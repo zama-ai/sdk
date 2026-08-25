@@ -41,6 +41,10 @@ next-env.d.ts
 # claude code (opt-in via `pnpm setup:claude`)
 .claude/
 
+# codex / other agent tooling
+.codex/
+.agents/
+
 # worktrees
 .worktrees/
 

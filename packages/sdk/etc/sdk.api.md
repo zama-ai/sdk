@@ -5855,6 +5855,7 @@ export interface ErrorForCode {
     [ZamaErrorCode.PreparedPermitChainMismatch]: PreparedPermitChainMismatchError;
     [ZamaErrorCode.PreparedPermitExpired]: PreparedPermitExpiredError;
     [ZamaErrorCode.RelayerRequestFailed]: RelayerRequestFailedError;
+    [ZamaErrorCode.RevokedKmsContext]: RevokedKmsContextError;
     [ZamaErrorCode.RpcRateLimited]: RpcRateLimitError;
     [ZamaErrorCode.SignerNotConfigured]: SignerNotConfiguredError;
     [ZamaErrorCode.SigningFailed]: SigningFailedError;
@@ -12981,6 +12982,11 @@ export interface RevokeDelegationSubmittedEvent extends BaseEvent {
 }
 
 // @public
+export class RevokedKmsContextError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
 export class RpcRateLimitError extends ZamaError {
     constructor(message: string, options?: ErrorOptions & {
         retryAfter?: number;
@@ -19635,6 +19641,7 @@ export const ZamaErrorCode: {
     readonly TransactionReverted: "TRANSACTION_REVERTED";
     readonly TransportKeyPairExpired: "KEYPAIR_EXPIRED";
     readonly InvalidTransportKeyPair: "INVALID_KEYPAIR";
+    readonly RevokedKmsContext: "REVOKED_KMS_CONTEXT";
     readonly NoCiphertext: "NO_CIPHERTEXT";
     readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED";
     readonly NotEntitled: "NOT_ENTITLED";

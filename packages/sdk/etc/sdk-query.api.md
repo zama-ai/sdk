@@ -1326,6 +1326,7 @@ export const ZamaErrorCode: {
     readonly TransactionReverted: "TRANSACTION_REVERTED";
     readonly TransportKeyPairExpired: "KEYPAIR_EXPIRED";
     readonly InvalidTransportKeyPair: "INVALID_KEYPAIR";
+    readonly RevokedKmsContext: "REVOKED_KMS_CONTEXT";
     readonly NoCiphertext: "NO_CIPHERTEXT";
     readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED";
     readonly NotEntitled: "NOT_ENTITLED";

@@ -158,8 +158,8 @@ importers:
         specifier: 6.0.3
         version: 6.0.3
       typescript-language-server:
-        specifier: ^5.3.0
-        version: 5.3.0
+        specifier: ^6.0.0
+        version: 6.0.0
       vitest:
         specifier: ^4.1.9
         version: 4.1.9(@types/node@22.19.21)(@vitest/coverage-v8@4.1.9)(@vitest/ui@4.1.9)(happy-dom@20.11.1)(vite@8.2.0(@types/node@22.19.21)(jiti@2.7.0)(yaml@2.9.0))
@@ -198,8 +198,8 @@ importers:
   packages/sdk:
     dependencies:
       '@fhevm/sdk':
-        specifier: 0.13.2
-        version: 0.13.2(ethers@6.17.0)(typescript@6.0.3)(viem@2.55.0(typescript@6.0.3)(zod@4.4.3))
+        specifier: 0.14.1-0
+        version: 0.14.1-0(ethers@6.17.0)(typescript@6.0.3)(viem@2.55.0(typescript@6.0.3)(zod@4.4.3))
       ethers:
         specifier: '>=6'
         version: 6.17.0
@@ -574,8 +574,8 @@ packages:
       typescript:
         optional: true
 
-  '@fhevm/sdk@0.13.2':
-    resolution: {integrity: sha512-M1ZUKdRJedxRa57bVeQ7jrzVP6hKAXjS8WabvMNJKBui7C2ZXDsvoyb7qpLqYib85obA+OQTwcPZV/oxWfciWA==}
+  '@fhevm/sdk@0.14.1-0':
+    resolution: {integrity: sha512-LLttIufmrBWNu4lss8zAyGFyadO3kd4eHzC9gN/jrQJpDPVs1E6n/NFRNzVvoMu5mYYE6As66H5kGalbNPtqfA==}
     engines: {node: '>=22.0'}
     peerDependencies:
       ethers: '>=6.8.0'
@@ -3903,9 +3903,9 @@ packages:
     resolution: {integrity: sha512-1URUxUqfHFM1c+zfSPsa3gnkO7Aq21qyH75SIduNYz4SzY964rn1X2vCMQaHSHhktiw+0kPa2iyb6PUpXqB6Vg==}
     engines: {node: '>=20'}
 
-  typescript-language-server@5.3.0:
-    resolution: {integrity: sha512-5puofxZHgFdAYtfNpmwCAvgtaYgg8wrUnH30m7Ze3QuguId5RNRadKASpOpyDxTyUdAF51FjhTdjntLw/EuWcQ==}
-    engines: {node: '>=20'}
+  typescript-language-server@6.0.0:
+    resolution: {integrity: sha512-LXtzY3UZGfghWA5eRU6/T5j1+YiGRgy14mR3GOKyTKlE1op1TYKQnLVxwBsmnXeDhGLuvzZyIHBAqvrekAITYQ==}
+    engines: {node: '>=22.22.2'}
     hasBin: true
 
   typescript@5.9.3:
@@ -4084,12 +4084,12 @@ packages:
     resolution: {integrity: sha512-JvONPptw3GAQGXlVV2utDcHx0BiY34FupW/kI6mZ5x06ER5DdPG/tXWMVHjTNULF5uKPOUUD0SaXg5QaubJL0A==}
     engines: {node: '>=8.0.0 || >=10.0.0'}
 
-  vscode-jsonrpc@9.0.0:
-    resolution: {integrity: sha512-+VvMmQPJhtvJ+8O+zu2JKIRiLxXF8NW7krWgyMGeOHrp4Cn23T5hc0v2LknNeopDOB70wghHAds7mKtcZ0I4Sg==}
+  vscode-jsonrpc@9.0.1:
+    resolution: {integrity: sha512-rfuA6T75H6m5EkbhtEPzre9pT0HPcDI2MMy4+nPFIBks5J8JBAUHD4tRYSgaBOijIEC7SRkC1kKyXTLqbmh9jw==}
     engines: {node: '>=14.0.0'}
 
-  vscode-languageserver-protocol@3.18.0:
-    resolution: {integrity: sha512-Zdz+kJ12Iz6tc11xfZyEo501bBATHXrCjmMfnaR3pMnf1CoqZBKIynba3P+/bi9VEdrMbNtAVKYpKhbODvqy+Q==}
+  vscode-languageserver-protocol@3.18.2:
+    resolution: {integrity: sha512-XRyDbT0Pp3sSNti3JmxVEUMySWCSi1hhM+/KUlCy1hV1zmrqpM1OwO12EAki8blhmLuIMpaJrYbo0OzGVfK2Qg==}
 
   vscode-languageserver-types@3.18.0:
     resolution: {integrity: sha512-8TsGPNMIMiiBdkORgRSvLjuiEIiAFtO+KssmYWxQ+uSVvlf7RjK8YKCOjPzZ+YA04jXEV7+7LvkSmHkhpNS99g==}
@@ -4404,7 +4404,7 @@ snapshots:
     optionalDependencies:
       typescript: 6.0.3
 
-  '@fhevm/sdk@0.13.2(ethers@6.17.0)(typescript@6.0.3)(viem@2.55.0(typescript@6.0.3)(zod@4.4.3))':
+  '@fhevm/sdk@0.14.1-0(ethers@6.17.0)(typescript@6.0.3)(viem@2.55.0(typescript@6.0.3)(zod@4.4.3))':
     dependencies:
       '@noble/curves': 2.0.1
       '@noble/hashes': 2.0.1
@@ -7283,10 +7283,10 @@ snapshots:
     dependencies:
       tagged-tag: 1.0.0
 
-  typescript-language-server@5.3.0:
+  typescript-language-server@6.0.0:
     dependencies:
       vscode-jsonrpc: 5.0.1
-      vscode-languageserver-protocol: 3.18.0
+      vscode-languageserver-protocol: 3.18.2
 
   typescript@5.9.3: {}
 
@@ -7404,11 +7404,11 @@ snapshots:
 
   vscode-jsonrpc@5.0.1: {}
 
-  vscode-jsonrpc@9.0.0: {}
+  vscode-jsonrpc@9.0.1: {}
 
-  vscode-languageserver-protocol@3.18.0:
+  vscode-languageserver-protocol@3.18.2:
     dependencies:
-      vscode-jsonrpc: 9.0.0
+      vscode-jsonrpc: 9.0.1
       vscode-languageserver-types: 3.18.0
 
   vscode-languageserver-types@3.18.0: {}

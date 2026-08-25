@@ -1,6 +1,10 @@
 import type { ZamaError } from "./base";
 import { DecryptionFailedError } from "./encryption";
-import { InvalidTransportKeyPairError, NoCiphertextError } from "./credential";
+import {
+  InvalidTransportKeyPairError,
+  NoCiphertextError,
+  RevokedKmsContextError,
+} from "./credential";
 import { RelayerRequestFailedError } from "./relayer";
 import { DelegationNotPropagatedError } from "./delegation";
 import { NotEntitledError } from "./entitlement";
@@ -14,6 +18,7 @@ import {
   isNotEntitledMessage,
   isRelayerError,
   isRelayerTimeoutError,
+  isRevokedKmsContextError,
   isRpcRateLimitError,
   parseHandleFromMessage,
 } from "../utils/error";
@@ -54,6 +59,7 @@ export const DECRYPT_PASSTHROUGH_ERROR_TYPES = [
   NotEntitledError,
   RpcRateLimitError,
   InvalidTransportKeyPairError,
+  RevokedKmsContextError,
 ] as const;
 
 /**
@@ -82,6 +88,19 @@ export function wrapDecryptError(
   // Typed so the decrypt path can evict the vault entry and regenerate on retry.
   if (error instanceof Error && isInvalidTransportKeyPairMessage(error.message)) {
     return new InvalidTransportKeyPairError(error.message, { cause: error });
+  }
+
+  // The permit's KMS context was revoked on-chain (InvalidKmsContext revert).
+  // Typed so the decrypt path can evict the dead permit, re-grant, and retry once.
+  if (isRevokedKmsContextError(error)) {
+    return new RevokedKmsContextError(
+      "The permit's KMS context has been revoked on-chain, so the permit is no longer usable. " +
+        "The SDK evicts the permit and re-grants automatically; if this error surfaced, the retry " +
+        "failed the same way. The on-chain validity check is cached for up to 15 minutes, so a " +
+        "just-revoked context can keep failing across that window. Retry after the window; the " +
+        "SDK re-runs the recovery on the next decrypt, no manual cleanup is needed.",
+      { cause: error },
+    );
   }
 
   // Actor not entitled (ACL). The relayer throws a message-only Error; the handle

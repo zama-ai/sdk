@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.5.0-alpha.11](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.10...v3.5.0-alpha.11) (2026-08-25)
+
+### Features
+
+- revoked kms context recovery ([#633](https://github.com/zama-ai/sdk/issues/633)) ([8f1e9d1]())
+
 ## [3.5.0-alpha.10](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.9...v3.5.0-alpha.10) (2026-08-24)
 
 ### Features
