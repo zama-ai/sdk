@@ -229,6 +229,20 @@ export interface NodeRelayerConfig extends RelayerConfig {
 }
 
 // @public
+export const polygon: {
+    readonly id: 137;
+    readonly gatewayChainId: 261131;
+    readonly relayerUrl: "https://relayer.mainnet.zama.org";
+    readonly network: "https://polygon-bor-rpc.publicnode.com";
+    readonly aclContractAddress: "0x6737F17e31cf26a1b62fb0362acC5a16CB156F49";
+    readonly kmsContractAddress: "0x14e609595474874Dd6b6128376E336EfADfdBE37";
+    readonly inputVerifierContractAddress: "0xf40BD204B035522EaAc8E5afAdc55113Acac96ca";
+    readonly verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24";
+    readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
+    readonly registryAddress: "0xc8908569868758dAF814B5a8b96bBc44D1653d54";
+};
+
+// @public
 export const polygonAmoy: {
     readonly id: 80002;
     readonly gatewayChainId: 10901;
