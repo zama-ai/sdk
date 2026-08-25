@@ -5,10 +5,14 @@ import { createMockChain } from "../../test-fixtures/chain";
 import { createMockRelayer } from "../../test-fixtures/relayer";
 import { TEST_TKMS_VERSION } from "../../test-fixtures/constants";
 import { SigningRejectedError, SigningFailedError } from "../../errors/signing";
-import { InvalidTransportKeyPairError } from "../../errors/credential";
+import {
+  InvalidTransportKeyPairError,
+  UnifiedPermitNotSupportedError,
+} from "../../errors/credential";
 import { ConfigurationError } from "../../errors/relayer";
 import { DerivationSecretHolder } from "../keypair-wrapping";
 import type { SerializedTransportKeyPairWithPermissions } from "../types";
+import { WILDCARD_PERMIT } from "../utils";
 
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
@@ -87,6 +91,85 @@ describe("CredentialService.allow", () => {
     const result = await credentialService.grantPermit([]);
     expect(result.keypair.publicKey).toBeDefined();
     expect(result.permissions).toEqual([]);
+    expect(signer.signTypedData).not.toHaveBeenCalled();
+  });
+});
+
+describe("CredentialService.grantPermit wildcard", () => {
+  test("signs a V2 permit with an empty contract list", async ({ credentialService, relayer }) => {
+    const result = await credentialService.grantPermit(WILDCARD_PERMIT);
+    expect(result.permissions).toHaveLength(1);
+    const [permission] = result.permissions;
+    expect(permission?.version).toBe(2);
+    expect(permission?.contractAddresses).toEqual([]);
+    expect(relayer.signUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayer.signDecryptionPermit).not.toHaveBeenCalled();
+  });
+
+  test("reuses an existing wildcard permit without re-prompting", async ({
+    credentialService,
+    signer,
+  }) => {
+    await credentialService.grantPermit(WILDCARD_PERMIT);
+    vi.mocked(signer.signTypedData).mockClear();
+    const second = await credentialService.grantPermit(WILDCARD_PERMIT);
+    expect(signer.signTypedData).not.toHaveBeenCalled();
+    expect(second.permissions).toHaveLength(1);
+  });
+
+  test("hasPermit covers an arbitrary contract once a wildcard permit is granted", async ({
+    credentialService,
+  }) => {
+    await credentialService.grantPermit(WILDCARD_PERMIT);
+    expect(await credentialService.hasPermit([A])).toBe(true);
+    expect(await credentialService.hasPermit([B, C])).toBe(true);
+  });
+
+  test("a plain contracts request does not re-prompt once a wildcard permit covers the scope", async ({
+    credentialService,
+    signer,
+  }) => {
+    await credentialService.grantPermit(WILDCARD_PERMIT);
+    vi.mocked(signer.signTypedData).mockClear();
+    const granted = await credentialService.grantPermit([A]);
+    expect(signer.signTypedData).not.toHaveBeenCalled();
+    expect(granted.permissions).toHaveLength(1);
+    expect(granted.permissions[0]?.contractAddresses).toEqual([]);
+  });
+
+  test("a delegated wildcard grant does not satisfy direct-decrypt coverage", async ({
+    credentialService,
+  }) => {
+    await credentialService.grantPermit(WILDCARD_PERMIT, DELEGATOR);
+    expect(await credentialService.hasPermit([A])).toBe(false);
+    expect(await credentialService.hasPermit([A], DELEGATOR)).toBe(true);
+  });
+
+  test("revoking a specific contract also drops a wildcard permit covering it", async ({
+    credentialService,
+  }) => {
+    await credentialService.grantPermit(WILDCARD_PERMIT);
+    expect(await credentialService.hasPermit([A])).toBe(true);
+    await credentialService.revokePermits([A]);
+    expect(await credentialService.hasPermit([A])).toBe(false);
+  });
+
+  test("throws UnifiedPermitNotSupportedError, without prompting the wallet, on a pre-v0.14 chain", async ({
+    credentialService,
+    relayer,
+    signer,
+  }) => {
+    // Mirrors @fhevm/sdk's real behavior: the chain-version check inside the V2
+    // unsigned-payload builder rejects before ever calling the signer.
+    vi.mocked(relayer.signUnifiedDecryptionPermit).mockRejectedValueOnce(
+      new Error(
+        "createUnsignedDecryptionPermitEip712V2 error: Invalid extraData version extraData=0x01",
+      ),
+    );
+
+    const error = await credentialService.grantPermit(WILDCARD_PERMIT).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(UnifiedPermitNotSupportedError);
+    expect((error as Error).message).toContain("protocol v0.14");
     expect(signer.signTypedData).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,7 @@
 import { getAddress, type Address, type Hex } from "viem";
 import type { CredentialService } from "../credentials/credential-service";
 import type { PreparedPermit } from "../credentials/types";
+import type { WildcardPermit } from "../credentials/utils";
 import { requireConfigured } from "../errors";
 import type { CachingService } from "../services/caching-service";
 import type { GenericLogger, GenericProvider, GenericSigner } from "../types";
@@ -61,11 +62,18 @@ export class Permits {
    * rejection is preserved (already-signed chunks are persisted before the
    * next prompt).
    *
-   * @param contracts - Contract addresses to authorize.
+   * Pass {@link WILDCARD_PERMIT} instead of an address list to request a V2
+   * permissive permit covering every contract, present and future — an
+   * explicit opt-in, not something a large address list implies. A stolen
+   * wildcard permit decrypts anything the signer owns until it expires, so
+   * prefer a specific contract list unless the caller genuinely needs
+   * unbounded coverage.
+   *
+   * @param contracts - Contract addresses to authorize, or {@link WILDCARD_PERMIT}.
    * @throws if `transportKeyPairDerivationSecret` is configured and the keypair fails to wrap or
    *   unwrap. {@link KeyWrappingError}
    */
-  async grantPermit(contracts: Address[]): Promise<void> {
+  async grantPermit(contracts: Address[] | WildcardPermit): Promise<void> {
     if (contracts.length === 0) {
       return;
     }
@@ -76,14 +84,18 @@ export class Permits {
 
   /**
    * Sign and store an EIP-712 delegation permit authorising decryption on
-   * behalf of `delegator`. Same idempotence/chunking semantics as {@link grantPermit}.
+   * behalf of `delegator`. Same idempotence/chunking/wildcard semantics as
+   * {@link grantPermit}.
    *
    * @param delegator - The address that delegated decryption rights to the connected signer.
-   * @param contracts - Contract addresses to authorize.
+   * @param contracts - Contract addresses to authorize, or {@link WILDCARD_PERMIT}.
    * @throws if `transportKeyPairDerivationSecret` is configured and the keypair fails to wrap or
    *   unwrap. {@link KeyWrappingError}
    */
-  async grantDelegationPermit(delegator: Address, contracts: Address[]): Promise<void> {
+  async grantDelegationPermit(
+    delegator: Address,
+    contracts: Address[] | WildcardPermit,
+  ): Promise<void> {
     if (contracts.length === 0) {
       return;
     }

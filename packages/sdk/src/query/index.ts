@@ -153,7 +153,11 @@ export type { Token } from "../token/token";
 export type { WrappedToken } from "../token/wrapped-token";
 export type { ZamaSDK, ZamaSDKOptions } from "../zama-sdk";
 export type { ZamaConfig } from "../config";
-export type { SerializedTransportKeyPair } from "../credentials";
+export {
+  WILDCARD_PERMIT,
+  type SerializedTransportKeyPair,
+  type WildcardPermit,
+} from "../credentials";
 export type {
   GenericSigner,
   GenericProvider,

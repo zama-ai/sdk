@@ -67,26 +67,54 @@ export interface SerializedPermit {
   signerAddress: ChecksummedAddress;
 }
 
+/** A V1 ("legacy") permit — always scoped to a specific, non-empty contract list. */
+export interface PermissionV1 {
+  /** Discriminant — always `1` for a V1 permit. */
+  version: 1;
+  /** Public key of the transport key pair this permit is bound to, hex-encoded. */
+  keypairPublicKey: Hex;
+  /** Contract addresses this permit grants decrypt access to. Never empty. */
+  contractAddresses: ChecksummedAddress[];
+  /** The signed serialized permit. */
+  serializedPermit: SerializedPermit;
+  /** Unix timestamp (seconds) when the permit becomes valid. */
+  startTimestamp: number;
+  /** Validity window length in days from {@link PermissionV1.startTimestamp}. */
+  durationDays: number;
+}
+
+/**
+ * A V2 (unified) permit. `contractAddresses: []` is a *wildcard* (permissive)
+ * permit — it covers every contract, not zero.
+ */
+export interface PermissionV2 {
+  /** Discriminant — always `2` for a V2 permit. */
+  version: 2;
+  /** Public key of the transport key pair this permit is bound to, hex-encoded. */
+  keypairPublicKey: Hex;
+  /**
+   * Contract addresses this permit grants decrypt access to. An empty list is
+   * a wildcard permit — see {@link PermissionV2}.
+   */
+  contractAddresses: ChecksummedAddress[];
+  /** The signed serialized permit. */
+  serializedPermit: SerializedPermit;
+  /** Unix timestamp (seconds) when the permit becomes valid. */
+  startTimestamp: number;
+  /** Validity window length in seconds from {@link PermissionV2.startTimestamp}. */
+  durationSeconds: number;
+}
+
 /**
  * A signed EIP-712 permit binding a signer (and optional delegator) to a set of
  * contract addresses for a bounded time window. Wraps the serialized `@fhevm/sdk`
  * permit ({@link SerializedPermit}) alongside the scope/coverage metadata the
  * permission store indexes on.
  *
+ * Discriminated by `version`: {@link PermissionV1} or {@link PermissionV2}.
  * Mirrors {@link PermissionSchema}; kept in sync by a `.test-d.ts` guard.
  */
-export interface Permission {
-  /** Public key of the transport key pair this permit is bound to, hex-encoded. */
-  keypairPublicKey: Hex;
-  /** Contract addresses this permit grants decrypt access to. */
-  contractAddresses: ChecksummedAddress[];
-  /** The signed serialized permit. */
-  serializedPermit: SerializedPermit;
-  /** Unix timestamp (seconds) when the permit becomes valid. */
-  startTimestamp: number;
-  /** Validity window length in days from {@link Permission.startTimestamp}. */
-  durationDays: number;
-}
+export type Permission = PermissionV1 | PermissionV2;
 
 /**
  * Credentials resolved for a decrypt operation: the transport key pair plus the

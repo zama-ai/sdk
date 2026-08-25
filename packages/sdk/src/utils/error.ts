@@ -241,6 +241,19 @@ export function isInvalidTransportKeyPairMessage(message: string): boolean {
 }
 
 /**
+ * `@fhevm/sdk`'s V2 (unified) permit unsigned-payload builder
+ * (`createUnsignedDecryptionPermitEip712V2`) resolves the connected chain's
+ * on-chain KMS context into an `extraData` version and asserts it's at least
+ * `EXTRA_DATA_V2` — the encoding only a protocol v0.14+ `ProtocolConfig`
+ * contract produces. Matching this signal (before any wallet prompt) lets the
+ * signing path surface a typed {@link UnifiedPermitNotSupportedError} instead
+ * of a generic `SigningFailedError`.
+ */
+export function isUnsupportedUnifiedPermitMessage(message: string): boolean {
+  return message.toLowerCase().includes("invalid extradata version");
+}
+
+/**
  * 4-byte selector of `InvalidKmsContext(uint256)`, the revert ProtocolConfig
  * raises when the KMS signers read resolves an unknown or revoked context.
  * The `error.test.ts` drift guard recomputes it from the Solidity signature.

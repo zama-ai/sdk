@@ -1,5 +1,11 @@
 import type { FheChain } from "./types";
 
+// None of the built-in configs below set `protocolConfigContractAddress` yet —
+// V2 (unified/wildcard) decryption permits are unaffected by that (they simply
+// aren't usable on these presets until it's added), and V1 permits don't need
+// it at all. Pass it in a custom `FheChain` for a network whose deployed
+// `ProtocolConfig` address you already know.
+
 /**
  * Mainnet network configuration (chainId 1).
  */

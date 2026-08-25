@@ -231,6 +231,7 @@ export interface RelayerSDK extends Pick<
   | "serializeTransportKeyPair"
   | "serializeSignedDecryptionPermit"
   | "signDecryptionPermit"
+  | "signUnifiedDecryptionPermit"
   | "parseTransportKeyPair"
   | "parseSignedDecryptionPermit"
 > {

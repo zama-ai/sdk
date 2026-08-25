@@ -6,7 +6,7 @@ import {
   positiveSeconds,
   unixSeconds,
 } from "../schemas/primitives";
-import type { PreparedPermit } from "./types";
+import type { Permission, PreparedPermit } from "./types";
 import { MAX_CONTRACTS_PER_PERMIT, MAX_V1_PERMIT_DURATION_DAYS, SECONDS_PER_DAY } from "./utils";
 
 const transportKeyPairTTLError = "transportKeyPairTTL must be a positive integer number of seconds";
@@ -89,14 +89,31 @@ export const SerializedPermitSchema = z.object({
   signerAddress: checksummedAddress,
 });
 
-/** @internal */
-export const PermissionSchema = z.object({
+const PermissionBaseSchema = {
   keypairPublicKey: hex,
+  // No minLength: an empty list is a valid V2 wildcard permit (see {@link Permission}).
   contractAddresses: z.array(checksummedAddress).check(z.maxLength(MAX_CONTRACTS_PER_PERMIT)),
   serializedPermit: SerializedPermitSchema,
   startTimestamp: unixSeconds,
+};
+
+const PermissionV1Schema = z.object({
+  ...PermissionBaseSchema,
+  version: z.literal(1),
   durationDays: positiveDays,
 });
+
+const PermissionV2Schema = z.object({
+  ...PermissionBaseSchema,
+  version: z.literal(2),
+  durationSeconds: positiveSeconds,
+});
+
+/** @internal */
+export const PermissionSchema = z.union([
+  PermissionV1Schema,
+  PermissionV2Schema,
+]) satisfies z.ZodMiniType<Permission>;
 
 export const PermissionListSchema = z.array(PermissionSchema);
 

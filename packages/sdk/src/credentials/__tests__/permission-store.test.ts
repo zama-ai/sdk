@@ -2,6 +2,7 @@ import type { Hex } from "viem";
 import { test as baseTest, describe, expect, vi } from "../../test-fixtures";
 import { MemoryStorage } from "../../storage/memory-storage";
 import { PermissionStore } from "../permission-store";
+import { permissionScopeKey } from "../storage-keys";
 import type { Permission } from "../types";
 import { checksum } from "../utils";
 
@@ -17,18 +18,26 @@ const directScope = { signerAddress: USER, chainId: 31337, delegatorAddress: USE
 
 const delegatedScope = { signerAddress: USER, chainId: 31337, delegatorAddress: DELEGATOR };
 
-function makePermission(
-  overrides: Partial<Omit<Permission, "serializedPermit">> & {
-    contractAddresses: Permission["contractAddresses"];
-    signature?: Hex;
-  },
-): Permission {
-  const { signature = SIGNATURE, ...rest } = overrides;
+function makePermission(overrides: {
+  contractAddresses: Permission["contractAddresses"];
+  signature?: Hex;
+  keypairPublicKey?: Hex;
+  startTimestamp?: number;
+  durationDays?: number;
+}): Permission {
+  const {
+    signature = SIGNATURE,
+    keypairPublicKey = PUBLIC_KEY,
+    startTimestamp = Math.floor(Date.now() / 1000),
+    durationDays = 30,
+    contractAddresses,
+  } = overrides;
   return {
-    keypairPublicKey: PUBLIC_KEY,
-    startTimestamp: Math.floor(Date.now() / 1000),
-    durationDays: 30,
-    ...rest,
+    version: 1,
+    keypairPublicKey,
+    contractAddresses,
+    startTimestamp,
+    durationDays,
     serializedPermit: {
       version: 1,
       eip712: { primaryType: "UserDecryptRequestVerification", domain: {}, types: {}, message: {} },
@@ -165,5 +174,41 @@ describe("PermissionStore", () => {
     expect(list.map((p) => p.serializedPermit.signature).sort()).toEqual(
       [SIG_EXISTING, SIG_NEW].sort(),
     );
+  });
+
+  test("a permit stored by a pre-V2 SDK (no top-level `version` field) still loads as V1, not wiped", async () => {
+    // Exactly the on-disk shape every permit had before the V1/V2 discriminant
+    // existed — no top-level `version`, only the nested `serializedPermit.version`.
+    const legacyStoredPermit = {
+      keypairPublicKey: PUBLIC_KEY,
+      contractAddresses: [TOKEN_A],
+      startTimestamp: Math.floor(Date.now() / 1000),
+      durationDays: 30,
+      serializedPermit: {
+        version: 1,
+        eip712: {
+          primaryType: "UserDecryptRequestVerification",
+          domain: {},
+          types: {},
+          message: {},
+        },
+        signature: SIGNATURE,
+        signerAddress: USER,
+      },
+    };
+    const storage = new MemoryStorage();
+    await storage.set(permissionScopeKey(directScope), [legacyStoredPermit]);
+    const store = new PermissionStore({
+      storage,
+      logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+    });
+
+    const list = await store.list(directScope);
+
+    expect(list).toHaveLength(1);
+    expect(list[0]?.version).toBe(1);
+    expect(list[0]?.contractAddresses).toEqual([TOKEN_A]);
+    // Confirm it wasn't treated as corrupt and wiped from storage.
+    expect(await storage.get(permissionScopeKey(directScope))).not.toBeNull();
   });
 });

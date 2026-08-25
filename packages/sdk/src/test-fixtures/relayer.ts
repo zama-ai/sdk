@@ -76,6 +76,49 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
           };
         },
       ),
+    // Mirrors signDecryptionPermit's mock shape but with the V2 (unified) EIP-712
+    // primaryType/message fields: `userAddress` and `allowedContracts` instead of
+    // a self/delegated primaryType split and `contractAddresses`.
+    signUnifiedDecryptionPermit: vi
+      .fn()
+      .mockImplementation(
+        async (params: {
+          signer: { signTypedData: (typedData: unknown) => Promise<string> };
+          signerAddress: string;
+          delegatorAddress?: string;
+          contractAddresses: readonly string[];
+        }) => {
+          const eip712 = {
+            domain: {
+              name: "Decryption",
+              version: "1",
+              chainId: BigInt(chain.id),
+              verifyingContract: TOKEN,
+            },
+            types: { UserDecryptRequestVerification: [] },
+            primaryType: "UserDecryptRequestVerification",
+            message: {
+              userAddress: params.signerAddress,
+              publicKey: TEST_PUBLIC_KEY,
+              allowedContracts: params.contractAddresses,
+              startTimestamp: "1000",
+              durationSeconds: "86400",
+              extraData: "0x",
+            },
+          };
+          const signature = await params.signer.signTypedData(eip712);
+          return {
+            version: 2,
+            eip712,
+            signature,
+            signerAddress: params.signerAddress,
+            encryptedDataOwnerAddress: params.delegatorAddress ?? params.signerAddress,
+            transportPublicKey: TEST_PUBLIC_KEY,
+            isDelegated: params.delegatorAddress !== undefined,
+            assertNotExpired: () => {},
+          };
+        },
+      ),
     serializeSignedDecryptionPermit: vi
       .fn()
       .mockImplementation(

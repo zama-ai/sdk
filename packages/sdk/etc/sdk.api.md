@@ -5862,6 +5862,7 @@ export interface ErrorForCode {
     [ZamaErrorCode.SigningRejected]: SigningRejectedError;
     [ZamaErrorCode.TransactionReverted]: TransactionRevertedError;
     [ZamaErrorCode.TransportKeyPairChanged]: TransportKeyPairChangedError;
+    [ZamaErrorCode.UnifiedPermitNotSupported]: UnifiedPermitNotSupportedError;
     [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
     [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
 }
@@ -5876,6 +5877,7 @@ export interface FheChain<TId extends number = number> {
     readonly inputVerifierContractAddress: Address;
     readonly kmsContractAddress: Address;
     readonly network: EIP1193Provider | string;
+    readonly protocolConfigContractAddress?: Address | undefined;
     readonly registryAddress: Address | undefined;
     readonly relayerUrl: string;
     readonly verifyingContractAddressDecryption: Address;
@@ -11463,19 +11465,33 @@ export interface PaginatedResult<T> {
 }
 
 // @public
-export interface Permission {
+export type Permission = PermissionV1 | PermissionV2;
+
+// @public
+export interface PermissionV1 {
     contractAddresses: ChecksummedAddress[];
     durationDays: number;
     keypairPublicKey: Hex;
     serializedPermit: SerializedPermit;
     startTimestamp: number;
+    version: 1;
+}
+
+// @public
+export interface PermissionV2 {
+    contractAddresses: ChecksummedAddress[];
+    durationSeconds: number;
+    keypairPublicKey: Hex;
+    serializedPermit: SerializedPermit;
+    startTimestamp: number;
+    version: 2;
 }
 
 // @public
 export class Permits {
     clear(): Promise<void>;
-    grantDelegationPermit(delegator: Address, contracts: Address[]): Promise<void>;
-    grantPermit(contracts: Address[]): Promise<void>;
+    grantDelegationPermit(delegator: Address, contracts: Address[] | WildcardPermit): Promise<void>;
+    grantPermit(contracts: Address[] | WildcardPermit): Promise<void>;
     hasDelegationPermit(delegator: Address, contracts: Address[]): Promise<boolean>;
     hasPermit(contracts: Address[]): Promise<boolean>;
     registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void>;
@@ -12739,7 +12755,7 @@ export class RelayerRequestFailedError extends ZamaError {
 }
 
 // @public
-export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
+export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "signUnifiedDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
     chain: FheChain;
     createUnsignedLegacyDecryptionPermitEip712(parameters: CreateUnsignedLegacyDecryptionPermitEip712Parameters): Promise<CreateUnsignedLegacyDecryptionPermitEip712ReturnType>;
 }
@@ -15952,6 +15968,11 @@ export function underlyingContract(wrapperAddress: Address): {
 };
 
 // @public
+export class UnifiedPermitNotSupportedError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
 export interface UnshieldCallbacks {
     onFinalizeSubmitted?: (txHash: Hex) => void;
     onFinalizing?: () => void;
@@ -18330,6 +18351,12 @@ export class WalletNotConnectedError extends SignerRequiredError {
 }
 
 // @public
+export const WILDCARD_PERMIT: "wildcard";
+
+// @public
+export type WildcardPermit = typeof WILDCARD_PERMIT;
+
+// @public
 export function wrapContract(wrapperAddress: Address, to: Address, amount: bigint): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -19670,6 +19697,7 @@ export const ZamaErrorCode: {
     readonly TransportKeyPairChanged: "TRANSPORT_KEY_PAIR_CHANGED";
     readonly PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH";
     readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
+    readonly UnifiedPermitNotSupported: "UNIFIED_PERMIT_NOT_SUPPORTED";
 };
 
 // @public

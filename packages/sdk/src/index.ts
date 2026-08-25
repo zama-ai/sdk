@@ -66,7 +66,15 @@ export {
 
 // Token abstraction layer
 export type { Address, Hex } from "viem";
-export type { ChecksummedAddress, Permission, SerializedTransportKeyPair } from "./credentials";
+export type {
+  ChecksummedAddress,
+  Permission,
+  PermissionV1,
+  PermissionV2,
+  SerializedTransportKeyPair,
+  WildcardPermit,
+} from "./credentials";
+export { WILDCARD_PERMIT } from "./credentials";
 export type {
   PreparedPermit,
   PreparePermitRequest,
@@ -112,6 +120,7 @@ export {
   TransactionRevertedError,
   TransportKeyPairChangedError,
   TransportKeyPairExpiredError,
+  UnifiedPermitNotSupportedError,
   WalletAccountNotReadyError,
   WalletNotConnectedError,
   ZamaError,

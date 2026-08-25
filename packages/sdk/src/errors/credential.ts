@@ -103,3 +103,18 @@ export class PreparedPermitExpiredError extends ZamaError {
     this.name = "PreparedPermitExpiredError";
   }
 }
+
+/**
+ * The connected chain doesn't support V2 (unified) decryption permits yet —
+ * including {@link WILDCARD_PERMIT} — because it hasn't upgraded to protocol
+ * v0.14 or later. Thrown before any wallet prompt: the SDK detects this from
+ * the chain's on-chain KMS context, without a signature attempt. V1 permits
+ * (an explicit contract list, not `WILDCARD_PERMIT`) are unaffected — grant
+ * one of those instead, or retry once the network upgrades.
+ */
+export class UnifiedPermitNotSupportedError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.UnifiedPermitNotSupported, message, options);
+    this.name = "UnifiedPermitNotSupportedError";
+  }
+}

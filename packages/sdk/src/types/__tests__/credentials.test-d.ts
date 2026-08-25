@@ -1,6 +1,11 @@
 import type { Hex } from "viem";
 import { describe, expectTypeOf, test } from "vitest";
-import type { Permission, StoredTransportKeyPair } from "../../credentials/types";
+import type {
+  Permission,
+  PermissionV1,
+  PermissionV2,
+  StoredTransportKeyPair,
+} from "../../credentials/types";
 import type { ChecksummedAddress } from "../../schemas/primitives";
 
 describe("StoredTransportKeyPair", () => {
@@ -17,6 +22,13 @@ describe("Permission", () => {
     expectTypeOf<Permission["keypairPublicKey"]>().toEqualTypeOf<Hex>();
     expectTypeOf<Permission["contractAddresses"]>().toEqualTypeOf<ChecksummedAddress[]>();
     expectTypeOf<Permission["startTimestamp"]>().toEqualTypeOf<number>();
-    expectTypeOf<Permission["durationDays"]>().toEqualTypeOf<number>();
+    expectTypeOf<Permission["version"]>().toEqualTypeOf<1 | 2>();
+  });
+
+  test("V1 carries durationDays, V2 carries durationSeconds", () => {
+    expectTypeOf<PermissionV1["durationDays"]>().toEqualTypeOf<number>();
+    expectTypeOf<PermissionV2["durationSeconds"]>().toEqualTypeOf<number>();
+    expectTypeOf<PermissionV1>().not.toHaveProperty("durationSeconds");
+    expectTypeOf<PermissionV2>().not.toHaveProperty("durationDays");
   });
 });
