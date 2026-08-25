@@ -88,6 +88,8 @@ export const ZamaErrorCode = {
   PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH",
   /** A prepared permit's validity window elapsed before its signature was registered. */
   PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED",
+  /** The unwrap request was already finalized on-chain; there is nothing left to resume. */
+  UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
@@ -144,6 +146,7 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.TransportKeyPairChanged]: false, // caller must re-run preparePermit against the current key pair
   [ZamaErrorCode.PreparedPermitChainMismatch]: false, // caller must register against the chain the permit was prepared for
   [ZamaErrorCode.PreparedPermitExpired]: false, // caller must re-run preparePermit for a fresh validity window
+  [ZamaErrorCode.UnshieldAlreadyFinalized]: false, // the funds already arrived; the stale pointer is cleared
 };
 
 /**

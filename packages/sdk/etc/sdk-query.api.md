@@ -739,6 +739,7 @@ export interface QueryLike {
 
 // @public
 export interface RawLog {
+    readonly address?: Hex;
     readonly data: Hex;
     readonly topics: readonly Hex[];
 }
@@ -1355,6 +1356,7 @@ export const ZamaErrorCode: {
     readonly TransportKeyPairChanged: "TRANSPORT_KEY_PAIR_CHANGED";
     readonly PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH";
     readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
+    readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
 };
 
 // @public

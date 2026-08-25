@@ -41,6 +41,7 @@ import type {
 } from "./signer";
 import type { SigningFailedError, SigningRejectedError } from "./signing";
 import type { TransactionRevertedError } from "./transaction";
+import type { UnshieldAlreadyFinalizedError } from "./unshield";
 
 /**
  * Maps each {@link ZamaErrorCode} to the error class thrown with that code, so
@@ -120,6 +121,8 @@ export interface ErrorForCode {
   [ZamaErrorCode.PreparedPermitChainMismatch]: PreparedPermitChainMismatchError;
   /** Thrown for {@link ZamaErrorCode.PreparedPermitExpired}. */
   [ZamaErrorCode.PreparedPermitExpired]: PreparedPermitExpiredError;
+  /** Thrown for {@link ZamaErrorCode.UnshieldAlreadyFinalized}. */
+  [ZamaErrorCode.UnshieldAlreadyFinalized]: UnshieldAlreadyFinalizedError;
 }
 
 /**

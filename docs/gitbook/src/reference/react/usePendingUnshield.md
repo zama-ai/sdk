@@ -9,6 +9,8 @@ Read the unwrap transaction hash of an unshield that was interrupted between its
 
 The SDK persists this automatically when [`useUnshield`](./useUnshield.md) / [`useUnshieldAll`](./useUnshieldAll.md) submit phase 1, and clears it once phase 2 finalizes — the unshield and unwrap mutations invalidate this query on success. Surface the returned hash as a "resume" prompt and pass it to [`useResumeUnshield`](./useResumeUnshield.md); resuming is caller-driven so a wallet transaction is never triggered on load.
 
+The pointer is verified on-chain before it is reported: a pointer whose unwrap request was already finalized is cleared, and `null` is returned. A stale entry never shows a resume prompt. If the verification read fails, the pointer is returned unverified; a network error never deletes recovery state.
+
 ## Import
 
 ```ts

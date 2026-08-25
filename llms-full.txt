@@ -2140,6 +2140,12 @@ Stuck on the migration, or spotted a step or rename this guide is missing? **Ope
 
 _Nothing is staged for the next release yet. As beta builds land, run `pnpm docs:changelog` to refresh this page._
 
+## Stale pending-unshield pointers self-heal
+
+An unshield whose finalize confirmed but whose local pointer was never cleared (a closed tab, a failed storage write) used to leave a permanent "resume unshield" prompt. Every resume attempt then submitted a transaction that reverted.
+
+The SDK now verifies the pointer on-chain. `getPendingUnshield()` clears a pointer whose unwrap request was already finalized and returns `null`. `resumeUnshield()` throws a new `UnshieldAlreadyFinalizedError` (`UNSHIELD_ALREADY_FINALIZED`) instead of broadcasting a reverting transaction, and `useResumeUnshield` refreshes the pending-unshield and balance queries when it sees this error, so the prompt disappears on its own. Treat the error as completion: the funds already arrived. No API change is required to pick this up. See the [error reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) and [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields).
+
 ## 3.x
 
 - source_type: official-doc
@@ -4293,8 +4299,13 @@ if (unwrapTxHash) {
 
 The flow is:
 
-1. **`getPendingUnshield`** -- returns the unwrap transaction hash of an interrupted unshield, or `null` if none is pending. The SDK saved it automatically during phase 1.
+1. **`getPendingUnshield`** -- returns the unwrap transaction hash of an interrupted unshield, or `null` if none is pending. The SDK saved it automatically during phase 1 and verifies it on-chain before reporting it: a pointer whose request was already finalized is cleared and `null` comes back, so a stale entry never shows a resume prompt.
 2. **`resumeUnshield`** -- picks up where the SDK left off by polling for the proof and submitting the finalize transaction. On success the SDK clears the persisted state for you.
+
+
+> [!WARNING]
+> **A resume can lose the race** Another tab, a double click, or a third party can finalize the same request first. `resumeUnshield` then clears the persisted state and throws `UnshieldAlreadyFinalizedError` instead of broadcasting a transaction that would revert. Treat the error as completion: the funds already arrived, so dismiss the prompt and refresh balances. `useResumeUnshield` refreshes the affected queries automatically. See [UnshieldAlreadyFinalizedError](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror).
+
 
 
 > [!INFO]
@@ -7915,6 +7926,8 @@ await wrappedToken.unshieldAll({
 
 Resumes an interrupted unshield after the unwrap transaction has already been submitted. The SDK reads the unwrap receipt, extracts the unwrap request id, waits for the proof, and submits `finalizeUnwrap`. On success it clears the persisted pending state.
 
+If the unwrap request was already finalized on-chain, it clears the persisted pending state and throws [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) instead of submitting a transaction that would revert. The funds already arrived; treat the error as completion.
+
 ```ts
 const pending = await wrappedToken.getPendingUnshield();
 if (pending) {
@@ -7927,6 +7940,8 @@ if (pending) {
 `() => Promise<Hex | null>`
 
 Returns the unwrap transaction hash of an unshield that was interrupted between its two phases, or `null` if none is pending for this wrapper. The SDK persists this automatically when `unshield()` / `unshieldAll()` submit phase 1, and clears it once phase 2 finalizes.
+
+The pointer is verified on-chain before it is reported: a pointer whose unwrap request was already finalized is cleared, and `null` is returned. If the verification read fails, the pointer is returned unverified. A network error never deletes recovery state.
 
 Resuming stays caller-driven — surface a "resume" prompt and call `resumeUnshield()`, rather than finalizing on load and triggering a wallet transaction the user did not initiate.
 
@@ -9284,6 +9299,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the WASM runtime                                                                                         |
 | `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                                                                                             |
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
+| `UnshieldAlreadyFinalizedError`         | `UNSHIELD_ALREADY_FINALIZED`          | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                                                          |
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired — user must re-sign                                                                                    |
 | `RevokedKmsContextError`                | `REVOKED_KMS_CONTEXT`                 | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                                   |
@@ -9428,7 +9444,27 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Inspect the revert reason. Common causes: insufficient balance, expired operator approval, or attempting to finalize an already-finalized unwrap.
+**How to handle:** Inspect the revert reason. Common causes: insufficient balance or an expired operator approval. Finalizing an already-finalized unwrap through `resumeUnshield()` or `unshield()` throws the more specific `UnshieldAlreadyFinalizedError` instead.
+
+### UnshieldAlreadyFinalizedError
+
+**Code:** `UNSHIELD_ALREADY_FINALIZED`
+
+Thrown by `resumeUnshield()` when the unwrap request no longer exists on-chain: it was already finalized, so the underlying ERC-20 tokens were delivered. `unshield()` and `unshieldAll()` throw it too when a concurrent finalize wins the race. The SDK clears the persisted pending-unshield state before throwing, so `getPendingUnshield()` returns `null` afterwards. The error carries `unwrapTxHash` and `unwrapRequestId`.
+
+```ts
+import { UnshieldAlreadyFinalizedError } from "@zama-fhe/sdk";
+
+try {
+  await wrappedToken.resumeUnshield(unwrapTxHash);
+} catch (error) {
+  if (error instanceof UnshieldAlreadyFinalizedError) {
+    dismissResumePrompt(); // the funds already arrived
+  }
+}
+```
+
+**How to handle:** Treat it as completion, not a failure: dismiss the "resume unshield" prompt and refresh balances. `useResumeUnshield` invalidates the affected queries automatically. Do not retry; nothing is left to finalize.
 
 ### InvalidTransportKeyPairError
 
@@ -13471,6 +13507,11 @@ The SDK persists the unwrap tx hash automatically when phase 1 is submitted and 
 Run this check on mount to handle any session that was interrupted. Resuming is intentionally caller-driven — prompt the user rather than finalizing on load, so you never trigger a wallet transaction they did not initiate.
 
 
+> [!WARNING]
+> **An already-finalized resume is not a failure** If the unwrap request was already finalized (another tab, a double click, a third party), the mutation fails with [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror). The funds already arrived. The SDK clears the persisted state and the hook invalidates the pending-unshield and balance queries, so the resume prompt disappears on its own. Treat the error as completion; do not retry.
+
+
+
 > [!INFO]
 > The SDK persists and clears the pending-unshield state for you. If you bypass `resumeUnshield` and orchestrate `unwrap` + `finalizeUnwrap` (via the `useUnwrap` / `useFinalizeUnwrap` hooks) yourself, manage your own persistence between the two phases.
 
@@ -13549,6 +13590,8 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 Read the unwrap transaction hash of an unshield that was interrupted between its two phases (returns `null` if none is pending for the wrapper).
 
 The SDK persists this automatically when [`useUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useUnshield.md) / [`useUnshieldAll`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useUnshieldAll.md) submit phase 1, and clears it once phase 2 finalizes — the unshield and unwrap mutations invalidate this query on success. Surface the returned hash as a "resume" prompt and pass it to [`useResumeUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useResumeUnshield.md); resuming is caller-driven so a wallet transaction is never triggered on load.
+
+The pointer is verified on-chain before it is reported: a pointer whose unwrap request was already finalized is cleared, and `null` is returned. A stale entry never shows a resume prompt. If the verification read fails, the pointer is returned unverified; a network error never deletes recovery state.
 
 ## Import
 

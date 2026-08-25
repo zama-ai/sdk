@@ -182,6 +182,8 @@ await wrappedToken.unshieldAll({
 
 Resumes an interrupted unshield after the unwrap transaction has already been submitted. The SDK reads the unwrap receipt, extracts the unwrap request id, waits for the proof, and submits `finalizeUnwrap`. On success it clears the persisted pending state.
 
+If the unwrap request was already finalized on-chain, it clears the persisted pending state and throws [`UnshieldAlreadyFinalizedError`](errors.md#unshieldalreadyfinalizederror) instead of submitting a transaction that would revert. The funds already arrived; treat the error as completion.
+
 ```ts
 const pending = await wrappedToken.getPendingUnshield();
 if (pending) {
@@ -194,6 +196,8 @@ if (pending) {
 `() => Promise<Hex | null>`
 
 Returns the unwrap transaction hash of an unshield that was interrupted between its two phases, or `null` if none is pending for this wrapper. The SDK persists this automatically when `unshield()` / `unshieldAll()` submit phase 1, and clears it once phase 2 finalizes.
+
+The pointer is verified on-chain before it is reported: a pointer whose unwrap request was already finalized is cleared, and `null` is returned. If the verification read fails, the pointer is returned unverified. A network error never deletes recovery state.
 
 Resuming stays caller-driven — surface a "resume" prompt and call `resumeUnshield()`, rather than finalizing on load and triggering a wallet transaction the user did not initiate.
 

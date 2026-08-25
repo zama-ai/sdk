@@ -202,6 +202,7 @@ export class MutableWalletAccountStore implements WalletAccountStore {
 
 // @public
 export interface RawLog {
+    readonly address?: Hex;
     readonly data: Hex;
     readonly topics: readonly Hex[];
 }
