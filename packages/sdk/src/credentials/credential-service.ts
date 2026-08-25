@@ -27,7 +27,7 @@ import {
   PreparedPermitSchema,
   SerializedPermitSchema,
 } from "./schemas";
-import type { PermissionScope } from "./storage-keys";
+import { permissionScopeKey, type PermissionScope } from "./storage-keys";
 import type {
   Permission,
   PreparedPermit,
@@ -108,6 +108,8 @@ export class CredentialService {
   readonly #permitTTL: number;
   readonly #logger: GenericLogger;
   readonly #scope: string | undefined;
+  /** In-flight revoked-context recoveries, one per permission scope. */
+  readonly #permitRecoveries = new Map<string, Promise<void>>();
 
   constructor(config: CredentialServiceConfig) {
     this.#vault = new TransportKeyPairVault({
@@ -164,15 +166,7 @@ export class CredentialService {
       return { keypair, permissions: [] };
     }
 
-    // Key permits by the router's active chain — the same source the permit's
-    // EIP-712 domain is signed against (#signPermit uses this.#router.relayer) —
-    // so the storage key and the signature can never disagree on the chain.
-    const chainId = this.#router.chain.id;
-    const scope: PermissionScope = {
-      signerAddress,
-      chainId,
-      delegatorAddress: delegator ? checksum(delegator) : signerAddress,
-    };
+    const scope = this.#permissionScope(signerAddress, delegator);
     const permissions = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
 
     const uncovered = uncoveredContracts(permissions, requested);
@@ -421,9 +415,7 @@ export class CredentialService {
     if (keypair === null) {
       return false;
     }
-    const chainId = this.#router.chain.id;
-    const delegatorAddress = delegator ? checksum(delegator) : signerAddress;
-    const scope: PermissionScope = { signerAddress, chainId, delegatorAddress };
+    const scope = this.#permissionScope(signerAddress, delegator);
     const permits = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
     return uncoveredContracts(permits, normalizeAddresses(contracts)).length === 0;
   }
@@ -452,11 +444,20 @@ export class CredentialService {
     if (normalized.length === 0) {
       return;
     }
-    const chainId = this.#router.chain.id;
-    await this.#store.deletePermitsTouching(
-      { signerAddress, chainId, delegatorAddress: signerAddress },
-      normalized,
-    );
+    await this.#store.deletePermitsTouching(this.#permissionScope(signerAddress), normalized);
+  }
+
+  /**
+   * Permits are keyed by the router's active chain, the same chain their
+   * EIP-712 domain is signed against, so the storage key and the signature
+   * can never disagree.
+   */
+  #permissionScope(signerAddress: ChecksummedAddress, delegator?: Address): PermissionScope {
+    return {
+      signerAddress,
+      chainId: this.#router.chain.id,
+      delegatorAddress: delegator ? checksum(delegator) : signerAddress,
+    };
   }
 
   /**
@@ -645,5 +646,132 @@ export class CredentialService {
       return;
     }
     await this.#vault.evict(checksum(account.address));
+  }
+
+  /**
+   * Recover the scope from a revoked KMS context: every permit in it was
+   * signed under the dead context, so drop them all and re-sign the scope's
+   * prior coverage plus `contracts` in one prompt, then resolve credentials as
+   * {@link grantPermit} would. The self-heal hook the decrypt path calls on
+   * {@link RevokedKmsContextError}; the key pair is untouched, only the
+   * permits embed the dead context.
+   *
+   * Concurrent and repeated recoveries for the same scope cost at most one
+   * wallet prompt: a running recovery is shared, and a call whose
+   * `staleSignatures` are no longer stored re-signs nothing because the scope
+   * was already recovered. If the stored permits cannot be read, nothing is
+   * evicted and the stored (dead) permits are returned unchanged. If the
+   * re-grant fails, the stored permits minus `staleSignatures` are put back
+   * before the error propagates.
+   *
+   * @param staleSignatures Signatures of the permits the failed decrypt used.
+   *   Omitted or empty makes recovery unconditional.
+   * @throws if the user rejects the re-grant prompt. {@link SigningRejectedError}
+   * @throws if re-signing fails for any other reason. {@link SigningFailedError}
+   */
+  async recoverPermits(
+    contracts: readonly Address[],
+    delegator?: Address,
+    staleSignatures?: readonly Hex[],
+  ): Promise<SerializedTransportKeyPairWithPermissions> {
+    const signer = this.#requireSigner("recoverPermits");
+    const account = signer.requireWalletAccount("recoverPermits");
+    const scope = this.#permissionScope(checksum(account.address), delegator);
+    const key = permissionScopeKey(scope);
+
+    // A recovery for this scope is already running: wait for it instead of
+    // starting another, no matter which permits this call failed with.
+    const inFlight = this.#permitRecoveries.get(key);
+    if (inFlight) {
+      await inFlight;
+      return this.grantPermit(contracts, delegator);
+    }
+
+    const stored = await this.#readScopePermits(scope);
+
+    // A sibling recovery may have started while the read above was awaiting.
+    // Check again: a sibling registers itself in the map before it clears the
+    // store, so if the read saw a cleared store, the sibling is found here.
+    const registered = this.#permitRecoveries.get(key);
+    if (registered) {
+      await registered;
+      return this.grantPermit(contracts, delegator);
+    }
+
+    // The read failed: never clear a scope we could not read, or coverage we
+    // cannot re-sign would be lost.
+    if (stored === null) {
+      return this.grantPermit(contracts, delegator);
+    }
+
+    const stale = new Set(staleSignatures ?? []);
+
+    // None of the failing permits is stored anymore: another recovery already
+    // replaced them. Retry with the fresh permit instead of re-signing.
+    if (stale.size > 0 && !stored.some((p) => stale.has(p.serializedPermit.signature))) {
+      return this.grantPermit(contracts, delegator);
+    }
+
+    const survivors = stored.filter((p) => !stale.has(p.serializedPermit.signature));
+    const prior = stored.flatMap((p) => p.contractAddresses);
+    const recovery = this.#clearAndRegrantScope(
+      scope,
+      prior,
+      contracts,
+      survivors,
+      delegator,
+    ).finally(() => {
+      this.#permitRecoveries.delete(key);
+    });
+    // No `await` between the map re-check above and this `set`, so two callers
+    // cannot both start a recovery for the same scope.
+    this.#permitRecoveries.set(key, recovery);
+    await recovery;
+    // The union re-grant already covered `contracts`, so no extra prompt here.
+    return this.grantPermit(contracts, delegator);
+  }
+
+  /** `null` marks a storage failure, distinct from an empty scope. */
+  async #readScopePermits(scope: PermissionScope): Promise<Permission[] | null> {
+    try {
+      return await this.#store.list(scope);
+    } catch (error) {
+      this.#logger.warn("read permits for recovery failed", { error });
+      return null;
+    }
+  }
+
+  async #clearAndRegrantScope(
+    scope: PermissionScope,
+    prior: readonly ChecksummedAddress[],
+    contracts: readonly Address[],
+    survivors: readonly Permission[],
+    delegator?: Address,
+  ): Promise<void> {
+    await swallow("evict revoked permits", () => this.#store.clearScope(scope), this.#logger);
+    try {
+      // Re-sign the union of what the scope covered, not just this call's
+      // contracts: one signature restores every widened permit, so sibling
+      // decrypt calls joining the recovery find their contracts already covered.
+      await this.grantPermit(sortedUnion(prior, normalizeAddresses(contracts)), delegator);
+    } catch (error) {
+      // Coverage the session cannot re-sign must survive a failed re-grant.
+      if (survivors.length > 0) {
+        await swallow(
+          "restore surviving permits",
+          async () => {
+            // A failed eviction leaves survivors stored: append only the missing ones.
+            const current = await this.#store.list(scope);
+            const present = new Set(current.map((p) => p.serializedPermit.signature));
+            const missing = survivors.filter((p) => !present.has(p.serializedPermit.signature));
+            if (missing.length > 0) {
+              await this.#store.append(scope, missing);
+            }
+          },
+          this.#logger,
+        );
+      }
+      throw error;
+    }
   }
 }

@@ -7,6 +7,7 @@ import {
   NoCiphertextError,
   NotEntitledError,
   RelayerRequestFailedError,
+  RevokedKmsContextError,
   RpcRateLimitError,
   SigningFailedError,
   SigningRejectedError,
@@ -325,6 +326,19 @@ describe("wrapDecryptError", () => {
       expect(wrapped).toBeInstanceOf(InvalidTransportKeyPairError);
       expect(wrapped.cause).toBe(stale);
     });
+
+    test("maps the InvalidKmsContext revert to a terminal RevokedKmsContextError", () => {
+      // The KMS signers read reverts with raw data only (the error isn't in the
+      // read's ABI fragment); the decrypt path relies on this typed error to
+      // evict the dead permit, re-grant, and retry once.
+      const revert = Object.assign(new Error("execution reverted"), {
+        cause: { name: "ContractFunctionRevertedError", raw: `0x77ddbe81${"11".repeat(32)}` },
+      });
+      const wrapped = wrapDecryptError(revert, "fallback");
+      expect(wrapped).toBeInstanceOf(RevokedKmsContextError);
+      expect(wrapped.cause).toBe(revert);
+      expect(wrapped.retryable).toBe(false);
+    });
   });
 
   describe("passthrough set is exhaustive (SDK-248)", () => {
@@ -355,6 +369,7 @@ describe("wrapDecryptError", () => {
       ],
       [RpcRateLimitError, () => new RpcRateLimitError("throttled")],
       [InvalidTransportKeyPairError, () => new InvalidTransportKeyPairError("stale key pair")],
+      [RevokedKmsContextError, () => new RevokedKmsContextError("revoked context")],
     ];
 
     test("every entry in DECRYPT_PASSTHROUGH_ERROR_TYPES has a passthrough example", () => {

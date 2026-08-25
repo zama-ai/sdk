@@ -208,6 +208,9 @@ export class Decryption {
    * @returns Per-entry results, each with a value or an error.
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
    * @throws if signer and provider are on different chains. {@link ChainMismatchError}
+   * @throws A failure that affects the whole session (rejected signature, RPC
+   * rate limit, revoked KMS context) rejects the call instead of landing in a
+   * per-entry error.
    *
    * @example
    * ```ts

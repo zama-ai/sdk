@@ -1,9 +1,19 @@
 import { vi } from "vitest";
-import type { Address } from "viem";
+import type { Address, Hex } from "viem";
 import type { GenericSigner } from "../types";
 import type { AddressFixtures } from "./addresses";
-import { TEST_SIGNATURE, USER } from "./constants";
+import { USER } from "./constants";
 import type { FixturesOf } from "./types";
+
+// Counter-suffixed so re-signed permits never collide with the stale signature
+// they replaced, matching production where each signature is unique.
+let signatureCounter = 0;
+
+function nextTestSignature(): Hex {
+  signatureCounter += 1;
+  const suffix = signatureCounter.toString(16).padStart(4, "0").slice(-4);
+  return `0x${"33".repeat(63)}${suffix}` as Hex;
+}
 
 /**
  * Test-only signer shape — matches the production {@link GenericSigner}. The
@@ -28,7 +38,7 @@ export function createMockSigner(
   return {
     walletAccount: store,
     requireWalletAccount: vi.fn().mockReturnValue(walletAccount),
-    signTypedData: vi.fn().mockResolvedValue(TEST_SIGNATURE),
+    signTypedData: vi.fn().mockImplementation(async () => nextTestSignature()),
     writeContract: vi.fn().mockResolvedValue("0xtxhash"),
     ...overrides,
   };
