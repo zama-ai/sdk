@@ -9,6 +9,23 @@ description: Unreleased changes on the prerelease (alpha) line — not yet in a 
 **Unreleased.** The changes on this page are on the prerelease (`alpha`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
 {% endhint %}
 
+## Polygon support
+
+The SDK now ships built-in presets for **Polygon**: `polygon` (mainnet, chain ID 137) and `polygonAmoy` (Amoy testnet, chain ID 80002). Import either from `@zama-fhe/sdk/chains` and pass it to `createConfig` like any other chain — no manual contract-address wiring.
+
+```ts
+import { polygon, polygonAmoy } from "@zama-fhe/sdk/chains";
+
+const config = createConfig({
+  chains: [polygonAmoy],
+  publicClient,
+  walletClient,
+  relayers: { [polygonAmoy.id]: web() },
+});
+```
+
+The shared Zama **testnet** relayer needs no API key, so `polygonAmoy` works as-is; the **mainnet** relayer used by `polygon` requires one — see [Authentication](../guides/authentication.md). A full `example-polygon-amoy` reference app is included in the examples. See [Configuration](../guides/configuration.md#1-pick-your-chains) for the complete preset list.
+
 ## Offline signing
 
 A new `sdk.offline.prepare` builds an unsigned transaction that the caller signs and broadcasts out-of-process: institutional custody, HSM ceremonies, policy engines with human approval. The signer is now optional in the SDK config, so the preparing process never holds the wallet private key. Atomic call sites are unchanged; `Token.confidentialTransfer` and friends keep their online path.
@@ -54,3 +71,8 @@ Failures surface as a new `KeyWrappingError` (`KEY_WRAPPING_FAILED`); `hasPermit
 ## Automatic recovery from KMS context rotation
 
 When a permit's KMS context is revoked on-chain, the SDK now re-grants the permit (one wallet prompt) and retries the decrypt instead of failing. No API change; existing decrypt and balance calls pick this up automatically. A new `RevokedKmsContextError` (`REVOKED_KMS_CONTEXT`) surfaces when the retry also fails, or when the re-grant itself fails (a signing failure attached as `cause`); on a failed re-grant the other permits of the scope are kept. See the [error reference](../reference/sdk/errors.md#revokedkmscontexterror) for the recovery mechanics.
+
+## Bug fixes
+
+- **Operator transfers bind the input proof to the caller, not the token owner.** `confidentialTransferFrom` and `confidentialTransferFromAndCall` now build the encrypted-amount proof against the transaction sender (the operator), matching how the contract verifies it against `msg.sender`; previously it was bound to the `from` owner, so an operator-initiated transfer could fail proof verification. No API change — `Token.confidentialTransferFrom` / `confidentialTransferFromAndCall` and their `useConfidentialTransferFrom` / `useConfidentialTransferFromAndCall` hooks pick it up automatically. See [Operator approvals](../guides/operator-approvals.md).
+- **ACL revert decoding ignores inherited property names.** Decoding a Solidity revert whose custom error is named like a built-in object member (`valueOf`, `toString`, `constructor`, …) no longer returns a spurious match — the lookup checks own properties only, so an unmapped error correctly falls through to `null` instead of surfacing a non-[`ZamaError`](../reference/sdk/errors.md) object.
