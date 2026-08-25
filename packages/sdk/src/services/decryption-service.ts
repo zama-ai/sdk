@@ -10,7 +10,9 @@ import {
   DecryptionFailedError,
   DelegationNotPropagatedError,
   isFatalBatchError,
+  RevokedKmsContextError,
   RpcRateLimitError,
+  SigningFailedError,
   wrapDecryptError,
   ZamaError,
 } from "../errors";
@@ -54,20 +56,26 @@ export interface DelegatedDecryptOptions {
 
 interface DecryptionStrategy {
   requesterAddress: Address;
-  /** The ACL actor whose entitlement is checked (signer, or delegator when delegated). */
-  aclActorAddress: Address;
-  resolveCredentials: (
-    contractAddresses: Address[],
-  ) => Promise<SerializedTransportKeyPairWithPermissions>;
+  /**
+   * Delegator whose permit scope this decrypt reads; undefined on the direct
+   * path. The single delegation discriminator: it also selects the delegated
+   * error classification and the ACL actor (delegator, or the requester when
+   * direct).
+   */
+  delegator?: Address;
   validate?: (contractAddresses: readonly Address[]) => Promise<void>;
-  decryptContract: (args: {
-    credentials: SerializedTransportKeyPairWithPermissions;
-    contractAddress: Address;
-    encryptedValues: EncryptedValue[];
-    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">;
-  }) => Promise<DecryptValuesReturnType>;
   errorMessage: string;
-  delegated?: boolean;
+}
+
+/** One decrypt-relayer request: a contract's handles chunked to the bit budget. */
+interface DecryptRequest {
+  contractAddress: Address;
+  encryptedValues: EncryptedValue[];
+}
+
+/** Tracks the evict-and-regrant allowance across retried decrypt attempts. */
+interface RecoveryBudget {
+  spent: boolean;
 }
 
 /** Per-handle outcome of a batch decrypt: the decrypted value, or a per-item error. */
@@ -124,15 +132,7 @@ export class DecryptionService {
     const normalizedSigner = getAddress(signerAddress);
     return this.#decrypt(
       handles,
-      {
-        requesterAddress: normalizedSigner,
-        aclActorAddress: normalizedSigner,
-        resolveCredentials: (contractAddresses) =>
-          this.#credentialService.grantPermit(contractAddresses),
-        decryptContract: ({ credentials, contractAddress, encryptedValues, options }) =>
-          this.#decryptValues(credentials, contractAddress, encryptedValues, options),
-        errorMessage: "Failed to decrypt encrypted values",
-      },
+      { requesterAddress: normalizedSigner, errorMessage: "Failed to decrypt encrypted values" },
       opts,
     );
   }
@@ -146,22 +146,27 @@ export class DecryptionService {
   ): Promise<Record<EncryptedValue, ClearValue>> {
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedDelegate = getAddress(delegateAddress);
+    // One evict-and-regrant across the whole propagation-retry loop, not one
+    // per attempt: each retry would otherwise re-arm the recovery and spend a
+    // fresh wallet prompt per 2s attempt while the upstream validity cache
+    // keeps serving the revoked context.
+    const recovery: RecoveryBudget = { spent: false };
     return this.#withPropagationRetry(opts?.waitForPropagation ?? true, () =>
-      this.#decrypt(encryptedInputs, {
-        requesterAddress: getAddress(accountAddress),
-        aclActorAddress: normalizedDelegator,
-        resolveCredentials: (contractAddresses) =>
-          this.#credentialService.grantPermit(contractAddresses, normalizedDelegator),
-        validate: (contractAddresses) =>
-          this.#assertAllDelegationsActive(contractAddresses, {
-            delegatorAddress: normalizedDelegator,
-            delegateAddress: normalizedDelegate,
-          }),
-        decryptContract: ({ credentials, contractAddress, encryptedValues, options }) =>
-          this.#decryptValues(credentials, contractAddress, encryptedValues, options),
-        errorMessage: "Failed to decrypt delegated encrypted values",
-        delegated: true,
-      }),
+      this.#decrypt(
+        encryptedInputs,
+        {
+          requesterAddress: getAddress(accountAddress),
+          delegator: normalizedDelegator,
+          validate: (contractAddresses) =>
+            this.#assertAllDelegationsActive(contractAddresses, {
+              delegatorAddress: normalizedDelegator,
+              delegateAddress: normalizedDelegate,
+            }),
+          errorMessage: "Failed to decrypt delegated encrypted values",
+        },
+        undefined,
+        recovery,
+      ),
     );
   }
 
@@ -253,11 +258,11 @@ export class DecryptionService {
       }
     }
 
-    // `pLimit` has no cancellation: once one worker rethrows a fatal error
-    // (e.g. an RPC rate-limit), the sibling workers would otherwise keep
-    // draining the queue and re-hitting the already-throttled endpoint. A
-    // shared flag lets the still-queued items short-circuit instead.
+    // `pLimit` cannot cancel calls that already started. The shared flag stops
+    // the queued items from starting once a fatal error (e.g. an RPC rate
+    // limit) is seen, instead of re-hitting the failing endpoint.
     let aborted = false;
+    let fatal: unknown;
     await pLimit(
       items.map((item) => async () => {
         if (aborted) {
@@ -278,7 +283,8 @@ export class DecryptionService {
         } catch (error) {
           if (isFatalBatchError(error)) {
             aborted = true;
-            throw error;
+            fatal ??= error;
+            return;
           }
           item.error = this.#toZamaError(error, "Failed to decrypt delegated encrypted values", {
             isDelegated: true,
@@ -289,6 +295,10 @@ export class DecryptionService {
       }),
       maxConcurrency,
     );
+
+    if (fatal !== undefined) {
+      throw fatal;
+    }
 
     return { items };
   }
@@ -339,6 +349,7 @@ export class DecryptionService {
     handles: EncryptedInput[],
     strategy: DecryptionStrategy,
     options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
+    recovery: RecoveryBudget = { spent: false },
   ): Promise<Record<EncryptedValue, ClearValue>> {
     if (handles.length === 0) {
       return {};
@@ -396,7 +407,7 @@ export class DecryptionService {
       return result;
     }
 
-    const credentials = await strategy.resolveCredentials(allContracts);
+    let credentials = await this.#credentialService.grantPermit(allContracts, strategy.delegator);
 
     const byContract = new Map<Address, EncryptedValue[]>();
     for (const h of uncached) {
@@ -411,7 +422,7 @@ export class DecryptionService {
     // Split each contract's handles to stay under the relayer's per-request
     // cleartext-bit budget — a contract with many/wide handles becomes
     // several relayer calls instead of one oversized, rejected call.
-    const requests: { contractAddress: Address; encryptedValues: EncryptedValue[] }[] = [];
+    const requests: DecryptRequest[] = [];
     for (const [contractAddress, encryptedValues] of byContract) {
       for (const chunk of chunkHandlesByBitBudget(encryptedValues)) {
         requests.push({ contractAddress, encryptedValues: chunk });
@@ -426,66 +437,51 @@ export class DecryptionService {
         encryptedValues: uncachedEncryptedValues,
       });
 
-      await pLimit(
-        requests.map(({ contractAddress, encryptedValues }) => async () => {
-          // Classify per contract so a not-entitled / relayer failure carries the
-          // exact contract + ACL actor (the request context the worker no longer
-          // threads). Already-typed errors pass straight through.
-          let decrypted: DecryptValuesReturnType;
-          try {
-            decrypted = await strategy.decryptContract({
-              credentials,
-              contractAddress,
-              encryptedValues,
-              options,
-            });
-          } catch (error) {
-            throw wrapDecryptError(error, strategy.errorMessage, {
-              isDelegated: strategy.delegated,
-              contractAddress,
-              account: strategy.aclActorAddress,
-            });
-          }
-
-          // `decryptValues` returns clear values positionally aligned with the
-          // requested `encryptedValues`; zip them back into the handle→value map.
-          for (let i = 0; i < encryptedValues.length; i++) {
-            const encryptedValue = encryptedValues[i];
-            const value = decrypted[i]?.value;
-            if (encryptedValue === undefined || value === undefined) {
-              continue;
-            }
-            result[encryptedValue] = value;
-            await this.#cache.set(
-              strategy.requesterAddress,
-              contractAddress,
-              encryptedValue,
-              value,
-            );
-          }
-
-          const missing = encryptedValues.filter(
-            (encryptedValue) => result[encryptedValue] === undefined,
+      try {
+        await this.#runDecryptRequests(strategy, credentials, requests, result, options);
+      } catch (error) {
+        if (!(error instanceof RevokedKmsContextError) || recovery.spent) {
+          throw error;
+        }
+        // Identify the permits this attempt used: if they are already gone from
+        // the store, a sibling decrypt recovered the scope and re-signing would
+        // cost a second prompt for nothing.
+        const staleSignatures = credentials.permissions.map((p) => p.serializedPermit.signature);
+        // Re-grant under the current context and retry the still-unresolved
+        // chunks once; a second revoked failure surfaces instead of looping
+        // into the upstream 15-minute validity cache. Spent is set before
+        // awaiting so a failing re-grant cannot re-arm the budget.
+        recovery.spent = true;
+        try {
+          credentials = await this.#credentialService.recoverPermits(
+            allContracts,
+            strategy.delegator,
+            staleSignatures,
           );
-          if (missing.length > 0) {
-            throw new DecryptionFailedError(
-              `${strategy.errorMessage}: relayer returned no clear value for ${missing.length} of ${encryptedValues.length} handle(s) on ${contractAddress}`,
-              {
-                cause: new AggregateError(
-                  missing.map(
-                    (encryptedValue) =>
-                      new DecryptionFailedError(
-                        `No clear value for handle ${encryptedValue} on ${contractAddress}`,
-                      ),
-                  ),
-                  `${missing.length} handle(s) missing a clear value on ${contractAddress}`,
-                ),
-              },
+        } catch (recoveryError) {
+          // A re-grant the signer cannot complete must not mask the revocation:
+          // the caller's remedy is a new permit, not a signing fix. A user
+          // rejecting the prompt stays a rejection.
+          if (recoveryError instanceof SigningFailedError) {
+            throw new RevokedKmsContextError(
+              "The permit's KMS context has been revoked on-chain and the automatic re-grant " +
+                "failed, so the decrypt cannot proceed. Establish a new permit for this scope " +
+                "and retry.",
+              { cause: recoveryError },
             );
           }
-        }),
-        5,
-      );
+          throw recoveryError;
+        }
+        await this.#runDecryptRequests(
+          strategy,
+          credentials,
+          requests.filter(({ encryptedValues }) =>
+            encryptedValues.some((encryptedValue) => result[encryptedValue] === undefined),
+          ),
+          result,
+          options,
+        );
+      }
 
       const uncachedResult: Record<EncryptedValue, ClearValue> = {};
       for (const encryptedValue of uncachedEncryptedValues) {
@@ -515,7 +511,105 @@ export class DecryptionService {
       });
       // The per-contract wrap above already classified these; this is a passthrough
       // for them plus a fallback for any non-contract failure (e.g. caching).
-      throw wrapDecryptError(error, strategy.errorMessage, { isDelegated: strategy.delegated });
+      throw wrapDecryptError(error, strategy.errorMessage, {
+        isDelegated: strategy.delegator !== undefined,
+      });
+    }
+  }
+
+  /**
+   * Fan the decrypt requests out (bounded concurrency), writing clear values
+   * into `result` and the cache as each settles. Every request is settled
+   * before anything is thrown: pLimit rejects on the first settled failure
+   * while siblings are still in flight, which would let a sibling's earlier
+   * failure hide a revoked-context revert from the recovery decision and let
+   * the retry race workers still writing into `result`. Among the settled
+   * failures, a {@link RevokedKmsContextError} is surfaced in preference to
+   * whichever happened to settle first, so the self-heal always sees it.
+   */
+  async #runDecryptRequests(
+    strategy: DecryptionStrategy,
+    credentials: SerializedTransportKeyPairWithPermissions,
+    requests: DecryptRequest[],
+    result: Record<EncryptedValue, ClearValue>,
+    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
+  ): Promise<void> {
+    const outcomes = await pLimit(
+      requests.map(({ contractAddress, encryptedValues }) => async (): Promise<unknown> => {
+        try {
+          await this.#decryptRequest(
+            strategy,
+            credentials,
+            contractAddress,
+            encryptedValues,
+            result,
+            options,
+          );
+          return undefined;
+        } catch (error) {
+          return error;
+        }
+      }),
+      5,
+    );
+    const failures = outcomes.filter((outcome) => outcome !== undefined);
+    if (failures.length > 0) {
+      throw failures.find((failure) => failure instanceof RevokedKmsContextError) ?? failures[0];
+    }
+  }
+
+  /** Decrypt one contract's chunk of handles into `result` (and the cache). */
+  async #decryptRequest(
+    strategy: DecryptionStrategy,
+    credentials: SerializedTransportKeyPairWithPermissions,
+    contractAddress: Address,
+    encryptedValues: EncryptedValue[],
+    result: Record<EncryptedValue, ClearValue>,
+    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
+  ): Promise<void> {
+    // Classify per contract so a not-entitled / relayer failure carries the
+    // exact contract + ACL actor. Already-typed errors pass straight through.
+    let decrypted: DecryptValuesReturnType;
+    try {
+      decrypted = await this.#decryptValues(credentials, contractAddress, encryptedValues, options);
+    } catch (error) {
+      throw wrapDecryptError(error, strategy.errorMessage, {
+        isDelegated: strategy.delegator !== undefined,
+        contractAddress,
+        account: strategy.delegator ?? strategy.requesterAddress,
+      });
+    }
+
+    // `decryptValues` returns clear values positionally aligned with the
+    // requested `encryptedValues`; zip them back into the handle→value map.
+    for (let i = 0; i < encryptedValues.length; i++) {
+      const encryptedValue = encryptedValues[i];
+      const value = decrypted[i]?.value;
+      if (encryptedValue === undefined || value === undefined) {
+        continue;
+      }
+      result[encryptedValue] = value;
+      await this.#cache.set(strategy.requesterAddress, contractAddress, encryptedValue, value);
+    }
+
+    const missing = encryptedValues.filter(
+      (encryptedValue) => result[encryptedValue] === undefined,
+    );
+    if (missing.length > 0) {
+      throw new DecryptionFailedError(
+        `${strategy.errorMessage}: relayer returned no clear value for ${missing.length} of ${encryptedValues.length} handle(s) on ${contractAddress}`,
+        {
+          cause: new AggregateError(
+            missing.map(
+              (encryptedValue) =>
+                new DecryptionFailedError(
+                  `No clear value for handle ${encryptedValue} on ${contractAddress}`,
+                ),
+            ),
+            `${missing.length} handle(s) missing a clear value on ${contractAddress}`,
+          ),
+        },
+      );
     }
   }
 

@@ -185,6 +185,10 @@ One permit per call: unlike `grantPermit`, `preparePermit` never widens an exist
 **Register promptly.** `prepared.eip712.message` carries the permit's validity window (`startTimestamp` + `durationDays`); if approval takes long enough that the window elapses before you call `registerPermit`, it throws `PreparedPermitExpiredError` — call `preparePermit` again for a fresh window. Registering also checks that the chain embedded in `prepared.eip712.domain` matches the SDK's active chain (`PreparedPermitChainMismatchError`) and that the transport key pair hasn't changed since prepare (`TransportKeyPairChangedError`, e.g. after a TTL expiry) — see the [Offline reference](../reference/sdk/Offline.md#preparepermit) for details.
 {% endhint %}
 
+{% hint style="info" %}
+**KMS context rotation.** A registered permit is bound to the chain's KMS context. If that context is revoked on-chain, decrypts throw `RevokedKmsContextError` with a `SigningFailedError` as `cause`: the SDK's automatic re-grant cannot sign in a signerless session, so it keeps the scope's other permits and surfaces the error instead. Run `preparePermit` and `registerPermit` again for the affected contracts. See the [error reference](../reference/sdk/errors.md#revokedkmscontexterror) for how to tell this case apart from the retryable one.
+{% endhint %}
+
 ## Next steps
 
 - [Offline reference](../reference/sdk/Offline.md) -- full `prepare`/`preparePermit` signatures, request kinds, and options

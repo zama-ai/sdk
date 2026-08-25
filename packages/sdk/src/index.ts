@@ -103,6 +103,7 @@ export {
   PreparedPermitExpiredError,
   RelayerRequestFailedError,
   retryAfterSeconds,
+  RevokedKmsContextError,
   RpcRateLimitError,
   SignerNotConfiguredError,
   SignerRequiredError,

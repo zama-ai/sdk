@@ -240,6 +240,46 @@ export function isInvalidTransportKeyPairMessage(message: string): boolean {
   return message.toLowerCase().includes("invalid transportkeypair");
 }
 
+/**
+ * 4-byte selector of `InvalidKmsContext(uint256)`, the revert ProtocolConfig
+ * raises when the KMS signers read resolves an unknown or revoked context.
+ * The `error.test.ts` drift guard recomputes it from the Solidity signature.
+ */
+export const INVALID_KMS_CONTEXT_SELECTOR = "0x77ddbe81";
+
+/** Revert-data fields across clients: viem's `raw`/`signature`, ethers' `data`. */
+const REVERT_DATA_KEYS = ["data", "raw", "signature"] as const;
+
+function nodeHasInvalidKmsContextRevert(node: Record<string, unknown>): boolean {
+  for (const key of REVERT_DATA_KEYS) {
+    const value = node[key];
+    if (typeof value === "string" && value.toLowerCase().startsWith(INVALID_KMS_CONTEXT_SELECTOR)) {
+      return true;
+    }
+  }
+  // Text-only fallback for wrappers that stringify the revert instead of
+  // carrying the data fields above.
+  if (typeof node.message === "string") {
+    const msg = node.message.toLowerCase();
+    return msg.includes(INVALID_KMS_CONTEXT_SELECTOR) || msg.includes("invalidkmscontext");
+  }
+  return false;
+}
+
+/**
+ * True when a failure is the on-chain KMS signers read reverting with
+ * `InvalidKmsContext`: the permit's KMS context has been revoked (or never
+ * existed), so every permit signed under it is permanently dead. The decrypt
+ * path uses this to evict the permit and re-grant under the current context.
+ *
+ * The installed `@fhevm/sdk` performs that read without the error in its ABI,
+ * so the revert arrives as raw data; the selector is matched anywhere in the
+ * cause chain, with a message fallback for text-only providers.
+ */
+export function isRevokedKmsContextError(error: unknown): boolean {
+  return findInErrorChain(error, nodeHasInvalidKmsContextRevert) !== undefined;
+}
+
 /** Parse the on-chain handle out of the not-entitled message. */
 export function parseHandleFromMessage(message: string): string | undefined {
   return /handle (0x[0-9a-fA-F]{64})/.exec(message)?.[1];

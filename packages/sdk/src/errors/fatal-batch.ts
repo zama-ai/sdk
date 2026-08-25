@@ -1,4 +1,4 @@
-import { KeyWrappingError } from "./credential";
+import { KeyWrappingError, RevokedKmsContextError } from "./credential";
 import { ConfigurationError } from "./relayer";
 import { RpcRateLimitError } from "./rpc";
 import { SigningRejectedError, SigningFailedError } from "./signing";
@@ -11,7 +11,10 @@ import { SigningRejectedError, SigningFailedError } from "./signing";
  * `transportKeyPairDerivationSecret`, `crypto.subtle` unavailable).
  * These are systemic failures that won't recover within the same call; for a
  * rate-limit in particular, the per-item retry loop would only amplify the
- * throttle by re-hitting the already-rate-limited endpoint.
+ * throttle by re-hitting the already-rate-limited endpoint. A revoked KMS
+ * context is likewise batch-wide: every item's permit shares the dead context,
+ * and the per-item loop would trigger one evict-and-regrant wallet prompt per
+ * item instead of the one the batch attempt already spent.
  *
  * Callers iterating over a batch (e.g. per-token decrypt) should rethrow when
  * this predicate is true so the whole batch aborts, and record the error
@@ -23,6 +26,7 @@ export function isFatalBatchError(error: unknown): boolean {
     error instanceof SigningFailedError ||
     error instanceof ConfigurationError ||
     error instanceof RpcRateLimitError ||
-    error instanceof KeyWrappingError
+    error instanceof KeyWrappingError ||
+    error instanceof RevokedKmsContextError
   );
 }

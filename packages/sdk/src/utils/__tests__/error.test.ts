@@ -2,6 +2,7 @@ import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, test, expect } from "../../test-fixtures";
+import { keccak256, toBytes } from "viem";
 import {
   toError,
   isContractCallError,
@@ -12,10 +13,20 @@ import {
   isRelayerError,
   isNotEntitledMessage,
   isInvalidTransportKeyPairMessage,
+  isRevokedKmsContextError,
+  INVALID_KMS_CONTEXT_SELECTOR,
   parseHandleFromMessage,
   extractRetryAfter,
   parseRetryAfterHeader,
 } from "../error";
+
+// Locate the installed @fhevm/sdk source (it ships TS) relative to its manifest,
+// so the drift guards below read the REAL dependency, not a hand-copied constant.
+const fhevmSdkFile = (relPath: string): string => {
+  const require = createRequire(import.meta.url);
+  const pkgDir = dirname(require.resolve("@fhevm/sdk/package.json"));
+  return readFileSync(join(pkgDir, relPath), "utf8");
+};
 
 describe("toError", () => {
   test("returns the same Error instance", () => {
@@ -404,14 +415,6 @@ describe("isNotEntitledMessage / parseHandleFromMessage", () => {
     expect(isNotEntitledMessage(contractMsg)).toBe(false);
   });
 
-  // Locate the installed @fhevm/sdk source (it ships TS) relative to its manifest,
-  // so the drift guards below read the REAL dependency, not a hand-copied constant.
-  const fhevmSdkFile = (relPath: string): string => {
-    const require = createRequire(import.meta.url);
-    const pkgDir = dirname(require.resolve("@fhevm/sdk/package.json"));
-    return readFileSync(join(pkgDir, relPath), "utf8");
-  };
-
   // Drift guard: if a @fhevm/sdk bump rewords AclUserDecryptionError's actor
   // message, the phrase isNotEntitledMessage keys on disappears here and this fails
   // loudly — otherwise NOT_ENTITLED would silently downgrade to DECRYPTION_FAILED
@@ -456,12 +459,71 @@ describe("isInvalidTransportKeyPairMessage", () => {
   // Drift guard: if a @fhevm/sdk bump rewords the throw, our matcher silently
   // stops typing the error and the vault self-heal (evict + regenerate) breaks.
   test("the installed @fhevm/sdk still throws the message our matcher keys on", () => {
-    const require = createRequire(import.meta.url);
-    const pkgDir = dirname(require.resolve("@fhevm/sdk/package.json"));
-    const source = readFileSync(
-      join(pkgDir, "core/utils-p/decrypt/verifyTkmsPublicKey.ts"),
-      "utf8",
-    );
+    const source = fhevmSdkFile("core/utils-p/decrypt/verifyTkmsPublicKey.ts");
     expect(source).toContain("invalid TransportKeyPairKeyPair");
+  });
+});
+
+describe("isRevokedKmsContextError", () => {
+  const revertData = `${INVALID_KMS_CONTEXT_SELECTOR}${"11".repeat(32)}`;
+
+  test("matches viem's undecodable revert (raw + signature on a nested cause)", () => {
+    // The KMS signers read's ABI fragment carries no error entries, so viem
+    // can't decode the revert into an errorName; only the raw data survives.
+    const error = Object.assign(new Error("execution reverted"), {
+      name: "ContractFunctionExecutionError",
+      cause: Object.assign(new Error("reverted"), {
+        name: "ContractFunctionRevertedError",
+        raw: revertData,
+        signature: INVALID_KMS_CONTEXT_SELECTOR,
+      }),
+    });
+    expect(isRevokedKmsContextError(error)).toBe(true);
+  });
+
+  test("matches ethers' CALL_EXCEPTION carrying the revert data", () => {
+    const error = Object.assign(new Error("call revert exception"), {
+      code: "CALL_EXCEPTION",
+      data: revertData,
+    });
+    expect(isRevokedKmsContextError(error)).toBe(true);
+  });
+
+  test("matches a message-only rendering of the revert", () => {
+    expect(isRevokedKmsContextError(new Error(`execution reverted: ${revertData}`))).toBe(true);
+    expect(isRevokedKmsContextError(new Error("reverted with InvalidKmsContext(42)"))).toBe(true);
+    // The name match is case-insensitive; wrappers stringify the casing inconsistently.
+    expect(isRevokedKmsContextError(new Error("reverted with InvalidKMSContext(42)"))).toBe(true);
+  });
+
+  test("does NOT match unrelated reverts or transport failures", () => {
+    expect(isRevokedKmsContextError(new Error("execution reverted"))).toBe(false);
+    expect(isRevokedKmsContextError(new Error("network error"))).toBe(false);
+    expect(
+      isRevokedKmsContextError(
+        Object.assign(new Error("reverted"), { code: "CALL_EXCEPTION", data: "0xdeadbeef" }),
+      ),
+    ).toBe(false);
+    expect(isRevokedKmsContextError(undefined)).toBe(false);
+  });
+
+  // Drift guard: the hardcoded selector must stay the keccak of the Solidity
+  // signature ProtocolConfig reverts with. A silent selector change would turn
+  // the typed self-heal signal back into an opaque DecryptionFailedError.
+  test("the selector constant matches keccak('InvalidKmsContext(uint256)')", () => {
+    expect(keccak256(toBytes("InvalidKmsContext(uint256)")).slice(0, 10)).toBe(
+      INVALID_KMS_CONTEXT_SELECTOR,
+    );
+  });
+
+  // Drift guard: the installed @fhevm/sdk must still document that its KMS
+  // signers read doubles as the context validity check reverting with
+  // InvalidKmsContext. If an upstream bump reroutes or renames that check,
+  // this fails loudly instead of the recovery silently never triggering.
+  test("the installed @fhevm/sdk KMS signers read still keys on InvalidKmsContext", () => {
+    const source = fhevmSdkFile(
+      "core/host-contracts/getKmsContextSignersAndThresholdFromExtraData-p.ts",
+    );
+    expect(source).toContain("InvalidKmsContext");
   });
 });
