@@ -52,6 +52,7 @@ export {
   hoodi,
   ingenTestnet,
   mainnet,
+  polygon,
   polygonAmoy,
   sepolia,
 } from "./chains";

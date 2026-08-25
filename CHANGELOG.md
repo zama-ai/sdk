@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.5.0-alpha.12](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.11...v3.5.0-alpha.12) (2026-08-25)
+
+### Features
+
+- add polygon support ([#638](https://github.com/zama-ai/sdk/issues/638)) ([f97f9f6]())
+
 ## [3.5.0-alpha.11](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.10...v3.5.0-alpha.11) (2026-08-25)
 
 ### Features

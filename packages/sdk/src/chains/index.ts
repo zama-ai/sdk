@@ -1,5 +1,6 @@
 export {
   mainnet,
+  polygon,
   sepolia,
   polygonAmoy,
   hoodi,
