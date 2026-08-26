@@ -1,5 +1,26 @@
 # Changelog
 
+## [3.5.0](https://github.com/zama-ai/sdk/compare/v3.4.0...v3.5.0) (2026-08-26)
+
+### Features
+
+- add polygon support ([#638](https://github.com/zama-ai/sdk/issues/638)) ([f97f9f6]())
+- **credentials:** optional derivationSecret wrapping for at-rest private key protection [SDK-135] ([#547](https://github.com/zama-ai/sdk/issues/547)) ([65a60eb]())
+- **examples:** add example-polygon-amoy app ([#603](https://github.com/zama-ai/sdk/issues/603)) ([be7fbac]())
+- offline permit flow ([#634](https://github.com/zama-ai/sdk/issues/634)) ([bbfae74]())
+- revoked kms context recovery ([#633](https://github.com/zama-ai/sdk/issues/633)) ([8f1e9d1]())
+- **sdk:** add Polygon Amoy (80002) chain preset ([#602](https://github.com/zama-ai/sdk/issues/602)) ([bf6157b]())
+- **sdk:** offline signing `prepare` for out-of-process custody (SDK-75) ([#345](https://github.com/zama-ai/sdk/issues/345)) ([66b8b40]()), closes [#7]()
+
+### Bug Fixes
+
+- add browser compatibility lint ([#625](https://github.com/zama-ai/sdk/issues/625)) ([cb27545]())
+- **examples:** derive relayer proxy URL from window origin ([#635](https://github.com/zama-ai/sdk/issues/635)) ([e676154]())
+- **examples:** switch Sepolia/Hoodi explorer links to BlockScout [SDK-297] ([#636](https://github.com/zama-ai/sdk/issues/636)) ([6540368]())
+- **examples:** use bare relayer host in proxy default ([#601](https://github.com/zama-ai/sdk/issues/601)) ([081bb9c]())
+- **sdk:** bind confidentialTransferFrom input proof to the tx sender ([#611](https://github.com/zama-ai/sdk/issues/611)) ([d51c627]())
+- **sdk:** guard ACL revert lookup against prototype-chain error names ([#624](https://github.com/zama-ai/sdk/issues/624)) ([f871a2c]()), closes [#130]() [#130]()
+
 ## [3.5.0-alpha.12](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.11...v3.5.0-alpha.12) (2026-08-25)
 
 ### Features
