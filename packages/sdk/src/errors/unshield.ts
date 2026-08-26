@@ -12,7 +12,7 @@ export interface UnshieldAlreadyFinalizedDetails {
 }
 
 /**
- * The unwrap request was already finalized on-chain — the underlying ERC-20
+ * The unwrap request was already finalized on-chain: the underlying ERC-20
  * tokens were delivered and there is nothing left to resume. The SDK clears
  * the persisted pending-unshield pointer before throwing, so treat this as a
  * success signal: refresh balances and dismiss any "resume unshield" prompt.

@@ -435,7 +435,7 @@ export class WrappedToken extends Token {
    * @param unwrapTxHash - The transaction hash of the previously submitted unwrap.
    * @param callbacks - Optional progress callbacks.
    * @returns The finalize transaction hash and mined receipt.
-   * @throws if the unwrap request was already finalized on-chain — the persisted
+   * @throws if the unwrap request was already finalized on-chain; the persisted
    *   pending-unshield state is cleared first. {@link UnshieldAlreadyFinalizedError}
    *
    * @example
@@ -482,7 +482,7 @@ export class WrappedToken extends Token {
    * The pointer is verified on-chain before it is reported: if the unwrap
    * request was already finalized (e.g. the tab closed before the SDK could
    * clear storage), the stale pointer is cleared and `null` is returned. When
-   * the verification read fails, the pointer is returned unverified — a
+   * the verification read fails, the pointer is returned unverified: a
    * network error never deletes recovery state.
    *
    * @returns The pending unwrap tx hash, or `null`.
@@ -618,7 +618,7 @@ export class WrappedToken extends Token {
 
   /**
    * Decode the `unwrapRequestId` from an unwrap/unshield receipt's logs.
-   * Only logs emitted by this wrapper count — a caller-supplied tx hash from a
+   * Only logs emitted by this wrapper count: a caller-supplied tx hash from a
    * different wrapper must fail here, not decode a foreign request id. Logs
    * without an emitter address (older custom adapters) are kept.
    * Throws when no matching `UnwrapRequested` event is found.
@@ -640,7 +640,7 @@ export class WrappedToken extends Token {
    * True only when the unwrap request is definitely gone. `unwrapRequester`
    * returns the zero address once finalize deletes the request, and the id
    * always comes from the unwrap tx's own `UnwrapRequested` event, so zero can
-   * only mean "already finalized". A failed read returns `false` — the check
+   * only mean "already finalized". A failed read returns `false`: the check
    * fails open, so a network error never heals recovery state.
    */
   async #isUnwrapRequestConsumed(unwrapRequestId: EncryptedValue): Promise<boolean> {
@@ -655,9 +655,8 @@ export class WrappedToken extends Token {
   }
 
   /**
-   * Consumed-request check for a persisted pointer. Entries saved by this SDK
-   * version carry the request id; legacy hash-only entries re-derive it from
-   * the unwrap receipt. Fails open (`false`) when the id cannot be resolved.
+   * Consumed-request check for a persisted pointer; legacy hash-only entries
+   * re-derive the request id from the unwrap receipt.
    */
   async #isPendingUnshieldConsumed(pending: PendingUnshieldRequest): Promise<boolean> {
     let unwrapRequestId = pending.unwrapRequestId;
@@ -672,7 +671,6 @@ export class WrappedToken extends Token {
     return this.#isUnwrapRequestConsumed(unwrapRequestId);
   }
 
-  /** Clear the persisted pending-unshield pointer, tolerating storage failures. */
   async #clearStoredPendingUnshield(operation: string): Promise<void> {
     await swallow(
       `${operation}: clearPendingUnshield`,
@@ -726,7 +724,7 @@ export class WrappedToken extends Token {
       finalizeResult = await this.finalizeUnwrap(unwrapRequestId);
     } catch (error) {
       // The id comes from this wrapper's own UnwrapRequested event and the only
-      // transition to "gone" is a successful finalize — so this revert means a
+      // transition to "gone" is a successful finalize, so this revert means a
       // concurrent finalize won the race (second tab, double click, third
       // party). The funds arrived; heal.
       if (!isInvalidUnwrapRequestRevert(error)) {

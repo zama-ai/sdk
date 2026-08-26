@@ -2138,13 +2138,11 @@ Stuck on the migration, or spotted a step or rename this guide is missing? **Ope
 > **Unreleased.** The changes on this page are on the prerelease (`beta`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
 
 
-_Nothing is staged for the next release yet. As beta builds land, run `pnpm docs:changelog` to refresh this page._
-
 ## Stale pending-unshield pointers self-heal
 
 An unshield whose finalize confirmed but whose local pointer was never cleared (a closed tab, a failed storage write) used to leave a permanent "resume unshield" prompt. Every resume attempt then submitted a transaction that reverted.
 
-The SDK now verifies the pointer on-chain. `getPendingUnshield()` clears a pointer whose unwrap request was already finalized and returns `null`. `resumeUnshield()` throws a new `UnshieldAlreadyFinalizedError` (`UNSHIELD_ALREADY_FINALIZED`) instead of broadcasting a reverting transaction, and `useResumeUnshield` refreshes the pending-unshield and balance queries when it sees this error, so the prompt disappears on its own. Treat the error as completion: the funds already arrived. No API change is required to pick this up. See the [error reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) and [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields).
+The SDK now verifies the pointer on-chain. `getPendingUnshield()` clears a pointer whose unwrap request was already finalized and returns `null`. `resumeUnshield()` throws a new `UnshieldAlreadyFinalizedError` (`UNSHIELD_ALREADY_FINALIZED`) instead of broadcasting a reverting transaction, and `useResumeUnshield` refreshes the pending-unshield and balance queries when it sees this error, so the prompt disappears on its own. Treat the error as completion: the funds already arrived. No API change is required to pick this up. See the [error reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) and [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields).
 
 ## 3.x
 
@@ -4304,7 +4302,7 @@ The flow is:
 
 
 > [!WARNING]
-> **A resume can lose the race** Another tab, a double click, or a third party can finalize the same request first. `resumeUnshield` then clears the persisted state and throws `UnshieldAlreadyFinalizedError` instead of broadcasting a transaction that would revert. Treat the error as completion: the funds already arrived, so dismiss the prompt and refresh balances. `useResumeUnshield` refreshes the affected queries automatically. See [UnshieldAlreadyFinalizedError](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror).
+> **A resume can lose the race** Another tab, a double click, or a third party can finalize the same request first. `resumeUnshield` then clears the persisted state and throws `UnshieldAlreadyFinalizedError` instead of broadcasting a transaction that would revert. Treat the error as completion: the funds already arrived, so dismiss the prompt and refresh balances. `useResumeUnshield` refreshes the affected queries automatically. See [UnshieldAlreadyFinalizedError](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror).
 
 
 
@@ -7926,7 +7924,7 @@ await wrappedToken.unshieldAll({
 
 Resumes an interrupted unshield after the unwrap transaction has already been submitted. The SDK reads the unwrap receipt, extracts the unwrap request id, waits for the proof, and submits `finalizeUnwrap`. On success it clears the persisted pending state.
 
-If the unwrap request was already finalized on-chain, it clears the persisted pending state and throws [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) instead of submitting a transaction that would revert. The funds already arrived; treat the error as completion.
+If the unwrap request was already finalized on-chain, it clears the persisted pending state and throws [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) instead of submitting a transaction that would revert. The funds already arrived; treat the error as completion.
 
 ```ts
 const pending = await wrappedToken.getPendingUnshield();
@@ -13508,7 +13506,7 @@ Run this check on mount to handle any session that was interrupted. Resuming is 
 
 
 > [!WARNING]
-> **An already-finalized resume is not a failure** If the unwrap request was already finalized (another tab, a double click, a third party), the mutation fails with [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror). The funds already arrived. The SDK clears the persisted state and the hook invalidates the pending-unshield and balance queries, so the resume prompt disappears on its own. Treat the error as completion; do not retry.
+> **An already-finalized resume is not a failure** If the unwrap request was already finalized (another tab, a double click, a third party), the mutation fails with [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror). The funds already arrived. The SDK clears the persisted state and the hook invalidates the pending-unshield and balance queries, so the resume prompt disappears on its own. Treat the error as completion; do not retry.
 
 
 

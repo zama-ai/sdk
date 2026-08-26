@@ -47,8 +47,8 @@ export function useResumeUnshield(
     },
     onError: (error, variables, onMutateResult, context) => {
       options?.onError?.(error, variables, onMutateResult, context);
-      // The unshield settled elsewhere and the SDK cleared the stored pointer:
-      // refresh so the pending-unshield banner and balances converge.
+      // Unlike other errors, this one means the unshield settled: refresh so
+      // the pending-unshield banner and balances converge.
       if (error instanceof UnshieldAlreadyFinalizedError) {
         invalidateAfterUnshield(context.client, token.address);
       }
