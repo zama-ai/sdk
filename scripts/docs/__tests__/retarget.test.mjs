@@ -16,8 +16,8 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, test } from "vitest";
 import { findUrlProblems } from "../check-target.mjs";
 import {
-  alphaHasSubstance,
-  emptyAlphaTemplate,
+  betaHasSubstance,
+  emptyBetaTemplate,
   RAW_END,
   RAW_START,
   TODO_MARKER,
@@ -27,77 +27,77 @@ import { retargetUrls } from "../retarget.mjs";
 // ─────────────────────────────────────────────── function-level regressions ──
 
 describe("retargetUrls — raw.githubusercontent branch segment", () => {
-  test("main → prerelease flips the branch", () => {
-    expect(retargetUrls("raw.githubusercontent.com/zama-ai/sdk/main/llms.txt", "prerelease")).toBe(
-      "raw.githubusercontent.com/zama-ai/sdk/prerelease/llms.txt",
+  test("main → beta flips the branch", () => {
+    expect(retargetUrls("raw.githubusercontent.com/zama-ai/sdk/main/llms.txt", "beta")).toBe(
+      "raw.githubusercontent.com/zama-ai/sdk/beta/llms.txt",
     );
   });
 
-  test("prerelease → main flips back", () => {
-    expect(
-      retargetUrls("raw.githubusercontent.com/zama-ai/sdk/prerelease/llms-full.txt", "main"),
-    ).toBe("raw.githubusercontent.com/zama-ai/sdk/main/llms-full.txt");
+  test("beta → main flips back", () => {
+    expect(retargetUrls("raw.githubusercontent.com/zama-ai/sdk/beta/llms-full.txt", "main")).toBe(
+      "raw.githubusercontent.com/zama-ai/sdk/main/llms-full.txt",
+    );
   });
 });
 
 describe("retargetUrls — docs.zama.org space segment (stable is implicit)", () => {
   const stableUrl = "docs.zama.org/protocol/sdk/guides/handle-errors.md";
-  const alphaUrl = "docs.zama.org/protocol/sdk/alpha/guides/handle-errors.md";
+  const betaUrl = "docs.zama.org/protocol/sdk/beta/guides/handle-errors.md";
 
-  test("main → prerelease INSERTS the alpha segment", () => {
-    expect(retargetUrls(stableUrl, "prerelease")).toBe(alphaUrl);
+  test("main → beta INSERTS the beta segment", () => {
+    expect(retargetUrls(stableUrl, "beta")).toBe(betaUrl);
   });
 
-  test("prerelease → main REMOVES the alpha segment", () => {
-    expect(retargetUrls(alphaUrl, "main")).toBe(stableUrl);
+  test("beta → main REMOVES the beta segment", () => {
+    expect(retargetUrls(betaUrl, "main")).toBe(stableUrl);
   });
 
   test("retargeting to the current branch is a no-op (idempotent)", () => {
-    expect(retargetUrls(alphaUrl, "prerelease")).toBe(alphaUrl);
+    expect(retargetUrls(betaUrl, "beta")).toBe(betaUrl);
     expect(retargetUrls(stableUrl, "main")).toBe(stableUrl);
   });
 
   test("rewrites every occurrence on a line", () => {
     const both = `see ${stableUrl} and ${stableUrl}`;
-    expect(retargetUrls(both, "prerelease")).toBe(`see ${alphaUrl} and ${alphaUrl}`);
+    expect(retargetUrls(both, "beta")).toBe(`see ${betaUrl} and ${betaUrl}`);
   });
 
   test("does not treat a real path segment as a space segment", () => {
-    // `overview` is a page, not a space — alpha must be inserted before it.
-    expect(retargetUrls("docs.zama.org/protocol/sdk/overview.md", "prerelease")).toBe(
-      "docs.zama.org/protocol/sdk/alpha/overview.md",
+    // `overview` is a page, not a space — beta must be inserted before it.
+    expect(retargetUrls("docs.zama.org/protocol/sdk/overview.md", "beta")).toBe(
+      "docs.zama.org/protocol/sdk/beta/overview.md",
     );
   });
 });
 
 describe("retargetUrls — round-trip byte-identity", () => {
-  // A promotion (main→prerelease) followed by its inverse (prerelease→main) must
+  // A promotion (main→beta) followed by its inverse (beta→main) must
   // return the exact original bytes, and vice-versa. Any asymmetry in the
-  // insert/remove-`alpha/` logic would surface as a mismatch here.
-  test("main → prerelease → main is byte-identical", () => {
+  // insert/remove-`beta/` logic would surface as a mismatch here.
+  test("main → beta → main is byte-identical", () => {
     const stable = [
       "raw.githubusercontent.com/zama-ai/sdk/main/llms.txt",
       "docs.zama.org/protocol/sdk/guides/x.md",
       "docs.zama.org/protocol/sdk/reference/sdk/Token.md",
       "github.com/zama-ai/sdk/blob/main/CHANGELOG.md",
     ].join("\n");
-    expect(retargetUrls(retargetUrls(stable, "prerelease"), "main")).toBe(stable);
+    expect(retargetUrls(retargetUrls(stable, "beta"), "main")).toBe(stable);
   });
 
-  test("prerelease → main → prerelease is byte-identical", () => {
-    const alpha = [
-      "raw.githubusercontent.com/zama-ai/sdk/prerelease/llms-full.txt",
-      "docs.zama.org/protocol/sdk/alpha/guides/x.md",
-      "docs.zama.org/protocol/sdk/alpha/overview.md",
+  test("beta → main → beta is byte-identical", () => {
+    const beta = [
+      "raw.githubusercontent.com/zama-ai/sdk/beta/llms-full.txt",
+      "docs.zama.org/protocol/sdk/beta/guides/x.md",
+      "docs.zama.org/protocol/sdk/beta/overview.md",
     ].join("\n");
-    expect(retargetUrls(retargetUrls(alpha, "main"), "prerelease")).toBe(alpha);
+    expect(retargetUrls(retargetUrls(beta, "main"), "beta")).toBe(beta);
   });
 });
 
 describe("retargetUrls — mixed content", () => {
   test("only the wrong URL flips; correct and unrelated URLs stay put", () => {
     const content = [
-      "docs.zama.org/protocol/sdk/alpha/wrong.md", // wrong for main → flips to stable
+      "docs.zama.org/protocol/sdk/beta/wrong.md", // wrong for main → flips to stable
       "docs.zama.org/protocol/sdk/right.md", // already stable → unchanged
       "raw.githubusercontent.com/zama-ai/sdk/main/ok.txt", // already main → unchanged
       "docs.zama.org/other/path.md", // not the /protocol/sdk/ space → unchanged
@@ -119,7 +119,7 @@ describe("retargetUrls — malformed / out-of-scope links are left alone", () =>
     // `.../sdk/main` (end of string, no following `/path`) has no trailing slash and
     // must be left untouched — flipping it would corrupt a non-file reference.
     const bare = "see raw.githubusercontent.com/zama-ai/sdk/main";
-    expect(retargetUrls(bare, "prerelease")).toBe(bare);
+    expect(retargetUrls(bare, "beta")).toBe(bare);
   });
 
   test("a github `blob/<branch>` link is never retargeted", () => {
@@ -127,33 +127,30 @@ describe("retargetUrls — malformed / out-of-scope links are left alone", () =>
     // point at main regardless of target — it is neither a raw.github corpus link nor
     // a docs.zama.org space link, so retargetUrls must not touch it.
     const blob = "github.com/zama-ai/sdk/blob/main/CHANGELOG.md";
-    expect(retargetUrls(blob, "prerelease")).toBe(blob);
+    expect(retargetUrls(blob, "beta")).toBe(blob);
     expect(retargetUrls(blob, "main")).toBe(blob);
   });
 });
 
 describe("findUrlProblems — catches the implicit-stable blind spot", () => {
-  test("space-less (stable) URL on prerelease is flagged", () => {
-    const problems = findUrlProblems("docs.zama.org/protocol/sdk/guides/x.md", "prerelease");
-    expect(problems).toEqual([`links to the "stable" GitBook space (expected "alpha")`]);
+  test("space-less (stable) URL on beta is flagged", () => {
+    const problems = findUrlProblems("docs.zama.org/protocol/sdk/guides/x.md", "beta");
+    expect(problems).toEqual([`links to the "stable" GitBook space (expected "beta")`]);
   });
 
-  test("alpha URL on main is flagged", () => {
-    const problems = findUrlProblems("docs.zama.org/protocol/sdk/alpha/guides/x.md", "main");
-    expect(problems).toEqual([`links to the "alpha" GitBook space (expected "stable")`]);
+  test("beta URL on main is flagged", () => {
+    const problems = findUrlProblems("docs.zama.org/protocol/sdk/beta/guides/x.md", "main");
+    expect(problems).toEqual([`links to the "beta" GitBook space (expected "stable")`]);
   });
 
   test("correctly-targeted URLs are clean in both directions", () => {
-    expect(findUrlProblems("docs.zama.org/protocol/sdk/alpha/x.md", "prerelease")).toEqual([]);
+    expect(findUrlProblems("docs.zama.org/protocol/sdk/beta/x.md", "beta")).toEqual([]);
     expect(findUrlProblems("docs.zama.org/protocol/sdk/x.md", "main")).toEqual([]);
   });
 
   test("wrong raw.githubusercontent branch is flagged", () => {
-    const problems = findUrlProblems(
-      "raw.githubusercontent.com/zama-ai/sdk/main/llms.txt",
-      "prerelease",
-    );
-    expect(problems).toEqual([`links to the "main" branch (expected "prerelease")`]);
+    const problems = findUrlProblems("raw.githubusercontent.com/zama-ai/sdk/main/llms.txt", "beta");
+    expect(problems).toEqual([`links to the "main" branch (expected "beta")`]);
   });
 });
 
@@ -214,7 +211,7 @@ const SUMMARY = `# Table of contents
 
 ## Changelog
 
-- [Alpha](changelog/alpha.md)
+- [Beta](changelog/beta.md)
 - [3.x](changelog/v3.md)
   - [3.1.x](changelog/v3-1.md)
   - [3.0.x](changelog/v3-0.md)
@@ -265,7 +262,7 @@ _Released 2026-01-01._
 The first stable v3 line.
 `;
 
-// Carries an inbound anchor into the Alpha page's "FHE runtime" heading — promotion
+// Carries an inbound anchor into the Beta page's "FHE runtime" heading — promotion
 // must repoint it to the new version page (else it dangles). Exercises A1's
 // anchor-repoint folded into retarget's changed[].
 const V3_1 = `---
@@ -281,37 +278,37 @@ This page covers the \`3.1.x\` line.
 
 _Released 2026-02-01._
 
-Per-chain tuning is documented under [FHE runtime](alpha.md#fhe-runtime).
+Per-chain tuning is documented under [FHE runtime](beta.md#fhe-runtime).
 `;
 
-// A staged Alpha page: editorial prose (with a flippable alpha-space URL and a
-// prerelease raw.github URL, so promotion carries them into the version page and
+// A staged Beta page: editorial prose (with a flippable beta-space URL and a
+// beta raw.github URL, so promotion carries them into the version page and
 // retarget's URL-rewrite must flip them), plus the machine-owned raw-material block.
-const STAGED_ALPHA = [
+const STAGED_BETA = [
   "---",
-  "title: Alpha",
-  "description: Unreleased changes on the prerelease (alpha) line.",
+  "title: Beta",
+  "description: Unreleased changes on the beta (beta) line.",
   "---",
   "",
-  "# Alpha",
+  "# Beta",
   "",
   '{% hint style="warning" %}',
-  "**Unreleased.** These changes are on the prerelease (`alpha`) line and are not yet in a stable release.",
+  "**Unreleased.** These changes are on the beta (`beta`) line and are not yet in a stable release.",
   "{% endhint %}",
   "",
-  "The internal FHE backend moved to `@fhevm/sdk`. See the [alpha runtime reference](https://docs.zama.org/protocol/sdk/alpha/guides/runtime.md) and the [raw corpus](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/llms.txt).",
+  "The internal FHE backend moved to `@fhevm/sdk`. See the [beta runtime reference](https://docs.zama.org/protocol/sdk/beta/guides/runtime.md) and the [raw corpus](https://raw.githubusercontent.com/zama-ai/sdk/beta/llms.txt).",
   "",
   "## FHE runtime",
   "",
   "`createConfig` accepts a process-wide `runtime` object that configures the FHE engine.",
   "",
-  // A table whose column width is driven by an alpha-space URL: flipping it to
-  // stable (dropping the `alpha/` segment, 6 chars) forces oxfmt to reflow the
+  // A table whose column width is driven by a beta-space URL: flipping it to
+  // stable (dropping the `beta/` segment, 6 chars) forces oxfmt to reflow the
   // table. This is the #538 shape — if llm:build ran BEFORE oxfmt, the corpus would
   // capture the pre-reflow widths and a fresh build would diverge.
   "| Setting | Reference |",
   "| --- | --- |",
-  "| runtime | https://docs.zama.org/protocol/sdk/alpha/guides/runtime.md |",
+  "| runtime | https://docs.zama.org/protocol/sdk/beta/guides/runtime.md |",
   "",
   "## Bug fixes",
   "",
@@ -323,7 +320,7 @@ const STAGED_ALPHA = [
   "",
   TODO_MARKER,
   "",
-  "### 3.4.0-alpha.1 — 2026-07-15",
+  "### 3.4.0-beta.1 — 2026-07-15",
   "",
   "#### Features",
   "",
@@ -372,8 +369,8 @@ function corpusConfig(branch) {
 }
 
 /** Build a corpus-buildable fixture tree. `branch` sets corpus.config's rawGithubBaseUrl;
- *  `alpha` is a staged tip ("staged") or the empty reset template ("empty"). */
-function makeFixture(root, { branch = "prerelease", alpha = "staged" } = {}) {
+ *  `beta` is a staged tip ("staged") or the empty reset template ("empty"). */
+function makeFixture(root, { branch = "beta", beta = "staged" } = {}) {
   write(root, "CHANGELOG.md", CHANGELOG);
   write(root, "README.md", README);
   write(root, "docs/llm/corpus.config.json", corpusConfig(branch));
@@ -384,8 +381,8 @@ function makeFixture(root, { branch = "prerelease", alpha = "staged" } = {}) {
   write(root, "docs/gitbook/src/changelog/v3-1.md", V3_1);
   write(
     root,
-    "docs/gitbook/src/changelog/alpha.md",
-    alpha === "staged" ? STAGED_ALPHA : emptyAlphaTemplate(),
+    "docs/gitbook/src/changelog/beta.md",
+    beta === "staged" ? STAGED_BETA : emptyBetaTemplate(),
   );
 }
 
@@ -405,12 +402,12 @@ function snapshotTree(root) {
 }
 
 const VERSION_PAGE = "docs/gitbook/src/changelog/v3-4.md";
-const ALPHA_PAGE = "docs/gitbook/src/changelog/alpha.md";
+const BETA_PAGE = "docs/gitbook/src/changelog/beta.md";
 const read = (root, rel) => readFileSync(join(root, rel), "utf8");
 
 describe("docs:retarget main — promotion integration", () => {
   test(
-    "promote-once: version page created, alpha reset, SUMMARY + index wired, anchors repointed",
+    "promote-once: version page created, beta reset, SUMMARY + index wired, anchors repointed",
     { timeout: 60_000 },
     () => {
       const dir = freshDir();
@@ -425,29 +422,29 @@ describe("docs:retarget main — promotion integration", () => {
       expect(versionPage).toContain("_Released 2026-07-17._");
       expect(versionPage).toContain("### FHE runtime");
       expect(versionPage).toContain("object that configures the FHE engine");
-      // Machine-owned scaffolding + the Alpha page's own H1 must NOT carry over.
+      // Machine-owned scaffolding + the Beta page's own H1 must NOT carry over.
       expect(versionPage).not.toContain(RAW_START);
       expect(versionPage).not.toContain(TODO_MARKER);
-      expect(versionPage).not.toMatch(/^#\s+Alpha\s*$/m);
+      expect(versionPage).not.toMatch(/^#\s+Beta\s*$/m);
 
       // The moved URLs are flipped to the stable space (the #450 guard).
       expect(versionPage).toContain("docs.zama.org/protocol/sdk/guides/runtime.md");
-      expect(versionPage).not.toContain("docs.zama.org/protocol/sdk/alpha/");
+      expect(versionPage).not.toContain("docs.zama.org/protocol/sdk/beta/");
       expect(versionPage).toContain("raw.githubusercontent.com/zama-ai/sdk/main/llms.txt");
-      expect(versionPage).not.toContain("/sdk/prerelease/");
+      expect(versionPage).not.toContain("/sdk/beta/");
 
-      // Alpha page reset to the empty template.
-      expect(alphaHasSubstance(read(dir, ALPHA_PAGE))).toBe(false);
-      expect(read(dir, ALPHA_PAGE)).not.toContain("object that configures the FHE engine");
+      // Beta page reset to the empty template.
+      expect(betaHasSubstance(read(dir, BETA_PAGE))).toBe(false);
+      expect(read(dir, BETA_PAGE)).not.toContain("object that configures the FHE engine");
 
       // Nav wired: SUMMARY child + major-index bullet.
       expect(read(dir, "docs/gitbook/src/SUMMARY.md")).toContain("changelog/v3-4.md");
       expect(read(dir, "docs/gitbook/src/changelog/v3.md")).toMatch(/v3-4\.md/);
 
-      // Inbound anchor repointed off the (now emptied) alpha page.
+      // Inbound anchor repointed off the (now emptied) beta page.
       const v31 = read(dir, "docs/gitbook/src/changelog/v3-1.md");
       expect(v31).toContain("v3-4.md#fhe-runtime");
-      expect(v31).not.toContain("alpha.md#fhe-runtime");
+      expect(v31).not.toContain("beta.md#fhe-runtime");
     },
   );
 
@@ -464,7 +461,7 @@ describe("docs:retarget main — promotion integration", () => {
       expectOk(runNode(RETARGET, ["main"], dir));
       const afterSecond = snapshotTree(dir);
 
-      // No second version section, alpha/SUMMARY unchanged, corpus byte-identical.
+      // No second version section, beta/SUMMARY unchanged, corpus byte-identical.
       expect(afterSecond).toEqual(afterFirst);
       expect(afterSecond[VERSION_PAGE].match(/^## 3\.4\.0\s*$/gm)?.length).toBe(1);
     },
@@ -494,7 +491,7 @@ describe("docs:retarget main — promotion integration", () => {
         VERSION_PAGE,
         "docs/gitbook/src/changelog/v3-1.md",
         "docs/gitbook/src/changelog/v3.md",
-        ALPHA_PAGE,
+        BETA_PAGE,
         "docs/gitbook/src/SUMMARY.md",
         "docs/llm/corpus.config.json",
       ];
@@ -512,14 +509,14 @@ describe("docs:retarget main — promotion integration", () => {
   );
 
   test(
-    "check-target main passes on the promoted version page (no residual alpha/ URLs)",
+    "check-target main passes on the promoted version page (no residual beta/ URLs)",
     { timeout: 60_000 },
     () => {
       const dir = freshDir();
       makeFixture(dir);
 
       expectOk(runNode(RETARGET, ["main"], dir));
-      // Meaningful only because the promoted page carried alpha URLs that retarget
+      // Meaningful only because the promoted page carried beta URLs that retarget
       // flipped: had it not, check-target main would fail here.
       const check = runNode(CHECK_TARGET, ["main"], dir);
       expect(check.status, `check-target main failed:\n${check.stderr}`).toBe(0);
@@ -539,15 +536,15 @@ describe("docs:retarget main — promotion integration", () => {
 
     expect(res.status).not.toBe(0);
     expect(snapshotTree(dir)).toEqual(before); // nothing half-written
-    expect(read(dir, "docs/llm/corpus.config.json")).toContain("/sdk/prerelease");
+    expect(read(dir, "docs/llm/corpus.config.json")).toContain("/sdk/beta");
     expect(existsSync(join(dir, "llms.txt"))).toBe(false); // build never ran
   });
 
   test("no-op-safe: nothing to promote and no URLs to flip ⇒ exit 0, zero writes", () => {
     const dir = freshDir();
-    // Already on main + an empty Alpha page ⇒ promoteChangelog no-ops ("alpha page is
+    // Already on main + an empty Beta page ⇒ promoteChangelog no-ops ("beta page is
     // empty") and there are no URLs to flip.
-    makeFixture(dir, { branch: "main", alpha: "empty" });
+    makeFixture(dir, { branch: "main", beta: "empty" });
     const before = snapshotTree(dir);
 
     const res = runNode(RETARGET, ["main"], dir);
@@ -564,22 +561,22 @@ describe("docs:retarget main — promotion integration", () => {
     () => {
       const dir = freshDir();
       // The stale-CHANGELOG shape: already on main, the newest mainline entry (3.4.0)
-      // is already on its version page, yet the Alpha page STILL carries staged content
-      // (the release commit that would add a NEWER `## [X.Y.Z]` wasn't pulled). Alpha
+      // is already on its version page, yet the Beta page STILL carries staged content
+      // (the release commit that would add a NEWER `## [X.Y.Z]` wasn't pulled). Beta
       // here carries NO branch/space URLs, so the URL pass has nothing to flip — the
       // only thing that could write is promotion, and the guard suppresses it, letting
       // us assert BOTH exit 0 and zero writes.
-      makeFixture(dir, { branch: "main", alpha: "staged" });
+      makeFixture(dir, { branch: "main", beta: "staged" });
       write(
         dir,
-        ALPHA_PAGE,
+        BETA_PAGE,
         [
           "---",
-          "title: Alpha",
-          "description: Unreleased changes on the prerelease (alpha) line.",
+          "title: Beta",
+          "description: Unreleased changes on the beta (beta) line.",
           "---",
           "",
-          "# Alpha",
+          "# Beta",
           "",
           '{% hint style="warning" %}',
           "**Unreleased.** Preview only.",
@@ -623,15 +620,15 @@ describe("docs:retarget main — promotion integration", () => {
   );
 });
 
-describe("docs:retarget prerelease — never promotes", () => {
-  test("staged alpha is left intact; no version page, no SUMMARY entry", () => {
+describe("docs:retarget beta — never promotes", () => {
+  test("staged beta is left intact; no version page, no SUMMARY entry", () => {
     const dir = freshDir();
-    makeFixture(dir, { branch: "prerelease", alpha: "staged" });
+    makeFixture(dir, { branch: "beta", beta: "staged" });
 
-    expectOk(runNode(RETARGET, ["prerelease"], dir));
+    expectOk(runNode(RETARGET, ["beta"], dir));
 
     expect(existsSync(join(dir, VERSION_PAGE))).toBe(false);
-    expect(alphaHasSubstance(read(dir, ALPHA_PAGE))).toBe(true);
+    expect(betaHasSubstance(read(dir, BETA_PAGE))).toBe(true);
     expect(read(dir, "docs/gitbook/src/SUMMARY.md")).not.toContain("v3-4.md");
   });
 });

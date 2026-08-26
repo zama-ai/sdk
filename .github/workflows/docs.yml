@@ -2,7 +2,7 @@ name: Docs
 
 on:
   pull_request:
-    branches: [main, prerelease]
+    branches: [main, beta, alpha]
     paths: &doc-paths
       - "docs/**"
       - "examples/**/README.md"
@@ -17,11 +17,12 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - ".github/workflows/docs.yml"
-  # semantic-release forces branch-to-branch merges (prerelease→main) with the
-  # docs:retarget fix committed directly on top, so doc changes routinely reach
-  # main/prerelease via direct push, never a PR. Run the checks there too.
+  # semantic-release forces branch-to-branch merges (beta→main, and occasionally
+  # alpha→beta→main for protocol-breaking work) with the docs:retarget fix committed
+  # directly on top, so doc changes routinely reach main/beta/alpha via direct push,
+  # never a PR. Run the checks there too.
   push:
-    branches: [main, prerelease]
+    branches: [main, beta, alpha]
     paths: *doc-paths
   workflow_call:
 
@@ -67,7 +68,7 @@ jobs:
       - name: Verify LLM corpus artifacts are up to date
         run: pnpm exec turbo run llm:check
 
-      # Doc URLs are branch-specific (raw.githubusercontent .../main|prerelease, and
+      # Doc URLs are branch-specific (raw.githubusercontent .../main|beta, and
       # docs.zama.org .../stable|alpha). `github.base_ref` is the branch this PR lands
       # on — reliable here even though the PR is checked out detached. If the committed
       # URLs target the wrong branch (e.g. a promotion that forgot `pnpm docs:retarget`),
@@ -77,7 +78,7 @@ jobs:
 
   # External link liveness for the published docs + READMEs. Internal links and
   # anchors are checked above by `pnpm docs:check-links`; this job covers `https://`
-  # targets. Runs for PRs and direct pushes to main/prerelease, but NOT when this
+  # targets. Runs for PRs and direct pushes to main/beta/alpha, but NOT when this
   # workflow is reused by release.yml: there `github.workflow` is the caller's name
   # ("Release"), so external flakiness still can't block a release. If it flakes on
   # PRs, move to a scheduled (cron) workflow.

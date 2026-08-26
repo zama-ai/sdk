@@ -63,7 +63,7 @@ Use descriptive branch names:
 
 ### Making Changes
 
-1. Create a feature branch from `prerelease` (the default PR base; `main` is reserved for release/CI-infra PRs)
+1. Create a feature branch from `beta` (the default PR base; `main` is reserved for release/CI-infra PRs). `alpha` is not a feature-PR target — it's a protected branch used only for testing changes incompatible with the current protocol on mainnet/testnet (e.g. a new FHEVM SDK major version), synced from `beta` and merged back only once stable enough.
 2. Make your changes
 3. Ensure all checks pass:
 
@@ -79,7 +79,7 @@ pnpm build        # Build output
 
 ### GitBook Documentation
 
-The docs in `docs/gitbook/src/` are published to GitBook (both `main` and `prerelease` ship as separate spaces). **Links between doc pages must be relative `.md` paths** — e.g. `[Token](../reference/sdk/Token.md)`, never host-absolute (`/reference/sdk/Token`). GitBook serves each space under a sub-path (`docs.zama.org/protocol/sdk/…`), so a leading-slash link resolves against the site root and breaks (it only surfaces on the live site — use GitBook's per-PR preview to check rendering). Anchors must match a heading in the target page.
+The docs in `docs/gitbook/src/` are published to GitBook (both `main` and `beta` ship as separate spaces, labeled "Stable" and "Beta" in the docs site version switcher; `alpha` is a protocol-testing branch only and has no separate docs space). **Links between doc pages must be relative `.md` paths** — e.g. `[Token](../reference/sdk/Token.md)`, never host-absolute (`/reference/sdk/Token`). GitBook serves each space under a sub-path (`docs.zama.org/protocol/sdk/…`), so a leading-slash link resolves against the site root and breaks (it only surfaces on the live site — use GitBook's per-PR preview to check rendering). Anchors must match a heading in the target page.
 
 `pnpm docs:check-links` validates this (no host-absolute links, every relative target and `#anchor` resolves) and runs in CI on any docs change. Run it locally before pushing doc edits.
 
@@ -100,10 +100,10 @@ pnpm llm:check
 
 The pre-commit hook regenerates and stages the LLM artifacts automatically when relevant staged sources change. If a corpus source is partially staged, stage or discard the remaining changes before committing so the generated files match the committed source state.
 
-Doc URLs are branch-specific: the corpus and the migration-guide prompt link to `raw.githubusercontent.com/zama-ai/sdk/<branch>/…` and `docs.zama.org/protocol/sdk/<space>/…` — `main`/`stable` on the release branch, `prerelease`/`alpha` on the prerelease branch. They can't be derived at build time (CI checks out PRs detached, and the committed artifacts must match the rebuild), so the branch is committed and flipped at promotion with one idempotent command:
+Doc URLs are branch-specific: the corpus and the migration-guide prompt link to `raw.githubusercontent.com/zama-ai/sdk/<branch>/…` and `docs.zama.org/protocol/sdk/<space>/…` — `main`/`stable` on the release branch, `beta`/`beta` on the beta branch (`alpha` has no docs space of its own). They can't be derived at build time (CI checks out PRs detached, and the committed artifacts must match the rebuild), so the branch is committed and flipped at promotion with one idempotent command:
 
 ```bash
-pnpm docs:retarget main        # or: prerelease
+pnpm docs:retarget main        # or: beta
 ```
 
 CI (`pnpm docs:check-target`, driven by the PR's base branch) fails any PR whose committed URLs target the wrong branch and points you at the command above.
@@ -160,27 +160,28 @@ We use [semantic-release](https://semantic-release.gitbook.io/semantic-release/)
 Release behavior:
 
 1. PR titles are validated against Conventional Commits.
-2. Squash-merging into a release branch (`main` or `prerelease`) preserves that title as the release signal.
+2. Squash-merging into a release branch (`main`, `beta`, or `alpha`) preserves that title as the release signal.
 3. semantic-release computes the next version (`patch`/`minor`/`major`) from merged commits. Breaking changes must be signaled with `!` in the PR title (e.g. `feat!: drop deprecated API`); `BREAKING CHANGE:` text in commit bodies is preserved in the changelog but does not affect the version bump.
 4. `@zama-fhe/sdk` and `@zama-fhe/react-sdk` are versioned and published together in lockstep.
-5. `main` publishes stable versions to npm `latest`, while `prerelease` publishes prerelease versions to npm `alpha`.
+5. `main` publishes stable versions to npm `latest`, `beta` publishes prerelease versions to npm `beta`, and `alpha` publishes prerelease versions to npm `alpha`.
 6. GitHub release notes and tags are generated automatically.
 
 Release workflows:
 
-- `Release` (`.github/workflows/release.yml`): automatic publish on push to `main` and `prerelease`, gated by `Vitest` and `Playwright`.
-- `Release (Manual)` (`.github/workflows/release-manual.yml`): manual publish restricted to `main` and `prerelease`, with the same `Vitest` + `Playwright` gates before publishing. Shares a concurrency group with `Release` to prevent simultaneous publishes on the same ref.
-- `Release Preview` (`.github/workflows/release-preview.yml`): manual dry-run restricted to `main` and `prerelease` (`pnpm release:dry-run`), no publish side effects.
+- `Release` (`.github/workflows/release.yml`): automatic publish on push to `main`, `beta`, and `alpha`, gated by `Vitest` and `Playwright`.
+- `Release (Manual)` (`.github/workflows/release-manual.yml`): manual publish restricted to `main`, `beta`, and `alpha`, with the same `Vitest` + `Playwright` gates before publishing. Shares a concurrency group with `Release` to prevent simultaneous publishes on the same ref.
+- `Release Preview` (`.github/workflows/release-preview.yml`): manual dry-run restricted to `main`, `beta`, and `alpha` (`pnpm release:dry-run`), no publish side effects.
 
 Install channels:
 
 - Stable: `npm i @zama-fhe/sdk`
-- Prerelease: `npm i @zama-fhe/sdk@alpha`
+- Beta: `npm i @zama-fhe/sdk@beta`
+- Alpha: `npm i @zama-fhe/sdk@alpha`
 
 Maintainer requirements:
 
 - Configure branch protection on `main` to require both `Vitest` and `Playwright` checks before merge.
-- Configure branch protection on `prerelease` with the same required checks.
+- Configure branch protection on `beta` and `alpha` with the same required checks.
 - Configure npm trusted publishers for `@zama-fhe/sdk` and `@zama-fhe/react-sdk` pointing to this repository's `release.yml` and `release-manual.yml` workflows.
 
 ## Architecture Guidelines

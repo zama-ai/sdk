@@ -7,16 +7,16 @@ The repo has **two** changelog surfaces — keep them distinct:
 
 ## Conventions
 
-- **Mainline releases only** — no per-prerelease pages. The unreleased tip accumulates on a single **Alpha page** under an "Unreleased" hint; on release its content is promoted into a version section and the Alpha page resets.
+- **Mainline releases only** — no per-prerelease pages. The unreleased tip accumulates on a single **Beta page** under an "Unreleased" hint; on release its content is promoted into a version section and the Beta page resets.
 - **Active major line → one page per minor**, behind a collapsible parent index. Page title and H1 are both `{minor}.x`. Inside, one `## {version}` section per release, **newest-first**, each opening with a `_Released YYYY-MM-DD._` dateline and grouping changes under `###` topic headings (not raw commit types).
 - **Superseded majors → one page per major**, grouped under a collapsible "Legacy versions" parent, same newest-first sections.
 - **Legacy pages are historical record** — write them in the API vocabulary of their era (don't modernize names) and don't link into the current-API `guides/`/`reference/` trees, the migration guide excepted.
-- **Nav is newest-to-oldest** (Alpha → active line → Legacy) and nests with **2-space indent** — the SUMMARY-driven LLM corpus derives page depth from indentation, so an off-indent entry miscategorizes the page.
+- **Nav is newest-to-oldest** (Beta → active line → Legacy) and nests with **2-space indent** — the SUMMARY-driven LLM corpus derives page depth from indentation, so an off-indent entry miscategorizes the page.
 - **Release datelines are real dates by design.** The no-calendar-dates rule is about forward-looking promises, not the historical record of when a version shipped.
 
 ## Automation
 
-- **`pnpm docs:changelog`** does the mechanical half — scaffolds missing `## {version}` stubs, new `{minor}.x` pages and their nav entries, and the Alpha "raw material" list. Deterministic, idempotent, no-op-safe; it writes stubs, never prose.
+- **`pnpm docs:changelog`** does the mechanical half — scaffolds missing `## {version}` stubs, new `{minor}.x` pages and their nav entries, and the Beta "raw material" list. Deterministic, idempotent, no-op-safe; it writes stubs, never prose.
 - **The `sdk-changelog` skill** does the editorial half — drafting the plain-language prose from those stubs.
 - **Promotion is automatic**, inside `pnpm docs:retarget main` at the release merge, with the version derived from the newest mainline entry in `CHANGELOG.md` — so pull the release commit before retargeting, or promotion silently no-ops.
 - **Enforcement:** `pnpm docs:check-links` (links, anchors, orphans) and the SUMMARY-driven corpus (`pnpm llm:build`).

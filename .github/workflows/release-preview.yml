@@ -29,8 +29,8 @@ jobs:
     steps:
       - name: Validate target branch
         run: |
-          if [[ "${GITHUB_REF_NAME}" != "main" && "${GITHUB_REF_NAME}" != "prerelease" ]]; then
-            echo "Release preview is only allowed from main or prerelease (got: ${GITHUB_REF_NAME})."
+          if [[ "${GITHUB_REF_NAME}" != "main" && "${GITHUB_REF_NAME}" != "beta" && "${GITHUB_REF_NAME}" != "alpha" ]]; then
+            echo "Release preview is only allowed from main, beta, or alpha (got: ${GITHUB_REF_NAME})."
             exit 1
           fi
 

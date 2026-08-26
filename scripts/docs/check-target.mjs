@@ -1,33 +1,34 @@
 // Assert the committed doc URLs target the expected publish branch.
 //
-//   pnpm docs:check-target <main|prerelease>
+//   pnpm docs:check-target <main|beta>
 //
 // Runs in CI with the PR's base branch (github.base_ref) — which, unlike a local
 // git branch name, is reliable in CI's detached-HEAD PR checkout and is exactly
 // where the PR will land. If the committed URLs point at the other branch/space
-// (e.g. a prerelease→main promotion that forgot to flip them), this fails and
+// (e.g. a beta→main promotion that forgot to flip them), this fails and
 // tells you to run `pnpm docs:retarget <branch>`. Idempotent partner to retarget.mjs.
+// `alpha` has no doc space of its own, so it's not a valid target here — see below.
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-export const BRANCH_TO_SPACE = { main: "stable", prerelease: "alpha" };
+export const BRANCH_TO_SPACE = { main: "stable", beta: "beta" };
 
 // `stable` is GitBook's default space and is omitted from docs.zama.org URLs, so a
-// stale stable-form URL on the prerelease branch has *no* space segment at all — we
+// stale stable-form URL on the beta branch has *no* space segment at all — we
 // can't catch it by looking for a literal wrong segment (the old approach silently
 // missed it). Instead read the actual space — the segment after /protocol/sdk/, or
 // the implicit `stable` when none is present — and compare it to what's expected.
-const SPACE_URL_RE = /docs\.zama\.org\/protocol\/sdk\/(?:(alpha|stable)\/)?/g;
+const SPACE_URL_RE = /docs\.zama\.org\/protocol\/sdk\/(?:(beta|stable)\/)?/g;
 
 /**
  * Human-readable problems with the branch/space URLs in `content` for a PR
- * landing on `expected` (`main` or `prerelease`). Empty array means clean.
+ * landing on `expected` (`main` or `beta`). Empty array means clean.
  */
 export function findUrlProblems(content, expected) {
   const space = BRANCH_TO_SPACE[expected];
-  const otherBranch = expected === "main" ? "prerelease" : "main";
+  const otherBranch = expected === "main" ? "beta" : "main";
   const problems = [];
 
   if (content.includes(`raw.githubusercontent.com/zama-ai/sdk/${otherBranch}/`)) {
@@ -62,10 +63,9 @@ function main() {
 
   const expected = process.argv[2];
   if (!Object.hasOwn(BRANCH_TO_SPACE, expected)) {
-    // Not a publish branch (e.g. a feature→feature PR) — nothing to assert.
-    console.log(
-      `docs:check-target: "${expected ?? "(nothing)"}" is not main/prerelease; skipping.`,
-    );
+    // Not a publish branch (e.g. a feature→feature PR, or the docs-less `alpha`
+    // protocol-testing branch) — nothing to assert.
+    console.log(`docs:check-target: "${expected ?? "(nothing)"}" is not main/beta; skipping.`);
     process.exit(0);
   }
   const space = BRANCH_TO_SPACE[expected];

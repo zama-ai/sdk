@@ -35,7 +35,7 @@ function write(root, rel, content) {
 
 const SPACE_LINK = {
   stable: "https://docs.zama.org/protocol/sdk/guides/x.md",
-  alpha: "https://docs.zama.org/protocol/sdk/alpha/guides/x.md",
+  beta: "https://docs.zama.org/protocol/sdk/beta/guides/x.md",
 };
 
 /** A minimal fixture: check-target only needs one doc page under docs/gitbook/src and
@@ -71,27 +71,27 @@ describe("check-target main() — end to end", () => {
     expect(res.stdout).toContain("stable");
   });
 
-  test("clean prerelease fixture passes", () => {
+  test("clean beta fixture passes", () => {
     const dir = freshDir();
-    makeFixture(dir, { branch: "prerelease", link: "alpha" });
-    const res = runCheckTarget(dir, "prerelease");
+    makeFixture(dir, { branch: "beta", link: "beta" });
+    const res = runCheckTarget(dir, "beta");
     expect(res.status).toBe(0);
   });
 
-  test("fails when a doc links to the wrong (alpha) GitBook space for main", () => {
+  test("fails when a doc links to the wrong (beta) GitBook space for main", () => {
     const dir = freshDir();
-    makeFixture(dir, { branch: "main", link: "alpha" });
+    makeFixture(dir, { branch: "main", link: "beta" });
     const res = runCheckTarget(dir, "main");
     expect(res.status).toBe(1);
-    expect(res.stderr).toContain("alpha");
+    expect(res.stderr).toContain("beta");
     expect(res.stderr).toContain("overview.md");
   });
 
   test("fails on the corpus.config.json rawGithubBaseUrl assertion when it targets the other branch", () => {
     const dir = freshDir();
-    // Docs are clean-stable (good for main) but the config still points at prerelease —
+    // Docs are clean-stable (good for main) but the config still points at beta —
     // isolates the rawGithubBaseUrl check from the per-file space check.
-    makeFixture(dir, { branch: "prerelease", link: "stable" });
+    makeFixture(dir, { branch: "beta", link: "stable" });
     const res = runCheckTarget(dir, "main");
     expect(res.status).toBe(1);
     expect(res.stderr).toContain("corpus.config.json");
