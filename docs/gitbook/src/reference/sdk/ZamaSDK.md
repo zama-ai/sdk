@@ -246,6 +246,28 @@ Checks whether the current signer has stored delegated-decryption permits for `d
 const ready = await sdk.permits.hasDelegationPermit(delegator, [cUSDT]);
 ```
 
+### permits.registerPermit
+
+`(prepared: PreparedPermit, signature: Hex) => Promise<void>`
+
+Verify and persist the signature an out-of-process signer produced for an [`offline.preparePermit`](#offline-preparepermit) payload — the second phase of the offline permit flow. No wallet account required: the permit is scoped by `prepared.signerAddress` and, for a delegated permit, the delegator address embedded in the signature-verified `eip712` — not a connected signer. Idempotent: registering the same `(prepared, signature)` pair more than once (e.g. a retried webhook delivery) replaces the stored entry instead of duplicating it.
+
+```ts
+const prepared = await sdk.offline.preparePermit({ signer: custodyAddress, contracts: [cUSDT] });
+const signature = await custody.signTypedData(prepared.eip712);
+await sdk.permits.registerPermit(prepared, signature);
+```
+
+**Throws:**
+
+- `ConfigurationError` - `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a process boundary and was corrupted)
+- `PreparedPermitChainMismatchError` - the chain embedded in `prepared.eip712` doesn't match the currently active chain
+- `PreparedPermitExpiredError` - the permit's validity window has already elapsed
+- `TransportKeyPairChangedError` - no transport key pair is stored for `prepared.signerAddress`, or it no longer matches the public key `prepared.eip712` was built against (e.g. a TTL expiry or eviction in between); call `preparePermit` again
+- `SigningFailedError` - the signature is invalid or malformed
+
+See the [Offline reference](./Offline.md#preparepermit) for `preparePermit`'s request/response shape and the [Offline signing guide](../../guides/offline.md#offline-permits) for the full workflow.
+
 ### decryption.decryptValues
 
 `(inputs: DecryptInput[]) => Promise<Record<EncryptedValue, ClearValue>>`
@@ -396,6 +418,42 @@ Wipe the transport key pair **and** cascade-delete every permit for the current 
 await sdk.permits.clear();
 ```
 
+### permits.warmTransportKeyPair
+
+`() => Promise<void>`
+
+Best-effort transport key pair prefetch for the connected signer — an optional latency optimization. Decrypt and permit flows remain correct without it, since they lazily create the transport key pair when needed. Silently no-ops when no signer is configured or no wallet account is connected yet.
+
+```ts
+await sdk.permits.warmTransportKeyPair();
+```
+
+Not for pre-warming a shared `transportKeyPairScope` — this method's wallet-account precondition doesn't apply to a scope-wide key, and would silently no-op exactly when an operator is most likely calling it (no end-user connected yet). Use [`permits.warmTransportKeyPairScope`](#permits-warmtransportkeypairscope) instead.
+
+### permits.warmTransportKeyPairScope
+
+`(scopeId: string) => Promise<void>`
+
+Pre-warm the shared transport key pair for a [`transportKeyPairScope`](../../concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators). Storage-only, operator-level action — no wallet account or signer needs to be connected, unlike `permits.warmTransportKeyPair()`.
+
+```ts
+await sdk.permits.warmTransportKeyPairScope("tenant-123");
+```
+
+`scopeId` must match the configured `transportKeyPairScope`, guarding against warming the wrong scope by mistake; throws `ConfigurationError` otherwise.
+
+### permits.revokeTransportKeyPair
+
+`(scopeId: string) => Promise<void>`
+
+Revoke the shared transport key pair for a `transportKeyPairScope` — the operator-level counterpart to [`permits.warmTransportKeyPairScope`](#permits-warmtransportkeypairscope), for use on suspected key compromise. Deletes the shared key pair; every permit in the scope embeds its public key, so they're all treated as stale on next access.
+
+```ts
+await sdk.permits.revokeTransportKeyPair("tenant-123");
+```
+
+This does not revoke any permit already issued under the key — a permit is a self-contained, bearer-style EIP-712 signature the relayer accepts independently of this call, and one exfiltrated alongside the key remains usable until its own `permitTTL` expiry regardless of this call. `scopeId` must match the configured scope; throws `ConfigurationError` otherwise. Signer-level [`permits.clear`](#permits-clear) never touches the shared key pair — it only ever wipes the calling signer's own permits.
+
 ### delegations
 
 `sdk.delegations` manages on-chain decryption delegation through the ACL contract:
@@ -406,6 +464,22 @@ await sdk.permits.clear();
 - `getExpiry({ contractAddress, delegatorAddress, delegateAddress })`
 
 See the [Delegations reference](./delegation.md) for the full API and propagation notes.
+
+### offline.prepare
+
+`sdk.offline.prepare(request, options?)`
+
+Builds an unsigned transaction that the caller signs and broadcasts out-of-process (institutional custody, HSMs). Works without a configured signer.
+
+See the [Offline reference](./Offline.md) for the request kinds and options, and the [Offline signing guide](../../guides/offline.md) for the workflow.
+
+### offline.preparePermit
+
+`sdk.offline.preparePermit(request)`
+
+Builds the unsigned EIP-712 typed data for a decryption permit, without signing it — the offline counterpart to [`permits.grantPermit`](#permits-grantpermit). Hand the result to an out-of-process signer, then pass the returned signature to [`permits.registerPermit`](#permits-registerpermit). Works without a configured signer.
+
+See the [Offline reference](./Offline.md#preparepermit) for the request/response shape and typed errors, and the [Offline signing guide](../../guides/offline.md#offline-permits) for the workflow.
 
 ### dispose
 

@@ -136,7 +136,7 @@ export const zamaQueryKeys = {
         "zama.hasPermit",
         {
           ...walletAccountKey(walletAccount),
-          contractAddresses: normalizeAddresses(contractAddresses).toSorted(),
+          contractAddresses: normalizeAddresses(contractAddresses).sort(),
         },
       ] as const,
   },
@@ -183,7 +183,7 @@ export const zamaQueryKeys = {
         {
           ...walletAccountKey(walletAccount),
           encryptedInputs: [...encryptedInputs]
-            .toSorted((a, b) => a.encryptedValue.localeCompare(b.encryptedValue))
+            .sort((a, b) => a.encryptedValue.localeCompare(b.encryptedValue))
             .map((h) => ({
               encryptedValue: h.encryptedValue as Hex,
               contractAddress: getAddress(h.contractAddress),

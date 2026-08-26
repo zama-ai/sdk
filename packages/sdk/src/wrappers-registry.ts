@@ -15,10 +15,10 @@ import {
   symbolContract,
 } from "./contracts";
 import { ConfigurationError } from "./errors/relayer";
-import { mainnet, sepolia, hoodi, ingenTestnet, bscTestnet } from "./chains";
+import { mainnet, polygon, sepolia, polygonAmoy, hoodi, ingenTestnet, bscTestnet } from "./chains";
 import { checksummedAddress, nonNegativeSeconds } from "./schemas/primitives";
 import type { GenericProvider } from "./types/provider";
-import { parseConfiguration } from "./validation";
+import { parseSchema } from "./validation";
 
 /**
  * Default wrappers registry addresses for known chains.
@@ -29,7 +29,9 @@ import { parseConfiguration } from "./validation";
  */
 export const DefaultRegistryAddresses: Record<number, Address> = {
   [mainnet.id]: mainnet.registryAddress,
+  [polygon.id]: polygon.registryAddress,
   [sepolia.id]: sepolia.registryAddress,
+  [polygonAmoy.id]: polygonAmoy.registryAddress,
   [hoodi.id]: hoodi.registryAddress,
   [ingenTestnet.id]: ingenTestnet.registryAddress,
   [bscTestnet.id]: bscTestnet.registryAddress,
@@ -133,11 +135,10 @@ export class WrappersRegistry {
     this.#addresses = Object.assign(
       {},
       DefaultRegistryAddresses,
-      parseConfiguration(z.optional(RegistryAddressesSchema), config.registryAddresses),
+      parseSchema(z.optional(RegistryAddressesSchema), config.registryAddresses),
     );
     this.#ttlMs =
-      parseConfiguration(RegistryTTLSchema, config.registryTTL ?? DEFAULT_REGISTRY_TTL_SECONDS) *
-      1000;
+      parseSchema(RegistryTTLSchema, config.registryTTL ?? DEFAULT_REGISTRY_TTL_SECONDS) * 1000;
   }
 
   /**

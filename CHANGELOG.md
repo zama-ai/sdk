@@ -1,5 +1,83 @@
 # Changelog
 
+## [3.5.0-alpha.12](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.11...v3.5.0-alpha.12) (2026-08-25)
+
+### Features
+
+- add polygon support ([#638](https://github.com/zama-ai/sdk/issues/638)) ([f97f9f6]())
+
+## [3.5.0-alpha.11](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.10...v3.5.0-alpha.11) (2026-08-25)
+
+### Features
+
+- revoked kms context recovery ([#633](https://github.com/zama-ai/sdk/issues/633)) ([8f1e9d1]())
+
+## [3.5.0-alpha.10](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.9...v3.5.0-alpha.10) (2026-08-24)
+
+### Features
+
+- offline permit flow ([#634](https://github.com/zama-ai/sdk/issues/634)) ([bbfae74]())
+
+## [3.5.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.8...v3.5.0-alpha.9) (2026-08-20)
+
+### Bug Fixes
+
+- **examples:** switch Sepolia/Hoodi explorer links to BlockScout [SDK-297] ([#636](https://github.com/zama-ai/sdk/issues/636)) ([6540368]())
+
+## [3.5.0-alpha.8](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.7...v3.5.0-alpha.8) (2026-08-20)
+
+### Bug Fixes
+
+- **examples:** derive relayer proxy URL from window origin ([#635](https://github.com/zama-ai/sdk/issues/635)) ([e676154]())
+
+## [3.5.0-alpha.7](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.6...v3.5.0-alpha.7) (2026-08-18)
+
+### Features
+
+- **credentials:** optional derivationSecret wrapping for at-rest private key protection [SDK-135] ([#547](https://github.com/zama-ai/sdk/issues/547)) ([65a60eb]())
+
+## [3.5.0-alpha.6](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.5...v3.5.0-alpha.6) (2026-08-14)
+
+### Bug Fixes
+
+- **sdk:** guard ACL revert lookup against prototype-chain error names ([#624](https://github.com/zama-ai/sdk/issues/624)) ([f871a2c]()), closes [#130]() [#130]()
+
+## [3.5.0-alpha.5](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.4...v3.5.0-alpha.5) (2026-08-14)
+
+### Bug Fixes
+
+- add browser compatibility lint ([#625](https://github.com/zama-ai/sdk/issues/625)) ([cb27545]())
+
+## [3.5.0-alpha.4](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.3...v3.5.0-alpha.4) (2026-08-05)
+
+### Bug Fixes
+
+- **sdk:** bind confidentialTransferFrom input proof to the tx sender ([#611](https://github.com/zama-ai/sdk/issues/611)) ([d51c627]())
+
+## [3.5.0-alpha.3](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.2...v3.5.0-alpha.3) (2026-08-05)
+
+### Features
+
+- **sdk:** offline signing `prepare` for out-of-process custody (SDK-75) ([#345](https://github.com/zama-ai/sdk/issues/345)) ([66b8b40]()), closes [#7]()
+
+## [3.5.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.1...v3.5.0-alpha.2) (2026-07-31)
+
+### Features
+
+- **examples:** add example-polygon-amoy app ([#603](https://github.com/zama-ai/sdk/issues/603)) ([be7fbac]())
+
+## [3.5.0-alpha.1](https://github.com/zama-ai/sdk/compare/v3.4.1-alpha.1...v3.5.0-alpha.1) (2026-07-31)
+
+### Features
+
+- **sdk:** add Polygon Amoy (80002) chain preset ([#602](https://github.com/zama-ai/sdk/issues/602)) ([bf6157b]())
+
+## [3.4.1-alpha.1](https://github.com/zama-ai/sdk/compare/v3.4.0...v3.4.1-alpha.1) (2026-07-31)
+
+### Bug Fixes
+
+- **examples:** use bare relayer host in proxy default ([#601](https://github.com/zama-ai/sdk/issues/601)) ([081bb9c]())
+
 ## [3.4.0](https://github.com/zama-ai/sdk/compare/v3.3.0...v3.4.0) (2026-07-30)
 
 ### Features

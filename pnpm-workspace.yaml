@@ -14,10 +14,17 @@ allowBuilds:
 
 overrides:
   minimatch: ">=10.2.4"
-  next: ">=16.2.5"
+  next: ">=16.2.11"
   "@walletconnect/ethereum-provider": "^2.23.7"
   lodash: ">=4.18.0"
   lodash-es: ">=4.18.0"
+  # Security floors for transitive dev-tooling deps flagged by Dependabot.
+  "undici@^6.0.0": ">=6.28.0 <7"
+  "undici@^7.0.0": ">=7.29.0 <8"
+  "js-yaml@^4.0.0": ">=4.3.0 <5"
+  "fast-uri@^3.0.0": ">=3.1.5 <4"
+  "brace-expansion@^5.0.0": ">=5.0.7 <6"
+  postcss: ">=8.5.23"
   # undici-types@6.19.3+ dropped provenance attestation (likely a switch away
   # from CI publish), triggering trustPolicy:no-downgrade on every install.
   # 6.19.2 is the last version with a sigstore attestation. Pin here until

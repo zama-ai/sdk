@@ -1,10 +1,13 @@
-import type { Hex } from "viem";
+import type { Address, Hex } from "viem";
 import type {
   ContractAbi,
   ReadContractArgs,
   ReadContractConfig,
   ReadContractReturnType,
   ReadFunctionName,
+  WriteContractArgs,
+  WriteContractConfig,
+  WriteFunctionName,
 } from "./contract";
 import type { TransactionReceipt } from "./transaction";
 
@@ -36,4 +39,44 @@ export interface GenericProvider {
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
   /** Return the latest block timestamp in seconds. */
   getBlockTimestamp(): Promise<bigint>;
+  /**
+   * Build a fully-populated, RLP-encoded unsigned transaction from a
+   * write-contract config and the originating wallet address. The provider
+   * resolves chain ID, nonce, gas limit, and EIP-1559 fee parameters from
+   * chain state and returns bytes ready to be signed out-of-process (an HSM,
+   * custody API, or policy engine)
+   *
+   * Optional overrides (`nonce`, `gasLimit`, `fees`) let callers pin values at
+   * prepare time — used by the offline-signing pipeline when a custodian
+   * supplies its own nonce/fee manager. `fees` carries both EIP-1559 legs as
+   * one object so they can only be pinned together — pinning a cap while the
+   * tip is estimated could produce a tip above the cap and fail serialization.
+   * Implementers may ignore unknown optional args without breaking.
+   *
+   * Used exclusively by the offline-signing pipeline. Atomic signers go
+   * through {@link GenericSigner.writeContract} and never invoke this.
+   *
+   * Adapters delegate to their underlying client's tx-building primitives:
+   * `encodeFunctionData` + `estimateGas` + `getTransactionCount` +
+   * `estimateFeesPerGas` + `serializeTransaction` (viem), the analogous
+   * `Contract.populateTransaction` + `Transaction.unsignedSerialized`
+   * pipeline (ethers v6).
+   *
+   * Nonce reads use the `"pending"` block tag so that once an earlier tx has
+   * been broadcast, the next prepare picks up the incremented count instead of
+   * a stale `"latest"`. Note `"pending"` does **not** disambiguate several
+   * payloads prepared *before* any of them is broadcast — they all read the
+   * same count; pass an explicit `nonce` to assign them yourself in that case.
+   */
+  prepareTransaction<
+    const TAbi extends ContractAbi,
+    TFunctionName extends WriteFunctionName<TAbi>,
+    const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
+  >(args: {
+    from: Address;
+    calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+    nonce?: number;
+    gasLimit?: bigint;
+    fees?: { maxFeePerGas: bigint; maxPriorityFeePerGas: bigint };
+  }): Promise<Hex>;
 }

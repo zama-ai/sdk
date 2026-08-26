@@ -10,6 +10,8 @@ import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
 import { createFhevmClient } from '@fhevm/sdk/viem';
+import { CreateUnsignedLegacyDecryptionPermitEip712Parameters } from '@fhevm/sdk/actions/base';
+import { CreateUnsignedLegacyDecryptionPermitEip712ReturnType } from '@fhevm/sdk/actions/base';
 import { DecryptValuesParameters } from '@fhevm/sdk/actions/decrypt';
 import { EIP1193Provider } from 'viem';
 import { Eip712Like } from '@fhevm/sdk/types';
@@ -343,6 +345,15 @@ export function approveContract(tokenAddress: Address, spender: Address, value: 
 };
 
 // @public
+export interface ApproveUnderlyingRequest {
+    amount: bigint;
+    from: Address;
+    kind: "ApproveUnderlying";
+    spender: Address;
+    underlying: Address;
+}
+
+// @public
 export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
     step: "reset" | "approve";
     txHash: Hex;
@@ -558,7 +569,7 @@ export const bscTestnet: {
     readonly id: 97;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "";
-    readonly network: "https://bsc-testnet-rpc.publicnode.com";
+    readonly network: "https://bsc-testnet.bnbchain.org";
     readonly aclContractAddress: "0x52470e945521E247Cb4754088a836Dc4b838AFBE";
     readonly kmsContractAddress: "0x788F5BB2d93aB4Cb67Fe2277757aE95006504F6F";
     readonly inputVerifierContractAddress: "0x49e0BAB39904E4192c30CFB58573Cbe27B7E398E";
@@ -5162,6 +5173,25 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
 };
 
 // @public
+export interface ConfidentialTransferFromRequest {
+    amount: bigint;
+    from: Address;
+    kind: "ConfidentialTransferFrom";
+    owner: Address;
+    to: Address;
+    token: Address;
+}
+
+// @public
+export interface ConfidentialTransferRequest {
+    amount: bigint;
+    from: Address;
+    kind: "ConfidentialTransfer";
+    to: Address;
+    token: Address;
+}
+
+// @public
 export class ConfigurationError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
@@ -5411,6 +5441,15 @@ export const DefaultRegistryAddresses: Record<number, Address>;
 // @public
 export interface DelegatedDecryptOptions {
     waitForPropagation?: boolean;
+}
+
+// @public
+export interface DelegateDecryptionRequest {
+    contractAddress: Address;
+    delegateAddress: Address;
+    expirationDate?: Date;
+    from: Address;
+    kind: "DelegateDecryption";
 }
 
 // @public
@@ -5809,15 +5848,20 @@ export interface ErrorForCode {
     [ZamaErrorCode.InsufficientConfidentialBalance]: InsufficientConfidentialBalanceError;
     [ZamaErrorCode.InsufficientERC20Balance]: InsufficientERC20BalanceError;
     [ZamaErrorCode.InvalidTransportKeyPair]: InvalidTransportKeyPairError;
+    [ZamaErrorCode.KeyWrappingFailed]: KeyWrappingError;
     [ZamaErrorCode.TransportKeyPairExpired]: TransportKeyPairExpiredError;
     [ZamaErrorCode.NoCiphertext]: NoCiphertextError;
     [ZamaErrorCode.NotEntitled]: NotEntitledError;
+    [ZamaErrorCode.PreparedPermitChainMismatch]: PreparedPermitChainMismatchError;
+    [ZamaErrorCode.PreparedPermitExpired]: PreparedPermitExpiredError;
     [ZamaErrorCode.RelayerRequestFailed]: RelayerRequestFailedError;
+    [ZamaErrorCode.RevokedKmsContext]: RevokedKmsContextError;
     [ZamaErrorCode.RpcRateLimited]: RpcRateLimitError;
     [ZamaErrorCode.SignerNotConfigured]: SignerNotConfiguredError;
     [ZamaErrorCode.SigningFailed]: SigningFailedError;
     [ZamaErrorCode.SigningRejected]: SigningRejectedError;
     [ZamaErrorCode.TransactionReverted]: TransactionRevertedError;
+    [ZamaErrorCode.TransportKeyPairChanged]: TransportKeyPairChangedError;
     [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
     [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
 }
@@ -7009,6 +7053,14 @@ export function finalizeUnwrapContract(wrapper: Address, unwrapRequestId: Encryp
 };
 
 // @public
+export interface FinalizeUnwrapRequest {
+    from: Address;
+    kind: "FinalizeUnwrap";
+    unwrapRequestIdOrAmount: Hex;
+    wrapper: Address;
+}
+
+// @public
 export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
     txHash: Hex;
     type: typeof ZamaSDKEvents.FinalizeUnwrapSubmitted;
@@ -7038,6 +7090,16 @@ export interface GenericLogger {
 export interface GenericProvider {
     getBlockTimestamp(): Promise<bigint>;
     getChainId(): Promise<number>;
+    prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
+        from: Address;
+        calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+        nonce?: number;
+        gasLimit?: bigint;
+        fees?: {
+            maxFeePerGas: bigint;
+            maxPriorityFeePerGas: bigint;
+        };
+    }): Promise<Hex>;
     readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
 }
@@ -11173,6 +11235,11 @@ export function isRetryable(error: unknown): error is ZamaError & {
 };
 
 // @public
+export class KeyWrappingError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
 export interface ListPairsOptions {
     metadata?: boolean;
     page?: number;
@@ -11377,6 +11444,14 @@ export class NotEntitledError extends ZamaError {
 }
 
 // @public
+export class Offline {
+    prepare<K extends TransactionKind>(request: Extract<PrepareTransactionRequest, {
+        kind: K;
+    }>, options?: PrepareOptions): Promise<PreparedFor<K>>;
+    preparePermit(request: PreparePermitRequest): Promise<PreparedPermit>;
+}
+
+// @public
 export type OnChainEvent = ConfidentialTransferEvent | WrapEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent;
 
 // @public
@@ -11403,11 +11478,98 @@ export class Permits {
     grantPermit(contracts: Address[]): Promise<void>;
     hasDelegationPermit(delegator: Address, contracts: Address[]): Promise<boolean>;
     hasPermit(contracts: Address[]): Promise<boolean>;
+    registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void>;
     revokePermits(contracts?: Address[]): Promise<void>;
     revokeTransportKeyPair(scopeId: string): Promise<void>;
     warmTransportKeyPair(): Promise<void>;
     warmTransportKeyPairScope(scopeId: string): Promise<void>;
 }
+
+// @public
+export const polygon: {
+    readonly id: 137;
+    readonly gatewayChainId: 261131;
+    readonly relayerUrl: "https://relayer.mainnet.zama.org";
+    readonly network: "https://polygon-bor-rpc.publicnode.com";
+    readonly aclContractAddress: "0x6737F17e31cf26a1b62fb0362acC5a16CB156F49";
+    readonly kmsContractAddress: "0x14e609595474874Dd6b6128376E336EfADfdBE37";
+    readonly inputVerifierContractAddress: "0xf40BD204B035522EaAc8E5afAdc55113Acac96ca";
+    readonly verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24";
+    readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
+    readonly registryAddress: "0xc8908569868758dAF814B5a8b96bBc44D1653d54";
+};
+
+// @public
+export const polygonAmoy: {
+    readonly id: 80002;
+    readonly gatewayChainId: 10901;
+    readonly relayerUrl: "https://relayer.testnet.zama.org";
+    readonly network: "https://polygon-amoy-bor-rpc.publicnode.com";
+    readonly aclContractAddress: "0xD99Cb9Fc3c42c87f2A4A12e8Fd60318d6bDdf985";
+    readonly kmsContractAddress: "0xCD1D89E311bce4C8DEa9a0857a0c9A4E153D4041";
+    readonly inputVerifierContractAddress: "0x6e5A7D8b0c645467Cba7e62D6624917085118631";
+    readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
+    readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
+    readonly registryAddress: "0xF486c3D4F4562760A43883e72E8D6f6Cf2EFdA94";
+};
+
+// @public
+export interface PreparedFor<K extends TransactionKind> extends PreparedTransaction {
+    readonly kind: K;
+}
+
+// @public
+export interface PreparedPermit {
+    eip712: SerializedPermitEip712;
+    signerAddress: ChecksummedAddress;
+    version: 1;
+}
+
+// @public
+export class PreparedPermitChainMismatchError extends ZamaError {
+    constructor(input: {
+        preparedChainId: number;
+        activeChainId: number;
+    }, options?: ErrorOptions);
+    readonly activeChainId: number;
+    readonly preparedChainId: number;
+}
+
+// @public
+export class PreparedPermitExpiredError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
+export interface PreparedTransaction {
+    readonly from: Address;
+    readonly kind: TransactionKind;
+    readonly unsignedTx: Hex;
+}
+
+// @public
+export interface PrepareFees {
+    maxFeePerGas: bigint;
+    maxPriorityFeePerGas: bigint;
+}
+
+// @public
+export interface PrepareOptions {
+    fees?: PrepareFees;
+    gasLimit?: bigint;
+    nonce?: number;
+}
+
+// @public
+export interface PreparePermitRequest {
+    contracts: readonly Address[];
+    delegator?: Address;
+    durationDays?: number;
+    signer: Address;
+}
+
+// @public
+export type PrepareTransactionRequest = ConfidentialTransferRequest | ConfidentialTransferFromRequest | SetOperatorRequest | UnwrapRequest | UnwrapAllRequest | FinalizeUnwrapRequest | ApproveUnderlyingRequest | WrapRequest | TransferAndCallRequest | DelegateDecryptionRequest | RevokeDelegationRequest;
 
 // @public
 export function rateContract(tokenAddress: Address): {
@@ -12593,6 +12755,7 @@ export class RelayerRequestFailedError extends ZamaError {
 // @public
 export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
     chain: FheChain;
+    createUnsignedLegacyDecryptionPermitEip712(parameters: CreateUnsignedLegacyDecryptionPermitEip712Parameters): Promise<CreateUnsignedLegacyDecryptionPermitEip712ReturnType>;
 }
 
 // @public
@@ -12819,9 +12982,22 @@ export function revokeDelegationContract(aclAddress: Address, delegateAddress: A
 };
 
 // @public
+export interface RevokeDelegationRequest {
+    contractAddress: Address;
+    delegateAddress: Address;
+    from: Address;
+    kind: "RevokeDelegation";
+}
+
+// @public
 export interface RevokeDelegationSubmittedEvent extends BaseEvent {
     txHash: Hex;
     type: typeof ZamaSDKEvents.RevokeDelegationSubmitted;
+}
+
+// @public
+export class RevokedKmsContextError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
 }
 
 // @public
@@ -14009,6 +14185,15 @@ export function setOperatorContract(tokenAddress: Address, operator: Address, un
 };
 
 // @public
+export interface SetOperatorRequest {
+    from: Address;
+    kind: "SetOperator";
+    operator: Address;
+    token: Address;
+    until: number;
+}
+
+// @public
 export interface SetOperatorSubmittedEvent extends BaseEvent {
     txHash: Hex;
     type: typeof ZamaSDKEvents.SetOperatorSubmitted;
@@ -14286,6 +14471,9 @@ export interface TransactionErrorEvent extends BaseEvent {
     operation: TransactionOperation;
     type: typeof ZamaSDKEvents.TransactionError;
 }
+
+// @public
+export type TransactionKind = PrepareTransactionRequest["kind"];
 
 // @public
 export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll";
@@ -14597,6 +14785,16 @@ export function transferAndCallContract(tokenAddress: Address, to: Address, amou
 };
 
 // @public
+export interface TransferAndCallRequest {
+    amount: bigint;
+    from: Address;
+    kind: "TransferAndCall";
+    recipientData?: Hex;
+    underlying: Address;
+    wrapper: Address;
+}
+
+// @public
 export interface TransferCallbacks {
     onEncryptComplete?: () => void;
     onTransferSubmitted?: (txHash: Hex) => void;
@@ -14617,6 +14815,11 @@ export interface TransferOptions extends TransferCallbacks {
 export interface TransferSubmittedEvent extends BaseEvent {
     txHash: Hex;
     type: typeof ZamaSDKEvents.TransferSubmitted;
+}
+
+// @public
+export class TransportKeyPairChangedError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
 }
 
 // @public
@@ -15789,6 +15992,14 @@ export interface UnshieldPhase2StartedEvent extends BaseEvent {
 export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
     txHash: Hex;
     type: typeof ZamaSDKEvents.UnshieldPhase2Submitted;
+}
+
+// @public
+export interface UnwrapAllRequest {
+    from: Address;
+    kind: "UnwrapAll";
+    to: Address;
+    token: Address;
 }
 
 // @public
@@ -18073,6 +18284,15 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
 };
 
 // @public
+export interface UnwrapRequest {
+    amount: bigint;
+    from: Address;
+    kind: "Unwrap";
+    to: Address;
+    token: Address;
+}
+
+// @public
 export interface UnwrapRequestedEvent {
     readonly encryptedAmount: EncryptedValue;
     readonly eventName: "UnwrapRequested";
@@ -19327,6 +19547,15 @@ export interface WrappersRegistryConfig {
 }
 
 // @public
+export interface WrapRequest {
+    amount: bigint;
+    from: Address;
+    kind: "Wrap";
+    to: Address;
+    wrapper: Address;
+}
+
+// @public
 export interface WrapSubmittedEvent extends BaseEvent {
     txHash: Hex;
     type: typeof ZamaSDKEvents.WrapSubmitted;
@@ -19426,6 +19655,7 @@ export const ZamaErrorCode: {
     readonly TransactionReverted: "TRANSACTION_REVERTED";
     readonly TransportKeyPairExpired: "KEYPAIR_EXPIRED";
     readonly InvalidTransportKeyPair: "INVALID_KEYPAIR";
+    readonly RevokedKmsContext: "REVOKED_KMS_CONTEXT";
     readonly NoCiphertext: "NO_CIPHERTEXT";
     readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED";
     readonly NotEntitled: "NOT_ENTITLED";
@@ -19450,6 +19680,10 @@ export const ZamaErrorCode: {
     readonly SignerNotConfigured: "SIGNER_NOT_CONFIGURED";
     readonly WalletNotConnected: "WALLET_NOT_CONNECTED";
     readonly WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY";
+    readonly KeyWrappingFailed: "KEY_WRAPPING_FAILED";
+    readonly TransportKeyPairChanged: "TRANSPORT_KEY_PAIR_CHANGED";
+    readonly PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH";
+    readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
 };
 
 // @public
@@ -19458,7 +19692,7 @@ export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 // @public
 export class ZamaSDK {
     [Symbol.dispose](): void;
-    constructor(config: ZamaConfig);
+    constructor(config: ZamaConfig, options?: ZamaSDKOptions);
     createToken(address: Address): Token;
     createWrappedToken(address: Address): WrappedToken;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
@@ -19466,6 +19700,7 @@ export class ZamaSDK {
     readonly delegations: Delegations;
     dispose(): void;
     encrypt(params: EncryptParams, options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<EncryptResult>;
+    readonly offline: Offline;
     readonly permits: Permits;
     readonly provider: GenericProvider;
     readonly registry: WrappersRegistry;
@@ -19507,6 +19742,11 @@ export const ZamaSDKEvents: {
 
 // @public
 export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents];
+
+// @public
+export interface ZamaSDKOptions {
+    transportKeyPairDerivationSecret?: string | Uint8Array;
+}
 
 // @public
 export const ZERO_ENCRYPTED_VALUE: "0x0000000000000000000000000000000000000000000000000000000000000000";

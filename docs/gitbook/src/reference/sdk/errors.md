@@ -21,6 +21,10 @@ import {
   InvalidTransportKeyPairError,
   TransportKeyPairExpiredError,
   NoCiphertextError,
+  KeyWrappingError,
+  TransportKeyPairChangedError,
+  PreparedPermitChainMismatchError,
+  PreparedPermitExpiredError,
   RelayerRequestFailedError,
   NotEntitledError,
   RpcRateLimitError,
@@ -86,7 +90,12 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                                                          |
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired — user must re-sign                                                                                    |
+| `RevokedKmsContextError`                | `REVOKED_KMS_CONTEXT`                 | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                                   |
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account                                                                                             |
+| `KeyWrappingError`                      | `KEY_WRAPPING_FAILED`                 | At-rest encryption or decryption of the transport private key failed (`transportKeyPairDerivationSecret`)                         |
+| `TransportKeyPairChangedError`          | `TRANSPORT_KEY_PAIR_CHANGED`          | Transport key pair changed between `preparePermit` and `registerPermit`                                                           |
+| `PreparedPermitChainMismatchError`      | `PREPARED_PERMIT_CHAIN_MISMATCH`      | The chain embedded in `prepared.eip712` doesn't match the chain `registerPermit` is running against                               |
+| `PreparedPermitExpiredError`            | `PREPARED_PERMIT_EXPIRED`             | A prepared permit's validity window elapsed before its signature was registered                                                   |
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                                                                       |
 | `NotEntitledError`                      | `NOT_ENTITLED`                        | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`) |
 | `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                  |
@@ -242,6 +251,21 @@ matchZamaError(error, {
 
 **How to handle:** Clear credentials and prompt the user to re-sign. The SDK generates a fresh transport key pair on the next operation.
 
+### RevokedKmsContextError
+
+**Code:** `REVOKED_KMS_CONTEXT`
+
+The KMS context the permit was signed under has been revoked on-chain, so the permit is permanently unusable. The SDK recovers automatically: it evicts the dead permit, re-grants under the current context (one wallet prompt), and retries the decrypt once. This error surfaces in two cases: the retry failed the same way (typically because the on-chain validity check is cached for up to 15 minutes, so a just-revoked context can keep failing across that window), or the re-grant itself failed because the configured signer cannot sign (the signing failure is attached as `cause`).
+
+```ts
+matchZamaError(error, {
+  REVOKED_KMS_CONTEXT: () =>
+    showError("Decryption key context was rotated. Retry in a few minutes."),
+});
+```
+
+**How to handle:** `cause` is always present, check its type to tell the two cases apart. If `cause` is a `SigningFailedError`, the re-grant failed: establish a new permit before retrying; the other permits of the scope were kept. In a session whose signer cannot sign, that means re-running the [offline permit flow](../../guides/offline.md#offline-permits): `preparePermit`, sign out-of-process, `registerPermit`. Otherwise the retry failed against the cached validity window: wait ~15 minutes and trigger the decrypt again, the SDK re-runs the recovery on the next call. No manual credential cleanup is needed, the dead permit was already evicted.
+
 ### TransportKeyPairExpiredError
 
 **Code:** `KEYPAIR_EXPIRED`
@@ -274,6 +298,72 @@ try {
 ```
 
 **How to handle:** Show an empty state in your UI prompting the user to shield tokens. Do not display "0" — there is no balance to show.
+
+### KeyWrappingError
+
+**Code:** `KEY_WRAPPING_FAILED`
+
+At-rest encryption or decryption of the transport private key failed. This is the key-protection feature behind `transportKeyPairDerivationSecret`, unrelated to token wrapping (`shield`/`unshield`).
+
+Thrown by `grantPermit`, `grantDelegationPermit`, `warmTransportKeyPair`, and `warmTransportKeyPairScope`, and by any operation that resolves credentials under the hood (`decryptValues`, `token.balanceOf`). `hasPermit` and `hasDelegationPermit` never throw it: they return `false`, so a permit check stays a safe read (see [Permit Model](../../concepts/permit-model.md)).
+
+```ts
+matchZamaError(error, {
+  KEY_WRAPPING_FAILED: () =>
+    showError("Credential storage misconfigured, check transportKeyPairDerivationSecret"),
+});
+```
+
+**How to handle:** A wrong secret without a scope never throws: the SDK treats it as a cache miss and regenerates. So without a `transportKeyPairScope`, the cause is one of:
+
+- An encrypted entry was read with no `transportKeyPairDerivationSecret` configured. Restore the secret, or call `sdk.permits.clear()` to downgrade to plaintext deliberately.
+- The entry was written by a newer wrapping scheme version. Upgrade the SDK, or call `sdk.permits.clear()` to discard the entry deliberately.
+- `crypto.subtle` is unavailable in the environment.
+
+With a `transportKeyPairScope`, no mismatch self-heals: regenerating would clobber the entry every other signer in the scope reads. Verify that every instance sharing the scope is configured with the same `transportKeyPairDerivationSecret`, and that none is missing it. See [Security Model](../../concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the mechanism and migration steps.
+
+### TransportKeyPairChangedError
+
+**Code:** `TRANSPORT_KEY_PAIR_CHANGED`
+
+Thrown by [`registerPermit`](./ZamaSDK.md#permits-registerpermit) when the transport key pair changed between `preparePermit` and `registerPermit` — a TTL expiry or eviction happened in between. The prepared EIP-712 payload is signed against the old key pair's public key; registering it under a different one would bind the permit to the wrong key.
+
+```ts
+matchZamaError(error, {
+  TRANSPORT_KEY_PAIR_CHANGED: () => showError("Offline permit expired — restart the request"),
+});
+```
+
+**How to handle:** Call `preparePermit` again to rebind the request to the current key pair, then repeat the external signing step.
+
+### PreparedPermitChainMismatchError
+
+**Code:** `PREPARED_PERMIT_CHAIN_MISMATCH`
+
+Thrown by [`registerPermit`](./ZamaSDK.md#permits-registerpermit) when the chain embedded in `prepared.eip712` doesn't match the chain the SDK is currently configured for. The error carries `preparedChainId` and `activeChainId`.
+
+```ts
+matchZamaError(error, {
+  PREPARED_PERMIT_CHAIN_MISMATCH: (e) =>
+    showError(`Switch to chain ${e.preparedChainId} to register this permit`),
+});
+```
+
+**How to handle:** Register the permit while the SDK is configured for the chain it was prepared for, or call `preparePermit` again against the currently active chain.
+
+### PreparedPermitExpiredError
+
+**Code:** `PREPARED_PERMIT_EXPIRED`
+
+A prepared permit's validity window (`startTimestamp` + `durationDays`) elapsed before its signature was registered — the out-of-process signing ceremony took longer than the permit's lifetime.
+
+```ts
+matchZamaError(error, {
+  PREPARED_PERMIT_EXPIRED: () => showError("Offline permit expired before it was registered"),
+});
+```
+
+**How to handle:** Call `preparePermit` again for a fresh validity window. Consider a longer `durationDays` (up to 365) if approval routinely takes this long.
 
 ### RelayerRequestFailedError
 

@@ -179,25 +179,43 @@ describe("Permits", () => {
       await sdk.decryption.decryptValues(handles);
       expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
     });
+
+    test("registerPermit clears the decrypt cache for the requester", async ({
+      sdk,
+      signer,
+      relayer,
+      handle,
+    }) => {
+      const handles = [{ encryptedValue: handle, contractAddress: CONTRACT_A }];
+      await sdk.decryption.decryptValues(handles);
+      expect(relayer.decryptValues).toHaveBeenCalledOnce();
+
+      const signerAddress = signer.walletAccount.getSnapshot()!.address;
+      const prepared = await sdk.offline.preparePermit({
+        signer: signerAddress,
+        contracts: [CONTRACT_A],
+      });
+      const signature = await signer.signTypedData(prepared.eip712);
+      await sdk.permits.registerPermit(prepared, signature);
+
+      await sdk.decryption.decryptValues(handles);
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe("scope (opt-in shared-tenant)", () => {
-    test("revokeTransportKeyPair throws SignerNotConfiguredError when no signer is configured", async ({
+    test("revokeTransportKeyPair works with no signer configured (storage-only, operator-level)", async ({
       createSDK,
     }) => {
       const sdk = createSDK({ signer: undefined, transportKeyPairScope: "tenant-1" });
-      await expect(sdk.permits.revokeTransportKeyPair("tenant-1")).rejects.toBeInstanceOf(
-        SignerNotConfiguredError,
-      );
+      await expect(sdk.permits.revokeTransportKeyPair("tenant-1")).resolves.toBeUndefined();
     });
 
-    test("warmTransportKeyPairScope throws SignerNotConfiguredError when no signer is configured", async ({
+    test("warmTransportKeyPairScope works with no signer configured (storage-only, operator-level)", async ({
       createSDK,
     }) => {
       const sdk = createSDK({ signer: undefined, transportKeyPairScope: "tenant-1" });
-      await expect(sdk.permits.warmTransportKeyPairScope("tenant-1")).rejects.toBeInstanceOf(
-        SignerNotConfiguredError,
-      );
+      await expect(sdk.permits.warmTransportKeyPairScope("tenant-1")).resolves.toBeUndefined();
     });
 
     test("revokeTransportKeyPair throws ConfigurationError when no scope is configured", async ({

@@ -6,7 +6,12 @@ export { TransactionRevertedError } from "./transaction";
 export {
   TransportKeyPairExpiredError,
   InvalidTransportKeyPairError,
+  RevokedKmsContextError,
   NoCiphertextError,
+  KeyWrappingError,
+  TransportKeyPairChangedError,
+  PreparedPermitChainMismatchError,
+  PreparedPermitExpiredError,
 } from "./credential";
 export { RelayerRequestFailedError, ConfigurationError } from "./relayer";
 export { NotEntitledError } from "./entitlement";

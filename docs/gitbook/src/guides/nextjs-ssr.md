@@ -11,7 +11,7 @@ The SDK's browser stack relies on APIs -- IndexedDB, wallet connections, and the
 
 ### 1. Understand the constraint
 
-The FHE relayer runs encryption and decryption through a WASM runtime in the browser. IndexedDB stores transport key pairs, and the signer needs a connected wallet. None of this exists during SSR.
+The FHE relayer runs encryption and decryption through a WASM runtime in the browser. IndexedDB stores transport key pairs, and the signer needs a connected wallet. None of this exists during SSR. [Supported environments](../tutorials/supported-environments.md) lists the browser floors the SDK supports.
 
 This means:
 

@@ -43,7 +43,7 @@ export const bscTestnet: {
     readonly id: 97;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "";
-    readonly network: "https://bsc-testnet-rpc.publicnode.com";
+    readonly network: "https://bsc-testnet.bnbchain.org";
     readonly aclContractAddress: "0x52470e945521E247Cb4754088a836Dc4b838AFBE";
     readonly kmsContractAddress: "0x788F5BB2d93aB4Cb67Fe2277757aE95006504F6F";
     readonly inputVerifierContractAddress: "0x49e0BAB39904E4192c30CFB58573Cbe27B7E398E";
@@ -227,6 +227,34 @@ export function node(options?: RelayerOptions): NodeRelayerConfig;
 export interface NodeRelayerConfig extends RelayerConfig {
     readonly type: "node";
 }
+
+// @public
+export const polygon: {
+    readonly id: 137;
+    readonly gatewayChainId: 261131;
+    readonly relayerUrl: "https://relayer.mainnet.zama.org";
+    readonly network: "https://polygon-bor-rpc.publicnode.com";
+    readonly aclContractAddress: "0x6737F17e31cf26a1b62fb0362acC5a16CB156F49";
+    readonly kmsContractAddress: "0x14e609595474874Dd6b6128376E336EfADfdBE37";
+    readonly inputVerifierContractAddress: "0xf40BD204B035522EaAc8E5afAdc55113Acac96ca";
+    readonly verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24";
+    readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
+    readonly registryAddress: "0xc8908569868758dAF814B5a8b96bBc44D1653d54";
+};
+
+// @public
+export const polygonAmoy: {
+    readonly id: 80002;
+    readonly gatewayChainId: 10901;
+    readonly relayerUrl: "https://relayer.testnet.zama.org";
+    readonly network: "https://polygon-amoy-bor-rpc.publicnode.com";
+    readonly aclContractAddress: "0xD99Cb9Fc3c42c87f2A4A12e8Fd60318d6bDdf985";
+    readonly kmsContractAddress: "0xCD1D89E311bce4C8DEa9a0857a0c9A4E153D4041";
+    readonly inputVerifierContractAddress: "0x6e5A7D8b0c645467Cba7e62D6624917085118631";
+    readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
+    readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
+    readonly registryAddress: "0xF486c3D4F4562760A43883e72E8D6f6Cf2EFdA94";
+};
 
 // @public
 export interface RelayerConfig {

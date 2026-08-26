@@ -31,7 +31,7 @@ treat this guide as the source of truth.
 Upgrade this repository from @zama-fhe/sdk and @zama-fhe/react-sdk v2.x to v3.x.
 
 SOURCE OF TRUTH — follow it exactly:
-https://docs.zama.org/protocol/sdk/migration/migrate-v2-to-v3.md
+https://docs.zama.org/protocol/sdk/alpha/migration/migrate-v2-to-v3.md
 
 Rules:
 1. Fetch and read that guide BEFORE doing anything. It is authoritative. Do NOT
@@ -39,7 +39,7 @@ Rules:
    @zama-fhe/sdk, NOT the legacy @zama-fhe/relayer-sdk (createInstance/initSDK).
    For any symbol you're unsure about, use the guide's symbol-mapping table; for
    anything it doesn't cover, fetch
-   https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt and follow its links.
+   https://raw.githubusercontent.com/zama-ai/sdk/prerelease/llms.txt and follow its links.
 2. First print a short PLAN: list every file importing @zama-fhe/sdk or
    @zama-fhe/react-sdk and which guide Steps apply to each. Then proceed.
 3. Apply the Steps IN ORDER, starting with Step 1 (configuration) — it unblocks
@@ -78,36 +78,36 @@ migration.
 
 ### `@zama-fhe/sdk` (core)
 
-| 2.x                                                                                       | 3.x                                                                                                              | Step                      |
-| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| `ZamaSDKConfig`                                                                           | `ZamaConfig` (+ `ZamaConfigViem`/`ZamaConfigEthers`/`ZamaConfigWagmi`)                                           | [1 · Config][s1]          |
-| `new ZamaSDK({ relayer, signer, storage })`                                               | `new ZamaSDK(createConfig({ chains, …client, relayers, storage }))`                                              | [1 · Config][s1]          |
-| `SepoliaConfig` / `MainnetConfig` / `HardhatConfig` (from `@zama-fhe/sdk`)                | `sepolia` / `mainnet` / `hardhat` (+ `hoodi`, `anvil`, `ingenTestnet`, `bscTestnet`) from `@zama-fhe/sdk/chains` | [1 · Config][s1]          |
-| `<chainConfig>.chainId`                                                                   | `<chain>.id`                                                                                                     | [1 · Config][s1]          |
-| `ViemSigner` / `EthersSigner` (constructed)                                               | pass `publicClient`/`walletClient` (or ethers `provider`/`signer`) to `createConfig`                             | [1 · Config][s1]          |
-| `keypairTTL` (config option)                                                              | `transportKeyPairTTL`                                                                                            | [1 · Config][s1]          |
-| `new RelayerWeb(...)`                                                                     | `web()` from `@zama-fhe/sdk/web`                                                                                 | [2 · Relayer][s2]         |
-| `new RelayerNode(...)`                                                                    | `node()` from `@zama-fhe/sdk/node`                                                                               | [2 · Relayer][s2]         |
-| `CredentialsManager` / `DelegatedCredentialsManager`                                      | `Permits` / `Delegations` / `Decryption`                                                                         | [3 · Permits][s3]         |
-| `CredentialsManagerConfig`, `Credentials*Event`, `StoredCredentials`, `StoredKeypair`     | `Permission`, `StoredTransportKeyPair` (+ permit events)                                                         | [3 · Permits][s3]         |
-| `token.approve(spender[, expiry])`                                                        | `token.setOperator(operator[, expiry])`                                                                          | [4 · Operators][s4]       |
-| `token.isApproved(spender[, owner])`                                                      | `token.isOperator(holder, spender)`                                                                              | [4 · Operators][s4]       |
-| `token.balanceOf()` (self default)                                                        | `token.balanceOf(owner)` — owner address now required                                                            | [4 · Operators][s4]       |
-| `EncryptResult.handles` (bytes)                                                           | `EncryptResult.encryptedValues` (hex; `inputProof` is now hex too)                                               | [5 · Encrypt/decrypt][s5] |
-| `extractEncryptedHandles(...)`                                                            | **removed** — read `result.encryptedValues`                                                                      | [5 · Encrypt/decrypt][s5] |
-| `Handle` (type), `ClearValueType`                                                         | `EncryptedValue` (term), `ClearValue`                                                                            | [5 · Encrypt/decrypt][s5] |
-| `ZERO_HANDLE` / `isZeroHandle()`                                                          | `ZERO_ENCRYPTED_VALUE` / `isEncryptedValueZero()`                                                                | [5 · Encrypt/decrypt][s5] |
-| `UserDecryptParams`, `PublicDecryptResult`, `DelegatedUserDecryptParams`, `DecryptHandle` | `DecryptValuesParams`, `DecryptPublicValuesResult`, `DelegatedDecryptValuesParams`, `DecryptInput`               | [5 · Encrypt/decrypt][s5] |
-| `applyDecryptedValues`, `DecryptCache`                                                    | **removed** — handled by the SDK's internal cache                                                                | [5 · Encrypt/decrypt][s5] |
-| `KeypairType` / `Keypair`; `generateKeypair()` / `warmKeypair()`                          | `TransportKeyPair`; `generateTransportKeyPair()` / `warmTransportKeyPair()`                                      | [5 · Encrypt/decrypt][s5] |
-| relayer `getPublicKey()`; `PublicKeyData`                                                 | `fetchFheEncryptionKeyBytes()`; `FheEncryptionKey`                                                               | [5 · Encrypt/decrypt][s5] |
-| `KeypairExpiredError` / `InvalidKeypairError`                                             | `TransportKeyPairExpiredError` / `InvalidTransportKeyPairError`                                                  | [5 · Encrypt/decrypt][s5] |
-| `sdk.createReadonlyToken(addr)`; `sdk.createToken(addr, wrapper?)`                        | `sdk.createToken(addr)` (read/transfer); `sdk.createWrappedToken(addr)` (wrap/shield/unshield)                   | [6 · Tokens][s6]          |
-| `ReadonlyToken`                                                                           | `Token` (read/transfer) / `WrappedToken` (wrap)                                                                  | [6 · Tokens][s6]          |
-| `decodeUnwrappedFinalized`, `UnwrappedFinalizedEvent`                                     | `decodeUnwrapFinalized`, `UnwrapFinalizedEvent`                                                                  | [6 · Tokens][s6]          |
-| `decodeUnwrappedStarted`, `UnwrappedStartedEvent`                                         | **removed**                                                                                                      | [6 · Tokens][s6]          |
-| `parseActivityFeed`, `ActivityItem`, `ActivityAmount`, `ActivityType`                     | **removed** (activity feed dropped)                                                                              | [7 · Removed][s7]         |
-| `totalSupplyContract`, `matchAclRevert`, `sortByBlockNumber`                              | **removed**                                                                                                      | [7 · Removed][s7]         |
+| 2.x                                                                                       | 3.x                                                                                                                             | Step                      |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `ZamaSDKConfig`                                                                           | `ZamaConfig` (+ `ZamaConfigViem`/`ZamaConfigEthers`/`ZamaConfigWagmi`)                                                          | [1 · Config][s1]          |
+| `new ZamaSDK({ relayer, signer, storage })`                                               | `new ZamaSDK(createConfig({ chains, …client, relayers, storage }))`                                                             | [1 · Config][s1]          |
+| `SepoliaConfig` / `MainnetConfig` / `HardhatConfig` (from `@zama-fhe/sdk`)                | `sepolia` / `mainnet` / `hardhat` (+ `polygonAmoy`, `hoodi`, `anvil`, `ingenTestnet`, `bscTestnet`) from `@zama-fhe/sdk/chains` | [1 · Config][s1]          |
+| `<chainConfig>.chainId`                                                                   | `<chain>.id`                                                                                                                    | [1 · Config][s1]          |
+| `ViemSigner` / `EthersSigner` (constructed)                                               | pass `publicClient`/`walletClient` (or ethers `provider`/`signer`) to `createConfig`                                            | [1 · Config][s1]          |
+| `keypairTTL` (config option)                                                              | `transportKeyPairTTL`                                                                                                           | [1 · Config][s1]          |
+| `new RelayerWeb(...)`                                                                     | `web()` from `@zama-fhe/sdk/web`                                                                                                | [2 · Relayer][s2]         |
+| `new RelayerNode(...)`                                                                    | `node()` from `@zama-fhe/sdk/node`                                                                                              | [2 · Relayer][s2]         |
+| `CredentialsManager` / `DelegatedCredentialsManager`                                      | `Permits` / `Delegations` / `Decryption`                                                                                        | [3 · Permits][s3]         |
+| `CredentialsManagerConfig`, `Credentials*Event`, `StoredCredentials`, `StoredKeypair`     | `Permission`, `StoredTransportKeyPair` (+ permit events)                                                                        | [3 · Permits][s3]         |
+| `token.approve(spender[, expiry])`                                                        | `token.setOperator(operator[, expiry])`                                                                                         | [4 · Operators][s4]       |
+| `token.isApproved(spender[, owner])`                                                      | `token.isOperator(holder, spender)`                                                                                             | [4 · Operators][s4]       |
+| `token.balanceOf()` (self default)                                                        | `token.balanceOf(owner)` — owner address now required                                                                           | [4 · Operators][s4]       |
+| `EncryptResult.handles` (bytes)                                                           | `EncryptResult.encryptedValues` (hex; `inputProof` is now hex too)                                                              | [5 · Encrypt/decrypt][s5] |
+| `extractEncryptedHandles(...)`                                                            | **removed** — read `result.encryptedValues`                                                                                     | [5 · Encrypt/decrypt][s5] |
+| `Handle` (type), `ClearValueType`                                                         | `EncryptedValue` (term), `ClearValue`                                                                                           | [5 · Encrypt/decrypt][s5] |
+| `ZERO_HANDLE` / `isZeroHandle()`                                                          | `ZERO_ENCRYPTED_VALUE` / `isEncryptedValueZero()`                                                                               | [5 · Encrypt/decrypt][s5] |
+| `UserDecryptParams`, `PublicDecryptResult`, `DelegatedUserDecryptParams`, `DecryptHandle` | `DecryptValuesParams`, `DecryptPublicValuesResult`, `DelegatedDecryptValuesParams`, `DecryptInput`                              | [5 · Encrypt/decrypt][s5] |
+| `applyDecryptedValues`, `DecryptCache`                                                    | **removed** — handled by the SDK's internal cache                                                                               | [5 · Encrypt/decrypt][s5] |
+| `KeypairType` / `Keypair`; `generateKeypair()` / `warmKeypair()`                          | `TransportKeyPair`; `generateTransportKeyPair()` / `warmTransportKeyPair()`                                                     | [5 · Encrypt/decrypt][s5] |
+| relayer `getPublicKey()`; `PublicKeyData`                                                 | `fetchFheEncryptionKeyBytes()`; `FheEncryptionKey`                                                                              | [5 · Encrypt/decrypt][s5] |
+| `KeypairExpiredError` / `InvalidKeypairError`                                             | `TransportKeyPairExpiredError` / `InvalidTransportKeyPairError`                                                                 | [5 · Encrypt/decrypt][s5] |
+| `sdk.createReadonlyToken(addr)`; `sdk.createToken(addr, wrapper?)`                        | `sdk.createToken(addr)` (read/transfer); `sdk.createWrappedToken(addr)` (wrap/shield/unshield)                                  | [6 · Tokens][s6]          |
+| `ReadonlyToken`                                                                           | `Token` (read/transfer) / `WrappedToken` (wrap)                                                                                 | [6 · Tokens][s6]          |
+| `decodeUnwrappedFinalized`, `UnwrappedFinalizedEvent`                                     | `decodeUnwrapFinalized`, `UnwrapFinalizedEvent`                                                                                 | [6 · Tokens][s6]          |
+| `decodeUnwrappedStarted`, `UnwrappedStartedEvent`                                         | **removed**                                                                                                                     | [6 · Tokens][s6]          |
+| `parseActivityFeed`, `ActivityItem`, `ActivityAmount`, `ActivityType`                     | **removed** (activity feed dropped)                                                                                             | [7 · Removed][s7]         |
+| `totalSupplyContract`, `matchAclRevert`, `sortByBlockNumber`                              | **removed**                                                                                                                     | [7 · Removed][s7]         |
 
 ### `@zama-fhe/react-sdk` (hooks)
 

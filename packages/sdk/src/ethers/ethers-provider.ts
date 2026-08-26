@@ -1,14 +1,24 @@
-import { BrowserProvider } from "ethers";
-import type { ethers } from "ethers";
+import { ethers, BrowserProvider, Transaction } from "ethers";
 import type {
   Abi,
+  Address,
   ContractFunctionArgs,
   ContractFunctionName,
   ContractFunctionReturnType,
   EIP1193Provider,
   Hex,
 } from "viem";
-import type { GenericProvider, ReadContractConfig, TransactionReceipt } from "../types";
+import { ConfigurationError, TransactionRevertedError } from "../errors";
+import type {
+  ContractAbi,
+  GenericProvider,
+  ReadContractConfig,
+  TransactionReceipt,
+  WriteContractArgs,
+  WriteContractConfig,
+  WriteFunctionName,
+} from "../types";
+import { assertHex } from "../utils/assertions";
 import { ethersRead } from "./contracts";
 
 /**
@@ -86,10 +96,14 @@ export class EthersProvider implements GenericProvider {
   async getBlockTimestamp(): Promise<bigint> {
     const block = await this.#readProvider.getBlock("latest");
     if (!block) {
-      throw new Error("Failed to fetch latest block");
+      throw new ConfigurationError(
+        "EthersProvider.getBlockTimestamp: failed to fetch latest block",
+      );
     }
     if (block.timestamp === null) {
-      throw new Error("Latest block has no timestamp");
+      throw new ConfigurationError(
+        "EthersProvider.getBlockTimestamp: latest block has no timestamp",
+      );
     }
     return BigInt(block.timestamp);
   }
@@ -98,7 +112,10 @@ export class EthersProvider implements GenericProvider {
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
     const receipt = await this.#readProvider.waitForTransaction(hash);
     if (!receipt) {
-      throw new Error("Transaction receipt not found");
+      throw new TransactionRevertedError(
+        `EthersProvider.waitForTransactionReceipt: no receipt found for tx ${hash}. ` +
+          "The transaction may have been dropped from the mempool, or the RPC's wait timeout elapsed.",
+      );
     }
     return {
       logs: receipt.logs.map((log) => ({
@@ -106,5 +123,91 @@ export class EthersProvider implements GenericProvider {
         data: log.data as Hex,
       })),
     };
+  }
+
+  /** Build a fully-populated, RLP-encoded unsigned transaction ready to be signed offline. */
+  async prepareTransaction<
+    const TAbi extends ContractAbi,
+    TFunctionName extends WriteFunctionName<TAbi>,
+    const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
+  >(args: {
+    from: Address;
+    calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+    nonce?: number;
+    gasLimit?: bigint;
+    fees?: { maxFeePerGas: bigint; maxPriorityFeePerGas: bigint };
+  }): Promise<Hex> {
+    const { from, calldata } = args;
+    const iface = new ethers.Interface(calldata.abi as unknown as ethers.InterfaceAbi);
+    // Resolve overloaded ABI entries by name + arity. ethers'
+    // `getFunction(key, values)` allows for an "overrides" object as the
+    // last arg, so a 2-arg fragment still matches a 3-value call and
+    // overloads like ERC-7984 `confidentialTransfer(address,bytes32)` vs
+    // `confidentialTransfer(address,bytes32,bytes)` aren't disambiguated.
+    const candidates: ethers.FunctionFragment[] = [];
+    iface.forEachFunction((frag) => {
+      if (frag.name === calldata.functionName) {
+        candidates.push(frag);
+      }
+    });
+    const argLength = (calldata.args as readonly unknown[]).length;
+    const fragment =
+      candidates.length === 1
+        ? candidates[0]
+        : candidates.find((frag) => frag.inputs.length === argLength);
+    if (!fragment) {
+      throw new Error(`Function ${calldata.functionName}(${argLength} args) not found in ABI`);
+    }
+    const data = iface.encodeFunctionData(fragment, calldata.args as readonly unknown[]);
+    assertHex(data, "data");
+
+    const value = calldata.value ?? 0n;
+    // Wrap estimateGas — pre-flight revert is the high-value failure mode.
+    // Skip the network round-trips entirely when the caller supplied
+    // overrides — useful for custodians with their own nonce/fee managers.
+    const networkPromise = this.#readProvider.getNetwork();
+    const noncePromise =
+      args.nonce !== undefined
+        ? Promise.resolve(args.nonce)
+        : this.#readProvider.getTransactionCount(from, "pending");
+    const gasPromise =
+      args.gasLimit !== undefined
+        ? Promise.resolve(args.gasLimit)
+        : (calldata.gas ??
+          this.#readProvider
+            .estimateGas({ from, to: calldata.address, data, value })
+            .catch((error: unknown) => {
+              throw new TransactionRevertedError(
+                `EthersProvider.prepareTransaction: gas estimation reverted for ${calldata.functionName as string} on ${calldata.address}`,
+                { cause: error },
+              );
+            }));
+    const feeDataPromise = args.fees ?? this.#readProvider.getFeeData();
+    const [network, nonce, gasLimit, feeData] = await Promise.all([
+      networkPromise,
+      noncePromise,
+      gasPromise,
+      feeDataPromise,
+    ]);
+    const maxFeePerGas = feeData.maxFeePerGas;
+    const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas;
+    if (maxFeePerGas === null || maxPriorityFeePerGas === null) {
+      throw new ConfigurationError(
+        "EthersProvider.prepareTransaction: EIP-1559 fee data unavailable (provider returned null maxFeePerGas). " +
+          "The connected chain may not support EIP-1559 type-2 transactions.",
+      );
+    }
+    const tx = Transaction.from({
+      type: 2,
+      chainId: Number(network.chainId),
+      nonce,
+      to: calldata.address,
+      data,
+      value,
+      gasLimit,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
+    });
+    return tx.unsignedSerialized as Hex;
   }
 }

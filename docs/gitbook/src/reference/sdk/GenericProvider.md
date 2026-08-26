@@ -1,11 +1,11 @@
 ---
 title: GenericProvider
-description: Interface that all provider adapters must implement for read-only chain access.
+description: Interface that all provider adapters must implement for chain reads and unsigned transaction preparation.
 ---
 
 # GenericProvider
 
-Interface that all provider adapters must implement for read-only chain access. You only need this if you are building a custom provider -- otherwise use [ViemProvider](./ViemProvider.md), [EthersProvider](./EthersProvider.md), or the wagmi `createConfig` which builds one internally.
+Interface that all provider adapters must implement for chain reads and unsigned transaction preparation. You only need this if you are building a custom provider -- otherwise use [ViemProvider](./ViemProvider.md), [EthersProvider](./EthersProvider.md), or the wagmi `createConfig` which builds one internally.
 
 ## Import
 
@@ -21,6 +21,13 @@ interface GenericProvider {
   readContract(config: ReadContractConfig): Promise<unknown>;
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
   getBlockTimestamp(): Promise<bigint>;
+  prepareTransaction(args: {
+    from: Address;
+    calldata: WriteContractConfig;
+    nonce?: number;
+    gasLimit?: bigint;
+    fees?: { maxFeePerGas: bigint; maxPriorityFeePerGas: bigint };
+  }): Promise<Hex>;
 }
 ```
 
@@ -60,6 +67,9 @@ class MyProvider implements GenericProvider {
   async getBlockTimestamp() {
     /* ... */
   }
+  async prepareTransaction(args) {
+    /* ... */
+  }
 }
 ```
 
@@ -96,6 +106,20 @@ getBlockTimestamp(): Promise<bigint>
 ```
 
 Return the timestamp of the latest block.
+
+### prepareTransaction
+
+```ts
+prepareTransaction(args: {
+  from: Address;
+  calldata: WriteContractConfig;
+  nonce?: number;
+  gasLimit?: bigint;
+  fees?: { maxFeePerGas: bigint; maxPriorityFeePerGas: bigint };
+}): Promise<Hex>
+```
+
+Build a fully populated, RLP-encoded unsigned EIP-1559 transaction without signing or broadcasting it. The provider reads the chain ID and fills any omitted nonce, gas limit, or fee values from chain state.
 
 ## Related
 

@@ -2,9 +2,13 @@ import type { Address } from "viem";
 import type { ChainRouter } from "./chains/router";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
+import { DerivationSecretHolder } from "./credentials/keypair-wrapping";
+import { DerivationSecretSchema } from "./credentials/schemas";
+import { ConfigurationError } from "./errors";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import { Decryption } from "./namespaces/decryption";
 import { Delegations } from "./namespaces/delegations";
+import { Offline } from "./namespaces/offline";
 import { Permits } from "./namespaces/permits";
 import type { EncryptParams, FhevmRelayerOptions, RelayerSDK } from "./relayer/types";
 import { CachingService } from "./services/caching-service";
@@ -12,6 +16,7 @@ import { DecryptionService } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
 import { EncryptionService } from "./services/encryption-service";
 import { LifecycleService } from "./services/lifecycle-service";
+import { OfflineService } from "./services/offline-service";
 import { Token } from "./token/token";
 import { WrappedToken } from "./token/wrapped-token";
 import type {
@@ -21,15 +26,82 @@ import type {
   GenericStorage,
   WalletAccountListener,
 } from "./types";
+import { parseSchema } from "./validation";
 import { WrappersRegistry } from "./wrappers-registry";
+
+/** Instance-level options that are deliberately not part of the shareable config object. */
+export interface ZamaSDKOptions {
+  /**
+   * Encrypts the transport key pair's private half at rest. Headless environments only
+   * (CLI tools, servers, agents); the constructor rejects it in browser contexts. Supply
+   * at least 32 random bytes, or a string of at least 64 characters, from a CSPRNG or
+   * secrets manager. The SDK copies a Uint8Array secret and zeroizes its own copy after
+   * key import; it never touches your buffer, so zeroize yours after construction.
+   * The SDK never persists or exposes this value. Omit for the default:
+   * plaintext at rest, security delegated to the storage backend.
+   */
+  transportKeyPairDerivationSecret?: string | Uint8Array;
+}
+
+/**
+ * Omitting the option means cleartext-at-rest by choice; passing it as `undefined` means the
+ * caller asked for wrapping and the value went missing, so it must fail instead of downgrading.
+ */
+function assertDerivationSecretNotUnset(options: ZamaSDKOptions): void {
+  if (
+    !Object.hasOwn(options, "transportKeyPairDerivationSecret") ||
+    options.transportKeyPairDerivationSecret !== undefined
+  ) {
+    return;
+  }
+  throw new ConfigurationError(
+    "transportKeyPairDerivationSecret was passed as undefined, which usually means the environment variable it reads is unset (e.g. process.env.ZAMA_DERIVATION_SECRET). Supply the secret, or omit the option entirely to persist transport key pairs in cleartext on purpose.",
+  );
+}
+
+/**
+ * Wrapping only helps where no platform keystore protects the store, which is the headless
+ * case. `importScripts` catches a browser worker, where `window` and `document` are absent.
+ */
+function assertDerivationSecretHeadless(secret: string | Uint8Array | undefined): void {
+  if (secret === undefined) {
+    return;
+  }
+  const { importScripts } = globalThis as { importScripts?: unknown };
+  const headless =
+    typeof window === "undefined" &&
+    typeof document === "undefined" &&
+    typeof importScripts !== "function";
+  if (headless) {
+    return;
+  }
+  throw new ConfigurationError(
+    "transportKeyPairDerivationSecret is supported in headless environments only (CLI tools, servers, agents). Remove the option: an environment with a platform keystore, or one that ships a bundle, must delegate at-rest security of the transport key pair to the storage backend.",
+  );
+}
+
+/**
+ * Copies a `Uint8Array` secret so the holder only ever zeroizes the SDK's own buffer, and
+ * a caller zeroizing theirs cannot corrupt later wraps. Strings are immutable, so no copy.
+ */
+function derivationSecretHolder(
+  secret: string | Uint8Array | undefined,
+): DerivationSecretHolder | undefined {
+  if (secret === undefined) {
+    return undefined;
+  }
+  const parsed = parseSchema(DerivationSecretSchema, secret);
+  return new DerivationSecretHolder(typeof parsed === "string" ? parsed : new Uint8Array(parsed));
+}
 
 /**
  * ZamaSDK — composes a RelayerSDK with contract abstraction.
  *
- * Exposes domain namespaces for permits, delegations, decryption, and tokens,
- * plus an unchanged registry, a top-level `encrypt`, and lifecycle methods. Internal
- * `*Service` classes do the work; the namespace classes own SDK-level guards
- * (chain alignment, signer requirement, event emission).
+ * Exposes domain namespaces for permits, delegations, decryption, offline
+ * signing, and tokens, plus an unchanged registry, a top-level `encrypt`, and
+ * lifecycle methods. Internal `*Service` classes do the work; the namespace
+ * classes own SDK-level guards (chain alignment, signer requirement, event
+ * emission).
  */
 export class ZamaSDK {
   readonly #router: ChainRouter;
@@ -50,6 +122,8 @@ export class ZamaSDK {
   readonly delegations: Delegations;
   /** FHE decryption (user, delegated user, public). */
   readonly decryption: Decryption;
+  /** Offline-signing pipeline: `prepare` builds an unsigned tx the caller signs and broadcasts out-of-process — for HSM, policy-engine, and cross-process custody workflows. */
+  readonly offline: Offline;
   readonly #registryTTL: number;
   readonly #registryAddresses: Record<number, Address>;
   readonly #onEvent: ZamaSDKEventListener;
@@ -58,10 +132,16 @@ export class ZamaSDK {
   readonly #lifecycleService: LifecycleService;
   readonly #encryptionService: EncryptionService;
   readonly #decryptionService: DecryptionService | undefined;
-  readonly #credentialService: CredentialService | undefined;
+  readonly #credentialService: CredentialService;
   readonly #delegationService: DelegationService;
+  readonly #offlineService: OfflineService;
 
-  constructor(config: ZamaConfig) {
+  constructor(config: ZamaConfig, options: ZamaSDKOptions = {}) {
+    assertDerivationSecretNotUnset(options);
+    assertDerivationSecretHeadless(options.transportKeyPairDerivationSecret);
+    // Constructor-local on purpose: neither the raw secret nor the holder may become a field.
+    const derivationSecret = derivationSecretHolder(options.transportKeyPairDerivationSecret);
+
     this.#router = config.router;
     this.provider = config.provider;
     this.signer = config.signer;
@@ -90,17 +170,21 @@ export class ZamaSDK {
     this.#registryAddresses = registryAddresses;
     this.#registryTTL = config.registryTTL;
 
+    // CredentialService is always constructed (with optional signer) so
+    // public-decrypt / encryption flows and pre-wallet-connect construction
+    // work; permit-signing methods require a signer and throw without one.
+    this.#credentialService = new CredentialService({
+      router: config.router,
+      signer: config.signer,
+      transportKeyPairTTL: config.transportKeyPairTTL,
+      permitTTL: config.permitTTL,
+      scope: config.transportKeyPairScope,
+      derivationSecret,
+      storage: this.storage,
+      permitStorage: config.permitStorage,
+      logger: this.#logger,
+    });
     if (config.signer) {
-      this.#credentialService = new CredentialService({
-        router: config.router,
-        signer: config.signer,
-        transportKeyPairTTL: config.transportKeyPairTTL,
-        permitTTL: config.permitTTL,
-        scope: config.transportKeyPairScope,
-        storage: this.storage,
-        permitStorage: config.permitStorage,
-        logger: this.#logger,
-      });
       this.#decryptionService = new DecryptionService({
         cache: this.#cachingService,
         credentialService: this.#credentialService,
@@ -119,6 +203,12 @@ export class ZamaSDK {
       cachingService: this.#cachingService,
       credentialService: this.#credentialService,
       logger: this.#logger,
+    });
+    this.#offlineService = new OfflineService({
+      provider: this.provider,
+      router: config.router,
+      encryption: this.#encryptionService,
+      emitEvent: (input, tokenAddress) => this.emitEvent(input, tokenAddress),
     });
 
     this.permits = new Permits({
@@ -139,6 +229,7 @@ export class ZamaSDK {
       router: config.router,
       decryptionService: this.#decryptionService,
     });
+    this.offline = new Offline(this.#offlineService, this.#credentialService);
   }
 
   /**

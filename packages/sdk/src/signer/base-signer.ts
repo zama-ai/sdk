@@ -12,10 +12,11 @@ import type {
 import { MutableWalletAccountStore } from "./wallet-account-store";
 
 /**
- * Abstract base class that implements the shared {@link GenericSigner}
- * boilerplate: wallet-account store, `requireWalletAccount`, idempotent
- * `dispose` / `Disposable`. Subclasses provide `signTypedData`,
- * `writeContract`, and optionally override `onDispose` for cleanup.
+ * Abstract base class that supplies the wallet-account / dispose
+ * boilerplate every signer adapter needs: an observable wallet-account
+ * store, `requireWalletAccount`, and an idempotent `dispose` /
+ * `Disposable`. Subclasses provide `signTypedData` and `writeContract` — the
+ * resulting concrete class automatically satisfies {@link GenericSigner}.
  *
  * Using this class is optional — implementing {@link GenericSigner} directly
  * with {@link createWalletAccountStore} remains fully supported.

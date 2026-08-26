@@ -3,8 +3,9 @@
  *
  * Unlike the mocked `integration.test.ts`, this suite hits live infrastructure —
  * a public RPC per chain plus, where one exists, the chain's hosted Zama relayer
- * (`relayer.testnet.zama.org` on Sepolia, `relayer.mainnet.zama.org` on
- * mainnet). It runs the same read-only flow against every relayer-backed and
+ * (`relayer.testnet.zama.org` on Sepolia and Polygon Amoy,
+ * `relayer.mainnet.zama.org` on
+ * Ethereum mainnet and Polygon). It runs the same read-only flow against every relayer-backed and
  * cleartext chain the SDK ships in `chains/configs.ts`:
  *
  *   1. the target confidential token is registered and valid in the on-chain
@@ -20,17 +21,18 @@
  *
  * Each entry runs its own single-chain `ZamaSDK` rather than one shared
  * multi-chain instance: reads are bound to a single RPC (`ViemProvider` wraps
- * one `PublicClient`) and the relayer transport differs per chain. Sepolia and
- * mainnet have full FHE infrastructure and use the `node()` relayer; the
- * cleartext testnets (hoodi / bsc / ingen) have no hosted relayer and drive the
+ * one `PublicClient`) and the relayer transport differs per chain. Mainnet,
+ * Polygon, Sepolia and Polygon Amoy have full FHE infrastructure and use the `node()`
+ * relayer; the cleartext testnets (hoodi / bsc / ingen) have no hosted relayer
+ * and drive the
  * FHE backend through `cleartext()`. `hardhat` needs a local node and is out of
  * scope.
  *
- * Mainnet's hosted relayer requires a Zama API key (`x-api-key` header), so the
- * mainnet entry only wires relayer `auth` when `ZAMA_RELAYER_API_KEY` is set;
- * its encryption test is skipped when the key is absent. The other three
- * mainnet checks are RPC-only and always run. Every other chain's relayer is
- * open, so the whole suite runs there without any key.
+ * The hosted mainnet relayer requires a Zama API key (`x-api-key` header), so
+ * the Ethereum mainnet and Polygon entries only wire relayer `auth` when
+ * `ZAMA_RELAYER_API_KEY` is set; their encryption test is skipped when the key
+ * is absent. Their other three checks are RPC-only and always run. Every other
+ * chain's relayer is open, so the whole suite runs there without any key.
  *
  * Runs only via `pnpm test:integration` (the default unit run excludes
  * `*integration.test.ts`). Being network-dependent, a failure most often means
@@ -44,7 +46,15 @@ import {
   type FheChain,
   type RelayerConfig,
 } from "@zama-fhe/sdk";
-import { bscTestnet, hoodi, ingenTestnet, mainnet, sepolia } from "@zama-fhe/sdk/chains";
+import {
+  bscTestnet,
+  hoodi,
+  ingenTestnet,
+  mainnet,
+  polygon,
+  polygonAmoy,
+  sepolia,
+} from "@zama-fhe/sdk/chains";
 import { node } from "@zama-fhe/sdk/node";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { createPublicClient, createWalletClient, custom, http, isHex } from "viem";
@@ -78,10 +88,22 @@ const entries: readonly ChainEntry[] = [
     underlyingTokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
   },
   {
+    chain: { ...polygon, auth: { __type: "ApiKeyHeader", value: String(ZAMA_RELAYER_API_KEY) } },
+    relayer: node(),
+    confidentialTokenAddress: "0xbC8d2F447d16A3a28B554C684659177245CEd8E3",
+    underlyingTokenAddress: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+  },
+  {
     chain: sepolia,
     relayer: node(),
     confidentialTokenAddress: "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639",
     underlyingTokenAddress: "0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF",
+  },
+  {
+    chain: polygonAmoy,
+    relayer: node(),
+    confidentialTokenAddress: "0x7a1728f2A07cE4D62167dE1348af168509011b7b",
+    underlyingTokenAddress: "0x8516e725223e3F829537D6A877E1aAE954811B69",
   },
   {
     chain: hoodi,

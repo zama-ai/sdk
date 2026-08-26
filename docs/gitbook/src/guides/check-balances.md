@@ -208,8 +208,9 @@ const tokens = addresses.map((a) => sdk.createToken(a));
 const { results, errors } = await Token.batchBalancesOf(tokens, userAddress);
 
 // `results` is Map<Address, bigint> for tokens that decrypted successfully,
-// `errors` is Map<Address, ZamaError> for tokens that failed — partial failure
-// never rejects the whole batch.
+// `errors` is Map<Address, ZamaError> for tokens that failed. A failure that
+// affects the whole session (rejected signature, RPC rate limit, revoked KMS
+// context) rejects the call instead of filling `errors`.
 for (const [address, balance] of results) {
   console.log(address, balance);
 }

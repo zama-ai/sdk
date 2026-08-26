@@ -193,9 +193,10 @@ describe("Token", () => {
   });
 
   describe("confidentialTransferFrom", () => {
-    test("encrypts amount with from as userAddress and sends transaction", async ({
+    test("encrypts amount with connected wallet as userAddress and sends transaction", async ({
       relayer,
       signer,
+      userAddress,
       token,
       tokenAddress,
     }) => {
@@ -207,7 +208,7 @@ describe("Token", () => {
       expect(relayer.encryptValues).toHaveBeenCalledWith({
         values: [{ value: 200n, type: "euint64" }],
         contractAddress: tokenAddress,
-        userAddress: getAddress(from),
+        userAddress,
       });
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "confidentialTransferFrom" }),
@@ -315,9 +316,10 @@ describe("Token", () => {
     const TO = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
     const DATA = "0xdeadbeef" as const;
 
-    test("encrypts amount with from as userAddress, forwards data and sends transaction", async ({
+    test("encrypts amount with connected wallet as userAddress, forwards data and sends transaction", async ({
       relayer,
       signer,
+      userAddress,
       token,
       tokenAddress,
       handle,
@@ -328,7 +330,7 @@ describe("Token", () => {
       expect(relayer.encryptValues).toHaveBeenCalledWith({
         values: [{ value: 200n, type: "euint64" }],
         contractAddress: tokenAddress,
-        userAddress: getAddress(FROM),
+        userAddress,
       });
       // Pin the full ordered args so a wrong-order regression fails here, not only in contracts.test.ts.
       expect(signer.writeContract).toHaveBeenCalledWith(

@@ -15,8 +15,7 @@ import {
   getAddress,
   type Address,
 } from "viem";
-import { sepolia } from "viem/chains";
-import { SEPOLIA_RPC_URL } from "@/lib/config";
+import { SEPOLIA_RPC_URL, sepolia } from "@/lib/config";
 import { getEthereumProvider } from "@/lib/ethereum";
 
 // ── What this file does ────────────────────────────────────────────────────────
@@ -52,8 +51,13 @@ import { getEthereumProvider } from "@/lib/ethereum";
 
 // Separate DB from indexedDBStorage — see block comment above for the reason.
 const permitDBStorage = new IndexedDBStorage("PermitStore");
+
+// The relayer requires an absolute URL, so resolve the same-origin proxy at runtime.
+// The SSR placeholder never issues requests.
 const relayerProxyUrl =
-  process.env.NEXT_PUBLIC_RELAYER_PROXY_URL || "http://localhost:3000/api/relayer";
+  typeof window === "undefined"
+    ? "http://localhost/api/relayer"
+    : `${window.location.origin}/api/relayer`;
 
 const queryClient = new QueryClient();
 

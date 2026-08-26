@@ -14,8 +14,12 @@ import {
 import { anvil } from "../chains";
 
 export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerSDK {
+  // Domain chainId mocks derive from this so a test that overrides `chain`
+  // (e.g. simulating a multi-chain router) gets an internally consistent
+  // EIP-712 domain instead of a hardcoded value from a different chain.
+  const chain = overrides.chain ?? anvil;
   return {
-    chain: anvil,
+    chain,
     generateTransportKeyPair: vi
       .fn()
       .mockResolvedValue({
@@ -43,7 +47,12 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
           contractAddresses: readonly string[];
         }) => {
           const eip712 = {
-            domain: { name: "Decryption", version: "1", chainId: 31337n, verifyingContract: TOKEN },
+            domain: {
+              name: "Decryption",
+              version: "1",
+              chainId: BigInt(chain.id),
+              verifyingContract: TOKEN,
+            },
             types: { UserDecryptRequestVerification: [] },
             primaryType: "UserDecryptRequestVerification",
             message: {
@@ -84,7 +93,71 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
           signerAddress: params.signedPermit.signerAddress,
         }),
       ),
-    parseSignedDecryptionPermit: vi.fn().mockImplementation(async (params: unknown) => params),
+    // Route the registerPermit path through the serializedPermit it verifies,
+    // mirroring signDecryptionPermit's fused shape so serializeSignedDecryptionPermit's
+    // mock (which reads signedPermit.{version,eip712,signature,signerAddress}) works.
+    // `isDelegated`/`encryptedDataOwnerAddress` are derived from the eip712 message's
+    // `delegatorAddress`, mirroring real `@fhevm/sdk` behavior, so tests that verify
+    // delegated-vs-self permit handling exercise a realistic shape.
+    parseSignedDecryptionPermit: vi
+      .fn()
+      .mockImplementation(
+        async (params: {
+          serializedPermit: {
+            version: number;
+            eip712: { message?: { delegatorAddress?: string } };
+            signature: string;
+            signerAddress: string;
+          };
+        }) => {
+          const delegatorAddress = params.serializedPermit.eip712.message?.delegatorAddress;
+          return {
+            version: params.serializedPermit.version,
+            eip712: params.serializedPermit.eip712,
+            signature: params.serializedPermit.signature,
+            signerAddress: params.serializedPermit.signerAddress,
+            encryptedDataOwnerAddress: delegatorAddress ?? params.serializedPermit.signerAddress,
+            transportPublicKey: TEST_PUBLIC_KEY,
+            isDelegated: delegatorAddress !== undefined,
+            assertNotExpired: () => {},
+          };
+        },
+      ),
+    // `types`/`primaryType`/`message.delegatorAddress` switch on `params.delegatorAddress`,
+    // mirroring `@fhevm/sdk`'s self-vs-delegated V1 EIP-712 shape.
+    createUnsignedLegacyDecryptionPermitEip712: vi
+      .fn()
+      .mockImplementation(
+        async (params: {
+          contractAddresses: readonly string[];
+          startTimestamp: number;
+          durationSeconds: number;
+          delegatorAddress?: string;
+        }) => ({
+          domain: {
+            name: "Decryption",
+            version: "1",
+            chainId: BigInt(chain.id),
+            verifyingContract: TOKEN,
+          },
+          types: {
+            [params.delegatorAddress
+              ? "DelegatedUserDecryptRequestVerification"
+              : "UserDecryptRequestVerification"]: [],
+          },
+          primaryType: params.delegatorAddress
+            ? "DelegatedUserDecryptRequestVerification"
+            : "UserDecryptRequestVerification",
+          message: {
+            publicKey: TEST_PUBLIC_KEY,
+            contractAddresses: params.contractAddresses,
+            startTimestamp: String(params.startTimestamp),
+            durationDays: String(Math.floor(params.durationSeconds / 86400)),
+            extraData: "0x",
+            ...(params.delegatorAddress && { delegatorAddress: params.delegatorAddress }),
+          },
+        }),
+      ),
     encryptValue: vi
       .fn()
       .mockResolvedValue({ encryptedValue: VALID_ENCRYPTED_VALUE, inputProof: VALID_INPUT_PROOF }),

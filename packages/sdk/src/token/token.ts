@@ -250,12 +250,14 @@ export class Token {
    * addresses in a single wallet signature, then delegates each decrypt to
    * `sdk.decryption.decryptValues`.
    *
-   * Tokens that fail to decrypt land in `errors` rather than aborting the
-   * whole batch — caller decides how to surface them.
+   * Tokens that fail to decrypt land in `errors`; the batch keeps going.
    *
    * @param tokens - Array of {@link Token} instances bound to the same SDK.
    * @param owner - Balance owner address.
    * @returns `{ results, errors }` partitioning the per-token outcomes.
+   * @throws A failure that affects the whole session (rejected signature,
+   * misconfiguration, RPC rate limit, key unwrapping failure, revoked KMS
+   * context) rejects the call instead of landing in `errors`.
    *
    * @example
    * ```ts
@@ -276,29 +278,49 @@ export class Token {
     // per-token decryptValues calls reuse the cached credentials.
     await sdk.permits.grantPermit(tokens.map((t) => t.address));
 
+    // `pLimit` cannot cancel calls that already started. The shared flag stops
+    // the queued tokens from starting once a fatal error is seen, so they do
+    // not each trigger their own recovery wallet prompt.
+    let aborted = false;
+    let fatal: unknown;
+
     const outcomes = await pLimit(
       tokens.map((t) => async () => {
+        if (aborted) {
+          return { status: "aborted" as const };
+        }
         try {
           return { status: "fulfilled" as const, value: await t.balanceOf(owner) };
         } catch (reason) {
+          // A fatal error (rejected signature, revoked KMS context, rate
+          // limit) would fail every token: stop the batch.
+          if (isFatalBatchError(reason)) {
+            aborted = true;
+            fatal ??= reason;
+            return { status: "aborted" as const };
+          }
           return { status: "rejected" as const, reason };
         }
       }),
       5,
     );
 
+    // Some tokens were never attempted after the abort, so a partial result
+    // would be wrong: reject the whole call.
+    if (fatal !== undefined) {
+      throw fatal;
+    }
+
     for (let i = 0; i < tokens.length; i++) {
       const tokenAddress = tokens[i]!.address;
       const outcome = outcomes[i]!;
+      if (outcome.status === "aborted") {
+        continue;
+      }
       if (outcome.status === "fulfilled") {
         results.set(tokenAddress, outcome.value);
       } else {
         const reason = outcome.reason;
-        // Session-level failures (user rejected signature, SDK misconfigured)
-        // apply to every token — surface them instead of collecting per-token.
-        if (isFatalBatchError(reason)) {
-          throw reason;
-        }
         const error =
           reason instanceof ZamaError
             ? reason
@@ -332,6 +354,9 @@ export class Token {
    * @throws if no active delegation exists. {@link DelegationNotFoundError}
    * @throws if the delegation has expired. {@link DelegationExpiredError}
    * @throws if any decryption fails and no `onError` is provided. {@link DecryptionFailedError}
+   * @throws A failure that affects the whole session (rejected signature, RPC
+   * rate limit, revoked KMS context) rejects the call even when `onError` is
+   * provided.
    *
    * @example
    * ```ts
@@ -453,32 +478,47 @@ export class Token {
     errors: Map<Address, ZamaError>,
     maxConcurrency: number,
   ): Promise<Array<EncryptedValue | undefined>> {
+    // `pLimit` cannot cancel calls that already started. The shared flag stops
+    // the queued tokens from re-hitting an endpoint that already failed for
+    // the whole batch.
+    let aborted = false;
+    let fatal: unknown;
+
     const outcomes = await pLimit(
       tokens.map((token) => async () => {
+        if (aborted) {
+          return { status: "aborted" as const };
+        }
         try {
           return {
             status: "fulfilled" as const,
             value: await token.readConfidentialBalanceOf(accountAddress),
           };
         } catch (reason) {
+          if (isFatalBatchError(reason)) {
+            aborted = true;
+            fatal ??= reason;
+            return { status: "aborted" as const };
+          }
           return { status: "rejected" as const, reason };
         }
       }),
       maxConcurrency,
     );
 
+    if (fatal !== undefined) {
+      throw fatal;
+    }
+
     const encryptedValues: Array<EncryptedValue | undefined> = [];
     for (const [index, token] of tokens.entries()) {
       const outcome = outcomes[index];
-      if (!outcome) {
+      if (!outcome || outcome.status === "aborted") {
         continue;
       }
       if (outcome.status === "fulfilled") {
         encryptedValues[index] = outcome.value;
         continue;
-      }
-      if (isFatalBatchError(outcome.reason)) {
-        throw outcome.reason;
       }
       errors.set(
         token.address,
@@ -578,7 +618,7 @@ export class Token {
     callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
     this.#requireSigner("confidentialTransferFrom");
-    await requireAlignedWalletAccount(
+    const account = await requireAlignedWalletAccount(
       "confidentialTransferFrom",
       this.sdk.signer,
       this.sdk.provider,
@@ -586,10 +626,11 @@ export class Token {
     const normalizedFrom = getAddress(from);
     const normalizedTo = getAddress(to);
 
+    // The input proof is verified against msg.sender, so it binds to the caller, not `from`.
     const { encryptedValues, inputProof } = await this.sdk.encrypt({
       values: [{ value: amount, type: "euint64" }],
       contractAddress: this.address,
-      userAddress: normalizedFrom,
+      userAddress: getAddress(account.address),
     });
     void swallow(
       "transferFrom: onEncryptComplete",
@@ -722,7 +763,7 @@ export class Token {
     callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
     this.#requireSigner("confidentialTransferFromAndCall");
-    await requireAlignedWalletAccount(
+    const account = await requireAlignedWalletAccount(
       "confidentialTransferFromAndCall",
       this.sdk.signer,
       this.sdk.provider,
@@ -730,10 +771,11 @@ export class Token {
     const normalizedFrom = getAddress(from);
     const normalizedTo = getAddress(to);
 
+    // The input proof is verified against msg.sender, so it binds to the caller, not `from`.
     const { encryptedValues, inputProof } = await this.sdk.encrypt({
       values: [{ value: amount, type: "euint64" }],
       contractAddress: this.address,
-      userAddress: normalizedFrom,
+      userAddress: getAddress(account.address),
     });
     void swallow(
       "transferFromAndCall: onEncryptComplete",

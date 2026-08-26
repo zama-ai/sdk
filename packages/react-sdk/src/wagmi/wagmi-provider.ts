@@ -1,4 +1,5 @@
 import type {
+  Address,
   ContractAbi,
   GenericProvider,
   Hex,
@@ -7,10 +8,20 @@ import type {
   ReadContractReturnType,
   ReadFunctionName,
   TransactionReceipt,
+  WriteContractArgs,
+  WriteContractConfig,
+  WriteFunctionName,
 } from "@zama-fhe/sdk";
-import { TransactionRevertedError } from "@zama-fhe/sdk";
+import { ConfigurationError, TransactionRevertedError } from "@zama-fhe/sdk";
+import { encodeFunctionData, serializeTransaction, type Abi } from "viem";
 import type { Config } from "wagmi";
-import { getBlock, getChainId, readContract, waitForTransactionReceipt } from "wagmi/actions";
+import {
+  getBlock,
+  getChainId,
+  getPublicClient,
+  readContract,
+  waitForTransactionReceipt,
+} from "wagmi/actions";
 
 /** Configuration for {@link WagmiProvider}. */
 export interface WagmiProviderConfig {
@@ -80,5 +91,68 @@ export class WagmiProvider implements GenericProvider {
   async getBlockTimestamp(): Promise<bigint> {
     const block = await getBlock(this.#config);
     return block.timestamp;
+  }
+
+  async prepareTransaction<
+    const TAbi extends ContractAbi,
+    TFunctionName extends WriteFunctionName<TAbi>,
+    const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
+  >(args: {
+    from: Address;
+    calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+    nonce?: number;
+    gasLimit?: bigint;
+    fees?: { maxFeePerGas: bigint; maxPriorityFeePerGas: bigint };
+  }): Promise<Hex> {
+    const publicClient = getPublicClient(this.#config);
+    if (!publicClient) {
+      throw new ConfigurationError(
+        "WagmiProvider.prepareTransaction: no public client configured for the active chain.",
+      );
+    }
+    const { from, calldata } = args;
+    const data = encodeFunctionData({
+      abi: calldata.abi as Abi,
+      functionName: calldata.functionName as string,
+      args: calldata.args as readonly unknown[],
+    });
+    // Wrap estimateGas — pre-flight revert is the high-value failure mode.
+    // Skip the network round-trips entirely when the caller supplied
+    // overrides — useful for custodians with their own nonce/fee managers.
+    const chainIdPromise = publicClient.getChainId();
+    const noncePromise =
+      args.nonce !== undefined
+        ? Promise.resolve(args.nonce)
+        : publicClient.getTransactionCount({ address: from, blockTag: "pending" });
+    const gasPromise =
+      args.gasLimit !== undefined
+        ? Promise.resolve(args.gasLimit)
+        : (calldata.gas ??
+          publicClient
+            .estimateGas({ account: from, to: calldata.address, data, value: calldata.value ?? 0n })
+            .catch((error: unknown) => {
+              throw new TransactionRevertedError(
+                `WagmiProvider.prepareTransaction: gas estimation reverted for ${calldata.functionName as string} on ${calldata.address}`,
+                { cause: error },
+              );
+            }));
+    const feesPromise = args.fees ?? publicClient.estimateFeesPerGas();
+    const [chainId, nonce, gas, fees] = await Promise.all([
+      chainIdPromise,
+      noncePromise,
+      gasPromise,
+      feesPromise,
+    ]);
+    return serializeTransaction({
+      type: "eip1559",
+      chainId,
+      nonce,
+      to: calldata.address,
+      data,
+      value: calldata.value ?? 0n,
+      gas,
+      maxFeePerGas: fees.maxFeePerGas,
+      maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
+    });
   }
 }

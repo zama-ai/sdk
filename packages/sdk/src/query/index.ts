@@ -105,6 +105,14 @@ export {
 } from "./delegated-decrypt";
 export { decryptPublicValuesMutationOptions } from "./public-decrypt";
 export { grantPermitMutationOptions } from "./grant-permit";
+export { preparePermitMutationOptions } from "./prepare-permit";
+export { registerPermitMutationOptions, type RegisterPermitParams } from "./register-permit";
+export type {
+  PreparedPermit,
+  PreparePermitRequest,
+  SerializedPermitEip712,
+} from "../credentials/types";
+export type { ChecksummedAddress } from "../schemas/primitives";
 export { hasPermitQueryOptions, type HasPermitQueryConfig } from "./has-permit";
 export { revokePermitsMutationOptions } from "./revoke-permits";
 export { clearCredentialsMutationOptions } from "./clear-credentials";
@@ -143,7 +151,7 @@ export type { DecryptPublicValuesResult } from "../relayer/types";
 export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/token";
 export type { Token } from "../token/token";
 export type { WrappedToken } from "../token/wrapped-token";
-export type { ZamaSDK } from "../zama-sdk";
+export type { ZamaSDK, ZamaSDKOptions } from "../zama-sdk";
 export type { ZamaConfig } from "../config";
 export type { SerializedTransportKeyPair } from "../credentials";
 export type {
@@ -188,7 +196,26 @@ export type {
   ListPairsOptions,
 } from "../wrappers-registry";
 export type { PaginatedResult, TokenWrapperPair, TokenWrapperPairWithMetadata } from "../contracts";
-export type { Permits, Delegations, Decryption } from "../namespaces";
+export type { Permits, Delegations, Decryption, Offline } from "../namespaces";
+export type {
+  ApproveUnderlyingRequest,
+  ConfidentialTransferFromRequest,
+  ConfidentialTransferRequest,
+  DelegateDecryptionRequest,
+  FinalizeUnwrapRequest,
+  PrepareFees,
+  PrepareOptions,
+  PrepareTransactionRequest,
+  PreparedFor,
+  PreparedTransaction,
+  RevokeDelegationRequest,
+  SetOperatorRequest,
+  TransactionKind,
+  TransferAndCallRequest,
+  UnwrapAllRequest,
+  UnwrapRequest,
+  WrapRequest,
+} from "../types";
 export type {
   DelegatedDecryptOptions,
   BatchDecryptResult,

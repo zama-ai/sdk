@@ -5,8 +5,8 @@ import {
   type Hex,
   type WalletAccount,
   type WriteContractArgs,
-  type WriteFunctionName,
   type WriteContractConfig,
+  type WriteFunctionName,
 } from "@zama-fhe/sdk";
 import { getAddress } from "viem";
 import type { Config } from "wagmi";

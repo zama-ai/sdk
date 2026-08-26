@@ -38,6 +38,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { RE2JS } from "re2js";
 import { checkTree, extractHeadingSlugs, slug } from "./check-links.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
@@ -389,13 +390,11 @@ export function insertSection(pageContent, version, sectionMarkdown) {
   const lines = pageContent.split("\n");
   const block = `${sectionMarkdown.trimEnd()}\n`;
 
-  const headingRe = /^##\s+(\d+\.\d+\.\d+(?:-\S+)?)\s*$/;
   for (let i = 0; i < lines.length; i++) {
-    const match = headingRe.exec(lines[i]);
-    if (!match) {
+    if (!lines[i].startsWith("## ")) {
       continue;
     }
-    const existing = parseVersion(match[1]);
+    const existing = parseVersion(lines[i].slice(3).trim());
     if (existing && compareVersions(existing, target) < 0) {
       lines.splice(i, 0, ...block.split("\n"), "");
       return lines.join("\n");
@@ -419,8 +418,9 @@ export function insertMinorIntoSummary(summaryContent, version) {
     return summaryContent;
   }
   const lines = summaryContent.split("\n");
-  const anchor = lines.findIndex((line) =>
-    new RegExp(`^-\\s*\\[[^\\]]+\\]\\(changelog/v${major}\\.md\\)\\s*$`).test(line),
+  const suffix = `](changelog/v${major}.md)`;
+  const anchor = lines.findIndex(
+    (line) => line.startsWith("- [") && line.trimEnd().endsWith(suffix),
   );
   if (anchor === -1) {
     return summaryContent;
@@ -547,13 +547,24 @@ export function extractAlphaProse(alphaContent) {
  *  Semantic check: after stripping frontmatter/banner/raw-material/comments and the
  *  known placeholder, is there any substance left? Robust to oxfmt reflow. */
 export function alphaHasSubstance(alphaContent) {
-  const remainder = extractAlphaProse(alphaContent)
-    .replace(/<!--[\s\S]*?-->/gu, "")
+  const remainder = stripHtmlComments(extractAlphaProse(alphaContent))
     .split("\n")
     .filter((line) => normalizeWhitespace(line) !== normalizeWhitespace(ALPHA_EMPTY_PLACEHOLDER))
     .join("\n")
     .trim();
   return remainder.length > 0;
+}
+
+/** Strip HTML comments, repeating until stable so a nested or adjacent construct
+ *  like `<!--<!-- -->-->` can't leave a live `<!--` behind after a single pass. */
+function stripHtmlComments(text) {
+  let previous;
+  let current = text;
+  do {
+    previous = current;
+    current = current.replace(/<!--[\s\S]*?-->/gu, "");
+  } while (current !== previous);
+  return current;
 }
 
 function normalizeWhitespace(text) {
@@ -825,8 +836,8 @@ function repointAlphaAnchors(edits, root, movedSlugs, targetBasename) {
   // Path-boundary the prefix: an optional group that must END in `/` (a directory
   // separator) or be absent (start-of-path, right after `](`). Otherwise a sibling
   // like `myalpha.md#slug` would spuriously match (`my` as the prefix).
-  const patterns = [...movedSlugs].map(
-    (movedSlug) => new RegExp(`\\]\\(([^)#]*\\/)?alpha\\.md#(${escapeRegExp(movedSlug)})\\)`, "gu"),
+  const patterns = [...movedSlugs].map((movedSlug) =>
+    RE2JS.compile(`\\]\\(([^)#]*\\/)?alpha\\.md#(${escapeRegExp(movedSlug)})\\)`),
   );
   for (const relPath of docPagesRelative(root)) {
     const content = edits.read(relPath);
@@ -835,7 +846,7 @@ function repointAlphaAnchors(edits, root, movedSlugs, targetBasename) {
     }
     let updated = content;
     for (const pattern of patterns) {
-      updated = updated.replace(pattern, (_match, prefix, anchor) => {
+      updated = pattern.matcher(updated).replaceAll((_match, prefix, anchor) => {
         return `](${prefix ?? ""}${targetBasename}#${anchor})`;
       });
     }

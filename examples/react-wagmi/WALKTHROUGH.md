@@ -35,9 +35,16 @@ const wagmiConfig = createConfig({
   transports: { [sepolia.id]: http(SEPOLIA_RPC_URL) },
 });
 
+// The relayer requires an absolute URL, so resolve the same-origin proxy at runtime.
+// The SSR placeholder never issues requests.
+const relayerProxyUrl =
+  typeof window === "undefined"
+    ? "http://localhost/api/relayer"
+    : `${window.location.origin}/api/relayer`;
+
 const mySepolia = {
   ...fheSepolia,
-  relayerUrl: "http://localhost:3000/api/relayer",
+  relayerUrl: relayerProxyUrl,
   network: SEPOLIA_RPC_URL,
 } as const satisfies FheChain;
 
@@ -251,7 +258,8 @@ transaction(s), shield transaction, and cache invalidation.
 ## 8. Relayer proxy
 
 The proxy route `src/app/api/relayer/[...path]/route.ts` keeps `RELAYER_API_KEY` server-side.
-Set `RELAYER_URL` in `.env.local` (defaults to the public Sepolia testnet relayer if unset).
+Set `RELAYER_URL` in `.env.local` (bare host, no `/v2` suffix; defaults to the public Sepolia
+testnet relayer if unset).
 `NEXT_PUBLIC_SEPOLIA_RPC_URL` overrides the default publicnode RPC — useful to avoid rate
 limiting with a private node.
 

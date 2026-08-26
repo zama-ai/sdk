@@ -31,9 +31,16 @@ factory.
 ```ts
 const publicClient = createPublicClient({ chain: sepolia, transport: http(SEPOLIA_RPC_URL) });
 const provider = new ViemProvider({ publicClient });
+// The relayer requires an absolute URL, so resolve the same-origin proxy at runtime.
+// The SSR placeholder never issues requests.
+const relayerProxyUrl =
+  typeof window === "undefined"
+    ? "http://localhost/api/relayer"
+    : `${window.location.origin}/api/relayer`;
+
 const zamaSepolia = {
   ...fheSepolia,
-  relayerUrl: new URL("/api/relayer", window.location.origin).toString(),
+  relayerUrl: relayerProxyUrl,
   network: SEPOLIA_RPC_URL,
 } as const;
 
@@ -62,15 +69,17 @@ one instance is safe — the SDK namespaces the keys internally.
 
 ### Relayer proxy (`/api/relayer/[...path]/route.ts`)
 
-The `web()` relayer factory creates a browser worker loaded from CDN. Workers require absolute URLs, so the proxy URL is constructed with `new URL("/api/relayer", window.location.origin).toString()`:
+`relayerUrl` must be an **absolute** URL. The SDK validates it with `new URL(relayerUrl)` — no base argument — so a bare path like `/api/relayer` is rejected before any request is made. Deriving it from `window.location.origin` at runtime keeps the app working on whatever port or host it happens to be served from.
 
 ```
-Browser Worker → http://localhost:3000/api/relayer/keyurl
+Browser → http://localhost:3003/api/relayer/v2/keyurl
                    ↓
-Next.js API route → RELAYER_URL/keyurl  (+ x-api-key header if set)
+Next.js API route → RELAYER_URL/v2/keyurl  (+ x-api-key header if set)
                    ↓
                  https://relayer.testnet.zama.org/v2/keyurl
 ```
+
+The `v2/` prefix comes from the SDK, not from the proxy.
 
 The proxy defaults to the public Sepolia testnet relayer. No `RELAYER_URL` or `RELAYER_API_KEY` is required for testnet.
 

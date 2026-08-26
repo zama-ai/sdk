@@ -1,4 +1,4 @@
-import { type Address, getAddress, type Hex } from "viem";
+import { getAddress, type Address, type Hex } from "viem";
 import {
   allowanceContract,
   approveContract,
@@ -11,10 +11,6 @@ import {
   unwrapFromBalanceContract,
   wrapContract,
 } from "../contracts";
-import { findUnwrapRequested } from "../events/onchain-events";
-import { ZamaSDKEvents } from "../events/sdk-events";
-import type { EncryptedValue } from "../relayer/types";
-import type { RawLog } from "../types/transaction";
 import {
   DecryptionFailedError,
   ERC20ReadFailedError,
@@ -25,13 +21,9 @@ import {
   TransactionRevertedError,
   ZamaError,
 } from "../errors";
-import { isEncryptedValueZero } from "../utils/handles";
-import { toError } from "../utils";
-import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
-import { assertBigint, assertNonNullable } from "../utils/assertions";
-import { swallow } from "../utils/swallow";
-import { clearPendingUnshield, loadPendingUnshield, savePendingUnshield } from "./pending-unshield";
-import { Token } from "./token";
+import { findUnwrapRequested } from "../events/onchain-events";
+import { ZamaSDKEvents } from "../events/sdk-events";
+import type { EncryptedValue } from "../relayer/types";
 import type {
   GenericSigner,
   ShieldCallbacks,
@@ -42,6 +34,14 @@ import type {
   UnwrapResult,
   WrapOptions,
 } from "../types";
+import type { RawLog } from "../types/transaction";
+import { toError } from "../utils";
+import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
+import { assertBigint, assertNonNullable } from "../utils/assertions";
+import { isEncryptedValueZero } from "../utils/handles";
+import { swallow } from "../utils/swallow";
+import { clearPendingUnshield, loadPendingUnshield, savePendingUnshield } from "./pending-unshield";
+import { Token } from "./token";
 
 /**
  * Confidential ERC-20 wrapper (ERC-7984 ERC20Wrapper).

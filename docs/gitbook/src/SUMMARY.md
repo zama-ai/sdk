@@ -8,6 +8,7 @@
 - [First confidential dApp](tutorials/first-confidential-dapp.md)
 - [Wallet & exchange integration](tutorials/wallet-exchange-integration.md)
 - [Build with an LLM](tutorials/build-with-an-llm.md)
+- [Supported environments](tutorials/supported-environments.md)
 
 ## Migration
 
@@ -38,6 +39,7 @@
 - [Decrypt values from event logs](guides/decrypt-from-event-logs.md)
 - [Handle errors](guides/handle-errors.md)
 - [Node.js backend](guides/node-js-backend.md)
+- [Offline signing](guides/offline.md)
 - [Web extensions](guides/web-extensions.md)
 - [Local development](guides/local-development.md)
 - [Next.js SSR](guides/nextjs-ssr.md)
@@ -66,6 +68,7 @@
   - [Contract builders](reference/sdk/contract-builders.md)
   - [Event decoders](reference/sdk/event-decoders.md)
   - [Delegations](reference/sdk/delegation.md)
+  - [Offline](reference/sdk/Offline.md)
   - [Network presets](reference/sdk/network-presets.md)
 - [React reference](reference/react/README.md)
   - [ZamaProvider](reference/react/ZamaProvider.md)
@@ -85,6 +88,8 @@
   - [useUnwrapAll](reference/react/useUnwrapAll.md)
   - [useFinalizeUnwrap](reference/react/useFinalizeUnwrap.md)
   - [useGrantPermit](reference/react/useGrantPermit.md)
+  - [usePreparePermit](reference/react/usePreparePermit.md)
+  - [useRegisterPermit](reference/react/useRegisterPermit.md)
   - [useHasPermit](reference/react/useHasPermit.md)
   - [useRevokePermits](reference/react/useRevokePermits.md)
   - [useClearCredentials](reference/react/useClearCredentials.md)

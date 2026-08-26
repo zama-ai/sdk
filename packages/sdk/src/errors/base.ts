@@ -30,6 +30,8 @@ export const ZamaErrorCode = {
   TransportKeyPairExpired: "KEYPAIR_EXPIRED",
   /** Relayer rejected transport key pair (stale, expired, or malformed). */
   InvalidTransportKeyPair: "INVALID_KEYPAIR",
+  /** The permit's KMS context was revoked on-chain; the SDK's evict-and-regrant retry also failed. */
+  RevokedKmsContext: "REVOKED_KMS_CONTEXT",
   /** No FHE ciphertext exists for this account (never shielded). */
   NoCiphertext: "NO_CIPHERTEXT",
   /** Relayer HTTP request failed. */
@@ -78,6 +80,14 @@ export const ZamaErrorCode = {
   WalletNotConnected: "WALLET_NOT_CONNECTED",
   /** Wallet account discovery is still resolving. */
   WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY",
+  /** Wrapping or unwrapping the transport private key with `transportKeyPairDerivationSecret` failed. */
+  KeyWrappingFailed: "KEY_WRAPPING_FAILED",
+  /** The transport key pair changed between `preparePermit` and `registerPermit`. */
+  TransportKeyPairChanged: "TRANSPORT_KEY_PAIR_CHANGED",
+  /** A prepared permit's `chainId` does not match the chain `registerPermit` is running against. */
+  PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH",
+  /** A prepared permit's validity window elapsed before its signature was registered. */
+  PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
@@ -105,6 +115,7 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.TransactionReverted]: false,
   [ZamaErrorCode.TransportKeyPairExpired]: false,
   [ZamaErrorCode.InvalidTransportKeyPair]: false,
+  [ZamaErrorCode.RevokedKmsContext]: false, // the retry already re-granted; a blind retry re-hits the stale validity cache
   [ZamaErrorCode.NoCiphertext]: false,
   [ZamaErrorCode.RelayerRequestFailed]: false, // conditional — see doc above
   [ZamaErrorCode.NotEntitled]: false,
@@ -129,6 +140,10 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.SignerNotConfigured]: false,
   [ZamaErrorCode.WalletNotConnected]: false,
   [ZamaErrorCode.WalletAccountNotReady]: true, // async wallet-account discovery still resolving
+  [ZamaErrorCode.KeyWrappingFailed]: false, // a transportKeyPairDerivationSecret mismatch or environment capability issue, not transient
+  [ZamaErrorCode.TransportKeyPairChanged]: false, // caller must re-run preparePermit against the current key pair
+  [ZamaErrorCode.PreparedPermitChainMismatch]: false, // caller must register against the chain the permit was prepared for
+  [ZamaErrorCode.PreparedPermitExpired]: false, // caller must re-run preparePermit for a fresh validity window
 };
 
 /**

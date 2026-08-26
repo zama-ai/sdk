@@ -2,6 +2,7 @@
 // oxlint-disable eslint-plugin-react-hooks/rules-of-hooks
 import { vi } from "vitest";
 import type { GenericProvider } from "../types";
+import { TEST_UNSIGNED_TX } from "./constants";
 import type { FixturesOf } from "./types";
 
 export function createMockProvider(overrides: Partial<GenericProvider> = {}): GenericProvider {
@@ -10,6 +11,7 @@ export function createMockProvider(overrides: Partial<GenericProvider> = {}): Ge
     readContract: vi.fn(),
     waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
     getBlockTimestamp: vi.fn().mockResolvedValue(BigInt(Math.floor(Date.now() / 1000))),
+    prepareTransaction: vi.fn().mockResolvedValue(TEST_UNSIGNED_TX),
     ...overrides,
   };
 }

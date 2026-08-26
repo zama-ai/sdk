@@ -1,5 +1,5 @@
 import { createMockRouter, describe, expect, test, vi } from "../../test-fixtures";
-import type { Address } from "viem";
+import type { Address, Hex } from "viem";
 import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
 import { createMockChain } from "../../test-fixtures/chain";
 import { createMockRelayer } from "../../test-fixtures/relayer";
@@ -7,6 +7,8 @@ import { TEST_TKMS_VERSION } from "../../test-fixtures/constants";
 import { SigningRejectedError, SigningFailedError } from "../../errors/signing";
 import { InvalidTransportKeyPairError } from "../../errors/credential";
 import { ConfigurationError } from "../../errors/relayer";
+import { DerivationSecretHolder } from "../keypair-wrapping";
+import type { SerializedTransportKeyPairWithPermissions } from "../types";
 
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
@@ -19,6 +21,11 @@ const ADDRS = Array.from({ length: 23 }, (_, i) => {
 const A = ADDRS[0]!;
 const B = ADDRS[1]!;
 const C = ADDRS[2]!;
+
+/** The permit identity `recoverPermits` compares against the store. */
+function signatures(credentials: SerializedTransportKeyPairWithPermissions): Hex[] {
+  return credentials.permissions.map((p) => p.serializedPermit.signature);
+}
 
 describe("CredentialService.allow", () => {
   test("creates a permit and stores it on the first call", async ({
@@ -127,6 +134,273 @@ describe("CredentialService transport-key-pair self-heal", () => {
     expect(relayer.parseTransportKeyPair).toHaveBeenCalledWith(
       expect.objectContaining({ tkmsVersion: TEST_TKMS_VERSION }),
     );
+  });
+});
+
+describe("CredentialService.recoverPermits", () => {
+  test("drops every permit in the scope and restores the prior coverage in one prompt", async ({
+    credentialService,
+    relayer,
+    signer,
+  }) => {
+    const granted = await credentialService.grantPermit([A, B]);
+    vi.mocked(signer.signTypedData).mockClear();
+
+    const recovered = await credentialService.recoverPermits([A], undefined, signatures(granted));
+
+    // One signature re-signed the scope's full prior coverage, not just A,
+    // and the returned credentials cover the requested contract.
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    expect(recovered.permissions.flatMap((p) => p.contractAddresses)).toContain(A);
+    expect(await credentialService.hasPermit([A, B])).toBe(true);
+    // The key pair is untouched: only the permits embed the dead context.
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+  });
+
+  test("a second recovery for the already-replaced permits re-signs nothing", async ({
+    credentialService,
+    signer,
+  }) => {
+    const granted = await credentialService.grantPermit([A, B]);
+    const stale = signatures(granted);
+    vi.mocked(signer.signTypedData).mockClear();
+
+    // Two sequential decrypt failures carrying the same dead permits: the first
+    // recovery settles and clears the map entry, so only permit identity can
+    // tell the second one that the scope is already healed.
+    await credentialService.recoverPermits([A], undefined, stale);
+    await credentialService.recoverPermits([A], undefined, stale);
+
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    expect(await credentialService.hasPermit([A, B])).toBe(true);
+  });
+
+  test("recovers when only one of the failing permits is still stored", async ({
+    credentialService,
+    signer,
+  }) => {
+    const granted = await credentialService.grantPermit([A, B]);
+    const replaced = signatures(granted);
+    const recovered = await credentialService.recoverPermits([A], undefined, replaced);
+    vi.mocked(signer.signTypedData).mockClear();
+
+    // One of the two named permits is still stored, so the failure is a genuine
+    // revocation and eviction proceeds.
+    await credentialService.recoverPermits([A], undefined, [...replaced, ...signatures(recovered)]);
+
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
+  test("skips eviction when none of the failing permits is still stored", async ({
+    credentialService,
+    signer,
+  }) => {
+    await credentialService.grantPermit([A, B]);
+    vi.mocked(signer.signTypedData).mockClear();
+
+    await credentialService.recoverPermits([A], undefined, [`0x${"de".repeat(65)}`]);
+
+    expect(signer.signTypedData).not.toHaveBeenCalled();
+    expect(await credentialService.hasPermit([A, B])).toBe(true);
+  });
+
+  test("recovers unconditionally when the failing signatures are not given", async ({
+    credentialService,
+    signer,
+  }) => {
+    await credentialService.grantPermit([A, B]);
+    vi.mocked(signer.signTypedData).mockClear();
+
+    await credentialService.recoverPermits([A]);
+    await credentialService.recoverPermits([A]);
+
+    expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+  });
+
+  test("concurrent recoveries in the same scope share one evict-and-regrant", async ({
+    credentialService,
+    signer,
+  }) => {
+    const granted = await credentialService.grantPermit([A, B]);
+    const stale = signatures(granted);
+    vi.mocked(signer.signTypedData).mockClear();
+
+    await Promise.all([
+      credentialService.recoverPermits([A], undefined, stale),
+      credentialService.recoverPermits([B], undefined, stale),
+    ]);
+
+    // The joiner awaited the leader's re-grant and found its contract already
+    // covered: one wallet prompt total, not one per decrypt call.
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
+  test("scopes recovery to the delegator: direct permits survive a delegated recover", async ({
+    credentialService,
+    signer,
+  }) => {
+    await credentialService.grantPermit([A]);
+    await credentialService.grantPermit([A], DELEGATOR);
+    vi.mocked(signer.signTypedData).mockClear();
+
+    await credentialService.recoverPermits([A], DELEGATOR);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+
+    // The direct-scope permit was untouched, so no re-prompt.
+    vi.mocked(signer.signTypedData).mockClear();
+    await credentialService.grantPermit([A]);
+    expect(signer.signTypedData).not.toHaveBeenCalled();
+  });
+
+  test("a failed permit read skips eviction and keeps the prior coverage", async ({
+    createCredentialService,
+    createMockStorage,
+    signer,
+  }) => {
+    const permitStorage = createMockStorage();
+    const service = createCredentialService({ permitStorage });
+    await service.grantPermit([A, B]);
+    vi.mocked(signer.signTypedData).mockClear();
+
+    const realGet = permitStorage.get;
+    let failNext = true;
+    permitStorage.get = async (key) => {
+      if (failNext) {
+        failNext = false;
+        throw new Error("storage unavailable");
+      }
+      return realGet(key);
+    };
+
+    await expect(service.recoverPermits([A])).resolves.toMatchObject({
+      keypair: expect.objectContaining({ publicKey: expect.any(String) }),
+    });
+
+    // Nothing was cleared and nothing was re-signed: the retry decrypts with
+    // the dead permit and the coverage survives for the next attempt.
+    expect(signer.signTypedData).not.toHaveBeenCalled();
+    expect(await service.hasPermit([A, B])).toBe(true);
+  });
+
+  test("recovers normally on the next call once the permit read succeeds again", async ({
+    createCredentialService,
+    createMockStorage,
+    signer,
+  }) => {
+    const permitStorage = createMockStorage();
+    const service = createCredentialService({ permitStorage });
+    await service.grantPermit([A, B]);
+
+    const realGet = permitStorage.get;
+    let failNext = true;
+    permitStorage.get = async (key) => {
+      if (failNext) {
+        failNext = false;
+        throw new Error("storage unavailable");
+      }
+      return realGet(key);
+    };
+    await service.recoverPermits([A]);
+    vi.mocked(signer.signTypedData).mockClear();
+
+    await service.recoverPermits([A]);
+
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    expect(await service.hasPermit([A, B])).toBe(true);
+  });
+
+  test("re-signs the requested contracts when the stored permit list is unparseable", async ({
+    createCredentialService,
+    createMockStorage,
+    signer,
+  }) => {
+    const permitStorage = createMockStorage();
+    const service = createCredentialService({ permitStorage });
+    const granted = await service.grantPermit([A]);
+    const scopeKey = vi
+      .mocked(permitStorage.set)
+      .mock.calls.map(([key]) => key)
+      .find((key) => key.startsWith("permits:"))!;
+    await permitStorage.set(scopeKey, { not: "a permit list" });
+    vi.mocked(signer.signTypedData).mockClear();
+
+    await service.recoverPermits([A], undefined, signatures(granted));
+
+    // `list` self-clears the corrupt scope and reports it empty, so the prior
+    // coverage is unrecoverable by definition and only `contracts` is re-signed.
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    expect(await service.hasPermit([A])).toBe(true);
+  });
+
+  test("a failed eviction does not mask the re-grant", async ({
+    createCredentialService,
+    createMockStorage,
+    signer,
+  }) => {
+    const permitStorage = createMockStorage();
+    const service = createCredentialService({ permitStorage });
+    await service.grantPermit([A, B]);
+    vi.mocked(signer.signTypedData).mockClear();
+    permitStorage.delete = async () => {
+      throw new Error("storage unavailable");
+    };
+
+    // C is outside the prior coverage, so the re-grant is observable even
+    // though the failed eviction left the dead permits in place.
+    await expect(service.recoverPermits([C])).resolves.toMatchObject({
+      keypair: expect.objectContaining({ publicKey: expect.any(String) }),
+    });
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
+  test("a failed re-grant restores the non-stale permits and evicts the stale ones", async ({
+    credentialService,
+    signer,
+  }) => {
+    // 12 contracts chunk into two permits: mark one stale, the other survives.
+    const granted = await credentialService.grantPermit(ADDRS.slice(0, 12));
+    const [stalePermit, survivor] = granted.permissions;
+    vi.mocked(signer.signTypedData).mockRejectedValueOnce(new Error("signer offline"));
+
+    await expect(
+      credentialService.recoverPermits(stalePermit!.contractAddresses, undefined, [
+        stalePermit!.serializedPermit.signature,
+      ]),
+    ).rejects.toBeInstanceOf(SigningFailedError);
+
+    expect(await credentialService.hasPermit(survivor!.contractAddresses)).toBe(true);
+    expect(await credentialService.hasPermit(stalePermit!.contractAddresses)).toBe(false);
+  });
+
+  test("a rejected re-grant prompt also restores the non-stale permits", async ({
+    credentialService,
+    signer,
+  }) => {
+    const granted = await credentialService.grantPermit(ADDRS.slice(0, 12));
+    const [stalePermit, survivor] = granted.permissions;
+    vi.mocked(signer.signTypedData).mockRejectedValueOnce(new Error("User rejected the request."));
+
+    await expect(
+      credentialService.recoverPermits([A], undefined, [stalePermit!.serializedPermit.signature]),
+    ).rejects.toBeInstanceOf(SigningRejectedError);
+
+    expect(await credentialService.hasPermit(survivor!.contractAddresses)).toBe(true);
+  });
+
+  test("a failed re-grant with no stale signatures restores everything", async ({
+    credentialService,
+    signer,
+  }) => {
+    await credentialService.grantPermit([A, B]);
+    vi.mocked(signer.signTypedData).mockRejectedValueOnce(new Error("signer offline"));
+
+    await expect(credentialService.recoverPermits([A])).rejects.toBeInstanceOf(SigningFailedError);
+
+    expect(await credentialService.hasPermit([A, B])).toBe(true);
+    // The restored coverage serves the next grant without a new prompt.
+    vi.mocked(signer.signTypedData).mockClear();
+    await credentialService.grantPermit([A, B]);
+    expect(signer.signTypedData).not.toHaveBeenCalled();
   });
 });
 
@@ -562,5 +836,126 @@ describe("CredentialService scope (opt-in shared-tenant)", () => {
   }) => {
     const service = createCredentialService({ scope: "tenant-1" });
     await expect(service.warmTransportKeyPairScope("tenant-2")).rejects.toThrow(ConfigurationError);
+  });
+});
+
+const holder = (secret: string | Uint8Array) => new DerivationSecretHolder(secret);
+
+describe("CredentialService derivationSecret (opt-in at-rest wrapping)", () => {
+  const SECRET = "correct-horse-battery-staple-and-then-some";
+
+  test("grantPermit and hasPermit work transparently end-to-end when configured", async ({
+    createCredentialService,
+  }) => {
+    const service = createCredentialService({ derivationSecret: holder(SECRET) });
+    await service.grantPermit([A]);
+    expect(await service.hasPermit([A])).toBe(true);
+  });
+
+  test("permits are never wrapped — only the private key is", async ({
+    createCredentialService,
+    storage,
+  }) => {
+    const setSpy = vi.spyOn(storage, "set");
+    const service = createCredentialService({ derivationSecret: holder(SECRET), storage });
+
+    await service.grantPermit([A]);
+
+    // The permit-list write (PermissionStore) is a plain array of Permission objects,
+    // completely untouched by the wrapping logic in TransportKeyPairVault.
+    const permitWrite = setSpy.mock.calls.find(([, value]) => Array.isArray(value));
+    expect(permitWrite).toBeDefined();
+    const permits = permitWrite![1] as Array<Record<string, unknown>>;
+    expect(
+      (permits[0]?.serializedPermit as Record<string, unknown> | undefined)?.signature,
+    ).toBeDefined();
+    expect(permits[0]?.contractAddresses).toBeDefined();
+    expect(permits[0]?.wrappedPrivateKey).toBeUndefined();
+
+    // The keypair write, in contrast, is wrapped.
+    const keypairWrite = setSpy.mock.calls.find(([, value]) => !Array.isArray(value));
+    expect(keypairWrite).toBeDefined();
+    const keypair = keypairWrite![1] as Record<string, unknown>;
+    expect(keypair.wrappedPrivateKey).toBeDefined();
+    expect(keypair.privateKey).toBeUndefined();
+  });
+
+  test("composes with scope end-to-end: two signers share the wrapped key pair, keep independent permits", async ({
+    createCredentialService,
+    createMockSigner,
+    storage,
+    relayer,
+  }) => {
+    const signerB = createMockSigner(DELEGATOR);
+    const serviceA = createCredentialService({
+      scope: "tenant-1",
+      derivationSecret: holder(SECRET),
+      storage,
+    });
+    const serviceB = createCredentialService({
+      scope: "tenant-1",
+      derivationSecret: holder(SECRET),
+      storage,
+      signer: signerB,
+    });
+
+    const resultA = await serviceA.grantPermit([A]);
+    const resultB = await serviceB.grantPermit([A]);
+
+    // The mock relayer returns the same constant key pair on every call, so asserting
+    // publicKey equality alone would pass even if serviceB silently regenerated its own
+    // key instead of genuinely reading serviceA's wrapped entry. Assert the generator
+    // was only invoked once to prove the second call is a real, successfully-decrypted
+    // shared read — the same pattern the unwrapped scope-sharing tests above use.
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+    expect(resultB.keypair.publicKey).toBe(resultA.keypair.publicKey);
+    expect(await serviceA.hasPermit([A])).toBe(true);
+    expect(await serviceB.hasPermit([A])).toBe(true);
+  });
+
+  test("hasPermit() never throws, even when the scoped keypair fails to unwrap under a mismatched secret", async ({
+    createCredentialService,
+    createMockSigner,
+    storage,
+  }) => {
+    // hasPermit() is documented as a safe, no-throw status check: grantPermit()'s
+    // fail-loudly-on-scoped-mismatch behavior is right for a mutating operation, but
+    // must not leak into this read-only lookup, which every caller (including the
+    // React useHasPermit() hook) relies on never rejecting.
+    const correctlyConfigured = createCredentialService({
+      scope: "tenant-1",
+      derivationSecret: holder("correct-horse-battery-staple-and-then-some"),
+      storage,
+    });
+    await correctlyConfigured.grantPermit([A]);
+
+    const signerB = createMockSigner(DELEGATOR);
+    const misconfigured = createCredentialService({
+      scope: "tenant-1",
+      derivationSecret: holder("a-different-secret-and-then-some-more"),
+      storage,
+      signer: signerB,
+    });
+
+    await expect(misconfigured.hasPermit([A])).resolves.toBe(false);
+  });
+
+  test("hasPermit() propagates a storage-layer failure unrelated to derivationSecret, instead of swallowing it as 'no permit'", async ({
+    createCredentialService,
+    storage,
+  }) => {
+    // hasPermit()'s no-throw contract only covers KeyWrappingError (a documented,
+    // expected failure mode of this feature) — a genuine backing-storage exception
+    // (a broken GenericStorage adapter, IndexedDB quota, etc.) is unrelated to
+    // derivationSecret entirely and must not be silently downgraded to "no permit".
+    const service = createCredentialService({
+      derivationSecret: holder("correct-horse-battery-staple-and-then-some"),
+    });
+    await service.grantPermit([A]);
+
+    const storageError = new Error("storage backend is unavailable");
+    vi.spyOn(storage, "get").mockRejectedValueOnce(storageError);
+
+    await expect(service.hasPermit([A])).rejects.toThrow(storageError);
   });
 });

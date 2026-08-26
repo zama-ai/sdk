@@ -1,5 +1,6 @@
-import { getAddress, type Address } from "viem";
+import { getAddress, type Address, type Hex } from "viem";
 import type { CredentialService } from "../credentials/credential-service";
+import type { PreparedPermit } from "../credentials/types";
 import { requireConfigured } from "../errors";
 import type { CachingService } from "../services/caching-service";
 import type { GenericLogger, GenericProvider, GenericSigner } from "../types";
@@ -61,6 +62,8 @@ export class Permits {
    * next prompt).
    *
    * @param contracts - Contract addresses to authorize.
+   * @throws if `transportKeyPairDerivationSecret` is configured and the keypair fails to wrap or
+   *   unwrap. {@link KeyWrappingError}
    */
   async grantPermit(contracts: Address[]): Promise<void> {
     if (contracts.length === 0) {
@@ -77,6 +80,8 @@ export class Permits {
    *
    * @param delegator - The address that delegated decryption rights to the connected signer.
    * @param contracts - Contract addresses to authorize.
+   * @throws if `transportKeyPairDerivationSecret` is configured and the keypair fails to wrap or
+   *   unwrap. {@link KeyWrappingError}
    */
   async grantDelegationPermit(delegator: Address, contracts: Address[]): Promise<void> {
     if (contracts.length === 0) {
@@ -90,7 +95,9 @@ export class Permits {
   /**
    * Pure store lookup: is there a permit covering `contracts`?
    * No wallet prompt, no transport key pair generation. Returns `false` when no signer
-   * is configured.
+   * is configured, or when `transportKeyPairDerivationSecret` is configured and the stored keypair
+   * fails to unwrap. Does not swallow other errors (e.g. a failing storage backend), which
+   * propagate normally.
    */
   async hasPermit(contracts: Address[]): Promise<boolean> {
     if (!this.#credentialService) {
@@ -100,7 +107,8 @@ export class Permits {
   }
 
   /**
-   * Pure store lookup for a delegation permit. See {@link hasPermit}.
+   * Pure store lookup for a delegation permit. Never throws when the stored keypair
+   * fails to unwrap, reporting no permit instead; other errors still propagate.
    *
    * @param delegator - The address that delegated decryption rights to the connected signer.
    * @param contracts - Contract addresses to check.
@@ -130,6 +138,9 @@ export class Permits {
    * precondition doesn't conceptually apply to a scope-wide key, and would silently
    * no-op precisely when an operator is most likely to be calling it (no end-user
    * connected yet). Use {@link warmTransportKeyPairScope} instead.
+   *
+   * @throws if `transportKeyPairDerivationSecret` is configured and the keypair fails to wrap or
+   *   unwrap. {@link KeyWrappingError}
    */
   async warmTransportKeyPair(): Promise<void> {
     const service = this.#credentialService;
@@ -141,6 +152,28 @@ export class Permits {
       return;
     }
     await service.warmTransportKeyPair(account.address);
+  }
+
+  /**
+   * Offline permit flow, phase 2: verify and persist the signature an
+   * out-of-process signer produced for a `sdk.offline.preparePermit` payload.
+   *
+   * No wallet account required: the permit is scoped by `prepared.signerAddress`
+   * (and `prepared.delegatorAddress`, if present), not a connected signer.
+   *
+   * @param prepared - The payload `sdk.offline.preparePermit` returned.
+   * @param signature - The 65-byte `eth_signTypedData_v4` signature over `prepared.eip712`.
+   * @throws if `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a
+   *   process boundary and was corrupted). {@link ConfigurationError}
+   * @throws if the chain embedded in `prepared.eip712` doesn't match the active chain. {@link PreparedPermitChainMismatchError}
+   * @throws if the permit's validity window has already elapsed. {@link PreparedPermitExpiredError}
+   * @throws if the transport key pair changed since prepare. {@link TransportKeyPairChangedError}
+   * @throws if the signature is invalid or malformed. {@link SigningFailedError}
+   */
+  async registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void> {
+    const service = this.#requireCredentialService("registerPermit");
+    await service.registerPermit(prepared, signature);
+    await this.#clearDecryptCacheForRequester(prepared.signerAddress);
   }
 
   /**
@@ -196,9 +229,8 @@ export class Permits {
   }
 
   /**
-   * Revoke the shared transport key pair for `transportKeyPairScope` (operator-level
-   * action — no wallet account needs to be connected, but a signer must still be
-   * configured on this SDK instance at construction time).
+   * Revoke the shared transport key pair for `transportKeyPairScope`. Storage-only,
+   * operator-level action: no wallet account or signer needs to be connected.
    *
    * Deletes the shared key pair; every permit in the scope embeds its public key, so
    * they're all treated as stale on next access. Signer-level {@link clear} never does
@@ -216,7 +248,6 @@ export class Permits {
    *
    * @param scopeId - Must match the configured `transportKeyPairScope`, as a guard
    *   against revoking the wrong scope by mistake.
-   * @throws if no signer is configured. {@link SignerNotConfiguredError}
    * @throws if no scope is configured, or `scopeId` doesn't match it. {@link ConfigurationError}
    * @throws if the underlying storage delete fails.
    */
@@ -226,17 +257,18 @@ export class Permits {
   }
 
   /**
-   * Warm the shared transport key pair for `transportKeyPairScope` (operator-level —
-   * no wallet account needs to be connected, but a signer must still be configured on
-   * this SDK instance at construction time) — the pre-warm counterpart to
-   * {@link revokeTransportKeyPair}. Prefer this over {@link warmTransportKeyPair} for a
-   * scoped key pair: unlike that method, this never silently no-ops for lack of a
-   * connected wallet, because a scope-wide key was never tied to one in the first place.
+   * Warm the shared transport key pair for `transportKeyPairScope` — the pre-warm
+   * counterpart to {@link revokeTransportKeyPair}. Storage-only, operator-level action:
+   * no wallet account or signer needs to be connected. Prefer this over
+   * {@link warmTransportKeyPair} for a scoped key pair: unlike that method, this never
+   * silently no-ops for lack of a connected wallet, because a scope-wide key was never
+   * tied to one in the first place.
    *
    * @param scopeId - Must match the configured `transportKeyPairScope`, as a guard
    *   against warming the wrong scope by mistake.
-   * @throws if no signer is configured. {@link SignerNotConfiguredError}
    * @throws if no scope is configured, or `scopeId` doesn't match it. {@link ConfigurationError}
+   * @throws if `transportKeyPairDerivationSecret` is configured and the keypair fails to wrap or
+   *   unwrap. {@link KeyWrappingError}
    */
   async warmTransportKeyPairScope(scopeId: string): Promise<void> {
     const service = this.#requireCredentialService("warmTransportKeyPairScope");

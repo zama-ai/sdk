@@ -2,9 +2,14 @@ import { ZamaError } from "./base";
 import type { ZamaErrorCode } from "./base";
 import type { ChainMismatchError } from "./chain";
 import type {
+  KeyWrappingError,
   NoCiphertextError,
+  PreparedPermitChainMismatchError,
+  PreparedPermitExpiredError,
+  TransportKeyPairChangedError,
   TransportKeyPairExpiredError,
   InvalidTransportKeyPairError,
+  RevokedKmsContextError,
 } from "./credential";
 import type {
   AclPausedError,
@@ -57,6 +62,8 @@ export interface ErrorForCode {
   [ZamaErrorCode.TransportKeyPairExpired]: TransportKeyPairExpiredError;
   /** Thrown for {@link ZamaErrorCode.InvalidTransportKeyPair}. */
   [ZamaErrorCode.InvalidTransportKeyPair]: InvalidTransportKeyPairError;
+  /** Thrown for {@link ZamaErrorCode.RevokedKmsContext}. */
+  [ZamaErrorCode.RevokedKmsContext]: RevokedKmsContextError;
   /** Thrown for {@link ZamaErrorCode.NoCiphertext}. */
   [ZamaErrorCode.NoCiphertext]: NoCiphertextError;
   /** Thrown for {@link ZamaErrorCode.RelayerRequestFailed}. */
@@ -105,6 +112,14 @@ export interface ErrorForCode {
   [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
   /** Thrown for {@link ZamaErrorCode.WalletAccountNotReady}. */
   [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
+  /** Thrown for {@link ZamaErrorCode.KeyWrappingFailed}. */
+  [ZamaErrorCode.KeyWrappingFailed]: KeyWrappingError;
+  /** Thrown for {@link ZamaErrorCode.TransportKeyPairChanged}. */
+  [ZamaErrorCode.TransportKeyPairChanged]: TransportKeyPairChangedError;
+  /** Thrown for {@link ZamaErrorCode.PreparedPermitChainMismatch}. */
+  [ZamaErrorCode.PreparedPermitChainMismatch]: PreparedPermitChainMismatchError;
+  /** Thrown for {@link ZamaErrorCode.PreparedPermitExpired}. */
+  [ZamaErrorCode.PreparedPermitExpired]: PreparedPermitExpiredError;
 }
 
 /**

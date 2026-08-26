@@ -16,7 +16,7 @@
     "@zama-fhe/react-sdk": "workspace:*",
     "@zama-fhe/sdk": "workspace:*",
     "@zama-fhe/test-components": "workspace:*",
-    "next": "^16.2.9",
+    "next": ">=16.2.11",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "viem": "^2.55.0",
@@ -34,5 +34,5 @@
     "node": ">=22",
     "pnpm": ">=10"
   },
-  "packageManager": "pnpm@10.30.2"
+  "packageManager": "pnpm@11.1.2"
 }

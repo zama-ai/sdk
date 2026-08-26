@@ -119,7 +119,7 @@ const cleartext = await sdk.decryption.decryptValues(
 const amount = cleartext[transfers[0].encryptedAmount]; // 500n
 ```
 
-`decryptValues` accepts many inputs at once, groups them by contract address, and issues one decryption request per contract — so decrypting a page of transfers costs one round-trip per token, not one per transfer. Results are cached per signer and contract, so re-decrypting an encrypted value you have already seen returns instantly without hitting the relayer.
+`decryptValues` accepts many inputs at once and groups them by contract address — so decrypting a page of transfers costs one round-trip per token, not one per transfer. A group only splits into more than one relayer request if its values would otherwise exceed the relayer's per-request size budget (see [Automatic chunking for large decrypt batches](../changelog/v3-4.md#automatic-chunking-for-large-decrypt-batches)). Results are cached per signer and contract, so re-decrypting an encrypted value you have already seen returns instantly without hitting the relayer.
 
 {% hint style="info" %}
 **No explicit permit call needed.** `decryptValues` signs and caches the required EIP-712 permit on demand the first time it runs for a contract. In a backend you can call `sdk.permits.grantPermit([tokenAddress])` up front if you prefer to do the signing during startup rather than on the first decrypt — but it is not required.

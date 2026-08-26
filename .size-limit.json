@@ -4,6 +4,6 @@
   {
     "name": "@zama-fhe/react-sdk (all JS)",
     "path": "packages/react-sdk/dist/**/*.js",
-    "limit": "15 KB"
+    "limit": "4.5 KB"
   }
 ]
