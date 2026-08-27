@@ -3,12 +3,14 @@
 //   pnpm docs:retarget <main|beta>
 //
 // Two branch-specific URL kinds live in the docs (see corpus.config.json + the migration guide):
-//   - raw.githubusercontent.com/zama-ai/sdk/<branch>/...  — `main` or `beta`.
-//   - docs.zama.org/protocol/sdk/<space>/....md — GitBook space: `main`→`stable`, `beta`→`beta`.
+//   - raw.githubusercontent.com/zama-ai/sdk/<branch>/...  — `main`, `beta`, or `alpha`, self-targeted.
+//     This is the LLM corpus, so alpha's must point at `alpha` for alpha testers' agents to get alpha
+//     content (alpha IS meant to be consumed) — not beta/main.
+//   - docs.zama.org/protocol/sdk/<space>/....md — GitBook space: `main`→`stable`, `beta`/`alpha`→`beta`.
+//     alpha has no GitBook space of its own, so its human doc links use the `beta` preview site.
 //     `stable` is the default (omitted) space, so promotion inserts/removes the `beta/` segment.
-// `alpha` is a protocol-testing branch (synced from beta); it has no GitBook space or doc URLs,
-// so it's intentionally absent from BRANCH_TO_SPACE. Branches can't be derived at build time
-// (CI PRs are detached HEAD), so they're committed and flipped here; idempotent (same branch = no-op).
+// Branches can't be derived at build time (CI PRs are detached HEAD), so they're committed and
+// flipped here; idempotent (same branch = no-op). Only `main` promotes the changelog (below).
 //
 // At release (beta→main) this ALSO promotes the GitBook changelog — the Beta page's staged tip
 // becomes the shipped version page — via promoteChangelog() in changelog.mjs. `docs:retarget beta`
@@ -28,14 +30,17 @@ import { promoteChangelog } from "./changelog.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 
-/** Publish branch → GitBook space. */
-export const BRANCH_TO_SPACE = { main: "stable", beta: "beta" };
+/** Publish branch → GitBook space. `alpha` has no space of its own; its human doc links
+ *  point at the `beta` preview site, while its raw/LLM URLs self-target the `alpha` branch. */
+export const BRANCH_TO_SPACE = { main: "stable", beta: "beta", alpha: "beta" };
 
 /**
- * Rewrite the branch/space URLs in `content` to target `target` (`main` or
- * `beta`). `stable` is the default (omitted) space, so the docs.zama.org
- * rewrite inserts or removes the `beta/` segment rather than swapping a fixed
- * one. Idempotent: retargeting to the branch the content already targets is a
+ * Rewrite the branch/space URLs in `content` to target `target` (`main`, `beta`,
+ * or `alpha`). The raw branch self-targets `target`; the docs.zama.org space is
+ * `BRANCH_TO_SPACE[target]` (`main`→stable, `beta`/`alpha`→beta). `stable` is the
+ * default (omitted) space, so the docs.zama.org rewrite inserts or removes the
+ * `beta/` segment rather than swapping a fixed one. Idempotent: retargeting to the
+ * branch the content already targets is a
  * no-op. Only the raw.githubusercontent `<branch>/<path>` and docs.zama.org space
  * forms are touched — a bare `.../sdk/main` (no trailing slash) or a GitHub
  * `blob/<branch>` link (e.g. the canonical CHANGELOG.md link, which always points
@@ -51,7 +56,7 @@ export function retargetUrls(content, target) {
   const spaceSegment = space === "stable" ? "" : `${space}/`;
   return content
     .replace(
-      /(raw\.githubusercontent\.com\/zama-ai\/sdk\/)(?:main|beta|prerelease)(\/)/g,
+      /(raw\.githubusercontent\.com\/zama-ai\/sdk\/)(?:main|beta|alpha|prerelease)(\/)/g,
       `$1${target}$2`,
     )
     .replace(
@@ -113,7 +118,7 @@ function main() {
 
   const target = process.argv[2];
   if (!Object.hasOwn(BRANCH_TO_SPACE, target)) {
-    console.error(`Usage: pnpm docs:retarget <main|beta>\nGot: ${target ?? "(nothing)"}`);
+    console.error(`Usage: pnpm docs:retarget <main|beta|alpha>\nGot: ${target ?? "(nothing)"}`);
     process.exit(1);
   }
   const space = BRANCH_TO_SPACE[target];
@@ -186,7 +191,7 @@ function main() {
   const configPath = join(root, "docs/llm/corpus.config.json");
   const config = readFileSync(configPath, "utf8");
   const updatedConfig = config.replace(
-    /(https:\/\/raw\.githubusercontent\.com\/zama-ai\/sdk\/)(?:main|beta|prerelease)/,
+    /(https:\/\/raw\.githubusercontent\.com\/zama-ai\/sdk\/)(?:main|beta|alpha|prerelease)/,
     `$1${target}`,
   );
   if (updatedConfig !== config) {

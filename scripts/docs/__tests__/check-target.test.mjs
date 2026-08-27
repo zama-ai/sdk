@@ -78,6 +78,13 @@ describe("check-target main() — end to end", () => {
     expect(res.status).toBe(0);
   });
 
+  test("clean alpha fixture passes — raw self-targets alpha, docs use the beta space", () => {
+    const dir = freshDir();
+    makeFixture(dir, { branch: "alpha", link: "beta" });
+    const res = runCheckTarget(dir, "alpha");
+    expect(res.status).toBe(0);
+  });
+
   test("fails when a doc links to the wrong (beta) GitBook space for main", () => {
     const dir = freshDir();
     makeFixture(dir, { branch: "main", link: "beta" });

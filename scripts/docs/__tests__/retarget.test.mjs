@@ -92,6 +92,18 @@ describe("retargetUrls — round-trip byte-identity", () => {
     ].join("\n");
     expect(retargetUrls(retargetUrls(beta, "main"), "beta")).toBe(beta);
   });
+
+  // beta↔alpha is a primary path (alpha syncs from beta). Both use the beta space, so the
+  // flip touches only the raw branch — the round-trip must leave the beta/ space untouched
+  // (no drift, no double-insert).
+  test("beta → alpha → beta is byte-identical", () => {
+    const beta = [
+      "raw.githubusercontent.com/zama-ai/sdk/beta/llms-full.txt",
+      "docs.zama.org/protocol/sdk/beta/guides/x.md",
+      "docs.zama.org/protocol/sdk/beta/overview.md",
+    ].join("\n");
+    expect(retargetUrls(retargetUrls(beta, "alpha"), "beta")).toBe(beta);
+  });
 });
 
 describe("retargetUrls — mixed content", () => {
@@ -179,6 +191,60 @@ describe("legacy prerelease/alpha migration (one-time prerelease→beta rename)"
     ).toEqual([`links to the "prerelease" branch (expected "beta")`]);
     expect(findUrlProblems("docs.zama.org/protocol/sdk/alpha/x.md", "beta")).toEqual([
       `links to the "alpha" GitBook space (expected "beta")`,
+    ]);
+  });
+});
+
+// `alpha` is a valid target: its raw/LLM URLs self-target `alpha` (so alpha testers' agents
+// fetch alpha content), while its docs.zama.org links use the `beta` space (alpha has no space).
+describe("alpha target — raw self-targets alpha, docs.zama.org uses the beta space", () => {
+  test("retargetUrls → alpha rewrites raw branches to alpha", () => {
+    expect(retargetUrls("raw.githubusercontent.com/zama-ai/sdk/beta/llms.txt", "alpha")).toBe(
+      "raw.githubusercontent.com/zama-ai/sdk/alpha/llms.txt",
+    );
+    expect(retargetUrls("raw.githubusercontent.com/zama-ai/sdk/prerelease/x", "alpha")).toBe(
+      "raw.githubusercontent.com/zama-ai/sdk/alpha/x",
+    );
+  });
+
+  test("retargetUrls → alpha maps the docs.zama.org space to beta", () => {
+    expect(retargetUrls("docs.zama.org/protocol/sdk/alpha/guides/x.md", "alpha")).toBe(
+      "docs.zama.org/protocol/sdk/beta/guides/x.md",
+    );
+    expect(retargetUrls("docs.zama.org/protocol/sdk/overview.md", "alpha")).toBe(
+      "docs.zama.org/protocol/sdk/beta/overview.md",
+    );
+  });
+
+  test("retargetUrls rewrites alpha raw AWAY when targeting beta/main", () => {
+    expect(retargetUrls("raw.githubusercontent.com/zama-ai/sdk/alpha/x", "beta")).toBe(
+      "raw.githubusercontent.com/zama-ai/sdk/beta/x",
+    );
+    expect(retargetUrls("raw.githubusercontent.com/zama-ai/sdk/alpha/x", "main")).toBe(
+      "raw.githubusercontent.com/zama-ai/sdk/main/x",
+    );
+  });
+
+  test("retargetUrls → alpha is idempotent", () => {
+    const alpha = [
+      "raw.githubusercontent.com/zama-ai/sdk/alpha/llms-full.txt",
+      "docs.zama.org/protocol/sdk/beta/guides/x.md",
+    ].join("\n");
+    expect(retargetUrls(alpha, "alpha")).toBe(alpha);
+  });
+
+  test("findUrlProblems for alpha: raw must be alpha, space must be beta", () => {
+    expect(
+      findUrlProblems(
+        "raw.githubusercontent.com/zama-ai/sdk/alpha/x\ndocs.zama.org/protocol/sdk/beta/y.md",
+        "alpha",
+      ),
+    ).toEqual([]);
+    expect(findUrlProblems("raw.githubusercontent.com/zama-ai/sdk/beta/x", "alpha")).toEqual([
+      `links to the "beta" branch (expected "alpha")`,
+    ]);
+    expect(findUrlProblems("docs.zama.org/protocol/sdk/guides/x.md", "alpha")).toEqual([
+      `links to the "stable" GitBook space (expected "beta")`,
     ]);
   });
 });
