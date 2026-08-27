@@ -40,13 +40,24 @@ export const BRANCH_TO_SPACE = { main: "stable", beta: "beta" };
  * forms are touched — a bare `.../sdk/main` (no trailing slash) or a GitHub
  * `blob/<branch>` link (e.g. the canonical CHANGELOG.md link, which always points
  * at `main`) is intentionally left alone.
+ *
+ * The legacy `prerelease` branch and `alpha` space forms are also recognized, so the
+ * one-time `prerelease`→`beta` rename migrates with a plain `pnpm docs:retarget beta`
+ * (the renamed branch still carries the old `.../sdk/prerelease/...` and `.../sdk/alpha/...`
+ * URLs). Safe to drop once no `prerelease`/`alpha` URLs remain in the tree.
  */
 export function retargetUrls(content, target) {
   const space = BRANCH_TO_SPACE[target];
   const spaceSegment = space === "stable" ? "" : `${space}/`;
   return content
-    .replace(/(raw\.githubusercontent\.com\/zama-ai\/sdk\/)(?:main|beta)(\/)/g, `$1${target}$2`)
-    .replace(/(docs\.zama\.org\/protocol\/sdk\/)(?:(?:beta|stable)\/)?/g, `$1${spaceSegment}`);
+    .replace(
+      /(raw\.githubusercontent\.com\/zama-ai\/sdk\/)(?:main|beta|prerelease)(\/)/g,
+      `$1${target}$2`,
+    )
+    .replace(
+      /(docs\.zama\.org\/protocol\/sdk\/)(?:(?:alpha|beta|stable)\/)?/g,
+      `$1${spaceSegment}`,
+    );
 }
 
 function walkMarkdown(dir, acc = []) {
@@ -175,7 +186,7 @@ function main() {
   const configPath = join(root, "docs/llm/corpus.config.json");
   const config = readFileSync(configPath, "utf8");
   const updatedConfig = config.replace(
-    /(https:\/\/raw\.githubusercontent\.com\/zama-ai\/sdk\/)(?:main|beta)/,
+    /(https:\/\/raw\.githubusercontent\.com\/zama-ai\/sdk\/)(?:main|beta|prerelease)/,
     `$1${target}`,
   );
   if (updatedConfig !== config) {

@@ -169,7 +169,7 @@ Release behavior:
 Release workflows:
 
 - `Release` (`.github/workflows/release.yml`): automatic publish on push to `main`, `beta`, and `alpha`, gated by `Vitest` and `Playwright`.
-- `Release (Manual)` (`.github/workflows/release-manual.yml`): manual publish restricted to `main`, `beta`, and `alpha`, with the same `Vitest` + `Playwright` gates before publishing. Shares a concurrency group with `Release` to prevent simultaneous publishes on the same ref.
+- Manual publish: the same `Release` workflow (`release.yml`) also runs on `workflow_dispatch` (same `main`/`beta`/`alpha` restriction and `Vitest` + `Playwright` gates). Use it to recover when semantic-release created the tag but the npm publish step failed — a `publish-tag` input republishes from an existing tag, and a `dry-run` input is available.
 - `Release Preview` (`.github/workflows/release-preview.yml`): manual dry-run restricted to `main`, `beta`, and `alpha` (`pnpm release:dry-run`), no publish side effects.
 
 Install channels:
@@ -182,7 +182,7 @@ Maintainer requirements:
 
 - Configure branch protection on `main` to require both `Vitest` and `Playwright` checks before merge.
 - Configure branch protection on `beta` and `alpha` with the same required checks.
-- Configure npm trusted publishers for `@zama-fhe/sdk` and `@zama-fhe/react-sdk` pointing to this repository's `release.yml` and `release-manual.yml` workflows.
+- Configure npm trusted publishers for `@zama-fhe/sdk` and `@zama-fhe/react-sdk` pointing to this repository's `release.yml` workflow.
 
 ## Architecture Guidelines
 

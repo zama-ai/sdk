@@ -154,6 +154,35 @@ describe("findUrlProblems — catches the implicit-stable blind spot", () => {
   });
 });
 
+// The `prerelease`→`beta` rename leaves the renamed branch carrying the old
+// `.../sdk/prerelease/...` raw URLs and `.../sdk/alpha/...` space URLs. `docs:retarget beta`
+// must migrate them (not corrupt/dead-link them), and `check-target` must flag them.
+describe("legacy prerelease/alpha migration (one-time prerelease→beta rename)", () => {
+  test("retargetUrls rewrites a legacy prerelease raw branch to the target", () => {
+    expect(retargetUrls("raw.githubusercontent.com/zama-ai/sdk/prerelease/llms.txt", "beta")).toBe(
+      "raw.githubusercontent.com/zama-ai/sdk/beta/llms.txt",
+    );
+  });
+
+  test("retargetUrls rewrites a legacy alpha space to the target space (and removes it for main)", () => {
+    expect(retargetUrls("docs.zama.org/protocol/sdk/alpha/guides/x.md", "beta")).toBe(
+      "docs.zama.org/protocol/sdk/beta/guides/x.md",
+    );
+    expect(retargetUrls("docs.zama.org/protocol/sdk/alpha/guides/x.md", "main")).toBe(
+      "docs.zama.org/protocol/sdk/guides/x.md",
+    );
+  });
+
+  test("findUrlProblems flags a legacy prerelease raw branch and alpha space", () => {
+    expect(
+      findUrlProblems("raw.githubusercontent.com/zama-ai/sdk/prerelease/llms.txt", "beta"),
+    ).toEqual([`links to the "prerelease" branch (expected "beta")`]);
+    expect(findUrlProblems("docs.zama.org/protocol/sdk/alpha/x.md", "beta")).toEqual([
+      `links to the "alpha" GitBook space (expected "beta")`,
+    ]);
+  });
+});
+
 // ───────────────────────────────── promotion-through-retarget integration ──
 //
 // These drive the REAL retarget.mjs as a subprocess over a throwaway tmp fixture

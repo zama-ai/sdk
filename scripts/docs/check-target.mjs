@@ -20,7 +20,10 @@ export const BRANCH_TO_SPACE = { main: "stable", beta: "beta" };
 // can't catch it by looking for a literal wrong segment (the old approach silently
 // missed it). Instead read the actual space — the segment after /protocol/sdk/, or
 // the implicit `stable` when none is present — and compare it to what's expected.
-const SPACE_URL_RE = /docs\.zama\.org\/protocol\/sdk\/(?:(beta|stable)\/)?/g;
+// `alpha` is the legacy (pre-rename) space, kept in the alternation so a stale
+// `.../sdk/alpha/...` URL on the renamed branch is caught and fixed by docs:retarget,
+// not silently read as the implicit `stable` space. Drop once no `alpha` URLs remain.
+const SPACE_URL_RE = /docs\.zama\.org\/protocol\/sdk\/(?:(alpha|beta|stable)\/)?/g;
 
 /**
  * Human-readable problems with the branch/space URLs in `content` for a PR
@@ -31,8 +34,13 @@ export function findUrlProblems(content, expected) {
   const otherBranch = expected === "main" ? "beta" : "main";
   const problems = [];
 
-  if (content.includes(`raw.githubusercontent.com/zama-ai/sdk/${otherBranch}/`)) {
-    problems.push(`links to the "${otherBranch}" branch (expected "${expected}")`);
+  // `otherBranch` is the publish branch we're not targeting; `prerelease` is the
+  // legacy pre-rename branch. Flag either so a stale raw URL is caught (and fixed by
+  // docs:retarget). alpha is off the doc site, so it never appears as a raw branch.
+  for (const wrongBranch of [otherBranch, "prerelease"]) {
+    if (content.includes(`raw.githubusercontent.com/zama-ai/sdk/${wrongBranch}/`)) {
+      problems.push(`links to the "${wrongBranch}" branch (expected "${expected}")`);
+    }
   }
 
   for (const match of content.matchAll(SPACE_URL_RE)) {
