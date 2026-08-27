@@ -8,7 +8,7 @@ name: Examples CI
 # import, a type error — against the SDK release it actually targets.
 on:
   pull_request:
-    branches: [main, prerelease]
+    branches: [main, beta, alpha]
     paths:
       - "examples/**"
       - ".github/workflows/examples.yml"

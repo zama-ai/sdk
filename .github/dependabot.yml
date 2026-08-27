@@ -2,7 +2,7 @@ version: 2
 updates:
   # SDK core packages and workspace tooling
   - package-ecosystem: npm
-    target-branch: prerelease
+    target-branch: beta
     directories:
       - /
       - /packages/sdk
@@ -25,7 +25,7 @@ updates:
 
   # Test apps
   - package-ecosystem: npm
-    target-branch: prerelease
+    target-branch: beta
     directories:
       - /test/test-nextjs
       - /test/test-vite
@@ -49,7 +49,7 @@ updates:
 
   # Example apps
   - package-ecosystem: npm
-    target-branch: prerelease
+    target-branch: beta
     directories:
       - /examples/example-bnb
       - /examples/example-hoodi
@@ -78,7 +78,7 @@ updates:
           - version-update:semver-patch
 
   - package-ecosystem: github-actions
-    target-branch: prerelease
+    target-branch: beta
     directory: /
     schedule:
       interval: weekly

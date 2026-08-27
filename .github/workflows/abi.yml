@@ -2,7 +2,7 @@ name: ABI Check
 
 on:
   pull_request:
-    branches: [main, prerelease]
+    branches: [main, beta, alpha]
     paths:
       - "contracts/src/**"
       - "contracts/foundry.toml"

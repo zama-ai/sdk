@@ -12,12 +12,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import {
-  alphaHasSubstance,
-  alphaReleasesSinceLastMainline,
+  betaHasSubstance,
+  betaReleasesSinceLastMainline,
   compareVersions,
-  emptyAlphaTemplate,
+  emptyBetaTemplate,
   hasVersionSection,
-  isAlphaVersion,
+  isBetaVersion,
   newestMainline,
   parseChangelog,
   parseVersion,
@@ -28,14 +28,14 @@ import {
 
 // ─────────────────────────────────────────────────────────────── parser ──
 
-// Mirrors real semantic-release output: newest-first, an alpha tip above the
+// Mirrors real semantic-release output: newest-first, a beta tip above the
 // last mainline release, multiple typed H3 sections, a BREAKING CHANGES block
 // with real squash noise (Co-Authored-By lines + a `*`-prefixed stray bullet
 // that must NOT be picked up as a real bullet), and both hash-link shapes
 // (`([hash]())` empty and a full commit URL).
 const FIXTURE_CHANGELOG = `# Changelog
 
-## [3.4.0-alpha.6](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.5...v3.4.0-alpha.6) (2026-07-16)
+## [3.4.0-beta.6](https://github.com/zama-ai/sdk/compare/v3.4.0-beta.5...v3.4.0-beta.6) (2026-07-16)
 
 ### Code Refactoring
 
@@ -73,24 +73,24 @@ Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 describe("parseChangelog", () => {
   const releases = parseChangelog(FIXTURE_CHANGELOG);
 
-  test("parses newest-first: alpha tip then mainline release", () => {
+  test("parses newest-first: beta tip then mainline release", () => {
     expect(releases).toHaveLength(2);
-    expect(releases[0].version).toBe("3.4.0-alpha.6");
+    expect(releases[0].version).toBe("3.4.0-beta.6");
     expect(releases[1].version).toBe("3.3.0");
   });
 
-  test("extracts isAlpha + major/minor/patch + date for the alpha release", () => {
-    const alpha = releases[0];
-    expect(alpha.isAlpha).toBe(true);
-    expect(alpha.major).toBe(3);
-    expect(alpha.minor).toBe(4);
-    expect(alpha.patch).toBe(0);
-    expect(alpha.date).toBe("2026-07-16");
+  test("extracts isBeta + major/minor/patch + date for the beta release", () => {
+    const beta = releases[0];
+    expect(beta.isBeta).toBe(true);
+    expect(beta.major).toBe(3);
+    expect(beta.minor).toBe(4);
+    expect(beta.patch).toBe(0);
+    expect(beta.date).toBe("2026-07-16");
   });
 
-  test("extracts isAlpha + major/minor/patch + date for the mainline release", () => {
+  test("extracts isBeta + major/minor/patch + date for the mainline release", () => {
     const mainline = releases[1];
-    expect(mainline.isAlpha).toBe(false);
+    expect(mainline.isBeta).toBe(false);
     expect(mainline.major).toBe(3);
     expect(mainline.minor).toBe(3);
     expect(mainline.patch).toBe(0);
@@ -156,13 +156,13 @@ describe("parseChangelog", () => {
   });
 });
 
-describe("parseVersion / isAlphaVersion", () => {
+describe("parseVersion / isBetaVersion", () => {
   test("parses core + prerelease", () => {
-    expect(parseVersion("3.4.0-alpha.6")).toEqual({
+    expect(parseVersion("3.4.0-beta.6")).toEqual({
       major: 3,
       minor: 4,
       patch: 0,
-      prerelease: "alpha.6",
+      prerelease: "beta.6",
     });
     expect(parseVersion("3.3.0")).toEqual({ major: 3, minor: 3, patch: 0, prerelease: null });
   });
@@ -171,10 +171,10 @@ describe("parseVersion / isAlphaVersion", () => {
     expect(parseVersion("not-a-version")).toBeNull();
   });
 
-  test("isAlphaVersion only matches the -alpha.N shape, not other prerelease tags", () => {
-    expect(isAlphaVersion("3.4.0-alpha.6")).toBe(true);
-    expect(isAlphaVersion("3.4.0")).toBe(false);
-    expect(isAlphaVersion("3.4.0-beta.1")).toBe(false);
+  test("isBetaVersion only matches the -beta.N shape, not other prerelease tags", () => {
+    expect(isBetaVersion("3.4.0-beta.6")).toBe(true);
+    expect(isBetaVersion("3.4.0")).toBe(false);
+    expect(isBetaVersion("3.4.0-alpha.1")).toBe(false);
   });
 });
 
@@ -231,42 +231,68 @@ describe("compareVersions", () => {
     expect(compareVersions("3.4.0", "3.3.0")).toBeGreaterThan(0);
   });
 
-  test("a mainline release outranks its own alpha prereleases (same core version)", () => {
-    expect(compareVersions("3.4.0", "3.4.0-alpha.6")).toBeGreaterThan(0);
-    expect(compareVersions("3.4.0-alpha.6", "3.4.0")).toBeLessThan(0);
+  test("a mainline release outranks its own beta prereleases (same core version)", () => {
+    expect(compareVersions("3.4.0", "3.4.0-beta.6")).toBeGreaterThan(0);
+    expect(compareVersions("3.4.0-beta.6", "3.4.0")).toBeLessThan(0);
   });
 
-  test("orders alpha builds numerically, not lexicographically", () => {
-    expect(compareVersions("3.4.0-alpha.2", "3.4.0-alpha.10")).toBeLessThan(0);
+  test("orders beta builds numerically, not lexicographically", () => {
+    expect(compareVersions("3.4.0-beta.2", "3.4.0-beta.10")).toBeLessThan(0);
   });
 });
 
-describe("newestMainline / alphaReleasesSinceLastMainline", () => {
-  test("newestMainline picks the first non-alpha release from a newest-first list", () => {
+describe("newestMainline / betaReleasesSinceLastMainline", () => {
+  test("newestMainline picks the first non-beta release from a newest-first list", () => {
     const releases = [
-      { version: "3.4.0-alpha.6", isAlpha: true },
-      { version: "3.3.0", isAlpha: false },
+      { version: "3.4.0-beta.6", isBeta: true, isPrerelease: true },
+      { version: "3.3.0", isBeta: false, isPrerelease: false },
     ];
     expect(newestMainline(releases).version).toBe("3.3.0");
   });
 
   test("newestMainline returns null when there is no mainline release yet", () => {
-    expect(newestMainline([{ version: "3.4.0-alpha.1", isAlpha: true }])).toBeNull();
+    expect(
+      newestMainline([{ version: "3.4.0-beta.1", isBeta: true, isPrerelease: true }]),
+    ).toBeNull();
   });
 
-  test("alphaReleasesSinceLastMainline stops at the first mainline release, ignoring older alphas beyond it", () => {
+  // Regression: an `-alpha.N` entry has isBeta=false but is NOT mainline. Before the
+  // isPrerelease fix, `!isBeta` was read as "is mainline", so the alpha tip was taken as
+  // the shipped version and `docs:retarget main` promoted a bogus prerelease section.
+  test("alpha entries are not mainline and are excluded from the beta tip", () => {
+    const releases = parseChangelog(
+      [
+        "# Changelog",
+        "",
+        "## [3.6.0-beta.2](url) (2026-09-02)",
+        "## [3.6.0-alpha.1](url) (2026-09-01)",
+        "## [3.6.0-beta.1](url) (2026-08-31)",
+        "## [3.5.0](url) (2026-08-26)",
+        "",
+      ].join("\n"),
+    );
+    expect(newestMainline(releases).version).toBe("3.5.0");
+    expect(betaReleasesSinceLastMainline(releases).map((r) => r.version)).toEqual([
+      "3.6.0-beta.2",
+      "3.6.0-beta.1",
+    ]);
+  });
+
+  test("betaReleasesSinceLastMainline stops at the first mainline release, ignoring older betas beyond it", () => {
     const releases = [
-      { version: "3.4.0-alpha.6", isAlpha: true },
-      { version: "3.4.0-alpha.5", isAlpha: true },
-      { version: "3.3.0", isAlpha: false },
-      { version: "3.3.0-alpha.1", isAlpha: true }, // older alpha, past the mainline boundary
+      { version: "3.4.0-beta.6", isBeta: true, isPrerelease: true },
+      { version: "3.4.0-beta.5", isBeta: true, isPrerelease: true },
+      { version: "3.3.0", isBeta: false, isPrerelease: false },
+      { version: "3.3.0-beta.1", isBeta: true, isPrerelease: true }, // older beta, past the mainline boundary
     ];
-    const alphas = alphaReleasesSinceLastMainline(releases);
-    expect(alphas.map((r) => r.version)).toEqual(["3.4.0-alpha.6", "3.4.0-alpha.5"]);
+    const betas = betaReleasesSinceLastMainline(releases);
+    expect(betas.map((r) => r.version)).toEqual(["3.4.0-beta.6", "3.4.0-beta.5"]);
   });
 
   test("returns [] when the changelog opens on a mainline release (no unreleased tip)", () => {
-    expect(alphaReleasesSinceLastMainline([{ version: "3.3.0", isAlpha: false }])).toEqual([]);
+    expect(
+      betaReleasesSinceLastMainline([{ version: "3.3.0", isBeta: false, isPrerelease: false }]),
+    ).toEqual([]);
   });
 });
 
@@ -280,22 +306,22 @@ describe("hasVersionSection", () => {
   });
 });
 
-describe("alphaHasSubstance", () => {
+describe("betaHasSubstance", () => {
   test("the freshly-reset template has no substance", () => {
-    expect(alphaHasSubstance(emptyAlphaTemplate())).toBe(false);
+    expect(betaHasSubstance(emptyBetaTemplate())).toBe(false);
   });
 
   test("real staged prose counts as substance", () => {
-    const staged = `${emptyAlphaTemplate()}\n## New feature\n\nSome real notes.\n`;
-    expect(alphaHasSubstance(staged)).toBe(true);
+    const staged = `${emptyBetaTemplate()}\n## New feature\n\nSome real notes.\n`;
+    expect(betaHasSubstance(staged)).toBe(true);
   });
 
   test("comment noise that survives a single strip pass is not substance", () => {
     // A single `<!--...-->` removal on this leaves `<!-- R -->` behind (the
     // outer `<!-` joins the trailing `-->`); only stripping until stable empties
     // it. Regression for the incomplete-multi-character-sanitization fix.
-    const noise = `${emptyAlphaTemplate()}\n<!-<!--x-->- R -->\n`;
-    expect(alphaHasSubstance(noise)).toBe(false);
+    const noise = `${emptyBetaTemplate()}\n<!-<!--x-->- R -->\n`;
+    expect(betaHasSubstance(noise)).toBe(false);
   });
 });
 
@@ -351,15 +377,15 @@ const CHANGELOG_MD_FIXTURE = `# Changelog
 - **sdk:** add confidentialTransferAndCall to Token methods ([#423](https://github.com/zama-ai/sdk/issues/423)) ([7b2b916]())
 `;
 
-const STAGED_ALPHA_FIXTURE = `---
-title: Alpha
-description: Unreleased changes on the prerelease (alpha) line — not yet in a stable release.
+const STAGED_BETA_FIXTURE = `---
+title: Beta
+description: Unreleased changes on the prerelease (beta) line — not yet in a stable release.
 ---
 
-# Alpha
+# Beta
 
 {% hint style="warning" %}
-**Unreleased.** The changes on this page are on the prerelease (\`alpha\`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
+**Unreleased.** The changes on this page are on the prerelease (\`beta\`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
 {% endhint %}
 
 ## wrap() for two-signature shield
@@ -368,18 +394,18 @@ description: Unreleased changes on the prerelease (alpha) line — not yet in a 
 `;
 
 /** A minimal, valid GitBook + CHANGELOG.md tree, not yet promoted: a mainline
- *  3.4.0 release exists in CHANGELOG.md, no v3-4.md page yet, and the Alpha
+ *  3.4.0 release exists in CHANGELOG.md, no v3-4.md page yet, and the Beta
  *  page carries genuine staged prose. */
 function writeFreshFixture(root) {
   mkdirSync(join(root, CHANGELOG_DIR), { recursive: true });
   writeFileSync(join(root, "CHANGELOG.md"), CHANGELOG_MD_FIXTURE);
   writeFileSync(join(root, "docs/gitbook/src/SUMMARY.md"), SUMMARY_FIXTURE);
   writeFileSync(join(root, `${CHANGELOG_DIR}/v3.md`), V3_INDEX_FIXTURE);
-  writeFileSync(join(root, `${CHANGELOG_DIR}/alpha.md`), STAGED_ALPHA_FIXTURE);
+  writeFileSync(join(root, `${CHANGELOG_DIR}/beta.md`), STAGED_BETA_FIXTURE);
 }
 
 describe("promoteChangelog", () => {
-  test("fresh-alpha fixture: promotes, creates the version page, resets alpha", () => {
+  test("fresh-beta fixture: promotes, creates the version page, resets beta", () => {
     const root = makeRoot();
     writeFreshFixture(root);
 
@@ -392,7 +418,7 @@ describe("promoteChangelog", () => {
     const versionPage = readFileSync(join(root, `${CHANGELOG_DIR}/v3-4.md`), "utf8");
     expect(hasVersionSection(versionPage, "3.4.0")).toBe(true);
     expect(versionPage).toContain("_Released 2026-07-16._");
-    // Alpha prose was carried over, demoted one heading level (## → ###).
+    // Beta prose was carried over, demoted one heading level (## → ###).
     expect(versionPage).toContain("### wrap() for two-signature shield");
 
     const summary = readFileSync(join(root, "docs/gitbook/src/SUMMARY.md"), "utf8");
@@ -401,8 +427,8 @@ describe("promoteChangelog", () => {
     const index = readFileSync(join(root, `${CHANGELOG_DIR}/v3.md`), "utf8");
     expect(index).toContain("(v3-4.md)");
 
-    const alpha = readFileSync(join(root, `${CHANGELOG_DIR}/alpha.md`), "utf8");
-    expect(alphaHasSubstance(alpha)).toBe(false);
+    const beta = readFileSync(join(root, `${CHANGELOG_DIR}/beta.md`), "utf8");
+    expect(betaHasSubstance(beta)).toBe(false);
   });
 
   test("already-promoted fixture (target `## {version}` already present): no-op, zero writes", () => {
@@ -434,16 +460,16 @@ Already-written plain-language notes.
     expect(result.changed).toEqual([]);
   });
 
-  test("already-promoted fixture (alpha already at the reset template): no-op, zero writes", () => {
+  test("already-promoted fixture (beta already at the reset template): no-op, zero writes", () => {
     const root = makeRoot();
     writeFreshFixture(root);
-    // No version page yet, but nothing is staged on Alpha (secondary guard).
-    writeFileSync(join(root, `${CHANGELOG_DIR}/alpha.md`), emptyAlphaTemplate());
+    // No version page yet, but nothing is staged on Beta (secondary guard).
+    writeFileSync(join(root, `${CHANGELOG_DIR}/beta.md`), emptyBetaTemplate());
 
     const result = promoteChangelog({ root });
 
     expect(result.promoted).toBe(false);
-    expect(result.reason).toBe("alpha page is empty");
+    expect(result.reason).toBe("beta page is empty");
     expect(result.changed).toEqual([]);
   });
 
@@ -455,7 +481,7 @@ Already-written plain-language notes.
     expect(first.promoted).toBe(true);
 
     const versionPageAfterFirst = readFileSync(join(root, `${CHANGELOG_DIR}/v3-4.md`), "utf8");
-    const alphaAfterFirst = readFileSync(join(root, `${CHANGELOG_DIR}/alpha.md`), "utf8");
+    const betaAfterFirst = readFileSync(join(root, `${CHANGELOG_DIR}/beta.md`), "utf8");
 
     const second = promoteChangelog({ root });
 
@@ -467,7 +493,7 @@ Already-written plain-language notes.
     expect(readFileSync(join(root, `${CHANGELOG_DIR}/v3-4.md`), "utf8")).toBe(
       versionPageAfterFirst,
     );
-    expect(readFileSync(join(root, `${CHANGELOG_DIR}/alpha.md`), "utf8")).toBe(alphaAfterFirst);
+    expect(readFileSync(join(root, `${CHANGELOG_DIR}/beta.md`), "utf8")).toBe(betaAfterFirst);
   });
 });
 
@@ -505,9 +531,9 @@ Already-written plain-language notes.
 // ─────────────────────────────────────── stale-CHANGELOG warning (Fix #1) ──
 
 describe("promoteChangelog — stale-CHANGELOG.md warning", () => {
-  test("warns (but stays a no-op, zero writes) when already-promoted AND alpha still has substance", () => {
+  test("warns (but stays a no-op, zero writes) when already-promoted AND beta still has substance", () => {
     const root = makeRoot();
-    writeFreshFixture(root); // alpha carries genuine staged prose
+    writeFreshFixture(root); // beta carries genuine staged prose
     // The newest mainline entry (3.4.0) is already on its page — the state the guard
     // reaches when CHANGELOG.md is stale (the release commit adding a NEWER `## [X.Y.Z]`
     // wasn't pulled), so `target` derived to the prior, already-promoted version.
@@ -525,12 +551,12 @@ describe("promoteChangelog — stale-CHANGELOG.md warning", () => {
     expect(snapshotTree(root)).toEqual(before);
   });
 
-  test("does NOT warn on a legitimate idempotent re-run (alpha already reset to empty)", () => {
+  test("does NOT warn on a legitimate idempotent re-run (beta already reset to empty)", () => {
     const root = makeRoot();
     writeFreshFixture(root);
-    // Genuine already-promoted state: version page present AND alpha reset — a true no-op.
+    // Genuine already-promoted state: version page present AND beta reset — a true no-op.
     writeFileSync(join(root, `${CHANGELOG_DIR}/v3-4.md`), PRE_PROMOTED_V3_4);
-    writeFileSync(join(root, `${CHANGELOG_DIR}/alpha.md`), emptyAlphaTemplate());
+    writeFileSync(join(root, `${CHANGELOG_DIR}/beta.md`), emptyBetaTemplate());
 
     const result = promoteChangelog({ root });
 
@@ -543,12 +569,12 @@ describe("promoteChangelog — stale-CHANGELOG.md warning", () => {
 // ────────────────────── self-referential + sibling anchor repointing (Fix #2/#6) ──
 
 describe("promoteChangelog — anchor repointing in the moved prose", () => {
-  const ALPHA_WITH_SELF_REFS = `---
-title: Alpha
-description: Unreleased changes on the prerelease (alpha) line — not yet in a stable release.
+  const BETA_WITH_SELF_REFS = `---
+title: Beta
+description: Unreleased changes on the prerelease (beta) line — not yet in a stable release.
 ---
 
-# Alpha
+# Beta
 
 {% hint style="warning" %}
 **Unreleased.** Preview only.
@@ -556,41 +582,41 @@ description: Unreleased changes on the prerelease (alpha) line — not yet in a 
 
 ## Runtime tuning
 
-See [error handling](alpha.md#error-handling) and the [runtime notes](./alpha.md#runtime-tuning) for caveats. Not the sibling [myalpha](myalpha.md#sibling) doc.
+See [error handling](beta.md#error-handling) and the [runtime notes](./beta.md#runtime-tuning) for caveats. Not the sibling [mybeta](mybeta.md#sibling) doc.
 
 ## Error handling
 
 Errors now carry typed causes.
 `;
 
-  test("self-referential `](alpha.md#…)` / `](./alpha.md#…)` links are repointed to the version page", () => {
+  test("self-referential `](beta.md#…)` / `](./beta.md#…)` links are repointed to the version page", () => {
     const root = makeRoot();
     writeFreshFixture(root);
-    writeFileSync(join(root, `${CHANGELOG_DIR}/alpha.md`), ALPHA_WITH_SELF_REFS);
+    writeFileSync(join(root, `${CHANGELOG_DIR}/beta.md`), BETA_WITH_SELF_REFS);
 
     const result = promoteChangelog({ root });
     expect(result.promoted).toBe(true);
 
     const versionPage = readFileSync(join(root, `${CHANGELOG_DIR}/v3-4.md`), "utf8");
-    // Both self-refs now point at the version page (same changelog/ dir), not alpha.md
+    // Both self-refs now point at the version page (same changelog/ dir), not beta.md
     // (which just reset — those links would dangle without the fix). The `./` prefix is
     // preserved on the one that carried it.
     expect(versionPage).toContain("(v3-4.md#error-handling)");
     expect(versionPage).toContain("(./v3-4.md#runtime-tuning)");
-    expect(versionPage).not.toContain("(alpha.md#"); // no un-repointed self-ref remains
-    // Fix #6 boundary: the sibling `myalpha.md#…` is NOT a match and stays put.
-    expect(versionPage).toContain("(myalpha.md#sibling)");
+    expect(versionPage).not.toContain("(beta.md#"); // no un-repointed self-ref remains
+    // Fix #6 boundary: the sibling `mybeta.md#…` is NOT a match and stays put.
+    expect(versionPage).toContain("(mybeta.md#sibling)");
   });
 
-  test("inbound `](myalpha.md#slug)` on another page is left alone (path-boundary)", () => {
+  test("inbound `](mybeta.md#slug)` on another page is left alone (path-boundary)", () => {
     const root = makeRoot();
     writeFreshFixture(root);
-    // A page whose inbound links include BOTH the real alpha.md anchor and a sibling
-    // `myalpha.md` that merely ends in `alpha.md#…`. The moved prose owns `#wrap-…`.
+    // A page whose inbound links include BOTH the real beta.md anchor and a sibling
+    // `mybeta.md` that merely ends in `beta.md#…`. The moved prose owns `#wrap-…`.
     const sibling = `# Sibling
 
-Real: [wrap notes](alpha.md#wrap-for-two-signature-shield).
-Decoy: [other](myalpha.md#wrap-for-two-signature-shield).
+Real: [wrap notes](beta.md#wrap-for-two-signature-shield).
+Decoy: [other](mybeta.md#wrap-for-two-signature-shield).
 `;
     writeFileSync(join(root, `${CHANGELOG_DIR}/v3-2.md`), sibling);
 
@@ -599,7 +625,7 @@ Decoy: [other](myalpha.md#wrap-for-two-signature-shield).
 
     const page = readFileSync(join(root, `${CHANGELOG_DIR}/v3-2.md`), "utf8");
     expect(page).toContain("(v3-4.md#wrap-for-two-signature-shield)"); // real link repointed
-    expect(page).toContain("(myalpha.md#wrap-for-two-signature-shield)"); // decoy untouched
+    expect(page).toContain("(mybeta.md#wrap-for-two-signature-shield)"); // decoy untouched
     expect(page).not.toContain("(myv3-4.md#"); // old bug would have corrupted it to this
   });
 });
@@ -609,9 +635,9 @@ Decoy: [other](myalpha.md#wrap-for-two-signature-shield).
 describe("promoteChangelog — atomic failure isolation", () => {
   test("a throw AFTER edits are staged (during the anchor sweep) writes NOTHING to disk", () => {
     const root = makeRoot();
-    writeFreshFixture(root); // alpha has a heading ⇒ repointAlphaAnchors runs (no early return)
+    writeFreshFixture(root); // beta has a heading ⇒ repointBetaAnchors runs (no early return)
     // Booby-trap: a DIRECTORY named `*.md` under the docs tree. The anchor sweep runs
-    // AFTER the version page / reset alpha / SUMMARY / index edits are staged in memory
+    // AFTER the version page / reset beta / SUMMARY / index edits are staged in memory
     // but BEFORE flush(); readFileSync on a directory throws EISDIR mid-sweep. Because
     // flush() is not atomic across files, "tree byte-identical after a throw" can only
     // hold if the throw lands in the compute phase — which is exactly what this asserts
@@ -622,7 +648,7 @@ describe("promoteChangelog — atomic failure isolation", () => {
 
     expect(() => promoteChangelog({ root })).toThrow(/EISDIR/);
 
-    // No version page created, alpha not reset, SUMMARY/index untouched: fully atomic.
+    // No version page created, beta not reset, SUMMARY/index untouched: fully atomic.
     expect(existsSync(join(root, `${CHANGELOG_DIR}/v3-4.md`))).toBe(false);
     expect(snapshotTree(root)).toEqual(before);
   });

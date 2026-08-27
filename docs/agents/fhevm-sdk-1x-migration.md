@@ -16,7 +16,7 @@
 > **This doc is now a historical record** of two migrations that have both landed. Keep it for the
 > rationale and the rename mapping (still an accurate reference for the current API); it no longer
 > describes pending work. For the user-facing description of the current backend, see
-> [`changelog/alpha.md`](../gitbook/src/changelog/alpha.md) and
+> [`changelog/beta.md`](../gitbook/src/changelog/beta.md) and
 > [`concepts/architecture.md`](../gitbook/src/concepts/architecture.md).
 
 Internal feedback that originally set this split (track 1 was deferred first, then completed):
