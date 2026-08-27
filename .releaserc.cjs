@@ -26,7 +26,11 @@ const mainTemplate = extract("mainTemplate").replace(/^\* /gm, "- ");
 const commitPartial = extract("commitPartial").replace(/^\*/, "-");
 
 module.exports = {
-  branches: ["main", { name: "prerelease", channel: "alpha", prerelease: "alpha" }],
+  branches: [
+    "main",
+    { name: "beta", channel: "beta", prerelease: "beta" },
+    { name: "alpha", channel: "alpha", prerelease: "alpha" },
+  ],
   tagFormat: "v${version}",
   plugins: [
     [

@@ -2124,21 +2124,21 @@ Stuck on the migration, or spotted a step or rename this guide is missing? **Ope
 [s6]: #step-6-token-wrappedtoken-upgraded-contracts
 [s7]: #step-7-removed-with-no-replacement
 
-## Alpha
+## Beta
 
 - source_type: official-doc
-- source_path: docs/gitbook/src/changelog/alpha.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/alpha.md
-- logical_path: changelog/alpha
+- source_path: docs/gitbook/src/changelog/beta.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/beta.md
+- logical_path: changelog/beta
 
-# Alpha
+# Beta
 
 
 > [!WARNING]
-> **Unreleased.** The changes on this page are on the prerelease (`alpha`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
+> **Unreleased.** The changes on this page are on the prerelease (`beta`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
 
 
-_Nothing is staged for the next release yet. As alpha builds land, run `pnpm docs:changelog` to refresh this page._
+_Nothing is staged for the next release yet. As beta builds land, run `pnpm docs:changelog` to refresh this page._
 
 ## 3.x
 
@@ -19204,7 +19204,7 @@ A fresh key pair invalidates every permit granted for the old one, so the signer
 
 The TFHE WASM binaries ship **inside the `@fhevm/sdk` npm package** and load from your own bundle — there is no runtime CDN fetch. Integrity is guaranteed the same way as any other dependency: by your package manager's lockfile hashes and your build pipeline.
 
-For advanced deployments that host the WASM assets on a URL instead (via the `runtime` option's `wasmAssetLoadMode` / `locateFile`), the integrity guarantee depends on the mode: `verified-blob` SHA-verifies the fetched bytes against hashes pinned in the library and fails initialization on mismatch, `precheck-direct-url` runs a precheck request before loading directly from the URL, and `trusted-direct-url` loads directly with no verification (fastest, least defensive). The `embedded-base64` mode inlines the WASM as base64 with no network fetch at all. See the [`wasmAssetLoadMode` mode table](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/alpha.md) for the full list.
+For advanced deployments that host the WASM assets on a URL instead (via the `runtime` option's `wasmAssetLoadMode` / `locateFile`), the integrity guarantee depends on the mode: `verified-blob` SHA-verifies the fetched bytes against hashes pinned in the library and fails initialization on mismatch, `precheck-direct-url` runs a precheck request before loading directly from the URL, and `trusted-direct-url` loads directly with no verification (fastest, least defensive). The `embedded-base64` mode inlines the WASM as base64 with no network fetch at all. See the [`wasmAssetLoadMode` mode table](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/beta.md) for the full list.
 
 ![WASM loading and integrity](../images/security-wasm-integrity.svg)
 
@@ -22254,9 +22254,9 @@ npm run test:e2e                     # Playwright e2e tests (starts dev server a
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@zama-fhe/sdk">
-    <img src="https://img.shields.io/npm/v/%40zama-fhe%2Fsdk/alpha?label=dev%20release&style=flat-square" alt="Dev release"></a>
+    <img src="https://img.shields.io/npm/v/%40zama-fhe%2Fsdk/beta?label=dev%20release&style=flat-square" alt="Dev release"></a>
   <a href="https://www.npmjs.com/package/@zama-fhe/sdk">
-    <img src="https://img.shields.io/npm/last-update/%40zama-fhe%2Fsdk/alpha?style=flat-square" alt="Dev release last updated"></a>
+    <img src="https://img.shields.io/npm/last-update/%40zama-fhe%2Fsdk/beta?style=flat-square" alt="Dev release last updated"></a>
   <a href="https://github.com/zama-ai/sdk/actions/workflows/ci.yml">
     <img src="https://img.shields.io/github/actions/workflow/status/zama-ai/sdk/ci.yml?style=flat-square&label=CI" alt="CI"></a>
   <a href="https://github.com/zama-ai/sdk/actions/workflows/playwright.yml">

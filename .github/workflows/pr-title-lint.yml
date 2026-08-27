@@ -2,7 +2,7 @@ name: PR Title Lint
 
 on:
   pull_request:
-    branches: [main, prerelease]
+    branches: [main, beta, alpha]
     types: [opened, edited, synchronize, reopened]
 
 concurrency:

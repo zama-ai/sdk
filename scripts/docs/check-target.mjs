@@ -1,37 +1,51 @@
 // Assert the committed doc URLs target the expected publish branch.
 //
-//   pnpm docs:check-target <main|prerelease>
+//   pnpm docs:check-target <main|beta|alpha>
 //
 // Runs in CI with the PR's base branch (github.base_ref) — which, unlike a local
 // git branch name, is reliable in CI's detached-HEAD PR checkout and is exactly
 // where the PR will land. If the committed URLs point at the other branch/space
-// (e.g. a prerelease→main promotion that forgot to flip them), this fails and
+// (e.g. a beta→main promotion that forgot to flip them), this fails and
 // tells you to run `pnpm docs:retarget <branch>`. Idempotent partner to retarget.mjs.
+// `alpha` IS a valid target: its raw/LLM URLs must self-target `alpha`, while its
+// docs.zama.org links use the `beta` space (alpha has no GitBook space of its own).
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-export const BRANCH_TO_SPACE = { main: "stable", prerelease: "alpha" };
+/** Publish branch → expected GitBook space (`alpha`→`beta`; alpha has no space of its own). */
+export const BRANCH_TO_SPACE = { main: "stable", beta: "beta", alpha: "beta" };
 
 // `stable` is GitBook's default space and is omitted from docs.zama.org URLs, so a
-// stale stable-form URL on the prerelease branch has *no* space segment at all — we
+// stale stable-form URL on the beta branch has *no* space segment at all — we
 // can't catch it by looking for a literal wrong segment (the old approach silently
 // missed it). Instead read the actual space — the segment after /protocol/sdk/, or
 // the implicit `stable` when none is present — and compare it to what's expected.
-const SPACE_URL_RE = /docs\.zama\.org\/protocol\/sdk\/(?:(alpha|stable)\/)?/g;
+// `alpha` is the legacy (pre-rename) space, kept in the alternation so a stale
+// `.../sdk/alpha/...` URL on the renamed branch is caught and fixed by docs:retarget,
+// not silently read as the implicit `stable` space. Drop once no `alpha` URLs remain.
+const SPACE_URL_RE = /docs\.zama\.org\/protocol\/sdk\/(?:(alpha|beta|stable)\/)?/g;
 
 /**
  * Human-readable problems with the branch/space URLs in `content` for a PR
- * landing on `expected` (`main` or `prerelease`). Empty array means clean.
+ * landing on `expected` (`main`, `beta`, or `alpha`). Empty array means clean.
  */
 export function findUrlProblems(content, expected) {
   const space = BRANCH_TO_SPACE[expected];
-  const otherBranch = expected === "main" ? "prerelease" : "main";
   const problems = [];
 
-  if (content.includes(`raw.githubusercontent.com/zama-ai/sdk/${otherBranch}/`)) {
-    problems.push(`links to the "${otherBranch}" branch (expected "${expected}")`);
+  // Flag any raw.githubusercontent branch segment that isn't `expected` — covers the
+  // other publish branches (main/beta/alpha) and the legacy `prerelease`. One flag per
+  // distinct wrong branch; docs:retarget fixes them. (Raw URLs self-target the branch,
+  // so alpha's must be `alpha`, not the `beta` space its docs.zama.org links use.)
+  const seenBranches = new Set();
+  for (const m of content.matchAll(/raw\.githubusercontent\.com\/zama-ai\/sdk\/([\w.-]+)\//g)) {
+    const branch = m[1];
+    if (branch !== expected && !seenBranches.has(branch)) {
+      seenBranches.add(branch);
+      problems.push(`links to the "${branch}" branch (expected "${expected}")`);
+    }
   }
 
   for (const match of content.matchAll(SPACE_URL_RE)) {
@@ -64,7 +78,7 @@ function main() {
   if (!Object.hasOwn(BRANCH_TO_SPACE, expected)) {
     // Not a publish branch (e.g. a feature→feature PR) — nothing to assert.
     console.log(
-      `docs:check-target: "${expected ?? "(nothing)"}" is not main/prerelease; skipping.`,
+      `docs:check-target: "${expected ?? "(nothing)"}" is not main/beta/alpha; skipping.`,
     );
     process.exit(0);
   }

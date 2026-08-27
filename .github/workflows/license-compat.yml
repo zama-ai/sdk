@@ -2,9 +2,9 @@ name: License Compatibility
 
 on:
   pull_request:
-    branches: [main, prerelease]
+    branches: [main, beta, alpha]
   push:
-    branches: [main, prerelease]
+    branches: [main, beta, alpha]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

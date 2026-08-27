@@ -131,7 +131,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 
 ### Changelog
 
-- [Alpha](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/alpha.md): Unreleased changes on the prerelease (alpha) line — not yet in a stable release.
+- [Beta](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/beta.md): Unreleased changes on the prerelease (beta) line — not yet in a stable release.
 - [3.x](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3.md): Human-readable release notes for the 3.x line — what changed in each minor version of @zama-fhe/sdk and @zama-fhe/react-sdk, in plain language.
 - [3.5.x](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-5.md): Release notes for the 3.5.x line.
 - [3.4.x](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-4.md): Release notes for the 3.4.x line.

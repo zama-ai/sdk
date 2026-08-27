@@ -32,7 +32,7 @@ Load these on demand during planning — they are not preloaded:
 - [`docs/agents/architecture.md`](docs/agents/architecture.md) — repo layout, how operations flow through the system (balance, transfer, shield, unshield, routing)
 - [`docs/agents/conventions.md`](docs/agents/conventions.md) — shared naming rules and design decisions (contracts-vs-tokens, Solidity-mirror params, pure contract call builders, stage-gate docs language, …)
 - [`docs/agents/gotchas.md`](docs/agents/gotchas.md) — shared footguns: address normalization in query keys, PR base branch, shared-branch safety
-- [`docs/agents/changelog.md`](docs/agents/changelog.md) — the GitBook changelog convention: mainline-only pages, the Alpha unreleased tip, per-minor vs. frozen-major pagination, nav wiring, and the `docs:changelog` automation
+- [`docs/agents/changelog.md`](docs/agents/changelog.md) — the GitBook changelog convention: mainline-only pages, the Beta unreleased tip, per-minor vs. frozen-major pagination, nav wiring, and the `docs:changelog` automation
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — dev commands (build, test, E2E, typecheck, lint, format), LLM artifact generation (`pnpm llm:build` / `llm:check`), API reports (`pnpm api-report*`), and the PR/release workflow
 
 Some packages add their own AGENTS.md with package-specific rules — they merge with this root file when you're working in that subtree:
