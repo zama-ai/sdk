@@ -118,7 +118,7 @@
     "semantic-release": "^25.0.5",
     "size-limit": "^13.0.3",
     "turbo": "2.10.4",
-    "typescript": "6.0.3",
+    "typescript": "7.0.2",
     "typescript-language-server": "^6.0.0",
     "vitest": "^4.1.9"
   },
