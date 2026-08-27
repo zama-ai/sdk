@@ -161,7 +161,7 @@ export function parseChangelog(text) {
         // Any suffix (`-alpha.N` or `-beta.N`) is a prerelease; only bare `X.Y.Z` is a
         // shipped mainline. `isBeta` alone must NOT be read as "is mainline" — with the
         // alpha channel added, an `-alpha.N` entry has isBeta=false but is not mainline.
-        isPrerelease: parsed?.prerelease != null,
+        isPrerelease: (parsed?.prerelease ?? null) !== null,
         major: parsed?.major ?? null,
         minor: parsed?.minor ?? null,
         patch: parsed?.patch ?? null,
