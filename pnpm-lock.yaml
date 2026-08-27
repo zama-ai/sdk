@@ -198,8 +198,8 @@ importers:
   packages/sdk:
     dependencies:
       '@fhevm/sdk':
-        specifier: 0.13.2
-        version: 0.13.2(ethers@6.17.0)(typescript@6.0.3)(viem@2.55.0(typescript@6.0.3)(zod@4.4.3))
+        specifier: 0.14.1-0
+        version: 0.14.1-0(ethers@6.17.0)(typescript@6.0.3)(viem@2.55.0(typescript@6.0.3)(zod@4.4.3))
       ethers:
         specifier: '>=6'
         version: 6.17.0
@@ -574,8 +574,8 @@ packages:
       typescript:
         optional: true
 
-  '@fhevm/sdk@0.13.2':
-    resolution: {integrity: sha512-M1ZUKdRJedxRa57bVeQ7jrzVP6hKAXjS8WabvMNJKBui7C2ZXDsvoyb7qpLqYib85obA+OQTwcPZV/oxWfciWA==}
+  '@fhevm/sdk@0.14.1-0':
+    resolution: {integrity: sha512-LLttIufmrBWNu4lss8zAyGFyadO3kd4eHzC9gN/jrQJpDPVs1E6n/NFRNzVvoMu5mYYE6As66H5kGalbNPtqfA==}
     engines: {node: '>=22.0'}
     peerDependencies:
       ethers: '>=6.8.0'
@@ -4105,6 +4105,9 @@ packages:
       typescript:
         optional: true
 
+  wasm-feature-detect@1.8.0:
+    resolution: {integrity: sha512-zksaLKM2fVlnB5jQQDqKXXwYHLQUVH9es+5TOOHwGOVJOCeRBCiPjwSg+3tN2AdTCzjgli4jijCH290kXb/zWQ==}
+
   wasm-feature-detect@1.9.0:
     resolution: {integrity: sha512-zonE+xlIIYtxPy++L24ow0hAD8CICb4+FgPyROd3buyXIqsJvUEDkBgfCCoXOd1Hu3DUr0GOfnPIdcGV+YpNaA==}
 
@@ -4404,11 +4407,11 @@ snapshots:
     optionalDependencies:
       typescript: 6.0.3
 
-  '@fhevm/sdk@0.13.2(ethers@6.17.0)(typescript@6.0.3)(viem@2.55.0(typescript@6.0.3)(zod@4.4.3))':
+  '@fhevm/sdk@0.14.1-0(ethers@6.17.0)(typescript@6.0.3)(viem@2.55.0(typescript@6.0.3)(zod@4.4.3))':
     dependencies:
       '@noble/curves': 2.0.1
       '@noble/hashes': 2.0.1
-      wasm-feature-detect: 1.9.0
+      wasm-feature-detect: 1.8.0
     optionalDependencies:
       ethers: 6.17.0
       typescript: 6.0.3
@@ -7435,6 +7438,8 @@ snapshots:
       - accounts
       - immer
       - porto
+
+  wasm-feature-detect@1.8.0: {}
 
   wasm-feature-detect@1.9.0: {}
 
