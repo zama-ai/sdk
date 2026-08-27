@@ -8,6 +8,7 @@ The repo has **two** changelog surfaces — keep them distinct:
 ## Conventions
 
 - **Mainline releases only** — no per-prerelease pages. The unreleased tip accumulates on a single **Beta page** under an "Unreleased" hint; on release its content is promoted into a version section and the Beta page resets.
+- **`alpha` is off the changelog** — the protocol-testing `alpha` branch has no GitBook space or doc URLs, so its `-alpha.N` builds never get a page or section here; only `beta`/stable work is written up.
 - **Active major line → one page per minor**, behind a collapsible parent index. Page title and H1 are both `{minor}.x`. Inside, one `## {version}` section per release, **newest-first**, each opening with a `_Released YYYY-MM-DD._` dateline and grouping changes under `###` topic headings (not raw commit types).
 - **Superseded majors → one page per major**, grouped under a collapsible "Legacy versions" parent, same newest-first sections.
 - **Legacy pages are historical record** — write them in the API vocabulary of their era (don't modernize names) and don't link into the current-API `guides/`/`reference/` trees, the migration guide excepted.

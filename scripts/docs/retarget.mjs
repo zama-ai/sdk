@@ -2,48 +2,23 @@
 //
 //   pnpm docs:retarget <main|beta>
 //
-// Two kinds of branch-specific URL live in the docs (see docs/llm/corpus.config.json
-// and the migration guide):
-//   - raw.githubusercontent.com/zama-ai/sdk/<branch>/...  — main on the release
-//     branch, beta on the beta branch (the files only exist on `main`
-//     after a release).
-//   - docs.zama.org/protocol/sdk/<space>/....md           — the GitBook space the
-//     branch publishes to: `main` → `stable`, `beta` → `beta`. `stable` is
-//     GitBook's default space and is omitted from the URL, so only `beta` ever
-//     appears as a path segment: promotion *inserts* `beta/` (main→beta) or
-//     *removes* it (beta→main), it isn't a fixed-segment swap.
-//   - `alpha` is a protocol-breaking-change testing branch only, synced from `beta`
-//     and merged back only when stable enough — it never gets its own GitBook space
-//     or doc URLs, so it's intentionally absent from BRANCH_TO_SPACE below.
+// Two branch-specific URL kinds live in the docs (see corpus.config.json + the migration guide):
+//   - raw.githubusercontent.com/zama-ai/sdk/<branch>/...  — `main` or `beta`.
+//   - docs.zama.org/protocol/sdk/<space>/....md — GitBook space: `main`→`stable`, `beta`→`beta`.
+//     `stable` is the default (omitted) space, so promotion inserts/removes the `beta/` segment.
+// `alpha` is a protocol-testing branch (synced from beta); it has no GitBook space or doc URLs,
+// so it's intentionally absent from BRANCH_TO_SPACE. Branches can't be derived at build time
+// (CI PRs are detached HEAD), so they're committed and flipped here; idempotent (same branch = no-op).
 //
-// They can't be derived at build time: CI checks out PRs as a detached HEAD, so
-// there's no branch to read, and the committed artifacts must match the rebuild.
-// So the branch is committed (in corpus.config.json + the hand-authored links) and
-// flipped at promotion with this one command, which is idempotent — running it for
-// the branch you're already on is a no-op.
+// At release (beta→main) this ALSO promotes the GitBook changelog — the Beta page's staged tip
+// becomes the shipped version page — via promoteChangelog() in changelog.mjs. `docs:retarget beta`
+// never promotes.
 //
-// At release (merge beta→main, and occasionally alpha→beta→main for protocol-breaking
-// work) this command ALSO promotes the human-readable GitBook changelog: the Beta
-// page's staged tip becomes the shipped version page. Promotion rides on
-// `docs:retarget main` (not a separate command) because a release shipping is exactly
-// the moment the beta tip becomes a version and doc URLs flip to the stable space. It
-// is delegated to the idempotent, auto-versioned `promoteChangelog()` in
-// changelog.mjs; `docs:retarget beta` never promotes.
-//
-// STRICT ordering (each step re-merges a past production failure if wrong):
-//   promote (flush to disk) → URL-rewrite (over all files, incl. the just-flushed
-//   version page) → oxfmt(every changed + promoted file) → llm:build.
-//   - The version page written by promotion carries `beta/`-space URLs from the
-//     Beta prose; the URL-rewrite pass must flip them to stable before check-target
-//     inspects it, or we re-trigger the #450 hand-fix.
-//   - Every promoted file (new version page, reset beta.md, SUMMARY.md, any
-//     anchor-repointed page) must be oxfmt'd before llm:build inlines it, or a fresh
-//     CI `llm:check` diverges — the #538 / 3.3.0 corpus-diff failure that gated the
-//     release job.
-//   - Promotion runs first and flushes only on full success, so a promotion throw
-//     leaves the URL/corpus outputs untouched (failure isolation).
-//   - No-op-safe: nothing to promote AND no URLs to flip ⇒ exit 0 with zero writes.
-//     retarget runs at merge time, so a spurious failure would block the merge.
+// STRICT ordering (each guards a past prod failure):
+//   promote → URL-rewrite (incl. the flushed version page) → oxfmt(changed+promoted) → llm:build.
+//   - URL-rewrite must flip the promoted page's `beta/` URLs to stable before check-target (#450).
+//   - oxfmt must precede llm:build or a fresh CI llm:check diverges (#538 / 3.3.0 release gate).
+//   - Promotion flushes only on full success (failure isolation); no-op-safe (exit 0, zero writes).
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";

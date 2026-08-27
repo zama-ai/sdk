@@ -17,10 +17,8 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - ".github/workflows/docs.yml"
-  # semantic-release forces branch-to-branch merges (beta→main, and occasionally
-  # alpha→beta→main for protocol-breaking work) with the docs:retarget fix committed
-  # directly on top, so doc changes routinely reach main/beta/alpha via direct push,
-  # never a PR. Run the checks there too.
+  # Promotions are branch-to-branch merges (beta→main; alpha→beta→main for breaking work)
+  # with docs:retarget committed on top, so docs reach main/beta/alpha by direct push, not a PR.
   push:
     branches: [main, beta, alpha]
     paths: *doc-paths
@@ -68,11 +66,9 @@ jobs:
       - name: Verify LLM corpus artifacts are up to date
         run: pnpm exec turbo run llm:check
 
-      # Doc URLs are branch-specific (raw.githubusercontent .../main|beta, and
-      # docs.zama.org .../stable|alpha). `github.base_ref` is the branch this PR lands
-      # on — reliable here even though the PR is checked out detached. If the committed
-      # URLs target the wrong branch (e.g. a promotion that forgot `pnpm docs:retarget`),
-      # this fails. `ref_name` covers the direct-push and workflow_call (release) paths.
+      # Doc URLs are branch-specific (raw.githubusercontent .../main|beta, docs.zama.org
+      # .../stable|beta). `base_ref` is the PR's target branch; `ref_name` covers direct-push
+      # and workflow_call (release). Fails if committed URLs target the wrong branch.
       - name: Verify doc URLs target the right branch
         run: pnpm docs:check-target "${{ github.base_ref || github.ref_name }}"
 
