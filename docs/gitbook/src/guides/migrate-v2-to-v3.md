@@ -39,7 +39,7 @@ Rules:
    @zama-fhe/sdk, NOT the legacy @zama-fhe/relayer-sdk (createInstance/initSDK).
    For any symbol you're unsure about, use the guide's symbol-mapping table; for
    anything it doesn't cover, fetch
-   https://raw.githubusercontent.com/zama-ai/sdk/beta/llms.txt and follow its links.
+   https://raw.githubusercontent.com/zama-ai/sdk/alpha/llms.txt and follow its links.
 2. First print a short PLAN: list every file importing @zama-fhe/sdk or
    @zama-fhe/react-sdk and which guide Steps apply to each. Then proceed.
 3. Apply the Steps IN ORDER, starting with Step 1 (configuration) — it unblocks
