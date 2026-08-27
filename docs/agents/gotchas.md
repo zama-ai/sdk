@@ -3,8 +3,8 @@
 Non-obvious things that have caused real bugs or friction.
 
 - **Address normalization in query keys.** All addresses in query keys must use `getAddress()` for checksumming. Inconsistent casing causes cache misses.
-- **Never delete or rename `main`, `prerelease`, or `release/*` branches locally** — they're shared across worktrees and tooling. If a tool needs a specific branch name for verification, use a throwaway name or a `/tmp` clone.
-- **PR base defaults to `prerelease`**, not `main`. `main` is reserved for release/CI infrastructure PRs (`.releaserc*`, `scripts/release/`, release workflows). Product and feature work targets `prerelease`.
+- **Never delete or rename `main`, `beta`, `alpha`, or `release/*` branches locally** — they're shared across worktrees and tooling. If a tool needs a specific branch name for verification, use a throwaway name or a `/tmp` clone.
+- **PR base defaults to `beta`**, not `main`. `main` is reserved for release/CI infrastructure PRs (`.releaserc*`, `scripts/release/`, release workflows). Product and feature work targets `beta`; `alpha` is a protected branch used only to test protocol-breaking changes (synced from `beta`, merged back once stable), not a feature-PR target.
 - **`storage` and `permitStorage` can safely share one backing store.** Transport-key-pair and permit keys are namespaced internally (`keypair:*` vs `permits:*`), so one shared `IndexedDBStorage` instance never collides — and it's the SDK's own default when `permitStorage` is omitted. Don't add a "must use separate stores" warning; it isn't true.
 - **Chain reads live on `GenericProvider`, wallet writes on `GenericSigner`.** Custom adapters must split read- vs write-side responsibilities across the two interfaces or the SDK's routing breaks.
 - **`signTypedData`: strip `EIP712Domain` from `types` before calling the wallet client.** Viem injects it automatically from the `domain` field — passing it in `types` causes a signature mismatch that surfaces as a credential rejection at decrypt time.
