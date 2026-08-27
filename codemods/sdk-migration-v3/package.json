@@ -7,7 +7,7 @@
     "test": "./test.sh"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
+    "@types/node": "^26.2.0",
     "codemod": "1.15.2",
     "typescript": "6.0.3"
   }
