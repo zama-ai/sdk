@@ -244,29 +244,55 @@ describe("compareVersions", () => {
 describe("newestMainline / betaReleasesSinceLastMainline", () => {
   test("newestMainline picks the first non-beta release from a newest-first list", () => {
     const releases = [
-      { version: "3.4.0-beta.6", isBeta: true },
-      { version: "3.3.0", isBeta: false },
+      { version: "3.4.0-beta.6", isBeta: true, isPrerelease: true },
+      { version: "3.3.0", isBeta: false, isPrerelease: false },
     ];
     expect(newestMainline(releases).version).toBe("3.3.0");
   });
 
   test("newestMainline returns null when there is no mainline release yet", () => {
-    expect(newestMainline([{ version: "3.4.0-beta.1", isBeta: true }])).toBeNull();
+    expect(
+      newestMainline([{ version: "3.4.0-beta.1", isBeta: true, isPrerelease: true }]),
+    ).toBeNull();
+  });
+
+  // Regression: an `-alpha.N` entry has isBeta=false but is NOT mainline. Before the
+  // isPrerelease fix, `!isBeta` was read as "is mainline", so the alpha tip was taken as
+  // the shipped version and `docs:retarget main` promoted a bogus prerelease section.
+  test("alpha entries are not mainline and are excluded from the beta tip", () => {
+    const releases = parseChangelog(
+      [
+        "# Changelog",
+        "",
+        "## [3.6.0-beta.2](url) (2026-09-02)",
+        "## [3.6.0-alpha.1](url) (2026-09-01)",
+        "## [3.6.0-beta.1](url) (2026-08-31)",
+        "## [3.5.0](url) (2026-08-26)",
+        "",
+      ].join("\n"),
+    );
+    expect(newestMainline(releases).version).toBe("3.5.0");
+    expect(betaReleasesSinceLastMainline(releases).map((r) => r.version)).toEqual([
+      "3.6.0-beta.2",
+      "3.6.0-beta.1",
+    ]);
   });
 
   test("betaReleasesSinceLastMainline stops at the first mainline release, ignoring older betas beyond it", () => {
     const releases = [
-      { version: "3.4.0-beta.6", isBeta: true },
-      { version: "3.4.0-beta.5", isBeta: true },
-      { version: "3.3.0", isBeta: false },
-      { version: "3.3.0-beta.1", isBeta: true }, // older beta, past the mainline boundary
+      { version: "3.4.0-beta.6", isBeta: true, isPrerelease: true },
+      { version: "3.4.0-beta.5", isBeta: true, isPrerelease: true },
+      { version: "3.3.0", isBeta: false, isPrerelease: false },
+      { version: "3.3.0-beta.1", isBeta: true, isPrerelease: true }, // older beta, past the mainline boundary
     ];
     const betas = betaReleasesSinceLastMainline(releases);
     expect(betas.map((r) => r.version)).toEqual(["3.4.0-beta.6", "3.4.0-beta.5"]);
   });
 
   test("returns [] when the changelog opens on a mainline release (no unreleased tip)", () => {
-    expect(betaReleasesSinceLastMainline([{ version: "3.3.0", isBeta: false }])).toEqual([]);
+    expect(
+      betaReleasesSinceLastMainline([{ version: "3.3.0", isBeta: false, isPrerelease: false }]),
+    ).toEqual([]);
   });
 });
 

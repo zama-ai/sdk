@@ -158,6 +158,10 @@ export function parseChangelog(text) {
         compareUrl,
         date,
         isBeta: isBetaVersion(version),
+        // Any suffix (`-alpha.N` or `-beta.N`) is a prerelease; only bare `X.Y.Z` is a
+        // shipped mainline. `isBeta` alone must NOT be read as "is mainline" — with the
+        // alpha channel added, an `-alpha.N` entry has isBeta=false but is not mainline.
+        isPrerelease: parsed?.prerelease != null,
         major: parsed?.major ?? null,
         minor: parsed?.minor ?? null,
         patch: parsed?.patch ?? null,
@@ -196,7 +200,7 @@ export function parseChangelog(text) {
 // ─────────────────────────────────────────────────── release selection ──
 
 export function newestMainline(releases) {
-  return releases.find((rel) => !rel.isBeta) ?? null;
+  return releases.find((rel) => !rel.isPrerelease) ?? null;
 }
 
 /** Read CHANGELOG.md from the edit set, failing with a descriptive error (rather
@@ -213,19 +217,23 @@ function readChangelog(edits, root) {
 
 /** Mainline releases on the active major, newest-first. */
 export function mainlineReleasesForActiveMajor(releases) {
-  return releases.filter((rel) => !rel.isBeta && rel.major === ACTIVE_MAJOR);
+  return releases.filter((rel) => !rel.isPrerelease && rel.major === ACTIVE_MAJOR);
 }
 
 /** Beta builds newer than the newest mainline release (the unreleased tip),
- *  newest-first. CHANGELOG is newest-first, so these are the beta entries above
- *  the first mainline heading. */
+ *  newest-first. CHANGELOG is newest-first, so these are the prerelease entries above
+ *  the first mainline heading. `alpha` builds are off the changelog, so they're skipped
+ *  from the collection — but an `-alpha.N` entry is NOT the mainline boundary (only a
+ *  suffix-less version is), so break on `!isPrerelease`, not `!isBeta`. */
 export function betaReleasesSinceLastMainline(releases) {
   const out = [];
   for (const rel of releases) {
-    if (!rel.isBeta) {
+    if (!rel.isPrerelease) {
       break;
     }
-    out.push(rel);
+    if (rel.isBeta) {
+      out.push(rel);
+    }
   }
   return out;
 }
@@ -764,7 +772,7 @@ export function promoteChangelog({ root = process.cwd(), version, dryRun = false
     return { changed: [], version: target, promoted: false, reason: "beta page is empty" };
   }
 
-  const date = releases.find((rel) => rel.version === target && !rel.isBeta)?.date;
+  const date = releases.find((rel) => rel.version === target && !rel.isPrerelease)?.date;
   // Repoint self-referential beta anchors in the prose BEFORE it lands on the version
   // page — the inbound sweep below can't fix them (the version page isn't on disk yet).
   const prose = repointSelfAnchors(extractBetaProse(betaContent), targetBasename);
