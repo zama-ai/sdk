@@ -2138,9 +2138,7 @@ Stuck on the migration, or spotted a step or rename this guide is missing? **Ope
 > **Unreleased.** The changes on this page are on the prerelease (`alpha`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
 
 
-## Reverted the unintended `@fhevm/sdk` upgrade
-
-3.5.1 pins `@fhevm/sdk` back to the stable `0.13.2`, reverting the accidental `0.14.1-0` bump that shipped in 3.5.0. No SDK API changes — upgrade from 3.5.0 to restore the intended dependency.
+_Nothing is staged for the next release yet. As alpha builds land, run `pnpm docs:changelog` to refresh this page._
 
 ## 3.x
 
@@ -2172,6 +2170,14 @@ Plain-language release notes for the `3.x` line — the current, actively-mainta
 # 3.5.x
 
 This page covers the `3.5.x` line.
+
+## 3.5.1
+
+_Released 2026-08-27._
+
+### Reverted the unintended `@fhevm/sdk` upgrade
+
+3.5.1 pins `@fhevm/sdk` back to the stable `0.13.2`, reverting the accidental `0.14.1-0` bump that shipped in 3.5.0. No SDK API changes — upgrade from 3.5.0 to restore the intended dependency.
 
 ## 3.5.0
 
