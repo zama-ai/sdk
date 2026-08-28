@@ -16,6 +16,22 @@ interface PermissionStoreConfig {
 }
 
 /**
+ * A permit persisted by an SDK version before V2 (unified) permits existed has
+ * no top-level `version` field — the discriminant didn't exist yet, and every
+ * such stored permit is a V1 permit. Backfills `version: 1` on read so that
+ * upgrading to an SDK version whose `PermissionSchema` requires that field
+ * doesn't treat old, still-valid stored permits as corrupt and wipe them via
+ * {@link PermissionStore.clearScope}. Mirrors `@fhevm/sdk`'s own
+ * `parseSignedDecryptionPermit`: "if no version, interpret as permit v1".
+ */
+function backfillLegacyPermissionVersion(raw: unknown): unknown {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw) || "version" in raw) {
+    return raw;
+  }
+  return { ...raw, version: 1 };
+}
+
+/**
  * Chain-scoped, 1-to-many store of EIP-712 permits.
  *
  * Permits are grouped by `(signerAddress, chainId, delegatorAddress)` so that
@@ -39,7 +55,8 @@ export class PermissionStore {
     if (raw === null || raw === undefined) {
       return [];
     }
-    const parsed = PermissionListSchema.safeParse(raw);
+    const migrated = Array.isArray(raw) ? raw.map(backfillLegacyPermissionVersion) : raw;
+    const parsed = PermissionListSchema.safeParse(migrated);
     if (!parsed.success) {
       await this.clearScope(scope);
       return [];

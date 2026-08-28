@@ -29,6 +29,15 @@ export interface FheChain<TId extends number = number> {
   readonly kmsContractAddress: Address;
   /** Address of the input verifier contract. */
   readonly inputVerifierContractAddress: Address;
+  /**
+   * Address of the `ProtocolConfig` contract. Required to sign or use V2
+   * (unified) decryption permits — including {@link WILDCARD_PERMIT} — which
+   * need protocol v0.14+. Leave `undefined` for a chain still on protocol
+   * ≤0.13, or one whose `ProtocolConfig` address isn't known yet: V2 permit
+   * signing then fails with a clear {@link UnifiedPermitNotSupportedError}
+   * instead of a wallet prompt. V1 permits are unaffected either way.
+   */
+  readonly protocolConfigContractAddress?: Address | undefined;
   /** EIP-712 verifying contract address for decryption requests. */
   readonly verifyingContractAddressDecryption: Address;
   /** EIP-712 verifying contract address for input verification. */

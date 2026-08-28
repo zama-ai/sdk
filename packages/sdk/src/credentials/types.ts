@@ -68,25 +68,52 @@ export interface SerializedPermit {
 }
 
 /**
- * A signed EIP-712 permit binding a signer (and optional delegator) to a set of
- * contract addresses for a bounded time window. Wraps the serialized `@fhevm/sdk`
- * permit ({@link SerializedPermit}) alongside the scope/coverage metadata the
- * permission store indexes on.
- *
- * Mirrors {@link PermissionSchema}; kept in sync by a `.test-d.ts` guard.
+ * Fields shared by every permit version, regardless of shape. Mirrors
+ * `PermissionBaseSchema`.
  */
-export interface Permission {
+export interface PermissionBase {
   /** Public key of the transport key pair this permit is bound to, hex-encoded. */
   keypairPublicKey: Hex;
-  /** Contract addresses this permit grants decrypt access to. */
+  /**
+   * Contract addresses this permit grants decrypt access to. Never empty for
+   * a V1 permit; an empty list on a V2 permit is a wildcard — see {@link PermissionV2}.
+   */
   contractAddresses: ChecksummedAddress[];
   /** The signed serialized permit. */
   serializedPermit: SerializedPermit;
   /** Unix timestamp (seconds) when the permit becomes valid. */
   startTimestamp: number;
-  /** Validity window length in days from {@link Permission.startTimestamp}. */
+}
+
+/** A V1 ("legacy") permit — always scoped to a specific, non-empty contract list. */
+export interface PermissionV1 extends PermissionBase {
+  /** Discriminant — always `1` for a V1 permit. */
+  version: 1;
+  /** Validity window length in days from {@link PermissionBase.startTimestamp}. */
   durationDays: number;
 }
+
+/**
+ * A V2 (unified) permit. `contractAddresses: []` is a *wildcard* (permissive)
+ * permit — it covers every contract, not zero.
+ */
+export interface PermissionV2 extends PermissionBase {
+  /** Discriminant — always `2` for a V2 permit. */
+  version: 2;
+  /** Validity window length in seconds from {@link PermissionBase.startTimestamp}. */
+  durationSeconds: number;
+}
+
+/**
+ * A signed EIP-712 permit binding a signer (and optional delegator) to a set of
+ * contract addresses for a bounded time window. Wraps the serialized `@fhevm/sdk`
+ * permit ({@link SerializedPermit}) alongside the scope/coverage metadata the
+ * permission store indexes on.
+ *
+ * Discriminated by `version`: {@link PermissionV1} or {@link PermissionV2}.
+ * Mirrors {@link PermissionSchema}; kept in sync by a `.test-d.ts` guard.
+ */
+export type Permission = PermissionV1 | PermissionV2;
 
 /**
  * Credentials resolved for a decrypt operation: the transport key pair plus the

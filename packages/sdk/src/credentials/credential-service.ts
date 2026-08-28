@@ -7,6 +7,7 @@ import {
   PreparedPermitChainMismatchError,
   PreparedPermitExpiredError,
   TransportKeyPairChangedError,
+  UnifiedPermitNotSupportedError,
 } from "../errors/credential";
 import { ConfigurationError } from "../errors/relayer";
 import { SignerNotConfiguredError } from "../errors/signer";
@@ -14,13 +15,23 @@ import { wrapSigningError } from "../errors/signing";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
 import type { GenericLogger, GenericSigner, GenericStorage } from "../types";
-import { isInvalidTransportKeyPairMessage } from "../utils/error";
+import {
+  isInvalidTransportKeyPairMessage,
+  isUnsupportedUnifiedPermitMessage,
+} from "../utils/error";
 import { swallow } from "../utils/swallow";
 import { parseSchema } from "../validation";
 import { TransportKeyPairVault } from "./keypair-vault";
 import type { DerivationSecretHolder } from "./keypair-wrapping";
 import { PermissionStore } from "./permission-store";
-import { chunkContracts, findPermitToWiden, sortedUnion, uncoveredContracts } from "./permissions";
+import {
+  chunkContracts,
+  findPermitToWiden,
+  isWildcardPermission,
+  permissionCoversAny,
+  sortedUnion,
+  uncoveredContracts,
+} from "./permissions";
 import {
   Eip712Schema,
   PermitTTLSchema,
@@ -41,6 +52,8 @@ import {
   nowSeconds,
   SECONDS_PER_DAY,
   toJsonSafeEip712,
+  WILDCARD_PERMIT,
+  type WildcardPermit,
 } from "./utils";
 
 export const DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS = 30 * SECONDS_PER_DAY;
@@ -147,6 +160,12 @@ export class CredentialService {
    * prompts by reusing or widening existing permits where possible. Empty
    * `contracts` warms the keypair without prompting.
    *
+   * Pass {@link WILDCARD_PERMIT} instead of an address list to request a V2
+   * permissive permit covering every contract (`allowedContracts: []`) — an
+   * explicit opt-in, never inferred from a large `contracts` list. Reuses an
+   * existing valid wildcard permit in scope with no wallet prompt, same as a
+   * covered address list.
+   *
    * @returns The resolved keypair and permits covering the requested contracts.
    * @throws if the user rejects a wallet signature prompt. {@link SigningRejectedError}
    * @throws if signing fails for any other reason. {@link SigningFailedError}
@@ -154,12 +173,28 @@ export class CredentialService {
    *   unwrap — see {@link TransportKeyPairVault.getOrCreate}. {@link KeyWrappingError}
    */
   async grantPermit(
-    contracts: readonly Address[],
+    contracts: readonly Address[] | WildcardPermit,
     delegator?: Address,
   ): Promise<SerializedTransportKeyPairWithPermissions> {
     const signer = this.#requireSigner("grantPermit");
     const account = signer.requireWalletAccount("grantPermit");
     const signerAddress = checksum(account.address);
+
+    if (contracts === WILDCARD_PERMIT) {
+      const keypair = await this.#vault.getOrCreate(signerAddress);
+      const scope = this.#permissionScope(signerAddress, delegator);
+      const permissions = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
+      const existing = permissions.find(isWildcardPermission);
+      if (existing) {
+        return { keypair, permissions: [existing] };
+      }
+      const permission = await this.#signPermit({ version: 2, chunk: [], keypair, scope });
+      await swallow("persist permit", () => this.#store.append(scope, [permission]), this.#logger);
+      return { keypair, permissions: [permission] };
+    }
+
+    // Preserved exactly as before wildcard support was added: normalize (and
+    // therefore validate) the address list before ever touching the vault.
     const requested = normalizeAddresses(contracts);
     const keypair = await this.#vault.getOrCreate(signerAddress);
     if (requested.length === 0) {
@@ -174,7 +209,7 @@ export class CredentialService {
       const candidate = findPermitToWiden(permissions, uncovered, requested);
       if (candidate !== null) {
         const widenedSet = sortedUnion(candidate.contractAddresses, uncovered);
-        const widened = await this.#signPermit({ chunk: widenedSet, keypair, scope });
+        const widened = await this.#signPermit({ version: 1, chunk: widenedSet, keypair, scope });
         await swallow(
           "replace permit",
           () => this.#store.replace(scope, candidate.serializedPermit.signature, widened),
@@ -183,7 +218,7 @@ export class CredentialService {
         permissions[permissions.indexOf(candidate)] = widened;
       } else {
         for (const chunk of chunkContracts(uncovered)) {
-          const permission = await this.#signPermit({ chunk, keypair, scope });
+          const permission = await this.#signPermit({ version: 1, chunk, keypair, scope });
           permissions.push(permission);
           await swallow(
             "persist permit",
@@ -197,7 +232,7 @@ export class CredentialService {
     const requestedSet = new Set(requested);
     return {
       keypair,
-      permissions: permissions.filter((p) => p.contractAddresses.some((a) => requestedSet.has(a))),
+      permissions: permissions.filter((p) => permissionCoversAny(p, requestedSet)),
     };
   }
 
@@ -365,6 +400,7 @@ export class CredentialService {
     );
 
     const permission: Permission = {
+      version: 1,
       keypairPublicKey: keypair.publicKey,
       contractAddresses: normalizeAddresses(signedPermit.eip712.message.contractAddresses),
       serializedPermit,
@@ -583,45 +619,68 @@ export class CredentialService {
   }
 
   async #signPermit(input: {
+    version: 1 | 2;
     chunk: ChecksummedAddress[];
     keypair: StoredTransportKeyPair;
     scope: PermissionScope;
   }): Promise<Permission> {
-    const { chunk, keypair, scope } = input;
+    const { version, chunk, keypair, scope } = input;
     const startTimestamp = nowSeconds();
     const isDelegated = scope.delegatorAddress !== scope.signerAddress;
     const relayer = this.#router.relayer;
     try {
       const transportKeyPair = await relayer.parseTransportKeyPair(keypair);
+      const durationSeconds = this.#permitTTL * SECONDS_PER_DAY;
       const permitInput = {
         transportKeyPair,
         contractAddresses: chunk,
         startTimestamp,
-        durationSeconds: this.#permitTTL * SECONDS_PER_DAY,
+        durationSeconds,
         signerAddress: scope.signerAddress,
         signer: this.#requireSigner("signPermit"),
       };
-      const signedPermit = isDelegated
-        ? await relayer.signDecryptionPermit({
-            ...permitInput,
-            delegatorAddress: scope.delegatorAddress,
-          })
-        : await relayer.signDecryptionPermit(permitInput);
+      const sign =
+        version === 2 ? relayer.signUnifiedDecryptionPermit : relayer.signDecryptionPermit;
+      const signedPermit = await sign(
+        isDelegated ? { ...permitInput, delegatorAddress: scope.delegatorAddress } : permitInput,
+      );
 
       const serializedPermit = SerializedPermitSchema.parse(
         await relayer.serializeSignedDecryptionPermit({ signedPermit }),
       );
 
-      return {
-        keypairPublicKey: keypair.publicKey,
-        contractAddresses: chunk,
-        serializedPermit,
-        startTimestamp,
-        durationDays: this.#permitTTL,
-      };
+      return version === 2
+        ? {
+            version: 2,
+            keypairPublicKey: keypair.publicKey,
+            contractAddresses: chunk,
+            serializedPermit,
+            startTimestamp,
+            durationSeconds,
+          }
+        : {
+            version: 1,
+            keypairPublicKey: keypair.publicKey,
+            contractAddresses: chunk,
+            serializedPermit,
+            startTimestamp,
+            durationDays: this.#permitTTL,
+          };
     } catch (error) {
       if (error instanceof ZamaError) {
         throw error;
+      }
+      // The chain hasn't upgraded to protocol v0.14+ yet — @fhevm/sdk detects this
+      // from the on-chain KMS context before ever requesting a signature. Surface
+      // a typed, self-explanatory error instead of a generic signing failure.
+      if (error instanceof Error && isUnsupportedUnifiedPermitMessage(error.message)) {
+        throw new UnifiedPermitNotSupportedError(
+          "grantPermit: V2 (unified) decryption permits — including wildcard permits — require " +
+            "protocol v0.14 or later on this network. The connected chain hasn't upgraded yet " +
+            "(or its ProtocolConfig contract address isn't configured on this FheChain). Grant a " +
+            "V1 permit with an explicit contract list instead, or retry once the network upgrades.",
+          { cause: error },
+        );
       }
       // A key pair the relayer can't re-derive (post KMS/TKMS rotation) is
       // unusable: evict it so the next grantPermit regenerates a valid one, then

@@ -3,11 +3,38 @@ import type { Permission } from "./types";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { MAX_CONTRACTS_PER_PERMIT, SECONDS_PER_DAY } from "./utils";
 
+/**
+ * A V2 permit with an empty `contractAddresses` list is permissive/wildcard —
+ * it covers every contract, not zero. V1 permits never have this shape (an
+ * empty list is rejected before a V1 permit is ever signed or stored).
+ */
+export function isWildcardPermission(permission: Permission): boolean {
+  return permission.version === 2 && permission.contractAddresses.length === 0;
+}
+
+/** Whether `permission`'s signed payload covers `address` — always true for a wildcard permit. */
+export function permissionCovers(permission: Permission, address: ChecksummedAddress): boolean {
+  return isWildcardPermission(permission) || permission.contractAddresses.includes(address);
+}
+
+/** Whether `permission`'s signed payload covers any address in `addresses` — always true for a wildcard permit. */
+export function permissionCoversAny(
+  permission: Permission,
+  addresses: ReadonlySet<ChecksummedAddress>,
+): boolean {
+  return (
+    isWildcardPermission(permission) || permission.contractAddresses.some((a) => addresses.has(a))
+  );
+}
+
 /** Contracts in `requested` not covered by the signed payload of any permission. */
 export function uncoveredContracts(
   permissions: readonly Permission[],
   requested: readonly ChecksummedAddress[],
 ): ChecksummedAddress[] {
+  if (permissions.some(isWildcardPermission)) {
+    return [];
+  }
   const covered = new Set(permissions.flatMap((p) => p.contractAddresses));
   return requested.filter((addr) => !covered.has(addr));
 }
@@ -21,6 +48,13 @@ export function chunkContracts(addresses: readonly ChecksummedAddress[]): Checks
   return chunks;
 }
 
+/** The permit's validity window length in seconds, regardless of version. */
+function durationSecondsOf(permission: Permission): number {
+  return permission.version === 1
+    ? permission.durationDays * SECONDS_PER_DAY
+    : permission.durationSeconds;
+}
+
 /** Drop permissions that are time-expired or bound to a stale keypair. */
 export function pruneUnusable(
   permissions: readonly Permission[],
@@ -30,17 +64,22 @@ export function pruneUnusable(
   return permissions.filter(
     (p) =>
       p.keypairPublicKey === keypairPublicKey &&
-      nowSeconds < p.startTimestamp + p.durationDays * SECONDS_PER_DAY,
+      nowSeconds < p.startTimestamp + durationSecondsOf(p),
   );
 }
 
-/** Drop every permission whose signed payload touches any address in `contracts`. */
+/**
+ * Drop every permission whose signed payload touches any address in `contracts`.
+ * A wildcard permit ({@link isWildcardPermission}) touches every contract, so it
+ * is always dropped by a non-empty `contracts` list — leaving it in place would
+ * silently defeat a caller's "revoke my access to this contract" request.
+ */
 export function withoutPermitsTouching(
   permissions: readonly Permission[],
   contracts: readonly ChecksummedAddress[],
 ): Permission[] {
   const removeSet = new Set(contracts);
-  return permissions.filter((p) => !p.contractAddresses.some((a) => removeSet.has(a)));
+  return permissions.filter((p) => !permissionCoversAny(p, removeSet));
 }
 
 /** Deduplicate and sort the union of two pre-checksummed address lists. */
@@ -61,8 +100,13 @@ export function findPermitToWiden(
   requested: readonly ChecksummedAddress[],
 ): Permission | null {
   const requestedSet = new Set(requested);
+  // A wildcard permit already covers everything, so it never legitimately reaches
+  // here (callers check `uncoveredContracts` first); excluded explicitly so it can
+  // never be mistaken for a widen candidate and re-signed as a narrow permit.
   const feasible = permissions.filter(
-    (p) => new Set([...p.contractAddresses, ...uncovered]).size <= MAX_CONTRACTS_PER_PERMIT,
+    (p) =>
+      !isWildcardPermission(p) &&
+      new Set([...p.contractAddresses, ...uncovered]).size <= MAX_CONTRACTS_PER_PERMIT,
   );
   if (feasible.length === 0) {
     return null;

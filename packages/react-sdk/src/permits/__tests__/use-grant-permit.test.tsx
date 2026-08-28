@@ -1,4 +1,5 @@
 import { act } from "@testing-library/react";
+import { WILDCARD_PERMIT } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useGrantPermit } from "../use-grant-permit";
@@ -20,6 +21,15 @@ describe("useGrantPermit", () => {
     queryClient.setQueryData(zamaQueryKeys.hasPermit.all, true);
 
     await act(() => result.current.mutateAsync([tokenAddress, otherTokenAddress]));
+
+    expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.hasPermit.all);
+  });
+
+  test("cache: removes isAllowed query after a wildcard grant", async ({ renderWithProviders }) => {
+    const { result, queryClient } = renderWithProviders(() => useGrantPermit());
+    queryClient.setQueryData(zamaQueryKeys.hasPermit.all, true);
+
+    await act(() => result.current.mutateAsync(WILDCARD_PERMIT));
 
     expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.hasPermit.all);
   });

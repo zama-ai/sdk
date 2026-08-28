@@ -49,6 +49,7 @@ import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
 import { UseQueryResult } from '@tanstack/react-query';
 import { UseSuspenseQueryResult } from '@tanstack/react-query';
+import { WildcardPermit } from '@zama-fhe/sdk';
 import { WrapParams } from '@zama-fhe/sdk/query';
 import { WrappedToken } from '@zama-fhe/sdk';
 import { ZamaConfig } from '@zama-fhe/sdk';
@@ -178,7 +179,7 @@ export function useEncrypt(): UseMutationResult<EncryptResult, Error, EncryptPar
 export function useFinalizeUnwrap(address: Address, options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams, Address>): UseMutationResult<TransactionResult, Error, FinalizeUnwrapParams, `0x${string}`>;
 
 // @public
-export function useGrantPermit(options?: UseMutationOptions<void, Error, Address[]>): UseMutationResult<void, Error, `0x${string}`[], unknown>;
+export function useGrantPermit(options?: UseMutationOptions<void, Error, Address[] | WildcardPermit>): UseMutationResult<void, Error, `0x${string}`[] | "wildcard", unknown>;
 
 // @public
 export function useHasPermit(config: UseHasPermitConfig, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): UseQueryResult<boolean, Error>;

@@ -430,6 +430,7 @@ export interface FheChain<TId extends number = number> {
     readonly inputVerifierContractAddress: Address;
     readonly kmsContractAddress: Address;
     readonly network: EIP1193Provider | string;
+    readonly protocolConfigContractAddress?: Address | undefined;
     readonly registryAddress: Address | undefined;
     readonly relayerUrl: string;
     readonly verifyingContractAddressDecryption: Address;
@@ -536,7 +537,7 @@ export interface GenericStorage {
 }
 
 // @public
-export function grantPermitMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.grantPermit"], Address[], void>;
+export function grantPermitMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.grantPermit"], Address[] | WildcardPermit, void>;
 
 // @public
 export function hashFn(queryKey: readonly unknown[]): string;
@@ -658,8 +659,8 @@ export function pendingUnshieldQueryOptions(sdk: ZamaSDK, tokenAddress: Address,
 // @public
 export class Permits {
     clear(): Promise<void>;
-    grantDelegationPermit(delegator: Address, contracts: Address[]): Promise<void>;
-    grantPermit(contracts: Address[]): Promise<void>;
+    grantDelegationPermit(delegator: Address, contracts: Address[] | WildcardPermit): Promise<void>;
+    grantPermit(contracts: Address[] | WildcardPermit): Promise<void>;
     hasDelegationPermit(delegator: Address, contracts: Address[]): Promise<boolean>;
     hasPermit(contracts: Address[]): Promise<boolean>;
     registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void>;
@@ -770,7 +771,7 @@ export interface RegisterPermitParams {
 }
 
 // @public
-export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
+export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "signUnifiedDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
     chain: FheChain;
     createUnsignedLegacyDecryptionPermitEip712(parameters: CreateUnsignedLegacyDecryptionPermitEip712Parameters): Promise<CreateUnsignedLegacyDecryptionPermitEip712ReturnType>;
 }
@@ -1169,6 +1170,12 @@ export interface WalletAccountStore {
 }
 
 // @public
+export const WILDCARD_PERMIT: "wildcard";
+
+// @public
+export type WildcardPermit = typeof WILDCARD_PERMIT;
+
+// @public
 export interface WrapEvent {
     readonly encryptedWrappedAmount: EncryptedValue;
     readonly eventName: "Wrap";
@@ -1355,6 +1362,7 @@ export const ZamaErrorCode: {
     readonly TransportKeyPairChanged: "TRANSPORT_KEY_PAIR_CHANGED";
     readonly PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH";
     readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
+    readonly UnifiedPermitNotSupported: "UNIFIED_PERMIT_NOT_SUPPORTED";
 };
 
 // @public

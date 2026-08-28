@@ -1,5 +1,15 @@
 import type { FheChain } from "./types";
 
+// `protocolConfigContractAddress` (required for V2/wildcard permit signing to
+// succeed — see `to-fhevm-chain.ts`) is wired in below for every built-in
+// config with a deployed `ProtocolConfig` contract, sourced from
+// https://github.com/zama-ai/protocol-registry. `hoodi`, `ingenTestnet`,
+// `bscTestnet`, and `hardhat`/`anvil` don't have one deployed yet, so they
+// omit it — V1 permits don't need it at all, and V2/wildcard permits simply
+// aren't usable on those presets until one exists. Pass it in a custom
+// `FheChain` for any other network whose deployed `ProtocolConfig` address
+// you already know.
+
 /**
  * Mainnet network configuration (chainId 1).
  */
@@ -14,6 +24,7 @@ export const mainnet = {
   verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24",
   verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287",
   registryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0",
+  protocolConfigContractAddress: "0xD8236B57394f90726b26aB25D38CeAC776E1a7C4",
 } as const satisfies FheChain;
 
 /**
@@ -30,6 +41,7 @@ export const polygon = {
   verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24",
   verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287",
   registryAddress: "0xc8908569868758dAF814B5a8b96bBc44D1653d54",
+  protocolConfigContractAddress: "0x17f62Ab3A1Ea519703cD597410147A30Fa1a7f1e",
 } as const satisfies FheChain;
 
 /**
@@ -46,6 +58,7 @@ export const sepolia = {
   verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
   verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
   registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e",
+  protocolConfigContractAddress: "0x51f9AFBc89Ea792e1a21a12AB802ab58D4dbee83",
 } as const satisfies FheChain;
 
 /**
@@ -62,6 +75,7 @@ export const polygonAmoy = {
   verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
   verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
   registryAddress: "0xF486c3D4F4562760A43883e72E8D6f6Cf2EFdA94",
+  protocolConfigContractAddress: "0x4CcF009Aba90D04f52b31fc7aDdE240578aFe10F",
 } as const satisfies FheChain;
 
 /**

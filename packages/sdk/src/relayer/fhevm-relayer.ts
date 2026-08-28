@@ -346,6 +346,30 @@ export class FhevmRelayer implements RelayerSDK {
   };
 
   /**
+   * Builds the unified (V2) EIP-712 user-decrypt permit and signs it, authorizing
+   * the transport key pair to decrypt the listed contracts' values — or, when
+   * `contractAddresses` is empty, every contract (a wildcard/permissive permit) —
+   * for `durationSeconds` starting at `startTimestamp`. Pass `delegatorAddress` to
+   * sign a delegated permit. Requires a chain on protocol v0.14+; throws otherwise.
+   *
+   * @example
+   * ```ts
+   * const signedPermit = await relayer.signUnifiedDecryptionPermit({
+   *   transportKeyPair,
+   *   contractAddresses: [], // wildcard: covers every contract
+   *   startTimestamp: Math.floor(Date.now() / 1000),
+   *   durationSeconds: 60 * 60 * 24,
+   *   signerAddress: "0xUser…",
+   *   signer,
+   * });
+   * ```
+   */
+  signUnifiedDecryptionPermit: FhevmClient["signUnifiedDecryptionPermit"] = async (parameters) => {
+    await this.#base.init();
+    return this.#base.signUnifiedDecryptionPermit(parameters);
+  };
+
+  /**
    * Builds the unsigned EIP-712 typed data for a V1 decryption permit, without
    * signing it — the signer-less counterpart to {@link signDecryptionPermit}.
    * Hand the result to an out-of-process signer for `eth_signTypedData_v4`,

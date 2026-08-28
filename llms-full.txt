@@ -18996,11 +18996,29 @@ This means users see fewer wallet popups over time. As they interact with more c
 > Batch all contract addresses you expect to need into a single `permits.grantPermit()` call to minimize wallet popups. Each uncovered chunk of up to 10 contracts triggers one signature prompt.
 
 
+## Wildcard (V2) permits
+
+Everything above describes the V1 permit model: a bounded, explicit list of up to 10 contract addresses per permit. `@zama-fhe/sdk` also supports V2 (unified) permits, which add one capability on top of that model: a **wildcard permit**, requested by passing the exported `WILDCARD_PERMIT` sentinel instead of a contract list —
+
+```ts
+import { WILDCARD_PERMIT } from "@zama-fhe/sdk";
+
+await sdk.permits.grantPermit(WILDCARD_PERMIT);
+```
+
+A wildcard permit covers every contract the signer is allowed to decrypt from, present and future, with a single wallet signature — including contracts the app doesn't know about yet at grant time. It's the same additive/reuse model as a normal permit: granting it again, or requesting decryption for any contract while a valid wildcard permit is in scope, never re-prompts.
+
+A few things a wildcard permit does **not** change:
+
+- **On-chain delegation is unaffected.** A wildcard permit only removes the need to enumerate contracts in the _permit_ — it has no bearing on `FHE.delegateUserDecryption()` grants, which remain required per-contract (or via a separate wildcard delegation on the ACL contract) for delegated decryption to work at all. Permit coverage and ACL delegation are two independent mechanisms.
+- **It's opt-in, not inferred.** The SDK never signs a wildcard permit unless the caller explicitly asks for one — passing a large contract list to `grantPermit()` still signs a normal, bounded V1 permit for exactly those contracts.
+- **It's broader, so treat it with more care than a contract-scoped permit.** A wildcard permit signed with a long validity window is a standing grant to decrypt anything the signer owns until it expires — prefer a specific contract list unless your app genuinely needs unbounded coverage, and prefer a short `permitTTL` when you do use it.
+
 ## Revocation
 
 Permits can be removed in two ways:
 
-- **Selective** — `sdk.permits.revokePermits(["0xTokenA"])` removes permits touching those contracts on the current chain. Other permits are untouched.
+- **Selective** — `sdk.permits.revokePermits(["0xTokenA"])` removes permits touching those contracts on the current chain. Other permits are untouched — except a wildcard permit, which is always removed by a selective revoke, since it covers every contract by definition.
 - **Full wipe** — `sdk.permits.revokePermits()` removes all permits for the current signer across all chains and delegators. The transport key pair is not affected.
 
 For a complete "log out" that also removes the transport key pair, use `sdk.permits.clear()`. See the [ZamaSDK reference](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-revokepermits) for the full API.

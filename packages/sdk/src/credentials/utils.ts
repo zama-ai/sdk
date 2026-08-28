@@ -15,6 +15,25 @@ export const MAX_V1_PERMIT_DURATION_DAYS = 365;
 
 export const SECONDS_PER_DAY = 86400;
 
+/**
+ * Sentinel requesting a V2 permissive ("wildcard") permit from
+ * {@link CredentialService.grantPermit} / `Permits.grantPermit` /
+ * `Permits.grantDelegationPermit` — one permit covering every contract, present
+ * and future, instead of an explicit list. Always an explicit opt-in: passing a
+ * contract list, however large, never signs a wildcard permit.
+ *
+ * @example
+ * ```ts
+ * import { WILDCARD_PERMIT } from "@zama-fhe/sdk";
+ *
+ * await sdk.permits.grantPermit(WILDCARD_PERMIT);
+ * ```
+ */
+export const WILDCARD_PERMIT = "wildcard" as const;
+
+/** The type of {@link WILDCARD_PERMIT}. */
+export type WildcardPermit = typeof WILDCARD_PERMIT;
+
 /** Current Unix time in whole seconds. */
 export function nowSeconds(): number {
   return Math.floor(Date.now() / 1000);

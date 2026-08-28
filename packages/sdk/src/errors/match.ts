@@ -10,6 +10,7 @@ import type {
   TransportKeyPairExpiredError,
   InvalidTransportKeyPairError,
   RevokedKmsContextError,
+  UnifiedPermitNotSupportedError,
 } from "./credential";
 import type {
   AclPausedError,
@@ -120,6 +121,8 @@ export interface ErrorForCode {
   [ZamaErrorCode.PreparedPermitChainMismatch]: PreparedPermitChainMismatchError;
   /** Thrown for {@link ZamaErrorCode.PreparedPermitExpired}. */
   [ZamaErrorCode.PreparedPermitExpired]: PreparedPermitExpiredError;
+  /** Thrown for {@link ZamaErrorCode.UnifiedPermitNotSupported}. */
+  [ZamaErrorCode.UnifiedPermitNotSupported]: UnifiedPermitNotSupportedError;
 }
 
 /**

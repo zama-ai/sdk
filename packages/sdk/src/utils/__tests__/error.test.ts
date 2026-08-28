@@ -13,6 +13,7 @@ import {
   isRelayerError,
   isNotEntitledMessage,
   isInvalidTransportKeyPairMessage,
+  isUnsupportedUnifiedPermitMessage,
   isRevokedKmsContextError,
   INVALID_KMS_CONTEXT_SELECTOR,
   parseHandleFromMessage,
@@ -461,6 +462,35 @@ describe("isInvalidTransportKeyPairMessage", () => {
   test("the installed @fhevm/sdk still throws the message our matcher keys on", () => {
     const source = fhevmSdkFile("core/utils-p/decrypt/verifyTkmsPublicKey.ts");
     expect(source).toContain("invalid TransportKeyPairKeyPair");
+  });
+});
+
+describe("isUnsupportedUnifiedPermitMessage", () => {
+  // Must stay in sync with @fhevm/sdk's createUnsignedDecryptionPermitEip712V2,
+  // which asserts the chain's on-chain KMS context resolves to at least
+  // EXTRA_DATA_V2 (protocol v0.14+) before building a V2 permit's typed data.
+  test("matches @fhevm/sdk's pre-v0.14-chain assertion message", () => {
+    expect(
+      isUnsupportedUnifiedPermitMessage(
+        "createUnsignedDecryptionPermitEip712V2 error: Invalid extraData version extraData=0x01",
+      ),
+    ).toBe(true);
+    // Case-insensitive.
+    expect(isUnsupportedUnifiedPermitMessage("INVALID EXTRADATA VERSION")).toBe(true);
+  });
+
+  test("does NOT match unrelated failures", () => {
+    expect(isUnsupportedUnifiedPermitMessage("network error")).toBe(false);
+    expect(isUnsupportedUnifiedPermitMessage("user rejected the request")).toBe(false);
+    expect(isUnsupportedUnifiedPermitMessage("invalid TransportKeyPairKeyPair")).toBe(false);
+  });
+
+  // Drift guard: if a @fhevm/sdk bump rewords this assertion, our matcher silently
+  // stops typing the error and callers get a generic SigningFailedError instead of
+  // the clear UnifiedPermitNotSupportedError.
+  test("the installed @fhevm/sdk still throws the message our matcher keys on", () => {
+    const source = fhevmSdkFile("core/kms/SignedDecryptionPermitV2-p.ts");
+    expect(source).toContain("Invalid extraData version");
   });
 });
 
