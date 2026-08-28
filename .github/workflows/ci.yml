@@ -2,7 +2,7 @@ name: CI
 
 on:
   pull_request:
-    branches: [main, prerelease]
+    branches: [main, beta, alpha]
   workflow_call:
 
 concurrency:

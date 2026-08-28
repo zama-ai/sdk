@@ -2,7 +2,7 @@ name: Contracts Test
 
 on:
   pull_request:
-    branches: [main, prerelease]
+    branches: [main, beta, alpha]
     paths:
       - "contracts/src/**"
       - "contracts/test/**"

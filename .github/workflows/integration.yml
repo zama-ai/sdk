@@ -7,7 +7,7 @@ name: Integration
 # blip should never block an unrelated merge.
 on:
   pull_request:
-    branches: [main, prerelease]
+    branches: [main, beta, alpha]
     paths:
       - "packages/sdk/**"
       - "pnpm-lock.yaml"

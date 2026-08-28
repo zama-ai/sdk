@@ -2,7 +2,7 @@ name: Codemod
 
 on:
   pull_request:
-    branches: [main, prerelease]
+    branches: [main, beta, alpha]
     paths:
       - "codemods/**"
       - ".github/workflows/codemod.yml"

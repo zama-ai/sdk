@@ -16,7 +16,7 @@
 
 ## Changelog
 
-- [Alpha (unreleased)](changelog/alpha.md)
+- [Beta (unreleased)](changelog/beta.md)
 - [3.x (current)](changelog/v3.md)
   - [3.5.x](changelog/v3-5.md)
   - [3.4.x](changelog/v3-4.md)

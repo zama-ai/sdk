@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.5.1](https://github.com/zama-ai/sdk/compare/v3.5.0...v3.5.1) (2026-08-27)
+
+### Build System
+
+- trigger Build ([#651](https://github.com/zama-ai/sdk/issues/651)) ([34a4240]())
+
 ## [3.5.1-alpha.1](https://github.com/zama-ai/sdk/compare/v3.5.0...v3.5.1-alpha.1) (2026-08-26)
 
 ### Build System

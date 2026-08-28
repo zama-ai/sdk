@@ -25,9 +25,9 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@zama-fhe/sdk">
-    <img src="https://img.shields.io/npm/v/%40zama-fhe%2Fsdk/alpha?label=dev%20release&style=flat-square" alt="Dev release"></a>
+    <img src="https://img.shields.io/npm/v/%40zama-fhe%2Fsdk/beta?label=dev%20release&style=flat-square" alt="Dev release"></a>
   <a href="https://www.npmjs.com/package/@zama-fhe/sdk">
-    <img src="https://img.shields.io/npm/last-update/%40zama-fhe%2Fsdk/alpha?style=flat-square" alt="Dev release last updated"></a>
+    <img src="https://img.shields.io/npm/last-update/%40zama-fhe%2Fsdk/beta?style=flat-square" alt="Dev release last updated"></a>
   <a href="https://github.com/zama-ai/sdk/actions/workflows/ci.yml">
     <img src="https://img.shields.io/github/actions/workflow/status/zama-ai/sdk/ci.yml?style=flat-square&label=CI" alt="CI"></a>
   <a href="https://github.com/zama-ai/sdk/actions/workflows/playwright.yml">
