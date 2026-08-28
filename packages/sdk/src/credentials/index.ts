@@ -2,6 +2,7 @@ export type {
   SerializedTransportKeyPairWithPermissions,
   SerializedTransportKeyPair,
   Permission,
+  PermissionBase,
   PermissionV1,
   PermissionV2,
 } from "./types";

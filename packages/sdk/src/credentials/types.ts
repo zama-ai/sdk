@@ -71,7 +71,7 @@ export interface SerializedPermit {
  * Fields shared by every permit version, regardless of shape. Mirrors
  * `PermissionBaseSchema`.
  */
-interface PermissionBase {
+export interface PermissionBase {
   /** Public key of the transport key pair this permit is bound to, hex-encoded. */
   keypairPublicKey: Hex;
   /**

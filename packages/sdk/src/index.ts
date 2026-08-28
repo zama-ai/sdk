@@ -70,6 +70,7 @@ export type { Address, Hex } from "viem";
 export type {
   ChecksummedAddress,
   Permission,
+  PermissionBase,
   PermissionV1,
   PermissionV2,
   SerializedTransportKeyPair,

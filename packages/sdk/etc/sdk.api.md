@@ -11260,6 +11260,7 @@ export const mainnet: {
     readonly verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24";
     readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
     readonly registryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0";
+    readonly protocolConfigContractAddress: "0xD8236B57394f90726b26aB25D38CeAC776E1a7C4";
 };
 
 // @public
@@ -11468,22 +11469,22 @@ export interface PaginatedResult<T> {
 export type Permission = PermissionV1 | PermissionV2;
 
 // @public
-export interface PermissionV1 {
+export interface PermissionBase {
     contractAddresses: ChecksummedAddress[];
-    durationDays: number;
     keypairPublicKey: Hex;
     serializedPermit: SerializedPermit;
     startTimestamp: number;
+}
+
+// @public
+export interface PermissionV1 extends PermissionBase {
+    durationDays: number;
     version: 1;
 }
 
 // @public
-export interface PermissionV2 {
-    contractAddresses: ChecksummedAddress[];
+export interface PermissionV2 extends PermissionBase {
     durationSeconds: number;
-    keypairPublicKey: Hex;
-    serializedPermit: SerializedPermit;
-    startTimestamp: number;
     version: 2;
 }
 
@@ -11513,6 +11514,7 @@ export const polygon: {
     readonly verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24";
     readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
     readonly registryAddress: "0xc8908569868758dAF814B5a8b96bBc44D1653d54";
+    readonly protocolConfigContractAddress: "0x17f62Ab3A1Ea519703cD597410147A30Fa1a7f1e";
 };
 
 // @public
@@ -11527,6 +11529,7 @@ export const polygonAmoy: {
     readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
     readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
     readonly registryAddress: "0xF486c3D4F4562760A43883e72E8D6f6Cf2EFdA94";
+    readonly protocolConfigContractAddress: "0x4CcF009Aba90D04f52b31fc7aDdE240578aFe10F";
 };
 
 // @public
@@ -13036,6 +13039,7 @@ export const sepolia: {
     readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
     readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
     readonly registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
+    readonly protocolConfigContractAddress: "0x51f9AFBc89Ea792e1a21a12AB802ab58D4dbee83";
 };
 
 // @public
