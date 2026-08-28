@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.5.2-beta.1](https://github.com/zama-ai/sdk/compare/v3.5.1...v3.5.2-beta.1) (2026-08-28)
+
+### Bug Fixes
+
+- self-heal stale pending-unshield pointer ([#645](https://github.com/zama-ai/sdk/issues/645)) ([6bc356d]())
+
 ## [3.5.1](https://github.com/zama-ai/sdk/compare/v3.5.0...v3.5.1) (2026-08-27)
 
 ### Build System
