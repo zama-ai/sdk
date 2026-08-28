@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.6.0-alpha.1](https://github.com/zama-ai/sdk/compare/v3.5.1...v3.6.0-alpha.1) (2026-08-28)
+
+### Features
+
+- v2 wildcard permits ([#653](https://github.com/zama-ai/sdk/issues/653)) ([8b07926]())
+
 ## [3.5.1](https://github.com/zama-ai/sdk/compare/v3.5.0...v3.5.1) (2026-08-27)
 
 ### Build System
