@@ -113,6 +113,10 @@ The SDK persists the unwrap tx hash automatically when phase 1 is submitted and 
 
 Run this check on mount to handle any session that was interrupted. Resuming is intentionally caller-driven — prompt the user rather than finalizing on load, so you never trigger a wallet transaction they did not initiate.
 
+{% hint style="warning" %}
+**An already-finalized resume is not a failure** If the unwrap request was already finalized (another tab, a double click, a third party), the mutation fails with [`UnshieldAlreadyFinalizedError`](../sdk/errors.md#unshieldalreadyfinalizederror). The funds already arrived. The SDK clears the persisted state and the hook invalidates the pending-unshield and balance queries, so the resume prompt disappears on its own. Treat the error as completion; do not retry.
+{% endhint %}
+
 {% hint style="info" %}
 The SDK persists and clears the pending-unshield state for you. If you bypass `resumeUnshield` and orchestrate `unwrap` + `finalizeUnwrap` (via the `useUnwrap` / `useFinalizeUnwrap` hooks) yourself, manage your own persistence between the two phases.
 {% endhint %}

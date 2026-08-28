@@ -290,6 +290,27 @@ export function finalizeUnwrapContract(
 }
 
 /**
+ * Returns the contract config to read the requester of an open unwrap request.
+ * The wrapper deletes the request on finalize, so the zero address means the
+ * request no longer exists.
+ *
+ * @example
+ * ```ts
+ * const requester = await provider.readContract(
+ *   unwrapRequesterContract(wrapperAddress, unwrapRequestId),
+ * );
+ * ```
+ */
+export function unwrapRequesterContract(wrapperAddress: Address, unwrapRequestId: EncryptedValue) {
+  return {
+    address: wrapperAddress,
+    abi: confidentialWrapperAbi,
+    functionName: "unwrapRequester",
+    args: [unwrapRequestId],
+  } as const;
+}
+
+/**
  * Returns the contract config to read the underlying ERC-20 token of a wrapper.
  *
  * @example

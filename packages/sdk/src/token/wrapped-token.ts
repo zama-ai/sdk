@@ -1,4 +1,4 @@
-import { getAddress, type Address, type Hex } from "viem";
+import { getAddress, zeroAddress, type Address, type Hex } from "viem";
 import {
   allowanceContract,
   approveContract,
@@ -9,6 +9,7 @@ import {
   underlyingContract,
   unwrapContract,
   unwrapFromBalanceContract,
+  unwrapRequesterContract,
   wrapContract,
 } from "../contracts";
 import {
@@ -19,8 +20,10 @@ import {
   InsufficientERC20BalanceError,
   SignerNotConfiguredError,
   TransactionRevertedError,
+  UnshieldAlreadyFinalizedError,
   ZamaError,
 } from "../errors";
+import { isInvalidUnwrapRequestRevert } from "../errors/unshield";
 import { findUnwrapRequested } from "../events/onchain-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { EncryptedValue } from "../relayer/types";
@@ -40,7 +43,12 @@ import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/ali
 import { assertBigint, assertNonNullable } from "../utils/assertions";
 import { isEncryptedValueZero } from "../utils/handles";
 import { swallow } from "../utils/swallow";
-import { clearPendingUnshield, loadPendingUnshield, savePendingUnshield } from "./pending-unshield";
+import {
+  clearPendingUnshield,
+  loadPendingUnshieldRequest,
+  savePendingUnshield,
+  type PendingUnshieldRequest,
+} from "./pending-unshield";
 import { Token } from "./token";
 
 /**
@@ -427,6 +435,8 @@ export class WrappedToken extends Token {
    * @param unwrapTxHash - The transaction hash of the previously submitted unwrap.
    * @param callbacks - Optional progress callbacks.
    * @returns The finalize transaction hash and mined receipt.
+   * @throws if the unwrap request was already finalized on-chain; the persisted
+   *   pending-unshield state is cleared first. {@link UnshieldAlreadyFinalizedError}
    *
    * @example
    * ```ts
@@ -449,6 +459,13 @@ export class WrappedToken extends Token {
       throw new TransactionRevertedError("Failed to get unwrap receipt", { cause: error });
     }
     const unwrapRequestId = this.#extractUnwrapRequestId(receipt.logs);
+    if (await this.#isUnwrapRequestConsumed(unwrapRequestId)) {
+      await this.#clearStoredPendingUnshield("resumeUnshield");
+      throw new UnshieldAlreadyFinalizedError(
+        "Nothing to resume: the unwrap request was already finalized on-chain and the funds were delivered.",
+        { unwrapTxHash, unwrapRequestId },
+      );
+    }
     return this.#finalizeUnshield(unwrapRequestId, unwrapTxHash, crypto.randomUUID(), callbacks);
   }
 
@@ -462,6 +479,12 @@ export class WrappedToken extends Token {
    * Resuming is intentionally caller-driven — auto-resuming on load would fire a
    * wallet transaction unprompted.
    *
+   * The pointer is verified on-chain before it is reported: if the unwrap
+   * request was already finalized (e.g. the tab closed before the SDK could
+   * clear storage), the stale pointer is cleared and `null` is returned. When
+   * the verification read fails, the pointer is returned unverified: a
+   * network error never deletes recovery state.
+   *
    * @returns The pending unwrap tx hash, or `null`.
    *
    * @example
@@ -471,7 +494,15 @@ export class WrappedToken extends Token {
    * ```
    */
   async getPendingUnshield(): Promise<Hex | null> {
-    return loadPendingUnshield(this.sdk.storage, this.address);
+    const pending = await loadPendingUnshieldRequest(this.sdk.storage, this.address);
+    if (!pending) {
+      return null;
+    }
+    if (await this.#isPendingUnshieldConsumed(pending)) {
+      await this.#clearStoredPendingUnshield("getPendingUnshield");
+      return null;
+    }
+    return pending.unwrapTxHash;
   }
 
   // UNSHIELD LOW-LEVEL PRIMITIVES
@@ -587,14 +618,65 @@ export class WrappedToken extends Token {
 
   /**
    * Decode the `unwrapRequestId` from an unwrap/unshield receipt's logs.
-   * Throws when the receipt lacks the `UnwrapRequested` event entirely.
+   * Only logs emitted by this wrapper count: a caller-supplied tx hash from a
+   * different wrapper must fail here, not decode a foreign request id. Logs
+   * without an emitter address (older custom adapters) are kept.
+   * Throws when no matching `UnwrapRequested` event is found.
    */
   #extractUnwrapRequestId(logs: readonly RawLog[]): EncryptedValue {
-    const event = findUnwrapRequested(logs);
+    const ownLogs = logs.filter(
+      (log) => log.address === undefined || getAddress(log.address) === this.address,
+    );
+    const event = findUnwrapRequested(ownLogs);
     if (!event) {
-      throw new TransactionRevertedError("No UnwrapRequested event found in unwrap receipt");
+      throw new TransactionRevertedError(
+        "No UnwrapRequested event from this wrapper found in the unwrap receipt",
+      );
     }
     return event.unwrapRequestId;
+  }
+
+  /**
+   * True only when the unwrap request is definitely gone. `unwrapRequester`
+   * returns the zero address once finalize deletes the request, and the id
+   * always comes from the unwrap tx's own `UnwrapRequested` event, so zero can
+   * only mean "already finalized". A failed read returns `false`: the check
+   * fails open, so a network error never heals recovery state.
+   */
+  async #isUnwrapRequestConsumed(unwrapRequestId: EncryptedValue): Promise<boolean> {
+    try {
+      const requester = await this.sdk.provider.readContract(
+        unwrapRequesterContract(this.address, unwrapRequestId),
+      );
+      return requester === zeroAddress;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Consumed-request check for a persisted pointer; legacy hash-only entries
+   * re-derive the request id from the unwrap receipt.
+   */
+  async #isPendingUnshieldConsumed(pending: PendingUnshieldRequest): Promise<boolean> {
+    let unwrapRequestId = pending.unwrapRequestId;
+    if (unwrapRequestId === undefined) {
+      try {
+        const receipt = await this.sdk.provider.waitForTransactionReceipt(pending.unwrapTxHash);
+        unwrapRequestId = this.#extractUnwrapRequestId(receipt.logs);
+      } catch {
+        return false;
+      }
+    }
+    return this.#isUnwrapRequestConsumed(unwrapRequestId);
+  }
+
+  async #clearStoredPendingUnshield(operation: string): Promise<void> {
+    await swallow(
+      `${operation}: clearPendingUnshield`,
+      () => clearPendingUnshield(this.sdk.storage, this.address),
+      this.sdk.logger,
+    );
   }
 
   async #getUnderlying(): Promise<Address> {
@@ -632,12 +714,29 @@ export class WrappedToken extends Token {
     this.emit({ type: ZamaSDKEvents.UnshieldPhase1Submitted, txHash: unwrapTxHash, operationId });
     await swallow(
       "unshield: savePendingUnshield",
-      () => savePendingUnshield(this.sdk.storage, this.address, unwrapTxHash),
+      () => savePendingUnshield(this.sdk.storage, this.address, unwrapTxHash, unwrapRequestId),
       this.sdk.logger,
     );
     this.emit({ type: ZamaSDKEvents.UnshieldPhase2Started, operationId });
     void swallow("unshield: onFinalizing", () => callbacks?.onFinalizing?.(), this.sdk.logger);
-    const finalizeResult = await this.finalizeUnwrap(unwrapRequestId);
+    let finalizeResult: TransactionResult;
+    try {
+      finalizeResult = await this.finalizeUnwrap(unwrapRequestId);
+    } catch (error) {
+      // The id comes from this wrapper's own UnwrapRequested event and the only
+      // transition to "gone" is a successful finalize, so this revert means a
+      // concurrent finalize won the race (second tab, double click, third
+      // party). The funds arrived; heal.
+      if (!isInvalidUnwrapRequestRevert(error)) {
+        throw error;
+      }
+      await this.#clearStoredPendingUnshield("unshield");
+      throw new UnshieldAlreadyFinalizedError(
+        "The unwrap request was finalized concurrently — the funds were already delivered.",
+        { unwrapTxHash, unwrapRequestId },
+        { cause: error },
+      );
+    }
     this.emit({
       type: ZamaSDKEvents.UnshieldPhase2Submitted,
       txHash: finalizeResult.txHash,
@@ -649,11 +748,7 @@ export class WrappedToken extends Token {
       this.sdk.logger,
     );
     // Phase 2 landed: the persisted recovery state is no longer needed.
-    await swallow(
-      "unshield: clearPendingUnshield",
-      () => clearPendingUnshield(this.sdk.storage, this.address),
-      this.sdk.logger,
-    );
+    await this.#clearStoredPendingUnshield("unshield");
     return finalizeResult;
   }
 

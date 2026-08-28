@@ -113,12 +113,14 @@ export {
   TransactionRevertedError,
   TransportKeyPairChangedError,
   TransportKeyPairExpiredError,
+  UnshieldAlreadyFinalizedError,
   WalletAccountNotReadyError,
   WalletNotConnectedError,
   ZamaError,
   ZamaErrorCode,
   type BalanceErrorDetails,
   type ErrorForCode,
+  type UnshieldAlreadyFinalizedDetails,
 } from "./errors";
 export { ZamaSDKEvents } from "./events";
 export type {
@@ -287,6 +289,7 @@ export {
   underlyingContract,
   unwrapContract,
   unwrapFromBalanceContract,
+  unwrapRequesterContract,
   wrapContract,
 } from "./contracts";
 export type { PaginatedResult, TokenWrapperPair, TokenWrapperPairWithMetadata } from "./contracts";

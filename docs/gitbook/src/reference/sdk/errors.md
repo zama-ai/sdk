@@ -88,6 +88,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the WASM runtime                                                                                         |
 | `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                                                                                             |
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
+| `UnshieldAlreadyFinalizedError`         | `UNSHIELD_ALREADY_FINALIZED`          | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                                                          |
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired — user must re-sign                                                                                    |
 | `RevokedKmsContextError`                | `REVOKED_KMS_CONTEXT`                 | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                                   |
@@ -232,7 +233,27 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Inspect the revert reason. Common causes: insufficient balance, expired operator approval, or attempting to finalize an already-finalized unwrap.
+**How to handle:** Inspect the revert reason. Common causes: insufficient balance or an expired operator approval. Finalizing an already-finalized unwrap through `resumeUnshield()` or `unshield()` throws the more specific `UnshieldAlreadyFinalizedError` instead.
+
+### UnshieldAlreadyFinalizedError
+
+**Code:** `UNSHIELD_ALREADY_FINALIZED`
+
+Thrown by `resumeUnshield()` when the unwrap request no longer exists on-chain: it was already finalized, so the underlying ERC-20 tokens were delivered. `unshield()` and `unshieldAll()` throw it too when a concurrent finalize wins the race. The SDK clears the persisted pending-unshield state before throwing, so `getPendingUnshield()` returns `null` afterwards. The error carries `unwrapTxHash` and `unwrapRequestId`.
+
+```ts
+import { UnshieldAlreadyFinalizedError } from "@zama-fhe/sdk";
+
+try {
+  await wrappedToken.resumeUnshield(unwrapTxHash);
+} catch (error) {
+  if (error instanceof UnshieldAlreadyFinalizedError) {
+    dismissResumePrompt(); // the funds already arrived
+  }
+}
+```
+
+**How to handle:** Treat it as completion, not a failure: dismiss the "resume unshield" prompt and refresh balances. `useResumeUnshield` invalidates the affected queries automatically. Do not retry; nothing is left to finalize.
 
 ### InvalidTransportKeyPairError
 

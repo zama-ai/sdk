@@ -165,8 +165,12 @@ if (unwrapTxHash) {
 
 The flow is:
 
-1. **`getPendingUnshield`** -- returns the unwrap transaction hash of an interrupted unshield, or `null` if none is pending. The SDK saved it automatically during phase 1.
+1. **`getPendingUnshield`** -- returns the unwrap transaction hash of an interrupted unshield, or `null` if none is pending. The SDK saved it automatically during phase 1 and verifies it on-chain before reporting it: a pointer whose request was already finalized is cleared and `null` comes back, so a stale entry never shows a resume prompt.
 2. **`resumeUnshield`** -- picks up where the SDK left off by polling for the proof and submitting the finalize transaction. On success the SDK clears the persisted state for you.
+
+{% hint style="warning" %}
+**A resume can lose the race** Another tab, a double click, or a third party can finalize the same request first. `resumeUnshield` then clears the persisted state and throws `UnshieldAlreadyFinalizedError` instead of broadcasting a transaction that would revert. Treat the error as completion: the funds already arrived, so dismiss the prompt and refresh balances. `useResumeUnshield` refreshes the affected queries automatically. See [UnshieldAlreadyFinalizedError](../reference/sdk/errors.md#unshieldalreadyfinalizederror).
+{% endhint %}
 
 {% hint style="info" %}
 The SDK persists and clears the pending-unshield state for you — there are no storage helpers to call by hand. `getPendingUnshield()` (read) and `unshield()` / `resumeUnshield()` (orchestrated write) are the full surface. If you orchestrate `unwrap` + `finalizeUnwrap` yourself, manage your own persistence between the two phases. React mutation hooks automatically invalidate balance queries on success, so your UI stays in sync without manual cache management.
