@@ -28,6 +28,7 @@ import {
   chunkContracts,
   findPermitToWiden,
   isWildcardPermission,
+  permissionCoversAny,
   sortedUnion,
   uncoveredContracts,
 } from "./permissions";
@@ -231,9 +232,7 @@ export class CredentialService {
     const requestedSet = new Set(requested);
     return {
       keypair,
-      permissions: permissions.filter(
-        (p) => isWildcardPermission(p) || p.contractAddresses.some((a) => requestedSet.has(a)),
-      ),
+      permissions: permissions.filter((p) => permissionCoversAny(p, requestedSet)),
     };
   }
 

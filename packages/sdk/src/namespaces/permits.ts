@@ -74,7 +74,7 @@ export class Permits {
    *   unwrap. {@link KeyWrappingError}
    */
   async grantPermit(contracts: Address[] | WildcardPermit): Promise<void> {
-    if (contracts.length === 0) {
+    if (Array.isArray(contracts) && contracts.length === 0) {
       return;
     }
     const service = this.#requireCredentialService("grantPermit");
@@ -96,7 +96,7 @@ export class Permits {
     delegator: Address,
     contracts: Address[] | WildcardPermit,
   ): Promise<void> {
-    if (contracts.length === 0) {
+    if (Array.isArray(contracts) && contracts.length === 0) {
       return;
     }
     const service = this.#requireCredentialService("grantDelegationPermit");

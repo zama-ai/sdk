@@ -67,19 +67,29 @@ export interface SerializedPermit {
   signerAddress: ChecksummedAddress;
 }
 
-/** A V1 ("legacy") permit — always scoped to a specific, non-empty contract list. */
-export interface PermissionV1 {
-  /** Discriminant — always `1` for a V1 permit. */
-  version: 1;
+/**
+ * Fields shared by every permit version, regardless of shape. Mirrors
+ * `PermissionBaseSchema`.
+ */
+interface PermissionBase {
   /** Public key of the transport key pair this permit is bound to, hex-encoded. */
   keypairPublicKey: Hex;
-  /** Contract addresses this permit grants decrypt access to. Never empty. */
+  /**
+   * Contract addresses this permit grants decrypt access to. Never empty for
+   * a V1 permit; an empty list on a V2 permit is a wildcard — see {@link PermissionV2}.
+   */
   contractAddresses: ChecksummedAddress[];
   /** The signed serialized permit. */
   serializedPermit: SerializedPermit;
   /** Unix timestamp (seconds) when the permit becomes valid. */
   startTimestamp: number;
-  /** Validity window length in days from {@link PermissionV1.startTimestamp}. */
+}
+
+/** A V1 ("legacy") permit — always scoped to a specific, non-empty contract list. */
+export interface PermissionV1 extends PermissionBase {
+  /** Discriminant — always `1` for a V1 permit. */
+  version: 1;
+  /** Validity window length in days from {@link PermissionBase.startTimestamp}. */
   durationDays: number;
 }
 
@@ -87,21 +97,10 @@ export interface PermissionV1 {
  * A V2 (unified) permit. `contractAddresses: []` is a *wildcard* (permissive)
  * permit — it covers every contract, not zero.
  */
-export interface PermissionV2 {
+export interface PermissionV2 extends PermissionBase {
   /** Discriminant — always `2` for a V2 permit. */
   version: 2;
-  /** Public key of the transport key pair this permit is bound to, hex-encoded. */
-  keypairPublicKey: Hex;
-  /**
-   * Contract addresses this permit grants decrypt access to. An empty list is
-   * a wildcard permit — see {@link PermissionV2}.
-   */
-  contractAddresses: ChecksummedAddress[];
-  /** The signed serialized permit. */
-  serializedPermit: SerializedPermit;
-  /** Unix timestamp (seconds) when the permit becomes valid. */
-  startTimestamp: number;
-  /** Validity window length in seconds from {@link PermissionV2.startTimestamp}. */
+  /** Validity window length in seconds from {@link PermissionBase.startTimestamp}. */
   durationSeconds: number;
 }
 

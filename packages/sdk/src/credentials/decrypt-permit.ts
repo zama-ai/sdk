@@ -1,7 +1,7 @@
 import type { Address, Hex } from "viem";
 import { DecryptionFailedError } from "../errors";
 import { checksum } from "../schemas/primitives";
-import { isWildcardPermission } from "./permissions";
+import { permissionCovers } from "./permissions";
 import type {
   Permission,
   SerializedTransportKeyPairWithPermissions,
@@ -49,8 +49,5 @@ function findPermissionFor(
   contractAddress: Address,
 ): Permission | undefined {
   const target = checksum(contractAddress);
-  return credentials.permissions.find(
-    (permission) =>
-      isWildcardPermission(permission) || permission.contractAddresses.includes(target),
-  );
+  return credentials.permissions.find((permission) => permissionCovers(permission, target));
 }

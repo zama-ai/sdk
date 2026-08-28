@@ -12,6 +12,21 @@ export function isWildcardPermission(permission: Permission): boolean {
   return permission.version === 2 && permission.contractAddresses.length === 0;
 }
 
+/** Whether `permission`'s signed payload covers `address` — always true for a wildcard permit. */
+export function permissionCovers(permission: Permission, address: ChecksummedAddress): boolean {
+  return isWildcardPermission(permission) || permission.contractAddresses.includes(address);
+}
+
+/** Whether `permission`'s signed payload covers any address in `addresses` — always true for a wildcard permit. */
+export function permissionCoversAny(
+  permission: Permission,
+  addresses: ReadonlySet<ChecksummedAddress>,
+): boolean {
+  return (
+    isWildcardPermission(permission) || permission.contractAddresses.some((a) => addresses.has(a))
+  );
+}
+
 /** Contracts in `requested` not covered by the signed payload of any permission. */
 export function uncoveredContracts(
   permissions: readonly Permission[],
@@ -64,9 +79,7 @@ export function withoutPermitsTouching(
   contracts: readonly ChecksummedAddress[],
 ): Permission[] {
   const removeSet = new Set(contracts);
-  return permissions.filter(
-    (p) => !isWildcardPermission(p) && !p.contractAddresses.some((a) => removeSet.has(a)),
-  );
+  return permissions.filter((p) => !permissionCoversAny(p, removeSet));
 }
 
 /** Deduplicate and sort the union of two pre-checksummed address lists. */
