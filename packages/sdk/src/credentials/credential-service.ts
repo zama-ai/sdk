@@ -639,20 +639,11 @@ export class CredentialService {
         signerAddress: scope.signerAddress,
         signer: this.#requireSigner("signPermit"),
       };
-      const signedPermit =
-        version === 2
-          ? isDelegated
-            ? await relayer.signUnifiedDecryptionPermit({
-                ...permitInput,
-                delegatorAddress: scope.delegatorAddress,
-              })
-            : await relayer.signUnifiedDecryptionPermit(permitInput)
-          : isDelegated
-            ? await relayer.signDecryptionPermit({
-                ...permitInput,
-                delegatorAddress: scope.delegatorAddress,
-              })
-            : await relayer.signDecryptionPermit(permitInput);
+      const sign =
+        version === 2 ? relayer.signUnifiedDecryptionPermit : relayer.signDecryptionPermit;
+      const signedPermit = await sign(
+        isDelegated ? { ...permitInput, delegatorAddress: scope.delegatorAddress } : permitInput,
+      );
 
       const serializedPermit = SerializedPermitSchema.parse(
         await relayer.serializeSignedDecryptionPermit({ signedPermit }),
