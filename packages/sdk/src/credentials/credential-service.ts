@@ -156,6 +156,23 @@ export class CredentialService {
   }
 
   /**
+   * The version to sign an address-list permit with — both a brand-new grant
+   * and a widen of an existing one. V2 when the connected relayer supports
+   * unified decryption, V1 otherwise. Never used for `WILDCARD_PERMIT` (always
+   * V2; see {@link grantPermit}).
+   *
+   * A feature-probe failure must not block permit issuance, so it falls back
+   * to the well-tested V1 path exactly as before this decision existed.
+   */
+  async #preferredNewPermitVersion(): Promise<1 | 2> {
+    try {
+      return (await this.#router.relayer.canUseUnifiedDecryptionPermit()) ? 2 : 1;
+    } catch {
+      return 1;
+    }
+  }
+
+  /**
    * Resolve a keypair and permissions covering `contracts`, minimizing wallet
    * prompts by reusing or widening existing permits where possible. Empty
    * `contracts` warms the keypair without prompting.
@@ -181,8 +198,8 @@ export class CredentialService {
     const signerAddress = checksum(account.address);
 
     if (contracts === WILDCARD_PERMIT) {
-      const keypair = await this.#vault.getOrCreate(signerAddress);
       const scope = this.#permissionScope(signerAddress, delegator);
+      const keypair = await this.#vault.getOrCreate(signerAddress);
       const permissions = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
       const existing = permissions.find(isWildcardPermission);
       if (existing) {
@@ -208,8 +225,9 @@ export class CredentialService {
     if (uncovered.length > 0) {
       const candidate = findPermitToWiden(permissions, uncovered, requested);
       if (candidate !== null) {
+        const version = await this.#preferredNewPermitVersion();
         const widenedSet = sortedUnion(candidate.contractAddresses, uncovered);
-        const widened = await this.#signPermit({ version: 1, chunk: widenedSet, keypair, scope });
+        const widened = await this.#signPermit({ version, chunk: widenedSet, keypair, scope });
         await swallow(
           "replace permit",
           () => this.#store.replace(scope, candidate.serializedPermit.signature, widened),
@@ -217,8 +235,9 @@ export class CredentialService {
         );
         permissions[permissions.indexOf(candidate)] = widened;
       } else {
+        const version = await this.#preferredNewPermitVersion();
         for (const chunk of chunkContracts(uncovered)) {
-          const permission = await this.#signPermit({ version: 1, chunk, keypair, scope });
+          const permission = await this.#signPermit({ version, chunk, keypair, scope });
           permissions.push(permission);
           await swallow(
             "persist permit",

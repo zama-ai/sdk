@@ -90,6 +90,8 @@ export const ZamaErrorCode = {
   PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED",
   /** V2 (unified) decryption permits — including wildcard permits — need protocol v0.14+; the connected chain hasn't upgraded yet. */
   UnifiedPermitNotSupported: "UNIFIED_PERMIT_NOT_SUPPORTED",
+  /** A stored V2/wildcard permit's scope is needed, but the connected relayer instance doesn't support unified decryption yet. */
+  UnifiedDecryptionUnsupported: "UNIFIED_DECRYPTION_UNSUPPORTED",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
@@ -147,6 +149,7 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.PreparedPermitChainMismatch]: false, // caller must register against the chain the permit was prepared for
   [ZamaErrorCode.PreparedPermitExpired]: false, // caller must re-run preparePermit for a fresh validity window
   [ZamaErrorCode.UnifiedPermitNotSupported]: false, // resolves only once the chain itself upgrades to protocol v0.14+
+  [ZamaErrorCode.UnifiedDecryptionUnsupported]: false, // resolves only once this relayer instance deploys /v3/user-decrypt, or the caller falls back to a V1 permit
 };
 
 /**

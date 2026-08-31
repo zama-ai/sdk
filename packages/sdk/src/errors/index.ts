@@ -13,6 +13,7 @@ export {
   PreparedPermitChainMismatchError,
   PreparedPermitExpiredError,
   UnifiedPermitNotSupportedError,
+  UnifiedDecryptionUnsupportedError,
 } from "./credential";
 export { RelayerRequestFailedError, ConfigurationError } from "./relayer";
 export { NotEntitledError } from "./entitlement";

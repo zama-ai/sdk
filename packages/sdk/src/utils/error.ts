@@ -254,6 +254,20 @@ export function isUnsupportedUnifiedPermitMessage(message: string): boolean {
 }
 
 /**
+ * `@fhevm/sdk`'s V2 decrypt dispatch (`fetchKmsSigncryptedSharesV2`) checks the
+ * connected relayer's resolved feature set and throws this before ever issuing
+ * the `/v3/user-decrypt` request when the relayer instance hasn't deployed that
+ * route — distinct from {@link isUnsupportedUnifiedPermitMessage}, which fires
+ * at *signing* time because the *chain* itself hasn't upgraded. This fires at
+ * *decrypt* time even on a fully upgraded chain, because this particular relayer
+ * instance lags behind it. Matching this signal lets the decrypt path surface a
+ * typed {@link UnifiedDecryptionUnsupportedError}.
+ */
+export function isUnifiedDecryptionUnsupportedMessage(message: string): boolean {
+  return message.toLowerCase().includes("does not support unified (v2) decryption permits");
+}
+
+/**
  * 4-byte selector of `InvalidKmsContext(uint256)`, the revert ProtocolConfig
  * raises when the KMS signers read resolves an unknown or revoked context.
  * The `error.test.ts` drift guard recomputes it from the Solidity signature.

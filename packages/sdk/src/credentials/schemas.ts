@@ -87,6 +87,10 @@ export const SerializedPermitSchema = z.object({
   eip712: Eip712Schema,
   signature: hex,
   signerAddress: checksummedAddress,
+  // V2 (unified) permits only — delegation is metadata alongside the signed
+  // message, not part of it. Absent for V1 (where delegation lives inside
+  // eip712.message) and for a non-delegated V2 permit.
+  delegatorAddress: z.optional(checksummedAddress),
 });
 
 const PermissionBaseSchema = {

@@ -65,6 +65,12 @@ export interface SerializedPermit {
   signature: Hex;
   /** Address that produced the signature. */
   signerAddress: ChecksummedAddress;
+  /**
+   * V2 (unified) permits only — delegation is metadata alongside the signed
+   * message, not part of it. Absent for V1 (where delegation lives inside
+   * `eip712.message`) and for a non-delegated V2 permit.
+   */
+  delegatorAddress?: ChecksummedAddress;
 }
 
 /**

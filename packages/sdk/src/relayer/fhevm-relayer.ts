@@ -1,4 +1,7 @@
-import { createUnsignedLegacyDecryptionPermitEip712 as createUnsignedLegacyDecryptionPermitEip712Action } from "@fhevm/sdk/actions/base";
+import {
+  canUseUnifiedDecryptionPermit as canUseUnifiedDecryptionPermitAction,
+  createUnsignedLegacyDecryptionPermitEip712 as createUnsignedLegacyDecryptionPermitEip712Action,
+} from "@fhevm/sdk/actions/base";
 import {
   createFhevmBaseClient,
   createFhevmDecryptClient,
@@ -391,6 +394,20 @@ export class FhevmRelayer implements RelayerSDK {
    */
   createUnsignedLegacyDecryptionPermitEip712: RelayerSDK["createUnsignedLegacyDecryptionPermitEip712"] =
     (parameters) => createUnsignedLegacyDecryptionPermitEip712Action(this.#base, parameters);
+
+  /**
+   * Reports whether the connected relayer supports V2 (unified) decryption
+   * permits — used to decide whether a newly-issued permit should be V1 or V2.
+   *
+   * @example
+   * ```ts
+   * const supportsV2 = await relayer.canUseUnifiedDecryptionPermit();
+   * ```
+   */
+  canUseUnifiedDecryptionPermit: RelayerSDK["canUseUnifiedDecryptionPermit"] = (parameters) =>
+    canUseUnifiedDecryptionPermitAction(this.#base, {
+      options: { ...this.#defaultOptions, ...parameters?.options },
+    });
 
   // Permit/key-pair helpers carry no request options. Parsing explicitly
   // initializes the capability that validates the restored value; serialization

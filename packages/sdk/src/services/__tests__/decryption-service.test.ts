@@ -1,5 +1,6 @@
 import { getAddress, type Address } from "viem";
 import { MAX_UINT64 } from "../../contracts";
+import { WILDCARD_PERMIT } from "../../credentials/utils";
 import {
   DelegationNotPropagatedError,
   InvalidTransportKeyPairError,
@@ -8,6 +9,7 @@ import {
   RpcRateLimitError,
   SigningFailedError,
   SigningRejectedError,
+  UnifiedDecryptionUnsupportedError,
 } from "../../errors";
 import type { EncryptedInput } from "../../query/user-decrypt";
 import type { EncryptedValue } from "../../relayer/types";
@@ -963,6 +965,195 @@ describe("DecryptionService", () => {
       // HANDLE_B in-flight). HANDLE_C is short-circuited by the abort flag, so it
       // never reaches the relayer — without the flag this would be 6.
       expect(relayer.decryptValues).toHaveBeenCalledTimes(5);
+    });
+  });
+
+  describe("V1/V2 permit routing", () => {
+    test("decrypt dispatch is unchanged when the relayer does not support unified decryption", async ({
+      decryptionService,
+      relayer,
+      userAddress,
+    }) => {
+      // Byte-identical-to-before regression: the mocked relayer defaults
+      // canUseUnifiedDecryptionPermit to false, so this must reach the exact same
+      // V1 request shape as every other test in this file.
+      await decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress);
+
+      expect(relayer.signDecryptionPermit).toHaveBeenCalledOnce();
+      expect(relayer.signUnifiedDecryptionPermit).not.toHaveBeenCalled();
+      expect(relayer.decryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({ signedPermit: expect.objectContaining({ version: 1 }) }),
+      );
+    });
+
+    test("routes a V2 permit through decrypt once the relayer supports unified decryption", async ({
+      decryptionService,
+      relayer,
+      userAddress,
+    }) => {
+      vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+
+      await decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress);
+
+      expect(relayer.signUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+      // The decrypt dispatch itself needs no V1/V2 branching: @fhevm/sdk routes
+      // on signedPermit.version internally (v2/v3 user-decrypt) — this just
+      // confirms a V2 permit reaches relayer.decryptValues correctly.
+      expect(relayer.decryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({ signedPermit: expect.objectContaining({ version: 2 }) }),
+      );
+    });
+
+    test("a direct V2 decrypt resolves ownerAddress to the requester", async ({
+      decryptionService,
+      relayer,
+      userAddress,
+    }) => {
+      vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+
+      await decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress);
+
+      expect(relayer.decryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          signedPermit: expect.objectContaining({ encryptedDataOwnerAddress: userAddress }),
+        }),
+      );
+    });
+
+    test("a delegated V1 decrypt resolves ownerAddress to the delegator", async ({
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+      userAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+
+      await decryptionService.delegatedDecryptValues(
+        handles([[HANDLE_A, CONTRACT_A]]),
+        delegatorAddress,
+        delegateAddress,
+        userAddress,
+      );
+
+      expect(relayer.decryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          signedPermit: expect.objectContaining({
+            version: 1,
+            encryptedDataOwnerAddress: delegatorAddress,
+          }),
+        }),
+      );
+    });
+
+    test("a delegated V2 decrypt resolves ownerAddress to the delegator", async ({
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+      userAddress,
+    }) => {
+      vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+
+      await decryptionService.delegatedDecryptValues(
+        handles([[HANDLE_A, CONTRACT_A]]),
+        delegatorAddress,
+        delegateAddress,
+        userAddress,
+      );
+
+      expect(relayer.decryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          signedPermit: expect.objectContaining({
+            version: 2,
+            encryptedDataOwnerAddress: delegatorAddress,
+          }),
+        }),
+      );
+    });
+
+    test("a delegated V2 wildcard decrypt resolves ownerAddress to the delegator", async ({
+      credentialService,
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+      userAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+      await credentialService.grantPermit(WILDCARD_PERMIT, delegatorAddress);
+
+      await decryptionService.delegatedDecryptValues(
+        handles([[HANDLE_A, CONTRACT_A]]),
+        delegatorAddress,
+        delegateAddress,
+        userAddress,
+      );
+
+      expect(relayer.decryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          signedPermit: expect.objectContaining({
+            version: 2,
+            encryptedDataOwnerAddress: delegatorAddress,
+          }),
+        }),
+      );
+    });
+
+    test("surfaces UnifiedDecryptionUnsupportedError when a stored wildcard permit hits a relayer that doesn't support V2", async ({
+      credentialService,
+      decryptionService,
+      relayer,
+      userAddress,
+    }) => {
+      // The permit was granted while V2 was supported (or granted explicitly via
+      // WILDCARD_PERMIT, which is always V2 regardless of the probe) — the relayer
+      // instance actually serving this decrypt call has since regressed, or the
+      // wildcard grant outran the relayer's rollout.
+      await credentialService.grantPermit(WILDCARD_PERMIT);
+      vi.mocked(relayer.decryptValues).mockRejectedValueOnce(
+        new Error(
+          "The relayer does not support unified (V2) decryption permits. Call " +
+            "`canUseUnifiedDecryptionPermit` up front to check support.",
+        ),
+      );
+
+      await expect(
+        decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
+      ).rejects.toBeInstanceOf(UnifiedDecryptionUnsupportedError);
+    });
+  });
+
+  describe("cross-contract batching", () => {
+    test("a wildcard permit covering 3 contracts still dispatches one relayer call per contract today", async ({
+      credentialService,
+      decryptionService,
+      relayer,
+      userAddress,
+    }) => {
+      const CONTRACT_D = getAddress("0x6666666666666666666666666666666666666666") as Address;
+      const HANDLE_D = `0x${"dd".repeat(32)}` as EncryptedValue;
+      await credentialService.grantPermit(WILDCARD_PERMIT);
+
+      await decryptionService.decryptValues(
+        handles([
+          [HANDLE_A, CONTRACT_A],
+          [HANDLE_B, CONTRACT_B],
+          [HANDLE_D, CONTRACT_D],
+        ]),
+        userAddress,
+      );
+
+      // #decrypt groups uncached handles byContract unconditionally, even
+      // though a single wildcard permit already covers every contract in this
+      // batch — so this is 3 relayer calls, not 1. If a future change adds a
+      // decryptValuesFromPairs-based fast path for single-permit-covered
+      // batches, this assertion is the one to flip to `toHaveBeenCalledTimes(1)`.
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(3);
     });
   });
 });
