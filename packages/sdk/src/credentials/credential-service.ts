@@ -58,6 +58,8 @@ import {
 
 export const DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS = 30 * SECONDS_PER_DAY;
 export const DEFAULT_PERMIT_DURATION_DAYS = 30;
+/** How long a `canUseUnifiedDecryptionPermit` probe result is trusted before re-probing. */
+export const UNIFIED_PERMIT_CACHE_TTL_SECONDS = SECONDS_PER_DAY;
 
 /** Configuration for {@link CredentialService}. TTLs are pre-validated by the caller. */
 export interface CredentialServiceConfig {
@@ -125,10 +127,10 @@ export class CredentialService {
   readonly #permitRecoveries = new Map<string, Promise<void>>();
   /**
    * Per-chain cache of `canUseUnifiedDecryptionPermit`. A successful probe
-   * (true or false) is reused for the life of this service; a thrown probe is
-   * not stored, so the next grant can retry.
+   * (true or false) is reused for {@link UNIFIED_PERMIT_CACHE_TTL_SECONDS};
+   * a thrown probe is not stored, so the next grant can retry.
    */
-  readonly #unifiedPermitByChain = new Map<number, boolean>();
+  readonly #unifiedPermitByChain = new Map<number, { supported: boolean; expiresAt: number }>();
 
   constructor(config: CredentialServiceConfig) {
     this.#vault = new TransportKeyPairVault({
@@ -163,19 +165,23 @@ export class CredentialService {
 
   /**
    * Whether this chain's relayer supports unified (V2) decryption permits.
-   * Cached per chain after a successful probe. A thrown probe is not stored,
+   * Cached per chain after a successful probe, for
+   * {@link UNIFIED_PERMIT_CACHE_TTL_SECONDS}. A thrown probe is not stored,
    * so the next grant can retry — and must not block issuance (caller signs
    * V1 for that attempt). Never used for `WILDCARD_PERMIT` (always V2).
    */
   async #canUseUnifiedPermit(): Promise<boolean> {
     const chainId = this.#router.chain.id;
     const cached = this.#unifiedPermitByChain.get(chainId);
-    if (cached !== undefined) {
-      return cached;
+    if (cached !== undefined && nowSeconds() < cached.expiresAt) {
+      return cached.supported;
     }
     try {
       const supported = await this.#router.relayer.canUseUnifiedDecryptionPermit();
-      this.#unifiedPermitByChain.set(chainId, supported);
+      this.#unifiedPermitByChain.set(chainId, {
+        supported,
+        expiresAt: nowSeconds() + UNIFIED_PERMIT_CACHE_TTL_SECONDS,
+      });
       return supported;
     } catch {
       return false;

@@ -204,6 +204,30 @@ describe("CredentialService.grantPermit version selection", () => {
     expect(result.permissions[0]?.version).toBe(1);
   });
 
+  test("re-probes once the cached result's TTL has expired", async ({
+    credentialService,
+    relayer,
+  }) => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+      await credentialService.grantPermit([A]);
+      expect(relayer.canUseUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+
+      vi.setSystemTime(new Date("2026-01-01T23:59:00Z"));
+      vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockClear();
+      await credentialService.grantPermit([B]);
+      expect(relayer.canUseUnifiedDecryptionPermit).not.toHaveBeenCalled();
+
+      vi.setSystemTime(new Date("2026-01-02T00:01:00Z"));
+      vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockClear();
+      await credentialService.grantPermit([C]);
+      expect(relayer.canUseUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   test("does not cache a thrown probe, so a later grant can still upgrade to V2", async ({
     credentialService,
     relayer,
