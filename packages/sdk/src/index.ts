@@ -122,6 +122,7 @@ export {
   TransactionRevertedError,
   TransportKeyPairChangedError,
   TransportKeyPairExpiredError,
+  UnifiedDecryptionUnsupportedError,
   UnifiedPermitNotSupportedError,
   WalletAccountNotReadyError,
   WalletNotConnectedError,
