@@ -123,6 +123,12 @@ export class CredentialService {
   readonly #scope: string | undefined;
   /** In-flight revoked-context recoveries, one per permission scope. */
   readonly #permitRecoveries = new Map<string, Promise<void>>();
+  /**
+   * Per-chain cache of `canUseUnifiedDecryptionPermit`. A successful probe
+   * (true or false) is reused for the life of this service; a thrown probe is
+   * not stored, so the next grant can retry.
+   */
+  readonly #unifiedPermitByChain = new Map<number, boolean>();
 
   constructor(config: CredentialServiceConfig) {
     this.#vault = new TransportKeyPairVault({
@@ -156,19 +162,23 @@ export class CredentialService {
   }
 
   /**
-   * The version to sign an address-list permit with — both a brand-new grant
-   * and a widen of an existing one. V2 when the connected relayer supports
-   * unified decryption, V1 otherwise. Never used for `WILDCARD_PERMIT` (always
-   * V2; see {@link grantPermit}).
-   *
-   * A feature-probe failure must not block permit issuance, so it falls back
-   * to the well-tested V1 path exactly as before this decision existed.
+   * Whether this chain's relayer supports unified (V2) decryption permits.
+   * Cached per chain after a successful probe. A thrown probe is not stored,
+   * so the next grant can retry — and must not block issuance (caller signs
+   * V1 for that attempt). Never used for `WILDCARD_PERMIT` (always V2).
    */
-  async #preferredNewPermitVersion(): Promise<1 | 2> {
+  async #canUseUnifiedPermit(): Promise<boolean> {
+    const chainId = this.#router.chain.id;
+    const cached = this.#unifiedPermitByChain.get(chainId);
+    if (cached !== undefined) {
+      return cached;
+    }
     try {
-      return (await this.#router.relayer.canUseUnifiedDecryptionPermit()) ? 2 : 1;
+      const supported = await this.#router.relayer.canUseUnifiedDecryptionPermit();
+      this.#unifiedPermitByChain.set(chainId, supported);
+      return supported;
     } catch {
-      return 1;
+      return false;
     }
   }
 
@@ -225,7 +235,7 @@ export class CredentialService {
     if (uncovered.length > 0) {
       const candidate = findPermitToWiden(permissions, uncovered, requested);
       if (candidate !== null) {
-        const version = await this.#preferredNewPermitVersion();
+        const version = (await this.#canUseUnifiedPermit()) ? 2 : 1;
         const widenedSet = sortedUnion(candidate.contractAddresses, uncovered);
         const widened = await this.#signPermit({ version, chunk: widenedSet, keypair, scope });
         await swallow(
@@ -235,7 +245,7 @@ export class CredentialService {
         );
         permissions[permissions.indexOf(candidate)] = widened;
       } else {
-        const version = await this.#preferredNewPermitVersion();
+        const version = (await this.#canUseUnifiedPermit()) ? 2 : 1;
         for (const chunk of chunkContracts(uncovered)) {
           const permission = await this.#signPermit({ version, chunk, keypair, scope });
           permissions.push(permission);

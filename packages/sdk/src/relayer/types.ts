@@ -260,7 +260,7 @@ export interface RelayerSDK extends Pick<
    * client rather than through a decorated method.
    *
    * The relayer's feature set is resolved once per client and pinned, so
-   * repeated calls are cheap and never drift — no caching needed on top.
+   * repeated calls are cheap and never drift.
    */
   canUseUnifiedDecryptionPermit(
     parameters?: CanUseUnifiedDecryptionPermitParameters,
