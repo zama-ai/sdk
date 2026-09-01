@@ -166,7 +166,7 @@
     "api-report:check": "api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.web.json && api-extractor run -c api-extractor.viem.json && api-extractor run -c api-extractor.ethers.json && api-extractor run -c api-extractor.node.json && api-extractor run -c api-extractor.query.json"
   },
   "dependencies": {
-    "@fhevm/sdk": "0.14.1-0",
+    "@fhevm/sdk": "0.14.1-1",
     "viem": ">=2",
     "zod": ">=4"
   },
