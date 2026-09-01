@@ -367,17 +367,20 @@ export class ZamaSDK {
   }
 
   /**
-   * Unsubscribe from signer lifecycle events without terminating the relayer.
-   * Call this when the SDK instance is being replaced but the relayer is shared
-   * (e.g. React provider remount in Strict Mode).
+   * Release the SDK-owned resources: signer lifecycle subscriptions and the
+   * relayer backend's resources, an encrypt worker included. Call this when the
+   * SDK instance is being replaced (e.g. React provider unmount or a Strict Mode
+   * remount). Work already in flight runs to completion, and the instance stays
+   * usable: the next encryption spawns a fresh worker.
    */
   dispose(): void {
     this.#lifecycleService.dispose();
+    this.#router.dispose();
   }
 
   /**
-   * Terminate the relayer backend and clean up resources.
-   * Call this when the SDK is no longer needed (e.g. on unmount or shutdown).
+   * {@link dispose} plus the signer's own disposal. Call this when the SDK is no
+   * longer needed (e.g. on shutdown). Work already in flight runs to completion.
    */
   terminate(): void {
     this.dispose();
@@ -387,7 +390,7 @@ export class ZamaSDK {
   /**
    * Implements the TC39 Explicit Resource Management protocol.
    * Calls {@link terminate} when the `using` binding goes out of scope,
-   * unsubscribing signer events and shutting down the relayer.
+   * unsubscribing signer events and releasing the relayer's resources.
    *
    * @example
    * ```ts

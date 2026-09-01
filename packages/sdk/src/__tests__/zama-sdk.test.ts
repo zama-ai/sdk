@@ -65,6 +65,16 @@ describe("ZamaSDK", () => {
     expect(terminate).toHaveBeenCalledOnce();
   });
 
+  test("dispose releases the relayer backends", ({ createSDK, createMockRouter }) => {
+    const router = createMockRouter();
+    const routerDispose = vi.spyOn(router, "dispose");
+    const sdk = createSDK({ router });
+
+    sdk.dispose();
+
+    expect(routerDispose).toHaveBeenCalledOnce();
+  });
+
   test("terminate calls signer.dispose", ({ createMockSigner, createSDK }) => {
     const dispose = vi.fn();
     const sdk = createSDK({ signer: { ...createMockSigner(), dispose } });

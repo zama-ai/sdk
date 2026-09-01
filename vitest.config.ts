@@ -75,6 +75,20 @@ export default defineConfig({
         resolve: sharedResolve,
       },
       {
+        plugins: [iifeStub()],
+        test: {
+          // The worker client needs a DOM realm for `Worker` and `structuredClone`.
+          name: "sdk-dom",
+          environment: "happy-dom",
+          pool: process.env.CI ? "forks" : "vmForks",
+          include: ["packages/sdk/src/worker/__tests__/*.test.ts"],
+          exclude: ["**/node_modules/**"],
+          globals: true,
+          setupFiles: ["./vitest.setup.ts"],
+        },
+        resolve: sharedResolve,
+      },
+      {
         test: {
           name: "typecheck",
           include: ["packages/sdk/**/*.test-d.ts"],
@@ -88,10 +102,7 @@ export default defineConfig({
           name: "react-sdk",
           environment: "happy-dom",
           pool: process.env.CI ? "forks" : "vmForks",
-          include: [
-            "packages/react-sdk/**/*.test.{ts,tsx}",
-            "packages/sdk/src/worker/__tests__/*.test.ts",
-          ],
+          include: ["packages/react-sdk/**/*.test.{ts,tsx}"],
           exclude: ["**/*integration.test.ts", "**/node_modules/**"],
           globals: true,
           setupFiles: ["./vitest.setup.ts"],
@@ -122,8 +133,8 @@ export default defineConfig({
         "**/relayer/cleartext/types.ts",
         "**/abi/**",
         "**/index.ts",
-        "**/worker/relayer-sdk.worker.ts",
-        "**/worker/relayer-sdk.node-worker.ts",
+        // The worker entry point only runs in a worker realm, not under vitest.
+        "**/worker/encrypt.worker.ts",
       ],
       thresholds: { lines: 80, branches: 80, functions: 80 },
     },
