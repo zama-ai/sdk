@@ -271,6 +271,27 @@ describe("CredentialService.grantPermit version selection", () => {
     expect(relayerA.canUseUnifiedDecryptionPermit).toHaveBeenCalledOnce();
   });
 
+  test("stays V1 without probing the relayer when the chain has no ProtocolConfig, even if the relayer supports V2", async ({
+    createCredentialService,
+  }) => {
+    const relayer = createMockRelayer();
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+    // Mirrors the real `hardhat`/`anvil` preset: no ProtocolConfig deployed, so
+    // V2 signing would fail regardless of what the relayer reports.
+    const router = createMockRouter({
+      chains: [createMockChain({ id: 31337, protocolConfigContractAddress: undefined })],
+      relayer,
+    });
+    const credentialService = createCredentialService({ router });
+
+    const result = await credentialService.grantPermit([A]);
+
+    expect(relayer.canUseUnifiedDecryptionPermit).not.toHaveBeenCalled();
+    expect(relayer.signDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayer.signUnifiedDecryptionPermit).not.toHaveBeenCalled();
+    expect(result.permissions[0]?.version).toBe(1);
+  });
+
   test("signs V2 for a plain contract list once the relayer supports unified decryption", async ({
     credentialService,
     relayer,

@@ -169,8 +169,16 @@ export class CredentialService {
    * {@link UNIFIED_PERMIT_CACHE_TTL_SECONDS}. A thrown probe is not stored,
    * so the next grant can retry — and must not block issuance (caller signs
    * V1 for that attempt). Never used for `WILDCARD_PERMIT` (always V2).
+   *
+   * V2 signing also requires the chain's `protocolConfigContractAddress` —
+   * without it, signing fails regardless of what the relayer reports, so we
+   * short-circuit here instead of probing the relayer only to fail at
+   * signing time.
    */
   async #canUseUnifiedPermit(): Promise<boolean> {
+    if (!this.#router.chain.protocolConfigContractAddress) {
+      return false;
+    }
     const chainId = this.#router.chain.id;
     const cached = this.#unifiedPermitByChain.get(chainId);
     if (cached !== undefined && nowSeconds() < cached.expiresAt) {
