@@ -134,6 +134,8 @@ export type {
   EncryptErrorEvent,
   EncryptStartEvent,
   FinalizeUnwrapSubmittedEvent,
+  PermitErrorEvent,
+  PermitOperation,
   RevokeDelegationSubmittedEvent,
   SetOperatorSubmittedEvent,
   ShieldSubmittedEvent,

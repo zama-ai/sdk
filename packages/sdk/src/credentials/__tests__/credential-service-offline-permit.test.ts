@@ -9,6 +9,7 @@ import {
   TransportKeyPairChangedError,
 } from "../../errors/credential";
 import { ConfigurationError } from "../../errors/relayer";
+import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { GenericSigner } from "../../types";
 import { assertNonNullable } from "../../utils/assertions";
 import type { CredentialService } from "../credential-service";
@@ -371,6 +372,31 @@ describe("CredentialService.registerPermit", () => {
 
     await expect(credentialService.registerPermit(prepared, "0xbad" as Hex)).rejects.toBeInstanceOf(
       SigningFailedError,
+    );
+  });
+
+  test("emits a PermitError event with operation=registerPermit on verification failure", async ({
+    createCredentialService,
+    signer,
+    relayer,
+  }) => {
+    const emitEvent = vi.fn();
+    const credentialService = createCredentialService({ emitEvent });
+    const { prepared } = await prepareAndSign(credentialService, signer);
+    vi.mocked(relayer.parseSignedDecryptionPermit).mockRejectedValueOnce(
+      new Error("bad signature"),
+    );
+
+    await expect(credentialService.registerPermit(prepared, "0xbad" as Hex)).rejects.toBeInstanceOf(
+      SigningFailedError,
+    );
+
+    expect(emitEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: ZamaSDKEvents.PermitError,
+        operation: "registerPermit",
+        error: expect.any(SigningFailedError),
+      }),
     );
   });
 });

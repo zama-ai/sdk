@@ -183,6 +183,7 @@ export class ZamaSDK {
       storage: this.storage,
       permitStorage: config.permitStorage,
       logger: this.#logger,
+      emitEvent: this.emitEvent.bind(this),
     });
     if (config.signer) {
       this.#decryptionService = new DecryptionService({

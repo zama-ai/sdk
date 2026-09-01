@@ -7,6 +7,7 @@ import { TEST_TKMS_VERSION } from "../../test-fixtures/constants";
 import { SigningRejectedError, SigningFailedError } from "../../errors/signing";
 import { InvalidTransportKeyPairError } from "../../errors/credential";
 import { ConfigurationError } from "../../errors/relayer";
+import { ZamaSDKEvents } from "../../events/sdk-events";
 import { DerivationSecretHolder } from "../keypair-wrapping";
 import type { SerializedTransportKeyPairWithPermissions } from "../types";
 
@@ -563,6 +564,54 @@ describe("CredentialService.allow signing-error wrapping", () => {
       await expect(credentialService.grantPermit([A])).rejects.toThrow(expected);
     },
   );
+});
+
+describe("CredentialService.allow signing-error event emission", () => {
+  test("emits a PermitError event with operation=grantPermit on signing failure", async ({
+    createCredentialService,
+    signer,
+  }) => {
+    const emitEvent = vi.fn();
+    const service = createCredentialService({ emitEvent });
+    vi.mocked(signer.signTypedData).mockRejectedValueOnce(new Error("network unreachable"));
+
+    await expect(service.grantPermit([A])).rejects.toThrow(SigningFailedError);
+
+    expect(emitEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: ZamaSDKEvents.PermitError,
+        operation: "grantPermit",
+        error: expect.any(SigningFailedError),
+      }),
+    );
+  });
+
+  test("reports operation=grantDelegationPermit for a delegated grant", async ({
+    createCredentialService,
+    signer,
+  }) => {
+    const emitEvent = vi.fn();
+    const service = createCredentialService({ emitEvent });
+    vi.mocked(signer.signTypedData).mockRejectedValueOnce(new Error("network unreachable"));
+
+    await expect(service.grantPermit([A], DELEGATOR)).rejects.toThrow(SigningFailedError);
+
+    expect(emitEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: ZamaSDKEvents.PermitError,
+        operation: "grantDelegationPermit",
+      }),
+    );
+  });
+
+  test("does not emit a PermitError event on success", async ({ createCredentialService }) => {
+    const emitEvent = vi.fn();
+    const service = createCredentialService({ emitEvent });
+
+    await service.grantPermit([A]);
+
+    expect(emitEvent).not.toHaveBeenCalled();
+  });
 });
 
 describe("CredentialService delegator-scope isolation", () => {

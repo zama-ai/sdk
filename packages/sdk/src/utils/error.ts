@@ -397,3 +397,27 @@ export function extractHttpStatus(error: unknown): number | undefined {
   }
   return (typeof node.statusCode === "number" ? node.statusCode : node.status) as number;
 }
+
+/**
+ * A JSON-RPC / EIP-1193 numeric error code (e.g. `4001` for user rejection, or a
+ * wallet/provider code like `-32603`) found anywhere in a signing failure's cause
+ * chain. Gives a signing error a structured, groupable field instead of leaving
+ * the code buried in free-text `message` or an opaque nested `cause`.
+ */
+export function extractRpcErrorCode(error: unknown): number | undefined {
+  const node = findInErrorChain(error, (n) => typeof n.code === "number");
+  return node ? (node.code as number) : undefined;
+}
+
+/**
+ * The `name` of the error class a signing failure was thrown as (e.g. viem's
+ * `InvalidParamsRpcError`, an EIP-1193 `ProviderRpcError`) — a stable,
+ * library-level classification an observability integration can group and alert
+ * on. Deliberately reads only the top-level error, not the full cause chain: a
+ * wallet's own internal error class name is inconsistent across wallets and
+ * buried at an arbitrary depth, so it is not guessed at here — the full chain
+ * remains available via the wrapped error's `cause` for manual inspection.
+ */
+export function extractWalletErrorName(error: unknown): string | undefined {
+  return error instanceof Error && error.name !== "Error" ? error.name : undefined;
+}

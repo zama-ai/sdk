@@ -11,6 +11,8 @@ import {
 import { ConfigurationError } from "../errors/relayer";
 import { SignerNotConfiguredError } from "../errors/signer";
 import { wrapSigningError } from "../errors/signing";
+import type { PermitOperation, ZamaSDKEventInput } from "../events/sdk-events";
+import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
 import type { GenericLogger, GenericSigner, GenericStorage } from "../types";
@@ -70,6 +72,11 @@ export interface CredentialServiceConfig {
   /** SDK-wide logger for credential-path diagnostics. */
   logger: GenericLogger;
   /**
+   * Publishes structured SDK events (e.g. {@link ZamaSDKEvents.PermitError}) into
+   * the unified `onEvent` stream — the same callback every other `*Service` receives.
+   */
+  emitEvent: (input: ZamaSDKEventInput) => void;
+  /**
    * Opt-in shared-tenant scope (B2B2C/WaaS operators). When set, every signer
    * configured with the same scope shares one transport key pair instead of one
    * per signer address. Permits stay per-signer regardless — see
@@ -107,6 +114,7 @@ export class CredentialService {
   readonly #signer: GenericSigner | undefined;
   readonly #permitTTL: number;
   readonly #logger: GenericLogger;
+  readonly #emitEvent: (input: ZamaSDKEventInput) => void;
   readonly #scope: string | undefined;
   /** In-flight revoked-context recoveries, one per permission scope. */
   readonly #permitRecoveries = new Map<string, Promise<void>>();
@@ -132,6 +140,7 @@ export class CredentialService {
     this.#signer = config.signer;
     this.#permitTTL = config.permitTTL;
     this.#logger = config.logger;
+    this.#emitEvent = config.emitEvent;
     this.#scope = config.scope;
   }
 
@@ -349,10 +358,19 @@ export class CredentialService {
         transportKeyPair,
       });
     } catch (error) {
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw wrapSigningError(error, "registerPermit: signature verification failed");
+      const failure =
+        error instanceof ZamaError
+          ? error
+          : wrapSigningError(error, {
+              operation: "registerPermit",
+              description: "signature verification failed",
+            });
+      this.#emitEvent({
+        type: ZamaSDKEvents.PermitError,
+        operation: "registerPermit",
+        error: failure,
+      });
+      throw failure;
     }
     if (signedPermit.version !== 1) {
       throw new ConfigurationError(
@@ -620,16 +638,21 @@ export class CredentialService {
         durationDays: this.#permitTTL,
       };
     } catch (error) {
+      const operation: PermitOperation = isDelegated ? "grantDelegationPermit" : "grantPermit";
+      let failure: ZamaError;
       if (error instanceof ZamaError) {
-        throw error;
+        failure = error;
+      } else {
+        // A key pair the relayer can't re-derive (post KMS/TKMS rotation) is
+        // unusable: evict it so the next grantPermit regenerates a valid one, then
+        // surface the typed InvalidTransportKeyPairError via wrapSigningError.
+        if (error instanceof Error && isInvalidTransportKeyPairMessage(error.message)) {
+          await this.#vault.evict(scope.signerAddress);
+        }
+        failure = wrapSigningError(error, { operation, description: "credential signing failed" });
       }
-      // A key pair the relayer can't re-derive (post KMS/TKMS rotation) is
-      // unusable: evict it so the next grantPermit regenerates a valid one, then
-      // surface the typed InvalidTransportKeyPairError via wrapSigningError.
-      if (error instanceof Error && isInvalidTransportKeyPairMessage(error.message)) {
-        await this.#vault.evict(scope.signerAddress);
-      }
-      throw wrapSigningError(error, "Credential signing failed");
+      this.#emitEvent({ type: ZamaSDKEvents.PermitError, operation, error: failure });
+      throw failure;
     }
   }
 
