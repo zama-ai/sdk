@@ -201,6 +201,16 @@ export class MutableWalletAccountStore implements WalletAccountStore {
 }
 
 // @public
+export interface PermitErrorEvent extends BaseEvent {
+    error: Error;
+    operation: PermitOperation;
+    type: typeof ZamaSDKEvents.PermitError;
+}
+
+// @public
+export type PermitOperation = "grantPermit" | "grantDelegationPermit" | "registerPermit";
+
+// @public
 export interface RawLog {
     readonly address?: Hex;
     readonly data: Hex;
@@ -482,8 +492,6 @@ export interface ZamaConfigViem<TChains extends AtLeastOneChain = AtLeastOneChai
     walletClient: WalletClient;
 }
 
-// Warning: (ae-forgotten-export) The symbol "PermitErrorEvent" needs to be exported by the entry point index.d.ts
-//
 // @public
 export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | PermitErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | WrapSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
