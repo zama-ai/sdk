@@ -61,7 +61,7 @@
   },
   "devDependencies": {
     "@zama-fhe/sdk": "workspace:*",
-    "viem": "^2.55.0"
+    "viem": "^2.56.0"
   },
   "peerDependencies": {
     "@tanstack/react-query": ">=5",
