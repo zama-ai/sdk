@@ -86,6 +86,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `SigningRejectedError`                  | `SIGNING_REJECTED`                    | User rejected the wallet signature                                                                                                |
 | `SigningFailedError`                    | `SIGNING_FAILED`                      | Wallet signature failed (connectivity, firmware)                                                                                  |
 | `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the WASM runtime                                                                                         |
+| `EncryptOffloadUnavailableError`        | `ENCRYPT_OFFLOAD_UNAVAILABLE`         | `offloadEncrypt: true` required the encrypt worker, which is unavailable                                                          |
 | `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                                                                                             |
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
 | `UnshieldAlreadyFinalizedError`         | `UNSHIELD_ALREADY_FINALIZED`          | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
@@ -209,6 +210,20 @@ matchZamaError(error, {
 
 **How to handle:** Verify your Content Security Policy includes `wasm-unsafe-eval`. Check that the browser supports WebAssembly.
 
+### EncryptOffloadUnavailableError
+
+**Code:** `ENCRYPT_OFFLOAD_UNAVAILABLE`
+
+Thrown only under [`web({ offloadEncrypt: true })`](./RelayerWeb.md#offloadencrypt): encryption was required to run in a Web Worker, but the worker could not spawn, missed a lifecycle deadline, or crashed. The strict mode rejects rather than finishing the work on the main thread. The `.cause` carries the underlying failure.
+
+```ts
+matchZamaError(error, {
+  ENCRYPT_OFFLOAD_UNAVAILABLE: (e) => showError(`Encryption offload unavailable: ${e.message}`),
+});
+```
+
+**How to handle:** Fix the deployment, not the call: see the [CSP requirement](./RelayerWeb.md#csp-requirement) and [`offloadWorker`](./RelayerWeb.md#offloadworker) for the usual causes. Switch to `offloadEncrypt: "auto"` to fall back to main-thread encryption instead.
+
 ### DecryptionFailedError
 
 **Code:** `DECRYPTION_FAILED`
@@ -242,15 +257,9 @@ matchZamaError(error, {
 Thrown by `resumeUnshield()` when the unwrap request no longer exists on-chain: it was already finalized, so the underlying ERC-20 tokens were delivered. `unshield()` and `unshieldAll()` throw it too when a concurrent finalize wins the race. The SDK clears the persisted pending-unshield state before throwing, so `getPendingUnshield()` returns `null` afterwards. The error carries `unwrapTxHash` and `unwrapRequestId`.
 
 ```ts
-import { UnshieldAlreadyFinalizedError } from "@zama-fhe/sdk";
-
-try {
-  await wrappedToken.resumeUnshield(unwrapTxHash);
-} catch (error) {
-  if (error instanceof UnshieldAlreadyFinalizedError) {
-    dismissResumePrompt(); // the funds already arrived
-  }
-}
+matchZamaError(error, {
+  UNSHIELD_ALREADY_FINALIZED: () => dismissResumePrompt(), // the funds already arrived
+});
 ```
 
 **How to handle:** Treat it as completion, not a failure: dismiss the "resume unshield" prompt and refresh balances. `useResumeUnshield` invalidates the affected queries automatically. Do not retry; nothing is left to finalize.

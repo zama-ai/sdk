@@ -24,6 +24,8 @@ export const ZamaErrorCode = {
   EncryptionFailed: "ENCRYPTION_FAILED",
   /** FHE decryption failed. */
   DecryptionFailed: "DECRYPTION_FAILED",
+  /** Encryption offload was required (`offloadEncrypt: true`) but the worker is unavailable. */
+  EncryptOffloadUnavailable: "ENCRYPT_OFFLOAD_UNAVAILABLE",
   /** On-chain transaction reverted. */
   TransactionReverted: "TRANSACTION_REVERTED",
   /** Transport key pair has expired and needs regeneration. */
@@ -114,6 +116,7 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.SigningFailed]: false,
   [ZamaErrorCode.EncryptionFailed]: false,
   [ZamaErrorCode.DecryptionFailed]: false,
+  [ZamaErrorCode.EncryptOffloadUnavailable]: false, // the worker realm is unusable for this page; a retry hits the same environment
   [ZamaErrorCode.TransactionReverted]: false,
   [ZamaErrorCode.TransportKeyPairExpired]: false,
   [ZamaErrorCode.InvalidTransportKeyPair]: false,

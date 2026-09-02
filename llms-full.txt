@@ -2138,11 +2138,19 @@ Stuck on the migration, or spotted a step or rename this guide is missing? **Ope
 > **Unreleased.** The changes on this page are on the prerelease (`beta`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
 
 
-## Stale pending-unshield pointers self-heal
+## Encryption runs in a Web Worker again
 
-An unshield whose finalize confirmed but whose local pointer was never cleared (a closed tab, a failed storage write) used to leave a permanent "resume unshield" prompt. Every resume attempt then submitted a transaction that reverted.
+`web()` runs encryption in a dedicated Web Worker, as it did before the `@fhevm/sdk` migration, so encrypting a large input no longer blocks the main thread. Nothing changes in your code: `encryptValue()`, `encryptValues()`, and every `Token` method that encrypts keep the same signatures.
 
-The SDK now verifies the pointer on-chain. `getPendingUnshield()` clears a pointer whose unwrap request was already finalized and returns `null`. `resumeUnshield()` throws a new `UnshieldAlreadyFinalizedError` (`UNSHIELD_ALREADY_FINALIZED`) instead of broadcasting a reverting transaction, and `useResumeUnshield` refreshes the pending-unshield and balance queries when it sees this error, so the prompt disappears on its own. Treat the error as completion: the funds already arrived. No API change is required to pick this up. See the [error reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) and [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields).
+Three new `web()` options control it: [`offloadEncrypt`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/RelayerWeb.md#offloadencrypt) picks where encryption runs (`"auto"` by default, with one `console.warn` per fallback), [`offloadWorker`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/RelayerWeb.md#offloadworker) supplies your own worker source for bundlers or CSPs the built-in spawn can't reach, and [`offloadTimeouts`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/RelayerWeb.md#offloadtimeouts) tunes the worker's lifecycle deadlines. Strict `offloadEncrypt: true` rejects with the new [`EncryptOffloadUnavailableError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#encryptoffloadunavailableerror) (`ENCRYPT_OFFLOAD_UNAVAILABLE`) instead of falling back.
+
+Apps served under a Content Security Policy need `worker-src 'self' blob:`; see the [CSP requirement](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/RelayerWeb.md#csp-requirement).
+
+## Interrupted unshields no longer leave a stuck resume prompt
+
+An unshield whose finalize confirmed but whose persisted record was never cleared (a closed tab, a failed storage write) used to leave a permanent "resume unshield" prompt. Every resume attempt then submitted a transaction that reverted.
+
+The SDK now verifies the record on-chain. `getPendingUnshield()` clears a record whose unwrap request was already finalized and returns `null`. `resumeUnshield()` throws a new `UnshieldAlreadyFinalizedError` (`UNSHIELD_ALREADY_FINALIZED`) instead of broadcasting a reverting transaction, and `useResumeUnshield` refreshes the pending-unshield and balance queries when it sees this error, so the prompt disappears on its own. Treat the error as completion: the funds already arrived. No API change is required to pick this up. See the [error reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) and [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields).
 
 ## 3.x
 
@@ -4297,12 +4305,12 @@ if (unwrapTxHash) {
 
 The flow is:
 
-1. **`getPendingUnshield`** -- returns the unwrap transaction hash of an interrupted unshield, or `null` if none is pending. The SDK saved it automatically during phase 1 and verifies it on-chain before reporting it: a pointer whose request was already finalized is cleared and `null` comes back, so a stale entry never shows a resume prompt.
+1. **`getPendingUnshield`** -- returns the unwrap transaction hash of an interrupted unshield, or `null` if none is pending. The SDK saved it automatically during phase 1. Before reporting it, the SDK verifies it on-chain: an already-finalized request is cleared and `null` comes back, so a stale entry never shows a resume prompt.
 2. **`resumeUnshield`** -- picks up where the SDK left off by polling for the proof and submitting the finalize transaction. On success the SDK clears the persisted state for you.
 
 
 > [!WARNING]
-> **A resume can lose the race** Another tab, a double click, or a third party can finalize the same request first. `resumeUnshield` then clears the persisted state and throws `UnshieldAlreadyFinalizedError` instead of broadcasting a transaction that would revert. Treat the error as completion: the funds already arrived, so dismiss the prompt and refresh balances. `useResumeUnshield` refreshes the affected queries automatically. See [UnshieldAlreadyFinalizedError](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror).
+> **A resume can lose the race.** Another tab, a double click, or a third party can finalize the same request first. `resumeUnshield` then clears the persisted state and throws `UnshieldAlreadyFinalizedError` instead of broadcasting a transaction that would revert. Treat the error as completion: the funds already arrived, so dismiss the prompt and refresh balances. `useResumeUnshield` refreshes the affected queries automatically. See [UnshieldAlreadyFinalizedError](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror).
 
 
 
@@ -7558,7 +7566,7 @@ See the [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/d
 
 `() => void`
 
-Unsubscribes from signer lifecycle events (disconnect, account change, chain change) without terminating the relayer. Use when you want to stop reacting to wallet events but keep the relayer alive for other SDK instances.
+Releases the SDK-owned resources: unsubscribes from signer lifecycle events (disconnect, account change, chain change) and releases the relayer backends' resources (an encrypt worker, if one is running). Work already in flight finishes, and the instance remains usable: a later operation re-acquires what it needs, respawning the encrypt worker on the next encryption.
 
 ```ts
 sdk.dispose();
@@ -7568,7 +7576,7 @@ sdk.dispose();
 
 `() => void`
 
-Full cleanup — calls `dispose()` and disposes the signer adapter's own event subscriptions. Call when the SDK is no longer needed.
+Full cleanup: calls `dispose()`, then also disposes the signer adapter's own event subscriptions. Call when the SDK is no longer needed. Like `dispose()`, it leaves the instance usable: a later operation re-acquires what it needs.
 
 ```ts
 sdk.terminate();
@@ -7939,7 +7947,7 @@ if (pending) {
 
 Returns the unwrap transaction hash of an unshield that was interrupted between its two phases, or `null` if none is pending for this wrapper. The SDK persists this automatically when `unshield()` / `unshieldAll()` submit phase 1, and clears it once phase 2 finalizes.
 
-The pointer is verified on-chain before it is reported: a pointer whose unwrap request was already finalized is cleared, and `null` is returned. If the verification read fails, the pointer is returned unverified. A network error never deletes recovery state.
+The SDK verifies the persisted hash on-chain before reporting it: if the unwrap request was already finalized, it clears the record and returns `null`. If the verification read fails, the hash is returned unverified; a network error never deletes recovery state.
 
 Resuming stays caller-driven — surface a "resume" prompt and call `resumeUnshield()`, rather than finalizing on load and triggering a wallet transaction the user did not initiate.
 
@@ -8280,7 +8288,7 @@ console.log(sepolia.registryAddress); // "0x2f0750Bb..."
 
 # `web()` transport
 
-The `web()` transport factory configures a chain to run FHE operations in the browser. It drives `@fhevm/sdk`, which handles encryption, decryption, and transport key pair management via bundled WASM — multi-threaded through an internal worker pool when cross-origin isolation is available.
+The `web()` transport factory configures a chain to run FHE operations in the browser. It drives `@fhevm/sdk`, which handles encryption, decryption, and transport key pair management via bundled WASM — multi-threaded through an internal worker pool when cross-origin isolation is available. Encryption runs in a dedicated Web Worker by default; see [`offloadEncrypt`](#offloadencrypt).
 
 ## Import
 
@@ -8306,6 +8314,87 @@ const config = createConfig({
 ## Parameters
 
 `web()` accepts an optional options object forwarded to `@fhevm/sdk` — per-client tuning such as `batchRpcCalls` (batch RPC requests) and `fheEncryptionKey` (supply a pre-fetched FHE encryption key). Most apps omit it and call `web()` bare; WASM execution and FHE-artifact caching are handled internally, with no special cross-origin headers required.
+
+### `offloadEncrypt`
+
+`"auto" | boolean | undefined`
+
+Controls where encryption runs. `web()` runs encryption in a dedicated Web Worker, so `encryptValue()` and `encryptValues()` do not block the page's main thread.
+
+| Value              | Behavior                                                                                        |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| `"auto"` (default) | Offload when the environment can spawn a module worker; fall back to the main thread otherwise. |
+| `true`             | Require the offload; reject the encryption when the worker is unavailable.                      |
+| `false`            | Always encrypt on the calling thread.                                                           |
+
+```ts
+web({ offloadEncrypt: true });
+```
+
+The worker is unavailable when it cannot spawn (a restrictive `worker-src` CSP, a bundler that did not emit the worker script), misses a lifecycle deadline, or crashes.
+
+A worker that dies after it came up is treated as transient: the encryptions it took down finish on the calling thread, and the next one spawns a fresh worker. A second crash settles the SDK on the calling thread for good, so a broken environment does not spawn a replacement worker per call.
+
+`sdk.dispose()` (and `sdk.terminate()`, which calls it) releases the worker: encryptions already running finish over it, and it is terminated once the last one settles. Encrypting again afterwards spawns a fresh worker, so disposing an SDK you still hold is safe, and it is also the way to give a fallen-back SDK the worker path back.
+
+#### Fallback warning
+
+Under `"auto"`, each fallback prints one `console.warn` (no logger configuration needed) naming the cause. When you pass a `logger` to `createConfig`, it receives the same message. A fallback means encryption blocks the main thread again, so it is worth fixing in the deployment.
+
+Realms with no `Worker` global at all (server-side rendering, Node, the CommonJS build) encrypt on the calling thread silently: no worker is ever attempted there, so there is nothing to warn about.
+
+#### Strict mode
+
+With `offloadEncrypt: true`, the SDK never falls back to the main thread. Every worker failure rejects the encryption with [`EncryptOffloadUnavailableError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#encryptoffloadunavailableerror) (`ENCRYPT_OFFLOAD_UNAVAILABLE`), so the app can surface it instead of hanging. A rejection leaves the SDK usable: the next encryption attempts a fresh worker. The rejection happens on the first encryption, never at config time, so `createConfig()` is safe to run during server-side rendering, where no `Worker` global exists.
+
+#### CSP requirement
+
+Serving the app under a Content Security Policy requires:
+
+```
+worker-src 'self' blob:;
+```
+
+`blob:` is not optional: the TFHE WASM spawns its own nested sub-workers from blob URLs inside the encrypt worker. Without it the worker fails to start, and the transport falls back to the main thread (`"auto"`) or rejects (`true`).
+
+### `offloadWorker`
+
+`string | URL | (() => Worker) | undefined`
+
+Escape hatch for the built-in worker spawn: a bundler that doesn't emit or rewrite the SDK's `new Worker(new URL(...))` expression inside `node_modules` (Vite dev-mode pre-bundling, older webpack), or a CSP that only allows worker sources the app itself serves.
+
+Pass a string or `URL` to spawn a worker from a path you control. Copy the worker file from `node_modules/@zama-fhe/sdk/dist/esm/encrypt.worker.js` into your public/static directory, or resolve it through the package's `@zama-fhe/sdk/encrypt.worker.js` export in a copy step:
+
+```ts
+web({ offloadWorker: "/encrypt.worker.js" });
+```
+
+Or pass a factory to build the worker yourself, so your own bundler sees and rewrites the `new Worker(new URL(...))` expression:
+
+```ts
+web({
+  offloadWorker: () =>
+    new Worker(new URL("./workers/encrypt.js", import.meta.url), { type: "module" }),
+});
+```
+
+The factory must construct a fresh worker on every call and hand it over exclusively: the SDK owns the worker's lifecycle, terminating it on `dispose()` and respawning it after a crash. A memoized or shared worker is dead for every later call, and two clients sharing one worker collide on operation ids and cancel each other's work.
+
+### `offloadTimeouts`
+
+`{ spawn?: number; init?: number } | undefined`
+
+Watchdog deadlines for the encrypt worker's lifecycle steps, in milliseconds. `spawn` bounds worker startup; default `10_000`. `init` bounds the worker-side client initialization (the on-chain version reads and WASM compilation, run inside the worker realm); default `300_000`. The FHE key is fetched on the calling thread, under the chain's `auth`, and handed to the worker.
+
+A missed deadline discards the presumed-stuck worker. The operation then finishes on the calling thread, or rejects under `offloadEncrypt: true`.
+
+Individual encrypt operations are not watched: a worker computing a ZK proof runs for as long as it needs, and `@fhevm/sdk`'s own relayer request timeout governs it instead. An `AbortSignal` passed to an encrypt call takes effect between phases (before dispatch, and during the relayer round-trip), not during proof generation; the worker's event loop is blocked by the WASM computation, so an abort landing mid-proof is observed once the proof finishes.
+
+```ts
+web({ offloadTimeouts: { init: 600_000 } });
+```
+
+Cross-origin isolation headers (`Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy: require-corp`) remain worthwhile: they enable multi-threaded WASM inside the worker, shortening encryption itself.
 
 ## Return Type
 
@@ -9295,6 +9384,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `SigningRejectedError`                  | `SIGNING_REJECTED`                    | User rejected the wallet signature                                                                                                |
 | `SigningFailedError`                    | `SIGNING_FAILED`                      | Wallet signature failed (connectivity, firmware)                                                                                  |
 | `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the WASM runtime                                                                                         |
+| `EncryptOffloadUnavailableError`        | `ENCRYPT_OFFLOAD_UNAVAILABLE`         | `offloadEncrypt: true` required the encrypt worker, which is unavailable                                                          |
 | `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                                                                                             |
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
 | `UnshieldAlreadyFinalizedError`         | `UNSHIELD_ALREADY_FINALIZED`          | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
@@ -9418,6 +9508,20 @@ matchZamaError(error, {
 
 **How to handle:** Verify your Content Security Policy includes `wasm-unsafe-eval`. Check that the browser supports WebAssembly.
 
+### EncryptOffloadUnavailableError
+
+**Code:** `ENCRYPT_OFFLOAD_UNAVAILABLE`
+
+Thrown only under [`web({ offloadEncrypt: true })`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/RelayerWeb.md#offloadencrypt): encryption was required to run in a Web Worker, but the worker could not spawn, missed a lifecycle deadline, or crashed. The strict mode rejects rather than finishing the work on the main thread. The `.cause` carries the underlying failure.
+
+```ts
+matchZamaError(error, {
+  ENCRYPT_OFFLOAD_UNAVAILABLE: (e) => showError(`Encryption offload unavailable: ${e.message}`),
+});
+```
+
+**How to handle:** Fix the deployment, not the call: see the [CSP requirement](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/RelayerWeb.md#csp-requirement) and [`offloadWorker`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/RelayerWeb.md#offloadworker) for the usual causes. Switch to `offloadEncrypt: "auto"` to fall back to main-thread encryption instead.
+
 ### DecryptionFailedError
 
 **Code:** `DECRYPTION_FAILED`
@@ -9451,15 +9555,9 @@ matchZamaError(error, {
 Thrown by `resumeUnshield()` when the unwrap request no longer exists on-chain: it was already finalized, so the underlying ERC-20 tokens were delivered. `unshield()` and `unshieldAll()` throw it too when a concurrent finalize wins the race. The SDK clears the persisted pending-unshield state before throwing, so `getPendingUnshield()` returns `null` afterwards. The error carries `unwrapTxHash` and `unwrapRequestId`.
 
 ```ts
-import { UnshieldAlreadyFinalizedError } from "@zama-fhe/sdk";
-
-try {
-  await wrappedToken.resumeUnshield(unwrapTxHash);
-} catch (error) {
-  if (error instanceof UnshieldAlreadyFinalizedError) {
-    dismissResumePrompt(); // the funds already arrived
-  }
-}
+matchZamaError(error, {
+  UNSHIELD_ALREADY_FINALIZED: () => dismissResumePrompt(), // the funds already arrived
+});
 ```
 
 **How to handle:** Treat it as completion, not a failure: dismiss the "resume unshield" prompt and refresh balances. `useResumeUnshield` invalidates the affected queries automatically. Do not retry; nothing is left to finalize.
@@ -13506,7 +13604,7 @@ Run this check on mount to handle any session that was interrupted. Resuming is 
 
 
 > [!WARNING]
-> **An already-finalized resume is not a failure** If the unwrap request was already finalized (another tab, a double click, a third party), the mutation fails with [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror). The funds already arrived. The SDK clears the persisted state and the hook invalidates the pending-unshield and balance queries, so the resume prompt disappears on its own. Treat the error as completion; do not retry.
+> **An already-finalized resume is not a failure.** If the unwrap request was already finalized (another tab, a double click, a third party), the mutation fails with [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror). The funds already arrived. The SDK clears the persisted state and the hook invalidates the pending-unshield and balance queries, so the resume prompt disappears on its own. Treat the error as completion; do not retry.
 
 
 
@@ -13589,7 +13687,7 @@ Read the unwrap transaction hash of an unshield that was interrupted between its
 
 The SDK persists this automatically when [`useUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useUnshield.md) / [`useUnshieldAll`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useUnshieldAll.md) submit phase 1, and clears it once phase 2 finalizes — the unshield and unwrap mutations invalidate this query on success. Surface the returned hash as a "resume" prompt and pass it to [`useResumeUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useResumeUnshield.md); resuming is caller-driven so a wallet transaction is never triggered on load.
 
-The pointer is verified on-chain before it is reported: a pointer whose unwrap request was already finalized is cleared, and `null` is returned. A stale entry never shows a resume prompt. If the verification read fails, the pointer is returned unverified; a network error never deletes recovery state.
+The SDK verifies the persisted hash on-chain before reporting it: if the unwrap request was already finalized, it clears the record and returns `null`, so a stale entry never shows a resume prompt. If the verification read fails, the hash is returned unverified; a network error never deletes recovery state.
 
 ## Import
 
