@@ -197,7 +197,7 @@ if (pending) {
 
 Returns the unwrap transaction hash of an unshield that was interrupted between its two phases, or `null` if none is pending for this wrapper. The SDK persists this automatically when `unshield()` / `unshieldAll()` submit phase 1, and clears it once phase 2 finalizes.
 
-The pointer is verified on-chain before it is reported: a pointer whose unwrap request was already finalized is cleared, and `null` is returned. If the verification read fails, the pointer is returned unverified. A network error never deletes recovery state.
+The SDK verifies the persisted hash on-chain before reporting it: if the unwrap request was already finalized, it clears the record and returns `null`. If the verification read fails, the hash is returned unverified; a network error never deletes recovery state.
 
 Resuming stays caller-driven — surface a "resume" prompt and call `resumeUnshield()`, rather than finalizing on load and triggering a wallet transaction the user did not initiate.
 

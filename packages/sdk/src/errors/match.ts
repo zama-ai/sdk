@@ -23,7 +23,11 @@ import type {
   DelegationNotPropagatedError,
   DelegationSelfNotAllowedError,
 } from "./delegation";
-import type { DecryptionFailedError, EncryptionFailedError } from "./encryption";
+import type {
+  DecryptionFailedError,
+  EncryptionFailedError,
+  EncryptOffloadUnavailableError,
+} from "./encryption";
 import type {
   BalanceCheckUnavailableError,
   ERC20ReadFailedError,
@@ -57,6 +61,8 @@ export interface ErrorForCode {
   [ZamaErrorCode.EncryptionFailed]: EncryptionFailedError;
   /** Thrown for {@link ZamaErrorCode.DecryptionFailed}. */
   [ZamaErrorCode.DecryptionFailed]: DecryptionFailedError;
+  /** Thrown for {@link ZamaErrorCode.EncryptOffloadUnavailable}. */
+  [ZamaErrorCode.EncryptOffloadUnavailable]: EncryptOffloadUnavailableError;
   /** Thrown for {@link ZamaErrorCode.TransactionReverted}. */
   [ZamaErrorCode.TransactionReverted]: TransactionRevertedError;
   /** Thrown for {@link ZamaErrorCode.TransportKeyPairExpired}. */

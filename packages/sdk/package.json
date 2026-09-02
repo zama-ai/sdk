@@ -1,6 +1,6 @@
 {
   "name": "@zama-fhe/sdk",
-  "version": "3.5.2-beta.1",
+  "version": "3.6.0-beta.1",
   "description": "TypeScript SDK for Zama fhEVM confidential smart contracts",
   "keywords": [
     "blockchain",
@@ -151,6 +151,7 @@
       },
       "default": "./dist/esm/chains/index.js"
     },
+    "./encrypt.worker.js": "./dist/esm/encrypt.worker.js",
     "./package.json": {
       "default": "./package.json"
     }
@@ -173,7 +174,8 @@
   "devDependencies": {
     "@dfns/sdk": "^0.8.20",
     "@dfns/sdk-keysigner": "^0.8.20",
-    "@tanstack/query-core": "^5.102.2"
+    "@tanstack/query-core": "^5.102.2",
+    "comlink": "^4.4.2"
   },
   "peerDependencies": {
     "@tanstack/query-core": ">=5",

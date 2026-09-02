@@ -52,6 +52,7 @@
     "e2e:test:nextjs": "pnpm --filter @zama-fhe/playwright e2e:test:nextjs",
     "e2e:test:vite": "pnpm --filter @zama-fhe/playwright e2e:test:vite",
     "e2e:test:node": "pnpm build:sdk && pnpm --filter @zama-fhe/playwright e2e:test:node",
+    "e2e:test:live": "pnpm --filter @zama-fhe/playwright e2e:test:live",
     "docs:diagrams": "node scripts/docs/generate-diagrams.mjs",
     "docs:check-links": "node scripts/docs/check-links.mjs",
     "docs:changelog": "node scripts/docs/changelog.mjs",

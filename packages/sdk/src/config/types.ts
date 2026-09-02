@@ -2,6 +2,7 @@ import type { AtLeastOneChain, FheChain } from "../chains";
 import type { ZamaSDKEventListener } from "../events";
 import type { ChainRouter } from "../chains/router";
 import type { FhevmRuntimeConfig, RelayerSDK } from "../relayer/types";
+import type { LoggerService } from "../services/logger-service";
 import type { GenericLogger, GenericProvider, GenericSigner, GenericStorage } from "../types";
 
 export type { AtLeastOneChain };
@@ -19,7 +20,7 @@ export interface RelayerConfig {
    * Create a single-chain relayer.
    * @internal
    */
-  readonly createRelayer: (chain: FheChain) => RelayerSDK;
+  readonly createRelayer: (chain: FheChain, logger: LoggerService) => RelayerSDK;
 }
 
 /** Web relayer config — drives the FHE backend directly. */

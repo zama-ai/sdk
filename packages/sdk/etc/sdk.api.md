@@ -5795,6 +5795,11 @@ export class EncryptionFailedError extends ZamaError {
 }
 
 // @public
+export class EncryptOffloadUnavailableError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
 export interface EncryptParams {
     contractAddress: Address;
     userAddress: Address;
@@ -5842,6 +5847,7 @@ export interface ErrorForCode {
     [ZamaErrorCode.DelegationNotFound]: DelegationNotFoundError;
     [ZamaErrorCode.DelegationNotPropagated]: DelegationNotPropagatedError;
     [ZamaErrorCode.DelegationSelfNotAllowed]: DelegationSelfNotAllowedError;
+    [ZamaErrorCode.EncryptOffloadUnavailable]: EncryptOffloadUnavailableError;
     [ZamaErrorCode.EncryptionFailed]: EncryptionFailedError;
     [ZamaErrorCode.ERC20ReadFailed]: ERC20ReadFailedError;
     [ZamaErrorCode.InsufficientAllowance]: InsufficientAllowanceError;
@@ -12758,6 +12764,7 @@ export class RelayerRequestFailedError extends ZamaError {
 export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
     chain: FheChain;
     createUnsignedLegacyDecryptionPermitEip712(parameters: CreateUnsignedLegacyDecryptionPermitEip712Parameters): Promise<CreateUnsignedLegacyDecryptionPermitEip712ReturnType>;
+    dispose?(): void;
 }
 
 // @public
@@ -20803,6 +20810,7 @@ export const ZamaErrorCode: {
     readonly SigningFailed: "SIGNING_FAILED";
     readonly EncryptionFailed: "ENCRYPTION_FAILED";
     readonly DecryptionFailed: "DECRYPTION_FAILED";
+    readonly EncryptOffloadUnavailable: "ENCRYPT_OFFLOAD_UNAVAILABLE";
     readonly TransactionReverted: "TRANSACTION_REVERTED";
     readonly TransportKeyPairExpired: "KEYPAIR_EXPIRED";
     readonly InvalidTransportKeyPair: "INVALID_KEYPAIR";
