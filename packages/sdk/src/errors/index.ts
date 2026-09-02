@@ -1,7 +1,11 @@
 export { ZamaError, ZamaErrorCode, isRetryable, retryAfterSeconds } from "./base";
 export { matchZamaError, type ErrorForCode } from "./match";
 export { SigningRejectedError, SigningFailedError, type SigningErrorMetadata } from "./signing";
-export { EncryptionFailedError, DecryptionFailedError } from "./encryption";
+export {
+  EncryptionFailedError,
+  DecryptionFailedError,
+  EncryptOffloadUnavailableError,
+} from "./encryption";
 export { TransactionRevertedError } from "./transaction";
 export {
   TransportKeyPairExpiredError,

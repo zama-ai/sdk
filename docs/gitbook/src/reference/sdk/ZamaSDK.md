@@ -485,7 +485,7 @@ See the [Offline reference](./Offline.md#preparepermit) for the request/response
 
 `() => void`
 
-Unsubscribes from signer lifecycle events (disconnect, account change, chain change) without terminating the relayer. Use when you want to stop reacting to wallet events but keep the relayer alive for other SDK instances.
+Releases the SDK-owned resources: unsubscribes from signer lifecycle events (disconnect, account change, chain change) and releases the relayer backends' resources (an encrypt worker, if one is running). Work already in flight finishes, and the instance remains usable: a later operation re-acquires what it needs, respawning the encrypt worker on the next encryption.
 
 ```ts
 sdk.dispose();
@@ -495,7 +495,7 @@ sdk.dispose();
 
 `() => void`
 
-Full cleanup — calls `dispose()` and disposes the signer adapter's own event subscriptions. Call when the SDK is no longer needed.
+Full cleanup: calls `dispose()`, then also disposes the signer adapter's own event subscriptions. Call when the SDK is no longer needed. Like `dispose()`, it leaves the instance usable: a later operation re-acquires what it needs.
 
 ```ts
 sdk.terminate();

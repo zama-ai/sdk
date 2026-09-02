@@ -90,6 +90,7 @@ export {
   DelegationNotPropagatedError,
   DelegationSelfNotAllowedError,
   EncryptionFailedError,
+  EncryptOffloadUnavailableError,
   ERC20ReadFailedError,
   InsufficientAllowanceError,
   InsufficientConfidentialBalanceError,

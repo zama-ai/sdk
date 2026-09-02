@@ -18,6 +18,8 @@ overrides:
   postcss: '>=8.5.23'
   undici-types: 6.19.2
 
+packageExtensionsChecksum: sha256-01Fi1pLbnw6Iv3UElECoFz4o1grCzkU5IwYDikS3JzE=
+
 importers:
 
   .:
@@ -219,6 +221,9 @@ importers:
       '@tanstack/query-core':
         specifier: ^5.102.2
         version: 5.102.2
+      comlink:
+        specifier: ^4.4.2
+        version: 4.4.2
 
   test/playwright:
     dependencies:
@@ -323,6 +328,9 @@ importers:
       '@zama-fhe/test-components':
         specifier: workspace:*
         version: link:../test-components
+      comlink:
+        specifier: ^4.4.2
+        version: 4.4.2
       react:
         specifier: ^19.2.7
         version: 19.2.7
@@ -2281,6 +2289,9 @@ packages:
 
   color-name@1.1.4:
     resolution: {integrity: sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==}
+
+  comlink@4.4.2:
+    resolution: {integrity: sha512-OxGdvBmJuNKSCMO4NTl1L47VRp6xn2wG4F/2hYzB6tiCb709otOxtEYCSvK80PtjODfXXZu8ds+Nw5kVCjqd2g==}
 
   commander@14.0.3:
     resolution: {integrity: sha512-H+y0Jo/T1RZ9qPP4Eh1pkcQcLRglraJaSLoyOtHxu6AapkjWVCy2Sit1QQ4x3Dng8qDlSsZEet7g5Pq06MvTgw==}
@@ -5854,6 +5865,8 @@ snapshots:
 
   color-name@1.1.4: {}
 
+  comlink@4.4.2: {}
+
   commander@14.0.3: {}
 
   compare-func@2.0.0:
@@ -6009,6 +6022,7 @@ snapshots:
       '@mdn/browser-compat-data': 6.1.5
       ast-metadata-inferer: 0.8.1
       browserslist: 4.28.8
+      caniuse-lite: 1.0.30001809
       eslint: 10.8.1(jiti@2.7.0)
       find-up: 5.0.0
       globals: 15.15.0

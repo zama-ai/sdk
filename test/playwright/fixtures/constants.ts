@@ -21,3 +21,14 @@ export const NODE_ANVIL_PORT = 8547;
 
 /** Anvil deployment timeout */
 export const ANVIL_DEPLOY_TIMEOUT_MS = 90_000;
+
+/**
+ * What a hermetic browser lane skips: node-only specs, plus `*-live.spec.ts`,
+ * which needs real testnet infrastructure and belongs to the non-required live
+ * lane.
+ */
+export const HERMETIC_TEST_IGNORE: string[] = [
+  "**/node/**",
+  "**/*.node.spec.ts",
+  "**/*-live.spec.ts",
+];

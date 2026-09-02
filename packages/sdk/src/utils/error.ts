@@ -315,7 +315,7 @@ export function parseRetryAfterHeader(value: string | null | undefined): number 
 }
 
 /** Read a `Retry-After` header (→ seconds) off a `Headers`-like object, if present. */
-function readRetryAfterHeader(headers: unknown): number | undefined {
+export function readRetryAfterHeader(headers: unknown): number | undefined {
   if (headers === null || typeof headers !== "object") {
     return undefined;
   }
