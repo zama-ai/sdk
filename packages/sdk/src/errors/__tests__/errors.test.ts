@@ -340,6 +340,26 @@ describe("wrapSigningError", () => {
       walletErrorName: "InvalidParamsRpcError",
     });
   });
+
+  test("ignores viem's UnknownRpcError -1 sentinel and looks further down the cause chain", () => {
+    const rawWalletError = { code: -32000, message: "insufficient funds for gas" };
+    const unknownRpcError = Object.assign(new Error("An unknown RPC error occurred"), {
+      name: "UnknownRpcError",
+      code: -1,
+      cause: rawWalletError,
+    });
+    const wrapped = wrapSigningError(unknownRpcError, { operation: "grantPermit" });
+    expect(wrapped).toMatchObject({ code: "SIGNING_FAILED", rpcCode: -32000 });
+  });
+
+  test("returns undefined rpcCode when only the -1 sentinel is present", () => {
+    const unknownRpcError = Object.assign(new Error("An unknown RPC error occurred"), {
+      name: "UnknownRpcError",
+      code: -1,
+    });
+    const wrapped = wrapSigningError(unknownRpcError, { operation: "grantPermit" });
+    expect(wrapped).toMatchObject({ code: "SIGNING_FAILED", rpcCode: undefined });
+  });
 });
 
 // --- Delegation errors ---

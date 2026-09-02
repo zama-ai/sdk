@@ -656,6 +656,16 @@ export interface PendingUnshieldQueryConfig {
 export function pendingUnshieldQueryOptions(sdk: ZamaSDK, tokenAddress: Address, config?: PendingUnshieldQueryConfig): QueryFactoryOptions<Hex | null, Error, Hex | null, ReturnType<typeof zamaQueryKeys.pendingUnshield.token>>;
 
 // @public
+export interface PermitErrorEvent extends BaseEvent {
+    error: Error;
+    operation: PermitOperation;
+    type: typeof ZamaSDKEvents.PermitError;
+}
+
+// @public
+export type PermitOperation = "grantPermit" | "grantDelegationPermit" | "registerPermit";
+
+// @public
 export class Permits {
     clear(): Promise<void>;
     grantDelegationPermit(delegator: Address, contracts: Address[]): Promise<void>;
@@ -1578,8 +1588,6 @@ export class ZamaSDK {
     terminate(): void;
 }
 
-// Warning: (ae-forgotten-export) The symbol "PermitErrorEvent" needs to be exported by the entry point index.d.ts
-//
 // @public
 export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | PermitErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | WrapSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 

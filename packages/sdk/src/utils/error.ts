@@ -403,9 +403,14 @@ export function extractHttpStatus(error: unknown): number | undefined {
  * wallet/provider code like `-32603`) found anywhere in a signing failure's cause
  * chain. Gives a signing error a structured, groupable field instead of leaving
  * the code buried in free-text `message` or an opaque nested `cause`.
+ *
+ * Skips `-1`: viem's own `UnknownRpcError` fallback code for errors it can't
+ * classify, not an RPC-provided code. Reporting it as `rpcCode` would read as
+ * a real (if odd) wallet error code, so the chain walk continues past it in
+ * case a real code is nested deeper (e.g. in `cause`).
  */
 export function extractRpcErrorCode(error: unknown): number | undefined {
-  const node = findInErrorChain(error, (n) => typeof n.code === "number");
+  const node = findInErrorChain(error, (n) => typeof n.code === "number" && n.code !== -1);
   return node ? (node.code as number) : undefined;
 }
 
