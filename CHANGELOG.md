@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.6.0-beta.1](https://github.com/zama-ai/sdk/compare/v3.5.2-beta.1...v3.6.0-beta.1) (2026-09-02)
+
+### Features
+
+- **sdk:** offload encryption to a web worker in the web() transport ([#683](https://github.com/zama-ai/sdk/issues/683)) ([981d351]())
+
 ## [3.5.2-beta.1](https://github.com/zama-ai/sdk/compare/v3.5.1...v3.5.2-beta.1) (2026-08-28)
 
 ### Bug Fixes
