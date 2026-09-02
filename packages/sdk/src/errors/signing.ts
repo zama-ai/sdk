@@ -61,20 +61,12 @@ export class SigningFailedError extends ZamaError {
 
 /**
  * Classify a caught signing error into {@link SigningRejectedError},
- * {@link SigningFailedError}, or {@link InvalidTransportKeyPairError}, and
- * return it (mirroring {@link wrapDecryptError}/{@link wrapEncryptError} —
- * callers `throw` the result rather than this function throwing directly, so
- * a caller can emit an observability event carrying the same error first).
- *
- * Detects user rejection via EIP-1193 code 4001 or message heuristics, and
- * enriches the result with `rpcCode`/`walletErrorName` extracted from `error`
- * (see {@link extractRpcErrorCode}/{@link extractWalletErrorName}) so an
- * integrator can fingerprint/alert on structured fields instead of parsing
- * the message text.
- *
- * Errors that are already typed SDK errors are returned as-is (mirroring
- * {@link wrapEncryptError}/{@link wrapDecryptError}), so callers don't need to
- * repeat an `error instanceof ZamaError` check before calling this.
+ * {@link SigningFailedError}, or {@link InvalidTransportKeyPairError} and
+ * return it rather than throw (mirroring {@link wrapDecryptError}/
+ * {@link wrapEncryptError}), so a caller can emit an observability event
+ * carrying the classified error before throwing it themselves. Enriches the
+ * result with `rpcCode`/`walletErrorName` extracted from `error`'s cause
+ * chain, and passes an already-typed `ZamaError` through unchanged.
  */
 export function wrapSigningError(
   error: unknown,

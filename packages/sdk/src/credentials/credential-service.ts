@@ -158,11 +158,9 @@ export class CredentialService {
    *
    * Never call this with an error from credential/vault resolution
    * (`#vault.getOrCreate` / `#vault.readStored`, or anything derived from their
-   * result, e.g. `TransportKeyPairChangedError`) — that boundary must stay
-   * outside emission. See `zama-sdk-credentials-lifecycle.test.ts`'s "a
-   * KeyWrappingError from credential resolution never reaches a ZamaSDKEvent
-   * payload": vault failures can be adjacent to `transportKeyPairDerivationSecret`
-   * internals and must never reach the public `onEvent` stream.
+   * result, e.g. `TransportKeyPairChangedError`) — those failures can be
+   * adjacent to `transportKeyPairDerivationSecret` internals and must never
+   * reach the public `onEvent` stream.
    */
   #failPermit(operation: PermitOperation, error: unknown, description: string): ZamaError {
     const failure = wrapSigningError(error, { operation, description });
@@ -197,8 +195,8 @@ export class CredentialService {
     }
     const requested = normalizeAddresses(contracts);
 
-    // Credential resolution — deliberately outside any emit boundary. See
-    // #failPermit's doc for the invariant this preserves.
+    // Credential/vault resolution — deliberately not wrapped; those failures
+    // must never reach onEvent.
     const keypair = await this.#vault.getOrCreate(signerAddress);
     if (requested.length === 0) {
       return { keypair, permissions: [] };
@@ -384,9 +382,8 @@ export class CredentialService {
     // generating a fresh one via getOrCreate would just be discarded by the
     // comparison below, having wastefully persisted a key nothing will use.
     //
-    // Credential resolution (through transportKeyPair below) is deliberately
-    // outside any emit boundary. See #failPermit's doc for the invariant this
-    // preserves.
+    // Credential/vault resolution (through transportKeyPair below) is
+    // deliberately not wrapped; those failures must never reach onEvent.
     const signerAddress = parsed.signerAddress;
     const keypair = await this.#vault.readStored(signerAddress);
     if (keypair === null || keypair.publicKey !== message.publicKey) {
