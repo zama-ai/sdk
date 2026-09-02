@@ -128,6 +128,32 @@ describe("EncryptWorkerClient dispatch", () => {
     expect(inline.encryptValue).not.toHaveBeenCalled();
   });
 
+  test("an abort during init rejects the call without dispatching it", async () => {
+    const { client, api } = makeClient();
+    const controller = new AbortController();
+    let finishInit!: () => void;
+    api.init.mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishInit = resolve;
+      }),
+    );
+
+    const pending = client.encryptValue({
+      ...(ENCRYPT_VALUE_ARGS as object),
+      options: { signal: controller.signal },
+    } as never);
+    await vi.waitFor(() => expect(api.init).toHaveBeenCalledOnce());
+    controller.abort();
+    finishInit();
+
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    expect(api.encryptValue).not.toHaveBeenCalled();
+
+    // Init still completed, so the next call runs over the same worker.
+    await expect(client.encryptValue(ENCRYPT_VALUE_ARGS)).resolves.toEqual(WORKER_RESULT);
+    expect(harness.workers).toHaveLength(1);
+  });
+
   test("an already-aborted signal rejects with its own reason", async () => {
     const { client, api } = makeClient();
     const controller = new AbortController();

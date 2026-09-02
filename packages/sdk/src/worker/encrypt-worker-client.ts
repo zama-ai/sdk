@@ -70,6 +70,12 @@ function isCloneFailure(error: unknown): boolean {
   );
 }
 
+function throwIfAborted(signal: AbortSignal | undefined): void {
+  if (signal?.aborted) {
+    throw signal.reason ?? new DOMException("The operation was aborted.", "AbortError");
+  }
+}
+
 /** What the client remembers about worker crashes, dropped whole by a worker answer and by a release. */
 type CrashHistory = {
   readonly count: number;
@@ -272,13 +278,11 @@ export class EncryptWorkerClient implements EncryptOffloadBackend {
     callOptions: CallOptions | undefined,
   ): Promise<T> {
     const { signal, onProgress, ...options } = callOptions ?? {};
-    // Checked before anything is spent: dispatching an already-aborted call
-    // would run the whole proof anyway, since the worker's event loop is blocked
-    // by the WASM work and the abort message only dequeues once it is done.
-    if (signal?.aborted) {
-      throw signal.reason ?? new DOMException("The operation was aborted.", "AbortError");
-    }
+    // The worker dequeues an abort only after the proof, so a dispatched call always runs whole.
+    throwIfAborted(signal);
     await this.init();
+    // A listener added after the abort never fires, so an abort during init needs this recheck.
+    throwIfAborted(signal);
     const generation = this.#generation;
     const api = generation?.api;
     // An existing degrade attempt already carries the decision that created it,
