@@ -2,6 +2,8 @@ import type { Address } from "viem";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { createMockSigner } from "../../test-fixtures/signer";
 import { ChainMismatchError, ConfigurationError, SignerNotConfiguredError } from "../../errors";
+import { ZamaSDKEvents } from "../../events/sdk-events";
+import type { ZamaSDKEvent } from "../../events/sdk-events";
 
 const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const CONTRACT_B = "0x3C3c3C3c3C3C3c3c3c3C3c3C3C3c3c3C3c3c3C3C" as Address;
@@ -50,6 +52,46 @@ describe("Permits", () => {
       const sdk = createSDK({ signer: undefined });
       await expect(sdk.permits.warmTransportKeyPair()).resolves.toBeUndefined();
       expect(relayer.generateTransportKeyPair).not.toHaveBeenCalled();
+    });
+
+    // This guard runs in Permits itself, before CredentialService is ever
+    // reached — it has its own emit point specifically so this is observable.
+    test("grantPermit emits a PermitError event for a failure before any signing", async ({
+      createSDK,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const sdk = createSDK({ signer: undefined, onEvent: (e) => events.push(e) });
+
+      await expect(sdk.permits.grantPermit([CONTRACT_A])).rejects.toBeInstanceOf(
+        SignerNotConfiguredError,
+      );
+
+      expect(events).toEqual([
+        expect.objectContaining({
+          type: ZamaSDKEvents.PermitError,
+          operation: "grantPermit",
+          error: expect.any(SignerNotConfiguredError),
+        }),
+      ]);
+    });
+
+    test("grantDelegationPermit emits a PermitError event for a failure before any signing", async ({
+      createSDK,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const sdk = createSDK({ signer: undefined, onEvent: (e) => events.push(e) });
+
+      await expect(
+        sdk.permits.grantDelegationPermit(DELEGATOR, [CONTRACT_A]),
+      ).rejects.toBeInstanceOf(SignerNotConfiguredError);
+
+      expect(events).toEqual([
+        expect.objectContaining({
+          type: ZamaSDKEvents.PermitError,
+          operation: "grantDelegationPermit",
+          error: expect.any(SignerNotConfiguredError),
+        }),
+      ]);
     });
   });
 
@@ -100,6 +142,32 @@ describe("Permits", () => {
       await expect(
         sdk.permits.grantDelegationPermit(DELEGATOR, [CONTRACT_A]),
       ).rejects.toMatchObject({ operation: "grantDelegationPermit" });
+    });
+
+    test("grantPermit emits a PermitError event on chain mismatch, before any signing", async ({
+      createSDK,
+      signer,
+      provider,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const sdk = createSDK({ onEvent: (e) => events.push(e) });
+      const account = { address: signer.walletAccount.getSnapshot()!.address, chainId: 1 };
+      vi.mocked(signer.walletAccount.getSnapshot).mockReturnValue(account);
+      vi.mocked(signer.requireWalletAccount).mockReturnValue(account);
+      vi.mocked(provider.getChainId).mockResolvedValue(11155111);
+
+      await expect(sdk.permits.grantPermit([CONTRACT_A])).rejects.toBeInstanceOf(
+        ChainMismatchError,
+      );
+
+      expect(events).toEqual([
+        expect.objectContaining({
+          type: ZamaSDKEvents.PermitError,
+          operation: "grantPermit",
+          error: expect.any(ChainMismatchError),
+        }),
+      ]);
+      expect(signer.signTypedData).not.toHaveBeenCalled();
     });
   });
 

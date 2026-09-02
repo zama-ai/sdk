@@ -360,6 +360,16 @@ describe("wrapSigningError", () => {
     const wrapped = wrapSigningError(unknownRpcError, { operation: "grantPermit" });
     expect(wrapped).toMatchObject({ code: "SIGNING_FAILED", rpcCode: undefined });
   });
+
+  test("passes an already-typed ZamaError through unchanged", () => {
+    const original = new NotEntitledError({
+      encryptedValue: "0xabc",
+      contractAddress: "0xcontract",
+      account: "0xaccount",
+    });
+    const wrapped = wrapSigningError(original, { operation: "grantPermit" });
+    expect(wrapped).toBe(original);
+  });
 });
 
 // --- Delegation errors ---

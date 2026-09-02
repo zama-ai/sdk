@@ -71,11 +71,18 @@ export class SigningFailedError extends ZamaError {
  * (see {@link extractRpcErrorCode}/{@link extractWalletErrorName}) so an
  * integrator can fingerprint/alert on structured fields instead of parsing
  * the message text.
+ *
+ * Errors that are already typed SDK errors are returned as-is (mirroring
+ * {@link wrapEncryptError}/{@link wrapDecryptError}), so callers don't need to
+ * repeat an `error instanceof ZamaError` check before calling this.
  */
 export function wrapSigningError(
   error: unknown,
   context: { operation: string; description?: string },
 ): ZamaError {
+  if (error instanceof ZamaError) {
+    return error;
+  }
   const { operation, description } = context;
   const hasCode4001 =
     typeof error === "object" && error !== null && "code" in error && error.code === 4001;

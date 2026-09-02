@@ -1,4 +1,3 @@
-import type { ParseSignedDecryptionPermitReturnType as SignedDecryptionPermit } from "@fhevm/sdk/actions/chain";
 import type { Address, Hex } from "viem";
 import type { ChainRouter } from "../chains/router";
 import { ZamaError } from "../errors/base";
@@ -152,6 +151,26 @@ export class CredentialService {
   }
 
   /**
+   * Classify a raw permit-flow error, emit the corresponding
+   * {@link ZamaSDKEvents.PermitError} event, and return the classified error for
+   * the caller to throw. Single choke point for `grantPermit`/`registerPermit`
+   * (and `#signPermit`) so every failure emits exactly once.
+   *
+   * Never call this with an error from credential/vault resolution
+   * (`#vault.getOrCreate` / `#vault.readStored`, or anything derived from their
+   * result, e.g. `TransportKeyPairChangedError`) — that boundary must stay
+   * outside emission. See `zama-sdk-credentials-lifecycle.test.ts`'s "a
+   * KeyWrappingError from credential resolution never reaches a ZamaSDKEvent
+   * payload": vault failures can be adjacent to `transportKeyPairDerivationSecret`
+   * internals and must never reach the public `onEvent` stream.
+   */
+  #failPermit(operation: PermitOperation, error: unknown, description: string): ZamaError {
+    const failure = wrapSigningError(error, { operation, description });
+    this.#emitEvent({ type: ZamaSDKEvents.PermitError, operation, error: failure });
+    return failure;
+  }
+
+  /**
    * Resolve a keypair and permissions covering `contracts`, minimizing wallet
    * prompts by reusing or widening existing permits where possible. Empty
    * `contracts` warms the keypair without prompting.
@@ -166,17 +185,32 @@ export class CredentialService {
     contracts: readonly Address[],
     delegator?: Address,
   ): Promise<SerializedTransportKeyPairWithPermissions> {
-    const signer = this.#requireSigner("grantPermit");
-    const account = signer.requireWalletAccount("grantPermit");
-    const signerAddress = checksum(account.address);
+    const operation: PermitOperation =
+      delegator !== undefined ? "grantDelegationPermit" : "grantPermit";
+    let signerAddress: ChecksummedAddress;
+    try {
+      const signer = this.#requireSigner("grantPermit");
+      const account = signer.requireWalletAccount("grantPermit");
+      signerAddress = checksum(account.address);
+    } catch (error) {
+      throw this.#failPermit(operation, error, "grant failed");
+    }
     const requested = normalizeAddresses(contracts);
+
+    // Credential resolution — deliberately outside any emit boundary. See
+    // #failPermit's doc for the invariant this preserves.
     const keypair = await this.#vault.getOrCreate(signerAddress);
     if (requested.length === 0) {
       return { keypair, permissions: [] };
     }
 
     const scope = this.#permissionScope(signerAddress, delegator);
-    const permissions = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
+    let permissions: Permission[];
+    try {
+      permissions = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
+    } catch (error) {
+      throw this.#failPermit(operation, error, "grant failed");
+    }
 
     const uncovered = uncoveredContracts(permissions, requested);
     if (uncovered.length > 0) {
@@ -310,7 +344,12 @@ export class CredentialService {
    * @throws if the signature is invalid or malformed. {@link SigningFailedError}
    */
   async registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void> {
-    const parsed = parseSchema(PreparedPermitSchema, prepared);
+    let parsed: PreparedPermit;
+    try {
+      parsed = parseSchema(PreparedPermitSchema, prepared);
+    } catch (error) {
+      throw this.#failPermit("registerPermit", error, "validation failed");
+    }
 
     // Snapshot the relayer and chain together, before the first await — see the
     // identical guard in preparePermit.
@@ -320,14 +359,22 @@ export class CredentialService {
     const { domain, message } = parsed.eip712;
     const preparedChainId = Number(domain.chainId);
     if (preparedChainId !== activeChainId) {
-      throw new PreparedPermitChainMismatchError({ preparedChainId, activeChainId });
+      throw this.#failPermit(
+        "registerPermit",
+        new PreparedPermitChainMismatchError({ preparedChainId, activeChainId }),
+        "validation failed",
+      );
     }
     const startTimestamp = Number(message.startTimestamp);
     const durationDays = Number(message.durationDays);
     if (nowSeconds() >= startTimestamp + durationDays * SECONDS_PER_DAY) {
-      throw new PreparedPermitExpiredError(
-        `registerPermit: the prepared permit's validity window (starting ${startTimestamp}, ` +
-          `${durationDays}d) has already elapsed — call preparePermit again.`,
+      throw this.#failPermit(
+        "registerPermit",
+        new PreparedPermitExpiredError(
+          `registerPermit: the prepared permit's validity window (starting ${startTimestamp}, ` +
+            `${durationDays}d) has already elapsed — call preparePermit again.`,
+        ),
+        "validation failed",
       );
     }
 
@@ -336,6 +383,10 @@ export class CredentialService {
     // stored key pair can only mean it changed since preparePermit ran —
     // generating a fresh one via getOrCreate would just be discarded by the
     // comparison below, having wastefully persisted a key nothing will use.
+    //
+    // Credential resolution (through transportKeyPair below) is deliberately
+    // outside any emit boundary. See #failPermit's doc for the invariant this
+    // preserves.
     const signerAddress = parsed.signerAddress;
     const keypair = await this.#vault.readStored(signerAddress);
     if (keypair === null || keypair.publicKey !== message.publicKey) {
@@ -344,11 +395,10 @@ export class CredentialService {
           "preparePermit again to rebind the signature request to the current key pair.",
       );
     }
-
     const transportKeyPair = await relayer.parseTransportKeyPair(keypair);
-    let signedPermit: SignedDecryptionPermit;
+
     try {
-      signedPermit = await relayer.parseSignedDecryptionPermit({
+      const signedPermit = await relayer.parseSignedDecryptionPermit({
         serializedPermit: {
           version: parsed.version,
           eip712: parsed.eip712,
@@ -357,44 +407,32 @@ export class CredentialService {
         },
         transportKeyPair,
       });
-    } catch (error) {
-      const failure =
-        error instanceof ZamaError
-          ? error
-          : wrapSigningError(error, {
-              operation: "registerPermit",
-              description: "signature verification failed",
-            });
-      this.#emitEvent({
-        type: ZamaSDKEvents.PermitError,
-        operation: "registerPermit",
-        error: failure,
-      });
-      throw failure;
-    }
-    if (signedPermit.version !== 1) {
-      throw new ConfigurationError(
-        `registerPermit: expected a V1 signed permit, got version ${signedPermit.version}.`,
+      if (signedPermit.version !== 1) {
+        throw new ConfigurationError(
+          `registerPermit: expected a V1 signed permit, got version ${signedPermit.version}.`,
+        );
+      }
+
+      const serializedPermit = SerializedPermitSchema.parse(
+        await relayer.serializeSignedDecryptionPermit({ signedPermit }),
       );
+
+      const permission: Permission = {
+        keypairPublicKey: keypair.publicKey,
+        contractAddresses: normalizeAddresses(signedPermit.eip712.message.contractAddresses),
+        serializedPermit,
+        startTimestamp: Number(signedPermit.eip712.message.startTimestamp),
+        durationDays: Number(signedPermit.eip712.message.durationDays),
+      };
+      const scope: PermissionScope = {
+        signerAddress,
+        chainId: activeChainId,
+        delegatorAddress: checksum(signedPermit.encryptedDataOwnerAddress),
+      };
+      await this.#store.replace(scope, serializedPermit.signature, permission);
+    } catch (error) {
+      throw this.#failPermit("registerPermit", error, "registration failed");
     }
-
-    const serializedPermit = SerializedPermitSchema.parse(
-      await relayer.serializeSignedDecryptionPermit({ signedPermit }),
-    );
-
-    const permission: Permission = {
-      keypairPublicKey: keypair.publicKey,
-      contractAddresses: normalizeAddresses(signedPermit.eip712.message.contractAddresses),
-      serializedPermit,
-      startTimestamp: Number(signedPermit.eip712.message.startTimestamp),
-      durationDays: Number(signedPermit.eip712.message.durationDays),
-    };
-    const scope: PermissionScope = {
-      signerAddress,
-      chainId: activeChainId,
-      delegatorAddress: checksum(signedPermit.encryptedDataOwnerAddress),
-    };
-    await this.#store.replace(scope, serializedPermit.signature, permission);
   }
 
   /**
@@ -639,20 +677,17 @@ export class CredentialService {
       };
     } catch (error) {
       const operation: PermitOperation = isDelegated ? "grantDelegationPermit" : "grantPermit";
-      let failure: ZamaError;
-      if (error instanceof ZamaError) {
-        failure = error;
-      } else {
-        // A key pair the relayer can't re-derive (post KMS/TKMS rotation) is
-        // unusable: evict it so the next grantPermit regenerates a valid one, then
-        // surface the typed InvalidTransportKeyPairError via wrapSigningError.
-        if (error instanceof Error && isInvalidTransportKeyPairMessage(error.message)) {
-          await this.#vault.evict(scope.signerAddress);
-        }
-        failure = wrapSigningError(error, { operation, description: "credential signing failed" });
+      // A key pair the relayer can't re-derive (post KMS/TKMS rotation) is
+      // unusable: evict it so the next grantPermit regenerates a valid one, then
+      // surface the typed InvalidTransportKeyPairError via wrapSigningError.
+      if (
+        !(error instanceof ZamaError) &&
+        error instanceof Error &&
+        isInvalidTransportKeyPairMessage(error.message)
+      ) {
+        await this.#vault.evict(scope.signerAddress);
       }
-      this.#emitEvent({ type: ZamaSDKEvents.PermitError, operation, error: failure });
-      throw failure;
+      throw this.#failPermit(operation, error, "credential signing failed");
     }
   }
 

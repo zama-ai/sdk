@@ -7,7 +7,10 @@ import { TEST_TKMS_VERSION } from "../../test-fixtures/constants";
 import { SigningRejectedError, SigningFailedError } from "../../errors/signing";
 import { InvalidTransportKeyPairError } from "../../errors/credential";
 import { ConfigurationError } from "../../errors/relayer";
+import { SignerNotConfiguredError } from "../../errors/signer";
 import { ZamaSDKEvents } from "../../events/sdk-events";
+import { LoggerService } from "../../services/logger-service";
+import { CredentialService } from "../credential-service";
 import { DerivationSecretHolder } from "../keypair-wrapping";
 import type { SerializedTransportKeyPairWithPermissions } from "../types";
 
@@ -611,6 +614,36 @@ describe("CredentialService.allow signing-error event emission", () => {
     await service.grantPermit([A]);
 
     expect(emitEvent).not.toHaveBeenCalled();
+  });
+
+  // No signer configured is a failure mode that pre-dates any signing attempt —
+  // #requireSigner throws directly, before #vault.getOrCreate is ever reached.
+  // Constructs CredentialService directly (not via createCredentialService,
+  // whose factory always falls back to a configured signer) to reach it.
+  test("emits a PermitError event for a failure before any signing (no signer configured)", async ({
+    relayer,
+    storage,
+  }) => {
+    const emitEvent = vi.fn();
+    const service = new CredentialService({
+      router: createMockRouter({ relayer }),
+      signer: undefined,
+      transportKeyPairTTL: 86400,
+      permitTTL: 1,
+      storage,
+      logger: new LoggerService(),
+      emitEvent,
+    });
+
+    await expect(service.grantPermit([A])).rejects.toBeInstanceOf(SignerNotConfiguredError);
+
+    expect(emitEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: ZamaSDKEvents.PermitError,
+        operation: "grantPermit",
+        error: expect.any(SignerNotConfiguredError),
+      }),
+    );
   });
 });
 

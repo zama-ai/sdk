@@ -218,6 +218,7 @@ export class ZamaSDK {
       cachingService: this.#cachingService,
       credentialService: this.#credentialService,
       logger: this.#logger,
+      emitEvent: this.emitEvent.bind(this),
     });
     this.delegations = new Delegations({
       signer: this.signer,

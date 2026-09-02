@@ -170,7 +170,7 @@ matchZamaError(error, {
 
 **Code:** `SIGNING_REJECTED`
 
-Thrown when the user clicks "Reject" in their wallet popup during an EIP-712 signature request (transport key pair generation or session signing).
+Thrown when the user clicks "Reject" in their wallet popup during an EIP-712 signature request (transport key pair generation or session signing). The error carries `operation` (the SDK method that was signing, e.g. `"grantPermit"`), and, when the wallet/provider's raw error exposes them, `rpcCode` and `walletErrorName`.
 
 ```ts
 try {
@@ -188,7 +188,7 @@ try {
 
 **Code:** `SIGNING_FAILED`
 
-The wallet attempted to sign but failed for a reason other than user rejection — network issues, hardware wallet firmware problems, or RPC timeouts.
+The wallet attempted to sign but failed for a reason other than user rejection — network issues, hardware wallet firmware problems, or RPC timeouts. Like `SigningRejectedError`, it carries `operation`, and, when recoverable from the wallet/provider's raw error, `rpcCode` (its JSON-RPC / EIP-1193 numeric error code) and `walletErrorName` (the error class name the wallet/provider library threw, e.g. viem's `InvalidParamsRpcError`) — useful for grouping and alerting on structured fields instead of parsing `message`. `grantPermit`, `grantDelegationPermit`, and `registerPermit` failures also emit a `ZamaSDKEvents.PermitError` event carrying the same error before throwing; see [`onEvent`](ZamaSDK.md#onevent).
 
 ```ts
 matchZamaError(error, { SIGNING_FAILED: (e) => console.error("Wallet signing error:", e.message) });

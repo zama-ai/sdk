@@ -2,6 +2,8 @@ import { getAddress, type Address, type Hex } from "viem";
 import type { CredentialService } from "../credentials/credential-service";
 import type { PreparedPermit } from "../credentials/types";
 import { requireConfigured } from "../errors";
+import type { PermitOperation, ZamaSDKEventInput } from "../events/sdk-events";
+import { ZamaSDKEvents } from "../events/sdk-events";
 import type { CachingService } from "../services/caching-service";
 import type { GenericLogger, GenericProvider, GenericSigner } from "../types";
 import { swallow } from "../utils";
@@ -31,6 +33,7 @@ export class Permits {
   readonly #cachingService: CachingService;
   readonly #credentialService: CredentialService | undefined;
   readonly #logger: GenericLogger;
+  readonly #emitEvent: (input: ZamaSDKEventInput) => void;
 
   /** @internal */
   constructor(opts: {
@@ -39,16 +42,39 @@ export class Permits {
     cachingService: CachingService;
     credentialService: CredentialService | undefined;
     logger: GenericLogger;
+    emitEvent: (input: ZamaSDKEventInput) => void;
   }) {
     this.#signer = opts.signer;
     this.#provider = opts.provider;
     this.#cachingService = opts.cachingService;
     this.#credentialService = opts.credentialService;
     this.#logger = opts.logger;
+    this.#emitEvent = opts.emitEvent;
   }
 
   #requireCredentialService(operation: string): CredentialService {
     return requireConfigured(this.#credentialService, operation);
+  }
+
+  /**
+   * Emit a {@link ZamaSDKEvents.PermitError} event for a pre-flight guard
+   * failure (no signer/CredentialService configured, chain mismatch) and
+   * rethrow the same error unchanged. These guards run in this namespace
+   * layer, before {@link CredentialService} (and its own equivalent choke
+   * point) is ever reached, so without this they'd be invisible to `onEvent`
+   * regardless of what CredentialService itself emits.
+   *
+   * Only for the pre-flight guards below — never wrap a delegated
+   * `CredentialService` call in this, since that call already emits
+   * internally on failure; doing it here too would double-emit.
+   */
+  #failPermit(operation: PermitOperation, error: unknown): never {
+    this.#emitEvent({
+      type: ZamaSDKEvents.PermitError,
+      operation,
+      error: error instanceof Error ? error : new Error(String(error)),
+    });
+    throw error;
   }
 
   /**
@@ -69,8 +95,13 @@ export class Permits {
     if (contracts.length === 0) {
       return;
     }
-    const service = this.#requireCredentialService("grantPermit");
-    await requireChainAlignment("grantPermit", this.#signer, this.#provider);
+    let service: CredentialService;
+    try {
+      service = this.#requireCredentialService("grantPermit");
+      await requireChainAlignment("grantPermit", this.#signer, this.#provider);
+    } catch (error) {
+      this.#failPermit("grantPermit", error);
+    }
     await service.grantPermit(contracts);
   }
 
@@ -87,8 +118,13 @@ export class Permits {
     if (contracts.length === 0) {
       return;
     }
-    const service = this.#requireCredentialService("grantDelegationPermit");
-    await requireChainAlignment("grantDelegationPermit", this.#signer, this.#provider);
+    let service: CredentialService;
+    try {
+      service = this.#requireCredentialService("grantDelegationPermit");
+      await requireChainAlignment("grantDelegationPermit", this.#signer, this.#provider);
+    } catch (error) {
+      this.#failPermit("grantDelegationPermit", error);
+    }
     await service.grantPermit(contracts, delegator);
   }
 
@@ -171,7 +207,12 @@ export class Permits {
    * @throws if the signature is invalid or malformed. {@link SigningFailedError}
    */
   async registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void> {
-    const service = this.#requireCredentialService("registerPermit");
+    let service: CredentialService;
+    try {
+      service = this.#requireCredentialService("registerPermit");
+    } catch (error) {
+      this.#failPermit("registerPermit", error);
+    }
     await service.registerPermit(prepared, signature);
     await this.#clearDecryptCacheForRequester(prepared.signerAddress);
   }
