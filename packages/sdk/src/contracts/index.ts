@@ -59,4 +59,4 @@ export {
   type PaginatedResult,
 } from "./wrappers-registry";
 
-export { MAX_UINT48, MAX_UINT64 } from "./constants";
+export { MAX_UINT48, MAX_UINT64, WILDCARD_CONTRACT } from "./constants";

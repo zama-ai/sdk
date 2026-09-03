@@ -1,6 +1,6 @@
 import { getAddress, type Address } from "viem";
 import { anvil } from "../../chains";
-import { MAX_UINT64 } from "../../contracts";
+import { MAX_UINT64, WILDCARD_CONTRACT } from "../../contracts";
 import { DelegationCooldownError, TransactionRevertedError } from "../../errors";
 import { describe, expect, test, vi } from "../../test-fixtures";
 
@@ -214,6 +214,30 @@ describe("DelegationService", () => {
     expect(emitEvent).toHaveBeenCalledWith(
       { type: events.DelegationSubmitted, txHash: "0xtxhash" },
       CONTRACT,
+    );
+  });
+
+  test("delegateDecryption accepts the wildcard sentinel as contractAddress", async ({
+    delegationService,
+    provider,
+    signer,
+    userAddress,
+    delegateAddress,
+  }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(0n);
+
+    const result = await delegationService.delegateDecryption(signer, {
+      contractAddress: WILDCARD_CONTRACT,
+      delegatorAddress: userAddress,
+      delegateAddress,
+    });
+
+    expect(result).toEqual({ txHash: "0xtxhash", receipt: { logs: [] } });
+    expect(signer.writeContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        functionName: "delegateForUserDecryption",
+        args: [delegateAddress, getAddress(WILDCARD_CONTRACT), MAX_UINT64],
+      }),
     );
   });
 

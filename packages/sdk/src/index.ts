@@ -65,6 +65,9 @@ export {
   ERC7984_WRAPPER_INTERFACE_ID,
 } from "./contracts";
 
+// Delegation/ACL sentinels
+export { MAX_UINT48, MAX_UINT64, WILDCARD_CONTRACT } from "./contracts";
+
 // Token abstraction layer
 export type { Address, Hex } from "viem";
 export type {

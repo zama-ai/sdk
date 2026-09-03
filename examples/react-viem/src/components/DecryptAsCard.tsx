@@ -4,13 +4,7 @@ import { useActionState } from "react";
 import { getAddress, isAddress, formatUnits } from "viem";
 import { useDelegationStatus, useDecryptBalanceAs } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
-import { DelegationNotFoundError, DelegationExpiredError } from "@zama-fhe/sdk";
-
-// Sentinel value used by the ACL contract to represent permanent (no-expiry) delegations.
-// The SDK sends this on-chain when expirationDate is undefined. Not exported by the SDK —
-// if this value changes in a future SDK version, formatExpiry will silently display wrong dates.
-// Track: https://github.com/zama-ai/sdk/issues (search PERMANENT_DELEGATION) for a public export.
-const PERMANENT_DELEGATION = 2n ** 64n - 1n;
+import { DelegationNotFoundError, DelegationExpiredError, MAX_UINT64 } from "@zama-fhe/sdk";
 
 interface DecryptAsCardProps {
   token: TokenWrapperPairWithMetadata;
@@ -19,7 +13,7 @@ interface DecryptAsCardProps {
 }
 
 function formatExpiry(expiryTimestamp: bigint): string {
-  if (expiryTimestamp === PERMANENT_DELEGATION) return "Permanent";
+  if (expiryTimestamp === MAX_UINT64) return "Permanent";
   return new Date(Number(expiryTimestamp) * 1000).toLocaleString();
 }
 

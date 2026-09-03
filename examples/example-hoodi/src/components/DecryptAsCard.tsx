@@ -2,12 +2,9 @@
 
 import { useDecryptBalanceAs, useDelegationStatus } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
-import { DelegationExpiredError, DelegationNotFoundError } from "@zama-fhe/sdk";
+import { DelegationExpiredError, DelegationNotFoundError, MAX_UINT64 } from "@zama-fhe/sdk";
 import { useActionState } from "react";
 import { formatUnits, getAddress, isAddress } from "viem";
-
-// Matches the SDK's internal sentinel value for permanent (no-expiry) delegations.
-const MAX_UINT64 = 2n ** 64n - 1n;
 
 interface DecryptAsCardProps {
   token: TokenWrapperPairWithMetadata;

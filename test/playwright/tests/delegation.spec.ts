@@ -2,6 +2,7 @@ import { test, expect } from "../fixtures";
 import { privateKeyToAccount } from "viem/accounts";
 import { createWalletClient, http } from "viem";
 import { foundry } from "viem/chains";
+import { WILDCARD_CONTRACT } from "@zama-fhe/sdk";
 
 const ACCOUNT_1_PK = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
 const ACCOUNT_1 = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
@@ -141,6 +142,54 @@ test("should delegate decryption to another account", async ({
 
   await page.getByTestId("delegate-button").click();
   await expect(page.getByTestId("delegate-success")).toContainText("Tx: 0x");
+});
+
+test("should delegate for all contracts via the wildcard checkbox", async ({
+  page,
+  account,
+  viemClient,
+  contracts,
+}) => {
+  await page.goto(`/delegation?token=${contracts.cUSDT}&delegate=${ACCOUNT_1}`);
+
+  await page.getByTestId("delegate-wildcard-checkbox").check();
+  await page.getByTestId("delegate-button").click();
+  await expect(page.getByTestId("delegate-success")).toContainText("Tx: 0x");
+
+  // The grant was recorded on the wildcard sentinel, not contracts.cUSDT.
+  const expiry = await viemClient.readContract({
+    address: contracts.acl,
+    abi: aclExpiryAbi,
+    functionName: "getUserDecryptionDelegationExpirationDate",
+    args: [account.address, ACCOUNT_1, WILDCARD_CONTRACT],
+  });
+  expect(expiry).toBe(2n ** 64n - 1n);
+});
+
+test("should decrypt via wildcard delegation to a contract never named in the grant", async ({
+  page,
+  account,
+  viemClient,
+  contracts,
+  anvilPort,
+}) => {
+  const { client: account1Client, account1 } = createAccount1Client(anvilPort);
+
+  // cUSDT is never named in the delegation call below — only the wildcard
+  // sentinel is — so a successful decrypt proves the grant covers a
+  // contract it never mentioned.
+  const hash = await account1Client.writeContract({
+    address: contracts.acl,
+    abi: aclDelegateAbi,
+    functionName: "delegateForUserDecryption",
+    args: [account.address, WILDCARD_CONTRACT, 2n ** 64n - 1n],
+  });
+  await viemClient.waitForTransactionReceipt({ hash });
+
+  await page.goto(`/delegation?token=${contracts.cUSDT}&delegator=${account1.address}`);
+  await page.getByTestId("decrypt-delegate-button").click();
+
+  await expect(page.getByTestId("delegated-balance")).toContainText("0");
 });
 
 test("should decrypt zero balance as delegate", async ({

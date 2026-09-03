@@ -11272,6 +11272,12 @@ export function matchZamaError<R>(error: unknown, handlers: { [K in ZamaErrorCod
 }): R | undefined;
 
 // @public
+export const MAX_UINT48: number;
+
+// @public
+export const MAX_UINT64: bigint;
+
+// @public
 export class MemoryStorage implements GenericStorage {
     delete(key: string): Promise<void>;
     get<T = unknown>(key: string): Promise<T | null>;
@@ -18377,6 +18383,9 @@ export interface WalletAccountStore {
 export class WalletNotConnectedError extends SignerRequiredError {
     constructor(operation: string, options?: ErrorOptions);
 }
+
+// @public
+export const WILDCARD_CONTRACT: "0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF";
 
 // @public
 export const WILDCARD_PERMIT: "wildcard";
