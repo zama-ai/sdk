@@ -68,22 +68,18 @@ export class SigningFailedError extends ZamaError {
  * result with `rpcCode`/`walletErrorName` extracted from `error`'s cause
  * chain, and passes an already-typed `ZamaError` through unchanged.
  */
-export function wrapSigningError(
-  error: unknown,
-  context: { operation: string; description?: string },
-): ZamaError {
+export function wrapSigningError(error: unknown, context: { operation: string }): ZamaError {
   if (error instanceof ZamaError) {
     return error;
   }
-  const { operation, description } = context;
+  const { operation } = context;
   const hasCode4001 =
     typeof error === "object" && error !== null && "code" in error && error.code === 4001;
   const originalMsg = error instanceof Error ? error.message : String(error);
   const lowerMsg = originalMsg.toLowerCase();
   const hasRejectionMessage =
     lowerMsg.includes("user rejected") || lowerMsg.includes("user denied");
-  const prefix = description ? `${operation}: ${description}` : operation;
-  const fullMessage = `${prefix}: ${originalMsg}`;
+  const fullMessage = `${operation}: ${originalMsg}`;
   if (hasCode4001 || hasRejectionMessage) {
     return new SigningRejectedError(fullMessage, {
       cause: error,

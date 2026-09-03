@@ -262,10 +262,7 @@ describe("wrapSigningError", () => {
     // verifyTkmsPublicKey throws this when a stored key pair can't be re-derived
     // under the current TKMS version — a self-heal signal, not a signing failure.
     const original = new Error("invalid TransportKeyPairKeyPair");
-    const wrapped = wrapSigningError(original, {
-      operation: "grantPermit",
-      description: "credential signing failed",
-    });
+    const wrapped = wrapSigningError(original, { operation: "grantPermit" });
     expect(wrapped).toMatchObject({ code: ZamaErrorCode.InvalidTransportKeyPair, cause: original });
   });
 
@@ -277,13 +274,6 @@ describe("wrapSigningError", () => {
   test("includes original message in SigningFailedError message", () => {
     const original = new Error("timeout");
     expect(wrapSigningError(original, { operation: "ctx" }).message).toBe("ctx: timeout");
-  });
-
-  test("includes the description when provided", () => {
-    const original = new Error("timeout");
-    expect(wrapSigningError(original, { operation: "ctx", description: "detail" }).message).toBe(
-      "ctx: detail: timeout",
-    );
   });
 
   test("stringifies non-Error values in the message", () => {

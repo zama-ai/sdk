@@ -151,10 +151,15 @@ export class CredentialService {
   }
 
   /**
-   * Classify a raw permit-flow error, emit the corresponding
-   * {@link ZamaSDKEvents.PermitError} event, and return the classified error for
-   * the caller to throw. Single choke point for `grantPermit`/`registerPermit`
-   * (and `#signPermit`) so every failure emits exactly once.
+   * Emit the corresponding {@link ZamaSDKEvents.PermitError} event for a raw
+   * permit-flow error and return it for the caller to throw. Single choke
+   * point for `grantPermit`/`registerPermit` (and `#signPermit`) so every
+   * failure emits exactly once — safe to call with an error that has nothing
+   * to do with wallet signing (schema validation, a stale/expired prepared
+   * permit, a permit-store read): {@link wrapSigningError} passes an
+   * already-typed `ZamaError` through unchanged, so only a genuinely
+   * unclassified error gets folded into `SigningFailedError`, the same
+   * fallback {@link wrapEncryptError}/{@link wrapDecryptError} use elsewhere.
    *
    * Never call this with an error from credential/vault resolution
    * (`#vault.getOrCreate` / `#vault.readStored`, or anything derived from their
@@ -162,8 +167,8 @@ export class CredentialService {
    * adjacent to `transportKeyPairDerivationSecret` internals and must never
    * reach the public `onEvent` stream.
    */
-  #failPermit(operation: PermitOperation, error: unknown, description: string): ZamaError {
-    const failure = wrapSigningError(error, { operation, description });
+  #failPermit(operation: PermitOperation, error: unknown): ZamaError {
+    const failure = wrapSigningError(error, { operation });
     this.#emitEvent({ type: ZamaSDKEvents.PermitError, operation, error: failure });
     return failure;
   }
@@ -192,13 +197,12 @@ export class CredentialService {
       const signer = this.#requireSigner("grantPermit");
       const account = signer.requireWalletAccount("grantPermit");
       signerAddress = checksum(account.address);
-      // normalizeAddresses/#permissionScope both checksum their inputs, which
-      // throws on a malformed address — kept in this try so that failure
-      // emits PermitError like every other grantPermit failure path.
+      // normalizeAddresses/#permissionScope both call checksum(), which can
+      // throw — kept in this try so a malformed address still emits PermitError.
       requested = normalizeAddresses(contracts);
       scope = this.#permissionScope(signerAddress, delegator);
     } catch (error) {
-      throw this.#failPermit(operation, error, "grant failed");
+      throw this.#failPermit(operation, error);
     }
 
     // Credential/vault resolution — deliberately not wrapped; those failures
@@ -212,7 +216,7 @@ export class CredentialService {
     try {
       permissions = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
     } catch (error) {
-      throw this.#failPermit(operation, error, "grant failed");
+      throw this.#failPermit(operation, error);
     }
 
     const uncovered = uncoveredContracts(permissions, requested);
@@ -351,7 +355,7 @@ export class CredentialService {
     try {
       parsed = parseSchema(PreparedPermitSchema, prepared);
     } catch (error) {
-      throw this.#failPermit("registerPermit", error, "validation failed");
+      throw this.#failPermit("registerPermit", error);
     }
 
     // Snapshot the relayer and chain together, before the first await — see the
@@ -365,7 +369,6 @@ export class CredentialService {
       throw this.#failPermit(
         "registerPermit",
         new PreparedPermitChainMismatchError({ preparedChainId, activeChainId }),
-        "validation failed",
       );
     }
     const startTimestamp = Number(message.startTimestamp);
@@ -377,7 +380,6 @@ export class CredentialService {
           `registerPermit: the prepared permit's validity window (starting ${startTimestamp}, ` +
             `${durationDays}d) has already elapsed — call preparePermit again.`,
         ),
-        "validation failed",
       );
     }
 
@@ -438,7 +440,7 @@ export class CredentialService {
         this.#logger,
       );
     } catch (error) {
-      throw this.#failPermit("registerPermit", error, "registration failed");
+      throw this.#failPermit("registerPermit", error);
     }
   }
 
@@ -695,7 +697,7 @@ export class CredentialService {
       ) {
         await this.#vault.evict(scope.signerAddress);
       }
-      throw this.#failPermit(operation, error, "credential signing failed");
+      throw this.#failPermit(operation, error);
     }
   }
 
