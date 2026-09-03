@@ -194,11 +194,11 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
           };
         },
       ),
-    // `types`/`primaryType`/`message.delegatorAddress` switch on `params.delegatorAddress`,
-    // mirroring `@fhevm/sdk`'s self-vs-delegated V1 EIP-712 shape.
     // Default to V1 (unsupported) so every existing test keeps exercising the
     // legacy permit path unchanged; a test that needs V2 mocks this `true`.
     canUseUnifiedDecryptionPermit: vi.fn().mockResolvedValue(false),
+    // `types`/`primaryType`/`message.delegatorAddress` switch on `params.delegatorAddress`,
+    // mirroring `@fhevm/sdk`'s self-vs-delegated V1 EIP-712 shape.
     createUnsignedLegacyDecryptionPermitEip712: vi
       .fn()
       .mockImplementation(

@@ -1148,11 +1148,11 @@ describe("DecryptionService", () => {
         userAddress,
       );
 
-      // #decrypt groups uncached handles byContract unconditionally, even
+      // Decryption groups uncached handles by contract unconditionally, even
       // though a single wildcard permit already covers every contract in this
       // batch — so this is 3 relayer calls, not 1. If a future change adds a
-      // decryptValuesFromPairs-based fast path for single-permit-covered
-      // batches, this assertion is the one to flip to `toHaveBeenCalledTimes(1)`.
+      // fast path for single-permit-covered batches, this assertion is the
+      // one to flip to `toHaveBeenCalledTimes(1)`.
       expect(relayer.decryptValues).toHaveBeenCalledTimes(3);
     });
   });
