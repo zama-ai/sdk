@@ -186,14 +186,20 @@ export class CredentialService {
     const operation: PermitOperation =
       delegator !== undefined ? "grantDelegationPermit" : "grantPermit";
     let signerAddress: ChecksummedAddress;
+    let requested: ChecksummedAddress[];
+    let scope: PermissionScope;
     try {
       const signer = this.#requireSigner("grantPermit");
       const account = signer.requireWalletAccount("grantPermit");
       signerAddress = checksum(account.address);
+      // normalizeAddresses/#permissionScope both checksum their inputs, which
+      // throws on a malformed address — kept in this try so that failure
+      // emits PermitError like every other grantPermit failure path.
+      requested = normalizeAddresses(contracts);
+      scope = this.#permissionScope(signerAddress, delegator);
     } catch (error) {
       throw this.#failPermit(operation, error, "grant failed");
     }
-    const requested = normalizeAddresses(contracts);
 
     // Credential/vault resolution — deliberately not wrapped; those failures
     // must never reach onEvent.
@@ -202,7 +208,6 @@ export class CredentialService {
       return { keypair, permissions: [] };
     }
 
-    const scope = this.#permissionScope(signerAddress, delegator);
     let permissions: Permission[];
     try {
       permissions = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
@@ -410,7 +415,8 @@ export class CredentialService {
         );
       }
 
-      const serializedPermit = SerializedPermitSchema.parse(
+      const serializedPermit = parseSchema(
+        SerializedPermitSchema,
         await relayer.serializeSignedDecryptionPermit({ signedPermit }),
       );
 
@@ -426,7 +432,11 @@ export class CredentialService {
         chainId: activeChainId,
         delegatorAddress: checksum(signedPermit.encryptedDataOwnerAddress),
       };
-      await this.#store.replace(scope, serializedPermit.signature, permission);
+      await swallow(
+        "replace permit",
+        () => this.#store.replace(scope, serializedPermit.signature, permission),
+        this.#logger,
+      );
     } catch (error) {
       throw this.#failPermit("registerPermit", error, "registration failed");
     }
@@ -661,7 +671,8 @@ export class CredentialService {
           })
         : await relayer.signDecryptionPermit(permitInput);
 
-      const serializedPermit = SerializedPermitSchema.parse(
+      const serializedPermit = parseSchema(
+        SerializedPermitSchema,
         await relayer.serializeSignedDecryptionPermit({ signedPermit }),
       );
 
