@@ -11479,6 +11479,16 @@ export interface Permission {
 }
 
 // @public
+export interface PermitErrorEvent extends BaseEvent {
+    error: Error;
+    operation: PermitOperation;
+    type: typeof ZamaSDKEvents.PermitError;
+}
+
+// @public
+export type PermitOperation = "grantPermit" | "grantDelegationPermit" | "registerPermit";
+
+// @public
 export class Permits {
     clear(): Promise<void>;
     grantDelegationPermit(delegator: Address, contracts: Address[]): Promise<void>;
@@ -14242,13 +14252,26 @@ export class SignerRequiredError extends ZamaError {
 }
 
 // @public
+export interface SigningErrorMetadata {
+    operation?: string;
+    rpcCode?: number;
+    walletErrorName?: string;
+}
+
+// @public
 export class SigningFailedError extends ZamaError {
-    constructor(message: string, options?: ErrorOptions);
+    constructor(message: string, options?: ErrorOptions & SigningErrorMetadata);
+    readonly operation: string | undefined;
+    readonly rpcCode: number | undefined;
+    readonly walletErrorName: string | undefined;
 }
 
 // @public
 export class SigningRejectedError extends ZamaError {
-    constructor(message: string, options?: ErrorOptions);
+    constructor(message: string, options?: ErrorOptions & SigningErrorMetadata);
+    readonly operation: string | undefined;
+    readonly rpcCode: number | undefined;
+    readonly walletErrorName: string | undefined;
 }
 
 // @public
@@ -20871,7 +20894,7 @@ export class ZamaSDK {
 }
 
 // @public
-export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | WrapSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
+export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | PermitErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | WrapSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
 export type ZamaSDKEventListener = (event: ZamaSDKEvent) => void;
@@ -20884,6 +20907,7 @@ export const ZamaSDKEvents: {
     readonly DecryptStart: "decrypt:start";
     readonly DecryptEnd: "decrypt:end";
     readonly DecryptError: "decrypt:error";
+    readonly PermitError: "permit:error";
     readonly TransactionError: "transaction:error";
     readonly ShieldSubmitted: "shield:submitted";
     readonly TransferSubmitted: "transfer:submitted";

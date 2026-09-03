@@ -121,6 +121,7 @@ export {
   ZamaErrorCode,
   type BalanceErrorDetails,
   type ErrorForCode,
+  type SigningErrorMetadata,
   type UnshieldAlreadyFinalizedDetails,
 } from "./errors";
 export { ZamaSDKEvents } from "./events";
@@ -135,6 +136,8 @@ export type {
   EncryptErrorEvent,
   EncryptStartEvent,
   FinalizeUnwrapSubmittedEvent,
+  PermitErrorEvent,
+  PermitOperation,
   RevokeDelegationSubmittedEvent,
   SetOperatorSubmittedEvent,
   ShieldSubmittedEvent,

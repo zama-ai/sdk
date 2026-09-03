@@ -18,6 +18,8 @@ overrides:
   postcss: '>=8.5.23'
   undici-types: 6.19.2
 
+packageExtensionsChecksum: sha256-01Fi1pLbnw6Iv3UElECoFz4o1grCzkU5IwYDikS3JzE=
+
 importers:
 
   .:
@@ -6029,6 +6031,7 @@ snapshots:
       '@mdn/browser-compat-data': 6.1.5
       ast-metadata-inferer: 0.8.1
       browserslist: 4.28.8
+      caniuse-lite: 1.0.30001809
       eslint: 10.8.1(jiti@2.7.0)
       find-up: 5.0.0
       globals: 15.15.0

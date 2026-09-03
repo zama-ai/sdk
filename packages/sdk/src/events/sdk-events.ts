@@ -13,6 +13,8 @@ export const ZamaSDKEvents = {
   DecryptStart: "decrypt:start",
   DecryptEnd: "decrypt:end",
   DecryptError: "decrypt:error",
+  // Credential operations
+  PermitError: "permit:error",
   // Write operations
   TransactionError: "transaction:error",
   ShieldSubmitted: "shield:submitted",
@@ -103,6 +105,29 @@ export interface DecryptErrorEvent extends BaseEvent {
   durationMs: number;
   /** Encrypted values that were being decrypted when the error occurred. */
   encryptedValues: EncryptedValue[];
+}
+
+/**
+ * SDK credential/permit operations that emit a {@link PermitErrorEvent} on failure.
+ * `grantPermit` and `grantDelegationPermit` are distinguished so an integrator
+ * can tell a direct-decrypt permit failure from a delegation-permit failure
+ * without parsing the error message.
+ */
+export type PermitOperation = "grantPermit" | "grantDelegationPermit" | "registerPermit";
+
+/**
+ * Emitted when signing or registering a decryption permit fails — including
+ * wallet/provider signing failures (`SigningFailedError`/`SigningRejectedError`)
+ * that would otherwise only be visible by catching the thrown error at the call
+ * site. Mirrors {@link TransactionErrorEvent} for the credential/permit path.
+ */
+export interface PermitErrorEvent extends BaseEvent {
+  /** Event type discriminant. */
+  type: typeof ZamaSDKEvents.PermitError;
+  /** Which permit operation failed. */
+  operation: PermitOperation;
+  /** The error that caused the operation to fail. */
+  error: Error;
 }
 
 /** Emitted when a write operation's transaction fails (before or after submission). */
@@ -240,6 +265,7 @@ export type ZamaSDKEvent =
   | DecryptStartEvent
   | DecryptEndEvent
   | DecryptErrorEvent
+  | PermitErrorEvent
   | TransactionErrorEvent
   | ShieldSubmittedEvent
   | TransferSubmittedEvent

@@ -248,81 +248,117 @@ describe("matchZamaError", () => {
 describe("wrapSigningError", () => {
   test("wraps Error as SigningRejectedError for code 4001", () => {
     const original = Object.assign(new Error("rejected"), { code: 4001 });
-    expect(() => wrapSigningError(original, "test")).toThrow(
-      expect.objectContaining({ code: "SIGNING_REJECTED", cause: original }),
-    );
+    const wrapped = wrapSigningError(original, { operation: "test" });
+    expect(wrapped).toMatchObject({ code: "SIGNING_REJECTED", cause: original, operation: "test" });
   });
 
   test("wraps Error as SigningFailedError for generic errors", () => {
     const original = new Error("network");
-    expect(() => wrapSigningError(original, "test")).toThrow(
-      expect.objectContaining({ code: "SIGNING_FAILED", cause: original }),
-    );
+    const wrapped = wrapSigningError(original, { operation: "test" });
+    expect(wrapped).toMatchObject({ code: "SIGNING_FAILED", cause: original, operation: "test" });
   });
 
   test("maps @fhevm/sdk's stale-key-pair error to InvalidTransportKeyPairError", () => {
     // verifyTkmsPublicKey throws this when a stored key pair can't be re-derived
     // under the current TKMS version — a self-heal signal, not a signing failure.
     const original = new Error("invalid TransportKeyPairKeyPair");
-    expect(() => wrapSigningError(original, "Credential signing failed")).toThrow(
-      expect.objectContaining({ code: ZamaErrorCode.InvalidTransportKeyPair, cause: original }),
-    );
+    const wrapped = wrapSigningError(original, { operation: "grantPermit" });
+    expect(wrapped).toMatchObject({ code: ZamaErrorCode.InvalidTransportKeyPair, cause: original });
   });
 
   test("includes original message in SigningRejectedError message", () => {
     const original = Object.assign(new Error("user denied"), { code: 4001 });
-    expect(() => wrapSigningError(original, "ctx")).toThrow("ctx: user denied");
+    expect(wrapSigningError(original, { operation: "ctx" }).message).toBe("ctx: user denied");
   });
 
   test("includes original message in SigningFailedError message", () => {
     const original = new Error("timeout");
-    expect(() => wrapSigningError(original, "ctx")).toThrow("ctx: timeout");
+    expect(wrapSigningError(original, { operation: "ctx" }).message).toBe("ctx: timeout");
   });
 
   test("stringifies non-Error values in the message", () => {
-    expect(() => wrapSigningError("string error", "ctx")).toThrow("ctx: string error");
+    expect(wrapSigningError("string error", { operation: "ctx" }).message).toBe(
+      "ctx: string error",
+    );
   });
 
   test("preserves non-Error cause instead of dropping it", () => {
     const stringError = "string error value";
-    expect(() => wrapSigningError(stringError, "test")).toThrow(
-      expect.objectContaining({ code: "SIGNING_FAILED", cause: stringError }),
-    );
+    const wrapped = wrapSigningError(stringError, { operation: "test" });
+    expect(wrapped).toMatchObject({ code: "SIGNING_FAILED", cause: stringError });
   });
 
   test("preserves object cause instead of dropping it", () => {
     const objError = { message: "something went wrong", code: 42 };
-    expect(() => wrapSigningError(objError, "test")).toThrow(
-      expect.objectContaining({ code: "SIGNING_FAILED", cause: objError }),
-    );
+    const wrapped = wrapSigningError(objError, { operation: "test" });
+    expect(wrapped).toMatchObject({ code: "SIGNING_FAILED", cause: objError, rpcCode: 42 });
   });
 
   test("detects rejection from non-Error objects with code 4001", () => {
     const walletError = { code: 4001, message: "User rejected" };
-    expect(() => wrapSigningError(walletError, "test")).toThrow(
-      expect.objectContaining({ code: "SIGNING_REJECTED", cause: walletError }),
-    );
+    const wrapped = wrapSigningError(walletError, { operation: "test" });
+    expect(wrapped).toMatchObject({ code: "SIGNING_REJECTED", cause: walletError, rpcCode: 4001 });
   });
 
   test("detects rejection from 'user rejected' message without code 4001", () => {
     const error = new Error("user rejected the request");
-    expect(() => wrapSigningError(error, "test")).toThrow(
-      expect.objectContaining({ code: "SIGNING_REJECTED", cause: error }),
-    );
+    const wrapped = wrapSigningError(error, { operation: "test" });
+    expect(wrapped).toMatchObject({ code: "SIGNING_REJECTED", cause: error });
   });
 
   test("detects rejection from 'user denied' message without code 4001", () => {
     const error = new Error("user denied transaction signature");
-    expect(() => wrapSigningError(error, "test")).toThrow(
-      expect.objectContaining({ code: "SIGNING_REJECTED", cause: error }),
-    );
+    const wrapped = wrapSigningError(error, { operation: "test" });
+    expect(wrapped).toMatchObject({ code: "SIGNING_REJECTED", cause: error });
   });
 
   test("does not classify generic 'denied' as rejection", () => {
     const error = new Error("Permission denied");
-    expect(() => wrapSigningError(error, "test")).toThrow(
-      expect.objectContaining({ code: "SIGNING_FAILED", cause: error }),
-    );
+    const wrapped = wrapSigningError(error, { operation: "test" });
+    expect(wrapped).toMatchObject({ code: "SIGNING_FAILED", cause: error });
+  });
+
+  test("extracts rpcCode and walletErrorName from a viem-style nested error", () => {
+    const providerError = Object.assign(new Error("chainId should be same as current chainId"), {
+      name: "InvalidParamsRpcError",
+      code: -32603,
+    });
+    const wrapped = wrapSigningError(providerError, { operation: "grantPermit" });
+    expect(wrapped).toMatchObject({
+      code: "SIGNING_FAILED",
+      rpcCode: -32603,
+      walletErrorName: "InvalidParamsRpcError",
+    });
+  });
+
+  test("ignores viem's UnknownRpcError -1 sentinel and looks further down the cause chain", () => {
+    const rawWalletError = { code: -32000, message: "insufficient funds for gas" };
+    const unknownRpcError = Object.assign(new Error("An unknown RPC error occurred"), {
+      name: "UnknownRpcError",
+      code: -1,
+      cause: rawWalletError,
+    });
+    const wrapped = wrapSigningError(unknownRpcError, { operation: "grantPermit" });
+    expect(wrapped).toMatchObject({ code: "SIGNING_FAILED", rpcCode: -32000 });
+  });
+
+  test("returns undefined rpcCode when only the -1 sentinel is present", () => {
+    const unknownRpcError = Object.assign(new Error("An unknown RPC error occurred"), {
+      name: "UnknownRpcError",
+      code: -1,
+    });
+    const wrapped = wrapSigningError(unknownRpcError, { operation: "grantPermit" });
+    expect(wrapped).toMatchObject({ code: "SIGNING_FAILED", rpcCode: undefined });
+  });
+
+  test("passes an already-typed ZamaError through unchanged", () => {
+    const original = new NotEntitledError({
+      encryptedValue: "0xabc",
+      contractAddress: "0xcontract",
+      account: "0xaccount",
+    });
+    const wrapped = wrapSigningError(original, { operation: "grantPermit" });
+    expect(wrapped).toBe(original);
   });
 });
 

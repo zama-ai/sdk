@@ -2152,6 +2152,12 @@ An unshield whose finalize confirmed but whose persisted record was never cleare
 
 The SDK now verifies the record on-chain. `getPendingUnshield()` clears a record whose unwrap request was already finalized and returns `null`. `resumeUnshield()` throws a new `UnshieldAlreadyFinalizedError` (`UNSHIELD_ALREADY_FINALIZED`) instead of broadcasting a reverting transaction, and `useResumeUnshield` refreshes the pending-unshield and balance queries when it sees this error, so the prompt disappears on its own. Treat the error as completion: the funds already arrived. No API change is required to pick this up. See the [error reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) and [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields).
 
+## Structured events and metadata for wallet signing/permit failures
+
+Wallet-signing failures during permit granting (`grantPermit`, `grantDelegationPermit`, `registerPermit`) are now observable: they emit a `ZamaSDKEvents.PermitError` event via [`onEvent`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#onevent), carrying the failed `operation` and the classified error, mirroring the existing `TransactionError` event for write transactions.
+
+`SigningRejectedError` and `SigningFailedError` also gained structured fields — `operation` (the SDK method that was signing), and, when recoverable from the wallet/provider's raw error, `rpcCode` and `walletErrorName` — so an integrator can group and alert on these instead of parsing the error message. See the [error reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#signingrejectederror). No API change is required to pick this up: existing thrown-error behavior for `grantPermit`/`grantDelegationPermit`/`registerPermit` is unchanged for callers that don't subscribe to `onEvent`.
+
 ## 3.x
 
 - source_type: official-doc
@@ -9468,7 +9474,7 @@ matchZamaError(error, {
 
 **Code:** `SIGNING_REJECTED`
 
-Thrown when the user clicks "Reject" in their wallet popup during an EIP-712 signature request (transport key pair generation or session signing).
+Thrown when the user clicks "Reject" in their wallet popup during an EIP-712 signature request (transport key pair generation or session signing). The error carries `operation` (the SDK method that was signing, e.g. `"grantPermit"`), and, when the wallet/provider's raw error exposes them, `rpcCode` and `walletErrorName`.
 
 ```ts
 try {
@@ -9486,7 +9492,7 @@ try {
 
 **Code:** `SIGNING_FAILED`
 
-The wallet attempted to sign but failed for a reason other than user rejection — network issues, hardware wallet firmware problems, or RPC timeouts.
+The wallet attempted to sign but failed for a reason other than user rejection — network issues, hardware wallet firmware problems, or RPC timeouts. Like `SigningRejectedError`, it carries `operation`, and, when recoverable from the wallet/provider's raw error, `rpcCode` (its JSON-RPC / EIP-1193 numeric error code) and `walletErrorName` (the error class name the wallet/provider library threw, e.g. viem's `InvalidParamsRpcError`) — useful for grouping and alerting on structured fields instead of parsing `message`. `grantPermit`, `grantDelegationPermit`, and `registerPermit` failures also emit a `ZamaSDKEvents.PermitError` event carrying the same error before throwing; see [`onEvent`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#onevent).
 
 ```ts
 matchZamaError(error, { SIGNING_FAILED: (e) => console.error("Wallet signing error:", e.message) });
