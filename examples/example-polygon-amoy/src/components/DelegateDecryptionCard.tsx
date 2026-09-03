@@ -3,8 +3,12 @@
 import { useActionState, useState } from "react";
 import { getAddress } from "viem";
 import { useDelegateDecryption } from "@zama-fhe/react-sdk";
-import { WILDCARD_CONTRACT, type TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
+import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { AMOY_EXPLORER_URL } from "@/lib/config";
+
+// Mirrors the SDK's WILDCARD_CONTRACT export — not yet in this app's pinned
+// SDK version. Switch to importing it once the pin is bumped.
+const WILDCARD_CONTRACT = "0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF";
 
 interface DelegateDecryptionCardProps {
   token: TokenWrapperPairWithMetadata;

@@ -3,8 +3,12 @@
 import { useActionState, useState } from "react";
 import { getAddress } from "ethers";
 import { useDelegateDecryption } from "@zama-fhe/react-sdk";
-import { WILDCARD_CONTRACT, type Address, type TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
+import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
+
+// Mirrors the SDK's WILDCARD_CONTRACT export — not yet in this app's pinned
+// SDK version. Switch to importing it once the pin is bumped.
+const WILDCARD_CONTRACT = "0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF";
 
 interface DelegateDecryptionCardProps {
   token: TokenWrapperPairWithMetadata;

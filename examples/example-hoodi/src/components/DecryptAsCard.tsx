@@ -2,9 +2,13 @@
 
 import { useDecryptBalanceAs, useDelegationStatus } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
-import { DelegationExpiredError, DelegationNotFoundError, MAX_UINT64 } from "@zama-fhe/sdk";
+import { DelegationExpiredError, DelegationNotFoundError } from "@zama-fhe/sdk";
 import { useActionState } from "react";
 import { formatUnits, getAddress, isAddress } from "viem";
+
+// Mirrors the SDK's MAX_UINT64 export — not yet in this app's pinned SDK
+// version. Switch to importing it once the pin is bumped.
+const MAX_UINT64 = 2n ** 64n - 1n;
 
 interface DecryptAsCardProps {
   token: TokenWrapperPairWithMetadata;
