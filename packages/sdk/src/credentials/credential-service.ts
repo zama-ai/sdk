@@ -389,8 +389,8 @@ export class CredentialService {
     // generating a fresh one via getOrCreate would just be discarded by the
     // comparison below, having wastefully persisted a key nothing will use.
     //
-    // Credential/vault resolution (through transportKeyPair below) is
-    // deliberately not wrapped; those failures must never reach onEvent.
+    // Credential/vault resolution is deliberately not wrapped; those
+    // failures must never reach onEvent.
     const signerAddress = parsed.signerAddress;
     const keypair = await this.#vault.readStored(signerAddress);
     if (keypair === null || keypair.publicKey !== message.publicKey) {
@@ -399,9 +399,9 @@ export class CredentialService {
           "preparePermit again to rebind the signature request to the current key pair.",
       );
     }
-    const transportKeyPair = await relayer.parseTransportKeyPair(keypair);
 
     try {
+      const transportKeyPair = await relayer.parseTransportKeyPair(keypair);
       const signedPermit = await relayer.parseSignedDecryptionPermit({
         serializedPermit: {
           version: parsed.version,
