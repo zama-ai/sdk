@@ -12,6 +12,7 @@ import {
 import { ConfigurationError } from "../errors/relayer";
 import { SignerNotConfiguredError } from "../errors/signer";
 import { wrapSigningError } from "../errors/signing";
+import type { RelayerSDK } from "../relayer/types";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
 import type { GenericLogger, GenericSigner, GenericStorage } from "../types";
@@ -43,6 +44,7 @@ import type {
   Permission,
   PreparedPermit,
   PreparePermitRequest,
+  SerializedPermitEip712,
   SerializedTransportKeyPairWithPermissions,
   StoredTransportKeyPair,
 } from "./types";
@@ -277,17 +279,26 @@ export class CredentialService {
    * unlike {@link grantPermit}. Prefer `grantPermit` unless signing must
    * happen out-of-process.
    *
-   * @throws if `request.contracts` is empty or exceeds {@link MAX_CONTRACTS_PER_PERMIT},
-   *   `request.delegator` equals `request.signer`, or `request.durationDays` exceeds
-   *   the V1 permit maximum of 365 days (enforced by `PermitTTLSchema`). {@link ConfigurationError}
+   * Prefers V2 (unified) permits whenever the chain supports them, mirroring
+   * `grantPermit`: an explicit contract list builds V2 in that case, V1
+   * otherwise; {@link WILDCARD_PERMIT} additionally requests a wildcard scope.
+   *
+   * @throws if `request.contracts` is empty or exceeds {@link MAX_CONTRACTS_PER_PERMIT}
+   *   (not checked for a wildcard request), `request.delegator` equals `request.signer`,
+   *   or `request.durationDays` exceeds the V1 permit maximum of 365 days (enforced by
+   *   `PermitTTLSchema`). {@link ConfigurationError}
+   * @throws if a wildcard permit is requested against a chain that hasn't upgraded to
+   *   protocol v0.14+. {@link UnifiedPermitNotSupportedError}
    */
   async preparePermit(request: PreparePermitRequest): Promise<PreparedPermit> {
     const signerAddress = checksum(request.signer);
-    const contracts = normalizeAddresses(request.contracts);
-    if (contracts.length === 0) {
+    const isWildcard = request.contracts === WILDCARD_PERMIT;
+    const contracts =
+      request.contracts === WILDCARD_PERMIT ? [] : normalizeAddresses(request.contracts);
+    if (!isWildcard && contracts.length === 0) {
       throw new ConfigurationError("preparePermit: request.contracts must not be empty.");
     }
-    if (contracts.length > MAX_CONTRACTS_PER_PERMIT) {
+    if (!isWildcard && contracts.length > MAX_CONTRACTS_PER_PERMIT) {
       throw new ConfigurationError(
         `preparePermit: request.contracts must not exceed ${MAX_CONTRACTS_PER_PERMIT} addresses per call ` +
           `(got ${contracts.length}) — grantPermit chunks automatically, preparePermit does not.`,
@@ -302,10 +313,12 @@ export class CredentialService {
     // PermitTTLSchema caps at MAX_V1_PERMIT_DURATION_DAYS, so an explicit
     // request.durationDays is bounded here, and the this.#permitTTL fallback
     // is bounded the same way at config-build time — no separate check needed.
+    // Reused as-is for a V2 request too: there's no separate V2 TTL config yet.
     const durationDays =
       request.durationDays !== undefined
         ? parseSchema(PermitTTLSchema, request.durationDays)
         : this.#permitTTL;
+    const durationSeconds = durationDays * SECONDS_PER_DAY;
 
     // Snapshot the relayer before the first await: a chain switch mid-flight
     // must not let the EIP-712 domain get built against a relayer bound to a
@@ -320,19 +333,87 @@ export class CredentialService {
     const keypair = await this.#vault.getOrCreate(signerAddress, { strict: true });
     const transportKeyPair = await relayer.parseTransportKeyPair(keypair);
     const startTimestamp = nowSeconds();
-    const eip712 = toJsonSafeEip712(
-      Eip712Schema.parse(
-        await relayer.createUnsignedLegacyDecryptionPermitEip712({
-          transportKeyPair,
-          contractAddresses: contracts,
-          startTimestamp,
-          durationSeconds: durationDays * SECONDS_PER_DAY,
-          ...(delegatorAddress && { delegatorAddress }),
-        }),
-      ),
-    );
 
-    return { version: 1, eip712, signerAddress };
+    // A wildcard request always attempts V2 without a chain-support precheck;
+    // an unsupported chain surfaces as UnifiedPermitNotSupportedError instead.
+    // A specific-contract request checks chain support first and only
+    // upgrades to V2 once confirmed.
+    const version = isWildcard || (await this.#canUseUnifiedPermit()) ? 2 : 1;
+
+    const eip712 = await this.#createUnsignedPermitEip712({
+      version,
+      relayer,
+      transportKeyPair,
+      contracts,
+      startTimestamp,
+      durationSeconds,
+      signerAddress,
+      delegatorAddress,
+    });
+
+    return version === 2
+      ? { version: 2, eip712, signerAddress, ...(delegatorAddress && { delegatorAddress }) }
+      : { version: 1, eip712, signerAddress };
+  }
+
+  /**
+   * Builds the unsigned EIP-712 payload for {@link preparePermit}, converting
+   * an unsupported-chain relayer error into {@link UnifiedPermitNotSupportedError}.
+   */
+  async #createUnsignedPermitEip712(input: {
+    version: 1 | 2;
+    relayer: RelayerSDK;
+    transportKeyPair: Awaited<ReturnType<RelayerSDK["parseTransportKeyPair"]>>;
+    contracts: ChecksummedAddress[];
+    startTimestamp: number;
+    durationSeconds: number;
+    signerAddress: ChecksummedAddress;
+    delegatorAddress?: ChecksummedAddress;
+  }): Promise<SerializedPermitEip712> {
+    const {
+      version,
+      relayer,
+      transportKeyPair,
+      contracts,
+      startTimestamp,
+      durationSeconds,
+      signerAddress,
+      delegatorAddress,
+    } = input;
+    try {
+      const eip712Raw =
+        version === 2
+          ? await relayer.createUnsignedUnifiedDecryptionPermitEip712({
+              transportKeyPair,
+              contractAddresses: contracts,
+              startTimestamp,
+              durationSeconds,
+              signerAddress,
+            })
+          : await relayer.createUnsignedLegacyDecryptionPermitEip712({
+              transportKeyPair,
+              contractAddresses: contracts,
+              startTimestamp,
+              durationSeconds,
+              ...(delegatorAddress && { delegatorAddress }),
+            });
+      return toJsonSafeEip712(Eip712Schema.parse(eip712Raw));
+    } catch (error) {
+      // The chain hasn't upgraded to protocol v0.14+ yet — @fhevm/sdk detects
+      // this from the on-chain KMS context before ever building the typed
+      // data. Surface a typed, self-explanatory error instead of a generic one.
+      if (error instanceof Error && isUnsupportedUnifiedPermitMessage(error.message)) {
+        throw new UnifiedPermitNotSupportedError(
+          "preparePermit: V2 (unified) decryption permits — including wildcard permits — " +
+            "require protocol v0.14 or later on this network. The connected chain hasn't " +
+            "upgraded yet (or its ProtocolConfig contract address isn't configured on this " +
+            "FheChain). Prepare a V1 permit with an explicit contract list instead, or retry " +
+            "once the network upgrades.",
+          { cause: error },
+        );
+      }
+      throw error;
+    }
   }
 
   /**
@@ -375,11 +456,16 @@ export class CredentialService {
       throw new PreparedPermitChainMismatchError({ preparedChainId, activeChainId });
     }
     const startTimestamp = Number(message.startTimestamp);
-    const durationDays = Number(message.durationDays);
-    if (nowSeconds() >= startTimestamp + durationDays * SECONDS_PER_DAY) {
+    const durationSeconds =
+      parsed.version === 2
+        ? Number(message.durationSeconds)
+        : Number(message.durationDays) * SECONDS_PER_DAY;
+    if (nowSeconds() >= startTimestamp + durationSeconds) {
+      const windowDescription =
+        parsed.version === 2 ? `${durationSeconds}s` : `${Number(message.durationDays)}d`;
       throw new PreparedPermitExpiredError(
         `registerPermit: the prepared permit's validity window (starting ${startTimestamp}, ` +
-          `${durationDays}d) has already elapsed — call preparePermit again.`,
+          `${windowDescription}) has already elapsed — call preparePermit again.`,
       );
     }
 
@@ -406,6 +492,10 @@ export class CredentialService {
           eip712: parsed.eip712,
           signature,
           signerAddress,
+          // V2 only: delegation isn't part of the signed message, so it's
+          // threaded through separately here.
+          ...(parsed.version === 2 &&
+            parsed.delegatorAddress && { delegatorAddress: parsed.delegatorAddress }),
         },
         transportKeyPair,
       });
@@ -415,24 +505,29 @@ export class CredentialService {
       }
       throw wrapSigningError(error, "registerPermit: signature verification failed");
     }
-    if (signedPermit.version !== 1) {
-      throw new ConfigurationError(
-        `registerPermit: expected a V1 signed permit, got version ${signedPermit.version}.`,
-      );
-    }
 
     const serializedPermit = SerializedPermitSchema.parse(
       await relayer.serializeSignedDecryptionPermit({ signedPermit }),
     );
 
-    const permission: Permission = {
-      version: 1,
-      keypairPublicKey: keypair.publicKey,
-      contractAddresses: normalizeAddresses(signedPermit.eip712.message.contractAddresses),
-      serializedPermit,
-      startTimestamp: Number(signedPermit.eip712.message.startTimestamp),
-      durationDays: Number(signedPermit.eip712.message.durationDays),
-    };
+    const permission: Permission =
+      signedPermit.version === 2
+        ? {
+            version: 2,
+            keypairPublicKey: keypair.publicKey,
+            contractAddresses: normalizeAddresses(signedPermit.eip712.message.allowedContracts),
+            serializedPermit,
+            startTimestamp: Number(signedPermit.eip712.message.startTimestamp),
+            durationSeconds: Number(signedPermit.eip712.message.durationSeconds),
+          }
+        : {
+            version: 1,
+            keypairPublicKey: keypair.publicKey,
+            contractAddresses: normalizeAddresses(signedPermit.eip712.message.contractAddresses),
+            serializedPermit,
+            startTimestamp: Number(signedPermit.eip712.message.startTimestamp),
+            durationDays: Number(signedPermit.eip712.message.durationDays),
+          };
     const scope: PermissionScope = {
       signerAddress,
       chainId: activeChainId,

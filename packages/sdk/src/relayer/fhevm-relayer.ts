@@ -1,6 +1,7 @@
 import {
   canUseUnifiedDecryptionPermit as canUseUnifiedDecryptionPermitAction,
   createUnsignedLegacyDecryptionPermitEip712 as createUnsignedLegacyDecryptionPermitEip712Action,
+  createUnsignedUnifiedDecryptionPermitEip712 as createUnsignedUnifiedDecryptionPermitEip712Action,
 } from "@fhevm/sdk/actions/base";
 import {
   createFhevmBaseClient,
@@ -394,6 +395,30 @@ export class FhevmRelayer implements RelayerSDK {
    */
   createUnsignedLegacyDecryptionPermitEip712: RelayerSDK["createUnsignedLegacyDecryptionPermitEip712"] =
     (parameters) => createUnsignedLegacyDecryptionPermitEip712Action(this.#base, parameters);
+
+  /**
+   * Builds the unsigned EIP-712 typed data for a V2 (unified) decryption
+   * permit, without signing it — the signer-less counterpart to
+   * {@link signUnifiedDecryptionPermit}. Hand the result to an out-of-process
+   * signer for `eth_signTypedData_v4`, then verify the returned signature via
+   * {@link parseSignedDecryptionPermit}.
+   *
+   * Not on `@fhevm/sdk`'s client decorator, so it's called directly against
+   * the base client rather than through a decorated method.
+   *
+   * @example
+   * ```ts
+   * const eip712 = await relayer.createUnsignedUnifiedDecryptionPermitEip712({
+   *   transportKeyPair,
+   *   contractAddresses: ["0xToken…"], // [] for a wildcard permit
+   *   startTimestamp: Math.floor(Date.now() / 1000),
+   *   durationSeconds: 60 * 60 * 24,
+   *   signerAddress: "0xSigner…",
+   * });
+   * ```
+   */
+  createUnsignedUnifiedDecryptionPermitEip712: RelayerSDK["createUnsignedUnifiedDecryptionPermitEip712"] =
+    (parameters) => createUnsignedUnifiedDecryptionPermitEip712Action(this.#base, parameters);
 
   /**
    * Reports whether the connected relayer supports V2 (unified) decryption
