@@ -94,6 +94,7 @@ export {
   DecryptionFailedError,
   DelegationContractIsSelfError,
   DelegationCooldownError,
+  DelegationDelegateCannotBeWildcardError,
   DelegationDelegateEqualsContractError,
   DelegationExpirationTooSoonError,
   DelegationExpiredError,

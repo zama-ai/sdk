@@ -64,6 +64,8 @@ export const ZamaErrorCode = {
   DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED",
   /** Delegate address cannot be the contract address. */
   DelegationDelegateEqualsContract: "DELEGATION_DELEGATE_EQUALS_CONTRACT",
+  /** Delegate address cannot be the wildcard sentinel — it's only valid as `contractAddress`. */
+  DelegationDelegateCannotBeWildcard: "DELEGATION_DELEGATE_CANNOT_BE_WILDCARD",
   /** Contract address cannot be the sender address. */
   DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF",
   /** The ACL contract is paused. */
@@ -136,6 +138,7 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.ERC20ReadFailed]: false, // conservative: conflates network (transient) and contract (terminal) faults, see class doc
   [ZamaErrorCode.DelegationExpiryUnchanged]: false,
   [ZamaErrorCode.DelegationDelegateEqualsContract]: false,
+  [ZamaErrorCode.DelegationDelegateCannotBeWildcard]: false,
   [ZamaErrorCode.DelegationContractIsSelf]: false,
   [ZamaErrorCode.AclPaused]: false,
   [ZamaErrorCode.DelegationExpirationTooSoon]: false,

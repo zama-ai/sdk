@@ -7,6 +7,7 @@ import {
   WILDCARD_CONTRACT,
 } from "../contracts";
 import {
+  DelegationDelegateCannotBeWildcardError,
   DelegationDelegateEqualsContractError,
   DelegationExpirationTooSoonError,
   DelegationExpiredError,
@@ -91,6 +92,12 @@ export class DelegationService {
     if (normalizedDelegate === normalizedDelegator) {
       throw new DelegationSelfNotAllowedError(
         "Cannot delegate to yourself (delegate === msg.sender).",
+      );
+    }
+
+    if (normalizedDelegate === getAddress(WILDCARD_CONTRACT)) {
+      throw new DelegationDelegateCannotBeWildcardError(
+        "Delegate address cannot be the wildcard sentinel; it can only be used as the contract address.",
       );
     }
 

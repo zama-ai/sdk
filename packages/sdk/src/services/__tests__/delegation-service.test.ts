@@ -214,6 +214,21 @@ describe("DelegationService", () => {
     expect(signer.writeContract).not.toHaveBeenCalled();
   });
 
+  test("delegateDecryption rejects the wildcard sentinel as delegateAddress", async ({
+    delegationService,
+    signer,
+    userAddress,
+  }) => {
+    await expect(
+      delegationService.delegateDecryption(signer, {
+        contractAddress: CONTRACT,
+        delegatorAddress: userAddress,
+        delegateAddress: WILDCARD_CONTRACT,
+      }),
+    ).rejects.toMatchObject({ code: "DELEGATION_DELEGATE_CANNOT_BE_WILDCARD" });
+    expect(signer.writeContract).not.toHaveBeenCalled();
+  });
+
   test("delegateDecryption submits ACL transaction when the requested expiry changes", async ({
     delegationService,
     provider,

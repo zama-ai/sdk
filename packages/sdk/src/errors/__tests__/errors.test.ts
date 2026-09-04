@@ -20,6 +20,7 @@ import {
   DelegationNotPropagatedError,
   DelegationExpiryUnchangedError,
   DelegationDelegateEqualsContractError,
+  DelegationDelegateCannotBeWildcardError,
   DelegationContractIsSelfError,
   AclPausedError,
   DelegationExpirationTooSoonError,
@@ -433,6 +434,21 @@ describe("DelegationDelegateEqualsContractError", () => {
   });
 });
 
+describe("DelegationDelegateCannotBeWildcardError", () => {
+  test("is instanceof ZamaError", () => {
+    const err = new DelegationDelegateCannotBeWildcardError("delegate is wildcard");
+    expect(err).toBeInstanceOf(ZamaError);
+    expect(err).toBeInstanceOf(DelegationDelegateCannotBeWildcardError);
+  });
+
+  test("has correct code and name", () => {
+    const err = new DelegationDelegateCannotBeWildcardError("delegate is wildcard");
+    expect(err.code).toBe(ZamaErrorCode.DelegationDelegateCannotBeWildcard);
+    expect(err.name).toBe("DelegationDelegateCannotBeWildcardError");
+    expect(err.message).toBe("delegate is wildcard");
+  });
+});
+
 describe("DelegationContractIsSelfError", () => {
   test("is instanceof ZamaError", () => {
     const err = new DelegationContractIsSelfError("contract is caller");
@@ -510,6 +526,14 @@ describe("matchAclRevert", () => {
     });
     const result = matchAclRevert(viemError, viemError);
     expect(result).toBeInstanceOf(DelegationDelegateEqualsContractError);
+  });
+
+  test("maps DelegateCannotBeWildcard via structured viem error", () => {
+    const viemError = Object.assign(new Error("revert"), {
+      cause: { data: { errorName: "DelegateCannotBeWildcard" } },
+    });
+    const result = matchAclRevert(viemError, viemError);
+    expect(result).toBeInstanceOf(DelegationDelegateCannotBeWildcardError);
   });
 
   test("maps SenderCannotBeContractAddress via structured viem error", () => {

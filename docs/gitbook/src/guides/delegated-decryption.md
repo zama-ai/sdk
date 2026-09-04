@@ -238,7 +238,7 @@ try {
 
 ### 6. Delegate for all contracts with the wildcard address (optional)
 
-Instead of granting delegation one contract at a time, pass `WILDCARD_CONTRACT` as `contractAddress` to cover every confidential contract the delegator owns — current and future. This is a plain ACL delegation to a reserved sentinel address; `ACL.sol` recognizes it and honors it for any contract checked via `isHandleDelegatedForUserDecryption`, not just the literal sentinel.
+Instead of granting delegation one contract at a time, pass `WILDCARD_CONTRACT` as `contractAddress` to cover every confidential contract the delegator owns — current and future. This is a plain ACL delegation to a reserved sentinel address: the ACL honors it automatically during decryption, and `getStatus`/`getExpiry` account for it too, so checking delegation status for any specific contract still reflects a wildcard-only grant. `WILDCARD_CONTRACT` is only valid as `contractAddress` — passing it as `delegateAddress` throws `DelegationDelegateCannotBeWildcardError`.
 
 {% tabs %}
 {% tab title="Core SDK" %}

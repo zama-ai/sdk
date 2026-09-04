@@ -33,6 +33,7 @@ export {
   DelegationExpiredError,
   DelegationExpiryUnchangedError,
   DelegationDelegateEqualsContractError,
+  DelegationDelegateCannotBeWildcardError,
   DelegationContractIsSelfError,
   AclPausedError,
   DelegationExpirationTooSoonError,

@@ -55,6 +55,7 @@ export class Delegations {
    * @throws if signer and provider are on different chains. {@link ChainMismatchError}
    * @throws if `expirationDate` is less than 1 hour in the future. {@link DelegationExpirationTooSoonError}
    * @throws if the delegate equals the connected wallet. {@link DelegationSelfNotAllowedError}
+   * @throws if the delegate is the wildcard sentinel. {@link DelegationDelegateCannotBeWildcardError}
    * @throws if the delegate equals the contract address. {@link DelegationDelegateEqualsContractError}
    * @throws if the new expiry equals the current one. {@link DelegationExpiryUnchangedError}
    * @throws if the delegation transaction reverts. {@link TransactionRevertedError}
