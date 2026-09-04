@@ -65,7 +65,7 @@ export {
   ERC7984_WRAPPER_INTERFACE_ID,
 } from "./contracts";
 
-// Delegation/ACL sentinels
+// Delegation/ACL wildcard values
 export { MAX_UINT64, WILDCARD_CONTRACT } from "./contracts";
 
 // Token abstraction layer

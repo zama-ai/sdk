@@ -214,7 +214,7 @@ describe("DelegationService", () => {
     expect(signer.writeContract).not.toHaveBeenCalled();
   });
 
-  test("delegateDecryption rejects the wildcard sentinel as delegateAddress", async ({
+  test("delegateDecryption rejects the wildcard address as delegateAddress", async ({
     delegationService,
     signer,
     userAddress,
@@ -282,7 +282,7 @@ describe("DelegationService", () => {
     );
   });
 
-  test("delegateDecryption accepts the wildcard sentinel as contractAddress", async ({
+  test("delegateDecryption accepts the wildcard address as contractAddress", async ({
     delegationService,
     provider,
     signer,

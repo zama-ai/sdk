@@ -64,7 +64,7 @@ export const ZamaErrorCode = {
   DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED",
   /** Delegate address cannot be the contract address. */
   DelegationDelegateEqualsContract: "DELEGATION_DELEGATE_EQUALS_CONTRACT",
-  /** Delegate address cannot be the wildcard sentinel — it's only valid as `contractAddress`. */
+  /** Delegate address cannot be the wildcard address — it's only valid as `contractAddress`. */
   DelegationDelegateCannotBeWildcard: "DELEGATION_DELEGATE_CANNOT_BE_WILDCARD",
   /** Contract address cannot be the sender address. */
   DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF",

@@ -51,7 +51,7 @@ export class DelegationDelegateEqualsContractError extends ZamaError {
   }
 }
 
-/** Delegate address cannot be the wildcard sentinel — it's only valid as `contractAddress`. */
+/** Delegate address cannot be the wildcard address — it's only valid as `contractAddress`. */
 export class DelegationDelegateCannotBeWildcardError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
     super(ZamaErrorCode.DelegationDelegateCannotBeWildcard, message, options);

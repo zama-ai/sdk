@@ -20,7 +20,7 @@ describe("ACL contract builders", () => {
     expect(config.args).toEqual([DELEGATE, tokenAddress, 1000n]);
   });
 
-  test("delegateForUserDecryptionContract with the wildcard sentinel", () => {
+  test("delegateForUserDecryptionContract with the wildcard address", () => {
     const config = delegateForUserDecryptionContract(ACL, DELEGATE, WILDCARD_CONTRACT, 1000n);
     expect(config.address).toBe(ACL);
     expect(config.functionName).toBe("delegateForUserDecryption");

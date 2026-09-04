@@ -54,7 +54,7 @@ const ACL_ERROR_MAP = {
     ),
   DelegateCannotBeWildcard: (cause) =>
     new DelegationDelegateCannotBeWildcardError(
-      "Delegate address cannot be the wildcard sentinel; it can only be used as the contract address.",
+      "Delegate address cannot be the wildcard address; it can only be used as the contract address.",
       { cause },
     ),
   ExpirationDateBeforeOneHour: (cause) =>

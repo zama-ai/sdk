@@ -97,7 +97,7 @@ export class DelegationService {
 
     if (normalizedDelegate === getAddress(WILDCARD_CONTRACT)) {
       throw new DelegationDelegateCannotBeWildcardError(
-        "Delegate address cannot be the wildcard sentinel; it can only be used as the contract address.",
+        "Delegate address cannot be the wildcard address; it can only be used as the contract address.",
       );
     }
 

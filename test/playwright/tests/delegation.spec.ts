@@ -156,7 +156,7 @@ test("should delegate for all contracts via the wildcard checkbox", async ({
   await page.getByTestId("delegate-button").click();
   await expect(page.getByTestId("delegate-success")).toContainText("Tx: 0x");
 
-  // The grant was recorded on the wildcard sentinel, not contracts.cUSDT.
+  // The grant was recorded on the wildcard address, not contracts.cUSDT.
   const expiry = await viemClient.readContract({
     address: contracts.acl,
     abi: aclExpiryAbi,
@@ -181,7 +181,7 @@ test("should decrypt via wildcard delegation to a contract never named in the gr
   await fundAccount1(viemClient, account1Client, account1.address, contracts, shieldAmount);
 
   // 2. cUSDT is never named in the delegation call below — only the wildcard
-  //    sentinel is — so a successful decrypt proves the grant covers a
+  //    address is — so a successful decrypt proves the grant covers a
   //    contract it never mentioned.
   const hash = await account1Client.writeContract({
     address: contracts.acl,
