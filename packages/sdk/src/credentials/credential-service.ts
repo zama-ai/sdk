@@ -220,8 +220,7 @@ export class CredentialService {
       return { keypair, permissions: [permission] };
     }
 
-    // Preserved exactly as before wildcard support was added: normalize (and
-    // therefore validate) the address list before ever touching the vault.
+    // Normalize (and therefore validate) the address list before ever touching the vault.
     const requested = normalizeAddresses(contracts);
     const keypair = await this.#vault.getOrCreate(signerAddress);
     if (requested.length === 0) {
@@ -280,7 +279,7 @@ export class CredentialService {
    * happen out-of-process.
    *
    * Prefers V2 (unified) permits whenever the chain supports them, mirroring
-   * `grantPermit`: an explicit contract list builds V2 in that case, V1
+   * {@link grantPermit}: an explicit contract list builds V2 in that case, V1
    * otherwise; {@link WILDCARD_PERMIT} additionally requests a wildcard scope.
    *
    * @throws if `request.contracts` is empty or exceeds {@link MAX_CONTRACTS_PER_PERMIT}

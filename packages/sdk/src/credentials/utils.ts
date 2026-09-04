@@ -17,10 +17,10 @@ export const SECONDS_PER_DAY = 86400;
 
 /**
  * Sentinel requesting a V2 permissive ("wildcard") permit from
- * {@link CredentialService.grantPermit} / `Permits.grantPermit` /
- * `Permits.grantDelegationPermit` — one permit covering every contract, present
- * and future, instead of an explicit list. Always an explicit opt-in: passing a
- * contract list, however large, never signs a wildcard permit.
+ * {@link CredentialService.grantPermit} / {@link Permits.grantPermit} /
+ * {@link Permits.grantDelegationPermit} — one permit covering every contract,
+ * present and future, instead of an explicit list. Always an explicit opt-in:
+ * passing a contract list, however large, never signs a wildcard permit.
  *
  * @example
  * ```ts

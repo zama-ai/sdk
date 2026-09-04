@@ -74,10 +74,7 @@ export interface SerializedPermit {
   delegatorAddress?: ChecksummedAddress;
 }
 
-/**
- * Fields shared by every permit version, regardless of shape. Mirrors
- * `PermissionBaseSchema`.
- */
+/** Fields shared by every permit version, regardless of shape. */
 export interface PermissionBase {
   /** Public key of the transport key pair this permit is bound to, hex-encoded. */
   keypairPublicKey: Hex;
@@ -94,7 +91,6 @@ export interface PermissionBase {
 
 /** A V1 ("legacy") permit — always scoped to a specific, non-empty contract list. */
 export interface PermissionV1 extends PermissionBase {
-  /** Discriminant — always `1` for a V1 permit. */
   version: 1;
   /** Validity window length in days from {@link PermissionBase.startTimestamp}. */
   durationDays: number;
@@ -105,7 +101,6 @@ export interface PermissionV1 extends PermissionBase {
  * permit — it covers every contract, not zero.
  */
 export interface PermissionV2 extends PermissionBase {
-  /** Discriminant — always `2` for a V2 permit. */
   version: 2;
   /** Validity window length in seconds from {@link PermissionBase.startTimestamp}. */
   durationSeconds: number;
@@ -182,7 +177,6 @@ export interface PreparedPermitBase {
 
 /** A V1 ("legacy") prepared permit. Delegation, if any, lives inside `eip712.message`. */
 export interface PreparedPermitV1 extends PreparedPermitBase {
-  /** Discriminant — always `1` for a V1 prepared permit. */
   version: 1;
 }
 
@@ -192,7 +186,6 @@ export interface PreparedPermitV1 extends PreparedPermitBase {
  * of inside `eip712.message`.
  */
 export interface PreparedPermitV2 extends PreparedPermitBase {
-  /** Discriminant — always `2` for a V2 prepared permit. */
   version: 2;
   /** Delegator address, for a delegated permit. Absent for a self permit. */
   delegatorAddress?: ChecksummedAddress;
