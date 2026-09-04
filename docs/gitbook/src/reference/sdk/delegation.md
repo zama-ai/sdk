@@ -64,6 +64,7 @@ When no `expirationDate` is provided, the SDK uses `2^64 - 1` (effectively perma
 - `DelegationExpirationTooSoonError` — expiration date less than 1 hour in the future
 - `DelegationSelfNotAllowedError` — delegate address equals the connected wallet
 - `DelegationDelegateEqualsContractError` — delegate address equals the contract address
+- `DelegationDelegateCannotBeWildcardError` — delegate address is the wildcard address
 - `DelegationExpiryUnchangedError` — new expiry matches the current on-chain expiry
 - `DelegationCooldownError` — only one delegate/revoke per `(delegator, delegate, contract)` per block
 - `AclPausedError` — the ACL contract is paused

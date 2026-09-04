@@ -236,7 +236,41 @@ try {
 {% endtab %}
 {% endtabs %}
 
-### 6. Revoke delegation (optional)
+### 6. Delegate for all contracts with the wildcard address (optional)
+
+Instead of granting delegation one contract at a time, pass `WILDCARD_CONTRACT` as `contractAddress`. The delegation then applies to any confidential contract, including ones deployed later. It does not widen access: the delegate can only read what the delegator can already read on each contract. `WILDCARD_CONTRACT` is only valid as `contractAddress`. `getStatus` and `getExpiry` for a specific contract also reflect a wildcard-only grant, so existing status checks keep working.
+
+{% tabs %}
+{% tab title="Core SDK" %}
+
+```ts
+import { WILDCARD_CONTRACT } from "@zama-fhe/sdk";
+
+await sdk.delegations.delegateDecryption({
+  contractAddress: WILDCARD_CONTRACT,
+  delegateAddress: "0xDelegate",
+});
+```
+
+{% endtab %}
+{% tab title="React SDK" %}
+
+```tsx
+import { WILDCARD_CONTRACT } from "@zama-fhe/sdk";
+import { useDelegateDecryption } from "@zama-fhe/react-sdk";
+
+const { mutateAsync: delegate } = useDelegateDecryption(WILDCARD_CONTRACT);
+await delegate({ delegateAddress: "0xDelegate" });
+```
+
+{% endtab %}
+{% endtabs %}
+
+{% hint style="info" %}
+Wildcard and per-contract delegations to the same delegate can coexist — `ACL.sol` honors both. If a per-contract grant would be redundant because the delegate already holds an active wildcard grant, `delegateDecryption` logs a warning; it still submits the transaction.
+{% endhint %}
+
+### 7. Revoke delegation (optional)
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -262,7 +296,7 @@ await revoke({ delegateAddress: "0xDelegate" });
 {% endtab %}
 {% endtabs %}
 
-### 7. Handle errors (optional)
+### 8. Handle errors (optional)
 
 Delegation operations can throw several error types. The most common:
 
