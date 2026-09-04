@@ -14,6 +14,7 @@ The repo has **two** changelog surfaces — keep them distinct:
 - **Legacy pages are historical record** — write them in the API vocabulary of their era (don't modernize names) and don't link into the current-API `guides/`/`reference/` trees, the migration guide excepted.
 - **Nav is newest-to-oldest** (Beta → active line → Legacy) and nests with **2-space indent** — the SUMMARY-driven LLM corpus derives page depth from indentation, so an off-indent entry miscategorizes the page.
 - **Release datelines are real dates by design.** The no-calendar-dates rule is about forward-looking promises, not the historical record of when a version shipped.
+- **`changelog/README.md` is static, not scaffolded.** It's the section's landing page — explains the three release channels (stable/beta/alpha) and what's covered here — and sits outside the `docs:changelog`/`sdk-changelog` machinery entirely. Edit it by hand; it's never touched by promotion or scaffolding.
 
 ## Automation
 

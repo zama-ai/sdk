@@ -2124,6 +2124,40 @@ Stuck on the migration, or spotted a step or rename this guide is missing? **Ope
 [s6]: #step-6-token-wrappedtoken-upgraded-contracts
 [s7]: #step-7-removed-with-no-replacement
 
+## Release channels
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/README.md
+- logical_path: changelog/README
+
+# Release channels
+
+`@zama-fhe/sdk` and `@zama-fhe/react-sdk` publish to three npm dist-tags, one per branch:
+
+| Channel    | Install                     | Branch  | Tracks                                      |
+| ---------- | --------------------------- | ------- | ------------------------------------------- |
+| **Stable** | `npm i @zama-fhe/sdk`       | `main`  | Currently deployed mainnet/testnet protocol |
+| **Beta**   | `npm i @zama-fhe/sdk@beta`  | `beta`  | Currently deployed mainnet/testnet protocol |
+| **Alpha**  | `npm i @zama-fhe/sdk@alpha` | `alpha` | Upcoming, not-yet-deployed protocol changes |
+
+Stable and beta both target the protocol version actually running on mainnet and testnet today — beta simply carries changes that haven't had a stable release yet. **Alpha is different in kind, not just in stability.** It tracks upcoming protocol changes that aren't deployed anywhere yet, closer to a DevNet than a "more bleeding-edge beta." Code that works on alpha can depend on protocol behavior that doesn't exist on any network you can actually reach yet.
+
+
+> [!WARNING]
+> If you didn't pick `alpha` on purpose, you almost certainly want `beta` or stable instead.
+
+
+## What's covered here
+
+This changelog section covers `main` and `beta` — the two lines with real deployments behind them:
+
+- [**Beta (unreleased)**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/beta.md) — changes on `beta` that haven't shipped in a stable release yet.
+- [**3.x (current)**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3.md) — plain-language release notes for the current stable major line, one page per minor version.
+- [**Legacy versions**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/legacy.md) — release notes for superseded major versions.
+
+`alpha` doesn't get its own page or docs space here: its commits aren't written up until they're synced into `beta`, or reach a stable release on `main`.
+
 ## Beta
 
 - source_type: official-doc
