@@ -172,6 +172,23 @@ describe("CredentialService.grantPermit wildcard", () => {
     expect((error as Error).message).toContain("protocol v0.14");
     expect(signer.signTypedData).not.toHaveBeenCalled();
   });
+
+  test("throws UnifiedPermitNotSupportedError, without prompting the relayer or the wallet, when the chain has no ProtocolConfig", async ({
+    createCredentialService,
+  }) => {
+    const relayer = createMockRelayer();
+    const router = createMockRouter({
+      chains: [createMockChain({ id: 31337, protocolConfigContractAddress: undefined })],
+      relayer,
+    });
+    const credentialService = createCredentialService({ router });
+
+    const error = await credentialService.grantPermit(WILDCARD_PERMIT).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(UnifiedPermitNotSupportedError);
+    expect(relayer.canUseUnifiedDecryptionPermit).not.toHaveBeenCalled();
+    expect(relayer.signUnifiedDecryptionPermit).not.toHaveBeenCalled();
+  });
 });
 
 describe("CredentialService.grantPermit version selection", () => {
@@ -186,46 +203,21 @@ describe("CredentialService.grantPermit version selection", () => {
     expect(result.permissions[0]?.version).toBe(1);
   });
 
-  test("reuses a cached probe on later grants, including after the mock flips", async ({
+  test("re-probes on every grant — @fhevm/sdk pins the result per client, not this layer", async ({
     credentialService,
     relayer,
   }) => {
     await credentialService.grantPermit([A]);
     expect(relayer.canUseUnifiedDecryptionPermit).toHaveBeenCalledOnce();
 
-    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
     vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockClear();
-    vi.mocked(relayer.signDecryptionPermit).mockClear();
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValueOnce(true);
 
     const result = await credentialService.grantPermit([B]);
 
-    expect(relayer.canUseUnifiedDecryptionPermit).not.toHaveBeenCalled();
-    expect(relayer.signDecryptionPermit).toHaveBeenCalledOnce();
-    expect(result.permissions[0]?.version).toBe(1);
-  });
-
-  test("re-probes once the cached result's TTL has expired", async ({
-    credentialService,
-    relayer,
-  }) => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    try {
-      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
-      await credentialService.grantPermit([A]);
-      expect(relayer.canUseUnifiedDecryptionPermit).toHaveBeenCalledOnce();
-
-      vi.setSystemTime(new Date("2026-01-01T23:59:00Z"));
-      vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockClear();
-      await credentialService.grantPermit([B]);
-      expect(relayer.canUseUnifiedDecryptionPermit).not.toHaveBeenCalled();
-
-      vi.setSystemTime(new Date("2026-01-02T00:01:00Z"));
-      vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockClear();
-      await credentialService.grantPermit([C]);
-      expect(relayer.canUseUnifiedDecryptionPermit).toHaveBeenCalledOnce();
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(relayer.canUseUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayer.signUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+    expect(result.permissions[0]?.version).toBe(2);
   });
 
   test("does not cache a thrown probe, so a later grant can still upgrade to V2", async ({
@@ -329,8 +321,8 @@ describe("CredentialService.grantPermit version selection", () => {
     relayer,
     signer,
   }) => {
-    // Same store, new service — the first session cached "no V2"; a later
-    // session re-probes and upgrades the widen.
+    // Same store, new service — the first session probed "no V2"; a later
+    // session probes again and upgrades the widen.
     await createCredentialService({ storage }).grantPermit([A, B]);
     vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
     vi.mocked(signer.signTypedData).mockClear();
