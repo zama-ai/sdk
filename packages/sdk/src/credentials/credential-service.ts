@@ -338,7 +338,7 @@ export class CredentialService {
     // an unsupported chain surfaces as UnifiedPermitNotSupportedError instead.
     // A specific-contract request checks chain support first and only
     // upgrades to V2 once confirmed.
-    const version = isWildcard || (await this.#canUseUnifiedPermit()) ? 2 : 1;
+    const version = isWildcard || (await this.#permitVersion()) === 2 ? 2 : 1;
 
     const eip712 = await this.#createUnsignedPermitEip712({
       version,
