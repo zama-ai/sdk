@@ -182,8 +182,23 @@ await sdk.permits.registerPermit(prepared, signature);
 One permit per call: unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks a request over 10 contracts — `contracts` maps to exactly one signature.
 
 {% hint style="warning" %}
-**Register promptly.** `prepared.eip712.message` carries the permit's validity window (`startTimestamp` + `durationDays`); if approval takes long enough that the window elapses before you call `registerPermit`, it throws `PreparedPermitExpiredError` — call `preparePermit` again for a fresh window. Registering also checks that the chain embedded in `prepared.eip712.domain` matches the SDK's active chain (`PreparedPermitChainMismatchError`) and that the transport key pair hasn't changed since prepare (`TransportKeyPairChangedError`, e.g. after a TTL expiry) — see the [Offline reference](../reference/sdk/Offline.md#preparepermit) for details.
+**Register promptly.** `prepared.eip712.message` carries the permit's validity window (`startTimestamp` + `durationDays`, or `durationSeconds` for a V2 permit); if approval takes long enough that the window elapses before you call `registerPermit`, it throws `PreparedPermitExpiredError` — call `preparePermit` again for a fresh window. Registering also checks that the chain embedded in `prepared.eip712.domain` matches the SDK's active chain (`PreparedPermitChainMismatchError`) and that the transport key pair hasn't changed since prepare (`TransportKeyPairChangedError`, e.g. after a TTL expiry) — see the [Offline reference](../reference/sdk/Offline.md#preparepermit) for details.
 {% endhint %}
+
+### Offline wildcard (V2) permits
+
+`preparePermit` prefers V2 (unified) permits whenever the connected chain supports them, same as `grantPermit` — an explicit contract list still upgrades to V2 in that case, falling back to V1 otherwise. Passing `contracts: WILDCARD_PERMIT` additionally requests a [wildcard (V2)](../concepts/permit-model.md#wildcard-v2-permits) scope:
+
+```ts
+import { WILDCARD_PERMIT } from "@zama-fhe/sdk";
+
+const prepared = await sdk.offline.preparePermit({
+  signer: "0xCustodyWallet",
+  contracts: WILDCARD_PERMIT,
+});
+```
+
+The rest of the flow — signing `prepared.eip712` and calling `registerPermit` — is identical to the V1 example above. One difference worth knowing: a V2 permit's delegation is post-sign metadata rather than part of the signed message (see [Wildcard (V2) permits](../concepts/permit-model.md#wildcard-v2-permits)), so a delegated V2 request carries `prepared.delegatorAddress` at the top level of the prepared payload instead of inside `prepared.eip712.message` — `registerPermit` reads it from there automatically, so no extra step is needed on your part.
 
 {% hint style="info" %}
 **KMS context rotation.** A registered permit is bound to the chain's KMS context. If that context is revoked on-chain, decrypts throw `RevokedKmsContextError` with a `SigningFailedError` as `cause`: the SDK's automatic re-grant cannot sign in a signerless session, so it keeps the scope's other permits and surfaces the error instead. Run `preparePermit` and `registerPermit` again for the affected contracts. See the [error reference](../reference/sdk/errors.md#revokedkmscontexterror) for how to tell this case apart from the retryable one.

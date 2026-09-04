@@ -1,14 +1,12 @@
 import type { FheChain } from "./types";
 
 // `protocolConfigContractAddress` (required for V2/wildcard permit signing to
-// succeed — see `to-fhevm-chain.ts`) is wired in below for every built-in
-// config with a deployed `ProtocolConfig` contract, sourced from
-// https://github.com/zama-ai/protocol-registry. `hoodi`, `ingenTestnet`,
-// `bscTestnet`, and `hardhat`/`anvil` don't have one deployed yet, so they
-// omit it — V1 permits don't need it at all, and V2/wildcard permits simply
-// aren't usable on those presets until one exists. Pass it in a custom
-// `FheChain` for any other network whose deployed `ProtocolConfig` address
-// you already know.
+// succeed) is wired in below for every built-in config with a deployed
+// `ProtocolConfig` contract. `hoodi`, `ingenTestnet`, `bscTestnet`, and
+// `hardhat`/`anvil` don't have one deployed yet, so they omit it — V1 permits
+// don't need it at all, and V2/wildcard permits simply aren't usable on those
+// presets until one exists. Pass it in a custom `FheChain` for any other
+// network whose deployed `ProtocolConfig` address you already know.
 
 /**
  * Mainnet network configuration (chainId 1).

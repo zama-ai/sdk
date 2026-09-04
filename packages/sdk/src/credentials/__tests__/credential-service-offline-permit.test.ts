@@ -7,12 +7,13 @@ import {
   PreparedPermitChainMismatchError,
   PreparedPermitExpiredError,
   TransportKeyPairChangedError,
+  UnifiedPermitNotSupportedError,
 } from "../../errors/credential";
 import { ConfigurationError } from "../../errors/relayer";
 import type { GenericSigner } from "../../types";
 import { assertNonNullable } from "../../utils/assertions";
 import type { CredentialService } from "../credential-service";
-import { MAX_CONTRACTS_PER_PERMIT, SECONDS_PER_DAY } from "../utils";
+import { MAX_CONTRACTS_PER_PERMIT, SECONDS_PER_DAY, WILDCARD_PERMIT } from "../utils";
 
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
@@ -22,6 +23,8 @@ const ADDRS = Array.from({ length: 23 }, (_, i) => {
   return `0x${hex}` as const;
 });
 const A = ADDRS[0]!;
+const B = ADDRS[1]!;
+const C = ADDRS[2]!;
 
 describe("CredentialService.preparePermit", () => {
   test("builds unsigned EIP-712 typed data without prompting the signer", async ({
@@ -176,6 +179,81 @@ describe("CredentialService.preparePermit", () => {
     expect(prepared.eip712.domain.chainId).toBe(String(1));
     expect(relayerA.createUnsignedLegacyDecryptionPermitEip712).toHaveBeenCalledOnce();
     expect(relayerB.createUnsignedLegacyDecryptionPermitEip712).not.toHaveBeenCalled();
+  });
+});
+
+describe("CredentialService.preparePermit — V2 (unified)", () => {
+  test("builds a V2 unsigned payload when the chain supports unified permits", async ({
+    credentialService,
+    relayer,
+  }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+
+    const prepared = await credentialService.preparePermit({ signer: USER, contracts: [A] });
+
+    expect(prepared.version).toBe(2);
+    expect(prepared.eip712.message.allowedContracts).toEqual([A]);
+    expect(relayer.createUnsignedUnifiedDecryptionPermitEip712).toHaveBeenCalledOnce();
+    expect(relayer.createUnsignedLegacyDecryptionPermitEip712).not.toHaveBeenCalled();
+  });
+
+  test("builds a V2 unsigned payload with an empty allowedContracts for a wildcard request", async ({
+    credentialService,
+    relayer,
+  }) => {
+    const prepared = await credentialService.preparePermit({
+      signer: USER,
+      contracts: WILDCARD_PERMIT,
+    });
+
+    expect(prepared.version).toBe(2);
+    expect(prepared.eip712.message.allowedContracts).toEqual([]);
+    expect(relayer.createUnsignedUnifiedDecryptionPermitEip712).toHaveBeenCalledOnce();
+  });
+
+  test("carries delegatorAddress at the top level, not inside eip712.message", async ({
+    credentialService,
+    relayer,
+  }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+
+    const prepared = await credentialService.preparePermit({
+      signer: USER,
+      contracts: [A],
+      delegator: DELEGATOR,
+    });
+
+    expect(prepared).toMatchObject({ version: 2, delegatorAddress: DELEGATOR });
+    expect(prepared.eip712.message.delegatorAddress).toBeUndefined();
+  });
+
+  test("rejects self-delegation for a wildcard request", async ({ credentialService }) => {
+    await expect(
+      credentialService.preparePermit({
+        signer: USER,
+        contracts: WILDCARD_PERMIT,
+        delegator: USER,
+      }),
+    ).rejects.toBeInstanceOf(ConfigurationError);
+  });
+
+  test("throws UnifiedPermitNotSupportedError, without generating a signature request, on a pre-v0.14 chain", async ({
+    credentialService,
+    relayer,
+  }) => {
+    // Mirrors @fhevm/sdk's real behavior: the chain-version check inside the
+    // V2 unsigned-payload builder rejects before any typed data is returned.
+    vi.mocked(relayer.createUnsignedUnifiedDecryptionPermitEip712).mockRejectedValueOnce(
+      new Error(
+        "createUnsignedDecryptionPermitEip712V2 error: Invalid extraData version extraData=0x01",
+      ),
+    );
+
+    const error = await credentialService
+      .preparePermit({ signer: USER, contracts: WILDCARD_PERMIT })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(UnifiedPermitNotSupportedError);
+    expect((error as Error).message).toContain("protocol v0.14");
   });
 });
 
@@ -372,5 +450,141 @@ describe("CredentialService.registerPermit", () => {
     await expect(credentialService.registerPermit(prepared, "0xbad" as Hex)).rejects.toBeInstanceOf(
       SigningFailedError,
     );
+  });
+});
+
+describe("CredentialService.registerPermit — V2 (unified)", () => {
+  async function prepareAndSignV2(
+    credentialService: CredentialService,
+    signer: GenericSigner,
+    overrides: { delegator?: Address; contracts?: Address[] | typeof WILDCARD_PERMIT } = {},
+  ) {
+    const prepared = await credentialService.preparePermit({
+      signer: USER,
+      contracts: overrides.contracts ?? [A],
+      delegator: overrides.delegator,
+    });
+    const signature = (await signer.signTypedData(prepared.eip712)) as Hex;
+    return { prepared, signature };
+  }
+
+  test("verifies and persists a V2 permit end-to-end", async ({
+    credentialService,
+    signer,
+    relayer,
+  }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+    const { prepared, signature } = await prepareAndSignV2(credentialService, signer);
+    expect(prepared.version).toBe(2);
+
+    await credentialService.registerPermit(prepared, signature);
+
+    expect(await credentialService.hasPermit([A])).toBe(true);
+  });
+
+  test("verifies and persists a wildcard V2 permit end-to-end", async ({
+    credentialService,
+    signer,
+  }) => {
+    const { prepared, signature } = await prepareAndSignV2(credentialService, signer, {
+      contracts: WILDCARD_PERMIT,
+    });
+    expect(prepared.version).toBe(2);
+
+    await credentialService.registerPermit(prepared, signature);
+
+    expect(await credentialService.hasPermit([A])).toBe(true);
+    expect(await credentialService.hasPermit([B, C])).toBe(true);
+  });
+
+  test("registers a delegated V2 permit under the delegator scope only", async ({
+    credentialService,
+    signer,
+    relayer,
+  }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+    const { prepared, signature } = await prepareAndSignV2(credentialService, signer, {
+      delegator: DELEGATOR,
+    });
+    expect(prepared.version).toBe(2);
+
+    await credentialService.registerPermit(prepared, signature);
+
+    expect(await credentialService.hasPermit([A])).toBe(false);
+    expect(await credentialService.hasPermit([A], DELEGATOR)).toBe(true);
+  });
+
+  test("registers successfully after a JSON.stringify/parse round trip", async ({
+    credentialService,
+    signer,
+  }) => {
+    const { prepared, signature } = await prepareAndSignV2(credentialService, signer, {
+      contracts: WILDCARD_PERMIT,
+    });
+
+    const rehydrated = JSON.parse(JSON.stringify(prepared));
+    await credentialService.registerPermit(rehydrated, signature);
+
+    expect(await credentialService.hasPermit([A])).toBe(true);
+  });
+
+  test("throws PreparedPermitExpiredError once a V2 permit's validity window has elapsed", async ({
+    credentialService,
+    signer,
+  }) => {
+    const { prepared, signature } = await prepareAndSignV2(credentialService, signer, {
+      contracts: WILDCARD_PERMIT,
+    });
+    const expired = {
+      ...prepared,
+      eip712: {
+        ...prepared.eip712,
+        message: {
+          ...prepared.eip712.message,
+          startTimestamp: String(
+            Number(prepared.eip712.message.startTimestamp) - 10 * SECONDS_PER_DAY,
+          ),
+          durationSeconds: "1",
+        },
+      },
+    };
+
+    await expect(credentialService.registerPermit(expired, signature)).rejects.toBeInstanceOf(
+      PreparedPermitExpiredError,
+    );
+  });
+
+  test("throws TransportKeyPairChangedError for a V2 permit when the stored key no longer matches", async ({
+    credentialService,
+    signer,
+  }) => {
+    const { prepared, signature } = await prepareAndSignV2(credentialService, signer, {
+      contracts: WILDCARD_PERMIT,
+    });
+    const staleKeyPair = {
+      ...prepared,
+      eip712: {
+        ...prepared.eip712,
+        message: { ...prepared.eip712.message, publicKey: "0xdead" as Hex },
+      },
+    };
+
+    await expect(credentialService.registerPermit(staleKeyPair, signature)).rejects.toBeInstanceOf(
+      TransportKeyPairChangedError,
+    );
+  });
+
+  test("wraps a malformed V2 prepared payload in ConfigurationError, not a raw ZodError", async ({
+    credentialService,
+    signer,
+  }) => {
+    const { prepared, signature } = await prepareAndSignV2(credentialService, signer, {
+      contracts: WILDCARD_PERMIT,
+    });
+    const malformed = { ...prepared, eip712: "not-an-object" };
+
+    await expect(
+      credentialService.registerPermit(malformed as unknown as typeof prepared, signature),
+    ).rejects.toBeInstanceOf(ConfigurationError);
   });
 });

@@ -109,6 +109,9 @@ export { preparePermitMutationOptions } from "./prepare-permit";
 export { registerPermitMutationOptions, type RegisterPermitParams } from "./register-permit";
 export type {
   PreparedPermit,
+  PreparedPermitBase,
+  PreparedPermitV1,
+  PreparedPermitV2,
   PreparePermitRequest,
   SerializedPermitEip712,
 } from "../credentials/types";

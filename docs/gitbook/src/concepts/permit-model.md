@@ -91,10 +91,12 @@ await sdk.permits.grantPermit(WILDCARD_PERMIT);
 
 A wildcard permit covers every contract the signer is allowed to decrypt from, present and future, with a single wallet signature — including contracts the app doesn't know about yet at grant time. It's the same additive/reuse model as a normal permit: granting it again, or requesting decryption for any contract while a valid wildcard permit is in scope, never re-prompts.
 
+The SDK prefers V2 (unified) permits by default, wildcard or not: even a plain, bounded contract list signs a V2 permit once the connected chain supports it, falling back to V1 transparently on a chain that hasn't upgraded yet. `WILDCARD_PERMIT` only controls the _wildcard scope_ on top of that — whether the permit's contract list is empty (covers everything) or the specific addresses requested.
+
 A few things a wildcard permit does **not** change:
 
 - **On-chain delegation is unaffected.** A wildcard permit only removes the need to enumerate contracts in the _permit_ — it has no bearing on `FHE.delegateUserDecryption()` grants, which remain required per-contract (or via a separate wildcard delegation on the ACL contract) for delegated decryption to work at all. Permit coverage and ACL delegation are two independent mechanisms.
-- **It's opt-in, not inferred.** The SDK never signs a wildcard permit unless the caller explicitly asks for one — passing a large contract list to `grantPermit()` still signs a normal, bounded V1 permit for exactly those contracts.
+- **Wildcard scope is opt-in, not inferred.** The SDK never signs a wildcard-scoped permit unless the caller explicitly asks for one — passing a large contract list to `grantPermit()` still signs a permit for exactly those contracts, never widened to "everything".
 - **It's broader, so treat it with more care than a contract-scoped permit.** A wildcard permit signed with a long validity window is a standing grant to decrypt anything the signer owns until it expires — prefer a specific contract list unless your app genuinely needs unbounded coverage, and prefer a short `permitTTL` when you do use it.
 
 ## Revocation
@@ -127,6 +129,8 @@ See [ZamaSDK.onWalletAccountChange](../reference/sdk/ZamaSDK.md#onwalletaccountc
 ## Offline permits
 
 The lifecycle above assumes a connected wallet signs `grantPermit`'s EIP-712 message in-process. Custody partners — HSMs, policy engines, out-of-process signers — cannot do that: `sdk.offline.preparePermit` builds the same EIP-712 typed data without signing it, and `sdk.permits.registerPermit` verifies and persists the signature once the custodian returns it. See the [Offline signing guide](../guides/offline.md#offline-permits) for the workflow.
+
+`preparePermit` follows the same [version-selection policy](#wildcard-v2-permits) as `grantPermit` — it prefers V2 whenever the connected chain supports it, and `WILDCARD_PERMIT` requests a wildcard-scoped permit either way. See [Offline wildcard (V2) permits](../guides/offline.md#offline-wildcard-v2-permits) for the offline-specific detail: V2 delegation isn't part of the signed message, so a delegated request carries it on the prepared payload instead.
 
 ## Related
 

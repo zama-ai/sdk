@@ -14,6 +14,8 @@ import { ContractFunctionReturnType } from 'viem';
 import { createFhevmClient } from '@fhevm/sdk/viem';
 import { CreateUnsignedLegacyDecryptionPermitEip712Parameters } from '@fhevm/sdk/actions/base';
 import { CreateUnsignedLegacyDecryptionPermitEip712ReturnType } from '@fhevm/sdk/actions/base';
+import { CreateUnsignedUnifiedDecryptionPermitEip712Parameters } from '@fhevm/sdk/actions/base';
+import { CreateUnsignedUnifiedDecryptionPermitEip712ReturnType } from '@fhevm/sdk/actions/base';
 import { EIP1193Provider } from 'viem';
 import { Eip712Like } from '@fhevm/sdk/types';
 import { Hex } from 'viem';
@@ -678,10 +680,23 @@ export interface PreparedFor<K extends TransactionKind> extends PreparedTransact
 }
 
 // @public
-export interface PreparedPermit {
+export type PreparedPermit = PreparedPermitV1 | PreparedPermitV2;
+
+// @public
+export interface PreparedPermitBase {
     eip712: SerializedPermitEip712;
     signerAddress: ChecksummedAddress;
+}
+
+// @public
+export interface PreparedPermitV1 extends PreparedPermitBase {
     version: 1;
+}
+
+// @public
+export interface PreparedPermitV2 extends PreparedPermitBase {
+    delegatorAddress?: ChecksummedAddress;
+    version: 2;
 }
 
 // @public
@@ -709,7 +724,7 @@ export function preparePermitMutationOptions(sdk: ZamaSDK): MutationFactoryOptio
 
 // @public
 export interface PreparePermitRequest {
-    contracts: readonly Address[];
+    contracts: readonly Address[] | WildcardPermit;
     delegator?: Address;
     durationDays?: number;
     signer: Address;
@@ -777,6 +792,7 @@ export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptV
     canUseUnifiedDecryptionPermit(parameters?: CanUseUnifiedDecryptionPermitParameters): Promise<CanUseUnifiedDecryptionPermitReturnType>;
     chain: FheChain;
     createUnsignedLegacyDecryptionPermitEip712(parameters: CreateUnsignedLegacyDecryptionPermitEip712Parameters): Promise<CreateUnsignedLegacyDecryptionPermitEip712ReturnType>;
+    createUnsignedUnifiedDecryptionPermitEip712(parameters: CreateUnsignedUnifiedDecryptionPermitEip712Parameters): Promise<CreateUnsignedUnifiedDecryptionPermitEip712ReturnType>;
 }
 
 // @public
