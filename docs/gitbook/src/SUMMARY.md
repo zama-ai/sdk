@@ -16,6 +16,7 @@
 
 ## Changelog
 
+- [Release channels](changelog/README.md)
 - [Beta (unreleased)](changelog/beta.md)
 - [3.x (current)](changelog/v3.md)
   - [3.5.x](changelog/v3-5.md)
