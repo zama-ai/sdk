@@ -1085,6 +1085,7 @@ describe("DecryptionService", () => {
       userAddress,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+      vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
       await credentialService.grantPermit(WILDCARD_PERMIT, delegatorAddress);
 
       await decryptionService.delegatedDecryptValues(
@@ -1110,10 +1111,10 @@ describe("DecryptionService", () => {
       relayer,
       userAddress,
     }) => {
-      // The permit was granted while V2 was supported (or granted explicitly via
-      // WILDCARD_PERMIT, which is always V2 regardless of the probe) — the relayer
-      // instance actually serving this decrypt call has since regressed, or the
-      // wildcard grant outran the relayer's rollout.
+      // The permit was granted while V2 was supported — the relayer instance
+      // actually serving this decrypt call has since regressed, or the wildcard
+      // grant outran the relayer's rollout.
+      vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
       await credentialService.grantPermit(WILDCARD_PERMIT);
       vi.mocked(relayer.decryptValues).mockRejectedValueOnce(
         new Error(
@@ -1137,6 +1138,7 @@ describe("DecryptionService", () => {
     }) => {
       const CONTRACT_D = getAddress("0x6666666666666666666666666666666666666666") as Address;
       const HANDLE_D = `0x${"dd".repeat(32)}` as EncryptedValue;
+      vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
       await credentialService.grantPermit(WILDCARD_PERMIT);
 
       await decryptionService.decryptValues(
