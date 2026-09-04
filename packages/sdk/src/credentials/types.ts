@@ -91,6 +91,7 @@ export interface PermissionBase {
 
 /** A V1 ("legacy") permit — always scoped to a specific, non-empty contract list. */
 export interface PermissionV1 extends PermissionBase {
+  /** Discriminant identifying this as a {@link PermissionV1}. */
   version: 1;
   /** Validity window length in days from {@link PermissionBase.startTimestamp}. */
   durationDays: number;
@@ -101,6 +102,7 @@ export interface PermissionV1 extends PermissionBase {
  * permit — it covers every contract, not zero.
  */
 export interface PermissionV2 extends PermissionBase {
+  /** Discriminant identifying this as a {@link PermissionV2}. */
   version: 2;
   /** Validity window length in seconds from {@link PermissionBase.startTimestamp}. */
   durationSeconds: number;
@@ -177,6 +179,7 @@ export interface PreparedPermitBase {
 
 /** A V1 ("legacy") prepared permit. Delegation, if any, lives inside `eip712.message`. */
 export interface PreparedPermitV1 extends PreparedPermitBase {
+  /** Discriminant identifying this as a {@link PreparedPermitV1}. */
   version: 1;
 }
 
@@ -186,6 +189,7 @@ export interface PreparedPermitV1 extends PreparedPermitBase {
  * of inside `eip712.message`.
  */
 export interface PreparedPermitV2 extends PreparedPermitBase {
+  /** Discriminant identifying this as a {@link PreparedPermitV2}. */
   version: 2;
   /** Delegator address, for a delegated permit. Absent for a self permit. */
   delegatorAddress?: ChecksummedAddress;
