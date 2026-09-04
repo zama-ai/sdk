@@ -27,6 +27,7 @@ export type CreateDelegationServiceFn = (overrides?: {
   provider?: GenericProvider;
   router?: ChainRouter;
   emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
+  logger?: LoggerService;
 }) => DelegationService;
 
 export type CreateDecryptionServiceFn = (overrides?: {
@@ -92,7 +93,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
         provider: overrides.provider ?? provider,
         router: overrides.router ?? createMockRouter({ relayer }),
         emitEvent: overrides.emitEvent,
-        logger: new LoggerService(),
+        logger: overrides.logger ?? new LoggerService(),
       });
     await use(factory);
   },

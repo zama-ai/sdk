@@ -13,41 +13,42 @@ All errors thrown by `@zama-fhe/sdk` and `@zama-fhe/react-sdk` extend `ZamaError
 
 Every SDK error is an instance of `ZamaError`, which extends the native `Error` class. Each subclass has a unique `.code` property:
 
-| Error                                   | Code                                  | What happened                                                                                       |
-| --------------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `SigningRejectedError`                  | `SIGNING_REJECTED`                    | User rejected the wallet signature                                                                  |
-| `SigningFailedError`                    | `SIGNING_FAILED`                      | Wallet signature failed (connectivity or firmware issue)                                            |
-| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the WASM runtime                                                           |
-| `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                                                               |
-| `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                      |
-| `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                            |
-| `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired -- user needs to re-sign                                                 |
-| `RevokedKmsContextError`                | `REVOKED_KMS_CONTEXT`                 | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit     |
-| `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance exists for this account                                                        |
-| `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed (check `.statusCode`); retryable on back-pressure (429)                 |
-| `NotEntitledError`                      | `NOT_ENTITLED`                        | Actor lacks the on-chain ACL grant to decrypt this value — terminal, don't retry                    |
-| `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (retryable)                                   |
-| `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK config or FHE runtime failed to initialize                                              |
-| `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                               |
-| `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                                   |
-| `InsufficientAllowanceError`            | `INSUFFICIENT_ALLOWANCE`              | ERC-20 allowance too low for a manual `wrap` (approve first)                                        |
-| `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance check impossible (no stored permits)                                                        |
-| `ERC20ReadFailedError`                  | `ERC20_READ_FAILED`                   | Public ERC-20 read failed (network or contract error)                                               |
-| `DelegationSelfNotAllowedError`         | `DELEGATION_SELF_NOT_ALLOWED`         | Delegation cannot target self                                                                       |
-| `DelegationCooldownError`               | `DELEGATION_COOLDOWN`                 | Only one delegate/revoke per tuple per block (retryable)                                            |
-| `DelegationNotFoundError`               | `DELEGATION_NOT_FOUND`                | No active delegation for this tuple                                                                 |
-| `SignerRequiredError`                   | `SIGNER_REQUIRED`                     | Write/sign/decrypt called without a signer                                                          |
-| `DelegationExpiredError`                | `DELEGATION_EXPIRED`                  | The delegation has expired                                                                          |
-| `SignerNotConfiguredError`              | `SIGNER_NOT_CONFIGURED`               | SDK operation needs a signer but none is configured (subclass of `SignerRequiredError`)             |
-| `WalletNotConnectedError`               | `WALLET_NOT_CONNECTED`                | Signer exists but has no connected wallet account (subclass of `SignerRequiredError`)               |
-| `WalletAccountNotReadyError`            | `WALLET_ACCOUNT_NOT_READY`            | Async signer adapter hasn't resolved its account yet (subclass of `SignerRequiredError`, retryable) |
-| `ChainMismatchError`                    | `CHAIN_MISMATCH`                      | Signer and provider are on different chains                                                         |
-| `DelegationContractIsSelfError`         | `DELEGATION_CONTRACT_IS_SELF`         | Delegation contract address equals the caller                                                       |
-| `DelegationDelegateEqualsContractError` | `DELEGATION_DELEGATE_EQUALS_CONTRACT` | Delegate equals the contract address                                                                |
-| `DelegationExpirationTooSoonError`      | `DELEGATION_EXPIRATION_TOO_SOON`      | Expiration date less than 1 hour in the future                                                      |
-| `DelegationExpiryUnchangedError`        | `DELEGATION_EXPIRY_UNCHANGED`         | New expiry matches the current value                                                                |
-| `DelegationNotPropagatedError`          | `DELEGATION_NOT_PROPAGATED`           | Delegated decrypt failed transiently (gateway not synced, or delegator ACL read stale) — retry      |
-| `AclPausedError`                        | `ACL_PAUSED`                          | The ACL contract is paused                                                                          |
+| Error                                     | Code                                     | What happened                                                                                       |
+| ----------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `SigningRejectedError`                    | `SIGNING_REJECTED`                       | User rejected the wallet signature                                                                  |
+| `SigningFailedError`                      | `SIGNING_FAILED`                         | Wallet signature failed (connectivity or firmware issue)                                            |
+| `EncryptionFailedError`                   | `ENCRYPTION_FAILED`                      | FHE encryption failed in the WASM runtime                                                           |
+| `DecryptionFailedError`                   | `DECRYPTION_FAILED`                      | FHE decryption failed                                                                               |
+| `TransactionRevertedError`                | `TRANSACTION_REVERTED`                   | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                      |
+| `InvalidTransportKeyPairError`            | `INVALID_KEYPAIR`                        | Relayer rejected transport key pair (stale or malformed)                                            |
+| `TransportKeyPairExpiredError`            | `KEYPAIR_EXPIRED`                        | Transport key pair expired -- user needs to re-sign                                                 |
+| `RevokedKmsContextError`                  | `REVOKED_KMS_CONTEXT`                    | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit     |
+| `NoCiphertextError`                       | `NO_CIPHERTEXT`                          | No encrypted balance exists for this account                                                        |
+| `RelayerRequestFailedError`               | `RELAYER_REQUEST_FAILED`                 | Relayer HTTP request failed (check `.statusCode`); retryable on back-pressure (429)                 |
+| `NotEntitledError`                        | `NOT_ENTITLED`                           | Actor lacks the on-chain ACL grant to decrypt this value — terminal, don't retry                    |
+| `RpcRateLimitError`                       | `RPC_RATE_LIMITED`                       | Consumer's RPC provider rate-limited an on-chain read (retryable)                                   |
+| `ConfigurationError`                      | `CONFIGURATION`                          | Invalid SDK config or FHE runtime failed to initialize                                              |
+| `InsufficientConfidentialBalanceError`    | `INSUFFICIENT_CONFIDENTIAL_BALANCE`      | Confidential balance too low for transfer or unshield                                               |
+| `InsufficientERC20BalanceError`           | `INSUFFICIENT_ERC20_BALANCE`             | ERC-20 balance too low for shield                                                                   |
+| `InsufficientAllowanceError`              | `INSUFFICIENT_ALLOWANCE`                 | ERC-20 allowance too low for a manual `wrap` (approve first)                                        |
+| `BalanceCheckUnavailableError`            | `BALANCE_CHECK_UNAVAILABLE`              | Balance check impossible (no stored permits)                                                        |
+| `ERC20ReadFailedError`                    | `ERC20_READ_FAILED`                      | Public ERC-20 read failed (network or contract error)                                               |
+| `DelegationSelfNotAllowedError`           | `DELEGATION_SELF_NOT_ALLOWED`            | Delegation cannot target self                                                                       |
+| `DelegationCooldownError`                 | `DELEGATION_COOLDOWN`                    | Only one delegate/revoke per tuple per block (retryable)                                            |
+| `DelegationNotFoundError`                 | `DELEGATION_NOT_FOUND`                   | No active delegation for this tuple                                                                 |
+| `SignerRequiredError`                     | `SIGNER_REQUIRED`                        | Write/sign/decrypt called without a signer                                                          |
+| `DelegationExpiredError`                  | `DELEGATION_EXPIRED`                     | The delegation has expired                                                                          |
+| `SignerNotConfiguredError`                | `SIGNER_NOT_CONFIGURED`                  | SDK operation needs a signer but none is configured (subclass of `SignerRequiredError`)             |
+| `WalletNotConnectedError`                 | `WALLET_NOT_CONNECTED`                   | Signer exists but has no connected wallet account (subclass of `SignerRequiredError`)               |
+| `WalletAccountNotReadyError`              | `WALLET_ACCOUNT_NOT_READY`               | Async signer adapter hasn't resolved its account yet (subclass of `SignerRequiredError`, retryable) |
+| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains                                                         |
+| `DelegationContractIsSelfError`           | `DELEGATION_CONTRACT_IS_SELF`            | Delegation contract address equals the caller                                                       |
+| `DelegationDelegateEqualsContractError`   | `DELEGATION_DELEGATE_EQUALS_CONTRACT`    | Delegate equals the contract address                                                                |
+| `DelegationDelegateCannotBeWildcardError` | `DELEGATION_DELEGATE_CANNOT_BE_WILDCARD` | Delegate address is the wildcard address                                                            |
+| `DelegationExpirationTooSoonError`        | `DELEGATION_EXPIRATION_TOO_SOON`         | Expiration date less than 1 hour in the future                                                      |
+| `DelegationExpiryUnchangedError`          | `DELEGATION_EXPIRY_UNCHANGED`            | New expiry matches the current value                                                                |
+| `DelegationNotPropagatedError`            | `DELEGATION_NOT_PROPAGATED`              | Delegated decrypt failed transiently (gateway not synced, or delegator ACL read stale) — retry      |
+| `AclPausedError`                          | `ACL_PAUSED`                             | The ACL contract is paused                                                                          |
 
 ### 2. Catch with instanceof
 

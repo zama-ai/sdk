@@ -1353,6 +1353,7 @@ export const ZamaErrorCode: {
     readonly ERC20ReadFailed: "ERC20_READ_FAILED";
     readonly DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED";
     readonly DelegationDelegateEqualsContract: "DELEGATION_DELEGATE_EQUALS_CONTRACT";
+    readonly DelegationDelegateCannotBeWildcard: "DELEGATION_DELEGATE_CANNOT_BE_WILDCARD";
     readonly DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF";
     readonly AclPaused: "ACL_PAUSED";
     readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON";

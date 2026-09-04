@@ -236,7 +236,45 @@ try {
 {% endtab %}
 {% endtabs %}
 
-### 6. Revoke delegation (optional)
+### 6. Delegate for all contracts with the wildcard address (optional)
+
+Instead of granting delegation one contract at a time, pass `WILDCARD_CONTRACT` as `contractAddress`. The delegation then applies to any confidential contract, including ones deployed later. It does not widen access: the delegate can only read what the delegator can already read on each contract. `WILDCARD_CONTRACT` is only valid as `contractAddress`. `getStatus` and `getExpiry` for a specific contract also reflect a wildcard-only grant, so existing status checks keep working.
+
+{% tabs %}
+{% tab title="Core SDK" %}
+
+```ts
+import { WILDCARD_CONTRACT } from "@zama-fhe/sdk";
+
+await sdk.delegations.delegateDecryption({
+  contractAddress: WILDCARD_CONTRACT,
+  delegateAddress: "0xDelegate",
+});
+```
+
+{% endtab %}
+{% tab title="React SDK" %}
+
+```tsx
+import { WILDCARD_CONTRACT } from "@zama-fhe/sdk";
+import { useDelegateDecryption } from "@zama-fhe/react-sdk";
+
+const { mutateAsync: delegate } = useDelegateDecryption(WILDCARD_CONTRACT);
+await delegate({ delegateAddress: "0xDelegate" });
+```
+
+{% endtab %}
+{% endtabs %}
+
+{% hint style="info" %}
+Wildcard and per-contract delegations to the same delegate can coexist — `ACL.sol` honors both. If a per-contract grant would be redundant because the delegate already holds an active wildcard grant, `delegateDecryption` logs a warning; it still submits the transaction.
+{% endhint %}
+
+{% hint style="info" %}
+**A second, related "wildcard" exists at the permit layer.** This section covers wildcard _delegation_ — an on-chain ACL grant from the delegator that lets a delegate skip naming each contract. `@zama-fhe/sdk` also has a wildcard _permit_ (`WILDCARD_PERMIT`), which lets the delegate skip naming each contract on their own signed permit instead. The two compose: decrypting on someone's behalf needs an active delegation covering the contract (specific or wildcard, this section) _and_ a permit covering it, held by the delegate (auto-signed per contract on each delegated decrypt, or granted up front as `WILDCARD_PERMIT` via `sdk.permits.grantDelegationPermit`). Granting one does not grant the other. See [Wildcard (V2) permits](../concepts/permit-model.md#wildcard-v2-permits) for the permit side.
+{% endhint %}
+
+### 7. Revoke delegation (optional)
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -262,7 +300,7 @@ await revoke({ delegateAddress: "0xDelegate" });
 {% endtab %}
 {% endtabs %}
 
-### 7. Handle errors (optional)
+### 8. Handle errors (optional)
 
 Delegation operations can throw several error types. The most common:
 
