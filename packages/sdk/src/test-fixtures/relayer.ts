@@ -61,6 +61,11 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
               startTimestamp: "1000",
               durationDays: "1",
               extraData: "0x",
+              // V1 bakes delegation into the signed message itself, so it's the
+              // one piece of "post-sign" info that DOES round-trip through
+              // serialize/parse — mirrors real @fhevm/sdk (a V1 signed permit's
+              // `encryptedDataOwnerAddress` getter reads `eip712.message.delegatorAddress`).
+              ...(params.delegatorAddress && { delegatorAddress: params.delegatorAddress }),
             },
           };
           const signature = await params.signer.signTypedData(eip712);
@@ -79,6 +84,11 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
     // Mirrors signDecryptionPermit's mock shape but with the V2 (unified) EIP-712
     // primaryType/message fields: `userAddress` and `allowedContracts` instead of
     // a self/delegated primaryType split and `contractAddresses`.
+    //
+    // Unlike V1, a V2 permit's delegation is real @fhevm/sdk's "post-sign
+    // metadata" — never part of the signed `message` — so serializeSignedDecryptionPermit's
+    // mock carries it separately as a top-level `delegatorAddress` field (see
+    // parseSignedDecryptionPermit's mock below).
     signUnifiedDecryptionPermit: vi
       .fn()
       .mockImplementation(
@@ -119,6 +129,11 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
           };
         },
       ),
+    // V2 delegation is "post-sign metadata", not part of the signed
+    // `eip712.message` (unlike V1), so it has to be serialized as a separate
+    // top-level `delegatorAddress` field, derived from the live signed
+    // permit's own `isDelegated`/`encryptedDataOwnerAddress` getters — mirrors
+    // real @fhevm/sdk's `serializeSignedDecryptionPermitToJSON`.
     serializeSignedDecryptionPermit: vi
       .fn()
       .mockImplementation(
@@ -128,20 +143,29 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
             eip712: unknown;
             signature: string;
             signerAddress: string;
+            isDelegated?: boolean;
+            encryptedDataOwnerAddress?: string;
           };
         }) => ({
           version: params.signedPermit.version,
           eip712: params.signedPermit.eip712,
           signature: params.signedPermit.signature,
           signerAddress: params.signedPermit.signerAddress,
+          delegatorAddress: params.signedPermit.isDelegated
+            ? params.signedPermit.encryptedDataOwnerAddress
+            : undefined,
         }),
       ),
     // Route the registerPermit path through the serializedPermit it verifies,
     // mirroring signDecryptionPermit's fused shape so serializeSignedDecryptionPermit's
     // mock (which reads signedPermit.{version,eip712,signature,signerAddress}) works.
-    // `isDelegated`/`encryptedDataOwnerAddress` are derived from the eip712 message's
-    // `delegatorAddress`, mirroring real `@fhevm/sdk` behavior, so tests that verify
-    // delegated-vs-self permit handling exercise a realistic shape.
+    //
+    // Version-dependent delegation recovery, mirroring real @fhevm/sdk: V1
+    // recovers `delegatorAddress` from the signed `eip712.message` (it was
+    // baked in at sign time — see signDecryptionPermit's mock above). V2
+    // recovers it from the top-level `delegatorAddress` field
+    // serializeSignedDecryptionPermit's mock now carries alongside the signed
+    // message, mirroring parseSignedDecryptionPermitV2.
     parseSignedDecryptionPermit: vi
       .fn()
       .mockImplementation(
@@ -151,9 +175,13 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
             eip712: { message?: { delegatorAddress?: string } };
             signature: string;
             signerAddress: string;
+            delegatorAddress?: string;
           };
         }) => {
-          const delegatorAddress = params.serializedPermit.eip712.message?.delegatorAddress;
+          const delegatorAddress =
+            params.serializedPermit.version === 1
+              ? params.serializedPermit.eip712.message?.delegatorAddress
+              : params.serializedPermit.delegatorAddress;
           return {
             version: params.serializedPermit.version,
             eip712: params.serializedPermit.eip712,
@@ -166,6 +194,9 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
           };
         },
       ),
+    // Default to V1 (unsupported) so every existing test keeps exercising the
+    // legacy permit path unchanged; a test that needs V2 mocks this `true`.
+    canUseUnifiedDecryptionPermit: vi.fn().mockResolvedValue(false),
     // `types`/`primaryType`/`message.delegatorAddress` switch on `params.delegatorAddress`,
     // mirroring `@fhevm/sdk`'s self-vs-delegated V1 EIP-712 shape.
     createUnsignedLegacyDecryptionPermitEip712: vi

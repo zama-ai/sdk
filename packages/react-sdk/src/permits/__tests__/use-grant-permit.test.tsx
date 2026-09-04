@@ -25,7 +25,11 @@ describe("useGrantPermit", () => {
     expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.hasPermit.all);
   });
 
-  test("cache: removes isAllowed query after a wildcard grant", async ({ renderWithProviders }) => {
+  test("cache: removes isAllowed query after a wildcard grant", async ({
+    renderWithProviders,
+    relayer,
+  }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
     const { result, queryClient } = renderWithProviders(() => useGrantPermit());
     queryClient.setQueryData(zamaQueryKeys.hasPermit.all, true);
 

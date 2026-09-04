@@ -11,6 +11,7 @@ import {
   RpcRateLimitError,
   SigningFailedError,
   SigningRejectedError,
+  UnifiedDecryptionUnsupportedError,
   ZamaError,
   wrapDecryptError,
 } from "../index";
@@ -317,6 +318,21 @@ describe("wrapDecryptError", () => {
       expect((wrapped as RelayerRequestFailedError).retryable).toBe(true);
     });
 
+    test("maps @fhevm/sdk's unsupported-V2-relayer error to UnifiedDecryptionUnsupportedError", () => {
+      // fetchKmsSigncryptedSharesV2 throws this before ever issuing the
+      // /v3/user-decrypt request when the relayer's resolved feature set says
+      // it doesn't support the route — distinct from the signing-time,
+      // chain-hasn't-upgraded UnifiedPermitNotSupportedError.
+      const unsupported = new Error(
+        "The relayer does not support unified (V2) decryption permits. Call " +
+          "`canUseUnifiedDecryptionPermit` up front to check support.",
+      );
+      const wrapped = wrapDecryptError(unsupported, "fallback");
+      expect(wrapped).toBeInstanceOf(UnifiedDecryptionUnsupportedError);
+      expect(wrapped.cause).toBe(unsupported);
+      expect(wrapped.retryable).toBe(false);
+    });
+
     test("maps @fhevm/sdk's stale-key-pair error to InvalidTransportKeyPairError", () => {
       // verifyTkmsPublicKey throws `invalid TransportKeyPairKeyPair` when a stored
       // key pair can't be re-derived under the current TKMS version; the decrypt
@@ -370,6 +386,10 @@ describe("wrapDecryptError", () => {
       [RpcRateLimitError, () => new RpcRateLimitError("throttled")],
       [InvalidTransportKeyPairError, () => new InvalidTransportKeyPairError("stale key pair")],
       [RevokedKmsContextError, () => new RevokedKmsContextError("revoked context")],
+      [
+        UnifiedDecryptionUnsupportedError,
+        () => new UnifiedDecryptionUnsupportedError("relayer does not support unified decryption"),
+      ],
     ];
 
     test("every entry in DECRYPT_PASSTHROUGH_ERROR_TYPES has a passthrough example", () => {

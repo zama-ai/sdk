@@ -6,6 +6,8 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
+import { CanUseUnifiedDecryptionPermitParameters } from '@fhevm/sdk/actions/base';
+import { CanUseUnifiedDecryptionPermitReturnType } from '@fhevm/sdk/actions/base';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
@@ -5862,6 +5864,7 @@ export interface ErrorForCode {
     [ZamaErrorCode.SigningRejected]: SigningRejectedError;
     [ZamaErrorCode.TransactionReverted]: TransactionRevertedError;
     [ZamaErrorCode.TransportKeyPairChanged]: TransportKeyPairChangedError;
+    [ZamaErrorCode.UnifiedDecryptionUnsupported]: UnifiedDecryptionUnsupportedError;
     [ZamaErrorCode.UnifiedPermitNotSupported]: UnifiedPermitNotSupportedError;
     [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
     [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
@@ -12773,6 +12776,7 @@ export class RelayerRequestFailedError extends ZamaError {
 
 // @public
 export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "signUnifiedDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
+    canUseUnifiedDecryptionPermit(parameters?: CanUseUnifiedDecryptionPermitParameters): Promise<CanUseUnifiedDecryptionPermitReturnType>;
     chain: FheChain;
     createUnsignedLegacyDecryptionPermitEip712(parameters: CreateUnsignedLegacyDecryptionPermitEip712Parameters): Promise<CreateUnsignedLegacyDecryptionPermitEip712ReturnType>;
 }
@@ -13044,6 +13048,7 @@ export const sepolia: {
 
 // @public
 export interface SerializedPermit {
+    delegatorAddress?: ChecksummedAddress;
     eip712: SerializedPermitEip712;
     signature: Hex;
     signerAddress: ChecksummedAddress;
@@ -15984,6 +15989,11 @@ export function underlyingContract(wrapperAddress: Address): {
     readonly functionName: "underlying";
     readonly args: readonly [];
 };
+
+// @public
+export class UnifiedDecryptionUnsupportedError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
 
 // @public
 export class UnifiedPermitNotSupportedError extends ZamaError {
@@ -19716,6 +19726,7 @@ export const ZamaErrorCode: {
     readonly PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH";
     readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
     readonly UnifiedPermitNotSupported: "UNIFIED_PERMIT_NOT_SUPPORTED";
+    readonly UnifiedDecryptionUnsupported: "UNIFIED_DECRYPTION_UNSUPPORTED";
 };
 
 // @public

@@ -97,6 +97,8 @@ describe("CredentialService.allow", () => {
 
 describe("CredentialService.grantPermit wildcard", () => {
   test("signs a V2 permit with an empty contract list", async ({ credentialService, relayer }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+
     const result = await credentialService.grantPermit(WILDCARD_PERMIT);
     expect(result.permissions).toHaveLength(1);
     const [permission] = result.permissions;
@@ -108,8 +110,11 @@ describe("CredentialService.grantPermit wildcard", () => {
 
   test("reuses an existing wildcard permit without re-prompting", async ({
     credentialService,
+    relayer,
     signer,
   }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+
     await credentialService.grantPermit(WILDCARD_PERMIT);
     vi.mocked(signer.signTypedData).mockClear();
     const second = await credentialService.grantPermit(WILDCARD_PERMIT);
@@ -119,7 +124,10 @@ describe("CredentialService.grantPermit wildcard", () => {
 
   test("hasPermit covers an arbitrary contract once a wildcard permit is granted", async ({
     credentialService,
+    relayer,
   }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+
     await credentialService.grantPermit(WILDCARD_PERMIT);
     expect(await credentialService.hasPermit([A])).toBe(true);
     expect(await credentialService.hasPermit([B, C])).toBe(true);
@@ -127,8 +135,11 @@ describe("CredentialService.grantPermit wildcard", () => {
 
   test("a plain contracts request does not re-prompt once a wildcard permit covers the scope", async ({
     credentialService,
+    relayer,
     signer,
   }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+
     await credentialService.grantPermit(WILDCARD_PERMIT);
     vi.mocked(signer.signTypedData).mockClear();
     const granted = await credentialService.grantPermit([A]);
@@ -139,7 +150,10 @@ describe("CredentialService.grantPermit wildcard", () => {
 
   test("a delegated wildcard grant does not satisfy direct-decrypt coverage", async ({
     credentialService,
+    relayer,
   }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+
     await credentialService.grantPermit(WILDCARD_PERMIT, DELEGATOR);
     expect(await credentialService.hasPermit([A])).toBe(false);
     expect(await credentialService.hasPermit([A], DELEGATOR)).toBe(true);
@@ -147,11 +161,26 @@ describe("CredentialService.grantPermit wildcard", () => {
 
   test("revoking a specific contract also drops a wildcard permit covering it", async ({
     credentialService,
+    relayer,
   }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+
     await credentialService.grantPermit(WILDCARD_PERMIT);
     expect(await credentialService.hasPermit([A])).toBe(true);
     await credentialService.revokePermits([A]);
     expect(await credentialService.hasPermit([A])).toBe(false);
+  });
+
+  test("throws UnifiedPermitNotSupportedError, without prompting the wallet, when the relayer does not support unified decryption", async ({
+    credentialService,
+    relayer,
+    signer,
+  }) => {
+    const error = await credentialService.grantPermit(WILDCARD_PERMIT).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(UnifiedPermitNotSupportedError);
+    expect(relayer.canUseUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayer.signUnifiedDecryptionPermit).not.toHaveBeenCalled();
+    expect(signer.signTypedData).not.toHaveBeenCalled();
   });
 
   test("throws UnifiedPermitNotSupportedError, without prompting the wallet, on a pre-v0.14 chain", async ({
@@ -159,6 +188,7 @@ describe("CredentialService.grantPermit wildcard", () => {
     relayer,
     signer,
   }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
     // Mirrors @fhevm/sdk's real behavior: the chain-version check inside the V2
     // unsigned-payload builder rejects before ever calling the signer.
     vi.mocked(relayer.signUnifiedDecryptionPermit).mockRejectedValueOnce(
@@ -171,6 +201,236 @@ describe("CredentialService.grantPermit wildcard", () => {
     expect(error).toBeInstanceOf(UnifiedPermitNotSupportedError);
     expect((error as Error).message).toContain("protocol v0.14");
     expect(signer.signTypedData).not.toHaveBeenCalled();
+  });
+
+  test("throws UnifiedPermitNotSupportedError, without prompting the relayer or the wallet, when the chain has no ProtocolConfig", async ({
+    createCredentialService,
+  }) => {
+    const relayer = createMockRelayer();
+    const router = createMockRouter({
+      chains: [createMockChain({ id: 31337, protocolConfigContractAddress: undefined })],
+      relayer,
+    });
+    const credentialService = createCredentialService({ router });
+
+    const error = await credentialService.grantPermit(WILDCARD_PERMIT).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(UnifiedPermitNotSupportedError);
+    expect(relayer.canUseUnifiedDecryptionPermit).not.toHaveBeenCalled();
+    expect(relayer.signUnifiedDecryptionPermit).not.toHaveBeenCalled();
+  });
+});
+
+describe("CredentialService.grantPermit version selection", () => {
+  test("signs V1 when the relayer does not support unified decryption", async ({
+    credentialService,
+    relayer,
+  }) => {
+    const result = await credentialService.grantPermit([A]);
+    expect(relayer.canUseUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayer.signDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayer.signUnifiedDecryptionPermit).not.toHaveBeenCalled();
+    expect(result.permissions[0]?.version).toBe(1);
+  });
+
+  test("re-probes on every grant — @fhevm/sdk pins the result per client, not this layer", async ({
+    credentialService,
+    relayer,
+  }) => {
+    await credentialService.grantPermit([A]);
+    expect(relayer.canUseUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockClear();
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValueOnce(true);
+
+    const result = await credentialService.grantPermit([B]);
+
+    expect(relayer.canUseUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayer.signUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+    expect(result.permissions[0]?.version).toBe(2);
+  });
+
+  test("does not cache a thrown probe, so a later grant can still upgrade to V2", async ({
+    credentialService,
+    relayer,
+  }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockRejectedValueOnce(
+      new Error("network error"),
+    );
+
+    expect((await credentialService.grantPermit([A])).permissions[0]?.version).toBe(1);
+    expect(relayer.signDecryptionPermit).toHaveBeenCalledOnce();
+
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+    vi.mocked(relayer.signDecryptionPermit).mockClear();
+
+    const result = await credentialService.grantPermit([B]);
+
+    expect(relayer.signUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayer.signDecryptionPermit).not.toHaveBeenCalled();
+    expect(result.permissions[0]?.version).toBe(2);
+  });
+
+  test("probes each chain independently after switchChain", async ({ createCredentialService }) => {
+    const relayerA = createMockRelayer();
+    const relayerB = createMockRelayer();
+    vi.mocked(relayerA.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+    vi.mocked(relayerB.canUseUnifiedDecryptionPermit).mockResolvedValue(false);
+    const router = createMockRouter({
+      chains: [createMockChain({ id: 1 }), createMockChain({ id: 2 })],
+      relayers: { 1: relayerA, 2: relayerB },
+      activeChainId: 1,
+    });
+    const credentialService = createCredentialService({ router });
+
+    expect((await credentialService.grantPermit([A])).permissions[0]?.version).toBe(2);
+    expect(relayerA.canUseUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayerB.canUseUnifiedDecryptionPermit).not.toHaveBeenCalled();
+
+    router.switchChain(2);
+    expect((await credentialService.grantPermit([B])).permissions[0]?.version).toBe(1);
+    expect(relayerB.canUseUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayerA.canUseUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+  });
+
+  test("stays V1 without probing the relayer when the chain has no ProtocolConfig, even if the relayer supports V2", async ({
+    createCredentialService,
+  }) => {
+    const relayer = createMockRelayer();
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+    // Mirrors the real `hardhat`/`anvil` preset: no ProtocolConfig deployed, so
+    // V2 signing would fail regardless of what the relayer reports.
+    const router = createMockRouter({
+      chains: [createMockChain({ id: 31337, protocolConfigContractAddress: undefined })],
+      relayer,
+    });
+    const credentialService = createCredentialService({ router });
+
+    const result = await credentialService.grantPermit([A]);
+
+    expect(relayer.canUseUnifiedDecryptionPermit).not.toHaveBeenCalled();
+    expect(relayer.signDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayer.signUnifiedDecryptionPermit).not.toHaveBeenCalled();
+    expect(result.permissions[0]?.version).toBe(1);
+  });
+
+  test("signs V2 for a plain contract list once the relayer supports unified decryption", async ({
+    credentialService,
+    relayer,
+  }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+
+    const result = await credentialService.grantPermit([A]);
+
+    expect(relayer.signUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayer.signDecryptionPermit).not.toHaveBeenCalled();
+    expect(result.permissions).toHaveLength(1);
+    const [permission] = result.permissions;
+    expect(permission?.version).toBe(2);
+    // Scope stays exactly what was requested — upgrading to V2 must never
+    // widen an explicit contract list into a wildcard permit.
+    expect(permission?.contractAddresses).toEqual([A]);
+  });
+
+  test("falls back to V1 without throwing when the capability probe itself fails", async ({
+    credentialService,
+    relayer,
+  }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockRejectedValue(new Error("network error"));
+
+    const result = await credentialService.grantPermit([A]);
+
+    expect(relayer.signDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayer.signUnifiedDecryptionPermit).not.toHaveBeenCalled();
+    expect(result.permissions[0]?.version).toBe(1);
+  });
+
+  test("widening an existing V1 permit upgrades to V2 once the relayer supports V2", async ({
+    createCredentialService,
+    storage,
+    relayer,
+    signer,
+  }) => {
+    // Same store, new service — the first session probed "no V2"; a later
+    // session probes again and upgrades the widen.
+    await createCredentialService({ storage }).grantPermit([A, B]);
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+    vi.mocked(signer.signTypedData).mockClear();
+    vi.mocked(relayer.signDecryptionPermit).mockClear();
+    vi.mocked(relayer.signUnifiedDecryptionPermit).mockClear();
+
+    const result = await createCredentialService({ storage }).grantPermit([A, B, C]);
+
+    expect(relayer.signUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayer.signDecryptionPermit).not.toHaveBeenCalled();
+    expect(result.permissions).toHaveLength(1);
+    expect(result.permissions[0]?.version).toBe(2);
+    expect(result.permissions[0]?.contractAddresses).toEqual([A, B, C]);
+  });
+
+  test("a delegated grant upgrades to V2 once the relayer supports V2", async ({
+    credentialService,
+    relayer,
+  }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+
+    const result = await credentialService.grantPermit([A], DELEGATOR);
+
+    expect(relayer.signUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayer.signDecryptionPermit).not.toHaveBeenCalled();
+    expect(result.permissions[0]?.version).toBe(2);
+    expect(result.permissions[0]?.contractAddresses).toEqual([A]);
+  });
+
+  test("a delegated grant stays V1 when the relayer does not support V2", async ({
+    credentialService,
+    relayer,
+  }) => {
+    const result = await credentialService.grantPermit([A], DELEGATOR);
+
+    expect(relayer.canUseUnifiedDecryptionPermit).toHaveBeenCalled();
+    expect(relayer.signDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayer.signUnifiedDecryptionPermit).not.toHaveBeenCalled();
+    expect(result.permissions[0]?.version).toBe(1);
+  });
+
+  test("widening a delegated V1 permit upgrades to V2 once the relayer supports V2", async ({
+    createCredentialService,
+    storage,
+    relayer,
+    signer,
+  }) => {
+    await createCredentialService({ storage }).grantPermit([A, B], DELEGATOR);
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+    vi.mocked(signer.signTypedData).mockClear();
+    vi.mocked(relayer.signDecryptionPermit).mockClear();
+    vi.mocked(relayer.signUnifiedDecryptionPermit).mockClear();
+
+    const result = await createCredentialService({ storage }).grantPermit([A, B, C], DELEGATOR);
+
+    expect(relayer.signUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayer.signDecryptionPermit).not.toHaveBeenCalled();
+    expect(result.permissions[0]?.version).toBe(2);
+    expect(result.permissions[0]?.contractAddresses).toEqual([A, B, C]);
+  });
+
+  test("widening an existing V2 permit stays V2, never silently downgrades to V1", async ({
+    credentialService,
+    relayer,
+    signer,
+  }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+    await credentialService.grantPermit([A, B]);
+    vi.mocked(signer.signTypedData).mockClear();
+    vi.mocked(relayer.signUnifiedDecryptionPermit).mockClear();
+
+    const result = await credentialService.grantPermit([A, B, C]);
+
+    expect(relayer.signUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayer.signDecryptionPermit).not.toHaveBeenCalled();
+    expect(result.permissions).toHaveLength(1);
+    expect(result.permissions[0]?.version).toBe(2);
+    expect(result.permissions[0]?.contractAddresses).toEqual([A, B, C]);
   });
 });
 

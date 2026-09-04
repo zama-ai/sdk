@@ -4,6 +4,7 @@ import {
   InvalidTransportKeyPairError,
   NoCiphertextError,
   RevokedKmsContextError,
+  UnifiedDecryptionUnsupportedError,
 } from "./credential";
 import { RelayerRequestFailedError } from "./relayer";
 import { DelegationNotPropagatedError } from "./delegation";
@@ -20,6 +21,7 @@ import {
   isRelayerTimeoutError,
   isRevokedKmsContextError,
   isRpcRateLimitError,
+  isUnifiedDecryptionUnsupportedMessage,
   parseHandleFromMessage,
 } from "../utils/error";
 
@@ -60,6 +62,7 @@ export const DECRYPT_PASSTHROUGH_ERROR_TYPES = [
   RpcRateLimitError,
   InvalidTransportKeyPairError,
   RevokedKmsContextError,
+  UnifiedDecryptionUnsupportedError,
 ] as const;
 
 /**
@@ -99,6 +102,18 @@ export function wrapDecryptError(
         "failed the same way. The on-chain validity check is cached for up to 15 minutes, so a " +
         "just-revoked context can keep failing across that window. Retry after the window; the " +
         "SDK re-runs the recovery on the next decrypt, no manual cleanup is needed.",
+      { cause: error },
+    );
+  }
+
+  // A stored V2/wildcard permit's scope is needed for this decrypt, but this
+  // relayer instance hasn't deployed /v3/user-decrypt yet — distinct from
+  // UnifiedPermitNotSupportedError (signing-time, chain hasn't upgraded).
+  if (error instanceof Error && isUnifiedDecryptionUnsupportedMessage(error.message)) {
+    return new UnifiedDecryptionUnsupportedError(
+      "This account's stored permit for this scope is a wildcard (V2) permit, but the connected " +
+        "relayer does not yet support unified decryption (/v3/user-decrypt). Grant a specific-" +
+        "contract permit instead (sdk.permits.grantPermit([...])), or retry once the relayer upgrades.",
       { cause: error },
     );
   }

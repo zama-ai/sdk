@@ -14,6 +14,7 @@ import {
   isNotEntitledMessage,
   isInvalidTransportKeyPairMessage,
   isUnsupportedUnifiedPermitMessage,
+  isUnifiedDecryptionUnsupportedMessage,
   isRevokedKmsContextError,
   INVALID_KMS_CONTEXT_SELECTOR,
   parseHandleFromMessage,
@@ -491,6 +492,41 @@ describe("isUnsupportedUnifiedPermitMessage", () => {
   test("the installed @fhevm/sdk still throws the message our matcher keys on", () => {
     const source = fhevmSdkFile("core/kms/SignedDecryptionPermitV2-p.ts");
     expect(source).toContain("Invalid extraData version");
+  });
+});
+
+describe("isUnifiedDecryptionUnsupportedMessage", () => {
+  // Must stay in sync with @fhevm/sdk's fetchKmsSigncryptedSharesV2, which
+  // checks the relayer's resolved feature set before ever issuing the
+  // /v3/user-decrypt request and throws this if the relayer doesn't support it.
+  test("matches @fhevm/sdk's unsupported-V2-relayer message", () => {
+    expect(
+      isUnifiedDecryptionUnsupportedMessage(
+        "The relayer does not support unified (V2) decryption permits. Call " +
+          "`canUseUnifiedDecryptionPermit` up front to check support.",
+      ),
+    ).toBe(true);
+    // Case-insensitive.
+    expect(
+      isUnifiedDecryptionUnsupportedMessage("DOES NOT SUPPORT UNIFIED (V2) DECRYPTION PERMITS"),
+    ).toBe(true);
+  });
+
+  test("does NOT match unrelated failures", () => {
+    expect(isUnifiedDecryptionUnsupportedMessage("network error")).toBe(false);
+    expect(
+      isUnifiedDecryptionUnsupportedMessage(
+        "createUnsignedDecryptionPermitEip712V2 error: Invalid extraData version extraData=0x01",
+      ),
+    ).toBe(false);
+  });
+
+  // Drift guard: if a @fhevm/sdk bump rewords this message, our matcher silently
+  // stops typing the error and callers get a generic DecryptionFailedError instead
+  // of the clear, actionable UnifiedDecryptionUnsupportedError.
+  test("the installed @fhevm/sdk still throws the message our matcher keys on", () => {
+    const source = fhevmSdkFile("core/kms/fetchKmsSigncryptedSharesV2-p.ts");
+    expect(source).toContain("does not support unified (V2) decryption permits");
   });
 });
 

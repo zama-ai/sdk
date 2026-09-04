@@ -156,6 +156,24 @@ export class CredentialService {
   }
 
   /**
+   * V2 signing requires the chain's `protocolConfigContractAddress`; without it,
+   * signing fails regardless of what the relayer reports. A thrown relayer probe
+   * is treated as unsupported for this call only, never cached — `@fhevm/sdk`
+   * already resolves and pins `canUseUnifiedDecryptionPermit` once per client,
+   * so caching it again here would just duplicate that.
+   */
+  async #permitVersion(): Promise<1 | 2> {
+    if (this.#router.chain.protocolConfigContractAddress === undefined) {
+      return 1;
+    }
+    try {
+      return (await this.#router.relayer.canUseUnifiedDecryptionPermit()) ? 2 : 1;
+    } catch {
+      return 1;
+    }
+  }
+
+  /**
    * Resolve a keypair and permissions covering `contracts`, minimizing wallet
    * prompts by reusing or widening existing permits where possible. Empty
    * `contracts` warms the keypair without prompting.
@@ -181,12 +199,19 @@ export class CredentialService {
     const signerAddress = checksum(account.address);
 
     if (contracts === WILDCARD_PERMIT) {
-      const keypair = await this.#vault.getOrCreate(signerAddress);
       const scope = this.#permissionScope(signerAddress, delegator);
+      const keypair = await this.#vault.getOrCreate(signerAddress);
       const permissions = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
       const existing = permissions.find(isWildcardPermission);
       if (existing) {
         return { keypair, permissions: [existing] };
+      }
+      if ((await this.#permitVersion()) === 1) {
+        throw new UnifiedPermitNotSupportedError(
+          "grantPermit: WILDCARD_PERMIT requires V2 (unified) decryption permits, which this " +
+            "network's relayer does not yet support. Grant a V1 permit with an explicit contract " +
+            "list instead, or retry once the relayer upgrades.",
+        );
       }
       const permission = await this.#signPermit({ version: 2, chunk: [], keypair, scope });
       await swallow("persist permit", () => this.#store.append(scope, [permission]), this.#logger);
@@ -206,10 +231,11 @@ export class CredentialService {
 
     const uncovered = uncoveredContracts(permissions, requested);
     if (uncovered.length > 0) {
+      const version = await this.#permitVersion();
       const candidate = findPermitToWiden(permissions, uncovered, requested);
       if (candidate !== null) {
         const widenedSet = sortedUnion(candidate.contractAddresses, uncovered);
-        const widened = await this.#signPermit({ version: 1, chunk: widenedSet, keypair, scope });
+        const widened = await this.#signPermit({ version, chunk: widenedSet, keypair, scope });
         await swallow(
           "replace permit",
           () => this.#store.replace(scope, candidate.serializedPermit.signature, widened),
@@ -218,7 +244,7 @@ export class CredentialService {
         permissions[permissions.indexOf(candidate)] = widened;
       } else {
         for (const chunk of chunkContracts(uncovered)) {
-          const permission = await this.#signPermit({ version: 1, chunk, keypair, scope });
+          const permission = await this.#signPermit({ version, chunk, keypair, scope });
           permissions.push(permission);
           await swallow(
             "persist permit",

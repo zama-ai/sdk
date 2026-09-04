@@ -1,4 +1,6 @@
 import type {
+  CanUseUnifiedDecryptionPermitParameters,
+  CanUseUnifiedDecryptionPermitReturnType,
   CreateUnsignedLegacyDecryptionPermitEip712Parameters,
   CreateUnsignedLegacyDecryptionPermitEip712ReturnType,
 } from "@fhevm/sdk/actions/base";
@@ -251,4 +253,16 @@ export interface RelayerSDK extends Pick<
   createUnsignedLegacyDecryptionPermitEip712(
     parameters: CreateUnsignedLegacyDecryptionPermitEip712Parameters,
   ): Promise<CreateUnsignedLegacyDecryptionPermitEip712ReturnType>;
+  /**
+   * Reports whether the connected relayer supports V2 (unified) decryption
+   * permits — specifically its `/v3/user-decrypt` route. Not exposed on
+   * `@fhevm/sdk`'s client decorator, so it's called directly against the base
+   * client rather than through a decorated method.
+   *
+   * The relayer's feature set is resolved once per client and pinned, so
+   * repeated calls are cheap and never drift.
+   */
+  canUseUnifiedDecryptionPermit(
+    parameters?: CanUseUnifiedDecryptionPermitParameters,
+  ): Promise<CanUseUnifiedDecryptionPermitReturnType>;
 }

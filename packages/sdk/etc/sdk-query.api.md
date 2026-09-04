@@ -6,6 +6,8 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
+import { CanUseUnifiedDecryptionPermitParameters } from '@fhevm/sdk/actions/base';
+import { CanUseUnifiedDecryptionPermitReturnType } from '@fhevm/sdk/actions/base';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
@@ -772,6 +774,7 @@ export interface RegisterPermitParams {
 
 // @public
 export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "signUnifiedDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
+    canUseUnifiedDecryptionPermit(parameters?: CanUseUnifiedDecryptionPermitParameters): Promise<CanUseUnifiedDecryptionPermitReturnType>;
     chain: FheChain;
     createUnsignedLegacyDecryptionPermitEip712(parameters: CreateUnsignedLegacyDecryptionPermitEip712Parameters): Promise<CreateUnsignedLegacyDecryptionPermitEip712ReturnType>;
 }
@@ -1363,6 +1366,7 @@ export const ZamaErrorCode: {
     readonly PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH";
     readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
     readonly UnifiedPermitNotSupported: "UNIFIED_PERMIT_NOT_SUPPORTED";
+    readonly UnifiedDecryptionUnsupported: "UNIFIED_DECRYPTION_UNSUPPORTED";
 };
 
 // @public
