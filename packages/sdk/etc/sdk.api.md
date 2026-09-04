@@ -11272,9 +11272,6 @@ export function matchZamaError<R>(error: unknown, handlers: { [K in ZamaErrorCod
 }): R | undefined;
 
 // @public
-export const MAX_UINT48: number;
-
-// @public
 export const MAX_UINT64: bigint;
 
 // @public

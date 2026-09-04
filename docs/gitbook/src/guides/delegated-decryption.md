@@ -266,8 +266,8 @@ await delegate({ delegateAddress: "0xDelegate" });
 {% endtab %}
 {% endtabs %}
 
-{% hint style="warning" %}
-Once a delegate holds a wildcard grant, per-contract delegations to that same delegate are redundant — the wildcard already covers them. The SDK does not track prior grants across calls to detect the overlap, so avoid combining them yourself.
+{% hint style="info" %}
+Wildcard and per-contract delegations to the same delegate can coexist — `ACL.sol` honors both. If a per-contract grant would be redundant because the delegate already holds an active wildcard grant, `delegateDecryption` logs a warning; it still submits the transaction.
 {% endhint %}
 
 {% hint style="info" %}

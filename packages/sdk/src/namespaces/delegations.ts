@@ -46,12 +46,8 @@ export class Delegations {
    * window with a bounded internal retry, so you can decrypt right after this
    * resolves.
    *
-   * @param contractAddress - The confidential contract address to delegate on. Pass
-   *   {@link WILDCARD_CONTRACT} instead of a specific address to delegate across every
-   *   confidential contract the delegator owns — current and future — rather than
-   *   enumerating each one. Granting the wildcard makes any per-contract delegation to
-   *   the same delegate redundant; the SDK does not track prior grants across calls to
-   *   detect that mix, so avoid combining them yourself.
+   * @param contractAddress - The confidential contract address to delegate on, or
+   *   {@link WILDCARD_CONTRACT} to cover every contract with a single delegation.
    * @param delegateAddress - Address to delegate decryption rights to.
    * @param expirationDate - Optional expiration date (defaults to permanent delegation via `uint64.max`).
    * @returns The transaction hash and mined receipt.

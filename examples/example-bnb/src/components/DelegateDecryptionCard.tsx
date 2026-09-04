@@ -1,14 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { getAddress } from "viem";
 import { useDelegateDecryption } from "@zama-fhe/react-sdk";
 import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { BSC_TESTNET_EXPLORER_URL } from "@/lib/config";
-
-// Mirrors the SDK's WILDCARD_CONTRACT export — not yet in this app's pinned
-// SDK version. Switch to importing it once the pin is bumped.
-const WILDCARD_CONTRACT = "0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF";
 
 interface DelegateDecryptionCardProps {
   token: TokenWrapperPairWithMetadata;
@@ -16,12 +12,7 @@ interface DelegateDecryptionCardProps {
 }
 
 export function DelegateDecryptionCard({ token, disabled = false }: DelegateDecryptionCardProps) {
-  // A wildcard grant makes any existing per-token delegation to the same
-  // delegate redundant.
-  const [allContracts, setAllContracts] = useState(false);
-  const delegate = useDelegateDecryption(
-    allContracts ? WILDCARD_CONTRACT : token.confidentialTokenAddress,
-  );
+  const delegate = useDelegateDecryption(token.confidentialTokenAddress);
 
   // datetime-local min: one hour from now, in the browser's local wall-clock time.
   const minExpiration = new Date(
@@ -43,7 +34,7 @@ export function DelegateDecryptionCard({ token, disabled = false }: DelegateDecr
     try {
       const data = await delegate.mutateAsync({
         delegateAddress: getAddress(delegateAddress),
-        // undefined → SDK sends MAX_UINT64 on-chain (permanent, no expiry).
+        // undefined → SDK sends PERMANENT_DELEGATION on-chain (permanent, no expiry).
         expirationDate: noExpiry ? undefined : new Date(expirationInput),
       });
       return { data };
@@ -86,21 +77,6 @@ export function DelegateDecryptionCard({ token, disabled = false }: DelegateDecr
           </label>
         </div>
         <p className="token-meta card-gap">Expiration must be at least one hour from now.</p>
-        <label className="checkbox-label card-gap">
-          <input
-            name="allContracts"
-            type="checkbox"
-            checked={allContracts}
-            onChange={(e) => setAllContracts(e.target.checked)}
-          />
-          Delegate for all contracts (wildcard)
-        </label>
-        {allContracts && (
-          <p className="token-meta card-gap">
-            Grants access across every confidential contract this wallet owns, not just{" "}
-            {token.confidential.symbol}. Skip per-token delegations to this delegate once granted.
-          </p>
-        )}
         <button type="submit" className="btn btn-primary btn-full" disabled={disabled || isPending}>
           {isPending ? "Granting…" : "Grant Access"}
         </button>

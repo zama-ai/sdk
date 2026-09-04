@@ -174,10 +174,15 @@ test("should decrypt via wildcard delegation to a contract never named in the gr
   anvilPort,
 }) => {
   const { client: account1Client, account1 } = createAccount1Client(anvilPort);
+  const shieldAmount = 500_000_000n;
 
-  // cUSDT is never named in the delegation call below — only the wildcard
-  // sentinel is — so a successful decrypt proves the grant covers a
-  // contract it never mentioned.
+  // 1. Fund Account #1 with shielded tokens so the decrypt below reads a
+  //    real, non-zero balance rather than short-circuiting on a zero handle.
+  await fundAccount1(viemClient, account1Client, account1.address, contracts, shieldAmount);
+
+  // 2. cUSDT is never named in the delegation call below — only the wildcard
+  //    sentinel is — so a successful decrypt proves the grant covers a
+  //    contract it never mentioned.
   const hash = await account1Client.writeContract({
     address: contracts.acl,
     abi: aclDelegateAbi,
@@ -189,7 +194,7 @@ test("should decrypt via wildcard delegation to a contract never named in the gr
   await page.goto(`/delegation?token=${contracts.cUSDT}&delegator=${account1.address}`);
   await page.getByTestId("decrypt-delegate-button").click();
 
-  await expect(page.getByTestId("delegated-balance")).toContainText("0");
+  await expect(page.getByTestId("delegated-balance")).toContainText(shieldAmount.toString());
 });
 
 test("should decrypt zero balance as delegate", async ({

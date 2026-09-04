@@ -6,8 +6,7 @@ import { DelegationExpiredError, DelegationNotFoundError } from "@zama-fhe/sdk";
 import { useActionState } from "react";
 import { formatUnits, getAddress, isAddress } from "viem";
 
-// Mirrors the SDK's MAX_UINT64 export — not yet in this app's pinned SDK
-// version. Switch to importing it once the pin is bumped.
+// Matches the SDK's internal sentinel value for permanent (no-expiry) delegations.
 const MAX_UINT64 = 2n ** 64n - 1n;
 
 interface DecryptAsCardProps {

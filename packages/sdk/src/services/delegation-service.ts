@@ -4,6 +4,7 @@ import {
   getDelegationExpiryContract,
   MAX_UINT64,
   revokeDelegationContract,
+  WILDCARD_CONTRACT,
 } from "../contracts";
 import {
   DelegationDelegateEqualsContractError,
@@ -31,7 +32,7 @@ type AclTransactionOperation = Extract<
   "delegateDecryption" | "revokeDelegation"
 >;
 
-/** Delegation activity and expiry, resolved from a single expiry read. */
+/** Delegation activity and expiry, resolved from the active contract or wildcard grant. */
 export interface DelegationStatus {
   /** Whether the delegation is currently active (exists and not expired). */
   isActive: boolean;
@@ -121,6 +122,14 @@ export class DelegationService {
       );
     }
 
+    if (normalizedContract !== getAddress(WILDCARD_CONTRACT)) {
+      await this.#warnIfWildcardAlreadyCoversDelegate({
+        contractAddress: normalizedContract,
+        delegatorAddress: normalizedDelegator,
+        delegateAddress: normalizedDelegate,
+      });
+    }
+
     return this.#submitAclTransaction({
       operation: "delegateDecryption",
       signer,
@@ -181,24 +190,75 @@ export class DelegationService {
   }
 
   /**
-   * Resolve activity and expiry together from a single {@link getDelegationExpiry} read,
-   * instead of two separate round trips through {@link isDelegated} and
-   * {@link getDelegationExpiry}.
+   * Resolve activity and expiry, falling back to the delegate's {@link WILDCARD_CONTRACT}
+   * grant when the per-contract row isn't active — the raw expiry getter is a per-contract
+   * read, so a wildcard-only grant would otherwise read as "no delegation" for every contract.
    */
   async getStatus(params: {
     contractAddress: Address;
     delegatorAddress: Address;
     delegateAddress: Address;
   }): Promise<DelegationStatus> {
-    const expiryTimestamp = await this.getDelegationExpiry(params);
+    const normalizedContract = getAddress(params.contractAddress);
+    const isWildcardQuery = normalizedContract === WILDCARD_CONTRACT;
+
+    const [contractExpiry, wildcardExpiry] = await Promise.all([
+      this.getDelegationExpiry(params),
+      isWildcardQuery
+        ? Promise.resolve(0n)
+        : this.getDelegationExpiry({ ...params, contractAddress: WILDCARD_CONTRACT }),
+    ]);
+
+    const now =
+      this.#needsBlockTimestamp(contractExpiry) || this.#needsBlockTimestamp(wildcardExpiry)
+        ? await this.#provider.getBlockTimestamp()
+        : undefined;
+
+    const contractStatus = this.#resolveStatus(contractExpiry, now);
+    if (contractStatus.isActive) {
+      return contractStatus;
+    }
+    const wildcardStatus = this.#resolveStatus(wildcardExpiry, now);
+    if (wildcardStatus.isActive) {
+      return wildcardStatus;
+    }
+    return contractExpiry >= wildcardExpiry ? contractStatus : wildcardStatus;
+  }
+
+  /**
+   * Advisory only — mixing wildcard and per-contract delegations to the same
+   * delegate is valid on-chain, so this never blocks the write.
+   */
+  async #warnIfWildcardAlreadyCoversDelegate(params: {
+    contractAddress: Address;
+    delegatorAddress: Address;
+    delegateAddress: Address;
+  }): Promise<void> {
+    try {
+      const { isActive } = await this.getStatus({ ...params, contractAddress: WILDCARD_CONTRACT });
+      if (isActive) {
+        this.#logger.warn(
+          `delegateDecryption: ${params.delegateAddress} already holds an active wildcard ` +
+            `delegation from ${params.delegatorAddress}; this grant for ${params.contractAddress} is redundant.`,
+        );
+      }
+    } catch (error) {
+      this.#logger.warn("delegateDecryption: wildcard redundancy check failed", { error });
+    }
+  }
+
+  #needsBlockTimestamp(expiryTimestamp: bigint): boolean {
+    return expiryTimestamp !== 0n && expiryTimestamp !== MAX_UINT64;
+  }
+
+  #resolveStatus(expiryTimestamp: bigint, now: bigint | undefined): DelegationStatus {
     if (expiryTimestamp === 0n) {
       return { isActive: false, expiryTimestamp };
     }
     if (expiryTimestamp === MAX_UINT64) {
       return { isActive: true, expiryTimestamp };
     }
-    const now = await this.#provider.getBlockTimestamp();
-    return { isActive: expiryTimestamp > now, expiryTimestamp };
+    return { isActive: now !== undefined && expiryTimestamp > now, expiryTimestamp };
   }
 
   async getDelegationExpiry({

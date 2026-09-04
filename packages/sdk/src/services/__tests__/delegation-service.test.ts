@@ -2,6 +2,7 @@ import { getAddress, type Address } from "viem";
 import { anvil } from "../../chains";
 import { MAX_UINT64, WILDCARD_CONTRACT } from "../../contracts";
 import { DelegationCooldownError, TransactionRevertedError } from "../../errors";
+import { LoggerService } from "../logger-service";
 import { describe, expect, test, vi } from "../../test-fixtures";
 
 const CONTRACT = getAddress("0x3333333333333333333333333333333333333333") as Address;
@@ -37,7 +38,12 @@ describe("DelegationService", () => {
     delegatorAddress,
     delegateAddress,
   }) => {
-    vi.mocked(provider.readContract).mockResolvedValueOnce(MAX_UINT64).mockResolvedValueOnce(20n);
+    // Each isDelegated call reads the target contract row and the wildcard row.
+    vi.mocked(provider.readContract)
+      .mockResolvedValueOnce(MAX_UINT64)
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValueOnce(20n)
+      .mockResolvedValueOnce(0n);
     vi.mocked(provider.getBlockTimestamp).mockResolvedValue(10n);
 
     await expect(
@@ -62,7 +68,12 @@ describe("DelegationService", () => {
     delegatorAddress,
     delegateAddress,
   }) => {
-    vi.mocked(provider.readContract).mockResolvedValueOnce(0n).mockResolvedValueOnce(10n);
+    // Each isDelegated call reads the target contract row and the wildcard row.
+    vi.mocked(provider.readContract)
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValueOnce(10n)
+      .mockResolvedValueOnce(0n);
     vi.mocked(provider.getBlockTimestamp).mockResolvedValue(20n);
 
     await expect(
@@ -81,17 +92,18 @@ describe("DelegationService", () => {
     ).resolves.toBe(false);
   });
 
-  test("getStatus resolves activity and expiry from a single expiry read", async ({
+  test("getStatus reads the target and wildcard rows and reports inactive when both are empty", async ({
     delegationService,
     provider,
     delegatorAddress,
     delegateAddress,
   }) => {
-    vi.mocked(provider.readContract).mockResolvedValueOnce(0n);
+    vi.mocked(provider.readContract).mockResolvedValue(0n);
 
     await expect(
       delegationService.getStatus({ contractAddress: CONTRACT, delegatorAddress, delegateAddress }),
     ).resolves.toEqual({ isActive: false, expiryTimestamp: 0n });
+    expect(provider.readContract).toHaveBeenCalledTimes(2);
     expect(provider.getBlockTimestamp).not.toHaveBeenCalled();
   });
 
@@ -101,12 +113,46 @@ describe("DelegationService", () => {
     delegatorAddress,
     delegateAddress,
   }) => {
-    vi.mocked(provider.readContract).mockResolvedValueOnce(MAX_UINT64);
+    vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
 
     await expect(
       delegationService.getStatus({ contractAddress: CONTRACT, delegatorAddress, delegateAddress }),
     ).resolves.toEqual({ isActive: true, expiryTimestamp: MAX_UINT64 });
     expect(provider.getBlockTimestamp).not.toHaveBeenCalled();
+  });
+
+  test("getStatus falls back to an active wildcard grant when the contract row is empty", async ({
+    delegationService,
+    provider,
+    delegatorAddress,
+    delegateAddress,
+  }) => {
+    vi.mocked(provider.readContract).mockImplementation(
+      async (config: { args: readonly unknown[] }) =>
+        config.args[2] === WILDCARD_CONTRACT ? MAX_UINT64 : 0n,
+    );
+
+    await expect(
+      delegationService.getStatus({ contractAddress: CONTRACT, delegatorAddress, delegateAddress }),
+    ).resolves.toEqual({ isActive: true, expiryTimestamp: MAX_UINT64 });
+  });
+
+  test("getStatus does not double-read the wildcard row when queried directly", async ({
+    delegationService,
+    provider,
+    delegatorAddress,
+    delegateAddress,
+  }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+
+    await expect(
+      delegationService.getStatus({
+        contractAddress: WILDCARD_CONTRACT,
+        delegatorAddress,
+        delegateAddress,
+      }),
+    ).resolves.toEqual({ isActive: true, expiryTimestamp: MAX_UINT64 });
+    expect(provider.readContract).toHaveBeenCalledTimes(1);
   });
 
   test("isDelegated stays consistent with getStatus for a future expiry", async ({
@@ -132,10 +178,14 @@ describe("DelegationService", () => {
     const activeContract = getAddress("0x1111111111111111111111111111111111111111") as Address;
     const missingContract = getAddress("0x2222222222222222222222222222222222222222") as Address;
     const expiredContract = getAddress("0x4444444444444444444444444444444444444444") as Address;
+    // getStatus reads the target contract row and the wildcard row for each contract.
     vi.mocked(provider.readContract)
-      .mockResolvedValueOnce(MAX_UINT64)
-      .mockResolvedValueOnce(0n)
-      .mockResolvedValueOnce(10n);
+      .mockResolvedValueOnce(MAX_UINT64) // activeContract row
+      .mockResolvedValueOnce(0n) // activeContract wildcard row (unused, already active)
+      .mockResolvedValueOnce(0n) // missingContract row
+      .mockResolvedValueOnce(0n) // missingContract wildcard row
+      .mockResolvedValueOnce(10n) // expiredContract row
+      .mockResolvedValueOnce(0n); // expiredContract wildcard row
     vi.mocked(provider.getBlockTimestamp).mockResolvedValue(20n);
 
     const inactive = await delegationService.findInactiveDelegations(
@@ -238,6 +288,37 @@ describe("DelegationService", () => {
         functionName: "delegateForUserDecryption",
         args: [delegateAddress, getAddress(WILDCARD_CONTRACT), MAX_UINT64],
       }),
+    );
+  });
+
+  test("delegateDecryption warns but still submits when the delegate already holds an active wildcard grant", async ({
+    createDelegationService,
+    provider,
+    signer,
+    userAddress,
+    delegateAddress,
+  }) => {
+    const warn = vi.fn();
+    const service = createDelegationService({
+      logger: new LoggerService({ info: vi.fn(), debug: vi.fn(), warn, error: vi.fn() }),
+    });
+    // Target-contract row is empty (no prior delegation); the wildcard row is permanent.
+    vi.mocked(provider.readContract).mockImplementation(async (config: unknown) => {
+      const args = (config as { args: readonly unknown[] }).args;
+      return args[2] === getAddress(WILDCARD_CONTRACT) ? MAX_UINT64 : 0n;
+    });
+
+    const result = await service.delegateDecryption(signer, {
+      contractAddress: CONTRACT,
+      delegatorAddress: userAddress,
+      delegateAddress,
+    });
+
+    expect(result).toEqual({ txHash: "0xtxhash", receipt: { logs: [] } });
+    expect(signer.writeContract).toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("already holds an active wildcard"),
+      undefined,
     );
   });
 
