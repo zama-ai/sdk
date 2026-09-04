@@ -7,9 +7,13 @@ export const MAX_UINT64 = 2n ** 64n - 1n;
  * Reserved wildcard sentinel address. Pass this as `contractAddress` to
  * {@link Delegations.delegateDecryption} to delegate decryption rights across
  * every confidential contract the delegator owns — current and future —
- * instead of enumerating each contract individually. `ACL.sol` recognizes
- * this address and honors it for any `(handle, contractAddress)` pair
- * checked via `isHandleDelegatedForUserDecryption`, not just the literal
- * sentinel itself.
+ * instead of enumerating each contract individually.
+ *
+ * `ACL.sol`'s `isHandleDelegatedForUserDecryption` honors this address for
+ * any `(handle, contractAddress)` pair, not just the literal sentinel — but
+ * its raw per-contract expiry getter doesn't, so querying a specific contract
+ * directly misses a wildcard-only grant. {@link Delegations.getStatus} and
+ * {@link Delegations.getExpiry} fall back to the wildcard row themselves, so
+ * status reads stay correct either way.
  */
 export const WILDCARD_CONTRACT = "0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF" as const;
