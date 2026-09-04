@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.6.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.6.0-alpha.1...v3.6.0-alpha.2) (2026-09-04)
+
+### Features
+
+- wire v1v2 permit branching into decryption ([#684](https://github.com/zama-ai/sdk/issues/684)) ([4957a0c]())
+
 ## [3.6.0-alpha.1](https://github.com/zama-ai/sdk/compare/v3.5.1...v3.6.0-alpha.1) (2026-08-28)
 
 ### Features
