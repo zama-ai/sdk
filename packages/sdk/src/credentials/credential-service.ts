@@ -156,21 +156,14 @@ export class CredentialService {
   }
 
   /**
-   * V2 signing requires the chain's `protocolConfigContractAddress`; without
-   * it, signing fails regardless of what the relayer reports. `WILDCARD_PERMIT`
-   * has no V1 fallback, so it checks this before touching the vault or the relayer.
-   */
-  #chainSupportsUnifiedSigning(): boolean {
-    return this.#router.chain.protocolConfigContractAddress !== undefined;
-  }
-
-  /**
-   * A thrown probe is treated as unsupported for this call only, never
-   * cached — `@fhevm/sdk` already resolves and pins `canUseUnifiedDecryptionPermit`
-   * once per client, so caching it again here would just duplicate that.
+   * V2 signing requires the chain's `protocolConfigContractAddress`; without it,
+   * signing fails regardless of what the relayer reports. A thrown relayer probe
+   * is treated as unsupported for this call only, never cached — `@fhevm/sdk`
+   * already resolves and pins `canUseUnifiedDecryptionPermit` once per client,
+   * so caching it again here would just duplicate that.
    */
   async #permitVersion(): Promise<1 | 2> {
-    if (!this.#chainSupportsUnifiedSigning()) {
+    if (this.#router.chain.protocolConfigContractAddress === undefined) {
       return 1;
     }
     try {
@@ -213,12 +206,11 @@ export class CredentialService {
       if (existing) {
         return { keypair, permissions: [existing] };
       }
-      if (!this.#chainSupportsUnifiedSigning()) {
+      if ((await this.#permitVersion()) === 1) {
         throw new UnifiedPermitNotSupportedError(
-          "grantPermit: WILDCARD_PERMIT requires V2 (unified) decryption permits, which require " +
-            "protocol v0.14 or later on this network (no ProtocolConfig contract address is " +
-            "configured for this FheChain). Grant a V1 permit with an explicit contract list " +
-            "instead, or retry once the network upgrades.",
+          "grantPermit: WILDCARD_PERMIT requires V2 (unified) decryption permits, which this " +
+            "network's relayer does not yet support. Grant a V1 permit with an explicit contract " +
+            "list instead, or retry once the relayer upgrades.",
         );
       }
       const permission = await this.#signPermit({ version: 2, chunk: [], keypair, scope });

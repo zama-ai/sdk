@@ -97,6 +97,8 @@ describe("CredentialService.allow", () => {
 
 describe("CredentialService.grantPermit wildcard", () => {
   test("signs a V2 permit with an empty contract list", async ({ credentialService, relayer }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+
     const result = await credentialService.grantPermit(WILDCARD_PERMIT);
     expect(result.permissions).toHaveLength(1);
     const [permission] = result.permissions;
@@ -108,8 +110,11 @@ describe("CredentialService.grantPermit wildcard", () => {
 
   test("reuses an existing wildcard permit without re-prompting", async ({
     credentialService,
+    relayer,
     signer,
   }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+
     await credentialService.grantPermit(WILDCARD_PERMIT);
     vi.mocked(signer.signTypedData).mockClear();
     const second = await credentialService.grantPermit(WILDCARD_PERMIT);
@@ -119,7 +124,10 @@ describe("CredentialService.grantPermit wildcard", () => {
 
   test("hasPermit covers an arbitrary contract once a wildcard permit is granted", async ({
     credentialService,
+    relayer,
   }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+
     await credentialService.grantPermit(WILDCARD_PERMIT);
     expect(await credentialService.hasPermit([A])).toBe(true);
     expect(await credentialService.hasPermit([B, C])).toBe(true);
@@ -127,8 +135,11 @@ describe("CredentialService.grantPermit wildcard", () => {
 
   test("a plain contracts request does not re-prompt once a wildcard permit covers the scope", async ({
     credentialService,
+    relayer,
     signer,
   }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+
     await credentialService.grantPermit(WILDCARD_PERMIT);
     vi.mocked(signer.signTypedData).mockClear();
     const granted = await credentialService.grantPermit([A]);
@@ -139,7 +150,10 @@ describe("CredentialService.grantPermit wildcard", () => {
 
   test("a delegated wildcard grant does not satisfy direct-decrypt coverage", async ({
     credentialService,
+    relayer,
   }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+
     await credentialService.grantPermit(WILDCARD_PERMIT, DELEGATOR);
     expect(await credentialService.hasPermit([A])).toBe(false);
     expect(await credentialService.hasPermit([A], DELEGATOR)).toBe(true);
@@ -147,11 +161,26 @@ describe("CredentialService.grantPermit wildcard", () => {
 
   test("revoking a specific contract also drops a wildcard permit covering it", async ({
     credentialService,
+    relayer,
   }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+
     await credentialService.grantPermit(WILDCARD_PERMIT);
     expect(await credentialService.hasPermit([A])).toBe(true);
     await credentialService.revokePermits([A]);
     expect(await credentialService.hasPermit([A])).toBe(false);
+  });
+
+  test("throws UnifiedPermitNotSupportedError, without prompting the wallet, when the relayer does not support unified decryption", async ({
+    credentialService,
+    relayer,
+    signer,
+  }) => {
+    const error = await credentialService.grantPermit(WILDCARD_PERMIT).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(UnifiedPermitNotSupportedError);
+    expect(relayer.canUseUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayer.signUnifiedDecryptionPermit).not.toHaveBeenCalled();
+    expect(signer.signTypedData).not.toHaveBeenCalled();
   });
 
   test("throws UnifiedPermitNotSupportedError, without prompting the wallet, on a pre-v0.14 chain", async ({
@@ -159,6 +188,7 @@ describe("CredentialService.grantPermit wildcard", () => {
     relayer,
     signer,
   }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
     // Mirrors @fhevm/sdk's real behavior: the chain-version check inside the V2
     // unsigned-payload builder rejects before ever calling the signer.
     vi.mocked(relayer.signUnifiedDecryptionPermit).mockRejectedValueOnce(
@@ -401,19 +431,6 @@ describe("CredentialService.grantPermit version selection", () => {
     expect(result.permissions).toHaveLength(1);
     expect(result.permissions[0]?.version).toBe(2);
     expect(result.permissions[0]?.contractAddresses).toEqual([A, B, C]);
-  });
-
-  test("granting WILDCARD_PERMIT stays V2 regardless of the capability probe", async ({
-    credentialService,
-    relayer,
-  }) => {
-    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(false);
-
-    const result = await credentialService.grantPermit(WILDCARD_PERMIT);
-
-    expect(relayer.canUseUnifiedDecryptionPermit).not.toHaveBeenCalled();
-    expect(relayer.signUnifiedDecryptionPermit).toHaveBeenCalledOnce();
-    expect(result.permissions[0]?.version).toBe(2);
   });
 });
 
