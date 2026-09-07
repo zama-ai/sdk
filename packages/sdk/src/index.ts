@@ -82,6 +82,9 @@ export type {
 export { WILDCARD_PERMIT } from "./credentials";
 export type {
   PreparedPermit,
+  PreparedPermitBase,
+  PreparedPermitV1,
+  PreparedPermitV2,
   PreparePermitRequest,
   SerializedPermit,
   SerializedPermitEip712,

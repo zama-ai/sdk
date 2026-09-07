@@ -1,5 +1,6 @@
 import type { Address, Hex } from "viem";
 import type { ChecksummedAddress } from "../schemas/primitives";
+import type { WildcardPermit } from "./utils";
 
 /**
  * Serialized transport key pair — ML-KEM public + private key as hex, the shape
@@ -73,10 +74,7 @@ export interface SerializedPermit {
   delegatorAddress?: ChecksummedAddress;
 }
 
-/**
- * Fields shared by every permit version, regardless of shape. Mirrors
- * `PermissionBaseSchema`.
- */
+/** Fields shared by every permit version, regardless of shape. */
 export interface PermissionBase {
   /** Public key of the transport key pair this permit is bound to, hex-encoded. */
   keypairPublicKey: Hex;
@@ -93,7 +91,7 @@ export interface PermissionBase {
 
 /** A V1 ("legacy") permit — always scoped to a specific, non-empty contract list. */
 export interface PermissionV1 extends PermissionBase {
-  /** Discriminant — always `1` for a V1 permit. */
+  /** Discriminant identifying this as a {@link PermissionV1}. */
   version: 1;
   /** Validity window length in days from {@link PermissionBase.startTimestamp}. */
   durationDays: number;
@@ -104,7 +102,7 @@ export interface PermissionV1 extends PermissionBase {
  * permit — it covers every contract, not zero.
  */
 export interface PermissionV2 extends PermissionBase {
-  /** Discriminant — always `2` for a V2 permit. */
+  /** Discriminant identifying this as a {@link PermissionV2}. */
   version: 2;
   /** Validity window length in seconds from {@link PermissionBase.startTimestamp}. */
   durationSeconds: number;
@@ -141,8 +139,12 @@ export interface SerializedTransportKeyPairWithPermissions {
 export interface PreparePermitRequest {
   /** Address that will sign the returned EIP-712 typed data. */
   signer: Address;
-  /** Contract addresses to authorize. Maximum {@link MAX_CONTRACTS_PER_PERMIT} — no chunking. */
-  contracts: readonly Address[];
+  /**
+   * Contract addresses to authorize, or {@link WildcardPermit} to request a
+   * V2 permit covering every contract. Maximum {@link MAX_CONTRACTS_PER_PERMIT}
+   * per call — no chunking. Ignored (and unchecked) when requesting a wildcard.
+   */
+  contracts: readonly Address[] | WildcardPermit;
   /** Delegator address, for a delegated permit. Omit for a self permit. */
   delegator?: Address;
   /** Permit validity window in days. Defaults to the SDK's configured `permitTTL`. */
@@ -155,21 +157,40 @@ export interface PreparePermitRequest {
  * out-of-process signer returns for it.
  *
  * Deliberately minimal: `chainId`, `contracts`, `startTimestamp`,
- * `durationDays`, and the transport public key are all readable off
- * {@link eip712}'s `domain`/`message` directly (and, once registered, off the
- * signature-verified payload) — carrying separate top-level copies would only
- * create two sources of truth that could disagree. Read them from `eip712`
- * for display/logging use.
+ * `durationDays`/`durationSeconds`, and the transport public key are all
+ * readable off {@link PreparedPermitBase.eip712}'s `domain`/`message` directly
+ * (and, once registered, off the signature-verified payload) — carrying
+ * separate top-level copies would only create two sources of truth that could
+ * disagree. Read them from `eip712` for display/logging use.
  *
- * `version` pins the permit shape (`1` while the SDK targets protocol ≤0.13)
- * so a future V2 flow is additive, not breaking. JSON-safe — ships across a
- * process boundary as-is.
+ * Discriminated by `version`: {@link PreparedPermitV1} (protocol ≤0.13) or
+ * {@link PreparedPermitV2} (protocol ≥0.14, unified/wildcard). JSON-safe —
+ * ships across a process boundary as-is.
  */
-export interface PreparedPermit {
-  /** Permit format version. Always `1` while the SDK targets protocol ≤0.13. */
-  version: 1;
+export type PreparedPermit = PreparedPermitV1 | PreparedPermitV2;
+
+/** Fields shared by every prepared-permit version. */
+export interface PreparedPermitBase {
   /** The EIP-712 typed data to sign with `eth_signTypedData_v4`. */
   eip712: SerializedPermitEip712;
   /** Address expected to sign {@link eip712}. */
   signerAddress: ChecksummedAddress;
+}
+
+/** A V1 ("legacy") prepared permit. Delegation, if any, lives inside `eip712.message`. */
+export interface PreparedPermitV1 extends PreparedPermitBase {
+  /** Discriminant identifying this as a {@link PreparedPermitV1}. */
+  version: 1;
+}
+
+/**
+ * A V2 (unified) prepared permit. V2 delegation is post-sign metadata, not
+ * part of the signed message, so a delegated request carries it here instead
+ * of inside `eip712.message`.
+ */
+export interface PreparedPermitV2 extends PreparedPermitBase {
+  /** Discriminant identifying this as a {@link PreparedPermitV2}. */
+  version: 2;
+  /** Delegator address, for a delegated permit. Absent for a self permit. */
+  delegatorAddress?: ChecksummedAddress;
 }

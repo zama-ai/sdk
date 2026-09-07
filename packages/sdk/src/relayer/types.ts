@@ -3,6 +3,8 @@ import type {
   CanUseUnifiedDecryptionPermitReturnType,
   CreateUnsignedLegacyDecryptionPermitEip712Parameters,
   CreateUnsignedLegacyDecryptionPermitEip712ReturnType,
+  CreateUnsignedUnifiedDecryptionPermitEip712Parameters,
+  CreateUnsignedUnifiedDecryptionPermitEip712ReturnType,
 } from "@fhevm/sdk/actions/base";
 import type { Eip712Like, TypedValue } from "@fhevm/sdk/types";
 import type {
@@ -253,6 +255,25 @@ export interface RelayerSDK extends Pick<
   createUnsignedLegacyDecryptionPermitEip712(
     parameters: CreateUnsignedLegacyDecryptionPermitEip712Parameters,
   ): Promise<CreateUnsignedLegacyDecryptionPermitEip712ReturnType>;
+  /**
+   * Builds the unsigned EIP-712 typed data for a V2 (unified) decryption
+   * permit — the signer-less counterpart to {@link FhevmClient.signUnifiedDecryptionPermit}.
+   * Not exposed on `@fhevm/sdk`'s client decorator, so it's called directly
+   * against the base client rather than through a decorated method.
+   *
+   * Unlike its V1 counterpart, this builder has no `delegatorAddress`
+   * parameter: V2 delegation is post-sign metadata, not part of the signed
+   * message, so a delegated offline request carries it separately on
+   * {@link PreparedPermit} instead of threading it through here.
+   *
+   * Backs the offline permit flow (`Offline.preparePermit`): the SDK builds
+   * the typed data here and hands it to an out-of-process signer for
+   * `eth_signTypedData_v4`. Reads the chain's KMS signers context on-chain to
+   * resolve the active protocol version — signer-offline, not network-offline.
+   */
+  createUnsignedUnifiedDecryptionPermitEip712(
+    parameters: CreateUnsignedUnifiedDecryptionPermitEip712Parameters,
+  ): Promise<CreateUnsignedUnifiedDecryptionPermitEip712ReturnType>;
   /**
    * Reports whether the connected relayer supports V2 (unified) decryption
    * permits — specifically its `/v3/user-decrypt` route. Not exposed on

@@ -232,6 +232,39 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
           },
         }),
       ),
+    // Signer-less counterpart of signUnifiedDecryptionPermit's mock above —
+    // same V2 message shape (`userAddress`/`allowedContracts`/`durationSeconds`),
+    // but no `delegatorAddress` parameter at all: mirrors the real
+    // `createUnsignedUnifiedDecryptionPermitEip712`, which has no such
+    // parameter since V2 delegation is post-sign metadata, never part of the
+    // signed message.
+    createUnsignedUnifiedDecryptionPermitEip712: vi
+      .fn()
+      .mockImplementation(
+        async (params: {
+          contractAddresses: readonly string[];
+          startTimestamp: number;
+          durationSeconds: number;
+          signerAddress: string;
+        }) => ({
+          domain: {
+            name: "Decryption",
+            version: "1",
+            chainId: BigInt(chain.id),
+            verifyingContract: TOKEN,
+          },
+          types: { UserDecryptRequestVerification: [] },
+          primaryType: "UserDecryptRequestVerification",
+          message: {
+            userAddress: params.signerAddress,
+            publicKey: TEST_PUBLIC_KEY,
+            allowedContracts: params.contractAddresses,
+            startTimestamp: String(params.startTimestamp),
+            durationSeconds: String(params.durationSeconds),
+            extraData: "0x",
+          },
+        }),
+      ),
     encryptValue: vi
       .fn()
       .mockResolvedValue({ encryptedValue: VALID_ENCRYPTED_VALUE, inputProof: VALID_INPUT_PROOF }),
