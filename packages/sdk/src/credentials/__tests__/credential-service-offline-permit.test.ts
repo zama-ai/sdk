@@ -201,6 +201,8 @@ describe("CredentialService.preparePermit — V2 (unified)", () => {
     credentialService,
     relayer,
   }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+
     const prepared = await credentialService.preparePermit({
       signer: USER,
       contracts: WILDCARD_PERMIT,
@@ -237,10 +239,23 @@ describe("CredentialService.preparePermit — V2 (unified)", () => {
     ).rejects.toBeInstanceOf(ConfigurationError);
   });
 
+  test("throws UnifiedPermitNotSupportedError, without ever building the typed data, when the relayer does not support unified decryption", async ({
+    credentialService,
+    relayer,
+  }) => {
+    const error = await credentialService
+      .preparePermit({ signer: USER, contracts: WILDCARD_PERMIT })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(UnifiedPermitNotSupportedError);
+    expect(relayer.canUseUnifiedDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayer.createUnsignedUnifiedDecryptionPermitEip712).not.toHaveBeenCalled();
+  });
+
   test("throws UnifiedPermitNotSupportedError, without generating a signature request, on a pre-v0.14 chain", async ({
     credentialService,
     relayer,
   }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
     // Mirrors @fhevm/sdk's real behavior: the chain-version check inside the
     // V2 unsigned-payload builder rejects before any typed data is returned.
     vi.mocked(relayer.createUnsignedUnifiedDecryptionPermitEip712).mockRejectedValueOnce(
@@ -485,7 +500,9 @@ describe("CredentialService.registerPermit — V2 (unified)", () => {
   test("verifies and persists a wildcard V2 permit end-to-end", async ({
     credentialService,
     signer,
+    relayer,
   }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
     const { prepared, signature } = await prepareAndSignV2(credentialService, signer, {
       contracts: WILDCARD_PERMIT,
     });
@@ -517,7 +534,9 @@ describe("CredentialService.registerPermit — V2 (unified)", () => {
   test("registers successfully after a JSON.stringify/parse round trip", async ({
     credentialService,
     signer,
+    relayer,
   }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
     const { prepared, signature } = await prepareAndSignV2(credentialService, signer, {
       contracts: WILDCARD_PERMIT,
     });
@@ -531,7 +550,9 @@ describe("CredentialService.registerPermit — V2 (unified)", () => {
   test("throws PreparedPermitExpiredError once a V2 permit's validity window has elapsed", async ({
     credentialService,
     signer,
+    relayer,
   }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
     const { prepared, signature } = await prepareAndSignV2(credentialService, signer, {
       contracts: WILDCARD_PERMIT,
     });
@@ -557,7 +578,9 @@ describe("CredentialService.registerPermit — V2 (unified)", () => {
   test("throws TransportKeyPairChangedError for a V2 permit when the stored key no longer matches", async ({
     credentialService,
     signer,
+    relayer,
   }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
     const { prepared, signature } = await prepareAndSignV2(credentialService, signer, {
       contracts: WILDCARD_PERMIT,
     });
@@ -577,7 +600,9 @@ describe("CredentialService.registerPermit — V2 (unified)", () => {
   test("wraps a malformed V2 prepared payload in ConfigurationError, not a raw ZodError", async ({
     credentialService,
     signer,
+    relayer,
   }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
     const { prepared, signature } = await prepareAndSignV2(credentialService, signer, {
       contracts: WILDCARD_PERMIT,
     });

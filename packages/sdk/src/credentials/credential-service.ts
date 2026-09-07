@@ -7,25 +7,23 @@ import {
   PreparedPermitChainMismatchError,
   PreparedPermitExpiredError,
   TransportKeyPairChangedError,
-  UnifiedPermitNotSupportedError,
+  toUnifiedPermitNotSupportedError,
+  wildcardPermitNotSupportedError,
 } from "../errors/credential";
 import { ConfigurationError } from "../errors/relayer";
 import { SignerNotConfiguredError } from "../errors/signer";
 import { wrapSigningError } from "../errors/signing";
-import type { RelayerSDK } from "../relayer/types";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
 import type { GenericLogger, GenericSigner, GenericStorage } from "../types";
-import {
-  isInvalidTransportKeyPairMessage,
-  isUnsupportedUnifiedPermitMessage,
-} from "../utils/error";
+import { isInvalidTransportKeyPairMessage } from "../utils/error";
 import { swallow } from "../utils/swallow";
 import { parseSchema } from "../validation";
 import { TransportKeyPairVault } from "./keypair-vault";
 import type { DerivationSecretHolder } from "./keypair-wrapping";
 import { PermissionStore } from "./permission-store";
 import {
+  buildPermission,
   chunkContracts,
   findPermitToWiden,
   isWildcardPermission,
@@ -209,11 +207,7 @@ export class CredentialService {
         return { keypair, permissions: [existing] };
       }
       if ((await this.#permitVersion()) === 1) {
-        throw new UnifiedPermitNotSupportedError(
-          "grantPermit: WILDCARD_PERMIT requires V2 (unified) decryption permits, which this " +
-            "network's relayer does not yet support. Grant a V1 permit with an explicit contract " +
-            "list instead, or retry once the relayer upgrades.",
-        );
+        throw wildcardPermitNotSupportedError("grantPermit");
       }
       const permission = await this.#signPermit({ version: 2, chunk: [], keypair, scope });
       await swallow("persist permit", () => this.#store.append(scope, [permission]), this.#logger);
@@ -279,15 +273,15 @@ export class CredentialService {
    * happen out-of-process.
    *
    * Prefers V2 (unified) permits whenever the chain supports them, mirroring
-   * {@link grantPermit}: an explicit contract list builds V2 in that case, V1
-   * otherwise; {@link WILDCARD_PERMIT} additionally requests a wildcard scope.
+   * {@link grantPermit}'s version selection exactly — including the
+   * {@link WILDCARD_PERMIT} chain-support precheck.
    *
    * @throws if `request.contracts` is empty or exceeds {@link MAX_CONTRACTS_PER_PERMIT}
    *   (not checked for a wildcard request), `request.delegator` equals `request.signer`,
    *   or `request.durationDays` exceeds the V1 permit maximum of 365 days (enforced by
    *   `PermitTTLSchema`). {@link ConfigurationError}
    * @throws if a wildcard permit is requested against a chain that hasn't upgraded to
-   *   protocol v0.14+. {@link UnifiedPermitNotSupportedError}
+   *   protocol v0.14+. `UnifiedPermitNotSupportedError`
    */
   async preparePermit(request: PreparePermitRequest): Promise<PreparedPermit> {
     const signerAddress = checksum(request.signer);
@@ -333,52 +327,13 @@ export class CredentialService {
     const transportKeyPair = await relayer.parseTransportKeyPair(keypair);
     const startTimestamp = nowSeconds();
 
-    // A wildcard request always attempts V2 without a chain-support precheck;
-    // an unsupported chain surfaces as UnifiedPermitNotSupportedError instead.
-    // A specific-contract request checks chain support first and only
-    // upgrades to V2 once confirmed.
-    const version = isWildcard || (await this.#permitVersion()) === 2 ? 2 : 1;
+    const chainVersion = await this.#permitVersion();
+    if (isWildcard && chainVersion === 1) {
+      throw wildcardPermitNotSupportedError("preparePermit");
+    }
+    const version = isWildcard ? 2 : chainVersion;
 
-    const eip712 = await this.#createUnsignedPermitEip712({
-      version,
-      relayer,
-      transportKeyPair,
-      contracts,
-      startTimestamp,
-      durationSeconds,
-      signerAddress,
-      delegatorAddress,
-    });
-
-    return version === 2
-      ? { version: 2, eip712, signerAddress, ...(delegatorAddress && { delegatorAddress }) }
-      : { version: 1, eip712, signerAddress };
-  }
-
-  /**
-   * Builds the unsigned EIP-712 payload for {@link preparePermit}, converting
-   * an unsupported-chain relayer error into {@link UnifiedPermitNotSupportedError}.
-   */
-  async #createUnsignedPermitEip712(input: {
-    version: 1 | 2;
-    relayer: RelayerSDK;
-    transportKeyPair: Awaited<ReturnType<RelayerSDK["parseTransportKeyPair"]>>;
-    contracts: ChecksummedAddress[];
-    startTimestamp: number;
-    durationSeconds: number;
-    signerAddress: ChecksummedAddress;
-    delegatorAddress?: ChecksummedAddress;
-  }): Promise<SerializedPermitEip712> {
-    const {
-      version,
-      relayer,
-      transportKeyPair,
-      contracts,
-      startTimestamp,
-      durationSeconds,
-      signerAddress,
-      delegatorAddress,
-    } = input;
+    let eip712: SerializedPermitEip712;
     try {
       const eip712Raw =
         version === 2
@@ -396,23 +351,16 @@ export class CredentialService {
               durationSeconds,
               ...(delegatorAddress && { delegatorAddress }),
             });
-      return toJsonSafeEip712(Eip712Schema.parse(eip712Raw));
+      eip712 = toJsonSafeEip712(Eip712Schema.parse(eip712Raw));
     } catch (error) {
-      // The chain hasn't upgraded to protocol v0.14+ yet — @fhevm/sdk detects
-      // this from the on-chain KMS context before ever building the typed
-      // data. Surface a typed, self-explanatory error instead of a generic one.
-      if (error instanceof Error && isUnsupportedUnifiedPermitMessage(error.message)) {
-        throw new UnifiedPermitNotSupportedError(
-          "preparePermit: V2 (unified) decryption permits — including wildcard permits — " +
-            "require protocol v0.14 or later on this network. The connected chain hasn't " +
-            "upgraded yet (or its ProtocolConfig contract address isn't configured on this " +
-            "FheChain). Prepare a V1 permit with an explicit contract list instead, or retry " +
-            "once the network upgrades.",
-          { cause: error },
-        );
-      }
-      throw error;
+      // A race between the precheck above and this call (the chain downgrading,
+      // or the probe having defensively returned 1) surfaces the same way here.
+      throw toUnifiedPermitNotSupportedError("preparePermit", error) ?? error;
     }
+
+    return version === 2
+      ? { version: 2, eip712, signerAddress, ...(delegatorAddress && { delegatorAddress }) }
+      : { version: 1, eip712, signerAddress };
   }
 
   /**
@@ -460,11 +408,9 @@ export class CredentialService {
         ? Number(message.durationSeconds)
         : Number(message.durationDays) * SECONDS_PER_DAY;
     if (nowSeconds() >= startTimestamp + durationSeconds) {
-      const windowDescription =
-        parsed.version === 2 ? `${durationSeconds}s` : `${Number(message.durationDays)}d`;
       throw new PreparedPermitExpiredError(
         `registerPermit: the prepared permit's validity window (starting ${startTimestamp}, ` +
-          `${windowDescription}) has already elapsed — call preparePermit again.`,
+          `${durationSeconds}s) has already elapsed — call preparePermit again.`,
       );
     }
 
@@ -509,24 +455,21 @@ export class CredentialService {
       await relayer.serializeSignedDecryptionPermit({ signedPermit }),
     );
 
-    const permission: Permission =
+    const permission = buildPermission(
+      {
+        keypairPublicKey: keypair.publicKey,
+        contractAddresses: normalizeAddresses(
+          signedPermit.version === 2
+            ? signedPermit.eip712.message.allowedContracts
+            : signedPermit.eip712.message.contractAddresses,
+        ),
+        serializedPermit,
+        startTimestamp: Number(signedPermit.eip712.message.startTimestamp),
+      },
       signedPermit.version === 2
-        ? {
-            version: 2,
-            keypairPublicKey: keypair.publicKey,
-            contractAddresses: normalizeAddresses(signedPermit.eip712.message.allowedContracts),
-            serializedPermit,
-            startTimestamp: Number(signedPermit.eip712.message.startTimestamp),
-            durationSeconds: Number(signedPermit.eip712.message.durationSeconds),
-          }
-        : {
-            version: 1,
-            keypairPublicKey: keypair.publicKey,
-            contractAddresses: normalizeAddresses(signedPermit.eip712.message.contractAddresses),
-            serializedPermit,
-            startTimestamp: Number(signedPermit.eip712.message.startTimestamp),
-            durationDays: Number(signedPermit.eip712.message.durationDays),
-          };
+        ? { version: 2, durationSeconds: Number(signedPermit.eip712.message.durationSeconds) }
+        : { version: 1, durationDays: Number(signedPermit.eip712.message.durationDays) },
+    );
     const scope: PermissionScope = {
       signerAddress,
       chainId: activeChainId,
@@ -769,38 +712,24 @@ export class CredentialService {
         await relayer.serializeSignedDecryptionPermit({ signedPermit }),
       );
 
-      return version === 2
-        ? {
-            version: 2,
-            keypairPublicKey: keypair.publicKey,
-            contractAddresses: chunk,
-            serializedPermit,
-            startTimestamp,
-            durationSeconds,
-          }
-        : {
-            version: 1,
-            keypairPublicKey: keypair.publicKey,
-            contractAddresses: chunk,
-            serializedPermit,
-            startTimestamp,
-            durationDays: this.#permitTTL,
-          };
+      return buildPermission(
+        {
+          keypairPublicKey: keypair.publicKey,
+          contractAddresses: chunk,
+          serializedPermit,
+          startTimestamp,
+        },
+        version === 2
+          ? { version: 2, durationSeconds }
+          : { version: 1, durationDays: this.#permitTTL },
+      );
     } catch (error) {
       if (error instanceof ZamaError) {
         throw error;
       }
-      // The chain hasn't upgraded to protocol v0.14+ yet — @fhevm/sdk detects this
-      // from the on-chain KMS context before ever requesting a signature. Surface
-      // a typed, self-explanatory error instead of a generic signing failure.
-      if (error instanceof Error && isUnsupportedUnifiedPermitMessage(error.message)) {
-        throw new UnifiedPermitNotSupportedError(
-          "grantPermit: V2 (unified) decryption permits — including wildcard permits — require " +
-            "protocol v0.14 or later on this network. The connected chain hasn't upgraded yet " +
-            "(or its ProtocolConfig contract address isn't configured on this FheChain). Grant a " +
-            "V1 permit with an explicit contract list instead, or retry once the network upgrades.",
-          { cause: error },
-        );
+      const unsupported = toUnifiedPermitNotSupportedError("grantPermit", error);
+      if (unsupported) {
+        throw unsupported;
       }
       // A key pair the relayer can't re-derive (post KMS/TKMS rotation) is
       // unusable: evict it so the next grantPermit regenerates a valid one, then

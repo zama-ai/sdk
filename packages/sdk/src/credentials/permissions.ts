@@ -1,7 +1,19 @@
 import type { Hex } from "viem";
-import type { Permission } from "./types";
+import type { Permission, PermissionBase, PermissionV1, PermissionV2 } from "./types";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { MAX_CONTRACTS_PER_PERMIT, SECONDS_PER_DAY } from "./utils";
+
+type PermissionVersionFields =
+  | Omit<PermissionV1, keyof PermissionBase>
+  | Omit<PermissionV2, keyof PermissionBase>;
+
+/** Shared by {@link CredentialService}'s two permit-signing paths so they can't drift apart. */
+export function buildPermission(
+  base: PermissionBase,
+  versionFields: PermissionVersionFields,
+): Permission {
+  return { ...base, ...versionFields };
+}
 
 /**
  * A V2 permit with an empty `contractAddresses` list is permissive/wildcard —

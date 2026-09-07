@@ -1,3 +1,4 @@
+import { isUnsupportedUnifiedPermitMessage } from "../utils/error";
 import { ZamaError, ZamaErrorCode } from "./base";
 
 /** Transport key pair has expired and needs regeneration. */
@@ -117,6 +118,47 @@ export class UnifiedPermitNotSupportedError extends ZamaError {
     super(ZamaErrorCode.UnifiedPermitNotSupported, message, options);
     this.name = "UnifiedPermitNotSupportedError";
   }
+}
+
+function unifiedPermitNotSupportedMessage(op: "grantPermit" | "preparePermit"): string {
+  return (
+    `${op}: V2 (unified) decryption permits — including wildcard permits — require protocol ` +
+    "v0.14 or later on this network. The connected chain hasn't upgraded yet (or its " +
+    "ProtocolConfig contract address isn't configured on this FheChain). " +
+    `Call ${op} with an explicit V1 contract list instead, or retry once the network upgrades.`
+  );
+}
+
+/**
+ * A {@link WILDCARD_PERMIT} request the caller already confirmed is unsupported,
+ * before any relayer call was attempted. See {@link toUnifiedPermitNotSupportedError}
+ * for the converted-error counterpart.
+ *
+ * @param op Which `CredentialService` entry point is rejecting the request.
+ */
+export function wildcardPermitNotSupportedError(
+  op: "grantPermit" | "preparePermit",
+): UnifiedPermitNotSupportedError {
+  return new UnifiedPermitNotSupportedError(unifiedPermitNotSupportedMessage(op));
+}
+
+/**
+ * Converts the `@fhevm/sdk` "invalid extraData version" signal — the chain
+ * hasn't upgraded to protocol v0.14+ — into a typed
+ * {@link UnifiedPermitNotSupportedError} worded for the calling entry point.
+ *
+ * @param op Which `CredentialService` entry point is converting the error.
+ * @returns The typed error, or `undefined` when `error` doesn't match so the
+ *   caller can fall through to its own handling.
+ */
+export function toUnifiedPermitNotSupportedError(
+  op: "grantPermit" | "preparePermit",
+  error: unknown,
+): UnifiedPermitNotSupportedError | undefined {
+  if (!(error instanceof Error) || !isUnsupportedUnifiedPermitMessage(error.message)) {
+    return undefined;
+  }
+  return new UnifiedPermitNotSupportedError(unifiedPermitNotSupportedMessage(op), { cause: error });
 }
 
 /**
