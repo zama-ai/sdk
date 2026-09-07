@@ -13,7 +13,7 @@ description: What stable, beta, and alpha mean for @zama-fhe/sdk, and where to f
 | **Beta**   | `npm i @zama-fhe/sdk@beta`  | `beta`  | Currently deployed mainnet/testnet protocol |
 | **Alpha**  | `npm i @zama-fhe/sdk@alpha` | `alpha` | Upcoming, not-yet-deployed protocol changes |
 
-Stable and beta both target the protocol version actually running on mainnet and testnet today — beta simply carries changes that haven't had a stable release yet. **Alpha is different in kind, not just in stability.** It tracks upcoming protocol changes that aren't deployed anywhere yet, closer to a DevNet than a "more bleeding-edge beta." Code that works on alpha can depend on protocol behavior that doesn't exist on any network you can actually reach yet.
+Stable and beta both target the protocol version [actually running on mainnet and testnet today](https://docs.zama.org/protocol/changelog) — beta simply carries changes that haven't had a stable release yet. **Alpha is different in kind, not just in stability.** It tracks upcoming protocol changes that aren't deployed anywhere yet, closer to a DevNet than a "more bleeding-edge beta." Code that works on alpha can depend on protocol behavior that doesn't exist on any network you can actually reach yet.
 
 {% hint style="warning" %}
 If you didn't pick `alpha` on purpose, you almost certainly want `beta` or stable instead.
