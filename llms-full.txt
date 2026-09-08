@@ -3382,7 +3382,7 @@ The `logger` is a minimal four-level interface — `error`, `warn`, `info`, `deb
 
 The logger is configured once here and flows SDK-wide — including into relayer request tracing, the credential store, and the decrypt cache. There is deliberately no per-relayer logger option; `createConfig({ logger })` is the single source of truth.
 
-### 8. (Optional) Tune the FHE runtime
+### 8. (Optional) Tune FHE runtime performance and behavior
 
 The `runtime` field configures the underlying `@fhevm/sdk` WASM runtime — how WASM assets load, threading, module versions, and a fallback relayer `auth`. It is process-global: it applies once per process, not per chain or per relayer.
 
@@ -7316,7 +7316,7 @@ const config = createConfig({
 
 `FhevmRuntimeConfig | undefined`
 
-Global `@fhevm/sdk` runtime config — WASM asset loading, threading, module versions, and a process-wide fallback relayer `auth`. See [Configuration: tune the FHE runtime](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md#8-optional-tune-the-fhe-runtime) for the full field-by-field walkthrough and defaults.
+Global `@fhevm/sdk` runtime config — WASM asset loading, threading, module versions, and a process-wide fallback relayer `auth`. See [Configuration: tune FHE runtime performance and behavior](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md#8-optional-tune-fhe-runtime-performance-and-behavior) for the full field-by-field walkthrough and defaults.
 
 
 > [!WARNING]

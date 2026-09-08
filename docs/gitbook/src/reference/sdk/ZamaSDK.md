@@ -170,7 +170,7 @@ const config = createConfig({
 
 `FhevmRuntimeConfig | undefined`
 
-Global `@fhevm/sdk` runtime config — WASM asset loading, threading, module versions, and a process-wide fallback relayer `auth`. See [Configuration: tune the FHE runtime](../../guides/configuration.md#8-optional-tune-the-fhe-runtime) for the full field-by-field walkthrough and defaults.
+Global `@fhevm/sdk` runtime config — WASM asset loading, threading, module versions, and a process-wide fallback relayer `auth`. See [Configuration: tune FHE runtime performance and behavior](../../guides/configuration.md#8-optional-tune-fhe-runtime-performance-and-behavior) for the full field-by-field walkthrough and defaults.
 
 {% hint style="warning" %}
 **Applied once per process.** The underlying `@fhevm/sdk` runtime is a process-wide singleton, set by the first `createConfig` call. A later `createConfig` in the same process cannot reconfigure it — the original configuration stays in effect and a warning is logged instead.

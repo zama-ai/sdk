@@ -345,7 +345,7 @@ The `logger` is a minimal four-level interface — `error`, `warn`, `info`, `deb
 
 The logger is configured once here and flows SDK-wide — including into relayer request tracing, the credential store, and the decrypt cache. There is deliberately no per-relayer logger option; `createConfig({ logger })` is the single source of truth.
 
-### 8. (Optional) Tune the FHE runtime
+### 8. (Optional) Tune FHE runtime performance and behavior
 
 The `runtime` field configures the underlying `@fhevm/sdk` WASM runtime — how WASM assets load, threading, module versions, and a fallback relayer `auth`. It is process-global: it applies once per process, not per chain or per relayer.
 
