@@ -39,6 +39,7 @@ export default function App() {
           <Route path="allow-all" Component={lazy(() => import("./pages/allow-all"))} />
           <Route path="decrypt" Component={lazy(() => import("./pages/decrypt"))} />
           <Route path="encrypt" Component={lazy(() => import("./pages/encrypt"))} />
+          <Route path="offload" Component={lazy(() => import("./pages/offload"))} />
           <Route
             path="wrapper-discovery"
             Component={lazy(() => import("./pages/wrapper-discovery"))}

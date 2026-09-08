@@ -1,6 +1,15 @@
 [
-  { "name": "@zama-fhe/sdk (ESM)", "path": "packages/sdk/dist/esm/**/*.js", "limit": "66 KB" },
+  {
+    "name": "@zama-fhe/sdk (ESM)",
+    "path": ["packages/sdk/dist/esm/**/*.js", "!packages/sdk/dist/esm/encrypt.worker.js"],
+    "limit": "66 KB"
+  },
   { "name": "@zama-fhe/sdk (CJS)", "path": "packages/sdk/dist/cjs/**/*.cjs", "limit": "57 KB" },
+  {
+    "name": "@zama-fhe/sdk (encrypt worker, self-contained, lazy-loaded)",
+    "path": "packages/sdk/dist/esm/encrypt.worker.js",
+    "limit": "3.5 MB"
+  },
   {
     "name": "@zama-fhe/react-sdk (all JS)",
     "path": "packages/react-sdk/dist/**/*.js",

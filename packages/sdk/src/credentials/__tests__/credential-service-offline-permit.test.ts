@@ -9,6 +9,7 @@ import {
   TransportKeyPairChangedError,
 } from "../../errors/credential";
 import { ConfigurationError } from "../../errors/relayer";
+import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { GenericSigner } from "../../types";
 import { assertNonNullable } from "../../utils/assertions";
 import type { CredentialService } from "../credential-service";
@@ -336,6 +337,81 @@ describe("CredentialService.registerPermit", () => {
     );
   });
 
+  test("emits a PermitError event on chain mismatch, before any signing/verification happens", async ({
+    createCredentialService,
+    signer,
+  }) => {
+    const emitEvent = vi.fn();
+    const credentialService = createCredentialService({ emitEvent });
+    const { prepared, signature } = await prepareAndSign(credentialService, signer);
+    const mismatched = {
+      ...prepared,
+      eip712: { ...prepared.eip712, domain: { ...prepared.eip712.domain, chainId: "999999" } },
+    };
+
+    await expect(credentialService.registerPermit(mismatched, signature)).rejects.toBeInstanceOf(
+      PreparedPermitChainMismatchError,
+    );
+
+    expect(emitEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: ZamaSDKEvents.PermitError,
+        operation: "registerPermit",
+        error: expect.any(PreparedPermitChainMismatchError),
+      }),
+    );
+  });
+
+  test("emits a PermitError event once the permit's validity window has elapsed", async ({
+    createCredentialService,
+    signer,
+  }) => {
+    const emitEvent = vi.fn();
+    const credentialService = createCredentialService({ emitEvent });
+    const { prepared, signature } = await prepareAndSign(credentialService, signer);
+    const expired = {
+      ...prepared,
+      eip712: {
+        ...prepared.eip712,
+        message: {
+          ...prepared.eip712.message,
+          startTimestamp: String(
+            Number(prepared.eip712.message.startTimestamp) - 10 * SECONDS_PER_DAY,
+          ),
+          durationDays: "1",
+        },
+      },
+    };
+
+    await expect(credentialService.registerPermit(expired, signature)).rejects.toBeInstanceOf(
+      PreparedPermitExpiredError,
+    );
+
+    expect(emitEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: ZamaSDKEvents.PermitError,
+        operation: "registerPermit",
+        error: expect.any(PreparedPermitExpiredError),
+      }),
+    );
+  });
+
+  test("does NOT emit a PermitError event for a credential/vault-resolution failure (TransportKeyPairChangedError)", async ({
+    createCredentialService,
+    signer,
+  }) => {
+    const emitEvent = vi.fn();
+    const credentialService = createCredentialService({ emitEvent });
+    const { prepared, signature } = await prepareAndSign(credentialService, signer);
+    await credentialService.clearCredentials();
+
+    await expect(credentialService.registerPermit(prepared, signature)).rejects.toBeInstanceOf(
+      TransportKeyPairChangedError,
+    );
+
+    expect(emitEvent).not.toHaveBeenCalled();
+  });
+
   test("throws TransportKeyPairChangedError without generating a new key pair when the stored key no longer matches", async ({
     credentialService,
     signer,
@@ -371,6 +447,31 @@ describe("CredentialService.registerPermit", () => {
 
     await expect(credentialService.registerPermit(prepared, "0xbad" as Hex)).rejects.toBeInstanceOf(
       SigningFailedError,
+    );
+  });
+
+  test("emits a PermitError event with operation=registerPermit on verification failure", async ({
+    createCredentialService,
+    signer,
+    relayer,
+  }) => {
+    const emitEvent = vi.fn();
+    const credentialService = createCredentialService({ emitEvent });
+    const { prepared } = await prepareAndSign(credentialService, signer);
+    vi.mocked(relayer.parseSignedDecryptionPermit).mockRejectedValueOnce(
+      new Error("bad signature"),
+    );
+
+    await expect(credentialService.registerPermit(prepared, "0xbad" as Hex)).rejects.toBeInstanceOf(
+      SigningFailedError,
+    );
+
+    expect(emitEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: ZamaSDKEvents.PermitError,
+        operation: "registerPermit",
+        error: expect.any(SigningFailedError),
+      }),
     );
   });
 });

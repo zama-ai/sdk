@@ -4,11 +4,12 @@ import { ConfigurationError } from "../../errors";
 import type { FheChain } from "../../chains/types";
 import type { RelayerConfig } from "../../config/types";
 import type { RelayerSDK } from "../../relayer/types";
+import { LoggerService } from "../../services/logger-service";
 
 describe("ChainRouter", () => {
   describe("constructor", () => {
     test("throws ConfigurationError on empty chains", () => {
-      expect(() => new ChainRouter([] as any, {})).toThrow(ConfigurationError);
+      expect(() => new ChainRouter([] as any, {}, new LoggerService())).toThrow(ConfigurationError);
     });
 
     test("throws ConfigurationError when chain has no matching relayer config", ({
@@ -19,9 +20,11 @@ describe("ChainRouter", () => {
       const chainB = createMockChain({ id: 2 });
       expect(
         () =>
-          new ChainRouter([chainA, chainB], {
-            [1]: { type: "web", createRelayer: () => createMockRelayer() },
-          }),
+          new ChainRouter(
+            [chainA, chainB],
+            { [1]: { type: "web", createRelayer: () => createMockRelayer() } },
+            new LoggerService(),
+          ),
       ).toThrow("Chain 2 has no relayer configured");
     });
   });
@@ -33,6 +36,7 @@ describe("ChainRouter", () => {
       const router = new ChainRouter(
         [chainA, chainB],
         relayerConfigs([chainA, chainB], createMockRelayer),
+        new LoggerService(),
       );
       expect(router.chains).toEqual([chainA, chainB]);
     });
@@ -43,6 +47,7 @@ describe("ChainRouter", () => {
       const router = new ChainRouter(
         [chainA, chainB],
         relayerConfigs([chainA, chainB], createMockRelayer),
+        new LoggerService(),
       );
       expect(router.chain).toEqual(chainA);
     });
@@ -53,6 +58,7 @@ describe("ChainRouter", () => {
       const router = new ChainRouter(
         [chainA, chainB],
         relayerConfigs([chainA, chainB], createMockRelayer),
+        new LoggerService(),
       );
       router.switchChain(2);
       expect(router.chain).toEqual(chainB);
@@ -66,6 +72,7 @@ describe("ChainRouter", () => {
       const router = new ChainRouter(
         [chainA, chainB],
         relayerConfigs([chainA, chainB], createMockRelayer),
+        new LoggerService(),
       );
       router.switchChain(2);
       expect(router.chain).toEqual(chainB);
@@ -76,7 +83,11 @@ describe("ChainRouter", () => {
       createMockRelayer,
     }) => {
       const chainA = createMockChain({ id: 1 });
-      const router = new ChainRouter([chainA], relayerConfigs([chainA], createMockRelayer));
+      const router = new ChainRouter(
+        [chainA],
+        relayerConfigs([chainA], createMockRelayer),
+        new LoggerService(),
+      );
       // The active chain follows the wallet even when unconfigured; the failure
       // surfaces loudly at the next getter, not silently on the old chain. Both
       // getters report the chain error, since `relayer` resolves `chain` first.
@@ -92,7 +103,11 @@ describe("ChainRouter", () => {
       createMockRelayer,
     }) => {
       const chainA = createMockChain({ id: 1 });
-      const router = new ChainRouter([chainA], relayerConfigs([chainA], createMockRelayer));
+      const router = new ChainRouter(
+        [chainA],
+        relayerConfigs([chainA], createMockRelayer),
+        new LoggerService(),
+      );
       router.switchChain(999);
       router.switchChain(1);
       expect(router.chain).toEqual(chainA);
@@ -105,10 +120,14 @@ describe("ChainRouter", () => {
       const chainB = createMockChain({ id: 2 });
       const relayerA = createMockRelayer();
       const relayerB = createMockRelayer();
-      const router = new ChainRouter([chainA, chainB], {
-        [1]: { type: "web", createRelayer: () => relayerA },
-        [2]: { type: "web", createRelayer: () => relayerB },
-      });
+      const router = new ChainRouter(
+        [chainA, chainB],
+        {
+          [1]: { type: "web", createRelayer: () => relayerA },
+          [2]: { type: "web", createRelayer: () => relayerB },
+        },
+        new LoggerService(),
+      );
       expect(router.relayer).toBe(relayerA);
     });
 
@@ -120,10 +139,14 @@ describe("ChainRouter", () => {
       const chainB = createMockChain({ id: 2 });
       const relayerA = createMockRelayer();
       const relayerB = createMockRelayer();
-      const router = new ChainRouter([chainA, chainB], {
-        [1]: { type: "web", createRelayer: () => relayerA },
-        [2]: { type: "web", createRelayer: () => relayerB },
-      });
+      const router = new ChainRouter(
+        [chainA, chainB],
+        {
+          [1]: { type: "web", createRelayer: () => relayerA },
+          [2]: { type: "web", createRelayer: () => relayerB },
+        },
+        new LoggerService(),
+      );
       router.switchChain(2);
       expect(router.relayer).toBe(relayerB);
     });
@@ -142,7 +165,11 @@ describe("ChainRouter", () => {
           return createMockChain({ id: 424242 });
         }
       }
-      const router = new BackendlessRouter([chainA], relayerConfigs([chainA], createMockRelayer));
+      const router = new BackendlessRouter(
+        [chainA],
+        relayerConfigs([chainA], createMockRelayer),
+        new LoggerService(),
+      );
       expect(() => router.relayer).toThrow(ConfigurationError);
       expect(() => router.relayer).toThrow(
         "No relayer configured for chain 1. Add it to the relayers object.",

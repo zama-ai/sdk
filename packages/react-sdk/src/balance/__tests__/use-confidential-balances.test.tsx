@@ -156,12 +156,10 @@ describe("useConfidentialBalances", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
 
-      const { data, dataUpdatedAt, ...state } = result.current;
-      const { promise: statePromise, ...stableState } = state;
+      const { data, dataUpdatedAt, ...stableState } = result.current;
       expect(data?.results.get(tokenAddress)).toBe(10n);
       expect(data?.results.get(otherTokenAddress)).toBe(20n);
       expect(dataUpdatedAt).toEqual(expect.any(Number));
-      expect(statePromise).toBeDefined();
       expect(stableState).toMatchInlineSnapshot(`
       {
         "error": null,

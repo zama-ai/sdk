@@ -119,6 +119,7 @@ export class EthersProvider implements GenericProvider {
     }
     return {
       logs: receipt.logs.map((log) => ({
+        address: log.address as Hex,
         topics: log.topics.filter((t): t is Hex => t !== null),
         data: log.data as Hex,
       })),

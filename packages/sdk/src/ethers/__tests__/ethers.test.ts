@@ -475,7 +475,9 @@ describe("EthersProvider", () => {
         waitForTransaction: vi
           .fn()
           .mockResolvedValue({
-            logs: [{ topics: ["0xtopic1", null, "0xtopic3"], data: "0xdata" }],
+            logs: [
+              { address: "0xemitter", topics: ["0xtopic1", null, "0xtopic3"], data: "0xdata" },
+            ],
           }),
       };
       const ethersProvider = new EthersProvider({ provider: mockProvider as never });
@@ -483,7 +485,10 @@ describe("EthersProvider", () => {
       const receipt = await ethersProvider.waitForTransactionReceipt("0xhash" as Hex);
 
       expect(mockProvider.waitForTransaction).toHaveBeenCalledWith("0xhash");
-      expect(receipt.logs).toEqual([{ topics: ["0xtopic1", "0xtopic3"], data: "0xdata" }]);
+      // A dropped address silently disables the SDK's log-emitter filtering.
+      expect(receipt.logs).toEqual([
+        { address: "0xemitter", topics: ["0xtopic1", "0xtopic3"], data: "0xdata" },
+      ]);
     });
 
     test("filters out null topics from logs", async () => {

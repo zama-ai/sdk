@@ -18,7 +18,7 @@ import type { CleartextRelayerConfig } from "./types";
 export function cleartext(options?: RelayerOptions): CleartextRelayerConfig {
   return {
     type: "cleartext",
-    createRelayer: (chain) => {
+    createRelayer: (chain, logger) => {
       if (!chain.executorAddress) {
         throw new ConfigurationError(
           `Cleartext relayer requires an executorAddress. ` +
@@ -26,7 +26,7 @@ export function cleartext(options?: RelayerOptions): CleartextRelayerConfig {
             `or set it on the chain definition.`,
         );
       }
-      return new FhevmRelayer({ chain, options, cleartext: true });
+      return new FhevmRelayer({ chain, options, cleartext: true, logger });
     },
   };
 }

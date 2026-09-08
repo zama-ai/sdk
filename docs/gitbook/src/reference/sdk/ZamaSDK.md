@@ -123,6 +123,25 @@ Transport key pair validity duration in seconds. Default: `2592000` (30 days). M
 
 Permit lifetime in days. Default: `30`. Controls how long each signed EIP-712 permit remains valid.
 
+### transportKeyPairScope
+
+`string | undefined`
+
+Opt-in shared-tenant scope for Wallet-as-a-Service / B2B2C operators managing many end-user wallets from one operator-controlled key store. An opaque identifier (typically a tenant ID) — every signer configured with the same scope shares one transport key pair instead of one per signer. Permits stay per-signer regardless of scope. Default: `undefined` (one transport key pair per signer).
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
+  transportKeyPairScope: "tenant-123", // opaque identifier, e.g. your tenant ID
+  storage: myPersistentStorage, // must be shared across every signer in this scope
+});
+```
+
+Sharing only works when every signer in the scope reads and writes the same storage instance. See [Security Model](../../concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators) for the tradeoff, and [`permits.warmTransportKeyPairScope`](#permits-warmtransportkeypairscope) / [`permits.revokeTransportKeyPair`](#permits-revoketransportkeypair) for the scope's lifecycle.
+
 ### registryTTL
 
 `number | undefined`
@@ -146,6 +165,52 @@ const config = createConfig({
   },
 });
 ```
+
+### runtime
+
+`FhevmRuntimeConfig | undefined`
+
+Global `@fhevm/sdk` runtime config — WASM asset loading, threading, module versions, and a process-wide fallback relayer `auth`. See [Configuration: tune FHE runtime performance and behavior](../../guides/configuration.md#8-optional-tune-fhe-runtime-performance-and-behavior) for the full field-by-field walkthrough and defaults.
+
+{% hint style="warning" %}
+**Applied once per process.** The underlying `@fhevm/sdk` runtime is a process-wide singleton, set by the first `createConfig` call. A later `createConfig` in the same process cannot reconfigure it — the original configuration stays in effect and a warning is logged instead.
+{% endhint %}
+
+`runtime.logger` is not forwarded — pass your logger via `createConfig`'s top-level [`logger`](#logger) instead. `runtime.auth` is a process-wide fallback relayer authentication, forwarded to `@fhevm/sdk` as-is; see [Authentication](../../guides/authentication.md) for the auth methods.
+
+### logger
+
+`GenericLogger | undefined`
+
+Optional logger for SDK diagnostics — a minimal four-level interface (`error`/`warn`/`info`/`debug`) that `console` and common logging libraries (pino, winston, an OpenTelemetry `DiagLogger`) satisfy directly. The SDK is silent by default and never bundles a logging library. See [Configuration: supply a logger](../../guides/configuration.md#7-optional-supply-a-logger) for level conventions.
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
+  logger: console,
+});
+```
+
+## Constructor options
+
+The `ZamaSDK` constructor takes the resolved `ZamaConfig` plus an optional second argument for options that apply to the SDK instance rather than the shared config:
+
+```ts
+const sdk = new ZamaSDK(config, {
+  transportKeyPairDerivationSecret: process.env.ZAMA_DERIVATION_SECRET,
+});
+```
+
+### transportKeyPairDerivationSecret
+
+`string | Uint8Array | undefined`
+
+Encrypts the transport private key before every write, for headless environments with no secure storage backend to delegate to (a CLI tool, an agent, a bare-metal box). Default: `undefined` — the transport key pair is stored in plaintext, and at-rest security is delegated to the `storage` backend. Rejected outside a headless environment (a browser or React Native constructor throws `ConfigurationError`), since those already have a secure default (IndexedDB, a platform keychain) that this option would only weaken.
+
+See [Configuration: wrap the transport key pair at rest](../../guides/configuration.md#10-optional-wrap-the-transport-key-pair-at-rest-headless-environments) for environment-by-environment guidance and [Security Model](../../concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the mechanism and entropy requirements.
 
 ## Properties
 
@@ -485,7 +550,7 @@ See the [Offline reference](./Offline.md#preparepermit) for the request/response
 
 `() => void`
 
-Unsubscribes from signer lifecycle events (disconnect, account change, chain change) without terminating the relayer. Use when you want to stop reacting to wallet events but keep the relayer alive for other SDK instances.
+Releases the SDK-owned resources: unsubscribes from signer lifecycle events (disconnect, account change, chain change) and releases the relayer backends' resources (an encrypt worker, if one is running). Work already in flight finishes, and the instance remains usable: a later operation re-acquires what it needs, respawning the encrypt worker on the next encryption.
 
 ```ts
 sdk.dispose();
@@ -495,7 +560,7 @@ sdk.dispose();
 
 `() => void`
 
-Full cleanup — calls `dispose()` and disposes the signer adapter's own event subscriptions. Call when the SDK is no longer needed.
+Full cleanup: calls `dispose()`, then also disposes the signer adapter's own event subscriptions. Call when the SDK is no longer needed. Like `dispose()`, it leaves the instance usable: a later operation re-acquires what it needs.
 
 ```ts
 sdk.terminate();
