@@ -1851,7 +1851,7 @@ await setOperator({ operator: "0xOperator" });
 
 
 The write side is a pure rename — v2's `token.approve()` already called the
-on-chain `setOperator`, so behaviour is unchanged. The read side has one trap:
+on-chain `setOperator`, so behavior is unchanged. The read side has one trap:
 
 
 > [!WARNING]
@@ -2456,7 +2456,7 @@ See [Check delegation status](https://raw.githubusercontent.com/zama-ai/sdk/beta
 
 **Decrypting many encrypted values in one call now works no matter how large the batch.** The KMS gateway caps each decryption request at 2048 cleartext bits — around 32 `euint64` values, but as few as 8 if they are `euint256` — and a batch whose values summed past that cap was rejected outright. Anyone batching heavily (a server-side indexer decrypting amounts pulled from event logs, a dashboard resolving a page of balances) had to guess a safe batch size against an undocumented limit, and any guess broke as soon as a batch mixed widths, because the cost of a value depends on its FHE type: `ebool` costs 2 bits, `eaddress` 160, `euint256` 256.
 
-The SDK now sizes the requests for you. `sdk.decryption.decryptValues` still groups encrypted values by contract, then splits each group into sub-requests whose cumulative bit cost stays under the budget, so an oversized batch becomes several relayer calls instead of one rejected one. `delegatedDecryptValues`, `delegatedBatchDecryptValues`, `Token.batchDecryptBalancesAs`, and the React hooks over them (`useDecryptValues`, `useBatchDecryptBalancesAs`) share the same code path and get the same behaviour. There is nothing to configure and nothing to change: no new option, no new constant to import, and identical call signatures, results, and caching. Public decryption (`decryptPublicValues`) and the low-level `sdk.relayer.*` methods bypass this path and still send exactly the values you hand them.
+The SDK now sizes the requests for you. `sdk.decryption.decryptValues` still groups encrypted values by contract, then splits each group into sub-requests whose cumulative bit cost stays under the budget, so an oversized batch becomes several relayer calls instead of one rejected one. `delegatedDecryptValues`, `delegatedBatchDecryptValues`, `Token.batchDecryptBalancesAs`, and the React hooks over them (`useDecryptValues`, `useBatchDecryptBalancesAs`) share the same code path and get the same behavior. There is nothing to configure and nothing to change: no new option, no new constant to import, and identical call signatures, results, and caching. Public decryption (`decryptPublicValues`) and the low-level `sdk.relayer.*` methods bypass this path and still send exactly the values you hand them.
 
 ### Two-signature shield with `wrap()`
 
@@ -3392,7 +3392,7 @@ const config = createConfig({
   wagmiConfig,
   relayers: { [sepolia.id]: web() },
   runtime: {
-    numberOfThreads: 4, // parallelise FHE work across Web Workers
+    numberOfThreads: 4, // parallelize FHE work across Web Workers
   },
 });
 ```
@@ -3401,7 +3401,7 @@ Every field is optional:
 
 | Field               | Default                                    | Effect                                                                                                                                                                                                                                                                                                                    |
 | ------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `numberOfThreads`   | requested: `navigator.hardwareConcurrency` | Number of Web Workers to parallelise FHE encryption/decryption across. This is the _requested_ count — the _effective_ count degrades to single-threaded (see `singleThread` below) where `navigator` is unavailable (Node < 21, some edge runtimes), or where `SharedArrayBuffer`/a spawnable worker isn't.              |
+| `numberOfThreads`   | requested: `navigator.hardwareConcurrency` | Number of Web Workers to parallelize FHE encryption/decryption across. This is the _requested_ count — the _effective_ count degrades to single-threaded (see `singleThread` below) where `navigator` is unavailable (Node < 21, some edge runtimes), or where `SharedArrayBuffer`/a spawnable worker isn't.              |
 | `singleThread`      | `false`                                    | `true` forces a single thread — no `SharedArrayBuffer` required. The SDK also auto-upgrades to this at runtime whenever multi-threading was requested but can't actually run (no cross-origin isolation, no way to spawn a worker for the chosen `wasmAssetLoadMode`) — silently, with a console warning, never an error. |
 | `wasmAssetLoadMode` | `"auto"`                                   | How the TFHE/KMS WASM assets are fetched and instantiated (modes below).                                                                                                                                                                                                                                                  |
 | `moduleVersions`    | `"auto"`                                   | Pin the TFHE/KMS WASM module versions instead of auto-resolving them from the chain's on-chain protocol version. `checkCompatibility` — checked only when a concrete version is pinned — defaults to `"throw"`; also accepts `"warn"` or `"off"`.                                                                         |
@@ -3814,7 +3814,7 @@ Among the wrapped tokens registered on Ethereum mainnet today, the routing is:
 | cWETH                | WETH       | `approve` + `wrap` (two txs)  |
 | cBRON                | BRON       | `approve` + `wrap` (two txs)  |
 
-ERC-1363 is a conditional optimisation, not a recommended new default — only a small subset of tokens implement it today. Tokens that don't (USDC, USDT, DAI, and most existing ERC-20s) continue to use `approve` + `wrap`. Any newly deployed wrapper picks up the `transferAndCall` path automatically if its underlying ERC-20 implements ERC-1363 — no opt-in is required from your code. See the [`WrappersRegistry` reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/WrappersRegistry.md) for how to look up the wrapper for a given ERC-20.
+ERC-1363 is a conditional optimization, not a recommended new default — only a small subset of tokens implement it today. Tokens that don't (USDC, USDT, DAI, and most existing ERC-20s) continue to use `approve` + `wrap`. Any newly deployed wrapper picks up the `transferAndCall` path automatically if its underlying ERC-20 implements ERC-1363 — no opt-in is required from your code. See the [`WrappersRegistry` reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/WrappersRegistry.md) for how to look up the wrapper for a given ERC-20.
 
 ## Steps
 
@@ -17316,8 +17316,8 @@ The configured SDK instance. Throws if called outside a `ZamaProvider`.
 
 ## Related
 
-- [useToken](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useToken.md) — memoised `Token` instance for a given address
-- [useWrappedToken](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useWrappedToken.md) — memoised `WrappedToken` for ERC-7984 wrapper operations
+- [useToken](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useToken.md) — memoized `Token` instance for a given address
+- [useWrappedToken](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useWrappedToken.md) — memoized `WrappedToken` for ERC-7984 wrapper operations
 - [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md) — full API reference for the SDK class
 
 ## useToken
@@ -17329,7 +17329,7 @@ The configured SDK instance. Throws if called outside a `ZamaProvider`.
 
 # useToken
 
-Returns a memoised [`Token`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Token.md) instance bound to the SDK in the current `ZamaProvider`. The reference is stable across re-renders, making it safe to use in dependency arrays.
+Returns a memoized [`Token`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Token.md) instance bound to the SDK in the current `ZamaProvider`. The reference is stable across re-renders, making it safe to use in dependency arrays.
 
 For ERC-7984 wrapper operations (shield, unshield, allowance), use [`useWrappedToken`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useWrappedToken.md) instead.
 
@@ -17377,7 +17377,7 @@ function TokenActions({ tokenAddress }: { tokenAddress: Address }) {
 
 # useWrappedToken
 
-Returns a memoised [`WrappedToken`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/WrappedToken.md) bound to the SDK in the current `ZamaProvider`. Use it for ERC-7984 wrapper operations (shield, unshield, allowance).
+Returns a memoized [`WrappedToken`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/WrappedToken.md) bound to the SDK in the current `ZamaProvider`. Use it for ERC-7984 wrapper operations (shield, unshield, allowance).
 
 `WrappedToken` extends the base [`Token`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Token.md) API, so the returned instance can also read balances and submit confidential transfers.
 
@@ -19650,7 +19650,7 @@ Next.js app demonstrating ERC-7984 confidential token operations on the **Hoodi*
 
 ## Cleartext Zama Protocol
 
-[Zama Protocol](https://docs.zama.org/protocol) is currently supported officially on Ethereum mainnet and Sepolia testnet. This setup uses a co-processor model to offload FHE computation from the host chain to a decentralised network.
+[Zama Protocol](https://docs.zama.org/protocol) is currently supported officially on Ethereum mainnet and Sepolia testnet. This setup uses a co-processor model to offload FHE computation from the host chain to a decentralized network.
 
 To provide support for yet-unsupported testnets, such as Hoodi, this example app simulates Zama Protocol using a **cleartext stack**. Essentially, it uses mocked FHE contracts to provide an API-compatible surface to write the values to the host chain, without needing an actual co-processor or relayer support to be added by Zama Protocol.
 
@@ -20094,7 +20094,7 @@ As soon as a valid address is entered, a live **delegation status** indicator ap
 
 Click **Decrypt Balance** to decrypt the owner's confidential balance. The result is displayed in token units.
 
-> **Cache behaviour:** decrypted values are cached locally in IndexedDB, keyed by the on-chain encrypted handle. If the owner's balance does not change between two decrypt calls, the second call returns the cached value without re-checking the ACL — this is intentional. See [Troubleshooting](#troubleshooting) for details.
+> **Cache behavior:** decrypted values are cached locally in IndexedDB, keyed by the on-chain encrypted handle. If the owner's balance does not change between two decrypt calls, the second call returns the cached value without re-checking the ACL — this is intentional. See [Troubleshooting](#troubleshooting) for details.
 
 ### Step 11 — Revoke decryption access (owner wallet)
 
@@ -20458,7 +20458,7 @@ confirmation — paste any hash into
 
 ### Section 1 — Setup
 
-Initialises the ethers `Wallet` + `JsonRpcProvider`, then creates one SDK config per
+Initializes the ethers `Wallet` + `JsonRpcProvider`, then creates one SDK config per
 wallet with:
 
 - `createConfig` from `@zama-fhe/sdk/ethers`

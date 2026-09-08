@@ -78,7 +78,7 @@ export class Permits {
   }
 
   /**
-   * Sign and store an EIP-712 permit authorising direct decryption for the
+   * Sign and store an EIP-712 permit authorizing direct decryption for the
    * given contract addresses.
    *
    * Idempotent: if a permit covering the requested set already exists, no
@@ -106,7 +106,7 @@ export class Permits {
   }
 
   /**
-   * Sign and store an EIP-712 delegation permit authorising decryption on
+   * Sign and store an EIP-712 delegation permit authorizing decryption on
    * behalf of `delegator`. Same idempotence/chunking semantics as {@link grantPermit}.
    *
    * @param delegator - The address that delegated decryption rights to the connected signer.

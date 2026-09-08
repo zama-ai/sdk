@@ -355,7 +355,7 @@ const config = createConfig({
   wagmiConfig,
   relayers: { [sepolia.id]: web() },
   runtime: {
-    numberOfThreads: 4, // parallelise FHE work across Web Workers
+    numberOfThreads: 4, // parallelize FHE work across Web Workers
   },
 });
 ```
@@ -364,7 +364,7 @@ Every field is optional:
 
 | Field               | Default                                    | Effect                                                                                                                                                                                                                                                                                                                    |
 | ------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `numberOfThreads`   | requested: `navigator.hardwareConcurrency` | Number of Web Workers to parallelise FHE encryption/decryption across. This is the _requested_ count — the _effective_ count degrades to single-threaded (see `singleThread` below) where `navigator` is unavailable (Node < 21, some edge runtimes), or where `SharedArrayBuffer`/a spawnable worker isn't.              |
+| `numberOfThreads`   | requested: `navigator.hardwareConcurrency` | Number of Web Workers to parallelize FHE encryption/decryption across. This is the _requested_ count — the _effective_ count degrades to single-threaded (see `singleThread` below) where `navigator` is unavailable (Node < 21, some edge runtimes), or where `SharedArrayBuffer`/a spawnable worker isn't.              |
 | `singleThread`      | `false`                                    | `true` forces a single thread — no `SharedArrayBuffer` required. The SDK also auto-upgrades to this at runtime whenever multi-threading was requested but can't actually run (no cross-origin isolation, no way to spawn a worker for the chosen `wasmAssetLoadMode`) — silently, with a console warning, never an error. |
 | `wasmAssetLoadMode` | `"auto"`                                   | How the TFHE/KMS WASM assets are fetched and instantiated (modes below).                                                                                                                                                                                                                                                  |
 | `moduleVersions`    | `"auto"`                                   | Pin the TFHE/KMS WASM module versions instead of auto-resolving them from the chain's on-chain protocol version. `checkCompatibility` — checked only when a concrete version is pinned — defaults to `"throw"`; also accepts `"warn"` or `"off"`.                                                                         |
