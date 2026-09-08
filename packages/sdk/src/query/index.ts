@@ -135,6 +135,10 @@ export {
 } from "./batch-decrypt-balances-as";
 export { revokeDelegationMutationOptions, type RevokeDelegationParams } from "./revoke-delegation";
 export {
+  invalidateDecryptionSignaturesMutationOptions,
+  type InvalidateDecryptionSignaturesParams,
+} from "./invalidate-decryption-signatures";
+export {
   delegationStatusQueryOptions,
   type DelegationStatus,
   type DelegationStatusQueryConfig,
@@ -254,4 +258,5 @@ export type {
   ZamaSDKEventListener,
   DelegationSubmittedEvent,
   RevokeDelegationSubmittedEvent,
+  InvalidateDecryptionSignaturesSubmittedEvent,
 } from "../events/sdk-events";

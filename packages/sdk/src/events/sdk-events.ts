@@ -26,6 +26,8 @@ export const ZamaSDKEvents = {
   // Delegation operations
   DelegationSubmitted: "delegation:submitted",
   RevokeDelegationSubmitted: "revokeDelegation:submitted",
+  // Permit operations
+  InvalidateDecryptionSignaturesSubmitted: "invalidateDecryptionSignatures:submitted",
   // Unshield orchestration
   UnshieldPhase1Submitted: "unshield:phase1_submitted",
   UnshieldPhase2Started: "unshield:phase2_started",
@@ -204,6 +206,14 @@ export interface RevokeDelegationSubmittedEvent extends BaseEvent {
   txHash: Hex;
 }
 
+/** Emitted when an invalidate-decryption-signatures transaction has been submitted to the network. */
+export interface InvalidateDecryptionSignaturesSubmittedEvent extends BaseEvent {
+  /** Event type discriminant. */
+  type: typeof ZamaSDKEvents.InvalidateDecryptionSignaturesSubmitted;
+  /** Hash of the submitted invalidateDecryptionSignatures transaction. */
+  txHash: Hex;
+}
+
 /** Emitted when the first phase of an unshield (the unwrap request) has been submitted. */
 export interface UnshieldPhase1SubmittedEvent extends BaseEvent {
   /** Event type discriminant. */
@@ -251,6 +261,7 @@ export type ZamaSDKEvent =
   | FinalizeUnwrapSubmittedEvent
   | DelegationSubmittedEvent
   | RevokeDelegationSubmittedEvent
+  | InvalidateDecryptionSignaturesSubmittedEvent
   | UnshieldPhase1SubmittedEvent
   | UnshieldPhase2StartedEvent
   | UnshieldPhase2SubmittedEvent;
@@ -281,6 +292,7 @@ export type TransactionOperation =
   | "approveUnderlying:reset"
   | "delegateDecryption"
   | "finalizeUnwrap"
+  | "invalidateDecryptionSignatures"
   | "revokeDelegation"
   | "setOperator"
   | "shield:transferAndCall"
@@ -323,6 +335,12 @@ export const transactionOperationMetadata = {
   },
   finalizeUnwrap: {
     submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.FinalizeUnwrapSubmitted, txHash }),
+  },
+  invalidateDecryptionSignatures: {
+    submittedEvent: (txHash: Hex) => ({
+      type: ZamaSDKEvents.InvalidateDecryptionSignaturesSubmitted,
+      txHash,
+    }),
   },
   revokeDelegation: {
     submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.RevokeDelegationSubmitted, txHash }),

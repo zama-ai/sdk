@@ -271,6 +271,12 @@ export interface GenericStorage {
 export { Hex }
 
 // @public
+export interface InvalidateDecryptionSignaturesSubmittedEvent extends BaseEvent {
+    txHash: Hex;
+    type: typeof ZamaSDKEvents.InvalidateDecryptionSignaturesSubmitted;
+}
+
+// @public
 export class MutableWalletAccountStore implements WalletAccountStore {
     constructor(initial?: WalletAccount);
     getSnapshot(): WalletAccount | undefined;
@@ -373,7 +379,7 @@ export interface TransactionErrorEvent extends BaseEvent {
 }
 
 // @public
-export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll";
+export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "invalidateDecryptionSignatures" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll";
 
 // @public
 export interface TransactionReceipt {
@@ -525,7 +531,7 @@ export type ZamaConfigEthers<TChains extends AtLeastOneChain = AtLeastOneChain> 
 });
 
 // @public
-export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | WrapSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
+export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | WrapSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | InvalidateDecryptionSignaturesSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
 export type ZamaSDKEventListener = (event: ZamaSDKEvent) => void;
@@ -549,6 +555,7 @@ export const ZamaSDKEvents: {
     readonly FinalizeUnwrapSubmitted: "finalizeUnwrap:submitted";
     readonly DelegationSubmitted: "delegation:submitted";
     readonly RevokeDelegationSubmitted: "revokeDelegation:submitted";
+    readonly InvalidateDecryptionSignaturesSubmitted: "invalidateDecryptionSignatures:submitted";
     readonly UnshieldPhase1Submitted: "unshield:phase1_submitted";
     readonly UnshieldPhase2Started: "unshield:phase2_started";
     readonly UnshieldPhase2Submitted: "unshield:phase2_submitted";

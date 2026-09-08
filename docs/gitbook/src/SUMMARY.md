@@ -94,6 +94,7 @@
   - [useHasPermit](reference/react/useHasPermit.md)
   - [useRevokePermits](reference/react/useRevokePermits.md)
   - [useClearCredentials](reference/react/useClearCredentials.md)
+  - [useInvalidateDecryptionSignatures](reference/react/useInvalidateDecryptionSignatures.md)
   - [useConfidentialSetOperator](reference/react/useConfidentialSetOperator.md)
   - [useConfidentialIsOperator](reference/react/useConfidentialIsOperator.md)
   - [useUnderlyingAllowance](reference/react/useUnderlyingAllowance.md)

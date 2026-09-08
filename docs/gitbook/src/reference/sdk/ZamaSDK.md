@@ -454,6 +454,21 @@ await sdk.permits.revokeTransportKeyPair("tenant-123");
 
 This does not revoke any permit already issued under the key — a permit is a self-contained, bearer-style EIP-712 signature the relayer accepts independently of this call, and one exfiltrated alongside the key remains usable until its own `permitTTL` expiry regardless of this call. `scopeId` must match the configured scope; throws `ConfigurationError` otherwise. Signer-level [`permits.clear`](#permits-clear) never touches the shared key pair — it only ever wipes the calling signer's own permits.
 
+### permits.invalidateDecryptionSignatures
+
+`(timestamp?: Date) => Promise<TransactionResult>`
+
+Invalidate every decryption signature the connected signer has signed before `timestamp`, via `ACL.invalidateDecryptionSignaturesBefore`. Any decryption request whose permit predates the new cutoff is rejected by the KMS Connector afterward — the recourse when a permissive/wildcard permit or its signing key is compromised, or on a multisig (ERC-1271/Safe) owner rotation. Call this on every multisig signer rotation and on suspected signing-key compromise.
+
+```ts
+await sdk.permits.invalidateDecryptionSignatures(); // invalidate everything up to now
+await sdk.permits.invalidateDecryptionSignatures(new Date("2026-01-01")); // invalidate up to a specific time
+```
+
+On success, this signer's locally-stored permits for the current chain are cleared automatically — they would now only fail against the KMS Connector, so there's nothing to gain by keeping them cached.
+
+This is a different mechanism from [ACL delegation revocation](./delegation.md#revokedelegation) (revoking a _delegate's_ access) and from the KMS-context-revocation recovery the decrypt path self-heals from automatically (a _protocol-side_ rotation) — this is the caller invalidating their own past signatures. Throws `TransactionRevertedError` on an invalid timestamp (non-increasing, or in the future).
+
 ### delegations
 
 `sdk.delegations` manages on-chain decryption delegation through the ACL contract:

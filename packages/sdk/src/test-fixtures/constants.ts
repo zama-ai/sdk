@@ -13,6 +13,14 @@ export const VALID_INPUT_PROOF = ("0x" + "cd".repeat(64)) as Hex;
 export const TEST_PUBLIC_KEY = `0x${"11".repeat(32)}` as Hex;
 export const TEST_PRIVATE_KEY = `0x${"22".repeat(32)}` as Hex;
 export const TEST_SIGNATURE = `0x${"33".repeat(65)}` as Hex;
+/**
+ * A variable-length, non-65-byte signature blob — simulates a smart-contract
+ * wallet's `isValidSignature`-verified signature (e.g. a concatenated Safe
+ * multisig blob), as opposed to a fixed-length EOA `ecrecover` signature.
+ * Deliberately not 65 bytes, so nothing that assumes a fixed EOA length
+ * accidentally passes.
+ */
+export const TEST_ERC1271_SIGNATURE = `0x${"44".repeat(97)}` as Hex;
 export const TEST_UNSIGNED_TX = "0xdeadbeef" as Hex;
 export const TEST_SIGNED_TX = "0xfeedface" as Hex;
 export const TEST_TX_HASH = `0x${"ab".repeat(32)}` as Hex;

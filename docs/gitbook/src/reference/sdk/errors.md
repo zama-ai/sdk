@@ -234,7 +234,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Inspect the revert reason. Common causes: insufficient balance, expired operator approval, or attempting to finalize an already-finalized unwrap.
+**How to handle:** Inspect the revert reason. Common causes: insufficient balance, expired operator approval, or attempting to finalize an already-finalized unwrap. `sdk.permits.invalidateDecryptionSignatures()` also surfaces this way on an invalid timestamp — one that isn't strictly greater than the account's current invalidation cutoff, or one set in the future.
 
 ### InvalidTransportKeyPairError
 

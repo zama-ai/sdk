@@ -52,6 +52,7 @@ import {
   revokeDelegationContract,
   getDelegationExpiryContract,
   isHandleDelegatedContract,
+  invalidateDecryptionSignaturesBeforeContract,
   getTokenPairsContract,
   getTokenPairsLengthContract,
   getTokenPairsSliceContract,
@@ -131,6 +132,14 @@ The [WrappersRegistry class](./WrappersRegistry.md) wraps these builders with au
 | `revokeDelegationContract(acl, delegate, contract)`                     | Revoke decryption delegation               |
 | `getDelegationExpiryContract(acl, delegator, delegate, contract)`       | Read delegation expiry date                |
 | `isHandleDelegatedContract(acl, delegator, delegate, contract, handle)` | Check if a handle is covered by delegation |
+
+## Permit security
+
+| Builder                                                        | What it does                                                    |
+| -------------------------------------------------------------- | --------------------------------------------------------------- |
+| `invalidateDecryptionSignaturesBeforeContract(acl, timestamp)` | Invalidate every decryption signature signed before `timestamp` |
+
+Prefer [`sdk.permits.invalidateDecryptionSignatures()`](./ZamaSDK.md#permits-invalidatedecryptionsignatures) — it also clears locally-cached permits that would now only fail against the KMS Connector.
 
 ## Executing calls
 

@@ -1,17 +1,20 @@
 import { createMockRouter, describe, expect, test, vi } from "../../test-fixtures";
 import type { Address, Hex } from "viem";
 import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
+import { anvil } from "../../chains";
 import { createMockChain } from "../../test-fixtures/chain";
 import { createMockRelayer } from "../../test-fixtures/relayer";
-import { TEST_TKMS_VERSION } from "../../test-fixtures/constants";
+import { TEST_ERC1271_SIGNATURE, TEST_TKMS_VERSION } from "../../test-fixtures/constants";
 import { SigningRejectedError, SigningFailedError } from "../../errors/signing";
 import {
   InvalidTransportKeyPairError,
   UnifiedPermitNotSupportedError,
 } from "../../errors/credential";
 import { ConfigurationError } from "../../errors/relayer";
+import { TransactionRevertedError } from "../../errors/transaction";
 import { DerivationSecretHolder } from "../keypair-wrapping";
 import type { SerializedTransportKeyPairWithPermissions } from "../types";
+import { isWildcardPermission } from "../permissions";
 import { WILDCARD_PERMIT } from "../utils";
 
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
@@ -498,6 +501,42 @@ describe("CredentialService.recoverPermits", () => {
     expect(await credentialService.hasPermit([A, B])).toBe(true);
     // The key pair is untouched: only the permits embed the dead context.
     expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+  });
+
+  test("recovering a scope holding a wildcard permit re-grants wildcard coverage, not a downgraded address list", async ({
+    credentialService,
+    relayer,
+    signer,
+  }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+    const granted = await credentialService.grantPermit(WILDCARD_PERMIT);
+    vi.mocked(signer.signTypedData).mockClear();
+
+    const recovered = await credentialService.recoverPermits([A], undefined, signatures(granted));
+
+    // One signature restored the scope, and it's still a wildcard permit —
+    // not silently downgraded to a finite address list covering only A.
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    expect(recovered.permissions.some(isWildcardPermission)).toBe(true);
+    // Proves broad coverage, not just the originally-requested contract A.
+    await expect(credentialService.hasPermit([A, B, C])).resolves.toBe(true);
+  });
+
+  test("recovering a V2 (non-wildcard) scope re-signs the union as V2", async ({
+    credentialService,
+    relayer,
+    signer,
+  }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+    const granted = await credentialService.grantPermit([A, B]);
+    vi.mocked(signer.signTypedData).mockClear();
+
+    const recovered = await credentialService.recoverPermits([A], undefined, signatures(granted));
+
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    expect(recovered.permissions.every((p) => p.version === 2)).toBe(true);
+    expect(recovered.permissions.some(isWildcardPermission)).toBe(false);
+    await expect(credentialService.hasPermit([A, B])).resolves.toBe(true);
   });
 
   test("a second recovery for the already-replaced permits re-signs nothing", async ({
@@ -1300,5 +1339,175 @@ describe("CredentialService derivationSecret (opt-in at-rest wrapping)", () => {
     vi.spyOn(storage, "get").mockRejectedValueOnce(storageError);
 
     await expect(service.hasPermit([A])).rejects.toThrow(storageError);
+  });
+});
+
+describe("CredentialService.invalidateDecryptionSignatures", () => {
+  test("submits the ACL call with timestamp 0 by default and clears stored permits", async ({
+    credentialService,
+    signer,
+  }) => {
+    await credentialService.grantPermit([A]);
+    await expect(credentialService.hasPermit([A])).resolves.toBe(true);
+
+    const result = await credentialService.invalidateDecryptionSignatures();
+
+    expect(result).toEqual({ txHash: "0xtxhash", receipt: { logs: [] } });
+    expect(signer.writeContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: anvil.aclContractAddress,
+        functionName: "invalidateDecryptionSignaturesBefore",
+        args: [0n],
+      }),
+    );
+    // The scope's permits are cleared, since they'd now only fail against the
+    // KMS Connector.
+    await expect(credentialService.hasPermit([A])).resolves.toBe(false);
+  });
+
+  test("clears same-chain delegated scopes along with the direct scope", async ({
+    credentialService,
+  }) => {
+    await credentialService.grantPermit([A]);
+    await credentialService.grantPermit([A], DELEGATOR);
+
+    await credentialService.invalidateDecryptionSignatures();
+
+    await expect(credentialService.hasPermit([A])).resolves.toBe(false);
+    await expect(credentialService.hasPermit([A], DELEGATOR)).resolves.toBe(false);
+  });
+
+  test("leaves permits on other chains intact", async ({
+    createCredentialService,
+    createMockRouter,
+    createMockChain,
+    relayer,
+    signer,
+  }) => {
+    const chainA = createMockChain({ id: 31337 });
+    const chainB = createMockChain({ id: 11155111 });
+    const router = createMockRouter({ chains: [chainA, chainB], relayer, activeChainId: 31337 });
+    const service = createCredentialService({ router, signer });
+
+    await service.grantPermit([A]);
+    await service.grantPermit([A], DELEGATOR);
+
+    router.switchChain(11155111);
+    await service.grantPermit([B]);
+
+    await service.invalidateDecryptionSignatures();
+
+    await expect(service.hasPermit([B])).resolves.toBe(false);
+
+    router.switchChain(31337);
+    await expect(service.hasPermit([A])).resolves.toBe(true);
+    await expect(service.hasPermit([A], DELEGATOR)).resolves.toBe(true);
+  });
+
+  test("converts an explicit timestamp to unix seconds", async ({ credentialService, signer }) => {
+    const timestamp = new Date("2026-01-01T00:00:00Z");
+
+    await credentialService.invalidateDecryptionSignatures(timestamp);
+
+    expect(signer.writeContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        functionName: "invalidateDecryptionSignaturesBefore",
+        args: [BigInt(Math.floor(timestamp.getTime() / 1000))],
+      }),
+    );
+  });
+
+  test("surfaces a revert (e.g. a non-increasing or future timestamp) as TransactionRevertedError", async ({
+    credentialService,
+    signer,
+  }) => {
+    vi.mocked(signer.writeContract).mockRejectedValueOnce(
+      new Error("execution reverted: InvalidationTimestampTooLow()"),
+    );
+
+    await expect(credentialService.invalidateDecryptionSignatures()).rejects.toThrow(
+      TransactionRevertedError,
+    );
+  });
+});
+
+// V2 (unified) permits widen the signature field to a variable-length blob so
+// ERC-1271 smart-contract-wallet signers (e.g. Safe multisigs) can sign
+// alongside plain 65-byte EOA signatures — see @fhevm/sdk's
+// `SignedDecryptionPermitV2`. `packages/sdk`'s own `hex` primitive schema has
+// no length constraint, and any relayer-side rejection is wrapped the same
+// way as any other signing failure — these tests confirm both, rather than
+// assuming it from reading the schema.
+describe("CredentialService — ERC-1271 / variable-length V2 signatures", () => {
+  test("grantPermit round-trips a variable-length signature", async ({
+    createCredentialService,
+    createMockSigner,
+    relayer,
+  }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+    const smartWalletSigner = createMockSigner(USER, {
+      signTypedData: vi.fn().mockResolvedValue(TEST_ERC1271_SIGNATURE),
+    });
+    const service = createCredentialService({ signer: smartWalletSigner });
+
+    const granted = await service.grantPermit([A]);
+
+    expect(granted.permissions[0]?.version).toBe(2);
+    expect(granted.permissions[0]?.serializedPermit.signature).toBe(TEST_ERC1271_SIGNATURE);
+    await expect(service.hasPermit([A])).resolves.toBe(true);
+  });
+
+  test("registerPermit round-trips a variable-length signature (offline flow)", async ({
+    createCredentialService,
+    relayer,
+  }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+    const service = createCredentialService({});
+
+    const prepared = await service.preparePermit({ signer: USER, contracts: [A] });
+    expect(prepared.version).toBe(2);
+    await service.registerPermit(prepared, TEST_ERC1271_SIGNATURE);
+
+    await expect(service.hasPermit([A])).resolves.toBe(true);
+  });
+
+  test("a relayer-side signature rejection during grantPermit surfaces as SigningFailedError, not a crash", async ({
+    createCredentialService,
+    createMockSigner,
+    relayer,
+  }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+    const rejectionError = new Error(
+      "ERC-1271 isValidSignature returned non-magic value 0xdeadbeef for userAddress " + USER,
+    );
+    vi.mocked(relayer.signUnifiedDecryptionPermit).mockRejectedValueOnce(rejectionError);
+    const smartWalletSigner = createMockSigner(USER);
+    const service = createCredentialService({ signer: smartWalletSigner });
+
+    const error = await service.grantPermit([A]).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(SigningFailedError);
+    expect((error as SigningFailedError).cause).toBe(rejectionError);
+  });
+
+  test("a relayer-side signature rejection during registerPermit surfaces as SigningFailedError, not a crash", async ({
+    createCredentialService,
+    relayer,
+  }) => {
+    vi.mocked(relayer.canUseUnifiedDecryptionPermit).mockResolvedValue(true);
+    const service = createCredentialService({});
+    const prepared = await service.preparePermit({ signer: USER, contracts: [A] });
+
+    const rejectionError = new Error(
+      "ERC-1271 isValidSignature returned non-magic value 0xdeadbeef for userAddress " + USER,
+    );
+    vi.mocked(relayer.parseSignedDecryptionPermit).mockRejectedValueOnce(rejectionError);
+
+    const error = await service
+      .registerPermit(prepared, TEST_ERC1271_SIGNATURE)
+      .catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(SigningFailedError);
+    expect((error as SigningFailedError).cause).toBe(rejectionError);
   });
 });
