@@ -30,7 +30,28 @@ const config = createConfig({
 
 ## Parameters
 
-`web()` accepts an optional options object forwarded to `@fhevm/sdk` — per-client tuning such as `batchRpcCalls` (batch RPC requests) and `fheEncryptionKey` (supply a pre-fetched FHE encryption key). Most apps omit it and call `web()` bare; WASM execution and FHE-artifact caching are handled internally, with no special cross-origin headers required.
+`web()` accepts an optional options object: per-client tuning forwarded to `@fhevm/sdk`, plus request defaults applied to every relayer round-trip on this chain. Most apps omit it and call `web()` bare; WASM execution and FHE-artifact caching are handled internally, with no special cross-origin headers required.
+
+| Option             | Type                                               | Default                                    | Purpose                                                                                                                                                                                            |
+| ------------------ | -------------------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `batchRpcCalls`    | `boolean`                                          | `false`                                    | Batch the client's on-chain version-resolution reads into one JSON-RPC request instead of issuing them individually.                                                                               |
+| `fheEncryptionKey` | `FheEncryptionKeyBytes`                            | none — fetched from the relayer's `keyurl` | A pre-fetched FHE public encryption key — the object `fetchFheEncryptionKeyBytes()` returns — to skip the ~50 MB fetch `@fhevm/sdk` otherwise performs during init.                                |
+| `moduleVersions`   | `"auto"` \| `{ tfhe?; kms?; checkCompatibility? }` | `"auto"`                                   | Pin the TFHE/KMS WASM module versions instead of auto-resolving them from the chain's on-chain protocol version.                                                                                   |
+| `timeout`          | `number` (ms)                                      | `3_600_000` (1 hour)                       | Maximum time to wait for a relayer **request** — an input-proof generation or a decryption, including its retry/backoff loop, not a single HTTP call. A per-call `timeout` overrides this default. |
+| `debug`            | `boolean`                                          | `false`                                    | Emit verbose per-request trace logs for this chain's relayer round-trips to `console.log` — a raw diagnostic switch, separate from any `logger` passed to `createConfig`.                          |
+
+```ts
+web({
+  batchRpcCalls: true,
+  fheEncryptionKey, // reuse a key fetched elsewhere
+  moduleVersions: "auto",
+  timeout: 60_000,
+});
+```
+
+`timeout` bounds only the relayer request itself, not `@fhevm/sdk`'s one-time per-client init phase (protocol-version resolution, the FHE key fetch, WASM module load), which runs before the first request and can hang independently of this value.
+
+The remaining options below are specific to `web()`'s encryption offload worker.
 
 ### `offloadEncrypt`
 

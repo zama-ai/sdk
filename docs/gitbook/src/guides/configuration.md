@@ -50,7 +50,7 @@ import { web } from "@zama-fhe/sdk/web";
 import { node } from "@zama-fhe/sdk/node";
 ```
 
-Chain-specific data (`relayerUrl`, `network`, `executorAddress`, etc.) comes from the chain preset, so a bare call is all most apps need. Each factory also accepts an optional options object forwarded to `@fhevm/sdk` for per-client tuning (e.g. `batchRpcCalls`, `fheEncryptionKey`).
+Chain-specific data (`relayerUrl`, `network`, `executorAddress`, etc.) comes from the chain preset, so a bare call is all most apps need. Each factory also accepts an optional options object forwarded to `@fhevm/sdk` for per-client tuning (e.g. `batchRpcCalls`, `fheEncryptionKey`, `moduleVersions`, `timeout`) — see the [`web()`](../reference/sdk/RelayerWeb.md#parameters) / [`node()`](../reference/sdk/RelayerNode.md#parameters) / [`cleartext()`](../reference/sdk/RelayerCleartext.md#parameters) reference for the full option list and defaults.
 
 ```ts
 // Browser — uses relayerUrl from the chain preset
@@ -347,7 +347,7 @@ The logger is configured once here and flows SDK-wide — including into relayer
 
 ### 8. (Optional) Tune the FHE runtime
 
-The `runtime` field configures the underlying `@fhevm/sdk` WASM runtime — threading, WASM asset loading, and module versions. It is process-global: it applies once per process, not per chain or per relayer.
+The `runtime` field configures the underlying `@fhevm/sdk` WASM runtime — how WASM assets load, threading, module versions, and a fallback relayer `auth`. It is process-global: it applies once per process, not per chain or per relayer.
 
 ```ts
 const config = createConfig({
@@ -360,12 +360,32 @@ const config = createConfig({
 });
 ```
 
-The knob most apps reach for is thread count:
+Every field is optional:
 
-| Field             | Effect                                                              |
-| ----------------- | ------------------------------------------------------------------- |
-| `numberOfThreads` | Number of Web Workers used to parallelise FHE encryption/decryption |
-| `singleThread`    | `true` forces a single thread — no `SharedArrayBuffer` required     |
+| Field               | Default                                    | Effect                                                                                                                                                                                                                                                                                                                    |
+| ------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `numberOfThreads`   | requested: `navigator.hardwareConcurrency` | Number of Web Workers to parallelise FHE encryption/decryption across. This is the _requested_ count — the _effective_ count degrades to single-threaded (see `singleThread` below) where `navigator` is unavailable (Node < 21, some edge runtimes), or where `SharedArrayBuffer`/a spawnable worker isn't.              |
+| `singleThread`      | `false`                                    | `true` forces a single thread — no `SharedArrayBuffer` required. The SDK also auto-upgrades to this at runtime whenever multi-threading was requested but can't actually run (no cross-origin isolation, no way to spawn a worker for the chosen `wasmAssetLoadMode`) — silently, with a console warning, never an error. |
+| `wasmAssetLoadMode` | `"auto"`                                   | How the TFHE/KMS WASM assets are fetched and instantiated (modes below).                                                                                                                                                                                                                                                  |
+| `moduleVersions`    | `"auto"`                                   | Pin the TFHE/KMS WASM module versions instead of auto-resolving them from the chain's on-chain protocol version. `checkCompatibility` — checked only when a concrete version is pinned — defaults to `"throw"`; also accepts `"warn"` or `"off"`.                                                                         |
+| `locateFile`        | none                                       | Remap where the WASM assets are served from — set this when self-hosting them.                                                                                                                                                                                                                                            |
+| `auth`              | none                                       | Process-wide fallback relayer authentication, applied to any chain that doesn't set its own `auth`.                                                                                                                                                                                                                       |
+
+`wasmAssetLoadMode` controls how the FHE WASM assets are fetched and instantiated:
+
+| Mode                  | Behavior                                                                                        |
+| --------------------- | ----------------------------------------------------------------------------------------------- |
+| `auto` (default)      | Pick the best mode available in the current environment.                                        |
+| `embedded-base64`     | Use the WASM inlined as base64 — no separate network fetch. Useful under strict CSP or offline. |
+| `verified-blob`       | Fetch the WASM, verify its integrity, then instantiate from the verified blob.                  |
+| `precheck-direct-url` | Load directly from the asset URL after a precheck request.                                      |
+| `trusted-direct-url`  | Load directly from the asset URL with no precheck (fastest, least defensive).                   |
+
+`runtime.logger` is not one of these — it's managed by the SDK. Pass your logger via `createConfig`'s top-level [`logger`](#7-optional-supply-a-logger) instead (step 7 above).
+
+{% hint style="warning" %}
+**`runtime` is applied once per process and can't be changed afterward.** The `@fhevm/sdk` runtime is a process-global singleton, applied by the first `createConfig` call. A later `createConfig` never reconfigures it — the original stays in effect, and a warning is logged (`"runtime configuration is already set and cannot be changed."`). Set `runtime` on your first `createConfig`; per-chain tuning that must vary belongs in each transport factory's `options` (see [Shared relayer options](#shared-relayer-options) below), not in `runtime`.
+{% endhint %}
 
 {% hint style="warning" %}
 Multi-threaded FHE relies on `SharedArrayBuffer`, which browsers only expose to [cross-origin isolated](https://developer.mozilla.org/en-US/docs/Web/API/Window/crossOriginIsolated) pages. To run more than one thread, serve your app with both headers:
@@ -377,6 +397,8 @@ Cross-Origin-Embedder-Policy: require-corp
 
 If you can't set those headers (some static hosts and embedded contexts), pass `runtime: { singleThread: true }` instead — the SDK then runs FHE on the main thread with no `SharedArrayBuffer` dependency.
 {% endhint %}
+
+`runtime.auth` is a process-wide fallback; a per-chain `auth` on the chain preset takes precedence for that chain. Note the discriminator differs by scope: `runtime.auth` uses `@fhevm/sdk`'s native `type` field (`{ type: "ApiKeyHeader", value }`), whereas a chain's `auth` uses the SDK's `__type` field. See [Authentication](./authentication.md) for the auth methods.
 
 ### 9. (Optional) Share one transport key pair across signers (B2B2C / WaaS)
 
