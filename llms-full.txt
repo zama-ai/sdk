@@ -7571,6 +7571,21 @@ await sdk.permits.revokeTransportKeyPair("tenant-123");
 
 This does not revoke any permit already issued under the key — a permit is a self-contained, bearer-style EIP-712 signature the relayer accepts independently of this call, and one exfiltrated alongside the key remains usable until its own `permitTTL` expiry regardless of this call. `scopeId` must match the configured scope; throws `ConfigurationError` otherwise. Signer-level [`permits.clear`](#permits-clear) never touches the shared key pair — it only ever wipes the calling signer's own permits.
 
+### permits.invalidateDecryptionSignatures
+
+`(timestamp?: Date) => Promise<TransactionResult>`
+
+Invalidate every decryption signature the connected signer has signed before `timestamp`, via `ACL.invalidateDecryptionSignaturesBefore`. Any decryption request whose permit predates the new cutoff is rejected by the KMS Connector afterward — the recourse when a permissive/wildcard permit or its signing key is compromised, or on a multisig (ERC-1271/Safe) owner rotation. Call this on every multisig signer rotation and on suspected signing-key compromise.
+
+```ts
+await sdk.permits.invalidateDecryptionSignatures(); // invalidate everything up to now
+await sdk.permits.invalidateDecryptionSignatures(new Date("2026-01-01")); // invalidate up to a specific time
+```
+
+On success, this signer's locally-stored permits for the current chain are cleared automatically — they would now only fail against the KMS Connector, so there's nothing to gain by keeping them cached.
+
+This is a different mechanism from [ACL delegation revocation](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/delegation.md#revokedelegation) (revoking a _delegate's_ access) and from the KMS-context-revocation recovery the decrypt path self-heals from automatically (a _protocol-side_ rotation) — this is the caller invalidating their own past signatures. Throws `TransactionRevertedError` on an invalid timestamp (non-increasing, or in the future).
+
 ### delegations
 
 `sdk.delegations` manages on-chain decryption delegation through the ACL contract:
@@ -9483,7 +9498,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Inspect the revert reason. Common causes: insufficient balance, expired operator approval, or attempting to finalize an already-finalized unwrap.
+**How to handle:** Inspect the revert reason. Common causes: insufficient balance, expired operator approval, or attempting to finalize an already-finalized unwrap. `sdk.permits.invalidateDecryptionSignatures()` also surfaces this way on an invalid timestamp — one that isn't strictly greater than the account's current invalidation cutoff, or one set in the future.
 
 ### InvalidTransportKeyPairError
 
@@ -10069,6 +10084,7 @@ import {
   revokeDelegationContract,
   getDelegationExpiryContract,
   isHandleDelegatedContract,
+  invalidateDecryptionSignaturesBeforeContract,
   getTokenPairsContract,
   getTokenPairsLengthContract,
   getTokenPairsSliceContract,
@@ -10149,6 +10165,14 @@ Use `totalSupplyQueryOptions` / React `useTotalSupply` for cached reads — they
 | `revokeDelegationContract(acl, delegate, contract)`                     | Revoke decryption delegation               |
 | `getDelegationExpiryContract(acl, delegator, delegate, contract)`       | Read delegation expiry date                |
 | `isHandleDelegatedContract(acl, delegator, delegate, contract, handle)` | Check if a handle is covered by delegation |
+
+## Permit security
+
+| Builder                                                        | What it does                                                    |
+| -------------------------------------------------------------- | --------------------------------------------------------------- |
+| `invalidateDecryptionSignaturesBeforeContract(acl, timestamp)` | Invalidate every decryption signature signed before `timestamp` |
+
+Prefer [`sdk.permits.invalidateDecryptionSignatures()`](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-invalidatedecryptionsignatures) — it also clears locally-cached permits that would now only fail against the KMS Connector.
 
 ## Executing calls
 
@@ -14975,6 +14999,149 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 - [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useGrantPermit.md) — sign permits for contracts
 - [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useHasPermit.md) — check whether stored permits cover contracts
 
+## useInvalidateDecryptionSignatures
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/useInvalidateDecryptionSignatures.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useInvalidateDecryptionSignatures.md
+- logical_path: reference/react/useInvalidateDecryptionSignatures
+
+# useInvalidateDecryptionSignatures
+
+Mutation hook that invalidates every decryption signature the connected signer has signed before a given timestamp, via the on-chain ACL contract. Any decryption request whose permit predates the new cutoff is rejected by the KMS Connector afterward — the recourse when a permissive/wildcard permit or its signing key is compromised, or on a multisig (ERC-1271/Safe) owner rotation. Call this on every multisig signer rotation and on suspected signing-key compromise.
+
+On success, the connected signer's locally-stored permits for the current chain are cleared automatically — they would now only fail against the KMS Connector.
+
+## Import
+
+```ts
+import { useInvalidateDecryptionSignatures } from "@zama-fhe/react-sdk";
+```
+
+## Usage
+
+
+### Tab: component.tsx
+
+```tsx
+import { useInvalidateDecryptionSignatures } from "@zama-fhe/react-sdk";
+
+function InvalidateAllButton() {
+  const { mutateAsync: invalidate, isPending } = useInvalidateDecryptionSignatures();
+
+  async function handleInvalidate() {
+    const { txHash } = await invalidate({});
+    console.log("Invalidated in", txHash);
+  }
+
+  return (
+    <button onClick={handleInvalidate} disabled={isPending}>
+      {isPending ? "Invalidating..." : "Invalidate All Signatures"}
+    </button>
+  );
+}
+```
+
+
+### `onSuccess`
+
+**Type:** `(data: TData, variables: TVariables, context: TContext) => void`
+
+Callback fired when the mutation completes without error. Receives the return data, the variables passed to `mutate`, and any context from `onMutate`.
+
+### `onError`
+
+**Type:** `(error: Error, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired when the mutation throws. Receives the error, the variables passed to `mutate`, and the context from `onMutate` (if it ran).
+
+### `onSettled`
+
+**Type:** `(data: TData | undefined, error: Error | null, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired after the mutation finishes, regardless of success or failure. Useful for cleanup like closing modals or resetting form state.
+
+### `onMutate`
+
+**Type:** `(variables: TVariables) => Promise<TContext> | TContext`
+
+Callback fired before the mutation function runs. Return a context value to pass through to `onSuccess`, `onError`, and `onSettled`. Commonly used for optimistic updates.
+
+
+## Mutation variables
+
+Passed to `mutate` / `mutateAsync` at call time.
+
+### timestamp
+
+`Date` (optional)
+
+Oldest timestamp that remains valid. Omit to invalidate everything signed up to now.
+
+```ts
+await invalidate({}); // invalidate everything up to now
+await invalidate({ timestamp: new Date("2026-01-01") }); // invalidate up to a specific time
+```
+
+## Return Type
+
+`data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
+
+### `mutate`
+
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
+
+
+## Related
+
+- [`sdk.permits.invalidateDecryptionSignatures`](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-invalidatedecryptionsignatures) -- underlying SDK method
+- [`useRevokePermits`](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useRevokePermits.md) -- local-only permit removal, does not reach the KMS
+- [Security model — Revocation](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/concepts/security-model.md#revocation) -- how this compares to the other two revocation mechanisms
+
 ## useConfidentialSetOperator
 
 - source_type: official-doc
@@ -19087,6 +19254,10 @@ A few things a wildcard permit does **not** change:
 - **Wildcard scope is opt-in, not inferred.** The SDK never signs a wildcard-scoped permit unless the caller explicitly asks for one — passing a large contract list to `grantPermit()` still signs a permit for exactly those contracts, never widened to "everything".
 - **It's broader, so treat it with more care than a contract-scoped permit.** A wildcard permit signed with a long validity window is a standing grant to decrypt anything the signer owns until it expires — prefer a specific contract list unless your app genuinely needs unbounded coverage, and prefer a short `permitTTL` when you do use it.
 
+### Smart-contract-wallet (ERC-1271) signers
+
+A V2 permit's signature accepts a variable-length blob, not just a fixed-length EOA `ecrecover` signature — so a signer backed by a smart-contract wallet (a Safe multisig, for example) can sign one the same way an EOA does, through `grantPermit`, `preparePermit`/`registerPermit`, or a custody-signed offline permit. The underlying `@fhevm/sdk` checks the signature against the connected chain's `IERC1271.isValidSignature` as a **best-effort, precautionary check only** — the KMS runs the same verification and remains the sole authority on whether a permit is actually honored; a passing client-side check is not itself proof of validity, and a rejection surfaces here as a normal `SigningFailedError`.
+
 ## Revocation
 
 Permits can be removed in two ways:
@@ -19095,6 +19266,8 @@ Permits can be removed in two ways:
 - **Full wipe** — `sdk.permits.revokePermits()` removes all permits for the current signer across all chains and delegators. The transport key pair is not affected.
 
 For a complete "log out" that also removes the transport key pair, use `sdk.permits.clear()`. See the [ZamaSDK reference](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-revokepermits) for the full API.
+
+Both of the above are **local-only**: they remove this SDK's own cached copy of a permit, but the permit itself — a self-contained, bearer-style EIP-712 signature — remains valid against the relayer directly until it expires. `sdk.permits.invalidateDecryptionSignatures(timestamp?)` is the one mechanism that's enforced on-chain/KMS-side, so it's the only one that actually stops an already-exfiltrated permit from working; use it on suspected key compromise or a multisig owner rotation. See [Security Model — Revocation](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/concepts/security-model.md#revocation) for how all three revocation mechanisms compare.
 
 ### Two revocation tiers with a shared scope
 
@@ -19368,6 +19541,14 @@ After revoking permits, the transport key pair remains in storage. Use `sdk.perm
 Invalidating the shared key pair itself is a distinct, operator-level operation: `sdk.permits.revokeTransportKeyPair(scopeId)`. It deletes the scope's key pair; every permit in the scope embeds that key pair's public key, so they're all treated as stale on next access — no permit needs to be touched directly, and no wallet needs to be connected. Use it for suspected compromise, periodic rotation, or scope decommissioning — never as a side effect of a single signer's revoke.
 
 `revokeTransportKeyPair()` only stops the SDK from reissuing or reusing the deleted key going forward — it does not revoke permits already issued under it. A permit is a self-contained, bearer-style EIP-712 signature the relayer accepts on its own terms; nothing in this SDK (or, from the client's perspective, on the relayer/KMS side) can push-revoke one server-side. If a compromise already exfiltrated both the shared private key and a still-valid permit — realistic, since permits and the key pair share the same `storage` by default unless `permitStorage` is configured separately — that permit remains usable against the relayer directly, bypassing this SDK entirely, until its own `permitTTL` expiry. `revokeTransportKeyPair()` closes the SDK-local half of the exposure; it is not a substitute for treating any already-issued permit from a compromised store as live until it naturally expires.
+
+**On-chain signature invalidation** (`sdk.permits.invalidateDecryptionSignatures(timestamp?)`) is the mechanism that closes the other half of that exposure — the part `revokeTransportKeyPair()` and `revokePermits()` cannot reach, because both only ever touch this SDK's local storage. It calls `ACL.invalidateDecryptionSignaturesBefore` on-chain, so the KMS Connector itself starts rejecting any decryption request signed before the new cutoff — including a permit already exfiltrated, still within its `permitTTL`, and used directly against the relayer without going through this SDK at all. Use it for the same triggers as a suspected compromise, and always on a multisig (ERC-1271/Safe) owner rotation, so a pre-signed request from a removed owner cannot remain valid. See [`ZamaSDK` reference](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-invalidatedecryptionsignatures) for the full API.
+
+This is a third, distinct revocation mechanism from the two above — worth not conflating:
+
+- `sdk.permits.revokePermits()` / `sdk.permits.clear()` — local-only, removes this SDK's cached copy of a permit; the permit itself remains valid server-side until it expires.
+- `sdk.permits.revokeTransportKeyPair(scopeId)` — local-only, stops a shared-scope key pair from being reissued or reused by this SDK; also doesn't revoke any permit already issued under it.
+- `sdk.permits.invalidateDecryptionSignatures(timestamp?)` — the only one of the three that's enforced on-chain/KMS-side, and the only one that actually stops an already-exfiltrated permit from working.
 
 ## CSRF protection
 

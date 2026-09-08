@@ -3,6 +3,7 @@
 import {
   useClearCredentials,
   useHasPermit,
+  useInvalidateDecryptionSignatures,
   useRevokePermits,
   useGrantPermit,
 } from "@zama-fhe/react-sdk";
@@ -14,6 +15,7 @@ export function PermitsPanel({ tokenAddresses }: { tokenAddresses: [Address, ...
   const revoke = useRevokePermits();
   const revokeAll = useRevokePermits();
   const clearCredentials = useClearCredentials();
+  const invalidateSignatures = useInvalidateDecryptionSignatures();
 
   return (
     <div className="space-y-6" data-testid="permits-panel">
@@ -59,6 +61,15 @@ export function PermitsPanel({ tokenAddresses }: { tokenAddresses: [Address, ...
           >
             {clearCredentials.isPending ? "Clearing..." : "Clear Credentials"}
           </button>
+
+          <button
+            onClick={() => invalidateSignatures.mutate({})}
+            disabled={invalidateSignatures.isPending}
+            className="px-4 py-2 bg-zama-surface border border-zama-border text-white font-medium rounded hover:bg-zama-border transition-colors disabled:opacity-50"
+            data-testid="permits-invalidate-signatures-button"
+          >
+            {invalidateSignatures.isPending ? "Invalidating..." : "Invalidate All Signatures"}
+          </button>
         </div>
 
         {revoke.isSuccess && (
@@ -89,6 +100,16 @@ export function PermitsPanel({ tokenAddresses }: { tokenAddresses: [Address, ...
         {clearCredentials.isError && (
           <p className="text-zama-error" data-testid="clear-credentials-error">
             Error: {clearCredentials.error.message}
+          </p>
+        )}
+        {invalidateSignatures.isSuccess && (
+          <p className="text-zama-success" data-testid="invalidate-signatures-success">
+            All signatures invalidated successfully
+          </p>
+        )}
+        {invalidateSignatures.isError && (
+          <p className="text-zama-error" data-testid="invalidate-signatures-error">
+            Error: {invalidateSignatures.error.message}
           </p>
         )}
       </div>

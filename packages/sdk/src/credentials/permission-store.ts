@@ -161,6 +161,34 @@ export class PermissionStore {
     await swallow("delete permit index", () => this.#storage.delete(indexKey), this.#logger);
   }
 
+  /**
+   * Delete every permission for the given signer on one chain, including every
+   * delegator scope on that chain. Other chains are left intact.
+   *
+   * On-chain signature invalidation is per host-chain ACL (`msg.sender` on that
+   * chain only), so locally evicting other chains would drop still-valid permits.
+   */
+  async clearAllForSignerOnChain(
+    signerAddress: ChecksummedAddress,
+    chainId: number,
+  ): Promise<void> {
+    const indexKey = permissionIndexKey(signerAddress);
+    const scopeKeys = await this.#readIndex(indexKey);
+    const prefix = `permits:${signerAddress}:${chainId}:`;
+    const matching = scopeKeys.filter((key) => key.startsWith(prefix));
+    const remaining = scopeKeys.filter((key) => !key.startsWith(prefix));
+    await Promise.all(matching.map((key) => this.#deleteScope(key)));
+    if (remaining.length === 0) {
+      await swallow("delete permit index", () => this.#storage.delete(indexKey), this.#logger);
+    } else if (remaining.length !== scopeKeys.length) {
+      await swallow(
+        "update permit index",
+        () => this.#storage.set(indexKey, remaining),
+        this.#logger,
+      );
+    }
+  }
+
   async #readIndex(indexKey: string): Promise<string[]> {
     const raw = await this.#storage.get(indexKey);
     if (raw === null || raw === undefined) {

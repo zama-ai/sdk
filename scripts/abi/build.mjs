@@ -13,7 +13,11 @@ export const targets = [
     exportName: "confidentialWrapperAbi",
   },
   {
-    artifactPath: "contracts/out/Impl.sol/IACL.json",
+    // contracts/src/IACLExtended.sol locally extends the vendored `IACL` with
+    // `invalidateDecryptionSignaturesBefore`, which upstream hasn't added to
+    // `IACL` itself yet. Point this back at contracts/out/Impl.sol/IACL.json
+    // once upstream adds it and this repo's pin includes it.
+    artifactPath: "contracts/out/IACLExtended.sol/IACLExtended.json",
     path: "packages/sdk/src/abi/acl.abi.ts",
     exportName: "aclAbi",
   },

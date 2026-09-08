@@ -26,6 +26,7 @@ import { EncryptParams } from '@zama-fhe/sdk';
 import { EncryptResult } from '@zama-fhe/sdk';
 import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
 import { Hex } from '@zama-fhe/sdk';
+import { InvalidateDecryptionSignaturesParams } from '@zama-fhe/sdk/query';
 import { JSX } from 'react';
 import { PaginatedResult } from '@zama-fhe/sdk';
 import { PreparedPermit } from '@zama-fhe/sdk';
@@ -188,6 +189,9 @@ export function useHasPermit(config: UseHasPermitConfig, options?: Omit<UseQuery
 export interface UseHasPermitConfig {
     contractAddresses: Address[];
 }
+
+// @public
+export function useInvalidateDecryptionSignatures(options?: UseMutationOptions<TransactionResult, Error, InvalidateDecryptionSignaturesParams>): UseMutationResult<TransactionResult, Error, InvalidateDecryptionSignaturesParams, unknown>;
 
 // @public
 export function useIsConfidential(tokenAddress: Address, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): UseQueryResult<boolean, Error>;

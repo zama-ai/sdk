@@ -232,6 +232,14 @@ Invalidating the shared key pair itself is a distinct, operator-level operation:
 
 `revokeTransportKeyPair()` only stops the SDK from reissuing or reusing the deleted key going forward — it does not revoke permits already issued under it. A permit is a self-contained, bearer-style EIP-712 signature the relayer accepts on its own terms; nothing in this SDK (or, from the client's perspective, on the relayer/KMS side) can push-revoke one server-side. If a compromise already exfiltrated both the shared private key and a still-valid permit — realistic, since permits and the key pair share the same `storage` by default unless `permitStorage` is configured separately — that permit remains usable against the relayer directly, bypassing this SDK entirely, until its own `permitTTL` expiry. `revokeTransportKeyPair()` closes the SDK-local half of the exposure; it is not a substitute for treating any already-issued permit from a compromised store as live until it naturally expires.
 
+**On-chain signature invalidation** (`sdk.permits.invalidateDecryptionSignatures(timestamp?)`) is the mechanism that closes the other half of that exposure — the part `revokeTransportKeyPair()` and `revokePermits()` cannot reach, because both only ever touch this SDK's local storage. It calls `ACL.invalidateDecryptionSignaturesBefore` on-chain, so the KMS Connector itself starts rejecting any decryption request signed before the new cutoff — including a permit already exfiltrated, still within its `permitTTL`, and used directly against the relayer without going through this SDK at all. Use it for the same triggers as a suspected compromise, and always on a multisig (ERC-1271/Safe) owner rotation, so a pre-signed request from a removed owner cannot remain valid. See [`ZamaSDK` reference](../reference/sdk/ZamaSDK.md#permits-invalidatedecryptionsignatures) for the full API.
+
+This is a third, distinct revocation mechanism from the two above — worth not conflating:
+
+- `sdk.permits.revokePermits()` / `sdk.permits.clear()` — local-only, removes this SDK's cached copy of a permit; the permit itself remains valid server-side until it expires.
+- `sdk.permits.revokeTransportKeyPair(scopeId)` — local-only, stops a shared-scope key pair from being reissued or reused by this SDK; also doesn't revoke any permit already issued under it.
+- `sdk.permits.invalidateDecryptionSignatures(timestamp?)` — the only one of the three that's enforced on-chain/KMS-side, and the only one that actually stops an already-exfiltrated permit from working.
+
 ## CSRF protection
 
 For browser apps, the `web()` transport supports CSRF tokens injected into all mutating HTTP requests to the relayer proxy:

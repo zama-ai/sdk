@@ -583,6 +583,20 @@ export function invalidateAfterWrap(queryClient: QueryClientLike, tokenAddress: 
 export function invalidateBalanceQueries(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public
+export function invalidateDecryptionSignaturesMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.invalidateDecryptionSignatures"], InvalidateDecryptionSignaturesParams, TransactionResult>;
+
+// @public
+export interface InvalidateDecryptionSignaturesParams {
+    timestamp?: Date;
+}
+
+// @public
+export interface InvalidateDecryptionSignaturesSubmittedEvent extends BaseEvent {
+    txHash: Hex;
+    type: typeof ZamaSDKEvents.InvalidateDecryptionSignaturesSubmitted;
+}
+
+// @public
 export function invalidateWagmiBalanceQueries(queryClient: QueryClientLike): void;
 
 // @public
@@ -667,6 +681,7 @@ export class Permits {
     grantPermit(contracts: Address[] | WildcardPermit): Promise<void>;
     hasDelegationPermit(delegator: Address, contracts: Address[]): Promise<boolean>;
     hasPermit(contracts: Address[]): Promise<boolean>;
+    invalidateDecryptionSignatures(timestamp?: Date): Promise<TransactionResult>;
     registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void>;
     revokePermits(contracts?: Address[]): Promise<void>;
     revokeTransportKeyPair(scopeId: string): Promise<void>;
@@ -1012,7 +1027,7 @@ export interface TransactionErrorEvent extends BaseEvent {
 export type TransactionKind = PrepareTransactionRequest["kind"];
 
 // @public
-export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll";
+export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "invalidateDecryptionSignatures" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll";
 
 // @public
 export interface TransactionReceipt {
@@ -1604,7 +1619,7 @@ export class ZamaSDK {
 }
 
 // @public
-export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | WrapSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
+export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | WrapSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | InvalidateDecryptionSignaturesSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
 export type ZamaSDKEventListener = (event: ZamaSDKEvent) => void;
@@ -1628,6 +1643,7 @@ export const ZamaSDKEvents: {
     readonly FinalizeUnwrapSubmitted: "finalizeUnwrap:submitted";
     readonly DelegationSubmitted: "delegation:submitted";
     readonly RevokeDelegationSubmitted: "revokeDelegation:submitted";
+    readonly InvalidateDecryptionSignaturesSubmitted: "invalidateDecryptionSignatures:submitted";
     readonly UnshieldPhase1Submitted: "unshield:phase1_submitted";
     readonly UnshieldPhase2Started: "unshield:phase2_started";
     readonly UnshieldPhase2Submitted: "unshield:phase2_submitted";
