@@ -347,7 +347,9 @@ The logger is configured once here and flows SDK-wide — including into relayer
 
 ### 8. (Optional) Tune FHE runtime performance and behavior
 
-The `runtime` field configures the underlying `@fhevm/sdk` WASM runtime — how WASM assets load, threading, module versions, and a fallback relayer `auth`. It is process-global: it applies once per process, not per chain or per relayer.
+The `runtime` field configures the underlying `@fhevm/sdk` WASM runtime — how WASM assets load, threading, and module versions. It is process-global: it applies once per process, not per chain or per relayer.
+
+Leaving `runtime` unset is a valid default: the SDK tries to run multi-threaded automatically, and falls back to single-threaded on its own when the environment doesn't support it (see `numberOfThreads`/`singleThread` below).
 
 ```ts
 const config = createConfig({
@@ -369,7 +371,7 @@ Every field is optional:
 | `wasmAssetLoadMode` | `"auto"`                                   | How the TFHE/KMS WASM assets are fetched and instantiated (modes below).                                                                                                                                                                                                                                                  |
 | `moduleVersions`    | `"auto"`                                   | Pin the TFHE/KMS WASM module versions instead of auto-resolving them from the chain's on-chain protocol version. `checkCompatibility` — checked only when a concrete version is pinned — defaults to `"throw"`; also accepts `"warn"` or `"off"`.                                                                         |
 | `locateFile`        | none                                       | Remap where the WASM assets are served from — set this when self-hosting them.                                                                                                                                                                                                                                            |
-| `auth`              | none                                       | Process-wide fallback relayer authentication, applied to any chain that doesn't set its own `auth`.                                                                                                                                                                                                                       |
+| `auth`              | none                                       | Process-wide fallback relayer authentication, applied to any chain that doesn't set its own `auth`. See [Authentication](./authentication.md) for the auth methods.                                                                                                                                                       |
 
 `wasmAssetLoadMode` controls how the FHE WASM assets are fetched and instantiated:
 
@@ -397,8 +399,6 @@ Cross-Origin-Embedder-Policy: require-corp
 
 If you can't set those headers (some static hosts and embedded contexts), pass `runtime: { singleThread: true }` instead — the SDK then runs FHE on the main thread with no `SharedArrayBuffer` dependency.
 {% endhint %}
-
-`runtime.auth` is a process-wide fallback; a per-chain `auth` on the chain preset takes precedence for that chain. Note the discriminator differs by scope: `runtime.auth` uses `@fhevm/sdk`'s native `type` field (`{ type: "ApiKeyHeader", value }`), whereas a chain's `auth` uses the SDK's `__type` field. See [Authentication](./authentication.md) for the auth methods.
 
 ### 9. (Optional) Share one transport key pair across signers (B2B2C / WaaS)
 

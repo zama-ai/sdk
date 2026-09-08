@@ -176,7 +176,7 @@ Global `@fhevm/sdk` runtime config — WASM asset loading, threading, module ver
 **Applied once per process.** The underlying `@fhevm/sdk` runtime is a process-wide singleton, set by the first `createConfig` call. A later `createConfig` in the same process cannot reconfigure it — the original configuration stays in effect and a warning is logged instead.
 {% endhint %}
 
-`runtime.logger` is not forwarded — pass your logger via `createConfig`'s top-level [`logger`](#logger) instead. The `auth` discriminator also differs from a chain's `auth`: `runtime.auth` uses `@fhevm/sdk`'s native `type` field (`{ type: "ApiKeyHeader", value }`), while a chain's `auth` uses the SDK's `__type` field. See [Authentication](../../guides/authentication.md) for the auth methods.
+`runtime.logger` is not forwarded — pass your logger via `createConfig`'s top-level [`logger`](#logger) instead. `runtime.auth` is a process-wide fallback relayer authentication, forwarded to `@fhevm/sdk` as-is; see [Authentication](../../guides/authentication.md) for the auth methods.
 
 ### logger
 
