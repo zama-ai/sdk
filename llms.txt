@@ -110,8 +110,8 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useMetadata](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useMetadata.md): Get token name, symbol, and decimals in one call.
 - [useTotalSupply](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTotalSupply.md): Read the total supply of a token.
 - [useZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useZamaSDK.md): Hook to access the raw ZamaSDK instance from ZamaProvider context.
-- [useToken](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useToken.md): Hook returning a memoised Token instance for a given address.
-- [useWrappedToken](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useWrappedToken.md): React hook returning a memoised WrappedToken instance.
+- [useToken](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useToken.md): Hook returning a memoized Token instance for a given address.
+- [useWrappedToken](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useWrappedToken.md): React hook returning a memoized WrappedToken instance.
 - [useEncrypt](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useEncrypt.md): Low-level mutation hook that encrypts a plaintext value using the relayer's FHE engine.
 - [useDecryptValues](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDecryptValues.md): Query hook for FHE user decryption. Disabled by default — enable it to fire, and gate on a cached permit to avoid an unexpected wallet prompt.
 - [useDecryptPublicValues](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDecryptPublicValues.md): Mutation hook that decrypts publicly-decryptable FHE values using the network public key — no credential required.

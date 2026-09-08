@@ -115,7 +115,7 @@ describe("EncryptWorkerClient dispose", () => {
     expect(harness.workers[1]!.terminated).toBe(true);
   });
 
-  test("a call landing mid-drain rides the released worker without cancelling the release", async () => {
+  test("a call landing mid-drain rides the released worker without canceling the release", async () => {
     const { client, api } = makeClient();
     const queue = queueEncrypts(api);
     await client.init();
