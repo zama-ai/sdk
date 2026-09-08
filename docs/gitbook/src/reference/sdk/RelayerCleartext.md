@@ -30,7 +30,24 @@ const config = createConfig({
 
 ## Parameters
 
-`cleartext()` accepts an optional options object forwarded to `@fhevm/sdk` for per-client tuning (`batchRpcCalls`, `fheEncryptionKey`); most apps call it bare. It reads `executorAddress` from the chain definition — the address of the `CleartextFHEVMExecutor` contract that stores plaintext values.
+`cleartext()` accepts an optional options object: per-client tuning forwarded to `@fhevm/sdk`, plus request defaults applied to every relayer round-trip on this chain; most apps call it bare. It reads `executorAddress` from the chain definition — the address of the `CleartextFHEVMExecutor` contract that stores plaintext values.
+
+| Option             | Type                                               | Default                                    | Purpose                                                                                                                                                                                            |
+| ------------------ | -------------------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `batchRpcCalls`    | `boolean`                                          | `false`                                    | Batch the client's on-chain version-resolution reads into one JSON-RPC request instead of issuing them individually.                                                                               |
+| `fheEncryptionKey` | `FheEncryptionKeyBytes`                            | none — fetched from the relayer's `keyurl` | A pre-fetched FHE public encryption key — the object `fetchFheEncryptionKeyBytes()` returns — to skip the ~50 MB fetch `@fhevm/sdk` otherwise performs during init.                                |
+| `moduleVersions`   | `"auto"` \| `{ tfhe?; kms?; checkCompatibility? }` | `"auto"`                                   | Pin the TFHE/KMS WASM module versions instead of auto-resolving them from the chain's on-chain protocol version.                                                                                   |
+| `timeout`          | `number` (ms)                                      | `3_600_000` (1 hour)                       | Maximum time to wait for a relayer **request** — an input-proof generation or a decryption, including its retry/backoff loop, not a single HTTP call. A per-call `timeout` overrides this default. |
+| `debug`            | `boolean`                                          | `false`                                    | Emit verbose per-request trace logs for this chain's relayer round-trips to `console.log` — a raw diagnostic switch, separate from any `logger` passed to `createConfig`.                          |
+
+```ts
+cleartext({
+  batchRpcCalls: true,
+  fheEncryptionKey, // reuse a key fetched elsewhere
+  moduleVersions: "auto",
+  timeout: 60_000,
+});
+```
 
 {% hint style="warning" %}
 The chain must define `executorAddress`, or `createRelayer` throws a `ConfigurationError`. Use a development chain preset that includes it (`hardhat`, `hoodi`) or set it yourself. Production presets (`mainnet`, `sepolia`) do not define it — cleartext mode is for development only.

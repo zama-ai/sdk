@@ -294,7 +294,7 @@ As soon as a valid address is entered, a live **delegation status** indicator ap
 
 Click **Decrypt Balance** to decrypt the owner's confidential balance. The result is displayed in token units.
 
-> **Cache behaviour:** decrypted values are cached locally in IndexedDB, keyed by the on-chain encrypted handle. If the owner's balance does not change between two decrypt calls, the second call returns the cached value without re-checking the ACL — this is intentional. See [Troubleshooting](#troubleshooting) for details.
+> **Cache behavior:** decrypted values are cached locally in IndexedDB, keyed by the on-chain encrypted handle. If the owner's balance does not change between two decrypt calls, the second call returns the cached value without re-checking the ACL — this is intentional. See [Troubleshooting](#troubleshooting) for details.
 
 ### Step 11 — Revoke decryption access (owner wallet)
 
