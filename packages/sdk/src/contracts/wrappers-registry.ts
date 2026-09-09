@@ -145,7 +145,7 @@ export interface TokenWrapperPairWithMetadata extends TokenWrapperPair {
   };
 }
 
-/** Paginated result set modelled after standard API pagination. */
+/** Paginated result set modeled after standard API pagination. */
 export interface PaginatedResult<T> {
   /** Items on the current page. */
   readonly items: readonly T[];

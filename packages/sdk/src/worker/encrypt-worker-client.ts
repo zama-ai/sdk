@@ -208,7 +208,7 @@ export class EncryptWorkerClient implements EncryptOffloadBackend {
 
   init = (): Promise<void> => {
     // A call landing mid-drain rides the worker being released rather than
-    // cancelling the release: the drain still completes, and the call after it
+    // canceling the release: the drain still completes, and the call after it
     // spawns a fresh worker.
     const generation = (this.#generation ??= createWorkerGeneration());
     if (generation.initPromise === undefined) {

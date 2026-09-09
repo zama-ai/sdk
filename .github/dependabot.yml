@@ -22,6 +22,8 @@ updates:
       - dependency-name: "*"
         update-types:
           - version-update:semver-patch
+      # Protocol-version-tied; bumped via alpha, not routine Dependabot.
+      - dependency-name: "@fhevm/sdk"
 
   # Test apps
   - package-ecosystem: npm
