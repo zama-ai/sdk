@@ -13,7 +13,7 @@ import {
  * Address fixtures specific to react-sdk mutation/cache tests. The SDK already
  * exposes `tokenAddress`, `userAddress`, `wrapperAddress`, etc. — these add the
  * extra addresses (spender, coordinator, second token, recipient, …) that the
- * React mutation tests need to assert behaviour against distinct addresses.
+ * React mutation tests need to assert behavior against distinct addresses.
  */
 export interface ReactAddressFixtures {
   spenderAddress: Address;
