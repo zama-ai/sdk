@@ -11470,6 +11470,9 @@ export interface PaginatedResult<T> {
 }
 
 // @public
+export function parsePreparedPermit(value: unknown): PreparedPermit;
+
+// @public
 export interface Permission {
     contractAddresses: ChecksummedAddress[];
     durationDays: number;
@@ -12779,6 +12782,12 @@ export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptV
 
 // @public
 export function retryAfterSeconds(error: unknown): number | undefined;
+
+// @public
+export function reviveZamaError(code: ZamaErrorCode, message: string, options: {
+    retryable: boolean;
+    retryAfter?: number;
+}): ZamaError;
 
 // @public
 export interface RevokedDelegationForUserDecryptionEvent {

@@ -68,6 +68,7 @@ export {
 // Token abstraction layer
 export type { Address, Hex } from "viem";
 export type { ChecksummedAddress, Permission, SerializedTransportKeyPair } from "./credentials";
+export { parsePreparedPermit } from "./credentials";
 export type {
   PreparedPermit,
   PreparePermitRequest,
@@ -105,6 +106,7 @@ export {
   PreparedPermitExpiredError,
   RelayerRequestFailedError,
   retryAfterSeconds,
+  reviveZamaError,
   RevokedKmsContextError,
   RpcRateLimitError,
   SignerNotConfiguredError,
