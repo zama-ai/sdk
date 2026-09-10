@@ -1,0 +1,10 @@
+version: v2
+plugins:
+  - local: clients/go/.tools/bin/protoc-gen-go
+    out: clients/go/gen
+    opt:
+      - paths=source_relative
+  - local: clients/go/.tools/bin/protoc-gen-go-grpc
+    out: clients/go/gen
+    opt:
+      - paths=source_relative

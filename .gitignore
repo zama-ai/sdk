@@ -26,6 +26,7 @@ npm-debug.log*
 # env files
 .env*
 !.env.example
+!/.env.sidecar.example
 
 # typescript
 *.tsbuildinfo
@@ -60,3 +61,7 @@ contracts/.forge-deploy-lock/
 
 # turborepo
 .turbo
+
+# Rust and Go sidecar build tooling
+clients/rust/target/
+clients/go/.tools/
