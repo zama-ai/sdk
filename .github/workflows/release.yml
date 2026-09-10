@@ -40,6 +40,10 @@ env:
   SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@fhevm/sdk,@zama-fhe/sdk,@zama-fhe/react-sdk"
   # Pinned safe-chain release used by the verified installer below; bump as newer versions are vetted.
   SAFE_CHAIN_VERSION: "1.5.15"
+  # Identity that owns SDK_RELEASER_TOKEN and is the sole author of GitHub Releases
+  # created by the automated release flow below. Used to gate the manual recovery
+  # path so it can only republish a ref the pipeline itself already released.
+  RELEASE_BOT_LOGIN: "zama-bot"
 
 jobs:
   # ── Publish from tag (manual recovery) ──────────────────────────────
@@ -48,6 +52,30 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - name: Verify tag was released by the automated pipeline
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_TAG: ${{ inputs.publish-tag }}
+        run: |
+          # A GitHub Release for this tag, authored by RELEASE_BOT_LOGIN, can only
+          # exist if the automated release job (authenticated as that identity)
+          # already produced it. A collaborator with ordinary push access can create
+          # a same-named tag or branch, but cannot forge a release authored by
+          # RELEASE_BOT_LOGIN, so this rejects any ref that didn't come from the
+          # pipeline before we ever check it out, build it, or publish it.
+          release_json=$(curl -fsSL \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${INPUT_TAG}") \
+            || { echo "::error::No GitHub Release found for tag '${INPUT_TAG}'. Only tags released by the automated pipeline can be republished."; exit 1; }
+
+          author=$(echo "${release_json}" | jq -r '.author.login')
+          if [[ "${author}" != "${RELEASE_BOT_LOGIN}" ]]; then
+            echo "::error::Release for tag '${INPUT_TAG}' was published by '${author}', not '${RELEASE_BOT_LOGIN}'. Refusing to publish."
+            exit 1
+          fi
+          echo "Verified: '${INPUT_TAG}' was released by ${RELEASE_BOT_LOGIN}."
+
       - name: Checkout tag
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
