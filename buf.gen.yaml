@@ -1,0 +1,12 @@
+version: v2
+plugins:
+  - local: protoc-gen-ts_proto
+    out: packages/sdk-sidecar/src/generated
+    opt:
+      - oneof=unions
+      - env=node
+      - esModuleInterop=true
+      - forceLong=bigint
+      - importSuffix=.js
+      - outputServices=grpc-js
+      - useExactTypes=false

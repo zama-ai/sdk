@@ -61,6 +61,7 @@ const sharedResolve = {
 export default defineConfig({
   test: {
     projects: [
+      "packages/sdk-sidecar/vitest.config.ts",
       {
         plugins: [iifeStub()],
         test: {

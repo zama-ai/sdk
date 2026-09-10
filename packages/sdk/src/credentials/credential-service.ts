@@ -20,14 +20,10 @@ import { swallow } from "../utils/swallow";
 import { parseSchema } from "../validation";
 import { TransportKeyPairVault } from "./keypair-vault";
 import type { DerivationSecretHolder } from "./keypair-wrapping";
+import { parsePreparedPermit } from "./parse-prepared-permit";
 import { PermissionStore } from "./permission-store";
 import { chunkContracts, findPermitToWiden, sortedUnion, uncoveredContracts } from "./permissions";
-import {
-  Eip712Schema,
-  PermitTTLSchema,
-  PreparedPermitSchema,
-  SerializedPermitSchema,
-} from "./schemas";
+import { Eip712Schema, PermitTTLSchema, SerializedPermitSchema } from "./schemas";
 import { permissionScopeKey, type PermissionScope } from "./storage-keys";
 import type {
   Permission,
@@ -353,7 +349,7 @@ export class CredentialService {
   async registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void> {
     let parsed: PreparedPermit;
     try {
-      parsed = parseSchema(PreparedPermitSchema, prepared);
+      parsed = parsePreparedPermit(prepared);
     } catch (error) {
       throw this.#failPermit("registerPermit", error);
     }

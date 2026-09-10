@@ -8,6 +8,7 @@
   "objectWrap": "collapse",
   "sortPackageJson": true,
   "ignorePatterns": [
+    "packages/sdk-sidecar/src/generated/**",
     "dist",
     "node_modules",
     "pnpm-lock.yaml",
