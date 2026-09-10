@@ -1,0 +1,47 @@
+x-build-args: &build-args
+  RUNTIME_UID: ${SIDECAR_UID:-1000}
+  RUNTIME_GID: ${SIDECAR_GID:-1000}
+
+services:
+  sidecar:
+    image: zama-sdk-sidecar:dev
+    build:
+      context: ../..
+      dockerfile: packages/sdk-sidecar/Dockerfile
+      args: *build-args
+    environment:
+      SIDECAR_SOCKET_PATH: /run/zama/sdk.sock
+    volumes:
+      - socket:/run/zama
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 150s
+  go:
+    profiles: [examples]
+    build:
+      context: ../..
+      dockerfile: clients/go/Dockerfile
+      args: *build-args
+    volumes:
+      - socket:/run/zama:ro
+      - ../../.env.sidecar.local:/config/.env.sidecar.local:ro
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  rust:
+    profiles: [examples]
+    build:
+      context: ../..
+      dockerfile: clients/rust/Dockerfile
+      args: *build-args
+    environment:
+      SIDECAR_SOCKET_PATH: /run/zama/sdk.sock
+    volumes:
+      - socket:/run/zama:ro
+      - ../../.env.sidecar.local:/config/.env.sidecar.local:ro
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+volumes:
+  socket:
