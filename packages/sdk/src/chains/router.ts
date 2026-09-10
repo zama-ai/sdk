@@ -32,7 +32,11 @@ export class ChainRouter {
     // One backend per chain. A caller-supplied createRelayer may return one
     // backend for several chains, so dispose dedupes.
     const relayers = new Map<number, RelayerSDK>();
-    for (const [chainId, { relayerConfig, chain }] of resolveChainRelayers(chains, configs)) {
+    for (const [chainId, { relayerConfig, chain }] of resolveChainRelayers(
+      chains,
+      configs,
+      logger,
+    )) {
       relayers.set(chainId, relayerConfig.createRelayer(chain, logger));
     }
     this.#relayers = relayers;
