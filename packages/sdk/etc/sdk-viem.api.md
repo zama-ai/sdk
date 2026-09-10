@@ -53,7 +53,9 @@ export type ClearValue = TypedValue["value"] | bigint | string | undefined;
 export type ContractAbi = Abi | readonly unknown[];
 
 // @public
-export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigViem<TChains>): ZamaConfig;
+export function createConfig<const TChains extends AtLeastOneChain, const TRelayers extends RelayersFor<TChains> = RelayersFor<TChains>>(params: ZamaConfigViem<TChains> & {
+    relayers: ExactRelayers<TChains, TRelayers>;
+}): ZamaConfig;
 
 // @public
 export interface DecryptEndEvent extends BaseEvent {
@@ -106,6 +108,9 @@ export interface EncryptErrorEvent extends BaseEvent {
 export interface EncryptStartEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.EncryptStart;
 }
+
+// @public
+export type ExactRelayers<TChains extends AtLeastOneChain, TRelayers extends RelayersFor<TChains>> = [Exclude<keyof TRelayers, TChains[number]["id"] | `${TChains[number]["id"]}`>] extends [never] ? TRelayers : TRelayers & { [K in Exclude<keyof TRelayers, TChains[number]["id"] | `${TChains[number]["id"]}`>]: "This relayer key has no matching entry in `chains`"; };
 
 // @public
 export interface FheChain<TId extends number = number> {
@@ -280,6 +285,9 @@ export function readUnderlyingTokenContract(client: PublicClient, wrapperAddress
 export interface RelayerConfig {
     readonly type: string;
 }
+
+// @public
+export type RelayersFor<TChains extends AtLeastOneChain> = { [K in TChains[number]["id"]]: RelayerConfig; };
 
 // @public
 export interface RevokeDelegationSubmittedEvent extends BaseEvent {
@@ -478,7 +486,7 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
     permitStorage?: GenericStorage;
     permitTTL?: number;
     registryTTL?: number;
-    relayers: { [K in TChains[number]["id"]]: RelayerConfig; };
+    relayers: RelayersFor<TChains>;
     runtime?: FhevmRuntimeConfig;
     storage?: GenericStorage;
     transportKeyPairScope?: string;

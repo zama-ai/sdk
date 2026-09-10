@@ -2176,6 +2176,8 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 
 A `relayers` entry whose chain is not in `chains` no longer throws a `ConfigurationError`. The entry is never used, so `createConfig` warns through the configured logger and continues. A chain without a relayer entry still throws. This lets a static relayer catalog serve a chain list that is filtered per environment without failing at boot.
 
+`createConfig` (core, viem, ethers, and wagmi) also tightened the compile-time check in the other direction: an orphaned relayer key is now a type error even when the map is held in a variable, as long as the chain ids are literal. Chains widened to `AtLeastOneChain`, or built without `as const`, cannot be checked and fall back to the runtime warning. Your config objects need no change. See [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md#2-pick-a-relayer).
+
 ## Encryption runs in a Web Worker again
 
 `web()` runs encryption in a dedicated Web Worker, as it did before the `@fhevm/sdk` migration, so encrypting a large input no longer blocks the main thread. Nothing changes in your code: `encryptValue()`, `encryptValues()`, and every `Token` method that encrypts keep the same signatures.
@@ -3116,6 +3118,8 @@ cleartext();
 ```
 
 The `relayers` map is keyed by chain id, one entry per chain in `chains`. A chain with no entry fails `createConfig` with a `ConfigurationError`. An entry whose chain is not in `chains` is unused and only warns through the configured logger, so a static relayer catalog can serve an environment-filtered chain list.
+
+With literal chain ids (the built-in presets, and your own overrides written `as const satisfies FheChain`) the compiler catches either mismatch, whether the map is inline or held in a variable.
 
 If you need to override a chain field (e.g. proxy relayer requests through your backend), spread the preset in the `chains` array:
 
@@ -7233,9 +7237,9 @@ const config = createConfig({
 
 ### relayers
 
-`Record<number, RelayerConfig>`, one entry per chain in `chains`, keyed by chain id
+`RelayersFor<TChains>`, one entry per chain in `chains`, keyed by chain id
 
-Per-chain relayer factories. A chain in `chains` without an entry fails `createConfig` with a `ConfigurationError`. An entry whose chain is not in `chains` is unused: `createConfig` warns through your `logger` and ignores it.
+Per-chain relayer factories. A chain in `chains` without an entry fails `createConfig` with a `ConfigurationError`. An entry whose chain is not in `chains` is unused: `createConfig` warns through your `logger` and ignores it. With literal chain ids (the built-in presets, or an override written `as const satisfies FheChain`) the compiler catches either mismatch.
 
 ```ts
 import { web } from "@zama-fhe/sdk/web";

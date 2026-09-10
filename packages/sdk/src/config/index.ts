@@ -7,6 +7,8 @@ export type {
   ZamaConfigGeneric,
   AtLeastOneChain,
   RelayerConfig,
+  RelayersFor,
+  ExactRelayers,
   CleartextRelayerConfig,
 } from "./types";
 export type { ZamaConfigViem } from "../viem/types";

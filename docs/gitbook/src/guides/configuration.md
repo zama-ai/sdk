@@ -65,6 +65,8 @@ cleartext();
 
 The `relayers` map is keyed by chain id, one entry per chain in `chains`. A chain with no entry fails `createConfig` with a `ConfigurationError`. An entry whose chain is not in `chains` is unused and only warns through the configured logger, so a static relayer catalog can serve an environment-filtered chain list.
 
+With literal chain ids (the built-in presets, and your own overrides written `as const satisfies FheChain`) the compiler catches either mismatch, whether the map is inline or held in a variable.
+
 If you need to override a chain field (e.g. proxy relayer requests through your backend), spread the preset in the `chains` array:
 
 ```ts

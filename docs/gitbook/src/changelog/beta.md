@@ -13,6 +13,8 @@ description: Unreleased changes on the prerelease (beta) line — not yet in a s
 
 A `relayers` entry whose chain is not in `chains` no longer throws a `ConfigurationError`. The entry is never used, so `createConfig` warns through the configured logger and continues. A chain without a relayer entry still throws. This lets a static relayer catalog serve a chain list that is filtered per environment without failing at boot.
 
+`createConfig` (core, viem, ethers, and wagmi) also tightened the compile-time check in the other direction: an orphaned relayer key is now a type error even when the map is held in a variable, as long as the chain ids are literal. Chains widened to `AtLeastOneChain`, or built without `as const`, cannot be checked and fall back to the runtime warning. Your config objects need no change. See [Configuration](../guides/configuration.md#2-pick-a-relayer).
+
 ## Encryption runs in a Web Worker again
 
 `web()` runs encryption in a dedicated Web Worker, as it did before the `@fhevm/sdk` migration, so encrypting a large input no longer blocks the main thread. Nothing changes in your code: `encryptValue()`, `encryptValues()`, and every `Token` method that encrypts keep the same signatures.

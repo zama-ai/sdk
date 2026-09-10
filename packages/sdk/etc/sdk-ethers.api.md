@@ -59,7 +59,9 @@ export type ClearValue = TypedValue["value"] | bigint | string | undefined;
 export type ContractAbi = Abi | readonly unknown[];
 
 // @public
-export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigEthers<TChains>): ZamaConfig;
+export function createConfig<const TChains extends AtLeastOneChain, const TRelayers extends RelayersFor<TChains> = RelayersFor<TChains>>(params: ZamaConfigEthers<TChains> & {
+    relayers: ExactRelayers<TChains, TRelayers>;
+}): ZamaConfig;
 
 // @public
 export interface DecryptEndEvent extends BaseEvent {
@@ -184,6 +186,9 @@ export interface EthersTransactionResponse {
 export interface EthersTransactionSigner extends EthersCallProvider {
     sendTransaction(tx: EthersTransactionRequest): Promise<EthersTransactionResponse>;
 }
+
+// @public
+export type ExactRelayers<TChains extends AtLeastOneChain, TRelayers extends RelayersFor<TChains>> = [Exclude<keyof TRelayers, TChains[number]["id"] | `${TChains[number]["id"]}`>] extends [never] ? TRelayers : TRelayers & { [K in Exclude<keyof TRelayers, TChains[number]["id"] | `${TChains[number]["id"]}`>]: "This relayer key has no matching entry in `chains`"; };
 
 // @public
 export interface FheChain<TId extends number = number> {
@@ -354,6 +359,9 @@ export interface RelayerConfig {
 }
 
 // @public
+export type RelayersFor<TChains extends AtLeastOneChain> = { [K in TChains[number]["id"]]: RelayerConfig; };
+
+// @public
 export interface RevokeDelegationSubmittedEvent extends BaseEvent {
     txHash: Hex;
     type: typeof ZamaSDKEvents.RevokeDelegationSubmitted;
@@ -512,7 +520,7 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
     permitStorage?: GenericStorage;
     permitTTL?: number;
     registryTTL?: number;
-    relayers: { [K in TChains[number]["id"]]: RelayerConfig; };
+    relayers: RelayersFor<TChains>;
     runtime?: FhevmRuntimeConfig;
     storage?: GenericStorage;
     transportKeyPairScope?: string;
