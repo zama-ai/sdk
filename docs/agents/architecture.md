@@ -2,7 +2,7 @@
 
 ## Repository layout
 
-**For SDK users:** `packages/sdk/` is the core SDK, `packages/react-sdk/` is the React hooks layer, and `examples/` has approved working integrations across React (wagmi, viem, ethers) and Node.js (viem, ethers) stacks.
+**For SDK users:** `packages/sdk/` is the core SDK, `packages/react-sdk/` is the React hooks layer, and `examples/` has approved working integrations across React (wagmi, viem, ethers) and Node.js (viem, ethers) stacks. Product verticals beyond tokens (vaults, swaps, …) ship as their own subpath (e.g. `@zama-fhe/sdk/vaults`, mirroring `/web`, `/node`, `/viem`, `/ethers`) rather than being registered into `ZamaSDK` itself, so a consumer who never imports a vertical never pulls its code into their bundle. Their React hooks follow the same rule one level up: a matching `@zama-fhe/react-sdk/vaults` subpath, mirroring `/wagmi`. See [`packages/sdk/src/vaults/index.ts`](../../packages/sdk/src/vaults/index.ts) and [`packages/react-sdk/src/vaults/index.ts`](../../packages/react-sdk/src/vaults/index.ts) for the first vertical and the pattern it follows.
 
 **For SDK developers and agents:** `contracts/` has the Solidity smart contracts (Foundry/forge) — ERC-7984 confidential tokens, wrappers, registries, batchers. `test/` has E2E infrastructure (Playwright, Next.js/Vite test apps, shared React test components). `tools/ast-grep/` has custom AST lint rules. `claude-setup/` has agent configuration (copied to `.claude/` by `pnpm setup:claude`). `docs/gitbook/` has user-facing documentation. `docs/agents/` has this guidance. For react-sdk hook design rules and gotchas, see [`packages/react-sdk/AGENTS.md`](../../packages/react-sdk/AGENTS.md).
 

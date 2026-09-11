@@ -44,6 +44,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Operator approvals](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/operator-approvals.md): How to approve another address to act on your confidential tokens.
 - [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/delegated-decryption.md): Grant another address the right to decrypt confidential balances, then read those balances as a delegate.
 - [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/encrypt-decrypt.md): How to encrypt values and decrypt FHE encrypted values for custom confidential smart contracts that are not wrapped ERC-20 tokens.
+- [Vault deposits and withdrawals](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-deposits.md): How to deposit into and withdraw from a confidential ERC-4626 vault.
 
 ### SDK Reference
 

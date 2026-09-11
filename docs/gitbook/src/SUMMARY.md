@@ -49,6 +49,7 @@
 - [Operator approvals](guides/operator-approvals.md)
 - [Delegated decryption](guides/delegated-decryption.md)
 - [Encrypt & decrypt](guides/encrypt-decrypt.md)
+- [Vault deposits and withdrawals](guides/vault-deposits.md)
 
 ## API References
 
