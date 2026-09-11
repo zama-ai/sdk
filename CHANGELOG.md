@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.6.0-beta.3](https://github.com/zama-ai/sdk/compare/v3.6.0-beta.2...v3.6.0-beta.3) (2026-09-11)
+
+### Bug Fixes
+
+- relayers chains validation ([#730](https://github.com/zama-ai/sdk/issues/730)) ([e6fa940]())
+
 ## [3.6.0-beta.2](https://github.com/zama-ai/sdk/compare/v3.6.0-beta.1...v3.6.0-beta.2) (2026-09-03)
 
 ### Bug Fixes
