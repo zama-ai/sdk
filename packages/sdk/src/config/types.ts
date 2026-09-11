@@ -35,29 +35,12 @@ export interface CleartextRelayerConfig extends RelayerConfig {
   readonly type: "cleartext";
 }
 
-/** Relayer map with one entry per chain in `TChains`, keyed by chain id. */
-export type RelayersFor<TChains extends AtLeastOneChain> = {
-  [K in TChains[number]["id"]]: RelayerConfig;
-};
-
-/** `TRelayers` that also rejects keys for chains absent from `TChains`. Only literal chain ids can be checked. */
-export type ExactRelayers<
-  TChains extends AtLeastOneChain,
-  TRelayers extends RelayersFor<TChains>,
-> = [Exclude<keyof TRelayers, TChains[number]["id"] | `${TChains[number]["id"]}`>] extends [never]
-  ? TRelayers
-  : TRelayers & {
-      [
-        K in Exclude<keyof TRelayers, TChains[number]["id"] | `${TChains[number]["id"]}`>
-      ]: "This relayer key has no matching entry in `chains`";
-    };
-
 /** Shared options across all adapter paths. */
 export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
   /** FHE chain configurations. Defines which chains support FHE operations. */
   chains: TChains;
   /** Per-chain relayer configuration. Every chain must have a relayer entry. */
-  relayers: RelayersFor<TChains>;
+  relayers: { [K in TChains[number]["id"]]: RelayerConfig };
   /** Credential storage. Default: IndexedDB in browser, memory in Node. */
   storage?: GenericStorage;
   /** Optional dedicated storage for permits. Defaults to `storage`. */

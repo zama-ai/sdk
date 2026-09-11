@@ -81,9 +81,9 @@ const config = createConfig({
 
 ### relayers
 
-`RelayersFor<TChains>`, one entry per chain in `chains`, keyed by chain id
+`Record<number, RelayerConfig>`, one entry per chain in `chains`, keyed by chain id
 
-Per-chain relayer factories. A chain in `chains` without an entry fails `createConfig` with a `ConfigurationError`. An entry whose chain is not in `chains` is unused: `createConfig` warns through your `logger` and ignores it. With literal chain ids (the built-in presets, or an override written `as const satisfies FheChain`) the compiler catches either mismatch.
+Per-chain relayer factories. A chain in `chains` without an entry fails `createConfig` with a `ConfigurationError`. An entry whose chain is not in `chains` is unused: `createConfig` warns through your `logger` and ignores it.
 
 ```ts
 import { web } from "@zama-fhe/sdk/web";

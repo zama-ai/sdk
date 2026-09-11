@@ -1,7 +1,5 @@
 import {
   createConfig as createCoreConfig,
-  type ExactRelayers,
-  type RelayersFor,
   type ZamaConfig,
   type ZamaConfigBase,
 } from "@zama-fhe/sdk";
@@ -20,12 +18,11 @@ export interface ZamaConfigWagmi<
 }
 
 /** Create a {@link ZamaConfig} from a wagmi `Config`. */
-export function createConfig<
-  const TChains extends AtLeastOneChain,
-  const TRelayers extends RelayersFor<TChains> = RelayersFor<TChains>,
->(params: ZamaConfigWagmi<TChains> & { relayers: ExactRelayers<TChains, TRelayers> }): ZamaConfig {
+export function createConfig<const TChains extends AtLeastOneChain>(
+  params: ZamaConfigWagmi<TChains>,
+): ZamaConfig {
   const { wagmiConfig, ...baseParams } = params;
   const signer = new WagmiSigner({ config: wagmiConfig });
   const provider = new WagmiProvider({ config: wagmiConfig });
-  return createCoreConfig<TChains, TRelayers>({ ...baseParams, signer, provider });
+  return createCoreConfig({ ...baseParams, signer, provider });
 }

@@ -5200,9 +5200,7 @@ export class ConfigurationError extends ZamaError {
 export type ContractAbi = Abi | readonly unknown[];
 
 // @public
-export function createConfig<const TChains extends AtLeastOneChain, const TRelayers extends RelayersFor<TChains> = RelayersFor<TChains>>(params: ZamaConfigGeneric<TChains> & {
-    relayers: ExactRelayers<TChains, TRelayers>;
-}): ZamaConfig;
+export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigGeneric<TChains>): ZamaConfig;
 
 // @public
 export function createWalletAccountStore(initial?: WalletAccount): MutableWalletAccountStore;
@@ -5874,9 +5872,6 @@ export interface ErrorForCode {
     [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
     [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
 }
-
-// @public
-export type ExactRelayers<TChains extends AtLeastOneChain, TRelayers extends RelayersFor<TChains>> = [Exclude<keyof TRelayers, TChains[number]["id"] | `${TChains[number]["id"]}`>] extends [never] ? TRelayers : TRelayers & { [K in Exclude<keyof TRelayers, TChains[number]["id"] | `${TChains[number]["id"]}`>]: "This relayer key has no matching entry in `chains`"; };
 
 // @public
 export interface FheChain<TId extends number = number> {
@@ -12781,9 +12776,6 @@ export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptV
     createUnsignedLegacyDecryptionPermitEip712(parameters: CreateUnsignedLegacyDecryptionPermitEip712Parameters): Promise<CreateUnsignedLegacyDecryptionPermitEip712ReturnType>;
     dispose?(): void;
 }
-
-// @public
-export type RelayersFor<TChains extends AtLeastOneChain> = { [K in TChains[number]["id"]]: RelayerConfig; };
 
 // @public
 export function retryAfterSeconds(error: unknown): number | undefined;
@@ -20791,7 +20783,7 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
     permitStorage?: GenericStorage;
     permitTTL?: number;
     registryTTL?: number;
-    relayers: RelayersFor<TChains>;
+    relayers: { [K in TChains[number]["id"]]: RelayerConfig; };
     runtime?: FhevmRuntimeConfig;
     storage?: GenericStorage;
     transportKeyPairScope?: string;

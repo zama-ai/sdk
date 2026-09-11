@@ -6,15 +6,11 @@
 
 import { AtLeastOneChain } from '@zama-fhe/sdk/chains';
 import { Config } from 'wagmi';
-import { ExactRelayers } from '@zama-fhe/sdk';
-import { RelayersFor } from '@zama-fhe/sdk';
 import { ZamaConfig } from '@zama-fhe/sdk';
 import { ZamaConfigBase } from '@zama-fhe/sdk';
 
 // @public
-export function createConfig<const TChains extends AtLeastOneChain, const TRelayers extends RelayersFor<TChains> = RelayersFor<TChains>>(params: ZamaConfigWagmi<TChains> & {
-    relayers: ExactRelayers<TChains, TRelayers>;
-}): ZamaConfig;
+export function createConfig<const TChains extends AtLeastOneChain>(params: ZamaConfigWagmi<TChains>): ZamaConfig;
 
 // @public
 export interface ZamaConfigWagmi<TChains extends AtLeastOneChain = AtLeastOneChain, T = Config> extends ZamaConfigBase<TChains> {

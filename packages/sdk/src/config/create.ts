@@ -1,6 +1,6 @@
-import type { AtLeastOneChain } from "../chains";
+import type { FheChain } from "../chains";
 import { buildZamaConfig } from "./build";
-import type { ExactRelayers, RelayersFor, ZamaConfig, ZamaConfigGeneric } from "./types";
+import type { ZamaConfig, ZamaConfigGeneric } from "./types";
 
 /**
  * Create a {@link ZamaConfig} from a custom {@link GenericSigner} and
@@ -25,11 +25,8 @@ import type { ExactRelayers, RelayersFor, ZamaConfig, ZamaConfigGeneric } from "
  * const sdk = new ZamaSDK(config);
  * ```
  */
-export function createConfig<
-  const TChains extends AtLeastOneChain,
-  const TRelayers extends RelayersFor<TChains> = RelayersFor<TChains>,
->(
-  params: ZamaConfigGeneric<TChains> & { relayers: ExactRelayers<TChains, TRelayers> },
+export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(
+  params: ZamaConfigGeneric<TChains>,
 ): ZamaConfig {
   return buildZamaConfig(params.signer, params.provider, params);
 }

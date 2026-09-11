@@ -1,15 +1,14 @@
-import type { AtLeastOneChain } from "../chains";
+import type { FheChain } from "../chains";
 import { buildZamaConfig } from "../config/build";
-import type { ExactRelayers, RelayersFor, ZamaConfig } from "../config/types";
+import type { ZamaConfig } from "../config/types";
 import { EthersProvider } from "./ethers-provider";
 import { EthersSigner } from "./ethers-signer";
 import type { ZamaConfigEthers } from "./types";
 
 /** Create a {@link ZamaConfig} from ethers types. */
-export function createConfig<
-  const TChains extends AtLeastOneChain,
-  const TRelayers extends RelayersFor<TChains> = RelayersFor<TChains>,
->(params: ZamaConfigEthers<TChains> & { relayers: ExactRelayers<TChains, TRelayers> }): ZamaConfig {
+export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(
+  params: ZamaConfigEthers<TChains>,
+): ZamaConfig {
   if ("signer" in params && params.signer) {
     const signer = new EthersSigner({ signer: params.signer });
     if (!params.signer.provider) {

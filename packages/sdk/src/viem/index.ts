@@ -14,13 +14,7 @@ export type {
   ClearValue,
 } from "../relayer/types";
 export type { AtLeastOneChain, FheChain, FheChainAuth } from "../chains/types";
-export type {
-  ZamaConfig,
-  ZamaConfigBase,
-  RelayerConfig,
-  RelayersFor,
-  ExactRelayers,
-} from "../config/types";
+export type { ZamaConfig, ZamaConfigBase, RelayerConfig } from "../config/types";
 export type {
   GenericProvider,
   GenericStorage,

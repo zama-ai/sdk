@@ -14,9 +14,7 @@ export { cleartext, createConfig } from "./config";
 export type {
   AtLeastOneChain,
   CleartextRelayerConfig,
-  ExactRelayers,
   RelayerConfig,
-  RelayersFor,
   ZamaConfig,
   ZamaConfigBase,
   ZamaConfigEthers,
