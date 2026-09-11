@@ -37,6 +37,7 @@ export const test = base.extend<SDKTestFixtures>({
   ...queryContextFixtures,
 });
 
+export { makeLogger, type MockLogger } from "./logger";
 export type { AddressFixtures } from "./addresses";
 export type { ChainFixtures } from "./chain";
 export type { ProviderFixtures } from "./provider";
