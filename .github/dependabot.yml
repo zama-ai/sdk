@@ -53,15 +53,7 @@ updates:
   - package-ecosystem: npm
     target-branch: beta
     directories:
-      - /examples/example-bnb
-      - /examples/example-hoodi
-      - /examples/example-ingen
-      - /examples/node-ethers
-      - /examples/node-viem
-      - /examples/react-ethers
-      - /examples/react-turnkey-wallet
-      - /examples/react-viem
-      - /examples/react-wagmi
+      - /examples/*
     schedule:
       interval: weekly
     cooldown:
