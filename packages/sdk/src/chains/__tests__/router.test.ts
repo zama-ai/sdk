@@ -1,4 +1,4 @@
-import { describe, expect, test } from "../../test-fixtures";
+import { describe, expect, makeLogger, test } from "../../test-fixtures";
 import { ChainRouter } from "../../chains/router";
 import { ConfigurationError } from "../../errors";
 import type { FheChain } from "../../chains/types";
@@ -26,6 +26,21 @@ describe("ChainRouter", () => {
             new LoggerService(),
           ),
       ).toThrow("Chain 2 has no relayer configured");
+    });
+
+    test("warns and ignores relayer configs without a matching chain", ({
+      createMockChain,
+      createMockRelayer,
+    }) => {
+      const chainA = createMockChain({ id: 1 });
+      const sink = makeLogger();
+      const router = new ChainRouter(
+        [chainA],
+        relayerConfigs([chainA, createMockChain({ id: 2 })], createMockRelayer),
+        new LoggerService(sink),
+      );
+      expect(router.chains).toEqual([chainA]);
+      expect(sink.warn.mock.calls[0]?.[0]).toContain("Relayer entries for chain(s) [2]");
     });
   });
 

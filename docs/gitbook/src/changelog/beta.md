@@ -9,6 +9,10 @@ description: Unreleased changes on the prerelease (beta) line — not yet in a s
 **Unreleased.** The changes on this page are on the prerelease (`beta`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
 {% endhint %}
 
+## Orphaned relayer entries warn instead of failing `createConfig`
+
+A `relayers` entry whose chain is not in `chains` no longer throws a `ConfigurationError`. The entry is never used, so `createConfig` warns through the configured logger and continues. A chain without a relayer entry still throws. This lets a static relayer catalog serve a chain list that is filtered per environment without failing at boot.
+
 ## Encryption runs in a Web Worker again
 
 `web()` runs encryption in a dedicated Web Worker, as it did before the `@fhevm/sdk` migration, so encrypting a large input no longer blocks the main thread. Nothing changes in your code: `encryptValue()`, `encryptValues()`, and every `Token` method that encrypts keep the same signatures.

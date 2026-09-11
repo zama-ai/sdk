@@ -2172,6 +2172,10 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 > **Unreleased.** The changes on this page are on the prerelease (`beta`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
 
 
+## Orphaned relayer entries warn instead of failing `createConfig`
+
+A `relayers` entry whose chain is not in `chains` no longer throws a `ConfigurationError`. The entry is never used, so `createConfig` warns through the configured logger and continues. A chain without a relayer entry still throws. This lets a static relayer catalog serve a chain list that is filtered per environment without failing at boot.
+
 ## Encryption runs in a Web Worker again
 
 `web()` runs encryption in a dedicated Web Worker, as it did before the `@fhevm/sdk` migration, so encrypting a large input no longer blocks the main thread. Nothing changes in your code: `encryptValue()`, `encryptValues()`, and every `Token` method that encrypts keep the same signatures.
@@ -3110,6 +3114,8 @@ node();
 // Local dev — no KMS, no gateway; executorAddress comes from the chain preset
 cleartext();
 ```
+
+The `relayers` map is keyed by chain id, one entry per chain in `chains`. A chain with no entry fails `createConfig` with a `ConfigurationError`. An entry whose chain is not in `chains` is unused and only warns through the configured logger, so a static relayer catalog can serve an environment-filtered chain list.
 
 If you need to override a chain field (e.g. proxy relayer requests through your backend), spread the preset in the `chains` array:
 
@@ -7227,9 +7233,9 @@ const config = createConfig({
 
 ### relayers
 
-`Record<number, RelayerConfig>`
+`Record<number, RelayerConfig>`, one entry per chain in `chains`, keyed by chain id
 
-Per-chain relayer factories. Each chain in `chains` must have a matching entry.
+Per-chain relayer factories. A chain in `chains` without an entry fails `createConfig` with a `ConfigurationError`. An entry whose chain is not in `chains` is unused: `createConfig` warns through your `logger` and ignores it.
 
 ```ts
 import { web } from "@zama-fhe/sdk/web";
