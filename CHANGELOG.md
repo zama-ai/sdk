@@ -1,5 +1,29 @@
 # Changelog
 
+## [3.6.0-beta.3](https://github.com/zama-ai/sdk/compare/v3.6.0-beta.2...v3.6.0-beta.3) (2026-09-11)
+
+### Bug Fixes
+
+- relayers chains validation ([#730](https://github.com/zama-ai/sdk/issues/730)) ([e6fa940]())
+
+## [3.6.0-beta.2](https://github.com/zama-ai/sdk/compare/v3.6.0-beta.1...v3.6.0-beta.2) (2026-09-03)
+
+### Bug Fixes
+
+- **sdk:** structured events + metadata for wallet signing/permit fai… ([#701](https://github.com/zama-ai/sdk/issues/701)) ([ca21b77]())
+
+## [3.6.0-beta.1](https://github.com/zama-ai/sdk/compare/v3.5.2-beta.1...v3.6.0-beta.1) (2026-09-02)
+
+### Features
+
+- **sdk:** offload encryption to a web worker in the web() transport ([#683](https://github.com/zama-ai/sdk/issues/683)) ([981d351]())
+
+## [3.5.2-beta.1](https://github.com/zama-ai/sdk/compare/v3.5.1...v3.5.2-beta.1) (2026-08-28)
+
+### Bug Fixes
+
+- self-heal stale pending-unshield pointer ([#645](https://github.com/zama-ai/sdk/issues/645)) ([6bc356d]())
+
 ## [3.5.1](https://github.com/zama-ai/sdk/compare/v3.5.0...v3.5.1) (2026-08-27)
 
 ### Build System

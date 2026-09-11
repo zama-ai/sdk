@@ -77,6 +77,6 @@ The configured SDK instance. Throws if called outside a `ZamaProvider`.
 
 ## Related
 
-- [useToken](./useToken.md) — memoised `Token` instance for a given address
-- [useWrappedToken](./useWrappedToken.md) — memoised `WrappedToken` for ERC-7984 wrapper operations
+- [useToken](./useToken.md) — memoized `Token` instance for a given address
+- [useWrappedToken](./useWrappedToken.md) — memoized `WrappedToken` for ERC-7984 wrapper operations
 - [ZamaSDK](../sdk/ZamaSDK.md) — full API reference for the SDK class

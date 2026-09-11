@@ -3,7 +3,7 @@ import { sepolia } from "@zama-fhe/sdk/chains";
 import { createConfig as createEthersConfig, EthersSigner } from "@zama-fhe/sdk/ethers";
 import { createConfig as createViemConfig, ViemSigner } from "@zama-fhe/sdk/viem";
 import { beforeEach, vi } from "vitest";
-import { describe, expect, test } from "../test-fixtures";
+import { describe, expect, makeLogger, test } from "../test-fixtures";
 import { createConfig as createWagmiConfig } from "../wagmi/config";
 import { WagmiSigner } from "../wagmi/wagmi-signer";
 
@@ -23,7 +23,7 @@ vi.mock(import("../../../sdk/src/ethers/ethers-signer"), async (importOriginal) 
 });
 
 // These tests only assert config wiring (router/storage/options), never relayer
-// behaviour. Stub the backend so `web().createRelayer` doesn't construct a real
+// behavior. Stub the backend so `web().createRelayer` doesn't construct a real
 // `@fhevm/sdk` client — that would touch the SDK's global runtime config, which
 // flakes when these tests share a worker with others that set it.
 vi.mock(import("../../../sdk/src/relayer/fhevm-relayer"), async (importOriginal) => {
@@ -100,15 +100,17 @@ describe("createConfig", () => {
       ).toThrow(/Chain 11155111/);
     });
 
-    test("throws for orphaned relayer entries with no matching chain", () => {
-      expect(() =>
-        createWagmiConfig({
-          chains: [sepolia],
-          wagmiConfig: mockWagmiConfig([11155111]),
-          //@ts-expect-error: extra relayer key not in chains
-          relayers: { [11155111]: web(), [999999]: web() },
-        }),
-      ).toThrow(/999999/);
+    test("warns and ignores orphaned relayer entries with no matching chain", () => {
+      const logger = makeLogger();
+      const config = createWagmiConfig({
+        chains: [sepolia],
+        wagmiConfig: mockWagmiConfig([11155111]),
+        //@ts-expect-error: extra relayer key not in chains
+        relayers: { [11155111]: web(), [999999]: web() },
+        logger,
+      });
+      expect(config.router.chains.map((c) => c.id)).toEqual([11155111]);
+      expect(logger.warn.mock.calls[0]?.[0]).toMatch(/999999/);
     });
 
     test("uses explicit relayers for non-wagmi paths", () => {

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://v2-10-4.turborepo.dev/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"],
+      // Selects the live-testnet build of the offload page. Turbo's Vite
+      // framework inference already passes and hashes `VITE_*`; declaring it
+      // pins that contract to this package instead of to the detection.
+      "env": ["VITE_LIVE_CHAIN"]
+    }
+  }
+}

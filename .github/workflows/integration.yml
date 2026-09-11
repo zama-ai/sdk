@@ -3,13 +3,21 @@ name: Integration
 # Integration suite (`pnpm test:integration`). Separate from Vitest because it
 # hits live infrastructure — notably the hosted mainnet relayer for the
 # relayer-auth negative checks — so it has a different reliability profile.
-# Keep this check NON-REQUIRED in branch protection: a transient mainnet/network
-# blip should never block an unrelated merge.
+# The `encrypt-offload-live` job below shares that profile: it drives the real
+# browser encrypt worker against an open testnet relayer, downloading the real
+# FHE key and computing a real proof.
+# Keep these checks NON-REQUIRED in branch protection: a transient
+# mainnet/network blip should never block an unrelated merge.
+# `test/**` is in the trigger for the live lane, which is built from the test
+# apps. GitHub cannot filter paths per job, so a change under `test/` also runs
+# the hosted-mainnet job above; both are non-required, so that is accepted
+# rather than gated behind an extra changed-files job.
 on:
   pull_request:
     branches: [main, beta, alpha]
     paths:
       - "packages/sdk/**"
+      - "test/**"
       - "pnpm-lock.yaml"
       - ".github/workflows/integration.yml"
 
@@ -49,3 +57,59 @@ jobs:
 
       - name: Run integration tests
         run: pnpm test:integration
+
+  # Fully-live encrypt offload lane: real key download, real proof in the
+  # worker, real relayer round-trip against an open testnet. No anvil, because
+  # the flow is encrypt-only and sends no transaction.
+  encrypt-offload-live:
+    runs-on: ubuntu-latest
+    # Real key download plus two real proofs; playwright.live.config.ts caps
+    # itself a few minutes under this so it reports before the runner kills it.
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-deps
+
+      - name: Restore Playwright browsers cache
+        id: playwright-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /home/runner/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @zama-fhe/playwright exec playwright install --with-deps --no-shell
+
+      - name: Save Playwright browsers cache
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /home/runner/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Build SDK packages
+        run: pnpm build
+
+      - name: Build Vite test-vite in live mode
+        run: pnpm build:test-vite
+        env:
+          VITE_LIVE_CHAIN: sepolia
+
+      - name: Run live encrypt offload spec
+        run: pnpm e2e:test:live
+
+      - name: Upload test results
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        # `always()`, not `!cancelled()`: a job the runner timed out still has
+        # the traces that explain why.
+        if: ${{ always() }}
+        with:
+          name: encrypt-offload-live-report
+          path: test/playwright/test-results/live/
+          retention-days: 7

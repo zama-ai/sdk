@@ -14,9 +14,9 @@ export const TTL_SECONDS = 86400;
 
 const holder = (secret: string | Uint8Array) => new DerivationSecretHolder(secret);
 
-export const makeLogger = () => ({ error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() });
+import { makeLogger, type MockLogger } from "../../test-fixtures/logger";
 
-export type MockLogger = ReturnType<typeof makeLogger>;
+export { makeLogger, type MockLogger };
 
 export type Generator = () => Promise<SerializeTransportKeyPairReturnType>;
 

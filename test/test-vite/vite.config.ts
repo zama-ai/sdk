@@ -4,6 +4,9 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [tailwindcss(), react()],
+  // Pre-bundle the fake encrypt worker's only dependency: discovering it lazily
+  // makes the dev server reload the page mid-test.
+  optimizeDeps: { include: ["comlink"] },
   build: {
     rollupOptions: {
       output: {

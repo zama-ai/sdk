@@ -1,12 +1,17 @@
 import { defineConfig, devices } from "@playwright/test";
-import { ANVIL_DEPLOY_TIMEOUT_MS, VITE_ANVIL_PORT, VITE_PORT } from "./fixtures/constants";
+import {
+  ANVIL_DEPLOY_TIMEOUT_MS,
+  HERMETIC_TEST_IGNORE,
+  VITE_ANVIL_PORT,
+  VITE_PORT,
+} from "./fixtures/constants";
 import type { WorkerFixtures } from "./fixtures/test";
 
 const CI = !!process.env.CI;
 
 export default defineConfig<{}, WorkerFixtures>({
   testDir: "./tests",
-  testIgnore: ["**/node/**", "**/*.node.spec.ts"],
+  testIgnore: HERMETIC_TEST_IGNORE,
   outputDir: "./test-results/vite/",
   fullyParallel: false,
   forbidOnly: CI,

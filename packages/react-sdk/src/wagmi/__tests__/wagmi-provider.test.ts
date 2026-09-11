@@ -47,7 +47,7 @@ const CONFIG = {} as unknown as Config;
 const provider = new WagmiProvider({ config: CONFIG });
 
 describe("WagmiProvider.prepareTransaction", () => {
-  test("returns an EIP-1559 serialised unsigned tx from the active public client", async () => {
+  test("returns an EIP-1559 serialized unsigned tx from the active public client", async () => {
     mockGetPublicClient.mockReturnValue(makePublicClient());
     mockGetChainId.mockResolvedValueOnce(31337);
     mockGetTxCount.mockResolvedValueOnce(7);
@@ -114,7 +114,7 @@ describe("WagmiProvider.prepareTransaction", () => {
   });
 
   test("treats UNSIGNED as opaque — the test only checks orchestration, not exact bytes", () => {
-    // Marker test so anyone reading this file knows the serialisation contract
+    // Marker test so anyone reading this file knows the serialization contract
     // is verified in viem-provider tests; here we cover wagmi-specific wiring.
     expect(UNSIGNED).toMatch(/^0x[0-9a-f]+$/i);
   });

@@ -24,6 +24,8 @@ export const ZamaErrorCode = {
   EncryptionFailed: "ENCRYPTION_FAILED",
   /** FHE decryption failed. */
   DecryptionFailed: "DECRYPTION_FAILED",
+  /** Encryption offload was required (`offloadEncrypt: true`) but the worker is unavailable. */
+  EncryptOffloadUnavailable: "ENCRYPT_OFFLOAD_UNAVAILABLE",
   /** On-chain transaction reverted. */
   TransactionReverted: "TRANSACTION_REVERTED",
   /** Transport key pair has expired and needs regeneration. */
@@ -88,6 +90,8 @@ export const ZamaErrorCode = {
   PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH",
   /** A prepared permit's validity window elapsed before its signature was registered. */
   PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED",
+  /** The unwrap request was already finalized on-chain; there is nothing left to resume. */
+  UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
@@ -112,6 +116,7 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.SigningFailed]: false,
   [ZamaErrorCode.EncryptionFailed]: false,
   [ZamaErrorCode.DecryptionFailed]: false,
+  [ZamaErrorCode.EncryptOffloadUnavailable]: false, // the worker realm is unusable for this page; a retry hits the same environment
   [ZamaErrorCode.TransactionReverted]: false,
   [ZamaErrorCode.TransportKeyPairExpired]: false,
   [ZamaErrorCode.InvalidTransportKeyPair]: false,
@@ -144,6 +149,7 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.TransportKeyPairChanged]: false, // caller must re-run preparePermit against the current key pair
   [ZamaErrorCode.PreparedPermitChainMismatch]: false, // caller must register against the chain the permit was prepared for
   [ZamaErrorCode.PreparedPermitExpired]: false, // caller must re-run preparePermit for a fresh validity window
+  [ZamaErrorCode.UnshieldAlreadyFinalized]: false, // the funds already arrived; the stale pointer is cleared
 };
 
 /**

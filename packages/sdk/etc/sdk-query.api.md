@@ -656,6 +656,16 @@ export interface PendingUnshieldQueryConfig {
 export function pendingUnshieldQueryOptions(sdk: ZamaSDK, tokenAddress: Address, config?: PendingUnshieldQueryConfig): QueryFactoryOptions<Hex | null, Error, Hex | null, ReturnType<typeof zamaQueryKeys.pendingUnshield.token>>;
 
 // @public
+export interface PermitErrorEvent extends BaseEvent {
+    error: Error;
+    operation: PermitOperation;
+    type: typeof ZamaSDKEvents.PermitError;
+}
+
+// @public
+export type PermitOperation = "grantPermit" | "grantDelegationPermit" | "registerPermit";
+
+// @public
 export class Permits {
     clear(): Promise<void>;
     grantDelegationPermit(delegator: Address, contracts: Address[]): Promise<void>;
@@ -739,6 +749,7 @@ export interface QueryLike {
 
 // @public
 export interface RawLog {
+    readonly address?: Hex;
     readonly data: Hex;
     readonly topics: readonly Hex[];
 }
@@ -773,6 +784,7 @@ export interface RegisterPermitParams {
 export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
     chain: FheChain;
     createUnsignedLegacyDecryptionPermitEip712(parameters: CreateUnsignedLegacyDecryptionPermitEip712Parameters): Promise<CreateUnsignedLegacyDecryptionPermitEip712ReturnType>;
+    dispose?(): void;
 }
 
 // @public
@@ -1323,6 +1335,7 @@ export const ZamaErrorCode: {
     readonly SigningFailed: "SIGNING_FAILED";
     readonly EncryptionFailed: "ENCRYPTION_FAILED";
     readonly DecryptionFailed: "DECRYPTION_FAILED";
+    readonly EncryptOffloadUnavailable: "ENCRYPT_OFFLOAD_UNAVAILABLE";
     readonly TransactionReverted: "TRANSACTION_REVERTED";
     readonly TransportKeyPairExpired: "KEYPAIR_EXPIRED";
     readonly InvalidTransportKeyPair: "INVALID_KEYPAIR";
@@ -1355,6 +1368,7 @@ export const ZamaErrorCode: {
     readonly TransportKeyPairChanged: "TRANSPORT_KEY_PAIR_CHANGED";
     readonly PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH";
     readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
+    readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
 };
 
 // @public
@@ -1575,7 +1589,7 @@ export class ZamaSDK {
 }
 
 // @public
-export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | WrapSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
+export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | PermitErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | WrapSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
 export type ZamaSDKEventListener = (event: ZamaSDKEvent) => void;
@@ -1588,6 +1602,7 @@ export const ZamaSDKEvents: {
     readonly DecryptStart: "decrypt:start";
     readonly DecryptEnd: "decrypt:end";
     readonly DecryptError: "decrypt:error";
+    readonly PermitError: "permit:error";
     readonly TransactionError: "transaction:error";
     readonly ShieldSubmitted: "shield:submitted";
     readonly TransferSubmitted: "transfer:submitted";

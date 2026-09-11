@@ -1,76 +1,113 @@
-import { describe, expect, test, vi } from "../../test-fixtures";
+import { describe, expect, makeLogger, test, vi } from "../../test-fixtures";
 import { resolveChainRelayers, resolveStorage } from "../resolve";
 import { sepolia, mainnet, hardhat, anvil, type FheChain } from "../../chains";
 import type { RelayerConfig } from "../types";
 import type { RelayerSDK } from "../../relayer/types";
+import { LoggerService } from "../../services/logger-service";
 
-/** Stub the public RelayerConfig seam — no internal-module mocking. */
+/** Stub the public RelayerConfig seam, no internal-module mocking. */
 function mockRelayerConfig(type: RelayerConfig["type"] = "web"): RelayerConfig {
   return { type, createRelayer: () => ({}) as unknown as RelayerSDK };
 }
 
+const silent = new LoggerService();
+
+type Case = {
+  label: string;
+  chains: FheChain[];
+  relayers: Record<number, RelayerConfig>;
+  expected: string;
+};
+
+const missingCases: Case[] = [
+  {
+    label: "single chain with no relayer entry",
+    chains: [sepolia],
+    relayers: {},
+    expected: "Chain 11155111 has no relayer configured",
+  },
+  {
+    label: "second chain missing a relayer entry",
+    chains: [sepolia, { id: 999999 } as FheChain],
+    relayers: { [11155111]: mockRelayerConfig() },
+    expected: "Chain 999999 has no relayer configured",
+  },
+];
+
+const orphanCases: Case[] = [
+  {
+    label: "single orphaned key",
+    chains: [],
+    relayers: { [999]: mockRelayerConfig() },
+    expected: "Relayer entries for chain(s) [999]",
+  },
+  {
+    label: "orphan alongside a valid entry",
+    chains: [sepolia],
+    relayers: { [11155111]: mockRelayerConfig(), [999]: mockRelayerConfig() },
+    expected: "Relayer entries for chain(s) [999]",
+  },
+  {
+    label: "multiple orphans listed in ascending id order",
+    chains: [sepolia],
+    relayers: {
+      [11155111]: mockRelayerConfig(),
+      [999]: mockRelayerConfig(),
+      [888]: mockRelayerConfig("cleartext"),
+    },
+    expected: "Relayer entries for chain(s) [888, 999]",
+  },
+];
+
 describe("resolveChainRelayers", () => {
   test("throws for duplicate chain ids (e.g. hardhat + anvil alias)", () => {
-    expect(() => resolveChainRelayers([hardhat, anvil], { [31337]: mockRelayerConfig() })).toThrow(
-      "Duplicate chain id(s) [31337]",
-    );
+    expect(() =>
+      resolveChainRelayers([hardhat, anvil], { [31337]: mockRelayerConfig() }, silent),
+    ).toThrow("Duplicate chain id(s) [31337]");
   });
 
-  test.each([
-    {
-      label: "single chain with no relayer entry",
-      chains: [sepolia],
-      relayers: {},
-      expected: "Chain 11155111 has no relayer configured",
-    },
-    {
-      label: "second chain missing a relayer entry",
-      chains: [sepolia, { id: 999999 } as FheChain],
-      relayers: { [11155111]: mockRelayerConfig() },
-      expected: "Chain 999999 has no relayer configured",
-    },
-  ])("throws when $label", ({ chains, relayers, expected }) => {
-    expect(() =>
-      resolveChainRelayers(chains, relayers as Readonly<Record<number, RelayerConfig>>),
-    ).toThrow(expected);
+  test.each(missingCases)("throws when $label", ({ chains, relayers, expected }) => {
+    expect(() => resolveChainRelayers(chains, relayers, silent)).toThrow(expected);
   });
 
-  test.each([
-    {
-      label: "single orphaned key",
-      chains: [],
-      relayers: { [999]: mockRelayerConfig() },
-      expected: "Relayer entries for chain(s) [999]",
+  test.each(orphanCases)(
+    "warns and drops orphaned relayer keys ($label)",
+    ({ chains, relayers, expected }) => {
+      const sink = makeLogger();
+
+      const result = resolveChainRelayers(chains, relayers, new LoggerService(sink));
+
+      expect([...result.keys()]).toEqual(chains.map((c) => c.id));
+      expect(sink.warn).toHaveBeenCalledOnce();
+      expect(sink.warn.mock.calls[0]?.[0]).toContain(expected);
     },
-    {
-      label: "orphan alongside a valid entry",
-      chains: [sepolia],
-      relayers: { [11155111]: mockRelayerConfig(), [999]: mockRelayerConfig() },
-      expected: "Relayer entries for chain(s) [999]",
-    },
-    {
-      label: "multiple orphans listed in order",
-      chains: [sepolia],
-      relayers: {
-        [11155111]: mockRelayerConfig(),
-        [999]: mockRelayerConfig(),
-        [888]: mockRelayerConfig("cleartext"),
-      },
-      expected: "Relayer entries for chain(s) [888, 999]",
-    },
-  ])("throws for orphaned relayer keys ($label)", ({ chains, relayers, expected }) => {
+  );
+
+  test("warns about orphans before throwing for a missing relayer", () => {
+    const sink = makeLogger();
+
     expect(() =>
-      resolveChainRelayers(chains, relayers as Readonly<Record<number, RelayerConfig>>),
-    ).toThrow(expected);
+      resolveChainRelayers([sepolia], { [999]: mockRelayerConfig() }, new LoggerService(sink)),
+    ).toThrow("Chain 11155111 has no relayer configured");
+    expect(sink.warn.mock.calls[0]?.[0]).toContain("Relayer entries for chain(s) [999]");
+  });
+
+  test("stays silent when relayer keys match the chains exactly", () => {
+    const sink = makeLogger();
+
+    resolveChainRelayers([sepolia], { [11155111]: mockRelayerConfig() }, new LoggerService(sink));
+
+    expect(sink.warn).not.toHaveBeenCalled();
   });
 
   test("resolves multiple chains and binds each to its relayer config", () => {
     const sepoliaCfg = mockRelayerConfig();
     const mainnetCfg = mockRelayerConfig();
-    const result = resolveChainRelayers([sepolia, mainnet], {
-      [11155111]: sepoliaCfg,
-      [1]: mainnetCfg,
-    });
+    const result = resolveChainRelayers(
+      [sepolia, mainnet],
+      { [11155111]: sepoliaCfg, [1]: mainnetCfg },
+      silent,
+    );
     expect(result.size).toBe(2);
     expect(result.get(11155111)).toEqual({ chain: sepolia, relayerConfig: sepoliaCfg });
     expect(result.get(1)).toEqual({ chain: mainnet, relayerConfig: mainnetCfg });

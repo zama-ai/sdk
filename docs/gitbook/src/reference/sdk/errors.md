@@ -86,8 +86,10 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `SigningRejectedError`                  | `SIGNING_REJECTED`                    | User rejected the wallet signature                                                                                                |
 | `SigningFailedError`                    | `SIGNING_FAILED`                      | Wallet signature failed (connectivity, firmware)                                                                                  |
 | `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the WASM runtime                                                                                         |
+| `EncryptOffloadUnavailableError`        | `ENCRYPT_OFFLOAD_UNAVAILABLE`         | `offloadEncrypt: true` required the encrypt worker, which is unavailable                                                          |
 | `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                                                                                             |
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
+| `UnshieldAlreadyFinalizedError`         | `UNSHIELD_ALREADY_FINALIZED`          | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                                                          |
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired — user must re-sign                                                                                    |
 | `RevokedKmsContextError`                | `REVOKED_KMS_CONTEXT`                 | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                                   |
@@ -168,7 +170,7 @@ matchZamaError(error, {
 
 **Code:** `SIGNING_REJECTED`
 
-Thrown when the user clicks "Reject" in their wallet popup during an EIP-712 signature request (transport key pair generation or session signing).
+Thrown when the user clicks "Reject" in their wallet popup during an EIP-712 signature request (transport key pair generation or session signing). The error carries `operation` (the SDK method that was signing, e.g. `"grantPermit"`), and, when the wallet/provider's raw error exposes them, `rpcCode` and `walletErrorName`.
 
 ```ts
 try {
@@ -186,7 +188,7 @@ try {
 
 **Code:** `SIGNING_FAILED`
 
-The wallet attempted to sign but failed for a reason other than user rejection — network issues, hardware wallet firmware problems, or RPC timeouts.
+The wallet attempted to sign but failed for a reason other than user rejection — network issues, hardware wallet firmware problems, or RPC timeouts. Like `SigningRejectedError`, it carries `operation`, and, when recoverable from the wallet/provider's raw error, `rpcCode` (its JSON-RPC / EIP-1193 numeric error code) and `walletErrorName` (the error class name the wallet/provider library threw, e.g. viem's `InvalidParamsRpcError`) — useful for grouping and alerting on structured fields instead of parsing `message`. `grantPermit`, `grantDelegationPermit`, and `registerPermit` failures also emit a `ZamaSDKEvents.PermitError` event carrying the same error before throwing; see [`onEvent`](ZamaSDK.md#onevent).
 
 ```ts
 matchZamaError(error, { SIGNING_FAILED: (e) => console.error("Wallet signing error:", e.message) });
@@ -207,6 +209,20 @@ matchZamaError(error, {
 ```
 
 **How to handle:** Verify your Content Security Policy includes `wasm-unsafe-eval`. Check that the browser supports WebAssembly.
+
+### EncryptOffloadUnavailableError
+
+**Code:** `ENCRYPT_OFFLOAD_UNAVAILABLE`
+
+Thrown only under [`web({ offloadEncrypt: true })`](./RelayerWeb.md#offloadencrypt): encryption was required to run in a Web Worker, but the worker could not spawn, missed a lifecycle deadline, or crashed. The strict mode rejects rather than finishing the work on the main thread. The `.cause` carries the underlying failure.
+
+```ts
+matchZamaError(error, {
+  ENCRYPT_OFFLOAD_UNAVAILABLE: (e) => showError(`Encryption offload unavailable: ${e.message}`),
+});
+```
+
+**How to handle:** Fix the deployment, not the call: see the [CSP requirement](./RelayerWeb.md#csp-requirement) and [`offloadWorker`](./RelayerWeb.md#offloadworker) for the usual causes. Switch to `offloadEncrypt: "auto"` to fall back to main-thread encryption instead.
 
 ### DecryptionFailedError
 
@@ -232,7 +248,21 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Inspect the revert reason. Common causes: insufficient balance, expired operator approval, or attempting to finalize an already-finalized unwrap.
+**How to handle:** Inspect the revert reason. Common causes: insufficient balance or an expired operator approval. Finalizing an already-finalized unwrap through `resumeUnshield()` or `unshield()` throws the more specific `UnshieldAlreadyFinalizedError` instead.
+
+### UnshieldAlreadyFinalizedError
+
+**Code:** `UNSHIELD_ALREADY_FINALIZED`
+
+Thrown by `resumeUnshield()` when the unwrap request no longer exists on-chain: it was already finalized, so the underlying ERC-20 tokens were delivered. `unshield()` and `unshieldAll()` throw it too when a concurrent finalize wins the race. The SDK clears the persisted pending-unshield state before throwing, so `getPendingUnshield()` returns `null` afterwards. The error carries `unwrapTxHash` and `unwrapRequestId`.
+
+```ts
+matchZamaError(error, {
+  UNSHIELD_ALREADY_FINALIZED: () => dismissResumePrompt(), // the funds already arrived
+});
+```
+
+**How to handle:** Treat it as completion, not a failure: dismiss the "resume unshield" prompt and refresh balances. `useResumeUnshield` invalidates the affected queries automatically. Do not retry; nothing is left to finalize.
 
 ### InvalidTransportKeyPairError
 

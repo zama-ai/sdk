@@ -1,11 +1,11 @@
 ---
 title: useWrappedToken
-description: React hook returning a memoised WrappedToken instance.
+description: React hook returning a memoized WrappedToken instance.
 ---
 
 # useWrappedToken
 
-Returns a memoised [`WrappedToken`](../sdk/WrappedToken.md) bound to the SDK in the current `ZamaProvider`. Use it for ERC-7984 wrapper operations (shield, unshield, allowance).
+Returns a memoized [`WrappedToken`](../sdk/WrappedToken.md) bound to the SDK in the current `ZamaProvider`. Use it for ERC-7984 wrapper operations (shield, unshield, allowance).
 
 `WrappedToken` extends the base [`Token`](../sdk/Token.md) API, so the returned instance can also read balances and submit confidential transfers.
 
