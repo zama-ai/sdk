@@ -45,6 +45,11 @@
       "import": "./dist/wagmi/index.js",
       "default": "./dist/wagmi/index.js"
     },
+    "./vaults": {
+      "types": "./dist/vaults/index.d.ts",
+      "import": "./dist/vaults/index.js",
+      "default": "./dist/vaults/index.js"
+    },
     "./package.json": {
       "default": "./package.json"
     }
