@@ -445,6 +445,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:guides/vault-deposits",
+      "title": "Vault deposits and withdrawals",
+      "source_path": "docs/gitbook/src/guides/vault-deposits.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-deposits.md",
+      "source_type": "official-doc",
+      "category": "guides",
+      "logical_path": "guides/vault-deposits",
+      "description": "How to deposit into and withdraw from a confidential ERC-4626 vault.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:reference/sdk/README",
       "title": "Overview",
       "source_path": "docs/gitbook/src/reference/sdk/README.md",
