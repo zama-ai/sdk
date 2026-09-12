@@ -1,0 +1,106 @@
+name: Sidecar CI
+
+on:
+  pull_request:
+    paths:
+      - "clients/**"
+      - "proto/**"
+      - "packages/sdk/**"
+      - "packages/sdk-sidecar/**"
+      - "buf*.yaml"
+      - "vitest.config.ts"
+      - "rust-toolchain.toml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/actions/install-deps/**"
+      - ".github/workflows/sidecar.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: sidecar-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_HOURS: "72"
+  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@fhevm/sdk,@zama-fhe/sdk,@zama-fhe/react-sdk"
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: clients/go/go.mod
+          cache-dependency-path: |
+            clients/go/go.sum
+            clients/go/examples/balance/go.sum
+      - name: Test library
+        working-directory: clients/go
+        run: |
+          go test -race ./...
+          go vet ./...
+      - name: Test example and regenerate contract bindings
+        working-directory: clients/go/examples/balance
+        run: |
+          go test -race ./...
+          go vet ./...
+          go generate ./contracts
+      - name: Check Go formatting and generated bindings
+        run: |
+          test -z "$(gofmt -l clients/go)"
+          git diff --exit-code -- clients/go
+
+  rust:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Install repository toolchain
+        run: rustup show
+      - name: Check formatting
+        run: cargo fmt --manifest-path clients/rust/Cargo.toml --check
+      - name: Test default features
+        run: cargo test --manifest-path clients/rust/Cargo.toml --locked
+      - name: Test signer integration and example
+        run: cargo test --manifest-path clients/rust/Cargo.toml --all-features --all-targets --locked
+      - name: Lint
+        run: cargo clippy --manifest-path clients/rust/Cargo.toml --all-features --all-targets --locked -- -D warnings
+      - name: Regenerate protobuf bindings
+        run: |
+          cargo run --manifest-path clients/rust/Cargo.toml -p zama-sdk-sidecar-codegen --locked
+          git diff --exit-code -- clients/rust
+
+  equivalence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: ./.github/actions/install-deps
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: clients/go/go.mod
+          cache-dependency-path: clients/go/go.sum
+      - name: Install repository toolchain
+        run: rustup show
+      - name: Regenerate TypeScript and Go protobuf bindings
+        run: |
+          pnpm sidecar:generate
+          sh clients/go/generate.sh
+          git diff --exit-code -- packages/sdk-sidecar/src/generated clients/go/gen
+      - name: Build SDK and sidecar
+        run: pnpm sidecar:build
+      - name: Prepare native test drivers
+        run: |
+          cargo test --manifest-path clients/rust/Cargo.toml --test external_storage_restart --locked --no-run
+          cd clients/go
+          go test -run '^$' ./...
+      - name: Verify SDK equivalence and native credential recovery
+        env:
+          SIDECAR_NATIVE_TESTS: "1"
+        run: pnpm sidecar:test
