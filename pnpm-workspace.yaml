@@ -6,9 +6,11 @@ packages:
 
 allowBuilds:
   "@ast-grep/cli": true
+  "@bufbuild/buf": true
   bufferutil: false
   esbuild: true
   keccak: false
+  protobufjs: false
   sharp: false
   utf-8-validate: false
 

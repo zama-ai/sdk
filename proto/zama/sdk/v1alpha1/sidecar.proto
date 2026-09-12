@@ -1,0 +1,92 @@
+syntax = "proto3";
+package zama.sdk.v1alpha1;
+option go_package = "github.com/zama-ai/sdk/clients/go/gen/zama/sdk/v1alpha1;sdkv1alpha1";
+service SidecarService {
+  rpc GetInfo(GetInfoRequest) returns (GetInfoResponse);
+  rpc CreateContext(CreateContextRequest) returns (CreateContextResponse);
+  rpc CloseContext(ContextRequest) returns (Empty);
+  rpc UpdateAccount(UpdateAccountRequest) returns (Empty);
+  rpc SignerChannel(stream SignerClientMessage) returns (stream SignerServerMessage);
+  rpc StorageChannel(stream StorageClientMessage) returns (stream StorageServerMessage);
+  rpc DecryptValues(DecryptValuesRequest) returns (DecryptValuesResponse);
+  rpc DelegatedDecryptValues(DelegatedDecryptValuesRequest) returns (DecryptValuesResponse);
+  rpc DecryptPublicValues(DecryptPublicValuesRequest) returns (DecryptPublicValuesResponse);
+  rpc DelegatedBatchDecryptValues(DelegatedBatchDecryptValuesRequest) returns (DelegatedBatchDecryptValuesResponse);
+  rpc PreparePermit(PreparePermitRequest) returns (PreparePermitResponse);
+  rpc RegisterPermit(RegisterPermitRequest) returns (Empty);
+  rpc GrantPermit(ContractsRequest) returns (Empty);
+  rpc GrantDelegationPermit(DelegationContractsRequest) returns (Empty);
+  rpc HasPermit(ContractsRequest) returns (HasPermitResponse);
+  rpc HasDelegationPermit(DelegationContractsRequest) returns (HasPermitResponse);
+  rpc RevokePermits(RevokePermitsRequest) returns (Empty);
+  rpc ClearPermits(OperationRequest) returns (Empty);
+  rpc WarmTransportKeyPair(OperationRequest) returns (Empty);
+  rpc WarmTransportKeyPairScope(ScopeRequest) returns (Empty);
+  rpc RevokeTransportKeyPair(ScopeRequest) returns (Empty);
+}
+message Empty {}
+message GetInfoRequest {}
+message GetInfoResponse { string sdk_version = 1; }
+message WalletAccount { bytes address = 1; uint64 chain_id = 2; }
+message CreateContextRequest {
+  string config_json = 1;
+  bool signer_enabled = 2;
+  WalletAccount account = 3;
+  StorageBinding storage = 4;
+  StorageBinding permit_storage = 5;
+}
+message CreateContextResponse { string context_id = 1; }
+message ContextRequest { string context_id = 1; }
+message UpdateAccountRequest { string context_id = 1; WalletAccount account = 2; }
+message Operation { string context_id = 1; string operation_id = 2; }
+message OperationRequest { Operation operation = 1; }
+message EncryptedInput { bytes encrypted_value = 1; bytes contract_address = 2; }
+message ClearValue {
+  oneof value {
+    string bigint_value = 1;
+    bool bool_value = 2;
+    string string_value = 3;
+    bool undefined_value = 4;
+    double number_value = 5;
+  }
+}
+message ClearEntry { bytes encrypted_value = 1; ClearValue value = 2; }
+message DecryptValuesRequest { Operation operation = 1; repeated EncryptedInput inputs = 2; optional double timeout_ms = 3; }
+message DecryptValuesResponse { repeated ClearEntry values = 1; }
+message DelegatedDecryptValuesRequest {
+  Operation operation = 1; repeated EncryptedInput inputs = 2;
+  bytes delegator_address = 3; optional bytes account_address = 4; optional bool wait_for_propagation = 5;
+}
+message DecryptPublicValuesRequest { Operation operation = 1; repeated bytes encrypted_values = 2; optional double timeout_ms = 3; }
+message DecryptPublicValuesResponse { repeated ClearEntry values = 1; bytes abi_encoded_clear_values = 2; bytes decryption_proof = 3; }
+message DelegatedBatchDecryptValuesRequest {
+  Operation operation = 1; repeated EncryptedInput inputs = 2;
+  bytes delegator_address = 3; optional bytes account_address = 4;
+  optional double max_concurrency = 5; optional bool wait_for_propagation = 6;
+}
+message SdkError { string code = 1; string message = 2; bool retryable = 3; optional double retry_after_seconds = 4; }
+message BatchItem { bytes encrypted_value = 1; bytes contract_address = 2; ClearValue value = 3; SdkError error = 4; }
+message DelegatedBatchDecryptValuesResponse { repeated BatchItem items = 1; }
+message PreparePermitRequest { Operation operation = 1; bytes signer_address = 2; repeated bytes contract_addresses = 3; optional bytes delegator_address = 4; optional double duration_days = 5; }
+message PreparePermitResponse { string prepared_permit_json = 1; }
+message RegisterPermitRequest { Operation operation = 1; string prepared_permit_json = 2; bytes signature = 3; }
+message ContractsRequest { Operation operation = 1; repeated bytes contract_addresses = 2; }
+message DelegationContractsRequest { Operation operation = 1; bytes delegator_address = 2; repeated bytes contract_addresses = 3; }
+message HasPermitResponse { bool has_permit = 1; }
+message ContractList { repeated bytes addresses = 1; }
+message RevokePermitsRequest { Operation operation = 1; ContractList contracts = 2; }
+message ScopeRequest { Operation operation = 1; string scope_id = 2; }
+message SignerReply { string operation_id = 1; string action_id = 2; bytes signature = 3; SdkError error = 4; }
+message SignerClientMessage { oneof message { ContextRequest attach = 1; SignerReply reply = 2; } }
+message SignerAction { string operation_id = 1; string action_id = 2; WalletAccount account = 3; string typed_data_json = 4; }
+message SignerReplyError { string operation_id = 1; string action_id = 2; SdkError error = 3; }
+message SignerActionCancelled { string operation_id = 1; string action_id = 2; }
+message SignerServerMessage { oneof message { Empty attached = 1; SignerAction action = 2; SignerReplyError reply_error = 3; SignerActionCancelled cancelled = 4; } }
+
+message StorageBinding { oneof backend { Empty memory = 1; string persistent = 2; string application = 3; } }
+enum StorageMethod { STORAGE_METHOD_UNSPECIFIED = 0; STORAGE_METHOD_GET = 1; STORAGE_METHOD_SET = 2; STORAGE_METHOD_DELETE = 3; }
+message StorageAction { string request_id = 1; string backend_id = 2; StorageMethod method = 3; string key = 4; bytes value = 5; }
+message StorageReply { string request_id = 1; optional bytes value = 2; SdkError error = 3; }
+message StorageClientMessage { oneof message { ContextRequest attach = 1; StorageReply reply = 2; } }
+message StorageReplyError { string request_id = 1; SdkError error = 2; }
+message StorageServerMessage { oneof message { Empty attached = 1; StorageAction action = 2; StorageReplyError reply_error = 3; } }

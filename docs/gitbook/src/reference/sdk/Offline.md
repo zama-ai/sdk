@@ -102,6 +102,18 @@ Returns a `PreparedPermit`. Every field is JSON-safe, so the object crosses a pr
 
 See [`permits.registerPermit`](./ZamaSDK.md#permits-registerpermit) for the second phase and its typed errors, and the [Offline signing guide](../../guides/offline.md#offline-permits) for the full workflow.
 
+## Parse a prepared permit
+
+```ts
+import { parsePreparedPermit } from "@zama-fhe/sdk";
+
+const prepared = parsePreparedPermit(JSON.parse(serializedPermit));
+```
+
+`parsePreparedPermit(value: unknown): PreparedPermit` validates a decoded payload against the SDK's prepared-permit schema and normalizes its signer address. It throws `ConfigurationError` for an invalid shape.
+
+This validates the payload's structure. Signature verification, expiration, chain matching, and transport-key checks happen during [`permits.registerPermit`](./ZamaSDK.md#permits-registerpermit).
+
 ## Request kinds
 
 Each request is a discriminated union member on `kind`. `from` is always the transaction sender.

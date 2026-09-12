@@ -4,3 +4,5 @@ export type {
   Permission,
 } from "./types";
 export type { ChecksummedAddress } from "../schemas/primitives";
+
+export { parsePreparedPermit } from "./parse-prepared-permit";
