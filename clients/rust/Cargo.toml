@@ -1,0 +1,47 @@
+[package]
+name = "zama-sdk-sidecar"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+publish = false
+
+[workspace]
+members = ["generator"]
+default-members = ["."]
+resolver = "3"
+
+[features]
+default = []
+alloy = ["dep:alloy-signer", "dep:alloy-dyn-abi"]
+
+[dependencies]
+async-trait = "0.1"
+serde = { version = "1", features = ["derive"] }
+uuid = { version = "1", features = ["v4"] }
+alloy-signer = { version = "=1.8.3", optional = true }
+alloy-dyn-abi = { version = "=1.7.2", features = ["eip712"], optional = true }
+alloy-primitives = { version = "=1.7.2", default-features = false, features = ["std"] }
+anyhow = "1"
+num-bigint = "0.4"
+tokio-stream = "0.1"
+hyper-util = { version = "0.1", features = ["tokio"] }
+prost = "=0.14.4"
+serde_json = "1"
+tokio = { version = "1", features = ["net", "time", "sync", "rt", "macros"] }
+tonic = "=0.14.6"
+tonic-prost = "=0.14.6"
+tower = { version = "0.5", features = ["util"] }
+
+[dev-dependencies]
+reqwest = { version = "=0.13.5", default-features = false }
+alloy-contract = { version = "=1.8.3", default-features = false }
+alloy-provider = { version = "=1.8.3", default-features = false, features = ["reqwest", "reqwest-rustls-tls"] }
+alloy-sol-types = "=1.7.2"
+tempfile = "3"
+futures-util = "0.3"
+http-body-util = "0.1"
+hyper = { version = "1", features = ["server", "http2"] }
+alloy-signer-local = { version = "=1.8.3", default-features = false, features = ["zeroize"] }
+dotenvy = "0.15"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
