@@ -5874,6 +5874,8 @@ export interface ErrorForCode {
     [ZamaErrorCode.InsufficientConfidentialBalance]: InsufficientConfidentialBalanceError;
     [ZamaErrorCode.InsufficientERC20Balance]: InsufficientERC20BalanceError;
     [ZamaErrorCode.InvalidTransportKeyPair]: InvalidTransportKeyPairError;
+    [ZamaErrorCode.InvalidationTimestampInFuture]: InvalidationTimestampInFutureError;
+    [ZamaErrorCode.InvalidationTimestampTooLow]: InvalidationTimestampTooLowError;
     [ZamaErrorCode.KeyWrappingFailed]: KeyWrappingError;
     [ZamaErrorCode.TransportKeyPairExpired]: TransportKeyPairExpiredError;
     [ZamaErrorCode.NoCiphertext]: NoCiphertextError;
@@ -9912,6 +9914,16 @@ export function invalidateDecryptionSignaturesBeforeContract(aclAddress: Address
 export interface InvalidateDecryptionSignaturesSubmittedEvent extends BaseEvent {
     txHash: Hex;
     type: typeof ZamaSDKEvents.InvalidateDecryptionSignaturesSubmitted;
+}
+
+// @public
+export class InvalidationTimestampInFutureError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
+export class InvalidationTimestampTooLowError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
 }
 
 // @public
@@ -21205,6 +21217,8 @@ export const ZamaErrorCode: {
     readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
     readonly UnifiedPermitNotSupported: "UNIFIED_PERMIT_NOT_SUPPORTED";
     readonly UnifiedDecryptionUnsupported: "UNIFIED_DECRYPTION_UNSUPPORTED";
+    readonly InvalidationTimestampTooLow: "INVALIDATION_TIMESTAMP_TOO_LOW";
+    readonly InvalidationTimestampInFuture: "INVALIDATION_TIMESTAMP_IN_FUTURE";
     readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
 };
 

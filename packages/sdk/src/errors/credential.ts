@@ -177,3 +177,26 @@ export class UnifiedDecryptionUnsupportedError extends ZamaError {
     this.name = "UnifiedDecryptionUnsupportedError";
   }
 }
+
+/**
+ * The requested invalidation cutoff was not strictly later than the account's
+ * current one. The ACL only ever moves the cutoff forward, so re-sending the
+ * same or an older timestamp always reverts.
+ */
+export class InvalidationTimestampTooLowError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.InvalidationTimestampTooLow, message, options);
+    this.name = "InvalidationTimestampTooLowError";
+  }
+}
+
+/**
+ * The requested invalidation cutoff was in the future. The ACL refuses to
+ * invalidate signatures that have not been produced yet.
+ */
+export class InvalidationTimestampInFutureError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.InvalidationTimestampInFuture, message, options);
+    this.name = "InvalidationTimestampInFutureError";
+  }
+}

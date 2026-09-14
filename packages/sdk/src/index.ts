@@ -131,6 +131,8 @@ export {
   TransportKeyPairChangedError,
   TransportKeyPairExpiredError,
   UnifiedDecryptionUnsupportedError,
+  InvalidationTimestampTooLowError,
+  InvalidationTimestampInFutureError,
   UnifiedPermitNotSupportedError,
   UnshieldAlreadyFinalizedError,
   WalletAccountNotReadyError,

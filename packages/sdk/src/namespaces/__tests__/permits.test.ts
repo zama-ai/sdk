@@ -361,4 +361,60 @@ describe("Permits", () => {
       expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
     });
   });
+
+  describe("invalidateDecryptionSignatures", () => {
+    test("throws SignerNotConfiguredError with no signer", async ({ createSDK }) => {
+      const sdk = createSDK({ signer: undefined });
+      await expect(sdk.permits.invalidateDecryptionSignatures()).rejects.toBeInstanceOf(
+        SignerNotConfiguredError,
+      );
+    });
+
+    test("submits the ACL write, then drops this chain's stored permits", async ({
+      sdk,
+      signer,
+    }) => {
+      await sdk.permits.grantPermit([CONTRACT_A]);
+      await expect(sdk.permits.hasPermit([CONTRACT_A])).resolves.toBe(true);
+
+      await sdk.permits.invalidateDecryptionSignatures();
+
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          functionName: "invalidateDecryptionSignaturesBefore",
+          args: [0n],
+        }),
+      );
+      await expect(sdk.permits.hasPermit([CONTRACT_A])).resolves.toBe(false);
+    });
+
+    test("keeps stored permits when the ACL write reverts", async ({ sdk, signer }) => {
+      await sdk.permits.grantPermit([CONTRACT_A]);
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(
+        new Error("execution reverted: InvalidationTimestampTooLow()"),
+      );
+
+      await expect(sdk.permits.invalidateDecryptionSignatures()).rejects.toMatchObject({
+        code: "INVALIDATION_TIMESTAMP_TOO_LOW",
+      });
+
+      await expect(sdk.permits.hasPermit([CONTRACT_A])).resolves.toBe(true);
+    });
+
+    test("throws ChainMismatchError when signer and provider disagree", async ({
+      sdk,
+      signer,
+      provider,
+    }) => {
+      const account = { address: signer.walletAccount.getSnapshot()!.address, chainId: 1 };
+      vi.mocked(signer.walletAccount.getSnapshot).mockReturnValue(account);
+      vi.mocked(signer.requireWalletAccount).mockReturnValue(account);
+      vi.mocked(provider.getChainId).mockResolvedValue(11155111);
+
+      await expect(sdk.permits.invalidateDecryptionSignatures()).rejects.toBeInstanceOf(
+        ChainMismatchError,
+      );
+      expect(signer.writeContract).not.toHaveBeenCalled();
+    });
+  });
 });

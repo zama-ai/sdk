@@ -175,7 +175,6 @@ export class ZamaSDK {
     // work; permit-signing methods require a signer and throw without one.
     this.#credentialService = new CredentialService({
       router: config.router,
-      provider: this.provider,
       signer: config.signer,
       transportKeyPairTTL: config.transportKeyPairTTL,
       permitTTL: config.permitTTL,
@@ -218,6 +217,7 @@ export class ZamaSDK {
       provider: this.provider,
       cachingService: this.#cachingService,
       credentialService: this.#credentialService,
+      delegationService: this.#delegationService,
       logger: this.#logger,
       emitEvent: this.emitEvent.bind(this),
     });

@@ -13,11 +13,12 @@ export function invalidateDecryptionSignaturesMutationOptions(
   sdk: ZamaSDK,
 ): MutationFactoryOptions<
   readonly ["zama.invalidateDecryptionSignatures"],
-  InvalidateDecryptionSignaturesParams,
+  InvalidateDecryptionSignaturesParams | void,
   TransactionResult
 > {
   return {
     mutationKey: ["zama.invalidateDecryptionSignatures"] as const,
-    mutationFn: async ({ timestamp }) => sdk.permits.invalidateDecryptionSignatures(timestamp),
+    mutationFn: async (params: InvalidateDecryptionSignaturesParams | void) =>
+      sdk.permits.invalidateDecryptionSignatures(params?.timestamp),
   };
 }

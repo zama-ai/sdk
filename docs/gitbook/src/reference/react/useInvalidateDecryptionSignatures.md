@@ -27,7 +27,7 @@ function InvalidateAllButton() {
   const { mutateAsync: invalidate, isPending } = useInvalidateDecryptionSignatures();
 
   async function handleInvalidate() {
-    const { txHash } = await invalidate({});
+    const { txHash } = await invalidate();
     console.log("Invalidated in", txHash);
   }
 
@@ -55,7 +55,7 @@ Passed to `mutate` / `mutateAsync` at call time.
 Oldest timestamp that remains valid. Omit to invalidate everything signed up to now.
 
 ```ts
-await invalidate({}); // invalidate everything up to now
+await invalidate(); // invalidate everything up to now
 await invalidate({ timestamp: new Date("2026-01-01") }); // invalidate up to a specific time
 ```
 

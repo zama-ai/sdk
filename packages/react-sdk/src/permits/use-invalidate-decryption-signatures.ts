@@ -16,16 +16,21 @@ import { useZamaSDK } from "../provider";
  *
  * @example
  * ```tsx
- * const invalidate = useInvalidateDecryptionSignatures();
- * invalidate.mutate({});
+ * const { mutate: invalidate } = useInvalidateDecryptionSignatures();
+ * invalidate();                          // everything up to now
+ * invalidate({ timestamp: cutoffDate }); // everything before `cutoffDate`
  * ```
  */
 export function useInvalidateDecryptionSignatures(
-  options?: UseMutationOptions<TransactionResult, Error, InvalidateDecryptionSignaturesParams>,
+  options?: UseMutationOptions<
+    TransactionResult,
+    Error,
+    InvalidateDecryptionSignaturesParams | void
+  >,
 ) {
   const sdk = useZamaSDK();
 
-  return useMutation<TransactionResult, Error, InvalidateDecryptionSignaturesParams>({
+  return useMutation<TransactionResult, Error, InvalidateDecryptionSignaturesParams | void>({
     ...invalidateDecryptionSignaturesMutationOptions(sdk),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {

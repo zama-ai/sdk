@@ -1,6 +1,5 @@
 import type { Address, Hex } from "viem";
 import type { ChainRouter } from "../chains/router";
-import { invalidateDecryptionSignaturesBeforeContract } from "../contracts/acl";
 import { ZamaError } from "../errors/base";
 import {
   KeyWrappingError,
@@ -17,15 +16,8 @@ import type { PermitOperation, ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
-import type {
-  GenericLogger,
-  GenericProvider,
-  GenericSigner,
-  GenericStorage,
-  TransactionResult,
-} from "../types";
+import type { GenericLogger, GenericSigner, GenericStorage } from "../types";
 import { isInvalidTransportKeyPairMessage } from "../utils/error";
-import { submitTransaction } from "../utils/submit-transaction";
 import { swallow } from "../utils/swallow";
 import { parseSchema } from "../validation";
 import { TransportKeyPairVault } from "./keypair-vault";
@@ -71,8 +63,6 @@ export const DEFAULT_PERMIT_DURATION_DAYS = 30;
 /** Configuration for {@link CredentialService}. TTLs are pre-validated by the caller. */
 export interface CredentialServiceConfig {
   router: ChainRouter;
-  /** Chain provider — only used by {@link CredentialService.invalidateDecryptionSignatures} to wait for the transaction receipt. */
-  provider: GenericProvider;
   /**
    * Optional signer. Required for {@link CredentialService.grantPermit},
    * {@link CredentialService.revokePermits}, and
@@ -133,7 +123,6 @@ export class CredentialService {
   readonly #vault: TransportKeyPairVault;
   readonly #store: PermissionStore;
   readonly #router: ChainRouter;
-  readonly #provider: GenericProvider;
   readonly #signer: GenericSigner | undefined;
   readonly #permitTTL: number;
   readonly #logger: GenericLogger;
@@ -160,7 +149,6 @@ export class CredentialService {
       logger: config.logger,
     });
     this.#router = config.router;
-    this.#provider = config.provider;
     this.#signer = config.signer;
     this.#permitTTL = config.permitTTL;
     this.#logger = config.logger;
@@ -628,50 +616,17 @@ export class CredentialService {
   }
 
   /**
-   * Invalidate every decryption signature this signer has signed before
-   * `timestamp`, via `ACL.invalidateDecryptionSignaturesBefore`. The
-   * KMS Connector rejects any decryption request whose permit predates the
-   * new cutoff — the recourse when a permissive/wildcard permit or its
-   * signing key is compromised, or on a multisig (ERC-1271/Safe) owner
-   * rotation. Distinct from {@link recoverPermits} (which repairs a *revoked
-   * KMS context*, a protocol-side rotation) and from ACL delegation revocation
-   * (a different mechanism entirely) — this is the caller invalidating their
-   * own past signatures.
-   *
-   * On success, proactively clears this signer's locally-stored permits for
-   * the current chain scope: they would only fail against the KMS Connector
-   * now, so there is nothing to gain by keeping them cached.
-   *
-   * @param timestamp - Oldest timestamp that remains valid. Omit to invalidate
-   *   everything up to now — resolved on-chain (`0` means "current block
-   *   timestamp"), not from the local clock, to avoid clock skew.
-   * @throws if no signer is configured. {@link SignerNotConfiguredError}
-   * @throws if the invalidation transaction reverts (e.g. a non-increasing or
-   *   future timestamp). {@link TransactionRevertedError}
+   * Drop this signer's stored permits for the active chain once an on-chain
+   * signature invalidation has succeeded — they would now only fail against the
+   * KMS Connector. Swallows storage failures, which must never mask a write that
+   * already landed on-chain.
    */
-  async invalidateDecryptionSignatures(timestamp?: Date): Promise<TransactionResult> {
-    const signer = this.#requireSigner("invalidateDecryptionSignatures");
-    const account = signer.requireWalletAccount("invalidateDecryptionSignatures");
-    const signerAddress = checksum(account.address);
-    const resolvedTimestamp = timestamp ? BigInt(Math.floor(timestamp.getTime() / 1000)) : 0n;
-    const acl = this.#router.relayer.chain.aclContractAddress;
-
-    const result = await submitTransaction({
-      operation: "invalidateDecryptionSignatures",
-      signer,
-      provider: this.#provider,
-      config: invalidateDecryptionSignaturesBeforeContract(acl, resolvedTimestamp),
-      emit: (input) => this.#emitEvent(input),
-      logger: this.#logger,
-    });
-
+  async clearPermitsAfterInvalidation(signerAddress: ChecksummedAddress): Promise<void> {
     await swallow(
       "clear permits after invalidation",
       () => this.#store.clearAllForSignerOnChain(signerAddress, this.#router.chain.id),
       this.#logger,
     );
-
-    return result;
   }
 
   /**
@@ -957,21 +912,21 @@ export class CredentialService {
     }
 
     const survivors = stored.filter((p) => !stale.has(p.serializedPermit.signature));
-    // A wildcard permit's `contractAddresses` is `[]` (a permissive scope), so
-    // flattening it into `prior` below would silently lose that coverage —
-    // check for it directly instead and re-request WILDCARD_PERMIT explicitly.
-    const hadWildcard = stored.some(isWildcardPermission);
-    const prior = stored.flatMap((p) => p.contractAddresses);
-    const recovery = this.#clearAndRegrantScope(
-      scope,
-      prior,
-      contracts,
-      survivors,
-      hadWildcard,
-      delegator,
-    ).finally(() => {
-      this.#permitRecoveries.delete(key);
-    });
+    // Re-sign the union the scope covered, not just this call's contracts: one
+    // signature restores every widened permit for concurrent callers. A wildcard
+    // permit's `contractAddresses` is `[]`, so folding it into that union would
+    // silently downgrade permissive coverage to a finite list.
+    const regrant: WildcardPermit | ChecksummedAddress[] = stored.some(isWildcardPermission)
+      ? WILDCARD_PERMIT
+      : sortedUnion(
+          stored.flatMap((p) => p.contractAddresses),
+          normalizeAddresses(contracts),
+        );
+    const recovery = this.#clearAndRegrantScope(scope, regrant, survivors, delegator).finally(
+      () => {
+        this.#permitRecoveries.delete(key);
+      },
+    );
     // No `await` between the map re-check above and this `set`, so two callers
     // cannot both start a recovery for the same scope.
     this.#permitRecoveries.set(key, recovery);
@@ -992,25 +947,13 @@ export class CredentialService {
 
   async #clearAndRegrantScope(
     scope: PermissionScope,
-    prior: readonly ChecksummedAddress[],
-    contracts: readonly Address[],
+    regrant: WildcardPermit | readonly ChecksummedAddress[],
     survivors: readonly Permission[],
-    hadWildcard: boolean,
     delegator?: Address,
   ): Promise<void> {
     await swallow("evict revoked permits", () => this.#store.clearScope(scope), this.#logger);
     try {
-      // Re-sign the union of what the scope covered, not just this call's
-      // contracts: one signature restores every widened permit, so sibling
-      // decrypt calls joining the recovery find their contracts already covered.
-      // A wildcard permit in the evicted scope already covered everything
-      // (including `contracts`), so re-request WILDCARD_PERMIT directly rather
-      // than the (now-empty-for-wildcard) address union, which would silently
-      // downgrade coverage to a finite list.
-      await this.grantPermit(
-        hadWildcard ? WILDCARD_PERMIT : sortedUnion(prior, normalizeAddresses(contracts)),
-        delegator,
-      );
+      await this.grantPermit(regrant, delegator);
     } catch (error) {
       // Coverage the session cannot re-sign must survive a failed re-grant.
       if (survivors.length > 0) {

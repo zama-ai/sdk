@@ -191,7 +191,7 @@ export interface UseHasPermitConfig {
 }
 
 // @public
-export function useInvalidateDecryptionSignatures(options?: UseMutationOptions<TransactionResult, Error, InvalidateDecryptionSignaturesParams>): UseMutationResult<TransactionResult, Error, InvalidateDecryptionSignaturesParams, unknown>;
+export function useInvalidateDecryptionSignatures(options?: UseMutationOptions<TransactionResult, Error, InvalidateDecryptionSignaturesParams | void>): UseMutationResult<TransactionResult, Error, void | InvalidateDecryptionSignaturesParams, unknown>;
 
 // @public
 export function useIsConfidential(tokenAddress: Address, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): UseQueryResult<boolean, Error>;

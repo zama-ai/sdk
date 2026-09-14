@@ -3,7 +3,12 @@ import type { GenericLogger, GenericStorage } from "../types";
 import { swallow } from "../utils/swallow";
 import { pruneUnusable, withoutPermitsTouching } from "./permissions";
 import { PermissionListSchema, PermissionSchema, ScopeIndexSchema } from "./schemas";
-import { permissionIndexKey, permissionScopeKey, type PermissionScope } from "./storage-keys";
+import {
+  permissionChainPrefix,
+  permissionIndexKey,
+  permissionScopeKey,
+  type PermissionScope,
+} from "./storage-keys";
 import type { Permission } from "./types";
 import type { ChecksummedAddress } from "../schemas/primitives";
 
@@ -155,10 +160,7 @@ export class PermissionStore {
    * Uses the per-signer scope index to cascade without enumerating all storage keys.
    */
   async clearAllForSigner(signerAddress: ChecksummedAddress): Promise<void> {
-    const indexKey = permissionIndexKey(signerAddress);
-    const scopeKeys = await this.#readIndex(indexKey);
-    await Promise.all(scopeKeys.map((k) => this.#deleteScope(k)));
-    await swallow("delete permit index", () => this.#storage.delete(indexKey), this.#logger);
+    await this.#clearIndexedScopes(signerAddress, () => true);
   }
 
   /**
@@ -172,20 +174,33 @@ export class PermissionStore {
     signerAddress: ChecksummedAddress,
     chainId: number,
   ): Promise<void> {
+    const prefix = permissionChainPrefix(signerAddress, chainId);
+    await this.#clearIndexedScopes(signerAddress, (scopeKey) => scopeKey.startsWith(prefix));
+  }
+
+  async #clearIndexedScopes(
+    signerAddress: ChecksummedAddress,
+    shouldClear: (scopeKey: string) => boolean,
+  ): Promise<void> {
     const indexKey = permissionIndexKey(signerAddress);
     const scopeKeys = await this.#readIndex(indexKey);
-    const prefix = `permits:${signerAddress}:${chainId}:`;
-    const matching = scopeKeys.filter((key) => key.startsWith(prefix));
-    const remaining = scopeKeys.filter((key) => !key.startsWith(prefix));
-    await Promise.all(matching.map((key) => this.#deleteScope(key)));
-    if (remaining.length === 0) {
+    const doomed = scopeKeys.filter(shouldClear);
+    // An empty index must still fall through, so a full clear deletes the index key.
+    if (scopeKeys.length > 0 && doomed.length === 0) {
+      return;
+    }
+    await Promise.all(doomed.map((key) => this.#deleteScope(key)));
+    await this.#writeIndex(
+      indexKey,
+      scopeKeys.filter((key) => !shouldClear(key)),
+    );
+  }
+
+  async #writeIndex(indexKey: string, next: readonly string[]): Promise<void> {
+    if (next.length === 0) {
       await swallow("delete permit index", () => this.#storage.delete(indexKey), this.#logger);
-    } else if (remaining.length !== scopeKeys.length) {
-      await swallow(
-        "update permit index",
-        () => this.#storage.set(indexKey, remaining),
-        this.#logger,
-      );
+    } else {
+      await swallow("update permit index", () => this.#storage.set(indexKey, next), this.#logger);
     }
   }
 
@@ -220,11 +235,7 @@ export class PermissionStore {
     if (next.length === list.length) {
       return;
     }
-    if (next.length === 0) {
-      await swallow("delete permit index", () => this.#storage.delete(indexKey), this.#logger);
-    } else {
-      await swallow("update permit index", () => this.#storage.set(indexKey, next), this.#logger);
-    }
+    await this.#writeIndex(indexKey, next);
   }
 
   async #deleteScope(scopeKey: string): Promise<void> {

@@ -1,4 +1,5 @@
 import type { ZamaError } from "./base";
+import { InvalidationTimestampInFutureError, InvalidationTimestampTooLowError } from "./credential";
 import { extractRevertErrorName } from "./revert";
 import {
   AclPausedError,
@@ -52,6 +53,18 @@ const ACL_ERROR_MAP = {
     }),
   NotDelegatedYet: (cause) =>
     new DelegationNotFoundError("Cannot revoke: no active delegation exists.", { cause }),
+  InvalidationTimestampTooLow: (cause) =>
+    new InvalidationTimestampTooLowError(
+      "The invalidation cutoff must be strictly later than the account's current one. " +
+        "Pass a later timestamp, or omit it to use the current block timestamp.",
+      { cause },
+    ),
+  InvalidationTimestampInTheFuture: (cause) =>
+    new InvalidationTimestampInFutureError(
+      "The invalidation cutoff cannot be in the future. Pass a timestamp no later than " +
+        "now, or omit it to use the current block timestamp.",
+      { cause },
+    ),
 } satisfies Record<string, (cause: unknown) => ZamaError>;
 
 function isAclRevertName(name: string): name is keyof typeof ACL_ERROR_MAP {

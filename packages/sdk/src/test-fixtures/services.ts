@@ -69,11 +69,10 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
   cachingService: async ({ storage }, use) => {
     await use(new CachingService(storage, new LoggerService()));
   },
-  createCredentialService: async ({ relayer, signer, storage, provider }, use) => {
+  createCredentialService: async ({ relayer, signer, storage }, use) => {
     const factory: CreateCredentialServiceFn = (config = {}) =>
       new CredentialService({
         router: config.router ?? createMockRouter({ relayer }),
-        provider: config.provider ?? provider,
         signer: config.signer ?? signer,
         transportKeyPairTTL: config.transportKeyPairTTL ?? 86400,
         permitTTL: config.permitTTL ?? 1,

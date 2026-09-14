@@ -18,6 +18,8 @@ export {
   PreparedPermitExpiredError,
   UnifiedPermitNotSupportedError,
   UnifiedDecryptionUnsupportedError,
+  InvalidationTimestampTooLowError,
+  InvalidationTimestampInFutureError,
 } from "./credential";
 export { RelayerRequestFailedError, ConfigurationError } from "./relayer";
 export { NotEntitledError } from "./entitlement";

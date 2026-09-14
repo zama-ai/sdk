@@ -583,7 +583,7 @@ export function invalidateAfterWrap(queryClient: QueryClientLike, tokenAddress: 
 export function invalidateBalanceQueries(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public
-export function invalidateDecryptionSignaturesMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.invalidateDecryptionSignatures"], InvalidateDecryptionSignaturesParams, TransactionResult>;
+export function invalidateDecryptionSignaturesMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.invalidateDecryptionSignatures"], InvalidateDecryptionSignaturesParams | void, TransactionResult>;
 
 // @public
 export interface InvalidateDecryptionSignaturesParams {
@@ -1412,6 +1412,8 @@ export const ZamaErrorCode: {
     readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
     readonly UnifiedPermitNotSupported: "UNIFIED_PERMIT_NOT_SUPPORTED";
     readonly UnifiedDecryptionUnsupported: "UNIFIED_DECRYPTION_UNSUPPORTED";
+    readonly InvalidationTimestampTooLow: "INVALIDATION_TIMESTAMP_TOO_LOW";
+    readonly InvalidationTimestampInFuture: "INVALIDATION_TIMESTAMP_IN_FUTURE";
     readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
 };
 

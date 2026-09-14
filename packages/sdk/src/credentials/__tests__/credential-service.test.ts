@@ -1,7 +1,6 @@
 import { createMockRouter, describe, expect, test, vi } from "../../test-fixtures";
 import type { Address, Hex } from "viem";
 import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
-import { anvil } from "../../chains";
 import { createMockChain } from "../../test-fixtures/chain";
 import { createMockRelayer } from "../../test-fixtures/relayer";
 import { TEST_ERC1271_SIGNATURE, TEST_TKMS_VERSION } from "../../test-fixtures/constants";
@@ -11,8 +10,8 @@ import {
   UnifiedPermitNotSupportedError,
 } from "../../errors/credential";
 import { ConfigurationError } from "../../errors/relayer";
+import { checksum } from "../../schemas/primitives";
 import { SignerNotConfiguredError } from "../../errors/signer";
-import { TransactionRevertedError } from "../../errors/transaction";
 import { ZamaSDKEvents } from "../../events/sdk-events";
 import { LoggerService } from "../../services/logger-service";
 import { CredentialService } from "../credential-service";
@@ -1005,12 +1004,10 @@ describe("CredentialService.allow signing-error event emission", () => {
   test("emits a PermitError event for a failure before any signing (no signer configured)", async ({
     relayer,
     storage,
-    provider,
   }) => {
     const emitEvent = vi.fn();
     const service = new CredentialService({
       router: createMockRouter({ relayer }),
-      provider,
       signer: undefined,
       transportKeyPairTTL: 86400,
       permitTTL: 1,
@@ -1426,26 +1423,13 @@ describe("CredentialService derivationSecret (opt-in at-rest wrapping)", () => {
   });
 });
 
-describe("CredentialService.invalidateDecryptionSignatures", () => {
-  test("submits the ACL call with timestamp 0 by default and clears stored permits", async ({
-    credentialService,
-    signer,
-  }) => {
+describe("CredentialService.clearPermitsAfterInvalidation", () => {
+  test("clears stored permits for the active chain", async ({ credentialService }) => {
     await credentialService.grantPermit([A]);
     await expect(credentialService.hasPermit([A])).resolves.toBe(true);
 
-    const result = await credentialService.invalidateDecryptionSignatures();
+    await credentialService.clearPermitsAfterInvalidation(checksum(USER));
 
-    expect(result).toEqual({ txHash: "0xtxhash", receipt: { logs: [] } });
-    expect(signer.writeContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        address: anvil.aclContractAddress,
-        functionName: "invalidateDecryptionSignaturesBefore",
-        args: [0n],
-      }),
-    );
-    // The scope's permits are cleared, since they'd now only fail against the
-    // KMS Connector.
     await expect(credentialService.hasPermit([A])).resolves.toBe(false);
   });
 
@@ -1455,7 +1439,7 @@ describe("CredentialService.invalidateDecryptionSignatures", () => {
     await credentialService.grantPermit([A]);
     await credentialService.grantPermit([A], DELEGATOR);
 
-    await credentialService.invalidateDecryptionSignatures();
+    await credentialService.clearPermitsAfterInvalidation(checksum(USER));
 
     await expect(credentialService.hasPermit([A])).resolves.toBe(false);
     await expect(credentialService.hasPermit([A], DELEGATOR)).resolves.toBe(false);
@@ -1479,7 +1463,7 @@ describe("CredentialService.invalidateDecryptionSignatures", () => {
     router.switchChain(11155111);
     await service.grantPermit([B]);
 
-    await service.invalidateDecryptionSignatures();
+    await service.clearPermitsAfterInvalidation(checksum(USER));
 
     await expect(service.hasPermit([B])).resolves.toBe(false);
 
@@ -1488,30 +1472,15 @@ describe("CredentialService.invalidateDecryptionSignatures", () => {
     await expect(service.hasPermit([A], DELEGATOR)).resolves.toBe(true);
   });
 
-  test("converts an explicit timestamp to unix seconds", async ({ credentialService, signer }) => {
-    const timestamp = new Date("2026-01-01T00:00:00Z");
-
-    await credentialService.invalidateDecryptionSignatures(timestamp);
-
-    expect(signer.writeContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        functionName: "invalidateDecryptionSignaturesBefore",
-        args: [BigInt(Math.floor(timestamp.getTime() / 1000))],
-      }),
-    );
-  });
-
-  test("surfaces a revert (e.g. a non-increasing or future timestamp) as TransactionRevertedError", async ({
-    credentialService,
-    signer,
+  test("a storage failure never propagates — the on-chain write already succeeded", async ({
+    createCredentialService,
+    storage,
   }) => {
-    vi.mocked(signer.writeContract).mockRejectedValueOnce(
-      new Error("execution reverted: InvalidationTimestampTooLow()"),
-    );
+    const service = createCredentialService({ storage });
+    await service.grantPermit([A]);
+    vi.spyOn(storage, "delete").mockRejectedValue(new Error("storage offline"));
 
-    await expect(credentialService.invalidateDecryptionSignatures()).rejects.toThrow(
-      TransactionRevertedError,
-    );
+    await expect(service.clearPermitsAfterInvalidation(checksum(USER))).resolves.toBeUndefined();
   });
 });
 
