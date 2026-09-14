@@ -82,6 +82,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
         scope: config.scope,
         derivationSecret: config.derivationSecret,
         logger: new LoggerService(),
+        emitEvent: config.emitEvent ?? (() => {}),
       });
     await use(factory);
   },

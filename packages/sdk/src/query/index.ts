@@ -244,6 +244,8 @@ export type {
   EncryptErrorEvent,
   EncryptStartEvent,
   FinalizeUnwrapSubmittedEvent,
+  PermitErrorEvent,
+  PermitOperation,
   ShieldSubmittedEvent,
   TransactionErrorEvent,
   TransactionOperation,

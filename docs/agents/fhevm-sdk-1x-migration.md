@@ -107,7 +107,7 @@ the alpha channel without a major bump.
   `decodeDelegatedForUserDecryption`, `delegateForUserDecryptionContract`, …) — mirror on-chain ACL
   Solidity event names (`Solidity-mirror` convention).
 - **`encrypt`-side `handle` terms** (`EncryptResult.handles`, etc.) — owned by PR #394, out of scope here.
-- **Token-flavoured / delegation hooks** (`useDecryptBalanceAs`, `useBatchDecryptBalancesAs`,
+- **Token-flavored / delegation hooks** (`useDecryptBalanceAs`, `useBatchDecryptBalancesAs`,
   `useDelegateDecryption`) — domain hooks, already well-named.
 - **Genuinely internal modules** — left as-is (public-API-only scope): `services/decryption-service.ts`
   incl. its internal `delegatedBatchDecryptHandlesAs` method, the relayer node/web/cleartext

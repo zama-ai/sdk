@@ -31,7 +31,7 @@ Among the wrapped tokens registered on Ethereum mainnet today, the routing is:
 | cWETH                | WETH       | `approve` + `wrap` (two txs)  |
 | cBRON                | BRON       | `approve` + `wrap` (two txs)  |
 
-ERC-1363 is a conditional optimisation, not a recommended new default — only a small subset of tokens implement it today. Tokens that don't (USDC, USDT, DAI, and most existing ERC-20s) continue to use `approve` + `wrap`. Any newly deployed wrapper picks up the `transferAndCall` path automatically if its underlying ERC-20 implements ERC-1363 — no opt-in is required from your code. See the [`WrappersRegistry` reference](../reference/sdk/WrappersRegistry.md) for how to look up the wrapper for a given ERC-20.
+ERC-1363 is a conditional optimization, not a recommended new default — only a small subset of tokens implement it today. Tokens that don't (USDC, USDT, DAI, and most existing ERC-20s) continue to use `approve` + `wrap`. Any newly deployed wrapper picks up the `transferAndCall` path automatically if its underlying ERC-20 implements ERC-1363 — no opt-in is required from your code. See the [`WrappersRegistry` reference](../reference/sdk/WrappersRegistry.md) for how to look up the wrapper for a given ERC-20.
 
 ## Steps
 

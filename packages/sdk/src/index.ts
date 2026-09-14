@@ -106,6 +106,7 @@ export {
   DelegationNotPropagatedError,
   DelegationSelfNotAllowedError,
   EncryptionFailedError,
+  EncryptOffloadUnavailableError,
   ERC20ReadFailedError,
   InsufficientAllowanceError,
   InsufficientConfidentialBalanceError,
@@ -131,12 +132,15 @@ export {
   TransportKeyPairExpiredError,
   UnifiedDecryptionUnsupportedError,
   UnifiedPermitNotSupportedError,
+  UnshieldAlreadyFinalizedError,
   WalletAccountNotReadyError,
   WalletNotConnectedError,
   ZamaError,
   ZamaErrorCode,
   type BalanceErrorDetails,
   type ErrorForCode,
+  type SigningErrorMetadata,
+  type UnshieldAlreadyFinalizedDetails,
 } from "./errors";
 export { ZamaSDKEvents } from "./events";
 export type {
@@ -151,6 +155,8 @@ export type {
   EncryptStartEvent,
   FinalizeUnwrapSubmittedEvent,
   InvalidateDecryptionSignaturesSubmittedEvent,
+  PermitErrorEvent,
+  PermitOperation,
   RevokeDelegationSubmittedEvent,
   SetOperatorSubmittedEvent,
   ShieldSubmittedEvent,
@@ -307,6 +313,7 @@ export {
   underlyingContract,
   unwrapContract,
   unwrapFromBalanceContract,
+  unwrapRequesterContract,
   wrapContract,
 } from "./contracts";
 export type { PaginatedResult, TokenWrapperPair, TokenWrapperPairWithMetadata } from "./contracts";

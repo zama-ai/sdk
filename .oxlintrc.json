@@ -157,6 +157,7 @@
         "**/*.config.mts",
         "**/*.config.cts",
         "packages/sdk/src/worker/**",
+        "packages/sdk/src/services/logger-service.ts",
         "packages/sdk/src/token/token.ts"
       ],
       "rules": { "no-console": "off" }

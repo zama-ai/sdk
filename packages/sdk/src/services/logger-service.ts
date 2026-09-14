@@ -39,4 +39,14 @@ export class LoggerService implements GenericLogger {
   debug(message: string, data?: Record<string, unknown>): void {
     this.#logger?.debug(`${this.#prefix} ${message}`, data);
   }
+
+  /**
+   * Warns on the console whatever the logger is, and once more through the
+   * consumer's own logger when one was supplied. The configured logger may be
+   * silenced, while these failures must still reach the console.
+   */
+  warnAlways(message: string): void {
+    console.warn(`${this.#prefix} ${message}`);
+    this.warn(message);
+  }
 }

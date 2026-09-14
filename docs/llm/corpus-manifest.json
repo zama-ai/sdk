@@ -97,6 +97,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:changelog/README",
+      "title": "Release channels",
+      "source_path": "docs/gitbook/src/changelog/README.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/changelog/README.md",
+      "source_type": "official-doc",
+      "category": "changelog",
+      "logical_path": "changelog/README",
+      "description": "What stable, beta, and alpha mean for @zama-fhe/sdk, and where to find what changed in each.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:changelog/beta",
       "title": "Beta",
       "source_path": "docs/gitbook/src/changelog/beta.md",
@@ -117,6 +129,18 @@
       "category": "changelog",
       "logical_path": "changelog/v3",
       "description": "Human-readable release notes for the 3.x line — what changed in each minor version of @zama-fhe/sdk and @zama-fhe/react-sdk, in plain language.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:changelog/v3-6",
+      "title": "3.6.x",
+      "source_path": "docs/gitbook/src/changelog/v3-6.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/changelog/v3-6.md",
+      "source_type": "official-doc",
+      "category": "changelog",
+      "logical_path": "changelog/v3-6",
+      "description": "Release notes for the 3.6.x line.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -1172,7 +1196,7 @@
       "source_type": "official-doc",
       "category": "reference-react",
       "logical_path": "reference/react/useToken",
-      "description": "Hook returning a memoised Token instance for a given address.",
+      "description": "Hook returning a memoized Token instance for a given address.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -1184,7 +1208,7 @@
       "source_type": "official-doc",
       "category": "reference-react",
       "logical_path": "reference/react/useWrappedToken",
-      "description": "React hook returning a memoised WrappedToken instance.",
+      "description": "React hook returning a memoized WrappedToken instance.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

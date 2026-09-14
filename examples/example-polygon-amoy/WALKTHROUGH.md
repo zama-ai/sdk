@@ -83,7 +83,7 @@ Two reasons for the proxy:
 
 The upstream default is the shared public testnet relayer, which serves both Sepolia and Polygon Amoy. It is **keyless**: no API key is required for testnet. Override `RELAYER_URL` and `RELAYER_API_KEY` in `.env.local` only if you run a private relayer. `RELAYER_URL` is the bare host, no `/v2` suffix.
 
-The proxy also normalises failures: a network error or a 30-second timeout returns a JSON `503` rather than an HTML error page, which the `web()` worker can parse.
+The proxy also normalizes failures: a network error or a 30-second timeout returns a JSON `503` rather than an HTML error page, which the `web()` worker can parse.
 
 ```
 Full FHE stack (Polygon Amoy, Sepolia, Mainnet)   Cleartext stack (Hoodi, BNB testnet, InGen)
@@ -323,7 +323,7 @@ As soon as a valid address is entered, a live **delegation status** indicator ap
 
 Click **Decrypt Balance** to decrypt the owner's confidential balance. The result is displayed in token units.
 
-> **Cache behaviour:** decrypted values are cached locally in IndexedDB, keyed by the on-chain encrypted handle. If the owner's balance does not change between two decrypt calls, the second call returns the cached value without re-checking the ACL. This is intentional. See [Troubleshooting](#troubleshooting) for details.
+> **Cache behavior:** decrypted values are cached locally in IndexedDB, keyed by the on-chain encrypted handle. If the owner's balance does not change between two decrypt calls, the second call returns the cached value without re-checking the ACL. This is intentional. See [Troubleshooting](#troubleshooting) for details.
 
 ### Step 11: Revoke decryption access (owner wallet)
 
