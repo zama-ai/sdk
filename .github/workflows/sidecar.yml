@@ -63,6 +63,16 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install repository toolchain
         run: rustup show
+      - name: Cache cargo
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            clients/rust/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('clients/rust/Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-
       - name: Check formatting
         run: cargo fmt --manifest-path clients/rust/Cargo.toml --check
       - name: Test default features
