@@ -2,6 +2,7 @@ import type { FheChain } from "../chains";
 import { ConfigurationError } from "../errors";
 import { IndexedDBStorage } from "../storage/indexeddb-storage";
 import { MemoryStorage } from "../storage/memory-storage";
+import type { LoggerService } from "../services/logger-service";
 import type { GenericStorage } from "../types";
 import type { RelayerConfig } from "./types";
 
@@ -33,47 +34,37 @@ export interface ResolvedChainRelayer {
 export function resolveChainRelayers(
   chains: readonly FheChain[],
   relayers: Readonly<Record<number, RelayerConfig>>,
+  logger: LoggerService,
 ): Map<number, ResolvedChainRelayer> {
-  const chainMap = new Map<number, FheChain>(chains.map((c) => [c.id, c]));
-  if (chainMap.size !== chains.length) {
-    const ids = chains.map((c) => c.id);
-    const dupes = [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
+  const ids = chains.map((c) => c.id);
+  const dupes = [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
+  if (dupes.length > 0) {
     throw new ConfigurationError(
       `Duplicate chain id(s) [${dupes.join(", ")}] in the chains array. ` +
         `Each chain id must appear only once. Note: hardhat and anvil are aliases (both use 31337).`,
     );
   }
-  const relayerMap = new Map(Object.entries(relayers));
-  const result = new Map<number, ResolvedChainRelayer>();
 
-  for (const id of chainMap.keys()) {
-    const chain = chainMap.get(id);
-    const relayerConfig = relayerMap.get(String(id));
-
-    if (!relayerConfig) {
-      throw new ConfigurationError(
-        `Chain ${id} has no relayer configured. ` +
-          `Add a relayer entry: relayers: { [${id}]: web() }`,
-      );
-    }
-
-    if (!chain) {
-      throw new ConfigurationError(
-        `Chain ${id} has a relayer configured but no entry in the chains array. ` +
-          `Add the chain config to the chains array.`,
-      );
-    }
-
-    result.set(id, { chain, relayerConfig });
+  const orphaned = Object.keys(relayers)
+    .map(Number)
+    .filter((id) => !ids.includes(id));
+  if (orphaned.length > 0) {
+    logger.warn(
+      `Relayer entries for chain(s) [${orphaned.join(", ")}] are ignored: those chains are not in ` +
+        `the chains array. Add the chain config to use them, or drop the relayer entries.`,
+    );
   }
 
-  const relayerIdSet = new Set(Object.keys(relayers).map(Number));
-  const orphaned = new Set([...relayerIdSet].filter((id) => !chainMap.has(id)));
-  if (orphaned.size > 0) {
-    throw new ConfigurationError(
-      `Relayer entries for chain(s) [${[...orphaned].join(", ")}] have no matching entry ` +
-        `in the chains array. Remove them or add the corresponding chain config.`,
-    );
+  const result = new Map<number, ResolvedChainRelayer>();
+  for (const chain of chains) {
+    const relayerConfig = relayers[chain.id];
+    if (!relayerConfig) {
+      throw new ConfigurationError(
+        `Chain ${chain.id} has no relayer configured. ` +
+          `Add a relayer entry: relayers: { [${chain.id}]: web() }`,
+      );
+    }
+    result.set(chain.id, { chain, relayerConfig });
   }
 
   return result;

@@ -45,8 +45,7 @@ export const RAW_END = "<!-- docs:changelog raw-material:end -->";
 
 /** The reset state of the Beta page after promotion — a stable template so the
  *  "already reset" check is semantic (see betaHasSubstance), not byte-exact. */
-const BETA_EMPTY_PLACEHOLDER =
-  "_Nothing is staged for the next release yet. As beta builds land, run `pnpm docs:changelog` to refresh this page._";
+const BETA_EMPTY_PLACEHOLDER = "_Nothing is staged for the next release yet._";
 
 // ───────────────────────────────────────────────────────────── parsing ──
 

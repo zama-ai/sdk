@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 import {
   ANVIL_DEPLOY_TIMEOUT_MS,
+  HERMETIC_TEST_IGNORE,
   NEXTJS_ANVIL_PORT,
   NEXTJS_PORT,
   VITE_ANVIL_PORT,
@@ -27,7 +28,7 @@ export default defineConfig<{}, WorkerFixtures>({
   projects: [
     {
       name: "nextjs",
-      testIgnore: ["**/node/**", "**/*.node.spec.ts"],
+      testIgnore: HERMETIC_TEST_IGNORE,
       workers: 1,
       use: {
         baseURL: `http://localhost:${NEXTJS_PORT}`,
@@ -38,7 +39,7 @@ export default defineConfig<{}, WorkerFixtures>({
     },
     {
       name: "vite",
-      testIgnore: ["**/node/**", "**/*.node.spec.ts"],
+      testIgnore: HERMETIC_TEST_IGNORE,
       workers: 1,
       use: {
         baseURL: `http://localhost:${VITE_PORT}`,

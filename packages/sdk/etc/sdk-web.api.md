@@ -8,6 +8,12 @@ import { createFhevmClient } from '@fhevm/sdk/viem';
 import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 
 // @public
+export type EncryptWorkerTimeouts = {
+    readonly spawn: number;
+    readonly init: number;
+};
+
+// @public
 export type FhevmClientOptions = NonNullable<Parameters<typeof createFhevmClient>[0]["options"]>;
 
 // @public
@@ -37,11 +43,18 @@ export interface RelayerOptions extends Pick<FhevmRelayerOptions, "timeout" | "d
 }
 
 // @public
-export function web(options?: RelayerOptions): WebRelayerConfig;
+export function web(options?: WebRelayerOptions): WebRelayerConfig;
 
 // @public
 export interface WebRelayerConfig extends RelayerConfig {
     readonly type: "web";
+}
+
+// @public
+export interface WebRelayerOptions extends RelayerOptions {
+    readonly offloadEncrypt?: "auto" | boolean;
+    readonly offloadTimeouts?: Partial<EncryptWorkerTimeouts>;
+    readonly offloadWorker?: string | URL | (() => Worker);
 }
 
 // (No @packageDocumentation comment for this package)

@@ -24,6 +24,8 @@ export const ZamaErrorCode = {
   EncryptionFailed: "ENCRYPTION_FAILED",
   /** FHE decryption failed. */
   DecryptionFailed: "DECRYPTION_FAILED",
+  /** Encryption offload was required (`offloadEncrypt: true`) but the worker is unavailable. */
+  EncryptOffloadUnavailable: "ENCRYPT_OFFLOAD_UNAVAILABLE",
   /** On-chain transaction reverted. */
   TransactionReverted: "TRANSACTION_REVERTED",
   /** Transport key pair has expired and needs regeneration. */
@@ -94,6 +96,8 @@ export const ZamaErrorCode = {
   UnifiedPermitNotSupported: "UNIFIED_PERMIT_NOT_SUPPORTED",
   /** A stored V2/wildcard permit's scope is needed, but the connected relayer instance doesn't support unified decryption yet. */
   UnifiedDecryptionUnsupported: "UNIFIED_DECRYPTION_UNSUPPORTED",
+  /** The unwrap request was already finalized on-chain; there is nothing left to resume. */
+  UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
@@ -118,6 +122,7 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.SigningFailed]: false,
   [ZamaErrorCode.EncryptionFailed]: false,
   [ZamaErrorCode.DecryptionFailed]: false,
+  [ZamaErrorCode.EncryptOffloadUnavailable]: false, // the worker realm is unusable for this page; a retry hits the same environment
   [ZamaErrorCode.TransactionReverted]: false,
   [ZamaErrorCode.TransportKeyPairExpired]: false,
   [ZamaErrorCode.InvalidTransportKeyPair]: false,
@@ -153,6 +158,7 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.PreparedPermitExpired]: false, // caller must re-run preparePermit for a fresh validity window
   [ZamaErrorCode.UnifiedPermitNotSupported]: false, // resolves only once the chain itself upgrades to protocol v0.14+
   [ZamaErrorCode.UnifiedDecryptionUnsupported]: false, // resolves only once this relayer instance deploys /v3/user-decrypt, or the caller falls back to a V1 permit
+  [ZamaErrorCode.UnshieldAlreadyFinalized]: false, // the funds already arrived; the stale pointer is cleared
 };
 
 /**

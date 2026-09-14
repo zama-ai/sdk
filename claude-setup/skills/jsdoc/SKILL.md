@@ -193,7 +193,7 @@ export class DecryptCache {
  * Each entry is keyed by `(requester, contractAddress, handle)` so that...
  * Addresses are checksummed and handles lowercased...
  * A separate index (`zama:decrypt:keys`) tracks all stored cache keys...
- * Index writes are serialised through a micro-queue...
+ * Index writes are serialized through a micro-queue...
  *
  * Cache storage key format:
  * ```
@@ -356,7 +356,7 @@ Keep comments that explain **why** (non-obvious design decisions, workarounds, k
 iterations: 600_000, // NIST SP 800-132 (2023) for PBKDF2-SHA-256. Do not reduce.
 
 // GOOD — concurrency design on field declarations
-// Serialises re-entrant calls: while one caller is checking chain IDs
+// Serializes re-entrant calls: while one caller is checking chain IDs
 // and potentially tearing down an old worker, others await this promise.
 #ensureLock: Promise<WorkerClient> | null = null;
 // Deduplicates WASM init: all concurrent callers share one promise.
@@ -458,7 +458,7 @@ export type StrippedQueryOptionKeys = "gcTime" | "staleTime" | ...;
  * RelayerWeb — browser encryption/decryption backend using a Web Worker.
  *
  * @privateRemarks
- * Uses a two-level lock: `#ensureLock` serialises chain-ID checks and
+ * Uses a two-level lock: `#ensureLock` serializes chain-ID checks and
  * worker teardown, while `#initPromise` deduplicates the WASM init.
  * Both are needed because chain switches must complete atomically
  * before a new init can start.

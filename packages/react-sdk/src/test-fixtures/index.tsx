@@ -21,6 +21,7 @@ export const test: TestAPI<SDKTestFixtures & ReactSDKTestFixtures> =
 expect.extend({ ...mutationAssertions });
 
 export { expect };
+export { makeLogger } from "../../../sdk/src/test-fixtures";
 export type { ReactAddressFixtures } from "./addresses";
 export type { MutationFixtures } from "./mutations";
 export type { QueryClientFixtures } from "./query-client";

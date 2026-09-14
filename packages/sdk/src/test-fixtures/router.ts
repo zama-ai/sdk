@@ -4,6 +4,7 @@ import { vi } from "vitest";
 import { ChainRouter } from "../chains/router";
 import type { FheChain } from "../chains/types";
 import type { RelayerSDK } from "../relayer/types";
+import { LoggerService } from "../services/logger-service";
 import { createMockChain } from "./chain";
 import { createMockRelayer } from "./relayer";
 import type { FixturesOf } from "./types";
@@ -56,7 +57,7 @@ class MockChainRouter extends ChainRouter {
     // The base constructor builds one backend per chain; hand it a config that
     // returns our mock backends so construction succeeds. The getters below
     // route off our own state, so the base's maps are never read.
-    super(chains, configs);
+    super(chains, configs, new LoggerService());
 
     this.#chainList = chains;
     this.#activeChainId = overrides.activeChainId ?? chains[0].id;
