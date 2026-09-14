@@ -2,6 +2,8 @@ import type { Hex } from "viem";
 
 /** Framework-agnostic log shape compatible with any Ethereum provider. */
 export interface RawLog {
+  /** Address of the contract that emitted the log. Optional for adapter compatibility. */
+  readonly address?: Hex;
   /** Indexed event topics (topic[0] is the event signature hash). */
   readonly topics: readonly Hex[];
   /** ABI-encoded non-indexed event data. */

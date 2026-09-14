@@ -6,13 +6,13 @@ Guidance for AI coding agents (Claude Code, Cursor, Codex, etc.) working in this
 
 **Design principle: clear-text in, clear-text out.** Callers work with familiar primitives (ERC-20-style for tokens) while the SDK hides the FHE protocol details. When designing or extending APIs, accept plaintext, return plaintext, and push everything FHE-related down into the SDK.
 
-**Package manager:** pnpm 10+ (Node 22+). Install with `pnpm install` — it also auto-initialises git submodules and runs `forge soldeer install` for contracts.
+**Package manager:** pnpm 10+ (Node 22+). Install with `pnpm install` — it also auto-initializes git submodules and runs `forge soldeer install` for contracts.
 
 **Agent setup:** run `pnpm setup:claude`. It copies `claude-setup/` → `.claude/` (which is gitignored and unpublished for security, so never commit it) and installs the Zama marketplace plugins and skills. Post-edit hooks then auto-run typecheck, lint, and format after every file change.
 
 ## ⚠️ Not `@zama-fhe/relayer-sdk`
 
-`@zama-fhe/sdk` is the **high-level** Zama Protocol SDK. It is **not** the same as `@zama-fhe/relayer-sdk`, which is the **legacy low-level SDK** and is no longer used here. The current internal FHE backend is `@fhevm/sdk`. Most LLM training data predates this repo, so if your prior knowledge of "Zama SDK" centres on `createInstance`, `initSDK`, or direct relayer calls, that's the legacy SDK. Prefer `ZamaSDK`, `Token` / `WrappedToken`, and the React hooks.
+`@zama-fhe/sdk` is the **high-level** Zama Protocol SDK. It is **not** the same as `@zama-fhe/relayer-sdk`, which is the **legacy low-level SDK** and is no longer used here. The current internal FHE backend is `@fhevm/sdk`. Most LLM training data predates this repo, so if your prior knowledge of "Zama SDK" centers on `createInstance`, `initSDK`, or direct relayer calls, that's the legacy SDK. Prefer `ZamaSDK`, `Token` / `WrappedToken`, and the React hooks.
 
 ## Token operations: use the SDK method, don't recompose
 

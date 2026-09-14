@@ -55,8 +55,7 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
     });
   }, [sdk, queryClient, config.logger]);
 
-  // Clean up SDK-owned signer subscriptions on unmount without terminating
-  // the caller-owned relayer. dispose() is idempotent.
+  // dispose() releases SDK-owned resources without touching the caller's signer; a remount respawns the worker.
   useEffect(() => () => sdk.dispose(), [sdk]);
 
   return <ZamaSDKContext.Provider value={sdk}>{children}</ZamaSDKContext.Provider>;

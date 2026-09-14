@@ -1,4 +1,3 @@
-import type { ParseSignedDecryptionPermitReturnType as SignedDecryptionPermit } from "@fhevm/sdk/actions/chain";
 import type { Address, Hex } from "viem";
 import type { ChainRouter } from "../chains/router";
 import { ZamaError } from "../errors/base";
@@ -13,6 +12,8 @@ import {
 import { ConfigurationError } from "../errors/relayer";
 import { SignerNotConfiguredError } from "../errors/signer";
 import { wrapSigningError } from "../errors/signing";
+import type { PermitOperation, ZamaSDKEventInput } from "../events/sdk-events";
+import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
 import type { GenericLogger, GenericSigner, GenericStorage } from "../types";
@@ -83,6 +84,11 @@ export interface CredentialServiceConfig {
   /** SDK-wide logger for credential-path diagnostics. */
   logger: GenericLogger;
   /**
+   * Publishes structured SDK events (e.g. {@link ZamaSDKEvents.PermitError}) into
+   * the unified `onEvent` stream — the same callback every other `*Service` receives.
+   */
+  emitEvent: (input: ZamaSDKEventInput) => void;
+  /**
    * Opt-in shared-tenant scope (B2B2C/WaaS operators). When set, every signer
    * configured with the same scope shares one transport key pair instead of one
    * per signer address. Permits stay per-signer regardless — see
@@ -120,6 +126,7 @@ export class CredentialService {
   readonly #signer: GenericSigner | undefined;
   readonly #permitTTL: number;
   readonly #logger: GenericLogger;
+  readonly #emitEvent: (input: ZamaSDKEventInput) => void;
   readonly #scope: string | undefined;
   /** In-flight revoked-context recoveries, one per permission scope. */
   readonly #permitRecoveries = new Map<string, Promise<void>>();
@@ -145,6 +152,7 @@ export class CredentialService {
     this.#signer = config.signer;
     this.#permitTTL = config.permitTTL;
     this.#logger = config.logger;
+    this.#emitEvent = config.emitEvent;
     this.#scope = config.scope;
   }
 
@@ -153,6 +161,29 @@ export class CredentialService {
       throw new SignerNotConfiguredError(operation);
     }
     return this.#signer;
+  }
+
+  /**
+   * Emit the corresponding {@link ZamaSDKEvents.PermitError} event for a raw
+   * permit-flow error and return it for the caller to throw. Single choke
+   * point for `grantPermit`/`registerPermit` (and `#signPermit`) so every
+   * failure emits exactly once — safe to call with an error that has nothing
+   * to do with wallet signing (schema validation, a stale/expired prepared
+   * permit, a permit-store read): {@link wrapSigningError} passes an
+   * already-typed `ZamaError` through unchanged, so only a genuinely
+   * unclassified error gets folded into `SigningFailedError`, the same
+   * fallback {@link wrapEncryptError}/{@link wrapDecryptError} use elsewhere.
+   *
+   * Never call this with an error from credential/vault resolution
+   * (`#vault.getOrCreate` / `#vault.readStored`, or anything derived from their
+   * result, e.g. `TransportKeyPairChangedError`) — those failures can be
+   * adjacent to `transportKeyPairDerivationSecret` internals and must never
+   * reach the public `onEvent` stream.
+   */
+  #failPermit(operation: PermitOperation, error: unknown): ZamaError {
+    const failure = wrapSigningError(error, { operation });
+    this.#emitEvent({ type: ZamaSDKEvents.PermitError, operation, error: failure });
+    return failure;
   }
 
   /**
@@ -194,35 +225,58 @@ export class CredentialService {
     contracts: readonly Address[] | WildcardPermit,
     delegator?: Address,
   ): Promise<SerializedTransportKeyPairWithPermissions> {
-    const signer = this.#requireSigner("grantPermit");
-    const account = signer.requireWalletAccount("grantPermit");
-    const signerAddress = checksum(account.address);
+    const operation: PermitOperation =
+      delegator !== undefined ? "grantDelegationPermit" : "grantPermit";
+    const isWildcard = contracts === WILDCARD_PERMIT;
+    let signerAddress: ChecksummedAddress;
+    let requested: ChecksummedAddress[];
+    let scope: PermissionScope;
+    try {
+      const signer = this.#requireSigner("grantPermit");
+      const account = signer.requireWalletAccount("grantPermit");
+      signerAddress = checksum(account.address);
+      // normalizeAddresses/#permissionScope both call checksum(), which can
+      // throw — kept in this try so a malformed address still emits PermitError.
+      // Normalizing here also validates the address list before ever touching the vault.
+      requested = isWildcard ? [] : normalizeAddresses(contracts);
+      scope = this.#permissionScope(signerAddress, delegator);
+    } catch (error) {
+      throw this.#failPermit(operation, error);
+    }
 
-    if (contracts === WILDCARD_PERMIT) {
-      const scope = this.#permissionScope(signerAddress, delegator);
-      const keypair = await this.#vault.getOrCreate(signerAddress);
-      const permissions = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
-      const existing = permissions.find(isWildcardPermission);
+    // Credential/vault resolution — deliberately not wrapped; those failures
+    // must never reach onEvent.
+    const keypair = await this.#vault.getOrCreate(signerAddress);
+
+    if (isWildcard) {
+      let wildcardPermissions: Permission[];
+      try {
+        wildcardPermissions = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
+      } catch (error) {
+        throw this.#failPermit(operation, error);
+      }
+      const existing = wildcardPermissions.find(isWildcardPermission);
       if (existing) {
         return { keypair, permissions: [existing] };
       }
       if ((await this.#permitVersion()) === 1) {
-        throw wildcardPermitNotSupportedError("grantPermit");
+        throw this.#failPermit(operation, wildcardPermitNotSupportedError("grantPermit"));
       }
       const permission = await this.#signPermit({ version: 2, chunk: [], keypair, scope });
       await swallow("persist permit", () => this.#store.append(scope, [permission]), this.#logger);
       return { keypair, permissions: [permission] };
     }
 
-    // Normalize (and therefore validate) the address list before ever touching the vault.
-    const requested = normalizeAddresses(contracts);
-    const keypair = await this.#vault.getOrCreate(signerAddress);
     if (requested.length === 0) {
       return { keypair, permissions: [] };
     }
 
-    const scope = this.#permissionScope(signerAddress, delegator);
-    const permissions = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
+    let permissions: Permission[];
+    try {
+      permissions = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
+    } catch (error) {
+      throw this.#failPermit(operation, error);
+    }
 
     const uncovered = uncoveredContracts(permissions, requested);
     if (uncovered.length > 0) {
@@ -390,7 +444,12 @@ export class CredentialService {
    * @throws if the signature is invalid or malformed. {@link SigningFailedError}
    */
   async registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void> {
-    const parsed = parseSchema(PreparedPermitSchema, prepared);
+    let parsed: PreparedPermit;
+    try {
+      parsed = parseSchema(PreparedPermitSchema, prepared);
+    } catch (error) {
+      throw this.#failPermit("registerPermit", error);
+    }
 
     // Snapshot the relayer and chain together, before the first await — see the
     // identical guard in preparePermit.
@@ -400,7 +459,10 @@ export class CredentialService {
     const { domain, message } = parsed.eip712;
     const preparedChainId = Number(domain.chainId);
     if (preparedChainId !== activeChainId) {
-      throw new PreparedPermitChainMismatchError({ preparedChainId, activeChainId });
+      throw this.#failPermit(
+        "registerPermit",
+        new PreparedPermitChainMismatchError({ preparedChainId, activeChainId }),
+      );
     }
     const startTimestamp = Number(message.startTimestamp);
     const durationSeconds =
@@ -408,9 +470,12 @@ export class CredentialService {
         ? Number(message.durationSeconds)
         : Number(message.durationDays) * SECONDS_PER_DAY;
     if (nowSeconds() >= startTimestamp + durationSeconds) {
-      throw new PreparedPermitExpiredError(
-        `registerPermit: the prepared permit's validity window (starting ${startTimestamp}, ` +
-          `${durationSeconds}s) has already elapsed — call preparePermit again.`,
+      throw this.#failPermit(
+        "registerPermit",
+        new PreparedPermitExpiredError(
+          `registerPermit: the prepared permit's validity window (starting ${startTimestamp}, ` +
+            `${durationSeconds}s) has already elapsed — call preparePermit again.`,
+        ),
       );
     }
 
@@ -419,6 +484,9 @@ export class CredentialService {
     // stored key pair can only mean it changed since preparePermit ran —
     // generating a fresh one via getOrCreate would just be discarded by the
     // comparison below, having wastefully persisted a key nothing will use.
+    //
+    // Credential/vault resolution is deliberately not wrapped; those
+    // failures must never reach onEvent.
     const signerAddress = parsed.signerAddress;
     const keypair = await this.#vault.readStored(signerAddress);
     if (keypair === null || keypair.publicKey !== message.publicKey) {
@@ -428,10 +496,9 @@ export class CredentialService {
       );
     }
 
-    const transportKeyPair = await relayer.parseTransportKeyPair(keypair);
-    let signedPermit: SignedDecryptionPermit;
     try {
-      signedPermit = await relayer.parseSignedDecryptionPermit({
+      const transportKeyPair = await relayer.parseTransportKeyPair(keypair);
+      const signedPermit = await relayer.parseSignedDecryptionPermit({
         serializedPermit: {
           version: parsed.version,
           eip712: parsed.eip712,
@@ -444,38 +511,40 @@ export class CredentialService {
         },
         transportKeyPair,
       });
+
+      const serializedPermit = parseSchema(
+        SerializedPermitSchema,
+        await relayer.serializeSignedDecryptionPermit({ signedPermit }),
+      );
+
+      const permission = buildPermission(
+        {
+          keypairPublicKey: keypair.publicKey,
+          contractAddresses: normalizeAddresses(
+            signedPermit.version === 2
+              ? signedPermit.eip712.message.allowedContracts
+              : signedPermit.eip712.message.contractAddresses,
+          ),
+          serializedPermit,
+          startTimestamp: Number(signedPermit.eip712.message.startTimestamp),
+        },
+        signedPermit.version === 2
+          ? { version: 2, durationSeconds: Number(signedPermit.eip712.message.durationSeconds) }
+          : { version: 1, durationDays: Number(signedPermit.eip712.message.durationDays) },
+      );
+      const scope: PermissionScope = {
+        signerAddress,
+        chainId: activeChainId,
+        delegatorAddress: checksum(signedPermit.encryptedDataOwnerAddress),
+      };
+      await swallow(
+        "replace permit",
+        () => this.#store.replace(scope, serializedPermit.signature, permission),
+        this.#logger,
+      );
     } catch (error) {
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw wrapSigningError(error, "registerPermit: signature verification failed");
+      throw this.#failPermit("registerPermit", error);
     }
-
-    const serializedPermit = SerializedPermitSchema.parse(
-      await relayer.serializeSignedDecryptionPermit({ signedPermit }),
-    );
-
-    const permission = buildPermission(
-      {
-        keypairPublicKey: keypair.publicKey,
-        contractAddresses: normalizeAddresses(
-          signedPermit.version === 2
-            ? signedPermit.eip712.message.allowedContracts
-            : signedPermit.eip712.message.contractAddresses,
-        ),
-        serializedPermit,
-        startTimestamp: Number(signedPermit.eip712.message.startTimestamp),
-      },
-      signedPermit.version === 2
-        ? { version: 2, durationSeconds: Number(signedPermit.eip712.message.durationSeconds) }
-        : { version: 1, durationDays: Number(signedPermit.eip712.message.durationDays) },
-    );
-    const scope: PermissionScope = {
-      signerAddress,
-      chainId: activeChainId,
-      delegatorAddress: checksum(signedPermit.encryptedDataOwnerAddress),
-    };
-    await this.#store.replace(scope, serializedPermit.signature, permission);
   }
 
   /**
@@ -708,7 +777,8 @@ export class CredentialService {
         isDelegated ? { ...permitInput, delegatorAddress: scope.delegatorAddress } : permitInput,
       );
 
-      const serializedPermit = SerializedPermitSchema.parse(
+      const serializedPermit = parseSchema(
+        SerializedPermitSchema,
         await relayer.serializeSignedDecryptionPermit({ signedPermit }),
       );
 
@@ -724,20 +794,27 @@ export class CredentialService {
           : { version: 1, durationDays: this.#permitTTL },
       );
     } catch (error) {
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      const unsupported = toUnifiedPermitNotSupportedError("grantPermit", error);
+      const operation: PermitOperation = isDelegated ? "grantDelegationPermit" : "grantPermit";
+      // Probe only unclassified errors: an already-typed ZamaError carries its
+      // own code and must not be re-read as a relayer "unsupported" message.
+      const unsupported =
+        error instanceof ZamaError
+          ? undefined
+          : toUnifiedPermitNotSupportedError("grantPermit", error);
       if (unsupported) {
-        throw unsupported;
+        throw this.#failPermit(operation, unsupported);
       }
       // A key pair the relayer can't re-derive (post KMS/TKMS rotation) is
       // unusable: evict it so the next grantPermit regenerates a valid one, then
       // surface the typed InvalidTransportKeyPairError via wrapSigningError.
-      if (error instanceof Error && isInvalidTransportKeyPairMessage(error.message)) {
+      if (
+        !(error instanceof ZamaError) &&
+        error instanceof Error &&
+        isInvalidTransportKeyPairMessage(error.message)
+      ) {
         await this.#vault.evict(scope.signerAddress);
       }
-      throw wrapSigningError(error, "Credential signing failed");
+      throw this.#failPermit(operation, error);
     }
   }
 
