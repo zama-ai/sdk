@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.7.0-alpha.1](https://github.com/zama-ai/sdk/compare/v3.6.0...v3.7.0-alpha.1) (2026-09-14)
+
+### Features
+
+- expose wildcard delegation ([#703](https://github.com/zama-ai/sdk/issues/703)) ([c9749fb]())
+- unified-decryption-for-offline-permit-flow ([#705](https://github.com/zama-ai/sdk/issues/705)) ([e570253]())
+- v2 wildcard permits ([#653](https://github.com/zama-ai/sdk/issues/653)) ([8b07926]())
+- wire v1v2 permit branching into decryption ([#684](https://github.com/zama-ai/sdk/issues/684)) ([4957a0c]())
+
 ## [3.6.0](https://github.com/zama-ai/sdk/compare/v3.5.1...v3.6.0) (2026-09-11)
 
 ### Features
