@@ -166,6 +166,45 @@ const config = createConfig({
 });
 ```
 
+#### Events
+
+Every event extends a common shape (an optional `tokenAddress`, a `timestamp`, and, for multi-phase operations like unshield, a shared `operationId`), plus fields specific to its `type`:
+
+| Event                                                                                                                                                                                | Fires when                                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `EncryptStart` / `EncryptEnd` / `EncryptError`                                                                                                                                       | An FHE encryption begins, succeeds, or fails.                                                                                                    |
+| `DecryptStart` / `DecryptEnd` / `DecryptError`                                                                                                                                       | A decryption begins, succeeds, or fails — see [`decryption.decryptValues`](#decryption-decryptvalues) for the full walkthrough and code samples. |
+| `PermitError`                                                                                                                                                                        | `grantPermit`, `grantDelegationPermit`, or `registerPermit` fails.                                                                               |
+| `TransactionError`                                                                                                                                                                   | A write operation's transaction fails, before or after submission.                                                                               |
+| `ShieldSubmitted`, `TransferSubmitted`, `TransferFromSubmitted`, `SetOperatorSubmitted`, `ApproveUnderlyingSubmitted`, `WrapSubmitted`, `UnwrapSubmitted`, `FinalizeUnwrapSubmitted` | The corresponding write transaction is submitted — each carries the transaction's `txHash`.                                                      |
+| `DelegationSubmitted` / `RevokeDelegationSubmitted`                                                                                                                                  | A delegation grant or revoke transaction is submitted — see [Delegation events](./delegation.md#events).                                         |
+| `UnshieldPhase1Submitted` / `UnshieldPhase2Started` / `UnshieldPhase2Submitted`                                                                                                      | The two-phase unshield flow's request and finalize steps progress.                                                                               |
+
+`TransactionError` and `PermitError` carry the same classified error your `await` also throws or rejects with, so you can wire identical handling into telemetry without duplicating logic:
+
+```ts
+import { ZamaSDKEvents, type TransactionErrorEvent, type PermitErrorEvent } from "@zama-fhe/sdk";
+
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
+  onEvent: (event) => {
+    if (event.type === ZamaSDKEvents.TransactionError) {
+      const { operation, error } = event as TransactionErrorEvent;
+      console.error(`[zama] ${operation} failed:`, error);
+    }
+    if (event.type === ZamaSDKEvents.PermitError) {
+      const { operation, error } = event as PermitErrorEvent;
+      console.error(`[zama] ${operation} failed:`, error);
+    }
+  },
+});
+```
+
+`TransactionError.operation` is one of the write operations (`transfer`, `wrap`, `unwrap`, `finalizeUnwrap`, `delegateDecryption`, and others); `PermitError.operation` is `grantPermit`, `grantDelegationPermit`, or `registerPermit`. Both events fire immediately before the same error is thrown — see [`SigningRejectedError`](./errors.md#signingrejectederror) and [`SigningFailedError`](./errors.md#signingfailederror) for the shapes `PermitError.error` most commonly carries.
+
 ### runtime
 
 `FhevmRuntimeConfig | undefined`
@@ -343,7 +382,7 @@ Renamed from `decryption.userDecrypt` (then briefly `decryptValuesFromPairs`) to
 
 Decrypt one or more FHE encrypted values. Returns cached values when available, only calling the relayer for uncached inputs. Results are written through the SDK's internal CachingService so subsequent calls for the same inputs return instantly.
 
-Inputs from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract (up to 5 concurrently). Zero encrypted values (32 zero bytes) resolve to `0n` without hitting the relayer.
+Inputs from different contracts can be mixed — they are grouped by `contractAddress`, and each group is sent to the relayer as one or more requests (up to 5 concurrently): a group is automatically split into multiple chunked requests when its cumulative cleartext-bit cost would exceed the KMS gateway's per-request budget, so an oversized batch for one contract still succeeds instead of being rejected. Zero encrypted values (32 zero bytes) resolve to `0n` without hitting the relayer.
 
 When the relayer is actually called, permits are resolved from the contract addresses of the full input set (including cached and zero entries), ensuring a stable permit scope regardless of which entries happen to be cached. If every entry is zero or already cached, no permits are needed and no wallet prompt is shown.
 
