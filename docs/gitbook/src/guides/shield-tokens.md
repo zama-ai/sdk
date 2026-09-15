@@ -213,7 +213,7 @@ await wrap.mutateAsync({ amount: 1000n });
 {% endtab %}
 {% endtabs %}
 
-`wrap()` validates the ERC-20 balance and the current allowance before submitting: it throws `InsufficientERC20BalanceError` if the balance is too low, and `InsufficientAllowanceError` if the wrapper is not approved for the amount (call `approveUnderlying()` first). Pass `{ to }` to mint the confidential balance to a different recipient.
+`wrap()` validates the ERC-20 balance and the current allowance before submitting: it throws `InsufficientERC20BalanceError` if the balance is too low, and `InsufficientAllowanceError` if the wrapper is not approved for the amount (call `approveUnderlying()` first). Pass `{ to }` to mint the confidential balance to a different recipient, or `{ onWrapSubmitted }` to observe the transaction hash as soon as it's submitted.
 
 ## Next steps
 
