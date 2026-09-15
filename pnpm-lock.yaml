@@ -91,7 +91,7 @@ importers:
         specifier: ^4.1.9
         version: 4.1.9(vitest@4.1.9)
       codemod:
-        specifier: 1.18.3
+        specifier: ^1.18.3
         version: 1.18.3
       conventional-changelog-conventionalcommits:
         specifier: ^9.3.1
@@ -172,7 +172,7 @@ importers:
         specifier: ^22.20.1
         version: 22.20.1
       codemod:
-        specifier: 1.18.3
+        specifier: ^1.18.3
         version: 1.18.3
       typescript:
         specifier: 6.0.3
