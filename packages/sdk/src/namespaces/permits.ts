@@ -5,7 +5,6 @@ import type { WildcardPermit } from "../credentials/utils";
 import { requireConfigured } from "../errors";
 import type { PermitOperation, ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
 import type { CachingService } from "../services/caching-service";
 import type { DelegationService } from "../services/delegation-service";
@@ -368,7 +367,7 @@ export class Permits {
       this.#signer,
       this.#provider,
     );
-    const signerAddress: ChecksummedAddress = checksum(account.address);
+    const signerAddress = checksum(account.address);
     const result = await this.#delegationService.invalidateDecryptionSignaturesBefore(
       signer,
       timestamp,
