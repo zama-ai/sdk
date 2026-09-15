@@ -25,6 +25,7 @@ mod decryption;
 mod encryption;
 mod error;
 mod lifetime;
+mod offline;
 mod operations;
 mod permits;
 mod signer;
@@ -48,6 +49,9 @@ pub use decryption::{
 pub use encryption::{EncryptInput, EncryptOptions, EncryptParams, EncryptResult};
 pub use error::{RpcError, SdkError};
 pub use num_bigint::BigInt;
+pub use offline::{
+    PrepareFees, PrepareOptions, PrepareTransaction, PreparedTransaction, Transaction,
+};
 pub use permits::{Offline, Permits, PreparePermit, PreparedPermit};
 pub use signer::{Signer, SigningRequest};
 pub use storage::{ApplicationStorage, MemoryStorage, NativeStorage, Storage};

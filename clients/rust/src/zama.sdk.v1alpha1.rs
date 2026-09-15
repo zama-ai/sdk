@@ -778,6 +778,181 @@ pub struct EncryptResponse {
     #[prost(bytes = "vec", tag = "2")]
     pub input_proof: ::prost::alloc::vec::Vec<u8>,
 }
+/// One SDK transaction kind per request; multi-step token flows stay in the TypeScript SDK.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PrepareTransactionRequest {
+    #[prost(message, optional, tag = "1")]
+    pub operation: ::core::option::Option<Operation>,
+    /// Sender the SDK binds encrypted inputs to; it must match the key that signs.
+    #[prost(bytes = "vec", tag = "2")]
+    pub from: ::prost::alloc::vec::Vec<u8>,
+    /// Omission reads nonce, gas and fees from live chain state.
+    #[prost(message, optional, tag = "3")]
+    pub options: ::core::option::Option<PrepareOptions>,
+    #[prost(
+        oneof = "prepare_transaction_request::Transaction",
+        tags = "4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14"
+    )]
+    pub transaction: ::core::option::Option<prepare_transaction_request::Transaction>,
+}
+/// Nested message and enum types in `PrepareTransactionRequest`.
+pub mod prepare_transaction_request {
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Transaction {
+        #[prost(message, tag = "4")]
+        ConfidentialTransfer(super::ConfidentialTransfer),
+        #[prost(message, tag = "5")]
+        ConfidentialTransferFrom(super::ConfidentialTransferFrom),
+        #[prost(message, tag = "6")]
+        SetOperator(super::SetOperator),
+        #[prost(message, tag = "7")]
+        Unwrap(super::Unwrap),
+        #[prost(message, tag = "8")]
+        UnwrapAll(super::UnwrapAll),
+        #[prost(message, tag = "9")]
+        FinalizeUnwrap(super::FinalizeUnwrap),
+        #[prost(message, tag = "10")]
+        ApproveUnderlying(super::ApproveUnderlying),
+        #[prost(message, tag = "11")]
+        Wrap(super::Wrap),
+        #[prost(message, tag = "12")]
+        TransferAndCall(super::TransferAndCall),
+        #[prost(message, tag = "13")]
+        DelegateDecryption(super::DelegateDecryption),
+        #[prost(message, tag = "14")]
+        RevokeDelegation(super::RevokeDelegation),
+    }
+}
+/// Each override has independent presence; amounts are canonical base-10 strings.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PrepareOptions {
+    #[prost(uint64, optional, tag = "1")]
+    pub nonce: ::core::option::Option<u64>,
+    #[prost(string, optional, tag = "2")]
+    pub gas_limit: ::core::option::Option<::prost::alloc::string::String>,
+    /// The fee pair is supplied together or not at all.
+    #[prost(message, optional, tag = "3")]
+    pub fees: ::core::option::Option<PrepareFees>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PrepareFees {
+    #[prost(string, tag = "1")]
+    pub max_fee_per_gas: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub max_priority_fee_per_gas: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ConfidentialTransfer {
+    #[prost(bytes = "vec", tag = "1")]
+    pub token: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub to: ::prost::alloc::vec::Vec<u8>,
+    #[prost(string, tag = "3")]
+    pub amount: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ConfidentialTransferFrom {
+    #[prost(bytes = "vec", tag = "1")]
+    pub token: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub owner: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "3")]
+    pub to: ::prost::alloc::vec::Vec<u8>,
+    #[prost(string, tag = "4")]
+    pub amount: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SetOperator {
+    #[prost(bytes = "vec", tag = "1")]
+    pub token: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub operator: ::prost::alloc::vec::Vec<u8>,
+    /// Required Unix timestamp in whole seconds; omission is rejected, never defaulted. A positive past value revokes.
+    #[prost(uint64, optional, tag = "3")]
+    pub until: ::core::option::Option<u64>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Unwrap {
+    #[prost(bytes = "vec", tag = "1")]
+    pub token: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub to: ::prost::alloc::vec::Vec<u8>,
+    #[prost(string, tag = "3")]
+    pub amount: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct UnwrapAll {
+    #[prost(bytes = "vec", tag = "1")]
+    pub token: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub to: ::prost::alloc::vec::Vec<u8>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct FinalizeUnwrap {
+    #[prost(bytes = "vec", tag = "1")]
+    pub wrapper: ::prost::alloc::vec::Vec<u8>,
+    /// unwrapRequestId or legacy encrypted amount from the UnwrapRequested log.
+    #[prost(bytes = "vec", tag = "2")]
+    pub unwrap_request_id_or_amount: ::prost::alloc::vec::Vec<u8>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ApproveUnderlying {
+    #[prost(bytes = "vec", tag = "1")]
+    pub underlying: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub spender: ::prost::alloc::vec::Vec<u8>,
+    #[prost(string, tag = "3")]
+    pub amount: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Wrap {
+    #[prost(bytes = "vec", tag = "1")]
+    pub wrapper: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub to: ::prost::alloc::vec::Vec<u8>,
+    #[prost(string, tag = "3")]
+    pub amount: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct TransferAndCall {
+    #[prost(bytes = "vec", tag = "1")]
+    pub underlying: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub wrapper: ::prost::alloc::vec::Vec<u8>,
+    #[prost(string, tag = "3")]
+    pub amount: ::prost::alloc::string::String,
+    /// Omission self-shields to the sender; present empty bytes reach the SDK unchanged.
+    #[prost(bytes = "vec", optional, tag = "4")]
+    pub recipient_data: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DelegateDecryption {
+    #[prost(bytes = "vec", tag = "1")]
+    pub contract_address: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub delegate_address: ::prost::alloc::vec::Vec<u8>,
+    /// Unix time in whole milliseconds; omission requests a permanent delegation.
+    #[prost(uint64, optional, tag = "3")]
+    pub expiration_date_ms: ::core::option::Option<u64>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RevokeDelegation {
+    #[prost(bytes = "vec", tag = "1")]
+    pub contract_address: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub delegate_address: ::prost::alloc::vec::Vec<u8>,
+}
+/// SDK output unchanged: no signature is produced and nothing is broadcast.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PrepareTransactionResponse {
+    #[prost(string, tag = "1")]
+    pub kind: ::prost::alloc::string::String,
+    #[prost(bytes = "vec", tag = "2")]
+    pub from: ::prost::alloc::vec::Vec<u8>,
+    /// RLP-encoded unsigned EIP-1559 transaction.
+    #[prost(bytes = "vec", tag = "3")]
+    pub unsigned_tx: ::prost::alloc::vec::Vec<u8>,
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum StorageMethod {
@@ -1180,6 +1355,36 @@ pub mod sidecar_service_client {
                     GrpcMethod::new(
                         "zama.sdk.v1alpha1.SidecarService",
                         "DelegatedBatchDecryptValues",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        /// Calls offline.prepare; the caller signs and broadcasts the returned unsigned transaction.
+        pub async fn prepare_transaction(
+            &mut self,
+            request: impl tonic::IntoRequest<super::PrepareTransactionRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::PrepareTransactionResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/zama.sdk.v1alpha1.SidecarService/PrepareTransaction",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "zama.sdk.v1alpha1.SidecarService",
+                        "PrepareTransaction",
                     ),
                 );
             self.inner.unary(req, path, codec).await

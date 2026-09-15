@@ -586,6 +586,122 @@ export interface EncryptResponse {
   inputProof: Buffer;
 }
 
+/** One SDK transaction kind per request; multi-step token flows stay in the TypeScript SDK. */
+export interface PrepareTransactionRequest {
+  operation:
+    | Operation
+    | undefined;
+  /** Sender the SDK binds encrypted inputs to; it must match the key that signs. */
+  from: Buffer;
+  /** Omission reads nonce, gas and fees from live chain state. */
+  options: PrepareOptions | undefined;
+  transaction:
+    | { $case: "confidentialTransfer"; confidentialTransfer: ConfidentialTransfer }
+    | { $case: "confidentialTransferFrom"; confidentialTransferFrom: ConfidentialTransferFrom }
+    | { $case: "setOperator"; setOperator: SetOperator }
+    | { $case: "unwrap"; unwrap: Unwrap }
+    | { $case: "unwrapAll"; unwrapAll: UnwrapAll }
+    | { $case: "finalizeUnwrap"; finalizeUnwrap: FinalizeUnwrap }
+    | { $case: "approveUnderlying"; approveUnderlying: ApproveUnderlying }
+    | { $case: "wrap"; wrap: Wrap }
+    | { $case: "transferAndCall"; transferAndCall: TransferAndCall }
+    | { $case: "delegateDecryption"; delegateDecryption: DelegateDecryption }
+    | { $case: "revokeDelegation"; revokeDelegation: RevokeDelegation }
+    | undefined;
+}
+
+/** Each override has independent presence; amounts are canonical base-10 strings. */
+export interface PrepareOptions {
+  nonce?: bigint | undefined;
+  gasLimit?:
+    | string
+    | undefined;
+  /** The fee pair is supplied together or not at all. */
+  fees: PrepareFees | undefined;
+}
+
+export interface PrepareFees {
+  maxFeePerGas: string;
+  maxPriorityFeePerGas: string;
+}
+
+export interface ConfidentialTransfer {
+  token: Buffer;
+  to: Buffer;
+  amount: string;
+}
+
+export interface ConfidentialTransferFrom {
+  token: Buffer;
+  owner: Buffer;
+  to: Buffer;
+  amount: string;
+}
+
+export interface SetOperator {
+  token: Buffer;
+  operator: Buffer;
+  /** Required Unix timestamp in whole seconds; omission is rejected, never defaulted. A positive past value revokes. */
+  until?: bigint | undefined;
+}
+
+export interface Unwrap {
+  token: Buffer;
+  to: Buffer;
+  amount: string;
+}
+
+export interface UnwrapAll {
+  token: Buffer;
+  to: Buffer;
+}
+
+export interface FinalizeUnwrap {
+  wrapper: Buffer;
+  /** unwrapRequestId or legacy encrypted amount from the UnwrapRequested log. */
+  unwrapRequestIdOrAmount: Buffer;
+}
+
+export interface ApproveUnderlying {
+  underlying: Buffer;
+  spender: Buffer;
+  amount: string;
+}
+
+export interface Wrap {
+  wrapper: Buffer;
+  to: Buffer;
+  amount: string;
+}
+
+export interface TransferAndCall {
+  underlying: Buffer;
+  wrapper: Buffer;
+  amount: string;
+  /** Omission self-shields to the sender; present empty bytes reach the SDK unchanged. */
+  recipientData?: Buffer | undefined;
+}
+
+export interface DelegateDecryption {
+  contractAddress: Buffer;
+  delegateAddress: Buffer;
+  /** Unix time in whole milliseconds; omission requests a permanent delegation. */
+  expirationDateMs?: bigint | undefined;
+}
+
+export interface RevokeDelegation {
+  contractAddress: Buffer;
+  delegateAddress: Buffer;
+}
+
+/** SDK output unchanged: no signature is produced and nothing is broadcast. */
+export interface PrepareTransactionResponse {
+  kind: string;
+  from: Buffer;
+  /** RLP-encoded unsigned EIP-1559 transaction. */
+  unsignedTx: Buffer;
+}
+
 function createBaseEmpty(): Empty {
   return {};
 }
@@ -8230,6 +8346,1732 @@ export const EncryptResponse: MessageFns<EncryptResponse> = {
   },
 };
 
+function createBasePrepareTransactionRequest(): PrepareTransactionRequest {
+  return { operation: undefined, from: Buffer.alloc(0), options: undefined, transaction: undefined };
+}
+
+export const PrepareTransactionRequest: MessageFns<PrepareTransactionRequest> = {
+  encode(message: PrepareTransactionRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.operation !== undefined) {
+      Operation.encode(message.operation, writer.uint32(10).fork()).join();
+    }
+    if (message.from.length !== 0) {
+      writer.uint32(18).bytes(message.from);
+    }
+    if (message.options !== undefined) {
+      PrepareOptions.encode(message.options, writer.uint32(26).fork()).join();
+    }
+    switch (message.transaction?.$case) {
+      case "confidentialTransfer":
+        ConfidentialTransfer.encode(message.transaction.confidentialTransfer, writer.uint32(34).fork()).join();
+        break;
+      case "confidentialTransferFrom":
+        ConfidentialTransferFrom.encode(message.transaction.confidentialTransferFrom, writer.uint32(42).fork()).join();
+        break;
+      case "setOperator":
+        SetOperator.encode(message.transaction.setOperator, writer.uint32(50).fork()).join();
+        break;
+      case "unwrap":
+        Unwrap.encode(message.transaction.unwrap, writer.uint32(58).fork()).join();
+        break;
+      case "unwrapAll":
+        UnwrapAll.encode(message.transaction.unwrapAll, writer.uint32(66).fork()).join();
+        break;
+      case "finalizeUnwrap":
+        FinalizeUnwrap.encode(message.transaction.finalizeUnwrap, writer.uint32(74).fork()).join();
+        break;
+      case "approveUnderlying":
+        ApproveUnderlying.encode(message.transaction.approveUnderlying, writer.uint32(82).fork()).join();
+        break;
+      case "wrap":
+        Wrap.encode(message.transaction.wrap, writer.uint32(90).fork()).join();
+        break;
+      case "transferAndCall":
+        TransferAndCall.encode(message.transaction.transferAndCall, writer.uint32(98).fork()).join();
+        break;
+      case "delegateDecryption":
+        DelegateDecryption.encode(message.transaction.delegateDecryption, writer.uint32(106).fork()).join();
+        break;
+      case "revokeDelegation":
+        RevokeDelegation.encode(message.transaction.revokeDelegation, writer.uint32(114).fork()).join();
+        break;
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): PrepareTransactionRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePrepareTransactionRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.operation = Operation.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.from = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.options = PrepareOptions.decode(reader, reader.uint32());
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.transaction = {
+            $case: "confidentialTransfer",
+            confidentialTransfer: ConfidentialTransfer.decode(reader, reader.uint32()),
+          };
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.transaction = {
+            $case: "confidentialTransferFrom",
+            confidentialTransferFrom: ConfidentialTransferFrom.decode(reader, reader.uint32()),
+          };
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.transaction = { $case: "setOperator", setOperator: SetOperator.decode(reader, reader.uint32()) };
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.transaction = { $case: "unwrap", unwrap: Unwrap.decode(reader, reader.uint32()) };
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.transaction = { $case: "unwrapAll", unwrapAll: UnwrapAll.decode(reader, reader.uint32()) };
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.transaction = {
+            $case: "finalizeUnwrap",
+            finalizeUnwrap: FinalizeUnwrap.decode(reader, reader.uint32()),
+          };
+          continue;
+        }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          message.transaction = {
+            $case: "approveUnderlying",
+            approveUnderlying: ApproveUnderlying.decode(reader, reader.uint32()),
+          };
+          continue;
+        }
+        case 11: {
+          if (tag !== 90) {
+            break;
+          }
+
+          message.transaction = { $case: "wrap", wrap: Wrap.decode(reader, reader.uint32()) };
+          continue;
+        }
+        case 12: {
+          if (tag !== 98) {
+            break;
+          }
+
+          message.transaction = {
+            $case: "transferAndCall",
+            transferAndCall: TransferAndCall.decode(reader, reader.uint32()),
+          };
+          continue;
+        }
+        case 13: {
+          if (tag !== 106) {
+            break;
+          }
+
+          message.transaction = {
+            $case: "delegateDecryption",
+            delegateDecryption: DelegateDecryption.decode(reader, reader.uint32()),
+          };
+          continue;
+        }
+        case 14: {
+          if (tag !== 114) {
+            break;
+          }
+
+          message.transaction = {
+            $case: "revokeDelegation",
+            revokeDelegation: RevokeDelegation.decode(reader, reader.uint32()),
+          };
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): PrepareTransactionRequest {
+    return {
+      operation: isSet(object.operation) ? Operation.fromJSON(object.operation) : undefined,
+      from: isSet(object.from) ? Buffer.from(bytesFromBase64(object.from)) : Buffer.alloc(0),
+      options: isSet(object.options) ? PrepareOptions.fromJSON(object.options) : undefined,
+      transaction: isSet(object.confidentialTransfer)
+        ? {
+          $case: "confidentialTransfer",
+          confidentialTransfer: ConfidentialTransfer.fromJSON(object.confidentialTransfer),
+        }
+        : isSet(object.confidential_transfer)
+        ? {
+          $case: "confidentialTransfer",
+          confidentialTransfer: ConfidentialTransfer.fromJSON(object.confidential_transfer),
+        }
+        : isSet(object.confidentialTransferFrom)
+        ? {
+          $case: "confidentialTransferFrom",
+          confidentialTransferFrom: ConfidentialTransferFrom.fromJSON(object.confidentialTransferFrom),
+        }
+        : isSet(object.confidential_transfer_from)
+        ? {
+          $case: "confidentialTransferFrom",
+          confidentialTransferFrom: ConfidentialTransferFrom.fromJSON(object.confidential_transfer_from),
+        }
+        : isSet(object.setOperator)
+        ? { $case: "setOperator", setOperator: SetOperator.fromJSON(object.setOperator) }
+        : isSet(object.set_operator)
+        ? { $case: "setOperator", setOperator: SetOperator.fromJSON(object.set_operator) }
+        : isSet(object.unwrap)
+        ? { $case: "unwrap", unwrap: Unwrap.fromJSON(object.unwrap) }
+        : isSet(object.unwrapAll)
+        ? { $case: "unwrapAll", unwrapAll: UnwrapAll.fromJSON(object.unwrapAll) }
+        : isSet(object.unwrap_all)
+        ? { $case: "unwrapAll", unwrapAll: UnwrapAll.fromJSON(object.unwrap_all) }
+        : isSet(object.finalizeUnwrap)
+        ? { $case: "finalizeUnwrap", finalizeUnwrap: FinalizeUnwrap.fromJSON(object.finalizeUnwrap) }
+        : isSet(object.finalize_unwrap)
+        ? { $case: "finalizeUnwrap", finalizeUnwrap: FinalizeUnwrap.fromJSON(object.finalize_unwrap) }
+        : isSet(object.approveUnderlying)
+        ? { $case: "approveUnderlying", approveUnderlying: ApproveUnderlying.fromJSON(object.approveUnderlying) }
+        : isSet(object.approve_underlying)
+        ? { $case: "approveUnderlying", approveUnderlying: ApproveUnderlying.fromJSON(object.approve_underlying) }
+        : isSet(object.wrap)
+        ? { $case: "wrap", wrap: Wrap.fromJSON(object.wrap) }
+        : isSet(object.transferAndCall)
+        ? { $case: "transferAndCall", transferAndCall: TransferAndCall.fromJSON(object.transferAndCall) }
+        : isSet(object.transfer_and_call)
+        ? { $case: "transferAndCall", transferAndCall: TransferAndCall.fromJSON(object.transfer_and_call) }
+        : isSet(object.delegateDecryption)
+        ? { $case: "delegateDecryption", delegateDecryption: DelegateDecryption.fromJSON(object.delegateDecryption) }
+        : isSet(object.delegate_decryption)
+        ? { $case: "delegateDecryption", delegateDecryption: DelegateDecryption.fromJSON(object.delegate_decryption) }
+        : isSet(object.revokeDelegation)
+        ? { $case: "revokeDelegation", revokeDelegation: RevokeDelegation.fromJSON(object.revokeDelegation) }
+        : isSet(object.revoke_delegation)
+        ? { $case: "revokeDelegation", revokeDelegation: RevokeDelegation.fromJSON(object.revoke_delegation) }
+        : undefined,
+    };
+  },
+
+  toJSON(message: PrepareTransactionRequest): unknown {
+    const obj: any = {};
+    if (message.operation !== undefined) {
+      obj.operation = Operation.toJSON(message.operation);
+    }
+    if (message.from.length !== 0) {
+      obj.from = base64FromBytes(message.from);
+    }
+    if (message.options !== undefined) {
+      obj.options = PrepareOptions.toJSON(message.options);
+    }
+    if (message.transaction?.$case === "confidentialTransfer") {
+      obj.confidentialTransfer = ConfidentialTransfer.toJSON(message.transaction.confidentialTransfer);
+    } else if (message.transaction?.$case === "confidentialTransferFrom") {
+      obj.confidentialTransferFrom = ConfidentialTransferFrom.toJSON(message.transaction.confidentialTransferFrom);
+    } else if (message.transaction?.$case === "setOperator") {
+      obj.setOperator = SetOperator.toJSON(message.transaction.setOperator);
+    } else if (message.transaction?.$case === "unwrap") {
+      obj.unwrap = Unwrap.toJSON(message.transaction.unwrap);
+    } else if (message.transaction?.$case === "unwrapAll") {
+      obj.unwrapAll = UnwrapAll.toJSON(message.transaction.unwrapAll);
+    } else if (message.transaction?.$case === "finalizeUnwrap") {
+      obj.finalizeUnwrap = FinalizeUnwrap.toJSON(message.transaction.finalizeUnwrap);
+    } else if (message.transaction?.$case === "approveUnderlying") {
+      obj.approveUnderlying = ApproveUnderlying.toJSON(message.transaction.approveUnderlying);
+    } else if (message.transaction?.$case === "wrap") {
+      obj.wrap = Wrap.toJSON(message.transaction.wrap);
+    } else if (message.transaction?.$case === "transferAndCall") {
+      obj.transferAndCall = TransferAndCall.toJSON(message.transaction.transferAndCall);
+    } else if (message.transaction?.$case === "delegateDecryption") {
+      obj.delegateDecryption = DelegateDecryption.toJSON(message.transaction.delegateDecryption);
+    } else if (message.transaction?.$case === "revokeDelegation") {
+      obj.revokeDelegation = RevokeDelegation.toJSON(message.transaction.revokeDelegation);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<PrepareTransactionRequest>): PrepareTransactionRequest {
+    return PrepareTransactionRequest.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<PrepareTransactionRequest>): PrepareTransactionRequest {
+    const message = createBasePrepareTransactionRequest();
+    message.operation = (object.operation !== undefined && object.operation !== null)
+      ? Operation.fromPartial(object.operation)
+      : undefined;
+    message.from = object.from ?? Buffer.alloc(0);
+    message.options = (object.options !== undefined && object.options !== null)
+      ? PrepareOptions.fromPartial(object.options)
+      : undefined;
+    switch (object.transaction?.$case) {
+      case "confidentialTransfer": {
+        if (
+          object.transaction?.confidentialTransfer !== undefined && object.transaction?.confidentialTransfer !== null
+        ) {
+          message.transaction = {
+            $case: "confidentialTransfer",
+            confidentialTransfer: ConfidentialTransfer.fromPartial(object.transaction.confidentialTransfer),
+          };
+        }
+        break;
+      }
+      case "confidentialTransferFrom": {
+        if (
+          object.transaction?.confidentialTransferFrom !== undefined &&
+          object.transaction?.confidentialTransferFrom !== null
+        ) {
+          message.transaction = {
+            $case: "confidentialTransferFrom",
+            confidentialTransferFrom: ConfidentialTransferFrom.fromPartial(object.transaction.confidentialTransferFrom),
+          };
+        }
+        break;
+      }
+      case "setOperator": {
+        if (object.transaction?.setOperator !== undefined && object.transaction?.setOperator !== null) {
+          message.transaction = {
+            $case: "setOperator",
+            setOperator: SetOperator.fromPartial(object.transaction.setOperator),
+          };
+        }
+        break;
+      }
+      case "unwrap": {
+        if (object.transaction?.unwrap !== undefined && object.transaction?.unwrap !== null) {
+          message.transaction = { $case: "unwrap", unwrap: Unwrap.fromPartial(object.transaction.unwrap) };
+        }
+        break;
+      }
+      case "unwrapAll": {
+        if (object.transaction?.unwrapAll !== undefined && object.transaction?.unwrapAll !== null) {
+          message.transaction = { $case: "unwrapAll", unwrapAll: UnwrapAll.fromPartial(object.transaction.unwrapAll) };
+        }
+        break;
+      }
+      case "finalizeUnwrap": {
+        if (object.transaction?.finalizeUnwrap !== undefined && object.transaction?.finalizeUnwrap !== null) {
+          message.transaction = {
+            $case: "finalizeUnwrap",
+            finalizeUnwrap: FinalizeUnwrap.fromPartial(object.transaction.finalizeUnwrap),
+          };
+        }
+        break;
+      }
+      case "approveUnderlying": {
+        if (object.transaction?.approveUnderlying !== undefined && object.transaction?.approveUnderlying !== null) {
+          message.transaction = {
+            $case: "approveUnderlying",
+            approveUnderlying: ApproveUnderlying.fromPartial(object.transaction.approveUnderlying),
+          };
+        }
+        break;
+      }
+      case "wrap": {
+        if (object.transaction?.wrap !== undefined && object.transaction?.wrap !== null) {
+          message.transaction = { $case: "wrap", wrap: Wrap.fromPartial(object.transaction.wrap) };
+        }
+        break;
+      }
+      case "transferAndCall": {
+        if (object.transaction?.transferAndCall !== undefined && object.transaction?.transferAndCall !== null) {
+          message.transaction = {
+            $case: "transferAndCall",
+            transferAndCall: TransferAndCall.fromPartial(object.transaction.transferAndCall),
+          };
+        }
+        break;
+      }
+      case "delegateDecryption": {
+        if (object.transaction?.delegateDecryption !== undefined && object.transaction?.delegateDecryption !== null) {
+          message.transaction = {
+            $case: "delegateDecryption",
+            delegateDecryption: DelegateDecryption.fromPartial(object.transaction.delegateDecryption),
+          };
+        }
+        break;
+      }
+      case "revokeDelegation": {
+        if (object.transaction?.revokeDelegation !== undefined && object.transaction?.revokeDelegation !== null) {
+          message.transaction = {
+            $case: "revokeDelegation",
+            revokeDelegation: RevokeDelegation.fromPartial(object.transaction.revokeDelegation),
+          };
+        }
+        break;
+      }
+    }
+    return message;
+  },
+};
+
+function createBasePrepareOptions(): PrepareOptions {
+  return { nonce: undefined, gasLimit: undefined, fees: undefined };
+}
+
+export const PrepareOptions: MessageFns<PrepareOptions> = {
+  encode(message: PrepareOptions, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.nonce !== undefined) {
+      if (BigInt.asUintN(64, message.nonce) !== message.nonce) {
+        throw new globalThis.Error("value provided for field message.nonce of type uint64 too large");
+      }
+      writer.uint32(8).uint64(message.nonce);
+    }
+    if (message.gasLimit !== undefined) {
+      writer.uint32(18).string(message.gasLimit);
+    }
+    if (message.fees !== undefined) {
+      PrepareFees.encode(message.fees, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): PrepareOptions {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePrepareOptions();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.nonce = reader.uint64() as bigint;
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.gasLimit = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.fees = PrepareFees.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): PrepareOptions {
+    return {
+      nonce: isSet(object.nonce) ? BigInt(object.nonce) : undefined,
+      gasLimit: isSet(object.gasLimit)
+        ? globalThis.String(object.gasLimit)
+        : isSet(object.gas_limit)
+        ? globalThis.String(object.gas_limit)
+        : undefined,
+      fees: isSet(object.fees) ? PrepareFees.fromJSON(object.fees) : undefined,
+    };
+  },
+
+  toJSON(message: PrepareOptions): unknown {
+    const obj: any = {};
+    if (message.nonce !== undefined) {
+      obj.nonce = message.nonce.toString();
+    }
+    if (message.gasLimit !== undefined) {
+      obj.gasLimit = message.gasLimit;
+    }
+    if (message.fees !== undefined) {
+      obj.fees = PrepareFees.toJSON(message.fees);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<PrepareOptions>): PrepareOptions {
+    return PrepareOptions.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<PrepareOptions>): PrepareOptions {
+    const message = createBasePrepareOptions();
+    message.nonce = (object.nonce !== undefined && object.nonce !== null) ? BigInt(object.nonce) : undefined;
+    message.gasLimit = object.gasLimit ?? undefined;
+    message.fees = (object.fees !== undefined && object.fees !== null)
+      ? PrepareFees.fromPartial(object.fees)
+      : undefined;
+    return message;
+  },
+};
+
+function createBasePrepareFees(): PrepareFees {
+  return { maxFeePerGas: "", maxPriorityFeePerGas: "" };
+}
+
+export const PrepareFees: MessageFns<PrepareFees> = {
+  encode(message: PrepareFees, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.maxFeePerGas !== "") {
+      writer.uint32(10).string(message.maxFeePerGas);
+    }
+    if (message.maxPriorityFeePerGas !== "") {
+      writer.uint32(18).string(message.maxPriorityFeePerGas);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): PrepareFees {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePrepareFees();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.maxFeePerGas = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.maxPriorityFeePerGas = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): PrepareFees {
+    return {
+      maxFeePerGas: isSet(object.maxFeePerGas)
+        ? globalThis.String(object.maxFeePerGas)
+        : isSet(object.max_fee_per_gas)
+        ? globalThis.String(object.max_fee_per_gas)
+        : "",
+      maxPriorityFeePerGas: isSet(object.maxPriorityFeePerGas)
+        ? globalThis.String(object.maxPriorityFeePerGas)
+        : isSet(object.max_priority_fee_per_gas)
+        ? globalThis.String(object.max_priority_fee_per_gas)
+        : "",
+    };
+  },
+
+  toJSON(message: PrepareFees): unknown {
+    const obj: any = {};
+    if (message.maxFeePerGas !== "") {
+      obj.maxFeePerGas = message.maxFeePerGas;
+    }
+    if (message.maxPriorityFeePerGas !== "") {
+      obj.maxPriorityFeePerGas = message.maxPriorityFeePerGas;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<PrepareFees>): PrepareFees {
+    return PrepareFees.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<PrepareFees>): PrepareFees {
+    const message = createBasePrepareFees();
+    message.maxFeePerGas = object.maxFeePerGas ?? "";
+    message.maxPriorityFeePerGas = object.maxPriorityFeePerGas ?? "";
+    return message;
+  },
+};
+
+function createBaseConfidentialTransfer(): ConfidentialTransfer {
+  return { token: Buffer.alloc(0), to: Buffer.alloc(0), amount: "" };
+}
+
+export const ConfidentialTransfer: MessageFns<ConfidentialTransfer> = {
+  encode(message: ConfidentialTransfer, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.token.length !== 0) {
+      writer.uint32(10).bytes(message.token);
+    }
+    if (message.to.length !== 0) {
+      writer.uint32(18).bytes(message.to);
+    }
+    if (message.amount !== "") {
+      writer.uint32(26).string(message.amount);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ConfidentialTransfer {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseConfidentialTransfer();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.token = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.to = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.amount = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ConfidentialTransfer {
+    return {
+      token: isSet(object.token) ? Buffer.from(bytesFromBase64(object.token)) : Buffer.alloc(0),
+      to: isSet(object.to) ? Buffer.from(bytesFromBase64(object.to)) : Buffer.alloc(0),
+      amount: isSet(object.amount) ? globalThis.String(object.amount) : "",
+    };
+  },
+
+  toJSON(message: ConfidentialTransfer): unknown {
+    const obj: any = {};
+    if (message.token.length !== 0) {
+      obj.token = base64FromBytes(message.token);
+    }
+    if (message.to.length !== 0) {
+      obj.to = base64FromBytes(message.to);
+    }
+    if (message.amount !== "") {
+      obj.amount = message.amount;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ConfidentialTransfer>): ConfidentialTransfer {
+    return ConfidentialTransfer.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ConfidentialTransfer>): ConfidentialTransfer {
+    const message = createBaseConfidentialTransfer();
+    message.token = object.token ?? Buffer.alloc(0);
+    message.to = object.to ?? Buffer.alloc(0);
+    message.amount = object.amount ?? "";
+    return message;
+  },
+};
+
+function createBaseConfidentialTransferFrom(): ConfidentialTransferFrom {
+  return { token: Buffer.alloc(0), owner: Buffer.alloc(0), to: Buffer.alloc(0), amount: "" };
+}
+
+export const ConfidentialTransferFrom: MessageFns<ConfidentialTransferFrom> = {
+  encode(message: ConfidentialTransferFrom, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.token.length !== 0) {
+      writer.uint32(10).bytes(message.token);
+    }
+    if (message.owner.length !== 0) {
+      writer.uint32(18).bytes(message.owner);
+    }
+    if (message.to.length !== 0) {
+      writer.uint32(26).bytes(message.to);
+    }
+    if (message.amount !== "") {
+      writer.uint32(34).string(message.amount);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ConfidentialTransferFrom {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseConfidentialTransferFrom();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.token = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.owner = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.to = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.amount = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ConfidentialTransferFrom {
+    return {
+      token: isSet(object.token) ? Buffer.from(bytesFromBase64(object.token)) : Buffer.alloc(0),
+      owner: isSet(object.owner) ? Buffer.from(bytesFromBase64(object.owner)) : Buffer.alloc(0),
+      to: isSet(object.to) ? Buffer.from(bytesFromBase64(object.to)) : Buffer.alloc(0),
+      amount: isSet(object.amount) ? globalThis.String(object.amount) : "",
+    };
+  },
+
+  toJSON(message: ConfidentialTransferFrom): unknown {
+    const obj: any = {};
+    if (message.token.length !== 0) {
+      obj.token = base64FromBytes(message.token);
+    }
+    if (message.owner.length !== 0) {
+      obj.owner = base64FromBytes(message.owner);
+    }
+    if (message.to.length !== 0) {
+      obj.to = base64FromBytes(message.to);
+    }
+    if (message.amount !== "") {
+      obj.amount = message.amount;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ConfidentialTransferFrom>): ConfidentialTransferFrom {
+    return ConfidentialTransferFrom.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ConfidentialTransferFrom>): ConfidentialTransferFrom {
+    const message = createBaseConfidentialTransferFrom();
+    message.token = object.token ?? Buffer.alloc(0);
+    message.owner = object.owner ?? Buffer.alloc(0);
+    message.to = object.to ?? Buffer.alloc(0);
+    message.amount = object.amount ?? "";
+    return message;
+  },
+};
+
+function createBaseSetOperator(): SetOperator {
+  return { token: Buffer.alloc(0), operator: Buffer.alloc(0), until: undefined };
+}
+
+export const SetOperator: MessageFns<SetOperator> = {
+  encode(message: SetOperator, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.token.length !== 0) {
+      writer.uint32(10).bytes(message.token);
+    }
+    if (message.operator.length !== 0) {
+      writer.uint32(18).bytes(message.operator);
+    }
+    if (message.until !== undefined) {
+      if (BigInt.asUintN(64, message.until) !== message.until) {
+        throw new globalThis.Error("value provided for field message.until of type uint64 too large");
+      }
+      writer.uint32(24).uint64(message.until);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): SetOperator {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSetOperator();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.token = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.operator = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.until = reader.uint64() as bigint;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): SetOperator {
+    return {
+      token: isSet(object.token) ? Buffer.from(bytesFromBase64(object.token)) : Buffer.alloc(0),
+      operator: isSet(object.operator) ? Buffer.from(bytesFromBase64(object.operator)) : Buffer.alloc(0),
+      until: isSet(object.until) ? BigInt(object.until) : undefined,
+    };
+  },
+
+  toJSON(message: SetOperator): unknown {
+    const obj: any = {};
+    if (message.token.length !== 0) {
+      obj.token = base64FromBytes(message.token);
+    }
+    if (message.operator.length !== 0) {
+      obj.operator = base64FromBytes(message.operator);
+    }
+    if (message.until !== undefined) {
+      obj.until = message.until.toString();
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<SetOperator>): SetOperator {
+    return SetOperator.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<SetOperator>): SetOperator {
+    const message = createBaseSetOperator();
+    message.token = object.token ?? Buffer.alloc(0);
+    message.operator = object.operator ?? Buffer.alloc(0);
+    message.until = (object.until !== undefined && object.until !== null) ? BigInt(object.until) : undefined;
+    return message;
+  },
+};
+
+function createBaseUnwrap(): Unwrap {
+  return { token: Buffer.alloc(0), to: Buffer.alloc(0), amount: "" };
+}
+
+export const Unwrap: MessageFns<Unwrap> = {
+  encode(message: Unwrap, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.token.length !== 0) {
+      writer.uint32(10).bytes(message.token);
+    }
+    if (message.to.length !== 0) {
+      writer.uint32(18).bytes(message.to);
+    }
+    if (message.amount !== "") {
+      writer.uint32(26).string(message.amount);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Unwrap {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUnwrap();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.token = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.to = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.amount = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Unwrap {
+    return {
+      token: isSet(object.token) ? Buffer.from(bytesFromBase64(object.token)) : Buffer.alloc(0),
+      to: isSet(object.to) ? Buffer.from(bytesFromBase64(object.to)) : Buffer.alloc(0),
+      amount: isSet(object.amount) ? globalThis.String(object.amount) : "",
+    };
+  },
+
+  toJSON(message: Unwrap): unknown {
+    const obj: any = {};
+    if (message.token.length !== 0) {
+      obj.token = base64FromBytes(message.token);
+    }
+    if (message.to.length !== 0) {
+      obj.to = base64FromBytes(message.to);
+    }
+    if (message.amount !== "") {
+      obj.amount = message.amount;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<Unwrap>): Unwrap {
+    return Unwrap.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<Unwrap>): Unwrap {
+    const message = createBaseUnwrap();
+    message.token = object.token ?? Buffer.alloc(0);
+    message.to = object.to ?? Buffer.alloc(0);
+    message.amount = object.amount ?? "";
+    return message;
+  },
+};
+
+function createBaseUnwrapAll(): UnwrapAll {
+  return { token: Buffer.alloc(0), to: Buffer.alloc(0) };
+}
+
+export const UnwrapAll: MessageFns<UnwrapAll> = {
+  encode(message: UnwrapAll, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.token.length !== 0) {
+      writer.uint32(10).bytes(message.token);
+    }
+    if (message.to.length !== 0) {
+      writer.uint32(18).bytes(message.to);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UnwrapAll {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUnwrapAll();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.token = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.to = Buffer.from(reader.bytes());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): UnwrapAll {
+    return {
+      token: isSet(object.token) ? Buffer.from(bytesFromBase64(object.token)) : Buffer.alloc(0),
+      to: isSet(object.to) ? Buffer.from(bytesFromBase64(object.to)) : Buffer.alloc(0),
+    };
+  },
+
+  toJSON(message: UnwrapAll): unknown {
+    const obj: any = {};
+    if (message.token.length !== 0) {
+      obj.token = base64FromBytes(message.token);
+    }
+    if (message.to.length !== 0) {
+      obj.to = base64FromBytes(message.to);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<UnwrapAll>): UnwrapAll {
+    return UnwrapAll.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<UnwrapAll>): UnwrapAll {
+    const message = createBaseUnwrapAll();
+    message.token = object.token ?? Buffer.alloc(0);
+    message.to = object.to ?? Buffer.alloc(0);
+    return message;
+  },
+};
+
+function createBaseFinalizeUnwrap(): FinalizeUnwrap {
+  return { wrapper: Buffer.alloc(0), unwrapRequestIdOrAmount: Buffer.alloc(0) };
+}
+
+export const FinalizeUnwrap: MessageFns<FinalizeUnwrap> = {
+  encode(message: FinalizeUnwrap, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.wrapper.length !== 0) {
+      writer.uint32(10).bytes(message.wrapper);
+    }
+    if (message.unwrapRequestIdOrAmount.length !== 0) {
+      writer.uint32(18).bytes(message.unwrapRequestIdOrAmount);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): FinalizeUnwrap {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseFinalizeUnwrap();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.wrapper = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.unwrapRequestIdOrAmount = Buffer.from(reader.bytes());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): FinalizeUnwrap {
+    return {
+      wrapper: isSet(object.wrapper) ? Buffer.from(bytesFromBase64(object.wrapper)) : Buffer.alloc(0),
+      unwrapRequestIdOrAmount: isSet(object.unwrapRequestIdOrAmount)
+        ? Buffer.from(bytesFromBase64(object.unwrapRequestIdOrAmount))
+        : isSet(object.unwrap_request_id_or_amount)
+        ? Buffer.from(bytesFromBase64(object.unwrap_request_id_or_amount))
+        : Buffer.alloc(0),
+    };
+  },
+
+  toJSON(message: FinalizeUnwrap): unknown {
+    const obj: any = {};
+    if (message.wrapper.length !== 0) {
+      obj.wrapper = base64FromBytes(message.wrapper);
+    }
+    if (message.unwrapRequestIdOrAmount.length !== 0) {
+      obj.unwrapRequestIdOrAmount = base64FromBytes(message.unwrapRequestIdOrAmount);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<FinalizeUnwrap>): FinalizeUnwrap {
+    return FinalizeUnwrap.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<FinalizeUnwrap>): FinalizeUnwrap {
+    const message = createBaseFinalizeUnwrap();
+    message.wrapper = object.wrapper ?? Buffer.alloc(0);
+    message.unwrapRequestIdOrAmount = object.unwrapRequestIdOrAmount ?? Buffer.alloc(0);
+    return message;
+  },
+};
+
+function createBaseApproveUnderlying(): ApproveUnderlying {
+  return { underlying: Buffer.alloc(0), spender: Buffer.alloc(0), amount: "" };
+}
+
+export const ApproveUnderlying: MessageFns<ApproveUnderlying> = {
+  encode(message: ApproveUnderlying, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.underlying.length !== 0) {
+      writer.uint32(10).bytes(message.underlying);
+    }
+    if (message.spender.length !== 0) {
+      writer.uint32(18).bytes(message.spender);
+    }
+    if (message.amount !== "") {
+      writer.uint32(26).string(message.amount);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ApproveUnderlying {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseApproveUnderlying();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.underlying = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.spender = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.amount = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ApproveUnderlying {
+    return {
+      underlying: isSet(object.underlying) ? Buffer.from(bytesFromBase64(object.underlying)) : Buffer.alloc(0),
+      spender: isSet(object.spender) ? Buffer.from(bytesFromBase64(object.spender)) : Buffer.alloc(0),
+      amount: isSet(object.amount) ? globalThis.String(object.amount) : "",
+    };
+  },
+
+  toJSON(message: ApproveUnderlying): unknown {
+    const obj: any = {};
+    if (message.underlying.length !== 0) {
+      obj.underlying = base64FromBytes(message.underlying);
+    }
+    if (message.spender.length !== 0) {
+      obj.spender = base64FromBytes(message.spender);
+    }
+    if (message.amount !== "") {
+      obj.amount = message.amount;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ApproveUnderlying>): ApproveUnderlying {
+    return ApproveUnderlying.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ApproveUnderlying>): ApproveUnderlying {
+    const message = createBaseApproveUnderlying();
+    message.underlying = object.underlying ?? Buffer.alloc(0);
+    message.spender = object.spender ?? Buffer.alloc(0);
+    message.amount = object.amount ?? "";
+    return message;
+  },
+};
+
+function createBaseWrap(): Wrap {
+  return { wrapper: Buffer.alloc(0), to: Buffer.alloc(0), amount: "" };
+}
+
+export const Wrap: MessageFns<Wrap> = {
+  encode(message: Wrap, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.wrapper.length !== 0) {
+      writer.uint32(10).bytes(message.wrapper);
+    }
+    if (message.to.length !== 0) {
+      writer.uint32(18).bytes(message.to);
+    }
+    if (message.amount !== "") {
+      writer.uint32(26).string(message.amount);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Wrap {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseWrap();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.wrapper = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.to = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.amount = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Wrap {
+    return {
+      wrapper: isSet(object.wrapper) ? Buffer.from(bytesFromBase64(object.wrapper)) : Buffer.alloc(0),
+      to: isSet(object.to) ? Buffer.from(bytesFromBase64(object.to)) : Buffer.alloc(0),
+      amount: isSet(object.amount) ? globalThis.String(object.amount) : "",
+    };
+  },
+
+  toJSON(message: Wrap): unknown {
+    const obj: any = {};
+    if (message.wrapper.length !== 0) {
+      obj.wrapper = base64FromBytes(message.wrapper);
+    }
+    if (message.to.length !== 0) {
+      obj.to = base64FromBytes(message.to);
+    }
+    if (message.amount !== "") {
+      obj.amount = message.amount;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<Wrap>): Wrap {
+    return Wrap.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<Wrap>): Wrap {
+    const message = createBaseWrap();
+    message.wrapper = object.wrapper ?? Buffer.alloc(0);
+    message.to = object.to ?? Buffer.alloc(0);
+    message.amount = object.amount ?? "";
+    return message;
+  },
+};
+
+function createBaseTransferAndCall(): TransferAndCall {
+  return { underlying: Buffer.alloc(0), wrapper: Buffer.alloc(0), amount: "", recipientData: undefined };
+}
+
+export const TransferAndCall: MessageFns<TransferAndCall> = {
+  encode(message: TransferAndCall, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.underlying.length !== 0) {
+      writer.uint32(10).bytes(message.underlying);
+    }
+    if (message.wrapper.length !== 0) {
+      writer.uint32(18).bytes(message.wrapper);
+    }
+    if (message.amount !== "") {
+      writer.uint32(26).string(message.amount);
+    }
+    if (message.recipientData !== undefined) {
+      writer.uint32(34).bytes(message.recipientData);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): TransferAndCall {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseTransferAndCall();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.underlying = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.wrapper = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.amount = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.recipientData = Buffer.from(reader.bytes());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): TransferAndCall {
+    return {
+      underlying: isSet(object.underlying) ? Buffer.from(bytesFromBase64(object.underlying)) : Buffer.alloc(0),
+      wrapper: isSet(object.wrapper) ? Buffer.from(bytesFromBase64(object.wrapper)) : Buffer.alloc(0),
+      amount: isSet(object.amount) ? globalThis.String(object.amount) : "",
+      recipientData: isSet(object.recipientData)
+        ? Buffer.from(bytesFromBase64(object.recipientData))
+        : isSet(object.recipient_data)
+        ? Buffer.from(bytesFromBase64(object.recipient_data))
+        : undefined,
+    };
+  },
+
+  toJSON(message: TransferAndCall): unknown {
+    const obj: any = {};
+    if (message.underlying.length !== 0) {
+      obj.underlying = base64FromBytes(message.underlying);
+    }
+    if (message.wrapper.length !== 0) {
+      obj.wrapper = base64FromBytes(message.wrapper);
+    }
+    if (message.amount !== "") {
+      obj.amount = message.amount;
+    }
+    if (message.recipientData !== undefined) {
+      obj.recipientData = base64FromBytes(message.recipientData);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<TransferAndCall>): TransferAndCall {
+    return TransferAndCall.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<TransferAndCall>): TransferAndCall {
+    const message = createBaseTransferAndCall();
+    message.underlying = object.underlying ?? Buffer.alloc(0);
+    message.wrapper = object.wrapper ?? Buffer.alloc(0);
+    message.amount = object.amount ?? "";
+    message.recipientData = object.recipientData ?? undefined;
+    return message;
+  },
+};
+
+function createBaseDelegateDecryption(): DelegateDecryption {
+  return { contractAddress: Buffer.alloc(0), delegateAddress: Buffer.alloc(0), expirationDateMs: undefined };
+}
+
+export const DelegateDecryption: MessageFns<DelegateDecryption> = {
+  encode(message: DelegateDecryption, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.contractAddress.length !== 0) {
+      writer.uint32(10).bytes(message.contractAddress);
+    }
+    if (message.delegateAddress.length !== 0) {
+      writer.uint32(18).bytes(message.delegateAddress);
+    }
+    if (message.expirationDateMs !== undefined) {
+      if (BigInt.asUintN(64, message.expirationDateMs) !== message.expirationDateMs) {
+        throw new globalThis.Error("value provided for field message.expirationDateMs of type uint64 too large");
+      }
+      writer.uint32(24).uint64(message.expirationDateMs);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DelegateDecryption {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDelegateDecryption();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.contractAddress = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.delegateAddress = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.expirationDateMs = reader.uint64() as bigint;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): DelegateDecryption {
+    return {
+      contractAddress: isSet(object.contractAddress)
+        ? Buffer.from(bytesFromBase64(object.contractAddress))
+        : isSet(object.contract_address)
+        ? Buffer.from(bytesFromBase64(object.contract_address))
+        : Buffer.alloc(0),
+      delegateAddress: isSet(object.delegateAddress)
+        ? Buffer.from(bytesFromBase64(object.delegateAddress))
+        : isSet(object.delegate_address)
+        ? Buffer.from(bytesFromBase64(object.delegate_address))
+        : Buffer.alloc(0),
+      expirationDateMs: isSet(object.expirationDateMs)
+        ? BigInt(object.expirationDateMs)
+        : isSet(object.expiration_date_ms)
+        ? BigInt(object.expiration_date_ms)
+        : undefined,
+    };
+  },
+
+  toJSON(message: DelegateDecryption): unknown {
+    const obj: any = {};
+    if (message.contractAddress.length !== 0) {
+      obj.contractAddress = base64FromBytes(message.contractAddress);
+    }
+    if (message.delegateAddress.length !== 0) {
+      obj.delegateAddress = base64FromBytes(message.delegateAddress);
+    }
+    if (message.expirationDateMs !== undefined) {
+      obj.expirationDateMs = message.expirationDateMs.toString();
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<DelegateDecryption>): DelegateDecryption {
+    return DelegateDecryption.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<DelegateDecryption>): DelegateDecryption {
+    const message = createBaseDelegateDecryption();
+    message.contractAddress = object.contractAddress ?? Buffer.alloc(0);
+    message.delegateAddress = object.delegateAddress ?? Buffer.alloc(0);
+    message.expirationDateMs = (object.expirationDateMs !== undefined && object.expirationDateMs !== null)
+      ? BigInt(object.expirationDateMs)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseRevokeDelegation(): RevokeDelegation {
+  return { contractAddress: Buffer.alloc(0), delegateAddress: Buffer.alloc(0) };
+}
+
+export const RevokeDelegation: MessageFns<RevokeDelegation> = {
+  encode(message: RevokeDelegation, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.contractAddress.length !== 0) {
+      writer.uint32(10).bytes(message.contractAddress);
+    }
+    if (message.delegateAddress.length !== 0) {
+      writer.uint32(18).bytes(message.delegateAddress);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RevokeDelegation {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRevokeDelegation();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.contractAddress = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.delegateAddress = Buffer.from(reader.bytes());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): RevokeDelegation {
+    return {
+      contractAddress: isSet(object.contractAddress)
+        ? Buffer.from(bytesFromBase64(object.contractAddress))
+        : isSet(object.contract_address)
+        ? Buffer.from(bytesFromBase64(object.contract_address))
+        : Buffer.alloc(0),
+      delegateAddress: isSet(object.delegateAddress)
+        ? Buffer.from(bytesFromBase64(object.delegateAddress))
+        : isSet(object.delegate_address)
+        ? Buffer.from(bytesFromBase64(object.delegate_address))
+        : Buffer.alloc(0),
+    };
+  },
+
+  toJSON(message: RevokeDelegation): unknown {
+    const obj: any = {};
+    if (message.contractAddress.length !== 0) {
+      obj.contractAddress = base64FromBytes(message.contractAddress);
+    }
+    if (message.delegateAddress.length !== 0) {
+      obj.delegateAddress = base64FromBytes(message.delegateAddress);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<RevokeDelegation>): RevokeDelegation {
+    return RevokeDelegation.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<RevokeDelegation>): RevokeDelegation {
+    const message = createBaseRevokeDelegation();
+    message.contractAddress = object.contractAddress ?? Buffer.alloc(0);
+    message.delegateAddress = object.delegateAddress ?? Buffer.alloc(0);
+    return message;
+  },
+};
+
+function createBasePrepareTransactionResponse(): PrepareTransactionResponse {
+  return { kind: "", from: Buffer.alloc(0), unsignedTx: Buffer.alloc(0) };
+}
+
+export const PrepareTransactionResponse: MessageFns<PrepareTransactionResponse> = {
+  encode(message: PrepareTransactionResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.kind !== "") {
+      writer.uint32(10).string(message.kind);
+    }
+    if (message.from.length !== 0) {
+      writer.uint32(18).bytes(message.from);
+    }
+    if (message.unsignedTx.length !== 0) {
+      writer.uint32(26).bytes(message.unsignedTx);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): PrepareTransactionResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePrepareTransactionResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.kind = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.from = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.unsignedTx = Buffer.from(reader.bytes());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): PrepareTransactionResponse {
+    return {
+      kind: isSet(object.kind) ? globalThis.String(object.kind) : "",
+      from: isSet(object.from) ? Buffer.from(bytesFromBase64(object.from)) : Buffer.alloc(0),
+      unsignedTx: isSet(object.unsignedTx)
+        ? Buffer.from(bytesFromBase64(object.unsignedTx))
+        : isSet(object.unsigned_tx)
+        ? Buffer.from(bytesFromBase64(object.unsigned_tx))
+        : Buffer.alloc(0),
+    };
+  },
+
+  toJSON(message: PrepareTransactionResponse): unknown {
+    const obj: any = {};
+    if (message.kind !== "") {
+      obj.kind = message.kind;
+    }
+    if (message.from.length !== 0) {
+      obj.from = base64FromBytes(message.from);
+    }
+    if (message.unsignedTx.length !== 0) {
+      obj.unsignedTx = base64FromBytes(message.unsignedTx);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<PrepareTransactionResponse>): PrepareTransactionResponse {
+    return PrepareTransactionResponse.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<PrepareTransactionResponse>): PrepareTransactionResponse {
+    const message = createBasePrepareTransactionResponse();
+    message.kind = object.kind ?? "";
+    message.from = object.from ?? Buffer.alloc(0);
+    message.unsignedTx = object.unsignedTx ?? Buffer.alloc(0);
+    return message;
+  },
+};
+
 /**
  * SDK failures retain their code and retry information in gRPC trailers.
  * Integer durations and counts are exact; omitted optional values use SDK defaults.
@@ -8349,6 +10191,18 @@ export const SidecarServiceService = {
       Buffer.from(DelegatedBatchDecryptValuesResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): DelegatedBatchDecryptValuesResponse =>
       DelegatedBatchDecryptValuesResponse.decode(value),
+  },
+  /** Calls offline.prepare; the caller signs and broadcasts the returned unsigned transaction. */
+  prepareTransaction: {
+    path: "/zama.sdk.v1alpha1.SidecarService/PrepareTransaction" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: PrepareTransactionRequest): Buffer =>
+      Buffer.from(PrepareTransactionRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): PrepareTransactionRequest => PrepareTransactionRequest.decode(value),
+    responseSerialize: (value: PrepareTransactionResponse): Buffer =>
+      Buffer.from(PrepareTransactionResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): PrepareTransactionResponse => PrepareTransactionResponse.decode(value),
   },
   /** Calls offline.preparePermit without signing; return the opaque envelope unchanged when registering. */
   preparePermit: {
@@ -8507,6 +10361,8 @@ export interface SidecarServiceServer extends UntypedServiceImplementation {
   decryptPublicValues: handleUnaryCall<DecryptPublicValuesRequest, DecryptPublicValuesResponse>;
   /** Calls decryption.delegatedBatchDecryptValues; per-item failures remain results, fatal SDK errors fail the RPC. */
   delegatedBatchDecryptValues: handleUnaryCall<DelegatedBatchDecryptValuesRequest, DelegatedBatchDecryptValuesResponse>;
+  /** Calls offline.prepare; the caller signs and broadcasts the returned unsigned transaction. */
+  prepareTransaction: handleUnaryCall<PrepareTransactionRequest, PrepareTransactionResponse>;
   /** Calls offline.preparePermit without signing; return the opaque envelope unchanged when registering. */
   preparePermit: handleUnaryCall<PreparePermitRequest, PreparePermitResponse>;
   /** Calls permits.registerPermit with the prepared envelope and signature. */
@@ -8675,6 +10531,22 @@ export interface SidecarServiceClient extends Client {
     metadata: Metadata,
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: DelegatedBatchDecryptValuesResponse) => void,
+  ): ClientUnaryCall;
+  /** Calls offline.prepare; the caller signs and broadcasts the returned unsigned transaction. */
+  prepareTransaction(
+    request: PrepareTransactionRequest,
+    callback: (error: ServiceError | null, response: PrepareTransactionResponse) => void,
+  ): ClientUnaryCall;
+  prepareTransaction(
+    request: PrepareTransactionRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: PrepareTransactionResponse) => void,
+  ): ClientUnaryCall;
+  prepareTransaction(
+    request: PrepareTransactionRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: PrepareTransactionResponse) => void,
   ): ClientUnaryCall;
   /** Calls offline.preparePermit without signing; return the opaque envelope unchanged when registering. */
   preparePermit(

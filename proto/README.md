@@ -1,6 +1,6 @@
 # Sidecar v1alpha1 contract
 
-The canonical schema is [sidecar.proto](zama/sdk/v1alpha1/sidecar.proto). It exposes the TypeScript SDK's encryption, decryption and permit methods through unary RPCs, with a bidirectional channel for external signing. This maintained, permanently beta sidecar is intended for external partners; its versioned protocol can evolve. Transport adapts arguments and results; `@zama-fhe/sdk` owns cryptography, credentials, defaults, caching, delegation checks, batching and recovery.
+The canonical schema is [sidecar.proto](zama/sdk/v1alpha1/sidecar.proto). It exposes the TypeScript SDK's encryption, decryption, permit and offline transaction methods through unary RPCs, with a bidirectional channel for external signing. This maintained, permanently beta sidecar is intended for external partners; its versioned protocol can evolve. Transport adapts arguments and results; `@zama-fhe/sdk` owns cryptography, credentials, defaults, caching, delegation checks, batching and recovery.
 
 ## SDK contexts
 
@@ -44,6 +44,7 @@ The SDK's inherited account-change credential/cache cleanup is asynchronous and 
 | `DelegatedDecryptValues`      | `sdk.decryption.delegatedDecryptValues`      |
 | `DecryptPublicValues`         | `sdk.decryption.decryptPublicValues`         |
 | `DelegatedBatchDecryptValues` | `sdk.decryption.delegatedBatchDecryptValues` |
+| `PrepareTransaction`          | `sdk.offline.prepare`                        |
 | `PreparePermit`               | `sdk.offline.preparePermit`                  |
 | `RegisterPermit`              | `sdk.permits.registerPermit`                 |
 | `GrantPermit`                 | `sdk.permits.grantPermit`                    |
@@ -59,7 +60,7 @@ The SDK's inherited account-change credential/cache cleanup is asynchronous and 
 
 Private decryption retains SDK credential acquisition, caching, zero-handle behavior and errors. Delegated calls preserve explicit delegator and optional account parameters. Public decryption returns clear values, ABI-encoded values and the decryption proof. Delegated batch results preserve input order, per-entry values or structured SDK errors, and fatal whole-call errors. Empty-input behavior, concurrency and propagation settings retain SDK semantics.
 
-Offline preparation accepts an explicit signer and optional delegator, independently of a connected wallet. The SDK validates permit scope, duration, signature, chain, expiry and transport-key consistency. Preparation returns an opaque `prepared_permit` byte envelope and separate `typed_data_json` to sign. Registration takes the unchanged envelope and signature; applications do not parse the envelope or supply protocol extra-data constants.
+Offline permit preparation accepts an explicit signer and optional delegator, independently of a connected wallet. The SDK validates permit scope, duration, signature, chain, expiry and transport-key consistency. Preparation returns an opaque `prepared_permit` byte envelope and separate `typed_data_json` to sign. Registration takes the unchanged envelope and signature; applications do not parse the envelope or supply protocol extra-data constants.
 
 Permit grants retain idempotent coverage and SDK-owned chunking, including empty-input behavior. Permit checks only look up stored coverage; they do not sign or generate keys. Registration and local revocation preserve requester-cache invalidation. Clearing credentials retains signer-level versus shared-key-scope behavior. Transport-key prewarming is a no-op without a connected wallet; explicit shared-scope prewarming and removal preserve SDK scope validation. Local revocation does not invalidate previously issued signatures on-chain.
 
@@ -72,6 +73,20 @@ Both `contract_address` and `user_address` are required 20-byte addresses. They 
 `timeout_ms` is an optional uint32 in whole milliseconds. Omission keeps the SDK default. Zero is a zero-millisecond budget, not "no timeout", and reaches the SDK unchanged. The RPC deadline is independent of it; the deadline and cancellation feed the SDK abort signal through the shared operation lifecycle. Encryption does not acquire credential storage locks or request wallet signatures.
 
 Results contain `encrypted_values`, one ordered 32-byte handle per input, and opaque `input_proof` bytes. Native clients reject a response whose value count does not match the input count, and preserve these bytes without numeric conversion. Ciphertexts can differ across equivalent calls; compare their semantics, order and binding instead of byte equality.
+
+## Offline transaction preparation
+
+`PrepareTransaction` calls `sdk.offline.prepare(request, options?)`. It takes an explicit `from` address and needs no signer channel. Preparation reads chain state and may contact the relayer; offline refers to signing ownership, not network availability.
+
+The transaction oneof covers every SDK kind: `ConfidentialTransfer`, `ConfidentialTransferFrom`, `SetOperator`, `Unwrap`, `UnwrapAll`, `FinalizeUnwrap`, `ApproveUnderlying`, `Wrap`, `TransferAndCall`, `DelegateDecryption` and `RevokeDelegation`. Request fields keep their SDK meaning. Each request is one transaction; native clients do not select shielding routes or reconstruct Token workflows.
+
+Amounts, gas limits and both EIP-1559 fee values are canonical base-10 strings, so arbitrary precision survives the wire. Nonce, operator expiry (seconds) and delegation expiry (milliseconds) are unsigned 64-bit integers; values above the SDK safe integer range are rejected before reaching the SDK. An omitted options message stays omitted. Nonce and gas limit have independent presence, and the fee pair is supplied together. Explicit zero reaches SDK validation unchanged. `SetOperator.until` is required on the wire; the sidecar rejects omission instead of defaulting an expiry, matching the SDK contract.
+
+`TransferAndCall.recipient_data` distinguishes omission from empty bytes. `DelegateDecryption.expiration_date_ms` omission keeps the SDK's permanent-delegation default; the SDK validates the minimum lead time. Go accepts `*time.Time` and rejects dates outside the millisecond range its time type can represent; Rust accepts `Option<u64>` milliseconds. Neither client chooses an expiry.
+
+The response carries the SDK's kind, sender and unsigned EIP-1559 bytes unchanged. This RPC signs nothing and broadcasts nothing. The caller verifies the sender and payload, signs with its own key or custodian, and broadcasts through its own provider. Permit preparation and registration stay separate RPCs.
+
+Preparation uses the existing operation lifecycle and error trailers. The SDK method accepts no abort signal: cancellation ends the caller's wait, and started SDK work drains before context disposal or account changes. Requests are never replayed automatically.
 
 ## Storage bindings and callbacks
 
@@ -117,7 +132,7 @@ RPC deadlines are independent of SDK relayer timeouts. Storage failures do not p
 
 ## Remaining API coverage
 
-Token/WrappedToken operations, registry access, delegation transactions, transaction-signing callbacks and SDK event subscriptions are not exposed in this slice. Injection of arbitrary JavaScript providers, loggers and SDK event callbacks remains outside this wire API. Native storage implementations are supported through the storage bridge. This is partial SDK coverage; the methods above delegate their SDK behavior rather than reconstructing token flows.
+Token/WrappedToken operations, registry access, executed delegation transactions, transaction-signing callbacks and SDK event subscriptions are not exposed in this slice. Delegation changes are available only as offline-prepared transactions. Injection of arbitrary JavaScript providers, loggers and SDK event callbacks remains outside this wire API. Native storage implementations are supported through the storage bridge. This is partial SDK coverage; the methods above delegate their SDK behavior rather than reconstructing token flows.
 
 The native balance examples perform Ethereum contract reads in Alloy/go-ethereum and pass the resulting encrypted handle to general decryption. The shared setup now accepts runtime/provider options, storage selection and optional credential protection before the encryption and balance steps. Integration with `Token.balanceOf`, other token lifecycle steps and delegation transactions remains deferred until those public native APIs are exposed. SDK-backed tests exercise credential reuse and restart behavior meanwhile.
 
@@ -125,7 +140,7 @@ The native balance examples perform Ethereum contract reads in Alloy/go-ethereum
 
 Shared scenarios compare direct SDK calls with sidecar calls using deterministic provider and relayer fixtures and real SDK credential/decryption logic. They compare values, errors and signer interactions across signerless calls, multiple contexts/accounts, direct and delegated permits, omitted options, acquisition/reuse/recovery, public proofs, batch failures, cancellation and concurrent reads.
 
-Go and Rust wire tests cover typed values, callback correlation, rejection and deadlines. Native recovery tests use the production context factory and retain application-owned credentials across sidecar runtime replacement. Sidecar CI runs these checks without live wallet or RPC configuration. Live examples read encrypted balances using native Ethereum libraries and invoke general decryption; persistent reuse and restart scenarios remain in tests.
+Go and Rust wire tests cover typed values, callback correlation, rejection and deadlines. Native recovery tests use the production context factory and retain application-owned credentials across sidecar runtime replacement. Sidecar CI runs these checks without live wallet or RPC configuration. Live examples read encrypted balances using native Ethereum libraries, invoke general decryption, then prepare and locally sign an operator revocation without broadcasting; persistent reuse and restart scenarios remain in tests. Offline equivalence tests compare every preparation kind, omitted and explicit options, malformed encodings and provider failures against the direct SDK.
 
 Encryption equivalence tests compare direct SDK calls and wire calls across input types, explicit binding addresses, timeout presence, SDK failures and cancellation. Native tests use the real SDK with a synthetic relayer that returns randomized encrypted values and a fixture proof. The relayer URL path of each test context selects its fixture scenario, and the TypeScript driver asserts the SDK-side inputs, addresses and timeout presence of every recorded call. Separate canonical backend checks exercise numeric rejection errors before network access. These fixtures do not verify live cryptographic proofs.
 
