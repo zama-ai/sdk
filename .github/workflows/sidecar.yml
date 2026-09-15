@@ -9,6 +9,7 @@ on:
       - "packages/sdk-sidecar/**"
       - "buf*.yaml"
       - "vitest.config.ts"
+      - "vitest.shared.mts"
       - "rust-toolchain.toml"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -100,11 +101,14 @@ jobs:
         run: rustup show
       - name: Regenerate TypeScript and Go protobuf bindings
         run: |
+          pnpm exec buf format --diff --exit-code
           pnpm sidecar:generate
           sh clients/go/generate.sh
           git diff --exit-code -- packages/sdk-sidecar/src/generated clients/go/gen
       - name: Build SDK and sidecar
         run: pnpm sidecar:build
+      - name: Verify built package exports
+        run: node --test packages/sdk-sidecar/test/package-exports.test.mjs
       - name: Prepare native test drivers
         run: |
           cargo test --manifest-path clients/rust/Cargo.toml --test external_storage_restart --locked --no-run
