@@ -52,7 +52,7 @@ async function harness(signerEnabled = true, backing = storage(), permitTTL?: nu
       {
         storage: undefined,
         permitStorage: undefined,
-        configJson: "{}",
+        config: undefined,
         signerEnabled,
         account: signerEnabled
           ? { address: Buffer.from(hexToBytes(USER)), chainId: BigInt(anvil.id) }
@@ -233,7 +233,7 @@ test("offline delegated permits preserve explicit identities, duration defaults 
       contracts: [TOKEN],
       delegator,
     });
-    const actual = await new Promise<string>((resolve, reject) =>
+    const actual = await new Promise<Buffer>((resolve, reject) =>
       remote.client.preparePermit(
         {
           operation: remote.operation(),
@@ -242,10 +242,10 @@ test("offline delegated permits preserve explicit identities, duration defaults 
           delegatorAddress: Buffer.from(hexToBytes(delegator)),
           durationDays: undefined,
         },
-        (error, value) => (error ? reject(error) : resolve(value.preparedPermitJson)),
+        (error, value) => (error ? reject(error) : resolve(value.preparedPermit)),
       ),
     );
-    const decoded = JSON.parse(actual);
+    const decoded = JSON.parse(actual.toString("utf8"));
     expect(decoded.signerAddress).toBe(expected.signerAddress);
     expect(decoded.eip712.message.delegatorAddress).toBe(expected.eip712.message.delegatorAddress);
     expect(decoded.eip712.message.durationDays).toBe(expected.eip712.message.durationDays);
@@ -254,7 +254,7 @@ test("offline delegated permits preserve explicit identities, duration defaults 
       remote.client.registerPermit(
         {
           operation: remote.operation(),
-          preparedPermitJson: actual,
+          preparedPermit: actual,
           signature: Buffer.from(hexToBytes(TEST_SIGNATURE)),
         },
         (error) => (error ? reject(error) : resolve()),
@@ -313,7 +313,7 @@ test("delegated decryption and batch preserve delegator, requester and SDK value
       actualBatch.items.map((item) => ({
         encryptedValue: bytesToHex(item.encryptedValue),
         contractAddress: bytesToHex(item.contractAddress).toLowerCase(),
-        value: decodeValue(item.value),
+        value: decodeValue(item.result?.$case === "value" ? item.result.value : undefined),
       })),
     ).toEqual(
       batch.items.map((item) => ({
@@ -511,10 +511,13 @@ test("delegated batch fallback preserves per-item success and failure", async ()
     expect(
       actual.items.map((item) => ({
         encryptedValue: bytesToHex(item.encryptedValue),
-        value: decode([{ encryptedValue: item.encryptedValue, value: item.value }])[
-          bytesToHex(item.encryptedValue)
-        ],
-        error: item.error?.code,
+        value: decode([
+          {
+            encryptedValue: item.encryptedValue,
+            value: item.result?.$case === "value" ? item.result.value : undefined,
+          },
+        ])[bytesToHex(item.encryptedValue)],
+        error: item.result?.$case === "error" ? item.result.error.code : undefined,
       })),
     ).toEqual(
       expected.items.map((item) => ({
@@ -538,11 +541,9 @@ test("fatal signer rate limits preserve SDK code and retry delay without batch f
   const signer = new LocalSigner();
   const direct = fixture(signer);
   const remote = await harness();
-  signer.sign.mockRejectedValue(
-    new RpcRateLimitError("Wallet RPC throttled.", { retryAfter: 1.25 }),
-  );
+  signer.sign.mockRejectedValue(new RpcRateLimitError("Wallet RPC throttled.", { retryAfter: 2 }));
   remote.local.sign.mockRejectedValue(
-    new RpcRateLimitError("Wallet RPC throttled.", { retryAfter: 1.25 }),
+    new RpcRateLimitError("Wallet RPC throttled.", { retryAfter: 2 }),
   );
   const encryptedInputs = [
     ...remote.encryptedInputs,
@@ -560,14 +561,14 @@ test("fatal signer rate limits preserve SDK code and retry delay without batch f
         maxConcurrency: 1,
       })
       .catch((error: RpcRateLimitError) => error);
-    expect(expected).toMatchObject({ code: "RPC_RATE_LIMITED", retryable: true, retryAfter: 1.25 });
+    expect(expected).toMatchObject({ code: "RPC_RATE_LIMITED", retryable: true, retryAfter: 2 });
     const actual = await delegatedBatch(remote, encryptedInputs).catch(
       (error: ServiceError) => error,
     );
     const error = actual as ServiceError;
     expect(error.metadata.get("zama-error-code")).toEqual(["RPC_RATE_LIMITED"]);
     expect(error.metadata.get("zama-error-retryable")).toEqual(["true"]);
-    expect(error.metadata.get("zama-error-retry-after-seconds")).toEqual(["1.25"]);
+    expect(error.metadata.get("zama-error-retry-after-seconds")).toEqual(["2"]);
     expect(signer.sign).toHaveBeenCalledTimes(1);
     expect(remote.local.sign).toHaveBeenCalledTimes(1);
     expect(direct.relayer.decryptValues).not.toHaveBeenCalled();
@@ -578,3 +579,39 @@ test("fatal signer rate limits preserve SDK code and retry delay without batch f
     await remote.close();
   }
 });
+
+test.each([undefined, 0, 2])(
+  "batch concurrency preserves default, unlimited and finite settings: %s",
+  async (maxConcurrency) => {
+    const remote = await harness();
+    const batch = vi
+      .spyOn(remote.fixtures[0]!.sdk.decryption, "delegatedBatchDecryptValues")
+      .mockResolvedValue({ items: [] });
+    try {
+      await new Promise<void>((resolve, reject) =>
+        remote.client.delegatedBatchDecryptValues(
+          {
+            operation: remote.operation(),
+            inputs: [],
+            delegatorAddress: Buffer.alloc(20, 1),
+            accountAddress: undefined,
+            maxConcurrency,
+            waitForPropagation: undefined,
+          },
+          (error) => (error ? reject(error) : resolve()),
+        ),
+      );
+      const options = batch.mock.calls[0]![0];
+      expect(options).toEqual({
+        encryptedInputs: [],
+        delegatorAddress: `0x${"01".repeat(20)}`,
+        ...(maxConcurrency === undefined
+          ? {}
+          : { maxConcurrency: maxConcurrency === 0 ? Infinity : maxConcurrency }),
+      });
+    } finally {
+      batch.mockRestore();
+      await remote.close();
+    }
+  },
+);

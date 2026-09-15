@@ -99,8 +99,7 @@ export async function testServer(factory: ContextFactory) {
                 reply: {
                   operationId: action.operationId,
                   actionId: action.actionId,
-                  signature: bytes(signature),
-                  error: undefined,
+                  result: { $case: "signature", signature: bytes(signature) },
                 },
               },
             }),
@@ -111,8 +110,7 @@ export async function testServer(factory: ContextFactory) {
                 reply: {
                   operationId: action.operationId,
                   actionId: action.actionId,
-                  signature: Buffer.alloc(0),
-                  error: errorDetails(error),
+                  result: { $case: "error", error: errorDetails(error) },
                 },
               },
             }),

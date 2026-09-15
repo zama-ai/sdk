@@ -1,9 +1,18 @@
 import { status } from "@grpc/grpc-js";
-import { SidecarError } from "./errors.js";
-import { reviveZamaError, ZamaErrorCode } from "@zama-fhe/sdk";
+import { invalidArgument, SidecarError } from "./errors.js";
+import { ZamaErrorCode } from "@zama-fhe/sdk";
+import { reviveZamaError } from "@zama-fhe/sdk/internal";
 import type { SdkError } from "./generated/zama/sdk/v1alpha1/sidecar.js";
 
 export function callbackError(value: SdkError): Error {
+  if (
+    value.retryAfterSeconds !== undefined &&
+    (!Number.isInteger(value.retryAfterSeconds) ||
+      value.retryAfterSeconds <= 0 ||
+      value.retryAfterSeconds > 0xffff_ffff)
+  ) {
+    return invalidArgument("Retry delay must be positive whole seconds within uint32 range.");
+  }
   const code = Object.values(ZamaErrorCode).find((candidate) => candidate === value.code);
   if (code === undefined) {
     if (value.code === "4001") {
@@ -14,7 +23,7 @@ export function callbackError(value: SdkError): Error {
       status.FAILED_PRECONDITION,
       value.message,
       value.retryable,
-      value.retryAfterSeconds,
+      value.retryable ? value.retryAfterSeconds : undefined,
     );
   }
   return reviveZamaError(code, value.message, {

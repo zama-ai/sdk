@@ -48,7 +48,7 @@ async function harness() {
           {
             storage: undefined,
             permitStorage: undefined,
-            configJson: "{}",
+            config: undefined,
             signerEnabled: true,
             account: { address: bytes(address), chainId: BigInt(anvil.id) },
           },

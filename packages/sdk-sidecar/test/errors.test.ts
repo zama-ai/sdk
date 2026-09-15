@@ -21,14 +21,14 @@ test("retains canonical SDK codes and messages without reclassifying signing fai
   );
 });
 
-test("restores callback error classes used by SDK recovery and preserves retry metadata", async () => {
+test("restores batch-fatal callback classes without overriding SDK retryability", async () => {
   const { callbackError } = await import("../src/callback-errors.js");
   const { RpcRateLimitError, InvalidTransportKeyPairError, SigningRejectedError, ZamaErrorCode } =
     await import("@zama-fhe/sdk");
   const throttled = callbackError({
     code: "RPC_RATE_LIMITED",
     message: "Try later",
-    retryable: true,
+    retryable: false,
     retryAfterSeconds: 7,
   });
   expect(throttled).toBeInstanceOf(RpcRateLimitError);
@@ -41,13 +41,45 @@ test("restores callback error classes used by SDK recovery and preserves retry m
       retryable: false,
       retryAfterSeconds: undefined,
     }),
-  ).toBeInstanceOf(InvalidTransportKeyPairError);
+  ).not.toBeInstanceOf(InvalidTransportKeyPairError);
   expect(
     callbackError({
       code: "SIGNING_REJECTED",
       message: "Rejected",
-      retryable: false,
-      retryAfterSeconds: undefined,
+      retryable: true,
+      retryAfterSeconds: 7,
     }),
   ).toBeInstanceOf(SigningRejectedError);
 });
+
+test.each([0, -1, 0.5, Infinity, 4294967296])(
+  "invalid retry hint %s is omitted without hiding the original failure",
+  (retryAfterSeconds) => {
+    const error = serviceError(
+      new SidecarError(
+        "STORAGE_FAILED",
+        status.UNAVAILABLE,
+        "Unavailable",
+        true,
+        retryAfterSeconds,
+      ),
+    );
+    expect(error.details).toBe("Unavailable");
+    expect(error.metadata.get("zama-error-code")).toEqual(["STORAGE_FAILED"]);
+    expect(error.metadata.get("zama-error-retry-after-seconds")).toEqual([]);
+  },
+);
+test.each([0, -1, 0.5, Infinity, 4294967296])(
+  "rejects malformed incoming retry hint %s",
+  async (retryAfterSeconds) => {
+    const { callbackError } = await import("../src/callback-errors.js");
+    expect(
+      callbackError({
+        code: "RPC_RATE_LIMITED",
+        message: "Unavailable",
+        retryable: true,
+        retryAfterSeconds,
+      }),
+    ).toMatchObject({ code: "INVALID_ARGUMENT" });
+  },
+);

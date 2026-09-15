@@ -53,14 +53,13 @@ test("pre-attachment lifecycle calls queue and unknown replies leave other callb
   remote.attach(stream as unknown as StorageStream);
   const action = frames(stream.messages, "action")[0]?.action;
   expect(action?.backendId).toBe("backend");
-  remote.reply({ requestId: "unknown", value: undefined, error: undefined });
+  remote.reply({ requestId: "unknown", result: undefined });
   expect(frames(stream.messages, "replyError").at(-1)?.replyError.error?.code).toBe(
     "STORAGE_REQUEST_NOT_FOUND",
   );
   remote.reply({
     requestId: action!.requestId,
-    value: Buffer.from(encodeStorage(7n)),
-    error: undefined,
+    result: { $case: "value", value: Buffer.from(encodeStorage(7n)) },
   });
   await expect(pending).resolves.toBe(7n);
   remote.dispose();
@@ -73,15 +72,13 @@ test("absence differs from empty bytes and connection loss never becomes a cache
   const missing = storage.get("missing");
   remote.reply({
     requestId: frames(stream.messages, "action").at(-1)!.action.requestId,
-    value: undefined,
-    error: undefined,
+    result: { $case: "notFound", notFound: {} },
   });
   await expect(missing).resolves.toBeNull();
   const empty = storage.get("empty");
   remote.reply({
     requestId: frames(stream.messages, "action").at(-1)!.action.requestId,
-    value: Buffer.alloc(0),
-    error: undefined,
+    result: { $case: "value", value: Buffer.alloc(0) },
   });
   await expect(empty).rejects.toThrow("version");
   const lost = storage.get("lost");
@@ -117,12 +114,14 @@ test("application callback failures retain wire code and retry metadata", async 
     .catch((error: unknown) => errorDetails(error));
   remote.reply({
     requestId: frames(stream.messages, "action").at(-1)!.action.requestId,
-    value: undefined,
-    error: {
-      code: "STORAGE_FAILED",
-      message: "backend unavailable",
-      retryable: true,
-      retryAfterSeconds: 2,
+    result: {
+      $case: "error",
+      error: {
+        code: "STORAGE_FAILED",
+        message: "backend unavailable",
+        retryable: true,
+        retryAfterSeconds: 2,
+      },
     },
   });
   expect(await pending).toEqual({
@@ -150,9 +149,48 @@ test("a failed write detaches storage and permits a fresh attachment without rep
   expect(frames(next.messages, "action")).toHaveLength(1);
   remote.reply({
     requestId: frames(next.messages, "action")[0]!.action.requestId,
-    value: undefined,
-    error: undefined,
+    result: { $case: "notFound", notFound: {} },
   });
   await expect(pending).resolves.toBeNull();
+  remote.dispose();
+});
+
+test("storage acknowledgements must match the pending operation", async () => {
+  const remote = new RemoteStorage();
+  const storage = remote.forBackend("backend");
+  const stream = new FakeStream<StorageServerMessage>();
+  remote.attach(stream as unknown as StorageStream);
+  for (const operation of [
+    () => storage.get("key"),
+    () => storage.set("key", 1n),
+    () => storage.delete("key"),
+  ]) {
+    const pending = operation();
+    remote.reply({
+      requestId: frames(stream.messages, "action").at(-1)!.action.requestId,
+      result: undefined,
+    });
+    await expect(pending).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+  }
+  const wrongGet = storage.get("key");
+  remote.reply({
+    requestId: frames(stream.messages, "action").at(-1)!.action.requestId,
+    result: { $case: "ack", ack: {} },
+  });
+  await expect(wrongGet).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+  const wrongSet = storage.set("key", 1n);
+  remote.reply({
+    requestId: frames(stream.messages, "action").at(-1)!.action.requestId,
+    result: { $case: "notFound", notFound: {} },
+  });
+  await expect(wrongSet).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+  for (const operation of [() => storage.set("key", 1n), () => storage.delete("key")]) {
+    const pending = operation();
+    remote.reply({
+      requestId: frames(stream.messages, "action").at(-1)!.action.requestId,
+      result: { $case: "ack", ack: {} },
+    });
+    await expect(pending).resolves.toBeUndefined();
+  }
   remote.dispose();
 });

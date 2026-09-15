@@ -1,3 +1,4 @@
+import { ContextConfig } from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
 import type * as Viem from "viem";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -36,7 +37,9 @@ test("context factory preserves signerless public decryption and zero-value lazy
   const storage = new StorageManager(directory);
   const factory = createContextFactory(storage);
   const request = {
-    configJson: JSON.stringify({ chainId: 11155111, rpcUrl: "https://rpc.invalid" }),
+    config: ContextConfig.fromPartial({
+      chains: [{ id: 11155111n, network: "https://rpc.invalid" }],
+    }),
     signerEnabled: false,
     account: undefined,
     storage: undefined,

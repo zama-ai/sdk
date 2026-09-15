@@ -1,22 +1,16 @@
 # Sidecar v1alpha1 contract
 
-The canonical schema is [sidecar.proto](zama/sdk/v1alpha1/sidecar.proto). It exposes the TypeScript SDK's decryption and permit methods through unary RPCs, with a bidirectional channel for external signing. This prototype protocol can change before a stable release. Transport adapts arguments and results; `@zama-fhe/sdk` owns cryptography, credentials, defaults, caching, delegation checks, batching and recovery.
+The canonical schema is [sidecar.proto](zama/sdk/v1alpha1/sidecar.proto). It exposes the TypeScript SDK's decryption and permit methods through unary RPCs, with a bidirectional channel for external signing. This beta protocol can change between coordinated SDK and client releases. Transport adapts arguments and results; `@zama-fhe/sdk` owns cryptography, credentials, defaults, caching, delegation checks, batching and recovery.
 
 ## SDK contexts
 
-`CreateContext` creates an SDK instance from `config_json`, `signer_enabled`, an optional wallet account and storage bindings. Native clients provide typed configuration and manage callback attachment during construction. `CloseContext` ends that instance. `GetInfo` returns the SDK version.
+`CreateContext` creates an SDK instance from typed `config`, `signer_enabled`, an optional wallet account and storage bindings. Native clients provide typed configuration and manage callback attachment during construction. `CloseContext` ends that instance. `GetInfo.sdk_version` reports the bundled `@zama-fhe/sdk` version. It does not report the internal `@fhevm/sdk` dependency version or the protobuf namespace version.
 
 A context owns its configuration and signer lifecycle. The process has no fixed owner or chain. Default memory storage is independent per context. Contexts sharing a storage binding share credentials according to SDK account, chain and scope rules.
 
-For an SDK chain preset, configuration accepts:
+`ContextConfig.chains` contains typed chain settings. `chain_id` selects the initial chain; omission selects the first entry. Preset chains inherit SDK protocol configuration, while custom chains supply their SDK chain settings.
 
-```json
-{ "chainId": 11155111, "rpcUrl": "https://your-sepolia-rpc.example" }
-```
-
-An optional `auth` value uses the SDK's `BearerToken`, `ApiKeyHeader` or `ApiKeyCookie` shape. `permitTTL`, `transportKeyPairTTL`, `transportKeyPairScope` and `registryTTL` are forwarded when supplied. Omitted values retain SDK defaults.
-
-For multiple or custom chains, supply `chains` using SDK chain configurations; `chainId` selects the initial chain and otherwise defaults to the first entry. Do not combine `chains` with the `rpcUrl`/`auth` shorthand. Preset chains inherit SDK protocol configuration. Custom chains require their SDK chain settings.
+Each chain's `auth` selects a bearer token, API-key header or API-key cookie. Omitted header and cookie names retain SDK defaults. `permit_ttl` is in days; `transport_key_pair_ttl` and `registry_ttl` are in seconds. Omitted credential options retain SDK defaults.
 
 `UpdateAccount` sets the connected wallet's address and chain, or disconnects the wallet when `account` is absent. A changed account cancels and drains existing operations in that context before changing the wallet snapshot. Repeating the current account leaves active operations running.
 
@@ -44,7 +38,7 @@ The SDK's inherited account-change credential/cache cleanup is asynchronous and 
 
 Private decryption retains SDK credential acquisition, caching, zero-handle behavior and errors. Delegated calls preserve explicit delegator and optional account parameters. Public decryption returns clear values, ABI-encoded values and the decryption proof. Delegated batch results preserve input order, per-entry values or structured SDK errors, and fatal whole-call errors. Empty-input behavior, concurrency and propagation settings retain SDK semantics.
 
-Offline preparation accepts an explicit signer and optional delegator, independently of a connected wallet. The SDK validates permit scope, duration, signature, chain, expiry and transport-key consistency. Signing payloads remain SDK-generated; applications do not supply protocol extra-data constants.
+Offline preparation accepts an explicit signer and optional delegator, independently of a connected wallet. The SDK validates permit scope, duration, signature, chain, expiry and transport-key consistency. Preparation returns an opaque `prepared_permit` byte envelope and separate `typed_data_json` to sign. Registration takes the unchanged envelope and signature; applications do not parse the envelope or supply protocol extra-data constants.
 
 Permit grants retain idempotent coverage and SDK-owned chunking, including empty-input behavior. Permit checks only look up stored coverage; they do not sign or generate keys. Registration and local revocation preserve requester-cache invalidation. Clearing credentials retains signer-level versus shared-key-scope behavior. Transport-key prewarming is a no-op without a connected wallet; explicit shared-scope prewarming and removal preserve SDK scope validation. Local revocation does not invalidate previously issued signatures on-chain.
 
@@ -52,7 +46,7 @@ Permit grants retain idempotent coverage and SDK-owned chunking, including empty
 
 `CreateContext.storage` selects a fresh sidecar memory store, a named persistent store, or an application backend ID. Omission selects fresh memory, matching the SDK's Node default. `permit_storage` independently selects a permit store; omission aliases the primary store.
 
-An application backend uses `StorageChannel`, a bidirectional callback channel attached to its context. The initial attachment receives an acknowledgment. Each `StorageAction` carries a request ID, backend ID, method, key and optional operation value. Replies carry a request ID, optional value or error. GET with an absent value means not found; present zero-length bytes remain distinct at the transport boundary. SET and DELETE complete only after the application replies.
+An application backend uses `StorageChannel`, a bidirectional callback channel attached to its context. The initial attachment receives an acknowledgment. Each `StorageAction` carries a request ID, backend ID, method, key and optional operation value. Replies carry a request ID and exactly one result: `value`, `not_found`, `ack` or `error`. GET returns `value` or `not_found`; present zero-length bytes remain distinct from absence. SET and DELETE return `ack` after completing the operation. A missing result or a result incompatible with the requested method is rejected.
 
 Storage callbacks have no SDK operation ID: the SDK also accesses storage from lifecycle listeners outside unary operations. The adapter rejects pending requests on channel loss; it does not translate disconnects into missing values or replay uncertain mutations. Applications can recreate an SDK with the same binding after connection loss. Go also exposes explicit storage-channel reattachment. Native applications can observe termination through Go `WaitChannelFailure` or Rust `wait_channel_closed`; observing a failure does not retry an SDK operation.
 
@@ -62,9 +56,9 @@ Binding identity controls coordination within one sidecar. Reusing a native appl
 
 ## Values and optional arguments
 
-Addresses are 20 raw bytes; encrypted handles are 32 raw bytes. `ClearValue` preserves the SDK value type with distinct bigint, number, boolean, string and undefined variants. Bigints use canonical decimal strings and never pass through floating-point conversion. The number variant uses a protobuf double, matching JavaScript numbers.
+Addresses are 20 raw bytes; encrypted handles are 32 raw bytes. `ClearValue` preserves the SDK value type with distinct bigint, number, boolean, string and undefined variants. Bigints use canonical decimal strings and never pass through floating-point conversion. The number variant uses `uint32` for SDK euint8/euint16/euint32 results. Wider encrypted integers use the bigint variant. Undefined uses an empty message marker.
 
-Optional scalar presence is significant. Omitted duration, timeout, maximum concurrency and propagation options remain omitted; explicit zero and false reach the SDK unchanged. Missing delegated account uses the SDK's delegator default.
+Optional scalar presence is significant. Durations, timeouts, concurrency and retry delays use unsigned integers. Timeouts are milliseconds; permit durations are days; retry delays are seconds. Omitted values retain SDK defaults. Maximum concurrency uses positive values for a limit and zero for unlimited concurrency. Explicit false propagation settings reach the SDK unchanged. Missing delegated account uses the SDK's delegator default.
 
 `RevokePermits.contracts` is a message wrapper: absent means no argument; present with zero addresses means an explicit empty array. Go preserves this as a nil versus non-nil empty slice. Rust uses `Option`.
 
@@ -72,7 +66,7 @@ Optional scalar presence is significant. Omitted duration, timeout, maximum conc
 
 Every SDK operation has a context ID and a client-generated operation ID. Clients can submit concurrent calls; the runtime coordinates credential operations sharing a storage identity and signer or key scope. There is no process-wide busy rejection.
 
-`SignerChannel` attaches to a signer-enabled context and acknowledges attachment before delivering actions. Each action includes operation/action IDs, the wallet account and SDK EIP-712 typed data. Replies return signature bytes or a structured signing error; `SIGNING_REJECTED` represents wallet rejection.
+`SignerChannel` attaches to a signer-enabled context and acknowledges attachment before delivering actions. Each action includes operation/action IDs, the wallet account and SDK EIP-712 typed data. Replies require exactly one result: signature bytes or a structured signing error; `SIGNING_REJECTED` represents wallet rejection.
 
 Cancellation frames stop pending wallet callbacks. Unknown or stale replies receive an action-scoped error and do not cancel unrelated work. Clients do not automatically replay signing requests after reconnection.
 
@@ -82,7 +76,7 @@ Cancellation does not roll back completed SDK storage changes. SDK work that can
 
 ## Errors and transport limits
 
-SDK errors retain their code, message, retryability and optional retry delay. Unary RPCs carry these in `zama-error-code`, `zama-error-retryable` and `zama-error-retry-after-seconds` trailers. Batch items and signer messages use the corresponding `SdkError` fields. Use the SDK code for application decisions; gRPC status also represents transport failures.
+SDK errors retain their code, message, retryability and optional integer retry delay in seconds. Callback errors use the SDK's canonical retryability for fixed error codes; relayer-request failures retain per-instance retryability. Unary RPCs carry these in `zama-error-code`, `zama-error-retryable` and `zama-error-retry-after-seconds` trailers. Batch items and signer messages use the corresponding `SdkError` fields. Use the SDK code for application decisions; gRPC status also represents transport failures.
 
 Go exposes `RPCError` and preserves `status.Code`. Rust exposes `RpcError` with the SDK details and underlying tonic status. Neither client automatically retries SDK operations or signing requests.
 

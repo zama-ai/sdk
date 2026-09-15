@@ -4,7 +4,16 @@ import type { handleUnaryCall } from "@grpc/grpc-js";
 import type * as rpc from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import type { ContextSdk, SidecarRuntime } from "./runtime.js";
 import { signerChannel, storageChannel } from "./channels.js";
-import { address, bytes, clearValue, entries, input, json } from "./encoding.js";
+import {
+  address,
+  bytes,
+  clearValue,
+  entries,
+  encryptedValue,
+  input,
+  json,
+  unsignedInteger,
+} from "./encoding.js";
 import { cancelled, errorDetails, invalidArgument, serviceError } from "./errors.js";
 
 function unary<Request, Response>(
@@ -76,7 +85,9 @@ export function createHandlers(
       values: entries(
         await sdk.decryption.decryptValues(request.inputs.map(input), {
           signal,
-          ...(request.timeoutMs === undefined ? {} : { timeout: request.timeoutMs }),
+          ...(request.timeoutMs === undefined
+            ? {}
+            : { timeout: unsignedInteger(request.timeoutMs, "Timeout") }),
         }),
       ),
     })),
@@ -94,8 +105,13 @@ export function createHandlers(
     })),
     decryptPublicValues: execute(async (sdk, request: rpc.DecryptPublicValuesRequest, signal) => {
       const result = await sdk.decryption.decryptPublicValues(
-        request.encryptedValues.map((value) => bytesToHex(value)),
-        { signal, ...(request.timeoutMs === undefined ? {} : { timeout: request.timeoutMs }) },
+        request.encryptedValues.map(encryptedValue),
+        {
+          signal,
+          ...(request.timeoutMs === undefined
+            ? {}
+            : { timeout: unsignedInteger(request.timeoutMs, "Timeout") }),
+        },
       );
       return {
         values: entries(result.clearValues),
@@ -113,7 +129,12 @@ export function createHandlers(
             : { accountAddress: address(request.accountAddress) }),
           ...(request.maxConcurrency === undefined
             ? {}
-            : { maxConcurrency: request.maxConcurrency }),
+            : {
+                maxConcurrency:
+                  request.maxConcurrency === 0
+                    ? Infinity
+                    : unsignedInteger(request.maxConcurrency, "Maximum concurrency"),
+              }),
           ...(request.waitForPropagation === undefined
             ? {}
             : { waitForPropagation: request.waitForPropagation }),
@@ -122,8 +143,9 @@ export function createHandlers(
           items: result.items.map((item) => ({
             encryptedValue: bytes(item.encryptedValue),
             contractAddress: bytes(item.contractAddress),
-            value: item.error ? undefined : clearValue(item.value),
-            error: item.error ? errorDetails(item.error) : undefined,
+            result: item.error
+              ? { $case: "error" as const, error: errorDetails(item.error) }
+              : { $case: "value" as const, value: clearValue(item.value) },
           })),
         };
       },
@@ -133,25 +155,29 @@ export function createHandlers(
       return runtime.execute(
         request.operation,
         signal,
-        async (sdk) => ({
-          preparedPermitJson: json(
-            await sdk.offline.preparePermit({
-              signer,
-              contracts: request.contractAddresses.map(address),
-              ...(request.delegatorAddress === undefined
-                ? {}
-                : { delegator: address(request.delegatorAddress) }),
-              ...(request.durationDays === undefined ? {} : { durationDays: request.durationDays }),
-            }),
-          ),
-        }),
+        async (sdk) => {
+          const prepared = await sdk.offline.preparePermit({
+            signer,
+            contracts: request.contractAddresses.map(address),
+            ...(request.delegatorAddress === undefined
+              ? {}
+              : { delegator: address(request.delegatorAddress) }),
+            ...(request.durationDays === undefined
+              ? {}
+              : { durationDays: unsignedInteger(request.durationDays, "Permit duration") }),
+          });
+          return {
+            preparedPermit: Buffer.from(json(prepared)),
+            typedDataJson: json(prepared.eip712),
+          };
+        },
         { credentialSigner: signer },
       );
     }),
     registerPermit: unary((request: rpc.RegisterPermitRequest, signal) => {
       let payload: unknown;
       try {
-        payload = JSON.parse(request.preparedPermitJson);
+        payload = JSON.parse(request.preparedPermit.toString("utf8"));
       } catch {
         throw invalidArgument("Prepared permit must contain valid JSON.");
       }

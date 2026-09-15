@@ -78,16 +78,23 @@ export interface GetInfoResponse {
   sdkVersion: string;
 }
 
+/** Addresses contain exactly 20 bytes; chain IDs must fit the SDK safe integer range. */
 export interface WalletAccount {
   address: Buffer;
   chainId: bigint;
 }
 
 export interface CreateContextRequest {
-  configJson: string;
+  config: ContextConfig | undefined;
   signerEnabled: boolean;
-  account: WalletAccount | undefined;
-  storage: StorageBinding | undefined;
+  account:
+    | WalletAccount
+    | undefined;
+  /** Omission creates isolated in-memory storage for this context. */
+  storage:
+    | StorageBinding
+    | undefined;
+  /** Omission shares storage, including its backend identity. */
   permitStorage: StorageBinding | undefined;
 }
 
@@ -104,6 +111,7 @@ export interface UpdateAccountRequest {
   account: WalletAccount | undefined;
 }
 
+/** operation_id must be unique among active operations within the context. */
 export interface Operation {
   contextId: string;
   operationId: string;
@@ -113,6 +121,7 @@ export interface OperationRequest {
   operation: Operation | undefined;
 }
 
+/** encrypted_value contains a 32-byte handle; contract_address contains 20 bytes. */
 export interface EncryptedInput {
   encryptedValue: Buffer;
   contractAddress: Buffer;
@@ -120,11 +129,17 @@ export interface EncryptedInput {
 
 export interface ClearValue {
   value:
-    | { $case: "bigintValue"; bigintValue: string }
+    | //
+    /** Base-10 integer string for values wider than the SDK number representation. */
+    { $case: "bigintValue"; bigintValue: string }
     | { $case: "boolValue"; boolValue: boolean }
     | { $case: "stringValue"; stringValue: string }
-    | { $case: "undefinedValue"; undefinedValue: boolean }
-    | { $case: "numberValue"; numberValue: number }
+    | //
+    /** Explicit SDK undefined differs from an absent or malformed result. */
+    { $case: "undefinedValue"; undefinedValue: Empty }
+    | //
+    /** SDK euint8, euint16 and euint32 clear values. */
+    { $case: "numberValue"; numberValue: number }
     | undefined;
 }
 
@@ -136,6 +151,7 @@ export interface ClearEntry {
 export interface DecryptValuesRequest {
   operation: Operation | undefined;
   inputs: EncryptedInput[];
+  /** SDK timeout in whole milliseconds; independent of the gRPC deadline. */
   timeoutMs?: number | undefined;
 }
 
@@ -154,6 +170,7 @@ export interface DelegatedDecryptValuesRequest {
 export interface DecryptPublicValuesRequest {
   operation: Operation | undefined;
   encryptedValues: Buffer[];
+  /** SDK timeout in whole milliseconds; independent of the gRPC deadline. */
   timeoutMs?: number | undefined;
 }
 
@@ -167,7 +184,10 @@ export interface DelegatedBatchDecryptValuesRequest {
   operation: Operation | undefined;
   inputs: EncryptedInput[];
   delegatorAddress: Buffer;
-  accountAddress?: Buffer | undefined;
+  accountAddress?:
+    | Buffer
+    | undefined;
+  /** Omission uses the SDK default; zero explicitly selects unlimited concurrency. */
   maxConcurrency?: number | undefined;
   waitForPropagation?: boolean | undefined;
 }
@@ -176,14 +196,14 @@ export interface SdkError {
   code: string;
   message: string;
   retryable: boolean;
+  /** Positive whole seconds, present only for retryable errors with a valid hint. */
   retryAfterSeconds?: number | undefined;
 }
 
 export interface BatchItem {
   encryptedValue: Buffer;
   contractAddress: Buffer;
-  value: ClearValue | undefined;
-  error: SdkError | undefined;
+  result: { $case: "value"; value: ClearValue } | { $case: "error"; error: SdkError } | undefined;
 }
 
 export interface DelegatedBatchDecryptValuesResponse {
@@ -194,17 +214,23 @@ export interface PreparePermitRequest {
   operation: Operation | undefined;
   signerAddress: Buffer;
   contractAddresses: Buffer[];
-  delegatorAddress?: Buffer | undefined;
+  delegatorAddress?:
+    | Buffer
+    | undefined;
+  /** Whole days; omission uses the SDK permit lifetime. */
   durationDays?: number | undefined;
 }
 
 export interface PreparePermitResponse {
-  preparedPermitJson: string;
+  /** Opaque SDK envelope for RegisterPermit; callers must not inspect or modify it. */
+  preparedPermit: Buffer;
+  /** EIP-712 data for application-controlled signing; dynamic types require JSON. */
+  typedDataJson: string;
 }
 
 export interface RegisterPermitRequest {
   operation: Operation | undefined;
-  preparedPermitJson: string;
+  preparedPermit: Buffer;
   signature: Buffer;
 }
 
@@ -237,11 +263,11 @@ export interface ScopeRequest {
   scopeId: string;
 }
 
+/** Exactly one result is required, even when the signature byte string is empty. */
 export interface SignerReply {
   operationId: string;
   actionId: string;
-  signature: Buffer;
-  error: SdkError | undefined;
+  result: { $case: "signature"; signature: Buffer } | { $case: "error"; error: SdkError } | undefined;
 }
 
 export interface SignerClientMessage {
@@ -290,10 +316,18 @@ export interface StorageAction {
   value: Buffer;
 }
 
+/**
+ * GET requires value or not_found; SET and DELETE require ack. Any operation may return error.
+ * Empty value bytes remain distinct from not_found. Missing or mismatched results fail the operation.
+ */
 export interface StorageReply {
   requestId: string;
-  value?: Buffer | undefined;
-  error: SdkError | undefined;
+  result:
+    | { $case: "value"; value: Buffer }
+    | { $case: "error"; error: SdkError }
+    | { $case: "notFound"; notFound: Empty }
+    | { $case: "ack"; ack: Empty }
+    | undefined;
 }
 
 export interface StorageClientMessage {
@@ -310,6 +344,100 @@ export interface StorageServerMessage {
     $case: "replyError";
     replyError: StorageReplyError;
   } | undefined;
+}
+
+export interface CloseContextResponse {
+}
+
+export interface UpdateAccountResponse {
+}
+
+export interface RegisterPermitResponse {
+}
+
+export interface GrantPermitResponse {
+}
+
+export interface GrantDelegationPermitResponse {
+}
+
+export interface RevokePermitsResponse {
+}
+
+export interface ClearPermitsResponse {
+}
+
+export interface WarmTransportKeyPairResponse {
+}
+
+export interface WarmTransportKeyPairScopeResponse {
+}
+
+export interface RevokeTransportKeyPairResponse {
+}
+
+export interface DelegatedDecryptValuesResponse {
+  values: ClearEntry[];
+}
+
+export interface HasDelegationPermitResponse {
+  hasPermit: boolean;
+}
+
+/** Omitted credential settings retain the SDK defaults. */
+export interface ContextConfig {
+  chains: ChainConfig[];
+  /** Omission selects the first configured chain. */
+  chainId?:
+    | bigint
+    | undefined;
+  /** Whole days. */
+  permitTtl?:
+    | number
+    | undefined;
+  /** Whole seconds. */
+  transportKeyPairTtl?: number | undefined;
+  transportKeyPairScope?:
+    | string
+    | undefined;
+  /** Whole seconds. */
+  registryTtl?: number | undefined;
+}
+
+/**
+ * Omitted fields inherit the SDK preset for id. Custom chains supply every required field.
+ * Contract addresses contain exactly 20 bytes, except explicitly cleared optional addresses.
+ */
+export interface ChainConfig {
+  id: bigint;
+  network?: string | undefined;
+  gatewayChainId?: bigint | undefined;
+  relayerUrl?: string | undefined;
+  aclContractAddress?: Buffer | undefined;
+  kmsContractAddress?: Buffer | undefined;
+  inputVerifierContractAddress?: Buffer | undefined;
+  verifyingContractAddressDecryption?: Buffer | undefined;
+  verifyingContractAddressInputVerification?:
+    | Buffer
+    | undefined;
+  /** An explicitly empty value clears the preset's optional address. */
+  registryAddress?: Buffer | undefined;
+  executorAddress?: Buffer | undefined;
+  auth: ChainAuth | undefined;
+}
+
+export interface ChainAuth {
+  credential:
+    | { $case: "bearerToken"; bearerToken: string }
+    | { $case: "apiKeyHeader"; apiKeyHeader: NamedCredential }
+    | { $case: "apiKeyCookie"; apiKeyCookie: NamedCredential }
+    | undefined;
+}
+
+export interface NamedCredential {
+  /** Omission preserves the SDK's default header or cookie name. */
+  name?: string | undefined;
+  value: string;
 }
 
 function createBaseEmpty(): Empty {
@@ -542,13 +670,13 @@ export const WalletAccount: MessageFns<WalletAccount> = {
 };
 
 function createBaseCreateContextRequest(): CreateContextRequest {
-  return { configJson: "", signerEnabled: false, account: undefined, storage: undefined, permitStorage: undefined };
+  return { config: undefined, signerEnabled: false, account: undefined, storage: undefined, permitStorage: undefined };
 }
 
 export const CreateContextRequest: MessageFns<CreateContextRequest> = {
   encode(message: CreateContextRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.configJson !== "") {
-      writer.uint32(10).string(message.configJson);
+    if (message.config !== undefined) {
+      ContextConfig.encode(message.config, writer.uint32(10).fork()).join();
     }
     if (message.signerEnabled !== false) {
       writer.uint32(16).bool(message.signerEnabled);
@@ -577,7 +705,7 @@ export const CreateContextRequest: MessageFns<CreateContextRequest> = {
             break;
           }
 
-          message.configJson = reader.string();
+          message.config = ContextConfig.decode(reader, reader.uint32());
           continue;
         }
         case 2: {
@@ -623,11 +751,7 @@ export const CreateContextRequest: MessageFns<CreateContextRequest> = {
 
   fromJSON(object: any): CreateContextRequest {
     return {
-      configJson: isSet(object.configJson)
-        ? globalThis.String(object.configJson)
-        : isSet(object.config_json)
-        ? globalThis.String(object.config_json)
-        : "",
+      config: isSet(object.config) ? ContextConfig.fromJSON(object.config) : undefined,
       signerEnabled: isSet(object.signerEnabled)
         ? globalThis.Boolean(object.signerEnabled)
         : isSet(object.signer_enabled)
@@ -645,8 +769,8 @@ export const CreateContextRequest: MessageFns<CreateContextRequest> = {
 
   toJSON(message: CreateContextRequest): unknown {
     const obj: any = {};
-    if (message.configJson !== "") {
-      obj.configJson = message.configJson;
+    if (message.config !== undefined) {
+      obj.config = ContextConfig.toJSON(message.config);
     }
     if (message.signerEnabled !== false) {
       obj.signerEnabled = message.signerEnabled;
@@ -668,7 +792,9 @@ export const CreateContextRequest: MessageFns<CreateContextRequest> = {
   },
   fromPartial(object: DeepPartial<CreateContextRequest>): CreateContextRequest {
     const message = createBaseCreateContextRequest();
-    message.configJson = object.configJson ?? "";
+    message.config = (object.config !== undefined && object.config !== null)
+      ? ContextConfig.fromPartial(object.config)
+      : undefined;
     message.signerEnabled = object.signerEnabled ?? false;
     message.account = (object.account !== undefined && object.account !== null)
       ? WalletAccount.fromPartial(object.account)
@@ -1138,10 +1264,10 @@ export const ClearValue: MessageFns<ClearValue> = {
         writer.uint32(26).string(message.value.stringValue);
         break;
       case "undefinedValue":
-        writer.uint32(32).bool(message.value.undefinedValue);
+        Empty.encode(message.value.undefinedValue, writer.uint32(34).fork()).join();
         break;
       case "numberValue":
-        writer.uint32(41).double(message.value.numberValue);
+        writer.uint32(40).uint32(message.value.numberValue);
         break;
     }
     return writer;
@@ -1179,19 +1305,19 @@ export const ClearValue: MessageFns<ClearValue> = {
           continue;
         }
         case 4: {
-          if (tag !== 32) {
+          if (tag !== 34) {
             break;
           }
 
-          message.value = { $case: "undefinedValue", undefinedValue: reader.bool() };
+          message.value = { $case: "undefinedValue", undefinedValue: Empty.decode(reader, reader.uint32()) };
           continue;
         }
         case 5: {
-          if (tag !== 41) {
+          if (tag !== 40) {
             break;
           }
 
-          message.value = { $case: "numberValue", numberValue: reader.double() };
+          message.value = { $case: "numberValue", numberValue: reader.uint32() };
           continue;
         }
       }
@@ -1218,9 +1344,9 @@ export const ClearValue: MessageFns<ClearValue> = {
         : isSet(object.string_value)
         ? { $case: "stringValue", stringValue: globalThis.String(object.string_value) }
         : isSet(object.undefinedValue)
-        ? { $case: "undefinedValue", undefinedValue: globalThis.Boolean(object.undefinedValue) }
+        ? { $case: "undefinedValue", undefinedValue: Empty.fromJSON(object.undefinedValue) }
         : isSet(object.undefined_value)
-        ? { $case: "undefinedValue", undefinedValue: globalThis.Boolean(object.undefined_value) }
+        ? { $case: "undefinedValue", undefinedValue: Empty.fromJSON(object.undefined_value) }
         : isSet(object.numberValue)
         ? { $case: "numberValue", numberValue: globalThis.Number(object.numberValue) }
         : isSet(object.number_value)
@@ -1238,9 +1364,9 @@ export const ClearValue: MessageFns<ClearValue> = {
     } else if (message.value?.$case === "stringValue") {
       obj.stringValue = message.value.stringValue;
     } else if (message.value?.$case === "undefinedValue") {
-      obj.undefinedValue = message.value.undefinedValue;
+      obj.undefinedValue = Empty.toJSON(message.value.undefinedValue);
     } else if (message.value?.$case === "numberValue") {
-      obj.numberValue = message.value.numberValue;
+      obj.numberValue = Math.round(message.value.numberValue);
     }
     return obj;
   },
@@ -1271,7 +1397,7 @@ export const ClearValue: MessageFns<ClearValue> = {
       }
       case "undefinedValue": {
         if (object.value?.undefinedValue !== undefined && object.value?.undefinedValue !== null) {
-          message.value = { $case: "undefinedValue", undefinedValue: object.value.undefinedValue };
+          message.value = { $case: "undefinedValue", undefinedValue: Empty.fromPartial(object.value.undefinedValue) };
         }
         break;
       }
@@ -1381,7 +1507,7 @@ export const DecryptValuesRequest: MessageFns<DecryptValuesRequest> = {
       EncryptedInput.encode(v!, writer.uint32(18).fork()).join();
     }
     if (message.timeoutMs !== undefined) {
-      writer.uint32(25).double(message.timeoutMs);
+      writer.uint32(24).uint32(message.timeoutMs);
     }
     return writer;
   },
@@ -1410,11 +1536,11 @@ export const DecryptValuesRequest: MessageFns<DecryptValuesRequest> = {
           continue;
         }
         case 3: {
-          if (tag !== 25) {
+          if (tag !== 24) {
             break;
           }
 
-          message.timeoutMs = reader.double();
+          message.timeoutMs = reader.uint32();
           continue;
         }
       }
@@ -1447,7 +1573,7 @@ export const DecryptValuesRequest: MessageFns<DecryptValuesRequest> = {
       obj.inputs = message.inputs.map((e) => EncryptedInput.toJSON(e));
     }
     if (message.timeoutMs !== undefined) {
-      obj.timeoutMs = message.timeoutMs;
+      obj.timeoutMs = Math.round(message.timeoutMs);
     }
     return obj;
   },
@@ -1683,7 +1809,7 @@ export const DecryptPublicValuesRequest: MessageFns<DecryptPublicValuesRequest> 
       writer.uint32(18).bytes(v!);
     }
     if (message.timeoutMs !== undefined) {
-      writer.uint32(25).double(message.timeoutMs);
+      writer.uint32(24).uint32(message.timeoutMs);
     }
     return writer;
   },
@@ -1712,11 +1838,11 @@ export const DecryptPublicValuesRequest: MessageFns<DecryptPublicValuesRequest> 
           continue;
         }
         case 3: {
-          if (tag !== 25) {
+          if (tag !== 24) {
             break;
           }
 
-          message.timeoutMs = reader.double();
+          message.timeoutMs = reader.uint32();
           continue;
         }
       }
@@ -1753,7 +1879,7 @@ export const DecryptPublicValuesRequest: MessageFns<DecryptPublicValuesRequest> 
       obj.encryptedValues = message.encryptedValues.map((e) => base64FromBytes(e));
     }
     if (message.timeoutMs !== undefined) {
-      obj.timeoutMs = message.timeoutMs;
+      obj.timeoutMs = Math.round(message.timeoutMs);
     }
     return obj;
   },
@@ -1898,7 +2024,7 @@ export const DelegatedBatchDecryptValuesRequest: MessageFns<DelegatedBatchDecryp
       writer.uint32(34).bytes(message.accountAddress);
     }
     if (message.maxConcurrency !== undefined) {
-      writer.uint32(41).double(message.maxConcurrency);
+      writer.uint32(40).uint32(message.maxConcurrency);
     }
     if (message.waitForPropagation !== undefined) {
       writer.uint32(48).bool(message.waitForPropagation);
@@ -1946,11 +2072,11 @@ export const DelegatedBatchDecryptValuesRequest: MessageFns<DelegatedBatchDecryp
           continue;
         }
         case 5: {
-          if (tag !== 41) {
+          if (tag !== 40) {
             break;
           }
 
-          message.maxConcurrency = reader.double();
+          message.maxConcurrency = reader.uint32();
           continue;
         }
         case 6: {
@@ -2012,7 +2138,7 @@ export const DelegatedBatchDecryptValuesRequest: MessageFns<DelegatedBatchDecryp
       obj.accountAddress = base64FromBytes(message.accountAddress);
     }
     if (message.maxConcurrency !== undefined) {
-      obj.maxConcurrency = message.maxConcurrency;
+      obj.maxConcurrency = Math.round(message.maxConcurrency);
     }
     if (message.waitForPropagation !== undefined) {
       obj.waitForPropagation = message.waitForPropagation;
@@ -2053,7 +2179,7 @@ export const SdkError: MessageFns<SdkError> = {
       writer.uint32(24).bool(message.retryable);
     }
     if (message.retryAfterSeconds !== undefined) {
-      writer.uint32(33).double(message.retryAfterSeconds);
+      writer.uint32(32).uint32(message.retryAfterSeconds);
     }
     return writer;
   },
@@ -2090,11 +2216,11 @@ export const SdkError: MessageFns<SdkError> = {
           continue;
         }
         case 4: {
-          if (tag !== 33) {
+          if (tag !== 32) {
             break;
           }
 
-          message.retryAfterSeconds = reader.double();
+          message.retryAfterSeconds = reader.uint32();
           continue;
         }
       }
@@ -2131,7 +2257,7 @@ export const SdkError: MessageFns<SdkError> = {
       obj.retryable = message.retryable;
     }
     if (message.retryAfterSeconds !== undefined) {
-      obj.retryAfterSeconds = message.retryAfterSeconds;
+      obj.retryAfterSeconds = Math.round(message.retryAfterSeconds);
     }
     return obj;
   },
@@ -2150,7 +2276,7 @@ export const SdkError: MessageFns<SdkError> = {
 };
 
 function createBaseBatchItem(): BatchItem {
-  return { encryptedValue: Buffer.alloc(0), contractAddress: Buffer.alloc(0), value: undefined, error: undefined };
+  return { encryptedValue: Buffer.alloc(0), contractAddress: Buffer.alloc(0), result: undefined };
 }
 
 export const BatchItem: MessageFns<BatchItem> = {
@@ -2161,11 +2287,13 @@ export const BatchItem: MessageFns<BatchItem> = {
     if (message.contractAddress.length !== 0) {
       writer.uint32(18).bytes(message.contractAddress);
     }
-    if (message.value !== undefined) {
-      ClearValue.encode(message.value, writer.uint32(26).fork()).join();
-    }
-    if (message.error !== undefined) {
-      SdkError.encode(message.error, writer.uint32(34).fork()).join();
+    switch (message.result?.$case) {
+      case "value":
+        ClearValue.encode(message.result.value, writer.uint32(26).fork()).join();
+        break;
+      case "error":
+        SdkError.encode(message.result.error, writer.uint32(34).fork()).join();
+        break;
     }
     return writer;
   },
@@ -2198,7 +2326,7 @@ export const BatchItem: MessageFns<BatchItem> = {
             break;
           }
 
-          message.value = ClearValue.decode(reader, reader.uint32());
+          message.result = { $case: "value", value: ClearValue.decode(reader, reader.uint32()) };
           continue;
         }
         case 4: {
@@ -2206,7 +2334,7 @@ export const BatchItem: MessageFns<BatchItem> = {
             break;
           }
 
-          message.error = SdkError.decode(reader, reader.uint32());
+          message.result = { $case: "error", error: SdkError.decode(reader, reader.uint32()) };
           continue;
         }
       }
@@ -2230,8 +2358,11 @@ export const BatchItem: MessageFns<BatchItem> = {
         : isSet(object.contract_address)
         ? Buffer.from(bytesFromBase64(object.contract_address))
         : Buffer.alloc(0),
-      value: isSet(object.value) ? ClearValue.fromJSON(object.value) : undefined,
-      error: isSet(object.error) ? SdkError.fromJSON(object.error) : undefined,
+      result: isSet(object.value)
+        ? { $case: "value", value: ClearValue.fromJSON(object.value) }
+        : isSet(object.error)
+        ? { $case: "error", error: SdkError.fromJSON(object.error) }
+        : undefined,
     };
   },
 
@@ -2243,11 +2374,10 @@ export const BatchItem: MessageFns<BatchItem> = {
     if (message.contractAddress.length !== 0) {
       obj.contractAddress = base64FromBytes(message.contractAddress);
     }
-    if (message.value !== undefined) {
-      obj.value = ClearValue.toJSON(message.value);
-    }
-    if (message.error !== undefined) {
-      obj.error = SdkError.toJSON(message.error);
+    if (message.result?.$case === "value") {
+      obj.value = ClearValue.toJSON(message.result.value);
+    } else if (message.result?.$case === "error") {
+      obj.error = SdkError.toJSON(message.result.error);
     }
     return obj;
   },
@@ -2259,12 +2389,20 @@ export const BatchItem: MessageFns<BatchItem> = {
     const message = createBaseBatchItem();
     message.encryptedValue = object.encryptedValue ?? Buffer.alloc(0);
     message.contractAddress = object.contractAddress ?? Buffer.alloc(0);
-    message.value = (object.value !== undefined && object.value !== null)
-      ? ClearValue.fromPartial(object.value)
-      : undefined;
-    message.error = (object.error !== undefined && object.error !== null)
-      ? SdkError.fromPartial(object.error)
-      : undefined;
+    switch (object.result?.$case) {
+      case "value": {
+        if (object.result?.value !== undefined && object.result?.value !== null) {
+          message.result = { $case: "value", value: ClearValue.fromPartial(object.result.value) };
+        }
+        break;
+      }
+      case "error": {
+        if (object.result?.error !== undefined && object.result?.error !== null) {
+          message.result = { $case: "error", error: SdkError.fromPartial(object.result.error) };
+        }
+        break;
+      }
+    }
     return message;
   },
 };
@@ -2354,7 +2492,7 @@ export const PreparePermitRequest: MessageFns<PreparePermitRequest> = {
       writer.uint32(34).bytes(message.delegatorAddress);
     }
     if (message.durationDays !== undefined) {
-      writer.uint32(41).double(message.durationDays);
+      writer.uint32(40).uint32(message.durationDays);
     }
     return writer;
   },
@@ -2399,11 +2537,11 @@ export const PreparePermitRequest: MessageFns<PreparePermitRequest> = {
           continue;
         }
         case 5: {
-          if (tag !== 41) {
+          if (tag !== 40) {
             break;
           }
 
-          message.durationDays = reader.double();
+          message.durationDays = reader.uint32();
           continue;
         }
       }
@@ -2456,7 +2594,7 @@ export const PreparePermitRequest: MessageFns<PreparePermitRequest> = {
       obj.delegatorAddress = base64FromBytes(message.delegatorAddress);
     }
     if (message.durationDays !== undefined) {
-      obj.durationDays = message.durationDays;
+      obj.durationDays = Math.round(message.durationDays);
     }
     return obj;
   },
@@ -2478,13 +2616,16 @@ export const PreparePermitRequest: MessageFns<PreparePermitRequest> = {
 };
 
 function createBasePreparePermitResponse(): PreparePermitResponse {
-  return { preparedPermitJson: "" };
+  return { preparedPermit: Buffer.alloc(0), typedDataJson: "" };
 }
 
 export const PreparePermitResponse: MessageFns<PreparePermitResponse> = {
   encode(message: PreparePermitResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.preparedPermitJson !== "") {
-      writer.uint32(10).string(message.preparedPermitJson);
+    if (message.preparedPermit.length !== 0) {
+      writer.uint32(10).bytes(message.preparedPermit);
+    }
+    if (message.typedDataJson !== "") {
+      writer.uint32(18).string(message.typedDataJson);
     }
     return writer;
   },
@@ -2501,7 +2642,15 @@ export const PreparePermitResponse: MessageFns<PreparePermitResponse> = {
             break;
           }
 
-          message.preparedPermitJson = reader.string();
+          message.preparedPermit = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.typedDataJson = reader.string();
           continue;
         }
       }
@@ -2515,18 +2664,26 @@ export const PreparePermitResponse: MessageFns<PreparePermitResponse> = {
 
   fromJSON(object: any): PreparePermitResponse {
     return {
-      preparedPermitJson: isSet(object.preparedPermitJson)
-        ? globalThis.String(object.preparedPermitJson)
-        : isSet(object.prepared_permit_json)
-        ? globalThis.String(object.prepared_permit_json)
+      preparedPermit: isSet(object.preparedPermit)
+        ? Buffer.from(bytesFromBase64(object.preparedPermit))
+        : isSet(object.prepared_permit)
+        ? Buffer.from(bytesFromBase64(object.prepared_permit))
+        : Buffer.alloc(0),
+      typedDataJson: isSet(object.typedDataJson)
+        ? globalThis.String(object.typedDataJson)
+        : isSet(object.typed_data_json)
+        ? globalThis.String(object.typed_data_json)
         : "",
     };
   },
 
   toJSON(message: PreparePermitResponse): unknown {
     const obj: any = {};
-    if (message.preparedPermitJson !== "") {
-      obj.preparedPermitJson = message.preparedPermitJson;
+    if (message.preparedPermit.length !== 0) {
+      obj.preparedPermit = base64FromBytes(message.preparedPermit);
+    }
+    if (message.typedDataJson !== "") {
+      obj.typedDataJson = message.typedDataJson;
     }
     return obj;
   },
@@ -2536,13 +2693,14 @@ export const PreparePermitResponse: MessageFns<PreparePermitResponse> = {
   },
   fromPartial(object: DeepPartial<PreparePermitResponse>): PreparePermitResponse {
     const message = createBasePreparePermitResponse();
-    message.preparedPermitJson = object.preparedPermitJson ?? "";
+    message.preparedPermit = object.preparedPermit ?? Buffer.alloc(0);
+    message.typedDataJson = object.typedDataJson ?? "";
     return message;
   },
 };
 
 function createBaseRegisterPermitRequest(): RegisterPermitRequest {
-  return { operation: undefined, preparedPermitJson: "", signature: Buffer.alloc(0) };
+  return { operation: undefined, preparedPermit: Buffer.alloc(0), signature: Buffer.alloc(0) };
 }
 
 export const RegisterPermitRequest: MessageFns<RegisterPermitRequest> = {
@@ -2550,8 +2708,8 @@ export const RegisterPermitRequest: MessageFns<RegisterPermitRequest> = {
     if (message.operation !== undefined) {
       Operation.encode(message.operation, writer.uint32(10).fork()).join();
     }
-    if (message.preparedPermitJson !== "") {
-      writer.uint32(18).string(message.preparedPermitJson);
+    if (message.preparedPermit.length !== 0) {
+      writer.uint32(18).bytes(message.preparedPermit);
     }
     if (message.signature.length !== 0) {
       writer.uint32(26).bytes(message.signature);
@@ -2579,7 +2737,7 @@ export const RegisterPermitRequest: MessageFns<RegisterPermitRequest> = {
             break;
           }
 
-          message.preparedPermitJson = reader.string();
+          message.preparedPermit = Buffer.from(reader.bytes());
           continue;
         }
         case 3: {
@@ -2602,11 +2760,11 @@ export const RegisterPermitRequest: MessageFns<RegisterPermitRequest> = {
   fromJSON(object: any): RegisterPermitRequest {
     return {
       operation: isSet(object.operation) ? Operation.fromJSON(object.operation) : undefined,
-      preparedPermitJson: isSet(object.preparedPermitJson)
-        ? globalThis.String(object.preparedPermitJson)
-        : isSet(object.prepared_permit_json)
-        ? globalThis.String(object.prepared_permit_json)
-        : "",
+      preparedPermit: isSet(object.preparedPermit)
+        ? Buffer.from(bytesFromBase64(object.preparedPermit))
+        : isSet(object.prepared_permit)
+        ? Buffer.from(bytesFromBase64(object.prepared_permit))
+        : Buffer.alloc(0),
       signature: isSet(object.signature) ? Buffer.from(bytesFromBase64(object.signature)) : Buffer.alloc(0),
     };
   },
@@ -2616,8 +2774,8 @@ export const RegisterPermitRequest: MessageFns<RegisterPermitRequest> = {
     if (message.operation !== undefined) {
       obj.operation = Operation.toJSON(message.operation);
     }
-    if (message.preparedPermitJson !== "") {
-      obj.preparedPermitJson = message.preparedPermitJson;
+    if (message.preparedPermit.length !== 0) {
+      obj.preparedPermit = base64FromBytes(message.preparedPermit);
     }
     if (message.signature.length !== 0) {
       obj.signature = base64FromBytes(message.signature);
@@ -2633,7 +2791,7 @@ export const RegisterPermitRequest: MessageFns<RegisterPermitRequest> = {
     message.operation = (object.operation !== undefined && object.operation !== null)
       ? Operation.fromPartial(object.operation)
       : undefined;
-    message.preparedPermitJson = object.preparedPermitJson ?? "";
+    message.preparedPermit = object.preparedPermit ?? Buffer.alloc(0);
     message.signature = object.signature ?? Buffer.alloc(0);
     return message;
   },
@@ -3112,7 +3270,7 @@ export const ScopeRequest: MessageFns<ScopeRequest> = {
 };
 
 function createBaseSignerReply(): SignerReply {
-  return { operationId: "", actionId: "", signature: Buffer.alloc(0), error: undefined };
+  return { operationId: "", actionId: "", result: undefined };
 }
 
 export const SignerReply: MessageFns<SignerReply> = {
@@ -3123,11 +3281,13 @@ export const SignerReply: MessageFns<SignerReply> = {
     if (message.actionId !== "") {
       writer.uint32(18).string(message.actionId);
     }
-    if (message.signature.length !== 0) {
-      writer.uint32(26).bytes(message.signature);
-    }
-    if (message.error !== undefined) {
-      SdkError.encode(message.error, writer.uint32(34).fork()).join();
+    switch (message.result?.$case) {
+      case "signature":
+        writer.uint32(26).bytes(message.result.signature);
+        break;
+      case "error":
+        SdkError.encode(message.result.error, writer.uint32(34).fork()).join();
+        break;
     }
     return writer;
   },
@@ -3160,7 +3320,7 @@ export const SignerReply: MessageFns<SignerReply> = {
             break;
           }
 
-          message.signature = Buffer.from(reader.bytes());
+          message.result = { $case: "signature", signature: Buffer.from(reader.bytes()) };
           continue;
         }
         case 4: {
@@ -3168,7 +3328,7 @@ export const SignerReply: MessageFns<SignerReply> = {
             break;
           }
 
-          message.error = SdkError.decode(reader, reader.uint32());
+          message.result = { $case: "error", error: SdkError.decode(reader, reader.uint32()) };
           continue;
         }
       }
@@ -3192,8 +3352,11 @@ export const SignerReply: MessageFns<SignerReply> = {
         : isSet(object.action_id)
         ? globalThis.String(object.action_id)
         : "",
-      signature: isSet(object.signature) ? Buffer.from(bytesFromBase64(object.signature)) : Buffer.alloc(0),
-      error: isSet(object.error) ? SdkError.fromJSON(object.error) : undefined,
+      result: isSet(object.signature)
+        ? { $case: "signature", signature: Buffer.from(bytesFromBase64(object.signature)) }
+        : isSet(object.error)
+        ? { $case: "error", error: SdkError.fromJSON(object.error) }
+        : undefined,
     };
   },
 
@@ -3205,11 +3368,10 @@ export const SignerReply: MessageFns<SignerReply> = {
     if (message.actionId !== "") {
       obj.actionId = message.actionId;
     }
-    if (message.signature.length !== 0) {
-      obj.signature = base64FromBytes(message.signature);
-    }
-    if (message.error !== undefined) {
-      obj.error = SdkError.toJSON(message.error);
+    if (message.result?.$case === "signature") {
+      obj.signature = base64FromBytes(message.result.signature);
+    } else if (message.result?.$case === "error") {
+      obj.error = SdkError.toJSON(message.result.error);
     }
     return obj;
   },
@@ -3221,10 +3383,20 @@ export const SignerReply: MessageFns<SignerReply> = {
     const message = createBaseSignerReply();
     message.operationId = object.operationId ?? "";
     message.actionId = object.actionId ?? "";
-    message.signature = object.signature ?? Buffer.alloc(0);
-    message.error = (object.error !== undefined && object.error !== null)
-      ? SdkError.fromPartial(object.error)
-      : undefined;
+    switch (object.result?.$case) {
+      case "signature": {
+        if (object.result?.signature !== undefined && object.result?.signature !== null) {
+          message.result = { $case: "signature", signature: object.result.signature };
+        }
+        break;
+      }
+      case "error": {
+        if (object.result?.error !== undefined && object.result?.error !== null) {
+          message.result = { $case: "error", error: SdkError.fromPartial(object.result.error) };
+        }
+        break;
+      }
+    }
     return message;
   },
 };
@@ -4017,7 +4189,7 @@ export const StorageAction: MessageFns<StorageAction> = {
 };
 
 function createBaseStorageReply(): StorageReply {
-  return { requestId: "", value: undefined, error: undefined };
+  return { requestId: "", result: undefined };
 }
 
 export const StorageReply: MessageFns<StorageReply> = {
@@ -4025,11 +4197,19 @@ export const StorageReply: MessageFns<StorageReply> = {
     if (message.requestId !== "") {
       writer.uint32(10).string(message.requestId);
     }
-    if (message.value !== undefined) {
-      writer.uint32(18).bytes(message.value);
-    }
-    if (message.error !== undefined) {
-      SdkError.encode(message.error, writer.uint32(26).fork()).join();
+    switch (message.result?.$case) {
+      case "value":
+        writer.uint32(18).bytes(message.result.value);
+        break;
+      case "error":
+        SdkError.encode(message.result.error, writer.uint32(26).fork()).join();
+        break;
+      case "notFound":
+        Empty.encode(message.result.notFound, writer.uint32(34).fork()).join();
+        break;
+      case "ack":
+        Empty.encode(message.result.ack, writer.uint32(42).fork()).join();
+        break;
     }
     return writer;
   },
@@ -4054,7 +4234,7 @@ export const StorageReply: MessageFns<StorageReply> = {
             break;
           }
 
-          message.value = Buffer.from(reader.bytes());
+          message.result = { $case: "value", value: Buffer.from(reader.bytes()) };
           continue;
         }
         case 3: {
@@ -4062,7 +4242,23 @@ export const StorageReply: MessageFns<StorageReply> = {
             break;
           }
 
-          message.error = SdkError.decode(reader, reader.uint32());
+          message.result = { $case: "error", error: SdkError.decode(reader, reader.uint32()) };
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.result = { $case: "notFound", notFound: Empty.decode(reader, reader.uint32()) };
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.result = { $case: "ack", ack: Empty.decode(reader, reader.uint32()) };
           continue;
         }
       }
@@ -4081,8 +4277,17 @@ export const StorageReply: MessageFns<StorageReply> = {
         : isSet(object.request_id)
         ? globalThis.String(object.request_id)
         : "",
-      value: isSet(object.value) ? Buffer.from(bytesFromBase64(object.value)) : undefined,
-      error: isSet(object.error) ? SdkError.fromJSON(object.error) : undefined,
+      result: isSet(object.value)
+        ? { $case: "value", value: Buffer.from(bytesFromBase64(object.value)) }
+        : isSet(object.error)
+        ? { $case: "error", error: SdkError.fromJSON(object.error) }
+        : isSet(object.notFound)
+        ? { $case: "notFound", notFound: Empty.fromJSON(object.notFound) }
+        : isSet(object.not_found)
+        ? { $case: "notFound", notFound: Empty.fromJSON(object.not_found) }
+        : isSet(object.ack)
+        ? { $case: "ack", ack: Empty.fromJSON(object.ack) }
+        : undefined,
     };
   },
 
@@ -4091,11 +4296,14 @@ export const StorageReply: MessageFns<StorageReply> = {
     if (message.requestId !== "") {
       obj.requestId = message.requestId;
     }
-    if (message.value !== undefined) {
-      obj.value = base64FromBytes(message.value);
-    }
-    if (message.error !== undefined) {
-      obj.error = SdkError.toJSON(message.error);
+    if (message.result?.$case === "value") {
+      obj.value = base64FromBytes(message.result.value);
+    } else if (message.result?.$case === "error") {
+      obj.error = SdkError.toJSON(message.result.error);
+    } else if (message.result?.$case === "notFound") {
+      obj.notFound = Empty.toJSON(message.result.notFound);
+    } else if (message.result?.$case === "ack") {
+      obj.ack = Empty.toJSON(message.result.ack);
     }
     return obj;
   },
@@ -4106,10 +4314,32 @@ export const StorageReply: MessageFns<StorageReply> = {
   fromPartial(object: DeepPartial<StorageReply>): StorageReply {
     const message = createBaseStorageReply();
     message.requestId = object.requestId ?? "";
-    message.value = object.value ?? undefined;
-    message.error = (object.error !== undefined && object.error !== null)
-      ? SdkError.fromPartial(object.error)
-      : undefined;
+    switch (object.result?.$case) {
+      case "value": {
+        if (object.result?.value !== undefined && object.result?.value !== null) {
+          message.result = { $case: "value", value: object.result.value };
+        }
+        break;
+      }
+      case "error": {
+        if (object.result?.error !== undefined && object.result?.error !== null) {
+          message.result = { $case: "error", error: SdkError.fromPartial(object.result.error) };
+        }
+        break;
+      }
+      case "notFound": {
+        if (object.result?.notFound !== undefined && object.result?.notFound !== null) {
+          message.result = { $case: "notFound", notFound: Empty.fromPartial(object.result.notFound) };
+        }
+        break;
+      }
+      case "ack": {
+        if (object.result?.ack !== undefined && object.result?.ack !== null) {
+          message.result = { $case: "ack", ack: Empty.fromPartial(object.result.ack) };
+        }
+        break;
+      }
+    }
     return message;
   },
 };
@@ -4406,8 +4636,1233 @@ export const StorageServerMessage: MessageFns<StorageServerMessage> = {
   },
 };
 
+function createBaseCloseContextResponse(): CloseContextResponse {
+  return {};
+}
+
+export const CloseContextResponse: MessageFns<CloseContextResponse> = {
+  encode(_: CloseContextResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CloseContextResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCloseContextResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): CloseContextResponse {
+    return {};
+  },
+
+  toJSON(_: CloseContextResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create(base?: DeepPartial<CloseContextResponse>): CloseContextResponse {
+    return CloseContextResponse.fromPartial(base ?? {});
+  },
+  fromPartial(_: DeepPartial<CloseContextResponse>): CloseContextResponse {
+    const message = createBaseCloseContextResponse();
+    return message;
+  },
+};
+
+function createBaseUpdateAccountResponse(): UpdateAccountResponse {
+  return {};
+}
+
+export const UpdateAccountResponse: MessageFns<UpdateAccountResponse> = {
+  encode(_: UpdateAccountResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateAccountResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUpdateAccountResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): UpdateAccountResponse {
+    return {};
+  },
+
+  toJSON(_: UpdateAccountResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create(base?: DeepPartial<UpdateAccountResponse>): UpdateAccountResponse {
+    return UpdateAccountResponse.fromPartial(base ?? {});
+  },
+  fromPartial(_: DeepPartial<UpdateAccountResponse>): UpdateAccountResponse {
+    const message = createBaseUpdateAccountResponse();
+    return message;
+  },
+};
+
+function createBaseRegisterPermitResponse(): RegisterPermitResponse {
+  return {};
+}
+
+export const RegisterPermitResponse: MessageFns<RegisterPermitResponse> = {
+  encode(_: RegisterPermitResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RegisterPermitResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRegisterPermitResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): RegisterPermitResponse {
+    return {};
+  },
+
+  toJSON(_: RegisterPermitResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create(base?: DeepPartial<RegisterPermitResponse>): RegisterPermitResponse {
+    return RegisterPermitResponse.fromPartial(base ?? {});
+  },
+  fromPartial(_: DeepPartial<RegisterPermitResponse>): RegisterPermitResponse {
+    const message = createBaseRegisterPermitResponse();
+    return message;
+  },
+};
+
+function createBaseGrantPermitResponse(): GrantPermitResponse {
+  return {};
+}
+
+export const GrantPermitResponse: MessageFns<GrantPermitResponse> = {
+  encode(_: GrantPermitResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GrantPermitResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGrantPermitResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): GrantPermitResponse {
+    return {};
+  },
+
+  toJSON(_: GrantPermitResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create(base?: DeepPartial<GrantPermitResponse>): GrantPermitResponse {
+    return GrantPermitResponse.fromPartial(base ?? {});
+  },
+  fromPartial(_: DeepPartial<GrantPermitResponse>): GrantPermitResponse {
+    const message = createBaseGrantPermitResponse();
+    return message;
+  },
+};
+
+function createBaseGrantDelegationPermitResponse(): GrantDelegationPermitResponse {
+  return {};
+}
+
+export const GrantDelegationPermitResponse: MessageFns<GrantDelegationPermitResponse> = {
+  encode(_: GrantDelegationPermitResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GrantDelegationPermitResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGrantDelegationPermitResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): GrantDelegationPermitResponse {
+    return {};
+  },
+
+  toJSON(_: GrantDelegationPermitResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create(base?: DeepPartial<GrantDelegationPermitResponse>): GrantDelegationPermitResponse {
+    return GrantDelegationPermitResponse.fromPartial(base ?? {});
+  },
+  fromPartial(_: DeepPartial<GrantDelegationPermitResponse>): GrantDelegationPermitResponse {
+    const message = createBaseGrantDelegationPermitResponse();
+    return message;
+  },
+};
+
+function createBaseRevokePermitsResponse(): RevokePermitsResponse {
+  return {};
+}
+
+export const RevokePermitsResponse: MessageFns<RevokePermitsResponse> = {
+  encode(_: RevokePermitsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RevokePermitsResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRevokePermitsResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): RevokePermitsResponse {
+    return {};
+  },
+
+  toJSON(_: RevokePermitsResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create(base?: DeepPartial<RevokePermitsResponse>): RevokePermitsResponse {
+    return RevokePermitsResponse.fromPartial(base ?? {});
+  },
+  fromPartial(_: DeepPartial<RevokePermitsResponse>): RevokePermitsResponse {
+    const message = createBaseRevokePermitsResponse();
+    return message;
+  },
+};
+
+function createBaseClearPermitsResponse(): ClearPermitsResponse {
+  return {};
+}
+
+export const ClearPermitsResponse: MessageFns<ClearPermitsResponse> = {
+  encode(_: ClearPermitsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ClearPermitsResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseClearPermitsResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): ClearPermitsResponse {
+    return {};
+  },
+
+  toJSON(_: ClearPermitsResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create(base?: DeepPartial<ClearPermitsResponse>): ClearPermitsResponse {
+    return ClearPermitsResponse.fromPartial(base ?? {});
+  },
+  fromPartial(_: DeepPartial<ClearPermitsResponse>): ClearPermitsResponse {
+    const message = createBaseClearPermitsResponse();
+    return message;
+  },
+};
+
+function createBaseWarmTransportKeyPairResponse(): WarmTransportKeyPairResponse {
+  return {};
+}
+
+export const WarmTransportKeyPairResponse: MessageFns<WarmTransportKeyPairResponse> = {
+  encode(_: WarmTransportKeyPairResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): WarmTransportKeyPairResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseWarmTransportKeyPairResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): WarmTransportKeyPairResponse {
+    return {};
+  },
+
+  toJSON(_: WarmTransportKeyPairResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create(base?: DeepPartial<WarmTransportKeyPairResponse>): WarmTransportKeyPairResponse {
+    return WarmTransportKeyPairResponse.fromPartial(base ?? {});
+  },
+  fromPartial(_: DeepPartial<WarmTransportKeyPairResponse>): WarmTransportKeyPairResponse {
+    const message = createBaseWarmTransportKeyPairResponse();
+    return message;
+  },
+};
+
+function createBaseWarmTransportKeyPairScopeResponse(): WarmTransportKeyPairScopeResponse {
+  return {};
+}
+
+export const WarmTransportKeyPairScopeResponse: MessageFns<WarmTransportKeyPairScopeResponse> = {
+  encode(_: WarmTransportKeyPairScopeResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): WarmTransportKeyPairScopeResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseWarmTransportKeyPairScopeResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): WarmTransportKeyPairScopeResponse {
+    return {};
+  },
+
+  toJSON(_: WarmTransportKeyPairScopeResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create(base?: DeepPartial<WarmTransportKeyPairScopeResponse>): WarmTransportKeyPairScopeResponse {
+    return WarmTransportKeyPairScopeResponse.fromPartial(base ?? {});
+  },
+  fromPartial(_: DeepPartial<WarmTransportKeyPairScopeResponse>): WarmTransportKeyPairScopeResponse {
+    const message = createBaseWarmTransportKeyPairScopeResponse();
+    return message;
+  },
+};
+
+function createBaseRevokeTransportKeyPairResponse(): RevokeTransportKeyPairResponse {
+  return {};
+}
+
+export const RevokeTransportKeyPairResponse: MessageFns<RevokeTransportKeyPairResponse> = {
+  encode(_: RevokeTransportKeyPairResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RevokeTransportKeyPairResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRevokeTransportKeyPairResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): RevokeTransportKeyPairResponse {
+    return {};
+  },
+
+  toJSON(_: RevokeTransportKeyPairResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create(base?: DeepPartial<RevokeTransportKeyPairResponse>): RevokeTransportKeyPairResponse {
+    return RevokeTransportKeyPairResponse.fromPartial(base ?? {});
+  },
+  fromPartial(_: DeepPartial<RevokeTransportKeyPairResponse>): RevokeTransportKeyPairResponse {
+    const message = createBaseRevokeTransportKeyPairResponse();
+    return message;
+  },
+};
+
+function createBaseDelegatedDecryptValuesResponse(): DelegatedDecryptValuesResponse {
+  return { values: [] };
+}
+
+export const DelegatedDecryptValuesResponse: MessageFns<DelegatedDecryptValuesResponse> = {
+  encode(message: DelegatedDecryptValuesResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.values) {
+      ClearEntry.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DelegatedDecryptValuesResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDelegatedDecryptValuesResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.values.push(ClearEntry.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): DelegatedDecryptValuesResponse {
+    return {
+      values: globalThis.Array.isArray(object?.values) ? object.values.map((e: any) => ClearEntry.fromJSON(e)) : [],
+    };
+  },
+
+  toJSON(message: DelegatedDecryptValuesResponse): unknown {
+    const obj: any = {};
+    if (message.values?.length) {
+      obj.values = message.values.map((e) => ClearEntry.toJSON(e));
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<DelegatedDecryptValuesResponse>): DelegatedDecryptValuesResponse {
+    return DelegatedDecryptValuesResponse.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<DelegatedDecryptValuesResponse>): DelegatedDecryptValuesResponse {
+    const message = createBaseDelegatedDecryptValuesResponse();
+    message.values = object.values?.map((e) => ClearEntry.fromPartial(e)) || [];
+    return message;
+  },
+};
+
+function createBaseHasDelegationPermitResponse(): HasDelegationPermitResponse {
+  return { hasPermit: false };
+}
+
+export const HasDelegationPermitResponse: MessageFns<HasDelegationPermitResponse> = {
+  encode(message: HasDelegationPermitResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.hasPermit !== false) {
+      writer.uint32(8).bool(message.hasPermit);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): HasDelegationPermitResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseHasDelegationPermitResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.hasPermit = reader.bool();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): HasDelegationPermitResponse {
+    return {
+      hasPermit: isSet(object.hasPermit)
+        ? globalThis.Boolean(object.hasPermit)
+        : isSet(object.has_permit)
+        ? globalThis.Boolean(object.has_permit)
+        : false,
+    };
+  },
+
+  toJSON(message: HasDelegationPermitResponse): unknown {
+    const obj: any = {};
+    if (message.hasPermit !== false) {
+      obj.hasPermit = message.hasPermit;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<HasDelegationPermitResponse>): HasDelegationPermitResponse {
+    return HasDelegationPermitResponse.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<HasDelegationPermitResponse>): HasDelegationPermitResponse {
+    const message = createBaseHasDelegationPermitResponse();
+    message.hasPermit = object.hasPermit ?? false;
+    return message;
+  },
+};
+
+function createBaseContextConfig(): ContextConfig {
+  return {
+    chains: [],
+    chainId: undefined,
+    permitTtl: undefined,
+    transportKeyPairTtl: undefined,
+    transportKeyPairScope: undefined,
+    registryTtl: undefined,
+  };
+}
+
+export const ContextConfig: MessageFns<ContextConfig> = {
+  encode(message: ContextConfig, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.chains) {
+      ChainConfig.encode(v!, writer.uint32(10).fork()).join();
+    }
+    if (message.chainId !== undefined) {
+      if (BigInt.asUintN(64, message.chainId) !== message.chainId) {
+        throw new globalThis.Error("value provided for field message.chainId of type uint64 too large");
+      }
+      writer.uint32(16).uint64(message.chainId);
+    }
+    if (message.permitTtl !== undefined) {
+      writer.uint32(24).uint32(message.permitTtl);
+    }
+    if (message.transportKeyPairTtl !== undefined) {
+      writer.uint32(32).uint32(message.transportKeyPairTtl);
+    }
+    if (message.transportKeyPairScope !== undefined) {
+      writer.uint32(42).string(message.transportKeyPairScope);
+    }
+    if (message.registryTtl !== undefined) {
+      writer.uint32(48).uint32(message.registryTtl);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ContextConfig {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseContextConfig();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.chains.push(ChainConfig.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.chainId = reader.uint64() as bigint;
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.permitTtl = reader.uint32();
+          continue;
+        }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
+
+          message.transportKeyPairTtl = reader.uint32();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.transportKeyPairScope = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 48) {
+            break;
+          }
+
+          message.registryTtl = reader.uint32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ContextConfig {
+    return {
+      chains: globalThis.Array.isArray(object?.chains) ? object.chains.map((e: any) => ChainConfig.fromJSON(e)) : [],
+      chainId: isSet(object.chainId)
+        ? BigInt(object.chainId)
+        : isSet(object.chain_id)
+        ? BigInt(object.chain_id)
+        : undefined,
+      permitTtl: isSet(object.permitTtl)
+        ? globalThis.Number(object.permitTtl)
+        : isSet(object.permit_ttl)
+        ? globalThis.Number(object.permit_ttl)
+        : undefined,
+      transportKeyPairTtl: isSet(object.transportKeyPairTtl)
+        ? globalThis.Number(object.transportKeyPairTtl)
+        : isSet(object.transport_key_pair_ttl)
+        ? globalThis.Number(object.transport_key_pair_ttl)
+        : undefined,
+      transportKeyPairScope: isSet(object.transportKeyPairScope)
+        ? globalThis.String(object.transportKeyPairScope)
+        : isSet(object.transport_key_pair_scope)
+        ? globalThis.String(object.transport_key_pair_scope)
+        : undefined,
+      registryTtl: isSet(object.registryTtl)
+        ? globalThis.Number(object.registryTtl)
+        : isSet(object.registry_ttl)
+        ? globalThis.Number(object.registry_ttl)
+        : undefined,
+    };
+  },
+
+  toJSON(message: ContextConfig): unknown {
+    const obj: any = {};
+    if (message.chains?.length) {
+      obj.chains = message.chains.map((e) => ChainConfig.toJSON(e));
+    }
+    if (message.chainId !== undefined) {
+      obj.chainId = message.chainId.toString();
+    }
+    if (message.permitTtl !== undefined) {
+      obj.permitTtl = Math.round(message.permitTtl);
+    }
+    if (message.transportKeyPairTtl !== undefined) {
+      obj.transportKeyPairTtl = Math.round(message.transportKeyPairTtl);
+    }
+    if (message.transportKeyPairScope !== undefined) {
+      obj.transportKeyPairScope = message.transportKeyPairScope;
+    }
+    if (message.registryTtl !== undefined) {
+      obj.registryTtl = Math.round(message.registryTtl);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ContextConfig>): ContextConfig {
+    return ContextConfig.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ContextConfig>): ContextConfig {
+    const message = createBaseContextConfig();
+    message.chains = object.chains?.map((e) => ChainConfig.fromPartial(e)) || [];
+    message.chainId = (object.chainId !== undefined && object.chainId !== null) ? BigInt(object.chainId) : undefined;
+    message.permitTtl = object.permitTtl ?? undefined;
+    message.transportKeyPairTtl = object.transportKeyPairTtl ?? undefined;
+    message.transportKeyPairScope = object.transportKeyPairScope ?? undefined;
+    message.registryTtl = object.registryTtl ?? undefined;
+    return message;
+  },
+};
+
+function createBaseChainConfig(): ChainConfig {
+  return {
+    id: 0n,
+    network: undefined,
+    gatewayChainId: undefined,
+    relayerUrl: undefined,
+    aclContractAddress: undefined,
+    kmsContractAddress: undefined,
+    inputVerifierContractAddress: undefined,
+    verifyingContractAddressDecryption: undefined,
+    verifyingContractAddressInputVerification: undefined,
+    registryAddress: undefined,
+    executorAddress: undefined,
+    auth: undefined,
+  };
+}
+
+export const ChainConfig: MessageFns<ChainConfig> = {
+  encode(message: ChainConfig, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== 0n) {
+      if (BigInt.asUintN(64, message.id) !== message.id) {
+        throw new globalThis.Error("value provided for field message.id of type uint64 too large");
+      }
+      writer.uint32(8).uint64(message.id);
+    }
+    if (message.network !== undefined) {
+      writer.uint32(18).string(message.network);
+    }
+    if (message.gatewayChainId !== undefined) {
+      if (BigInt.asUintN(64, message.gatewayChainId) !== message.gatewayChainId) {
+        throw new globalThis.Error("value provided for field message.gatewayChainId of type uint64 too large");
+      }
+      writer.uint32(24).uint64(message.gatewayChainId);
+    }
+    if (message.relayerUrl !== undefined) {
+      writer.uint32(34).string(message.relayerUrl);
+    }
+    if (message.aclContractAddress !== undefined) {
+      writer.uint32(42).bytes(message.aclContractAddress);
+    }
+    if (message.kmsContractAddress !== undefined) {
+      writer.uint32(50).bytes(message.kmsContractAddress);
+    }
+    if (message.inputVerifierContractAddress !== undefined) {
+      writer.uint32(58).bytes(message.inputVerifierContractAddress);
+    }
+    if (message.verifyingContractAddressDecryption !== undefined) {
+      writer.uint32(66).bytes(message.verifyingContractAddressDecryption);
+    }
+    if (message.verifyingContractAddressInputVerification !== undefined) {
+      writer.uint32(74).bytes(message.verifyingContractAddressInputVerification);
+    }
+    if (message.registryAddress !== undefined) {
+      writer.uint32(82).bytes(message.registryAddress);
+    }
+    if (message.executorAddress !== undefined) {
+      writer.uint32(90).bytes(message.executorAddress);
+    }
+    if (message.auth !== undefined) {
+      ChainAuth.encode(message.auth, writer.uint32(98).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ChainConfig {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseChainConfig();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.id = reader.uint64() as bigint;
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.network = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.gatewayChainId = reader.uint64() as bigint;
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.relayerUrl = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.aclContractAddress = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.kmsContractAddress = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.inputVerifierContractAddress = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.verifyingContractAddressDecryption = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.verifyingContractAddressInputVerification = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          message.registryAddress = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 11: {
+          if (tag !== 90) {
+            break;
+          }
+
+          message.executorAddress = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 12: {
+          if (tag !== 98) {
+            break;
+          }
+
+          message.auth = ChainAuth.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ChainConfig {
+    return {
+      id: isSet(object.id) ? BigInt(object.id) : 0n,
+      network: isSet(object.network) ? globalThis.String(object.network) : undefined,
+      gatewayChainId: isSet(object.gatewayChainId)
+        ? BigInt(object.gatewayChainId)
+        : isSet(object.gateway_chain_id)
+        ? BigInt(object.gateway_chain_id)
+        : undefined,
+      relayerUrl: isSet(object.relayerUrl)
+        ? globalThis.String(object.relayerUrl)
+        : isSet(object.relayer_url)
+        ? globalThis.String(object.relayer_url)
+        : undefined,
+      aclContractAddress: isSet(object.aclContractAddress)
+        ? Buffer.from(bytesFromBase64(object.aclContractAddress))
+        : isSet(object.acl_contract_address)
+        ? Buffer.from(bytesFromBase64(object.acl_contract_address))
+        : undefined,
+      kmsContractAddress: isSet(object.kmsContractAddress)
+        ? Buffer.from(bytesFromBase64(object.kmsContractAddress))
+        : isSet(object.kms_contract_address)
+        ? Buffer.from(bytesFromBase64(object.kms_contract_address))
+        : undefined,
+      inputVerifierContractAddress: isSet(object.inputVerifierContractAddress)
+        ? Buffer.from(bytesFromBase64(object.inputVerifierContractAddress))
+        : isSet(object.input_verifier_contract_address)
+        ? Buffer.from(bytesFromBase64(object.input_verifier_contract_address))
+        : undefined,
+      verifyingContractAddressDecryption: isSet(object.verifyingContractAddressDecryption)
+        ? Buffer.from(bytesFromBase64(object.verifyingContractAddressDecryption))
+        : isSet(object.verifying_contract_address_decryption)
+        ? Buffer.from(bytesFromBase64(object.verifying_contract_address_decryption))
+        : undefined,
+      verifyingContractAddressInputVerification: isSet(object.verifyingContractAddressInputVerification)
+        ? Buffer.from(bytesFromBase64(object.verifyingContractAddressInputVerification))
+        : isSet(object.verifying_contract_address_input_verification)
+        ? Buffer.from(bytesFromBase64(object.verifying_contract_address_input_verification))
+        : undefined,
+      registryAddress: isSet(object.registryAddress)
+        ? Buffer.from(bytesFromBase64(object.registryAddress))
+        : isSet(object.registry_address)
+        ? Buffer.from(bytesFromBase64(object.registry_address))
+        : undefined,
+      executorAddress: isSet(object.executorAddress)
+        ? Buffer.from(bytesFromBase64(object.executorAddress))
+        : isSet(object.executor_address)
+        ? Buffer.from(bytesFromBase64(object.executor_address))
+        : undefined,
+      auth: isSet(object.auth) ? ChainAuth.fromJSON(object.auth) : undefined,
+    };
+  },
+
+  toJSON(message: ChainConfig): unknown {
+    const obj: any = {};
+    if (message.id !== 0n) {
+      obj.id = message.id.toString();
+    }
+    if (message.network !== undefined) {
+      obj.network = message.network;
+    }
+    if (message.gatewayChainId !== undefined) {
+      obj.gatewayChainId = message.gatewayChainId.toString();
+    }
+    if (message.relayerUrl !== undefined) {
+      obj.relayerUrl = message.relayerUrl;
+    }
+    if (message.aclContractAddress !== undefined) {
+      obj.aclContractAddress = base64FromBytes(message.aclContractAddress);
+    }
+    if (message.kmsContractAddress !== undefined) {
+      obj.kmsContractAddress = base64FromBytes(message.kmsContractAddress);
+    }
+    if (message.inputVerifierContractAddress !== undefined) {
+      obj.inputVerifierContractAddress = base64FromBytes(message.inputVerifierContractAddress);
+    }
+    if (message.verifyingContractAddressDecryption !== undefined) {
+      obj.verifyingContractAddressDecryption = base64FromBytes(message.verifyingContractAddressDecryption);
+    }
+    if (message.verifyingContractAddressInputVerification !== undefined) {
+      obj.verifyingContractAddressInputVerification = base64FromBytes(
+        message.verifyingContractAddressInputVerification,
+      );
+    }
+    if (message.registryAddress !== undefined) {
+      obj.registryAddress = base64FromBytes(message.registryAddress);
+    }
+    if (message.executorAddress !== undefined) {
+      obj.executorAddress = base64FromBytes(message.executorAddress);
+    }
+    if (message.auth !== undefined) {
+      obj.auth = ChainAuth.toJSON(message.auth);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ChainConfig>): ChainConfig {
+    return ChainConfig.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ChainConfig>): ChainConfig {
+    const message = createBaseChainConfig();
+    message.id = (object.id !== undefined && object.id !== null) ? BigInt(object.id) : 0n;
+    message.network = object.network ?? undefined;
+    message.gatewayChainId = (object.gatewayChainId !== undefined && object.gatewayChainId !== null)
+      ? BigInt(object.gatewayChainId)
+      : undefined;
+    message.relayerUrl = object.relayerUrl ?? undefined;
+    message.aclContractAddress = object.aclContractAddress ?? undefined;
+    message.kmsContractAddress = object.kmsContractAddress ?? undefined;
+    message.inputVerifierContractAddress = object.inputVerifierContractAddress ?? undefined;
+    message.verifyingContractAddressDecryption = object.verifyingContractAddressDecryption ?? undefined;
+    message.verifyingContractAddressInputVerification = object.verifyingContractAddressInputVerification ?? undefined;
+    message.registryAddress = object.registryAddress ?? undefined;
+    message.executorAddress = object.executorAddress ?? undefined;
+    message.auth = (object.auth !== undefined && object.auth !== null) ? ChainAuth.fromPartial(object.auth) : undefined;
+    return message;
+  },
+};
+
+function createBaseChainAuth(): ChainAuth {
+  return { credential: undefined };
+}
+
+export const ChainAuth: MessageFns<ChainAuth> = {
+  encode(message: ChainAuth, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    switch (message.credential?.$case) {
+      case "bearerToken":
+        writer.uint32(10).string(message.credential.bearerToken);
+        break;
+      case "apiKeyHeader":
+        NamedCredential.encode(message.credential.apiKeyHeader, writer.uint32(18).fork()).join();
+        break;
+      case "apiKeyCookie":
+        NamedCredential.encode(message.credential.apiKeyCookie, writer.uint32(26).fork()).join();
+        break;
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ChainAuth {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseChainAuth();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.credential = { $case: "bearerToken", bearerToken: reader.string() };
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.credential = { $case: "apiKeyHeader", apiKeyHeader: NamedCredential.decode(reader, reader.uint32()) };
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.credential = { $case: "apiKeyCookie", apiKeyCookie: NamedCredential.decode(reader, reader.uint32()) };
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ChainAuth {
+    return {
+      credential: isSet(object.bearerToken)
+        ? { $case: "bearerToken", bearerToken: globalThis.String(object.bearerToken) }
+        : isSet(object.bearer_token)
+        ? { $case: "bearerToken", bearerToken: globalThis.String(object.bearer_token) }
+        : isSet(object.apiKeyHeader)
+        ? { $case: "apiKeyHeader", apiKeyHeader: NamedCredential.fromJSON(object.apiKeyHeader) }
+        : isSet(object.api_key_header)
+        ? { $case: "apiKeyHeader", apiKeyHeader: NamedCredential.fromJSON(object.api_key_header) }
+        : isSet(object.apiKeyCookie)
+        ? { $case: "apiKeyCookie", apiKeyCookie: NamedCredential.fromJSON(object.apiKeyCookie) }
+        : isSet(object.api_key_cookie)
+        ? { $case: "apiKeyCookie", apiKeyCookie: NamedCredential.fromJSON(object.api_key_cookie) }
+        : undefined,
+    };
+  },
+
+  toJSON(message: ChainAuth): unknown {
+    const obj: any = {};
+    if (message.credential?.$case === "bearerToken") {
+      obj.bearerToken = message.credential.bearerToken;
+    } else if (message.credential?.$case === "apiKeyHeader") {
+      obj.apiKeyHeader = NamedCredential.toJSON(message.credential.apiKeyHeader);
+    } else if (message.credential?.$case === "apiKeyCookie") {
+      obj.apiKeyCookie = NamedCredential.toJSON(message.credential.apiKeyCookie);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ChainAuth>): ChainAuth {
+    return ChainAuth.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ChainAuth>): ChainAuth {
+    const message = createBaseChainAuth();
+    switch (object.credential?.$case) {
+      case "bearerToken": {
+        if (object.credential?.bearerToken !== undefined && object.credential?.bearerToken !== null) {
+          message.credential = { $case: "bearerToken", bearerToken: object.credential.bearerToken };
+        }
+        break;
+      }
+      case "apiKeyHeader": {
+        if (object.credential?.apiKeyHeader !== undefined && object.credential?.apiKeyHeader !== null) {
+          message.credential = {
+            $case: "apiKeyHeader",
+            apiKeyHeader: NamedCredential.fromPartial(object.credential.apiKeyHeader),
+          };
+        }
+        break;
+      }
+      case "apiKeyCookie": {
+        if (object.credential?.apiKeyCookie !== undefined && object.credential?.apiKeyCookie !== null) {
+          message.credential = {
+            $case: "apiKeyCookie",
+            apiKeyCookie: NamedCredential.fromPartial(object.credential.apiKeyCookie),
+          };
+        }
+        break;
+      }
+    }
+    return message;
+  },
+};
+
+function createBaseNamedCredential(): NamedCredential {
+  return { name: undefined, value: "" };
+}
+
+export const NamedCredential: MessageFns<NamedCredential> = {
+  encode(message: NamedCredential, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== undefined) {
+      writer.uint32(10).string(message.name);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): NamedCredential {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseNamedCredential();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.name = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): NamedCredential {
+    return {
+      name: isSet(object.name) ? globalThis.String(object.name) : undefined,
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: NamedCredential): unknown {
+    const obj: any = {};
+    if (message.name !== undefined) {
+      obj.name = message.name;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<NamedCredential>): NamedCredential {
+    return NamedCredential.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<NamedCredential>): NamedCredential {
+    const message = createBaseNamedCredential();
+    message.name = object.name ?? undefined;
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
+/**
+ * SDK failures retain their code and retry information in gRPC trailers.
+ * Integer durations and counts are exact; omitted optional values use SDK defaults.
+ */
 export type SidecarServiceService = typeof SidecarServiceService;
 export const SidecarServiceService = {
+  /** Reports the version of @zama-fhe/sdk executing operations in this process. */
   getInfo: {
     path: "/zama.sdk.v1alpha1.SidecarService/GetInfo" as const,
     requestStream: false as const,
@@ -4417,6 +5872,7 @@ export const SidecarServiceService = {
     responseSerialize: (value: GetInfoResponse): Buffer => Buffer.from(GetInfoResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): GetInfoResponse => GetInfoResponse.decode(value),
   },
+  /** Creates an independent SDK instance; no account or signer is required for public operations. */
   createContext: {
     path: "/zama.sdk.v1alpha1.SidecarService/CreateContext" as const,
     requestStream: false as const,
@@ -4427,24 +5883,29 @@ export const SidecarServiceService = {
       Buffer.from(CreateContextResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): CreateContextResponse => CreateContextResponse.decode(value),
   },
+  /** Cancels active operations and disposes this context and its callback channels. */
   closeContext: {
     path: "/zama.sdk.v1alpha1.SidecarService/CloseContext" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: ContextRequest): Buffer => Buffer.from(ContextRequest.encode(value).finish()),
     requestDeserialize: (value: Buffer): ContextRequest => ContextRequest.decode(value),
-    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+    responseSerialize: (value: CloseContextResponse): Buffer =>
+      Buffer.from(CloseContextResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): CloseContextResponse => CloseContextResponse.decode(value),
   },
+  /** Cancels pending operations before changing the signer account; omission disconnects it. */
   updateAccount: {
     path: "/zama.sdk.v1alpha1.SidecarService/UpdateAccount" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: UpdateAccountRequest): Buffer => Buffer.from(UpdateAccountRequest.encode(value).finish()),
     requestDeserialize: (value: Buffer): UpdateAccountRequest => UpdateAccountRequest.decode(value),
-    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+    responseSerialize: (value: UpdateAccountResponse): Buffer =>
+      Buffer.from(UpdateAccountResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): UpdateAccountResponse => UpdateAccountResponse.decode(value),
   },
+  /** Attach once per context before signing. Actions may overlap; correlate both action and operation IDs. */
   signerChannel: {
     path: "/zama.sdk.v1alpha1.SidecarService/SignerChannel" as const,
     requestStream: true as const,
@@ -4454,6 +5915,7 @@ export const SidecarServiceService = {
     responseSerialize: (value: SignerServerMessage): Buffer => Buffer.from(SignerServerMessage.encode(value).finish()),
     responseDeserialize: (value: Buffer): SignerServerMessage => SignerServerMessage.decode(value),
   },
+  /** Attach once per context to serve application storage; keys and values remain opaque. */
   storageChannel: {
     path: "/zama.sdk.v1alpha1.SidecarService/StorageChannel" as const,
     requestStream: true as const,
@@ -4464,6 +5926,7 @@ export const SidecarServiceService = {
       Buffer.from(StorageServerMessage.encode(value).finish()),
     responseDeserialize: (value: Buffer): StorageServerMessage => StorageServerMessage.decode(value),
   },
+  /** Calls decryption.decryptValues, including automatic permit acquisition and credential recovery. */
   decryptValues: {
     path: "/zama.sdk.v1alpha1.SidecarService/DecryptValues" as const,
     requestStream: false as const,
@@ -4474,6 +5937,7 @@ export const SidecarServiceService = {
       Buffer.from(DecryptValuesResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): DecryptValuesResponse => DecryptValuesResponse.decode(value),
   },
+  /** Calls decryption.delegatedDecryptValues; an omitted account uses the delegator address. */
   delegatedDecryptValues: {
     path: "/zama.sdk.v1alpha1.SidecarService/DelegatedDecryptValues" as const,
     requestStream: false as const,
@@ -4481,10 +5945,12 @@ export const SidecarServiceService = {
     requestSerialize: (value: DelegatedDecryptValuesRequest): Buffer =>
       Buffer.from(DelegatedDecryptValuesRequest.encode(value).finish()),
     requestDeserialize: (value: Buffer): DelegatedDecryptValuesRequest => DelegatedDecryptValuesRequest.decode(value),
-    responseSerialize: (value: DecryptValuesResponse): Buffer =>
-      Buffer.from(DecryptValuesResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): DecryptValuesResponse => DecryptValuesResponse.decode(value),
+    responseSerialize: (value: DelegatedDecryptValuesResponse): Buffer =>
+      Buffer.from(DelegatedDecryptValuesResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): DelegatedDecryptValuesResponse =>
+      DelegatedDecryptValuesResponse.decode(value),
   },
+  /** Calls decryption.decryptPublicValues without requiring a signer. */
   decryptPublicValues: {
     path: "/zama.sdk.v1alpha1.SidecarService/DecryptPublicValues" as const,
     requestStream: false as const,
@@ -4496,6 +5962,7 @@ export const SidecarServiceService = {
       Buffer.from(DecryptPublicValuesResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): DecryptPublicValuesResponse => DecryptPublicValuesResponse.decode(value),
   },
+  /** Calls decryption.delegatedBatchDecryptValues; per-item failures remain results, fatal SDK errors fail the RPC. */
   delegatedBatchDecryptValues: {
     path: "/zama.sdk.v1alpha1.SidecarService/DelegatedBatchDecryptValues" as const,
     requestStream: false as const,
@@ -4509,6 +5976,7 @@ export const SidecarServiceService = {
     responseDeserialize: (value: Buffer): DelegatedBatchDecryptValuesResponse =>
       DelegatedBatchDecryptValuesResponse.decode(value),
   },
+  /** Calls offline.preparePermit without signing; return the opaque envelope unchanged when registering. */
   preparePermit: {
     path: "/zama.sdk.v1alpha1.SidecarService/PreparePermit" as const,
     requestStream: false as const,
@@ -4519,6 +5987,7 @@ export const SidecarServiceService = {
       Buffer.from(PreparePermitResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): PreparePermitResponse => PreparePermitResponse.decode(value),
   },
+  /** Calls permits.registerPermit with the prepared envelope and signature. */
   registerPermit: {
     path: "/zama.sdk.v1alpha1.SidecarService/RegisterPermit" as const,
     requestStream: false as const,
@@ -4526,18 +5995,21 @@ export const SidecarServiceService = {
     requestSerialize: (value: RegisterPermitRequest): Buffer =>
       Buffer.from(RegisterPermitRequest.encode(value).finish()),
     requestDeserialize: (value: Buffer): RegisterPermitRequest => RegisterPermitRequest.decode(value),
-    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+    responseSerialize: (value: RegisterPermitResponse): Buffer =>
+      Buffer.from(RegisterPermitResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): RegisterPermitResponse => RegisterPermitResponse.decode(value),
   },
+  /** Calls permits.grantPermit; any wallet signing is requested on the signer channel. */
   grantPermit: {
     path: "/zama.sdk.v1alpha1.SidecarService/GrantPermit" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: ContractsRequest): Buffer => Buffer.from(ContractsRequest.encode(value).finish()),
     requestDeserialize: (value: Buffer): ContractsRequest => ContractsRequest.decode(value),
-    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+    responseSerialize: (value: GrantPermitResponse): Buffer => Buffer.from(GrantPermitResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GrantPermitResponse => GrantPermitResponse.decode(value),
   },
+  /** Calls permits.grantDelegationPermit for the supplied delegator and contracts. */
   grantDelegationPermit: {
     path: "/zama.sdk.v1alpha1.SidecarService/GrantDelegationPermit" as const,
     requestStream: false as const,
@@ -4545,9 +6017,11 @@ export const SidecarServiceService = {
     requestSerialize: (value: DelegationContractsRequest): Buffer =>
       Buffer.from(DelegationContractsRequest.encode(value).finish()),
     requestDeserialize: (value: Buffer): DelegationContractsRequest => DelegationContractsRequest.decode(value),
-    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+    responseSerialize: (value: GrantDelegationPermitResponse): Buffer =>
+      Buffer.from(GrantDelegationPermitResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GrantDelegationPermitResponse => GrantDelegationPermitResponse.decode(value),
   },
+  /** Calls permits.hasPermit using the SDK credential store and expiry rules. */
   hasPermit: {
     path: "/zama.sdk.v1alpha1.SidecarService/HasPermit" as const,
     requestStream: false as const,
@@ -4557,6 +6031,7 @@ export const SidecarServiceService = {
     responseSerialize: (value: HasPermitResponse): Buffer => Buffer.from(HasPermitResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): HasPermitResponse => HasPermitResponse.decode(value),
   },
+  /** Calls permits.hasDelegationPermit for the supplied delegator and contracts. */
   hasDelegationPermit: {
     path: "/zama.sdk.v1alpha1.SidecarService/HasDelegationPermit" as const,
     requestStream: false as const,
@@ -4564,81 +6039,116 @@ export const SidecarServiceService = {
     requestSerialize: (value: DelegationContractsRequest): Buffer =>
       Buffer.from(DelegationContractsRequest.encode(value).finish()),
     requestDeserialize: (value: Buffer): DelegationContractsRequest => DelegationContractsRequest.decode(value),
-    responseSerialize: (value: HasPermitResponse): Buffer => Buffer.from(HasPermitResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): HasPermitResponse => HasPermitResponse.decode(value),
+    responseSerialize: (value: HasDelegationPermitResponse): Buffer =>
+      Buffer.from(HasDelegationPermitResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): HasDelegationPermitResponse => HasDelegationPermitResponse.decode(value),
   },
+  /** Calls permits.revokePermits; omitted contracts and an empty list retain their distinct SDK meanings. */
   revokePermits: {
     path: "/zama.sdk.v1alpha1.SidecarService/RevokePermits" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: RevokePermitsRequest): Buffer => Buffer.from(RevokePermitsRequest.encode(value).finish()),
     requestDeserialize: (value: Buffer): RevokePermitsRequest => RevokePermitsRequest.decode(value),
-    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+    responseSerialize: (value: RevokePermitsResponse): Buffer =>
+      Buffer.from(RevokePermitsResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): RevokePermitsResponse => RevokePermitsResponse.decode(value),
   },
+  /** Calls permits.clear to clear locally stored permits. */
   clearPermits: {
     path: "/zama.sdk.v1alpha1.SidecarService/ClearPermits" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: OperationRequest): Buffer => Buffer.from(OperationRequest.encode(value).finish()),
     requestDeserialize: (value: Buffer): OperationRequest => OperationRequest.decode(value),
-    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+    responseSerialize: (value: ClearPermitsResponse): Buffer =>
+      Buffer.from(ClearPermitsResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ClearPermitsResponse => ClearPermitsResponse.decode(value),
   },
+  /** Calls permits.warmTransportKeyPair; signing is requested only when the SDK requires it. */
   warmTransportKeyPair: {
     path: "/zama.sdk.v1alpha1.SidecarService/WarmTransportKeyPair" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: OperationRequest): Buffer => Buffer.from(OperationRequest.encode(value).finish()),
     requestDeserialize: (value: Buffer): OperationRequest => OperationRequest.decode(value),
-    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+    responseSerialize: (value: WarmTransportKeyPairResponse): Buffer =>
+      Buffer.from(WarmTransportKeyPairResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): WarmTransportKeyPairResponse => WarmTransportKeyPairResponse.decode(value),
   },
+  /** Calls permits.warmTransportKeyPairScope for a shared credential scope. */
   warmTransportKeyPairScope: {
     path: "/zama.sdk.v1alpha1.SidecarService/WarmTransportKeyPairScope" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: ScopeRequest): Buffer => Buffer.from(ScopeRequest.encode(value).finish()),
     requestDeserialize: (value: Buffer): ScopeRequest => ScopeRequest.decode(value),
-    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+    responseSerialize: (value: WarmTransportKeyPairScopeResponse): Buffer =>
+      Buffer.from(WarmTransportKeyPairScopeResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): WarmTransportKeyPairScopeResponse =>
+      WarmTransportKeyPairScopeResponse.decode(value),
   },
+  /** Calls permits.revokeTransportKeyPair for the supplied credential scope. */
   revokeTransportKeyPair: {
     path: "/zama.sdk.v1alpha1.SidecarService/RevokeTransportKeyPair" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: ScopeRequest): Buffer => Buffer.from(ScopeRequest.encode(value).finish()),
     requestDeserialize: (value: Buffer): ScopeRequest => ScopeRequest.decode(value),
-    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+    responseSerialize: (value: RevokeTransportKeyPairResponse): Buffer =>
+      Buffer.from(RevokeTransportKeyPairResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): RevokeTransportKeyPairResponse =>
+      RevokeTransportKeyPairResponse.decode(value),
   },
 } as const;
 
 export interface SidecarServiceServer extends UntypedServiceImplementation {
+  /** Reports the version of @zama-fhe/sdk executing operations in this process. */
   getInfo: handleUnaryCall<GetInfoRequest, GetInfoResponse>;
+  /** Creates an independent SDK instance; no account or signer is required for public operations. */
   createContext: handleUnaryCall<CreateContextRequest, CreateContextResponse>;
-  closeContext: handleUnaryCall<ContextRequest, Empty>;
-  updateAccount: handleUnaryCall<UpdateAccountRequest, Empty>;
+  /** Cancels active operations and disposes this context and its callback channels. */
+  closeContext: handleUnaryCall<ContextRequest, CloseContextResponse>;
+  /** Cancels pending operations before changing the signer account; omission disconnects it. */
+  updateAccount: handleUnaryCall<UpdateAccountRequest, UpdateAccountResponse>;
+  /** Attach once per context before signing. Actions may overlap; correlate both action and operation IDs. */
   signerChannel: handleBidiStreamingCall<SignerClientMessage, SignerServerMessage>;
+  /** Attach once per context to serve application storage; keys and values remain opaque. */
   storageChannel: handleBidiStreamingCall<StorageClientMessage, StorageServerMessage>;
+  /** Calls decryption.decryptValues, including automatic permit acquisition and credential recovery. */
   decryptValues: handleUnaryCall<DecryptValuesRequest, DecryptValuesResponse>;
-  delegatedDecryptValues: handleUnaryCall<DelegatedDecryptValuesRequest, DecryptValuesResponse>;
+  /** Calls decryption.delegatedDecryptValues; an omitted account uses the delegator address. */
+  delegatedDecryptValues: handleUnaryCall<DelegatedDecryptValuesRequest, DelegatedDecryptValuesResponse>;
+  /** Calls decryption.decryptPublicValues without requiring a signer. */
   decryptPublicValues: handleUnaryCall<DecryptPublicValuesRequest, DecryptPublicValuesResponse>;
+  /** Calls decryption.delegatedBatchDecryptValues; per-item failures remain results, fatal SDK errors fail the RPC. */
   delegatedBatchDecryptValues: handleUnaryCall<DelegatedBatchDecryptValuesRequest, DelegatedBatchDecryptValuesResponse>;
+  /** Calls offline.preparePermit without signing; return the opaque envelope unchanged when registering. */
   preparePermit: handleUnaryCall<PreparePermitRequest, PreparePermitResponse>;
-  registerPermit: handleUnaryCall<RegisterPermitRequest, Empty>;
-  grantPermit: handleUnaryCall<ContractsRequest, Empty>;
-  grantDelegationPermit: handleUnaryCall<DelegationContractsRequest, Empty>;
+  /** Calls permits.registerPermit with the prepared envelope and signature. */
+  registerPermit: handleUnaryCall<RegisterPermitRequest, RegisterPermitResponse>;
+  /** Calls permits.grantPermit; any wallet signing is requested on the signer channel. */
+  grantPermit: handleUnaryCall<ContractsRequest, GrantPermitResponse>;
+  /** Calls permits.grantDelegationPermit for the supplied delegator and contracts. */
+  grantDelegationPermit: handleUnaryCall<DelegationContractsRequest, GrantDelegationPermitResponse>;
+  /** Calls permits.hasPermit using the SDK credential store and expiry rules. */
   hasPermit: handleUnaryCall<ContractsRequest, HasPermitResponse>;
-  hasDelegationPermit: handleUnaryCall<DelegationContractsRequest, HasPermitResponse>;
-  revokePermits: handleUnaryCall<RevokePermitsRequest, Empty>;
-  clearPermits: handleUnaryCall<OperationRequest, Empty>;
-  warmTransportKeyPair: handleUnaryCall<OperationRequest, Empty>;
-  warmTransportKeyPairScope: handleUnaryCall<ScopeRequest, Empty>;
-  revokeTransportKeyPair: handleUnaryCall<ScopeRequest, Empty>;
+  /** Calls permits.hasDelegationPermit for the supplied delegator and contracts. */
+  hasDelegationPermit: handleUnaryCall<DelegationContractsRequest, HasDelegationPermitResponse>;
+  /** Calls permits.revokePermits; omitted contracts and an empty list retain their distinct SDK meanings. */
+  revokePermits: handleUnaryCall<RevokePermitsRequest, RevokePermitsResponse>;
+  /** Calls permits.clear to clear locally stored permits. */
+  clearPermits: handleUnaryCall<OperationRequest, ClearPermitsResponse>;
+  /** Calls permits.warmTransportKeyPair; signing is requested only when the SDK requires it. */
+  warmTransportKeyPair: handleUnaryCall<OperationRequest, WarmTransportKeyPairResponse>;
+  /** Calls permits.warmTransportKeyPairScope for a shared credential scope. */
+  warmTransportKeyPairScope: handleUnaryCall<ScopeRequest, WarmTransportKeyPairScopeResponse>;
+  /** Calls permits.revokeTransportKeyPair for the supplied credential scope. */
+  revokeTransportKeyPair: handleUnaryCall<ScopeRequest, RevokeTransportKeyPairResponse>;
 }
 
 export interface SidecarServiceClient extends Client {
+  /** Reports the version of @zama-fhe/sdk executing operations in this process. */
   getInfo(
     request: GetInfoRequest,
     callback: (error: ServiceError | null, response: GetInfoResponse) => void,
@@ -4654,6 +6164,7 @@ export interface SidecarServiceClient extends Client {
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: GetInfoResponse) => void,
   ): ClientUnaryCall;
+  /** Creates an independent SDK instance; no account or signer is required for public operations. */
   createContext(
     request: CreateContextRequest,
     callback: (error: ServiceError | null, response: CreateContextResponse) => void,
@@ -4669,48 +6180,53 @@ export interface SidecarServiceClient extends Client {
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: CreateContextResponse) => void,
   ): ClientUnaryCall;
+  /** Cancels active operations and disposes this context and its callback channels. */
   closeContext(
     request: ContextRequest,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: CloseContextResponse) => void,
   ): ClientUnaryCall;
   closeContext(
     request: ContextRequest,
     metadata: Metadata,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: CloseContextResponse) => void,
   ): ClientUnaryCall;
   closeContext(
     request: ContextRequest,
     metadata: Metadata,
     options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: CloseContextResponse) => void,
   ): ClientUnaryCall;
+  /** Cancels pending operations before changing the signer account; omission disconnects it. */
   updateAccount(
     request: UpdateAccountRequest,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: UpdateAccountResponse) => void,
   ): ClientUnaryCall;
   updateAccount(
     request: UpdateAccountRequest,
     metadata: Metadata,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: UpdateAccountResponse) => void,
   ): ClientUnaryCall;
   updateAccount(
     request: UpdateAccountRequest,
     metadata: Metadata,
     options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: UpdateAccountResponse) => void,
   ): ClientUnaryCall;
+  /** Attach once per context before signing. Actions may overlap; correlate both action and operation IDs. */
   signerChannel(): ClientDuplexStream<SignerClientMessage, SignerServerMessage>;
   signerChannel(options: Partial<CallOptions>): ClientDuplexStream<SignerClientMessage, SignerServerMessage>;
   signerChannel(
     metadata: Metadata,
     options?: Partial<CallOptions>,
   ): ClientDuplexStream<SignerClientMessage, SignerServerMessage>;
+  /** Attach once per context to serve application storage; keys and values remain opaque. */
   storageChannel(): ClientDuplexStream<StorageClientMessage, StorageServerMessage>;
   storageChannel(options: Partial<CallOptions>): ClientDuplexStream<StorageClientMessage, StorageServerMessage>;
   storageChannel(
     metadata: Metadata,
     options?: Partial<CallOptions>,
   ): ClientDuplexStream<StorageClientMessage, StorageServerMessage>;
+  /** Calls decryption.decryptValues, including automatic permit acquisition and credential recovery. */
   decryptValues(
     request: DecryptValuesRequest,
     callback: (error: ServiceError | null, response: DecryptValuesResponse) => void,
@@ -4726,21 +6242,23 @@ export interface SidecarServiceClient extends Client {
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: DecryptValuesResponse) => void,
   ): ClientUnaryCall;
+  /** Calls decryption.delegatedDecryptValues; an omitted account uses the delegator address. */
   delegatedDecryptValues(
     request: DelegatedDecryptValuesRequest,
-    callback: (error: ServiceError | null, response: DecryptValuesResponse) => void,
+    callback: (error: ServiceError | null, response: DelegatedDecryptValuesResponse) => void,
   ): ClientUnaryCall;
   delegatedDecryptValues(
     request: DelegatedDecryptValuesRequest,
     metadata: Metadata,
-    callback: (error: ServiceError | null, response: DecryptValuesResponse) => void,
+    callback: (error: ServiceError | null, response: DelegatedDecryptValuesResponse) => void,
   ): ClientUnaryCall;
   delegatedDecryptValues(
     request: DelegatedDecryptValuesRequest,
     metadata: Metadata,
     options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: DecryptValuesResponse) => void,
+    callback: (error: ServiceError | null, response: DelegatedDecryptValuesResponse) => void,
   ): ClientUnaryCall;
+  /** Calls decryption.decryptPublicValues without requiring a signer. */
   decryptPublicValues(
     request: DecryptPublicValuesRequest,
     callback: (error: ServiceError | null, response: DecryptPublicValuesResponse) => void,
@@ -4756,6 +6274,7 @@ export interface SidecarServiceClient extends Client {
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: DecryptPublicValuesResponse) => void,
   ): ClientUnaryCall;
+  /** Calls decryption.delegatedBatchDecryptValues; per-item failures remain results, fatal SDK errors fail the RPC. */
   delegatedBatchDecryptValues(
     request: DelegatedBatchDecryptValuesRequest,
     callback: (error: ServiceError | null, response: DelegatedBatchDecryptValuesResponse) => void,
@@ -4771,6 +6290,7 @@ export interface SidecarServiceClient extends Client {
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: DelegatedBatchDecryptValuesResponse) => void,
   ): ClientUnaryCall;
+  /** Calls offline.preparePermit without signing; return the opaque envelope unchanged when registering. */
   preparePermit(
     request: PreparePermitRequest,
     callback: (error: ServiceError | null, response: PreparePermitResponse) => void,
@@ -4786,51 +6306,55 @@ export interface SidecarServiceClient extends Client {
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: PreparePermitResponse) => void,
   ): ClientUnaryCall;
+  /** Calls permits.registerPermit with the prepared envelope and signature. */
   registerPermit(
     request: RegisterPermitRequest,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: RegisterPermitResponse) => void,
   ): ClientUnaryCall;
   registerPermit(
     request: RegisterPermitRequest,
     metadata: Metadata,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: RegisterPermitResponse) => void,
   ): ClientUnaryCall;
   registerPermit(
     request: RegisterPermitRequest,
     metadata: Metadata,
     options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: RegisterPermitResponse) => void,
   ): ClientUnaryCall;
+  /** Calls permits.grantPermit; any wallet signing is requested on the signer channel. */
   grantPermit(
     request: ContractsRequest,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: GrantPermitResponse) => void,
   ): ClientUnaryCall;
   grantPermit(
     request: ContractsRequest,
     metadata: Metadata,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: GrantPermitResponse) => void,
   ): ClientUnaryCall;
   grantPermit(
     request: ContractsRequest,
     metadata: Metadata,
     options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: GrantPermitResponse) => void,
   ): ClientUnaryCall;
+  /** Calls permits.grantDelegationPermit for the supplied delegator and contracts. */
   grantDelegationPermit(
     request: DelegationContractsRequest,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: GrantDelegationPermitResponse) => void,
   ): ClientUnaryCall;
   grantDelegationPermit(
     request: DelegationContractsRequest,
     metadata: Metadata,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: GrantDelegationPermitResponse) => void,
   ): ClientUnaryCall;
   grantDelegationPermit(
     request: DelegationContractsRequest,
     metadata: Metadata,
     options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: GrantDelegationPermitResponse) => void,
   ): ClientUnaryCall;
+  /** Calls permits.hasPermit using the SDK credential store and expiry rules. */
   hasPermit(
     request: ContractsRequest,
     callback: (error: ServiceError | null, response: HasPermitResponse) => void,
@@ -4846,95 +6370,101 @@ export interface SidecarServiceClient extends Client {
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: HasPermitResponse) => void,
   ): ClientUnaryCall;
+  /** Calls permits.hasDelegationPermit for the supplied delegator and contracts. */
   hasDelegationPermit(
     request: DelegationContractsRequest,
-    callback: (error: ServiceError | null, response: HasPermitResponse) => void,
-  ): ClientUnaryCall;
-  hasDelegationPermit(
-    request: DelegationContractsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: HasPermitResponse) => void,
+    callback: (error: ServiceError | null, response: HasDelegationPermitResponse) => void,
   ): ClientUnaryCall;
   hasDelegationPermit(
     request: DelegationContractsRequest,
     metadata: Metadata,
+    callback: (error: ServiceError | null, response: HasDelegationPermitResponse) => void,
+  ): ClientUnaryCall;
+  hasDelegationPermit(
+    request: DelegationContractsRequest,
+    metadata: Metadata,
     options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: HasPermitResponse) => void,
+    callback: (error: ServiceError | null, response: HasDelegationPermitResponse) => void,
+  ): ClientUnaryCall;
+  /** Calls permits.revokePermits; omitted contracts and an empty list retain their distinct SDK meanings. */
+  revokePermits(
+    request: RevokePermitsRequest,
+    callback: (error: ServiceError | null, response: RevokePermitsResponse) => void,
   ): ClientUnaryCall;
   revokePermits(
     request: RevokePermitsRequest,
-    callback: (error: ServiceError | null, response: Empty) => void,
-  ): ClientUnaryCall;
-  revokePermits(
-    request: RevokePermitsRequest,
     metadata: Metadata,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: RevokePermitsResponse) => void,
   ): ClientUnaryCall;
   revokePermits(
     request: RevokePermitsRequest,
     metadata: Metadata,
     options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: RevokePermitsResponse) => void,
   ): ClientUnaryCall;
+  /** Calls permits.clear to clear locally stored permits. */
   clearPermits(
     request: OperationRequest,
-    callback: (error: ServiceError | null, response: Empty) => void,
-  ): ClientUnaryCall;
-  clearPermits(
-    request: OperationRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: ClearPermitsResponse) => void,
   ): ClientUnaryCall;
   clearPermits(
     request: OperationRequest,
     metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: ClearPermitsResponse) => void,
   ): ClientUnaryCall;
-  warmTransportKeyPair(
-    request: OperationRequest,
-    callback: (error: ServiceError | null, response: Empty) => void,
-  ): ClientUnaryCall;
-  warmTransportKeyPair(
-    request: OperationRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: Empty) => void,
-  ): ClientUnaryCall;
-  warmTransportKeyPair(
+  clearPermits(
     request: OperationRequest,
     metadata: Metadata,
     options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: ClearPermitsResponse) => void,
   ): ClientUnaryCall;
+  /** Calls permits.warmTransportKeyPair; signing is requested only when the SDK requires it. */
+  warmTransportKeyPair(
+    request: OperationRequest,
+    callback: (error: ServiceError | null, response: WarmTransportKeyPairResponse) => void,
+  ): ClientUnaryCall;
+  warmTransportKeyPair(
+    request: OperationRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: WarmTransportKeyPairResponse) => void,
+  ): ClientUnaryCall;
+  warmTransportKeyPair(
+    request: OperationRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: WarmTransportKeyPairResponse) => void,
+  ): ClientUnaryCall;
+  /** Calls permits.warmTransportKeyPairScope for a shared credential scope. */
   warmTransportKeyPairScope(
     request: ScopeRequest,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: WarmTransportKeyPairScopeResponse) => void,
   ): ClientUnaryCall;
   warmTransportKeyPairScope(
     request: ScopeRequest,
     metadata: Metadata,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: WarmTransportKeyPairScopeResponse) => void,
   ): ClientUnaryCall;
   warmTransportKeyPairScope(
     request: ScopeRequest,
     metadata: Metadata,
     options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: WarmTransportKeyPairScopeResponse) => void,
   ): ClientUnaryCall;
+  /** Calls permits.revokeTransportKeyPair for the supplied credential scope. */
   revokeTransportKeyPair(
     request: ScopeRequest,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: RevokeTransportKeyPairResponse) => void,
   ): ClientUnaryCall;
   revokeTransportKeyPair(
     request: ScopeRequest,
     metadata: Metadata,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: RevokeTransportKeyPairResponse) => void,
   ): ClientUnaryCall;
   revokeTransportKeyPair(
     request: ScopeRequest,
     metadata: Metadata,
     options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: Empty) => void,
+    callback: (error: ServiceError | null, response: RevokeTransportKeyPairResponse) => void,
   ): ClientUnaryCall;
 }
 

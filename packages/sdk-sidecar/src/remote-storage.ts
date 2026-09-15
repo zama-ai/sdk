@@ -11,7 +11,7 @@ import {
 } from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import { callbackError } from "./callback-errors.js";
 import { decodeStorage, encodeStorage } from "./storage-codec.js";
-import { errorDetails, SidecarError } from "./errors.js";
+import { errorDetails, invalidArgument, SidecarError } from "./errors.js";
 
 export type StorageStream = ServerDuplexStream<StorageClientMessage, StorageServerMessage>;
 type Pending = {
@@ -116,10 +116,26 @@ export class RemoteStorage {
     }
     this.#pending.delete(reply.requestId);
     clearTimeout(pending.timer);
-    if (reply.error) {
-      pending.reject(callbackError(reply.error));
+    const result = reply.result;
+    if (result?.$case === "error") {
+      pending.reject(callbackError(result.error));
+    } else if (
+      pending.action.method === StorageMethod.STORAGE_METHOD_GET &&
+      result?.$case === "value"
+    ) {
+      pending.resolve(result.value);
+    } else if (
+      pending.action.method === StorageMethod.STORAGE_METHOD_GET &&
+      result?.$case === "notFound"
+    ) {
+      pending.resolve(undefined);
+    } else if (
+      pending.action.method !== StorageMethod.STORAGE_METHOD_GET &&
+      result?.$case === "ack"
+    ) {
+      pending.resolve(undefined);
     } else {
-      pending.resolve(reply.value);
+      pending.reject(invalidArgument("Storage reply does not match the requested operation."));
     }
   }
   #unavailable(): SidecarError {

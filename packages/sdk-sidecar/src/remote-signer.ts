@@ -83,10 +83,15 @@ export class RemoteSigner extends BaseSigner {
     }
     this.#pending.delete(reply.actionId);
     pending.dispose();
-    if (reply.error) {
-      pending.reject(callbackError(reply.error));
-    } else {
-      pending.resolve(bytesToHex(reply.signature));
+    switch (reply.result?.$case) {
+      case "error":
+        pending.reject(callbackError(reply.result.error));
+        break;
+      case "signature":
+        pending.resolve(bytesToHex(reply.result.signature));
+        break;
+      default:
+        pending.reject(new SigningFailedError("Signer reply requires a signature or error."));
     }
   }
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {

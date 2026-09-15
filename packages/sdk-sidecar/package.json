@@ -1,6 +1,6 @@
 {
   "name": "@zama-fhe/sdk-sidecar",
-  "version": "0.1.0",
+  "version": "3.6.0",
   "private": true,
   "files": [
     "dist"

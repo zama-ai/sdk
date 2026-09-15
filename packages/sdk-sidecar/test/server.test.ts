@@ -44,7 +44,7 @@ test("serves typed unary calls over a private socket and sanitizes errors", asyn
         {
           storage: undefined,
           permitStorage: undefined,
-          configJson: "{}",
+          config: undefined,
           signerEnabled: false,
           account: undefined,
         },
@@ -126,7 +126,7 @@ test.each(["cancel", "deadline"] as const)(
     const contextId = await runtime.createContext({
       storage: undefined,
       permitStorage: undefined,
-      configJson: "{}",
+      config: undefined,
       signerEnabled: false,
       account: undefined,
     });
@@ -176,7 +176,7 @@ test("closing contexts with both callback channels permits prompt server shutdow
     const created = await new Promise<{ contextId: string }>((resolve, reject) =>
       client.createContext(
         {
-          configJson: "{}",
+          config: undefined,
           signerEnabled: true,
           account: undefined,
           storage: undefined,

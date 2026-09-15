@@ -12784,12 +12784,6 @@ export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptV
 export function retryAfterSeconds(error: unknown): number | undefined;
 
 // @public
-export function reviveZamaError(code: ZamaErrorCode, message: string, options: {
-    retryable: boolean;
-    retryAfter?: number;
-}): ZamaError;
-
-// @public
 export interface RevokedDelegationForUserDecryptionEvent {
     readonly contractAddress: Address;
     readonly delegate: Address;

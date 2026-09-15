@@ -34,8 +34,7 @@ test("signer routes replies by operation and action without killing unrelated wo
   signer.reply({
     operationId: "wrong",
     actionId: a!.actionId,
-    signature: Buffer.from([1]),
-    error: undefined,
+    result: { $case: "signature", signature: Buffer.from([1]) },
   });
   expect(frames(stream.messages, "replyError").at(-1)?.replyError.error?.code).toBe(
     "SIGNER_ACTION_NOT_FOUND",
@@ -43,15 +42,13 @@ test("signer routes replies by operation and action without killing unrelated wo
   signer.reply({
     operationId: "second",
     actionId: b!.actionId,
-    signature: Buffer.from([2]),
-    error: undefined,
+    result: { $case: "signature", signature: Buffer.from([2]) },
   });
   await expect(second).resolves.toBe("0x02");
   signer.reply({
     operationId: "first",
     actionId: a!.actionId,
-    signature: Buffer.from([1]),
-    error: undefined,
+    result: { $case: "signature", signature: Buffer.from([1]) },
   });
   await expect(first).resolves.toBe("0x01");
   signer.dispose();
@@ -105,4 +102,16 @@ test("unattached signer streams expire without imposing a wallet signing deadlin
   } finally {
     vi.useRealTimers();
   }
+});
+
+test("a missing signer result rejects only the corresponding operation", async () => {
+  const { signer, stream, sign } = setup();
+  const pending = sign("malformed");
+  signer.reply({
+    operationId: "malformed",
+    actionId: frames(stream.messages, "action")[0]!.action.actionId,
+    result: undefined,
+  });
+  await expect(pending).rejects.toMatchObject({ code: "SIGNING_FAILED" });
+  signer.dispose();
 });

@@ -14,7 +14,7 @@ function setup() {
 const request = {
   storage: undefined,
   permitStorage: undefined,
-  configJson: "{}",
+  config: undefined,
   signerEnabled: false,
   account: undefined,
 };

@@ -52,5 +52,3 @@ export { UnshieldAlreadyFinalizedError, type UnshieldAlreadyFinalizedDetails } f
 export { wrapDecryptError, type DecryptErrorContext } from "./decrypt";
 export { wrapEncryptError } from "./encrypt";
 export { isFatalBatchError } from "./fatal-batch";
-
-export { reviveZamaError } from "./revive";

@@ -13,7 +13,7 @@ export function createContextFactory(manager: StorageManager): ContextFactory {
       request.permitStorage === undefined
         ? primary
         : await manager.resolve(request.permitStorage, remote);
-    const { chains, chainId, ...options } = parseContextConfig(request.configJson);
+    const { chains, chainId, ...options } = parseContextConfig(request.config);
     const providers = new Map(
       chains.map((chain) => [
         chain.id,

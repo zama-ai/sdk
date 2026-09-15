@@ -25,7 +25,7 @@ export function errorDetails(error: unknown): SdkError {
       code: error.code,
       message: error.message,
       retryable: error.retryable,
-      retryAfterSeconds: sdkRetryAfterSeconds(error),
+      retryAfterSeconds: integerRetryDelay(sdkRetryAfterSeconds(error)),
     };
   }
   if (error instanceof SidecarError) {
@@ -33,7 +33,7 @@ export function errorDetails(error: unknown): SdkError {
       code: error.code,
       message: error.message,
       retryable: error.retryable,
-      retryAfterSeconds: error.retryAfterSeconds,
+      retryAfterSeconds: error.retryable ? integerRetryDelay(error.retryAfterSeconds) : undefined,
     };
   }
   return {
@@ -58,4 +58,10 @@ export function serviceError(error: unknown): ServiceError {
         ? status.FAILED_PRECONDITION
         : status.INTERNAL;
   return Object.assign(new Error(details.message), { code, details: details.message, metadata });
+}
+
+function integerRetryDelay(value: number | undefined): number | undefined {
+  return value !== undefined && Number.isInteger(value) && value > 0 && value <= 0xffff_ffff
+    ? value
+    : undefined;
 }
