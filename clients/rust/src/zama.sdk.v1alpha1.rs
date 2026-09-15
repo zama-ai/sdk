@@ -297,7 +297,7 @@ pub struct SignerReply {
     pub operation_id: ::prost::alloc::string::String,
     #[prost(string, tag = "2")]
     pub action_id: ::prost::alloc::string::String,
-    #[prost(oneof = "signer_reply::Result", tags = "3, 4")]
+    #[prost(oneof = "signer_reply::Result", tags = "3, 4, 140")]
     pub result: ::core::option::Option<signer_reply::Result>,
 }
 /// Nested message and enum types in `SignerReply`.
@@ -308,6 +308,9 @@ pub mod signer_reply {
         Signature(::prost::alloc::vec::Vec<u8>),
         #[prost(message, tag = "4")]
         Error(super::SdkError),
+        /// 32-byte hash of the broadcast transaction; fields 140–159 are allocated to transactions.
+        #[prost(bytes, tag = "140")]
+        TransactionHash(::prost::alloc::vec::Vec<u8>),
     }
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -333,8 +336,41 @@ pub struct SignerAction {
     pub action_id: ::prost::alloc::string::String,
     #[prost(message, optional, tag = "3")]
     pub account: ::core::option::Option<WalletAccount>,
+    /// typed_data_json keeps its original field number; the union prevents a mixed request.
+    #[prost(oneof = "signer_action::Request", tags = "4, 140")]
+    pub request: ::core::option::Option<signer_action::Request>,
+}
+/// Nested message and enum types in `SignerAction`.
+pub mod signer_action {
+    /// typed_data_json keeps its original field number; the union prevents a mixed request.
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Request {
+        #[prost(string, tag = "4")]
+        TypedDataJson(::prost::alloc::string::String),
+        #[prost(message, tag = "140")]
+        ContractWrite(super::ContractWriteRequest),
+    }
+}
+/// Mirrors GenericSigner.writeContract; the SDK encodes data once and native wallets broadcast it unchanged.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ContractWriteRequest {
+    #[prost(bytes = "vec", tag = "1")]
+    pub address: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub data: ::prost::alloc::vec::Vec<u8>,
+    #[prost(string, tag = "3")]
+    pub abi_json: ::prost::alloc::string::String,
     #[prost(string, tag = "4")]
-    pub typed_data_json: ::prost::alloc::string::String,
+    pub function_name: ::prost::alloc::string::String,
+    /// Bigint arguments are base-10 strings interpreted through the ABI.
+    #[prost(string, tag = "5")]
+    pub args_json: ::prost::alloc::string::String,
+    /// Base-10 wei; omission keeps the SDK/wallet default, "0" is explicit.
+    #[prost(string, optional, tag = "6")]
+    pub value: ::core::option::Option<::prost::alloc::string::String>,
+    /// Base-10 gas limit; omission lets the wallet estimate.
+    #[prost(string, optional, tag = "7")]
+    pub gas: ::core::option::Option<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SignerReplyError {

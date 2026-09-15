@@ -222,6 +222,8 @@ message SignerReply {
   oneof result {
     bytes signature = 3;
     SdkError error = 4;
+    // 32-byte hash of the broadcast transaction; fields 140–159 are allocated to transactions.
+    bytes transaction_hash = 140;
   }
 }
 message SignerClientMessage {
@@ -234,7 +236,24 @@ message SignerAction {
   string operation_id = 1;
   string action_id = 2;
   WalletAccount account = 3;
-  string typed_data_json = 4;
+  // typed_data_json keeps its original field number; the union prevents a mixed request.
+  oneof request {
+    string typed_data_json = 4;
+    ContractWriteRequest contract_write = 140;
+  }
+}
+// Mirrors GenericSigner.writeContract; the SDK encodes data once and native wallets broadcast it unchanged.
+message ContractWriteRequest {
+  bytes address = 1;
+  bytes data = 2;
+  string abi_json = 3;
+  string function_name = 4;
+  // Bigint arguments are base-10 strings interpreted through the ABI.
+  string args_json = 5;
+  // Base-10 wei; omission keeps the SDK/wallet default, "0" is explicit.
+  optional string value = 6;
+  // Base-10 gas limit; omission lets the wallet estimate.
+  optional string gas = 7;
 }
 message SignerReplyError {
   string operation_id = 1;

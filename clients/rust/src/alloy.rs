@@ -1,3 +1,7 @@
+#[path = "alloy_transactions.rs"]
+mod transactions;
+pub use transactions::{AlloyWallet, TxEnvelope, WritePolicy};
+
 use crate::{SdkError, Signer, SigningRequest};
 use alloy_dyn_abi::eip712::TypedData;
 use async_trait::async_trait;

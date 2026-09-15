@@ -56,8 +56,8 @@ export class SidecarRuntime {
     }
     const id = randomUUID();
     const signer = request.signerEnabled
-      ? new RemoteSigner(walletAccount(request.account), (operationIds) =>
-          this.#cancelOperations(id, operationIds),
+      ? new RemoteSigner(walletAccount(request.account), (operationIds, reason) =>
+          this.#cancelOperations(id, operationIds, reason),
         )
       : undefined;
     const storage = new RemoteStorage();
@@ -95,12 +95,18 @@ export class SidecarRuntime {
     }
     return context;
   }
-  #cancelOperations(id: string, operationIds?: readonly string[]): void {
+  #cancelOperations(
+    id: string,
+    operationIds?: readonly string[],
+    reason: Error = cancelled(),
+  ): void {
     const context = this.#contexts.get(id);
-    for (const [operationId, operation] of context?.operations.entries() ?? []) {
-      if (operationIds === undefined || operationIds.includes(operationId)) {
-        operation.controller.abort();
-      }
+    const operations =
+      operationIds === undefined
+        ? (context?.operations.values() ?? [])
+        : operationIds.map((operationId) => context?.operations.get(operationId));
+    for (const operation of operations) {
+      operation?.controller.abort(reason);
     }
   }
   attachSigner(id: string, stream: SignerStream): RemoteSigner {
@@ -192,7 +198,7 @@ export class SidecarRuntime {
       throw cancelled();
     }
     const controller = new AbortController();
-    const abort = () => controller.abort();
+    const abort = () => controller.abort(cancelled());
     signal.addEventListener("abort", abort, { once: true });
     const credentialSigner =
       options.credentialSigner ?? context.signer?.walletAccount.getSnapshot()?.address;
@@ -203,7 +209,7 @@ export class SidecarRuntime {
     );
     const execute = async () => {
       if (controller.signal.aborted) {
-        throw cancelled();
+        throw controller.signal.reason;
       }
       return operationContext.run({ id: reference.operationId, signal: controller.signal }, () =>
         action(context.sdk, controller.signal),
@@ -214,7 +220,7 @@ export class SidecarRuntime {
     );
     context.operations.set(reference.operationId, { controller, done });
     const abortResult = Promise.withResolvers<never>();
-    const rejectCancelled = () => abortResult.reject(cancelled());
+    const rejectCancelled = () => abortResult.reject(controller.signal.reason);
     controller.signal.addEventListener("abort", rejectCancelled, { once: true });
     void done
       .finally(() => {

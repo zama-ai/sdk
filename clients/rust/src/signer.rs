@@ -1,6 +1,6 @@
 #[cfg(test)]
 use crate::Sdk;
-use crate::{RpcError, SdkError, WalletAccount, generated};
+use crate::{B256, ContractWriteRequest, RpcError, SdkError, WalletAccount, generated};
 use anyhow::{Context, Result};
 use std::{collections::HashMap, future::Future, sync::Arc};
 use tokio::{
@@ -19,6 +19,13 @@ pub struct SigningRequest {
 #[async_trait::async_trait]
 pub trait Signer: Send + Sync {
     async fn sign_typed_data(&self, request: SigningRequest) -> Result<Vec<u8>, SdkError>;
+
+    /// Approves, signs and broadcasts once, returning the hash without waiting for a receipt.
+    async fn write_contract(&self, _request: ContractWriteRequest) -> Result<B256, SdkError> {
+        Err(SdkError::signer_not_configured(
+            "This signer does not support contract writes.",
+        ))
+    }
 }
 #[async_trait::async_trait]
 impl<F, Fut> Signer for F
@@ -34,6 +41,9 @@ where
 impl<S: Signer + ?Sized> Signer for Arc<S> {
     async fn sign_typed_data(&self, request: SigningRequest) -> Result<Vec<u8>, SdkError> {
         (**self).sign_typed_data(request).await
+    }
+    async fn write_contract(&self, request: ContractWriteRequest) -> Result<B256, SdkError> {
+        (**self).write_contract(request).await
     }
 }
 
@@ -88,21 +98,54 @@ pub(crate) async fn attach_signer(
     }))
 }
 
-fn signing_request(action: generated::SignerAction) -> Result<SigningRequest, SdkError> {
-    Ok(SigningRequest {
-        operation_id: action.operation_id,
-        action_id: action.action_id,
-        account: action
+#[derive(Debug)]
+enum CallbackRequest {
+    TypedData(SigningRequest),
+    ContractWrite(ContractWriteRequest),
+}
+impl CallbackRequest {
+    fn decode(action: generated::SignerAction) -> Result<Self, SdkError> {
+        let account: WalletAccount = action
             .account
             .ok_or_else(|| SdkError::signing_failed("Missing signer account."))?
             .try_into()
             .map_err(|error: anyhow::Error| {
                 SdkError::signing_failed(format!("Invalid signer account: {error}"))
-            })?,
-        typed_data: serde_json::from_str(&action.typed_data_json).map_err(|error| {
-            SdkError::signing_failed(format!("Invalid signing request typed data: {error}"))
-        })?,
-    })
+            })?;
+        match action.request {
+            Some(generated::signer_action::Request::TypedDataJson(typed_data_json)) => {
+                Ok(Self::TypedData(SigningRequest {
+                    operation_id: action.operation_id,
+                    action_id: action.action_id,
+                    account,
+                    typed_data: serde_json::from_str(&typed_data_json).map_err(|error| {
+                        SdkError::signing_failed(format!(
+                            "Invalid signing request typed data: {error}"
+                        ))
+                    })?,
+                }))
+            }
+            Some(generated::signer_action::Request::ContractWrite(write)) => {
+                Ok(Self::ContractWrite(ContractWriteRequest::from_wire(
+                    action.operation_id,
+                    action.action_id,
+                    account,
+                    write,
+                )?))
+            }
+            None => Err(SdkError::signing_failed("Missing signer request.")),
+        }
+    }
+    async fn run(self, sign: &dyn Signer) -> Result<generated::signer_reply::Result, SdkError> {
+        use generated::signer_reply::Result as Reply;
+        match self {
+            Self::TypedData(request) => sign.sign_typed_data(request).await.map(Reply::Signature),
+            Self::ContractWrite(request) => sign
+                .write_contract(request)
+                .await
+                .map(|hash| Reply::TransactionHash(hash.to_vec())),
+        }
+    }
 }
 
 type ActionKey = (String, String);
@@ -155,19 +198,17 @@ impl Callbacks {
         if self.pending.contains_key(&key) {
             return Ok(());
         }
-        let request = signing_request(action);
+        let request = CallbackRequest::decode(action);
         let sign = self.sign.clone();
         let sender = self.sender.clone();
         let result_key = key.clone();
         let abort = self.tasks.spawn(async move {
             let result = match request {
-                Ok(request) => sign.sign_typed_data(request).await,
+                Ok(request) => request.run(sign.as_ref()).await,
                 Err(error) => Err(error),
             };
-            let result = match result {
-                Ok(signature) => generated::signer_reply::Result::Signature(signature),
-                Err(error) => generated::signer_reply::Result::Error(error.into()),
-            };
+            let result =
+                result.unwrap_or_else(|error| generated::signer_reply::Result::Error(error.into()));
             let reply = generated::SignerReply {
                 operation_id: result_key.0.clone(),
                 action_id: result_key.1.clone(),
@@ -222,3 +263,7 @@ impl Sdk {
         .await
     }
 }
+
+#[cfg(test)]
+#[path = "transaction_tests.rs"]
+mod transaction_tests;

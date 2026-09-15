@@ -8,37 +8,84 @@ import {
   type EIP712TypedData,
   type Hex,
   type WalletAccount,
+  type WriteContractConfig,
+  type ContractAbi,
+  type WriteFunctionName,
+  type WriteContractArgs,
 } from "@zama-fhe/sdk";
-import { bytesToHex } from "viem";
+import { bytesToHex, encodeFunctionData, type EncodeFunctionDataParameters } from "viem";
 import type {
   SignerClientMessage,
   SignerServerMessage,
   SignerReply,
+  SignerAction,
 } from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import { bytes, json } from "./encoding.js";
 import { callbackError } from "./callback-errors.js";
-import { cancelled, errorDetails, SidecarError } from "./errors.js";
+import { cancelled, errorDetails, SidecarError, TransactionCallbackError } from "./errors.js";
 
 export type SignerStream = ServerDuplexStream<SignerClientMessage, SignerServerMessage>;
 export const operationContext = new AsyncLocalStorage<{ id: string; signal: AbortSignal }>();
+type Kind = {
+  method: "signTypedData" | "writeContract";
+  settle: (result: SignerReply["result"]) => Hex;
+  lost: (channelError: Error) => Error;
+};
+const typedData: Kind = {
+  method: "signTypedData",
+  settle(result) {
+    switch (result?.$case) {
+      case "signature":
+        return bytesToHex(result.signature);
+      case "error":
+        throw callbackError(result.error);
+      default:
+        throw new SigningFailedError("Signer reply requires a signature or error.");
+    }
+  },
+  lost: (channelError) => channelError,
+};
+const contractWrite: Kind = {
+  method: "writeContract",
+  settle(result) {
+    if (result?.$case === "error") {
+      throw callbackError(result.error, true);
+    }
+    if (result?.$case === "transactionHash" && result.transactionHash.length === 32) {
+      return bytesToHex(result.transactionHash);
+    }
+    // The wallet may have broadcast before producing an unusable result.
+    throw transactionOutcomeUnknown("Wallet returned an invalid transaction result.");
+  },
+  lost: () =>
+    transactionOutcomeUnknown("Signer channel closed before the transaction outcome was received."),
+};
 type Pending = {
   operationId: string;
+  kind: Kind;
   resolve: (signature: Hex) => void;
   reject: (error: Error) => void;
   dispose: () => void;
 };
 export class RemoteSigner extends BaseSigner {
   #connection = new CallbackConnection<SignerClientMessage, SignerServerMessage>((error) => {
-    this.#onDisconnect([
-      ...new Set([...this.#pending.values()].map((pending) => pending.operationId)),
-    ]);
+    const pending = [...this.#pending.values()];
+    const writes = new Set(
+      pending.filter((entry) => entry.kind === contractWrite).map((entry) => entry.operationId),
+    );
+    const others = [...new Set(pending.map((entry) => entry.operationId))].filter(
+      (operationId) => !writes.has(operationId),
+    );
+    // Settle callbacks before aborting their operations so writes keep the uncertain outcome.
     this.#rejectAll(error instanceof Error ? error : cancelled());
+    this.#onDisconnect(others);
+    this.#onDisconnect([...writes], contractWrite.lost(cancelled()));
   });
   #pending = new Map<string, Pending>();
-  #onDisconnect: (operationIds: readonly string[]) => void;
+  #onDisconnect: (operationIds: readonly string[], reason?: Error) => void;
   constructor(
     account: WalletAccount | undefined,
-    onDisconnect: (operationIds: readonly string[]) => void,
+    onDisconnect: (operationIds: readonly string[], reason?: Error) => void,
   ) {
     super(account);
     this.#onDisconnect = onDisconnect;
@@ -83,23 +130,40 @@ export class RemoteSigner extends BaseSigner {
     }
     this.#pending.delete(reply.actionId);
     pending.dispose();
-    switch (reply.result?.$case) {
-      case "error":
-        pending.reject(callbackError(reply.result.error));
-        break;
-      case "signature":
-        pending.resolve(bytesToHex(reply.result.signature));
-        break;
-      default:
-        pending.reject(new SigningFailedError("Signer reply requires a signature or error."));
+    try {
+      pending.resolve(pending.kind.settle(reply.result));
+    } catch (error) {
+      pending.reject(error as Error);
     }
   }
-  async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
+  async signTypedData(data: EIP712TypedData): Promise<Hex> {
+    return this.#request(typedData, { $case: "typedDataJson", typedDataJson: json(data) });
+  }
+  async writeContract<
+    const TAbi extends ContractAbi,
+    TFunctionName extends WriteFunctionName<TAbi>,
+    const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
+  >(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex> {
+    return this.#request(contractWrite, {
+      $case: "contractWrite",
+      contractWrite: {
+        address: bytes(config.address),
+        // SDK generics include untyped ABIs; viem validates their function and arguments at runtime.
+        data: bytes(encodeFunctionData(config as EncodeFunctionDataParameters)),
+        abiJson: json(config.abi),
+        functionName: config.functionName,
+        argsJson: json(config.args),
+        ...(config.value === undefined ? {} : { value: config.value.toString() }),
+        ...(config.gas === undefined ? {} : { gas: config.gas.toString() }),
+      },
+    });
+  }
+  #request(kind: Kind, request: NonNullable<SignerAction["request"]>): Promise<Hex> {
     const operation = operationContext.getStore();
     if (!operation || operation.signal.aborted) {
       throw cancelled();
     }
-    const account = this.requireWalletAccount("signTypedData");
+    const account = this.requireWalletAccount(kind.method);
     if (!this.#connection.connected) {
       throw new SigningFailedError("Signer channel is not connected.");
     }
@@ -120,6 +184,7 @@ export class RemoteSigner extends BaseSigner {
       operation.signal.addEventListener("abort", abort, { once: true });
       this.#pending.set(actionId, {
         operationId: operation.id,
+        kind,
         resolve,
         reject,
         dispose: () => operation.signal.removeEventListener("abort", abort),
@@ -132,7 +197,7 @@ export class RemoteSigner extends BaseSigner {
               operationId: operation.id,
               actionId,
               account: { address: bytes(account.address), chainId: BigInt(account.chainId) },
-              typedDataJson: json(typedData),
+              request,
             },
           },
         });
@@ -143,13 +208,10 @@ export class RemoteSigner extends BaseSigner {
       }
     });
   }
-  async writeContract(): Promise<Hex> {
-    throw new SigningFailedError("Transaction methods are outside this sidecar API.");
-  }
   #rejectAll(error: Error): void {
     for (const pending of this.#pending.values()) {
       pending.dispose();
-      pending.reject(error);
+      pending.reject(pending.kind.lost(error));
     }
     this.#pending.clear();
   }
@@ -158,4 +220,12 @@ export class RemoteSigner extends BaseSigner {
     this.#rejectAll(cancelled());
     super.dispose();
   }
+}
+
+function transactionOutcomeUnknown(message: string): TransactionCallbackError {
+  return new TransactionCallbackError(
+    "TRANSACTION_OUTCOME_UNKNOWN",
+    status.FAILED_PRECONDITION,
+    message,
+  );
 }

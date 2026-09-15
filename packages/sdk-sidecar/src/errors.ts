@@ -13,6 +13,7 @@ export class SidecarError extends Error {
     super(message);
   }
 }
+export class TransactionCallbackError extends SidecarError {}
 export function invalidArgument(message = "Invalid request."): SidecarError {
   return new SidecarError("INVALID_ARGUMENT", status.INVALID_ARGUMENT, message);
 }
@@ -20,6 +21,10 @@ export function cancelled(): SidecarError {
   return new SidecarError("CANCELLED", status.CANCELLED, "Operation cancelled.");
 }
 export function errorDetails(error: unknown): SdkError {
+  // The SDK wraps wallet errors; native callers still need the broadcast outcome.
+  if (error instanceof ZamaError && error.cause instanceof TransactionCallbackError) {
+    return errorDetails(error.cause);
+  }
   if (error instanceof ZamaError) {
     return {
       code: error.code,

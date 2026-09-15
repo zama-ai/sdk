@@ -2,6 +2,7 @@ package sidecar
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"errors"
 	"strings"
 
@@ -14,6 +15,10 @@ func NewPrivateKeySigner(privateKey string, chainID uint64) (SignerConfig, error
 	if err != nil {
 		return SignerConfig{}, errors.New("invalid wallet private key")
 	}
+	return privateKeySigner(key, chainID), nil
+}
+
+func privateKeySigner(key *ecdsa.PrivateKey, chainID uint64) SignerConfig {
 	account := WalletAccount{Address: crypto.PubkeyToAddress(key.PublicKey), ChainID: chainID}
 	return SignerConfig{Account: &account, SignTypedData: func(ctx context.Context, requested WalletAccount, typed apitypes.TypedData) ([]byte, error) {
 		if err := ctx.Err(); err != nil {
@@ -32,5 +37,5 @@ func NewPrivateKeySigner(privateKey string, chainID uint64) (SignerConfig, error
 		}
 		signature[64] += 27
 		return signature, nil
-	}}, nil
+	}}
 }

@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	sidecar "github.com/zama-ai/sdk/clients/go"
 	"github.com/zama-ai/sdk/clients/go/examples/balance/contracts"
@@ -33,6 +36,22 @@ func connectEthereum(ctx context.Context, config exampleConfig) (*ethclient.Clie
 	if !chain.IsUint64() || chain.Uint64() != sepoliaChainID {
 		rpc.Close()
 		return nil, sidecar.SignerConfig{}, errors.New("RPC must use Sepolia")
+	}
+	signer, err = sidecar.NewEthereumSigner(config.privateKey, sepoliaChainID, rpc, sidecar.WritePolicy{
+		Approve: func(ctx context.Context, request sidecar.ContractWriteRequest) error {
+			if request.Address != config.token {
+				return fmt.Errorf("%w: example wallet only approves the configured token", sidecar.ErrSigningRejected)
+			}
+			return ctx.Err()
+		},
+		Submitting: func(_ sidecar.ContractWriteRequest, tx *types.Transaction) {
+			// A durable record lets the application reconcile a cancelled or lost callback.
+			log.Printf("submitting transaction %s", tx.Hash().Hex())
+		},
+	})
+	if err != nil {
+		rpc.Close()
+		return nil, sidecar.SignerConfig{}, err
 	}
 	return rpc, signer, nil
 }
