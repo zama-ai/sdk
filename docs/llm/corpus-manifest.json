@@ -140,7 +140,7 @@
       "source_type": "official-doc",
       "category": "changelog",
       "logical_path": "changelog/v3-6",
-      "description": "Release notes for the 3.6.x line.",
+      "description": "Web Worker encryption offload, structured wallet-signing and permit-failure events, an interrupted-unshield resume fix, and orphaned relayer entries that warn instead of throwing.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -152,7 +152,7 @@
       "source_type": "official-doc",
       "category": "changelog",
       "logical_path": "changelog/v3-5",
-      "description": "Release notes for the 3.5.x line.",
+      "description": "Polygon presets, offline signing and decryption permits, at-rest transport-key encryption, and automatic KMS-context recovery.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -164,7 +164,7 @@
       "source_type": "official-doc",
       "category": "changelog",
       "logical_path": "changelog/v3-4",
-      "description": "Release notes for the 3.4.x line.",
+      "description": "An internal FHE backend migration to @fhevm/sdk, FHE runtime and client tuning knobs, shared transport key pairs for B2B2C, automatic decrypt-batch chunking, and a two-signature shield via wrap().",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
