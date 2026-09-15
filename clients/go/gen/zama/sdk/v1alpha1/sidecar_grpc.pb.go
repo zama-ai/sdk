@@ -45,28 +45,52 @@ const (
 // SidecarServiceClient is the client API for SidecarService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// SDK failures retain their code and retry information in gRPC trailers.
+// Integer durations and counts are exact; omitted optional values use SDK defaults.
 type SidecarServiceClient interface {
+	// Reports the version of @zama-fhe/sdk executing operations in this process.
 	GetInfo(ctx context.Context, in *GetInfoRequest, opts ...grpc.CallOption) (*GetInfoResponse, error)
+	// Creates an independent SDK instance; no account or signer is required for public operations.
 	CreateContext(ctx context.Context, in *CreateContextRequest, opts ...grpc.CallOption) (*CreateContextResponse, error)
-	CloseContext(ctx context.Context, in *ContextRequest, opts ...grpc.CallOption) (*Empty, error)
-	UpdateAccount(ctx context.Context, in *UpdateAccountRequest, opts ...grpc.CallOption) (*Empty, error)
+	// Cancels active operations and disposes this context and its callback channels.
+	CloseContext(ctx context.Context, in *ContextRequest, opts ...grpc.CallOption) (*CloseContextResponse, error)
+	// Cancels pending operations before changing the signer account; omission disconnects it.
+	UpdateAccount(ctx context.Context, in *UpdateAccountRequest, opts ...grpc.CallOption) (*UpdateAccountResponse, error)
+	// Attach once per context before signing. Actions may overlap; correlate both action and operation IDs.
 	SignerChannel(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[SignerClientMessage, SignerServerMessage], error)
+	// Attach once per context to serve application storage; keys and values remain opaque.
 	StorageChannel(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[StorageClientMessage, StorageServerMessage], error)
+	// Calls decryption.decryptValues, including automatic permit acquisition and credential recovery.
 	DecryptValues(ctx context.Context, in *DecryptValuesRequest, opts ...grpc.CallOption) (*DecryptValuesResponse, error)
-	DelegatedDecryptValues(ctx context.Context, in *DelegatedDecryptValuesRequest, opts ...grpc.CallOption) (*DecryptValuesResponse, error)
+	// Calls decryption.delegatedDecryptValues; an omitted account uses the delegator address.
+	DelegatedDecryptValues(ctx context.Context, in *DelegatedDecryptValuesRequest, opts ...grpc.CallOption) (*DelegatedDecryptValuesResponse, error)
+	// Calls decryption.decryptPublicValues without requiring a signer.
 	DecryptPublicValues(ctx context.Context, in *DecryptPublicValuesRequest, opts ...grpc.CallOption) (*DecryptPublicValuesResponse, error)
+	// Calls decryption.delegatedBatchDecryptValues; per-item failures remain results, fatal SDK errors fail the RPC.
 	DelegatedBatchDecryptValues(ctx context.Context, in *DelegatedBatchDecryptValuesRequest, opts ...grpc.CallOption) (*DelegatedBatchDecryptValuesResponse, error)
+	// Calls offline.preparePermit without signing; return the opaque envelope unchanged when registering.
 	PreparePermit(ctx context.Context, in *PreparePermitRequest, opts ...grpc.CallOption) (*PreparePermitResponse, error)
-	RegisterPermit(ctx context.Context, in *RegisterPermitRequest, opts ...grpc.CallOption) (*Empty, error)
-	GrantPermit(ctx context.Context, in *ContractsRequest, opts ...grpc.CallOption) (*Empty, error)
-	GrantDelegationPermit(ctx context.Context, in *DelegationContractsRequest, opts ...grpc.CallOption) (*Empty, error)
+	// Calls permits.registerPermit with the prepared envelope and signature.
+	RegisterPermit(ctx context.Context, in *RegisterPermitRequest, opts ...grpc.CallOption) (*RegisterPermitResponse, error)
+	// Calls permits.grantPermit; any wallet signing is requested on the signer channel.
+	GrantPermit(ctx context.Context, in *ContractsRequest, opts ...grpc.CallOption) (*GrantPermitResponse, error)
+	// Calls permits.grantDelegationPermit for the supplied delegator and contracts.
+	GrantDelegationPermit(ctx context.Context, in *DelegationContractsRequest, opts ...grpc.CallOption) (*GrantDelegationPermitResponse, error)
+	// Calls permits.hasPermit using the SDK credential store and expiry rules.
 	HasPermit(ctx context.Context, in *ContractsRequest, opts ...grpc.CallOption) (*HasPermitResponse, error)
-	HasDelegationPermit(ctx context.Context, in *DelegationContractsRequest, opts ...grpc.CallOption) (*HasPermitResponse, error)
-	RevokePermits(ctx context.Context, in *RevokePermitsRequest, opts ...grpc.CallOption) (*Empty, error)
-	ClearPermits(ctx context.Context, in *OperationRequest, opts ...grpc.CallOption) (*Empty, error)
-	WarmTransportKeyPair(ctx context.Context, in *OperationRequest, opts ...grpc.CallOption) (*Empty, error)
-	WarmTransportKeyPairScope(ctx context.Context, in *ScopeRequest, opts ...grpc.CallOption) (*Empty, error)
-	RevokeTransportKeyPair(ctx context.Context, in *ScopeRequest, opts ...grpc.CallOption) (*Empty, error)
+	// Calls permits.hasDelegationPermit for the supplied delegator and contracts.
+	HasDelegationPermit(ctx context.Context, in *DelegationContractsRequest, opts ...grpc.CallOption) (*HasDelegationPermitResponse, error)
+	// Calls permits.revokePermits; omitted contracts and an empty list retain their distinct SDK meanings.
+	RevokePermits(ctx context.Context, in *RevokePermitsRequest, opts ...grpc.CallOption) (*RevokePermitsResponse, error)
+	// Calls permits.clear to clear locally stored permits.
+	ClearPermits(ctx context.Context, in *OperationRequest, opts ...grpc.CallOption) (*ClearPermitsResponse, error)
+	// Calls permits.warmTransportKeyPair; signing is requested only when the SDK requires it.
+	WarmTransportKeyPair(ctx context.Context, in *OperationRequest, opts ...grpc.CallOption) (*WarmTransportKeyPairResponse, error)
+	// Calls permits.warmTransportKeyPairScope for a shared credential scope.
+	WarmTransportKeyPairScope(ctx context.Context, in *ScopeRequest, opts ...grpc.CallOption) (*WarmTransportKeyPairScopeResponse, error)
+	// Calls permits.revokeTransportKeyPair for the supplied credential scope.
+	RevokeTransportKeyPair(ctx context.Context, in *ScopeRequest, opts ...grpc.CallOption) (*RevokeTransportKeyPairResponse, error)
 }
 
 type sidecarServiceClient struct {
@@ -97,9 +121,9 @@ func (c *sidecarServiceClient) CreateContext(ctx context.Context, in *CreateCont
 	return out, nil
 }
 
-func (c *sidecarServiceClient) CloseContext(ctx context.Context, in *ContextRequest, opts ...grpc.CallOption) (*Empty, error) {
+func (c *sidecarServiceClient) CloseContext(ctx context.Context, in *ContextRequest, opts ...grpc.CallOption) (*CloseContextResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Empty)
+	out := new(CloseContextResponse)
 	err := c.cc.Invoke(ctx, SidecarService_CloseContext_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -107,9 +131,9 @@ func (c *sidecarServiceClient) CloseContext(ctx context.Context, in *ContextRequ
 	return out, nil
 }
 
-func (c *sidecarServiceClient) UpdateAccount(ctx context.Context, in *UpdateAccountRequest, opts ...grpc.CallOption) (*Empty, error) {
+func (c *sidecarServiceClient) UpdateAccount(ctx context.Context, in *UpdateAccountRequest, opts ...grpc.CallOption) (*UpdateAccountResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Empty)
+	out := new(UpdateAccountResponse)
 	err := c.cc.Invoke(ctx, SidecarService_UpdateAccount_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -153,9 +177,9 @@ func (c *sidecarServiceClient) DecryptValues(ctx context.Context, in *DecryptVal
 	return out, nil
 }
 
-func (c *sidecarServiceClient) DelegatedDecryptValues(ctx context.Context, in *DelegatedDecryptValuesRequest, opts ...grpc.CallOption) (*DecryptValuesResponse, error) {
+func (c *sidecarServiceClient) DelegatedDecryptValues(ctx context.Context, in *DelegatedDecryptValuesRequest, opts ...grpc.CallOption) (*DelegatedDecryptValuesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DecryptValuesResponse)
+	out := new(DelegatedDecryptValuesResponse)
 	err := c.cc.Invoke(ctx, SidecarService_DelegatedDecryptValues_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -193,9 +217,9 @@ func (c *sidecarServiceClient) PreparePermit(ctx context.Context, in *PreparePer
 	return out, nil
 }
 
-func (c *sidecarServiceClient) RegisterPermit(ctx context.Context, in *RegisterPermitRequest, opts ...grpc.CallOption) (*Empty, error) {
+func (c *sidecarServiceClient) RegisterPermit(ctx context.Context, in *RegisterPermitRequest, opts ...grpc.CallOption) (*RegisterPermitResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Empty)
+	out := new(RegisterPermitResponse)
 	err := c.cc.Invoke(ctx, SidecarService_RegisterPermit_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -203,9 +227,9 @@ func (c *sidecarServiceClient) RegisterPermit(ctx context.Context, in *RegisterP
 	return out, nil
 }
 
-func (c *sidecarServiceClient) GrantPermit(ctx context.Context, in *ContractsRequest, opts ...grpc.CallOption) (*Empty, error) {
+func (c *sidecarServiceClient) GrantPermit(ctx context.Context, in *ContractsRequest, opts ...grpc.CallOption) (*GrantPermitResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Empty)
+	out := new(GrantPermitResponse)
 	err := c.cc.Invoke(ctx, SidecarService_GrantPermit_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -213,9 +237,9 @@ func (c *sidecarServiceClient) GrantPermit(ctx context.Context, in *ContractsReq
 	return out, nil
 }
 
-func (c *sidecarServiceClient) GrantDelegationPermit(ctx context.Context, in *DelegationContractsRequest, opts ...grpc.CallOption) (*Empty, error) {
+func (c *sidecarServiceClient) GrantDelegationPermit(ctx context.Context, in *DelegationContractsRequest, opts ...grpc.CallOption) (*GrantDelegationPermitResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Empty)
+	out := new(GrantDelegationPermitResponse)
 	err := c.cc.Invoke(ctx, SidecarService_GrantDelegationPermit_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -233,9 +257,9 @@ func (c *sidecarServiceClient) HasPermit(ctx context.Context, in *ContractsReque
 	return out, nil
 }
 
-func (c *sidecarServiceClient) HasDelegationPermit(ctx context.Context, in *DelegationContractsRequest, opts ...grpc.CallOption) (*HasPermitResponse, error) {
+func (c *sidecarServiceClient) HasDelegationPermit(ctx context.Context, in *DelegationContractsRequest, opts ...grpc.CallOption) (*HasDelegationPermitResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(HasPermitResponse)
+	out := new(HasDelegationPermitResponse)
 	err := c.cc.Invoke(ctx, SidecarService_HasDelegationPermit_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -243,9 +267,9 @@ func (c *sidecarServiceClient) HasDelegationPermit(ctx context.Context, in *Dele
 	return out, nil
 }
 
-func (c *sidecarServiceClient) RevokePermits(ctx context.Context, in *RevokePermitsRequest, opts ...grpc.CallOption) (*Empty, error) {
+func (c *sidecarServiceClient) RevokePermits(ctx context.Context, in *RevokePermitsRequest, opts ...grpc.CallOption) (*RevokePermitsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Empty)
+	out := new(RevokePermitsResponse)
 	err := c.cc.Invoke(ctx, SidecarService_RevokePermits_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -253,9 +277,9 @@ func (c *sidecarServiceClient) RevokePermits(ctx context.Context, in *RevokePerm
 	return out, nil
 }
 
-func (c *sidecarServiceClient) ClearPermits(ctx context.Context, in *OperationRequest, opts ...grpc.CallOption) (*Empty, error) {
+func (c *sidecarServiceClient) ClearPermits(ctx context.Context, in *OperationRequest, opts ...grpc.CallOption) (*ClearPermitsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Empty)
+	out := new(ClearPermitsResponse)
 	err := c.cc.Invoke(ctx, SidecarService_ClearPermits_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -263,9 +287,9 @@ func (c *sidecarServiceClient) ClearPermits(ctx context.Context, in *OperationRe
 	return out, nil
 }
 
-func (c *sidecarServiceClient) WarmTransportKeyPair(ctx context.Context, in *OperationRequest, opts ...grpc.CallOption) (*Empty, error) {
+func (c *sidecarServiceClient) WarmTransportKeyPair(ctx context.Context, in *OperationRequest, opts ...grpc.CallOption) (*WarmTransportKeyPairResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Empty)
+	out := new(WarmTransportKeyPairResponse)
 	err := c.cc.Invoke(ctx, SidecarService_WarmTransportKeyPair_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -273,9 +297,9 @@ func (c *sidecarServiceClient) WarmTransportKeyPair(ctx context.Context, in *Ope
 	return out, nil
 }
 
-func (c *sidecarServiceClient) WarmTransportKeyPairScope(ctx context.Context, in *ScopeRequest, opts ...grpc.CallOption) (*Empty, error) {
+func (c *sidecarServiceClient) WarmTransportKeyPairScope(ctx context.Context, in *ScopeRequest, opts ...grpc.CallOption) (*WarmTransportKeyPairScopeResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Empty)
+	out := new(WarmTransportKeyPairScopeResponse)
 	err := c.cc.Invoke(ctx, SidecarService_WarmTransportKeyPairScope_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -283,9 +307,9 @@ func (c *sidecarServiceClient) WarmTransportKeyPairScope(ctx context.Context, in
 	return out, nil
 }
 
-func (c *sidecarServiceClient) RevokeTransportKeyPair(ctx context.Context, in *ScopeRequest, opts ...grpc.CallOption) (*Empty, error) {
+func (c *sidecarServiceClient) RevokeTransportKeyPair(ctx context.Context, in *ScopeRequest, opts ...grpc.CallOption) (*RevokeTransportKeyPairResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Empty)
+	out := new(RevokeTransportKeyPairResponse)
 	err := c.cc.Invoke(ctx, SidecarService_RevokeTransportKeyPair_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -296,28 +320,52 @@ func (c *sidecarServiceClient) RevokeTransportKeyPair(ctx context.Context, in *S
 // SidecarServiceServer is the server API for SidecarService service.
 // All implementations must embed UnimplementedSidecarServiceServer
 // for forward compatibility.
+//
+// SDK failures retain their code and retry information in gRPC trailers.
+// Integer durations and counts are exact; omitted optional values use SDK defaults.
 type SidecarServiceServer interface {
+	// Reports the version of @zama-fhe/sdk executing operations in this process.
 	GetInfo(context.Context, *GetInfoRequest) (*GetInfoResponse, error)
+	// Creates an independent SDK instance; no account or signer is required for public operations.
 	CreateContext(context.Context, *CreateContextRequest) (*CreateContextResponse, error)
-	CloseContext(context.Context, *ContextRequest) (*Empty, error)
-	UpdateAccount(context.Context, *UpdateAccountRequest) (*Empty, error)
+	// Cancels active operations and disposes this context and its callback channels.
+	CloseContext(context.Context, *ContextRequest) (*CloseContextResponse, error)
+	// Cancels pending operations before changing the signer account; omission disconnects it.
+	UpdateAccount(context.Context, *UpdateAccountRequest) (*UpdateAccountResponse, error)
+	// Attach once per context before signing. Actions may overlap; correlate both action and operation IDs.
 	SignerChannel(grpc.BidiStreamingServer[SignerClientMessage, SignerServerMessage]) error
+	// Attach once per context to serve application storage; keys and values remain opaque.
 	StorageChannel(grpc.BidiStreamingServer[StorageClientMessage, StorageServerMessage]) error
+	// Calls decryption.decryptValues, including automatic permit acquisition and credential recovery.
 	DecryptValues(context.Context, *DecryptValuesRequest) (*DecryptValuesResponse, error)
-	DelegatedDecryptValues(context.Context, *DelegatedDecryptValuesRequest) (*DecryptValuesResponse, error)
+	// Calls decryption.delegatedDecryptValues; an omitted account uses the delegator address.
+	DelegatedDecryptValues(context.Context, *DelegatedDecryptValuesRequest) (*DelegatedDecryptValuesResponse, error)
+	// Calls decryption.decryptPublicValues without requiring a signer.
 	DecryptPublicValues(context.Context, *DecryptPublicValuesRequest) (*DecryptPublicValuesResponse, error)
+	// Calls decryption.delegatedBatchDecryptValues; per-item failures remain results, fatal SDK errors fail the RPC.
 	DelegatedBatchDecryptValues(context.Context, *DelegatedBatchDecryptValuesRequest) (*DelegatedBatchDecryptValuesResponse, error)
+	// Calls offline.preparePermit without signing; return the opaque envelope unchanged when registering.
 	PreparePermit(context.Context, *PreparePermitRequest) (*PreparePermitResponse, error)
-	RegisterPermit(context.Context, *RegisterPermitRequest) (*Empty, error)
-	GrantPermit(context.Context, *ContractsRequest) (*Empty, error)
-	GrantDelegationPermit(context.Context, *DelegationContractsRequest) (*Empty, error)
+	// Calls permits.registerPermit with the prepared envelope and signature.
+	RegisterPermit(context.Context, *RegisterPermitRequest) (*RegisterPermitResponse, error)
+	// Calls permits.grantPermit; any wallet signing is requested on the signer channel.
+	GrantPermit(context.Context, *ContractsRequest) (*GrantPermitResponse, error)
+	// Calls permits.grantDelegationPermit for the supplied delegator and contracts.
+	GrantDelegationPermit(context.Context, *DelegationContractsRequest) (*GrantDelegationPermitResponse, error)
+	// Calls permits.hasPermit using the SDK credential store and expiry rules.
 	HasPermit(context.Context, *ContractsRequest) (*HasPermitResponse, error)
-	HasDelegationPermit(context.Context, *DelegationContractsRequest) (*HasPermitResponse, error)
-	RevokePermits(context.Context, *RevokePermitsRequest) (*Empty, error)
-	ClearPermits(context.Context, *OperationRequest) (*Empty, error)
-	WarmTransportKeyPair(context.Context, *OperationRequest) (*Empty, error)
-	WarmTransportKeyPairScope(context.Context, *ScopeRequest) (*Empty, error)
-	RevokeTransportKeyPair(context.Context, *ScopeRequest) (*Empty, error)
+	// Calls permits.hasDelegationPermit for the supplied delegator and contracts.
+	HasDelegationPermit(context.Context, *DelegationContractsRequest) (*HasDelegationPermitResponse, error)
+	// Calls permits.revokePermits; omitted contracts and an empty list retain their distinct SDK meanings.
+	RevokePermits(context.Context, *RevokePermitsRequest) (*RevokePermitsResponse, error)
+	// Calls permits.clear to clear locally stored permits.
+	ClearPermits(context.Context, *OperationRequest) (*ClearPermitsResponse, error)
+	// Calls permits.warmTransportKeyPair; signing is requested only when the SDK requires it.
+	WarmTransportKeyPair(context.Context, *OperationRequest) (*WarmTransportKeyPairResponse, error)
+	// Calls permits.warmTransportKeyPairScope for a shared credential scope.
+	WarmTransportKeyPairScope(context.Context, *ScopeRequest) (*WarmTransportKeyPairScopeResponse, error)
+	// Calls permits.revokeTransportKeyPair for the supplied credential scope.
+	RevokeTransportKeyPair(context.Context, *ScopeRequest) (*RevokeTransportKeyPairResponse, error)
 	mustEmbedUnimplementedSidecarServiceServer()
 }
 
@@ -334,10 +382,10 @@ func (UnimplementedSidecarServiceServer) GetInfo(context.Context, *GetInfoReques
 func (UnimplementedSidecarServiceServer) CreateContext(context.Context, *CreateContextRequest) (*CreateContextResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateContext not implemented")
 }
-func (UnimplementedSidecarServiceServer) CloseContext(context.Context, *ContextRequest) (*Empty, error) {
+func (UnimplementedSidecarServiceServer) CloseContext(context.Context, *ContextRequest) (*CloseContextResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CloseContext not implemented")
 }
-func (UnimplementedSidecarServiceServer) UpdateAccount(context.Context, *UpdateAccountRequest) (*Empty, error) {
+func (UnimplementedSidecarServiceServer) UpdateAccount(context.Context, *UpdateAccountRequest) (*UpdateAccountResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateAccount not implemented")
 }
 func (UnimplementedSidecarServiceServer) SignerChannel(grpc.BidiStreamingServer[SignerClientMessage, SignerServerMessage]) error {
@@ -349,7 +397,7 @@ func (UnimplementedSidecarServiceServer) StorageChannel(grpc.BidiStreamingServer
 func (UnimplementedSidecarServiceServer) DecryptValues(context.Context, *DecryptValuesRequest) (*DecryptValuesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DecryptValues not implemented")
 }
-func (UnimplementedSidecarServiceServer) DelegatedDecryptValues(context.Context, *DelegatedDecryptValuesRequest) (*DecryptValuesResponse, error) {
+func (UnimplementedSidecarServiceServer) DelegatedDecryptValues(context.Context, *DelegatedDecryptValuesRequest) (*DelegatedDecryptValuesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DelegatedDecryptValues not implemented")
 }
 func (UnimplementedSidecarServiceServer) DecryptPublicValues(context.Context, *DecryptPublicValuesRequest) (*DecryptPublicValuesResponse, error) {
@@ -361,34 +409,34 @@ func (UnimplementedSidecarServiceServer) DelegatedBatchDecryptValues(context.Con
 func (UnimplementedSidecarServiceServer) PreparePermit(context.Context, *PreparePermitRequest) (*PreparePermitResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method PreparePermit not implemented")
 }
-func (UnimplementedSidecarServiceServer) RegisterPermit(context.Context, *RegisterPermitRequest) (*Empty, error) {
+func (UnimplementedSidecarServiceServer) RegisterPermit(context.Context, *RegisterPermitRequest) (*RegisterPermitResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RegisterPermit not implemented")
 }
-func (UnimplementedSidecarServiceServer) GrantPermit(context.Context, *ContractsRequest) (*Empty, error) {
+func (UnimplementedSidecarServiceServer) GrantPermit(context.Context, *ContractsRequest) (*GrantPermitResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GrantPermit not implemented")
 }
-func (UnimplementedSidecarServiceServer) GrantDelegationPermit(context.Context, *DelegationContractsRequest) (*Empty, error) {
+func (UnimplementedSidecarServiceServer) GrantDelegationPermit(context.Context, *DelegationContractsRequest) (*GrantDelegationPermitResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GrantDelegationPermit not implemented")
 }
 func (UnimplementedSidecarServiceServer) HasPermit(context.Context, *ContractsRequest) (*HasPermitResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method HasPermit not implemented")
 }
-func (UnimplementedSidecarServiceServer) HasDelegationPermit(context.Context, *DelegationContractsRequest) (*HasPermitResponse, error) {
+func (UnimplementedSidecarServiceServer) HasDelegationPermit(context.Context, *DelegationContractsRequest) (*HasDelegationPermitResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method HasDelegationPermit not implemented")
 }
-func (UnimplementedSidecarServiceServer) RevokePermits(context.Context, *RevokePermitsRequest) (*Empty, error) {
+func (UnimplementedSidecarServiceServer) RevokePermits(context.Context, *RevokePermitsRequest) (*RevokePermitsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokePermits not implemented")
 }
-func (UnimplementedSidecarServiceServer) ClearPermits(context.Context, *OperationRequest) (*Empty, error) {
+func (UnimplementedSidecarServiceServer) ClearPermits(context.Context, *OperationRequest) (*ClearPermitsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ClearPermits not implemented")
 }
-func (UnimplementedSidecarServiceServer) WarmTransportKeyPair(context.Context, *OperationRequest) (*Empty, error) {
+func (UnimplementedSidecarServiceServer) WarmTransportKeyPair(context.Context, *OperationRequest) (*WarmTransportKeyPairResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method WarmTransportKeyPair not implemented")
 }
-func (UnimplementedSidecarServiceServer) WarmTransportKeyPairScope(context.Context, *ScopeRequest) (*Empty, error) {
+func (UnimplementedSidecarServiceServer) WarmTransportKeyPairScope(context.Context, *ScopeRequest) (*WarmTransportKeyPairScopeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method WarmTransportKeyPairScope not implemented")
 }
-func (UnimplementedSidecarServiceServer) RevokeTransportKeyPair(context.Context, *ScopeRequest) (*Empty, error) {
+func (UnimplementedSidecarServiceServer) RevokeTransportKeyPair(context.Context, *ScopeRequest) (*RevokeTransportKeyPairResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeTransportKeyPair not implemented")
 }
 func (UnimplementedSidecarServiceServer) mustEmbedUnimplementedSidecarServiceServer() {}

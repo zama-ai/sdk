@@ -3,7 +3,6 @@ package sidecar
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -73,11 +72,7 @@ func TestTypedConfigurationAndStorageChoices(t *testing.T) {
 	if r.Storage.GetMemory() == nil || r.PermitStorage != nil {
 		t.Fatal("default storage choices changed")
 	}
-	var decoded map[string]any
-	if err := json.Unmarshal([]byte(r.ConfigJson), &decoded); err != nil {
-		t.Fatal(err)
-	}
-	if decoded["permitTTL"] != float64(0) || decoded["chainId"] != float64(11155111) || decoded["auth"].(map[string]any)["__type"] != "ApiKeyHeader" {
+	if r.Config.PermitTtl == nil || *r.Config.PermitTtl != 0 || r.Config.GetChainId() != 11155111 || r.Config.Chains[0].Auth.GetApiKeyHeader().Value != "example" {
 		t.Fatal("typed SDK config changed")
 	}
 	config.Storage = PersistentStorage("credentials")
@@ -115,9 +110,9 @@ func (s *storageServer) CreateContext(_ context.Context, r *pb.CreateContextRequ
 	s.mu.Unlock()
 	return &pb.CreateContextResponse{ContextId: id}, nil
 }
-func (s *storageServer) CloseContext(_ context.Context, r *pb.ContextRequest) (*pb.Empty, error) {
+func (s *storageServer) CloseContext(_ context.Context, r *pb.ContextRequest) (*pb.CloseContextResponse, error) {
 	s.disconnect(r.ContextId)
-	return &pb.Empty{}, nil
+	return &pb.CloseContextResponse{}, nil
 }
 func (s *storageServer) disconnect(id string) {
 	s.mu.Lock()
@@ -178,8 +173,8 @@ func storeRequest(t *testing.T, server *storageServer, sdk *SDKContext, method p
 	if err != nil {
 		t.Fatal(err)
 	}
-	if reply.Error != nil {
-		t.Fatalf("storage callback failed: %v", reply.Error)
+	if reply.GetError() != nil {
+		t.Fatalf("storage callback failed: %v", reply.GetError())
 	}
 	return reply
 }
@@ -201,10 +196,10 @@ func TestApplicationStorageOpaqueWireAndNewSidecarContext(t *testing.T) {
 		t.Fatal("opaque credential was not stored in native backend")
 	}
 	storeRequest(t, firstServer, first, pb.StorageMethod_STORAGE_METHOD_SET, "empty", nil)
-	if value := storeRequest(t, firstServer, first, pb.StorageMethod_STORAGE_METHOD_GET, "empty", nil).Value; value == nil || len(value) != 0 {
+	if value := storeRequest(t, firstServer, first, pb.StorageMethod_STORAGE_METHOD_GET, "empty", nil).GetValue(); value == nil || len(value) != 0 {
 		t.Fatal("empty lost protobuf presence")
 	}
-	if value := storeRequest(t, firstServer, first, pb.StorageMethod_STORAGE_METHOD_GET, "missing", nil).Value; value != nil {
+	if value := storeRequest(t, firstServer, first, pb.StorageMethod_STORAGE_METHOD_GET, "missing", nil).GetValue(); value != nil {
 		t.Fatal("missing became empty")
 	}
 	if err := first.Close(testContext(t)); err != nil {
@@ -218,7 +213,7 @@ func TestApplicationStorageOpaqueWireAndNewSidecarContext(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer second.Close(testContext(t))
-	if value := storeRequest(t, secondServer, second, pb.StorageMethod_STORAGE_METHOD_GET, "credential", nil).Value; !bytes.Equal(value, blob) {
+	if value := storeRequest(t, secondServer, second, pb.StorageMethod_STORAGE_METHOD_GET, "credential", nil).GetValue(); !bytes.Equal(value, blob) {
 		t.Fatal("native data lost when sidecar context was replaced")
 	}
 	storeRequest(t, secondServer, second, pb.StorageMethod_STORAGE_METHOD_DELETE, "credential", nil)
@@ -314,7 +309,7 @@ func TestStorageCallbackErrorMetadataAcrossWire(t *testing.T) {
 		t.Run(fmt.Sprint(rich), func(t *testing.T) {
 			var failure error = errors.New("database unavailable")
 			if rich {
-				failure = fmt.Errorf("adapter: %w", &SDKError{Code: "RPC_RATE_LIMITED", Message: "retry later", Retryable: true, RetryAfterSeconds: number(2.5)})
+				failure = fmt.Errorf("adapter: %w", &SDKError{Code: "RPC_RATE_LIMITED", Message: "retry later", Retryable: true, RetryAfterSeconds: number(2)})
 			}
 			server := newStorageServer()
 			client := testClient(t, server, nil)
@@ -328,16 +323,56 @@ func TestStorageCallbackErrorMetadataAcrossWire(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if reply.Error == nil {
+			if reply.GetError() == nil {
 				t.Fatal("storage failure lost")
 			}
 			if rich {
-				if reply.Error.Code != "RPC_RATE_LIMITED" || reply.Error.Message != "retry later" || !reply.Error.Retryable || reply.Error.RetryAfterSeconds == nil || *reply.Error.RetryAfterSeconds != 2.5 {
-					t.Fatalf("SDK metadata lost: %v", reply.Error)
+				if reply.GetError().Code != "RPC_RATE_LIMITED" || reply.GetError().Message != "retry later" || !reply.GetError().Retryable || reply.GetError().RetryAfterSeconds == nil || *reply.GetError().RetryAfterSeconds != 2 {
+					t.Fatalf("SDK metadata lost: %v", reply.GetError())
 				}
-			} else if reply.Error.Code != "STORAGE_FAILED" || reply.Error.Message != "database unavailable" {
-				t.Fatalf("ordinary storage error changed: %v", reply.Error)
+			} else if reply.GetError().Code != "STORAGE_FAILED" || reply.GetError().Message != "database unavailable" {
+				t.Fatalf("ordinary storage error changed: %v", reply.GetError())
 			}
 		})
+	}
+}
+
+func TestChainOverridesPreservePresence(t *testing.T) {
+	empty := ""
+	address := "0x0000000000000000000000000000000000000001"
+	chain, err := (ChainConfig{ID: 11155111, RegistryAddress: &empty, ACLContractAddress: &address, Auth: APIKeyCookie{Value: "token", Cookie: &empty}}).wire()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if chain.RegistryAddress == nil || len(chain.RegistryAddress) != 0 || chain.ExecutorAddress != nil || chain.Network != nil {
+		t.Fatal("preset omission or explicit clearing changed")
+	}
+	if len(chain.AclContractAddress) != 20 || chain.AclContractAddress[19] != 1 {
+		t.Fatal("address changed")
+	}
+	if chain.Auth.GetApiKeyCookie().Name == nil || *chain.Auth.GetApiKeyCookie().Name != "" {
+		t.Fatal("explicit credential name became omitted")
+	}
+	invalid := "0x1234"
+	if _, err := (ChainConfig{ACLContractAddress: &invalid}).wire(); err == nil {
+		t.Fatal("short address was padded")
+	}
+}
+
+func TestConfigurationRejectsAmbiguousChainSelection(t *testing.T) {
+	for _, update := range []func(*SDKConfig){
+		func(config *SDKConfig) { config.Chains = []ChainConfig{} },
+		func(config *SDKConfig) { config.Chains = []ChainConfig{{ID: 11155111}} },
+		func(config *SDKConfig) {
+			config.RPCURL = nil
+			config.Auth = BearerToken{Token: "token"}
+			config.Chains = []ChainConfig{{ID: 11155111}}
+		},
+	} {
+		config := NewSDKConfig(11155111, "http://localhost")
+		update(&config)
+		if _, err := config.wire(); err == nil {
+			t.Fatal("ambiguous chain configuration accepted")
+		}
 	}
 }

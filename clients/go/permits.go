@@ -8,9 +8,14 @@ import (
 	"google.golang.org/grpc"
 )
 
+type PreparedPermit struct {
+	Envelope      []byte
+	TypedDataJSON string
+}
+
 type PreparePermitOptions struct {
 	Delegator    *common.Address
-	DurationDays *float64
+	DurationDays *uint32
 }
 
 func addressesWire(addresses []common.Address) [][]byte {
@@ -20,29 +25,29 @@ func addressesWire(addresses []common.Address) [][]byte {
 	}
 	return result
 }
-func (s *SDKContext) PreparePermit(ctx context.Context, signer common.Address, contracts []common.Address, options PreparePermitOptions) (string, error) {
+func (s *SDKContext) PreparePermit(ctx context.Context, signer common.Address, contracts []common.Address, options PreparePermitOptions) (*PreparedPermit, error) {
 	r, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.PreparePermitResponse, error) {
 		return s.client.rpc.PreparePermit(ctx, &pb.PreparePermitRequest{Operation: op, SignerAddress: signer.Bytes(), ContractAddresses: addressesWire(contracts), DelegatorAddress: optionalAddress(options.Delegator), DurationDays: options.DurationDays}, trailer)
 	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return r.PreparedPermitJson, nil
+	return &PreparedPermit{Envelope: r.PreparedPermit, TypedDataJSON: r.TypedDataJson}, nil
 }
-func (s *SDKContext) RegisterPermit(ctx context.Context, prepared string, signature []byte) error {
-	_, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.Empty, error) {
-		return s.client.rpc.RegisterPermit(ctx, &pb.RegisterPermitRequest{Operation: op, PreparedPermitJson: prepared, Signature: signature}, trailer)
+func (s *SDKContext) RegisterPermit(ctx context.Context, prepared []byte, signature []byte) error {
+	_, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.RegisterPermitResponse, error) {
+		return s.client.rpc.RegisterPermit(ctx, &pb.RegisterPermitRequest{Operation: op, PreparedPermit: prepared, Signature: signature}, trailer)
 	})
 	return err
 }
 func (s *SDKContext) GrantPermit(ctx context.Context, contracts []common.Address) error {
-	_, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.Empty, error) {
+	_, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.GrantPermitResponse, error) {
 		return s.client.rpc.GrantPermit(ctx, &pb.ContractsRequest{Operation: op, ContractAddresses: addressesWire(contracts)}, trailer)
 	})
 	return err
 }
 func (s *SDKContext) GrantDelegationPermit(ctx context.Context, delegator common.Address, contracts []common.Address) error {
-	_, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.Empty, error) {
+	_, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.GrantDelegationPermitResponse, error) {
 		return s.client.rpc.GrantDelegationPermit(ctx, &pb.DelegationContractsRequest{Operation: op, DelegatorAddress: delegator.Bytes(), ContractAddresses: addressesWire(contracts)}, trailer)
 	})
 	return err
@@ -57,7 +62,7 @@ func (s *SDKContext) HasPermit(ctx context.Context, contracts []common.Address) 
 	return r.HasPermit, nil
 }
 func (s *SDKContext) HasDelegationPermit(ctx context.Context, delegator common.Address, contracts []common.Address) (bool, error) {
-	r, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.HasPermitResponse, error) {
+	r, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.HasDelegationPermitResponse, error) {
 		return s.client.rpc.HasDelegationPermit(ctx, &pb.DelegationContractsRequest{Operation: op, DelegatorAddress: delegator.Bytes(), ContractAddresses: addressesWire(contracts)}, trailer)
 	})
 	if err != nil {
@@ -72,31 +77,31 @@ func (s *SDKContext) RevokePermits(ctx context.Context, contracts []common.Addre
 	if contracts != nil {
 		list = &pb.ContractList{Addresses: addressesWire(contracts)}
 	}
-	_, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.Empty, error) {
+	_, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.RevokePermitsResponse, error) {
 		return s.client.rpc.RevokePermits(ctx, &pb.RevokePermitsRequest{Operation: op, Contracts: list}, trailer)
 	})
 	return err
 }
 func (s *SDKContext) ClearPermits(ctx context.Context) error {
-	_, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.Empty, error) {
+	_, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.ClearPermitsResponse, error) {
 		return s.client.rpc.ClearPermits(ctx, &pb.OperationRequest{Operation: op}, trailer)
 	})
 	return err
 }
 func (s *SDKContext) WarmTransportKeyPair(ctx context.Context) error {
-	_, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.Empty, error) {
+	_, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.WarmTransportKeyPairResponse, error) {
 		return s.client.rpc.WarmTransportKeyPair(ctx, &pb.OperationRequest{Operation: op}, trailer)
 	})
 	return err
 }
 func (s *SDKContext) WarmTransportKeyPairScope(ctx context.Context, scope string) error {
-	_, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.Empty, error) {
+	_, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.WarmTransportKeyPairScopeResponse, error) {
 		return s.client.rpc.WarmTransportKeyPairScope(ctx, &pb.ScopeRequest{Operation: op, ScopeId: scope}, trailer)
 	})
 	return err
 }
 func (s *SDKContext) RevokeTransportKeyPair(ctx context.Context, scope string) error {
-	_, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.Empty, error) {
+	_, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.RevokeTransportKeyPairResponse, error) {
 		return s.client.rpc.RevokeTransportKeyPair(ctx, &pb.ScopeRequest{Operation: op, ScopeId: scope}, trailer)
 	})
 	return err

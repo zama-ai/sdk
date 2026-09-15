@@ -5,7 +5,7 @@ pub struct SdkError {
     pub code: String,
     pub message: String,
     pub retryable: bool,
-    pub retry_after_seconds: Option<f64>,
+    pub retry_after_seconds: Option<u32>,
 }
 
 impl fmt::Display for SdkError {

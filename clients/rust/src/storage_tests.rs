@@ -76,8 +76,14 @@ async fn managed_storage_preserves_opaque_bytes_missing_empty_and_backend_identi
             panic!("expected reply")
         };
         assert_eq!(reply.request_id, index.to_string());
-        assert_eq!(reply.value, expected);
-        assert!(reply.error.is_none());
+        let expected = match method {
+            StorageMethod::Get => expected.map_or(
+                storage_reply::Result::NotFound(Empty {}),
+                storage_reply::Result::Value,
+            ),
+            _ => storage_reply::Result::Ack(Empty {}),
+        };
+        assert_eq!(reply.result, Some(expected));
     }
     memory.set("same", vec![1]).await.unwrap();
     permit_memory.set("same", vec![2]).await.unwrap();
@@ -99,7 +105,7 @@ async fn managed_storage_preserves_opaque_bytes_missing_empty_and_backend_identi
             panic!("expected reply")
         };
         assert_eq!(reply.request_id, id);
-        assert_eq!(reply.value, Some(expected));
+        assert_eq!(reply.result, Some(storage_reply::Result::Value(expected)));
     }
     sdk.close().await.unwrap();
 }
@@ -177,7 +183,7 @@ async fn storage_callbacks_run_concurrently_and_stop_on_close() {
         panic!("expected reply")
     };
     assert_eq!(reply.request_id, "fast");
-    assert_eq!(reply.value, Some(vec![42]));
+    assert_eq!(reply.result, Some(storage_reply::Result::Value(vec![42])));
     let clone = sdk.clone();
     drop(sdk);
     assert_eq!(stopped.available_permits(), 0);

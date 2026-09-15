@@ -172,10 +172,7 @@ async fn preserves_context_options_typed_values_and_sdk_errors() {
             let request = CreateContextRequest::decode(bytes).unwrap();
             assert!(!request.signer_enabled);
             assert!(request.account.is_none());
-            assert_eq!(
-                serde_json::from_str::<serde_json::Value>(&request.config_json).unwrap()["permitTTL"],
-                90
-            );
+            assert_eq!(request.config.unwrap().permit_ttl, Some(90));
             response(CreateContextResponse {
                 context_id: "context".into(),
             })
@@ -183,15 +180,15 @@ async fn preserves_context_options_typed_values_and_sdk_errors() {
         "DecryptValues" => {
             let request = DecryptValuesRequest::decode(bytes).unwrap();
             assert_eq!(request.operation.unwrap().context_id, "context");
-            assert_eq!(request.timeout_ms, Some(0.5));
+            assert_eq!(request.timeout_ms, Some(1));
             use clear_value::Value;
             response(DecryptValuesResponse {
                 values: [
                     Value::BigintValue("340282366920938463463374607431768211457".into()),
                     Value::BoolValue(false),
                     Value::StringValue("0x1234".into()),
-                    Value::UndefinedValue(true),
-                    Value::NumberValue(4_294_967_295.0),
+                    Value::UndefinedValue(Empty {}),
+                    Value::NumberValue(4_294_967_295),
                 ]
                 .into_iter()
                 .enumerate()
@@ -212,18 +209,17 @@ async fn preserves_context_options_typed_values_and_sdk_errors() {
         "DelegatedBatchDecryptValues" => {
             let request = DelegatedBatchDecryptValuesRequest::decode(bytes).unwrap();
             assert_eq!(request.account_address, Some(vec![4; 20]));
-            assert_eq!(request.max_concurrency, Some(2.5));
+            assert_eq!(request.max_concurrency, Some(2));
             response(DelegatedBatchDecryptValuesResponse {
                 items: vec![generated::BatchItem {
                     encrypted_value: vec![5; 32],
                     contract_address: vec![6; 20],
-                    value: None,
-                    error: Some(generated::SdkError {
+                    result: Some(generated::batch_item::Result::Error(generated::SdkError {
                         code: "RELAYER_REQUEST_FAILED".into(),
                         message: "busy".into(),
                         retryable: true,
-                        retry_after_seconds: Some(1.25),
-                    }),
+                        retry_after_seconds: Some(1),
+                    })),
                 }],
             })
         }
@@ -243,10 +239,17 @@ async fn preserves_context_options_typed_values_and_sdk_errors() {
             let request = PreparePermitRequest::decode(bytes).unwrap();
             assert_eq!(request.signer_address, vec![7; 20]);
             assert_eq!(request.delegator_address, Some(vec![8; 20]));
-            assert_eq!(request.duration_days, Some(0.5));
+            assert_eq!(request.duration_days, Some(1));
             response(PreparePermitResponse {
-                prepared_permit_json: "{}".into(),
+                prepared_permit: vec![0, 255, 128, 1],
+                typed_data_json: "{}".into(),
             })
+        }
+        "RegisterPermit" => {
+            let request = RegisterPermitRequest::decode(bytes).unwrap();
+            assert_eq!(request.prepared_permit, vec![0, 255, 128, 1]);
+            assert_eq!(request.signature, vec![42]);
+            response(RegisterPermitResponse {})
         }
         "UpdateAccount" => {
             assert!(
@@ -263,7 +266,7 @@ async fn preserves_context_options_typed_values_and_sdk_errors() {
             .header("grpc-message", "busy")
             .header("zama-error-code", "RELAYER_REQUEST_FAILED")
             .header("zama-error-retryable", "true")
-            .header("zama-error-retry-after-seconds", "1.25")
+            .header("zama-error-retry-after-seconds", "1")
             .body(Full::new(Bytes::new()).boxed())
             .unwrap(),
         _ => default_handler(path, bytes),
@@ -272,16 +275,12 @@ async fn preserves_context_options_typed_values_and_sdk_errors() {
     let client = Client::connect(&server.socket).await.unwrap();
     let sdk = client
         .create_context(
-            &serde_json::json!({ "permitTTL":90 }),
+            &SdkConfig::new(11155111, "https://rpc.invalid").with_permit_ttl(90),
             SignerConfig::Disabled,
         )
         .await
         .unwrap();
-    let values = sdk
-        .decryption()
-        .decrypt_values(&[], Some(0.5))
-        .await
-        .unwrap();
+    let values = sdk.decryption().decrypt_values(&[], Some(1)).await.unwrap();
     assert_eq!(
         values[&B256::ZERO],
         crate::ClearValue::BigInt("340282366920938463463374607431768211457".parse().unwrap())
@@ -297,7 +296,7 @@ async fn preserves_context_options_typed_values_and_sdk_errors() {
     assert_eq!(values[&B256::repeat_byte(3)], crate::ClearValue::Undefined);
     assert_eq!(
         values[&B256::repeat_byte(4)],
-        crate::ClearValue::Number(4_294_967_295.0)
+        crate::ClearValue::Number(4_294_967_295)
     );
     sdk.decryption()
         .delegated_decrypt_values(
@@ -317,7 +316,7 @@ async fn preserves_context_options_typed_values_and_sdk_errors() {
             Address::repeat_byte(3),
             DelegatedBatchOptions {
                 account_address: Some(Address::repeat_byte(4)),
-                max_concurrency: Some(2.5),
+                max_concurrency: Some(2),
                 ..Default::default()
             },
         )
@@ -325,7 +324,7 @@ async fn preserves_context_options_typed_values_and_sdk_errors() {
         .unwrap();
     let error = items[0].result.as_ref().unwrap_err();
     assert!(error.retryable);
-    assert_eq!(error.retry_after_seconds, Some(1.25));
+    assert_eq!(error.retry_after_seconds, Some(1));
     let public = sdk
         .decryption()
         .decrypt_public_values(&[], None)
@@ -343,20 +342,26 @@ async fn preserves_context_options_typed_values_and_sdk_errors() {
             .addresses
             .is_empty()
     );
-    sdk.offline()
+    let prepared = sdk
+        .offline()
         .prepare_permit(PreparePermit {
             signer: Address::repeat_byte(7),
             contracts: &[],
             delegator: Some(Address::repeat_byte(8)),
-            duration_days: Some(0.5),
+            duration_days: Some(1),
         })
+        .await
+        .unwrap();
+    assert_eq!(prepared.typed_data, serde_json::json!({}));
+    sdk.permits()
+        .register_permit(&prepared.envelope, &[42])
         .await
         .unwrap();
     sdk.update_account(None).await.unwrap();
     let error = sdk.permits().has_permit(&[]).await.unwrap_err();
     let error = error.downcast_ref::<RpcError>().unwrap();
     assert_eq!(error.status.code(), tonic::Code::Unavailable);
-    assert_eq!(error.sdk.as_ref().unwrap().retry_after_seconds, Some(1.25));
+    assert_eq!(error.sdk.as_ref().unwrap().retry_after_seconds, Some(1));
     assert!(error.sdk.as_ref().unwrap().retryable);
     sdk.close().await.unwrap();
     assert!(
@@ -388,7 +393,10 @@ async fn signer_channel_routes_concurrent_callbacks_rejection_and_cancellation()
     let sdk = Client::connect(&server.socket)
         .await
         .unwrap()
-        .create_context(&serde_json::json!({}), SignerConfig::Enabled(None))
+        .create_context(
+            &SdkConfig::new(11155111, "https://rpc.invalid"),
+            SignerConfig::Enabled(None),
+        )
         .await
         .unwrap();
     server
@@ -459,7 +467,10 @@ async fn signer_channel_routes_concurrent_callbacks_rejection_and_cancellation()
             panic!("missing reply")
         };
         assert_eq!(reply.operation_id, operation);
-        assert_eq!(reply.signature, signature);
+        assert_eq!(
+            reply.result,
+            Some(generated::signer_reply::Result::Signature(signature))
+        );
     }
     server
         .actions
@@ -477,7 +488,10 @@ async fn signer_channel_routes_concurrent_callbacks_rejection_and_cancellation()
     let Some(signer_client_message::Message::Reply(reply)) = server.reply().await.message else {
         panic!("missing rejection")
     };
-    assert_eq!(reply.error.unwrap().code, "SIGNING_FAILED");
+    let Some(generated::signer_reply::Result::Error(error)) = reply.result else {
+        panic!("expected signer error");
+    };
+    assert_eq!(error.code, "SIGNING_FAILED");
     server
         .actions
         .send(action(&d.message.operation_id, "cancel"))

@@ -55,7 +55,7 @@ impl SdkBuilder {
         let context_id = self
             .client
             .create_context_with_storage(
-                &serde_json::to_value(&self.config)?,
+                &self.config,
                 signer,
                 Some(self.storage.wire()),
                 self.permit_storage.as_ref().map(Storage::wire),

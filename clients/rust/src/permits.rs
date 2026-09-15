@@ -7,15 +7,21 @@ pub struct PreparePermit<'a> {
     pub signer: Address,
     pub contracts: &'a [Address],
     pub delegator: Option<Address>,
-    pub duration_days: Option<f64>,
+    pub duration_days: Option<u32>,
 }
 fn addresses(values: &[Address]) -> Vec<Vec<u8>> {
     values.iter().map(|a| a.to_vec()).collect()
 }
 
+#[derive(Clone, Debug)]
+pub struct PreparedPermit {
+    pub envelope: Vec<u8>,
+    pub typed_data: serde_json::Value,
+}
+
 impl Offline {
-    pub async fn prepare_permit(&self, request: PreparePermit<'_>) -> Result<String> {
-        Ok(rpc!(
+    pub async fn prepare_permit(&self, request: PreparePermit<'_>) -> Result<PreparedPermit> {
+        let response = rpc!(
             &self.0,
             prepare_permit,
             PreparePermitRequest {
@@ -25,17 +31,20 @@ impl Offline {
                 duration_days: request.duration_days,
             }
         )
-        .await?
-        .prepared_permit_json)
+        .await?;
+        Ok(PreparedPermit {
+            envelope: response.prepared_permit,
+            typed_data: serde_json::from_str(&response.typed_data_json)?,
+        })
     }
 }
 impl Permits {
-    pub async fn register_permit(&self, prepared_json: &str, signature: &[u8]) -> Result<()> {
+    pub async fn register_permit(&self, prepared_permit: &[u8], signature: &[u8]) -> Result<()> {
         rpc!(
             &self.0,
             register_permit,
             RegisterPermitRequest {
-                prepared_permit_json: prepared_json.into(),
+                prepared_permit: prepared_permit.into(),
                 signature: signature.to_vec(),
             }
         )

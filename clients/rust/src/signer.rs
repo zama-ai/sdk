@@ -144,15 +144,14 @@ impl Callbacks {
         let sender = self.sender.clone();
         let result_key = key.clone();
         let abort = self.tasks.spawn(async move {
-            let (signature, error) = match sign.sign_typed_data(request).await {
-                Ok(signature) => (signature, None),
-                Err(error) => (Vec::new(), Some(error.into())),
+            let result = match sign.sign_typed_data(request).await {
+                Ok(signature) => generated::signer_reply::Result::Signature(signature),
+                Err(error) => generated::signer_reply::Result::Error(error.into()),
             };
             let reply = generated::SignerReply {
                 operation_id: result_key.0.clone(),
                 action_id: result_key.1.clone(),
-                signature,
-                error,
+                result: Some(result),
             };
             sender
                 .send(generated::SignerClientMessage {

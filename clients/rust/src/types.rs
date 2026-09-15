@@ -48,7 +48,7 @@ impl From<EncryptedInput> for generated::EncryptedInput {
 #[derive(Clone, Debug, PartialEq)]
 pub enum ClearValue {
     BigInt(BigInt),
-    Number(f64),
+    Number(u32),
     Bool(bool),
     String(String),
     Undefined,

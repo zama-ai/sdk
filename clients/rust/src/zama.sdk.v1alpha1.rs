@@ -8,6 +8,7 @@ pub struct GetInfoResponse {
     #[prost(string, tag = "1")]
     pub sdk_version: ::prost::alloc::string::String,
 }
+/// Addresses contain exactly 20 bytes; chain IDs must fit the SDK safe integer range.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct WalletAccount {
     #[prost(bytes = "vec", tag = "1")]
@@ -15,16 +16,18 @@ pub struct WalletAccount {
     #[prost(uint64, tag = "2")]
     pub chain_id: u64,
 }
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CreateContextRequest {
-    #[prost(string, tag = "1")]
-    pub config_json: ::prost::alloc::string::String,
+    #[prost(message, optional, tag = "1")]
+    pub config: ::core::option::Option<ContextConfig>,
     #[prost(bool, tag = "2")]
     pub signer_enabled: bool,
     #[prost(message, optional, tag = "3")]
     pub account: ::core::option::Option<WalletAccount>,
+    /// Omission creates isolated in-memory storage for this context.
     #[prost(message, optional, tag = "4")]
     pub storage: ::core::option::Option<StorageBinding>,
+    /// Omission shares storage, including its backend identity.
     #[prost(message, optional, tag = "5")]
     pub permit_storage: ::core::option::Option<StorageBinding>,
 }
@@ -45,6 +48,7 @@ pub struct UpdateAccountRequest {
     #[prost(message, optional, tag = "2")]
     pub account: ::core::option::Option<WalletAccount>,
 }
+/// operation_id must be unique among active operations within the context.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Operation {
     #[prost(string, tag = "1")]
@@ -57,6 +61,7 @@ pub struct OperationRequest {
     #[prost(message, optional, tag = "1")]
     pub operation: ::core::option::Option<Operation>,
 }
+/// encrypted_value contains a 32-byte handle; contract_address contains 20 bytes.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct EncryptedInput {
     #[prost(bytes = "vec", tag = "1")]
@@ -64,28 +69,31 @@ pub struct EncryptedInput {
     #[prost(bytes = "vec", tag = "2")]
     pub contract_address: ::prost::alloc::vec::Vec<u8>,
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ClearValue {
     #[prost(oneof = "clear_value::Value", tags = "1, 2, 3, 4, 5")]
     pub value: ::core::option::Option<clear_value::Value>,
 }
 /// Nested message and enum types in `ClearValue`.
 pub mod clear_value {
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
     pub enum Value {
+        /// Base-10 integer string for values wider than the SDK number representation.
         #[prost(string, tag = "1")]
         BigintValue(::prost::alloc::string::String),
         #[prost(bool, tag = "2")]
         BoolValue(bool),
         #[prost(string, tag = "3")]
         StringValue(::prost::alloc::string::String),
-        #[prost(bool, tag = "4")]
-        UndefinedValue(bool),
-        #[prost(double, tag = "5")]
-        NumberValue(f64),
+        /// Explicit SDK undefined differs from an absent or malformed result.
+        #[prost(message, tag = "4")]
+        UndefinedValue(super::Empty),
+        /// SDK euint8, euint16 and euint32 clear values.
+        #[prost(uint32, tag = "5")]
+        NumberValue(u32),
     }
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ClearEntry {
     #[prost(bytes = "vec", tag = "1")]
     pub encrypted_value: ::prost::alloc::vec::Vec<u8>,
@@ -98,8 +106,9 @@ pub struct DecryptValuesRequest {
     pub operation: ::core::option::Option<Operation>,
     #[prost(message, repeated, tag = "2")]
     pub inputs: ::prost::alloc::vec::Vec<EncryptedInput>,
-    #[prost(double, optional, tag = "3")]
-    pub timeout_ms: ::core::option::Option<f64>,
+    /// SDK timeout in whole milliseconds; independent of the gRPC deadline.
+    #[prost(uint32, optional, tag = "3")]
+    pub timeout_ms: ::core::option::Option<u32>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DecryptValuesResponse {
@@ -119,14 +128,15 @@ pub struct DelegatedDecryptValuesRequest {
     #[prost(bool, optional, tag = "5")]
     pub wait_for_propagation: ::core::option::Option<bool>,
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct DecryptPublicValuesRequest {
     #[prost(message, optional, tag = "1")]
     pub operation: ::core::option::Option<Operation>,
     #[prost(bytes = "vec", repeated, tag = "2")]
     pub encrypted_values: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
-    #[prost(double, optional, tag = "3")]
-    pub timeout_ms: ::core::option::Option<f64>,
+    /// SDK timeout in whole milliseconds; independent of the gRPC deadline.
+    #[prost(uint32, optional, tag = "3")]
+    pub timeout_ms: ::core::option::Option<u32>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DecryptPublicValuesResponse {
@@ -147,12 +157,13 @@ pub struct DelegatedBatchDecryptValuesRequest {
     pub delegator_address: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", optional, tag = "4")]
     pub account_address: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
-    #[prost(double, optional, tag = "5")]
-    pub max_concurrency: ::core::option::Option<f64>,
+    /// Omission uses the SDK default; zero explicitly selects unlimited concurrency.
+    #[prost(uint32, optional, tag = "5")]
+    pub max_concurrency: ::core::option::Option<u32>,
     #[prost(bool, optional, tag = "6")]
     pub wait_for_propagation: ::core::option::Option<bool>,
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SdkError {
     #[prost(string, tag = "1")]
     pub code: ::prost::alloc::string::String,
@@ -160,26 +171,35 @@ pub struct SdkError {
     pub message: ::prost::alloc::string::String,
     #[prost(bool, tag = "3")]
     pub retryable: bool,
-    #[prost(double, optional, tag = "4")]
-    pub retry_after_seconds: ::core::option::Option<f64>,
+    /// Positive whole seconds, present only for retryable errors with a valid hint.
+    #[prost(uint32, optional, tag = "4")]
+    pub retry_after_seconds: ::core::option::Option<u32>,
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct BatchItem {
     #[prost(bytes = "vec", tag = "1")]
     pub encrypted_value: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "2")]
     pub contract_address: ::prost::alloc::vec::Vec<u8>,
-    #[prost(message, optional, tag = "3")]
-    pub value: ::core::option::Option<ClearValue>,
-    #[prost(message, optional, tag = "4")]
-    pub error: ::core::option::Option<SdkError>,
+    #[prost(oneof = "batch_item::Result", tags = "3, 4")]
+    pub result: ::core::option::Option<batch_item::Result>,
+}
+/// Nested message and enum types in `BatchItem`.
+pub mod batch_item {
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Result {
+        #[prost(message, tag = "3")]
+        Value(super::ClearValue),
+        #[prost(message, tag = "4")]
+        Error(super::SdkError),
+    }
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DelegatedBatchDecryptValuesResponse {
     #[prost(message, repeated, tag = "1")]
     pub items: ::prost::alloc::vec::Vec<BatchItem>,
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PreparePermitRequest {
     #[prost(message, optional, tag = "1")]
     pub operation: ::core::option::Option<Operation>,
@@ -189,20 +209,25 @@ pub struct PreparePermitRequest {
     pub contract_addresses: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
     #[prost(bytes = "vec", optional, tag = "4")]
     pub delegator_address: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
-    #[prost(double, optional, tag = "5")]
-    pub duration_days: ::core::option::Option<f64>,
+    /// Whole days; omission uses the SDK permit lifetime.
+    #[prost(uint32, optional, tag = "5")]
+    pub duration_days: ::core::option::Option<u32>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PreparePermitResponse {
-    #[prost(string, tag = "1")]
-    pub prepared_permit_json: ::prost::alloc::string::String,
+    /// Opaque SDK envelope for RegisterPermit; callers must not inspect or modify it.
+    #[prost(bytes = "vec", tag = "1")]
+    pub prepared_permit: ::prost::alloc::vec::Vec<u8>,
+    /// EIP-712 data for application-controlled signing; dynamic types require JSON.
+    #[prost(string, tag = "2")]
+    pub typed_data_json: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RegisterPermitRequest {
     #[prost(message, optional, tag = "1")]
     pub operation: ::core::option::Option<Operation>,
-    #[prost(string, tag = "2")]
-    pub prepared_permit_json: ::prost::alloc::string::String,
+    #[prost(bytes = "vec", tag = "2")]
+    pub prepared_permit: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "3")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
 }
@@ -246,25 +271,34 @@ pub struct ScopeRequest {
     #[prost(string, tag = "2")]
     pub scope_id: ::prost::alloc::string::String,
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
+/// Exactly one result is required, even when the signature byte string is empty.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SignerReply {
     #[prost(string, tag = "1")]
     pub operation_id: ::prost::alloc::string::String,
     #[prost(string, tag = "2")]
     pub action_id: ::prost::alloc::string::String,
-    #[prost(bytes = "vec", tag = "3")]
-    pub signature: ::prost::alloc::vec::Vec<u8>,
-    #[prost(message, optional, tag = "4")]
-    pub error: ::core::option::Option<SdkError>,
+    #[prost(oneof = "signer_reply::Result", tags = "3, 4")]
+    pub result: ::core::option::Option<signer_reply::Result>,
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
+/// Nested message and enum types in `SignerReply`.
+pub mod signer_reply {
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Result {
+        #[prost(bytes, tag = "3")]
+        Signature(::prost::alloc::vec::Vec<u8>),
+        #[prost(message, tag = "4")]
+        Error(super::SdkError),
+    }
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SignerClientMessage {
     #[prost(oneof = "signer_client_message::Message", tags = "1, 2")]
     pub message: ::core::option::Option<signer_client_message::Message>,
 }
 /// Nested message and enum types in `SignerClientMessage`.
 pub mod signer_client_message {
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
     pub enum Message {
         #[prost(message, tag = "1")]
         Attach(super::ContextRequest),
@@ -283,7 +317,7 @@ pub struct SignerAction {
     #[prost(string, tag = "4")]
     pub typed_data_json: ::prost::alloc::string::String,
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SignerReplyError {
     #[prost(string, tag = "1")]
     pub operation_id: ::prost::alloc::string::String,
@@ -299,14 +333,14 @@ pub struct SignerActionCancelled {
     #[prost(string, tag = "2")]
     pub action_id: ::prost::alloc::string::String,
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SignerServerMessage {
     #[prost(oneof = "signer_server_message::Message", tags = "1, 2, 3, 4")]
     pub message: ::core::option::Option<signer_server_message::Message>,
 }
 /// Nested message and enum types in `SignerServerMessage`.
 pub mod signer_server_message {
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
     pub enum Message {
         #[prost(message, tag = "1")]
         Attached(super::Empty),
@@ -348,23 +382,37 @@ pub struct StorageAction {
     #[prost(bytes = "vec", tag = "5")]
     pub value: ::prost::alloc::vec::Vec<u8>,
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
+/// GET requires value or not_found; SET and DELETE require ack. Any operation may return error.
+/// Empty value bytes remain distinct from not_found. Missing or mismatched results fail the operation.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct StorageReply {
     #[prost(string, tag = "1")]
     pub request_id: ::prost::alloc::string::String,
-    #[prost(bytes = "vec", optional, tag = "2")]
-    pub value: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
-    #[prost(message, optional, tag = "3")]
-    pub error: ::core::option::Option<SdkError>,
+    #[prost(oneof = "storage_reply::Result", tags = "2, 3, 4, 5")]
+    pub result: ::core::option::Option<storage_reply::Result>,
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
+/// Nested message and enum types in `StorageReply`.
+pub mod storage_reply {
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Result {
+        #[prost(bytes, tag = "2")]
+        Value(::prost::alloc::vec::Vec<u8>),
+        #[prost(message, tag = "3")]
+        Error(super::SdkError),
+        #[prost(message, tag = "4")]
+        NotFound(super::Empty),
+        #[prost(message, tag = "5")]
+        Ack(super::Empty),
+    }
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct StorageClientMessage {
     #[prost(oneof = "storage_client_message::Message", tags = "1, 2")]
     pub message: ::core::option::Option<storage_client_message::Message>,
 }
 /// Nested message and enum types in `StorageClientMessage`.
 pub mod storage_client_message {
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
     pub enum Message {
         #[prost(message, tag = "1")]
         Attach(super::ContextRequest),
@@ -372,21 +420,21 @@ pub mod storage_client_message {
         Reply(super::StorageReply),
     }
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct StorageReplyError {
     #[prost(string, tag = "1")]
     pub request_id: ::prost::alloc::string::String,
     #[prost(message, optional, tag = "2")]
     pub error: ::core::option::Option<SdkError>,
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct StorageServerMessage {
     #[prost(oneof = "storage_server_message::Message", tags = "1, 2, 3")]
     pub message: ::core::option::Option<storage_server_message::Message>,
 }
 /// Nested message and enum types in `StorageServerMessage`.
 pub mod storage_server_message {
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
     pub enum Message {
         #[prost(message, tag = "1")]
         Attached(super::Empty),
@@ -395,6 +443,117 @@ pub mod storage_server_message {
         #[prost(message, tag = "3")]
         ReplyError(super::StorageReplyError),
     }
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CloseContextResponse {}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct UpdateAccountResponse {}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RegisterPermitResponse {}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GrantPermitResponse {}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GrantDelegationPermitResponse {}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RevokePermitsResponse {}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ClearPermitsResponse {}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct WarmTransportKeyPairResponse {}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct WarmTransportKeyPairScopeResponse {}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RevokeTransportKeyPairResponse {}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DelegatedDecryptValuesResponse {
+    #[prost(message, repeated, tag = "1")]
+    pub values: ::prost::alloc::vec::Vec<ClearEntry>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct HasDelegationPermitResponse {
+    #[prost(bool, tag = "1")]
+    pub has_permit: bool,
+}
+/// Omitted credential settings retain the SDK defaults.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ContextConfig {
+    #[prost(message, repeated, tag = "1")]
+    pub chains: ::prost::alloc::vec::Vec<ChainConfig>,
+    /// Omission selects the first configured chain.
+    #[prost(uint64, optional, tag = "2")]
+    pub chain_id: ::core::option::Option<u64>,
+    /// Whole days.
+    #[prost(uint32, optional, tag = "3")]
+    pub permit_ttl: ::core::option::Option<u32>,
+    /// Whole seconds.
+    #[prost(uint32, optional, tag = "4")]
+    pub transport_key_pair_ttl: ::core::option::Option<u32>,
+    #[prost(string, optional, tag = "5")]
+    pub transport_key_pair_scope: ::core::option::Option<::prost::alloc::string::String>,
+    /// Whole seconds.
+    #[prost(uint32, optional, tag = "6")]
+    pub registry_ttl: ::core::option::Option<u32>,
+}
+/// Omitted fields inherit the SDK preset for id. Custom chains supply every required field.
+/// Contract addresses contain exactly 20 bytes, except explicitly cleared optional addresses.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ChainConfig {
+    #[prost(uint64, tag = "1")]
+    pub id: u64,
+    #[prost(string, optional, tag = "2")]
+    pub network: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(uint64, optional, tag = "3")]
+    pub gateway_chain_id: ::core::option::Option<u64>,
+    #[prost(string, optional, tag = "4")]
+    pub relayer_url: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(bytes = "vec", optional, tag = "5")]
+    pub acl_contract_address: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
+    #[prost(bytes = "vec", optional, tag = "6")]
+    pub kms_contract_address: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
+    #[prost(bytes = "vec", optional, tag = "7")]
+    pub input_verifier_contract_address: ::core::option::Option<
+        ::prost::alloc::vec::Vec<u8>,
+    >,
+    #[prost(bytes = "vec", optional, tag = "8")]
+    pub verifying_contract_address_decryption: ::core::option::Option<
+        ::prost::alloc::vec::Vec<u8>,
+    >,
+    #[prost(bytes = "vec", optional, tag = "9")]
+    pub verifying_contract_address_input_verification: ::core::option::Option<
+        ::prost::alloc::vec::Vec<u8>,
+    >,
+    /// An explicitly empty value clears the preset's optional address.
+    #[prost(bytes = "vec", optional, tag = "10")]
+    pub registry_address: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
+    #[prost(bytes = "vec", optional, tag = "11")]
+    pub executor_address: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
+    #[prost(message, optional, tag = "12")]
+    pub auth: ::core::option::Option<ChainAuth>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ChainAuth {
+    #[prost(oneof = "chain_auth::Credential", tags = "1, 2, 3")]
+    pub credential: ::core::option::Option<chain_auth::Credential>,
+}
+/// Nested message and enum types in `ChainAuth`.
+pub mod chain_auth {
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Credential {
+        #[prost(string, tag = "1")]
+        BearerToken(::prost::alloc::string::String),
+        #[prost(message, tag = "2")]
+        ApiKeyHeader(super::NamedCredential),
+        #[prost(message, tag = "3")]
+        ApiKeyCookie(super::NamedCredential),
+    }
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct NamedCredential {
+    /// Omission preserves the SDK's default header or cookie name.
+    #[prost(string, optional, tag = "1")]
+    pub name: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(string, tag = "2")]
+    pub value: ::prost::alloc::string::String,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
@@ -439,6 +598,8 @@ pub mod sidecar_service_client {
     )]
     use tonic::codegen::*;
     use tonic::codegen::http::Uri;
+    /// SDK failures retain their code and retry information in gRPC trailers.
+    /// Integer durations and counts are exact; omitted optional values use SDK defaults.
     #[derive(Debug, Clone)]
     pub struct SidecarServiceClient<T> {
         inner: tonic::client::Grpc<T>,
@@ -519,6 +680,7 @@ pub mod sidecar_service_client {
             self.inner = self.inner.max_encoding_message_size(limit);
             self
         }
+        /// Reports the version of @zama-fhe/sdk executing operations in this process.
         pub async fn get_info(
             &mut self,
             request: impl tonic::IntoRequest<super::GetInfoRequest>,
@@ -543,6 +705,7 @@ pub mod sidecar_service_client {
                 .insert(GrpcMethod::new("zama.sdk.v1alpha1.SidecarService", "GetInfo"));
             self.inner.unary(req, path, codec).await
         }
+        /// Creates an independent SDK instance; no account or signer is required for public operations.
         pub async fn create_context(
             &mut self,
             request: impl tonic::IntoRequest<super::CreateContextRequest>,
@@ -569,10 +732,14 @@ pub mod sidecar_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// Cancels active operations and disposes this context and its callback channels.
         pub async fn close_context(
             &mut self,
             request: impl tonic::IntoRequest<super::ContextRequest>,
-        ) -> std::result::Result<tonic::Response<super::Empty>, tonic::Status> {
+        ) -> std::result::Result<
+            tonic::Response<super::CloseContextResponse>,
+            tonic::Status,
+        > {
             self.inner
                 .ready()
                 .await
@@ -592,10 +759,14 @@ pub mod sidecar_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// Cancels pending operations before changing the signer account; omission disconnects it.
         pub async fn update_account(
             &mut self,
             request: impl tonic::IntoRequest<super::UpdateAccountRequest>,
-        ) -> std::result::Result<tonic::Response<super::Empty>, tonic::Status> {
+        ) -> std::result::Result<
+            tonic::Response<super::UpdateAccountResponse>,
+            tonic::Status,
+        > {
             self.inner
                 .ready()
                 .await
@@ -615,6 +786,7 @@ pub mod sidecar_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// Attach once per context before signing. Actions may overlap; correlate both action and operation IDs.
         pub async fn signer_channel(
             &mut self,
             request: impl tonic::IntoStreamingRequest<
@@ -643,6 +815,7 @@ pub mod sidecar_service_client {
                 );
             self.inner.streaming(req, path, codec).await
         }
+        /// Attach once per context to serve application storage; keys and values remain opaque.
         pub async fn storage_channel(
             &mut self,
             request: impl tonic::IntoStreamingRequest<
@@ -671,6 +844,7 @@ pub mod sidecar_service_client {
                 );
             self.inner.streaming(req, path, codec).await
         }
+        /// Calls decryption.decryptValues, including automatic permit acquisition and credential recovery.
         pub async fn decrypt_values(
             &mut self,
             request: impl tonic::IntoRequest<super::DecryptValuesRequest>,
@@ -697,11 +871,12 @@ pub mod sidecar_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// Calls decryption.delegatedDecryptValues; an omitted account uses the delegator address.
         pub async fn delegated_decrypt_values(
             &mut self,
             request: impl tonic::IntoRequest<super::DelegatedDecryptValuesRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::DecryptValuesResponse>,
+            tonic::Response<super::DelegatedDecryptValuesResponse>,
             tonic::Status,
         > {
             self.inner
@@ -726,6 +901,7 @@ pub mod sidecar_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// Calls decryption.decryptPublicValues without requiring a signer.
         pub async fn decrypt_public_values(
             &mut self,
             request: impl tonic::IntoRequest<super::DecryptPublicValuesRequest>,
@@ -755,6 +931,7 @@ pub mod sidecar_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// Calls decryption.delegatedBatchDecryptValues; per-item failures remain results, fatal SDK errors fail the RPC.
         pub async fn delegated_batch_decrypt_values(
             &mut self,
             request: impl tonic::IntoRequest<super::DelegatedBatchDecryptValuesRequest>,
@@ -784,6 +961,7 @@ pub mod sidecar_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// Calls offline.preparePermit without signing; return the opaque envelope unchanged when registering.
         pub async fn prepare_permit(
             &mut self,
             request: impl tonic::IntoRequest<super::PreparePermitRequest>,
@@ -810,10 +988,14 @@ pub mod sidecar_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// Calls permits.registerPermit with the prepared envelope and signature.
         pub async fn register_permit(
             &mut self,
             request: impl tonic::IntoRequest<super::RegisterPermitRequest>,
-        ) -> std::result::Result<tonic::Response<super::Empty>, tonic::Status> {
+        ) -> std::result::Result<
+            tonic::Response<super::RegisterPermitResponse>,
+            tonic::Status,
+        > {
             self.inner
                 .ready()
                 .await
@@ -833,10 +1015,14 @@ pub mod sidecar_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// Calls permits.grantPermit; any wallet signing is requested on the signer channel.
         pub async fn grant_permit(
             &mut self,
             request: impl tonic::IntoRequest<super::ContractsRequest>,
-        ) -> std::result::Result<tonic::Response<super::Empty>, tonic::Status> {
+        ) -> std::result::Result<
+            tonic::Response<super::GrantPermitResponse>,
+            tonic::Status,
+        > {
             self.inner
                 .ready()
                 .await
@@ -856,10 +1042,14 @@ pub mod sidecar_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// Calls permits.grantDelegationPermit for the supplied delegator and contracts.
         pub async fn grant_delegation_permit(
             &mut self,
             request: impl tonic::IntoRequest<super::DelegationContractsRequest>,
-        ) -> std::result::Result<tonic::Response<super::Empty>, tonic::Status> {
+        ) -> std::result::Result<
+            tonic::Response<super::GrantDelegationPermitResponse>,
+            tonic::Status,
+        > {
             self.inner
                 .ready()
                 .await
@@ -882,6 +1072,7 @@ pub mod sidecar_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// Calls permits.hasPermit using the SDK credential store and expiry rules.
         pub async fn has_permit(
             &mut self,
             request: impl tonic::IntoRequest<super::ContractsRequest>,
@@ -908,11 +1099,12 @@ pub mod sidecar_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// Calls permits.hasDelegationPermit for the supplied delegator and contracts.
         pub async fn has_delegation_permit(
             &mut self,
             request: impl tonic::IntoRequest<super::DelegationContractsRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::HasPermitResponse>,
+            tonic::Response<super::HasDelegationPermitResponse>,
             tonic::Status,
         > {
             self.inner
@@ -937,10 +1129,14 @@ pub mod sidecar_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// Calls permits.revokePermits; omitted contracts and an empty list retain their distinct SDK meanings.
         pub async fn revoke_permits(
             &mut self,
             request: impl tonic::IntoRequest<super::RevokePermitsRequest>,
-        ) -> std::result::Result<tonic::Response<super::Empty>, tonic::Status> {
+        ) -> std::result::Result<
+            tonic::Response<super::RevokePermitsResponse>,
+            tonic::Status,
+        > {
             self.inner
                 .ready()
                 .await
@@ -960,10 +1156,14 @@ pub mod sidecar_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// Calls permits.clear to clear locally stored permits.
         pub async fn clear_permits(
             &mut self,
             request: impl tonic::IntoRequest<super::OperationRequest>,
-        ) -> std::result::Result<tonic::Response<super::Empty>, tonic::Status> {
+        ) -> std::result::Result<
+            tonic::Response<super::ClearPermitsResponse>,
+            tonic::Status,
+        > {
             self.inner
                 .ready()
                 .await
@@ -983,10 +1183,14 @@ pub mod sidecar_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// Calls permits.warmTransportKeyPair; signing is requested only when the SDK requires it.
         pub async fn warm_transport_key_pair(
             &mut self,
             request: impl tonic::IntoRequest<super::OperationRequest>,
-        ) -> std::result::Result<tonic::Response<super::Empty>, tonic::Status> {
+        ) -> std::result::Result<
+            tonic::Response<super::WarmTransportKeyPairResponse>,
+            tonic::Status,
+        > {
             self.inner
                 .ready()
                 .await
@@ -1009,10 +1213,14 @@ pub mod sidecar_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// Calls permits.warmTransportKeyPairScope for a shared credential scope.
         pub async fn warm_transport_key_pair_scope(
             &mut self,
             request: impl tonic::IntoRequest<super::ScopeRequest>,
-        ) -> std::result::Result<tonic::Response<super::Empty>, tonic::Status> {
+        ) -> std::result::Result<
+            tonic::Response<super::WarmTransportKeyPairScopeResponse>,
+            tonic::Status,
+        > {
             self.inner
                 .ready()
                 .await
@@ -1035,10 +1243,14 @@ pub mod sidecar_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// Calls permits.revokeTransportKeyPair for the supplied credential scope.
         pub async fn revoke_transport_key_pair(
             &mut self,
             request: impl tonic::IntoRequest<super::ScopeRequest>,
-        ) -> std::result::Result<tonic::Response<super::Empty>, tonic::Status> {
+        ) -> std::result::Result<
+            tonic::Response<super::RevokeTransportKeyPairResponse>,
+            tonic::Status,
+        > {
             self.inner
                 .ready()
                 .await

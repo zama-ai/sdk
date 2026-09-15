@@ -46,15 +46,15 @@ func (s *signingServer) CreateContext(_ context.Context, r *pb.CreateContextRequ
 	s.mu.Unlock()
 	return &pb.CreateContextResponse{ContextId: id}, nil
 }
-func (s *signingServer) UpdateAccount(_ context.Context, r *pb.UpdateAccountRequest) (*pb.Empty, error) {
+func (s *signingServer) UpdateAccount(_ context.Context, r *pb.UpdateAccountRequest) (*pb.UpdateAccountResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.sessions[r.ContextId].account = r.Account
-	return &pb.Empty{}, nil
+	return &pb.UpdateAccountResponse{}, nil
 }
-func (s *signingServer) CloseContext(_ context.Context, r *pb.ContextRequest) (*pb.Empty, error) {
+func (s *signingServer) CloseContext(_ context.Context, r *pb.ContextRequest) (*pb.CloseContextResponse, error) {
 	s.disconnect(r.ContextId)
-	return &pb.Empty{}, nil
+	return &pb.CloseContextResponse{}, nil
 }
 func (s *signingServer) disconnect(id string) {
 	s.mu.Lock()
@@ -117,11 +117,11 @@ func (s *signingServer) DecryptValues(ctx context.Context, r *pb.DecryptValuesRe
 		case <-session.done:
 			return nil, status.Error(codes.Unavailable, "signer disconnected")
 		case result := <-reply:
-			if result.Error != nil {
-				grpc.SetTrailer(ctx, metadata.Pairs("zama-error-code", result.Error.Code))
-				return nil, status.Error(codes.FailedPrecondition, result.Error.Message)
+			if result.GetError() != nil {
+				grpc.SetTrailer(ctx, metadata.Pairs("zama-error-code", result.GetError().Code))
+				return nil, status.Error(codes.FailedPrecondition, result.GetError().Message)
 			}
-			signature = result.Signature
+			signature = result.GetSignature()
 			if s.staleReply {
 				session.out <- &pb.SignerServerMessage{Message: &pb.SignerServerMessage_ReplyError{ReplyError: &pb.SignerReplyError{OperationId: r.Operation.OperationId, ActionId: id, Error: &pb.SdkError{Code: "SIGNER_ACTION_NOT_FOUND", Message: "stale"}}}}
 			}

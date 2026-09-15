@@ -57,14 +57,15 @@ impl Callbacks {
                 let backend = self.backends.get(&action.backend_id).cloned();
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
-                    let (value, error) = match execute(backend, &action).await {
-                        Ok(value) => (value, None),
-                        Err(error) => (None, Some(storage_error(error).into())),
+                    let result = match execute(backend, &action).await {
+                        Ok(value) => value,
+                        Err(error) => {
+                            generated::storage_reply::Result::Error(storage_error(error).into())
+                        }
                     };
                     let reply = generated::StorageReply {
                         request_id: action.request_id,
-                        value,
-                        error,
+                        result: Some(result),
                     };
                     sender
                         .send(generated::StorageClientMessage {
@@ -85,17 +86,21 @@ impl Callbacks {
 async fn execute(
     backend: Option<Arc<dyn NativeStorage>>,
     action: &generated::StorageAction,
-) -> Result<Option<Vec<u8>>> {
+) -> Result<generated::storage_reply::Result> {
+    use generated::storage_reply::Result as Reply;
     let backend = backend.ok_or_else(|| invalid("Unknown storage backend."))?;
     match generated::StorageMethod::try_from(action.method) {
-        Ok(generated::StorageMethod::Get) => backend.get(&action.key).await,
+        Ok(generated::StorageMethod::Get) => Ok(match backend.get(&action.key).await? {
+            Some(value) => Reply::Value(value),
+            None => Reply::NotFound(generated::Empty {}),
+        }),
         Ok(generated::StorageMethod::Set) => {
             backend.set(&action.key, action.value.clone()).await?;
-            Ok(None)
+            Ok(Reply::Ack(generated::Empty {}))
         }
         Ok(generated::StorageMethod::Delete) => {
             backend.delete(&action.key).await?;
-            Ok(None)
+            Ok(Reply::Ack(generated::Empty {}))
         }
         _ => Err(invalid("Unknown storage operation.").into()),
     }
@@ -130,7 +135,7 @@ mod tests {
             code: "STORAGE_FAILED".into(),
             message: "retry".into(),
             retryable: true,
-            retry_after_seconds: Some(2.0),
+            retry_after_seconds: Some(2),
         };
         let error = RpcError {
             status: tonic::Status::unavailable("retry"),

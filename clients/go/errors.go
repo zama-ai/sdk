@@ -13,7 +13,7 @@ type SDKError struct {
 	Code              string
 	Message           string
 	Retryable         bool
-	RetryAfterSeconds *float64
+	RetryAfterSeconds *uint32
 }
 
 func (e *SDKError) Error() string {
@@ -59,8 +59,9 @@ func rpcError(err error, trailers metadata.MD) error {
 		result.Retryable = v[0] == "true"
 	}
 	if v := trailers.Get("zama-error-retry-after-seconds"); len(v) == 1 {
-		if n, e := strconv.ParseFloat(v[0], 64); e == nil {
-			result.RetryAfterSeconds = &n
+		if n, e := strconv.ParseUint(v[0], 10, 32); e == nil {
+			seconds := uint32(n)
+			result.RetryAfterSeconds = &seconds
 		}
 	}
 	return result

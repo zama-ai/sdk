@@ -52,8 +52,9 @@ func (s *SDKContext) storageReply(ctx context.Context, action *pb.StorageAction)
 			var found bool
 			value, found, err = store.Get(ctx, action.Key)
 			if err == nil && found {
-				// Present nil values must encode as empty bytes, not a cache miss.
-				reply.Value = append([]byte{}, value...)
+				reply.Result = &pb.StorageReply_Value{Value: bytes.Clone(value)}
+			} else if err == nil {
+				reply.Result = &pb.StorageReply_NotFound{NotFound: &pb.Empty{}}
 			}
 		case pb.StorageMethod_STORAGE_METHOD_SET:
 			err = store.Set(ctx, action.Key, bytes.Clone(action.Value))
@@ -64,7 +65,9 @@ func (s *SDKContext) storageReply(ctx context.Context, action *pb.StorageAction)
 		}
 	}
 	if err != nil {
-		reply.Error = callbackError(err, "STORAGE_FAILED")
+		reply.Result = &pb.StorageReply_Error{Error: callbackError(err, "STORAGE_FAILED")}
+	} else if reply.Result == nil {
+		reply.Result = &pb.StorageReply_Ack{Ack: &pb.Empty{}}
 	}
 	return reply
 }

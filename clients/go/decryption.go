@@ -30,9 +30,9 @@ type ClearValue struct {
 	Integer *big.Int
 	Boolean bool
 	Text    string
-	Number  float64
+	Number  uint32
 }
-type DecryptOptions struct{ TimeoutMS *float64 }
+type DecryptOptions struct{ TimeoutMS *uint32 }
 type DelegatedDecryptOptions struct {
 	AccountAddress     *common.Address
 	WaitForPropagation *bool
@@ -40,7 +40,8 @@ type DelegatedDecryptOptions struct {
 type DelegatedBatchOptions struct {
 	AccountAddress     *common.Address
 	WaitForPropagation *bool
-	MaxConcurrency     *float64
+	// MaxConcurrency uses the SDK default when nil; zero means unlimited.
+	MaxConcurrency *uint32
 }
 type PublicDecryption struct {
 	ClearValues           map[common.Hash]ClearValue
@@ -118,7 +119,7 @@ func (s *SDKContext) DecryptValues(ctx context.Context, inputs []EncryptedInput,
 	return clearEntries(response.Values)
 }
 func (s *SDKContext) DelegatedDecryptValues(ctx context.Context, inputs []EncryptedInput, delegator common.Address, options DelegatedDecryptOptions) (map[common.Hash]ClearValue, error) {
-	response, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.DecryptValuesResponse, error) {
+	response, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.DelegatedDecryptValuesResponse, error) {
 		return s.client.rpc.DelegatedDecryptValues(ctx, &pb.DelegatedDecryptValuesRequest{Operation: op, Inputs: inputsWire(inputs), DelegatorAddress: delegator.Bytes(), AccountAddress: optionalAddress(options.AccountAddress), WaitForPropagation: options.WaitForPropagation}, trailer)
 	})
 	if err != nil {
@@ -155,16 +156,21 @@ func (s *SDKContext) DelegatedBatchDecryptValues(ctx context.Context, inputs []E
 		if item == nil || len(item.EncryptedValue) != common.HashLength || len(item.ContractAddress) != common.AddressLength {
 			return nil, errors.New("invalid batch response address")
 		}
-		if (item.Value == nil) == (item.Error == nil) {
-			return nil, errors.New("batch item must contain a value or error")
-		}
-		items[i] = BatchItem{EncryptedValue: common.BytesToHash(item.EncryptedValue), ContractAddress: common.BytesToAddress(item.ContractAddress), Error: sdkError(item.Error)}
-		if item.Value != nil {
-			value, err := clearValue(item.Value)
+		items[i] = BatchItem{EncryptedValue: common.BytesToHash(item.EncryptedValue), ContractAddress: common.BytesToAddress(item.ContractAddress)}
+		switch result := item.Result.(type) {
+		case *pb.BatchItem_Value:
+			value, err := clearValue(result.Value)
 			if err != nil {
 				return nil, err
 			}
 			items[i].Value = &value
+		case *pb.BatchItem_Error:
+			if result.Error == nil {
+				return nil, errors.New("missing batch item error")
+			}
+			items[i].Error = sdkError(result.Error)
+		default:
+			return nil, errors.New("batch item must contain a value or error")
 		}
 	}
 	return items, nil

@@ -189,6 +189,7 @@ func (x *GetInfoResponse) GetSdkVersion() string {
 	return ""
 }
 
+// Addresses contain exactly 20 bytes; chain IDs must fit the SDK safe integer range.
 type WalletAccount struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Address       []byte                 `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
@@ -243,11 +244,13 @@ func (x *WalletAccount) GetChainId() uint64 {
 
 type CreateContextRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ConfigJson    string                 `protobuf:"bytes,1,opt,name=config_json,json=configJson,proto3" json:"config_json,omitempty"`
+	Config        *ContextConfig         `protobuf:"bytes,1,opt,name=config,proto3" json:"config,omitempty"`
 	SignerEnabled bool                   `protobuf:"varint,2,opt,name=signer_enabled,json=signerEnabled,proto3" json:"signer_enabled,omitempty"`
 	Account       *WalletAccount         `protobuf:"bytes,3,opt,name=account,proto3" json:"account,omitempty"`
-	Storage       *StorageBinding        `protobuf:"bytes,4,opt,name=storage,proto3" json:"storage,omitempty"`
-	PermitStorage *StorageBinding        `protobuf:"bytes,5,opt,name=permit_storage,json=permitStorage,proto3" json:"permit_storage,omitempty"`
+	// Omission creates isolated in-memory storage for this context.
+	Storage *StorageBinding `protobuf:"bytes,4,opt,name=storage,proto3" json:"storage,omitempty"`
+	// Omission shares storage, including its backend identity.
+	PermitStorage *StorageBinding `protobuf:"bytes,5,opt,name=permit_storage,json=permitStorage,proto3" json:"permit_storage,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -282,11 +285,11 @@ func (*CreateContextRequest) Descriptor() ([]byte, []int) {
 	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *CreateContextRequest) GetConfigJson() string {
+func (x *CreateContextRequest) GetConfig() *ContextConfig {
 	if x != nil {
-		return x.ConfigJson
+		return x.Config
 	}
-	return ""
+	return nil
 }
 
 func (x *CreateContextRequest) GetSignerEnabled() bool {
@@ -457,6 +460,7 @@ func (x *UpdateAccountRequest) GetAccount() *WalletAccount {
 	return nil
 }
 
+// operation_id must be unique among active operations within the context.
 type Operation struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ContextId     string                 `protobuf:"bytes,1,opt,name=context_id,json=contextId,proto3" json:"context_id,omitempty"`
@@ -553,6 +557,7 @@ func (x *OperationRequest) GetOperation() *Operation {
 	return nil
 }
 
+// encrypted_value contains a 32-byte handle; contract_address contains 20 bytes.
 type EncryptedInput struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	EncryptedValue  []byte                 `protobuf:"bytes,1,opt,name=encrypted_value,json=encryptedValue,proto3" json:"encrypted_value,omitempty"`
@@ -683,16 +688,16 @@ func (x *ClearValue) GetStringValue() string {
 	return ""
 }
 
-func (x *ClearValue) GetUndefinedValue() bool {
+func (x *ClearValue) GetUndefinedValue() *Empty {
 	if x != nil {
 		if x, ok := x.Value.(*ClearValue_UndefinedValue); ok {
 			return x.UndefinedValue
 		}
 	}
-	return false
+	return nil
 }
 
-func (x *ClearValue) GetNumberValue() float64 {
+func (x *ClearValue) GetNumberValue() uint32 {
 	if x != nil {
 		if x, ok := x.Value.(*ClearValue_NumberValue); ok {
 			return x.NumberValue
@@ -706,6 +711,7 @@ type isClearValue_Value interface {
 }
 
 type ClearValue_BigintValue struct {
+	// Base-10 integer string for values wider than the SDK number representation.
 	BigintValue string `protobuf:"bytes,1,opt,name=bigint_value,json=bigintValue,proto3,oneof"`
 }
 
@@ -718,11 +724,13 @@ type ClearValue_StringValue struct {
 }
 
 type ClearValue_UndefinedValue struct {
-	UndefinedValue bool `protobuf:"varint,4,opt,name=undefined_value,json=undefinedValue,proto3,oneof"`
+	// Explicit SDK undefined differs from an absent or malformed result.
+	UndefinedValue *Empty `protobuf:"bytes,4,opt,name=undefined_value,json=undefinedValue,proto3,oneof"`
 }
 
 type ClearValue_NumberValue struct {
-	NumberValue float64 `protobuf:"fixed64,5,opt,name=number_value,json=numberValue,proto3,oneof"`
+	// SDK euint8, euint16 and euint32 clear values.
+	NumberValue uint32 `protobuf:"varint,5,opt,name=number_value,json=numberValue,proto3,oneof"`
 }
 
 func (*ClearValue_BigintValue) isClearValue_Value() {}
@@ -788,10 +796,11 @@ func (x *ClearEntry) GetValue() *ClearValue {
 }
 
 type DecryptValuesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Operation     *Operation             `protobuf:"bytes,1,opt,name=operation,proto3" json:"operation,omitempty"`
-	Inputs        []*EncryptedInput      `protobuf:"bytes,2,rep,name=inputs,proto3" json:"inputs,omitempty"`
-	TimeoutMs     *float64               `protobuf:"fixed64,3,opt,name=timeout_ms,json=timeoutMs,proto3,oneof" json:"timeout_ms,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Operation *Operation             `protobuf:"bytes,1,opt,name=operation,proto3" json:"operation,omitempty"`
+	Inputs    []*EncryptedInput      `protobuf:"bytes,2,rep,name=inputs,proto3" json:"inputs,omitempty"`
+	// SDK timeout in whole milliseconds; independent of the gRPC deadline.
+	TimeoutMs     *uint32 `protobuf:"varint,3,opt,name=timeout_ms,json=timeoutMs,proto3,oneof" json:"timeout_ms,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -840,7 +849,7 @@ func (x *DecryptValuesRequest) GetInputs() []*EncryptedInput {
 	return nil
 }
 
-func (x *DecryptValuesRequest) GetTimeoutMs() float64 {
+func (x *DecryptValuesRequest) GetTimeoutMs() uint32 {
 	if x != nil && x.TimeoutMs != nil {
 		return *x.TimeoutMs
 	}
@@ -971,9 +980,10 @@ type DecryptPublicValuesRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Operation       *Operation             `protobuf:"bytes,1,opt,name=operation,proto3" json:"operation,omitempty"`
 	EncryptedValues [][]byte               `protobuf:"bytes,2,rep,name=encrypted_values,json=encryptedValues,proto3" json:"encrypted_values,omitempty"`
-	TimeoutMs       *float64               `protobuf:"fixed64,3,opt,name=timeout_ms,json=timeoutMs,proto3,oneof" json:"timeout_ms,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// SDK timeout in whole milliseconds; independent of the gRPC deadline.
+	TimeoutMs     *uint32 `protobuf:"varint,3,opt,name=timeout_ms,json=timeoutMs,proto3,oneof" json:"timeout_ms,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DecryptPublicValuesRequest) Reset() {
@@ -1020,7 +1030,7 @@ func (x *DecryptPublicValuesRequest) GetEncryptedValues() [][]byte {
 	return nil
 }
 
-func (x *DecryptPublicValuesRequest) GetTimeoutMs() float64 {
+func (x *DecryptPublicValuesRequest) GetTimeoutMs() uint32 {
 	if x != nil && x.TimeoutMs != nil {
 		return *x.TimeoutMs
 	}
@@ -1088,13 +1098,14 @@ func (x *DecryptPublicValuesResponse) GetDecryptionProof() []byte {
 }
 
 type DelegatedBatchDecryptValuesRequest struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	Operation          *Operation             `protobuf:"bytes,1,opt,name=operation,proto3" json:"operation,omitempty"`
-	Inputs             []*EncryptedInput      `protobuf:"bytes,2,rep,name=inputs,proto3" json:"inputs,omitempty"`
-	DelegatorAddress   []byte                 `protobuf:"bytes,3,opt,name=delegator_address,json=delegatorAddress,proto3" json:"delegator_address,omitempty"`
-	AccountAddress     []byte                 `protobuf:"bytes,4,opt,name=account_address,json=accountAddress,proto3,oneof" json:"account_address,omitempty"`
-	MaxConcurrency     *float64               `protobuf:"fixed64,5,opt,name=max_concurrency,json=maxConcurrency,proto3,oneof" json:"max_concurrency,omitempty"`
-	WaitForPropagation *bool                  `protobuf:"varint,6,opt,name=wait_for_propagation,json=waitForPropagation,proto3,oneof" json:"wait_for_propagation,omitempty"`
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Operation        *Operation             `protobuf:"bytes,1,opt,name=operation,proto3" json:"operation,omitempty"`
+	Inputs           []*EncryptedInput      `protobuf:"bytes,2,rep,name=inputs,proto3" json:"inputs,omitempty"`
+	DelegatorAddress []byte                 `protobuf:"bytes,3,opt,name=delegator_address,json=delegatorAddress,proto3" json:"delegator_address,omitempty"`
+	AccountAddress   []byte                 `protobuf:"bytes,4,opt,name=account_address,json=accountAddress,proto3,oneof" json:"account_address,omitempty"`
+	// Omission uses the SDK default; zero explicitly selects unlimited concurrency.
+	MaxConcurrency     *uint32 `protobuf:"varint,5,opt,name=max_concurrency,json=maxConcurrency,proto3,oneof" json:"max_concurrency,omitempty"`
+	WaitForPropagation *bool   `protobuf:"varint,6,opt,name=wait_for_propagation,json=waitForPropagation,proto3,oneof" json:"wait_for_propagation,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -1157,7 +1168,7 @@ func (x *DelegatedBatchDecryptValuesRequest) GetAccountAddress() []byte {
 	return nil
 }
 
-func (x *DelegatedBatchDecryptValuesRequest) GetMaxConcurrency() float64 {
+func (x *DelegatedBatchDecryptValuesRequest) GetMaxConcurrency() uint32 {
 	if x != nil && x.MaxConcurrency != nil {
 		return *x.MaxConcurrency
 	}
@@ -1172,11 +1183,12 @@ func (x *DelegatedBatchDecryptValuesRequest) GetWaitForPropagation() bool {
 }
 
 type SdkError struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Code              string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
-	Message           string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
-	Retryable         bool                   `protobuf:"varint,3,opt,name=retryable,proto3" json:"retryable,omitempty"`
-	RetryAfterSeconds *float64               `protobuf:"fixed64,4,opt,name=retry_after_seconds,json=retryAfterSeconds,proto3,oneof" json:"retry_after_seconds,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Code      string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	Message   string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Retryable bool                   `protobuf:"varint,3,opt,name=retryable,proto3" json:"retryable,omitempty"`
+	// Positive whole seconds, present only for retryable errors with a valid hint.
+	RetryAfterSeconds *uint32 `protobuf:"varint,4,opt,name=retry_after_seconds,json=retryAfterSeconds,proto3,oneof" json:"retry_after_seconds,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -1232,7 +1244,7 @@ func (x *SdkError) GetRetryable() bool {
 	return false
 }
 
-func (x *SdkError) GetRetryAfterSeconds() float64 {
+func (x *SdkError) GetRetryAfterSeconds() uint32 {
 	if x != nil && x.RetryAfterSeconds != nil {
 		return *x.RetryAfterSeconds
 	}
@@ -1243,10 +1255,13 @@ type BatchItem struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	EncryptedValue  []byte                 `protobuf:"bytes,1,opt,name=encrypted_value,json=encryptedValue,proto3" json:"encrypted_value,omitempty"`
 	ContractAddress []byte                 `protobuf:"bytes,2,opt,name=contract_address,json=contractAddress,proto3" json:"contract_address,omitempty"`
-	Value           *ClearValue            `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
-	Error           *SdkError              `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Types that are valid to be assigned to Result:
+	//
+	//	*BatchItem_Value
+	//	*BatchItem_Error
+	Result        isBatchItem_Result `protobuf_oneof:"result"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *BatchItem) Reset() {
@@ -1293,19 +1308,46 @@ func (x *BatchItem) GetContractAddress() []byte {
 	return nil
 }
 
+func (x *BatchItem) GetResult() isBatchItem_Result {
+	if x != nil {
+		return x.Result
+	}
+	return nil
+}
+
 func (x *BatchItem) GetValue() *ClearValue {
 	if x != nil {
-		return x.Value
+		if x, ok := x.Result.(*BatchItem_Value); ok {
+			return x.Value
+		}
 	}
 	return nil
 }
 
 func (x *BatchItem) GetError() *SdkError {
 	if x != nil {
-		return x.Error
+		if x, ok := x.Result.(*BatchItem_Error); ok {
+			return x.Error
+		}
 	}
 	return nil
 }
+
+type isBatchItem_Result interface {
+	isBatchItem_Result()
+}
+
+type BatchItem_Value struct {
+	Value *ClearValue `protobuf:"bytes,3,opt,name=value,proto3,oneof"`
+}
+
+type BatchItem_Error struct {
+	Error *SdkError `protobuf:"bytes,4,opt,name=error,proto3,oneof"`
+}
+
+func (*BatchItem_Value) isBatchItem_Result() {}
+
+func (*BatchItem_Error) isBatchItem_Result() {}
 
 type DelegatedBatchDecryptValuesResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1357,9 +1399,10 @@ type PreparePermitRequest struct {
 	SignerAddress     []byte                 `protobuf:"bytes,2,opt,name=signer_address,json=signerAddress,proto3" json:"signer_address,omitempty"`
 	ContractAddresses [][]byte               `protobuf:"bytes,3,rep,name=contract_addresses,json=contractAddresses,proto3" json:"contract_addresses,omitempty"`
 	DelegatorAddress  []byte                 `protobuf:"bytes,4,opt,name=delegator_address,json=delegatorAddress,proto3,oneof" json:"delegator_address,omitempty"`
-	DurationDays      *float64               `protobuf:"fixed64,5,opt,name=duration_days,json=durationDays,proto3,oneof" json:"duration_days,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Whole days; omission uses the SDK permit lifetime.
+	DurationDays  *uint32 `protobuf:"varint,5,opt,name=duration_days,json=durationDays,proto3,oneof" json:"duration_days,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PreparePermitRequest) Reset() {
@@ -1420,7 +1463,7 @@ func (x *PreparePermitRequest) GetDelegatorAddress() []byte {
 	return nil
 }
 
-func (x *PreparePermitRequest) GetDurationDays() float64 {
+func (x *PreparePermitRequest) GetDurationDays() uint32 {
 	if x != nil && x.DurationDays != nil {
 		return *x.DurationDays
 	}
@@ -1428,10 +1471,13 @@ func (x *PreparePermitRequest) GetDurationDays() float64 {
 }
 
 type PreparePermitResponse struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	PreparedPermitJson string                 `protobuf:"bytes,1,opt,name=prepared_permit_json,json=preparedPermitJson,proto3" json:"prepared_permit_json,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Opaque SDK envelope for RegisterPermit; callers must not inspect or modify it.
+	PreparedPermit []byte `protobuf:"bytes,1,opt,name=prepared_permit,json=preparedPermit,proto3" json:"prepared_permit,omitempty"`
+	// EIP-712 data for application-controlled signing; dynamic types require JSON.
+	TypedDataJson string `protobuf:"bytes,2,opt,name=typed_data_json,json=typedDataJson,proto3" json:"typed_data_json,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PreparePermitResponse) Reset() {
@@ -1464,20 +1510,27 @@ func (*PreparePermitResponse) Descriptor() ([]byte, []int) {
 	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{23}
 }
 
-func (x *PreparePermitResponse) GetPreparedPermitJson() string {
+func (x *PreparePermitResponse) GetPreparedPermit() []byte {
 	if x != nil {
-		return x.PreparedPermitJson
+		return x.PreparedPermit
+	}
+	return nil
+}
+
+func (x *PreparePermitResponse) GetTypedDataJson() string {
+	if x != nil {
+		return x.TypedDataJson
 	}
 	return ""
 }
 
 type RegisterPermitRequest struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	Operation          *Operation             `protobuf:"bytes,1,opt,name=operation,proto3" json:"operation,omitempty"`
-	PreparedPermitJson string                 `protobuf:"bytes,2,opt,name=prepared_permit_json,json=preparedPermitJson,proto3" json:"prepared_permit_json,omitempty"`
-	Signature          []byte                 `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Operation      *Operation             `protobuf:"bytes,1,opt,name=operation,proto3" json:"operation,omitempty"`
+	PreparedPermit []byte                 `protobuf:"bytes,2,opt,name=prepared_permit,json=preparedPermit,proto3" json:"prepared_permit,omitempty"`
+	Signature      []byte                 `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *RegisterPermitRequest) Reset() {
@@ -1517,11 +1570,11 @@ func (x *RegisterPermitRequest) GetOperation() *Operation {
 	return nil
 }
 
-func (x *RegisterPermitRequest) GetPreparedPermitJson() string {
+func (x *RegisterPermitRequest) GetPreparedPermit() []byte {
 	if x != nil {
-		return x.PreparedPermitJson
+		return x.PreparedPermit
 	}
-	return ""
+	return nil
 }
 
 func (x *RegisterPermitRequest) GetSignature() []byte {
@@ -1835,12 +1888,16 @@ func (x *ScopeRequest) GetScopeId() string {
 	return ""
 }
 
+// Exactly one result is required, even when the signature byte string is empty.
 type SignerReply struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	OperationId   string                 `protobuf:"bytes,1,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
-	ActionId      string                 `protobuf:"bytes,2,opt,name=action_id,json=actionId,proto3" json:"action_id,omitempty"`
-	Signature     []byte                 `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
-	Error         *SdkError              `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	OperationId string                 `protobuf:"bytes,1,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
+	ActionId    string                 `protobuf:"bytes,2,opt,name=action_id,json=actionId,proto3" json:"action_id,omitempty"`
+	// Types that are valid to be assigned to Result:
+	//
+	//	*SignerReply_Signature
+	//	*SignerReply_Error
+	Result        isSignerReply_Result `protobuf_oneof:"result"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1889,19 +1946,46 @@ func (x *SignerReply) GetActionId() string {
 	return ""
 }
 
+func (x *SignerReply) GetResult() isSignerReply_Result {
+	if x != nil {
+		return x.Result
+	}
+	return nil
+}
+
 func (x *SignerReply) GetSignature() []byte {
 	if x != nil {
-		return x.Signature
+		if x, ok := x.Result.(*SignerReply_Signature); ok {
+			return x.Signature
+		}
 	}
 	return nil
 }
 
 func (x *SignerReply) GetError() *SdkError {
 	if x != nil {
-		return x.Error
+		if x, ok := x.Result.(*SignerReply_Error); ok {
+			return x.Error
+		}
 	}
 	return nil
 }
+
+type isSignerReply_Result interface {
+	isSignerReply_Result()
+}
+
+type SignerReply_Signature struct {
+	Signature []byte `protobuf:"bytes,3,opt,name=signature,proto3,oneof"`
+}
+
+type SignerReply_Error struct {
+	Error *SdkError `protobuf:"bytes,4,opt,name=error,proto3,oneof"`
+}
+
+func (*SignerReply_Signature) isSignerReply_Result() {}
+
+func (*SignerReply_Error) isSignerReply_Result() {}
 
 type SignerClientMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -2453,11 +2537,18 @@ func (x *StorageAction) GetValue() []byte {
 	return nil
 }
 
+// GET requires value or not_found; SET and DELETE require ack. Any operation may return error.
+// Empty value bytes remain distinct from not_found. Missing or mismatched results fail the operation.
 type StorageReply struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	Value         []byte                 `protobuf:"bytes,2,opt,name=value,proto3,oneof" json:"value,omitempty"`
-	Error         *SdkError              `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	RequestId string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	// Types that are valid to be assigned to Result:
+	//
+	//	*StorageReply_Value
+	//	*StorageReply_Error
+	//	*StorageReply_NotFound
+	//	*StorageReply_Ack
+	Result        isStorageReply_Result `protobuf_oneof:"result"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2499,19 +2590,76 @@ func (x *StorageReply) GetRequestId() string {
 	return ""
 }
 
+func (x *StorageReply) GetResult() isStorageReply_Result {
+	if x != nil {
+		return x.Result
+	}
+	return nil
+}
+
 func (x *StorageReply) GetValue() []byte {
 	if x != nil {
-		return x.Value
+		if x, ok := x.Result.(*StorageReply_Value); ok {
+			return x.Value
+		}
 	}
 	return nil
 }
 
 func (x *StorageReply) GetError() *SdkError {
 	if x != nil {
-		return x.Error
+		if x, ok := x.Result.(*StorageReply_Error); ok {
+			return x.Error
+		}
 	}
 	return nil
 }
+
+func (x *StorageReply) GetNotFound() *Empty {
+	if x != nil {
+		if x, ok := x.Result.(*StorageReply_NotFound); ok {
+			return x.NotFound
+		}
+	}
+	return nil
+}
+
+func (x *StorageReply) GetAck() *Empty {
+	if x != nil {
+		if x, ok := x.Result.(*StorageReply_Ack); ok {
+			return x.Ack
+		}
+	}
+	return nil
+}
+
+type isStorageReply_Result interface {
+	isStorageReply_Result()
+}
+
+type StorageReply_Value struct {
+	Value []byte `protobuf:"bytes,2,opt,name=value,proto3,oneof"`
+}
+
+type StorageReply_Error struct {
+	Error *SdkError `protobuf:"bytes,3,opt,name=error,proto3,oneof"`
+}
+
+type StorageReply_NotFound struct {
+	NotFound *Empty `protobuf:"bytes,4,opt,name=not_found,json=notFound,proto3,oneof"`
+}
+
+type StorageReply_Ack struct {
+	Ack *Empty `protobuf:"bytes,5,opt,name=ack,proto3,oneof"`
+}
+
+func (*StorageReply_Value) isStorageReply_Result() {}
+
+func (*StorageReply_Error) isStorageReply_Result() {}
+
+func (*StorageReply_NotFound) isStorageReply_Result() {}
+
+func (*StorageReply_Ack) isStorageReply_Result() {}
 
 type StorageClientMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -2745,6 +2893,829 @@ func (*StorageServerMessage_Action) isStorageServerMessage_Message() {}
 
 func (*StorageServerMessage_ReplyError) isStorageServerMessage_Message() {}
 
+type CloseContextResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CloseContextResponse) Reset() {
+	*x = CloseContextResponse{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CloseContextResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CloseContextResponse) ProtoMessage() {}
+
+func (x *CloseContextResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CloseContextResponse.ProtoReflect.Descriptor instead.
+func (*CloseContextResponse) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{43}
+}
+
+type UpdateAccountResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateAccountResponse) Reset() {
+	*x = UpdateAccountResponse{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateAccountResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateAccountResponse) ProtoMessage() {}
+
+func (x *UpdateAccountResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateAccountResponse.ProtoReflect.Descriptor instead.
+func (*UpdateAccountResponse) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{44}
+}
+
+type RegisterPermitResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegisterPermitResponse) Reset() {
+	*x = RegisterPermitResponse{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegisterPermitResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegisterPermitResponse) ProtoMessage() {}
+
+func (x *RegisterPermitResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegisterPermitResponse.ProtoReflect.Descriptor instead.
+func (*RegisterPermitResponse) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{45}
+}
+
+type GrantPermitResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GrantPermitResponse) Reset() {
+	*x = GrantPermitResponse{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GrantPermitResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GrantPermitResponse) ProtoMessage() {}
+
+func (x *GrantPermitResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GrantPermitResponse.ProtoReflect.Descriptor instead.
+func (*GrantPermitResponse) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{46}
+}
+
+type GrantDelegationPermitResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GrantDelegationPermitResponse) Reset() {
+	*x = GrantDelegationPermitResponse{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GrantDelegationPermitResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GrantDelegationPermitResponse) ProtoMessage() {}
+
+func (x *GrantDelegationPermitResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GrantDelegationPermitResponse.ProtoReflect.Descriptor instead.
+func (*GrantDelegationPermitResponse) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{47}
+}
+
+type RevokePermitsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokePermitsResponse) Reset() {
+	*x = RevokePermitsResponse{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokePermitsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokePermitsResponse) ProtoMessage() {}
+
+func (x *RevokePermitsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokePermitsResponse.ProtoReflect.Descriptor instead.
+func (*RevokePermitsResponse) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{48}
+}
+
+type ClearPermitsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClearPermitsResponse) Reset() {
+	*x = ClearPermitsResponse{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClearPermitsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClearPermitsResponse) ProtoMessage() {}
+
+func (x *ClearPermitsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClearPermitsResponse.ProtoReflect.Descriptor instead.
+func (*ClearPermitsResponse) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{49}
+}
+
+type WarmTransportKeyPairResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WarmTransportKeyPairResponse) Reset() {
+	*x = WarmTransportKeyPairResponse{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WarmTransportKeyPairResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WarmTransportKeyPairResponse) ProtoMessage() {}
+
+func (x *WarmTransportKeyPairResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WarmTransportKeyPairResponse.ProtoReflect.Descriptor instead.
+func (*WarmTransportKeyPairResponse) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{50}
+}
+
+type WarmTransportKeyPairScopeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WarmTransportKeyPairScopeResponse) Reset() {
+	*x = WarmTransportKeyPairScopeResponse{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WarmTransportKeyPairScopeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WarmTransportKeyPairScopeResponse) ProtoMessage() {}
+
+func (x *WarmTransportKeyPairScopeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WarmTransportKeyPairScopeResponse.ProtoReflect.Descriptor instead.
+func (*WarmTransportKeyPairScopeResponse) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{51}
+}
+
+type RevokeTransportKeyPairResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeTransportKeyPairResponse) Reset() {
+	*x = RevokeTransportKeyPairResponse{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeTransportKeyPairResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeTransportKeyPairResponse) ProtoMessage() {}
+
+func (x *RevokeTransportKeyPairResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeTransportKeyPairResponse.ProtoReflect.Descriptor instead.
+func (*RevokeTransportKeyPairResponse) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{52}
+}
+
+type DelegatedDecryptValuesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Values        []*ClearEntry          `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DelegatedDecryptValuesResponse) Reset() {
+	*x = DelegatedDecryptValuesResponse{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DelegatedDecryptValuesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DelegatedDecryptValuesResponse) ProtoMessage() {}
+
+func (x *DelegatedDecryptValuesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DelegatedDecryptValuesResponse.ProtoReflect.Descriptor instead.
+func (*DelegatedDecryptValuesResponse) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *DelegatedDecryptValuesResponse) GetValues() []*ClearEntry {
+	if x != nil {
+		return x.Values
+	}
+	return nil
+}
+
+type HasDelegationPermitResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	HasPermit     bool                   `protobuf:"varint,1,opt,name=has_permit,json=hasPermit,proto3" json:"has_permit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HasDelegationPermitResponse) Reset() {
+	*x = HasDelegationPermitResponse{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HasDelegationPermitResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HasDelegationPermitResponse) ProtoMessage() {}
+
+func (x *HasDelegationPermitResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HasDelegationPermitResponse.ProtoReflect.Descriptor instead.
+func (*HasDelegationPermitResponse) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *HasDelegationPermitResponse) GetHasPermit() bool {
+	if x != nil {
+		return x.HasPermit
+	}
+	return false
+}
+
+// Omitted credential settings retain the SDK defaults.
+type ContextConfig struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Chains []*ChainConfig         `protobuf:"bytes,1,rep,name=chains,proto3" json:"chains,omitempty"`
+	// Omission selects the first configured chain.
+	ChainId *uint64 `protobuf:"varint,2,opt,name=chain_id,json=chainId,proto3,oneof" json:"chain_id,omitempty"`
+	// Whole days.
+	PermitTtl *uint32 `protobuf:"varint,3,opt,name=permit_ttl,json=permitTtl,proto3,oneof" json:"permit_ttl,omitempty"`
+	// Whole seconds.
+	TransportKeyPairTtl   *uint32 `protobuf:"varint,4,opt,name=transport_key_pair_ttl,json=transportKeyPairTtl,proto3,oneof" json:"transport_key_pair_ttl,omitempty"`
+	TransportKeyPairScope *string `protobuf:"bytes,5,opt,name=transport_key_pair_scope,json=transportKeyPairScope,proto3,oneof" json:"transport_key_pair_scope,omitempty"`
+	// Whole seconds.
+	RegistryTtl   *uint32 `protobuf:"varint,6,opt,name=registry_ttl,json=registryTtl,proto3,oneof" json:"registry_ttl,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ContextConfig) Reset() {
+	*x = ContextConfig{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ContextConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ContextConfig) ProtoMessage() {}
+
+func (x *ContextConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ContextConfig.ProtoReflect.Descriptor instead.
+func (*ContextConfig) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{55}
+}
+
+func (x *ContextConfig) GetChains() []*ChainConfig {
+	if x != nil {
+		return x.Chains
+	}
+	return nil
+}
+
+func (x *ContextConfig) GetChainId() uint64 {
+	if x != nil && x.ChainId != nil {
+		return *x.ChainId
+	}
+	return 0
+}
+
+func (x *ContextConfig) GetPermitTtl() uint32 {
+	if x != nil && x.PermitTtl != nil {
+		return *x.PermitTtl
+	}
+	return 0
+}
+
+func (x *ContextConfig) GetTransportKeyPairTtl() uint32 {
+	if x != nil && x.TransportKeyPairTtl != nil {
+		return *x.TransportKeyPairTtl
+	}
+	return 0
+}
+
+func (x *ContextConfig) GetTransportKeyPairScope() string {
+	if x != nil && x.TransportKeyPairScope != nil {
+		return *x.TransportKeyPairScope
+	}
+	return ""
+}
+
+func (x *ContextConfig) GetRegistryTtl() uint32 {
+	if x != nil && x.RegistryTtl != nil {
+		return *x.RegistryTtl
+	}
+	return 0
+}
+
+// Omitted fields inherit the SDK preset for id. Custom chains supply every required field.
+// Contract addresses contain exactly 20 bytes, except explicitly cleared optional addresses.
+type ChainConfig struct {
+	state                                     protoimpl.MessageState `protogen:"open.v1"`
+	Id                                        uint64                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Network                                   *string                `protobuf:"bytes,2,opt,name=network,proto3,oneof" json:"network,omitempty"`
+	GatewayChainId                            *uint64                `protobuf:"varint,3,opt,name=gateway_chain_id,json=gatewayChainId,proto3,oneof" json:"gateway_chain_id,omitempty"`
+	RelayerUrl                                *string                `protobuf:"bytes,4,opt,name=relayer_url,json=relayerUrl,proto3,oneof" json:"relayer_url,omitempty"`
+	AclContractAddress                        []byte                 `protobuf:"bytes,5,opt,name=acl_contract_address,json=aclContractAddress,proto3,oneof" json:"acl_contract_address,omitempty"`
+	KmsContractAddress                        []byte                 `protobuf:"bytes,6,opt,name=kms_contract_address,json=kmsContractAddress,proto3,oneof" json:"kms_contract_address,omitempty"`
+	InputVerifierContractAddress              []byte                 `protobuf:"bytes,7,opt,name=input_verifier_contract_address,json=inputVerifierContractAddress,proto3,oneof" json:"input_verifier_contract_address,omitempty"`
+	VerifyingContractAddressDecryption        []byte                 `protobuf:"bytes,8,opt,name=verifying_contract_address_decryption,json=verifyingContractAddressDecryption,proto3,oneof" json:"verifying_contract_address_decryption,omitempty"`
+	VerifyingContractAddressInputVerification []byte                 `protobuf:"bytes,9,opt,name=verifying_contract_address_input_verification,json=verifyingContractAddressInputVerification,proto3,oneof" json:"verifying_contract_address_input_verification,omitempty"`
+	// An explicitly empty value clears the preset's optional address.
+	RegistryAddress []byte     `protobuf:"bytes,10,opt,name=registry_address,json=registryAddress,proto3,oneof" json:"registry_address,omitempty"`
+	ExecutorAddress []byte     `protobuf:"bytes,11,opt,name=executor_address,json=executorAddress,proto3,oneof" json:"executor_address,omitempty"`
+	Auth            *ChainAuth `protobuf:"bytes,12,opt,name=auth,proto3" json:"auth,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ChainConfig) Reset() {
+	*x = ChainConfig{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[56]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChainConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChainConfig) ProtoMessage() {}
+
+func (x *ChainConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[56]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChainConfig.ProtoReflect.Descriptor instead.
+func (*ChainConfig) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{56}
+}
+
+func (x *ChainConfig) GetId() uint64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *ChainConfig) GetNetwork() string {
+	if x != nil && x.Network != nil {
+		return *x.Network
+	}
+	return ""
+}
+
+func (x *ChainConfig) GetGatewayChainId() uint64 {
+	if x != nil && x.GatewayChainId != nil {
+		return *x.GatewayChainId
+	}
+	return 0
+}
+
+func (x *ChainConfig) GetRelayerUrl() string {
+	if x != nil && x.RelayerUrl != nil {
+		return *x.RelayerUrl
+	}
+	return ""
+}
+
+func (x *ChainConfig) GetAclContractAddress() []byte {
+	if x != nil {
+		return x.AclContractAddress
+	}
+	return nil
+}
+
+func (x *ChainConfig) GetKmsContractAddress() []byte {
+	if x != nil {
+		return x.KmsContractAddress
+	}
+	return nil
+}
+
+func (x *ChainConfig) GetInputVerifierContractAddress() []byte {
+	if x != nil {
+		return x.InputVerifierContractAddress
+	}
+	return nil
+}
+
+func (x *ChainConfig) GetVerifyingContractAddressDecryption() []byte {
+	if x != nil {
+		return x.VerifyingContractAddressDecryption
+	}
+	return nil
+}
+
+func (x *ChainConfig) GetVerifyingContractAddressInputVerification() []byte {
+	if x != nil {
+		return x.VerifyingContractAddressInputVerification
+	}
+	return nil
+}
+
+func (x *ChainConfig) GetRegistryAddress() []byte {
+	if x != nil {
+		return x.RegistryAddress
+	}
+	return nil
+}
+
+func (x *ChainConfig) GetExecutorAddress() []byte {
+	if x != nil {
+		return x.ExecutorAddress
+	}
+	return nil
+}
+
+func (x *ChainConfig) GetAuth() *ChainAuth {
+	if x != nil {
+		return x.Auth
+	}
+	return nil
+}
+
+type ChainAuth struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Credential:
+	//
+	//	*ChainAuth_BearerToken
+	//	*ChainAuth_ApiKeyHeader
+	//	*ChainAuth_ApiKeyCookie
+	Credential    isChainAuth_Credential `protobuf_oneof:"credential"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChainAuth) Reset() {
+	*x = ChainAuth{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[57]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChainAuth) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChainAuth) ProtoMessage() {}
+
+func (x *ChainAuth) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[57]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChainAuth.ProtoReflect.Descriptor instead.
+func (*ChainAuth) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{57}
+}
+
+func (x *ChainAuth) GetCredential() isChainAuth_Credential {
+	if x != nil {
+		return x.Credential
+	}
+	return nil
+}
+
+func (x *ChainAuth) GetBearerToken() string {
+	if x != nil {
+		if x, ok := x.Credential.(*ChainAuth_BearerToken); ok {
+			return x.BearerToken
+		}
+	}
+	return ""
+}
+
+func (x *ChainAuth) GetApiKeyHeader() *NamedCredential {
+	if x != nil {
+		if x, ok := x.Credential.(*ChainAuth_ApiKeyHeader); ok {
+			return x.ApiKeyHeader
+		}
+	}
+	return nil
+}
+
+func (x *ChainAuth) GetApiKeyCookie() *NamedCredential {
+	if x != nil {
+		if x, ok := x.Credential.(*ChainAuth_ApiKeyCookie); ok {
+			return x.ApiKeyCookie
+		}
+	}
+	return nil
+}
+
+type isChainAuth_Credential interface {
+	isChainAuth_Credential()
+}
+
+type ChainAuth_BearerToken struct {
+	BearerToken string `protobuf:"bytes,1,opt,name=bearer_token,json=bearerToken,proto3,oneof"`
+}
+
+type ChainAuth_ApiKeyHeader struct {
+	ApiKeyHeader *NamedCredential `protobuf:"bytes,2,opt,name=api_key_header,json=apiKeyHeader,proto3,oneof"`
+}
+
+type ChainAuth_ApiKeyCookie struct {
+	ApiKeyCookie *NamedCredential `protobuf:"bytes,3,opt,name=api_key_cookie,json=apiKeyCookie,proto3,oneof"`
+}
+
+func (*ChainAuth_BearerToken) isChainAuth_Credential() {}
+
+func (*ChainAuth_ApiKeyHeader) isChainAuth_Credential() {}
+
+func (*ChainAuth_ApiKeyCookie) isChainAuth_Credential() {}
+
+type NamedCredential struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Omission preserves the SDK's default header or cookie name.
+	Name          *string `protobuf:"bytes,1,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Value         string  `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NamedCredential) Reset() {
+	*x = NamedCredential{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[58]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NamedCredential) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NamedCredential) ProtoMessage() {}
+
+func (x *NamedCredential) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[58]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NamedCredential.ProtoReflect.Descriptor instead.
+func (*NamedCredential) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{58}
+}
+
+func (x *NamedCredential) GetName() string {
+	if x != nil && x.Name != nil {
+		return *x.Name
+	}
+	return ""
+}
+
+func (x *NamedCredential) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
 var File_zama_sdk_v1alpha1_sidecar_proto protoreflect.FileDescriptor
 
 const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
@@ -2757,10 +3728,9 @@ const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
 	"sdkVersion\"D\n" +
 	"\rWalletAccount\x12\x18\n" +
 	"\aaddress\x18\x01 \x01(\fR\aaddress\x12\x19\n" +
-	"\bchain_id\x18\x02 \x01(\x04R\achainId\"\xa1\x02\n" +
-	"\x14CreateContextRequest\x12\x1f\n" +
-	"\vconfig_json\x18\x01 \x01(\tR\n" +
-	"configJson\x12%\n" +
+	"\bchain_id\x18\x02 \x01(\x04R\achainId\"\xba\x02\n" +
+	"\x14CreateContextRequest\x128\n" +
+	"\x06config\x18\x01 \x01(\v2 .zama.sdk.v1alpha1.ContextConfigR\x06config\x12%\n" +
 	"\x0esigner_enabled\x18\x02 \x01(\bR\rsignerEnabled\x12:\n" +
 	"\aaccount\x18\x03 \x01(\v2 .zama.sdk.v1alpha1.WalletAccountR\aaccount\x12;\n" +
 	"\astorage\x18\x04 \x01(\v2!.zama.sdk.v1alpha1.StorageBindingR\astorage\x12H\n" +
@@ -2783,15 +3753,15 @@ const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
 	"\toperation\x18\x01 \x01(\v2\x1c.zama.sdk.v1alpha1.OperationR\toperation\"d\n" +
 	"\x0eEncryptedInput\x12'\n" +
 	"\x0fencrypted_value\x18\x01 \x01(\fR\x0eencryptedValue\x12)\n" +
-	"\x10contract_address\x18\x02 \x01(\fR\x0fcontractAddress\"\xd0\x01\n" +
+	"\x10contract_address\x18\x02 \x01(\fR\x0fcontractAddress\"\xea\x01\n" +
 	"\n" +
 	"ClearValue\x12#\n" +
 	"\fbigint_value\x18\x01 \x01(\tH\x00R\vbigintValue\x12\x1f\n" +
 	"\n" +
 	"bool_value\x18\x02 \x01(\bH\x00R\tboolValue\x12#\n" +
-	"\fstring_value\x18\x03 \x01(\tH\x00R\vstringValue\x12)\n" +
-	"\x0fundefined_value\x18\x04 \x01(\bH\x00R\x0eundefinedValue\x12#\n" +
-	"\fnumber_value\x18\x05 \x01(\x01H\x00R\vnumberValueB\a\n" +
+	"\fstring_value\x18\x03 \x01(\tH\x00R\vstringValue\x12C\n" +
+	"\x0fundefined_value\x18\x04 \x01(\v2\x18.zama.sdk.v1alpha1.EmptyH\x00R\x0eundefinedValue\x12#\n" +
+	"\fnumber_value\x18\x05 \x01(\rH\x00R\vnumberValueB\a\n" +
 	"\x05value\"j\n" +
 	"\n" +
 	"ClearEntry\x12'\n" +
@@ -2801,7 +3771,7 @@ const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
 	"\toperation\x18\x01 \x01(\v2\x1c.zama.sdk.v1alpha1.OperationR\toperation\x129\n" +
 	"\x06inputs\x18\x02 \x03(\v2!.zama.sdk.v1alpha1.EncryptedInputR\x06inputs\x12\"\n" +
 	"\n" +
-	"timeout_ms\x18\x03 \x01(\x01H\x00R\ttimeoutMs\x88\x01\x01B\r\n" +
+	"timeout_ms\x18\x03 \x01(\rH\x00R\ttimeoutMs\x88\x01\x01B\r\n" +
 	"\v_timeout_ms\"N\n" +
 	"\x15DecryptValuesResponse\x125\n" +
 	"\x06values\x18\x01 \x03(\v2\x1d.zama.sdk.v1alpha1.ClearEntryR\x06values\"\xd5\x02\n" +
@@ -2817,7 +3787,7 @@ const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
 	"\toperation\x18\x01 \x01(\v2\x1c.zama.sdk.v1alpha1.OperationR\toperation\x12)\n" +
 	"\x10encrypted_values\x18\x02 \x03(\fR\x0fencryptedValues\x12\"\n" +
 	"\n" +
-	"timeout_ms\x18\x03 \x01(\x01H\x00R\ttimeoutMs\x88\x01\x01B\r\n" +
+	"timeout_ms\x18\x03 \x01(\rH\x00R\ttimeoutMs\x88\x01\x01B\r\n" +
 	"\v_timeout_ms\"\xb8\x01\n" +
 	"\x1bDecryptPublicValuesResponse\x125\n" +
 	"\x06values\x18\x01 \x03(\v2\x1d.zama.sdk.v1alpha1.ClearEntryR\x06values\x127\n" +
@@ -2828,7 +3798,7 @@ const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
 	"\x06inputs\x18\x02 \x03(\v2!.zama.sdk.v1alpha1.EncryptedInputR\x06inputs\x12+\n" +
 	"\x11delegator_address\x18\x03 \x01(\fR\x10delegatorAddress\x12,\n" +
 	"\x0faccount_address\x18\x04 \x01(\fH\x00R\x0eaccountAddress\x88\x01\x01\x12,\n" +
-	"\x0fmax_concurrency\x18\x05 \x01(\x01H\x01R\x0emaxConcurrency\x88\x01\x01\x125\n" +
+	"\x0fmax_concurrency\x18\x05 \x01(\rH\x01R\x0emaxConcurrency\x88\x01\x01\x125\n" +
 	"\x14wait_for_propagation\x18\x06 \x01(\bH\x02R\x12waitForPropagation\x88\x01\x01B\x12\n" +
 	"\x10_account_addressB\x12\n" +
 	"\x10_max_concurrencyB\x17\n" +
@@ -2837,13 +3807,14 @@ const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x1c\n" +
 	"\tretryable\x18\x03 \x01(\bR\tretryable\x123\n" +
-	"\x13retry_after_seconds\x18\x04 \x01(\x01H\x00R\x11retryAfterSeconds\x88\x01\x01B\x16\n" +
-	"\x14_retry_after_seconds\"\xc7\x01\n" +
+	"\x13retry_after_seconds\x18\x04 \x01(\rH\x00R\x11retryAfterSeconds\x88\x01\x01B\x16\n" +
+	"\x14_retry_after_seconds\"\xd5\x01\n" +
 	"\tBatchItem\x12'\n" +
 	"\x0fencrypted_value\x18\x01 \x01(\fR\x0eencryptedValue\x12)\n" +
-	"\x10contract_address\x18\x02 \x01(\fR\x0fcontractAddress\x123\n" +
-	"\x05value\x18\x03 \x01(\v2\x1d.zama.sdk.v1alpha1.ClearValueR\x05value\x121\n" +
-	"\x05error\x18\x04 \x01(\v2\x1b.zama.sdk.v1alpha1.SdkErrorR\x05error\"Y\n" +
+	"\x10contract_address\x18\x02 \x01(\fR\x0fcontractAddress\x125\n" +
+	"\x05value\x18\x03 \x01(\v2\x1d.zama.sdk.v1alpha1.ClearValueH\x00R\x05value\x123\n" +
+	"\x05error\x18\x04 \x01(\v2\x1b.zama.sdk.v1alpha1.SdkErrorH\x00R\x05errorB\b\n" +
+	"\x06result\"Y\n" +
 	"#DelegatedBatchDecryptValuesResponse\x122\n" +
 	"\x05items\x18\x01 \x03(\v2\x1c.zama.sdk.v1alpha1.BatchItemR\x05items\"\xac\x02\n" +
 	"\x14PreparePermitRequest\x12:\n" +
@@ -2851,14 +3822,15 @@ const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
 	"\x0esigner_address\x18\x02 \x01(\fR\rsignerAddress\x12-\n" +
 	"\x12contract_addresses\x18\x03 \x03(\fR\x11contractAddresses\x120\n" +
 	"\x11delegator_address\x18\x04 \x01(\fH\x00R\x10delegatorAddress\x88\x01\x01\x12(\n" +
-	"\rduration_days\x18\x05 \x01(\x01H\x01R\fdurationDays\x88\x01\x01B\x14\n" +
+	"\rduration_days\x18\x05 \x01(\rH\x01R\fdurationDays\x88\x01\x01B\x14\n" +
 	"\x12_delegator_addressB\x10\n" +
-	"\x0e_duration_days\"I\n" +
-	"\x15PreparePermitResponse\x120\n" +
-	"\x14prepared_permit_json\x18\x01 \x01(\tR\x12preparedPermitJson\"\xa3\x01\n" +
+	"\x0e_duration_days\"h\n" +
+	"\x15PreparePermitResponse\x12'\n" +
+	"\x0fprepared_permit\x18\x01 \x01(\fR\x0epreparedPermit\x12&\n" +
+	"\x0ftyped_data_json\x18\x02 \x01(\tR\rtypedDataJson\"\x9a\x01\n" +
 	"\x15RegisterPermitRequest\x12:\n" +
-	"\toperation\x18\x01 \x01(\v2\x1c.zama.sdk.v1alpha1.OperationR\toperation\x120\n" +
-	"\x14prepared_permit_json\x18\x02 \x01(\tR\x12preparedPermitJson\x12\x1c\n" +
+	"\toperation\x18\x01 \x01(\v2\x1c.zama.sdk.v1alpha1.OperationR\toperation\x12'\n" +
+	"\x0fprepared_permit\x18\x02 \x01(\fR\x0epreparedPermit\x12\x1c\n" +
 	"\tsignature\x18\x03 \x01(\fR\tsignature\"}\n" +
 	"\x10ContractsRequest\x12:\n" +
 	"\toperation\x18\x01 \x01(\v2\x1c.zama.sdk.v1alpha1.OperationR\toperation\x12-\n" +
@@ -2877,12 +3849,13 @@ const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
 	"\tcontracts\x18\x02 \x01(\v2\x1f.zama.sdk.v1alpha1.ContractListR\tcontracts\"e\n" +
 	"\fScopeRequest\x12:\n" +
 	"\toperation\x18\x01 \x01(\v2\x1c.zama.sdk.v1alpha1.OperationR\toperation\x12\x19\n" +
-	"\bscope_id\x18\x02 \x01(\tR\ascopeId\"\x9e\x01\n" +
+	"\bscope_id\x18\x02 \x01(\tR\ascopeId\"\xac\x01\n" +
 	"\vSignerReply\x12!\n" +
 	"\foperation_id\x18\x01 \x01(\tR\voperationId\x12\x1b\n" +
-	"\taction_id\x18\x02 \x01(\tR\bactionId\x12\x1c\n" +
-	"\tsignature\x18\x03 \x01(\fR\tsignature\x121\n" +
-	"\x05error\x18\x04 \x01(\v2\x1b.zama.sdk.v1alpha1.SdkErrorR\x05error\"\x95\x01\n" +
+	"\taction_id\x18\x02 \x01(\tR\bactionId\x12\x1e\n" +
+	"\tsignature\x18\x03 \x01(\fH\x00R\tsignature\x123\n" +
+	"\x05error\x18\x04 \x01(\v2\x1b.zama.sdk.v1alpha1.SdkErrorH\x00R\x05errorB\b\n" +
+	"\x06result\"\x95\x01\n" +
 	"\x13SignerClientMessage\x12;\n" +
 	"\x06attach\x18\x01 \x01(\v2!.zama.sdk.v1alpha1.ContextRequestH\x00R\x06attach\x126\n" +
 	"\x05reply\x18\x02 \x01(\v2\x1e.zama.sdk.v1alpha1.SignerReplyH\x00R\x05replyB\t\n" +
@@ -2920,13 +3893,15 @@ const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
 	"backend_id\x18\x02 \x01(\tR\tbackendId\x128\n" +
 	"\x06method\x18\x03 \x01(\x0e2 .zama.sdk.v1alpha1.StorageMethodR\x06method\x12\x10\n" +
 	"\x03key\x18\x04 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x05 \x01(\fR\x05value\"\x85\x01\n" +
+	"\x05value\x18\x05 \x01(\fR\x05value\"\xeb\x01\n" +
 	"\fStorageReply\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x01 \x01(\tR\trequestId\x12\x19\n" +
-	"\x05value\x18\x02 \x01(\fH\x00R\x05value\x88\x01\x01\x121\n" +
-	"\x05error\x18\x03 \x01(\v2\x1b.zama.sdk.v1alpha1.SdkErrorR\x05errorB\b\n" +
-	"\x06_value\"\x97\x01\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12\x16\n" +
+	"\x05value\x18\x02 \x01(\fH\x00R\x05value\x123\n" +
+	"\x05error\x18\x03 \x01(\v2\x1b.zama.sdk.v1alpha1.SdkErrorH\x00R\x05error\x127\n" +
+	"\tnot_found\x18\x04 \x01(\v2\x18.zama.sdk.v1alpha1.EmptyH\x00R\bnotFound\x12,\n" +
+	"\x03ack\x18\x05 \x01(\v2\x18.zama.sdk.v1alpha1.EmptyH\x00R\x03ackB\b\n" +
+	"\x06result\"\x97\x01\n" +
 	"\x14StorageClientMessage\x12;\n" +
 	"\x06attach\x18\x01 \x01(\v2!.zama.sdk.v1alpha1.ContextRequestH\x00R\x06attach\x127\n" +
 	"\x05reply\x18\x02 \x01(\v2\x1f.zama.sdk.v1alpha1.StorageReplyH\x00R\x05replyB\t\n" +
@@ -2940,34 +3915,98 @@ const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
 	"\x06action\x18\x02 \x01(\v2 .zama.sdk.v1alpha1.StorageActionH\x00R\x06action\x12G\n" +
 	"\vreply_error\x18\x03 \x01(\v2$.zama.sdk.v1alpha1.StorageReplyErrorH\x00R\n" +
 	"replyErrorB\t\n" +
-	"\amessage*z\n" +
+	"\amessage\"\x16\n" +
+	"\x14CloseContextResponse\"\x17\n" +
+	"\x15UpdateAccountResponse\"\x18\n" +
+	"\x16RegisterPermitResponse\"\x15\n" +
+	"\x13GrantPermitResponse\"\x1f\n" +
+	"\x1dGrantDelegationPermitResponse\"\x17\n" +
+	"\x15RevokePermitsResponse\"\x16\n" +
+	"\x14ClearPermitsResponse\"\x1e\n" +
+	"\x1cWarmTransportKeyPairResponse\"#\n" +
+	"!WarmTransportKeyPairScopeResponse\" \n" +
+	"\x1eRevokeTransportKeyPairResponse\"W\n" +
+	"\x1eDelegatedDecryptValuesResponse\x125\n" +
+	"\x06values\x18\x01 \x03(\v2\x1d.zama.sdk.v1alpha1.ClearEntryR\x06values\"<\n" +
+	"\x1bHasDelegationPermitResponse\x12\x1d\n" +
+	"\n" +
+	"has_permit\x18\x01 \x01(\bR\thasPermit\"\x90\x03\n" +
+	"\rContextConfig\x126\n" +
+	"\x06chains\x18\x01 \x03(\v2\x1e.zama.sdk.v1alpha1.ChainConfigR\x06chains\x12\x1e\n" +
+	"\bchain_id\x18\x02 \x01(\x04H\x00R\achainId\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"permit_ttl\x18\x03 \x01(\rH\x01R\tpermitTtl\x88\x01\x01\x128\n" +
+	"\x16transport_key_pair_ttl\x18\x04 \x01(\rH\x02R\x13transportKeyPairTtl\x88\x01\x01\x12<\n" +
+	"\x18transport_key_pair_scope\x18\x05 \x01(\tH\x03R\x15transportKeyPairScope\x88\x01\x01\x12&\n" +
+	"\fregistry_ttl\x18\x06 \x01(\rH\x04R\vregistryTtl\x88\x01\x01B\v\n" +
+	"\t_chain_idB\r\n" +
+	"\v_permit_ttlB\x19\n" +
+	"\x17_transport_key_pair_ttlB\x1b\n" +
+	"\x19_transport_key_pair_scopeB\x0f\n" +
+	"\r_registry_ttl\"\xa9\a\n" +
+	"\vChainConfig\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x1d\n" +
+	"\anetwork\x18\x02 \x01(\tH\x00R\anetwork\x88\x01\x01\x12-\n" +
+	"\x10gateway_chain_id\x18\x03 \x01(\x04H\x01R\x0egatewayChainId\x88\x01\x01\x12$\n" +
+	"\vrelayer_url\x18\x04 \x01(\tH\x02R\n" +
+	"relayerUrl\x88\x01\x01\x125\n" +
+	"\x14acl_contract_address\x18\x05 \x01(\fH\x03R\x12aclContractAddress\x88\x01\x01\x125\n" +
+	"\x14kms_contract_address\x18\x06 \x01(\fH\x04R\x12kmsContractAddress\x88\x01\x01\x12J\n" +
+	"\x1finput_verifier_contract_address\x18\a \x01(\fH\x05R\x1cinputVerifierContractAddress\x88\x01\x01\x12V\n" +
+	"%verifying_contract_address_decryption\x18\b \x01(\fH\x06R\"verifyingContractAddressDecryption\x88\x01\x01\x12e\n" +
+	"-verifying_contract_address_input_verification\x18\t \x01(\fH\aR)verifyingContractAddressInputVerification\x88\x01\x01\x12.\n" +
+	"\x10registry_address\x18\n" +
+	" \x01(\fH\bR\x0fregistryAddress\x88\x01\x01\x12.\n" +
+	"\x10executor_address\x18\v \x01(\fH\tR\x0fexecutorAddress\x88\x01\x01\x120\n" +
+	"\x04auth\x18\f \x01(\v2\x1c.zama.sdk.v1alpha1.ChainAuthR\x04authB\n" +
+	"\n" +
+	"\b_networkB\x13\n" +
+	"\x11_gateway_chain_idB\x0e\n" +
+	"\f_relayer_urlB\x17\n" +
+	"\x15_acl_contract_addressB\x17\n" +
+	"\x15_kms_contract_addressB\"\n" +
+	" _input_verifier_contract_addressB(\n" +
+	"&_verifying_contract_address_decryptionB0\n" +
+	"._verifying_contract_address_input_verificationB\x13\n" +
+	"\x11_registry_addressB\x13\n" +
+	"\x11_executor_address\"\xd6\x01\n" +
+	"\tChainAuth\x12#\n" +
+	"\fbearer_token\x18\x01 \x01(\tH\x00R\vbearerToken\x12J\n" +
+	"\x0eapi_key_header\x18\x02 \x01(\v2\".zama.sdk.v1alpha1.NamedCredentialH\x00R\fapiKeyHeader\x12J\n" +
+	"\x0eapi_key_cookie\x18\x03 \x01(\v2\".zama.sdk.v1alpha1.NamedCredentialH\x00R\fapiKeyCookieB\f\n" +
+	"\n" +
+	"credential\"I\n" +
+	"\x0fNamedCredential\x12\x17\n" +
+	"\x04name\x18\x01 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05valueB\a\n" +
+	"\x05_name*z\n" +
 	"\rStorageMethod\x12\x1e\n" +
 	"\x1aSTORAGE_METHOD_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12STORAGE_METHOD_GET\x10\x01\x12\x16\n" +
 	"\x12STORAGE_METHOD_SET\x10\x02\x12\x19\n" +
-	"\x15STORAGE_METHOD_DELETE\x10\x032\xe8\x0f\n" +
+	"\x15STORAGE_METHOD_DELETE\x10\x032\xbc\x11\n" +
 	"\x0eSidecarService\x12P\n" +
 	"\aGetInfo\x12!.zama.sdk.v1alpha1.GetInfoRequest\x1a\".zama.sdk.v1alpha1.GetInfoResponse\x12b\n" +
-	"\rCreateContext\x12'.zama.sdk.v1alpha1.CreateContextRequest\x1a(.zama.sdk.v1alpha1.CreateContextResponse\x12K\n" +
-	"\fCloseContext\x12!.zama.sdk.v1alpha1.ContextRequest\x1a\x18.zama.sdk.v1alpha1.Empty\x12R\n" +
-	"\rUpdateAccount\x12'.zama.sdk.v1alpha1.UpdateAccountRequest\x1a\x18.zama.sdk.v1alpha1.Empty\x12c\n" +
+	"\rCreateContext\x12'.zama.sdk.v1alpha1.CreateContextRequest\x1a(.zama.sdk.v1alpha1.CreateContextResponse\x12Z\n" +
+	"\fCloseContext\x12!.zama.sdk.v1alpha1.ContextRequest\x1a'.zama.sdk.v1alpha1.CloseContextResponse\x12b\n" +
+	"\rUpdateAccount\x12'.zama.sdk.v1alpha1.UpdateAccountRequest\x1a(.zama.sdk.v1alpha1.UpdateAccountResponse\x12c\n" +
 	"\rSignerChannel\x12&.zama.sdk.v1alpha1.SignerClientMessage\x1a&.zama.sdk.v1alpha1.SignerServerMessage(\x010\x01\x12f\n" +
 	"\x0eStorageChannel\x12'.zama.sdk.v1alpha1.StorageClientMessage\x1a'.zama.sdk.v1alpha1.StorageServerMessage(\x010\x01\x12b\n" +
-	"\rDecryptValues\x12'.zama.sdk.v1alpha1.DecryptValuesRequest\x1a(.zama.sdk.v1alpha1.DecryptValuesResponse\x12t\n" +
-	"\x16DelegatedDecryptValues\x120.zama.sdk.v1alpha1.DelegatedDecryptValuesRequest\x1a(.zama.sdk.v1alpha1.DecryptValuesResponse\x12t\n" +
+	"\rDecryptValues\x12'.zama.sdk.v1alpha1.DecryptValuesRequest\x1a(.zama.sdk.v1alpha1.DecryptValuesResponse\x12}\n" +
+	"\x16DelegatedDecryptValues\x120.zama.sdk.v1alpha1.DelegatedDecryptValuesRequest\x1a1.zama.sdk.v1alpha1.DelegatedDecryptValuesResponse\x12t\n" +
 	"\x13DecryptPublicValues\x12-.zama.sdk.v1alpha1.DecryptPublicValuesRequest\x1a..zama.sdk.v1alpha1.DecryptPublicValuesResponse\x12\x8c\x01\n" +
 	"\x1bDelegatedBatchDecryptValues\x125.zama.sdk.v1alpha1.DelegatedBatchDecryptValuesRequest\x1a6.zama.sdk.v1alpha1.DelegatedBatchDecryptValuesResponse\x12b\n" +
-	"\rPreparePermit\x12'.zama.sdk.v1alpha1.PreparePermitRequest\x1a(.zama.sdk.v1alpha1.PreparePermitResponse\x12T\n" +
-	"\x0eRegisterPermit\x12(.zama.sdk.v1alpha1.RegisterPermitRequest\x1a\x18.zama.sdk.v1alpha1.Empty\x12L\n" +
-	"\vGrantPermit\x12#.zama.sdk.v1alpha1.ContractsRequest\x1a\x18.zama.sdk.v1alpha1.Empty\x12`\n" +
-	"\x15GrantDelegationPermit\x12-.zama.sdk.v1alpha1.DelegationContractsRequest\x1a\x18.zama.sdk.v1alpha1.Empty\x12V\n" +
-	"\tHasPermit\x12#.zama.sdk.v1alpha1.ContractsRequest\x1a$.zama.sdk.v1alpha1.HasPermitResponse\x12j\n" +
-	"\x13HasDelegationPermit\x12-.zama.sdk.v1alpha1.DelegationContractsRequest\x1a$.zama.sdk.v1alpha1.HasPermitResponse\x12R\n" +
-	"\rRevokePermits\x12'.zama.sdk.v1alpha1.RevokePermitsRequest\x1a\x18.zama.sdk.v1alpha1.Empty\x12M\n" +
-	"\fClearPermits\x12#.zama.sdk.v1alpha1.OperationRequest\x1a\x18.zama.sdk.v1alpha1.Empty\x12U\n" +
-	"\x14WarmTransportKeyPair\x12#.zama.sdk.v1alpha1.OperationRequest\x1a\x18.zama.sdk.v1alpha1.Empty\x12V\n" +
-	"\x19WarmTransportKeyPairScope\x12\x1f.zama.sdk.v1alpha1.ScopeRequest\x1a\x18.zama.sdk.v1alpha1.Empty\x12S\n" +
-	"\x16RevokeTransportKeyPair\x12\x1f.zama.sdk.v1alpha1.ScopeRequest\x1a\x18.zama.sdk.v1alpha1.EmptyBEZCgithub.com/zama-ai/sdk/clients/go/gen/zama/sdk/v1alpha1;sdkv1alpha1b\x06proto3"
+	"\rPreparePermit\x12'.zama.sdk.v1alpha1.PreparePermitRequest\x1a(.zama.sdk.v1alpha1.PreparePermitResponse\x12e\n" +
+	"\x0eRegisterPermit\x12(.zama.sdk.v1alpha1.RegisterPermitRequest\x1a).zama.sdk.v1alpha1.RegisterPermitResponse\x12Z\n" +
+	"\vGrantPermit\x12#.zama.sdk.v1alpha1.ContractsRequest\x1a&.zama.sdk.v1alpha1.GrantPermitResponse\x12x\n" +
+	"\x15GrantDelegationPermit\x12-.zama.sdk.v1alpha1.DelegationContractsRequest\x1a0.zama.sdk.v1alpha1.GrantDelegationPermitResponse\x12V\n" +
+	"\tHasPermit\x12#.zama.sdk.v1alpha1.ContractsRequest\x1a$.zama.sdk.v1alpha1.HasPermitResponse\x12t\n" +
+	"\x13HasDelegationPermit\x12-.zama.sdk.v1alpha1.DelegationContractsRequest\x1a..zama.sdk.v1alpha1.HasDelegationPermitResponse\x12b\n" +
+	"\rRevokePermits\x12'.zama.sdk.v1alpha1.RevokePermitsRequest\x1a(.zama.sdk.v1alpha1.RevokePermitsResponse\x12\\\n" +
+	"\fClearPermits\x12#.zama.sdk.v1alpha1.OperationRequest\x1a'.zama.sdk.v1alpha1.ClearPermitsResponse\x12l\n" +
+	"\x14WarmTransportKeyPair\x12#.zama.sdk.v1alpha1.OperationRequest\x1a/.zama.sdk.v1alpha1.WarmTransportKeyPairResponse\x12r\n" +
+	"\x19WarmTransportKeyPairScope\x12\x1f.zama.sdk.v1alpha1.ScopeRequest\x1a4.zama.sdk.v1alpha1.WarmTransportKeyPairScopeResponse\x12l\n" +
+	"\x16RevokeTransportKeyPair\x12\x1f.zama.sdk.v1alpha1.ScopeRequest\x1a1.zama.sdk.v1alpha1.RevokeTransportKeyPairResponseBEZCgithub.com/zama-ai/sdk/clients/go/gen/zama/sdk/v1alpha1;sdkv1alpha1b\x06proto3"
 
 var (
 	file_zama_sdk_v1alpha1_sidecar_proto_rawDescOnce sync.Once
@@ -2982,7 +4021,7 @@ func file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP() []byte {
 }
 
 var file_zama_sdk_v1alpha1_sidecar_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_zama_sdk_v1alpha1_sidecar_proto_msgTypes = make([]protoimpl.MessageInfo, 43)
+var file_zama_sdk_v1alpha1_sidecar_proto_msgTypes = make([]protoimpl.MessageInfo, 59)
 var file_zama_sdk_v1alpha1_sidecar_proto_goTypes = []any{
 	(StorageMethod)(0),                          // 0: zama.sdk.v1alpha1.StorageMethod
 	(*Empty)(nil),                               // 1: zama.sdk.v1alpha1.Empty
@@ -3028,98 +4067,123 @@ var file_zama_sdk_v1alpha1_sidecar_proto_goTypes = []any{
 	(*StorageClientMessage)(nil),                // 41: zama.sdk.v1alpha1.StorageClientMessage
 	(*StorageReplyError)(nil),                   // 42: zama.sdk.v1alpha1.StorageReplyError
 	(*StorageServerMessage)(nil),                // 43: zama.sdk.v1alpha1.StorageServerMessage
+	(*CloseContextResponse)(nil),                // 44: zama.sdk.v1alpha1.CloseContextResponse
+	(*UpdateAccountResponse)(nil),               // 45: zama.sdk.v1alpha1.UpdateAccountResponse
+	(*RegisterPermitResponse)(nil),              // 46: zama.sdk.v1alpha1.RegisterPermitResponse
+	(*GrantPermitResponse)(nil),                 // 47: zama.sdk.v1alpha1.GrantPermitResponse
+	(*GrantDelegationPermitResponse)(nil),       // 48: zama.sdk.v1alpha1.GrantDelegationPermitResponse
+	(*RevokePermitsResponse)(nil),               // 49: zama.sdk.v1alpha1.RevokePermitsResponse
+	(*ClearPermitsResponse)(nil),                // 50: zama.sdk.v1alpha1.ClearPermitsResponse
+	(*WarmTransportKeyPairResponse)(nil),        // 51: zama.sdk.v1alpha1.WarmTransportKeyPairResponse
+	(*WarmTransportKeyPairScopeResponse)(nil),   // 52: zama.sdk.v1alpha1.WarmTransportKeyPairScopeResponse
+	(*RevokeTransportKeyPairResponse)(nil),      // 53: zama.sdk.v1alpha1.RevokeTransportKeyPairResponse
+	(*DelegatedDecryptValuesResponse)(nil),      // 54: zama.sdk.v1alpha1.DelegatedDecryptValuesResponse
+	(*HasDelegationPermitResponse)(nil),         // 55: zama.sdk.v1alpha1.HasDelegationPermitResponse
+	(*ContextConfig)(nil),                       // 56: zama.sdk.v1alpha1.ContextConfig
+	(*ChainConfig)(nil),                         // 57: zama.sdk.v1alpha1.ChainConfig
+	(*ChainAuth)(nil),                           // 58: zama.sdk.v1alpha1.ChainAuth
+	(*NamedCredential)(nil),                     // 59: zama.sdk.v1alpha1.NamedCredential
 }
 var file_zama_sdk_v1alpha1_sidecar_proto_depIdxs = []int32{
-	4,  // 0: zama.sdk.v1alpha1.CreateContextRequest.account:type_name -> zama.sdk.v1alpha1.WalletAccount
-	38, // 1: zama.sdk.v1alpha1.CreateContextRequest.storage:type_name -> zama.sdk.v1alpha1.StorageBinding
-	38, // 2: zama.sdk.v1alpha1.CreateContextRequest.permit_storage:type_name -> zama.sdk.v1alpha1.StorageBinding
-	4,  // 3: zama.sdk.v1alpha1.UpdateAccountRequest.account:type_name -> zama.sdk.v1alpha1.WalletAccount
-	9,  // 4: zama.sdk.v1alpha1.OperationRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	12, // 5: zama.sdk.v1alpha1.ClearEntry.value:type_name -> zama.sdk.v1alpha1.ClearValue
-	9,  // 6: zama.sdk.v1alpha1.DecryptValuesRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	11, // 7: zama.sdk.v1alpha1.DecryptValuesRequest.inputs:type_name -> zama.sdk.v1alpha1.EncryptedInput
-	13, // 8: zama.sdk.v1alpha1.DecryptValuesResponse.values:type_name -> zama.sdk.v1alpha1.ClearEntry
-	9,  // 9: zama.sdk.v1alpha1.DelegatedDecryptValuesRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	11, // 10: zama.sdk.v1alpha1.DelegatedDecryptValuesRequest.inputs:type_name -> zama.sdk.v1alpha1.EncryptedInput
-	9,  // 11: zama.sdk.v1alpha1.DecryptPublicValuesRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	13, // 12: zama.sdk.v1alpha1.DecryptPublicValuesResponse.values:type_name -> zama.sdk.v1alpha1.ClearEntry
-	9,  // 13: zama.sdk.v1alpha1.DelegatedBatchDecryptValuesRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	11, // 14: zama.sdk.v1alpha1.DelegatedBatchDecryptValuesRequest.inputs:type_name -> zama.sdk.v1alpha1.EncryptedInput
-	12, // 15: zama.sdk.v1alpha1.BatchItem.value:type_name -> zama.sdk.v1alpha1.ClearValue
-	20, // 16: zama.sdk.v1alpha1.BatchItem.error:type_name -> zama.sdk.v1alpha1.SdkError
-	21, // 17: zama.sdk.v1alpha1.DelegatedBatchDecryptValuesResponse.items:type_name -> zama.sdk.v1alpha1.BatchItem
-	9,  // 18: zama.sdk.v1alpha1.PreparePermitRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	9,  // 19: zama.sdk.v1alpha1.RegisterPermitRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	9,  // 20: zama.sdk.v1alpha1.ContractsRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	9,  // 21: zama.sdk.v1alpha1.DelegationContractsRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	9,  // 22: zama.sdk.v1alpha1.RevokePermitsRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	29, // 23: zama.sdk.v1alpha1.RevokePermitsRequest.contracts:type_name -> zama.sdk.v1alpha1.ContractList
-	9,  // 24: zama.sdk.v1alpha1.ScopeRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	20, // 25: zama.sdk.v1alpha1.SignerReply.error:type_name -> zama.sdk.v1alpha1.SdkError
-	7,  // 26: zama.sdk.v1alpha1.SignerClientMessage.attach:type_name -> zama.sdk.v1alpha1.ContextRequest
-	32, // 27: zama.sdk.v1alpha1.SignerClientMessage.reply:type_name -> zama.sdk.v1alpha1.SignerReply
-	4,  // 28: zama.sdk.v1alpha1.SignerAction.account:type_name -> zama.sdk.v1alpha1.WalletAccount
-	20, // 29: zama.sdk.v1alpha1.SignerReplyError.error:type_name -> zama.sdk.v1alpha1.SdkError
-	1,  // 30: zama.sdk.v1alpha1.SignerServerMessage.attached:type_name -> zama.sdk.v1alpha1.Empty
-	34, // 31: zama.sdk.v1alpha1.SignerServerMessage.action:type_name -> zama.sdk.v1alpha1.SignerAction
-	35, // 32: zama.sdk.v1alpha1.SignerServerMessage.reply_error:type_name -> zama.sdk.v1alpha1.SignerReplyError
-	36, // 33: zama.sdk.v1alpha1.SignerServerMessage.cancelled:type_name -> zama.sdk.v1alpha1.SignerActionCancelled
-	1,  // 34: zama.sdk.v1alpha1.StorageBinding.memory:type_name -> zama.sdk.v1alpha1.Empty
-	0,  // 35: zama.sdk.v1alpha1.StorageAction.method:type_name -> zama.sdk.v1alpha1.StorageMethod
-	20, // 36: zama.sdk.v1alpha1.StorageReply.error:type_name -> zama.sdk.v1alpha1.SdkError
-	7,  // 37: zama.sdk.v1alpha1.StorageClientMessage.attach:type_name -> zama.sdk.v1alpha1.ContextRequest
-	40, // 38: zama.sdk.v1alpha1.StorageClientMessage.reply:type_name -> zama.sdk.v1alpha1.StorageReply
-	20, // 39: zama.sdk.v1alpha1.StorageReplyError.error:type_name -> zama.sdk.v1alpha1.SdkError
-	1,  // 40: zama.sdk.v1alpha1.StorageServerMessage.attached:type_name -> zama.sdk.v1alpha1.Empty
-	39, // 41: zama.sdk.v1alpha1.StorageServerMessage.action:type_name -> zama.sdk.v1alpha1.StorageAction
-	42, // 42: zama.sdk.v1alpha1.StorageServerMessage.reply_error:type_name -> zama.sdk.v1alpha1.StorageReplyError
-	2,  // 43: zama.sdk.v1alpha1.SidecarService.GetInfo:input_type -> zama.sdk.v1alpha1.GetInfoRequest
-	5,  // 44: zama.sdk.v1alpha1.SidecarService.CreateContext:input_type -> zama.sdk.v1alpha1.CreateContextRequest
-	7,  // 45: zama.sdk.v1alpha1.SidecarService.CloseContext:input_type -> zama.sdk.v1alpha1.ContextRequest
-	8,  // 46: zama.sdk.v1alpha1.SidecarService.UpdateAccount:input_type -> zama.sdk.v1alpha1.UpdateAccountRequest
-	33, // 47: zama.sdk.v1alpha1.SidecarService.SignerChannel:input_type -> zama.sdk.v1alpha1.SignerClientMessage
-	41, // 48: zama.sdk.v1alpha1.SidecarService.StorageChannel:input_type -> zama.sdk.v1alpha1.StorageClientMessage
-	14, // 49: zama.sdk.v1alpha1.SidecarService.DecryptValues:input_type -> zama.sdk.v1alpha1.DecryptValuesRequest
-	16, // 50: zama.sdk.v1alpha1.SidecarService.DelegatedDecryptValues:input_type -> zama.sdk.v1alpha1.DelegatedDecryptValuesRequest
-	17, // 51: zama.sdk.v1alpha1.SidecarService.DecryptPublicValues:input_type -> zama.sdk.v1alpha1.DecryptPublicValuesRequest
-	19, // 52: zama.sdk.v1alpha1.SidecarService.DelegatedBatchDecryptValues:input_type -> zama.sdk.v1alpha1.DelegatedBatchDecryptValuesRequest
-	23, // 53: zama.sdk.v1alpha1.SidecarService.PreparePermit:input_type -> zama.sdk.v1alpha1.PreparePermitRequest
-	25, // 54: zama.sdk.v1alpha1.SidecarService.RegisterPermit:input_type -> zama.sdk.v1alpha1.RegisterPermitRequest
-	26, // 55: zama.sdk.v1alpha1.SidecarService.GrantPermit:input_type -> zama.sdk.v1alpha1.ContractsRequest
-	27, // 56: zama.sdk.v1alpha1.SidecarService.GrantDelegationPermit:input_type -> zama.sdk.v1alpha1.DelegationContractsRequest
-	26, // 57: zama.sdk.v1alpha1.SidecarService.HasPermit:input_type -> zama.sdk.v1alpha1.ContractsRequest
-	27, // 58: zama.sdk.v1alpha1.SidecarService.HasDelegationPermit:input_type -> zama.sdk.v1alpha1.DelegationContractsRequest
-	30, // 59: zama.sdk.v1alpha1.SidecarService.RevokePermits:input_type -> zama.sdk.v1alpha1.RevokePermitsRequest
-	10, // 60: zama.sdk.v1alpha1.SidecarService.ClearPermits:input_type -> zama.sdk.v1alpha1.OperationRequest
-	10, // 61: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPair:input_type -> zama.sdk.v1alpha1.OperationRequest
-	31, // 62: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPairScope:input_type -> zama.sdk.v1alpha1.ScopeRequest
-	31, // 63: zama.sdk.v1alpha1.SidecarService.RevokeTransportKeyPair:input_type -> zama.sdk.v1alpha1.ScopeRequest
-	3,  // 64: zama.sdk.v1alpha1.SidecarService.GetInfo:output_type -> zama.sdk.v1alpha1.GetInfoResponse
-	6,  // 65: zama.sdk.v1alpha1.SidecarService.CreateContext:output_type -> zama.sdk.v1alpha1.CreateContextResponse
-	1,  // 66: zama.sdk.v1alpha1.SidecarService.CloseContext:output_type -> zama.sdk.v1alpha1.Empty
-	1,  // 67: zama.sdk.v1alpha1.SidecarService.UpdateAccount:output_type -> zama.sdk.v1alpha1.Empty
-	37, // 68: zama.sdk.v1alpha1.SidecarService.SignerChannel:output_type -> zama.sdk.v1alpha1.SignerServerMessage
-	43, // 69: zama.sdk.v1alpha1.SidecarService.StorageChannel:output_type -> zama.sdk.v1alpha1.StorageServerMessage
-	15, // 70: zama.sdk.v1alpha1.SidecarService.DecryptValues:output_type -> zama.sdk.v1alpha1.DecryptValuesResponse
-	15, // 71: zama.sdk.v1alpha1.SidecarService.DelegatedDecryptValues:output_type -> zama.sdk.v1alpha1.DecryptValuesResponse
-	18, // 72: zama.sdk.v1alpha1.SidecarService.DecryptPublicValues:output_type -> zama.sdk.v1alpha1.DecryptPublicValuesResponse
-	22, // 73: zama.sdk.v1alpha1.SidecarService.DelegatedBatchDecryptValues:output_type -> zama.sdk.v1alpha1.DelegatedBatchDecryptValuesResponse
-	24, // 74: zama.sdk.v1alpha1.SidecarService.PreparePermit:output_type -> zama.sdk.v1alpha1.PreparePermitResponse
-	1,  // 75: zama.sdk.v1alpha1.SidecarService.RegisterPermit:output_type -> zama.sdk.v1alpha1.Empty
-	1,  // 76: zama.sdk.v1alpha1.SidecarService.GrantPermit:output_type -> zama.sdk.v1alpha1.Empty
-	1,  // 77: zama.sdk.v1alpha1.SidecarService.GrantDelegationPermit:output_type -> zama.sdk.v1alpha1.Empty
-	28, // 78: zama.sdk.v1alpha1.SidecarService.HasPermit:output_type -> zama.sdk.v1alpha1.HasPermitResponse
-	28, // 79: zama.sdk.v1alpha1.SidecarService.HasDelegationPermit:output_type -> zama.sdk.v1alpha1.HasPermitResponse
-	1,  // 80: zama.sdk.v1alpha1.SidecarService.RevokePermits:output_type -> zama.sdk.v1alpha1.Empty
-	1,  // 81: zama.sdk.v1alpha1.SidecarService.ClearPermits:output_type -> zama.sdk.v1alpha1.Empty
-	1,  // 82: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPair:output_type -> zama.sdk.v1alpha1.Empty
-	1,  // 83: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPairScope:output_type -> zama.sdk.v1alpha1.Empty
-	1,  // 84: zama.sdk.v1alpha1.SidecarService.RevokeTransportKeyPair:output_type -> zama.sdk.v1alpha1.Empty
-	64, // [64:85] is the sub-list for method output_type
-	43, // [43:64] is the sub-list for method input_type
-	43, // [43:43] is the sub-list for extension type_name
-	43, // [43:43] is the sub-list for extension extendee
-	0,  // [0:43] is the sub-list for field type_name
+	56, // 0: zama.sdk.v1alpha1.CreateContextRequest.config:type_name -> zama.sdk.v1alpha1.ContextConfig
+	4,  // 1: zama.sdk.v1alpha1.CreateContextRequest.account:type_name -> zama.sdk.v1alpha1.WalletAccount
+	38, // 2: zama.sdk.v1alpha1.CreateContextRequest.storage:type_name -> zama.sdk.v1alpha1.StorageBinding
+	38, // 3: zama.sdk.v1alpha1.CreateContextRequest.permit_storage:type_name -> zama.sdk.v1alpha1.StorageBinding
+	4,  // 4: zama.sdk.v1alpha1.UpdateAccountRequest.account:type_name -> zama.sdk.v1alpha1.WalletAccount
+	9,  // 5: zama.sdk.v1alpha1.OperationRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	1,  // 6: zama.sdk.v1alpha1.ClearValue.undefined_value:type_name -> zama.sdk.v1alpha1.Empty
+	12, // 7: zama.sdk.v1alpha1.ClearEntry.value:type_name -> zama.sdk.v1alpha1.ClearValue
+	9,  // 8: zama.sdk.v1alpha1.DecryptValuesRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	11, // 9: zama.sdk.v1alpha1.DecryptValuesRequest.inputs:type_name -> zama.sdk.v1alpha1.EncryptedInput
+	13, // 10: zama.sdk.v1alpha1.DecryptValuesResponse.values:type_name -> zama.sdk.v1alpha1.ClearEntry
+	9,  // 11: zama.sdk.v1alpha1.DelegatedDecryptValuesRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	11, // 12: zama.sdk.v1alpha1.DelegatedDecryptValuesRequest.inputs:type_name -> zama.sdk.v1alpha1.EncryptedInput
+	9,  // 13: zama.sdk.v1alpha1.DecryptPublicValuesRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	13, // 14: zama.sdk.v1alpha1.DecryptPublicValuesResponse.values:type_name -> zama.sdk.v1alpha1.ClearEntry
+	9,  // 15: zama.sdk.v1alpha1.DelegatedBatchDecryptValuesRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	11, // 16: zama.sdk.v1alpha1.DelegatedBatchDecryptValuesRequest.inputs:type_name -> zama.sdk.v1alpha1.EncryptedInput
+	12, // 17: zama.sdk.v1alpha1.BatchItem.value:type_name -> zama.sdk.v1alpha1.ClearValue
+	20, // 18: zama.sdk.v1alpha1.BatchItem.error:type_name -> zama.sdk.v1alpha1.SdkError
+	21, // 19: zama.sdk.v1alpha1.DelegatedBatchDecryptValuesResponse.items:type_name -> zama.sdk.v1alpha1.BatchItem
+	9,  // 20: zama.sdk.v1alpha1.PreparePermitRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	9,  // 21: zama.sdk.v1alpha1.RegisterPermitRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	9,  // 22: zama.sdk.v1alpha1.ContractsRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	9,  // 23: zama.sdk.v1alpha1.DelegationContractsRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	9,  // 24: zama.sdk.v1alpha1.RevokePermitsRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	29, // 25: zama.sdk.v1alpha1.RevokePermitsRequest.contracts:type_name -> zama.sdk.v1alpha1.ContractList
+	9,  // 26: zama.sdk.v1alpha1.ScopeRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	20, // 27: zama.sdk.v1alpha1.SignerReply.error:type_name -> zama.sdk.v1alpha1.SdkError
+	7,  // 28: zama.sdk.v1alpha1.SignerClientMessage.attach:type_name -> zama.sdk.v1alpha1.ContextRequest
+	32, // 29: zama.sdk.v1alpha1.SignerClientMessage.reply:type_name -> zama.sdk.v1alpha1.SignerReply
+	4,  // 30: zama.sdk.v1alpha1.SignerAction.account:type_name -> zama.sdk.v1alpha1.WalletAccount
+	20, // 31: zama.sdk.v1alpha1.SignerReplyError.error:type_name -> zama.sdk.v1alpha1.SdkError
+	1,  // 32: zama.sdk.v1alpha1.SignerServerMessage.attached:type_name -> zama.sdk.v1alpha1.Empty
+	34, // 33: zama.sdk.v1alpha1.SignerServerMessage.action:type_name -> zama.sdk.v1alpha1.SignerAction
+	35, // 34: zama.sdk.v1alpha1.SignerServerMessage.reply_error:type_name -> zama.sdk.v1alpha1.SignerReplyError
+	36, // 35: zama.sdk.v1alpha1.SignerServerMessage.cancelled:type_name -> zama.sdk.v1alpha1.SignerActionCancelled
+	1,  // 36: zama.sdk.v1alpha1.StorageBinding.memory:type_name -> zama.sdk.v1alpha1.Empty
+	0,  // 37: zama.sdk.v1alpha1.StorageAction.method:type_name -> zama.sdk.v1alpha1.StorageMethod
+	20, // 38: zama.sdk.v1alpha1.StorageReply.error:type_name -> zama.sdk.v1alpha1.SdkError
+	1,  // 39: zama.sdk.v1alpha1.StorageReply.not_found:type_name -> zama.sdk.v1alpha1.Empty
+	1,  // 40: zama.sdk.v1alpha1.StorageReply.ack:type_name -> zama.sdk.v1alpha1.Empty
+	7,  // 41: zama.sdk.v1alpha1.StorageClientMessage.attach:type_name -> zama.sdk.v1alpha1.ContextRequest
+	40, // 42: zama.sdk.v1alpha1.StorageClientMessage.reply:type_name -> zama.sdk.v1alpha1.StorageReply
+	20, // 43: zama.sdk.v1alpha1.StorageReplyError.error:type_name -> zama.sdk.v1alpha1.SdkError
+	1,  // 44: zama.sdk.v1alpha1.StorageServerMessage.attached:type_name -> zama.sdk.v1alpha1.Empty
+	39, // 45: zama.sdk.v1alpha1.StorageServerMessage.action:type_name -> zama.sdk.v1alpha1.StorageAction
+	42, // 46: zama.sdk.v1alpha1.StorageServerMessage.reply_error:type_name -> zama.sdk.v1alpha1.StorageReplyError
+	13, // 47: zama.sdk.v1alpha1.DelegatedDecryptValuesResponse.values:type_name -> zama.sdk.v1alpha1.ClearEntry
+	57, // 48: zama.sdk.v1alpha1.ContextConfig.chains:type_name -> zama.sdk.v1alpha1.ChainConfig
+	58, // 49: zama.sdk.v1alpha1.ChainConfig.auth:type_name -> zama.sdk.v1alpha1.ChainAuth
+	59, // 50: zama.sdk.v1alpha1.ChainAuth.api_key_header:type_name -> zama.sdk.v1alpha1.NamedCredential
+	59, // 51: zama.sdk.v1alpha1.ChainAuth.api_key_cookie:type_name -> zama.sdk.v1alpha1.NamedCredential
+	2,  // 52: zama.sdk.v1alpha1.SidecarService.GetInfo:input_type -> zama.sdk.v1alpha1.GetInfoRequest
+	5,  // 53: zama.sdk.v1alpha1.SidecarService.CreateContext:input_type -> zama.sdk.v1alpha1.CreateContextRequest
+	7,  // 54: zama.sdk.v1alpha1.SidecarService.CloseContext:input_type -> zama.sdk.v1alpha1.ContextRequest
+	8,  // 55: zama.sdk.v1alpha1.SidecarService.UpdateAccount:input_type -> zama.sdk.v1alpha1.UpdateAccountRequest
+	33, // 56: zama.sdk.v1alpha1.SidecarService.SignerChannel:input_type -> zama.sdk.v1alpha1.SignerClientMessage
+	41, // 57: zama.sdk.v1alpha1.SidecarService.StorageChannel:input_type -> zama.sdk.v1alpha1.StorageClientMessage
+	14, // 58: zama.sdk.v1alpha1.SidecarService.DecryptValues:input_type -> zama.sdk.v1alpha1.DecryptValuesRequest
+	16, // 59: zama.sdk.v1alpha1.SidecarService.DelegatedDecryptValues:input_type -> zama.sdk.v1alpha1.DelegatedDecryptValuesRequest
+	17, // 60: zama.sdk.v1alpha1.SidecarService.DecryptPublicValues:input_type -> zama.sdk.v1alpha1.DecryptPublicValuesRequest
+	19, // 61: zama.sdk.v1alpha1.SidecarService.DelegatedBatchDecryptValues:input_type -> zama.sdk.v1alpha1.DelegatedBatchDecryptValuesRequest
+	23, // 62: zama.sdk.v1alpha1.SidecarService.PreparePermit:input_type -> zama.sdk.v1alpha1.PreparePermitRequest
+	25, // 63: zama.sdk.v1alpha1.SidecarService.RegisterPermit:input_type -> zama.sdk.v1alpha1.RegisterPermitRequest
+	26, // 64: zama.sdk.v1alpha1.SidecarService.GrantPermit:input_type -> zama.sdk.v1alpha1.ContractsRequest
+	27, // 65: zama.sdk.v1alpha1.SidecarService.GrantDelegationPermit:input_type -> zama.sdk.v1alpha1.DelegationContractsRequest
+	26, // 66: zama.sdk.v1alpha1.SidecarService.HasPermit:input_type -> zama.sdk.v1alpha1.ContractsRequest
+	27, // 67: zama.sdk.v1alpha1.SidecarService.HasDelegationPermit:input_type -> zama.sdk.v1alpha1.DelegationContractsRequest
+	30, // 68: zama.sdk.v1alpha1.SidecarService.RevokePermits:input_type -> zama.sdk.v1alpha1.RevokePermitsRequest
+	10, // 69: zama.sdk.v1alpha1.SidecarService.ClearPermits:input_type -> zama.sdk.v1alpha1.OperationRequest
+	10, // 70: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPair:input_type -> zama.sdk.v1alpha1.OperationRequest
+	31, // 71: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPairScope:input_type -> zama.sdk.v1alpha1.ScopeRequest
+	31, // 72: zama.sdk.v1alpha1.SidecarService.RevokeTransportKeyPair:input_type -> zama.sdk.v1alpha1.ScopeRequest
+	3,  // 73: zama.sdk.v1alpha1.SidecarService.GetInfo:output_type -> zama.sdk.v1alpha1.GetInfoResponse
+	6,  // 74: zama.sdk.v1alpha1.SidecarService.CreateContext:output_type -> zama.sdk.v1alpha1.CreateContextResponse
+	44, // 75: zama.sdk.v1alpha1.SidecarService.CloseContext:output_type -> zama.sdk.v1alpha1.CloseContextResponse
+	45, // 76: zama.sdk.v1alpha1.SidecarService.UpdateAccount:output_type -> zama.sdk.v1alpha1.UpdateAccountResponse
+	37, // 77: zama.sdk.v1alpha1.SidecarService.SignerChannel:output_type -> zama.sdk.v1alpha1.SignerServerMessage
+	43, // 78: zama.sdk.v1alpha1.SidecarService.StorageChannel:output_type -> zama.sdk.v1alpha1.StorageServerMessage
+	15, // 79: zama.sdk.v1alpha1.SidecarService.DecryptValues:output_type -> zama.sdk.v1alpha1.DecryptValuesResponse
+	54, // 80: zama.sdk.v1alpha1.SidecarService.DelegatedDecryptValues:output_type -> zama.sdk.v1alpha1.DelegatedDecryptValuesResponse
+	18, // 81: zama.sdk.v1alpha1.SidecarService.DecryptPublicValues:output_type -> zama.sdk.v1alpha1.DecryptPublicValuesResponse
+	22, // 82: zama.sdk.v1alpha1.SidecarService.DelegatedBatchDecryptValues:output_type -> zama.sdk.v1alpha1.DelegatedBatchDecryptValuesResponse
+	24, // 83: zama.sdk.v1alpha1.SidecarService.PreparePermit:output_type -> zama.sdk.v1alpha1.PreparePermitResponse
+	46, // 84: zama.sdk.v1alpha1.SidecarService.RegisterPermit:output_type -> zama.sdk.v1alpha1.RegisterPermitResponse
+	47, // 85: zama.sdk.v1alpha1.SidecarService.GrantPermit:output_type -> zama.sdk.v1alpha1.GrantPermitResponse
+	48, // 86: zama.sdk.v1alpha1.SidecarService.GrantDelegationPermit:output_type -> zama.sdk.v1alpha1.GrantDelegationPermitResponse
+	28, // 87: zama.sdk.v1alpha1.SidecarService.HasPermit:output_type -> zama.sdk.v1alpha1.HasPermitResponse
+	55, // 88: zama.sdk.v1alpha1.SidecarService.HasDelegationPermit:output_type -> zama.sdk.v1alpha1.HasDelegationPermitResponse
+	49, // 89: zama.sdk.v1alpha1.SidecarService.RevokePermits:output_type -> zama.sdk.v1alpha1.RevokePermitsResponse
+	50, // 90: zama.sdk.v1alpha1.SidecarService.ClearPermits:output_type -> zama.sdk.v1alpha1.ClearPermitsResponse
+	51, // 91: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPair:output_type -> zama.sdk.v1alpha1.WarmTransportKeyPairResponse
+	52, // 92: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPairScope:output_type -> zama.sdk.v1alpha1.WarmTransportKeyPairScopeResponse
+	53, // 93: zama.sdk.v1alpha1.SidecarService.RevokeTransportKeyPair:output_type -> zama.sdk.v1alpha1.RevokeTransportKeyPairResponse
+	73, // [73:94] is the sub-list for method output_type
+	52, // [52:73] is the sub-list for method input_type
+	52, // [52:52] is the sub-list for extension type_name
+	52, // [52:52] is the sub-list for extension extendee
+	0,  // [0:52] is the sub-list for field type_name
 }
 
 func init() { file_zama_sdk_v1alpha1_sidecar_proto_init() }
@@ -3139,7 +4203,15 @@ func file_zama_sdk_v1alpha1_sidecar_proto_init() {
 	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[16].OneofWrappers = []any{}
 	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[18].OneofWrappers = []any{}
 	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[19].OneofWrappers = []any{}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[20].OneofWrappers = []any{
+		(*BatchItem_Value)(nil),
+		(*BatchItem_Error)(nil),
+	}
 	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[22].OneofWrappers = []any{}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[31].OneofWrappers = []any{
+		(*SignerReply_Signature)(nil),
+		(*SignerReply_Error)(nil),
+	}
 	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[32].OneofWrappers = []any{
 		(*SignerClientMessage_Attach)(nil),
 		(*SignerClientMessage_Reply)(nil),
@@ -3155,7 +4227,12 @@ func file_zama_sdk_v1alpha1_sidecar_proto_init() {
 		(*StorageBinding_Persistent)(nil),
 		(*StorageBinding_Application)(nil),
 	}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[39].OneofWrappers = []any{}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[39].OneofWrappers = []any{
+		(*StorageReply_Value)(nil),
+		(*StorageReply_Error)(nil),
+		(*StorageReply_NotFound)(nil),
+		(*StorageReply_Ack)(nil),
+	}
 	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[40].OneofWrappers = []any{
 		(*StorageClientMessage_Attach)(nil),
 		(*StorageClientMessage_Reply)(nil),
@@ -3165,13 +4242,21 @@ func file_zama_sdk_v1alpha1_sidecar_proto_init() {
 		(*StorageServerMessage_Action)(nil),
 		(*StorageServerMessage_ReplyError)(nil),
 	}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[55].OneofWrappers = []any{}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[56].OneofWrappers = []any{}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[57].OneofWrappers = []any{
+		(*ChainAuth_BearerToken)(nil),
+		(*ChainAuth_ApiKeyHeader)(nil),
+		(*ChainAuth_ApiKeyCookie)(nil),
+	}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[58].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zama_sdk_v1alpha1_sidecar_proto_rawDesc), len(file_zama_sdk_v1alpha1_sidecar_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   43,
+			NumMessages:   59,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

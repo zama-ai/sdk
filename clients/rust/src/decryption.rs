@@ -14,7 +14,8 @@ pub struct DelegatedOptions {
 pub struct DelegatedBatchOptions {
     pub account_address: Option<Address>,
     pub wait_for_propagation: Option<bool>,
-    pub max_concurrency: Option<f64>,
+    /// Omission retains the SDK default; zero means unlimited concurrency.
+    pub max_concurrency: Option<u32>,
 }
 #[derive(Debug)]
 pub struct PublicDecryption {
@@ -33,7 +34,7 @@ impl Decryption {
     pub async fn decrypt_values(
         &self,
         inputs: &[EncryptedInput],
-        timeout_ms: Option<f64>,
+        timeout_ms: Option<u32>,
     ) -> Result<ClearValues> {
         let response = rpc!(
             &self.0,
@@ -68,7 +69,7 @@ impl Decryption {
     pub async fn decrypt_public_values(
         &self,
         encrypted_values: &[B256],
-        timeout_ms: Option<f64>,
+        timeout_ms: Option<u32>,
     ) -> Result<PublicDecryption> {
         let response = rpc!(
             &self.0,
@@ -111,9 +112,11 @@ impl Decryption {
                     item.contract_address.len() == 20,
                     "invalid batch contract address"
                 );
-                let result = match (item.value, item.error) {
-                    (Some(value), None) => Ok(value.try_into()?),
-                    (None, Some(error)) => Err(error.into()),
+                let result = match item.result {
+                    Some(crate::generated::batch_item::Result::Value(value)) => {
+                        Ok(value.try_into()?)
+                    }
+                    Some(crate::generated::batch_item::Result::Error(error)) => Err(error.into()),
                     _ => anyhow::bail!("invalid batch result"),
                 };
                 Ok(BatchItem {

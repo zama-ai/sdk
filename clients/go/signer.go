@@ -73,13 +73,15 @@ func (s *SDKContext) dispatchSignature(action *pb.SignerAction, sign SignTypedDa
 			err = json.Unmarshal([]byte(action.TypedDataJson), &typed)
 		}
 		if err == nil {
-			reply.Signature, err = sign(ctx, WalletAccount{Address: common.BytesToAddress(action.Account.Address), ChainID: action.Account.ChainId}, typed)
+			var signature []byte
+			signature, err = sign(ctx, WalletAccount{Address: common.BytesToAddress(action.Account.Address), ChainID: action.Account.ChainId}, typed)
+			reply.Result = &pb.SignerReply_Signature{Signature: signature}
 		}
 		if ctx.Err() != nil {
 			return
 		}
 		if err != nil {
-			reply.Error = signingError(err)
+			reply.Result = &pb.SignerReply_Error{Error: signingError(err)}
 		}
 		send(reply)
 	}()

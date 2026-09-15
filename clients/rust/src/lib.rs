@@ -39,7 +39,7 @@ pub use decryption::{
 };
 pub use error::{RpcError, SdkError};
 pub use num_bigint::BigInt;
-pub use permits::{Offline, Permits, PreparePermit};
+pub use permits::{Offline, Permits, PreparePermit, PreparedPermit};
 pub use signer::{Signer, SigningRequest};
 pub use storage::{ApplicationStorage, MemoryStorage, NativeStorage, Storage};
 pub use types::{ClearValue, ClearValues, EncryptedInput, WalletAccount};
@@ -121,11 +121,7 @@ impl Client {
         .sdk_version)
     }
     #[cfg(test)]
-    async fn create_context(
-        &self,
-        config: &serde_json::Value,
-        signer: SignerConfig,
-    ) -> Result<Sdk> {
+    async fn create_context(&self, config: &SdkConfig, signer: SignerConfig) -> Result<Sdk> {
         let context_id = self
             .create_context_with_storage(config, signer, None, None)
             .await?;
@@ -138,7 +134,7 @@ impl Client {
     }
     async fn create_context_with_storage(
         &self,
-        config: &serde_json::Value,
+        config: &SdkConfig,
         signer: SignerConfig,
         storage: Option<generated::StorageBinding>,
         permit_storage: Option<generated::StorageBinding>,
@@ -150,7 +146,7 @@ impl Client {
         let mut inner = self.inner.clone();
         let response = unary(
             generated::CreateContextRequest {
-                config_json: serde_json::to_string(config)?,
+                config: Some(config.try_into()?),
                 signer_enabled,
                 account,
                 storage,

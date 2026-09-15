@@ -91,7 +91,7 @@ async fn managed_channel_wait_ignores_stale_replies_and_preserves_other_errors()
                             code: code.into(),
                             message: "backend unavailable".into(),
                             retryable: true,
-                            retry_after_seconds: Some(1.5),
+                            retry_after_seconds: Some(1),
                         }),
                     },
                 )),
@@ -119,7 +119,7 @@ async fn managed_channel_wait_ignores_stale_replies_and_preserves_other_errors()
         let sdk_error = error.downcast_ref::<crate::SdkError>().unwrap();
         assert_eq!(sdk_error.code, "STORAGE_FAILED");
         assert!(sdk_error.retryable);
-        assert_eq!(sdk_error.retry_after_seconds, Some(1.5));
+        assert_eq!(sdk_error.retry_after_seconds, Some(1));
     }
     sdk.close().await.unwrap();
 }

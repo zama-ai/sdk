@@ -2,7 +2,6 @@ package sidecar
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"path/filepath"
 
@@ -51,7 +50,7 @@ func (c *Client) Info(ctx context.Context) (*Info, error) {
 }
 
 func (c *Client) CreateContext(ctx context.Context, config SDKConfig, signer SignerConfig) (*SDKContext, error) {
-	serialized, err := json.Marshal(config)
+	serialized, err := config.wire()
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +67,7 @@ func (c *Client) CreateContext(ctx context.Context, config SDKConfig, signer Sig
 		}
 	}
 	var trailers metadata.MD
-	response, err := c.rpc.CreateContext(ctx, &pb.CreateContextRequest{ConfigJson: string(serialized), SignerEnabled: signer.SignTypedData != nil, Account: accountWire(signer.Account), Storage: storage, PermitStorage: permits}, grpc.Trailer(&trailers))
+	response, err := c.rpc.CreateContext(ctx, &pb.CreateContextRequest{Config: serialized, SignerEnabled: signer.SignTypedData != nil, Account: accountWire(signer.Account), Storage: storage, PermitStorage: permits}, grpc.Trailer(&trailers))
 	if err != nil {
 		return nil, rpcError(err, trailers)
 	}

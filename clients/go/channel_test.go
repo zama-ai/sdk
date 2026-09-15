@@ -62,14 +62,14 @@ func waitFor(t *testing.T, condition func() bool) {
 
 func TestRPCErrorPreservesCallbackMetadata(t *testing.T) {
 	cause := status.Error(codes.ResourceExhausted, "retry later")
-	err := rpcError(cause, metadata.Pairs("zama-error-code", "RATE_LIMITED", "zama-error-retryable", "true", "zama-error-retry-after-seconds", "2.5"))
+	err := rpcError(cause, metadata.Pairs("zama-error-code", "RATE_LIMITED", "zama-error-retryable", "true", "zama-error-retry-after-seconds", "2"))
 	wrapped := fmt.Errorf("storage: %w", err)
 	var sdk *SDKError
 	if !errors.As(wrapped, &sdk) || !errors.Is(wrapped, cause) {
 		t.Fatal("lost error chain")
 	}
 	wire := callbackError(wrapped, "STORAGE_FAILED")
-	if wire.Code != "RATE_LIMITED" || !wire.Retryable || wire.GetRetryAfterSeconds() != 2.5 {
+	if wire.Code != "RATE_LIMITED" || !wire.Retryable || wire.GetRetryAfterSeconds() != 2 {
 		t.Fatalf("lost metadata: %v", wire)
 	}
 	if status.Code(err) != codes.ResourceExhausted {

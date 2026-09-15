@@ -79,7 +79,7 @@ func TestClearValueTypesAndPrecision(t *testing.T) {
 		{&pb.ClearValue{Value: &pb.ClearValue_BigintValue{BigintValue: large}}, ClearBigInt, true},
 		{&pb.ClearValue{Value: &pb.ClearValue_BoolValue{BoolValue: false}}, ClearBool, true},
 		{&pb.ClearValue{Value: &pb.ClearValue_StringValue{StringValue: "0x1234"}}, ClearString, true},
-		{&pb.ClearValue{Value: &pb.ClearValue_UndefinedValue{UndefinedValue: true}}, ClearUndefined, true},
+		{&pb.ClearValue{Value: &pb.ClearValue_UndefinedValue{UndefinedValue: &pb.Empty{}}}, ClearUndefined, true},
 		{&pb.ClearValue{Value: &pb.ClearValue_BigintValue{BigintValue: "01"}}, 0, false},
 		{&pb.ClearValue{}, 0, false}, {nil, 0, false},
 	} {
@@ -97,6 +97,8 @@ func TestClearValueTypesAndPrecision(t *testing.T) {
 	}
 }
 func TestSDKContextParametersAndOptionalDefaults(t *testing.T) {
+	envelope := []byte{0, 255, 128, 1}
+	typedData := `{ "primaryType": "Permit", "message": {"value":"12"} }`
 	var sequence atomic.Uint64
 	requests := make(chan any, 32)
 	client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, info *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
@@ -107,7 +109,7 @@ func TestSDKContextParametersAndOptionalDefaults(t *testing.T) {
 		requests <- request
 		switch request.(type) {
 		case *pb.PreparePermitRequest:
-			return &pb.PreparePermitResponse{PreparedPermitJson: "{}"}, nil
+			return &pb.PreparePermitResponse{PreparedPermit: envelope, TypedDataJson: typedData}, nil
 		case *pb.DecryptValuesRequest, *pb.DelegatedDecryptValuesRequest:
 			return &pb.DecryptValuesResponse{}, nil
 		case *pb.DecryptPublicValuesRequest:
@@ -133,10 +135,13 @@ func TestSDKContextParametersAndOptionalDefaults(t *testing.T) {
 		t.Fatal("contexts not isolated")
 	}
 	signer, delegator, contract := common.Address{1}, common.Address{2}, common.Address{3}
-	for _, duration := range []*float64{nil, number(0), number(1.5)} {
-		_, err := first.PreparePermit(ctx, signer, []common.Address{contract}, PreparePermitOptions{Delegator: &delegator, DurationDays: duration})
+	for _, duration := range []*uint32{nil, number(0), number(2)} {
+		prepared, err := first.PreparePermit(ctx, signer, []common.Address{contract}, PreparePermitOptions{Delegator: &delegator, DurationDays: duration})
 		if err != nil {
 			t.Fatal(err)
+		}
+		if !bytes.Equal(prepared.Envelope, envelope) || prepared.TypedDataJSON != typedData {
+			t.Fatal("prepared permit envelope and signing payload changed")
 		}
 		r := (<-requests).(*pb.PreparePermitRequest)
 		if !bytes.Equal(r.SignerAddress, signer.Bytes()) || !bytes.Equal(r.DelegatorAddress, delegator.Bytes()) || r.Operation.ContextId != first.id {
@@ -198,10 +203,13 @@ func TestSDKContextParametersAndOptionalDefaults(t *testing.T) {
 	if (<-requests).(*pb.UpdateAccountRequest).Account != nil {
 		t.Fatal("wallet disconnect lost")
 	}
-	if err := first.RegisterPermit(ctx, "{}", []byte{1}); err != nil {
+	if err := first.RegisterPermit(ctx, envelope, []byte{1}); err != nil {
 		t.Fatal("client prevalidated SDK signature")
 	}
-	<-requests
+	registered := (<-requests).(*pb.RegisterPermitRequest)
+	if !bytes.Equal(registered.PreparedPermit, envelope) {
+		t.Fatal("opaque envelope changed during registration")
+	}
 	for _, operation := range []func() error{
 		func() error { return first.GrantPermit(ctx, []common.Address{contract}) },
 		func() error { return first.GrantDelegationPermit(ctx, delegator, []common.Address{contract}) },
@@ -220,15 +228,15 @@ func TestSDKContextParametersAndOptionalDefaults(t *testing.T) {
 		<-requests
 	}
 }
-func number(n float64) *float64 { return &n }
+func number(n uint32) *uint32 { return &n }
 func TestRPCErrorTrailers(t *testing.T) {
 	client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(ctx context.Context, _ any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
-		grpc.SetTrailer(ctx, metadata.Pairs("zama-error-code", "RPC_RATE_LIMITED", "zama-error-retryable", "true", "zama-error-retry-after-seconds", "1.5"))
+		grpc.SetTrailer(ctx, metadata.Pairs("zama-error-code", "RPC_RATE_LIMITED", "zama-error-retryable", "true", "zama-error-retry-after-seconds", "2"))
 		return nil, status.Error(codes.ResourceExhausted, "slow down")
 	})
 	_, err := client.Info(testContext(t))
 	var rpc *RPCError
-	if !errors.As(err, &rpc) || rpc.Code != "RPC_RATE_LIMITED" || !rpc.Retryable || rpc.RetryAfterSeconds == nil || *rpc.RetryAfterSeconds != 1.5 || status.Code(err) != codes.ResourceExhausted || status.Code(errors.Unwrap(err)) != codes.ResourceExhausted {
+	if !errors.As(err, &rpc) || rpc.Code != "RPC_RATE_LIMITED" || !rpc.Retryable || rpc.RetryAfterSeconds == nil || *rpc.RetryAfterSeconds != 2 || status.Code(err) != codes.ResourceExhausted || status.Code(errors.Unwrap(err)) != codes.ResourceExhausted {
 		t.Fatalf("lost SDK error: %#v %v", rpc, err)
 	}
 }
