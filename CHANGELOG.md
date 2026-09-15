@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.7.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.7.0-alpha.1...v3.7.0-alpha.2) (2026-09-15)
+
+### Features
+
+- extend KMS recovery & invalidation to V2 permits ([#727](https://github.com/zama-ai/sdk/issues/727)) ([e3eec34]())
+
 ## [3.7.0-alpha.1](https://github.com/zama-ai/sdk/compare/v3.6.0...v3.7.0-alpha.1) (2026-09-14)
 
 ### Features
