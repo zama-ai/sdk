@@ -78,6 +78,7 @@ export async function testServer(factory: ContextFactory) {
   const streams: ClientDuplexStream<SignerClientMessage, SignerServerMessage>[] = [];
   return {
     client,
+    socket,
     async attachSigner(contextId: string, sign: (action: SignerAction) => Promise<Hex>) {
       const stream = client.signerChannel();
       streams.push(stream);

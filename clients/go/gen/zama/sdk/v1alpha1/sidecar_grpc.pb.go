@@ -25,6 +25,7 @@ const (
 	SidecarService_UpdateAccount_FullMethodName               = "/zama.sdk.v1alpha1.SidecarService/UpdateAccount"
 	SidecarService_SignerChannel_FullMethodName               = "/zama.sdk.v1alpha1.SidecarService/SignerChannel"
 	SidecarService_StorageChannel_FullMethodName              = "/zama.sdk.v1alpha1.SidecarService/StorageChannel"
+	SidecarService_Encrypt_FullMethodName                     = "/zama.sdk.v1alpha1.SidecarService/Encrypt"
 	SidecarService_DecryptValues_FullMethodName               = "/zama.sdk.v1alpha1.SidecarService/DecryptValues"
 	SidecarService_DelegatedDecryptValues_FullMethodName      = "/zama.sdk.v1alpha1.SidecarService/DelegatedDecryptValues"
 	SidecarService_DecryptPublicValues_FullMethodName         = "/zama.sdk.v1alpha1.SidecarService/DecryptPublicValues"
@@ -61,6 +62,8 @@ type SidecarServiceClient interface {
 	SignerChannel(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[SignerClientMessage, SignerServerMessage], error)
 	// Attach once per context to serve application storage; keys and values remain opaque.
 	StorageChannel(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[StorageClientMessage, StorageServerMessage], error)
+	// Calls sdk.encrypt with explicit user/contract binding; no wallet signing is required.
+	Encrypt(ctx context.Context, in *EncryptRequest, opts ...grpc.CallOption) (*EncryptResponse, error)
 	// Calls decryption.decryptValues, including automatic permit acquisition and credential recovery.
 	DecryptValues(ctx context.Context, in *DecryptValuesRequest, opts ...grpc.CallOption) (*DecryptValuesResponse, error)
 	// Calls decryption.delegatedDecryptValues; an omitted account uses the delegator address.
@@ -166,6 +169,16 @@ func (c *sidecarServiceClient) StorageChannel(ctx context.Context, opts ...grpc.
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type SidecarService_StorageChannelClient = grpc.BidiStreamingClient[StorageClientMessage, StorageServerMessage]
+
+func (c *sidecarServiceClient) Encrypt(ctx context.Context, in *EncryptRequest, opts ...grpc.CallOption) (*EncryptResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EncryptResponse)
+	err := c.cc.Invoke(ctx, SidecarService_Encrypt_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
 
 func (c *sidecarServiceClient) DecryptValues(ctx context.Context, in *DecryptValuesRequest, opts ...grpc.CallOption) (*DecryptValuesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
@@ -336,6 +349,8 @@ type SidecarServiceServer interface {
 	SignerChannel(grpc.BidiStreamingServer[SignerClientMessage, SignerServerMessage]) error
 	// Attach once per context to serve application storage; keys and values remain opaque.
 	StorageChannel(grpc.BidiStreamingServer[StorageClientMessage, StorageServerMessage]) error
+	// Calls sdk.encrypt with explicit user/contract binding; no wallet signing is required.
+	Encrypt(context.Context, *EncryptRequest) (*EncryptResponse, error)
 	// Calls decryption.decryptValues, including automatic permit acquisition and credential recovery.
 	DecryptValues(context.Context, *DecryptValuesRequest) (*DecryptValuesResponse, error)
 	// Calls decryption.delegatedDecryptValues; an omitted account uses the delegator address.
@@ -393,6 +408,9 @@ func (UnimplementedSidecarServiceServer) SignerChannel(grpc.BidiStreamingServer[
 }
 func (UnimplementedSidecarServiceServer) StorageChannel(grpc.BidiStreamingServer[StorageClientMessage, StorageServerMessage]) error {
 	return status.Error(codes.Unimplemented, "method StorageChannel not implemented")
+}
+func (UnimplementedSidecarServiceServer) Encrypt(context.Context, *EncryptRequest) (*EncryptResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Encrypt not implemented")
 }
 func (UnimplementedSidecarServiceServer) DecryptValues(context.Context, *DecryptValuesRequest) (*DecryptValuesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DecryptValues not implemented")
@@ -545,6 +563,24 @@ func _SidecarService_StorageChannel_Handler(srv interface{}, stream grpc.ServerS
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type SidecarService_StorageChannelServer = grpc.BidiStreamingServer[StorageClientMessage, StorageServerMessage]
+
+func _SidecarService_Encrypt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EncryptRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SidecarServiceServer).Encrypt(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SidecarService_Encrypt_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SidecarServiceServer).Encrypt(ctx, req.(*EncryptRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
 
 func _SidecarService_DecryptValues_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DecryptValuesRequest)
@@ -838,6 +874,10 @@ var SidecarService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateAccount",
 			Handler:    _SidecarService_UpdateAccount_Handler,
+		},
+		{
+			MethodName: "Encrypt",
+			Handler:    _SidecarService_Encrypt_Handler,
 		},
 		{
 			MethodName: "DecryptValues",

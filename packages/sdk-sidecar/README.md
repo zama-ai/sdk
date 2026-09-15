@@ -1,15 +1,17 @@
-# Decrypt a confidential balance from Rust or Go
+# Encrypt inputs and decrypt a balance from Rust or Go
 
-Use the maintained, permanently beta sidecar of `@zama-fhe/sdk` for external partner applications. Run it in Docker and decrypt a balance from a native Rust or Go application. Both examples print:
+Use the maintained, permanently beta sidecar of `@zama-fhe/sdk` for external partner applications. Run it in Docker to encrypt contract inputs and decrypt a balance from a native Rust or Go application. Both examples print:
 
 ```text
+Encrypted inputs: <ordered encrypted values>
+Input proof: 0x<proof bytes>
 User Address: <wallet address>
 Token: <name> (<token address>) https://eth-sepolia.blockscout.com/token/<token address>
 Encrypted balance: <ciphertext handle>
 Decrypted balance: <raw amount>
 ```
 
-The native application reads the token using Alloy or go-ethereum. It passes the encrypted handle to `sdk.decryption.decryptValues` through the sidecar. The SDK requests a wallet signature only when its credential flow needs one.
+The encryption step passes typed plaintext inputs and explicit user/contract addresses to `sdk.encrypt`. The native application reads the token using Alloy or go-ethereum. It passes the encrypted handle to `sdk.decryption.decryptValues` through the sidecar. The SDK requests a wallet signature only when its credential flow needs one.
 
 ## Configure the examples
 
@@ -29,7 +31,7 @@ export SIDECAR_UID="$(id -u)"
 export SIDECAR_GID="$(id -g)"
 
 dc() {
-  docker compose --env-file .env.sidecar.local \
+  docker compose --project-name sdk363-encryption --env-file .env.sidecar.local \
     -f packages/sdk-sidecar/compose.yaml "$@"
 }
 ```
@@ -54,7 +56,7 @@ dc run --rm go
 dc run --rm rust
 ```
 
-Use the [Go example](../../clients/go/examples/balance/main.go) or [Rust example](../../clients/rust/examples/balance/main.rs) as a starting point. Each entry point loads shared configuration, connects its wallet/provider, creates an SDK context, then runs the balance step. Setup lives in Go `config.go`/`ethereum.go` and Rust `support.rs`; `balance.go`/`balance.rs` receive SDK, provider, token and owner dependencies explicitly. Application-owned memory storage is the example default. The client manages callback channels. Neither example sends blockchain transactions.
+Use the [Go example](../../clients/go/examples/balance/main.go) or [Rust example](../../clients/rust/examples/balance/main.rs) as a starting point. Each entry point loads shared configuration, connects its wallet/provider, creates an SDK context, then runs the encryption and balance steps. Setup lives in Go `config.go`/`ethereum.go` and Rust `support.rs`; `balance.go`/`balance.rs` receive SDK, provider, token and owner dependencies explicitly. Application-owned memory storage is the example default. The client manages callback channels. The encryption step sends `1000` as `euint64`, `true` as `ebool`, and the user address as `eaddress`, then prints the encrypted values and proof. Neither example sends blockchain transactions.
 
 The encrypted balance is the contract's ciphertext handle. The decrypted value is the raw amount for that same handle, without decimal formatting.
 
@@ -79,7 +81,7 @@ Use [clients/go](../../clients/go) or [clients/rust](../../clients/rust). Genera
 
 Create one SDK context for each configuration and signer lifecycle your application needs. Build the configuration with Go `NewSDKConfig(chainID, rpcURL)` or Rust `SdkConfig::new(chain_id, rpc_url)`. Both clients encode the typed protobuf configuration directly; your application does not serialize SDK configuration as JSON.
 
-Supply a signer for private decryption. The Go private-key helper and optional Rust Alloy adapter handle EIP-712 signing; custom signing implementations remain supported. A context without a signer supports public decryption and the SDK's signer-independent offline and permit operations. Close contexts when finished.
+Supply a signer for private decryption. The Go private-key helper and optional Rust Alloy adapter handle EIP-712 signing; custom signing implementations remain supported. A context without a signer supports encryption, public decryption and the SDK's signer-independent offline and permit operations. Close contexts when finished.
 
 Observe callback-channel termination with Go `WaitChannelFailure(ctx, SignerChannel)` / `StorageChannel`, or Rust `wait_channel_closed(CallbackChannel::Signer)` / `CallbackChannel::Storage`. Go supports explicit reattachment. In Rust, close the failed SDK and build another with the same storage binding. Interrupted operations are not retried automatically.
 
@@ -164,8 +166,16 @@ cargo test --manifest-path clients/rust/Cargo.toml --all-features --all-targets 
 cargo clippy --manifest-path clients/rust/Cargo.toml --all-features --all-targets --locked -- -D warnings
 ```
 
-Run `SIDECAR_NATIVE_TESTS=1 pnpm sidecar:test` for the native integration suite. It verifies protected application-owned credentials across replacement of the SDK runtime: both native drivers retain their memory stores and decrypt fresh handles without another signature. It also builds and runs both complete balance examples against synthetic RPC and SDK fixtures, including caller configuration, storage callbacks, signing and optional credential protection. No live wallet or RPC is used.
+Run `SIDECAR_NATIVE_TESTS=1 pnpm sidecar:test` for the native integration suite. It verifies protected application-owned credentials across replacement of the SDK runtime: both native drivers retain their memory stores and decrypt fresh handles without another signature. It also builds and runs both complete encryption and balance examples against synthetic RPC and SDK fixtures, including caller configuration, storage callbacks, signing and optional credential protection. No live wallet or RPC is used.
 
-These checks use synthetic data. The Docker commands above exercise live RPC reads, signing and decryption with your configured wallet.
+These checks use synthetic data. The Docker commands above exercise live encryption, RPC reads, signing and decryption with your configured wallet.
 
 The Go example is a separate module. Regenerate its typed contract bindings with `(cd clients/go/examples/balance && go generate ./contracts)`. Sidecar CI checks both native clients, binding generation, and SDK equivalence without a live wallet or RPC.
+
+To run only native encryption and the complete example sequences with synthetic configuration:
+
+```sh
+SIDECAR_NATIVE_TESTS=1 pnpm --filter @zama-fhe/sdk-sidecar exec vitest run --config vitest.config.ts test/native-encryption.test.ts test/native-examples.test.ts
+```
+
+Encryption checks cover lossless values, explicit binding addresses, omitted/zero timeouts, SDK errors, canonical backend rejection and cancellation. The complete examples also exercise shared runtime/provider settings and protected credentials. Synthetic encryption proofs are inspectable fixture data; live cryptographic verification remains separate.
