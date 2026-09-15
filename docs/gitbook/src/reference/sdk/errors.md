@@ -84,7 +84,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 
 ## Retryability
 
-Every `ZamaError` declares whether it's safe to retry via a `readonly retryable: boolean` field, set from its error code. Use `isRetryable()` and `retryAfterSeconds()` instead of hardcoding a set of retryable codes yourself — they stay correct as the error taxonomy grows.
+Every `ZamaError` declares whether it's safe to retry via a `readonly retryable: boolean` field — usually determined by its error code, though `RelayerRequestFailedError` sets it per-instance based on the HTTP status instead. Use `isRetryable()` and `retryAfterSeconds()` instead of hardcoding a set of retryable codes yourself — they stay correct as the error taxonomy grows.
 
 ```ts
 import { isRetryable, retryAfterSeconds } from "@zama-fhe/sdk";

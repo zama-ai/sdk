@@ -2568,7 +2568,7 @@ Balance validation, chain-alignment checks, and error handling match [`confident
 
 
 > [!WARNING]
-> The recipient **must** implement the ERC-7984 receiver hook. Sending to a plain wallet address or a contract without the hook will revert with `TransactionRevertedError`. Use plain [`confidentialTransfer`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/transfer-privately.md) for ordinary recipients.
+> The receiver hook only applies to deployed contracts. If `to` is a deployed contract that doesn't implement the hook (or the hook reverts), the whole transaction reverts with `TransactionRevertedError`. If `to` has no code — a plain wallet address, or a contract that hasn't been deployed yet — the hook is silently skipped and the transfer succeeds like a plain transfer, with no way for the recipient to react. Use plain [`confidentialTransfer`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/transfer-privately.md) for ordinary recipients.
 
 
 ### Automatic pending-unshield recovery
@@ -4182,7 +4182,12 @@ The `matchZamaError` helper maps SDK error codes to user-friendly messages. See 
 
 ## Transfer into a contract (receiver hook)
 
-Sometimes the recipient is a contract that needs to _react_ to the transfer — for example a confidential vault that credits a deposit, or a payment splitter that fans the amount out. `confidentialTransferAndCall` moves the encrypted amount **and** invokes the recipient's ERC-7984 receiver hook (`onConfidentialTransferReceived`) in a single transaction, so the deposit can never land without the contract being told about it. If the recipient doesn't implement the hook, the call reverts with `TransactionRevertedError` — transfer and hook invocation are atomic, so there's no way to land only the transfer.
+Sometimes the recipient is a contract that needs to _react_ to the transfer — for example a confidential vault that credits a deposit, or a payment splitter that fans the amount out. `confidentialTransferAndCall` moves the encrypted amount **and** invokes the recipient's ERC-7984 receiver hook (`onConfidentialTransferReceived`) in a single transaction. If `to` is a deployed contract that doesn't implement the hook (or the hook itself reverts), the whole transaction reverts with `TransactionRevertedError` — transfer and hook invocation are atomic there, so there's no way to land only the transfer.
+
+
+> [!WARNING]
+> This guarantee only holds for deployed contracts. If `to` has no code — a plain wallet address, or a contract that hasn't been deployed yet — the hook is silently skipped and the transfer succeeds exactly like a plain `confidentialTransfer`, with no error and no way for the recipient to react. Double-check the address before relying on this for vault-style integrations.
+
 
 Use `token.confidentialTransferAndCall()` (or the `useConfidentialTransferAndCall` hook). The third argument, `data`, is an opaque payload forwarded verbatim to the receiver's hook. The SDK never encodes, validates, or inspects it — its layout is defined by the receiving contract's ABI, not the token's. Encode it with viem's `encodeAbiParameters` to match what the contract expects.
 
@@ -7325,7 +7330,7 @@ How long cached registry results remain valid, in seconds. Default: `86400` (24 
 
 `ZamaSDKEventListener | undefined`
 
-Lifecycle event callback for debugging and telemetry. Events never contain sensitive data.
+Lifecycle event callback for debugging and telemetry. Events never carry private keys, permit signatures, or ZK proofs — but `DecryptEnd`/`DecryptError` do carry decrypted cleartext values (see below), so avoid logging full event payloads for those two if your logging pipeline isn't already trusted with plaintext.
 
 ```ts
 const config = createConfig({
@@ -7343,17 +7348,17 @@ const config = createConfig({
 
 Every event extends a common shape (an optional `tokenAddress`, a `timestamp`, and, for multi-phase operations like unshield, a shared `operationId`), plus fields specific to its `type`:
 
-| Event                                                                                                                                                                                | Fires when                                                                                                                                       |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `EncryptStart` / `EncryptEnd` / `EncryptError`                                                                                                                                       | An FHE encryption begins, succeeds, or fails.                                                                                                    |
-| `DecryptStart` / `DecryptEnd` / `DecryptError`                                                                                                                                       | A decryption begins, succeeds, or fails — see [`decryption.decryptValues`](#decryption-decryptvalues) for the full walkthrough and code samples. |
-| `PermitError`                                                                                                                                                                        | `grantPermit`, `grantDelegationPermit`, or `registerPermit` fails.                                                                               |
-| `TransactionError`                                                                                                                                                                   | A write operation's transaction fails, before or after submission.                                                                               |
-| `ShieldSubmitted`, `TransferSubmitted`, `TransferFromSubmitted`, `SetOperatorSubmitted`, `ApproveUnderlyingSubmitted`, `WrapSubmitted`, `UnwrapSubmitted`, `FinalizeUnwrapSubmitted` | The corresponding write transaction is submitted — each carries the transaction's `txHash`.                                                      |
-| `DelegationSubmitted` / `RevokeDelegationSubmitted`                                                                                                                                  | A delegation grant or revoke transaction is submitted — see [Delegation events](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/delegation.md#events).                                         |
-| `UnshieldPhase1Submitted` / `UnshieldPhase2Started` / `UnshieldPhase2Submitted`                                                                                                      | The two-phase unshield flow's request and finalize steps progress.                                                                               |
+| Event                                                                                                                                                                                | Fires when                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EncryptStart` / `EncryptEnd` / `EncryptError`                                                                                                                                       | An FHE encryption begins, succeeds, or fails.                                                                                                                                                                                                                                                                                                           |
+| `DecryptStart` / `DecryptEnd` / `DecryptError`                                                                                                                                       | A decryption begins, succeeds, or fails — `DecryptEnd`/`DecryptError` carry decrypted cleartext values; see [`decryption.decryptValues`](#decryption-decryptvalues) for the full walkthrough and code samples.                                                                                                                                          |
+| `PermitError`                                                                                                                                                                        | `grantPermit`, `grantDelegationPermit`, or `registerPermit` fails — but not every failure of these methods: transport-key-pair issues (`TransportKeyPairChangedError`, `KeyWrappingError`) are deliberately excluded from this event.                                                                                                                   |
+| `TransactionError`                                                                                                                                                                   | `submitTransaction` itself rejects — before broadcast (estimation/validation) or while waiting for the receipt. It does **not** fire for a transaction that broadcasts successfully but reverts on execution: the SDK doesn't currently inspect `receipt.status`, so a mined-but-reverted transaction resolves as a success with no error and no event. |
+| `ShieldSubmitted`, `TransferSubmitted`, `TransferFromSubmitted`, `SetOperatorSubmitted`, `ApproveUnderlyingSubmitted`, `WrapSubmitted`, `UnwrapSubmitted`, `FinalizeUnwrapSubmitted` | The corresponding write transaction is submitted — each carries the transaction's `txHash`.                                                                                                                                                                                                                                                             |
+| `DelegationSubmitted` / `RevokeDelegationSubmitted`                                                                                                                                  | A delegation grant or revoke transaction is submitted — see [Delegation events](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/delegation.md#events).                                                                                                                                                                                                                                                |
+| `UnshieldPhase1Submitted` / `UnshieldPhase2Started` / `UnshieldPhase2Submitted`                                                                                                      | The two-phase unshield flow's request and finalize steps progress.                                                                                                                                                                                                                                                                                      |
 
-`TransactionError` and `PermitError` carry the same classified error your `await` also throws or rejects with, so you can wire identical handling into telemetry without duplicating logic:
+`TransactionError` and `PermitError` usually carry the same classified error your `await` also throws or rejects with, so you can wire similar handling into telemetry — but don't assume they always match exactly. One documented exception: finalizing an already-finalized unshield concurrently (two tabs, a double click) emits `TransactionError` with the raw `TransactionRevertedError` from the losing finalize attempt, then `unshield()`/`unshieldAll()`/`resumeUnshield()` translates that into the more specific [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) before it reaches your `await`.
 
 ```ts
 import { ZamaSDKEvents, type TransactionErrorEvent, type PermitErrorEvent } from "@zama-fhe/sdk";
@@ -7376,7 +7381,7 @@ const config = createConfig({
 });
 ```
 
-`TransactionError.operation` is one of the write operations (`transfer`, `wrap`, `unwrap`, `finalizeUnwrap`, `delegateDecryption`, and others); `PermitError.operation` is `grantPermit`, `grantDelegationPermit`, or `registerPermit`. Both events fire immediately before the same error is thrown — see [`SigningRejectedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#signingrejectederror) and [`SigningFailedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#signingfailederror) for the shapes `PermitError.error` most commonly carries.
+`TransactionError.operation` is one of the write operations (`transfer`, `wrap`, `unwrap`, `finalizeUnwrap`, `delegateDecryption`, and others); `PermitError.operation` is `grantPermit`, `grantDelegationPermit`, or `registerPermit`. See [`SigningRejectedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#signingrejectederror) and [`SigningFailedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#signingfailederror) for the shapes `PermitError.error` most commonly carries.
 
 ### runtime
 
@@ -9634,7 +9639,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 
 ## Retryability
 
-Every `ZamaError` declares whether it's safe to retry via a `readonly retryable: boolean` field, set from its error code. Use `isRetryable()` and `retryAfterSeconds()` instead of hardcoding a set of retryable codes yourself — they stay correct as the error taxonomy grows.
+Every `ZamaError` declares whether it's safe to retry via a `readonly retryable: boolean` field — usually determined by its error code, though `RelayerRequestFailedError` sets it per-instance based on the HTTP status instead. Use `isRetryable()` and `retryAfterSeconds()` instead of hardcoding a set of retryable codes yourself — they stay correct as the error taxonomy grows.
 
 ```ts
 import { isRetryable, retryAfterSeconds } from "@zama-fhe/sdk";
