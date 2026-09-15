@@ -16,10 +16,13 @@ import {
   SigningRejectedError,
   SigningFailedError,
   EncryptionFailedError,
+  EncryptOffloadUnavailableError,
   DecryptionFailedError,
   TransactionRevertedError,
+  UnshieldAlreadyFinalizedError,
   InvalidTransportKeyPairError,
   TransportKeyPairExpiredError,
+  RevokedKmsContextError,
   NoCiphertextError,
   KeyWrappingError,
   TransportKeyPairChangedError,
@@ -78,6 +81,31 @@ const message = matchZamaError(error, {
 | `handlers` | `{ [K in ErrorCode]?: (e: ErrorForCode[K]) => T } & { _?: (e: unknown) => T }` | Map of error codes to handler functions |
 
 The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler receives the error class for its code, so subclass fields like `InsufficientConfidentialBalanceError.available` or `RelayerRequestFailedError.statusCode` are available without a cast.
+
+## Retryability
+
+Every `ZamaError` declares whether it's safe to retry via a `readonly retryable: boolean` field — usually determined by its error code, though `RelayerRequestFailedError` sets it per-instance based on the HTTP status instead. Use `isRetryable()` and `retryAfterSeconds()` instead of hardcoding a set of retryable codes yourself — they stay correct as the error taxonomy grows.
+
+```ts
+import { isRetryable, retryAfterSeconds } from "@zama-fhe/sdk";
+
+try {
+  await token.confidentialTransfer(to, amount);
+} catch (error) {
+  if (!isRetryable(error)) {
+    throw error; // terminal — don't retry
+  }
+  const delaySeconds = retryAfterSeconds(error) ?? 2; // backoff when the server gives no hint
+  // ... wait, then retry
+}
+```
+
+| Function            | Signature                                                      | Description                                                                                                                                                                                                                                          |
+| ------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `isRetryable`       | `(error: unknown) => error is ZamaError & { retryable: true }` | `true` only for a `ZamaError` instance whose `.retryable` is `true`; `false` for anything else, including non-SDK errors.                                                                                                                            |
+| `retryAfterSeconds` | `(error: unknown) => number \| undefined`                      | Reads the error's own `retryAfter` field when the error is retryable and carries one. Only `RelayerRequestFailedError` and `RpcRateLimitError` currently carry `retryAfter` — treat `undefined` as "retry with your own backoff," not "don't retry." |
+
+Exactly five error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, and `WalletAccountNotReadyError`. See [Retry transient failures](../../guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
 
 ## Error summary
 

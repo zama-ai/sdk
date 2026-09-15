@@ -52,6 +52,8 @@ import { node } from "@zama-fhe/sdk/node";
 
 Chain-specific data (`relayerUrl`, `network`, `executorAddress`, etc.) comes from the chain preset, so a bare call is all most apps need. Each factory also accepts an optional options object forwarded to `@fhevm/sdk` for per-client tuning (e.g. `batchRpcCalls`, `fheEncryptionKey`, `moduleVersions`, `timeout`) — see the [`web()`](../reference/sdk/RelayerWeb.md#parameters) / [`node()`](../reference/sdk/RelayerNode.md#parameters) / [`cleartext()`](../reference/sdk/RelayerCleartext.md#parameters) reference for the full option list and defaults.
 
+`web()` additionally runs encryption in a dedicated Web Worker by default, so `encryptValue()`/`encryptValues()` calls don't block the main thread. Tune or opt out of this with `offloadEncrypt`, `offloadWorker`, and `offloadTimeouts` — see [`web()`'s encryption offload options](../reference/sdk/RelayerWeb.md#offloadencrypt) for the full behavior and defaults. If your app sets a Content Security Policy, it needs `worker-src 'self' blob:` for the offload worker to start.
+
 ```ts
 // Browser — uses relayerUrl from the chain preset
 web();

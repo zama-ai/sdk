@@ -7,7 +7,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@zama-fhe/sdk": "^3.5.1",
+    "@zama-fhe/sdk": "^3.6.0",
     "ethers": "^6.17.0"
   },
   "devDependencies": {
