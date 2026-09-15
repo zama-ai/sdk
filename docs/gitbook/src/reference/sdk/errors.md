@@ -91,6 +91,8 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `DecryptionFailedError`                   | `DECRYPTION_FAILED`                      | FHE decryption failed                                                                                                             |
 | `TransactionRevertedError`                | `TRANSACTION_REVERTED`                   | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
 | `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
+| `InvalidationTimestampTooLowError`        | `INVALIDATION_TIMESTAMP_TOO_LOW`         | Invalidation cutoff was not strictly later than the account's current one                                                         |
+| `InvalidationTimestampInFutureError`      | `INVALIDATION_TIMESTAMP_IN_FUTURE`       | Invalidation cutoff was in the future                                                                                             |
 | `InvalidTransportKeyPairError`            | `INVALID_KEYPAIR`                        | Relayer rejected transport key pair (stale or malformed)                                                                          |
 | `TransportKeyPairExpiredError`            | `KEYPAIR_EXPIRED`                        | Transport key pair expired — user must re-sign                                                                                    |
 | `RevokedKmsContextError`                  | `REVOKED_KMS_CONTEXT`                    | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                                   |
@@ -250,7 +252,36 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Inspect the revert reason. Common causes: insufficient balance or an expired operator approval. Finalizing an already-finalized unwrap through `resumeUnshield()` or `unshield()` throws the more specific `UnshieldAlreadyFinalizedError` instead.
+**How to handle:** Inspect the revert reason. Common causes: insufficient balance or an expired operator approval. Finalizing an already-finalized unwrap through `resumeUnshield()` or `unshield()` throws the more specific `UnshieldAlreadyFinalizedError` instead. `sdk.permits.invalidateDecryptionSignatures()` throws the more specific `InvalidationTimestampTooLowError` / `InvalidationTimestampInFutureError` for a rejected cutoff.
+
+### InvalidationTimestampTooLowError
+
+**Code:** `INVALIDATION_TIMESTAMP_TOO_LOW`
+
+Thrown by `invalidateDecryptionSignatures()` when the requested cutoff is not strictly later than the account's current invalidation cutoff. The ACL only ever moves the cutoff forward, so re-sending the same timestamp — or an older one — reverts.
+
+```ts
+matchZamaError(error, {
+  INVALIDATION_TIMESTAMP_TOO_LOW: () =>
+    toast("Signatures are already invalidated up to that point."),
+});
+```
+
+**How to handle:** Pass a later timestamp, or omit it entirely to use the current block timestamp. Do not retry with the same value.
+
+### InvalidationTimestampInFutureError
+
+**Code:** `INVALIDATION_TIMESTAMP_IN_FUTURE`
+
+Thrown by `invalidateDecryptionSignatures()` when the requested cutoff lies in the future. The ACL refuses to invalidate signatures that have not been produced yet.
+
+```ts
+matchZamaError(error, {
+  INVALIDATION_TIMESTAMP_IN_FUTURE: () => toast("Pick a time no later than now."),
+});
+```
+
+**How to handle:** Pass a timestamp no later than now, or omit it to let the chain resolve the cutoff from the current block timestamp — which also sidesteps client clock skew.
 
 ### UnshieldAlreadyFinalizedError
 

@@ -87,7 +87,7 @@ export interface CredentialServiceConfig {
    * Publishes structured SDK events (e.g. {@link ZamaSDKEvents.PermitError}) into
    * the unified `onEvent` stream — the same callback every other `*Service` receives.
    */
-  emitEvent: (input: ZamaSDKEventInput) => void;
+  emitEvent: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
   /**
    * Opt-in shared-tenant scope (B2B2C/WaaS operators). When set, every signer
    * configured with the same scope shares one transport key pair instead of one
@@ -126,7 +126,7 @@ export class CredentialService {
   readonly #signer: GenericSigner | undefined;
   readonly #permitTTL: number;
   readonly #logger: GenericLogger;
-  readonly #emitEvent: (input: ZamaSDKEventInput) => void;
+  readonly #emitEvent: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
   readonly #scope: string | undefined;
   /** In-flight revoked-context recoveries, one per permission scope. */
   readonly #permitRecoveries = new Map<string, Promise<void>>();
@@ -616,6 +616,20 @@ export class CredentialService {
   }
 
   /**
+   * Drop this signer's stored permits for the active chain once an on-chain
+   * signature invalidation has succeeded — they would now only fail against the
+   * KMS Connector. Swallows storage failures, which must never mask a write that
+   * already landed on-chain.
+   */
+  async clearPermitsAfterInvalidation(signerAddress: ChecksummedAddress): Promise<void> {
+    await swallow(
+      "clear permits after invalidation",
+      () => this.#store.clearAllForSignerOnChain(signerAddress, this.#router.chain.id),
+      this.#logger,
+    );
+  }
+
+  /**
    * Permits are keyed by the router's active chain, the same chain their
    * EIP-712 domain is signed against, so the storage key and the signature
    * can never disagree.
@@ -898,16 +912,21 @@ export class CredentialService {
     }
 
     const survivors = stored.filter((p) => !stale.has(p.serializedPermit.signature));
-    const prior = stored.flatMap((p) => p.contractAddresses);
-    const recovery = this.#clearAndRegrantScope(
-      scope,
-      prior,
-      contracts,
-      survivors,
-      delegator,
-    ).finally(() => {
-      this.#permitRecoveries.delete(key);
-    });
+    // Re-sign the union the scope covered, not just this call's contracts: one
+    // signature restores every widened permit for concurrent callers. A wildcard
+    // permit's `contractAddresses` is `[]`, so folding it into that union would
+    // silently downgrade permissive coverage to a finite list.
+    const regrant: WildcardPermit | ChecksummedAddress[] = stored.some(isWildcardPermission)
+      ? WILDCARD_PERMIT
+      : sortedUnion(
+          stored.flatMap((p) => p.contractAddresses),
+          normalizeAddresses(contracts),
+        );
+    const recovery = this.#clearAndRegrantScope(scope, regrant, survivors, delegator).finally(
+      () => {
+        this.#permitRecoveries.delete(key);
+      },
+    );
     // No `await` between the map re-check above and this `set`, so two callers
     // cannot both start a recovery for the same scope.
     this.#permitRecoveries.set(key, recovery);
@@ -928,17 +947,13 @@ export class CredentialService {
 
   async #clearAndRegrantScope(
     scope: PermissionScope,
-    prior: readonly ChecksummedAddress[],
-    contracts: readonly Address[],
+    regrant: WildcardPermit | readonly ChecksummedAddress[],
     survivors: readonly Permission[],
     delegator?: Address,
   ): Promise<void> {
     await swallow("evict revoked permits", () => this.#store.clearScope(scope), this.#logger);
     try {
-      // Re-sign the union of what the scope covered, not just this call's
-      // contracts: one signature restores every widened permit, so sibling
-      // decrypt calls joining the recovery find their contracts already covered.
-      await this.grantPermit(sortedUnion(prior, normalizeAddresses(contracts)), delegator);
+      await this.grantPermit(regrant, delegator);
     } catch (error) {
       // Coverage the session cannot re-sign must survive a failed re-grant.
       if (survivors.length > 0) {

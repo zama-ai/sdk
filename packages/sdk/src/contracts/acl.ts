@@ -49,6 +49,29 @@ export function revokeDelegationContract(
 }
 
 /**
+ * Returns the contract config to invalidate every decryption signature signed
+ * by `msg.sender` before `timestamp` (`0n` resolves to now on-chain).
+ *
+ * @example
+ * ```ts
+ * const txHash = await signer.writeContract(
+ *   invalidateDecryptionSignaturesBeforeContract(aclAddress, 0n),
+ * );
+ * ```
+ */
+export function invalidateDecryptionSignaturesBeforeContract(
+  aclAddress: Address,
+  timestamp: bigint,
+) {
+  return {
+    address: aclAddress,
+    abi: aclAbi,
+    functionName: "invalidateDecryptionSignaturesBefore",
+    args: [timestamp],
+  } as const;
+}
+
+/**
  * Returns the contract config to read the delegation expiry date.
  *
  * @example

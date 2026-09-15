@@ -6,6 +6,7 @@ import {
   revokeDelegationContract,
   getDelegationExpiryContract,
   isHandleDelegatedContract,
+  invalidateDecryptionSignaturesBeforeContract,
 } from "../acl";
 import { WILDCARD_CONTRACT } from "../constants";
 
@@ -48,5 +49,19 @@ describe("ACL contract builders", () => {
     expect(config.address).toBe(ACL);
     expect(config.functionName).toBe("isHandleDelegatedForUserDecryption");
     expect(config.args).toEqual([userAddress, DELEGATE, tokenAddress, handle]);
+  });
+
+  test("invalidateDecryptionSignaturesBeforeContract with an explicit past timestamp", () => {
+    const config = invalidateDecryptionSignaturesBeforeContract(ACL, 1000n);
+    expect(config.address).toBe(ACL);
+    expect(config.functionName).toBe("invalidateDecryptionSignaturesBefore");
+    expect(config.args).toEqual([1000n]);
+  });
+
+  test("invalidateDecryptionSignaturesBeforeContract with 0 (resolves to now on-chain)", () => {
+    const config = invalidateDecryptionSignaturesBeforeContract(ACL, 0n);
+    expect(config.address).toBe(ACL);
+    expect(config.functionName).toBe("invalidateDecryptionSignaturesBefore");
+    expect(config.args).toEqual([0n]);
   });
 });

@@ -2,6 +2,7 @@ import { getAddress, type Address } from "viem";
 import {
   delegateForUserDecryptionContract,
   getDelegationExpiryContract,
+  invalidateDecryptionSignaturesBeforeContract,
   MAX_UINT64,
   revokeDelegationContract,
   WILDCARD_CONTRACT,
@@ -30,7 +31,7 @@ import { submitTransaction } from "../utils/submit-transaction";
 
 type AclTransactionOperation = Extract<
   TransactionOperation,
-  "delegateDecryption" | "revokeDelegation"
+  "delegateDecryption" | "revokeDelegation" | "invalidateDecryptionSignatures"
 >;
 
 /** Delegation activity and expiry, resolved from the active contract or wildcard grant. */
@@ -296,7 +297,8 @@ export class DelegationService {
   }: {
     operation: AclTransactionOperation;
     signer: GenericSigner;
-    contractAddress: Address;
+    /** The confidential contract the write is scoped to; omitted for account-wide writes. */
+    contractAddress?: Address;
     config: WriteContractConfig;
   }): Promise<TransactionResult> {
     try {
@@ -312,6 +314,26 @@ export class DelegationService {
       this.#throwAclRevertIfMatched(error);
       throw error;
     }
+  }
+
+  /**
+   * Invalidate every decryption signature this signer produced before
+   * `timestamp`, via `ACL.invalidateDecryptionSignaturesBefore`.
+   *
+   * @param timestamp - Oldest timestamp that remains valid. Omit to let the chain
+   *   resolve the cutoff from the current block timestamp, avoiding client clock skew.
+   */
+  async invalidateDecryptionSignaturesBefore(
+    signer: GenericSigner,
+    timestamp?: Date,
+  ): Promise<TransactionResult> {
+    const acl = this.#router.relayer.chain.aclContractAddress;
+    const cutoff = timestamp ? BigInt(Math.floor(timestamp.getTime() / 1000)) : 0n;
+    return this.#submitAclTransaction({
+      operation: "invalidateDecryptionSignatures",
+      signer,
+      config: invalidateDecryptionSignaturesBeforeContract(acl, cutoff),
+    });
   }
 
   #throwAclRevertIfMatched(error: unknown): void {

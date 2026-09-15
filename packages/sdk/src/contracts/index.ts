@@ -44,6 +44,7 @@ export {
   revokeDelegationContract,
   getDelegationExpiryContract,
   isHandleDelegatedContract,
+  invalidateDecryptionSignaturesBeforeContract,
 } from "./acl";
 
 export {

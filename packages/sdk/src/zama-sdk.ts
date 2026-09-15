@@ -217,6 +217,7 @@ export class ZamaSDK {
       provider: this.provider,
       cachingService: this.#cachingService,
       credentialService: this.#credentialService,
+      delegationService: this.#delegationService,
       logger: this.#logger,
       emitEvent: this.emitEvent.bind(this),
     });

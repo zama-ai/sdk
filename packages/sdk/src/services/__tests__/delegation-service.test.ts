@@ -1,7 +1,12 @@
 import { getAddress, type Address } from "viem";
 import { anvil } from "../../chains";
 import { MAX_UINT64, WILDCARD_CONTRACT } from "../../contracts";
-import { DelegationCooldownError, TransactionRevertedError } from "../../errors";
+import {
+  DelegationCooldownError,
+  InvalidationTimestampInFutureError,
+  InvalidationTimestampTooLowError,
+  TransactionRevertedError,
+} from "../../errors";
 import { LoggerService } from "../logger-service";
 import { describe, expect, test, vi } from "../../test-fixtures";
 
@@ -406,5 +411,99 @@ describe("DelegationService", () => {
     expect(thrown).toMatchObject({ code: "DELEGATION_COOLDOWN" });
     expect((thrown as Error).cause).toBeInstanceOf(TransactionRevertedError);
     expect(((thrown as Error).cause as Error).cause).toBe(rootCause);
+  });
+
+  describe("invalidateDecryptionSignaturesBefore", () => {
+    test("defaults to timestamp 0, letting the ACL resolve the cutoff on-chain", async ({
+      delegationService,
+      signer,
+    }) => {
+      const result = await delegationService.invalidateDecryptionSignaturesBefore(signer);
+
+      expect(result).toEqual({ txHash: "0xtxhash", receipt: { logs: [] } });
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          address: anvil.aclContractAddress,
+          functionName: "invalidateDecryptionSignaturesBefore",
+          args: [0n],
+        }),
+      );
+    });
+
+    test("converts an explicit timestamp to unix seconds", async ({
+      delegationService,
+      signer,
+    }) => {
+      const timestamp = new Date("2026-01-01T00:00:00Z");
+
+      await delegationService.invalidateDecryptionSignaturesBefore(signer, timestamp);
+
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          functionName: "invalidateDecryptionSignaturesBefore",
+          args: [BigInt(Math.floor(timestamp.getTime() / 1000))],
+        }),
+      );
+    });
+
+    test("emits the submitted event without a contract address (the write is account-wide)", async ({
+      createDelegationService,
+      signer,
+    }) => {
+      const emitEvent = vi.fn();
+      const service = createDelegationService({ emitEvent });
+
+      await service.invalidateDecryptionSignaturesBefore(signer);
+
+      expect(emitEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ txHash: "0xtxhash" }),
+        undefined,
+      );
+    });
+
+    test("maps a non-increasing cutoff to InvalidationTimestampTooLowError", async ({
+      delegationService,
+      signer,
+    }) => {
+      const rootCause = new Error("execution reverted: InvalidationTimestampTooLow()");
+      vi.mocked(signer.writeContract).mockRejectedValue(rootCause);
+
+      const thrown = await delegationService
+        .invalidateDecryptionSignaturesBefore(signer)
+        .catch((error: Error) => error);
+
+      expect(thrown).toBeInstanceOf(InvalidationTimestampTooLowError);
+      expect(thrown).toMatchObject({ code: "INVALIDATION_TIMESTAMP_TOO_LOW" });
+      expect((thrown as Error).cause).toBeInstanceOf(TransactionRevertedError);
+    });
+
+    test("maps a future cutoff to InvalidationTimestampInFutureError", async ({
+      delegationService,
+      signer,
+    }) => {
+      vi.mocked(signer.writeContract).mockRejectedValue(
+        new Error("execution reverted: InvalidationTimestampInTheFuture()"),
+      );
+
+      const thrown = await delegationService
+        .invalidateDecryptionSignaturesBefore(signer)
+        .catch((error: Error) => error);
+
+      expect(thrown).toBeInstanceOf(InvalidationTimestampInFutureError);
+      expect(thrown).toMatchObject({ code: "INVALIDATION_TIMESTAMP_IN_FUTURE" });
+    });
+
+    test("an unrecognized revert still surfaces as TransactionRevertedError", async ({
+      delegationService,
+      signer,
+    }) => {
+      vi.mocked(signer.writeContract).mockRejectedValue(
+        new Error("execution reverted: Whatever()"),
+      );
+
+      await expect(
+        delegationService.invalidateDecryptionSignaturesBefore(signer),
+      ).rejects.toBeInstanceOf(TransactionRevertedError);
+    });
   });
 });

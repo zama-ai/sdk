@@ -5,8 +5,10 @@ import type { WildcardPermit } from "../credentials/utils";
 import { requireConfigured } from "../errors";
 import type { PermitOperation, ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
+import { checksum } from "../schemas/primitives";
 import type { CachingService } from "../services/caching-service";
-import type { GenericLogger, GenericProvider, GenericSigner } from "../types";
+import type { DelegationService } from "../services/delegation-service";
+import type { GenericLogger, GenericProvider, GenericSigner, TransactionResult } from "../types";
 import { swallow } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 
@@ -33,6 +35,7 @@ export class Permits {
   readonly #provider: GenericProvider;
   readonly #cachingService: CachingService;
   readonly #credentialService: CredentialService | undefined;
+  readonly #delegationService: DelegationService;
   readonly #logger: GenericLogger;
   readonly #emitEvent: (input: ZamaSDKEventInput) => void;
 
@@ -42,6 +45,7 @@ export class Permits {
     provider: GenericProvider;
     cachingService: CachingService;
     credentialService: CredentialService | undefined;
+    delegationService: DelegationService;
     logger: GenericLogger;
     emitEvent: (input: ZamaSDKEventInput) => void;
   }) {
@@ -49,8 +53,13 @@ export class Permits {
     this.#provider = opts.provider;
     this.#cachingService = opts.cachingService;
     this.#credentialService = opts.credentialService;
+    this.#delegationService = opts.delegationService;
     this.#logger = opts.logger;
     this.#emitEvent = opts.emitEvent;
+  }
+
+  #requireSigner(operation: string): GenericSigner {
+    return requireConfigured(this.#signer, operation);
   }
 
   #requireCredentialService(operation: string): CredentialService {
@@ -210,7 +219,8 @@ export class Permits {
    * (and `prepared.delegatorAddress`, if present), not a connected signer.
    *
    * @param prepared - The payload `sdk.offline.preparePermit` returned.
-   * @param signature - The 65-byte `eth_signTypedData_v4` signature over `prepared.eip712`.
+   * @param signature - The `eth_signTypedData_v4` signature over `prepared.eip712`.
+   *   V2 permits also accept a variable-length ERC-1271 (smart-wallet) blob.
    * @throws if `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a
    *   process boundary and was corrupted). {@link ConfigurationError}
    * @throws if the chain embedded in `prepared.eip712` doesn't match the active chain. {@link PreparedPermitChainMismatchError}
@@ -326,5 +336,45 @@ export class Permits {
   async warmTransportKeyPairScope(scopeId: string): Promise<void> {
     const service = this.#requireCredentialService("warmTransportKeyPairScope");
     await service.warmTransportKeyPairScope(scopeId);
+  }
+
+  /**
+   * Invalidate every decryption signature signed before `timestamp`, via
+   * `ACL.invalidateDecryptionSignaturesBefore`. The KMS Connector rejects
+   * any decryption request whose permit predates the new cutoff — the
+   * recourse when a permissive/wildcard permit or its signing key is
+   * compromised, or on a multisig (ERC-1271/Safe) owner rotation. Call this
+   * on every multisig signer rotation and on suspected signing-key compromise.
+   *
+   * On success, this signer's locally-stored permits for the current chain
+   * are cleared automatically — they would now only fail against the KMS
+   * Connector.
+   *
+   * @param timestamp - Oldest timestamp that remains valid. Omit to invalidate
+   *   everything up to now.
+   * @throws if no signer is configured. {@link SignerNotConfiguredError}
+   * @throws if signer and provider are on different chains. {@link ChainMismatchError}
+   * @throws if `timestamp` is not strictly later than the account's current
+   *   cutoff. {@link InvalidationTimestampTooLowError}
+   * @throws if `timestamp` is in the future. {@link InvalidationTimestampInFutureError}
+   * @throws if the invalidation transaction reverts for any other reason. {@link TransactionRevertedError}
+   */
+  async invalidateDecryptionSignatures(timestamp?: Date): Promise<TransactionResult> {
+    const service = this.#requireCredentialService("invalidateDecryptionSignatures");
+    const signer = this.#requireSigner("invalidateDecryptionSignatures");
+    const account = await requireAlignedWalletAccount(
+      "invalidateDecryptionSignatures",
+      this.#signer,
+      this.#provider,
+    );
+    const signerAddress = checksum(account.address);
+    const result = await this.#delegationService.invalidateDecryptionSignaturesBefore(
+      signer,
+      timestamp,
+    );
+    // Only after the write lands: local permits stay usable if it reverted.
+    await service.clearPermitsAfterInvalidation(signerAddress);
+    await this.#clearDecryptCacheForRequester(getAddress(account.address));
+    return result;
   }
 }

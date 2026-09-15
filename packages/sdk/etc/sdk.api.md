@@ -5556,6 +5556,16 @@ export function delegateForUserDecryptionContract(aclAddress: Address, delegateA
         readonly stateMutability: "view";
     }, {
         readonly type: "function";
+        readonly name: "invalidateDecryptionSignaturesBefore";
+        readonly inputs: readonly [{
+            readonly name: "timestamp";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
         readonly name: "isAccountDenied";
         readonly inputs: readonly [{
             readonly name: "account";
@@ -5864,6 +5874,8 @@ export interface ErrorForCode {
     [ZamaErrorCode.InsufficientConfidentialBalance]: InsufficientConfidentialBalanceError;
     [ZamaErrorCode.InsufficientERC20Balance]: InsufficientERC20BalanceError;
     [ZamaErrorCode.InvalidTransportKeyPair]: InvalidTransportKeyPairError;
+    [ZamaErrorCode.InvalidationTimestampInFuture]: InvalidationTimestampInFutureError;
+    [ZamaErrorCode.InvalidationTimestampTooLow]: InvalidationTimestampTooLowError;
     [ZamaErrorCode.KeyWrappingFailed]: KeyWrappingError;
     [ZamaErrorCode.TransportKeyPairExpired]: TransportKeyPairExpiredError;
     [ZamaErrorCode.NoCiphertext]: NoCiphertextError;
@@ -7411,6 +7423,16 @@ export function getDelegationExpiryContract(aclAddress: Address, delegatorAddres
             readonly internalType: "uint64";
         }];
         readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "invalidateDecryptionSignaturesBefore";
+        readonly inputs: readonly [{
+            readonly name: "timestamp";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
     }, {
         readonly type: "function";
         readonly name: "isAccountDenied";
@@ -9669,6 +9691,242 @@ export class InsufficientERC20BalanceError extends ZamaError {
 }
 
 // @public
+export function invalidateDecryptionSignaturesBeforeContract(aclAddress: Address, timestamp: bigint): {
+    readonly address: `0x${string}`;
+    readonly abi: readonly [{
+        readonly type: "function";
+        readonly name: "allow";
+        readonly inputs: readonly [{
+            readonly name: "handle";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "allowForDecryption";
+        readonly inputs: readonly [{
+            readonly name: "handlesList";
+            readonly type: "bytes32[]";
+            readonly internalType: "bytes32[]";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "allowTransient";
+        readonly inputs: readonly [{
+            readonly name: "ciphertext";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "cleanTransientStorage";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "delegateForUserDecryption";
+        readonly inputs: readonly [{
+            readonly name: "delegate";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "contractAddress";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "expirationDate";
+            readonly type: "uint64";
+            readonly internalType: "uint64";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "getUserDecryptionDelegationExpirationDate";
+        readonly inputs: readonly [{
+            readonly name: "delegator";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "delegate";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "contractAddress";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint64";
+            readonly internalType: "uint64";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "invalidateDecryptionSignaturesBefore";
+        readonly inputs: readonly [{
+            readonly name: "timestamp";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "isAccountDenied";
+        readonly inputs: readonly [{
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "isAllowed";
+        readonly inputs: readonly [{
+            readonly name: "handle";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "isAllowedForDecryption";
+        readonly inputs: readonly [{
+            readonly name: "handle";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "isHandleDelegatedForUserDecryption";
+        readonly inputs: readonly [{
+            readonly name: "delegator";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "delegate";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "contractAddress";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "handle";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "multicall";
+        readonly inputs: readonly [{
+            readonly name: "data";
+            readonly type: "bytes[]";
+            readonly internalType: "bytes[]";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "results";
+            readonly type: "bytes[]";
+            readonly internalType: "bytes[]";
+        }];
+        readonly stateMutability: "payable";
+    }, {
+        readonly type: "function";
+        readonly name: "persistAllowed";
+        readonly inputs: readonly [{
+            readonly name: "handle";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "revokeDelegationForUserDecryption";
+        readonly inputs: readonly [{
+            readonly name: "delegate";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "contractAddress";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }];
+    readonly functionName: "invalidateDecryptionSignaturesBefore";
+    readonly args: readonly [bigint];
+};
+
+// @public
+export interface InvalidateDecryptionSignaturesSubmittedEvent extends BaseEvent {
+    txHash: Hex;
+    type: typeof ZamaSDKEvents.InvalidateDecryptionSignaturesSubmitted;
+}
+
+// @public
+export class InvalidationTimestampInFutureError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
+export class InvalidationTimestampTooLowError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
 export class InvalidTransportKeyPairError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
@@ -9990,6 +10248,16 @@ export function isHandleDelegatedContract(aclAddress: Address, delegatorAddress:
             readonly internalType: "uint64";
         }];
         readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "invalidateDecryptionSignaturesBefore";
+        readonly inputs: readonly [{
+            readonly name: "timestamp";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
     }, {
         readonly type: "function";
         readonly name: "isAccountDenied";
@@ -11526,6 +11794,7 @@ export class Permits {
     grantPermit(contracts: Address[] | WildcardPermit): Promise<void>;
     hasDelegationPermit(delegator: Address, contracts: Address[]): Promise<boolean>;
     hasPermit(contracts: Address[]): Promise<boolean>;
+    invalidateDecryptionSignatures(timestamp?: Date): Promise<TransactionResult>;
     registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void>;
     revokePermits(contracts?: Address[]): Promise<void>;
     revokeTransportKeyPair(scopeId: string): Promise<void>;
@@ -12925,6 +13194,16 @@ export function revokeDelegationContract(aclAddress: Address, delegateAddress: A
             readonly internalType: "uint64";
         }];
         readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "invalidateDecryptionSignaturesBefore";
+        readonly inputs: readonly [{
+            readonly name: "timestamp";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
     }, {
         readonly type: "function";
         readonly name: "isAccountDenied";
@@ -14558,7 +14837,7 @@ export interface TransactionErrorEvent extends BaseEvent {
 export type TransactionKind = PrepareTransactionRequest["kind"];
 
 // @public
-export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll";
+export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "invalidateDecryptionSignatures" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll";
 
 // @public
 export interface TransactionReceipt {
@@ -20938,6 +21217,8 @@ export const ZamaErrorCode: {
     readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
     readonly UnifiedPermitNotSupported: "UNIFIED_PERMIT_NOT_SUPPORTED";
     readonly UnifiedDecryptionUnsupported: "UNIFIED_DECRYPTION_UNSUPPORTED";
+    readonly InvalidationTimestampTooLow: "INVALIDATION_TIMESTAMP_TOO_LOW";
+    readonly InvalidationTimestampInFuture: "INVALIDATION_TIMESTAMP_IN_FUTURE";
     readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
 };
 
@@ -20966,7 +21247,7 @@ export class ZamaSDK {
 }
 
 // @public
-export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | PermitErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | WrapSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
+export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | PermitErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | WrapSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | InvalidateDecryptionSignaturesSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
 export type ZamaSDKEventListener = (event: ZamaSDKEvent) => void;
@@ -20991,6 +21272,7 @@ export const ZamaSDKEvents: {
     readonly FinalizeUnwrapSubmitted: "finalizeUnwrap:submitted";
     readonly DelegationSubmitted: "delegation:submitted";
     readonly RevokeDelegationSubmitted: "revokeDelegation:submitted";
+    readonly InvalidateDecryptionSignaturesSubmitted: "invalidateDecryptionSignatures:submitted";
     readonly UnshieldPhase1Submitted: "unshield:phase1_submitted";
     readonly UnshieldPhase2Started: "unshield:phase2_started";
     readonly UnshieldPhase2Submitted: "unshield:phase2_submitted";

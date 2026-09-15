@@ -12,6 +12,8 @@ import type {
   RevokedKmsContextError,
   UnifiedPermitNotSupportedError,
   UnifiedDecryptionUnsupportedError,
+  InvalidationTimestampTooLowError,
+  InvalidationTimestampInFutureError,
 } from "./credential";
 import type {
   AclPausedError,
@@ -136,6 +138,10 @@ export interface ErrorForCode {
   [ZamaErrorCode.UnifiedPermitNotSupported]: UnifiedPermitNotSupportedError;
   /** Thrown for {@link ZamaErrorCode.UnifiedDecryptionUnsupported}. */
   [ZamaErrorCode.UnifiedDecryptionUnsupported]: UnifiedDecryptionUnsupportedError;
+  /** Thrown for {@link ZamaErrorCode.InvalidationTimestampTooLow}. */
+  [ZamaErrorCode.InvalidationTimestampTooLow]: InvalidationTimestampTooLowError;
+  /** Thrown for {@link ZamaErrorCode.InvalidationTimestampInFuture}. */
+  [ZamaErrorCode.InvalidationTimestampInFuture]: InvalidationTimestampInFutureError;
   /** Thrown for {@link ZamaErrorCode.UnshieldAlreadyFinalized}. */
   [ZamaErrorCode.UnshieldAlreadyFinalized]: UnshieldAlreadyFinalizedError;
 }

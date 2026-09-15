@@ -99,6 +99,10 @@ A few things a wildcard permit does **not** change:
 - **Wildcard scope is opt-in, not inferred.** The SDK never signs a wildcard-scoped permit unless the caller explicitly asks for one — passing a large contract list to `grantPermit()` still signs a permit for exactly those contracts, never widened to "everything".
 - **It's broader, so treat it with more care than a contract-scoped permit.** A wildcard permit signed with a long validity window is a standing grant to decrypt anything the signer owns until it expires — prefer a specific contract list unless your app genuinely needs unbounded coverage, and prefer a short `permitTTL` when you do use it.
 
+### Smart-contract-wallet (ERC-1271) signers
+
+A V2 permit's signature accepts a variable-length blob, not just a fixed-length EOA `ecrecover` signature — so a signer backed by a smart-contract wallet (a Safe multisig, for example) can sign one the same way an EOA does, through `grantPermit`, `preparePermit`/`registerPermit`, or a custody-signed offline permit. The underlying `@fhevm/sdk` checks the signature against the connected chain's `IERC1271.isValidSignature` as a **best-effort, precautionary check only** — the KMS runs the same verification and remains the sole authority on whether a permit is actually honored; a passing client-side check is not itself proof of validity, and a rejection surfaces here as a normal `SigningFailedError`.
+
 ## Revocation
 
 Permits can be removed in two ways:
@@ -107,6 +111,8 @@ Permits can be removed in two ways:
 - **Full wipe** — `sdk.permits.revokePermits()` removes all permits for the current signer across all chains and delegators. The transport key pair is not affected.
 
 For a complete "log out" that also removes the transport key pair, use `sdk.permits.clear()`. See the [ZamaSDK reference](../reference/sdk/ZamaSDK.md#permits-revokepermits) for the full API.
+
+Both of the above are **local-only**: they remove this SDK's own cached copy of a permit, but the permit itself — a self-contained, bearer-style EIP-712 signature — remains valid against the relayer directly until it expires. `sdk.permits.invalidateDecryptionSignatures(timestamp?)` is the one mechanism that's enforced on-chain/KMS-side, so it's the only one that actually stops an already-exfiltrated permit from working; use it on suspected key compromise or a multisig owner rotation. See [Security Model — Revocation](./security-model.md#revocation) for how all three revocation mechanisms compare.
 
 ### Two revocation tiers with a shared scope
 

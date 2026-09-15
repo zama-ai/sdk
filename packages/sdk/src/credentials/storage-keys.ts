@@ -20,8 +20,12 @@ export function transportKeyPairScopeStorageKey(scope: string): string {
   return `keypair:scope:${scope}`;
 }
 
+export function permissionChainPrefix(signerAddress: ChecksummedAddress, chainId: number): string {
+  return `permits:${signerAddress}:${chainId}:`;
+}
+
 export function permissionScopeKey(scope: PermissionScope): string {
-  return `permits:${scope.signerAddress}:${scope.chainId}:${scope.delegatorAddress}`;
+  return `${permissionChainPrefix(scope.signerAddress, scope.chainId)}${scope.delegatorAddress}`;
 }
 
 export function permissionIndexKey(signerAddress: ChecksummedAddress): string {

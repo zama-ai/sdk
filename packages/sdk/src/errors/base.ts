@@ -96,6 +96,10 @@ export const ZamaErrorCode = {
   UnifiedPermitNotSupported: "UNIFIED_PERMIT_NOT_SUPPORTED",
   /** A stored V2/wildcard permit's scope is needed, but the connected relayer instance doesn't support unified decryption yet. */
   UnifiedDecryptionUnsupported: "UNIFIED_DECRYPTION_UNSUPPORTED",
+  /** `invalidateDecryptionSignatures` was given a cutoff at or below the account's current one; the ACL only moves it forward. */
+  InvalidationTimestampTooLow: "INVALIDATION_TIMESTAMP_TOO_LOW",
+  /** `invalidateDecryptionSignatures` was given a cutoff in the future; the ACL only accepts now or earlier. */
+  InvalidationTimestampInFuture: "INVALIDATION_TIMESTAMP_IN_FUTURE",
   /** The unwrap request was already finalized on-chain; there is nothing left to resume. */
   UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED",
 } as const;
@@ -158,6 +162,8 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.PreparedPermitExpired]: false, // caller must re-run preparePermit for a fresh validity window
   [ZamaErrorCode.UnifiedPermitNotSupported]: false, // resolves only once the chain itself upgrades to protocol v0.14+
   [ZamaErrorCode.UnifiedDecryptionUnsupported]: false, // resolves only once this relayer instance deploys /v3/user-decrypt, or the caller falls back to a V1 permit
+  [ZamaErrorCode.InvalidationTimestampTooLow]: false, // the caller must pass a strictly later cutoff; retrying the same one always reverts
+  [ZamaErrorCode.InvalidationTimestampInFuture]: false, // the caller must pass a cutoff no later than now
   [ZamaErrorCode.UnshieldAlreadyFinalized]: false, // the funds already arrived; the stale pointer is cleared
 };
 

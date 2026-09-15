@@ -76,6 +76,7 @@ export type {
   FinalizeUnwrapSubmittedEvent,
   DelegationSubmittedEvent,
   RevokeDelegationSubmittedEvent,
+  InvalidateDecryptionSignaturesSubmittedEvent,
   UnshieldPhase1SubmittedEvent,
   UnshieldPhase2StartedEvent,
   UnshieldPhase2SubmittedEvent,

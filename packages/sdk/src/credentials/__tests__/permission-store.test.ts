@@ -93,6 +93,21 @@ describe("PermissionStore", () => {
     expect(await store.list(delegatedScope)).toEqual([]);
   });
 
+  test("clearAllForSignerOnChain drops every scope on that chain and leaves other chains", async ({
+    store,
+  }) => {
+    const otherChainDirect = { ...directScope, chainId: 11155111 };
+    await store.append(directScope, [makePermission({ contractAddresses: [TOKEN_A] })]);
+    await store.append(delegatedScope, [makePermission({ contractAddresses: [TOKEN_B] })]);
+    await store.append(otherChainDirect, [makePermission({ contractAddresses: [TOKEN_A] })]);
+
+    await store.clearAllForSignerOnChain(USER, 31337);
+
+    expect(await store.list(directScope)).toEqual([]);
+    expect(await store.list(delegatedScope)).toEqual([]);
+    expect(await store.list(otherChainDirect)).toHaveLength(1);
+  });
+
   test("listUsableAndPrune drops time-expired permits", async ({ store }) => {
     vi.useFakeTimers();
     try {

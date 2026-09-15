@@ -24,6 +24,7 @@ export { useRegisterPermit } from "./permits/use-register-permit";
 export { useHasPermit, type UseHasPermitConfig } from "./permits/use-has-permit";
 export { useRevokePermits } from "./permits/use-revoke-permits";
 export { useClearCredentials } from "./permits/use-clear-credentials";
+export { useInvalidateDecryptionSignatures } from "./permits/use-invalidate-decryption-signatures";
 
 // Token hooks (ERC-20 token operations)
 export { useToken } from "./token/use-token";
