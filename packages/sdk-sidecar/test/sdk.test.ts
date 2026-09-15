@@ -44,6 +44,7 @@ test("context factory preserves signerless public decryption and zero-value lazy
     account: undefined,
     storage: undefined,
     permitStorage: undefined,
+    transportKeyPairDerivationSecret: undefined,
   };
   const signer = new RemoteSigner(
     { address: "0x1111111111111111111111111111111111111111", chainId: 11155111 },

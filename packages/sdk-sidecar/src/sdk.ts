@@ -1,7 +1,6 @@
-import { createPublicClient, http } from "viem";
 import { createConfig, ZamaSDK, ConfigurationError, type GenericProvider } from "@zama-fhe/sdk";
-import { node } from "@zama-fhe/sdk/node";
-import { ViemProvider } from "@zama-fhe/sdk/viem";
+import { sdkInstanceOptions } from "./sdk-options.js";
+import { createHttpProvider } from "./provider.js";
 import type { StorageManager } from "./storage-manager.js";
 import { parseContextConfig } from "./sdk-config.js";
 import type { ContextFactory } from "./runtime.js";
@@ -13,11 +12,12 @@ export function createContextFactory(manager: StorageManager): ContextFactory {
       request.permitStorage === undefined
         ? primary
         : await manager.resolve(request.permitStorage, remote);
-    const { chains, chainId, ...options } = parseContextConfig(request.config);
+    const { chains, chainId, processRuntime, relayers, providerConfigs, ...options } =
+      parseContextConfig(request.config);
     const providers = new Map(
       chains.map((chain) => [
         chain.id,
-        new ViemProvider({ publicClient: createPublicClient({ transport: http(chain.network) }) }),
+        createHttpProvider(chain.network, providerConfigs.get(chain.id)),
       ]),
     );
     const current = () => {
@@ -42,9 +42,11 @@ export function createContextFactory(manager: StorageManager): ContextFactory {
         provider,
         storage: primary.storage,
         permitStorage: permits.storage,
-        relayers: Object.fromEntries(chains.map((chain) => [chain.id, node()])),
+        relayers,
+        ...(processRuntime === undefined ? {} : { runtime: processRuntime }),
         ...options,
       }),
+      sdkInstanceOptions(request.transportKeyPairDerivationSecret),
     );
     return {
       sdk,

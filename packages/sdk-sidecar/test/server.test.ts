@@ -44,6 +44,7 @@ test("serves typed unary calls over a private socket and sanitizes errors", asyn
         {
           storage: undefined,
           permitStorage: undefined,
+    transportKeyPairDerivationSecret: undefined,
           config: undefined,
           signerEnabled: false,
           account: undefined,
@@ -126,6 +127,7 @@ test.each(["cancel", "deadline"] as const)(
     const contextId = await runtime.createContext({
       storage: undefined,
       permitStorage: undefined,
+    transportKeyPairDerivationSecret: undefined,
       config: undefined,
       signerEnabled: false,
       account: undefined,
@@ -181,6 +183,7 @@ test("closing contexts with both callback channels permits prompt server shutdow
           account: undefined,
           storage: undefined,
           permitStorage: undefined,
+    transportKeyPairDerivationSecret: undefined,
         },
         (error, value) => (error ? reject(error) : resolve(value)),
       ),

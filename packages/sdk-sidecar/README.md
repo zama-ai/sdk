@@ -1,6 +1,6 @@
 # Decrypt a confidential balance from Rust or Go
 
-Run `@zama-fhe/sdk` in a Docker sidecar and decrypt a balance from a native Rust or Go application. Both examples print:
+Use the maintained, permanently beta sidecar of `@zama-fhe/sdk` for external partner applications. Run it in Docker and decrypt a balance from a native Rust or Go application. Both examples print:
 
 ```text
 User Address: <wallet address>
@@ -54,7 +54,7 @@ dc run --rm go
 dc run --rm rust
 ```
 
-Use the [Go example](../../clients/go/examples/balance/main.go) or [Rust example](../../clients/rust/examples/balance/main.rs) as a starting point. Each loads its wallet locally and creates an SDK with typed configuration, a signer adapter and application-owned memory storage. The client manages callback channels. Neither example sends blockchain transactions.
+Use the [Go example](../../clients/go/examples/balance/main.go) or [Rust example](../../clients/rust/examples/balance/main.rs) as a starting point. Each entry point loads shared configuration, connects its wallet/provider, creates an SDK context, then runs the balance step. Setup lives in Go `config.go`/`ethereum.go` and Rust `support.rs`; `balance.go`/`balance.rs` receive SDK, provider, token and owner dependencies explicitly. Application-owned memory storage is the example default. The client manages callback channels. Neither example sends blockchain transactions.
 
 The encrypted balance is the contract's ciphertext handle. The decrypted value is the raw amount for that same handle, without decimal formatting.
 
@@ -69,7 +69,7 @@ dc run --rm go
 dc run --rm rust
 ```
 
-The examples store credentials in their own process memory. Each `dc run` starts a new process and therefore a new store. A sidecar restart preserves application-owned credentials only while that application/store remains alive, or when its backend is persistent.
+With the default `CREDENTIAL_STORAGE=application-memory`, the examples store credentials in their own process memory. Each `dc run` starts a new process and therefore a new store. A sidecar restart preserves application-owned credentials only while that application/store remains alive, or when its backend is persistent.
 
 The default Compose setup mounts only the socket into the sidecar. It does not require a credential volume. Stop it with `dc down`.
 
@@ -77,11 +77,7 @@ The default Compose setup mounts only the socket into the sidecar. It does not r
 
 Use [clients/go](../../clients/go) or [clients/rust](../../clients/rust). Generated bindings are checked in; application builds require neither Node nor a protobuf compiler. Images and language packages are not published yet.
 
-Create one SDK context for each configuration and signer lifecycle your application needs. Pass a configuration such as:
-
-```json
-{ "chainId": 11155111, "rpcUrl": "https://your-sepolia-rpc.example" }
-```
+Create one SDK context for each configuration and signer lifecycle your application needs. Build the configuration with Go `NewSDKConfig(chainID, rpcURL)` or Rust `SdkConfig::new(chain_id, rpc_url)`. Both clients encode the typed protobuf configuration directly; your application does not serialize SDK configuration as JSON.
 
 Supply a signer for private decryption. The Go private-key helper and optional Rust Alloy adapter handle EIP-712 signing; custom signing implementations remain supported. A context without a signer supports public decryption and the SDK's signer-independent offline and permit operations. Close contexts when finished.
 
@@ -111,9 +107,43 @@ Select Go `PersistentStorage("partner")` or Rust `Storage::Persistent("partner".
 
 Set Go `SDKConfig.PermitStorage` or Rust builder `.permit_storage(...)` to separate permits from transport keys. Omission preserves the SDK default of sharing the primary store.
 
+## Configure SDK options
+
+Set only the options your application needs. Leaving them absent preserves SDK and provider defaults. Both examples accept these settings in `.env.sidecar.local`:
+
+```dotenv
+CREDENTIAL_STORAGE=application-memory
+SDK_SINGLE_THREAD=true
+SDK_BATCH_RPC_CALLS=true
+SDK_RPC_TIMEOUT_MS=10000
+```
+
+`SDK_SINGLE_THREAD` configures the SDK process runtime. Start a fresh sidecar when changing it: the first SDK configuration in that process wins, even when it omits runtime options. `SDK_BATCH_RPC_CALLS` configures the Sepolia node relayer. `SDK_RPC_TIMEOUT_MS` configures HTTP requests made by the sidecar provider; it does not change the native application's RPC client.
+
+Select `CREDENTIAL_STORAGE=sidecar-memory` for the SDK instance's memory store. For sidecar persistence, select `CREDENTIAL_STORAGE=persistent` and set `CREDENTIAL_STORE_NAME`, then configure the private storage volume described above.
+
+The native API also supports runtime WASM loading, module versions, thread count and fallback auth; per-chain node/cleartext relayers and their typed options; and provider headers, retries, batching and polling. Use [Go configuration types](../../clients/go/config_options.go) or [Rust configuration types](../../clients/rust/src/config_options.rs). Encryption-key material uses raw byte slices or vectors. Explicitly empty relayer and header maps remain distinct from omitted maps. Prefetched FHE encryption keys are commonly about 50 MiB, so increase both the server and native client message limits before sending one. See the [wire configuration contract](../../proto/README.md#runtime-relayers-and-providers) for option names and unsupported JavaScript injection points.
+
+## Protect stored transport keys
+
+Provide `TRANSPORT_KEY_PAIR_DERIVATION_SECRET` in the example configuration from a secrets manager or cryptographically secure random source. The SDK accepts strings of at least 64 characters, or byte inputs of at least 32 bytes through the native API. A length check does not establish randomness. The examples forward text exactly; they do not decode it as hex.
+
+Leave the variable absent to omit credential protection. An explicitly empty value reaches SDK validation and fails. In application code, use Go `TextDerivationSecret`/`BytesDerivationSecret` or Rust `DerivationSecret::text`/`::bytes`. To express protection enabled without an available secret, use Go `MissingDerivationSecret()` or Rust `DerivationSecret::missing()`; the SDK rejects this configuration.
+
+Retain the same secret and credential backend when recreating an SDK or restarting the sidecar. Secrets are instance inputs, never stored with credentials. Keep them out of application logs. The SDK handles wrapping, unwrapping, validation and recovery. Protected stored credentials without their required secret fail according to SDK behavior.
+
+Run the same single command for each complete demo after changing setup:
+
+```sh
+dc run --rm go
+dc run --rm rust
+```
+
+The balance workflow currently reads the encrypted handle with the native Ethereum library and uses SDK decryption. Integration with `Token.balanceOf` and additional token/delegation steps is deferred until those native public APIs are exposed. Credential reuse and restart behavior are exercised through SDK-backed integration tests.
+
 ## Transport configuration
 
-Messages default to a 4 MiB maximum in the server and both clients. Configure larger batches using `SIDECAR_MAX_MESSAGE_BYTES` and the matching native client option: Go `DialOptions.MaxMessageBytes`, or Rust `Client::with_message_limit`.
+Messages default to a 4 MiB maximum in the server and both clients. Larger batches and prefetched FHE encryption keys require `SIDECAR_MAX_MESSAGE_BYTES` on the server plus the matching native client option: Go `DialOptions.MaxMessageBytes`, or Rust `Client::with_message_limit`. Set both limits above the encoded request size; prefetched keys are commonly about 50 MiB.
 
 `SIDECAR_MAX_CONCURRENT_STREAMS`, `SIDECAR_MAX_CONTEXTS` and `SIDECAR_MAX_OPERATIONS_PER_CONTEXT` optionally set deployment resource limits. The sidecar does not impose the prototype's fixed 16-stream, 64-context or 128-operation caps by default. Each active signer or application-storage channel uses one stream.
 
@@ -134,7 +164,7 @@ cargo test --manifest-path clients/rust/Cargo.toml --all-features --all-targets 
 cargo clippy --manifest-path clients/rust/Cargo.toml --all-features --all-targets --locked -- -D warnings
 ```
 
-To verify application-owned credentials across replacement of the SDK runtime, run `SIDECAR_NATIVE_TESTS=1 pnpm sidecar:test`. This launches both native test drivers, retains their memory stores, replaces the TypeScript runtime, and checks that fresh handles decrypt without another signature.
+Run `SIDECAR_NATIVE_TESTS=1 pnpm sidecar:test` for the native integration suite. It verifies protected application-owned credentials across replacement of the SDK runtime: both native drivers retain their memory stores and decrypt fresh handles without another signature. It also builds and runs both complete balance examples against synthetic RPC and SDK fixtures, including caller configuration, storage callbacks, signing and optional credential protection. No live wallet or RPC is used.
 
 These checks use synthetic data. The Docker commands above exercise live RPC reads, signing and decryption with your configured wallet.
 

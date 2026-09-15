@@ -96,6 +96,11 @@ export interface CreateContextRequest {
     | undefined;
   /** Omission shares storage, including its backend identity. */
   permitStorage: StorageBinding | undefined;
+  transportKeyPairDerivationSecret: DerivationSecret | undefined;
+}
+
+export interface DerivationSecret {
+  value: { $case: "text"; text: string } | { $case: "bytes"; bytes: Buffer } | undefined;
 }
 
 export interface CreateContextResponse {
@@ -402,6 +407,8 @@ export interface ContextConfig {
     | undefined;
   /** Whole seconds. */
   registryTtl?: number | undefined;
+  processRuntime: ProcessRuntimeConfig | undefined;
+  relayers: RelayerMap | undefined;
 }
 
 /**
@@ -424,6 +431,7 @@ export interface ChainConfig {
   registryAddress?: Buffer | undefined;
   executorAddress?: Buffer | undefined;
   auth: ChainAuth | undefined;
+  provider: HttpProviderConfig | undefined;
 }
 
 export interface ChainAuth {
@@ -438,6 +446,102 @@ export interface NamedCredential {
   /** Omission preserves the SDK's default header or cookie name. */
   name?: string | undefined;
   value: string;
+}
+
+/** Runtime settings apply to the process once, at its first SDK configuration. */
+export interface ProcessRuntimeConfig {
+  wasmAssetLoadMode?: string | undefined;
+  moduleVersions: ModuleVersions | undefined;
+  singleThread?: boolean | undefined;
+  numberOfThreads?: number | undefined;
+  auth: ChainAuth | undefined;
+}
+
+export interface ModuleVersions {
+  selection: { $case: "auto"; auto: Empty } | { $case: "pinned"; pinned: PinnedModuleVersions } | undefined;
+}
+
+export interface PinnedModuleVersions {
+  tfhe?: string | undefined;
+  kms?: string | undefined;
+  checkCompatibility?: string | undefined;
+}
+
+/** A present empty map differs from omission: every configured chain needs a relayer. */
+export interface RelayerMap {
+  entries: Map<bigint, RelayerConfig>;
+}
+
+export interface RelayerMap_EntriesEntry {
+  key: bigint;
+  value: RelayerConfig | undefined;
+}
+
+export interface RelayerConfig {
+  type: string;
+  options: RelayerOptions | undefined;
+}
+
+export interface RelayerOptions {
+  /** Whole milliseconds. */
+  timeout?: number | undefined;
+  debug?: boolean | undefined;
+  batchRpcCalls?: boolean | undefined;
+  moduleVersions: ModuleVersions | undefined;
+  fheEncryptionKey: FheEncryptionKey | undefined;
+}
+
+export interface FheEncryptionKey {
+  publicKeyBytes: FhePublicKeyBytes | undefined;
+  crsBytes: FheCrsBytes | undefined;
+  metadata: FheEncryptionKeyMetadata | undefined;
+}
+
+export interface FhePublicKeyBytes {
+  id: string;
+  bytes: Buffer;
+}
+
+export interface FheCrsBytes {
+  id: string;
+  capacity: number;
+  bytes: Buffer;
+}
+
+export interface FheEncryptionKeyMetadata {
+  relayerUrl: string;
+  chainId: bigint;
+}
+
+/** Timeouts, retry delays and polling intervals are whole milliseconds. */
+export interface HttpProviderConfig {
+  headers: HttpHeaders | undefined;
+  timeout?: number | undefined;
+  retryCount?: number | undefined;
+  retryDelay?: number | undefined;
+  batch: ProviderBatch | undefined;
+  pollingInterval?: number | undefined;
+}
+
+export interface HttpHeaders {
+  entries: { [key: string]: string };
+}
+
+export interface HttpHeaders_EntriesEntry {
+  key: string;
+  value: string;
+}
+
+export interface ProviderBatch {
+  selection: { $case: "enabled"; enabled: boolean } | { $case: "options"; options: ProviderBatchOptions } | undefined;
+}
+
+export interface ProviderBatchOptions {
+  batchSize?:
+    | number
+    | undefined;
+  /** Whole milliseconds. */
+  wait?: number | undefined;
 }
 
 function createBaseEmpty(): Empty {
@@ -670,7 +774,14 @@ export const WalletAccount: MessageFns<WalletAccount> = {
 };
 
 function createBaseCreateContextRequest(): CreateContextRequest {
-  return { config: undefined, signerEnabled: false, account: undefined, storage: undefined, permitStorage: undefined };
+  return {
+    config: undefined,
+    signerEnabled: false,
+    account: undefined,
+    storage: undefined,
+    permitStorage: undefined,
+    transportKeyPairDerivationSecret: undefined,
+  };
 }
 
 export const CreateContextRequest: MessageFns<CreateContextRequest> = {
@@ -689,6 +800,9 @@ export const CreateContextRequest: MessageFns<CreateContextRequest> = {
     }
     if (message.permitStorage !== undefined) {
       StorageBinding.encode(message.permitStorage, writer.uint32(42).fork()).join();
+    }
+    if (message.transportKeyPairDerivationSecret !== undefined) {
+      DerivationSecret.encode(message.transportKeyPairDerivationSecret, writer.uint32(802).fork()).join();
     }
     return writer;
   },
@@ -740,6 +854,14 @@ export const CreateContextRequest: MessageFns<CreateContextRequest> = {
           message.permitStorage = StorageBinding.decode(reader, reader.uint32());
           continue;
         }
+        case 100: {
+          if (tag !== 802) {
+            break;
+          }
+
+          message.transportKeyPairDerivationSecret = DerivationSecret.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -764,6 +886,11 @@ export const CreateContextRequest: MessageFns<CreateContextRequest> = {
         : isSet(object.permit_storage)
         ? StorageBinding.fromJSON(object.permit_storage)
         : undefined,
+      transportKeyPairDerivationSecret: isSet(object.transportKeyPairDerivationSecret)
+        ? DerivationSecret.fromJSON(object.transportKeyPairDerivationSecret)
+        : isSet(object.transport_key_pair_derivation_secret)
+        ? DerivationSecret.fromJSON(object.transport_key_pair_derivation_secret)
+        : undefined,
     };
   },
 
@@ -783,6 +910,9 @@ export const CreateContextRequest: MessageFns<CreateContextRequest> = {
     }
     if (message.permitStorage !== undefined) {
       obj.permitStorage = StorageBinding.toJSON(message.permitStorage);
+    }
+    if (message.transportKeyPairDerivationSecret !== undefined) {
+      obj.transportKeyPairDerivationSecret = DerivationSecret.toJSON(message.transportKeyPairDerivationSecret);
     }
     return obj;
   },
@@ -805,6 +935,102 @@ export const CreateContextRequest: MessageFns<CreateContextRequest> = {
     message.permitStorage = (object.permitStorage !== undefined && object.permitStorage !== null)
       ? StorageBinding.fromPartial(object.permitStorage)
       : undefined;
+    message.transportKeyPairDerivationSecret =
+      (object.transportKeyPairDerivationSecret !== undefined && object.transportKeyPairDerivationSecret !== null)
+        ? DerivationSecret.fromPartial(object.transportKeyPairDerivationSecret)
+        : undefined;
+    return message;
+  },
+};
+
+function createBaseDerivationSecret(): DerivationSecret {
+  return { value: undefined };
+}
+
+export const DerivationSecret: MessageFns<DerivationSecret> = {
+  encode(message: DerivationSecret, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    switch (message.value?.$case) {
+      case "text":
+        writer.uint32(10).string(message.value.text);
+        break;
+      case "bytes":
+        writer.uint32(18).bytes(message.value.bytes);
+        break;
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DerivationSecret {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDerivationSecret();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.value = { $case: "text", text: reader.string() };
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = { $case: "bytes", bytes: Buffer.from(reader.bytes()) };
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): DerivationSecret {
+    return {
+      value: isSet(object.text)
+        ? { $case: "text", text: globalThis.String(object.text) }
+        : isSet(object.bytes)
+        ? { $case: "bytes", bytes: Buffer.from(bytesFromBase64(object.bytes)) }
+        : undefined,
+    };
+  },
+
+  toJSON(message: DerivationSecret): unknown {
+    const obj: any = {};
+    if (message.value?.$case === "text") {
+      obj.text = message.value.text;
+    } else if (message.value?.$case === "bytes") {
+      obj.bytes = base64FromBytes(message.value.bytes);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<DerivationSecret>): DerivationSecret {
+    return DerivationSecret.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<DerivationSecret>): DerivationSecret {
+    const message = createBaseDerivationSecret();
+    switch (object.value?.$case) {
+      case "text": {
+        if (object.value?.text !== undefined && object.value?.text !== null) {
+          message.value = { $case: "text", text: object.value.text };
+        }
+        break;
+      }
+      case "bytes": {
+        if (object.value?.bytes !== undefined && object.value?.bytes !== null) {
+          message.value = { $case: "bytes", bytes: object.value.bytes };
+        }
+        break;
+      }
+    }
     return message;
   },
 };
@@ -5198,6 +5424,8 @@ function createBaseContextConfig(): ContextConfig {
     transportKeyPairTtl: undefined,
     transportKeyPairScope: undefined,
     registryTtl: undefined,
+    processRuntime: undefined,
+    relayers: undefined,
   };
 }
 
@@ -5223,6 +5451,12 @@ export const ContextConfig: MessageFns<ContextConfig> = {
     }
     if (message.registryTtl !== undefined) {
       writer.uint32(48).uint32(message.registryTtl);
+    }
+    if (message.processRuntime !== undefined) {
+      ProcessRuntimeConfig.encode(message.processRuntime, writer.uint32(802).fork()).join();
+    }
+    if (message.relayers !== undefined) {
+      RelayerMap.encode(message.relayers, writer.uint32(810).fork()).join();
     }
     return writer;
   },
@@ -5282,6 +5516,22 @@ export const ContextConfig: MessageFns<ContextConfig> = {
           message.registryTtl = reader.uint32();
           continue;
         }
+        case 100: {
+          if (tag !== 802) {
+            break;
+          }
+
+          message.processRuntime = ProcessRuntimeConfig.decode(reader, reader.uint32());
+          continue;
+        }
+        case 101: {
+          if (tag !== 810) {
+            break;
+          }
+
+          message.relayers = RelayerMap.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -5319,6 +5569,12 @@ export const ContextConfig: MessageFns<ContextConfig> = {
         : isSet(object.registry_ttl)
         ? globalThis.Number(object.registry_ttl)
         : undefined,
+      processRuntime: isSet(object.processRuntime)
+        ? ProcessRuntimeConfig.fromJSON(object.processRuntime)
+        : isSet(object.process_runtime)
+        ? ProcessRuntimeConfig.fromJSON(object.process_runtime)
+        : undefined,
+      relayers: isSet(object.relayers) ? RelayerMap.fromJSON(object.relayers) : undefined,
     };
   },
 
@@ -5342,6 +5598,12 @@ export const ContextConfig: MessageFns<ContextConfig> = {
     if (message.registryTtl !== undefined) {
       obj.registryTtl = Math.round(message.registryTtl);
     }
+    if (message.processRuntime !== undefined) {
+      obj.processRuntime = ProcessRuntimeConfig.toJSON(message.processRuntime);
+    }
+    if (message.relayers !== undefined) {
+      obj.relayers = RelayerMap.toJSON(message.relayers);
+    }
     return obj;
   },
 
@@ -5356,6 +5618,12 @@ export const ContextConfig: MessageFns<ContextConfig> = {
     message.transportKeyPairTtl = object.transportKeyPairTtl ?? undefined;
     message.transportKeyPairScope = object.transportKeyPairScope ?? undefined;
     message.registryTtl = object.registryTtl ?? undefined;
+    message.processRuntime = (object.processRuntime !== undefined && object.processRuntime !== null)
+      ? ProcessRuntimeConfig.fromPartial(object.processRuntime)
+      : undefined;
+    message.relayers = (object.relayers !== undefined && object.relayers !== null)
+      ? RelayerMap.fromPartial(object.relayers)
+      : undefined;
     return message;
   },
 };
@@ -5374,6 +5642,7 @@ function createBaseChainConfig(): ChainConfig {
     registryAddress: undefined,
     executorAddress: undefined,
     auth: undefined,
+    provider: undefined,
   };
 }
 
@@ -5420,6 +5689,9 @@ export const ChainConfig: MessageFns<ChainConfig> = {
     }
     if (message.auth !== undefined) {
       ChainAuth.encode(message.auth, writer.uint32(98).fork()).join();
+    }
+    if (message.provider !== undefined) {
+      HttpProviderConfig.encode(message.provider, writer.uint32(802).fork()).join();
     }
     return writer;
   },
@@ -5527,6 +5799,14 @@ export const ChainConfig: MessageFns<ChainConfig> = {
           message.auth = ChainAuth.decode(reader, reader.uint32());
           continue;
         }
+        case 100: {
+          if (tag !== 802) {
+            break;
+          }
+
+          message.provider = HttpProviderConfig.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -5586,6 +5866,7 @@ export const ChainConfig: MessageFns<ChainConfig> = {
         ? Buffer.from(bytesFromBase64(object.executor_address))
         : undefined,
       auth: isSet(object.auth) ? ChainAuth.fromJSON(object.auth) : undefined,
+      provider: isSet(object.provider) ? HttpProviderConfig.fromJSON(object.provider) : undefined,
     };
   },
 
@@ -5629,6 +5910,9 @@ export const ChainConfig: MessageFns<ChainConfig> = {
     if (message.auth !== undefined) {
       obj.auth = ChainAuth.toJSON(message.auth);
     }
+    if (message.provider !== undefined) {
+      obj.provider = HttpProviderConfig.toJSON(message.provider);
+    }
     return obj;
   },
 
@@ -5651,6 +5935,9 @@ export const ChainConfig: MessageFns<ChainConfig> = {
     message.registryAddress = object.registryAddress ?? undefined;
     message.executorAddress = object.executorAddress ?? undefined;
     message.auth = (object.auth !== undefined && object.auth !== null) ? ChainAuth.fromPartial(object.auth) : undefined;
+    message.provider = (object.provider !== undefined && object.provider !== null)
+      ? HttpProviderConfig.fromPartial(object.provider)
+      : undefined;
     return message;
   },
 };
@@ -5852,6 +6139,1582 @@ export const NamedCredential: MessageFns<NamedCredential> = {
     const message = createBaseNamedCredential();
     message.name = object.name ?? undefined;
     message.value = object.value ?? "";
+    return message;
+  },
+};
+
+function createBaseProcessRuntimeConfig(): ProcessRuntimeConfig {
+  return {
+    wasmAssetLoadMode: undefined,
+    moduleVersions: undefined,
+    singleThread: undefined,
+    numberOfThreads: undefined,
+    auth: undefined,
+  };
+}
+
+export const ProcessRuntimeConfig: MessageFns<ProcessRuntimeConfig> = {
+  encode(message: ProcessRuntimeConfig, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.wasmAssetLoadMode !== undefined) {
+      writer.uint32(10).string(message.wasmAssetLoadMode);
+    }
+    if (message.moduleVersions !== undefined) {
+      ModuleVersions.encode(message.moduleVersions, writer.uint32(18).fork()).join();
+    }
+    if (message.singleThread !== undefined) {
+      writer.uint32(24).bool(message.singleThread);
+    }
+    if (message.numberOfThreads !== undefined) {
+      writer.uint32(32).uint32(message.numberOfThreads);
+    }
+    if (message.auth !== undefined) {
+      ChainAuth.encode(message.auth, writer.uint32(42).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ProcessRuntimeConfig {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseProcessRuntimeConfig();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.wasmAssetLoadMode = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.moduleVersions = ModuleVersions.decode(reader, reader.uint32());
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.singleThread = reader.bool();
+          continue;
+        }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
+
+          message.numberOfThreads = reader.uint32();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.auth = ChainAuth.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ProcessRuntimeConfig {
+    return {
+      wasmAssetLoadMode: isSet(object.wasmAssetLoadMode)
+        ? globalThis.String(object.wasmAssetLoadMode)
+        : isSet(object.wasm_asset_load_mode)
+        ? globalThis.String(object.wasm_asset_load_mode)
+        : undefined,
+      moduleVersions: isSet(object.moduleVersions)
+        ? ModuleVersions.fromJSON(object.moduleVersions)
+        : isSet(object.module_versions)
+        ? ModuleVersions.fromJSON(object.module_versions)
+        : undefined,
+      singleThread: isSet(object.singleThread)
+        ? globalThis.Boolean(object.singleThread)
+        : isSet(object.single_thread)
+        ? globalThis.Boolean(object.single_thread)
+        : undefined,
+      numberOfThreads: isSet(object.numberOfThreads)
+        ? globalThis.Number(object.numberOfThreads)
+        : isSet(object.number_of_threads)
+        ? globalThis.Number(object.number_of_threads)
+        : undefined,
+      auth: isSet(object.auth) ? ChainAuth.fromJSON(object.auth) : undefined,
+    };
+  },
+
+  toJSON(message: ProcessRuntimeConfig): unknown {
+    const obj: any = {};
+    if (message.wasmAssetLoadMode !== undefined) {
+      obj.wasmAssetLoadMode = message.wasmAssetLoadMode;
+    }
+    if (message.moduleVersions !== undefined) {
+      obj.moduleVersions = ModuleVersions.toJSON(message.moduleVersions);
+    }
+    if (message.singleThread !== undefined) {
+      obj.singleThread = message.singleThread;
+    }
+    if (message.numberOfThreads !== undefined) {
+      obj.numberOfThreads = Math.round(message.numberOfThreads);
+    }
+    if (message.auth !== undefined) {
+      obj.auth = ChainAuth.toJSON(message.auth);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ProcessRuntimeConfig>): ProcessRuntimeConfig {
+    return ProcessRuntimeConfig.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ProcessRuntimeConfig>): ProcessRuntimeConfig {
+    const message = createBaseProcessRuntimeConfig();
+    message.wasmAssetLoadMode = object.wasmAssetLoadMode ?? undefined;
+    message.moduleVersions = (object.moduleVersions !== undefined && object.moduleVersions !== null)
+      ? ModuleVersions.fromPartial(object.moduleVersions)
+      : undefined;
+    message.singleThread = object.singleThread ?? undefined;
+    message.numberOfThreads = object.numberOfThreads ?? undefined;
+    message.auth = (object.auth !== undefined && object.auth !== null) ? ChainAuth.fromPartial(object.auth) : undefined;
+    return message;
+  },
+};
+
+function createBaseModuleVersions(): ModuleVersions {
+  return { selection: undefined };
+}
+
+export const ModuleVersions: MessageFns<ModuleVersions> = {
+  encode(message: ModuleVersions, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    switch (message.selection?.$case) {
+      case "auto":
+        Empty.encode(message.selection.auto, writer.uint32(10).fork()).join();
+        break;
+      case "pinned":
+        PinnedModuleVersions.encode(message.selection.pinned, writer.uint32(18).fork()).join();
+        break;
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ModuleVersions {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseModuleVersions();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.selection = { $case: "auto", auto: Empty.decode(reader, reader.uint32()) };
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.selection = { $case: "pinned", pinned: PinnedModuleVersions.decode(reader, reader.uint32()) };
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ModuleVersions {
+    return {
+      selection: isSet(object.auto)
+        ? { $case: "auto", auto: Empty.fromJSON(object.auto) }
+        : isSet(object.pinned)
+        ? { $case: "pinned", pinned: PinnedModuleVersions.fromJSON(object.pinned) }
+        : undefined,
+    };
+  },
+
+  toJSON(message: ModuleVersions): unknown {
+    const obj: any = {};
+    if (message.selection?.$case === "auto") {
+      obj.auto = Empty.toJSON(message.selection.auto);
+    } else if (message.selection?.$case === "pinned") {
+      obj.pinned = PinnedModuleVersions.toJSON(message.selection.pinned);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ModuleVersions>): ModuleVersions {
+    return ModuleVersions.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ModuleVersions>): ModuleVersions {
+    const message = createBaseModuleVersions();
+    switch (object.selection?.$case) {
+      case "auto": {
+        if (object.selection?.auto !== undefined && object.selection?.auto !== null) {
+          message.selection = { $case: "auto", auto: Empty.fromPartial(object.selection.auto) };
+        }
+        break;
+      }
+      case "pinned": {
+        if (object.selection?.pinned !== undefined && object.selection?.pinned !== null) {
+          message.selection = { $case: "pinned", pinned: PinnedModuleVersions.fromPartial(object.selection.pinned) };
+        }
+        break;
+      }
+    }
+    return message;
+  },
+};
+
+function createBasePinnedModuleVersions(): PinnedModuleVersions {
+  return { tfhe: undefined, kms: undefined, checkCompatibility: undefined };
+}
+
+export const PinnedModuleVersions: MessageFns<PinnedModuleVersions> = {
+  encode(message: PinnedModuleVersions, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.tfhe !== undefined) {
+      writer.uint32(10).string(message.tfhe);
+    }
+    if (message.kms !== undefined) {
+      writer.uint32(18).string(message.kms);
+    }
+    if (message.checkCompatibility !== undefined) {
+      writer.uint32(26).string(message.checkCompatibility);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): PinnedModuleVersions {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePinnedModuleVersions();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.tfhe = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.kms = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.checkCompatibility = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): PinnedModuleVersions {
+    return {
+      tfhe: isSet(object.tfhe) ? globalThis.String(object.tfhe) : undefined,
+      kms: isSet(object.kms) ? globalThis.String(object.kms) : undefined,
+      checkCompatibility: isSet(object.checkCompatibility)
+        ? globalThis.String(object.checkCompatibility)
+        : isSet(object.check_compatibility)
+        ? globalThis.String(object.check_compatibility)
+        : undefined,
+    };
+  },
+
+  toJSON(message: PinnedModuleVersions): unknown {
+    const obj: any = {};
+    if (message.tfhe !== undefined) {
+      obj.tfhe = message.tfhe;
+    }
+    if (message.kms !== undefined) {
+      obj.kms = message.kms;
+    }
+    if (message.checkCompatibility !== undefined) {
+      obj.checkCompatibility = message.checkCompatibility;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<PinnedModuleVersions>): PinnedModuleVersions {
+    return PinnedModuleVersions.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<PinnedModuleVersions>): PinnedModuleVersions {
+    const message = createBasePinnedModuleVersions();
+    message.tfhe = object.tfhe ?? undefined;
+    message.kms = object.kms ?? undefined;
+    message.checkCompatibility = object.checkCompatibility ?? undefined;
+    return message;
+  },
+};
+
+function createBaseRelayerMap(): RelayerMap {
+  return { entries: new Map() };
+}
+
+export const RelayerMap: MessageFns<RelayerMap> = {
+  encode(message: RelayerMap, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    message.entries.forEach((value, key) => {
+      RelayerMap_EntriesEntry.encode({ key: key as any, value }, writer.uint32(10).fork()).join();
+    });
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RelayerMap {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRelayerMap();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          const entry1 = RelayerMap_EntriesEntry.decode(reader, reader.uint32());
+          if (entry1.value !== undefined) {
+            message.entries.set(entry1.key, entry1.value);
+          }
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): RelayerMap {
+    return {
+      entries: isObject(object.entries)
+        ? (globalThis.Object.entries(object.entries) as [string, any][]).reduce(
+          (acc: Map<bigint, RelayerConfig>, [key, value]: [string, any]) => {
+            acc.set(BigInt(key), RelayerConfig.fromJSON(value));
+            return acc;
+          },
+          new Map(),
+        )
+        : new Map(),
+    };
+  },
+
+  toJSON(message: RelayerMap): unknown {
+    const obj: any = {};
+    if (message.entries?.size) {
+      obj.entries = {};
+      message.entries.forEach((v, k) => {
+        obj.entries[k.toString()] = RelayerConfig.toJSON(v);
+      });
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<RelayerMap>): RelayerMap {
+    return RelayerMap.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<RelayerMap>): RelayerMap {
+    const message = createBaseRelayerMap();
+    message.entries = (() => {
+      const m = new Map();
+      (object.entries as Map<bigint, RelayerConfig> ?? new Map()).forEach((value, key) => {
+        if (value !== undefined) {
+          m.set(key, RelayerConfig.fromPartial(value));
+        }
+      });
+      return m;
+    })();
+    return message;
+  },
+};
+
+function createBaseRelayerMap_EntriesEntry(): RelayerMap_EntriesEntry {
+  return { key: 0n, value: undefined };
+}
+
+export const RelayerMap_EntriesEntry: MessageFns<RelayerMap_EntriesEntry> = {
+  encode(message: RelayerMap_EntriesEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== 0n) {
+      if (BigInt.asUintN(64, message.key) !== message.key) {
+        throw new globalThis.Error("value provided for field message.key of type uint64 too large");
+      }
+      writer.uint32(8).uint64(message.key);
+    }
+    if (message.value !== undefined) {
+      RelayerConfig.encode(message.value, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RelayerMap_EntriesEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRelayerMap_EntriesEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.key = reader.uint64() as bigint;
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = RelayerConfig.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): RelayerMap_EntriesEntry {
+    return {
+      key: isSet(object.key) ? BigInt(object.key) : 0n,
+      value: isSet(object.value) ? RelayerConfig.fromJSON(object.value) : undefined,
+    };
+  },
+
+  toJSON(message: RelayerMap_EntriesEntry): unknown {
+    const obj: any = {};
+    if (message.key !== 0n) {
+      obj.key = message.key.toString();
+    }
+    if (message.value !== undefined) {
+      obj.value = RelayerConfig.toJSON(message.value);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<RelayerMap_EntriesEntry>): RelayerMap_EntriesEntry {
+    return RelayerMap_EntriesEntry.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<RelayerMap_EntriesEntry>): RelayerMap_EntriesEntry {
+    const message = createBaseRelayerMap_EntriesEntry();
+    message.key = (object.key !== undefined && object.key !== null) ? BigInt(object.key) : 0n;
+    message.value = (object.value !== undefined && object.value !== null)
+      ? RelayerConfig.fromPartial(object.value)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseRelayerConfig(): RelayerConfig {
+  return { type: "", options: undefined };
+}
+
+export const RelayerConfig: MessageFns<RelayerConfig> = {
+  encode(message: RelayerConfig, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.type !== "") {
+      writer.uint32(10).string(message.type);
+    }
+    if (message.options !== undefined) {
+      RelayerOptions.encode(message.options, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RelayerConfig {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRelayerConfig();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.type = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.options = RelayerOptions.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): RelayerConfig {
+    return {
+      type: isSet(object.type) ? globalThis.String(object.type) : "",
+      options: isSet(object.options) ? RelayerOptions.fromJSON(object.options) : undefined,
+    };
+  },
+
+  toJSON(message: RelayerConfig): unknown {
+    const obj: any = {};
+    if (message.type !== "") {
+      obj.type = message.type;
+    }
+    if (message.options !== undefined) {
+      obj.options = RelayerOptions.toJSON(message.options);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<RelayerConfig>): RelayerConfig {
+    return RelayerConfig.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<RelayerConfig>): RelayerConfig {
+    const message = createBaseRelayerConfig();
+    message.type = object.type ?? "";
+    message.options = (object.options !== undefined && object.options !== null)
+      ? RelayerOptions.fromPartial(object.options)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseRelayerOptions(): RelayerOptions {
+  return {
+    timeout: undefined,
+    debug: undefined,
+    batchRpcCalls: undefined,
+    moduleVersions: undefined,
+    fheEncryptionKey: undefined,
+  };
+}
+
+export const RelayerOptions: MessageFns<RelayerOptions> = {
+  encode(message: RelayerOptions, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.timeout !== undefined) {
+      writer.uint32(8).uint32(message.timeout);
+    }
+    if (message.debug !== undefined) {
+      writer.uint32(16).bool(message.debug);
+    }
+    if (message.batchRpcCalls !== undefined) {
+      writer.uint32(24).bool(message.batchRpcCalls);
+    }
+    if (message.moduleVersions !== undefined) {
+      ModuleVersions.encode(message.moduleVersions, writer.uint32(34).fork()).join();
+    }
+    if (message.fheEncryptionKey !== undefined) {
+      FheEncryptionKey.encode(message.fheEncryptionKey, writer.uint32(42).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RelayerOptions {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRelayerOptions();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.timeout = reader.uint32();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.debug = reader.bool();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.batchRpcCalls = reader.bool();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.moduleVersions = ModuleVersions.decode(reader, reader.uint32());
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.fheEncryptionKey = FheEncryptionKey.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): RelayerOptions {
+    return {
+      timeout: isSet(object.timeout) ? globalThis.Number(object.timeout) : undefined,
+      debug: isSet(object.debug) ? globalThis.Boolean(object.debug) : undefined,
+      batchRpcCalls: isSet(object.batchRpcCalls)
+        ? globalThis.Boolean(object.batchRpcCalls)
+        : isSet(object.batch_rpc_calls)
+        ? globalThis.Boolean(object.batch_rpc_calls)
+        : undefined,
+      moduleVersions: isSet(object.moduleVersions)
+        ? ModuleVersions.fromJSON(object.moduleVersions)
+        : isSet(object.module_versions)
+        ? ModuleVersions.fromJSON(object.module_versions)
+        : undefined,
+      fheEncryptionKey: isSet(object.fheEncryptionKey)
+        ? FheEncryptionKey.fromJSON(object.fheEncryptionKey)
+        : isSet(object.fhe_encryption_key)
+        ? FheEncryptionKey.fromJSON(object.fhe_encryption_key)
+        : undefined,
+    };
+  },
+
+  toJSON(message: RelayerOptions): unknown {
+    const obj: any = {};
+    if (message.timeout !== undefined) {
+      obj.timeout = Math.round(message.timeout);
+    }
+    if (message.debug !== undefined) {
+      obj.debug = message.debug;
+    }
+    if (message.batchRpcCalls !== undefined) {
+      obj.batchRpcCalls = message.batchRpcCalls;
+    }
+    if (message.moduleVersions !== undefined) {
+      obj.moduleVersions = ModuleVersions.toJSON(message.moduleVersions);
+    }
+    if (message.fheEncryptionKey !== undefined) {
+      obj.fheEncryptionKey = FheEncryptionKey.toJSON(message.fheEncryptionKey);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<RelayerOptions>): RelayerOptions {
+    return RelayerOptions.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<RelayerOptions>): RelayerOptions {
+    const message = createBaseRelayerOptions();
+    message.timeout = object.timeout ?? undefined;
+    message.debug = object.debug ?? undefined;
+    message.batchRpcCalls = object.batchRpcCalls ?? undefined;
+    message.moduleVersions = (object.moduleVersions !== undefined && object.moduleVersions !== null)
+      ? ModuleVersions.fromPartial(object.moduleVersions)
+      : undefined;
+    message.fheEncryptionKey = (object.fheEncryptionKey !== undefined && object.fheEncryptionKey !== null)
+      ? FheEncryptionKey.fromPartial(object.fheEncryptionKey)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseFheEncryptionKey(): FheEncryptionKey {
+  return { publicKeyBytes: undefined, crsBytes: undefined, metadata: undefined };
+}
+
+export const FheEncryptionKey: MessageFns<FheEncryptionKey> = {
+  encode(message: FheEncryptionKey, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.publicKeyBytes !== undefined) {
+      FhePublicKeyBytes.encode(message.publicKeyBytes, writer.uint32(10).fork()).join();
+    }
+    if (message.crsBytes !== undefined) {
+      FheCrsBytes.encode(message.crsBytes, writer.uint32(18).fork()).join();
+    }
+    if (message.metadata !== undefined) {
+      FheEncryptionKeyMetadata.encode(message.metadata, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): FheEncryptionKey {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseFheEncryptionKey();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.publicKeyBytes = FhePublicKeyBytes.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.crsBytes = FheCrsBytes.decode(reader, reader.uint32());
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.metadata = FheEncryptionKeyMetadata.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): FheEncryptionKey {
+    return {
+      publicKeyBytes: isSet(object.publicKeyBytes)
+        ? FhePublicKeyBytes.fromJSON(object.publicKeyBytes)
+        : isSet(object.public_key_bytes)
+        ? FhePublicKeyBytes.fromJSON(object.public_key_bytes)
+        : undefined,
+      crsBytes: isSet(object.crsBytes)
+        ? FheCrsBytes.fromJSON(object.crsBytes)
+        : isSet(object.crs_bytes)
+        ? FheCrsBytes.fromJSON(object.crs_bytes)
+        : undefined,
+      metadata: isSet(object.metadata) ? FheEncryptionKeyMetadata.fromJSON(object.metadata) : undefined,
+    };
+  },
+
+  toJSON(message: FheEncryptionKey): unknown {
+    const obj: any = {};
+    if (message.publicKeyBytes !== undefined) {
+      obj.publicKeyBytes = FhePublicKeyBytes.toJSON(message.publicKeyBytes);
+    }
+    if (message.crsBytes !== undefined) {
+      obj.crsBytes = FheCrsBytes.toJSON(message.crsBytes);
+    }
+    if (message.metadata !== undefined) {
+      obj.metadata = FheEncryptionKeyMetadata.toJSON(message.metadata);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<FheEncryptionKey>): FheEncryptionKey {
+    return FheEncryptionKey.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<FheEncryptionKey>): FheEncryptionKey {
+    const message = createBaseFheEncryptionKey();
+    message.publicKeyBytes = (object.publicKeyBytes !== undefined && object.publicKeyBytes !== null)
+      ? FhePublicKeyBytes.fromPartial(object.publicKeyBytes)
+      : undefined;
+    message.crsBytes = (object.crsBytes !== undefined && object.crsBytes !== null)
+      ? FheCrsBytes.fromPartial(object.crsBytes)
+      : undefined;
+    message.metadata = (object.metadata !== undefined && object.metadata !== null)
+      ? FheEncryptionKeyMetadata.fromPartial(object.metadata)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseFhePublicKeyBytes(): FhePublicKeyBytes {
+  return { id: "", bytes: Buffer.alloc(0) };
+}
+
+export const FhePublicKeyBytes: MessageFns<FhePublicKeyBytes> = {
+  encode(message: FhePublicKeyBytes, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.bytes.length !== 0) {
+      writer.uint32(18).bytes(message.bytes);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): FhePublicKeyBytes {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseFhePublicKeyBytes();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.id = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.bytes = Buffer.from(reader.bytes());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): FhePublicKeyBytes {
+    return {
+      id: isSet(object.id) ? globalThis.String(object.id) : "",
+      bytes: isSet(object.bytes) ? Buffer.from(bytesFromBase64(object.bytes)) : Buffer.alloc(0),
+    };
+  },
+
+  toJSON(message: FhePublicKeyBytes): unknown {
+    const obj: any = {};
+    if (message.id !== "") {
+      obj.id = message.id;
+    }
+    if (message.bytes.length !== 0) {
+      obj.bytes = base64FromBytes(message.bytes);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<FhePublicKeyBytes>): FhePublicKeyBytes {
+    return FhePublicKeyBytes.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<FhePublicKeyBytes>): FhePublicKeyBytes {
+    const message = createBaseFhePublicKeyBytes();
+    message.id = object.id ?? "";
+    message.bytes = object.bytes ?? Buffer.alloc(0);
+    return message;
+  },
+};
+
+function createBaseFheCrsBytes(): FheCrsBytes {
+  return { id: "", capacity: 0, bytes: Buffer.alloc(0) };
+}
+
+export const FheCrsBytes: MessageFns<FheCrsBytes> = {
+  encode(message: FheCrsBytes, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.capacity !== 0) {
+      writer.uint32(16).uint32(message.capacity);
+    }
+    if (message.bytes.length !== 0) {
+      writer.uint32(26).bytes(message.bytes);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): FheCrsBytes {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseFheCrsBytes();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.id = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.capacity = reader.uint32();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.bytes = Buffer.from(reader.bytes());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): FheCrsBytes {
+    return {
+      id: isSet(object.id) ? globalThis.String(object.id) : "",
+      capacity: isSet(object.capacity) ? globalThis.Number(object.capacity) : 0,
+      bytes: isSet(object.bytes) ? Buffer.from(bytesFromBase64(object.bytes)) : Buffer.alloc(0),
+    };
+  },
+
+  toJSON(message: FheCrsBytes): unknown {
+    const obj: any = {};
+    if (message.id !== "") {
+      obj.id = message.id;
+    }
+    if (message.capacity !== 0) {
+      obj.capacity = Math.round(message.capacity);
+    }
+    if (message.bytes.length !== 0) {
+      obj.bytes = base64FromBytes(message.bytes);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<FheCrsBytes>): FheCrsBytes {
+    return FheCrsBytes.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<FheCrsBytes>): FheCrsBytes {
+    const message = createBaseFheCrsBytes();
+    message.id = object.id ?? "";
+    message.capacity = object.capacity ?? 0;
+    message.bytes = object.bytes ?? Buffer.alloc(0);
+    return message;
+  },
+};
+
+function createBaseFheEncryptionKeyMetadata(): FheEncryptionKeyMetadata {
+  return { relayerUrl: "", chainId: 0n };
+}
+
+export const FheEncryptionKeyMetadata: MessageFns<FheEncryptionKeyMetadata> = {
+  encode(message: FheEncryptionKeyMetadata, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.relayerUrl !== "") {
+      writer.uint32(10).string(message.relayerUrl);
+    }
+    if (message.chainId !== 0n) {
+      if (BigInt.asUintN(64, message.chainId) !== message.chainId) {
+        throw new globalThis.Error("value provided for field message.chainId of type uint64 too large");
+      }
+      writer.uint32(16).uint64(message.chainId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): FheEncryptionKeyMetadata {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseFheEncryptionKeyMetadata();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.relayerUrl = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.chainId = reader.uint64() as bigint;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): FheEncryptionKeyMetadata {
+    return {
+      relayerUrl: isSet(object.relayerUrl)
+        ? globalThis.String(object.relayerUrl)
+        : isSet(object.relayer_url)
+        ? globalThis.String(object.relayer_url)
+        : "",
+      chainId: isSet(object.chainId) ? BigInt(object.chainId) : isSet(object.chain_id) ? BigInt(object.chain_id) : 0n,
+    };
+  },
+
+  toJSON(message: FheEncryptionKeyMetadata): unknown {
+    const obj: any = {};
+    if (message.relayerUrl !== "") {
+      obj.relayerUrl = message.relayerUrl;
+    }
+    if (message.chainId !== 0n) {
+      obj.chainId = message.chainId.toString();
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<FheEncryptionKeyMetadata>): FheEncryptionKeyMetadata {
+    return FheEncryptionKeyMetadata.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<FheEncryptionKeyMetadata>): FheEncryptionKeyMetadata {
+    const message = createBaseFheEncryptionKeyMetadata();
+    message.relayerUrl = object.relayerUrl ?? "";
+    message.chainId = (object.chainId !== undefined && object.chainId !== null) ? BigInt(object.chainId) : 0n;
+    return message;
+  },
+};
+
+function createBaseHttpProviderConfig(): HttpProviderConfig {
+  return {
+    headers: undefined,
+    timeout: undefined,
+    retryCount: undefined,
+    retryDelay: undefined,
+    batch: undefined,
+    pollingInterval: undefined,
+  };
+}
+
+export const HttpProviderConfig: MessageFns<HttpProviderConfig> = {
+  encode(message: HttpProviderConfig, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.headers !== undefined) {
+      HttpHeaders.encode(message.headers, writer.uint32(10).fork()).join();
+    }
+    if (message.timeout !== undefined) {
+      writer.uint32(16).uint32(message.timeout);
+    }
+    if (message.retryCount !== undefined) {
+      writer.uint32(24).uint32(message.retryCount);
+    }
+    if (message.retryDelay !== undefined) {
+      writer.uint32(32).uint32(message.retryDelay);
+    }
+    if (message.batch !== undefined) {
+      ProviderBatch.encode(message.batch, writer.uint32(42).fork()).join();
+    }
+    if (message.pollingInterval !== undefined) {
+      writer.uint32(48).uint32(message.pollingInterval);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): HttpProviderConfig {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseHttpProviderConfig();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.headers = HttpHeaders.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.timeout = reader.uint32();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.retryCount = reader.uint32();
+          continue;
+        }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
+
+          message.retryDelay = reader.uint32();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.batch = ProviderBatch.decode(reader, reader.uint32());
+          continue;
+        }
+        case 6: {
+          if (tag !== 48) {
+            break;
+          }
+
+          message.pollingInterval = reader.uint32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): HttpProviderConfig {
+    return {
+      headers: isSet(object.headers) ? HttpHeaders.fromJSON(object.headers) : undefined,
+      timeout: isSet(object.timeout) ? globalThis.Number(object.timeout) : undefined,
+      retryCount: isSet(object.retryCount)
+        ? globalThis.Number(object.retryCount)
+        : isSet(object.retry_count)
+        ? globalThis.Number(object.retry_count)
+        : undefined,
+      retryDelay: isSet(object.retryDelay)
+        ? globalThis.Number(object.retryDelay)
+        : isSet(object.retry_delay)
+        ? globalThis.Number(object.retry_delay)
+        : undefined,
+      batch: isSet(object.batch) ? ProviderBatch.fromJSON(object.batch) : undefined,
+      pollingInterval: isSet(object.pollingInterval)
+        ? globalThis.Number(object.pollingInterval)
+        : isSet(object.polling_interval)
+        ? globalThis.Number(object.polling_interval)
+        : undefined,
+    };
+  },
+
+  toJSON(message: HttpProviderConfig): unknown {
+    const obj: any = {};
+    if (message.headers !== undefined) {
+      obj.headers = HttpHeaders.toJSON(message.headers);
+    }
+    if (message.timeout !== undefined) {
+      obj.timeout = Math.round(message.timeout);
+    }
+    if (message.retryCount !== undefined) {
+      obj.retryCount = Math.round(message.retryCount);
+    }
+    if (message.retryDelay !== undefined) {
+      obj.retryDelay = Math.round(message.retryDelay);
+    }
+    if (message.batch !== undefined) {
+      obj.batch = ProviderBatch.toJSON(message.batch);
+    }
+    if (message.pollingInterval !== undefined) {
+      obj.pollingInterval = Math.round(message.pollingInterval);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<HttpProviderConfig>): HttpProviderConfig {
+    return HttpProviderConfig.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<HttpProviderConfig>): HttpProviderConfig {
+    const message = createBaseHttpProviderConfig();
+    message.headers = (object.headers !== undefined && object.headers !== null)
+      ? HttpHeaders.fromPartial(object.headers)
+      : undefined;
+    message.timeout = object.timeout ?? undefined;
+    message.retryCount = object.retryCount ?? undefined;
+    message.retryDelay = object.retryDelay ?? undefined;
+    message.batch = (object.batch !== undefined && object.batch !== null)
+      ? ProviderBatch.fromPartial(object.batch)
+      : undefined;
+    message.pollingInterval = object.pollingInterval ?? undefined;
+    return message;
+  },
+};
+
+function createBaseHttpHeaders(): HttpHeaders {
+  return { entries: {} };
+}
+
+export const HttpHeaders: MessageFns<HttpHeaders> = {
+  encode(message: HttpHeaders, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    globalThis.Object.entries(message.entries).forEach(([key, value]: [string, string]) => {
+      HttpHeaders_EntriesEntry.encode({ key: key as any, value }, writer.uint32(10).fork()).join();
+    });
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): HttpHeaders {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseHttpHeaders();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          const entry1 = HttpHeaders_EntriesEntry.decode(reader, reader.uint32());
+          if (entry1.value !== undefined) {
+            message.entries[entry1.key] = entry1.value;
+          }
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): HttpHeaders {
+    return {
+      entries: isObject(object.entries)
+        ? (globalThis.Object.entries(object.entries) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+    };
+  },
+
+  toJSON(message: HttpHeaders): unknown {
+    const obj: any = {};
+    if (message.entries) {
+      const entries = globalThis.Object.entries(message.entries) as [string, string][];
+      if (entries.length > 0) {
+        obj.entries = {};
+        entries.forEach(([k, v]) => {
+          obj.entries[k] = v;
+        });
+      }
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<HttpHeaders>): HttpHeaders {
+    return HttpHeaders.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<HttpHeaders>): HttpHeaders {
+    const message = createBaseHttpHeaders();
+    message.entries = (globalThis.Object.entries(object.entries ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    return message;
+  },
+};
+
+function createBaseHttpHeaders_EntriesEntry(): HttpHeaders_EntriesEntry {
+  return { key: "", value: "" };
+}
+
+export const HttpHeaders_EntriesEntry: MessageFns<HttpHeaders_EntriesEntry> = {
+  encode(message: HttpHeaders_EntriesEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): HttpHeaders_EntriesEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseHttpHeaders_EntriesEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): HttpHeaders_EntriesEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: HttpHeaders_EntriesEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<HttpHeaders_EntriesEntry>): HttpHeaders_EntriesEntry {
+    return HttpHeaders_EntriesEntry.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<HttpHeaders_EntriesEntry>): HttpHeaders_EntriesEntry {
+    const message = createBaseHttpHeaders_EntriesEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
+function createBaseProviderBatch(): ProviderBatch {
+  return { selection: undefined };
+}
+
+export const ProviderBatch: MessageFns<ProviderBatch> = {
+  encode(message: ProviderBatch, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    switch (message.selection?.$case) {
+      case "enabled":
+        writer.uint32(8).bool(message.selection.enabled);
+        break;
+      case "options":
+        ProviderBatchOptions.encode(message.selection.options, writer.uint32(18).fork()).join();
+        break;
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ProviderBatch {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseProviderBatch();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.selection = { $case: "enabled", enabled: reader.bool() };
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.selection = { $case: "options", options: ProviderBatchOptions.decode(reader, reader.uint32()) };
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ProviderBatch {
+    return {
+      selection: isSet(object.enabled)
+        ? { $case: "enabled", enabled: globalThis.Boolean(object.enabled) }
+        : isSet(object.options)
+        ? { $case: "options", options: ProviderBatchOptions.fromJSON(object.options) }
+        : undefined,
+    };
+  },
+
+  toJSON(message: ProviderBatch): unknown {
+    const obj: any = {};
+    if (message.selection?.$case === "enabled") {
+      obj.enabled = message.selection.enabled;
+    } else if (message.selection?.$case === "options") {
+      obj.options = ProviderBatchOptions.toJSON(message.selection.options);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ProviderBatch>): ProviderBatch {
+    return ProviderBatch.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ProviderBatch>): ProviderBatch {
+    const message = createBaseProviderBatch();
+    switch (object.selection?.$case) {
+      case "enabled": {
+        if (object.selection?.enabled !== undefined && object.selection?.enabled !== null) {
+          message.selection = { $case: "enabled", enabled: object.selection.enabled };
+        }
+        break;
+      }
+      case "options": {
+        if (object.selection?.options !== undefined && object.selection?.options !== null) {
+          message.selection = { $case: "options", options: ProviderBatchOptions.fromPartial(object.selection.options) };
+        }
+        break;
+      }
+    }
+    return message;
+  },
+};
+
+function createBaseProviderBatchOptions(): ProviderBatchOptions {
+  return { batchSize: undefined, wait: undefined };
+}
+
+export const ProviderBatchOptions: MessageFns<ProviderBatchOptions> = {
+  encode(message: ProviderBatchOptions, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.batchSize !== undefined) {
+      writer.uint32(8).uint32(message.batchSize);
+    }
+    if (message.wait !== undefined) {
+      writer.uint32(16).uint32(message.wait);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ProviderBatchOptions {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseProviderBatchOptions();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.batchSize = reader.uint32();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.wait = reader.uint32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ProviderBatchOptions {
+    return {
+      batchSize: isSet(object.batchSize)
+        ? globalThis.Number(object.batchSize)
+        : isSet(object.batch_size)
+        ? globalThis.Number(object.batch_size)
+        : undefined,
+      wait: isSet(object.wait) ? globalThis.Number(object.wait) : undefined,
+    };
+  },
+
+  toJSON(message: ProviderBatchOptions): unknown {
+    const obj: any = {};
+    if (message.batchSize !== undefined) {
+      obj.batchSize = Math.round(message.batchSize);
+    }
+    if (message.wait !== undefined) {
+      obj.wait = Math.round(message.wait);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ProviderBatchOptions>): ProviderBatchOptions {
+    return ProviderBatchOptions.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ProviderBatchOptions>): ProviderBatchOptions {
+    const message = createBaseProviderBatchOptions();
+    message.batchSize = object.batchSize ?? undefined;
+    message.wait = object.wait ?? undefined;
     return message;
   },
 };
@@ -6493,6 +8356,10 @@ export type DeepPartial<T> = T extends bigint ? string | number | bigint
   : T extends { $case: string } ? { [K in keyof Omit<T, "$case">]?: DeepPartial<T[K]> } & { $case: T["$case"] }
   : T extends {} ? { [K in keyof T]?: DeepPartial<T[K]> }
   : Partial<T>;
+
+function isObject(value: any): boolean {
+  return typeof value === "object" && value !== null;
+}
 
 function isSet(value: any): boolean {
   return value !== null && value !== undefined;

@@ -2,14 +2,20 @@ import {
   chains as presets,
   ConfigurationError,
   type FheChain,
-  type FheChainAuth,
   type ZamaConfigBase,
+  type FhevmRuntimeConfig,
 } from "@zama-fhe/sdk";
 import type {
-  ChainAuth,
   ChainConfig,
   ContextConfig as WireConfig,
 } from "./generated/zama/sdk/v1alpha1/sidecar.js";
+import { chainAuth, defined, decodeOptional } from "./config-values.js";
+import {
+  processRuntimeConfig,
+  providerConfig,
+  relayerConfig,
+  type ProviderConfig,
+} from "./config-options.js";
 import { address, safeInteger, unsignedInteger } from "./encoding.js";
 
 type HttpChain = Omit<FheChain, "network"> & { network: string };
@@ -19,26 +25,9 @@ export interface ContextConfig extends Pick<
 > {
   chains: [HttpChain, ...HttpChain[]];
   chainId: number;
-}
-function auth(value: ChainAuth): FheChainAuth {
-  switch (value.credential?.$case) {
-    case "bearerToken":
-      return { __type: "BearerToken", token: value.credential.bearerToken };
-    case "apiKeyHeader":
-      return {
-        __type: "ApiKeyHeader",
-        ...defined({ header: value.credential.apiKeyHeader.name }),
-        value: value.credential.apiKeyHeader.value,
-      };
-    case "apiKeyCookie":
-      return {
-        __type: "ApiKeyCookie",
-        ...defined({ cookie: value.credential.apiKeyCookie.name }),
-        value: value.credential.apiKeyCookie.value,
-      };
-    default:
-      throw new ConfigurationError("Chain authentication requires a credential.");
-  }
+  processRuntime?: FhevmRuntimeConfig;
+  relayers: ZamaConfigBase["relayers"];
+  providerConfigs: Map<number, ProviderConfig>;
 }
 function chain(value: ChainConfig): HttpChain {
   const id = safeInteger(value.id, "Chain ID");
@@ -62,7 +51,7 @@ function chain(value: ChainConfig): HttpChain {
         value.verifyingContractAddressInputVerification,
         address,
       ),
-      auth: decodeOptional(value.auth, auth),
+      auth: decodeOptional(value.auth, chainAuth),
     }),
   };
   // Empty address bytes clear a preset; omission retains it.
@@ -105,7 +94,14 @@ export function parseContextConfig(config: WireConfig | undefined): ContextConfi
   if (!config) {
     throw new ConfigurationError("Context configuration is required.");
   }
-  const chains = config.chains.map(chain);
+  const providerConfigs = new Map<number, ProviderConfig>();
+  const chains = config.chains.map((value) => {
+    const resolved = chain(value);
+    if (value.provider !== undefined) {
+      providerConfigs.set(resolved.id, providerConfig(value.provider));
+    }
+    return resolved;
+  });
   const initialChain =
     config.chainId === undefined ? chains[0]?.id : safeInteger(config.chainId, "Initial chain ID");
   const selected = chains.find((item) => item.id === initialChain);
@@ -115,7 +111,17 @@ export function parseContextConfig(config: WireConfig | undefined): ContextConfi
   return {
     chains: [selected, ...chains.filter((item) => item !== selected)],
     chainId: selected.id,
+    providerConfigs,
+    relayers: Object.fromEntries(
+      config.relayers === undefined
+        ? chains.map((value) => [value.id, relayerConfig()])
+        : [...config.relayers.entries].map(([id, value]) => [
+            safeInteger(id, "Relayer chain ID"),
+            relayerConfig(value),
+          ]),
+    ),
     ...defined({
+      processRuntime: decodeOptional(config.processRuntime, processRuntimeConfig),
       permitTTL: decodeOptional(config.permitTtl, (ttl) => unsignedInteger(ttl, "Permit TTL")),
       transportKeyPairTTL: decodeOptional(config.transportKeyPairTtl, (ttl) =>
         unsignedInteger(ttl, "Transport key pair TTL"),
@@ -133,18 +139,4 @@ function required<T>(value: T | undefined, name: string): T {
     throw new ConfigurationError(`Custom chain requires ${name}.`);
   }
   return value;
-}
-
-function decodeOptional<T, R>(value: T | undefined, decode: (value: T) => R): R | undefined {
-  return value === undefined ? undefined : decode(value);
-}
-
-function defined<T extends object>(value: T): Partial<T> {
-  const result: Partial<T> = { ...value };
-  for (const key in result) {
-    if (result[key] === undefined) {
-      delete result[key];
-    }
-  }
-  return result;
 }

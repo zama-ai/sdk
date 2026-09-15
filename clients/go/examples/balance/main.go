@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -12,6 +11,10 @@ import (
 
 func run() error {
 	config, err := loadConfig(os.Args[1:])
+	if err != nil {
+		return err
+	}
+	sdkConfig, err := config.sdkConfig()
 	if err != nil {
 		return err
 	}
@@ -27,11 +30,6 @@ func run() error {
 		return err
 	}
 	defer client.Close()
-	sdkConfig := sidecar.NewSDKConfig(sepoliaChainID, config.rpcURL)
-	sdkConfig.Storage = sidecar.ApplicationStorage(sidecar.NewMemoryStorage())
-	if config.relayerAPIKey != "" {
-		sdkConfig.Auth = sidecar.APIKeyHeader{Value: config.relayerAPIKey}
-	}
 	sdk, err := client.CreateContext(ctx, sdkConfig, signer)
 	if err != nil {
 		return err
@@ -42,24 +40,9 @@ func run() error {
 		sdk.Close(cleanup)
 	}()
 
-	name, encrypted, err := readToken(ctx, provider, config.token, config.owner)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("User Address: %s\n", config.owner.Hex())
-	fmt.Printf("Token: %s (%s) https://eth-sepolia.blockscout.com/token/%s\n", name, config.token.Hex(), config.token.Hex())
-	fmt.Printf("Encrypted balance: %s\n", encrypted.Hex())
-	values, err := sdk.DecryptValues(ctx, []sidecar.EncryptedInput{{EncryptedValue: encrypted, ContractAddress: config.token}}, sidecar.DecryptOptions{})
-	if err != nil {
-		return err
-	}
-	balance, ok := values[encrypted]
-	if !ok || balance.Kind != sidecar.ClearBigInt {
-		return errors.New("decryption returned no integer balance")
-	}
-	fmt.Printf("Decrypted balance: %s\n", balance.Integer)
-	return nil
+	return showBalance(ctx, provider, sdk, config.token, config.owner)
 }
+
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

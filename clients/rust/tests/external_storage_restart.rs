@@ -20,6 +20,9 @@ async fn create(
         .await?
         .sdk(SdkConfig::new(31337, "http://fixture.invalid"))
         .storage(storage)
+        .transport_key_pair_derivation_secret(zama_sdk_sidecar::DerivationSecret::text(
+            "sdk362-synthetic-restart-secret-0123456789abcdef0123456789abcdef0123456789abcdef",
+        ))
         .signer(
             Some(WalletAccount {
                 address: Address::repeat_byte(0x2b),

@@ -8,6 +8,7 @@ import (
 )
 
 type ChainAuth interface{ wire() *pb.ChainAuth }
+
 type BearerToken struct{ Token string }
 
 func (a BearerToken) wire() *pb.ChainAuth {
@@ -45,24 +46,29 @@ type ChainConfig struct {
 	RegistryAddress                           *string
 	ExecutorAddress                           *string
 	Auth                                      ChainAuth
+	Provider                                  *ProviderOptions
 }
 
 type SDKConfig struct {
-	ChainID               *uint64
-	RPCURL                *string
-	Chains                []ChainConfig
-	Auth                  ChainAuth
-	PermitTTL             *uint32
-	TransportKeyPairTTL   *uint32
-	TransportKeyPairScope *string
-	RegistryTTL           *uint32
-	Storage               StorageConfig
-	PermitStorage         *StorageConfig
+	ProcessRuntime                   *ProcessRuntime
+	Relayers                         map[uint64]RelayerConfig
+	TransportKeyPairDerivationSecret *DerivationSecret
+	ChainID                          *uint64
+	RPCURL                           *string
+	Chains                           []ChainConfig
+	Auth                             ChainAuth
+	PermitTTL                        *uint32
+	TransportKeyPairTTL              *uint32
+	TransportKeyPairScope            *string
+	RegistryTTL                      *uint32
+	Storage                          StorageConfig
+	PermitStorage                    *StorageConfig
 }
 
 func NewSDKConfig(chainID uint64, rpcURL string) SDKConfig {
 	return SDKConfig{ChainID: &chainID, RPCURL: &rpcURL}
 }
+
 func (c SDKConfig) wire() (*pb.ContextConfig, error) {
 	chains := c.Chains
 	if chains != nil && (len(chains) == 0 || c.RPCURL != nil || c.Auth != nil) {
@@ -71,7 +77,22 @@ func (c SDKConfig) wire() (*pb.ContextConfig, error) {
 	if chains == nil && c.ChainID != nil {
 		chains = []ChainConfig{{ID: *c.ChainID, Network: c.RPCURL, Auth: c.Auth}}
 	}
-	result := &pb.ContextConfig{ChainId: c.ChainID, PermitTtl: c.PermitTTL, TransportKeyPairTtl: c.TransportKeyPairTTL, TransportKeyPairScope: c.TransportKeyPairScope, RegistryTtl: c.RegistryTTL}
+	result := &pb.ContextConfig{
+		ChainId:               c.ChainID,
+		PermitTtl:             c.PermitTTL,
+		TransportKeyPairTtl:   c.TransportKeyPairTTL,
+		TransportKeyPairScope: c.TransportKeyPairScope,
+		RegistryTtl:           c.RegistryTTL,
+	}
+	if c.ProcessRuntime != nil {
+		result.ProcessRuntime = c.ProcessRuntime.wire()
+	}
+	if c.Relayers != nil {
+		result.Relayers = &pb.RelayerMap{Entries: make(map[uint64]*pb.RelayerConfig, len(c.Relayers))}
+		for chainID, relayer := range c.Relayers {
+			result.Relayers.Entries[chainID] = relayer.wire()
+		}
+	}
 	for _, chain := range chains {
 		value, err := chain.wire()
 		if err != nil {
@@ -81,10 +102,14 @@ func (c SDKConfig) wire() (*pb.ContextConfig, error) {
 	}
 	return result, nil
 }
+
 func (c ChainConfig) wire() (*pb.ChainConfig, error) {
 	result := &pb.ChainConfig{Id: c.ID, Network: c.Network, GatewayChainId: c.GatewayChainID, RelayerUrl: c.RelayerURL}
 	if c.Auth != nil {
 		result.Auth = c.Auth.wire()
+	}
+	if c.Provider != nil {
+		result.Provider = c.Provider.wire()
 	}
 	for _, field := range []struct {
 		name      string

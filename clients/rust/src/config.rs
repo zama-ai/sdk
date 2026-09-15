@@ -26,6 +26,7 @@ impl RelayerAuth {
 
 #[derive(Clone, Debug)]
 pub struct ChainConfig {
+    pub provider: Option<crate::ProviderOptions>,
     pub id: u64,
     pub network: String,
     pub auth: Option<RelayerAuth>,
@@ -44,6 +45,7 @@ impl ChainConfig {
         Self {
             id,
             network: rpc_url.into(),
+            provider: None,
             auth: None,
             gateway_chain_id: None,
             relayer_url: None,
@@ -64,6 +66,8 @@ impl ChainConfig {
 
 #[derive(Clone, Debug)]
 pub struct SdkConfig {
+    pub process_runtime: Option<crate::ProcessRuntime>,
+    pub relayers: Option<std::collections::BTreeMap<u64, crate::RelayerConfig>>,
     pub chain_id: u64,
     pub chains: Vec<ChainConfig>,
     pub permit_ttl: Option<u32>,
@@ -79,6 +83,8 @@ impl SdkConfig {
         Self {
             chain_id,
             chains,
+            process_runtime: None,
+            relayers: Default::default(),
             permit_ttl: None,
             transport_key_pair_ttl: None,
             transport_key_pair_scope: None,
@@ -154,6 +160,7 @@ impl TryFrom<&ChainConfig> for generated::ChainConfig {
             )?,
             registry_address: optional_address(&chain.registry_address)?,
             executor_address: optional_address(&chain.executor_address)?,
+            provider: chain.provider.as_ref().map(crate::ProviderOptions::wire),
         })
     }
 }
@@ -171,6 +178,19 @@ impl TryFrom<&SdkConfig> for generated::ContextConfig {
             transport_key_pair_ttl: config.transport_key_pair_ttl,
             transport_key_pair_scope: config.transport_key_pair_scope.clone(),
             registry_ttl: config.registry_ttl,
+            process_runtime: config
+                .process_runtime
+                .as_ref()
+                .map(crate::ProcessRuntime::wire),
+            relayers: config
+                .relayers
+                .as_ref()
+                .map(|entries| generated::RelayerMap {
+                    entries: entries
+                        .iter()
+                        .map(|(chain_id, relayer)| (*chain_id, relayer.wire()))
+                        .collect(),
+                }),
         })
     }
 }

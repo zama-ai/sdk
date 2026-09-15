@@ -20,6 +20,7 @@ pub mod alloy;
 mod builder;
 mod channel;
 mod config;
+mod config_options;
 mod decryption;
 mod error;
 mod lifetime;
@@ -34,6 +35,7 @@ pub use alloy_primitives::{Address, B256};
 pub use async_trait::async_trait;
 pub use builder::SdkBuilder;
 pub use config::{ChainConfig, RelayerAuth, SdkConfig};
+pub use config_options::*;
 pub use decryption::{
     BatchItem, Decryption, DelegatedBatchOptions, DelegatedOptions, PublicDecryption,
 };
@@ -123,7 +125,7 @@ impl Client {
     #[cfg(test)]
     async fn create_context(&self, config: &SdkConfig, signer: SignerConfig) -> Result<Sdk> {
         let context_id = self
-            .create_context_with_storage(config, signer, None, None)
+            .create_context_with_storage(config, signer, None, None, None)
             .await?;
         Ok(Sdk::from_context(
             self.clone(),
@@ -138,6 +140,7 @@ impl Client {
         signer: SignerConfig,
         storage: Option<generated::StorageBinding>,
         permit_storage: Option<generated::StorageBinding>,
+        transport_key_pair_derivation_secret: Option<generated::DerivationSecret>,
     ) -> Result<String> {
         let (signer_enabled, account) = match signer {
             SignerConfig::Disabled => (false, None),
@@ -151,6 +154,7 @@ impl Client {
                 account,
                 storage,
                 permit_storage,
+                transport_key_pair_derivation_secret,
             },
             self.timeout,
             |r| inner.create_context(r),
