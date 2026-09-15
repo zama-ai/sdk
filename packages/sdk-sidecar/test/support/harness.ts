@@ -10,6 +10,7 @@ import {
   type GenericSigner,
   type GenericStorage,
   type Hex,
+  type ZamaSDKEventListener,
 } from "@zama-fhe/sdk";
 import { bytesToHex } from "viem";
 import { createMockProvider } from "../../../sdk/src/test-fixtures/provider.js";
@@ -35,6 +36,7 @@ export function fixture(
   signer: GenericSigner | undefined,
   backing: GenericStorage = storage(),
   permitTTL?: number,
+  onEvent?: ZamaSDKEventListener,
 ) {
   const provider = createMockProvider();
   const relayer = createMockRelayer();
@@ -45,6 +47,7 @@ export function fixture(
       signer,
       provider,
       storage: backing,
+      onEvent,
       ...(permitTTL === undefined ? {} : { permitTTL }),
       relayers: { [anvil.id]: backend },
     }),

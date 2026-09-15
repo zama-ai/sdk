@@ -1075,6 +1075,144 @@ pub struct GetDelegationStatusResponse {
     #[prost(uint64, tag = "2")]
     pub expiry_timestamp: u64,
 }
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SdkEvent {
+    #[prost(string, tag = "1")]
+    pub r#type: ::prost::alloc::string::String,
+    #[prost(double, tag = "2")]
+    pub timestamp: f64,
+    #[prost(bytes = "vec", optional, tag = "3")]
+    pub token_address: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
+    #[prost(string, optional, tag = "4")]
+    pub sdk_operation_id: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(double, optional, tag = "5")]
+    pub duration_ms: ::core::option::Option<f64>,
+    #[prost(bytes = "vec", repeated, tag = "6")]
+    pub encrypted_values: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
+    #[prost(message, repeated, tag = "7")]
+    pub result: ::prost::alloc::vec::Vec<ClearEntry>,
+    #[prost(message, optional, tag = "8")]
+    pub error: ::core::option::Option<SdkError>,
+    #[prost(string, optional, tag = "9")]
+    pub operation: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(bytes = "vec", optional, tag = "10")]
+    pub tx_hash: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
+    #[prost(string, optional, tag = "11")]
+    pub shield_path: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(string, optional, tag = "12")]
+    pub step: ::core::option::Option<::prost::alloc::string::String>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct WalletAccountChanged {
+    #[prost(message, optional, tag = "1")]
+    pub previous: ::core::option::Option<WalletAccount>,
+    #[prost(message, optional, tag = "2")]
+    pub next: ::core::option::Option<WalletAccount>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct OperationProgress {
+    #[prost(enumeration = "ProgressKind", tag = "1")]
+    pub kind: i32,
+    #[prost(bytes = "vec", optional, tag = "2")]
+    pub tx_hash: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct BatchErrorCallback {
+    #[prost(bytes = "vec", tag = "1")]
+    pub token_address: ::prost::alloc::vec::Vec<u8>,
+    #[prost(message, optional, tag = "2")]
+    pub error: ::core::option::Option<SdkError>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct EventDelivery {
+    #[prost(string, tag = "1")]
+    pub context_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub operation_id: ::prost::alloc::string::String,
+    #[prost(uint64, tag = "3")]
+    pub sequence: u64,
+    #[prost(oneof = "event_delivery::Payload", tags = "4, 5, 6, 7")]
+    pub payload: ::core::option::Option<event_delivery::Payload>,
+}
+/// Nested message and enum types in `EventDelivery`.
+pub mod event_delivery {
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Payload {
+        #[prost(message, tag = "4")]
+        Event(::prost::alloc::boxed::Box<super::SdkEvent>),
+        #[prost(message, tag = "5")]
+        WalletAccount(super::WalletAccountChanged),
+        #[prost(message, tag = "6")]
+        Progress(super::OperationProgress),
+        #[prost(message, tag = "7")]
+        BatchError(super::BatchErrorCallback),
+    }
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct EventReply {
+    #[prost(uint64, tag = "1")]
+    pub sequence: u64,
+    #[prost(oneof = "event_reply::Outcome", tags = "2, 3, 4")]
+    pub outcome: ::core::option::Option<event_reply::Outcome>,
+}
+/// Nested message and enum types in `EventReply`.
+pub mod event_reply {
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Outcome {
+        #[prost(message, tag = "2")]
+        Acknowledged(super::Empty),
+        #[prost(string, tag = "3")]
+        FallbackBigint(::prost::alloc::string::String),
+        #[prost(message, tag = "4")]
+        Error(super::SdkError),
+    }
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct EventClientMessage {
+    #[prost(oneof = "event_client_message::Message", tags = "1, 2")]
+    pub message: ::core::option::Option<event_client_message::Message>,
+}
+/// Nested message and enum types in `EventClientMessage`.
+pub mod event_client_message {
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Message {
+        #[prost(message, tag = "1")]
+        Attach(super::ContextRequest),
+        #[prost(message, tag = "2")]
+        Reply(super::EventReply),
+    }
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct EventReplyError {
+    #[prost(uint64, tag = "1")]
+    pub sequence: u64,
+    #[prost(message, optional, tag = "2")]
+    pub error: ::core::option::Option<SdkError>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct EventCancelled {
+    #[prost(uint64, tag = "1")]
+    pub sequence: u64,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct EventServerMessage {
+    #[prost(oneof = "event_server_message::Message", tags = "1, 2, 3, 4")]
+    pub message: ::core::option::Option<event_server_message::Message>,
+}
+/// Nested message and enum types in `EventServerMessage`.
+pub mod event_server_message {
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Message {
+        #[prost(message, tag = "1")]
+        Attached(super::Empty),
+        #[prost(message, tag = "2")]
+        Delivery(super::EventDelivery),
+        #[prost(message, tag = "3")]
+        ReplyError(super::EventReplyError),
+        #[prost(message, tag = "4")]
+        Cancelled(super::EventCancelled),
+    }
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum StorageMethod {
@@ -1192,6 +1330,53 @@ impl TransactionKind {
             "TRANSACTION_KIND_TRANSFER_AND_CALL" => Some(Self::TransferAndCall),
             "TRANSACTION_KIND_DELEGATE_DECRYPTION" => Some(Self::DelegateDecryption),
             "TRANSACTION_KIND_REVOKE_DELEGATION" => Some(Self::RevokeDelegation),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum ProgressKind {
+    Unspecified = 0,
+    EncryptComplete = 1,
+    TransferSubmitted = 2,
+    ApprovalSubmitted = 3,
+    ShieldSubmitted = 4,
+    WrapSubmitted = 5,
+    UnwrapSubmitted = 6,
+    Finalizing = 7,
+    FinalizeSubmitted = 8,
+}
+impl ProgressKind {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "PROGRESS_KIND_UNSPECIFIED",
+            Self::EncryptComplete => "PROGRESS_KIND_ENCRYPT_COMPLETE",
+            Self::TransferSubmitted => "PROGRESS_KIND_TRANSFER_SUBMITTED",
+            Self::ApprovalSubmitted => "PROGRESS_KIND_APPROVAL_SUBMITTED",
+            Self::ShieldSubmitted => "PROGRESS_KIND_SHIELD_SUBMITTED",
+            Self::WrapSubmitted => "PROGRESS_KIND_WRAP_SUBMITTED",
+            Self::UnwrapSubmitted => "PROGRESS_KIND_UNWRAP_SUBMITTED",
+            Self::Finalizing => "PROGRESS_KIND_FINALIZING",
+            Self::FinalizeSubmitted => "PROGRESS_KIND_FINALIZE_SUBMITTED",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "PROGRESS_KIND_UNSPECIFIED" => Some(Self::Unspecified),
+            "PROGRESS_KIND_ENCRYPT_COMPLETE" => Some(Self::EncryptComplete),
+            "PROGRESS_KIND_TRANSFER_SUBMITTED" => Some(Self::TransferSubmitted),
+            "PROGRESS_KIND_APPROVAL_SUBMITTED" => Some(Self::ApprovalSubmitted),
+            "PROGRESS_KIND_SHIELD_SUBMITTED" => Some(Self::ShieldSubmitted),
+            "PROGRESS_KIND_WRAP_SUBMITTED" => Some(Self::WrapSubmitted),
+            "PROGRESS_KIND_UNWRAP_SUBMITTED" => Some(Self::UnwrapSubmitted),
+            "PROGRESS_KIND_FINALIZING" => Some(Self::Finalizing),
+            "PROGRESS_KIND_FINALIZE_SUBMITTED" => Some(Self::FinalizeSubmitted),
             _ => None,
         }
     }
@@ -1450,6 +1635,34 @@ pub mod sidecar_service_client {
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new("zama.sdk.v1alpha1.SidecarService", "StorageChannel"),
+                );
+            self.inner.streaming(req, path, codec).await
+        }
+        pub async fn event_channel(
+            &mut self,
+            request: impl tonic::IntoStreamingRequest<
+                Message = super::EventClientMessage,
+            >,
+        ) -> std::result::Result<
+            tonic::Response<tonic::codec::Streaming<super::EventServerMessage>>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/zama.sdk.v1alpha1.SidecarService/EventChannel",
+            );
+            let mut req = request.into_streaming_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("zama.sdk.v1alpha1.SidecarService", "EventChannel"),
                 );
             self.inner.streaming(req, path, codec).await
         }

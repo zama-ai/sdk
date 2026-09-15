@@ -70,6 +70,8 @@ pub(super) struct Server {
     pub(super) timeouts: Arc<Mutex<Vec<bool>>>,
     pub(super) storage_actions: mpsc::UnboundedSender<StorageServerMessage>,
     pub(super) storage_replies: mpsc::UnboundedReceiver<StorageClientMessage>,
+    pub(super) event_actions: mpsc::UnboundedSender<EventServerMessage>,
+    pub(super) event_replies: mpsc::UnboundedReceiver<EventClientMessage>,
 }
 impl Drop for Server {
     fn drop(&mut self) {
@@ -87,6 +89,9 @@ impl Server {
         let (storage_actions, storage_receiver) = mpsc::unbounded_channel();
         let storage_receiver = Arc::new(Mutex::new(Some(storage_receiver)));
         let (storage_reply, storage_replies) = mpsc::unbounded_channel();
+        let (event_actions, event_receiver) = mpsc::unbounded_channel();
+        let event_receiver = Arc::new(Mutex::new(Some(event_receiver)));
+        let (event_reply, event_replies) = mpsc::unbounded_channel();
         let timeouts = Arc::new(Mutex::new(Vec::new()));
         let observed_timeouts = timeouts.clone();
         let task = tokio::spawn(async move {
@@ -95,6 +100,8 @@ impl Server {
                 .serve_connection(
                     TokioIo::new(stream),
                     hyper::service::service_fn(move |request: hyper::Request<Incoming>| {
+                        let event_receiver = event_receiver.clone();
+                        let event_reply = event_reply.clone();
                         let storage_receiver = storage_receiver.clone();
                         let storage_reply = storage_reply.clone();
                         let handler = handler.clone();
@@ -102,6 +109,14 @@ impl Server {
                         let send_reply = send_reply.clone();
                         let timeouts = observed_timeouts.clone();
                         async move {
+                            if request.uri().path().ends_with("/EventChannel") {
+                                let outgoing = event_receiver.lock().unwrap().take().unwrap();
+                                return Ok::<_, Infallible>(duplex(
+                                    request.into_body(),
+                                    outgoing,
+                                    event_reply,
+                                ));
+                            }
                             if request.uri().path().ends_with("/StorageChannel") {
                                 let outgoing = storage_receiver.lock().unwrap().take().unwrap();
                                 return Ok::<_, Infallible>(duplex(
@@ -141,6 +156,8 @@ impl Server {
             timeouts,
             storage_actions,
             storage_replies,
+            event_actions,
+            event_replies,
         }
     }
     pub(super) async fn reply(&mut self) -> SignerClientMessage {

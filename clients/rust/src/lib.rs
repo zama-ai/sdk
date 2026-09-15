@@ -25,6 +25,8 @@ mod decryption;
 mod delegations;
 mod encryption;
 mod error;
+mod event_channel;
+mod events;
 mod lifetime;
 mod offline;
 mod operations;
@@ -54,6 +56,10 @@ pub use delegations::{
 };
 pub use encryption::{EncryptInput, EncryptOptions, EncryptParams, EncryptResult};
 pub use error::{RpcError, SdkError};
+pub use events::{
+    BatchErrorCallback, EventContext, EventHandler, EventKind, Notification, OperationProgress,
+    SdkEvent,
+};
 pub use num_bigint::BigInt;
 pub use offline::{
     PrepareFees, PrepareOptions, PrepareTransaction, PreparedTransaction, Transaction,
@@ -89,6 +95,7 @@ pub struct Client {
 pub enum CallbackChannel {
     Signer,
     Storage,
+    Events,
 }
 
 #[derive(Clone)]
@@ -203,6 +210,7 @@ impl Sdk {
         let connection = match channel {
             CallbackChannel::Signer => self.resources.signer.as_ref(),
             CallbackChannel::Storage => self.resources.storage.as_ref(),
+            CallbackChannel::Events => self.resources.events.as_ref(),
         }
         .context("SDK has no such callback channel")?;
         connection.wait().await

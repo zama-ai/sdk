@@ -4,7 +4,10 @@ import { ChannelWriter } from "./channel-writer.js";
 export class CallbackConnection<Request, Response> {
   #stream?: ServerDuplexStream<Request, Response>;
   #writer?: ChannelWriter<Response>;
-  constructor(private readonly onDisconnect: (error?: unknown) => void) {}
+  constructor(
+    private readonly onDisconnect: (error?: unknown) => void,
+    private readonly queueLimit?: { maximum: number; error: Error },
+  ) {}
 
   get connected(): boolean {
     return this.#stream !== undefined;
@@ -12,7 +15,7 @@ export class CallbackConnection<Request, Response> {
 
   attach(stream: ServerDuplexStream<Request, Response>): void {
     this.#stream = stream;
-    this.#writer = new ChannelWriter(stream);
+    this.#writer = new ChannelWriter(stream, this.queueLimit);
     const disconnect = (error?: unknown) => this.#disconnect(stream, error);
     stream.once("cancelled", disconnect);
     stream.once("error", disconnect);
@@ -38,6 +41,10 @@ export class CallbackConnection<Request, Response> {
       return;
     }
     void this.#writer?.write(message).catch((error: unknown) => {
+      if (this.queueLimit && error instanceof Error && this.#stream === stream) {
+        this.fail(error);
+        return;
+      }
       this.#disconnect(stream, error);
       stream.end();
     });
@@ -48,5 +55,14 @@ export class CallbackConnection<Request, Response> {
     this.#stream = undefined;
     this.#writer = undefined;
     stream?.end();
+  }
+
+  fail(error: Error): void {
+    const stream = this.#stream;
+    if (stream) {
+      this.#disconnect(stream, error);
+      // Let grpc-js end the writable side and send the failure status to the client.
+      stream.emit("error", error);
+    }
   }
 }

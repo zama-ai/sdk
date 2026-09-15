@@ -17,6 +17,7 @@ service SidecarService {
   rpc SignerChannel(stream SignerClientMessage) returns (stream SignerServerMessage);
   // Attach once per context to serve application storage; keys and values remain opaque.
   rpc StorageChannel(stream StorageClientMessage) returns (stream StorageServerMessage);
+  rpc EventChannel(stream EventClientMessage) returns (stream EventServerMessage);
   // Calls decryption.decryptValues, including automatic permit acquisition and credential recovery.
   rpc DecryptValues(DecryptValuesRequest) returns (DecryptValuesResponse);
   // Calls decryption.delegatedDecryptValues; an omitted account uses the delegator address.
@@ -678,4 +679,82 @@ message GetDelegationStatusResponse {
   bool is_active = 1;
   // Same sentinels as GetDelegationExpiryResponse: 0 means none, 2^64-1 means permanent.
   uint64 expiry_timestamp = 2;
+}
+
+message SdkEvent {
+  string type = 1;
+  double timestamp = 2;
+  optional bytes token_address = 3;
+  optional string sdk_operation_id = 4;
+  optional double duration_ms = 5;
+  repeated bytes encrypted_values = 6;
+  repeated ClearEntry result = 7;
+  SdkError error = 8;
+  optional string operation = 9;
+  optional bytes tx_hash = 10;
+  optional string shield_path = 11;
+  optional string step = 12;
+}
+message WalletAccountChanged {
+  WalletAccount previous = 1;
+  WalletAccount next = 2;
+}
+enum ProgressKind {
+  PROGRESS_KIND_UNSPECIFIED = 0;
+  PROGRESS_KIND_ENCRYPT_COMPLETE = 1;
+  PROGRESS_KIND_TRANSFER_SUBMITTED = 2;
+  PROGRESS_KIND_APPROVAL_SUBMITTED = 3;
+  PROGRESS_KIND_SHIELD_SUBMITTED = 4;
+  PROGRESS_KIND_WRAP_SUBMITTED = 5;
+  PROGRESS_KIND_UNWRAP_SUBMITTED = 6;
+  PROGRESS_KIND_FINALIZING = 7;
+  PROGRESS_KIND_FINALIZE_SUBMITTED = 8;
+}
+message OperationProgress {
+  ProgressKind kind = 1;
+  optional bytes tx_hash = 2;
+}
+message BatchErrorCallback {
+  bytes token_address = 1;
+  SdkError error = 2;
+}
+message EventDelivery {
+  string context_id = 1;
+  string operation_id = 2;
+  uint64 sequence = 3;
+  oneof payload {
+    SdkEvent event = 4;
+    WalletAccountChanged wallet_account = 5;
+    OperationProgress progress = 6;
+    BatchErrorCallback batch_error = 7;
+  }
+}
+message EventReply {
+  uint64 sequence = 1;
+  oneof outcome {
+    Empty acknowledged = 2;
+    string fallback_bigint = 3;
+    SdkError error = 4;
+  }
+}
+message EventClientMessage {
+  oneof message {
+    ContextRequest attach = 1;
+    EventReply reply = 2;
+  }
+}
+message EventReplyError {
+  uint64 sequence = 1;
+  SdkError error = 2;
+}
+message EventCancelled {
+  uint64 sequence = 1;
+}
+message EventServerMessage {
+  oneof message {
+    Empty attached = 1;
+    EventDelivery delivery = 2;
+    EventReplyError reply_error = 3;
+    EventCancelled cancelled = 4;
+  }
 }

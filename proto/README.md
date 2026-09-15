@@ -20,7 +20,7 @@ Each chain's `auth` selects a bearer token, API-key header or API-key cookie. Om
 
 Each `chains` entry accepts typed HTTP `provider` settings for `headers`, `timeout`, `retry_count`, `retry_delay`, `batch` and `polling_interval`. `HttpHeaders` wraps the protobuf map so omission remains distinct from an explicitly empty header set. Timeout, retry delay, batch wait and polling interval are milliseconds. `ProviderBatch` selects either a boolean or typed batch options. These configure the sidecar's public-read viem provider, independently of the application's native Ethereum provider and the relayer backend's internal RPC client. Use an RPC URL with the required access credentials for backend RPC reads; custom JavaScript `network` providers are unsupported. Omitted options retain viem/SDK defaults; explicit zero and false are forwarded.
 
-Arbitrary JavaScript providers, relayer factory functions, fetch hooks, loggers, `onEvent` callbacks, module objects and browser/worker injection points cannot cross this protocol. Use the typed options above for native integrations. Relayer authentication can be configured per chain, with runtime auth as the SDK's process-wide fallback.
+Arbitrary JavaScript providers, relayer factory functions, fetch hooks, loggers, `onEvent` callbacks, module objects and browser/worker injection points cannot cross this protocol. Use the typed options above for native integrations and the event channel below for native event handlers. Relayer authentication can be configured per chain, with runtime auth as the SDK's process-wide fallback.
 
 ## Credential protection
 
@@ -119,9 +119,45 @@ Binding identity controls coordination within one sidecar. Reusing a native appl
 
 Addresses are 20 raw bytes; encrypted handles are 32 raw bytes. `ClearValue` preserves the SDK value type with distinct bigint, number, boolean, string and undefined variants. Bigints use canonical decimal strings and never pass through floating-point conversion. The number variant uses `uint32` for SDK euint8/euint16/euint32 results. Wider encrypted integers use the bigint variant. Undefined uses an empty message marker.
 
-Optional scalar presence is significant. Durations, timeouts, concurrency and retry delays use unsigned integers. Timeouts are milliseconds; permit durations are days; retry delays are seconds. Omitted values retain SDK defaults, and an explicit zero timeout is a zero-millisecond budget, not "no timeout". Maximum concurrency uses positive values for a limit and zero for unlimited concurrency. Explicit false propagation settings reach the SDK unchanged. Missing delegated account uses the SDK's delegator default.
+Optional scalar presence is significant. Configuration durations, timeouts, concurrency and retry delays use unsigned integers. Timeouts are milliseconds; permit durations are days; retry delays are seconds. Omitted values retain SDK defaults, and an explicit zero timeout is a zero-millisecond budget, not "no timeout". Maximum concurrency uses positive values for a limit and zero for unlimited concurrency. Explicit false propagation settings reach the SDK unchanged. Missing delegated account uses the SDK's delegator default.
 
 `RevokePermits.contracts` is a message wrapper: absent means no argument; present with zero addresses means an explicit empty array. Go preserves this as a nil versus non-nil empty slice. Rust uses `Option`.
+
+## Events and operation callbacks
+
+`EventChannel` attaches to one context and acknowledges attachment before delivering frames. Each context supports one active event subscription. Go exposes `SDKConfig.Events` and `SubscribeEvents`; Rust exposes the SDK builder's `.events(handler)` method. Both clients deliver typed lifecycle events, wallet changes and progress notifications. Subscription setup is separate in the [Go example](../clients/go/examples/balance/events.go) and [Rust example](../clients/rust/examples/balance/events.rs).
+
+`EventDelivery` includes the context ID, RPC operation ID and a monotonically increasing sequence number. Lifecycle payloads separately preserve the SDK's optional `operationId` as `sdk_operation_id`; RPC correlation never replaces it. SDK work outside a unary operation has an empty RPC operation ID. Sequence numbers continue across explicit reattachment, but they do not provide replay or durable resumption.
+
+Lifecycle timestamps and measured durations use protobuf `double` to preserve the SDK’s JavaScript numbers, including fractional milliseconds. The current SDK uses `Date.now()` for these measurements; the wire format does not round fractional values. This differs from integer configuration timeouts and retry delays.
+
+Lifecycle payloads preserve timestamps, durations, token addresses, encrypted values, clear-value results, transaction hashes, operation names, shield paths and approval steps. Errors use the existing `SdkError` conversion, including its sanitization of unclassified errors. Event type strings match the SDK's 21 event variants; clients expose native kind constants/enums. Optional payload fields retain presence. Schema changes are required when the SDK adds payload fields.
+
+Wallet notifications come from `sdk.onWalletAccountChange`, after SDK chain switching and account cleanup. They preserve the order the SDK actually emits, including overlapping asynchronous account transitions. The adapter neither synthesizes an initial snapshot nor turns `UpdateAccount` into a cleanup barrier. The SDK currently marks this runtime method internal and omits it from published declarations; the adapter checks availability and fails context construction explicitly if it disappears.
+
+### Notifications and return values
+
+Lifecycle, wallet and progress notifications do not block SDK orchestration. Native notification handlers run in delivery order and acknowledge completion. Handler errors are acknowledged without failing the SDK operation. A unary response can arrive before its notifications finish running locally.
+
+Progress has eight typed stages: encryption complete; transfer, approval, shield, wrap and unwrap submitted; finalizing; finalize submitted. Submitted stages carry transaction hashes. The TypeScript [progress adapter](../packages/sdk-sidecar/src/progress-callbacks.ts) passes callbacks directly into SDK operations. It never infers progress from lifecycle events: unshield callbacks and similarly named events have different timing.
+
+`batch_error` is a return-value request, separate from notifications. Its reply must contain a canonical decimal bigint or a structured callback error. An acknowledgment is not a fallback value. Pending requests reject on operation cancellation, context close or channel loss. Cancellation frames identify the sequence to stop; late replies receive `EVENT_DELIVERY_NOT_FOUND` and do not affect other work. Native callbacks must honor Go context cancellation; Rust drops canceled callback futures. Return callbacks may overlap across operations, so handlers must protect shared application state.
+
+**Integration boundary:** Token/WrappedToken RPCs are not exposed at this foundation. Their progress adapter is exercised through real SDK operations in synthetic tests, but native token workflow integration remains pending. The return-value transport is implemented and tested independently. It is not wired to `Token.batchDecryptBalancesAs`: that SDK callback returns `bigint` synchronously, and an async RPC cannot replace it. SDK-370 leaves this acceptance criterion explicitly unresolved and introduces neither a synchronous worker bridge nor an SDK callback API change. SDK-367 must first inspect whether applying native fallbacks to structured per-token results preserves which failures invoke the callback, callback ordering and thrown errors. If it cannot preserve those semantics, propose upstream async-callback support rather than approximating SDK behavior. The existing delegated-decryption batch API remains unchanged and does not acquire a new callback option.
+
+### Cleanup and backpressure
+
+The server permits at most 256 unacknowledged deliveries and 256 queued output frames per subscription. Writers also honor HTTP/2 backpressure. Exceeding either bound terminates the subscription with `EVENT_BACKPRESSURE`; there is no silent event dropping or unbounded buffering. Native clients maintain bounded queues and fail on malformed correlation or queue overflow. Delivery order describes this subscription's emitted order, not a global ordering across SDK contexts.
+
+Go `EventSubscription.Close` cancels queued and active callbacks; `SDKContext.Close` also closes the subscription. Rust closes the channel and drops callback futures when the managed SDK closes or drops. Observe termination through Go `WaitChannelFailure(ctx, EventChannel)` or Rust `wait_channel_closed(CallbackChannel::Events)`. Go supports explicit reattachment; replacing a locally closed subscription retries `EVENT_ATTACHED` for up to roughly one second while the server observes the old stream closing. The caller’s cancellation still applies. Rust applications build a new managed SDK. Neither client automatically replays operations or callbacks. Events emitted before attachment or while disconnected are not retained.
+
+An event-channel failure rejects pending return callbacks but does not cancel independent SDK work. Notification callbacks that ignore cancellation can delay their own cleanup in Go. Avoid awaiting an operation that needs the same serialized notification handler from inside that handler.
+
+### Diagnostics
+
+Subscriptions are opt-in and do not enable a logger. The native examples select event kinds and progress stages for diagnostics; they never log complete event objects. Decryption events contain plaintext results. Raw error messages, token/account addresses and arbitrary SDK logger metadata can also reveal application data.
+
+Use the typed notification handler as your SDK diagnostics sink and select only the metadata your application needs. The default sidecar writes generic warning/error severity to stderr, plus the fixed SDK runtime-configuration warning. It omits arbitrary `GenericLogger` messages and metadata. This keeps arbitrary SDK diagnostics from becoming sensitive-data logs by default. See the [event integration guide](../packages/sdk-sidecar/EVENTS.md).
 
 ## Signing and operation lifecycle
 
@@ -145,13 +181,13 @@ SDK errors retain their code, message, retryability and optional integer retry d
 
 Go exposes `RPCError` and preserves `status.Code`. Rust exposes `RpcError` with the SDK details and underlying tonic status. Neither client automatically retries SDK operations or signing requests.
 
-The server and both clients default to 4 MiB messages. Large batches and prefetched FHE encryption keys require a higher limit at both endpoints; prefetched keys are commonly about 50 MiB. Set `SIDECAR_MAX_MESSAGE_BYTES` on the server and the matching Go `DialOptions.MaxMessageBytes` or Rust `Client::with_message_limit` above the encoded request size. Concurrent-stream, context and operation ceilings are optional deployment settings; there is no fixed 16-stream limit. Signer and storage channels each occupy an HTTP/2 stream. Writers honor stream backpressure rather than treating a temporarily full output buffer as failure.
+The server and both clients default to 4 MiB messages. Large batches and prefetched FHE encryption keys require a higher limit at both endpoints; prefetched keys are commonly about 50 MiB. Set `SIDECAR_MAX_MESSAGE_BYTES` on the server and the matching Go `DialOptions.MaxMessageBytes` or Rust `Client::with_message_limit` above the encoded request size. Concurrent-stream, context and operation ceilings are optional deployment settings; there is no fixed 16-stream limit. Signer, storage and event channels each occupy an HTTP/2 stream. Writers honor stream backpressure rather than treating a temporarily full output buffer as failure.
 
 RPC deadlines are independent of SDK relayer timeouts. Storage failures do not prevent unrelated metadata or public-decryption calls.
 
 ## Remaining API coverage
 
-Token/WrappedToken operations, registry access and SDK event subscriptions are not exposed. Executed on-chain delegation transactions are exposed through `DelegateDecryption`/`RevokeDelegation`; `PrepareTransaction`'s `delegate_decryption`/`revoke_delegation` kinds remain available separately for offline-prepared, self-signed delegation transactions. Injection of arbitrary JavaScript providers, loggers and SDK event callbacks remains outside this wire API. Native storage implementations are supported through the storage bridge. This is partial SDK coverage; the methods above delegate their SDK behavior rather than reconstructing token flows.
+Token/WrappedToken operations and registry access are not exposed. SDK event subscriptions use the separate event channel. Executed on-chain delegation transactions are exposed through `DelegateDecryption`/`RevokeDelegation`; `PrepareTransaction`'s `delegate_decryption`/`revoke_delegation` kinds remain available separately for offline-prepared, self-signed delegation transactions. Injection of arbitrary JavaScript providers, loggers and SDK event callbacks remains outside this wire API. Native storage implementations are supported through the storage bridge. This is partial SDK coverage; the methods above delegate their SDK behavior rather than reconstructing token flows.
 
 The native balance examples perform Ethereum contract reads in Alloy/go-ethereum and pass the resulting encrypted handle to general decryption. The shared setup now accepts runtime/provider options, storage selection and optional credential protection before the encryption and balance steps, and its wallets include transaction adapters, now exercised by a real delegation grant/revoke step. Integration with `Token.balanceOf` and other token lifecycle steps remains deferred until those public native APIs are exposed. SDK-backed tests exercise credential reuse, restart behavior and the transaction callback meanwhile.
 

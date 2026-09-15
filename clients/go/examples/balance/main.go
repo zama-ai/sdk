@@ -40,10 +40,16 @@ func run() error {
 		sdk.Close(cleanup)
 	}()
 
+	subscription, err := subscribeEvents(ctx, sdk, os.Stderr)
+	if err != nil {
+		return err
+	}
+	defer subscription.Close()
+
 	if err := encryptInputs(ctx, sdk, config.token, config.owner); err != nil {
 		return err
 	}
-	if err := showBalance(ctx, provider, sdk, config.token, config.owner); err != nil {
+	if err := showBalance(ctx, provider, sdk, config.token, config.owner, os.Stdout); err != nil {
 		return err
 	}
 	if err := prepareOffline(ctx, sdk, config.token, config.owner, config.privateKey); err != nil {

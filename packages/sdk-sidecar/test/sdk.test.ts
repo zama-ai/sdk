@@ -8,6 +8,7 @@ import { createContextFactory } from "../src/sdk.js";
 import { StorageManager } from "../src/storage-manager.js";
 import { RemoteStorage } from "../src/remote-storage.js";
 import { RemoteSigner } from "../src/remote-signer.js";
+import { RemoteEvents } from "../src/remote-events.js";
 
 const requests = vi.hoisted(() => [] as string[]);
 vi.mock("viem", async (importOriginal) => {
@@ -51,11 +52,17 @@ test("context factory preserves signerless public decryption and zero-value lazy
     () => {},
   );
   const signing = vi.spyOn(signer, "signTypedData");
-  const publicContext = await factory(request, undefined, new RemoteStorage());
+  const publicContext = await factory(
+    request,
+    undefined,
+    new RemoteStorage(),
+    new RemoteEvents("public"),
+  );
   const signedContext = await factory(
     { ...request, signerEnabled: true },
     signer,
     new RemoteStorage(),
+    new RemoteEvents("signed"),
   );
   const zero = `0x${"00".repeat(32)}` as const;
   try {

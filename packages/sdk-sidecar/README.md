@@ -201,3 +201,7 @@ SIDECAR_NATIVE_TESTS=1 pnpm --filter @zama-fhe/sdk-sidecar exec vitest run --con
 ```
 
 Encryption checks cover lossless values, explicit binding addresses, timeout presence (omitted keeps the SDK default, zero is a zero-millisecond budget), SDK errors, canonical backend rejection and cancellation. The complete examples also exercise shared runtime/provider settings and protected credentials. Synthetic encryption proofs are inspectable fixture data; live cryptographic verification remains separate.
+
+## Event subscriptions
+
+Both native examples attach metadata-only lifecycle diagnostics before running the shared encryption, balance, offline preparation and delegation sequence. Subscription helpers remain separate from workflow steps. See [event delivery and diagnostics](EVENTS.md) for ordering, cleanup, backpressure and the explicitly unresolved Token batch-fallback integration.

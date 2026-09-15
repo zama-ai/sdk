@@ -200,6 +200,81 @@ export function transactionKindToJSON(object: TransactionKind): string {
   }
 }
 
+export enum ProgressKind {
+  PROGRESS_KIND_UNSPECIFIED = 0,
+  PROGRESS_KIND_ENCRYPT_COMPLETE = 1,
+  PROGRESS_KIND_TRANSFER_SUBMITTED = 2,
+  PROGRESS_KIND_APPROVAL_SUBMITTED = 3,
+  PROGRESS_KIND_SHIELD_SUBMITTED = 4,
+  PROGRESS_KIND_WRAP_SUBMITTED = 5,
+  PROGRESS_KIND_UNWRAP_SUBMITTED = 6,
+  PROGRESS_KIND_FINALIZING = 7,
+  PROGRESS_KIND_FINALIZE_SUBMITTED = 8,
+  UNRECOGNIZED = -1,
+}
+
+export function progressKindFromJSON(object: any): ProgressKind {
+  switch (object) {
+    case 0:
+    case "PROGRESS_KIND_UNSPECIFIED":
+      return ProgressKind.PROGRESS_KIND_UNSPECIFIED;
+    case 1:
+    case "PROGRESS_KIND_ENCRYPT_COMPLETE":
+      return ProgressKind.PROGRESS_KIND_ENCRYPT_COMPLETE;
+    case 2:
+    case "PROGRESS_KIND_TRANSFER_SUBMITTED":
+      return ProgressKind.PROGRESS_KIND_TRANSFER_SUBMITTED;
+    case 3:
+    case "PROGRESS_KIND_APPROVAL_SUBMITTED":
+      return ProgressKind.PROGRESS_KIND_APPROVAL_SUBMITTED;
+    case 4:
+    case "PROGRESS_KIND_SHIELD_SUBMITTED":
+      return ProgressKind.PROGRESS_KIND_SHIELD_SUBMITTED;
+    case 5:
+    case "PROGRESS_KIND_WRAP_SUBMITTED":
+      return ProgressKind.PROGRESS_KIND_WRAP_SUBMITTED;
+    case 6:
+    case "PROGRESS_KIND_UNWRAP_SUBMITTED":
+      return ProgressKind.PROGRESS_KIND_UNWRAP_SUBMITTED;
+    case 7:
+    case "PROGRESS_KIND_FINALIZING":
+      return ProgressKind.PROGRESS_KIND_FINALIZING;
+    case 8:
+    case "PROGRESS_KIND_FINALIZE_SUBMITTED":
+      return ProgressKind.PROGRESS_KIND_FINALIZE_SUBMITTED;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return ProgressKind.UNRECOGNIZED;
+  }
+}
+
+export function progressKindToJSON(object: ProgressKind): string {
+  switch (object) {
+    case ProgressKind.PROGRESS_KIND_UNSPECIFIED:
+      return "PROGRESS_KIND_UNSPECIFIED";
+    case ProgressKind.PROGRESS_KIND_ENCRYPT_COMPLETE:
+      return "PROGRESS_KIND_ENCRYPT_COMPLETE";
+    case ProgressKind.PROGRESS_KIND_TRANSFER_SUBMITTED:
+      return "PROGRESS_KIND_TRANSFER_SUBMITTED";
+    case ProgressKind.PROGRESS_KIND_APPROVAL_SUBMITTED:
+      return "PROGRESS_KIND_APPROVAL_SUBMITTED";
+    case ProgressKind.PROGRESS_KIND_SHIELD_SUBMITTED:
+      return "PROGRESS_KIND_SHIELD_SUBMITTED";
+    case ProgressKind.PROGRESS_KIND_WRAP_SUBMITTED:
+      return "PROGRESS_KIND_WRAP_SUBMITTED";
+    case ProgressKind.PROGRESS_KIND_UNWRAP_SUBMITTED:
+      return "PROGRESS_KIND_UNWRAP_SUBMITTED";
+    case ProgressKind.PROGRESS_KIND_FINALIZING:
+      return "PROGRESS_KIND_FINALIZING";
+    case ProgressKind.PROGRESS_KIND_FINALIZE_SUBMITTED:
+      return "PROGRESS_KIND_FINALIZE_SUBMITTED";
+    case ProgressKind.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
 export interface Empty {
 }
 
@@ -924,6 +999,78 @@ export interface GetDelegationStatusResponse {
   isActive: boolean;
   /** Same sentinels as GetDelegationExpiryResponse: 0 means none, 2^64-1 means permanent. */
   expiryTimestamp: bigint;
+}
+
+export interface SdkEvent {
+  type: string;
+  timestamp: number;
+  tokenAddress?: Buffer | undefined;
+  sdkOperationId?: string | undefined;
+  durationMs?: number | undefined;
+  encryptedValues: Buffer[];
+  result: ClearEntry[];
+  error: SdkError | undefined;
+  operation?: string | undefined;
+  txHash?: Buffer | undefined;
+  shieldPath?: string | undefined;
+  step?: string | undefined;
+}
+
+export interface WalletAccountChanged {
+  previous: WalletAccount | undefined;
+  next: WalletAccount | undefined;
+}
+
+export interface OperationProgress {
+  kind: ProgressKind;
+  txHash?: Buffer | undefined;
+}
+
+export interface BatchErrorCallback {
+  tokenAddress: Buffer;
+  error: SdkError | undefined;
+}
+
+export interface EventDelivery {
+  contextId: string;
+  operationId: string;
+  sequence: bigint;
+  payload:
+    | { $case: "event"; event: SdkEvent }
+    | { $case: "walletAccount"; walletAccount: WalletAccountChanged }
+    | { $case: "progress"; progress: OperationProgress }
+    | { $case: "batchError"; batchError: BatchErrorCallback }
+    | undefined;
+}
+
+export interface EventReply {
+  sequence: bigint;
+  outcome: { $case: "acknowledged"; acknowledged: Empty } | { $case: "fallbackBigint"; fallbackBigint: string } | {
+    $case: "error";
+    error: SdkError;
+  } | undefined;
+}
+
+export interface EventClientMessage {
+  message: { $case: "attach"; attach: ContextRequest } | { $case: "reply"; reply: EventReply } | undefined;
+}
+
+export interface EventReplyError {
+  sequence: bigint;
+  error: SdkError | undefined;
+}
+
+export interface EventCancelled {
+  sequence: bigint;
+}
+
+export interface EventServerMessage {
+  message:
+    | { $case: "attached"; attached: Empty }
+    | { $case: "delivery"; delivery: EventDelivery }
+    | { $case: "replyError"; replyError: EventReplyError }
+    | { $case: "cancelled"; cancelled: EventCancelled }
+    | undefined;
 }
 
 function createBaseEmpty(): Empty {
@@ -11441,6 +11588,1235 @@ export const GetDelegationStatusResponse: MessageFns<GetDelegationStatusResponse
   },
 };
 
+function createBaseSdkEvent(): SdkEvent {
+  return {
+    type: "",
+    timestamp: 0,
+    tokenAddress: undefined,
+    sdkOperationId: undefined,
+    durationMs: undefined,
+    encryptedValues: [],
+    result: [],
+    error: undefined,
+    operation: undefined,
+    txHash: undefined,
+    shieldPath: undefined,
+    step: undefined,
+  };
+}
+
+export const SdkEvent: MessageFns<SdkEvent> = {
+  encode(message: SdkEvent, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.type !== "") {
+      writer.uint32(10).string(message.type);
+    }
+    if (message.timestamp !== 0) {
+      writer.uint32(17).double(message.timestamp);
+    }
+    if (message.tokenAddress !== undefined) {
+      writer.uint32(26).bytes(message.tokenAddress);
+    }
+    if (message.sdkOperationId !== undefined) {
+      writer.uint32(34).string(message.sdkOperationId);
+    }
+    if (message.durationMs !== undefined) {
+      writer.uint32(41).double(message.durationMs);
+    }
+    for (const v of message.encryptedValues) {
+      writer.uint32(50).bytes(v!);
+    }
+    for (const v of message.result) {
+      ClearEntry.encode(v!, writer.uint32(58).fork()).join();
+    }
+    if (message.error !== undefined) {
+      SdkError.encode(message.error, writer.uint32(66).fork()).join();
+    }
+    if (message.operation !== undefined) {
+      writer.uint32(74).string(message.operation);
+    }
+    if (message.txHash !== undefined) {
+      writer.uint32(82).bytes(message.txHash);
+    }
+    if (message.shieldPath !== undefined) {
+      writer.uint32(90).string(message.shieldPath);
+    }
+    if (message.step !== undefined) {
+      writer.uint32(98).string(message.step);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): SdkEvent {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSdkEvent();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.type = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 17) {
+            break;
+          }
+
+          message.timestamp = reader.double();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.tokenAddress = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.sdkOperationId = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 41) {
+            break;
+          }
+
+          message.durationMs = reader.double();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.encryptedValues.push(Buffer.from(reader.bytes()));
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.result.push(ClearEntry.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.error = SdkError.decode(reader, reader.uint32());
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.operation = reader.string();
+          continue;
+        }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          message.txHash = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 11: {
+          if (tag !== 90) {
+            break;
+          }
+
+          message.shieldPath = reader.string();
+          continue;
+        }
+        case 12: {
+          if (tag !== 98) {
+            break;
+          }
+
+          message.step = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): SdkEvent {
+    return {
+      type: isSet(object.type) ? globalThis.String(object.type) : "",
+      timestamp: isSet(object.timestamp) ? globalThis.Number(object.timestamp) : 0,
+      tokenAddress: isSet(object.tokenAddress)
+        ? Buffer.from(bytesFromBase64(object.tokenAddress))
+        : isSet(object.token_address)
+        ? Buffer.from(bytesFromBase64(object.token_address))
+        : undefined,
+      sdkOperationId: isSet(object.sdkOperationId)
+        ? globalThis.String(object.sdkOperationId)
+        : isSet(object.sdk_operation_id)
+        ? globalThis.String(object.sdk_operation_id)
+        : undefined,
+      durationMs: isSet(object.durationMs)
+        ? globalThis.Number(object.durationMs)
+        : isSet(object.duration_ms)
+        ? globalThis.Number(object.duration_ms)
+        : undefined,
+      encryptedValues: globalThis.Array.isArray(object?.encryptedValues)
+        ? object.encryptedValues.map((e: any) => Buffer.from(bytesFromBase64(e)))
+        : globalThis.Array.isArray(object?.encrypted_values)
+        ? object.encrypted_values.map((e: any) => Buffer.from(bytesFromBase64(e)))
+        : [],
+      result: globalThis.Array.isArray(object?.result)
+        ? object.result.map((e: any) => ClearEntry.fromJSON(e))
+        : [],
+      error: isSet(object.error) ? SdkError.fromJSON(object.error) : undefined,
+      operation: isSet(object.operation) ? globalThis.String(object.operation) : undefined,
+      txHash: isSet(object.txHash)
+        ? Buffer.from(bytesFromBase64(object.txHash))
+        : isSet(object.tx_hash)
+        ? Buffer.from(bytesFromBase64(object.tx_hash))
+        : undefined,
+      shieldPath: isSet(object.shieldPath)
+        ? globalThis.String(object.shieldPath)
+        : isSet(object.shield_path)
+        ? globalThis.String(object.shield_path)
+        : undefined,
+      step: isSet(object.step) ? globalThis.String(object.step) : undefined,
+    };
+  },
+
+  toJSON(message: SdkEvent): unknown {
+    const obj: any = {};
+    if (message.type !== "") {
+      obj.type = message.type;
+    }
+    if (message.timestamp !== 0) {
+      obj.timestamp = message.timestamp;
+    }
+    if (message.tokenAddress !== undefined) {
+      obj.tokenAddress = base64FromBytes(message.tokenAddress);
+    }
+    if (message.sdkOperationId !== undefined) {
+      obj.sdkOperationId = message.sdkOperationId;
+    }
+    if (message.durationMs !== undefined) {
+      obj.durationMs = message.durationMs;
+    }
+    if (message.encryptedValues?.length) {
+      obj.encryptedValues = message.encryptedValues.map((e) => base64FromBytes(e));
+    }
+    if (message.result?.length) {
+      obj.result = message.result.map((e) => ClearEntry.toJSON(e));
+    }
+    if (message.error !== undefined) {
+      obj.error = SdkError.toJSON(message.error);
+    }
+    if (message.operation !== undefined) {
+      obj.operation = message.operation;
+    }
+    if (message.txHash !== undefined) {
+      obj.txHash = base64FromBytes(message.txHash);
+    }
+    if (message.shieldPath !== undefined) {
+      obj.shieldPath = message.shieldPath;
+    }
+    if (message.step !== undefined) {
+      obj.step = message.step;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<SdkEvent>): SdkEvent {
+    return SdkEvent.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<SdkEvent>): SdkEvent {
+    const message = createBaseSdkEvent();
+    message.type = object.type ?? "";
+    message.timestamp = object.timestamp ?? 0;
+    message.tokenAddress = object.tokenAddress ?? undefined;
+    message.sdkOperationId = object.sdkOperationId ?? undefined;
+    message.durationMs = object.durationMs ?? undefined;
+    message.encryptedValues = object.encryptedValues?.map((e) => e) || [];
+    message.result = object.result?.map((e) => ClearEntry.fromPartial(e)) || [];
+    message.error = (object.error !== undefined && object.error !== null)
+      ? SdkError.fromPartial(object.error)
+      : undefined;
+    message.operation = object.operation ?? undefined;
+    message.txHash = object.txHash ?? undefined;
+    message.shieldPath = object.shieldPath ?? undefined;
+    message.step = object.step ?? undefined;
+    return message;
+  },
+};
+
+function createBaseWalletAccountChanged(): WalletAccountChanged {
+  return { previous: undefined, next: undefined };
+}
+
+export const WalletAccountChanged: MessageFns<WalletAccountChanged> = {
+  encode(message: WalletAccountChanged, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.previous !== undefined) {
+      WalletAccount.encode(message.previous, writer.uint32(10).fork()).join();
+    }
+    if (message.next !== undefined) {
+      WalletAccount.encode(message.next, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): WalletAccountChanged {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseWalletAccountChanged();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.previous = WalletAccount.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.next = WalletAccount.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): WalletAccountChanged {
+    return {
+      previous: isSet(object.previous) ? WalletAccount.fromJSON(object.previous) : undefined,
+      next: isSet(object.next) ? WalletAccount.fromJSON(object.next) : undefined,
+    };
+  },
+
+  toJSON(message: WalletAccountChanged): unknown {
+    const obj: any = {};
+    if (message.previous !== undefined) {
+      obj.previous = WalletAccount.toJSON(message.previous);
+    }
+    if (message.next !== undefined) {
+      obj.next = WalletAccount.toJSON(message.next);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<WalletAccountChanged>): WalletAccountChanged {
+    return WalletAccountChanged.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<WalletAccountChanged>): WalletAccountChanged {
+    const message = createBaseWalletAccountChanged();
+    message.previous = (object.previous !== undefined && object.previous !== null)
+      ? WalletAccount.fromPartial(object.previous)
+      : undefined;
+    message.next = (object.next !== undefined && object.next !== null)
+      ? WalletAccount.fromPartial(object.next)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseOperationProgress(): OperationProgress {
+  return { kind: 0, txHash: undefined };
+}
+
+export const OperationProgress: MessageFns<OperationProgress> = {
+  encode(message: OperationProgress, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.kind !== 0) {
+      writer.uint32(8).int32(message.kind);
+    }
+    if (message.txHash !== undefined) {
+      writer.uint32(18).bytes(message.txHash);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): OperationProgress {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseOperationProgress();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.kind = reader.int32() as any;
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.txHash = Buffer.from(reader.bytes());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): OperationProgress {
+    return {
+      kind: isSet(object.kind) ? progressKindFromJSON(object.kind) : 0,
+      txHash: isSet(object.txHash)
+        ? Buffer.from(bytesFromBase64(object.txHash))
+        : isSet(object.tx_hash)
+        ? Buffer.from(bytesFromBase64(object.tx_hash))
+        : undefined,
+    };
+  },
+
+  toJSON(message: OperationProgress): unknown {
+    const obj: any = {};
+    if (message.kind !== 0) {
+      obj.kind = progressKindToJSON(message.kind);
+    }
+    if (message.txHash !== undefined) {
+      obj.txHash = base64FromBytes(message.txHash);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<OperationProgress>): OperationProgress {
+    return OperationProgress.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<OperationProgress>): OperationProgress {
+    const message = createBaseOperationProgress();
+    message.kind = object.kind ?? 0;
+    message.txHash = object.txHash ?? undefined;
+    return message;
+  },
+};
+
+function createBaseBatchErrorCallback(): BatchErrorCallback {
+  return { tokenAddress: Buffer.alloc(0), error: undefined };
+}
+
+export const BatchErrorCallback: MessageFns<BatchErrorCallback> = {
+  encode(message: BatchErrorCallback, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.tokenAddress.length !== 0) {
+      writer.uint32(10).bytes(message.tokenAddress);
+    }
+    if (message.error !== undefined) {
+      SdkError.encode(message.error, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): BatchErrorCallback {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseBatchErrorCallback();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.tokenAddress = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.error = SdkError.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): BatchErrorCallback {
+    return {
+      tokenAddress: isSet(object.tokenAddress)
+        ? Buffer.from(bytesFromBase64(object.tokenAddress))
+        : isSet(object.token_address)
+        ? Buffer.from(bytesFromBase64(object.token_address))
+        : Buffer.alloc(0),
+      error: isSet(object.error) ? SdkError.fromJSON(object.error) : undefined,
+    };
+  },
+
+  toJSON(message: BatchErrorCallback): unknown {
+    const obj: any = {};
+    if (message.tokenAddress.length !== 0) {
+      obj.tokenAddress = base64FromBytes(message.tokenAddress);
+    }
+    if (message.error !== undefined) {
+      obj.error = SdkError.toJSON(message.error);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<BatchErrorCallback>): BatchErrorCallback {
+    return BatchErrorCallback.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<BatchErrorCallback>): BatchErrorCallback {
+    const message = createBaseBatchErrorCallback();
+    message.tokenAddress = object.tokenAddress ?? Buffer.alloc(0);
+    message.error = (object.error !== undefined && object.error !== null)
+      ? SdkError.fromPartial(object.error)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseEventDelivery(): EventDelivery {
+  return { contextId: "", operationId: "", sequence: 0n, payload: undefined };
+}
+
+export const EventDelivery: MessageFns<EventDelivery> = {
+  encode(message: EventDelivery, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.contextId !== "") {
+      writer.uint32(10).string(message.contextId);
+    }
+    if (message.operationId !== "") {
+      writer.uint32(18).string(message.operationId);
+    }
+    if (message.sequence !== 0n) {
+      if (BigInt.asUintN(64, message.sequence) !== message.sequence) {
+        throw new globalThis.Error("value provided for field message.sequence of type uint64 too large");
+      }
+      writer.uint32(24).uint64(message.sequence);
+    }
+    switch (message.payload?.$case) {
+      case "event":
+        SdkEvent.encode(message.payload.event, writer.uint32(34).fork()).join();
+        break;
+      case "walletAccount":
+        WalletAccountChanged.encode(message.payload.walletAccount, writer.uint32(42).fork()).join();
+        break;
+      case "progress":
+        OperationProgress.encode(message.payload.progress, writer.uint32(50).fork()).join();
+        break;
+      case "batchError":
+        BatchErrorCallback.encode(message.payload.batchError, writer.uint32(58).fork()).join();
+        break;
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): EventDelivery {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseEventDelivery();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.contextId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.operationId = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.sequence = reader.uint64() as bigint;
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.payload = { $case: "event", event: SdkEvent.decode(reader, reader.uint32()) };
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.payload = {
+            $case: "walletAccount",
+            walletAccount: WalletAccountChanged.decode(reader, reader.uint32()),
+          };
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.payload = { $case: "progress", progress: OperationProgress.decode(reader, reader.uint32()) };
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.payload = { $case: "batchError", batchError: BatchErrorCallback.decode(reader, reader.uint32()) };
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): EventDelivery {
+    return {
+      contextId: isSet(object.contextId)
+        ? globalThis.String(object.contextId)
+        : isSet(object.context_id)
+        ? globalThis.String(object.context_id)
+        : "",
+      operationId: isSet(object.operationId)
+        ? globalThis.String(object.operationId)
+        : isSet(object.operation_id)
+        ? globalThis.String(object.operation_id)
+        : "",
+      sequence: isSet(object.sequence) ? BigInt(object.sequence) : 0n,
+      payload: isSet(object.event)
+        ? { $case: "event", event: SdkEvent.fromJSON(object.event) }
+        : isSet(object.walletAccount)
+        ? { $case: "walletAccount", walletAccount: WalletAccountChanged.fromJSON(object.walletAccount) }
+        : isSet(object.wallet_account)
+        ? { $case: "walletAccount", walletAccount: WalletAccountChanged.fromJSON(object.wallet_account) }
+        : isSet(object.progress)
+        ? { $case: "progress", progress: OperationProgress.fromJSON(object.progress) }
+        : isSet(object.batchError)
+        ? { $case: "batchError", batchError: BatchErrorCallback.fromJSON(object.batchError) }
+        : isSet(object.batch_error)
+        ? { $case: "batchError", batchError: BatchErrorCallback.fromJSON(object.batch_error) }
+        : undefined,
+    };
+  },
+
+  toJSON(message: EventDelivery): unknown {
+    const obj: any = {};
+    if (message.contextId !== "") {
+      obj.contextId = message.contextId;
+    }
+    if (message.operationId !== "") {
+      obj.operationId = message.operationId;
+    }
+    if (message.sequence !== 0n) {
+      obj.sequence = message.sequence.toString();
+    }
+    if (message.payload?.$case === "event") {
+      obj.event = SdkEvent.toJSON(message.payload.event);
+    } else if (message.payload?.$case === "walletAccount") {
+      obj.walletAccount = WalletAccountChanged.toJSON(message.payload.walletAccount);
+    } else if (message.payload?.$case === "progress") {
+      obj.progress = OperationProgress.toJSON(message.payload.progress);
+    } else if (message.payload?.$case === "batchError") {
+      obj.batchError = BatchErrorCallback.toJSON(message.payload.batchError);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<EventDelivery>): EventDelivery {
+    return EventDelivery.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<EventDelivery>): EventDelivery {
+    const message = createBaseEventDelivery();
+    message.contextId = object.contextId ?? "";
+    message.operationId = object.operationId ?? "";
+    message.sequence = (object.sequence !== undefined && object.sequence !== null) ? BigInt(object.sequence) : 0n;
+    switch (object.payload?.$case) {
+      case "event": {
+        if (object.payload?.event !== undefined && object.payload?.event !== null) {
+          message.payload = { $case: "event", event: SdkEvent.fromPartial(object.payload.event) };
+        }
+        break;
+      }
+      case "walletAccount": {
+        if (object.payload?.walletAccount !== undefined && object.payload?.walletAccount !== null) {
+          message.payload = {
+            $case: "walletAccount",
+            walletAccount: WalletAccountChanged.fromPartial(object.payload.walletAccount),
+          };
+        }
+        break;
+      }
+      case "progress": {
+        if (object.payload?.progress !== undefined && object.payload?.progress !== null) {
+          message.payload = { $case: "progress", progress: OperationProgress.fromPartial(object.payload.progress) };
+        }
+        break;
+      }
+      case "batchError": {
+        if (object.payload?.batchError !== undefined && object.payload?.batchError !== null) {
+          message.payload = {
+            $case: "batchError",
+            batchError: BatchErrorCallback.fromPartial(object.payload.batchError),
+          };
+        }
+        break;
+      }
+    }
+    return message;
+  },
+};
+
+function createBaseEventReply(): EventReply {
+  return { sequence: 0n, outcome: undefined };
+}
+
+export const EventReply: MessageFns<EventReply> = {
+  encode(message: EventReply, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.sequence !== 0n) {
+      if (BigInt.asUintN(64, message.sequence) !== message.sequence) {
+        throw new globalThis.Error("value provided for field message.sequence of type uint64 too large");
+      }
+      writer.uint32(8).uint64(message.sequence);
+    }
+    switch (message.outcome?.$case) {
+      case "acknowledged":
+        Empty.encode(message.outcome.acknowledged, writer.uint32(18).fork()).join();
+        break;
+      case "fallbackBigint":
+        writer.uint32(26).string(message.outcome.fallbackBigint);
+        break;
+      case "error":
+        SdkError.encode(message.outcome.error, writer.uint32(34).fork()).join();
+        break;
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): EventReply {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseEventReply();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.sequence = reader.uint64() as bigint;
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.outcome = { $case: "acknowledged", acknowledged: Empty.decode(reader, reader.uint32()) };
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.outcome = { $case: "fallbackBigint", fallbackBigint: reader.string() };
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.outcome = { $case: "error", error: SdkError.decode(reader, reader.uint32()) };
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): EventReply {
+    return {
+      sequence: isSet(object.sequence) ? BigInt(object.sequence) : 0n,
+      outcome: isSet(object.acknowledged)
+        ? { $case: "acknowledged", acknowledged: Empty.fromJSON(object.acknowledged) }
+        : isSet(object.fallbackBigint)
+        ? { $case: "fallbackBigint", fallbackBigint: globalThis.String(object.fallbackBigint) }
+        : isSet(object.fallback_bigint)
+        ? { $case: "fallbackBigint", fallbackBigint: globalThis.String(object.fallback_bigint) }
+        : isSet(object.error)
+        ? { $case: "error", error: SdkError.fromJSON(object.error) }
+        : undefined,
+    };
+  },
+
+  toJSON(message: EventReply): unknown {
+    const obj: any = {};
+    if (message.sequence !== 0n) {
+      obj.sequence = message.sequence.toString();
+    }
+    if (message.outcome?.$case === "acknowledged") {
+      obj.acknowledged = Empty.toJSON(message.outcome.acknowledged);
+    } else if (message.outcome?.$case === "fallbackBigint") {
+      obj.fallbackBigint = message.outcome.fallbackBigint;
+    } else if (message.outcome?.$case === "error") {
+      obj.error = SdkError.toJSON(message.outcome.error);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<EventReply>): EventReply {
+    return EventReply.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<EventReply>): EventReply {
+    const message = createBaseEventReply();
+    message.sequence = (object.sequence !== undefined && object.sequence !== null) ? BigInt(object.sequence) : 0n;
+    switch (object.outcome?.$case) {
+      case "acknowledged": {
+        if (object.outcome?.acknowledged !== undefined && object.outcome?.acknowledged !== null) {
+          message.outcome = { $case: "acknowledged", acknowledged: Empty.fromPartial(object.outcome.acknowledged) };
+        }
+        break;
+      }
+      case "fallbackBigint": {
+        if (object.outcome?.fallbackBigint !== undefined && object.outcome?.fallbackBigint !== null) {
+          message.outcome = { $case: "fallbackBigint", fallbackBigint: object.outcome.fallbackBigint };
+        }
+        break;
+      }
+      case "error": {
+        if (object.outcome?.error !== undefined && object.outcome?.error !== null) {
+          message.outcome = { $case: "error", error: SdkError.fromPartial(object.outcome.error) };
+        }
+        break;
+      }
+    }
+    return message;
+  },
+};
+
+function createBaseEventClientMessage(): EventClientMessage {
+  return { message: undefined };
+}
+
+export const EventClientMessage: MessageFns<EventClientMessage> = {
+  encode(message: EventClientMessage, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    switch (message.message?.$case) {
+      case "attach":
+        ContextRequest.encode(message.message.attach, writer.uint32(10).fork()).join();
+        break;
+      case "reply":
+        EventReply.encode(message.message.reply, writer.uint32(18).fork()).join();
+        break;
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): EventClientMessage {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseEventClientMessage();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.message = { $case: "attach", attach: ContextRequest.decode(reader, reader.uint32()) };
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.message = { $case: "reply", reply: EventReply.decode(reader, reader.uint32()) };
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): EventClientMessage {
+    return {
+      message: isSet(object.attach)
+        ? { $case: "attach", attach: ContextRequest.fromJSON(object.attach) }
+        : isSet(object.reply)
+        ? { $case: "reply", reply: EventReply.fromJSON(object.reply) }
+        : undefined,
+    };
+  },
+
+  toJSON(message: EventClientMessage): unknown {
+    const obj: any = {};
+    if (message.message?.$case === "attach") {
+      obj.attach = ContextRequest.toJSON(message.message.attach);
+    } else if (message.message?.$case === "reply") {
+      obj.reply = EventReply.toJSON(message.message.reply);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<EventClientMessage>): EventClientMessage {
+    return EventClientMessage.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<EventClientMessage>): EventClientMessage {
+    const message = createBaseEventClientMessage();
+    switch (object.message?.$case) {
+      case "attach": {
+        if (object.message?.attach !== undefined && object.message?.attach !== null) {
+          message.message = { $case: "attach", attach: ContextRequest.fromPartial(object.message.attach) };
+        }
+        break;
+      }
+      case "reply": {
+        if (object.message?.reply !== undefined && object.message?.reply !== null) {
+          message.message = { $case: "reply", reply: EventReply.fromPartial(object.message.reply) };
+        }
+        break;
+      }
+    }
+    return message;
+  },
+};
+
+function createBaseEventReplyError(): EventReplyError {
+  return { sequence: 0n, error: undefined };
+}
+
+export const EventReplyError: MessageFns<EventReplyError> = {
+  encode(message: EventReplyError, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.sequence !== 0n) {
+      if (BigInt.asUintN(64, message.sequence) !== message.sequence) {
+        throw new globalThis.Error("value provided for field message.sequence of type uint64 too large");
+      }
+      writer.uint32(8).uint64(message.sequence);
+    }
+    if (message.error !== undefined) {
+      SdkError.encode(message.error, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): EventReplyError {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseEventReplyError();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.sequence = reader.uint64() as bigint;
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.error = SdkError.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): EventReplyError {
+    return {
+      sequence: isSet(object.sequence) ? BigInt(object.sequence) : 0n,
+      error: isSet(object.error) ? SdkError.fromJSON(object.error) : undefined,
+    };
+  },
+
+  toJSON(message: EventReplyError): unknown {
+    const obj: any = {};
+    if (message.sequence !== 0n) {
+      obj.sequence = message.sequence.toString();
+    }
+    if (message.error !== undefined) {
+      obj.error = SdkError.toJSON(message.error);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<EventReplyError>): EventReplyError {
+    return EventReplyError.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<EventReplyError>): EventReplyError {
+    const message = createBaseEventReplyError();
+    message.sequence = (object.sequence !== undefined && object.sequence !== null) ? BigInt(object.sequence) : 0n;
+    message.error = (object.error !== undefined && object.error !== null)
+      ? SdkError.fromPartial(object.error)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseEventCancelled(): EventCancelled {
+  return { sequence: 0n };
+}
+
+export const EventCancelled: MessageFns<EventCancelled> = {
+  encode(message: EventCancelled, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.sequence !== 0n) {
+      if (BigInt.asUintN(64, message.sequence) !== message.sequence) {
+        throw new globalThis.Error("value provided for field message.sequence of type uint64 too large");
+      }
+      writer.uint32(8).uint64(message.sequence);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): EventCancelled {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseEventCancelled();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.sequence = reader.uint64() as bigint;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): EventCancelled {
+    return { sequence: isSet(object.sequence) ? BigInt(object.sequence) : 0n };
+  },
+
+  toJSON(message: EventCancelled): unknown {
+    const obj: any = {};
+    if (message.sequence !== 0n) {
+      obj.sequence = message.sequence.toString();
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<EventCancelled>): EventCancelled {
+    return EventCancelled.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<EventCancelled>): EventCancelled {
+    const message = createBaseEventCancelled();
+    message.sequence = (object.sequence !== undefined && object.sequence !== null) ? BigInt(object.sequence) : 0n;
+    return message;
+  },
+};
+
+function createBaseEventServerMessage(): EventServerMessage {
+  return { message: undefined };
+}
+
+export const EventServerMessage: MessageFns<EventServerMessage> = {
+  encode(message: EventServerMessage, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    switch (message.message?.$case) {
+      case "attached":
+        Empty.encode(message.message.attached, writer.uint32(10).fork()).join();
+        break;
+      case "delivery":
+        EventDelivery.encode(message.message.delivery, writer.uint32(18).fork()).join();
+        break;
+      case "replyError":
+        EventReplyError.encode(message.message.replyError, writer.uint32(26).fork()).join();
+        break;
+      case "cancelled":
+        EventCancelled.encode(message.message.cancelled, writer.uint32(34).fork()).join();
+        break;
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): EventServerMessage {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseEventServerMessage();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.message = { $case: "attached", attached: Empty.decode(reader, reader.uint32()) };
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.message = { $case: "delivery", delivery: EventDelivery.decode(reader, reader.uint32()) };
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.message = { $case: "replyError", replyError: EventReplyError.decode(reader, reader.uint32()) };
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.message = { $case: "cancelled", cancelled: EventCancelled.decode(reader, reader.uint32()) };
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): EventServerMessage {
+    return {
+      message: isSet(object.attached)
+        ? { $case: "attached", attached: Empty.fromJSON(object.attached) }
+        : isSet(object.delivery)
+        ? { $case: "delivery", delivery: EventDelivery.fromJSON(object.delivery) }
+        : isSet(object.replyError)
+        ? { $case: "replyError", replyError: EventReplyError.fromJSON(object.replyError) }
+        : isSet(object.reply_error)
+        ? { $case: "replyError", replyError: EventReplyError.fromJSON(object.reply_error) }
+        : isSet(object.cancelled)
+        ? { $case: "cancelled", cancelled: EventCancelled.fromJSON(object.cancelled) }
+        : undefined,
+    };
+  },
+
+  toJSON(message: EventServerMessage): unknown {
+    const obj: any = {};
+    if (message.message?.$case === "attached") {
+      obj.attached = Empty.toJSON(message.message.attached);
+    } else if (message.message?.$case === "delivery") {
+      obj.delivery = EventDelivery.toJSON(message.message.delivery);
+    } else if (message.message?.$case === "replyError") {
+      obj.replyError = EventReplyError.toJSON(message.message.replyError);
+    } else if (message.message?.$case === "cancelled") {
+      obj.cancelled = EventCancelled.toJSON(message.message.cancelled);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<EventServerMessage>): EventServerMessage {
+    return EventServerMessage.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<EventServerMessage>): EventServerMessage {
+    const message = createBaseEventServerMessage();
+    switch (object.message?.$case) {
+      case "attached": {
+        if (object.message?.attached !== undefined && object.message?.attached !== null) {
+          message.message = { $case: "attached", attached: Empty.fromPartial(object.message.attached) };
+        }
+        break;
+      }
+      case "delivery": {
+        if (object.message?.delivery !== undefined && object.message?.delivery !== null) {
+          message.message = { $case: "delivery", delivery: EventDelivery.fromPartial(object.message.delivery) };
+        }
+        break;
+      }
+      case "replyError": {
+        if (object.message?.replyError !== undefined && object.message?.replyError !== null) {
+          message.message = { $case: "replyError", replyError: EventReplyError.fromPartial(object.message.replyError) };
+        }
+        break;
+      }
+      case "cancelled": {
+        if (object.message?.cancelled !== undefined && object.message?.cancelled !== null) {
+          message.message = { $case: "cancelled", cancelled: EventCancelled.fromPartial(object.message.cancelled) };
+        }
+        break;
+      }
+    }
+    return message;
+  },
+};
+
 /**
  * SDK failures retain their code and retry information in gRPC trailers.
  * Integer durations and counts are exact; omitted optional values use SDK defaults.
@@ -11510,6 +12886,15 @@ export const SidecarServiceService = {
     responseSerialize: (value: StorageServerMessage): Buffer =>
       Buffer.from(StorageServerMessage.encode(value).finish()),
     responseDeserialize: (value: Buffer): StorageServerMessage => StorageServerMessage.decode(value),
+  },
+  eventChannel: {
+    path: "/zama.sdk.v1alpha1.SidecarService/EventChannel" as const,
+    requestStream: true as const,
+    responseStream: true as const,
+    requestSerialize: (value: EventClientMessage): Buffer => Buffer.from(EventClientMessage.encode(value).finish()),
+    requestDeserialize: (value: Buffer): EventClientMessage => EventClientMessage.decode(value),
+    responseSerialize: (value: EventServerMessage): Buffer => Buffer.from(EventServerMessage.encode(value).finish()),
+    responseDeserialize: (value: Buffer): EventServerMessage => EventServerMessage.decode(value),
   },
   /** Calls decryption.decryptValues, including automatic permit acquisition and credential recovery. */
   decryptValues: {
@@ -11782,6 +13167,7 @@ export interface SidecarServiceServer extends UntypedServiceImplementation {
   signerChannel: handleBidiStreamingCall<SignerClientMessage, SignerServerMessage>;
   /** Attach once per context to serve application storage; keys and values remain opaque. */
   storageChannel: handleBidiStreamingCall<StorageClientMessage, StorageServerMessage>;
+  eventChannel: handleBidiStreamingCall<EventClientMessage, EventServerMessage>;
   /** Calls decryption.decryptValues, including automatic permit acquisition and credential recovery. */
   decryptValues: handleUnaryCall<DecryptValuesRequest, DecryptValuesResponse>;
   /** Calls decryption.delegatedDecryptValues; an omitted account uses the delegator address. */
@@ -11907,6 +13293,12 @@ export interface SidecarServiceClient extends Client {
     metadata: Metadata,
     options?: Partial<CallOptions>,
   ): ClientDuplexStream<StorageClientMessage, StorageServerMessage>;
+  eventChannel(): ClientDuplexStream<EventClientMessage, EventServerMessage>;
+  eventChannel(options: Partial<CallOptions>): ClientDuplexStream<EventClientMessage, EventServerMessage>;
+  eventChannel(
+    metadata: Metadata,
+    options?: Partial<CallOptions>,
+  ): ClientDuplexStream<EventClientMessage, EventServerMessage>;
   /** Calls decryption.decryptValues, including automatic permit acquisition and credential recovery. */
   decryptValues(
     request: DecryptValuesRequest,

@@ -4,7 +4,7 @@ import type { handleUnaryCall } from "@grpc/grpc-js";
 import type * as rpc from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import type { ContextSdk, SidecarRuntime } from "./runtime.js";
 import { prepareTransaction } from "./offline.js";
-import { signerChannel, storageChannel } from "./channels.js";
+import { signerChannel, storageChannel, eventChannel } from "./channels.js";
 import {
   address,
   bytes,
@@ -90,6 +90,7 @@ export function createHandlers(
     }),
     signerChannel: signerChannel(runtime),
     storageChannel: storageChannel(runtime),
+    eventChannel: eventChannel(runtime),
     encrypt: execute(encrypt, true),
     decryptValues: execute(async (sdk, request: rpc.DecryptValuesRequest, signal) => ({
       values: entries(

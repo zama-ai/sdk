@@ -1,6 +1,7 @@
 mod balance;
 mod delegation;
 mod encryption;
+mod events;
 mod offline;
 mod support;
 

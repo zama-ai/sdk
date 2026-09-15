@@ -9,13 +9,15 @@ type ClientFrame<Reply> = {
 
 function attachChannel<Reply, Response>(
   stream: ServerDuplexStream<ClientFrame<Reply>, Response>,
-  kind: "SIGNER" | "STORAGE",
+  kind: "SIGNER" | "STORAGE" | "EVENT",
   timeoutMs: number,
   attach: (contextId: string) => { reply(value: Reply): void },
 ): void {
   let attached: ReturnType<typeof attach> | undefined;
   const deadline = setTimeout(() => {
-    stream.destroy(
+    // grpc-js sends error trailers from its error handler; destroy() skips finalization.
+    stream.emit(
+      "error",
       serviceError(
         new SidecarError(
           `${kind}_ATTACH_TIMEOUT`,
@@ -46,7 +48,7 @@ function attachChannel<Reply, Response>(
         throw invalidArgument("Attach a context before replying to callback requests.");
       }
     } catch (error) {
-      stream.destroy(serviceError(error));
+      stream.emit("error", serviceError(error));
     }
   });
 }
@@ -61,4 +63,8 @@ export function storageChannel(
 ): rpc.SidecarServiceServer["storageChannel"] {
   return (stream) =>
     attachChannel(stream, "STORAGE", 10_000, (id) => runtime.attachStorage(id, stream));
+}
+
+export function eventChannel(runtime: SidecarRuntime): rpc.SidecarServiceServer["eventChannel"] {
+  return (stream) => attachChannel(stream, "EVENT", 5000, (id) => runtime.attachEvents(id, stream));
 }

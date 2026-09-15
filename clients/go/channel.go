@@ -14,6 +14,7 @@ type ChannelKind string
 const (
 	SignerChannel  ChannelKind = "signer"
 	StorageChannel ChannelKind = "storage"
+	EventChannel   ChannelKind = "event"
 )
 
 type callbackChannel struct {
@@ -31,6 +32,8 @@ func (s *SDKContext) WaitChannelFailure(ctx context.Context, kind ChannelKind) e
 		channel = s.signer
 	case StorageChannel:
 		channel = s.storage
+	case EventChannel:
+		channel = s.events
 	default:
 		s.mu.Unlock()
 		return errors.New("unknown callback channel")
