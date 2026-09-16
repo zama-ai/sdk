@@ -207,6 +207,7 @@ enum SecretValue {
     Bytes(Vec<u8>),
 }
 impl DerivationSecret {
+    /// Sends protection enabled with no derivation secret value.
     pub fn missing() -> Self {
         Self(SecretValue::Missing)
     }

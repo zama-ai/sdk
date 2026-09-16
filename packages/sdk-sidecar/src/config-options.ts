@@ -7,7 +7,6 @@ import {
 import { toFhevmAuth } from "@zama-fhe/sdk/internal";
 import { node } from "@zama-fhe/sdk/node";
 import type { HttpTransportConfig } from "viem";
-import { invalidArgument } from "./errors.js";
 import type * as Wire from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import { chainAuth, decodeOptional, defined, safeInteger, unsignedInteger } from "./encoding.js";
 
@@ -136,17 +135,6 @@ export function providerConfig(value: Wire.HttpProviderConfig): ProviderConfig {
 type EncryptionKey = NonNullable<RelayerOptions["fheEncryptionKey"]>;
 type CrsCapacity = EncryptionKey["crsBytes"]["capacity"];
 
-function isCrsCapacity(value: number): value is CrsCapacity {
-  return Number.isInteger(value) && value >= 0 && value <= 0xffff_ffff;
-}
-
-function crsCapacity(value: number): CrsCapacity {
-  if (!isCrsCapacity(value)) {
-    throw invalidArgument("CRS capacity must be an unsigned 32-bit integer.");
-  }
-  return value;
-}
-
 function encryptionKey(value: Wire.FheEncryptionKey): EncryptionKey {
   const { publicKeyBytes, crsBytes, metadata } = value;
   if (!publicKeyBytes || !crsBytes || !metadata) {
@@ -156,7 +144,7 @@ function encryptionKey(value: Wire.FheEncryptionKey): EncryptionKey {
     publicKeyBytes: { id: publicKeyBytes.id, bytes: new Uint8Array(publicKeyBytes.bytes) },
     crsBytes: {
       id: crsBytes.id,
-      capacity: crsCapacity(crsBytes.capacity),
+      capacity: unsignedInteger(crsBytes.capacity, "CRS capacity") as CrsCapacity,
       bytes: new Uint8Array(crsBytes.bytes),
     },
     metadata: {

@@ -1,8 +1,22 @@
-import { createConfig, ZamaSDK, ConfigurationError, type GenericProvider } from "@zama-fhe/sdk";
+import {
+  createConfig,
+  ZamaSDK,
+  ConfigurationError,
+  type GenericProvider,
+  type GenericLogger,
+} from "@zama-fhe/sdk";
 import { createHttpProvider } from "./provider.js";
 import type { StorageManager } from "./storage-manager.js";
 import { parseContextConfig } from "./sdk-config.js";
 import type { ContextFactory } from "./runtime.js";
+
+const noop = () => {};
+const stderrLogger: GenericLogger = {
+  error: (message) => process.stderr.write(`${message}\n`),
+  warn: (message) => process.stderr.write(`${message}\n`),
+  info: noop,
+  debug: noop,
+};
 
 export function createContextFactory(manager: StorageManager): ContextFactory {
   return async (request, signer, remote) => {
@@ -42,14 +56,7 @@ export function createContextFactory(manager: StorageManager): ContextFactory {
         provider,
         storage: primary.storage,
         permitStorage: permits.storage,
-        logger: {
-          warn: (message) => {
-            process.stderr.write(`${message}\n`);
-          },
-          error: () => {},
-          info: () => {},
-          debug: () => {},
-        },
+        logger: stderrLogger,
         ...options,
       }),
       // Presence with undefined enables protection; omission leaves the SDK option absent.
