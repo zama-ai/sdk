@@ -5,6 +5,7 @@ on:
     paths:
       - "clients/**"
       - "proto/**"
+      - "scripts/sidecar/**"
       - "packages/sdk/**"
       - "packages/sdk-sidecar/**"
       - "buf*.yaml"
@@ -93,6 +94,16 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: ./.github/actions/install-deps
+      - name: Fetch pull request base
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: git fetch --no-tags --depth=1 origin "$BASE_SHA"
+      - name: Check protobuf compatibility
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: pnpm exec node scripts/sidecar/check-proto-compatibility.mjs "$BASE_SHA"
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version-file: clients/go/go.mod
