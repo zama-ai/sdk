@@ -11470,6 +11470,9 @@ export interface PaginatedResult<T> {
 }
 
 // @public
+export function parsePreparedPermit(value: unknown): PreparedPermit;
+
+// @public
 export interface Permission {
     contractAddresses: ChecksummedAddress[];
     durationDays: number;
