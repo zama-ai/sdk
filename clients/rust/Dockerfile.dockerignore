@@ -1,0 +1,8 @@
+**
+!clients
+!clients/rust
+!clients/rust/**
+**/target
+**/.env*
+
+!rust-toolchain.toml

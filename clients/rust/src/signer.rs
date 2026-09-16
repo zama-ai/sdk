@@ -30,6 +30,12 @@ where
         self(request).await
     }
 }
+#[async_trait::async_trait]
+impl<S: Signer + ?Sized> Signer for Arc<S> {
+    async fn sign_typed_data(&self, request: SigningRequest) -> Result<Vec<u8>, SdkError> {
+        (**self).sign_typed_data(request).await
+    }
+}
 
 pub(crate) async fn attach_signer(
     mut client: crate::Service,
