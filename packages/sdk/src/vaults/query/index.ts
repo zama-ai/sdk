@@ -13,5 +13,4 @@ export {
 export { joinMutationOptions, type JoinParams } from "./join";
 export { claimMutationOptions, type ClaimParams } from "./claim";
 export { quitMutationOptions, type QuitParams } from "./quit";
-export { recoverMutationOptions, type RecoverParams } from "./recover";
 export { dispatchBatchMutationOptions } from "./dispatch-batch";

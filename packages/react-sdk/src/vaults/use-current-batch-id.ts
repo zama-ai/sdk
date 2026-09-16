@@ -17,7 +17,6 @@ export interface UseCurrentBatchIdConfig {
  *
  * @param config - The batcher address.
  * @param options - React Query options (forwarded to `useQuery`).
- * @returns Query result with `data: bigint`.
  *
  * @example
  * ```tsx

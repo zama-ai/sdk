@@ -1,42 +1,28 @@
 import { getAddress, type Address } from "viem";
 import { WrappedToken } from "../token";
-import type { TransactionResult } from "../types";
 import type { ZamaSDK } from "../zama-sdk";
-import type { VaultAddresses, VaultJoinOptions } from "./types";
+import type { JoinResult, VaultAddresses, VaultJoinOptions } from "./types";
 import { VaultBatcher } from "./vault-batcher";
 
 /**
- * A confidential ERC-4626 vault: the deposit and redeem batchers that make up
- * one vault, wrapped in ERC-20-style methods.
+ * A confidential ERC-4626 vault: one deposit batcher and one redeem batcher
+ * behind ERC-20-style `deposit` and `requestWithdrawal` methods.
  *
- * `deposit`/`requestWithdrawal` compose `depositBatcher`/`redeemBatcher`
- * (public {@link VaultBatcher} instances) the way `WrappedToken.shield`
- * composes the underlying ERC-20 and ERC-1363 routing, automating a step
- * callers would otherwise have to hand-roll: granting the batcher an
- * ERC-7984 operator approval before it can pull the joined amount — the
- * same pull-based approval model ERC-20's `approve` + `transferFrom` uses.
- *
- * Everything else (claim, quit, recover, batch state, …) is exposed directly
- * on `depositBatcher`/`redeemBatcher` rather than duplicated here — e.g.
+ * Claiming, quitting and batch state live on the two batchers directly —
  * `vault.depositBatcher.claim(batchId)`.
- *
- * @remarks
- * The operator-grant requirement is inferred from how ERC-7984 batchers pull
- * funds, not yet confirmed against `join`'s exact on-chain behavior for a
- * standalone (non-router) batcher. If a batcher turns out not to need it,
- * granting an unused operator approval is a harmless no-op, not a
- * correctness bug — so this errs on the safe side pending confirmation.
  */
 export class Vault {
+  /** The SDK instance this vault reads and writes through. */
   readonly sdk: ZamaSDK;
   /** Checksummed address of the underlying ERC-4626 vault contract. */
   readonly address: Address;
+  /** The batcher deposits of the underlying asset join. */
   readonly depositBatcher: VaultBatcher;
+  /** The batcher share redemptions join. */
   readonly redeemBatcher: VaultBatcher;
 
-  // Caches the in-flight promise, not just the resolved value: two concurrent
-  // callers (e.g. deposit() and a hook's onSuccess) must share one lookup and
-  // end up with the same WrappedToken instance, not race to build two.
+  // The promise is cached, not just the resolved value, so concurrent callers
+  // share one lookup and end up with the same instance.
   #depositToken: Promise<WrappedToken> | null = null;
   #shareToken: Promise<WrappedToken> | null = null;
 
@@ -59,10 +45,15 @@ export class Vault {
     return this.#depositToken;
   }
 
-  /** The confidential share token this vault issues. Resolved once and cached. */
+  /**
+   * The confidential share token this vault issues. Resolved once and cached.
+   *
+   * Read from the redeem batcher, which is the contract that actually pulls
+   * these shares and so decides which token a withdrawal must grant on.
+   */
   async shareToken(): Promise<WrappedToken> {
-    this.#shareToken ??= this.depositBatcher
-      .toToken()
+    this.#shareToken ??= this.redeemBatcher
+      .fromToken()
       .then((address) => new WrappedToken(this.sdk, address))
       .catch((error: unknown) => {
         this.#shareToken = null;
@@ -80,9 +71,14 @@ export class Vault {
    * @param amount - The plaintext amount to deposit.
    * @param options - Optional `beneficiary` and `operatorDeadline`.
    */
-  async deposit(amount: bigint, options?: VaultJoinOptions): Promise<TransactionResult> {
+  async deposit(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult> {
     const token = await this.depositToken();
-    await this.#ensureOperator(token, this.depositBatcher.address, options?.operatorDeadline);
+    await this.#ensureOperator(
+      "deposit",
+      token,
+      this.depositBatcher.address,
+      options?.operatorDeadline,
+    );
     return this.depositBatcher.join(amount, options?.beneficiary);
   }
 
@@ -95,23 +91,33 @@ export class Vault {
    * @param amount - The plaintext amount of shares to redeem.
    * @param options - Optional `beneficiary` and `operatorDeadline`.
    */
-  async requestWithdrawal(amount: bigint, options?: VaultJoinOptions): Promise<TransactionResult> {
+  async requestWithdrawal(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult> {
     const token = await this.shareToken();
-    await this.#ensureOperator(token, this.redeemBatcher.address, options?.operatorDeadline);
+    await this.#ensureOperator(
+      "requestWithdrawal",
+      token,
+      this.redeemBatcher.address,
+      options?.operatorDeadline,
+    );
     return this.redeemBatcher.join(amount, options?.beneficiary);
   }
 
+  /**
+   * The batcher pulls with `confidentialTransferFrom`, which ERC-7984 rejects
+   * unless the batcher is already an operator of the caller.
+   */
   async #ensureOperator(
+    operation: string,
     token: WrappedToken,
     operator: Address,
     until: number | undefined,
   ): Promise<void> {
     if (!this.sdk.signer) {
-      // No signer to check `isOperator` against — let the join call raise
-      // SignerNotConfiguredError with an accurate operation name instead.
+      // Nothing to check `isOperator` against; let the join raise instead, so
+      // the error names the operation the caller actually asked for.
       return;
     }
-    const account = this.sdk.signer.requireWalletAccount("deposit/requestWithdrawal");
+    const account = this.sdk.signer.requireWalletAccount(operation);
     const alreadyApproved = await token.isOperator(account.address, operator);
     if (!alreadyApproved) {
       await token.setOperator(operator, until);
@@ -131,8 +137,8 @@ export class Vault {
  *   depositBatcher: "0xDepositBatcher",
  *   redeemBatcher: "0xRedeemBatcher",
  * });
- * await vault.deposit(1_000_000n);
- * const batchId = await vault.depositBatcher.currentBatchId();
+ * const { batchId } = await vault.deposit(1_000_000n);
+ * // …once the batch is dispatched and reaches BatchState.Finalized:
  * await vault.depositBatcher.claim(batchId);
  * ```
  */

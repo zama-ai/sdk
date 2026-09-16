@@ -17,9 +17,9 @@ export interface UseQuitConfig {
 }
 
 /**
- * Undo the caller's own join before a batch is dispatched, returning the
- * joined amount to their balance. Invalidates the batcher's input token's
- * balance cache on success.
+ * Return the caller's own deposit to their balance. Works on a batch that is
+ * still pending, and on one that was canceled — this is the only refund path.
+ * Invalidates the batcher's input token's balance cache on success.
  *
  * @param config - The batcher address.
  * @param options - React Query mutation options.

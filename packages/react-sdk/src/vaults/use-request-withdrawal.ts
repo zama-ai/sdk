@@ -5,9 +5,9 @@ import {
   type UseMutationOptions,
   type UseMutationResult,
 } from "@tanstack/react-query";
-import type { TransactionResult } from "@zama-fhe/sdk";
 import { invalidateBalanceQueries } from "@zama-fhe/sdk/query";
 import {
+  type JoinResult,
   requestWithdrawalMutationOptions,
   type RequestWithdrawalParams,
   type VaultAddresses,
@@ -37,8 +37,8 @@ export interface UseRequestWithdrawalConfig {
  */
 export function useRequestWithdrawal<TContext = unknown>(
   config: UseRequestWithdrawalConfig,
-  options?: UseMutationOptions<TransactionResult, Error, RequestWithdrawalParams, TContext>,
-): UseMutationResult<TransactionResult, Error, RequestWithdrawalParams, TContext> {
+  options?: UseMutationOptions<JoinResult, Error, RequestWithdrawalParams, TContext>,
+): UseMutationResult<JoinResult, Error, RequestWithdrawalParams, TContext> {
   const vault = useVault(config.addresses);
 
   return useMutation({
@@ -49,5 +49,5 @@ export function useRequestWithdrawal<TContext = unknown>(
       invalidateBalanceQueries(context.client, shareToken.address);
       return options?.onSuccess?.(data, variables, onMutateResult, context);
     },
-  }) as UseMutationResult<TransactionResult, Error, RequestWithdrawalParams, TContext>;
+  }) as UseMutationResult<JoinResult, Error, RequestWithdrawalParams, TContext>;
 }

@@ -1,10 +1,28 @@
 [
   {
     "name": "@zama-fhe/sdk (ESM)",
-    "path": ["packages/sdk/dist/esm/**/*.js", "!packages/sdk/dist/esm/encrypt.worker.js"],
+    "path": [
+      "packages/sdk/dist/esm/**/*.js",
+      "!packages/sdk/dist/esm/encrypt.worker.js",
+      "!packages/sdk/dist/esm/vaults/**/*.js"
+    ],
     "limit": "66 KB"
   },
-  { "name": "@zama-fhe/sdk (CJS)", "path": "packages/sdk/dist/cjs/**/*.cjs", "limit": "57 KB" },
+  {
+    "name": "@zama-fhe/sdk/vaults (ESM, separate subpath)",
+    "path": "packages/sdk/dist/esm/vaults/**/*.js",
+    "limit": "5 KB"
+  },
+  {
+    "name": "@zama-fhe/sdk (CJS)",
+    "path": ["packages/sdk/dist/cjs/**/*.cjs", "!packages/sdk/dist/cjs/vaults/**/*.cjs"],
+    "limit": "57 KB"
+  },
+  {
+    "name": "@zama-fhe/sdk/vaults (CJS, separate subpath)",
+    "path": "packages/sdk/dist/cjs/vaults/**/*.cjs",
+    "limit": "5 KB"
+  },
   {
     "name": "@zama-fhe/sdk (encrypt worker, self-contained, lazy-loaded)",
     "path": "packages/sdk/dist/esm/encrypt.worker.js",
@@ -12,7 +30,12 @@
   },
   {
     "name": "@zama-fhe/react-sdk (all JS)",
-    "path": "packages/react-sdk/dist/**/*.js",
-    "limit": "6 KB"
+    "path": ["packages/react-sdk/dist/**/*.js", "!packages/react-sdk/dist/vaults/**/*.js"],
+    "limit": "4.5 KB"
+  },
+  {
+    "name": "@zama-fhe/react-sdk/vaults (separate subpath)",
+    "path": "packages/react-sdk/dist/vaults/**/*.js",
+    "limit": "1.5 KB"
   }
 ]

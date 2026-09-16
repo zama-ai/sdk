@@ -1,8 +1,7 @@
 import type { Address } from "viem";
 import type { MutationFactoryOptions } from "../../query/factory-types";
-import type { TransactionResult } from "../../types";
 import type { Vault } from "../vault";
-import type { VaultJoinOptions } from "../types";
+import type { JoinResult, VaultJoinOptions } from "../types";
 
 /** Variables for {@link depositMutationOptions}. */
 export interface DepositParams extends VaultJoinOptions {
@@ -13,11 +12,7 @@ export interface DepositParams extends VaultJoinOptions {
 /** Builds TanStack Query mutation options for {@link Vault.deposit | depositing} into a vault. */
 export function depositMutationOptions(
   vault: Vault,
-): MutationFactoryOptions<
-  readonly ["zama.vault.deposit", Address],
-  DepositParams,
-  TransactionResult
-> {
+): MutationFactoryOptions<readonly ["zama.vault.deposit", Address], DepositParams, JoinResult> {
   return {
     mutationKey: ["zama.vault.deposit", vault.depositBatcher.address] as const,
     mutationFn: async ({ amount, ...rest }) => vault.deposit(amount, rest),

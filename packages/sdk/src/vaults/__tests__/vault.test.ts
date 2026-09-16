@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 import { WrappedToken } from "../../token";
-import { beforeEach, describe, expect, test, vi } from "../../test-fixtures";
+import { beforeEach, describe, expect, mockJoinReceipt, test, vi } from "../../test-fixtures";
 import { createVault, Vault } from "../vault";
 
 const VAULT_ADDRESS = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
@@ -46,7 +46,7 @@ describe("Vault", () => {
     );
   });
 
-  test("resolves shareToken from the deposit batcher's toToken", async ({ sdk, provider }) => {
+  test("resolves shareToken from the redeem batcher's fromToken", async ({ sdk, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(SHARE_TOKEN);
     const vault = createVault(sdk, addresses());
 
@@ -54,7 +54,7 @@ describe("Vault", () => {
 
     expect(shareToken.address).toBe(SHARE_TOKEN);
     expect(provider.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({ address: DEPOSIT_BATCHER, functionName: "toToken" }),
+      expect.objectContaining({ address: REDEEM_BATCHER, functionName: "fromToken" }),
     );
   });
 
@@ -69,6 +69,7 @@ describe("Vault", () => {
       inputProof,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(DEPOSIT_TOKEN); // fromToken()
+      mockJoinReceipt(provider, { batcher: DEPOSIT_BATCHER, account: userAddress });
       vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(false);
       const setOperator = vi
         .spyOn(WrappedToken.prototype, "setOperator")
@@ -97,6 +98,7 @@ describe("Vault", () => {
 
     test("skips the operator grant when one is already active", async ({ sdk, provider }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(DEPOSIT_TOKEN);
+      mockJoinReceipt(provider, { batcher: DEPOSIT_BATCHER, account: OTHER_ADDRESS });
       vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(true);
       const setOperator = vi.spyOn(WrappedToken.prototype, "setOperator");
 
@@ -114,6 +116,7 @@ describe("Vault", () => {
       inputProof,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(DEPOSIT_TOKEN);
+      mockJoinReceipt(provider, { batcher: DEPOSIT_BATCHER, account: OTHER_ADDRESS });
       vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(true);
 
       const vault = createVault(sdk, addresses());
@@ -130,8 +133,10 @@ describe("Vault", () => {
     provider,
     signer,
     relayer,
+    userAddress,
   }) => {
-    vi.mocked(provider.readContract).mockResolvedValueOnce(SHARE_TOKEN); // toToken()
+    vi.mocked(provider.readContract).mockResolvedValueOnce(SHARE_TOKEN); // redeemBatcher.fromToken()
+    mockJoinReceipt(provider, { batcher: REDEEM_BATCHER, account: userAddress });
     vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(true);
 
     const vault = createVault(sdk, addresses());

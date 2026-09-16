@@ -5,9 +5,9 @@ import {
   type UseMutationOptions,
   type UseMutationResult,
 } from "@tanstack/react-query";
-import type { Address, TransactionResult } from "@zama-fhe/sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { invalidateBalanceQueries } from "@zama-fhe/sdk/query";
-import { joinMutationOptions, type JoinParams } from "@zama-fhe/sdk/vaults";
+import { joinMutationOptions, type JoinParams, type JoinResult } from "@zama-fhe/sdk/vaults";
 import { useVaultBatcher } from "./use-vault-batcher";
 
 /** Configuration for {@link useJoin}. */
@@ -32,8 +32,8 @@ export interface UseJoinConfig {
  */
 export function useJoin<TContext = unknown>(
   config: UseJoinConfig,
-  options?: UseMutationOptions<TransactionResult, Error, JoinParams, TContext>,
-): UseMutationResult<TransactionResult, Error, JoinParams, TContext> {
+  options?: UseMutationOptions<JoinResult, Error, JoinParams, TContext>,
+): UseMutationResult<JoinResult, Error, JoinParams, TContext> {
   const batcher = useVaultBatcher(config.address);
 
   return useMutation({
@@ -44,5 +44,5 @@ export function useJoin<TContext = unknown>(
       invalidateBalanceQueries(context.client, fromToken);
       return options?.onSuccess?.(data, variables, onMutateResult, context);
     },
-  }) as UseMutationResult<TransactionResult, Error, JoinParams, TContext>;
+  }) as UseMutationResult<JoinResult, Error, JoinParams, TContext>;
 }

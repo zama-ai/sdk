@@ -16,12 +16,9 @@ export interface UseDispatchBatchConfig {
 }
 
 /**
- * Close the current batch once it has reached `minBatchAge` and kick off
- * decryption of its aggregate amount. Permissionless — any connected account
- * can call this, not just participants. Invalidates the batcher's
- * `currentBatchId`, `batchState`, and `timeUntilDispatchable` caches on
- * success, since dispatching advances the current batch and changes state
- * for the one just closed.
+ * Close the current batch once it is old enough and kick off decryption of its
+ * aggregate amount. Permissionless — any connected account can call this, not
+ * just participants. Invalidates the batcher's cached batch state on success.
  *
  * @param config - The batcher address.
  * @param options - React Query mutation options.

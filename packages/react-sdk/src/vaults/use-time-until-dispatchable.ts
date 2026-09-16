@@ -20,16 +20,12 @@ export interface UseTimeUntilDispatchableConfig {
 }
 
 /**
- * Seconds remaining until a batch reaches its minimum age and becomes
- * eligible for dispatch — `0` once it already is. Computed against the
- * chain's current block timestamp, not the caller's wall clock.
- *
- * Not a guarantee dispatch will succeed the moment this reaches `0` —
- * someone still has to submit the transaction.
+ * Seconds until a batch becomes eligible for dispatch, `0` once it already is
+ * — the earliest possible moment, not a promise anyone will dispatch then.
+ * Measured against the chain's block timestamp, not the caller's wall clock.
  *
  * @param config - The batcher address, batch id, and optional poll interval.
  * @param options - React Query options (forwarded to `useQuery`).
- * @returns Query result with `data: bigint` (seconds remaining).
  *
  * @example
  * ```tsx

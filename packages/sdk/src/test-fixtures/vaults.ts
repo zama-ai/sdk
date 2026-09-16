@@ -1,0 +1,34 @@
+import { keccak256, pad, toBytes, type Address, type Hex } from "viem";
+import { vi } from "vitest";
+import type { GenericProvider } from "../types";
+import type { RawLog } from "../types/transaction";
+
+const JOINED_TOPIC = keccak256(toBytes("Joined(uint256,address,bytes32)"));
+
+/** A `Joined(uint256 indexed batchId, address indexed account, euint64 amount)` log. */
+export function joinedLog(params: {
+  batcher: Address;
+  batchId: bigint;
+  account: Address;
+  confidentialAmount?: Hex;
+}): RawLog {
+  return {
+    address: params.batcher,
+    topics: [
+      JOINED_TOPIC,
+      pad(`0x${params.batchId.toString(16)}`, { size: 32 }),
+      pad(params.account, { size: 32 }),
+    ],
+    data: params.confidentialAmount ?? (`0x${"ab".repeat(32)}` as Hex),
+  };
+}
+
+/** A join reads its batch id back out of the receipt and throws without this. */
+export function mockJoinReceipt(
+  provider: GenericProvider,
+  params: { batcher: Address; account: Address; batchId?: bigint },
+): void {
+  vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+    logs: [joinedLog({ ...params, batchId: params.batchId ?? 12n })],
+  });
+}

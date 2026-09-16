@@ -1,8 +1,7 @@
 import type { Address } from "viem";
 import type { MutationFactoryOptions } from "../../query/factory-types";
-import type { TransactionResult } from "../../types";
 import type { Vault } from "../vault";
-import type { VaultJoinOptions } from "../types";
+import type { JoinResult, VaultJoinOptions } from "../types";
 
 /** Variables for {@link requestWithdrawalMutationOptions}. */
 export interface RequestWithdrawalParams extends VaultJoinOptions {
@@ -16,7 +15,7 @@ export function requestWithdrawalMutationOptions(
 ): MutationFactoryOptions<
   readonly ["zama.vault.requestWithdrawal", Address],
   RequestWithdrawalParams,
-  TransactionResult
+  JoinResult
 > {
   return {
     mutationKey: ["zama.vault.requestWithdrawal", vault.redeemBatcher.address] as const,

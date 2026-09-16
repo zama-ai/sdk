@@ -1,7 +1,7 @@
 import type { EncryptValuesReturnType } from "@fhevm/sdk/actions/encrypt";
 import type { Address } from "viem";
 import { SignerNotConfiguredError } from "../../errors";
-import { describe, expect, test, vi } from "../../test-fixtures";
+import { describe, expect, mockJoinReceipt, test, vi } from "../../test-fixtures";
 import { VaultBatcher } from "../vault-batcher";
 
 const BATCHER_ADDRESS = "0x7777777777777777777777777777777777777777" as Address;
@@ -15,17 +15,20 @@ describe("VaultBatcher", () => {
   });
 
   describe("join", () => {
-    test("encrypts the amount and submits join with the connected account as beneficiary", async ({
+    test("encrypts the amount, submits join, and reads the batch id from the Joined event", async ({
       sdk,
+      provider,
       signer,
       relayer,
       userAddress,
       handle,
       inputProof,
     }) => {
+      mockJoinReceipt(provider, { batcher: BATCHER_ADDRESS, account: userAddress });
       const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
-      await batcher.join(1_000n);
+      const result = await batcher.join(1_000n);
 
+      expect(result.batchId).toBe(12n);
       expect(relayer.encryptValues).toHaveBeenCalledWith({
         values: [{ value: 1_000n, type: "euint64" }],
         contractAddress: BATCHER_ADDRESS,
@@ -38,10 +41,12 @@ describe("VaultBatcher", () => {
 
     test("uses an explicit beneficiary when provided", async ({
       sdk,
+      provider,
       signer,
       handle,
       inputProof,
     }) => {
+      mockJoinReceipt(provider, { batcher: BATCHER_ADDRESS, account: OTHER_ADDRESS });
       const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
       await batcher.join(1_000n, OTHER_ADDRESS);
 
@@ -53,6 +58,11 @@ describe("VaultBatcher", () => {
     test("throws without a configured signer", async ({ createSDK }) => {
       const batcher = new VaultBatcher(createSDK({ signer: undefined }), BATCHER_ADDRESS);
       await expect(batcher.join(1_000n)).rejects.toThrow(SignerNotConfiguredError);
+    });
+
+    test("throws when the receipt carries no Joined event", async ({ sdk }) => {
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+      await expect(batcher.join(1_000n)).rejects.toThrow("No Joined event");
     });
 
     test("throws when encryption returns no values", async ({ sdk, relayer, inputProof }) => {
@@ -83,7 +93,7 @@ describe("VaultBatcher", () => {
     });
   });
 
-  describe("claim / recover", () => {
+  describe("claim", () => {
     test("defaults the target account to the connected wallet", async ({
       sdk,
       signer,
@@ -109,18 +119,6 @@ describe("VaultBatcher", () => {
     }) => {
       const batcher = new VaultBatcher(createSDK({ signer: undefined }), BATCHER_ADDRESS);
       await expect(batcher.claim(3n, OTHER_ADDRESS)).rejects.toThrow(SignerNotConfiguredError);
-    });
-
-    test("recovers on behalf of the connected wallet by default", async ({
-      sdk,
-      signer,
-      userAddress,
-    }) => {
-      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
-      await batcher.recover(9n);
-      expect(signer.writeContract).toHaveBeenCalledWith(
-        expect.objectContaining({ functionName: "recover", args: [9n, userAddress] }),
-      );
     });
   });
 
@@ -165,7 +163,7 @@ describe("VaultBatcher", () => {
     }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(1_000n) // batchCreatedAt
-        .mockResolvedValueOnce(3_480n); // minBatchAge
+        .mockResolvedValueOnce(3_480n); // batchMinBatchAge(batchId)
       vi.mocked(provider.getBlockTimestamp).mockResolvedValueOnce(2_000n); // now
 
       const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
@@ -176,7 +174,7 @@ describe("VaultBatcher", () => {
     test("returns 0 once the batch is already old enough", async ({ sdk, provider }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(1_000n) // batchCreatedAt
-        .mockResolvedValueOnce(3_480n); // minBatchAge
+        .mockResolvedValueOnce(3_480n); // batchMinBatchAge(batchId)
       vi.mocked(provider.getBlockTimestamp).mockResolvedValueOnce(10_000n); // well past eligible
 
       const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);

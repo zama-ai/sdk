@@ -5,11 +5,11 @@ import type { VaultBatcher } from "../vault-batcher";
 
 /** Variables for {@link quitMutationOptions}. */
 export interface QuitParams {
-  /** The not-yet-dispatched batch to undo the caller's own join in. */
+  /** The pending or canceled batch to withdraw the caller's own deposit from. */
   batchId: bigint;
 }
 
-/** Builds TanStack Query mutation options for {@link VaultBatcher.quit | undoing a join} before dispatch. */
+/** Builds TanStack Query mutation options for {@link VaultBatcher.quit | withdrawing a deposit} from a pending or canceled batch. */
 export function quitMutationOptions(
   batcher: VaultBatcher,
 ): MutationFactoryOptions<readonly ["zama.vault.quit", Address], QuitParams, TransactionResult> {

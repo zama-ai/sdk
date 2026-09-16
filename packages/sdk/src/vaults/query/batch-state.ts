@@ -1,6 +1,7 @@
 import { assertNonNullable } from "../../utils/assertions";
 import type { QueryFactoryOptions } from "../../query/factory-types";
 import { filterQueryOptions } from "../../query/utils";
+import type { BatchState } from "../types";
 import type { VaultBatcher } from "../vault-batcher";
 import { vaultQueryKeys } from "./query-keys";
 
@@ -12,14 +13,16 @@ export interface BatchStateQueryConfig {
   query?: Record<string, unknown>;
 }
 
-/**
- * Query options for a batch's lifecycle state, as the raw number the
- * contract stores — see {@link VaultBatcher.batchState}.
- */
+/** Query options for a batch's lifecycle state — see {@link BatchState}. */
 export function batchStateQueryOptions(
   batcher: VaultBatcher,
   config: BatchStateQueryConfig = {},
-): QueryFactoryOptions<number, Error, number, ReturnType<typeof vaultQueryKeys.batchState.batch>> {
+): QueryFactoryOptions<
+  BatchState,
+  Error,
+  BatchState,
+  ReturnType<typeof vaultQueryKeys.batchState.batch>
+> {
   const queryOpts = config.query ?? {};
 
   return {

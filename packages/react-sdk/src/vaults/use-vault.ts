@@ -10,7 +10,6 @@ import { useZamaSDK } from "../provider";
  * for direct single-direction access.
  *
  * @param addresses - The vault, deposit batcher, and redeem batcher contract addresses.
- * @returns A memoized `Vault` instance.
  *
  * @example
  * ```tsx

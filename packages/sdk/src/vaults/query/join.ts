@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 import type { MutationFactoryOptions } from "../../query/factory-types";
-import type { TransactionResult } from "../../types";
+import type { JoinResult } from "../types";
 import type { VaultBatcher } from "../vault-batcher";
 
 /** Variables for {@link joinMutationOptions}. */
@@ -17,7 +17,7 @@ export interface JoinParams {
  */
 export function joinMutationOptions(
   batcher: VaultBatcher,
-): MutationFactoryOptions<readonly ["zama.vault.join", Address], JoinParams, TransactionResult> {
+): MutationFactoryOptions<readonly ["zama.vault.join", Address], JoinParams, JoinResult> {
   return {
     mutationKey: ["zama.vault.join", batcher.address] as const,
     mutationFn: async ({ amount, beneficiary }) => batcher.join(amount, beneficiary),

@@ -2,7 +2,7 @@
 
 import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import { batchStateQueryOptions } from "@zama-fhe/sdk/vaults";
+import { batchStateQueryOptions, type BatchState } from "@zama-fhe/sdk/vaults";
 import { useQuery } from "../utils/query";
 import { useVaultBatcher } from "./use-vault-batcher";
 
@@ -15,16 +15,12 @@ export interface UseBatchStateConfig {
 }
 
 /**
- * A batch's lifecycle state, as the raw number the contract stores.
- *
- * This SDK does not yet mirror the batcher contract's `BatchState` enum by
- * name — compare the returned value against that enum's definition for
- * anything beyond the two states observed directly: batches that are still
- * open (accepting joins) read `0`; every already-settled batch sampled read `3`.
+ * A batch's lifecycle state, which decides what the user may do next — see
+ * {@link BatchState}. Claiming is possible only on `Finalized`; `Canceled`
+ * means the batch never executed and the deposit must be quit instead.
  *
  * @param config - The batcher address and batch id.
  * @param options - React Query options (forwarded to `useQuery`).
- * @returns Query result with `data: number`.
  *
  * @example
  * ```tsx
@@ -33,7 +29,7 @@ export interface UseBatchStateConfig {
  */
 export function useBatchState(
   config: UseBatchStateConfig,
-  options?: Omit<UseQueryOptions<number>, "queryKey" | "queryFn">,
+  options?: Omit<UseQueryOptions<BatchState>, "queryKey" | "queryFn">,
 ) {
   const batcher = useVaultBatcher(config.address);
   const baseOpts = batchStateQueryOptions(batcher, { batchId: config.batchId });

@@ -8,7 +8,6 @@ import { depositMutationOptions } from "../deposit";
 import { dispatchBatchMutationOptions } from "../dispatch-batch";
 import { joinMutationOptions } from "../join";
 import { quitMutationOptions } from "../quit";
-import { recoverMutationOptions } from "../recover";
 import { requestWithdrawalMutationOptions } from "../request-withdrawal";
 
 const DEPOSIT_BATCHER = "0x1111111111111111111111111111111111111111" as Address;
@@ -31,7 +30,6 @@ function createMockBatcher(address: Address): VaultBatcher {
     join: vi.fn().mockResolvedValue(TX_RESULT),
     claim: vi.fn().mockResolvedValue(TX_RESULT),
     quit: vi.fn().mockResolvedValue(TX_RESULT),
-    recover: vi.fn().mockResolvedValue(TX_RESULT),
     dispatchBatch: vi.fn().mockResolvedValue(TX_RESULT),
   } as unknown as VaultBatcher;
 }
@@ -82,15 +80,6 @@ describe("batcher-level mutation options", () => {
     expect(options.mutationKey).toEqual(["zama.vault.quit", DEPOSIT_BATCHER]);
     await options.mutationFn({ batchId: 3n });
     expect(batcher.quit).toHaveBeenCalledWith(3n);
-  });
-
-  test("recoverMutationOptions delegates to batcher.recover", async () => {
-    const batcher = createMockBatcher(REDEEM_BATCHER);
-    const options = recoverMutationOptions(batcher);
-
-    expect(options.mutationKey).toEqual(["zama.vault.recover", REDEEM_BATCHER]);
-    await options.mutationFn({ batchId: 9n, account: ACCOUNT });
-    expect(batcher.recover).toHaveBeenCalledWith(9n, ACCOUNT);
   });
 
   test("dispatchBatchMutationOptions delegates to batcher.dispatchBatch", async () => {

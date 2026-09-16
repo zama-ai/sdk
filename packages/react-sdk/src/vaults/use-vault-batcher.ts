@@ -10,7 +10,6 @@ import { useZamaSDK } from "../provider";
  * memoized by address. Low-level — most apps should use `useVault` instead.
  *
  * @param address - The batcher contract address (deposit or redeem direction).
- * @returns A memoized `VaultBatcher` instance.
  *
  * @example
  * ```tsx

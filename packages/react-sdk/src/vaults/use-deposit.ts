@@ -5,11 +5,11 @@ import {
   type UseMutationOptions,
   type UseMutationResult,
 } from "@tanstack/react-query";
-import type { TransactionResult } from "@zama-fhe/sdk";
 import { invalidateBalanceQueries } from "@zama-fhe/sdk/query";
 import {
   depositMutationOptions,
   type DepositParams,
+  type JoinResult,
   type VaultAddresses,
 } from "@zama-fhe/sdk/vaults";
 import { useVault } from "./use-vault";
@@ -36,8 +36,8 @@ export interface UseDepositConfig {
  */
 export function useDeposit<TContext = unknown>(
   config: UseDepositConfig,
-  options?: UseMutationOptions<TransactionResult, Error, DepositParams, TContext>,
-): UseMutationResult<TransactionResult, Error, DepositParams, TContext> {
+  options?: UseMutationOptions<JoinResult, Error, DepositParams, TContext>,
+): UseMutationResult<JoinResult, Error, DepositParams, TContext> {
   const vault = useVault(config.addresses);
 
   return useMutation({
@@ -48,5 +48,5 @@ export function useDeposit<TContext = unknown>(
       invalidateBalanceQueries(context.client, depositToken.address);
       return options?.onSuccess?.(data, variables, onMutateResult, context);
     },
-  }) as UseMutationResult<TransactionResult, Error, DepositParams, TContext>;
+  }) as UseMutationResult<JoinResult, Error, DepositParams, TContext>;
 }

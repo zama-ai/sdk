@@ -1,14 +1,10 @@
 import { getAddress, type Address } from "viem";
 
 /**
- * Canonical query-key namespace for the vaults module's TanStack Query
- * factories, kept local to this module (not part of `@zama-fhe/sdk/query`'s
- * `zamaQueryKeys`) — core has no knowledge of verticals, and this one
- * shouldn't either.
+ * Query keys for the vaults module.
  *
- * `batcher(...)` keys are the broader, batchId-less prefix used to invalidate
- * every cached batch for a batcher at once (e.g. after `dispatchBatch`
- * advances which batch is current); `batch(...)` keys scope a single batch.
+ * A `batcher(...)` key is a prefix of every `batch(...)` key for that batcher,
+ * so invalidating it clears all of them at once.
  */
 export const vaultQueryKeys = {
   currentBatchId: {

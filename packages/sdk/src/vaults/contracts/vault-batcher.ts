@@ -27,19 +27,9 @@ export function claimContract(batcher: Address, batchId: bigint, account: Addres
   } as const;
 }
 
-/** Returns the contract config to undo the caller's own join before the batch is dispatched. */
+/** Returns the contract config to withdraw the caller's own deposit from a pending or canceled batch. */
 export function quitContract(batcher: Address, batchId: bigint) {
   return { address: batcher, abi: vaultBatcherAbi, functionName: "quit", args: [batchId] } as const;
-}
-
-/** Returns the contract config to recover funds from a batch that was canceled. */
-export function recoverContract(batcher: Address, batchId: bigint, account: Address) {
-  return {
-    address: batcher,
-    abi: vaultBatcherAbi,
-    functionName: "recover",
-    args: [batchId, account],
-  } as const;
 }
 
 /** Returns the contract config to close the current batch and kick off decryption. Permissionless. */
@@ -62,11 +52,7 @@ export function currentBatchIdContract(batcher: Address) {
   } as const;
 }
 
-/**
- * Returns the contract config to read a batch's lifecycle state as a raw
- * number. The batcher contract's `BatchState` enum is the source of truth
- * for what each value means — this SDK does not yet mirror it.
- */
+/** Returns the contract config to read a batch's lifecycle state (the contract's `BatchState` enum). */
 export function batchStateContract(batcher: Address, batchId: bigint) {
   return {
     address: batcher,
@@ -111,18 +97,38 @@ export function toTokenContract(batcher: Address) {
   return { address: batcher, abi: vaultBatcherAbi, functionName: "toToken", args: [] } as const;
 }
 
-/** Returns the contract config to read the minimum age a batch must reach before it can be dispatched. */
+/** Returns the contract config to read the batcher's current minimum-batch-age policy. */
 export function minBatchAgeContract(batcher: Address) {
   return { address: batcher, abi: vaultBatcherAbi, functionName: "minBatchAge", args: [] } as const;
 }
 
-/** Returns the contract config to read the deadline (a duration, not a timestamp) by which a dispatched batch's callback must land. */
+/** Returns the contract config to read the minimum age pinned to one batch when it opened. */
+export function batchMinBatchAgeContract(batcher: Address, batchId: bigint) {
+  return {
+    address: batcher,
+    abi: vaultBatcherAbi,
+    functionName: "batchMinBatchAge",
+    args: [batchId],
+  } as const;
+}
+
+/** Returns the contract config to read the batcher's current callback-deadline policy. */
 export function callbackDeadlineContract(batcher: Address) {
   return {
     address: batcher,
     abi: vaultBatcherAbi,
     functionName: "callbackDeadline",
     args: [],
+  } as const;
+}
+
+/** Returns the contract config to read the callback deadline pinned to one batch when it opened. */
+export function batchCallbackDeadlineContract(batcher: Address, batchId: bigint) {
+  return {
+    address: batcher,
+    abi: vaultBatcherAbi,
+    functionName: "batchCallbackDeadline",
+    args: [batchId],
   } as const;
 }
 
@@ -144,4 +150,29 @@ export function batchDispatchedAtContract(batcher: Address, batchId: bigint) {
     functionName: "batchDispatchedAt",
     args: [batchId],
   } as const;
+}
+
+/** Returns the contract config to read a finalized batch's exchange rate, or 0 while unfinalized. */
+export function exchangeRateContract(batcher: Address, batchId: bigint) {
+  return {
+    address: batcher,
+    abi: vaultBatcherAbi,
+    functionName: "exchangeRate",
+    args: [batchId],
+  } as const;
+}
+
+/** Returns the contract config to read the number of decimals the exchange rate is scaled by. */
+export function exchangeRateDecimalsContract(batcher: Address) {
+  return {
+    address: batcher,
+    abi: vaultBatcherAbi,
+    functionName: "exchangeRateDecimals",
+    args: [],
+  } as const;
+}
+
+/** Returns the contract config to read whether the batcher is paused (blocking joins and dispatch). */
+export function pausedContract(batcher: Address) {
+  return { address: batcher, abi: vaultBatcherAbi, functionName: "paused", args: [] } as const;
 }

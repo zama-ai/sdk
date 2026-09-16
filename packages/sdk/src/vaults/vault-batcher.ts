@@ -12,28 +12,33 @@ import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/ali
 import { isEncryptedValueZero } from "../utils/handles";
 import type { ZamaSDK } from "../zama-sdk";
 import {
+  batchCallbackDeadlineContract,
   batchCreatedAtContract,
   batchDispatchedAtContract,
+  batchMinBatchAgeContract,
   batchStateContract,
   callbackDeadlineContract,
   claimContract,
   currentBatchIdContract,
   depositsContract,
   dispatchBatchContract,
+  exchangeRateContract,
+  exchangeRateDecimalsContract,
   fromTokenContract,
   joinContract,
   minBatchAgeContract,
+  pausedContract,
   quitContract,
-  recoverContract,
   toTokenContract,
   totalDepositsContract,
   vaultContract,
 } from "./contracts";
+import { findJoined } from "./events";
+import type { BatchState, JoinResult } from "./types";
 
 /**
- * Wraps an async address read so concurrent callers share one in-flight
- * request and a resolved value is never re-fetched — the value is immutable
- * for the batcher's lifetime (vault/fromToken/toToken are set at deploy time).
+ * Safe to cache forever: the addresses a batcher reports are set at deploy
+ * time and never change.
  */
 function memoizeAddressRead(read: () => Promise<Address>): () => Promise<Address> {
   let cached: Address | undefined;
@@ -59,22 +64,18 @@ function memoizeAddressRead(read: () => Promise<Address>): () => Promise<Address
 }
 
 /**
- * A confidential ERC-4626 vault batcher: batches deposits (or redemptions)
- * together, dispatches the aggregate through the underlying vault once
- * decrypted, and lets each participant claim their share.
+ * One on-chain batcher contract: it pools participants' encrypted amounts,
+ * dispatches only the decrypted aggregate through the underlying ERC-4626
+ * vault, and lets each participant claim their share. A vault has one batcher
+ * per direction, so construct one instance for deposits and one for redeems.
  *
- * One `VaultBatcher` instance mirrors one on-chain batcher contract. A vault
- * has two directions — deposit and redeem — each behind its own batcher
- * contract; construct one `VaultBatcher` per direction, or use
- * `createVault` for a small convenience wrapper over both.
- *
- * @remarks
- * The lifecycle this class exposes — `join` → (someone calls
- * `dispatchBatch`) → `claim` — mirrors `WrappedToken.unshield`'s two-phase
- * request-then-finalize pattern, except the finalize step here
- * (`dispatchBatchCallback`) is driven by the relayer/KMS, not the caller.
+ * The lifecycle is `join` → `dispatchBatch` → `claim`, but finalization
+ * between the last two is driven by the relayer, not by the caller: a batch
+ * is claimable only once it reaches {@link BatchState.Finalized}, which can be
+ * well after dispatch.
  */
 export class VaultBatcher {
+  /** The SDK instance this batcher reads and writes through. */
   readonly sdk: ZamaSDK;
   /** Checksummed address of the batcher contract. */
   readonly address: Address;
@@ -98,10 +99,9 @@ export class VaultBatcher {
   // READS
 
   /**
-   * The underlying ERC-4626 vault this batcher deposits into or redeems
-   * from. Exchange rate / share price (`convertToShares`, `convertToAssets`,
-   * `totalAssets`) lives on this vault contract itself, via the standard
-   * ERC-4626 interface — not on the batcher. Resolved once and cached.
+   * The underlying ERC-4626 vault. Share price (`convertToShares`,
+   * `convertToAssets`, `totalAssets`) is read from it directly, not from the
+   * batcher. Resolved once and cached.
    */
   async vault(): Promise<Address> {
     return this.#vault();
@@ -129,28 +129,50 @@ export class VaultBatcher {
   }
 
   /**
-   * A batch's lifecycle state, as the raw number the contract stores. Observed
-   * directly: `0` while still open and accepting {@link join}, `3` once settled.
-   * Other values are unconfirmed — compare against the batcher contract's own
-   * `BatchState` enum.
+   * A batch's lifecycle state. See {@link BatchState} for which operation each
+   * state allows.
+   *
+   * @throws Reverts on chain with `BatchNonexistent` for an id above
+   *   {@link currentBatchId} — batch ids start at 1.
    */
-  async batchState(batchId: bigint): Promise<number> {
+  async batchState(batchId: bigint): Promise<BatchState> {
     return this.sdk.provider.readContract(batchStateContract(this.address, batchId));
   }
 
-  /** Minimum age (in seconds) a batch must reach before {@link dispatchBatch} can close it. */
+  /** Whether the batcher is paused. While paused, `join` and `dispatchBatch` revert; `quit` and `claim` still work. */
+  async paused(): Promise<boolean> {
+    return this.sdk.provider.readContract(pausedContract(this.address));
+  }
+
+  /**
+   * The policy for batches opened from now on. Dispatch of an existing batch
+   * is gated on {@link batchMinBatchAge} instead.
+   */
   async minBatchAge(): Promise<bigint> {
     return this.sdk.provider.readContract(minBatchAgeContract(this.address));
   }
 
+  /** The minimum age in seconds pinned to `batchId` when it opened — the value dispatch enforces. */
+  async batchMinBatchAge(batchId: bigint): Promise<bigint> {
+    return this.sdk.provider.readContract(batchMinBatchAgeContract(this.address, batchId));
+  }
+
   /**
-   * Maximum age (in seconds), *not* a timestamp despite the name, that a
-   * dispatched batch is allowed to wait for its decryption callback before
-   * it's eligible to be canceled. Combine with {@link batchDispatchedAt} to
-   * get an absolute deadline for a specific batch.
+   * How long a dispatched batch may wait for its decryption callback before it
+   * is canceled — seconds, not a timestamp, despite the name. Applies to
+   * batches opened from now on; for an existing batch use
+   * {@link batchCallbackDeadline}.
    */
   async callbackDeadline(): Promise<bigint> {
     return this.sdk.provider.readContract(callbackDeadlineContract(this.address));
+  }
+
+  /**
+   * The callback deadline pinned to `batchId` when it opened. Add it to
+   * {@link batchDispatchedAt} for the timestamp that batch must finalize by.
+   */
+  async batchCallbackDeadline(batchId: bigint): Promise<bigint> {
+    return this.sdk.provider.readContract(batchCallbackDeadlineContract(this.address, batchId));
   }
 
   /** The Unix timestamp (seconds) at which a batch was opened. */
@@ -164,20 +186,31 @@ export class VaultBatcher {
   }
 
   /**
-   * Seconds remaining until a batch reaches {@link minBatchAge} and becomes
-   * eligible for {@link dispatchBatch} — `0` once it already is. Computed
-   * against the chain's current block timestamp, not the caller's wall
-   * clock, so it stays correct even if the local clock has drifted.
+   * A finalized batch's exchange rate, scaled by
+   * {@link exchangeRateDecimals}; `0` until the batch finalizes. A claim pays
+   * out `deposit * exchangeRate / 10 ** exchangeRateDecimals`, rounded down.
+   */
+  async exchangeRate(batchId: bigint): Promise<bigint> {
+    return this.sdk.provider.readContract(exchangeRateContract(this.address, batchId));
+  }
+
+  /** The number of decimals {@link exchangeRate} is scaled by. */
+  async exchangeRateDecimals(): Promise<number> {
+    return this.sdk.provider.readContract(exchangeRateDecimalsContract(this.address));
+  }
+
+  /**
+   * Seconds until `batchId` becomes eligible for dispatch, `0` once it already
+   * is — the earliest possible moment, not a promise anyone will dispatch then.
    *
-   * Useful for showing a countdown or polling interval in a UI; not a
-   * guarantee dispatch will succeed the moment this reaches `0` — someone
-   * still has to submit the transaction, and it can be dispatched later than
-   * this by anyone at any point afterward.
+   * Measured against the chain's block timestamp and the batch's own pinned
+   * minimum age, so neither local clock drift nor a mid-flight policy change
+   * desyncs the countdown.
    */
   async timeUntilDispatchable(batchId: bigint): Promise<bigint> {
     const [createdAt, minAge, now] = await Promise.all([
       this.batchCreatedAt(batchId),
-      this.minBatchAge(),
+      this.batchMinBatchAge(batchId),
       this.sdk.provider.getBlockTimestamp(),
     ]);
     const eligibleAt = createdAt + minAge;
@@ -223,21 +256,16 @@ export class VaultBatcher {
    * automatically. Once someone calls {@link dispatchBatch} and the relayer
    * finalizes it, call {@link claim} to receive the output.
    *
-   * @param amount - The plaintext amount to contribute to the batch.
+   * @param amount - The plaintext amount to contribute; encrypted before submission.
    * @param beneficiary - Recipient of the batch's eventual output. Defaults to the connected wallet account.
-   * @returns The transaction hash and mined receipt.
    *
    * @remarks
-   * This does not return the id of the batch the join landed in. The
-   * authoritative source would be an event the batcher emits on `join` —
-   * once that event's schema is verified against the real contract, this
-   * method should decode the batch id from it, the way
-   * `WrappedToken.unwrap` decodes `unwrapRequestId` from `UnwrapRequested`.
-   * Until then, read {@link currentBatchId} right after this call resolves
-   * as a best-effort approximation — it can be wrong if another account's
-   * `dispatchBatch` call landed in the same window.
+   * The batcher must already hold an ERC-7984 operator grant from the caller,
+   * or it cannot pull the amount. A join with too little balance still
+   * succeeds on chain and credits nothing — check the returned
+   * `confidentialJoinedAmount`.
    */
-  async join(amount: bigint, beneficiary?: Address): Promise<TransactionResult> {
+  async join(amount: bigint, beneficiary?: Address): Promise<JoinResult> {
     this.#requireSigner("join");
     const account = await requireAlignedWalletAccount("join", this.sdk.signer, this.sdk.provider);
     const userAddress = getAddress(account.address);
@@ -254,15 +282,35 @@ export class VaultBatcher {
       throw new EncryptionFailedError("Encryption returned no encrypted values");
     }
 
-    return this.#submitTransaction(
+    const result = await this.#submitTransaction(
       "join",
       joinContract(this.address, resolvedBeneficiary, encryptedAmount, inputProof),
     );
+
+    const joined = findJoined(result.receipt.logs, this.address);
+    if (!joined) {
+      throw new TransactionRevertedError(
+        `No Joined event from batcher ${this.address} found in the join receipt`,
+      );
+    }
+    return {
+      ...result,
+      batchId: joined.batchId,
+      beneficiary: joined.account,
+      confidentialJoinedAmount: joined.confidentialAmount,
+    };
   }
 
   /**
-   * Undo the caller's own join before the batch is dispatched, returning the
-   * joined amount to their confidential balance on `fromToken`.
+   * Withdraw the caller's own deposit from a batch, returning it to their
+   * confidential balance on `fromToken`.
+   *
+   * Legal in two states: {@link BatchState.Pending} (undo a join before
+   * dispatch) and {@link BatchState.Canceled} (take the deposit back after a
+   * batch failed to finalize).
+   *
+   * Refunds the caller only — there is no third-party form, so a position
+   * joined for a `beneficiary` can only be quit by that beneficiary.
    */
   async quit(batchId: bigint): Promise<TransactionResult> {
     this.#requireSigner("quit");
@@ -272,10 +320,12 @@ export class VaultBatcher {
 
   /**
    * Claim a finalized batch's output for `account`. Permissionless — anyone
-   * can call this on another account's behalf; the output is always
-   * delivered to `account`, never to the caller. Read the resulting balance
-   * via a `Token` instance on the batcher's `toToken`, rather than
-   * from this call's return value.
+   * can call this on another account's behalf, and the output always goes to
+   * `account`, never to the caller. The amount is not returned; read it as a
+   * balance on the batcher's {@link toToken}.
+   *
+   * Only legal once the batch reaches {@link BatchState.Finalized}; on a
+   * canceled batch use {@link quit} instead.
    *
    * @param account - The account to claim for. Defaults to the connected wallet account.
    */
@@ -285,24 +335,10 @@ export class VaultBatcher {
   }
 
   /**
-   * Recover funds after a batch was canceled (e.g. it failed to finalize
-   * within {@link callbackDeadline}). The batch never executed against the
-   * underlying vault, so this refunds the original `fromToken` amount — it
-   * does not deliver a converted `toToken` output the way {@link claim} does.
-   * Permissionless, same delivery semantics as `claim` otherwise (anyone can
-   * call it on another account's behalf; the output always goes to `account`).
-   *
-   * @param account - The account to recover for. Defaults to the connected wallet account.
-   */
-  async recover(batchId: bigint, account?: Address): Promise<TransactionResult> {
-    const target = await this.#resolveTarget("recover", account);
-    return this.#submitTransaction("recover", recoverContract(this.address, batchId, target));
-  }
-
-  /**
-   * Close the current batch once it has reached {@link minBatchAge} and
+   * Close the current batch once it has reached its pinned minimum age and
    * kick off decryption of its aggregate amount. Permissionless — any
    * account with a configured signer can call this, not just participants.
+   * Reverts while the batcher is {@link paused}.
    */
   async dispatchBatch(): Promise<TransactionResult> {
     this.#requireSigner("dispatchBatch");
@@ -320,9 +356,8 @@ export class VaultBatcher {
   }
 
   /**
-   * `account`, or the connected wallet address when `account` is omitted.
-   * Always verifies signer/provider chain alignment — the connected signer
-   * submits the transaction regardless of who the target account is.
+   * Chain alignment is verified even when `account` is someone else's: the
+   * connected signer still submits the transaction.
    */
   async #resolveTarget(operation: string, account: Address | undefined): Promise<Address> {
     this.#requireSigner(operation);

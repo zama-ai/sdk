@@ -42,11 +42,9 @@ describe("useTimeUntilDispatchable", () => {
     renderWithProviders,
     provider,
   }) => {
-    // timeUntilDispatchable composes three provider calls: batchCreatedAt,
-    // minBatchAge (both via readContract), and getBlockTimestamp.
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(1_000n) // batchCreatedAt
-      .mockResolvedValueOnce(3_480n); // minBatchAge
+      .mockResolvedValueOnce(3_480n); // batchMinBatchAge(batchId)
     vi.mocked(provider.getBlockTimestamp).mockResolvedValueOnce(2_000n); // now
 
     const { result } = renderWithProviders(() =>
