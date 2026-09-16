@@ -21,3 +21,5 @@ export {
   totalDepositsContract,
   vaultContract,
 } from "./vault-batcher";
+
+export { routerJoinContract, tokenWrapperRegistryContract } from "./vault-router";
