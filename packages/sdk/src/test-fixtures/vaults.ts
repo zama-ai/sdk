@@ -1,7 +1,9 @@
-import { keccak256, pad, toBytes, type Address, type Hex } from "viem";
+import { getAddress, keccak256, pad, toBytes, type Address, type Hex } from "viem";
 import { vi } from "vitest";
+import type { EncryptedValue, RelayerSDK } from "../relayer/types";
 import { Token } from "../token";
 import type { GenericProvider } from "../types";
+import { VALID_INPUT_PROOF } from "./constants";
 import type { RawLog } from "../types/transaction";
 
 const JOINED_TOPIC = keccak256(toBytes("Joined(uint256,address,bytes32)"));
@@ -46,4 +48,46 @@ export function mockJoinBalance(
     config.functionName === "vault" && params.vault ? params.vault : params.fromToken,
   );
   vi.spyOn(Token.prototype, "balanceOf").mockResolvedValue(params.balance ?? 1_000_000_000n);
+}
+
+/**
+ * Answers `currentBatchId` per batcher. Any other read, or a batcher the table
+ * does not name, throws rather than returning a default, so a test that reaches
+ * further than it meant to fails loudly.
+ */
+export function mockCurrentBatchIds(
+  provider: GenericProvider,
+  batchIds: Readonly<Record<Address, bigint>>,
+): void {
+  vi.mocked(provider.readContract).mockImplementation(async (call: unknown) => {
+    const { address, functionName } = call as { address: Address; functionName: string };
+    if (functionName !== "currentBatchId") {
+      throw new Error(`mockCurrentBatchIds was asked for ${functionName}`);
+    }
+    const batchId = batchIds[getAddress(address)];
+    if (batchId === undefined) {
+      throw new Error(`mockCurrentBatchIds has no batch id for ${address}`);
+    }
+    return batchId;
+  });
+}
+
+/**
+ * One encrypt returning `count` distinct handles under a single proof, in leg
+ * order — the shape a fan-out submits.
+ *
+ * The relayer's handle type is branded, so the cast lives here rather than at
+ * every call site.
+ */
+export function mockEncryptedLegs(relayer: RelayerSDK, count: number): readonly EncryptedValue[] {
+  const handles = Array.from(
+    { length: count },
+    (_unused, index) =>
+      `0x${(index + 1).toString(16).padStart(2, "0").repeat(32)}` as EncryptedValue,
+  );
+  vi.mocked(relayer.encryptValues).mockResolvedValue({
+    encryptedValues: handles,
+    inputProof: VALID_INPUT_PROOF,
+  } as unknown as Awaited<ReturnType<RelayerSDK["encryptValues"]>>);
+  return handles;
 }

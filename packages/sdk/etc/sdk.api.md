@@ -5868,6 +5868,8 @@ export interface ErrorForCode {
     [ZamaErrorCode.SigningRejected]: SigningRejectedError;
     [ZamaErrorCode.TransactionReverted]: TransactionRevertedError;
     [ZamaErrorCode.TransportKeyPairChanged]: TransportKeyPairChangedError;
+    // Warning: (ae-forgotten-export) The symbol "UnlistedConfidentialTokenError" needs to be exported by the entry point index.d.ts
+    [ZamaErrorCode.UnlistedConfidentialToken]: UnlistedConfidentialTokenError;
     [ZamaErrorCode.UnshieldAlreadyFinalized]: UnshieldAlreadyFinalizedError;
     [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
     [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
@@ -20877,6 +20879,7 @@ export const ZamaErrorCode: {
     readonly PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH";
     readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
     readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
+    readonly UnlistedConfidentialToken: "UNLISTED_CONFIDENTIAL_TOKEN";
 };
 
 // @public

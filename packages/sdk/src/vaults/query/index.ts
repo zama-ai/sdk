@@ -6,6 +6,14 @@ export {
   invalidateAfterQuit,
   invalidateBatchQueries,
 } from "./invalidation";
+export { activeBatcherQueryOptions, type ActiveBatcherQueryConfig } from "./active-batcher";
+export { activeBatchersQueryOptions, type ActiveBatchersQueryConfig } from "./active-batchers";
+export {
+  groupDepositMutationOptions,
+  groupRequestWithdrawalMutationOptions,
+  type GroupDepositParams,
+  type GroupRequestWithdrawalParams,
+} from "./group-deposit";
 export { currentBatchIdQueryOptions, type CurrentBatchIdQueryConfig } from "./current-batch-id";
 export { batchStateQueryOptions, type BatchStateQueryConfig } from "./batch-state";
 export {
