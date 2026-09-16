@@ -1,5 +1,6 @@
 import { waitFor } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
+import { BatchState } from "@zama-fhe/sdk/vaults";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useBatchState } from "../use-batch-state";
 import { useCurrentBatchId } from "../use-current-batch-id";
@@ -43,6 +44,7 @@ describe("useTimeUntilDispatchable", () => {
     provider,
   }) => {
     vi.mocked(provider.readContract)
+      .mockResolvedValueOnce(BatchState.Pending) // batchState
       .mockResolvedValueOnce(1_000n) // batchCreatedAt
       .mockResolvedValueOnce(3_480n); // batchMinBatchAge(batchId)
     vi.mocked(provider.getBlockTimestamp).mockResolvedValueOnce(2_000n); // now
@@ -53,5 +55,21 @@ describe("useTimeUntilDispatchable", () => {
 
     // eligible at 1_000 + 3_480 = 4_480; now is 2_000 → 2_480 remaining
     await waitFor(() => expect(result.current.data).toBe(2_480n));
+  });
+});
+
+describe("useTimeUntilDispatchable, once the batch has left Pending", () => {
+  test("reports null rather than a 0 countdown", async ({ renderWithProviders, provider }) => {
+    vi.mocked(provider.readContract)
+      .mockResolvedValueOnce(BatchState.Finalized) // batchState
+      .mockResolvedValueOnce(1_000n) // batchCreatedAt
+      .mockResolvedValueOnce(3_480n); // batchMinBatchAge(batchId)
+    vi.mocked(provider.getBlockTimestamp).mockResolvedValueOnce(99_000n);
+
+    const { result } = renderWithProviders(() =>
+      useTimeUntilDispatchable({ address: BATCHER_ADDRESS, batchId: 58n }),
+    );
+
+    await waitFor(() => expect(result.current.data).toBeNull());
   });
 });

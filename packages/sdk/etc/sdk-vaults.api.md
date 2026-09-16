@@ -273,6 +273,24 @@ export function batchCallbackDeadlineContract(batcher: Address, batchId: bigint)
         readonly stateMutability: "nonpayable";
     }, {
         readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
         readonly name: "toToken";
         readonly inputs: readonly [];
         readonly outputs: readonly [{
@@ -884,6 +902,24 @@ export function batchCreatedAtContract(batcher: Address, batchId: bigint): {
         }];
         readonly outputs: readonly [{
             readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
             readonly type: "bytes32";
             readonly internalType: "euint64";
         }];
@@ -1507,6 +1543,24 @@ export function batchDispatchedAtContract(batcher: Address, batchId: bigint): {
         readonly stateMutability: "nonpayable";
     }, {
         readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
         readonly name: "toToken";
         readonly inputs: readonly [];
         readonly outputs: readonly [{
@@ -2118,6 +2172,24 @@ export function batchMinBatchAgeContract(batcher: Address, batchId: bigint): {
         }];
         readonly outputs: readonly [{
             readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
             readonly type: "bytes32";
             readonly internalType: "euint64";
         }];
@@ -2743,6 +2815,24 @@ export function batchStateContract(batcher: Address, batchId: bigint): {
         }];
         readonly outputs: readonly [{
             readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
             readonly type: "bytes32";
             readonly internalType: "euint64";
         }];
@@ -3377,6 +3467,24 @@ export function callbackDeadlineContract(batcher: Address): {
         readonly stateMutability: "nonpayable";
     }, {
         readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
         readonly name: "toToken";
         readonly inputs: readonly [];
         readonly outputs: readonly [{
@@ -3988,6 +4096,24 @@ export function claimContract(batcher: Address, batchId: bigint, account: Addres
         }];
         readonly outputs: readonly [{
             readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
             readonly type: "bytes32";
             readonly internalType: "euint64";
         }];
@@ -4628,6 +4754,24 @@ export function currentBatchIdContract(batcher: Address): {
         readonly stateMutability: "nonpayable";
     }, {
         readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
         readonly name: "toToken";
         readonly inputs: readonly [];
         readonly outputs: readonly [{
@@ -5002,6 +5146,11 @@ export interface CurrentBatchIdQueryConfig {
 // @public
 export function currentBatchIdQueryOptions(batcher: VaultBatcher, config?: CurrentBatchIdQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof vaultQueryKeys.currentBatchId.batcher>>;
 
+// Warning: (ae-forgotten-export) The symbol "RawLog" needs to be exported by the entry point index.d.ts
+//
+// @public
+export function decodeJoined(log: RawLog): JoinedEvent | null;
+
 // @public
 export function depositMutationOptions(vault: Vault): MutationFactoryOptions<readonly ["zama.vault.deposit", Address], DepositParams, JoinResult>;
 
@@ -5255,6 +5404,24 @@ export function depositsContract(batcher: Address, batchId: bigint, account: Add
         }];
         readonly outputs: readonly [{
             readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
             readonly type: "bytes32";
             readonly internalType: "euint64";
         }];
@@ -5872,6 +6039,24 @@ export function dispatchBatchContract(batcher: Address): {
         }];
         readonly outputs: readonly [{
             readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
             readonly type: "bytes32";
             readonly internalType: "euint64";
         }];
@@ -6498,6 +6683,24 @@ export function exchangeRateContract(batcher: Address, batchId: bigint): {
         readonly stateMutability: "nonpayable";
     }, {
         readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
         readonly name: "toToken";
         readonly inputs: readonly [];
         readonly outputs: readonly [{
@@ -7115,6 +7318,24 @@ export function exchangeRateDecimalsContract(batcher: Address): {
         readonly stateMutability: "nonpayable";
     }, {
         readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
         readonly name: "toToken";
         readonly inputs: readonly [];
         readonly outputs: readonly [{
@@ -7481,10 +7702,8 @@ export function exchangeRateDecimalsContract(batcher: Address): {
     readonly args: readonly [];
 };
 
-// Warning: (ae-forgotten-export) The symbol "RawLog" needs to be exported by the entry point index.d.ts
-//
 // @public
-export function findJoined(logs: readonly RawLog[], batcher: Address): JoinedEvent | null;
+export function findJoined(logs: readonly RawLog[], batcher: Address, account?: Address): JoinedEvent | null;
 
 // @public
 export function fromTokenContract(batcher: Address): {
@@ -7731,6 +7950,24 @@ export function fromTokenContract(batcher: Address): {
         }];
         readonly outputs: readonly [{
             readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
             readonly type: "bytes32";
             readonly internalType: "euint64";
         }];
@@ -8103,6 +8340,31 @@ export function fromTokenContract(batcher: Address): {
     readonly args: readonly [];
 };
 
+// Warning: (ae-forgotten-export) The symbol "QueryClientLike" needs to be exported by the entry point index.d.ts
+//
+// @public
+export function invalidateAfterClaim(queryClient: QueryClientLike, params: {
+    toToken: Address;
+}): void;
+
+// @public
+export function invalidateAfterDispatchBatch(queryClient: QueryClientLike, batcherAddress: Address): void;
+
+// @public
+export function invalidateAfterJoin(queryClient: QueryClientLike, params: {
+    batcherAddress: Address;
+    fromToken: Address;
+}): void;
+
+// @public
+export function invalidateAfterQuit(queryClient: QueryClientLike, params: {
+    batcherAddress: Address;
+    fromToken: Address;
+}): void;
+
+// @public
+export function invalidateBatchQueries(queryClient: QueryClientLike, batcherAddress: Address): void;
+
 // Warning: (ae-forgotten-export) The symbol "EncryptedValue" needs to be exported by the entry point index.d.ts
 //
 // @public
@@ -8350,6 +8612,24 @@ export function joinContract(batcher: Address, beneficiary: Address, encryptedAm
         }];
         readonly outputs: readonly [{
             readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
             readonly type: "bytes32";
             readonly internalType: "euint64";
         }];
@@ -8733,7 +9013,12 @@ export interface JoinedEvent {
 export function joinMutationOptions(batcher: VaultBatcher): MutationFactoryOptions<readonly ["zama.vault.join", Address], JoinParams, JoinResult>;
 
 // @public
-export interface JoinParams {
+export interface JoinOptions {
+    skipBalanceCheck?: boolean;
+}
+
+// @public
+export interface JoinParams extends JoinOptions {
     amount: bigint;
     beneficiary?: Address;
 }
@@ -8990,6 +9275,24 @@ export function minBatchAgeContract(batcher: Address): {
         }];
         readonly outputs: readonly [{
             readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
             readonly type: "bytes32";
             readonly internalType: "euint64";
         }];
@@ -9613,6 +9916,24 @@ export function pausedContract(batcher: Address): {
         readonly stateMutability: "nonpayable";
     }, {
         readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
         readonly name: "toToken";
         readonly inputs: readonly [];
         readonly outputs: readonly [{
@@ -10230,6 +10551,24 @@ export function quitContract(batcher: Address, batchId: bigint): {
         readonly stateMutability: "nonpayable";
     }, {
         readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
         readonly name: "toToken";
         readonly inputs: readonly [];
         readonly outputs: readonly [{
@@ -10605,6 +10944,650 @@ export interface QuitParams {
 }
 
 // @public
+export function recoverContract(batcher: Address, batchId: bigint, account: Address): {
+    readonly address: `0x${string}`;
+    readonly abi: readonly [{
+        readonly type: "function";
+        readonly name: "batchCallbackDeadline";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "batchCreatedAt";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "batchDispatchedAt";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "batchMaxSlippageBps";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint16";
+            readonly internalType: "uint16";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "batchMinBatchAge";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "batchState";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint8";
+            readonly internalType: "enum BatcherConfidential.BatchState";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "callbackDeadline";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "claim";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "currentBatchId";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "deposits";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "dispatchBatch";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "exchangeRate";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint64";
+            readonly internalType: "uint64";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "exchangeRateDecimals";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint8";
+            readonly internalType: "uint8";
+        }];
+        readonly stateMutability: "pure";
+    }, {
+        readonly type: "function";
+        readonly name: "fromToken";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "address";
+            readonly internalType: "contract IERC7984ERC20Wrapper";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "join";
+        readonly inputs: readonly [{
+            readonly name: "beneficiary";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "externalEuint64";
+        }, {
+            readonly name: "inputProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "joined";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "maxSlippageBps";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint16";
+            readonly internalType: "uint16";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "minBatchAge";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "paused";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "quit";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "toToken";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "address";
+            readonly internalType: "contract IERC7984ERC20Wrapper";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "totalDeposits";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "unwrapRequestId";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "vault";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "address";
+            readonly internalType: "contract IERC4626";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "event";
+        readonly name: "BatchCanceled";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly indexed: true;
+            readonly internalType: "uint256";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "BatchDispatched";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly indexed: true;
+            readonly internalType: "uint256";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "BatchFinalized";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly indexed: true;
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "exchangeRate";
+            readonly type: "uint64";
+            readonly indexed: false;
+            readonly internalType: "uint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "Claimed";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly indexed: true;
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly indexed: false;
+            readonly internalType: "euint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "Joined";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly indexed: true;
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly indexed: false;
+            readonly internalType: "euint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "Quit";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly indexed: true;
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly indexed: false;
+            readonly internalType: "euint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "error";
+        readonly name: "BatchNonexistent";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "BatchTooYoung";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "elapsed";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "required";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "BatchUnexpectedState";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "current";
+            readonly type: "uint8";
+            readonly internalType: "enum BatcherConfidential.BatchState";
+        }, {
+            readonly name: "expectedStates";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "DuplicateUnderlyingTokens";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "EnforcedPause";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "ExpectedPause";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "IntermediateStepToTokenBalanceChanged";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidBeneficiary";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidCallbackDeadline";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidExchangeRate";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "totalDeposits";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "exchangeRate";
+            readonly type: "uint64";
+            readonly internalType: "uint64";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidKMSSignatures";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidMaxSlippageBps";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidMinBatchAge";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidTokenRate";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidWrapperToken";
+        readonly inputs: readonly [{
+            readonly name: "token";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "OwnableInvalidOwner";
+        readonly inputs: readonly [{
+            readonly name: "owner";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "OwnableUnauthorizedAccount";
+        readonly inputs: readonly [{
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ReentrancyGuardReentrantCall";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "RouteAssetMismatch";
+        readonly inputs: readonly [{
+            readonly name: "actualAsset";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "expectedAsset";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "RouteShareMismatch";
+        readonly inputs: readonly [{
+            readonly name: "actualShare";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "expectedShare";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "SafeCastOverflowedUintDowncast";
+        readonly inputs: readonly [{
+            readonly name: "bits";
+            readonly type: "uint8";
+            readonly internalType: "uint8";
+        }, {
+            readonly name: "value";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "SafeERC20FailedOperation";
+        readonly inputs: readonly [{
+            readonly name: "token";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "SenderNotAllowedToUseHandle";
+        readonly inputs: readonly [{
+            readonly name: "handle";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }, {
+            readonly name: "sender";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "SlippageExceeded";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "actual";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "minimum";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "Unauthorized";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "ZamaProtocolUnsupported";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "ZeroDeposits";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }];
+    readonly functionName: "recover";
+    readonly args: readonly [bigint, `0x${string}`];
+};
+
+// @public
+export function recoverMutationOptions(batcher: VaultBatcher): MutationFactoryOptions<readonly ["zama.vault.recover", Address], RecoverParams, TransactionResult>;
+
+// @public
+export interface RecoverParams {
+    account?: Address;
+    batchId: bigint;
+}
+
+// @public
 export function requestWithdrawalMutationOptions(vault: Vault): MutationFactoryOptions<readonly ["zama.vault.requestWithdrawal", Address], RequestWithdrawalParams, JoinResult>;
 
 // @public
@@ -10620,7 +11603,7 @@ export interface TimeUntilDispatchableQueryConfig {
 }
 
 // @public
-export function timeUntilDispatchableQueryOptions(batcher: VaultBatcher, config?: TimeUntilDispatchableQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof vaultQueryKeys.timeUntilDispatchable.batch>>;
+export function timeUntilDispatchableQueryOptions(batcher: VaultBatcher, config?: TimeUntilDispatchableQueryConfig): QueryFactoryOptions<bigint | null, Error, bigint | null, ReturnType<typeof vaultQueryKeys.timeUntilDispatchable.batch>>;
 
 // @public
 export function totalDepositsContract(batcher: Address, batchId: bigint): {
@@ -10867,6 +11850,24 @@ export function totalDepositsContract(batcher: Address, batchId: bigint): {
         }];
         readonly outputs: readonly [{
             readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
             readonly type: "bytes32";
             readonly internalType: "euint64";
         }];
@@ -11490,6 +12491,24 @@ export function toTokenContract(batcher: Address): {
         readonly stateMutability: "nonpayable";
     }, {
         readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
         readonly name: "toToken";
         readonly inputs: readonly [];
         readonly outputs: readonly [{
@@ -11859,7 +12878,6 @@ export function toTokenContract(batcher: Address): {
 // @public
 export class Vault {
     constructor(sdk: ZamaSDK, addresses: VaultAddresses);
-    readonly address: Address;
     deposit(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult>;
     readonly depositBatcher: VaultBatcher;
     // Warning: (ae-forgotten-export) The symbol "WrappedToken" needs to be exported by the entry point index.d.ts
@@ -11868,13 +12886,14 @@ export class Vault {
     requestWithdrawal(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult>;
     readonly sdk: ZamaSDK;
     shareToken(): Promise<WrappedToken>;
+    vaultAddress(): Promise<Address>;
 }
 
 // @public
 export interface VaultAddresses {
     depositBatcher: Address;
     redeemBatcher: Address;
-    vault: Address;
+    vault?: Address;
 }
 
 // @public
@@ -11896,12 +12915,13 @@ export class VaultBatcher {
     exchangeRate(batchId: bigint): Promise<bigint>;
     exchangeRateDecimals(): Promise<number>;
     fromToken(): Promise<Address>;
-    join(amount: bigint, beneficiary?: Address): Promise<JoinResult>;
+    join(amount: bigint, beneficiary?: Address, options?: JoinOptions): Promise<JoinResult>;
     minBatchAge(): Promise<bigint>;
     paused(): Promise<boolean>;
     quit(batchId: bigint): Promise<TransactionResult>;
+    recover(batchId: bigint, account?: Address): Promise<TransactionResult>;
     readonly sdk: ZamaSDK;
-    timeUntilDispatchable(batchId: bigint): Promise<bigint>;
+    timeUntilDispatchable(batchId: bigint): Promise<bigint | null>;
     toToken(): Promise<Address>;
     vault(): Promise<Address>;
 }
@@ -12151,6 +13171,24 @@ export function vaultContract(batcher: Address): {
         }];
         readonly outputs: readonly [{
             readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "recover";
+        readonly inputs: readonly [{
+            readonly name: "batchId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "refunded";
             readonly type: "bytes32";
             readonly internalType: "euint64";
         }];
@@ -12524,7 +13562,7 @@ export function vaultContract(batcher: Address): {
 };
 
 // @public
-export interface VaultJoinOptions {
+export interface VaultJoinOptions extends JoinOptions {
     beneficiary?: Address;
     operatorDeadline?: number;
 }
@@ -12554,6 +13592,11 @@ export const vaultQueryKeys: {
             readonly batchId: bigint | undefined;
         }];
     };
+};
+
+// @public
+export const VaultTopics: {
+    readonly Joined: `0x${string}`;
 };
 
 // (No @packageDocumentation comment for this package)

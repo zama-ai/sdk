@@ -6,8 +6,8 @@
 export { VaultBatcher } from "./vault-batcher";
 export { createVault, Vault } from "./vault";
 export { BatchState } from "./types";
-export type { JoinResult, VaultAddresses, VaultJoinOptions } from "./types";
-export { findJoined, type JoinedEvent } from "./events";
+export type { JoinOptions, JoinResult, VaultAddresses, VaultJoinOptions } from "./types";
+export { decodeJoined, findJoined, VaultTopics, type JoinedEvent } from "./events";
 
 export {
   batchCallbackDeadlineContract,
@@ -27,6 +27,7 @@ export {
   minBatchAgeContract,
   pausedContract,
   quitContract,
+  recoverContract,
   toTokenContract,
   totalDepositsContract,
   vaultContract,
@@ -40,8 +41,14 @@ export {
   currentBatchIdQueryOptions,
   depositMutationOptions,
   dispatchBatchMutationOptions,
+  invalidateAfterClaim,
+  invalidateAfterDispatchBatch,
+  invalidateAfterJoin,
+  invalidateAfterQuit,
+  invalidateBatchQueries,
   joinMutationOptions,
   quitMutationOptions,
+  recoverMutationOptions,
   requestWithdrawalMutationOptions,
   timeUntilDispatchableQueryOptions,
   vaultQueryKeys,
@@ -51,6 +58,7 @@ export {
   type DepositParams,
   type JoinParams,
   type QuitParams,
+  type RecoverParams,
   type RequestWithdrawalParams,
   type TimeUntilDispatchableQueryConfig,
 } from "./query";

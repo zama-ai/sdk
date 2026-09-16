@@ -5,13 +5,14 @@ import {
   type UseMutationOptions,
   type UseMutationResult,
 } from "@tanstack/react-query";
-import { invalidateBalanceQueries } from "@zama-fhe/sdk/query";
 import {
+  invalidateAfterJoin,
   type JoinResult,
   requestWithdrawalMutationOptions,
   type RequestWithdrawalParams,
   type VaultAddresses,
 } from "@zama-fhe/sdk/vaults";
+import { invalidateOnceResolved } from "./invalidate-once-resolved";
 import { useVault } from "./use-vault";
 
 /** Configuration for {@link useRequestWithdrawal}. */
@@ -44,9 +45,13 @@ export function useRequestWithdrawal<TContext = unknown>(
   return useMutation({
     ...requestWithdrawalMutationOptions(vault),
     ...options,
-    onSuccess: async (data, variables, onMutateResult, context) => {
-      const shareToken = await vault.shareToken();
-      invalidateBalanceQueries(context.client, shareToken.address);
+    onSuccess: (data, variables, onMutateResult, context) => {
+      invalidateOnceResolved(vault.sdk, "requestWithdrawal", vault.shareToken(), (shareToken) =>
+        invalidateAfterJoin(context.client, {
+          batcherAddress: vault.redeemBatcher.address,
+          fromToken: shareToken.address,
+        }),
+      );
       return options?.onSuccess?.(data, variables, onMutateResult, context);
     },
   }) as UseMutationResult<JoinResult, Error, RequestWithdrawalParams, TContext>;

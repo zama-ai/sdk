@@ -6,8 +6,8 @@ import {
   type UseMutationResult,
 } from "@tanstack/react-query";
 import type { Address, TransactionResult } from "@zama-fhe/sdk";
-import { invalidateBalanceQueries } from "@zama-fhe/sdk/query";
-import { quitMutationOptions, type QuitParams } from "@zama-fhe/sdk/vaults";
+import { invalidateAfterQuit, quitMutationOptions, type QuitParams } from "@zama-fhe/sdk/vaults";
+import { invalidateOnceResolved } from "./invalidate-once-resolved";
 import { useVaultBatcher } from "./use-vault-batcher";
 
 /** Configuration for {@link useQuit}. */
@@ -18,8 +18,9 @@ export interface UseQuitConfig {
 
 /**
  * Return the caller's own deposit to their balance. Works on a batch that is
- * still pending, and on one that was canceled — this is the only refund path.
- * Invalidates the batcher's input token's balance cache on success.
+ * still pending, and on one that was canceled. To refund someone else's
+ * deposit in a canceled batch, use `useRecover`. Invalidates the batcher's
+ * input token's balance cache on success.
  *
  * @param config - The batcher address.
  * @param options - React Query mutation options.
@@ -39,9 +40,10 @@ export function useQuit<TContext = unknown>(
   return useMutation({
     ...quitMutationOptions(batcher),
     ...options,
-    onSuccess: async (data, variables, onMutateResult, context) => {
-      const fromToken = await batcher.fromToken();
-      invalidateBalanceQueries(context.client, fromToken);
+    onSuccess: (data, variables, onMutateResult, context) => {
+      invalidateOnceResolved(batcher.sdk, "quit", batcher.fromToken(), (fromToken) =>
+        invalidateAfterQuit(context.client, { batcherAddress: batcher.address, fromToken }),
+      );
       return options?.onSuccess?.(data, variables, onMutateResult, context);
     },
   }) as UseMutationResult<TransactionResult, Error, QuitParams, TContext>;

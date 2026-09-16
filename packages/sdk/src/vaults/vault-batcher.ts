@@ -1,15 +1,18 @@
-import { getAddress, type Address, type Hex } from "viem";
+import { getAddress, type Address } from "viem";
 import {
   DecryptionFailedError,
   EncryptionFailedError,
   SignerNotConfiguredError,
   TransactionRevertedError,
-  ZamaError,
 } from "../errors";
+import type { TransactionOperation } from "../events/sdk-events";
 import type { EncryptedValue } from "../relayer/types";
+import { Token } from "../token";
 import type { GenericSigner, TransactionResult, WriteContractConfig } from "../types";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
+import { assertConfidentialBalance } from "../utils/assert-balance";
 import { isEncryptedValueZero } from "../utils/handles";
+import { submitTransaction as submitSdkTransaction } from "../utils/submit-transaction";
 import type { ZamaSDK } from "../zama-sdk";
 import {
   batchCallbackDeadlineContract,
@@ -29,12 +32,13 @@ import {
   minBatchAgeContract,
   pausedContract,
   quitContract,
+  recoverContract,
   toTokenContract,
   totalDepositsContract,
   vaultContract,
 } from "./contracts";
 import { findJoined } from "./events";
-import type { BatchState, JoinResult } from "./types";
+import { BatchState, type JoinOptions, type JoinResult } from "./types";
 
 /**
  * Safe to cache forever: the addresses a batcher reports are set at deploy
@@ -83,6 +87,9 @@ export class VaultBatcher {
   readonly #vault: () => Promise<Address>;
   readonly #fromToken: () => Promise<Address>;
   readonly #toToken: () => Promise<Address>;
+
+  // One instance, so repeated joins reuse the token's decrypted-balance cache.
+  #fromTokenInstance: Promise<Token> | null = null;
 
   constructor(sdk: ZamaSDK, address: Address) {
     this.sdk = sdk;
@@ -201,18 +208,24 @@ export class VaultBatcher {
 
   /**
    * Seconds until `batchId` becomes eligible for dispatch, `0` once it already
-   * is — the earliest possible moment, not a promise anyone will dispatch then.
+   * is — the earliest possible moment, not a promise anyone will dispatch
+   * then. `null` once the batch has left {@link BatchState.Pending} and can
+   * never be dispatched again.
    *
    * Measured against the chain's block timestamp and the batch's own pinned
    * minimum age, so neither local clock drift nor a mid-flight policy change
    * desyncs the countdown.
    */
-  async timeUntilDispatchable(batchId: bigint): Promise<bigint> {
-    const [createdAt, minAge, now] = await Promise.all([
+  async timeUntilDispatchable(batchId: bigint): Promise<bigint | null> {
+    const [state, createdAt, minAge, now] = await Promise.all([
+      this.batchState(batchId),
       this.batchCreatedAt(batchId),
       this.batchMinBatchAge(batchId),
       this.sdk.provider.getBlockTimestamp(),
     ]);
+    if (state !== BatchState.Pending) {
+      return null;
+    }
     const eligibleAt = createdAt + minAge;
     return eligibleAt > now ? eligibleAt - now : 0n;
   }
@@ -262,14 +275,22 @@ export class VaultBatcher {
    * @remarks
    * The batcher must already hold an ERC-7984 operator grant from the caller,
    * or it cannot pull the amount. A join with too little balance still
-   * succeeds on chain and credits nothing — check the returned
-   * `confidentialJoinedAmount`.
+   * succeeds on chain and credits nothing, so the amount is checked against
+   * the caller's confidential balance first; `confidentialJoinedAmount` is the
+   * authoritative record of what actually landed.
+   *
+   * @throws if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
+   * @throws if balance validation requires decryption that is not possible. {@link BalanceCheckUnavailableError}
    */
-  async join(amount: bigint, beneficiary?: Address): Promise<JoinResult> {
+  async join(amount: bigint, beneficiary?: Address, options?: JoinOptions): Promise<JoinResult> {
     this.#requireSigner("join");
     const account = await requireAlignedWalletAccount("join", this.sdk.signer, this.sdk.provider);
     const userAddress = getAddress(account.address);
     const resolvedBeneficiary = beneficiary ? getAddress(beneficiary) : userAddress;
+
+    if (!options?.skipBalanceCheck) {
+      await this.#assertJoinableBalance(amount);
+    }
 
     const { encryptedValues, inputProof } = await this.sdk.encrypt({
       values: [{ value: amount, type: "euint64" }],
@@ -283,14 +304,14 @@ export class VaultBatcher {
     }
 
     const result = await this.#submitTransaction(
-      "join",
+      "vault:join",
       joinContract(this.address, resolvedBeneficiary, encryptedAmount, inputProof),
     );
 
-    const joined = findJoined(result.receipt.logs, this.address);
+    const joined = findJoined(result.receipt.logs, this.address, resolvedBeneficiary);
     if (!joined) {
       throw new TransactionRevertedError(
-        `No Joined event from batcher ${this.address} found in the join receipt`,
+        `No Joined event for ${resolvedBeneficiary} from batcher ${this.address} found in the join receipt`,
       );
     }
     return {
@@ -309,13 +330,28 @@ export class VaultBatcher {
    * dispatch) and {@link BatchState.Canceled} (take the deposit back after a
    * batch failed to finalize).
    *
-   * Refunds the caller only — there is no third-party form, so a position
-   * joined for a `beneficiary` can only be quit by that beneficiary.
+   * Refunds the caller only. To refund someone else's deposit in a canceled
+   * batch, use {@link recover}.
    */
   async quit(batchId: bigint): Promise<TransactionResult> {
     this.#requireSigner("quit");
     await requireChainAlignment("quit", this.sdk.signer, this.sdk.provider);
-    return this.#submitTransaction("quit", quitContract(this.address, batchId));
+    return this.#submitTransaction("vault:quit", quitContract(this.address, batchId));
+  }
+
+  /**
+   * Refund `account`'s deposit in a canceled batch on their behalf.
+   * Permissionless — anyone can call this, and the refund always goes to
+   * `account`, never to the caller.
+   *
+   * Only legal once the batch reaches {@link BatchState.Canceled}; before that,
+   * a participant undoes their own join with {@link quit}.
+   *
+   * @param account - The depositor to refund. Defaults to the connected wallet account.
+   */
+  async recover(batchId: bigint, account?: Address): Promise<TransactionResult> {
+    const target = await this.#resolveTarget("recover", account);
+    return this.#submitTransaction("vault:recover", recoverContract(this.address, batchId, target));
   }
 
   /**
@@ -325,13 +361,13 @@ export class VaultBatcher {
    * balance on the batcher's {@link toToken}.
    *
    * Only legal once the batch reaches {@link BatchState.Finalized}; on a
-   * canceled batch use {@link quit} instead.
+   * canceled batch use {@link quit} or {@link recover} instead.
    *
    * @param account - The account to claim for. Defaults to the connected wallet account.
    */
   async claim(batchId: bigint, account?: Address): Promise<TransactionResult> {
     const target = await this.#resolveTarget("claim", account);
-    return this.#submitTransaction("claim", claimContract(this.address, batchId, target));
+    return this.#submitTransaction("vault:claim", claimContract(this.address, batchId, target));
   }
 
   /**
@@ -343,7 +379,7 @@ export class VaultBatcher {
   async dispatchBatch(): Promise<TransactionResult> {
     this.#requireSigner("dispatchBatch");
     await requireChainAlignment("dispatchBatch", this.sdk.signer, this.sdk.provider);
-    return this.#submitTransaction("dispatchBatch", dispatchBatchContract(this.address));
+    return this.#submitTransaction("vault:dispatchBatch", dispatchBatchContract(this.address));
   }
 
   // INTERNAL
@@ -353,6 +389,28 @@ export class VaultBatcher {
       throw new SignerNotConfiguredError(operation);
     }
     return this.sdk.signer;
+  }
+
+  async #inputToken(): Promise<Token> {
+    this.#fromTokenInstance ??= this.fromToken()
+      .then((address) => new Token(this.sdk, address))
+      .catch((error: unknown) => {
+        this.#fromTokenInstance = null;
+        throw error;
+      });
+    return this.#fromTokenInstance;
+  }
+
+  async #assertJoinableBalance(amount: bigint): Promise<void> {
+    const token = await this.#inputToken();
+    return assertConfidentialBalance({
+      operation: "join",
+      tokenAddress: token.address,
+      amount,
+      signer: this.sdk.signer,
+      provider: this.sdk.provider,
+      readBalance: (owner) => token.balanceOf(owner),
+    });
   }
 
   /**
@@ -374,21 +432,16 @@ export class VaultBatcher {
   }
 
   async #submitTransaction(
-    operation: string,
+    operation: TransactionOperation,
     config: WriteContractConfig,
   ): Promise<TransactionResult> {
-    const signer = this.#requireSigner(operation);
-    try {
-      const txHash: Hex = await signer.writeContract(config);
-      const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError(`VaultBatcher transaction failed during ${operation}`, {
-        cause: error,
-      });
-    }
+    return submitSdkTransaction({
+      operation,
+      signer: this.#requireSigner(operation),
+      provider: this.sdk.provider,
+      config,
+      emit: (input) => this.sdk.emitEvent(input),
+      logger: this.sdk.logger,
+    });
   }
 }

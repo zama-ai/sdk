@@ -6,8 +6,8 @@ import {
   type UseMutationResult,
 } from "@tanstack/react-query";
 import type { Address, TransactionResult } from "@zama-fhe/sdk";
-import { invalidateBalanceQueries } from "@zama-fhe/sdk/query";
-import { claimMutationOptions, type ClaimParams } from "@zama-fhe/sdk/vaults";
+import { claimMutationOptions, invalidateAfterClaim, type ClaimParams } from "@zama-fhe/sdk/vaults";
+import { invalidateOnceResolved } from "./invalidate-once-resolved";
 import { useVaultBatcher } from "./use-vault-batcher";
 
 /** Configuration for {@link useClaim}. */
@@ -39,9 +39,10 @@ export function useClaim<TContext = unknown>(
   return useMutation({
     ...claimMutationOptions(batcher),
     ...options,
-    onSuccess: async (data, variables, onMutateResult, context) => {
-      const toToken = await batcher.toToken();
-      invalidateBalanceQueries(context.client, toToken);
+    onSuccess: (data, variables, onMutateResult, context) => {
+      invalidateOnceResolved(batcher.sdk, "claim", batcher.toToken(), (toToken) =>
+        invalidateAfterClaim(context.client, { toToken }),
+      );
       return options?.onSuccess?.(data, variables, onMutateResult, context);
     },
   }) as UseMutationResult<TransactionResult, Error, ClaimParams, TContext>;

@@ -11,6 +11,7 @@ import { DepositParams } from '@zama-fhe/sdk/vaults';
 import { JoinParams } from '@zama-fhe/sdk/vaults';
 import { JoinResult } from '@zama-fhe/sdk/vaults';
 import { QuitParams } from '@zama-fhe/sdk/vaults';
+import { RecoverParams } from '@zama-fhe/sdk/vaults';
 import { RequestWithdrawalParams } from '@zama-fhe/sdk/vaults';
 import { TransactionResult } from '@zama-fhe/sdk';
 import { UseMutationOptions } from '@tanstack/react-query';
@@ -79,6 +80,14 @@ export interface UseQuitConfig {
 }
 
 // @public
+export function useRecover<TContext = unknown>(config: UseRecoverConfig, options?: UseMutationOptions<TransactionResult, Error, RecoverParams, TContext>): UseMutationResult<TransactionResult, Error, RecoverParams, TContext>;
+
+// @public
+export interface UseRecoverConfig {
+    address: Address;
+}
+
+// @public
 export function useRequestWithdrawal<TContext = unknown>(config: UseRequestWithdrawalConfig, options?: UseMutationOptions<JoinResult, Error, RequestWithdrawalParams, TContext>): UseMutationResult<JoinResult, Error, RequestWithdrawalParams, TContext>;
 
 // @public
@@ -87,7 +96,7 @@ export interface UseRequestWithdrawalConfig {
 }
 
 // @public
-export function useTimeUntilDispatchable(config: UseTimeUntilDispatchableConfig, options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">): UseQueryResult<bigint, Error>;
+export function useTimeUntilDispatchable(config: UseTimeUntilDispatchableConfig, options?: Omit<UseQueryOptions<bigint | null>, "queryKey" | "queryFn">): UseQueryResult<bigint | null, Error>;
 
 // @public
 export interface UseTimeUntilDispatchableConfig {

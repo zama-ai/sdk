@@ -1,4 +1,5 @@
 import { getAddress, type Address } from "viem";
+import { ConfigurationError } from "../errors";
 import { WrappedToken } from "../token";
 import type { ZamaSDK } from "../zama-sdk";
 import type { JoinResult, VaultAddresses, VaultJoinOptions } from "./types";
@@ -14,8 +15,6 @@ import { VaultBatcher } from "./vault-batcher";
 export class Vault {
   /** The SDK instance this vault reads and writes through. */
   readonly sdk: ZamaSDK;
-  /** Checksummed address of the underlying ERC-4626 vault contract. */
-  readonly address: Address;
   /** The batcher deposits of the underlying asset join. */
   readonly depositBatcher: VaultBatcher;
   /** The batcher share redemptions join. */
@@ -23,14 +22,34 @@ export class Vault {
 
   // The promise is cached, not just the resolved value, so concurrent callers
   // share one lookup and end up with the same instance.
+  #vaultAddress: Promise<Address> | null = null;
   #depositToken: Promise<WrappedToken> | null = null;
   #shareToken: Promise<WrappedToken> | null = null;
 
+  readonly #expectedVaultAddress: Address | undefined;
+
   constructor(sdk: ZamaSDK, addresses: VaultAddresses) {
     this.sdk = sdk;
-    this.address = getAddress(addresses.vault);
+    this.#expectedVaultAddress = addresses.vault ? getAddress(addresses.vault) : undefined;
     this.depositBatcher = new VaultBatcher(sdk, addresses.depositBatcher);
     this.redeemBatcher = new VaultBatcher(sdk, addresses.redeemBatcher);
+  }
+
+  /**
+   * The underlying ERC-4626 vault contract, read from both batchers rather
+   * than trusted from configuration. Resolved once and cached.
+   *
+   * @throws if the batchers report different vaults, or either disagrees with
+   *   an `addresses.vault` passed to the constructor — a mismatched pair would
+   *   settle deposits and redemptions against different vaults.
+   *   {@link ConfigurationError}
+   */
+  async vaultAddress(): Promise<Address> {
+    this.#vaultAddress ??= this.#resolveVaultAddress().catch((error: unknown) => {
+      this.#vaultAddress = null;
+      throw error;
+    });
+    return this.#vaultAddress;
   }
 
   /** The confidential token deposited into this vault. Resolved once and cached. */
@@ -69,7 +88,6 @@ export class Vault {
    * already active.
    *
    * @param amount - The plaintext amount to deposit.
-   * @param options - Optional `beneficiary` and `operatorDeadline`.
    */
   async deposit(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult> {
     const token = await this.depositToken();
@@ -79,7 +97,9 @@ export class Vault {
       this.depositBatcher.address,
       options?.operatorDeadline,
     );
-    return this.depositBatcher.join(amount, options?.beneficiary);
+    return this.depositBatcher.join(amount, options?.beneficiary, {
+      skipBalanceCheck: options?.skipBalanceCheck,
+    });
   }
 
   /**
@@ -89,7 +109,6 @@ export class Vault {
    * active.
    *
    * @param amount - The plaintext amount of shares to redeem.
-   * @param options - Optional `beneficiary` and `operatorDeadline`.
    */
   async requestWithdrawal(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult> {
     const token = await this.shareToken();
@@ -99,7 +118,28 @@ export class Vault {
       this.redeemBatcher.address,
       options?.operatorDeadline,
     );
-    return this.redeemBatcher.join(amount, options?.beneficiary);
+    return this.redeemBatcher.join(amount, options?.beneficiary, {
+      skipBalanceCheck: options?.skipBalanceCheck,
+    });
+  }
+
+  async #resolveVaultAddress(): Promise<Address> {
+    const [depositVault, redeemVault] = await Promise.all([
+      this.depositBatcher.vault(),
+      this.redeemBatcher.vault(),
+    ]);
+    if (getAddress(depositVault) !== getAddress(redeemVault)) {
+      throw new ConfigurationError(
+        `Vault batchers point at different ERC-4626 vaults: deposit batcher ${this.depositBatcher.address} reports ${depositVault}, redeem batcher ${this.redeemBatcher.address} reports ${redeemVault}`,
+      );
+    }
+    const onChain = getAddress(depositVault);
+    if (this.#expectedVaultAddress !== undefined && this.#expectedVaultAddress !== onChain) {
+      throw new ConfigurationError(
+        `Configured vault address ${this.#expectedVaultAddress} does not match the ${onChain} both batchers report`,
+      );
+    }
+    return onChain;
   }
 
   /**
@@ -133,7 +173,6 @@ export class Vault {
  * import { createVault } from "@zama-fhe/sdk/vaults";
  *
  * const vault = createVault(sdk, {
- *   vault: "0xVault",
  *   depositBatcher: "0xDepositBatcher",
  *   redeemBatcher: "0xRedeemBatcher",
  * });

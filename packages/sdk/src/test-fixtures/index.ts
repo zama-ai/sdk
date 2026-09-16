@@ -73,4 +73,4 @@ export {
 } from "./constants";
 
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
-export { joinedLog, mockJoinReceipt } from "./vaults";
+export { joinedLog, mockJoinBalance, mockJoinReceipt } from "./vaults";

@@ -2,7 +2,7 @@ import { act } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
 import { WrappedToken } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
-import { describe, expect, mockJoinReceipt, test, vi } from "../../test-fixtures";
+import { describe, expect, mockJoinBalance, mockJoinReceipt, test, vi } from "../../test-fixtures";
 import { useDeposit } from "../use-deposit";
 import { useRequestWithdrawal } from "../use-request-withdrawal";
 
@@ -24,7 +24,7 @@ describe("useDeposit", () => {
     provider,
     userAddress,
   }) => {
-    vi.mocked(provider.readContract).mockResolvedValueOnce(DEPOSIT_TOKEN); // fromToken()
+    mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN });
     mockJoinReceipt(provider, { batcher: DEPOSIT_BATCHER, account: userAddress });
     vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(true);
 
@@ -39,7 +39,7 @@ describe("useDeposit", () => {
   });
 
   test("forwards onSuccess", async ({ renderWithProviders, provider, userAddress }) => {
-    vi.mocked(provider.readContract).mockResolvedValueOnce(DEPOSIT_TOKEN);
+    mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN });
     mockJoinReceipt(provider, { batcher: DEPOSIT_BATCHER, account: userAddress });
     vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(true);
     const onSuccess = vi.fn();
@@ -57,7 +57,7 @@ describe("useRequestWithdrawal", () => {
     provider,
     userAddress,
   }) => {
-    vi.mocked(provider.readContract).mockResolvedValueOnce(SHARE_TOKEN); // redeemBatcher.fromToken()
+    mockJoinBalance(provider, { fromToken: SHARE_TOKEN });
     mockJoinReceipt(provider, { batcher: REDEEM_BATCHER, account: userAddress });
     vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(true);
 

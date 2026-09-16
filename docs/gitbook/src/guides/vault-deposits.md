@@ -1,11 +1,13 @@
 ---
 title: Vault deposits and withdrawals
-description: How to deposit into and withdraw from a confidential ERC-4626 vault.
+description: How to integrate confidential ERC-4626 vaults with the Zama SDK.
 ---
 
 # Vault deposits and withdrawals
 
-Confidential vaults batch deposits and redemptions together, execute the aggregate through an underlying ERC-4626 vault once decrypted, and let each participant claim their share. Core SDK usage imports from `@zama-fhe/sdk/vaults`; React hooks import from `@zama-fhe/react-sdk/vaults`. Both are separate subpaths, so this module is only bundled for apps that actually use it.
+This guide covers **integrating** a confidential vault from the SDK. For what a confidential vault is, how batching and settlement work on-chain, and the contracts themselves, see the [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault) — in particular its [deposit guide](https://docs.zama.org/protocol/confidential-vault/guides/deposit).
+
+Core SDK usage imports from `@zama-fhe/sdk/vaults`; React hooks import from `@zama-fhe/react-sdk/vaults`. Both are separate subpaths, so this module is only bundled for apps that actually use it.
 
 ## The two layers
 
@@ -18,7 +20,7 @@ Most apps should use `Vault` (`useVault` / `useDeposit` / `useRequestWithdrawal`
 
 ### 1. Create a vault instance
 
-`createVault` (or `useVault`) takes the SDK instance and the three addresses that make up one vault: the underlying ERC-4626 vault contract, and its deposit and redeem batcher contracts.
+`createVault` (or `useVault`) takes the SDK instance and the vault's two batcher addresses.
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -27,11 +29,13 @@ Most apps should use `Vault` (`useVault` / `useDeposit` / `useRequestWithdrawal`
 import { createVault } from "@zama-fhe/sdk/vaults";
 
 const addresses = {
-  vault: "0xVault",
   depositBatcher: "0xDepositBatcher",
   redeemBatcher: "0xRedeemBatcher",
 };
 const vault = createVault(sdk, addresses);
+
+// Resolved from the batchers on first use, then cached:
+const vaultAddress = await vault.vaultAddress();
 ```
 
 {% endtab %}
@@ -41,7 +45,6 @@ const vault = createVault(sdk, addresses);
 import { useVault } from "@zama-fhe/react-sdk/vaults";
 
 const addresses = {
-  vault: "0xVault",
   depositBatcher: "0xDepositBatcher",
   redeemBatcher: "0xRedeemBatcher",
 };
@@ -50,6 +53,8 @@ const vault = useVault(addresses);
 
 {% endtab %}
 {% endtabs %}
+
+You don't have to supply the underlying ERC-4626 vault address: both batchers report it on-chain, and `vaultAddress()` reads it once and caches it. Pass `vault` anyway if you want it checked — a pair of batchers that report different vaults, or a configured address the batchers disagree with, throws instead of silently settling against the wrong contract.
 
 ### 2. Deposit
 
@@ -79,9 +84,9 @@ Pass `beneficiary` to credit a different account, and `operatorDeadline` to cont
 
 {% hint style="warning" %}
 The beneficiary owns the position, not the caller: only they can `quit` it, and `claim` always pays out to them.
-
-A deposit larger than your confidential balance does **not** revert. ERC-7984 transfers move zero rather than failing, so the transaction succeeds and joins nothing. The returned `confidentialJoinedAmount` is what actually landed — decrypt it, or call `depositBatcher.depositOf(batchId, account)`, to confirm.
 {% endhint %}
+
+The SDK checks your confidential balance before submitting, exactly as `Token.confidentialTransfer` does — an ERC-7984 transfer moves zero instead of reverting, so without that check a too-large deposit would succeed on-chain and join nothing. Pass `skipBalanceCheck: true` for accounts whose balance the connected signer can't decrypt (smart wallets). The returned `confidentialJoinedAmount` is still the authoritative record of what landed: decrypt it, or call `depositBatcher.depositOf(batchId, account)`, to confirm.
 
 ### 3. Track the batch
 
@@ -111,18 +116,18 @@ const { data: state } = useBatchState({
 
 `batchState` decides which action is legal, so read it before offering the user a button:
 
-| `BatchState` | What it means                                                 | What the user can do                       |
-| ------------ | ------------------------------------------------------------- | ------------------------------------------ |
-| `Pending`    | Open, accepting joins. Always the batcher's `currentBatchId`. | `deposit` / `requestWithdrawal`, or `quit` |
-| `Dispatched` | Closed; the aggregate amount is being decrypted.              | Nothing — wait                             |
-| `Finalized`  | Settled with an exchange rate.                                | `claim`                                    |
-| `Canceled`   | The route failed, or the callback deadline passed.            | `quit`, to take the deposit back           |
+| `BatchState` | What the user can do                                |
+| ------------ | --------------------------------------------------- |
+| `Pending`    | `deposit` / `requestWithdrawal`, or `quit`          |
+| `Dispatched` | Nothing — wait                                      |
+| `Finalized`  | `claim`                                             |
+| `Canceled`   | `quit` (or `recover`), to take the deposit back     |
 
 {% hint style="warning" %}
-`Canceled` is the last value, not "done". Claiming a canceled batch reverts — a canceled batch never executed, so there is nothing to claim, only a deposit to take back with `quit`.
+`Canceled` is the last enum value, not "done". Claiming a canceled batch reverts — a canceled batch never executed, so there is nothing to claim, only a deposit to take back.
 {% endhint %}
 
-There's necessarily a delay between joining a batch and being able to claim it — batching is the whole point, and dispatch only becomes possible once the batch is old enough. To show a countdown or decide when to poll again, use `timeUntilDispatchable`:
+To show a countdown, or decide when to poll again, use `timeUntilDispatchable`:
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -146,11 +151,11 @@ const { data: secondsLeft } = useTimeUntilDispatchable({
 {% endtab %}
 {% endtabs %}
 
-It returns `0` once the batch is old enough — not a guarantee dispatch will succeed at that exact moment (someone still has to submit the transaction, and it's fine to dispatch later than this), just the earliest point it's possible.
+It returns `0` once the batch is old enough — the earliest moment dispatch is possible, not a guarantee anyone will dispatch then. It returns `null` once the batch has left `Pending` and can no longer be dispatched at all, so `0` never has to stand in for "already dispatched".
 
 ### 4. Dispatch the batch
 
-Once a batch has been open for at least `minBatchAge` (i.e. `timeUntilDispatchable` reads `0`), anyone can dispatch it — this is a permissionless call, not something only participants can trigger:
+Once `timeUntilDispatchable` reads `0`, anyone can dispatch the batch — this is a permissionless call, not something only participants can trigger:
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -170,15 +175,11 @@ dispatchBatch.mutate();
 {% endtab %}
 {% endtabs %}
 
-Dispatching decrypts the batch's aggregate amount and executes the real deposit against the underlying vault. Individual participants' amounts are never decrypted — only the aggregate. This call can revert if the batch isn't old enough yet, or has already been dispatched.
-
-Once dispatched, `batchDispatchedAt(batchId)` returns the dispatch timestamp (`0` before that). Combined with `batchCallbackDeadline(batchId)` — a duration, not a timestamp — that gives the absolute deadline by which finalization must land: `batchDispatchedAt(batchId) + batchCallbackDeadline(batchId)`. Past it, the batch is canceled.
-
-Use the per-batch reads (`batchMinBatchAge`, `batchCallbackDeadline`) rather than the batcher-wide `minBatchAge()` / `callbackDeadline()`: each batch pins the policy in force when it opened, so the batcher-wide values describe future batches, not this one.
+Use the per-batch reads (`batchMinBatchAge`, `batchCallbackDeadline`) rather than the batcher-wide `minBatchAge()` / `callbackDeadline()`: each batch pins the policy in force when it opened, so the batcher-wide values describe future batches, not this one. `batchDispatchedAt(batchId) + batchCallbackDeadline(batchId)` gives the timestamp finalization must land by; past it, the batch is canceled.
 
 ### 5. Claim
 
-Dispatch only starts the decryption; finalization lands later, when the relayer delivers the callback. Wait for `batchState` to reach `Finalized`, then claim. Claiming is permissionless — anyone can call it on another account's behalf, but the output always goes to that account, never to the caller:
+Dispatch only starts the decryption; finalization lands later. Wait for `batchState` to reach `Finalized`, then claim. Claiming is permissionless — anyone can call it on another account's behalf, but the output always goes to that account, never to the caller:
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -240,7 +241,7 @@ const claim = useClaim({ address: vault.redeemBatcher.address });
 
 ## Getting a deposit back
 
-`quit` is the only refund path, and it covers both cases: undoing a join before the batch is dispatched, and taking the deposit back after a batch was canceled (the route failed, or the callback deadline passed). It refunds the caller's own deposit — there is no third-party form, so a position joined for a `beneficiary` can only be quit by that beneficiary.
+`quit` refunds the caller's own deposit. It works both before the batch is dispatched (undoing a join) and after a batch was canceled:
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -261,7 +262,29 @@ quit.mutate({ batchId });
 {% endtab %}
 {% endtabs %}
 
+`recover` does the same for someone else. It is permissionless and only legal on a **canceled** batch, and the refund always goes to the depositor, never to the caller — so a keeper, or the app itself, can clean up a canceled batch on behalf of users who joined for a `beneficiary` and would otherwise have to come back and quit themselves:
+
+{% tabs %}
+{% tab title="Core SDK" %}
+
+```ts
+// Legal only while batchState(batchId) is Canceled.
+await vault.depositBatcher.recover(batchId, "0xDepositor");
+```
+
+{% endtab %}
+{% tab title="React SDK" %}
+
+```tsx
+const recover = useRecover({ address: vault.depositBatcher.address });
+recover.mutate({ batchId, account: "0xDepositor" });
+```
+
+{% endtab %}
+{% endtabs %}
+
 ## Next steps
 
+- [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault) — the protocol side: how batching, dispatch and settlement work
 - [Operator approvals](./operator-approvals.md) — the approval model `vault.deposit()` / `vault.requestWithdrawal()` automate
 - [Check balances](./check-balances.md) — reading confidential balances on `depositToken()` / `shareToken()`

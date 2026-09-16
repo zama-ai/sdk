@@ -20,16 +20,29 @@ export enum BatchState {
 
 /** Addresses that make up one confidential vault. */
 export interface VaultAddresses {
-  /** The ERC-4626 vault contract that holds the underlying asset and issues shares. */
-  vault: Address;
+  /**
+   * The ERC-4626 vault contract that holds the underlying asset and issues
+   * shares. Optional — both batchers report it on chain. Passing it does not
+   * skip that read: it is verified against what the batchers report.
+   */
+  vault?: Address;
   /** The batcher users join to deposit the confidential underlying asset into the vault. */
   depositBatcher: Address;
   /** The batcher users join to redeem confidential shares back into the underlying asset. */
   redeemBatcher: Address;
 }
 
+/** Options for {@link VaultBatcher.join}. */
+export interface JoinOptions {
+  /**
+   * Skip the confidential-balance pre-flight before joining — for accounts
+   * whose balance the connected signer cannot decrypt, such as smart wallets.
+   */
+  skipBalanceCheck?: boolean;
+}
+
 /** Options for {@link Vault.deposit} and {@link Vault.requestWithdrawal}. */
-export interface VaultJoinOptions {
+export interface VaultJoinOptions extends JoinOptions {
   /**
    * Account credited in the batch. Defaults to the connected wallet address.
    *

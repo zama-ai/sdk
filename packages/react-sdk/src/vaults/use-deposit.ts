@@ -5,13 +5,14 @@ import {
   type UseMutationOptions,
   type UseMutationResult,
 } from "@tanstack/react-query";
-import { invalidateBalanceQueries } from "@zama-fhe/sdk/query";
 import {
   depositMutationOptions,
+  invalidateAfterJoin,
   type DepositParams,
   type JoinResult,
   type VaultAddresses,
 } from "@zama-fhe/sdk/vaults";
+import { invalidateOnceResolved } from "./invalidate-once-resolved";
 import { useVault } from "./use-vault";
 
 /** Configuration for {@link useDeposit}. */
@@ -43,9 +44,13 @@ export function useDeposit<TContext = unknown>(
   return useMutation({
     ...depositMutationOptions(vault),
     ...options,
-    onSuccess: async (data, variables, onMutateResult, context) => {
-      const depositToken = await vault.depositToken();
-      invalidateBalanceQueries(context.client, depositToken.address);
+    onSuccess: (data, variables, onMutateResult, context) => {
+      invalidateOnceResolved(vault.sdk, "deposit", vault.depositToken(), (depositToken) =>
+        invalidateAfterJoin(context.client, {
+          batcherAddress: vault.depositBatcher.address,
+          fromToken: depositToken.address,
+        }),
+      );
       return options?.onSuccess?.(data, variables, onMutateResult, context);
     },
   }) as UseMutationResult<JoinResult, Error, DepositParams, TContext>;

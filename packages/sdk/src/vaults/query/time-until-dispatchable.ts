@@ -18,16 +18,17 @@ export interface TimeUntilDispatchableQueryConfig {
 }
 
 /**
- * Query options for the seconds remaining until a batch can be dispatched —
+ * Query options for the seconds remaining until a batch can be dispatched, or
+ * `null` once the batch has left `Pending` and can no longer be dispatched —
  * see {@link VaultBatcher.timeUntilDispatchable}.
  */
 export function timeUntilDispatchableQueryOptions(
   batcher: VaultBatcher,
   config: TimeUntilDispatchableQueryConfig = {},
 ): QueryFactoryOptions<
-  bigint,
+  bigint | null,
   Error,
-  bigint,
+  bigint | null,
   ReturnType<typeof vaultQueryKeys.timeUntilDispatchable.batch>
 > {
   const queryOpts = config.query ?? {};

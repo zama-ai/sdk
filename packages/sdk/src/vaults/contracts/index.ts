@@ -16,6 +16,7 @@ export {
   minBatchAgeContract,
   pausedContract,
   quitContract,
+  recoverContract,
   toTokenContract,
   totalDepositsContract,
   vaultContract,

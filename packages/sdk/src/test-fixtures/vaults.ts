@@ -1,5 +1,6 @@
 import { keccak256, pad, toBytes, type Address, type Hex } from "viem";
 import { vi } from "vitest";
+import { Token } from "../token";
 import type { GenericProvider } from "../types";
 import type { RawLog } from "../types/transaction";
 
@@ -31,4 +32,13 @@ export function mockJoinReceipt(
   vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
     logs: [joinedLog({ ...params, batchId: params.batchId ?? 12n })],
   });
+}
+
+/** A join pre-flights the caller's balance on `fromToken` and throws without this. */
+export function mockJoinBalance(
+  provider: GenericProvider,
+  params: { fromToken: Address; balance?: bigint },
+): void {
+  vi.mocked(provider.readContract).mockResolvedValue(params.fromToken);
+  vi.spyOn(Token.prototype, "balanceOf").mockResolvedValue(params.balance ?? 1_000_000_000n);
 }

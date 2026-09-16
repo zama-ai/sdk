@@ -1,9 +1,16 @@
-import { getAddress, keccak256, toBytes, type Address, type Hex } from "viem";
+import { getAddress, type Address } from "viem";
+import { eventTopic, topicToAddress, wordToBytes32 } from "../events/log-decoding";
 import type { EncryptedValue } from "../relayer/types";
 import type { RawLog } from "../types/transaction";
 
-/** `Joined(uint256 indexed batchId, address indexed account, euint64 amount)` */
-const JOINED_TOPIC: Hex = keccak256(toBytes("Joined(uint256,address,bytes32)"));
+/**
+ * Vault batcher event topic0 constants (keccak256 of the canonical Solidity
+ * signature). Pass to `getLogs({ topics: [Object.values(VaultTopics)] })`.
+ */
+export const VaultTopics = {
+  /** `Joined(uint256 indexed batchId, address indexed account, euint64 amount)` */
+  Joined: eventTopic("Joined(uint256,address,bytes32)"),
+} as const;
 
 /** A decoded `Joined` event. */
 export interface JoinedEvent {
@@ -15,33 +22,48 @@ export interface JoinedEvent {
   confidentialAmount: EncryptedValue;
 }
 
-function decodeJoined(log: RawLog): JoinedEvent | null {
+/**
+ * Joined(uint256 indexed batchId, address indexed account, euint64 amount)
+ * Indexed: batchId (topics[1]), account (topics[2])
+ * Data: amount (bytes32)
+ */
+export function decodeJoined(log: RawLog): JoinedEvent | null {
   const [topic, batchId, account] = log.topics;
-  if (topic !== JOINED_TOPIC || batchId === undefined || account === undefined) {
+  if (topic !== VaultTopics.Joined || batchId === undefined || account === undefined) {
     return null;
   }
+
   return {
     batchId: BigInt(batchId),
-    account: getAddress(`0x${account.slice(-40)}`),
-    // The sole non-indexed argument, so it occupies the first data word.
-    confidentialAmount: `0x${log.data.slice(2, 66)}` as EncryptedValue,
+    account: topicToAddress(account),
+    confidentialAmount: wordToBytes32(log.data, 0),
   };
 }
 
 /**
- * Scoped to `batcher` rather than taking the first match: one transaction can
- * join several batchers, and each must read its own event. Logs that carry no
- * emitter address (older custom adapters) are kept.
+ * Filters on `batcher`, and on `account` when given, rather than taking the
+ * first match: one transaction can join several batchers and credit several
+ * beneficiaries, so an unfiltered search can return someone else's batch id.
+ * Logs carrying no emitter address are kept, since some adapters omit it.
  */
-export function findJoined(logs: readonly RawLog[], batcher: Address): JoinedEvent | null {
+export function findJoined(
+  logs: readonly RawLog[],
+  batcher: Address,
+  account?: Address,
+): JoinedEvent | null {
+  const normalizedAccount = account ? getAddress(account) : undefined;
   for (const log of logs) {
     if (log.address !== undefined && getAddress(log.address) !== batcher) {
       continue;
     }
     const event = decodeJoined(log);
-    if (event) {
-      return event;
+    if (!event) {
+      continue;
     }
+    if (normalizedAccount !== undefined && event.account !== normalizedAccount) {
+      continue;
+    }
+    return event;
   }
   return null;
 }

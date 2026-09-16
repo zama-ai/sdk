@@ -1,15 +1,7 @@
 /**
- * ABI for `DepositVaultBatcherConfidential` and
- * `RedeemVaultBatcherConfidential`, which share one interface.
- *
- * Extracted from the compiled Foundry artifact and trimmed: owner-only writes
- * (`pause`/`unpause`, ownership, policy setters) and the relayer-driven
- * `dispatchBatchCallback` are dropped since the SDK never calls them, while
+ * ABI for the deposit and redeem vault batchers, which share one interface.
+ * Owner-only writes and the relayer-driven `dispatchBatchCallback` are omitted;
  * every custom error is kept so reverts decode to a name.
- *
- * Unlike every other ABI here it is not produced by `pnpm abi:build`, because
- * these contracts are not vendored into this repo. Vendor them and regenerate
- * rather than editing this file by hand.
  */
 export const vaultBatcherAbi = [
   {
@@ -153,6 +145,16 @@ export const vaultBatcherAbi = [
     name: "quit",
     inputs: [{ name: "batchId", type: "uint256", internalType: "uint256" }],
     outputs: [{ name: "", type: "bytes32", internalType: "euint64" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "recover",
+    inputs: [
+      { name: "batchId", type: "uint256", internalType: "uint256" },
+      { name: "account", type: "address", internalType: "address" },
+    ],
+    outputs: [{ name: "refunded", type: "bytes32", internalType: "euint64" }],
     stateMutability: "nonpayable",
   },
   {

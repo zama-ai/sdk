@@ -6,7 +6,7 @@ import {
   type UseMutationResult,
 } from "@tanstack/react-query";
 import type { Address, TransactionResult } from "@zama-fhe/sdk";
-import { dispatchBatchMutationOptions, vaultQueryKeys } from "@zama-fhe/sdk/vaults";
+import { dispatchBatchMutationOptions, invalidateAfterDispatchBatch } from "@zama-fhe/sdk/vaults";
 import { useVaultBatcher } from "./use-vault-batcher";
 
 /** Configuration for {@link useDispatchBatch}. */
@@ -39,15 +39,7 @@ export function useDispatchBatch<TContext = unknown>(
     ...dispatchBatchMutationOptions(batcher),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
-      void context.client.invalidateQueries({
-        queryKey: vaultQueryKeys.currentBatchId.batcher(batcher.address),
-      });
-      void context.client.invalidateQueries({
-        queryKey: vaultQueryKeys.batchState.batcher(batcher.address),
-      });
-      void context.client.invalidateQueries({
-        queryKey: vaultQueryKeys.timeUntilDispatchable.batcher(batcher.address),
-      });
+      invalidateAfterDispatchBatch(context.client, batcher.address);
       return options?.onSuccess?.(data, variables, onMutateResult, context);
     },
   }) as UseMutationResult<TransactionResult, Error, void, TContext>;

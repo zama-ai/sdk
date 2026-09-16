@@ -24,6 +24,8 @@ export interface UseTimeUntilDispatchableConfig {
  * — the earliest possible moment, not a promise anyone will dispatch then.
  * Measured against the chain's block timestamp, not the caller's wall clock.
  *
+ * `null` once the batch has left `Pending` and can never be dispatched again.
+ *
  * @param config - The batcher address, batch id, and optional poll interval.
  * @param options - React Query options (forwarded to `useQuery`).
  *
@@ -38,7 +40,7 @@ export interface UseTimeUntilDispatchableConfig {
  */
 export function useTimeUntilDispatchable(
   config: UseTimeUntilDispatchableConfig,
-  options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">,
+  options?: Omit<UseQueryOptions<bigint | null>, "queryKey" | "queryFn">,
 ) {
   const batcher = useVaultBatcher(config.address);
   const baseOpts = timeUntilDispatchableQueryOptions(batcher, {

@@ -18,7 +18,6 @@ describe("useVault", () => {
       }),
     );
 
-    expect(result.current.address).toBe(VAULT_ADDRESS);
     expect(result.current.depositBatcher).toBeInstanceOf(VaultBatcher);
     expect(result.current.depositBatcher.address).toBe(DEPOSIT_BATCHER);
     expect(result.current.redeemBatcher.address).toBe(REDEEM_BATCHER);

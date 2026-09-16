@@ -10,6 +10,7 @@ export { useRequestWithdrawal, type UseRequestWithdrawalConfig } from "./use-req
 export { useJoin, type UseJoinConfig } from "./use-join";
 export { useClaim, type UseClaimConfig } from "./use-claim";
 export { useQuit, type UseQuitConfig } from "./use-quit";
+export { useRecover, type UseRecoverConfig } from "./use-recover";
 export { useDispatchBatch, type UseDispatchBatchConfig } from "./use-dispatch-batch";
 export { useCurrentBatchId, type UseCurrentBatchIdConfig } from "./use-current-batch-id";
 export { useBatchState, type UseBatchStateConfig } from "./use-batch-state";

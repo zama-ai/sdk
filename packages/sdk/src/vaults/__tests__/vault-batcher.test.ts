@@ -1,11 +1,21 @@
 import type { EncryptValuesReturnType } from "@fhevm/sdk/actions/encrypt";
 import type { Address } from "viem";
-import { SignerNotConfiguredError } from "../../errors";
-import { describe, expect, mockJoinReceipt, test, vi } from "../../test-fixtures";
+import { InsufficientConfidentialBalanceError, SignerNotConfiguredError } from "../../errors";
+import {
+  describe,
+  expect,
+  joinedLog,
+  mockJoinBalance,
+  mockJoinReceipt,
+  test,
+  vi,
+} from "../../test-fixtures";
+import { BatchState } from "../types";
 import { VaultBatcher } from "../vault-batcher";
 
 const BATCHER_ADDRESS = "0x7777777777777777777777777777777777777777" as Address;
 const OTHER_ADDRESS = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
+const FROM_TOKEN = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 const ZERO_ENCRYPTED = `0x${"00".repeat(32)}` as const;
 
 describe("VaultBatcher", () => {
@@ -24,6 +34,7 @@ describe("VaultBatcher", () => {
       handle,
       inputProof,
     }) => {
+      mockJoinBalance(provider, { fromToken: FROM_TOKEN });
       mockJoinReceipt(provider, { batcher: BATCHER_ADDRESS, account: userAddress });
       const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
       const result = await batcher.join(1_000n);
@@ -46,6 +57,7 @@ describe("VaultBatcher", () => {
       handle,
       inputProof,
     }) => {
+      mockJoinBalance(provider, { fromToken: FROM_TOKEN });
       mockJoinReceipt(provider, { batcher: BATCHER_ADDRESS, account: OTHER_ADDRESS });
       const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
       await batcher.join(1_000n, OTHER_ADDRESS);
@@ -60,18 +72,80 @@ describe("VaultBatcher", () => {
       await expect(batcher.join(1_000n)).rejects.toThrow(SignerNotConfiguredError);
     });
 
-    test("throws when the receipt carries no Joined event", async ({ sdk }) => {
+    test("throws when the receipt carries no Joined event", async ({ sdk, provider }) => {
+      mockJoinBalance(provider, { fromToken: FROM_TOKEN });
       const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
       await expect(batcher.join(1_000n)).rejects.toThrow("No Joined event");
     });
 
-    test("throws when encryption returns no values", async ({ sdk, relayer, inputProof }) => {
+    test("ignores a Joined event credited to a different beneficiary", async ({
+      sdk,
+      provider,
+      userAddress,
+    }) => {
+      mockJoinBalance(provider, { fromToken: FROM_TOKEN });
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+        logs: [joinedLog({ batcher: BATCHER_ADDRESS, batchId: 12n, account: OTHER_ADDRESS })],
+      });
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+      await expect(batcher.join(1_000n)).rejects.toThrow(userAddress);
+    });
+
+    test("picks the Joined event for the beneficiary it joined for", async ({
+      sdk,
+      provider,
+      userAddress,
+    }) => {
+      mockJoinBalance(provider, { fromToken: FROM_TOKEN });
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+        logs: [
+          joinedLog({ batcher: BATCHER_ADDRESS, batchId: 11n, account: userAddress }),
+          joinedLog({ batcher: BATCHER_ADDRESS, batchId: 12n, account: OTHER_ADDRESS }),
+        ],
+      });
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+      const result = await batcher.join(1_000n, OTHER_ADDRESS);
+      expect(result.batchId).toBe(12n);
+      expect(result.beneficiary).toBe(OTHER_ADDRESS);
+    });
+
+    test("throws when encryption returns no values", async ({
+      sdk,
+      provider,
+      relayer,
+      inputProof,
+    }) => {
+      mockJoinBalance(provider, { fromToken: FROM_TOKEN });
       vi.mocked(relayer.encryptValues).mockResolvedValueOnce({
         encryptedValues: [],
         inputProof,
       } as unknown as EncryptValuesReturnType);
       const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
       await expect(batcher.join(1_000n)).rejects.toThrow("Encryption returned no encrypted values");
+    });
+
+    test("refuses to join more than the confidential balance on fromToken", async ({
+      sdk,
+      provider,
+      signer,
+    }) => {
+      mockJoinBalance(provider, { fromToken: FROM_TOKEN, balance: 999n });
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+
+      await expect(batcher.join(1_000n)).rejects.toThrow(InsufficientConfidentialBalanceError);
+      expect(signer.writeContract).not.toHaveBeenCalled();
+    });
+
+    test("skips the balance check when asked", async ({ sdk, provider, signer, userAddress }) => {
+      mockJoinBalance(provider, { fromToken: FROM_TOKEN, balance: 999n });
+      mockJoinReceipt(provider, { batcher: BATCHER_ADDRESS, account: userAddress });
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+
+      await batcher.join(1_000n, undefined, { skipBalanceCheck: true });
+
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({ functionName: "join" }),
+      );
     });
   });
 
@@ -122,6 +196,33 @@ describe("VaultBatcher", () => {
     });
   });
 
+  describe("recover", () => {
+    test("defaults the refunded account to the connected wallet", async ({
+      sdk,
+      signer,
+      userAddress,
+    }) => {
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+      await batcher.recover(9n);
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({ functionName: "recover", args: [9n, userAddress] }),
+      );
+    });
+
+    test("refunds another depositor on their behalf", async ({ sdk, signer }) => {
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+      await batcher.recover(9n, OTHER_ADDRESS);
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({ functionName: "recover", args: [9n, OTHER_ADDRESS] }),
+      );
+    });
+
+    test("still requires a signer to submit", async ({ createSDK }) => {
+      const batcher = new VaultBatcher(createSDK({ signer: undefined }), BATCHER_ADDRESS);
+      await expect(batcher.recover(9n, OTHER_ADDRESS)).rejects.toThrow(SignerNotConfiguredError);
+    });
+  });
+
   describe("reads", () => {
     test("passes through view calls to the provider", async ({ sdk, provider }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(3480n);
@@ -162,6 +263,7 @@ describe("VaultBatcher", () => {
       provider,
     }) => {
       vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(BatchState.Pending) // batchState
         .mockResolvedValueOnce(1_000n) // batchCreatedAt
         .mockResolvedValueOnce(3_480n); // batchMinBatchAge(batchId)
       vi.mocked(provider.getBlockTimestamp).mockResolvedValueOnce(2_000n); // now
@@ -173,6 +275,7 @@ describe("VaultBatcher", () => {
 
     test("returns 0 once the batch is already old enough", async ({ sdk, provider }) => {
       vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(BatchState.Pending) // batchState
         .mockResolvedValueOnce(1_000n) // batchCreatedAt
         .mockResolvedValueOnce(3_480n); // batchMinBatchAge(batchId)
       vi.mocked(provider.getBlockTimestamp).mockResolvedValueOnce(10_000n); // well past eligible
@@ -180,6 +283,20 @@ describe("VaultBatcher", () => {
       const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
       await expect(batcher.timeUntilDispatchable(58n)).resolves.toBe(0n);
     });
+
+    test.for([BatchState.Dispatched, BatchState.Finalized, BatchState.Canceled])(
+      "returns null for a batch in state %s, which can never be dispatched again",
+      async (state, { sdk, provider }) => {
+        vi.mocked(provider.readContract)
+          .mockResolvedValueOnce(state) // batchState
+          .mockResolvedValueOnce(1_000n) // batchCreatedAt
+          .mockResolvedValueOnce(3_480n); // batchMinBatchAge(batchId)
+        vi.mocked(provider.getBlockTimestamp).mockResolvedValueOnce(10_000n);
+
+        const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+        await expect(batcher.timeUntilDispatchable(58n)).resolves.toBeNull();
+      },
+    );
   });
 
   describe("depositOf", () => {

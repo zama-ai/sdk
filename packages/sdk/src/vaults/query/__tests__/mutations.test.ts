@@ -61,7 +61,7 @@ describe("batcher-level mutation options", () => {
 
     expect(options.mutationKey).toEqual(["zama.vault.join", DEPOSIT_BATCHER]);
     await options.mutationFn({ amount: 1_000n, beneficiary: ACCOUNT });
-    expect(batcher.join).toHaveBeenCalledWith(1_000n, ACCOUNT);
+    expect(batcher.join).toHaveBeenCalledWith(1_000n, ACCOUNT, {});
   });
 
   test("claimMutationOptions delegates to batcher.claim", async () => {

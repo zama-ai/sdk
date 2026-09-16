@@ -1,12 +1,13 @@
-import { act } from "@testing-library/react";
+import { act, waitFor } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { vaultQueryKeys } from "@zama-fhe/sdk/vaults";
-import { describe, expect, mockJoinReceipt, test, vi } from "../../test-fixtures";
+import { describe, expect, mockJoinBalance, mockJoinReceipt, test, vi } from "../../test-fixtures";
 import { useClaim } from "../use-claim";
 import { useDispatchBatch } from "../use-dispatch-batch";
 import { useJoin } from "../use-join";
 import { useQuit } from "../use-quit";
+import { useRecover } from "../use-recover";
 
 const BATCHER_ADDRESS = "0x7777777777777777777777777777777777777777" as Address;
 const FROM_TOKEN = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
@@ -18,7 +19,7 @@ describe("useJoin", () => {
     provider,
     userAddress,
   }) => {
-    vi.mocked(provider.readContract).mockResolvedValueOnce(FROM_TOKEN); // fromToken()
+    mockJoinBalance(provider, { fromToken: FROM_TOKEN });
     mockJoinReceipt(provider, { batcher: BATCHER_ADDRESS, account: userAddress });
     const { result, queryClient } = renderWithProviders(() =>
       useJoin({ address: BATCHER_ADDRESS }),
@@ -74,6 +75,45 @@ describe("useQuit", () => {
       expect.objectContaining({ functionName: "quit", args: [3n] }),
     );
     expect(queryClient).toHaveInvalidatedQueries([balanceKey]);
+  });
+});
+
+describe("useRecover", () => {
+  test("refunds a depositor and invalidates the input token's balance cache", async ({
+    renderWithProviders,
+    provider,
+    userAddress,
+    signer,
+  }) => {
+    vi.mocked(provider.readContract).mockResolvedValueOnce(FROM_TOKEN);
+    const { result, queryClient } = renderWithProviders(() =>
+      useRecover({ address: BATCHER_ADDRESS }),
+    );
+
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(FROM_TOKEN, userAddress);
+    queryClient.setQueryData(balanceKey, 0n);
+
+    await act(() => result.current.mutateAsync({ batchId: 3n, account: userAddress }));
+
+    expect(signer.writeContract).toHaveBeenCalledWith(
+      expect.objectContaining({ functionName: "recover", args: [3n, userAddress] }),
+    );
+    expect(queryClient).toHaveInvalidatedQueries([balanceKey]);
+  });
+});
+
+describe("invalidation after a settled transaction", () => {
+  test("a failed token-address read does not fail the mutation", async ({
+    renderWithProviders,
+    provider,
+  }) => {
+    // The claim succeeds; only the follow-up read invalidation needs fails.
+    vi.mocked(provider.readContract).mockRejectedValue(new Error("rpc unavailable"));
+    const { result } = renderWithProviders(() => useClaim({ address: BATCHER_ADDRESS }));
+
+    await act(() => result.current.mutateAsync({ batchId: 7n }));
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
   });
 });
 

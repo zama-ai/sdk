@@ -1,10 +1,10 @@
 import type { Address } from "viem";
 import type { MutationFactoryOptions } from "../../query/factory-types";
-import type { JoinResult } from "../types";
+import type { JoinOptions, JoinResult } from "../types";
 import type { VaultBatcher } from "../vault-batcher";
 
 /** Variables for {@link joinMutationOptions}. */
-export interface JoinParams {
+export interface JoinParams extends JoinOptions {
   /** Plaintext amount to contribute to the batch. */
   amount: bigint;
   /** Recipient of the batch's eventual output. Defaults to the connected wallet account. */
@@ -20,6 +20,7 @@ export function joinMutationOptions(
 ): MutationFactoryOptions<readonly ["zama.vault.join", Address], JoinParams, JoinResult> {
   return {
     mutationKey: ["zama.vault.join", batcher.address] as const,
-    mutationFn: async ({ amount, beneficiary }) => batcher.join(amount, beneficiary),
+    mutationFn: async ({ amount, beneficiary, ...options }) =>
+      batcher.join(amount, beneficiary, options),
   };
 }
