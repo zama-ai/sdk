@@ -7,7 +7,11 @@ if (!nextVersion) {
   process.exit(1);
 }
 
-const targets = ["packages/sdk/package.json", "packages/react-sdk/package.json"];
+const targets = [
+  "packages/sdk/package.json",
+  "packages/react-sdk/package.json",
+  "packages/sdk-sidecar/package.json",
+];
 
 for (const path of targets) {
   const pkg = JSON.parse(readFileSync(path, "utf8"));

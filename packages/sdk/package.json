@@ -62,6 +62,9 @@
       ],
       "vaults": [
         "./dist/esm/vaults/index.d.ts"
+      ],
+      "internal": [
+        "./dist/esm/internal/index.d.ts"
       ]
     }
   },
@@ -168,6 +171,17 @@
     "./encrypt.worker.js": "./dist/esm/encrypt.worker.js",
     "./package.json": {
       "default": "./package.json"
+    },
+    "./internal": {
+      "import": {
+        "types": "./dist/esm/internal/index.d.ts",
+        "default": "./dist/esm/internal/index.js"
+      },
+      "require": {
+        "types": "./dist/esm/internal/index.d.ts",
+        "default": "./dist/cjs/internal/index.cjs"
+      },
+      "default": "./dist/esm/internal/index.js"
     }
   },
   "publishConfig": {

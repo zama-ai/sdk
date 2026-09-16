@@ -1,0 +1,16 @@
+version: v2
+modules:
+  - path: proto
+lint:
+  use:
+    - STANDARD
+  ignore_only:
+    RPC_REQUEST_STANDARD_NAME:
+      - proto/zama/sdk/v1alpha1/sidecar.proto
+    RPC_RESPONSE_STANDARD_NAME:
+      - proto/zama/sdk/v1alpha1/sidecar.proto
+    RPC_REQUEST_RESPONSE_UNIQUE:
+      - proto/zama/sdk/v1alpha1/sidecar.proto
+breaking:
+  use:
+    - FILE
