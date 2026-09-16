@@ -469,6 +469,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:guides/vault-groups",
+      "title": "Vault groups",
+      "source_path": "docs/gitbook/src/guides/vault-groups.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-groups.md",
+      "source_type": "official-doc",
+      "category": "guides",
+      "logical_path": "guides/vault-groups",
+      "description": "Deposit into one of several vaults without revealing which one.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:reference/sdk/README",
       "title": "Overview",
       "source_path": "docs/gitbook/src/reference/sdk/README.md",
