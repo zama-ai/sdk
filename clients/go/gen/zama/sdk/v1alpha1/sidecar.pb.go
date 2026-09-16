@@ -250,7 +250,8 @@ type CreateContextRequest struct {
 	// Omission creates isolated in-memory storage for this context.
 	Storage *StorageBinding `protobuf:"bytes,4,opt,name=storage,proto3" json:"storage,omitempty"`
 	// Omission shares storage, including its backend identity.
-	PermitStorage                    *StorageBinding   `protobuf:"bytes,5,opt,name=permit_storage,json=permitStorage,proto3" json:"permit_storage,omitempty"`
+	PermitStorage *StorageBinding `protobuf:"bytes,5,opt,name=permit_storage,json=permitStorage,proto3" json:"permit_storage,omitempty"`
+	// Fields 100–119 are allocated to configuration and credential protection.
 	TransportKeyPairDerivationSecret *DerivationSecret `protobuf:"bytes,100,opt,name=transport_key_pair_derivation_secret,json=transportKeyPairDerivationSecret,proto3" json:"transport_key_pair_derivation_secret,omitempty"`
 	unknownFields                    protoimpl.UnknownFields
 	sizeCache                        protoimpl.SizeCache
@@ -328,6 +329,7 @@ func (x *CreateContextRequest) GetTransportKeyPairDerivationSecret() *Derivation
 	return nil
 }
 
+// Instance input for credential protection; never persisted with credentials and never logged.
 type DerivationSecret struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Value:
@@ -3443,7 +3445,8 @@ type ContextConfig struct {
 	TransportKeyPairTtl   *uint32 `protobuf:"varint,4,opt,name=transport_key_pair_ttl,json=transportKeyPairTtl,proto3,oneof" json:"transport_key_pair_ttl,omitempty"`
 	TransportKeyPairScope *string `protobuf:"bytes,5,opt,name=transport_key_pair_scope,json=transportKeyPairScope,proto3,oneof" json:"transport_key_pair_scope,omitempty"`
 	// Whole seconds.
-	RegistryTtl    *uint32               `protobuf:"varint,6,opt,name=registry_ttl,json=registryTtl,proto3,oneof" json:"registry_ttl,omitempty"`
+	RegistryTtl *uint32 `protobuf:"varint,6,opt,name=registry_ttl,json=registryTtl,proto3,oneof" json:"registry_ttl,omitempty"`
+	// Fields 100–119 are allocated to configuration and credential protection.
 	ProcessRuntime *ProcessRuntimeConfig `protobuf:"bytes,100,opt,name=process_runtime,json=processRuntime,proto3" json:"process_runtime,omitempty"`
 	Relayers       *RelayerMap           `protobuf:"bytes,101,opt,name=relayers,proto3" json:"relayers,omitempty"`
 	unknownFields  protoimpl.UnknownFields
@@ -3550,12 +3553,13 @@ type ChainConfig struct {
 	VerifyingContractAddressDecryption        []byte                 `protobuf:"bytes,8,opt,name=verifying_contract_address_decryption,json=verifyingContractAddressDecryption,proto3,oneof" json:"verifying_contract_address_decryption,omitempty"`
 	VerifyingContractAddressInputVerification []byte                 `protobuf:"bytes,9,opt,name=verifying_contract_address_input_verification,json=verifyingContractAddressInputVerification,proto3,oneof" json:"verifying_contract_address_input_verification,omitempty"`
 	// An explicitly empty value clears the preset's optional address.
-	RegistryAddress []byte              `protobuf:"bytes,10,opt,name=registry_address,json=registryAddress,proto3,oneof" json:"registry_address,omitempty"`
-	ExecutorAddress []byte              `protobuf:"bytes,11,opt,name=executor_address,json=executorAddress,proto3,oneof" json:"executor_address,omitempty"`
-	Auth            *ChainAuth          `protobuf:"bytes,12,opt,name=auth,proto3" json:"auth,omitempty"`
-	Provider        *HttpProviderConfig `protobuf:"bytes,100,opt,name=provider,proto3" json:"provider,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	RegistryAddress []byte     `protobuf:"bytes,10,opt,name=registry_address,json=registryAddress,proto3,oneof" json:"registry_address,omitempty"`
+	ExecutorAddress []byte     `protobuf:"bytes,11,opt,name=executor_address,json=executorAddress,proto3,oneof" json:"executor_address,omitempty"`
+	Auth            *ChainAuth `protobuf:"bytes,12,opt,name=auth,proto3" json:"auth,omitempty"`
+	// Fields 100–119 are allocated to configuration and credential protection.
+	Provider      *HttpProviderConfig `protobuf:"bytes,100,opt,name=provider,proto3" json:"provider,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ChainConfig) Reset() {
@@ -3830,7 +3834,7 @@ func (x *NamedCredential) GetValue() string {
 	return ""
 }
 
-// Runtime settings apply to the process once, at its first SDK configuration.
+// Applied once per sidecar process; the first SDK configuration wins.
 type ProcessRuntimeConfig struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	WasmAssetLoadMode *string                `protobuf:"bytes,1,opt,name=wasm_asset_load_mode,json=wasmAssetLoadMode,proto3,oneof" json:"wasm_asset_load_mode,omitempty"`
@@ -4730,10 +4734,10 @@ const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
 	"\aaccount\x18\x03 \x01(\v2 .zama.sdk.v1alpha1.WalletAccountR\aaccount\x12;\n" +
 	"\astorage\x18\x04 \x01(\v2!.zama.sdk.v1alpha1.StorageBindingR\astorage\x12H\n" +
 	"\x0epermit_storage\x18\x05 \x01(\v2!.zama.sdk.v1alpha1.StorageBindingR\rpermitStorage\x12s\n" +
-	"$transport_key_pair_derivation_secret\x18d \x01(\v2#.zama.sdk.v1alpha1.DerivationSecretR transportKeyPairDerivationSecret\"I\n" +
-	"\x10DerivationSecret\x12\x14\n" +
-	"\x04text\x18\x01 \x01(\tH\x00R\x04text\x12\x16\n" +
-	"\x05bytes\x18\x02 \x01(\fH\x00R\x05bytesB\a\n" +
+	"$transport_key_pair_derivation_secret\x18d \x01(\v2#.zama.sdk.v1alpha1.DerivationSecretR transportKeyPairDerivationSecret\"S\n" +
+	"\x10DerivationSecret\x12\x19\n" +
+	"\x04text\x18\x01 \x01(\tB\x03\x80\x01\x01H\x00R\x04text\x12\x1b\n" +
+	"\x05bytes\x18\x02 \x01(\fB\x03\x80\x01\x01H\x00R\x05bytesB\a\n" +
 	"\x05value\"6\n" +
 	"\x15CreateContextResponse\x12\x1d\n" +
 	"\n" +

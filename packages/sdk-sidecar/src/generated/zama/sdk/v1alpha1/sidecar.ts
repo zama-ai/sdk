@@ -95,10 +95,14 @@ export interface CreateContextRequest {
     | StorageBinding
     | undefined;
   /** Omission shares storage, including its backend identity. */
-  permitStorage: StorageBinding | undefined;
+  permitStorage:
+    | StorageBinding
+    | undefined;
+  /** Fields 100–119 are allocated to configuration and credential protection. */
   transportKeyPairDerivationSecret: DerivationSecret | undefined;
 }
 
+/** Instance input for credential protection; never persisted with credentials and never logged. */
 export interface DerivationSecret {
   value: { $case: "text"; text: string } | { $case: "bytes"; bytes: Buffer } | undefined;
 }
@@ -406,7 +410,10 @@ export interface ContextConfig {
     | string
     | undefined;
   /** Whole seconds. */
-  registryTtl?: number | undefined;
+  registryTtl?:
+    | number
+    | undefined;
+  /** Fields 100–119 are allocated to configuration and credential protection. */
   processRuntime: ProcessRuntimeConfig | undefined;
   relayers: RelayerMap | undefined;
 }
@@ -430,7 +437,10 @@ export interface ChainConfig {
   /** An explicitly empty value clears the preset's optional address. */
   registryAddress?: Buffer | undefined;
   executorAddress?: Buffer | undefined;
-  auth: ChainAuth | undefined;
+  auth:
+    | ChainAuth
+    | undefined;
+  /** Fields 100–119 are allocated to configuration and credential protection. */
   provider: HttpProviderConfig | undefined;
 }
 
@@ -448,7 +458,7 @@ export interface NamedCredential {
   value: string;
 }
 
-/** Runtime settings apply to the process once, at its first SDK configuration. */
+/** Applied once per sidecar process; the first SDK configuration wins. */
 export interface ProcessRuntimeConfig {
   wasmAssetLoadMode?: string | undefined;
   moduleVersions: ModuleVersions | undefined;

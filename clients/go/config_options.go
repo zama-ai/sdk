@@ -32,7 +32,7 @@ type ProcessRuntime struct {
 	ModuleVersions    ModuleVersions
 	SingleThread      *bool
 	NumberOfThreads   *uint32
-	Auth              ChainAuth
+	Auth              RelayerAuth
 }
 
 func (r ProcessRuntime) wire() *pb.ProcessRuntimeConfig {
@@ -168,32 +168,47 @@ func (key FHEEncryptionKey) wire() *pb.FheEncryptionKey {
 	}
 }
 
-// A nil *DerivationSecret omits the SDK option; MissingDerivationSecret explicitly requires a secret.
-type DerivationSecret struct {
-	text    *string
-	bytes   []byte
-	isBytes bool
+type DerivationSecret interface {
+	wire() *pb.DerivationSecret
 }
 
-func MissingDerivationSecret() *DerivationSecret          { return &DerivationSecret{} }
-func TextDerivationSecret(value string) *DerivationSecret { return &DerivationSecret{text: &value} }
-func BytesDerivationSecret(value []byte) *DerivationSecret {
-	return &DerivationSecret{bytes: append([]byte{}, value...), isBytes: true}
-}
-func (s DerivationSecret) String() string   { return "[REDACTED]" }
-func (s DerivationSecret) GoString() string { return "[REDACTED]" }
-func (s DerivationSecret) Format(state fmt.State, verb rune) {
-	_, _ = state.Write([]byte("[REDACTED]"))
-}
-func (s *DerivationSecret) wire() *pb.DerivationSecret {
-	if s == nil {
+func wireDerivationSecret(secret DerivationSecret) *pb.DerivationSecret {
+	if secret == nil {
 		return nil
 	}
-	result := &pb.DerivationSecret{}
-	if s.text != nil {
-		result.Value = &pb.DerivationSecret_Text{Text: *s.text}
-	} else if s.isBytes {
-		result.Value = &pb.DerivationSecret_Bytes{Bytes: append([]byte{}, s.bytes...)}
-	}
-	return result
+	return secret.wire()
+}
+
+type redactedDerivationSecret struct{}
+
+func (redactedDerivationSecret) String() string   { return "[REDACTED]" }
+func (redactedDerivationSecret) GoString() string { return "[REDACTED]" }
+func (redactedDerivationSecret) Format(state fmt.State, verb rune) {
+	_, _ = state.Write([]byte("[REDACTED]"))
+}
+
+type missingDerivationSecret struct{ redactedDerivationSecret }
+type textDerivationSecret struct {
+	redactedDerivationSecret
+	value string
+}
+type bytesDerivationSecret struct {
+	redactedDerivationSecret
+	value []byte
+}
+
+// MissingDerivationSecret sends protection enabled with no derivation secret value.
+func MissingDerivationSecret() DerivationSecret { return missingDerivationSecret{} }
+func TextDerivationSecret(value string) DerivationSecret {
+	return textDerivationSecret{value: value}
+}
+func BytesDerivationSecret(value []byte) DerivationSecret {
+	return bytesDerivationSecret{value: append([]byte{}, value...)}
+}
+func (missingDerivationSecret) wire() *pb.DerivationSecret { return &pb.DerivationSecret{} }
+func (s textDerivationSecret) wire() *pb.DerivationSecret {
+	return &pb.DerivationSecret{Value: &pb.DerivationSecret_Text{Text: s.value}}
+}
+func (s bytesDerivationSecret) wire() *pb.DerivationSecret {
+	return &pb.DerivationSecret{Value: &pb.DerivationSecret_Bytes{Bytes: append([]byte{}, s.value...)}}
 }

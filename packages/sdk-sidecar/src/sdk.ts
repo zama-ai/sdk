@@ -1,5 +1,4 @@
 import { createConfig, ZamaSDK, ConfigurationError, type GenericProvider } from "@zama-fhe/sdk";
-import { sdkInstanceOptions } from "./sdk-options.js";
 import { createHttpProvider } from "./provider.js";
 import type { StorageManager } from "./storage-manager.js";
 import { parseContextConfig } from "./sdk-config.js";
@@ -12,8 +11,7 @@ export function createContextFactory(manager: StorageManager): ContextFactory {
       request.permitStorage === undefined
         ? primary
         : await manager.resolve(request.permitStorage, remote);
-    const { chains, chainId, processRuntime, relayers, providerConfigs, ...options } =
-      parseContextConfig(request.config);
+    const { chains, chainId, providerConfigs, ...options } = parseContextConfig(request.config);
     const providers = new Map(
       chains.map((chain) => [
         chain.id,
@@ -35,6 +33,8 @@ export function createContextFactory(manager: StorageManager): ContextFactory {
       getBlockTimestamp: () => current().getBlockTimestamp(),
       prepareTransaction: (args) => current().prepareTransaction(args),
     };
+    const secret = request.transportKeyPairDerivationSecret;
+    const value = secret?.value;
     const sdk = new ZamaSDK(
       createConfig({
         chains,
@@ -42,11 +42,20 @@ export function createContextFactory(manager: StorageManager): ContextFactory {
         provider,
         storage: primary.storage,
         permitStorage: permits.storage,
-        relayers,
-        ...(processRuntime === undefined ? {} : { runtime: processRuntime }),
+        logger: {
+          warn: (message) => {
+            process.stderr.write(`${message}\n`);
+          },
+          error: () => {},
+          info: () => {},
+          debug: () => {},
+        },
         ...options,
       }),
-      sdkInstanceOptions(request.transportKeyPairDerivationSecret),
+      // Presence with undefined enables protection; omission leaves the SDK option absent.
+      secret === undefined
+        ? {}
+        : { transportKeyPairDerivationSecret: value?.$case === "text" ? value.text : value?.bytes },
     );
     return {
       sdk,

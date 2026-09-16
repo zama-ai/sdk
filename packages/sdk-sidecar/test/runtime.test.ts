@@ -14,7 +14,7 @@ function setup() {
 const request = {
   storage: undefined,
   permitStorage: undefined,
-    transportKeyPairDerivationSecret: undefined,
+  transportKeyPairDerivationSecret: undefined,
   config: undefined,
   signerEnabled: false,
   account: undefined,

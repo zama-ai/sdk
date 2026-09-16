@@ -118,7 +118,7 @@ SDK_BATCH_RPC_CALLS=true
 SDK_RPC_TIMEOUT_MS=10000
 ```
 
-`SDK_SINGLE_THREAD` configures the SDK process runtime. Start a fresh sidecar when changing it: the first SDK configuration in that process wins, even when it omits runtime options. `SDK_BATCH_RPC_CALLS` configures the Sepolia node relayer. `SDK_RPC_TIMEOUT_MS` configures HTTP requests made by the sidecar provider; it does not change the native application's RPC client.
+`SDK_SINGLE_THREAD` configures the SDK process runtime. Start a fresh sidecar when changing it: the first SDK configuration in that process wins, even when it omits runtime options. Later explicit runtime settings produce an SDK warning on sidecar stderr. `SDK_BATCH_RPC_CALLS` configures the Sepolia node relayer. `SDK_RPC_TIMEOUT_MS` configures HTTP requests made by the sidecar provider; it does not change the native application's RPC client.
 
 Select `CREDENTIAL_STORAGE=sidecar-memory` for the SDK instance's memory store. For sidecar persistence, select `CREDENTIAL_STORAGE=persistent` and set `CREDENTIAL_STORE_NAME`, then configure the private storage volume described above.
 

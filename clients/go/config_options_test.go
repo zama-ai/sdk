@@ -9,6 +9,8 @@ import (
 	pb "github.com/zama-ai/sdk/clients/go/gen/zama/sdk/v1alpha1"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 func TestConfigOptionsAreSentAsTypedProtobuf(t *testing.T) {
@@ -85,13 +87,13 @@ func TestConfigOptionsAreSentAsTypedProtobuf(t *testing.T) {
 }
 
 func TestDerivationSecretWirePresenceAndRedaction(t *testing.T) {
-	for _, secret := range []*DerivationSecret{nil, MissingDerivationSecret(), TextDerivationSecret(""), TextDerivationSecret("synthetic-secret"), BytesDerivationSecret(nil), BytesDerivationSecret([]byte{0, 255, 128})} {
-		t.Run(fmt.Sprintf("%T-%v", secret, secret.wire() != nil), func(t *testing.T) {
+	for _, secret := range []DerivationSecret{nil, MissingDerivationSecret(), TextDerivationSecret(""), TextDerivationSecret("synthetic-secret"), BytesDerivationSecret(nil), BytesDerivationSecret([]byte{0, 255, 128})} {
+		t.Run(fmt.Sprintf("%T-%v", secret, wireDerivationSecret(secret) != nil), func(t *testing.T) {
 			config := NewSDKConfig(11155111, "http://localhost")
 			config.TransportKeyPairDerivationSecret = secret
 			client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 				r := request.(*pb.CreateContextRequest)
-				if !proto.Equal(r.TransportKeyPairDerivationSecret, secret.wire()) {
+				if !proto.Equal(r.TransportKeyPairDerivationSecret, wireDerivationSecret(secret)) {
 					t.Fatal("secret wire presence changed")
 				}
 				return &pb.CreateContextResponse{ContextId: "config"}, nil
@@ -105,6 +107,42 @@ func TestDerivationSecretWirePresenceAndRedaction(t *testing.T) {
 				}
 			}
 		})
+	}
+	message := pb.File_zama_sdk_v1alpha1_sidecar_proto.Messages().ByName("DerivationSecret")
+	for _, name := range []string{"text", "bytes"} {
+		options, ok := message.Fields().ByName(protoreflect.Name(name)).Options().(*descriptorpb.FieldOptions)
+		if !ok || !options.GetDebugRedact() {
+			t.Fatalf("generated %s field lost debug_redact", name)
+		}
+	}
+}
+
+func TestRelayerAuthFormattingRedactsCredentials(t *testing.T) {
+	for _, auth := range []RelayerAuth{
+		BearerToken{Token: "bearer-secret"},
+		APIKeyHeader{Value: "header-secret"},
+		APIKeyCookie{Value: "cookie-secret"},
+	} {
+		for _, format := range []string{"%v", "%+v", "%#v", "%s", "%q"} {
+			assertNoRelayerCredential(t, format, fmt.Sprintf(format, auth))
+		}
+		for _, value := range []any{
+			SDKConfig{Auth: auth, ProcessRuntime: &ProcessRuntime{Auth: auth}},
+			ProcessRuntime{Auth: auth},
+		} {
+			for _, format := range []string{"%v", "%+v", "%#v"} {
+				assertNoRelayerCredential(t, format, fmt.Sprintf(format, value))
+			}
+		}
+	}
+}
+
+func assertNoRelayerCredential(t *testing.T, format string, formatted string) {
+	t.Helper()
+	for _, secret := range []string{"bearer-secret", "header-secret", "cookie-secret"} {
+		if strings.Contains(formatted, secret) {
+			t.Fatalf("relayer credential leaked with %s", format)
+		}
 	}
 }
 

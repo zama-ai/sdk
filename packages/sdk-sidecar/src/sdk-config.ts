@@ -3,30 +3,38 @@ import {
   ConfigurationError,
   type FheChain,
   type ZamaConfigBase,
-  type FhevmRuntimeConfig,
 } from "@zama-fhe/sdk";
 import type {
   ChainConfig,
   ContextConfig as WireConfig,
 } from "./generated/zama/sdk/v1alpha1/sidecar.js";
-import { chainAuth, defined, decodeOptional } from "./config-values.js";
 import {
   processRuntimeConfig,
   providerConfig,
   relayerConfig,
   type ProviderConfig,
 } from "./config-options.js";
-import { address, safeInteger, unsignedInteger } from "./encoding.js";
+import {
+  chainAuth,
+  defined,
+  decodeOptional,
+  address,
+  safeInteger,
+  unsignedInteger,
+} from "./encoding.js";
 
 type HttpChain = Omit<FheChain, "network"> & { network: string };
 export interface ContextConfig extends Pick<
   ZamaConfigBase,
-  "permitTTL" | "transportKeyPairTTL" | "transportKeyPairScope" | "registryTTL"
+  | "permitTTL"
+  | "transportKeyPairTTL"
+  | "transportKeyPairScope"
+  | "registryTTL"
+  | "runtime"
+  | "relayers"
 > {
   chains: [HttpChain, ...HttpChain[]];
   chainId: number;
-  processRuntime?: FhevmRuntimeConfig;
-  relayers: ZamaConfigBase["relayers"];
   providerConfigs: Map<number, ProviderConfig>;
 }
 function chain(value: ChainConfig): HttpChain {
@@ -121,7 +129,7 @@ export function parseContextConfig(config: WireConfig | undefined): ContextConfi
           ]),
     ),
     ...defined({
-      processRuntime: decodeOptional(config.processRuntime, processRuntimeConfig),
+      runtime: decodeOptional(config.processRuntime, processRuntimeConfig),
       permitTTL: decodeOptional(config.permitTtl, (ttl) => unsignedInteger(ttl, "Permit TTL")),
       transportKeyPairTTL: decodeOptional(config.transportKeyPairTtl, (ttl) =>
         unsignedInteger(ttl, "Transport key pair TTL"),

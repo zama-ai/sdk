@@ -7,13 +7,16 @@ import (
 	pb "github.com/zama-ai/sdk/clients/go/gen/zama/sdk/v1alpha1"
 )
 
-type ChainAuth interface{ wire() *pb.ChainAuth }
+type RelayerAuth interface{ wire() *pb.ChainAuth }
+
+type ChainAuth = RelayerAuth
 
 type BearerToken struct{ Token string }
 
 func (a BearerToken) wire() *pb.ChainAuth {
 	return &pb.ChainAuth{Credential: &pb.ChainAuth_BearerToken{BearerToken: a.Token}}
 }
+func (BearerToken) Format(state fmt.State, verb rune) { redactAuth(state) }
 
 type APIKeyHeader struct {
 	Value  string
@@ -23,6 +26,7 @@ type APIKeyHeader struct {
 func (a APIKeyHeader) wire() *pb.ChainAuth {
 	return &pb.ChainAuth{Credential: &pb.ChainAuth_ApiKeyHeader{ApiKeyHeader: &pb.NamedCredential{Name: a.Header, Value: a.Value}}}
 }
+func (APIKeyHeader) Format(state fmt.State, verb rune) { redactAuth(state) }
 
 type APIKeyCookie struct {
 	Value  string
@@ -31,6 +35,11 @@ type APIKeyCookie struct {
 
 func (a APIKeyCookie) wire() *pb.ChainAuth {
 	return &pb.ChainAuth{Credential: &pb.ChainAuth_ApiKeyCookie{ApiKeyCookie: &pb.NamedCredential{Name: a.Cookie, Value: a.Value}}}
+}
+func (APIKeyCookie) Format(state fmt.State, verb rune) { redactAuth(state) }
+
+func redactAuth(state fmt.State) {
+	_, _ = state.Write([]byte("[REDACTED]"))
 }
 
 type ChainConfig struct {
@@ -45,18 +54,18 @@ type ChainConfig struct {
 	VerifyingContractAddressInputVerification *string
 	RegistryAddress                           *string
 	ExecutorAddress                           *string
-	Auth                                      ChainAuth
+	Auth                                      RelayerAuth
 	Provider                                  *ProviderOptions
 }
 
 type SDKConfig struct {
 	ProcessRuntime                   *ProcessRuntime
 	Relayers                         map[uint64]RelayerConfig
-	TransportKeyPairDerivationSecret *DerivationSecret
+	TransportKeyPairDerivationSecret DerivationSecret
 	ChainID                          *uint64
 	RPCURL                           *string
 	Chains                           []ChainConfig
-	Auth                             ChainAuth
+	Auth                             RelayerAuth
 	PermitTTL                        *uint32
 	TransportKeyPairTTL              *uint32
 	TransportKeyPairScope            *string

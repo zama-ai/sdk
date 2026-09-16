@@ -86,7 +86,7 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
     const directory = await mkdtemp(join(tmpdir(), "native-examples-"));
     const socket = join(directory, "sdk.sock");
     const privateKey = `0x${"01".repeat(32)}` as const;
-    const secret = "sdk362-example-synthetic-secret-".repeat(3);
+    const secret = "fixture-example-synthetic-secret-".repeat(3);
     const account = privateKeyToAccount(privateKey);
     const methods: string[] = [];
     const rpc = createServer((request, response) => {

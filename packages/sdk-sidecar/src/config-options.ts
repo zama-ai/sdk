@@ -4,16 +4,72 @@ import {
   type FhevmRuntimeConfig,
   type RelayerOptions,
 } from "@zama-fhe/sdk";
+import { toFhevmAuth } from "@zama-fhe/sdk/internal";
 import { node } from "@zama-fhe/sdk/node";
 import type { HttpTransportConfig } from "viem";
+import { invalidArgument } from "./errors.js";
 import type * as Wire from "./generated/zama/sdk/v1alpha1/sidecar.js";
-import { safeInteger, unsignedInteger } from "./encoding.js";
-import { chainAuth, defined, decodeOptional } from "./config-values.js";
+import { chainAuth, decodeOptional, defined, safeInteger, unsignedInteger } from "./encoding.js";
 
 export type ProviderConfig = Pick<
   HttpTransportConfig,
   "timeout" | "retryCount" | "retryDelay" | "batch"
 > & { headers?: Record<string, string>; pollingInterval?: number };
+
+type PinnedModuleVersions = Exclude<NonNullable<FhevmRuntimeConfig["moduleVersions"]>, "auto">;
+type WasmAssetLoadMode = NonNullable<FhevmRuntimeConfig["wasmAssetLoadMode"]>;
+
+const WASM_ASSET_LOAD_MODES = {
+  "embedded-base64": true,
+  "verified-blob": true,
+  "precheck-direct-url": true,
+  "trusted-direct-url": true,
+  auto: true,
+} satisfies Record<WasmAssetLoadMode, true>;
+const TFHE_VERSIONS = { "1.5.3": true, "1.6.2": true } satisfies Record<
+  NonNullable<PinnedModuleVersions["tfhe"]>,
+  true
+>;
+const KMS_VERSIONS = { "0.13.10": true, "0.13.20-0": true } satisfies Record<
+  NonNullable<PinnedModuleVersions["kms"]>,
+  true
+>;
+const COMPATIBILITY_CHECKS = { throw: true, warn: true, off: true } satisfies Record<
+  NonNullable<PinnedModuleVersions["checkCompatibility"]>,
+  true
+>;
+
+function isSupported<Value extends string>(
+  value: string,
+  supported: Readonly<Record<Value, true>>,
+): value is Value {
+  return Object.hasOwn(supported, value);
+}
+
+function supportedValue<Value extends string>(
+  value: string,
+  values: Readonly<Record<Value, true>>,
+  name: string,
+): Value {
+  if (!isSupported(value, values)) {
+    throw new ConfigurationError(`Unsupported ${name}.`);
+  }
+  return value;
+}
+
+function pinnedModuleVersions(value: Wire.PinnedModuleVersions): PinnedModuleVersions {
+  return defined({
+    tfhe: decodeOptional(value.tfhe, (version) =>
+      supportedValue(version, TFHE_VERSIONS, "TFHE module version"),
+    ),
+    kms: decodeOptional(value.kms, (version) =>
+      supportedValue(version, KMS_VERSIONS, "KMS module version"),
+    ),
+    checkCompatibility: decodeOptional(value.checkCompatibility, (check) =>
+      supportedValue(check, COMPATIBILITY_CHECKS, "module compatibility check"),
+    ),
+  });
+}
 
 function moduleVersions(value: Wire.ModuleVersions): FhevmRuntimeConfig["moduleVersions"] {
   const selection = value.selection;
@@ -21,33 +77,23 @@ function moduleVersions(value: Wire.ModuleVersions): FhevmRuntimeConfig["moduleV
     case "auto":
       return "auto";
     case "pinned":
-      return defined(selection.pinned) as FhevmRuntimeConfig["moduleVersions"];
+      return pinnedModuleVersions(selection.pinned);
     default:
       throw new ConfigurationError("Module versions require a selection.");
   }
 }
 
-function runtimeAuth(value: Wire.ChainAuth): FhevmRuntimeConfig["auth"] {
-  const auth = chainAuth(value);
-  const type = auth["__type"];
-  if (type === "BearerToken") {
-    return { type, token: auth.token };
-  }
-  if (type === "ApiKeyHeader") {
-    return { type, value: auth.value, ...defined({ header: auth.header }) };
-  }
-  return { type, value: auth.value, ...defined({ cookie: auth.cookie }) };
-}
-
 export function processRuntimeConfig(value: Wire.ProcessRuntimeConfig): FhevmRuntimeConfig {
   return defined({
-    wasmAssetLoadMode: value.wasmAssetLoadMode as FhevmRuntimeConfig["wasmAssetLoadMode"],
+    wasmAssetLoadMode: decodeOptional(value.wasmAssetLoadMode, (mode) =>
+      supportedValue(mode, WASM_ASSET_LOAD_MODES, "WASM asset load mode"),
+    ),
     moduleVersions: decodeOptional(value.moduleVersions, moduleVersions),
     singleThread: value.singleThread,
     numberOfThreads: decodeOptional(value.numberOfThreads, (number) =>
       unsignedInteger(number, "Runtime thread count"),
     ),
-    auth: decodeOptional(value.auth, runtimeAuth),
+    auth: decodeOptional(value.auth, (auth) => toFhevmAuth(chainAuth(auth))),
   });
 }
 
@@ -88,6 +134,19 @@ export function providerConfig(value: Wire.HttpProviderConfig): ProviderConfig {
 }
 
 type EncryptionKey = NonNullable<RelayerOptions["fheEncryptionKey"]>;
+type CrsCapacity = EncryptionKey["crsBytes"]["capacity"];
+
+function isCrsCapacity(value: number): value is CrsCapacity {
+  return Number.isInteger(value) && value >= 0 && value <= 0xffff_ffff;
+}
+
+function crsCapacity(value: number): CrsCapacity {
+  if (!isCrsCapacity(value)) {
+    throw invalidArgument("CRS capacity must be an unsigned 32-bit integer.");
+  }
+  return value;
+}
+
 function encryptionKey(value: Wire.FheEncryptionKey): EncryptionKey {
   const { publicKeyBytes, crsBytes, metadata } = value;
   if (!publicKeyBytes || !crsBytes || !metadata) {
@@ -97,10 +156,7 @@ function encryptionKey(value: Wire.FheEncryptionKey): EncryptionKey {
     publicKeyBytes: { id: publicKeyBytes.id, bytes: new Uint8Array(publicKeyBytes.bytes) },
     crsBytes: {
       id: crsBytes.id,
-      capacity: unsignedInteger(
-        crsBytes.capacity,
-        "CRS capacity",
-      ) as EncryptionKey["crsBytes"]["capacity"],
+      capacity: crsCapacity(crsBytes.capacity),
       bytes: new Uint8Array(crsBytes.bytes),
     },
     metadata: {

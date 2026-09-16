@@ -35,7 +35,11 @@ pub use alloy_primitives::{Address, B256};
 pub use async_trait::async_trait;
 pub use builder::SdkBuilder;
 pub use config::{ChainConfig, RelayerAuth, SdkConfig};
-pub use config_options::*;
+pub use config_options::{
+    DerivationSecret, FheCrsBytes, FheEncryptionKey, FheEncryptionKeyMetadata, FhePublicKeyBytes,
+    ModuleVersions, PinnedModuleVersions, ProcessRuntime, ProviderBatch, ProviderBatchOptions,
+    ProviderOptions, RelayerConfig, RelayerOptions, RelayerType,
+};
 pub use decryption::{
     BatchItem, Decryption, DelegatedBatchOptions, DelegatedOptions, PublicDecryption,
 };
@@ -123,9 +127,9 @@ impl Client {
         .sdk_version)
     }
     #[cfg(test)]
-    async fn create_context(&self, config: &SdkConfig, signer: SignerConfig) -> Result<Sdk> {
+    async fn create_context(&self, config: SdkConfig, signer: SignerConfig) -> Result<Sdk> {
         let context_id = self
-            .create_context_with_storage(config, signer, None, None, None)
+            .create_context_with_storage(config.try_into()?, signer, None, None, None)
             .await?;
         Ok(Sdk::from_context(
             self.clone(),
@@ -136,7 +140,7 @@ impl Client {
     }
     async fn create_context_with_storage(
         &self,
-        config: &SdkConfig,
+        config: generated::ContextConfig,
         signer: SignerConfig,
         storage: Option<generated::StorageBinding>,
         permit_storage: Option<generated::StorageBinding>,
@@ -149,7 +153,7 @@ impl Client {
         let mut inner = self.inner.clone();
         let response = unary(
             generated::CreateContextRequest {
-                config: Some(config.try_into()?),
+                config: Some(config),
                 signer_enabled,
                 account,
                 storage,

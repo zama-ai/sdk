@@ -41,6 +41,7 @@ impl SdkBuilder {
         self
     }
     pub async fn build(self) -> Result<Sdk> {
+        let config = self.config.try_into()?;
         let signer = self
             .signer
             .as_ref()
@@ -61,7 +62,7 @@ impl SdkBuilder {
         let context_id = self
             .client
             .create_context_with_storage(
-                &self.config,
+                config,
                 signer,
                 Some(self.storage.wire()),
                 self.permit_storage.as_ref().map(Storage::wire),

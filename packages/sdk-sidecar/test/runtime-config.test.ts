@@ -62,14 +62,37 @@ const fullRuntime = ProcessRuntimeConfig.fromPartial({
   numberOfThreads: 0,
   wasmAssetLoadMode: "auto",
   moduleVersions: {
-    selection: { $case: "pinned", pinned: { kms: "0.13.0", checkCompatibility: "off" } },
+    selection: { $case: "pinned", pinned: { kms: "0.13.10", checkCompatibility: "off" } },
   },
   auth: { credential: { $case: "bearerToken", bearerToken: "synthetic-token" } },
 });
 
 test("typed runtime reaches the canonical SDK lock and the first configuration wins", async () => {
+  const warn = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   const manager = new StorageManager();
   try {
+    const before = getAppliedWireRuntime();
+    for (const runtime of [
+      { wasmAssetLoadMode: "invalid" },
+      { moduleVersions: { selection: { $case: "pinned" as const, pinned: { kms: "0.13.0" } } } },
+      { moduleVersions: { selection: { $case: "pinned" as const, pinned: { tfhe: "invalid" } } } },
+      {
+        moduleVersions: {
+          selection: { $case: "pinned" as const, pinned: { checkCompatibility: "invalid" } },
+        },
+      },
+    ]) {
+      await expect(
+        createContextFactory(manager)(
+          CreateContextRequest.fromPartial({
+            config: wireConfig({ processRuntime: ProcessRuntimeConfig.fromPartial(runtime) }),
+          }),
+          undefined,
+          new RemoteStorage(),
+        ),
+      ).rejects.toThrow("Unsupported");
+      expect(getAppliedWireRuntime()).toBe(before);
+    }
     const context = await createContextFactory(manager)(
       CreateContextRequest.fromPartial({ config: wireConfig({ processRuntime: fullRuntime }) }),
       undefined,
@@ -81,18 +104,26 @@ test("typed runtime reaches the canonical SDK lock and the first configuration w
       singleThread: false,
       numberOfThreads: 0,
       wasmAssetLoadMode: "auto",
-      moduleVersions: { kms: "0.13.0", checkCompatibility: "off" },
+      moduleVersions: { kms: "0.13.10", checkCompatibility: "off" },
       auth: { type: "BearerToken", token: "synthetic-token" },
     });
 
-    createConfig({
-      chains: [anvil],
-      provider: createMockProvider(),
-      relayers: { [anvil.id]: node() },
-      runtime: { singleThread: true },
-    });
+    const later = await createContextFactory(manager)(
+      CreateContextRequest.fromPartial({
+        config: wireConfig({
+          processRuntime: ProcessRuntimeConfig.fromPartial({ singleThread: true }),
+        }),
+      }),
+      undefined,
+      new RemoteStorage(),
+    );
+    later.sdk.dispose();
+    expect(warn).toHaveBeenCalledWith(
+      "[zama-sdk] runtime configuration is already set and cannot be changed.\n",
+    );
     expect(getAppliedWireRuntime()).toBe(applied);
   } finally {
+    warn.mockRestore();
     await manager.close();
   }
 });

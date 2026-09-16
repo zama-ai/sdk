@@ -68,7 +68,7 @@ func (c *Client) CreateContext(ctx context.Context, config SDKConfig, signer Sig
 	}
 	var trailers metadata.MD
 	response, err := c.rpc.CreateContext(ctx, &pb.CreateContextRequest{
-		Config: serialized, TransportKeyPairDerivationSecret: config.TransportKeyPairDerivationSecret.wire(),
+		Config: serialized, TransportKeyPairDerivationSecret: wireDerivationSecret(config.TransportKeyPairDerivationSecret),
 		SignerEnabled: signer.SignTypedData != nil, Account: accountWire(signer.Account), Storage: storage, PermitStorage: permits,
 	}, grpc.Trailer(&trailers))
 	if err != nil {

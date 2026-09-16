@@ -24,7 +24,7 @@ func TestExternalStorageAcrossSidecarRestart(t *testing.T) {
 	defer cancel()
 	config := NewSDKConfig(31337, "http://localhost")
 	config.Storage = ApplicationStorage(NewMemoryStorage())
-	config.TransportKeyPairDerivationSecret = TextDerivationSecret("sdk362-synthetic-restart-secret-0123456789abcdef0123456789abcdef0123456789abcdef")
+	config.TransportKeyPairDerivationSecret = TextDerivationSecret("synthetic-restart-secret-0123456789abcdef0123456789abcdef0123456789abcdef")
 	var signatures atomic.Int32
 	signer := SignerConfig{Account: &WalletAccount{Address: common.BytesToAddress(bytes.Repeat([]byte{0x2b}, 20)), ChainID: 31337}, SignTypedData: func(context.Context, WalletAccount, apitypes.TypedData) ([]byte, error) {
 		signatures.Add(1)

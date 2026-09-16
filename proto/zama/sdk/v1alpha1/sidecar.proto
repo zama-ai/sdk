@@ -66,12 +66,14 @@ message CreateContextRequest {
   StorageBinding storage = 4;
   // Omission shares storage, including its backend identity.
   StorageBinding permit_storage = 5;
+  // Fields 100–119 are allocated to configuration and credential protection.
   DerivationSecret transport_key_pair_derivation_secret = 100;
 }
+// Instance input for credential protection; never persisted with credentials and never logged.
 message DerivationSecret {
   oneof value {
-    string text = 1;
-    bytes bytes = 2;
+    string text = 1 [debug_redact = true];
+    bytes bytes = 2 [debug_redact = true];
   }
 }
 message CreateContextResponse {
@@ -336,6 +338,7 @@ message ContextConfig {
   optional string transport_key_pair_scope = 5;
   // Whole seconds.
   optional uint32 registry_ttl = 6;
+  // Fields 100–119 are allocated to configuration and credential protection.
   ProcessRuntimeConfig process_runtime = 100;
   RelayerMap relayers = 101;
 }
@@ -355,6 +358,7 @@ message ChainConfig {
   optional bytes registry_address = 10;
   optional bytes executor_address = 11;
   ChainAuth auth = 12;
+  // Fields 100–119 are allocated to configuration and credential protection.
   HttpProviderConfig provider = 100;
 }
 message ChainAuth {
@@ -370,7 +374,7 @@ message NamedCredential {
   string value = 2;
 }
 
-// Runtime settings apply to the process once, at its first SDK configuration.
+// Applied once per sidecar process; the first SDK configuration wins.
 message ProcessRuntimeConfig {
   optional string wasm_asset_load_mode = 1;
   ModuleVersions module_versions = 2;

@@ -207,7 +207,7 @@ async fn preserves_context_options_typed_values_and_sdk_errors() {
             }),
         },
     )]));
-    let expected_config = generated::ContextConfig::try_from(&config).unwrap();
+    let expected_config = generated::ContextConfig::try_from(config.clone()).unwrap();
     let handler = move |path: &str, bytes: &[u8]| match path.rsplit('/').next().unwrap() {
         "CreateContext" => {
             let request = CreateContextRequest::decode(bytes).unwrap();
@@ -315,7 +315,7 @@ async fn preserves_context_options_typed_values_and_sdk_errors() {
     let server = Server::start(Arc::new(handler)).await;
     let client = Client::connect(&server.socket).await.unwrap();
     let sdk = client
-        .create_context(&config, SignerConfig::Disabled)
+        .create_context(config, SignerConfig::Disabled)
         .await
         .unwrap();
     let values = sdk.decryption().decrypt_values(&[], Some(1)).await.unwrap();
@@ -446,7 +446,7 @@ async fn signer_channel_replies_to_invalid_actions_and_keeps_processing() {
         .await
         .unwrap()
         .create_context(
-            &SdkConfig::new(11155111, "https://rpc.invalid"),
+            SdkConfig::new(11155111, "https://rpc.invalid"),
             SignerConfig::Enabled(None),
         )
         .await
@@ -612,7 +612,7 @@ async fn alloy_signer_preserves_structured_errors_on_the_channel() {
         .await
         .unwrap()
         .create_context(
-            &SdkConfig::new(11155111, "https://rpc.invalid"),
+            SdkConfig::new(11155111, "https://rpc.invalid"),
             SignerConfig::Enabled(None),
         )
         .await
@@ -677,7 +677,7 @@ async fn signer_channel_routes_concurrent_callbacks_rejection_and_cancellation()
         .await
         .unwrap()
         .create_context(
-            &SdkConfig::new(11155111, "https://rpc.invalid"),
+            SdkConfig::new(11155111, "https://rpc.invalid"),
             SignerConfig::Enabled(None),
         )
         .await
@@ -880,40 +880,11 @@ async fn deadline_covers_stalled_response_body() {
     assert_eq!(*server.timeouts.lock().unwrap(), vec![true]);
 }
 
-#[path = "storage_tests.rs"]
-mod storage_tests;
+#[path = "config_tests.rs"]
+mod config_tests;
 
 #[path = "lifecycle_tests.rs"]
 mod lifecycle_tests;
 
-#[tokio::test]
-async fn derivation_secret_is_a_separate_instance_option() {
-    for secret in [
-        None,
-        Some(crate::DerivationSecret::missing()),
-        Some(crate::DerivationSecret::text("")),
-        Some(crate::DerivationSecret::text("synthetic-secret")),
-        Some(crate::DerivationSecret::bytes(vec![])),
-        Some(crate::DerivationSecret::bytes(vec![0, 255])),
-    ] {
-        let expected = secret.clone().map(crate::DerivationSecret::wire);
-        let config = SdkConfig::new(11155111, "http://localhost");
-        let expected_config = generated::ContextConfig::try_from(&config).unwrap();
-        let server = Server::start(Arc::new(move |path, bytes| {
-            if path.ends_with("/CreateContext") {
-                let request = CreateContextRequest::decode(bytes).unwrap();
-                assert_eq!(request.transport_key_pair_derivation_secret, expected);
-                assert_eq!(request.config, Some(expected_config.clone()));
-            }
-            default_handler(path, bytes)
-        }))
-        .await;
-        let client = Client::connect(&server.socket).await.unwrap();
-        let mut builder = client.sdk(config);
-        if let Some(secret) = secret {
-            builder = builder.transport_key_pair_derivation_secret(secret);
-        }
-        let sdk = builder.build().await.unwrap();
-        sdk.close().await.unwrap();
-    }
-}
+#[path = "storage_tests.rs"]
+mod storage_tests;

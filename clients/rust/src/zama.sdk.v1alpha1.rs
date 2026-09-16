@@ -30,9 +30,11 @@ pub struct CreateContextRequest {
     /// Omission shares storage, including its backend identity.
     #[prost(message, optional, tag = "5")]
     pub permit_storage: ::core::option::Option<StorageBinding>,
+    /// Fields 100–119 are allocated to configuration and credential protection.
     #[prost(message, optional, tag = "100")]
     pub transport_key_pair_derivation_secret: ::core::option::Option<DerivationSecret>,
 }
+/// Instance input for credential protection; never persisted with credentials and never logged.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct DerivationSecret {
     #[prost(oneof = "derivation_secret::Value", tags = "1, 2")]
@@ -510,6 +512,7 @@ pub struct ContextConfig {
     /// Whole seconds.
     #[prost(uint32, optional, tag = "6")]
     pub registry_ttl: ::core::option::Option<u32>,
+    /// Fields 100–119 are allocated to configuration and credential protection.
     #[prost(message, optional, tag = "100")]
     pub process_runtime: ::core::option::Option<ProcessRuntimeConfig>,
     #[prost(message, optional, tag = "101")]
@@ -550,6 +553,7 @@ pub struct ChainConfig {
     pub executor_address: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
     #[prost(message, optional, tag = "12")]
     pub auth: ::core::option::Option<ChainAuth>,
+    /// Fields 100–119 are allocated to configuration and credential protection.
     #[prost(message, optional, tag = "100")]
     pub provider: ::core::option::Option<HttpProviderConfig>,
 }
@@ -578,7 +582,7 @@ pub struct NamedCredential {
     #[prost(string, tag = "2")]
     pub value: ::prost::alloc::string::String,
 }
-/// Runtime settings apply to the process once, at its first SDK configuration.
+/// Applied once per sidecar process; the first SDK configuration wins.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ProcessRuntimeConfig {
     #[prost(string, optional, tag = "1")]

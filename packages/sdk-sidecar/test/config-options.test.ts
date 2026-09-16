@@ -159,7 +159,7 @@ test("preserves runtime, relayer, empty maps, zeroes, and explicit false", () =>
     }),
   );
 
-  expect(config.processRuntime).toEqual({
+  expect(config.runtime).toEqual({
     singleThread: false,
     numberOfThreads: 0,
     wasmAssetLoadMode: "auto",
@@ -275,6 +275,27 @@ test("supports cleartext and rejects incomplete typed selections", () => {
   ).toThrow("Module versions require a selection.");
 });
 
+test("rejects unsupported runtime values before they reach the SDK", () => {
+  const base = {
+    wasmAssetLoadMode: undefined,
+    moduleVersions: undefined,
+    singleThread: undefined,
+    numberOfThreads: undefined,
+    auth: undefined,
+  };
+  expect(() => processRuntimeConfig({ ...base, wasmAssetLoadMode: "other" })).toThrow(
+    "Unsupported WASM asset load mode.",
+  );
+  for (const pinned of [{ tfhe: "1.6" }, { kms: "0.13.0" }, { checkCompatibility: "ignore" }]) {
+    expect(() =>
+      processRuntimeConfig({
+        ...base,
+        moduleVersions: ModuleVersions.fromPartial({ selection: { $case: "pinned", pinned } }),
+      }),
+    ).toThrow("Unsupported");
+  }
+});
+
 test("omitted and explicit empty relayer maps stay distinct", () => {
   const omitted = parseContextConfig(ContextConfig.fromPartial({ chains: [preset] }));
   const empty = parseContextConfig(
@@ -321,4 +342,23 @@ test("rejects an incomplete prefetched encryption key envelope", () => {
       },
     }),
   ).toThrow("requires public key, CRS and metadata");
+});
+
+test("rejects an invalid prefetched CRS capacity", () => {
+  expect(() =>
+    relayerConfig({
+      type: "node",
+      options: {
+        timeout: undefined,
+        debug: undefined,
+        batchRpcCalls: undefined,
+        moduleVersions: undefined,
+        fheEncryptionKey: {
+          publicKeyBytes: { id: "key", bytes: Buffer.alloc(0) },
+          crsBytes: { id: "crs", capacity: -1, bytes: Buffer.alloc(0) },
+          metadata: { relayerUrl: "https://relayer.invalid", chainId },
+        },
+      },
+    }),
+  ).toThrow("CRS capacity must be an unsigned 32-bit integer.");
 });
