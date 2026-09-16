@@ -28,10 +28,7 @@ Most apps should use `Vault` (`useVault` / `useDeposit` / `useRequestWithdrawal`
 ```ts
 import { createVault } from "@zama-fhe/sdk/vaults";
 
-const addresses = {
-  depositBatcher: "0xDepositBatcher",
-  redeemBatcher: "0xRedeemBatcher",
-};
+const addresses = { depositBatcher: "0xDepositBatcher", redeemBatcher: "0xRedeemBatcher" };
 const vault = createVault(sdk, addresses);
 
 // Resolved from the batchers on first use, then cached:
@@ -44,10 +41,7 @@ const vaultAddress = await vault.vaultAddress();
 ```tsx
 import { useVault } from "@zama-fhe/react-sdk/vaults";
 
-const addresses = {
-  depositBatcher: "0xDepositBatcher",
-  redeemBatcher: "0xRedeemBatcher",
-};
+const addresses = { depositBatcher: "0xDepositBatcher", redeemBatcher: "0xRedeemBatcher" };
 const vault = useVault(addresses);
 ```
 
@@ -116,12 +110,12 @@ const { data: state } = useBatchState({
 
 `batchState` decides which action is legal, so read it before offering the user a button:
 
-| `BatchState` | What the user can do                                |
-| ------------ | --------------------------------------------------- |
-| `Pending`    | `deposit` / `requestWithdrawal`, or `quit`          |
-| `Dispatched` | Nothing — wait                                      |
-| `Finalized`  | `claim`                                             |
-| `Canceled`   | `quit` (or `recover`), to take the deposit back     |
+| `BatchState` | What the user can do                            |
+| ------------ | ----------------------------------------------- |
+| `Pending`    | `deposit` / `requestWithdrawal`, or `quit`      |
+| `Dispatched` | Nothing — wait                                  |
+| `Finalized`  | `claim`                                         |
+| `Canceled`   | `quit` (or `recover`), to take the deposit back |
 
 {% hint style="warning" %}
 `Canceled` is the last enum value, not "done". Claiming a canceled batch reverts — a canceled batch never executed, so there is nothing to claim, only a deposit to take back.
