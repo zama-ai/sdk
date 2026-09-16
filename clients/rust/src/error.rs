@@ -8,6 +8,35 @@ pub struct SdkError {
     pub retry_after_seconds: Option<u32>,
 }
 
+impl SdkError {
+    pub fn chain_mismatch(message: impl Into<String>) -> Self {
+        Self {
+            code: "CHAIN_MISMATCH".into(),
+            message: message.into(),
+            retryable: false,
+            retry_after_seconds: None,
+        }
+    }
+
+    pub fn signing_rejected(message: impl Into<String>) -> Self {
+        Self {
+            code: "SIGNING_REJECTED".into(),
+            message: message.into(),
+            retryable: false,
+            retry_after_seconds: None,
+        }
+    }
+
+    pub fn signing_failed(message: impl Into<String>) -> Self {
+        Self {
+            code: "SIGNING_FAILED".into(),
+            message: message.into(),
+            retryable: false,
+            retry_after_seconds: None,
+        }
+    }
+}
+
 impl fmt::Display for SdkError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}: {}", self.code, self.message)

@@ -82,7 +82,25 @@ pub(crate) async fn attach_signer(
     }))
 }
 
+fn signing_request(action: generated::SignerAction) -> Result<SigningRequest, SdkError> {
+    Ok(SigningRequest {
+        operation_id: action.operation_id,
+        action_id: action.action_id,
+        account: action
+            .account
+            .ok_or_else(|| SdkError::signing_failed("Missing signer account."))?
+            .try_into()
+            .map_err(|error: anyhow::Error| {
+                SdkError::signing_failed(format!("Invalid signer account: {error}"))
+            })?,
+        typed_data: serde_json::from_str(&action.typed_data_json).map_err(|error| {
+            SdkError::signing_failed(format!("Invalid signing request typed data: {error}"))
+        })?,
+    })
+}
+
 type ActionKey = (String, String);
+
 enum Pending {
     Running(AbortHandle),
     Settled,
@@ -131,20 +149,16 @@ impl Callbacks {
         if self.pending.contains_key(&key) {
             return Ok(());
         }
-        let request = SigningRequest {
-            operation_id: action.operation_id,
-            action_id: action.action_id,
-            account: action
-                .account
-                .context("missing signer account")?
-                .try_into()?,
-            typed_data: serde_json::from_str(&action.typed_data_json)?,
-        };
+        let request = signing_request(action);
         let sign = self.sign.clone();
         let sender = self.sender.clone();
         let result_key = key.clone();
         let abort = self.tasks.spawn(async move {
-            let result = match sign.sign_typed_data(request).await {
+            let result = match request {
+                Ok(request) => sign.sign_typed_data(request).await,
+                Err(error) => Err(error),
+            };
+            let result = match result {
                 Ok(signature) => generated::signer_reply::Result::Signature(signature),
                 Err(error) => generated::signer_reply::Result::Error(error.into()),
             };
