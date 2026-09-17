@@ -3,9 +3,11 @@ import { randomBytes } from "node:crypto";
 import { bytesToHex } from "viem";
 import { json } from "../../src/encoding.js";
 import { createEncryptionValidationBackend } from "../../../sdk/src/test-fixtures/encryption.js";
+import scenarios from "../../../../proto/fixtures/encryption-scenarios.json";
 import { fixture, testServer } from "./harness.js";
 
 type EncryptionOperation = ReturnType<typeof fixture>["relayer"]["encryptValues"];
+export const encryptionScenarios = scenarios;
 
 export async function syntheticEncryption({
   values,
@@ -13,25 +15,26 @@ export async function syntheticEncryption({
   userAddress,
   options,
 }: Parameters<EncryptionOperation>[0]): ReturnType<EncryptionOperation> {
-  if (options?.timeout === 15) {
+  // Timeout selects synthetic behavior so every native client can share one fixture protocol.
+  if (options?.timeout === encryptionScenarios.invalidInput) {
     return createEncryptionValidationBackend()({ values, contractAddress, userAddress, options });
   }
-  if (options?.timeout === 13) {
+  if (options?.timeout === encryptionScenarios.rateLimited) {
     throw Object.assign(new Error("Encryption service busy"), { status: 429, retryAfter: 7 });
   }
-  if (options?.timeout === 16) {
+  if (options?.timeout === encryptionScenarios.fractionalRetryHint) {
     throw Object.assign(new Error("Encryption retry hint is fractional"), {
       status: 429,
       retryAfter: 7.5,
     });
   }
-  if (options?.timeout === 17) {
+  if (options?.timeout === encryptionScenarios.unavailable) {
     throw Object.assign(new Error("Encryption service unavailable"), {
       status: 503,
       retryAfter: 9,
     });
   }
-  if (options?.timeout === 14) {
+  if (options?.timeout === encryptionScenarios.cancelled) {
     await new Promise<void>((_, reject) => {
       const abort = () => reject(new Error("Encryption aborted"));
       if (options.signal?.aborted) {

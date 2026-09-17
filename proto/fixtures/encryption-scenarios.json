@@ -1,0 +1,7 @@
+{
+  "rateLimited": 13,
+  "cancelled": 14,
+  "invalidInput": 15,
+  "fractionalRetryHint": 16,
+  "unavailable": 17
+}

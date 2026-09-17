@@ -1,12 +1,29 @@
 use anyhow::Result;
+use serde::Deserialize;
 use serde_json::{Value, json};
 use std::time::Duration;
 use zama_sdk_sidecar::{Address, BigInt, Client, EncryptInput, EncryptParams, RpcError, SdkConfig};
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct EncryptionScenarios {
+    rate_limited: u32,
+    cancelled: u32,
+    invalid_input: u32,
+}
 
 #[tokio::test]
 #[ignore = "requires SDK-backed encryption fixture server"]
 async fn encryption_preserves_sdk_semantics() -> Result<()> {
     let socket = std::env::var("SIDECAR_ENCRYPT_TEST_SOCKET")?;
+    let EncryptionScenarios {
+        rate_limited,
+        cancelled,
+        invalid_input,
+    } = serde_json::from_str(&std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../proto/fixtures/encryption-scenarios.json"
+    ))?)?;
     let sdk = Client::connect(socket)
         .await?
         .sdk(SdkConfig::new(31337, "http://fixture.invalid"))
@@ -76,7 +93,7 @@ async fn encryption_preserves_sdk_semantics() -> Result<()> {
     let proof: Value = serde_json::from_slice(&empty.input_proof)?;
     assert_eq!(proof["timeout"], 0);
 
-    let error = sdk.encrypt(params, Some(13)).await.unwrap_err();
+    let error = sdk.encrypt(params, Some(rate_limited)).await.unwrap_err();
     let error = error.downcast_ref::<RpcError>().unwrap();
     let sdk_error = error.sdk.as_ref().unwrap();
     assert_eq!(sdk_error.code, "RELAYER_REQUEST_FAILED");
@@ -94,7 +111,7 @@ async fn encryption_preserves_sdk_semantics() -> Result<()> {
                     values: &[invalid],
                     ..params
                 },
-                Some(15),
+                Some(invalid_input),
             )
             .await
             .unwrap_err();
@@ -109,15 +126,21 @@ async fn encryption_preserves_sdk_semantics() -> Result<()> {
     }
 
     assert!(
-        tokio::time::timeout(Duration::from_millis(100), sdk.encrypt(params, Some(14)))
-            .await
-            .is_err()
+        tokio::time::timeout(
+            Duration::from_millis(100),
+            sdk.encrypt(params, Some(cancelled)),
+        )
+        .await
+        .is_err()
     );
     let bounded = sdk.clone().with_timeout(Duration::from_millis(100));
     assert!(
-        tokio::time::timeout(Duration::from_secs(2), bounded.encrypt(params, Some(14)))
-            .await?
-            .is_err()
+        tokio::time::timeout(
+            Duration::from_secs(2),
+            bounded.encrypt(params, Some(cancelled)),
+        )
+        .await?
+        .is_err()
     );
     assert_eq!(
         sdk.encrypt(params, None).await?.encrypted_values.len(),

@@ -12,7 +12,7 @@ import type {
   EncryptResponse,
 } from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
 import type { ContextSdk } from "../src/runtime.js";
-import { encryptionFixture, encryptionServer } from "./support/encryption.js";
+import { encryptionFixture, encryptionScenarios, encryptionServer } from "./support/encryption.js";
 
 const contractAddress = getAddress("0x1234567890123456789012345678901234567890");
 const userAddress = getAddress("0xabcdefabcdefabcdefabcdefabcdefabcdefabcd");
@@ -147,14 +147,24 @@ test("empty inputs and out-of-range integers reach SDK unchanged", async () => {
 });
 
 test.each([
-  { timeout: 13, details: "Encryption service busy", retryable: ["true"], retryAfter: ["7"] },
   {
-    timeout: 16,
+    timeout: encryptionScenarios.rateLimited,
+    details: "Encryption service busy",
+    retryable: ["true"],
+    retryAfter: ["7"],
+  },
+  {
+    timeout: encryptionScenarios.fractionalRetryHint,
     details: "Encryption retry hint is fractional",
     retryable: ["true"],
     retryAfter: [],
   },
-  { timeout: 17, details: "Encryption service unavailable", retryable: ["false"], retryAfter: [] },
+  {
+    timeout: encryptionScenarios.unavailable,
+    details: "Encryption service unavailable",
+    retryable: ["false"],
+    retryAfter: [],
+  },
 ])(
   "SDK failure preserves only valid whole-second retry details for timeout $timeout",
   async ({ timeout, details, retryable, retryAfter }) => {
@@ -194,13 +204,16 @@ test("concurrent public encryption and cancellation remain isolated", async () =
     const start = () => {
       let call: ReturnType<typeof remote.client.encrypt>;
       const result = new Promise<ServiceError>((resolve, reject) => {
-        call = remote.client.encrypt(remote.request(inputs, 14), (error) => {
-          if (error) {
-            resolve(error);
-          } else {
-            reject(new Error("blocked encryption unexpectedly completed"));
-          }
-        });
+        call = remote.client.encrypt(
+          remote.request(inputs, encryptionScenarios.cancelled),
+          (error) => {
+            if (error) {
+              resolve(error);
+            } else {
+              reject(new Error("blocked encryption unexpectedly completed"));
+            }
+          },
+        );
       });
       return { call: call!, result };
     };
@@ -226,7 +239,7 @@ test("concurrent public encryption and cancellation remain isolated", async () =
 test.each(["cancel", "deadline", "close"])("%s aborts SDK encryption", async (mode) => {
   const remote = await harness();
   try {
-    const request = remote.request(inputs, 14);
+    const request = remote.request(inputs, encryptionScenarios.cancelled);
     let call: ReturnType<typeof remote.client.encrypt>;
     const result = new Promise<EncryptResponse>((resolve, reject) => {
       call = remote.client.encrypt(
@@ -348,7 +361,7 @@ test("a direct SDK call observes the same abort signal behavior", async () => {
   try {
     const result = direct.sdk.encrypt(
       { values: inputs, contractAddress, userAddress },
-      { timeout: 14, signal: controller.signal },
+      { timeout: encryptionScenarios.cancelled, signal: controller.signal },
     );
     const failed = result.catch((error: Error) => error);
     await expect.poll(() => direct.encryptValues.mock.calls.length).toBe(1);

@@ -1,9 +1,8 @@
 # Encrypt inputs and decrypt a balance from Rust or Go
 
-Use the maintained, permanently beta sidecar of `@zama-fhe/sdk` for external partner applications. Run it in Docker to encrypt contract inputs and decrypt a balance from a native Rust or Go application. Both examples print:
+Use the maintained, permanently beta sidecar of `@zama-fhe/sdk` for external partner applications. Run it in Docker to encrypt contract inputs and decrypt a balance from a native Rust or Go application. Both examples print the encrypted inputs, followed by:
 
 ```text
-Encrypted inputs: <ordered encrypted values>
 Input proof: 0x<proof bytes>
 User Address: <wallet address>
 Token: <name> (<token address>) https://eth-sepolia.blockscout.com/token/<token address>
@@ -31,7 +30,7 @@ export SIDECAR_UID="$(id -u)"
 export SIDECAR_GID="$(id -g)"
 
 dc() {
-  docker compose --project-name sdk363-encryption --env-file .env.sidecar.local \
+  docker compose --env-file .env.sidecar.local \
     -f packages/sdk-sidecar/compose.yaml "$@"
 }
 ```

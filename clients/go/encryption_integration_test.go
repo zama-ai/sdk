@@ -15,11 +15,31 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type encryptionScenarios struct {
+	RateLimited  uint32 `json:"rateLimited"`
+	Cancelled    uint32 `json:"cancelled"`
+	InvalidInput uint32 `json:"invalidInput"`
+}
+
+func loadEncryptionScenarios(t *testing.T) encryptionScenarios {
+	t.Helper()
+	contents, err := os.ReadFile("../../proto/fixtures/encryption-scenarios.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarios encryptionScenarios
+	if err := json.Unmarshal(contents, &scenarios); err != nil {
+		t.Fatal(err)
+	}
+	return scenarios
+}
+
 func TestEncryptionSDKIntegration(t *testing.T) {
 	socket := os.Getenv("SIDECAR_ENCRYPT_TEST_SOCKET")
 	if socket == "" {
 		t.Skip("set SIDECAR_ENCRYPT_TEST_SOCKET with the SDK encryption fixture")
 	}
+	scenarios := loadEncryptionScenarios(t)
 	client, err := Dial(socket)
 	if err != nil {
 		t.Fatal(err)
@@ -75,13 +95,13 @@ func TestEncryptionSDKIntegration(t *testing.T) {
 	if err != nil || len(empty.EncryptedValues) != 0 {
 		t.Fatalf("empty inputs: %v", err)
 	}
-	timeout := uint32(13)
+	timeout := scenarios.RateLimited
 	_, err = sdk.Encrypt(ctx, params, EncryptOptions{TimeoutMS: &timeout})
 	var details *SDKError
 	if !errors.As(err, &details) || details.Code != "RELAYER_REQUEST_FAILED" {
 		t.Fatalf("structured SDK failure: %v", err)
 	}
-	timeout = 15
+	timeout = scenarios.InvalidInput
 	for _, invalid := range []struct {
 		name  string
 		value EncryptInput
@@ -98,7 +118,7 @@ func TestEncryptionSDKIntegration(t *testing.T) {
 			}
 		})
 	}
-	timeout = 14
+	timeout = scenarios.Cancelled
 	cancelCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
 	defer cancel()
 	_, err = sdk.Encrypt(cancelCtx, params, EncryptOptions{TimeoutMS: &timeout})

@@ -17,8 +17,6 @@ service SidecarService {
   rpc SignerChannel(stream SignerClientMessage) returns (stream SignerServerMessage);
   // Attach once per context to serve application storage; keys and values remain opaque.
   rpc StorageChannel(stream StorageClientMessage) returns (stream StorageServerMessage);
-  // Calls sdk.encrypt with explicit user/contract binding; no wallet signing is required.
-  rpc Encrypt(EncryptRequest) returns (EncryptResponse);
   // Calls decryption.decryptValues, including automatic permit acquisition and credential recovery.
   rpc DecryptValues(DecryptValuesRequest) returns (DecryptValuesResponse);
   // Calls decryption.delegatedDecryptValues; an omitted account uses the delegator address.
@@ -49,6 +47,8 @@ service SidecarService {
   rpc WarmTransportKeyPairScope(ScopeRequest) returns (WarmTransportKeyPairScopeResponse);
   // Calls permits.revokeTransportKeyPair for the supplied credential scope.
   rpc RevokeTransportKeyPair(ScopeRequest) returns (RevokeTransportKeyPairResponse);
+  // Calls sdk.encrypt with explicit user/contract binding; no wallet signing is required.
+  rpc Encrypt(EncryptRequest) returns (EncryptResponse);
 }
 message Empty {}
 message GetInfoRequest {}
@@ -95,27 +95,6 @@ message Operation {
 }
 message OperationRequest {
   Operation operation = 1;
-}
-message EncryptInput {
-  string type = 1;
-  oneof value {
-    // Canonical signed decimal encoding; the SDK validates the value range.
-    string bigint_value = 2;
-    bool bool_value = 3;
-    bytes address_value = 4;
-  }
-}
-message EncryptRequest {
-  Operation operation = 1;
-  repeated EncryptInput values = 2;
-  bytes contract_address = 3;
-  bytes user_address = 4;
-  // SDK timeout in whole milliseconds; independent of the gRPC deadline.
-  optional uint32 timeout_ms = 5;
-}
-message EncryptResponse {
-  repeated bytes encrypted_values = 1;
-  bytes input_proof = 2;
 }
 // encrypted_value contains a 32-byte handle; contract_address contains 20 bytes.
 message EncryptedInput {
@@ -472,4 +451,25 @@ message ProviderBatchOptions {
   optional uint32 batch_size = 1;
   // Whole milliseconds.
   optional uint32 wait = 2;
+}
+message EncryptInput {
+  string type = 1;
+  oneof value {
+    // Canonical signed decimal encoding; the SDK validates the value range.
+    string bigint_value = 2;
+    bool bool_value = 3;
+    bytes address_value = 4;
+  }
+}
+message EncryptRequest {
+  Operation operation = 1;
+  repeated EncryptInput values = 2;
+  bytes contract_address = 3;
+  bytes user_address = 4;
+  // SDK timeout in whole milliseconds; independent of the gRPC deadline.
+  optional uint32 timeout_ms = 5;
+}
+message EncryptResponse {
+  repeated bytes encrypted_values = 1;
+  bytes input_proof = 2;
 }
