@@ -61,17 +61,22 @@ async fn verifies_account_and_chain_and_keeps_preparation_failures_certain() {
         .disable_recommended_fillers()
         .wallet(signer.clone())
         .connect_mocked_client(rpc.clone());
-    let wallet = AlloySigner::new(signer).with_transactions(provider, |_request| async { Ok(()) });
+    let wallet =
+        AlloySigner::new(signer).with_transactions(provider, |_request, _cancel| async { Ok(()) });
     let mut wrong_account = request.clone();
     wrong_account.account.address = Address::ZERO;
     assert_eq!(
-        wallet.write_contract(wrong_account).await.unwrap_err().code,
+        wallet
+            .write_contract(wrong_account, CancellationToken::new())
+            .await
+            .unwrap_err()
+            .code,
         "SIGNING_FAILED"
     );
     rpc.push_success(&"0x2");
     assert_eq!(
         wallet
-            .write_contract(request.clone())
+            .write_contract(request.clone(), CancellationToken::new())
             .await
             .unwrap_err()
             .code,
@@ -81,7 +86,7 @@ async fn verifies_account_and_chain_and_keeps_preparation_failures_certain() {
     rpc.push_success(&"0x1");
     assert_eq!(
         wallet
-            .write_contract(request.clone())
+            .write_contract(request.clone(), CancellationToken::new())
             .await
             .unwrap_err()
             .code,
@@ -97,11 +102,15 @@ async fn rejection_never_submits() {
     let provider = ProviderBuilder::new()
         .wallet(signer.clone())
         .connect_mocked_client(Asserter::new());
-    let wallet = AlloySigner::new(signer).with_transactions(provider, |_request| async {
+    let wallet = AlloySigner::new(signer).with_transactions(provider, |_request, _cancel| async {
         Err(SdkError::signing_rejected("declined"))
     });
     assert_eq!(
-        wallet.write_contract(request).await.unwrap_err().code,
+        wallet
+            .write_contract(request, CancellationToken::new())
+            .await
+            .unwrap_err()
+            .code,
         "SIGNING_REJECTED"
     );
     assert!(wallet.uncertain.lock().await.is_none());
@@ -205,7 +214,11 @@ impl Network {
 struct RecordingPolicy(SyncMutex<Vec<B256>>);
 #[async_trait::async_trait]
 impl WritePolicy for RecordingPolicy {
-    async fn approve(&self, _request: &ContractWriteRequest) -> Result<(), SdkError> {
+    async fn approve(
+        &self,
+        _request: &ContractWriteRequest,
+        _cancel: &CancellationToken,
+    ) -> Result<(), SdkError> {
         Ok(())
     }
     fn submitting(&self, _request: &ContractWriteRequest, transaction: &TxEnvelope) {
@@ -222,19 +235,25 @@ async fn uncertain_broadcast_blocks_following_writes_with_a_certain_code() {
         RecordingPolicy::default(),
     );
     let request = request(test_signer().address());
-    let error = wallet.write_contract(request.clone()).await.unwrap_err();
+    let error = wallet
+        .write_contract(request.clone(), CancellationToken::new())
+        .await
+        .unwrap_err();
     let submitted = *network.recorded.lock().unwrap()[0].tx_hash();
     assert_eq!(error.code, "TRANSACTION_OUTCOME_UNKNOWN");
     assert!(!error.retryable);
     assert!(error.message.contains(&submitted.to_string()));
     assert_eq!(wallet.policy.0.lock().unwrap().as_slice(), &[submitted]);
-    let blocked = wallet.write_contract(request).await.unwrap_err();
+    let blocked = wallet
+        .write_contract(request, CancellationToken::new())
+        .await
+        .unwrap_err();
     assert_eq!(blocked.code, "SIGNING_FAILED");
     assert!(blocked.message.contains(&submitted.to_string()));
     assert_eq!(network.recorded.lock().unwrap().len(), 1);
 }
 #[tokio::test]
-async fn cancellation_after_submission_blocks_following_writes() {
+async fn cancellation_after_signing_still_broadcasts() {
     let network = Network {
         hold: Some(Arc::new(tokio::sync::Semaphore::new(0))),
         ..Network::default()
@@ -244,32 +263,55 @@ async fn cancellation_after_submission_blocks_following_writes() {
         RecordingPolicy::default(),
     ));
     let request = request(test_signer().address());
+    let cancel = CancellationToken::new();
     let active_wallet = wallet.clone();
     let active_request = request.clone();
-    let active = tokio::spawn(async move { active_wallet.write_contract(active_request).await });
+    let active_cancel = cancel.clone();
+    let active = tokio::spawn(async move {
+        active_wallet
+            .write_contract(active_request, active_cancel)
+            .await
+    });
     while network.recorded.lock().unwrap().is_empty() {
         tokio::task::yield_now().await;
     }
-    active.abort();
-    assert!(active.await.unwrap_err().is_cancelled());
+    cancel.cancel();
+    network.hold.as_ref().unwrap().add_permits(1);
     let submitted = *network.recorded.lock().unwrap()[0].tx_hash();
-    // The policy saw the signed transaction even though the callback never returned its hash.
+    assert_eq!(active.await.unwrap().unwrap(), submitted);
     assert_eq!(wallet.policy.0.lock().unwrap().as_slice(), &[submitted]);
-    let blocked = wallet.write_contract(request).await.unwrap_err();
-    assert_eq!(blocked.code, "SIGNING_FAILED");
-    assert_eq!(network.recorded.lock().unwrap().len(), 1);
+    assert!(wallet.uncertain.lock().await.is_none());
 }
 #[tokio::test]
-async fn alloy_wallet_signs_and_broadcasts_concurrent_writes_without_receipts() {
+async fn cancellation_before_approval_never_broadcasts() {
+    let network = Network::default();
+    let wallet = AlloySigner::new(test_signer()).with_transactions(
+        network.provider(FixtureFiller::default()),
+        |_request, _cancel| async { Err(SdkError::signing_rejected("approval must not run")) },
+    );
+    let cancel = CancellationToken::new();
+    cancel.cancel();
+    let error = wallet
+        .write_contract(request(test_signer().address()), cancel)
+        .await
+        .unwrap_err();
+    assert_eq!(error.code, "SIGNING_FAILED");
+    assert!(network.recorded.lock().unwrap().is_empty());
+    assert!(wallet.uncertain.lock().await.is_none());
+}
+#[tokio::test]
+async fn alloy_wallet_signs_and_broadcasts_serialized_writes_without_receipts() {
     let network = Network::default();
     let filler = FixtureFiller::default();
     let nonces = filler.0.clone();
     let wallet = AlloySigner::new(test_signer())
-        .with_transactions(network.provider(filler), |_request| async { Ok(()) });
+        .with_transactions(network.provider(filler), |_request, _cancel| async {
+            Ok(())
+        });
     let request = request(test_signer().address());
     let (first, second) = tokio::join!(
-        wallet.write_contract(request.clone()),
-        wallet.write_contract(request.clone())
+        wallet.write_contract(request.clone(), CancellationToken::new()),
+        wallet.write_contract(request.clone(), CancellationToken::new())
     );
     let recorded = network.recorded.lock().unwrap();
     assert_eq!(recorded.len(), 2);
@@ -283,4 +325,124 @@ async fn alloy_wallet_signs_and_broadcasts_concurrent_writes_without_receipts() 
         assert_eq!(tx.input().as_ref(), request.data.as_slice());
     }
     assert_eq!(nonces.load(std::sync::atomic::Ordering::SeqCst), 2);
+}
+
+/// Answers the recommended filler stack and can fail gas estimation once.
+#[derive(Clone)]
+struct RecoveringNetwork {
+    sent: Arc<SyncMutex<Vec<TxEnvelope>>>,
+    fail_gas: Arc<SyncMutex<bool>>,
+    /// Turns true once a nonce request has been answered, gating the gas failure behind it.
+    nonce_served: Arc<tokio::sync::watch::Sender<bool>>,
+}
+impl Default for RecoveringNetwork {
+    fn default() -> Self {
+        Self {
+            sent: Arc::default(),
+            fail_gas: Arc::default(),
+            nonce_served: Arc::new(tokio::sync::watch::channel(false).0),
+        }
+    }
+}
+impl RecoveringNetwork {
+    fn transport(
+        &self,
+    ) -> impl tower::Service<
+        alloy_json_rpc::RequestPacket,
+        Response = alloy_json_rpc::ResponsePacket,
+        Error = alloy_transport::TransportError,
+        Future = alloy_transport::TransportFut<'static>,
+    > + Clone
+    + Send
+    + Sync
+    + use<> {
+        let network = self.clone();
+        tower::service_fn(
+            move |packet: alloy_json_rpc::RequestPacket| -> alloy_transport::TransportFut<'static> {
+                let network = network.clone();
+                Box::pin(async move {
+                    let packet = serde_json::to_value(packet).unwrap();
+                    let result = match packet["method"].as_str().unwrap() {
+                        "eth_chainId" => serde_json::json!("0x1"),
+                        "eth_getTransactionCount" => {
+                            network.nonce_served.send_replace(true);
+                            serde_json::json!("0x5")
+                        }
+                        "eth_feeHistory" => serde_json::json!({
+                            "oldestBlock": "0x1",
+                            "baseFeePerGas": ["0x7", "0x7"],
+                            "gasUsedRatio": [0.5],
+                            "reward": [["0x1"]],
+                        }),
+                        "eth_estimateGas" => {
+                            if std::mem::take(&mut *network.fail_gas.lock().unwrap()) {
+                                // The nonce read of the same fill has to settle before this failure.
+                                let mut served = network.nonce_served.subscribe();
+                                // The timeout only keeps a broken stack from hanging; the test
+                                // asserts the nonce was served.
+                                let _ = tokio::time::timeout(Duration::from_secs(5), async {
+                                    while !*served.borrow_and_update() {
+                                        served.changed().await.unwrap();
+                                    }
+                                })
+                                .await;
+                                return Err(alloy_transport::TransportErrorKind::custom_str(
+                                    "gas estimation unavailable",
+                                ));
+                            }
+                            serde_json::json!("0x5208")
+                        }
+                        "eth_sendRawTransaction" => {
+                            let raw = alloy_primitives::hex::decode(
+                                packet["params"][0].as_str().unwrap(),
+                            )
+                            .unwrap();
+                            let tx = TxEnvelope::decode_2718(&mut raw.as_slice()).unwrap();
+                            let hash = *tx.tx_hash();
+                            network.sent.lock().unwrap().push(tx);
+                            serde_json::json!(hash)
+                        }
+                        method => panic!("unexpected RPC method: {method}"),
+                    };
+                    Ok::<_, alloy_transport::TransportError>(
+                        serde_json::from_value::<alloy_json_rpc::ResponsePacket>(
+                            serde_json::json!({
+                                "jsonrpc": "2.0", "id": packet["id"], "result": result,
+                            }),
+                        )
+                        .unwrap(),
+                    )
+                })
+            },
+        )
+    }
+}
+#[tokio::test]
+async fn simple_nonce_management_keeps_the_nonce_after_a_fill_failure() {
+    let network = RecoveringNetwork::default();
+    *network.fail_gas.lock().unwrap() = true;
+    let provider = ProviderBuilder::new()
+        .disable_recommended_fillers()
+        .with_gas_estimation()
+        .with_blob_gas_estimation()
+        .with_simple_nonce_management()
+        .fetch_chain_id()
+        .wallet(test_signer())
+        .connect_client(alloy_rpc_client::RpcClient::new(network.transport(), true));
+    let wallet = AlloySigner::new(test_signer())
+        .with_transactions(provider, |_request, _cancel| async { Ok(()) });
+    let request = request(test_signer().address());
+    let failed = wallet
+        .write_contract(request.clone(), CancellationToken::new())
+        .await
+        .unwrap_err();
+    assert_eq!(failed.code, "SIGNING_FAILED");
+    assert!(network.sent.lock().unwrap().is_empty());
+    // The failing fill took a nonce, which a cached manager would not hand out twice.
+    assert!(*network.nonce_served.borrow());
+    wallet
+        .write_contract(request, CancellationToken::new())
+        .await
+        .unwrap();
+    assert_eq!(network.sent.lock().unwrap()[0].nonce(), 5);
 }

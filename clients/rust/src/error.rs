@@ -45,7 +45,7 @@ impl SdkError {
         }
     }
 
-    /// Sidecar-specific: a contract write may have reached the network without yielding a hash.
+    /// A contract write may have reached the network without yielding a hash.
     pub fn transaction_outcome_unknown(message: impl Into<String>) -> Self {
         Self {
             code: "TRANSACTION_OUTCOME_UNKNOWN".into(),

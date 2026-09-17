@@ -21,7 +21,7 @@ import type {
   SignerAction,
 } from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import { bytes, json } from "./encoding.js";
-import { callbackError } from "./callback-errors.js";
+import { callbackError, decodeCallbackError } from "./callback-errors.js";
 import { cancelled, errorDetails, SidecarError, TransactionCallbackError } from "./errors.js";
 
 export type SignerStream = ServerDuplexStream<SignerClientMessage, SignerServerMessage>;
@@ -49,7 +49,11 @@ const contractWrite: Kind = {
   method: "writeContract",
   settle(result) {
     if (result?.$case === "error") {
-      throw callbackError(result.error, true);
+      const decoded = decodeCallbackError(result.error);
+      // Codes outside the SDK taxonomy must survive the SDK's transaction wrapper; INTERNAL stays opaque.
+      throw decoded.kind === "foreign" && decoded.error.code !== "INTERNAL"
+        ? transactionCallbackError(decoded.error)
+        : decoded.error;
     }
     if (result?.$case === "transactionHash" && result.transactionHash.length === 32) {
       return bytesToHex(result.transactionHash);
@@ -69,26 +73,42 @@ type Pending = {
 };
 export class RemoteSigner extends BaseSigner {
   #connection = new CallbackConnection<SignerClientMessage, SignerServerMessage>((error) => {
-    const pending = [...this.#pending.values()];
-    const writes = new Set(
-      pending.filter((entry) => entry.kind === contractWrite).map((entry) => entry.operationId),
-    );
-    const others = [...new Set(pending.map((entry) => entry.operationId))].filter(
-      (operationId) => !writes.has(operationId),
-    );
+    const reasons = new Map<string, Error>();
+    for (const { operationId, kind } of this.#pending.values()) {
+      // A contract write outranks any other action pending for the same operation.
+      if (kind === contractWrite || !reasons.has(operationId)) {
+        reasons.set(operationId, kind.lost(cancelled()));
+      }
+    }
     // Settle callbacks before aborting their operations so writes keep the uncertain outcome.
     this.#rejectAll(error instanceof Error ? error : cancelled());
-    this.#onDisconnect(others);
-    this.#onDisconnect([...writes], contractWrite.lost(cancelled()));
+    for (const [operationId, reason] of reasons) {
+      this.#onDisconnect(operationId, reason);
+    }
   });
   #pending = new Map<string, Pending>();
-  #onDisconnect: (operationIds: readonly string[], reason?: Error) => void;
+  #onDisconnect: (operationId: string, reason: Error) => void;
   constructor(
     account: WalletAccount | undefined,
-    onDisconnect: (operationIds: readonly string[], reason?: Error) => void,
+    onDisconnect: (operationId: string, reason: Error) => void,
   ) {
     super(account);
     this.#onDisconnect = onDisconnect;
+  }
+  #hasPendingWrite(operationId: string): boolean {
+    for (const pending of this.#pending.values()) {
+      if (pending.operationId === operationId && pending.kind === contractWrite) {
+        return true;
+      }
+    }
+    return false;
+  }
+  abortReason(operationId: string): Error {
+    return this.#hasPendingWrite(operationId)
+      ? transactionOutcomeUnknown(
+          "Operation cancelled after a transaction was requested; the wallet may have broadcast it.",
+        )
+      : cancelled();
   }
   attach(stream: SignerStream): void {
     if (this.#connection.connected) {
@@ -174,7 +194,7 @@ export class RemoteSigner extends BaseSigner {
           return;
         }
         operation.signal.removeEventListener("abort", abort);
-        reject(cancelled());
+        reject(operation.signal.reason instanceof Error ? operation.signal.reason : cancelled());
         if (this.#connection.connected) {
           this.#send({
             message: { $case: "cancelled", cancelled: { operationId: operation.id, actionId } },
@@ -220,6 +240,18 @@ export class RemoteSigner extends BaseSigner {
     this.#rejectAll(cancelled());
     super.dispose();
   }
+}
+
+function transactionCallbackError(error: SidecarError): TransactionCallbackError {
+  const uncertain = error.code === "TRANSACTION_OUTCOME_UNKNOWN";
+  return new TransactionCallbackError(
+    error.code,
+    error.grpcStatus,
+    error.message,
+    // A possibly broadcast transaction must never look retryable, whatever the wallet reported.
+    uncertain ? false : error.retryable,
+    uncertain ? undefined : error.retryAfterSeconds,
+  );
 }
 
 function transactionOutcomeUnknown(message: string): TransactionCallbackError {

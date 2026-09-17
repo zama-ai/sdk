@@ -183,3 +183,15 @@ func TestConcurrentTransactionCallbacksRemainCorrelated(t *testing.T) {
 		t.Fatal("first transaction did not finish")
 	}
 }
+
+func TestContractWriteRejectsNonCanonicalAmounts(t *testing.T) {
+	for _, encoded := range []string{"-1", "-0", "01", "", " 1", "+1", "1.0", "0x1"} {
+		t.Run(encoded, func(t *testing.T) {
+			wire := transactionWire()
+			wire.Value = &encoded
+			if _, err := contractWriteRequest("operation", "action", WalletAccount{}, wire); err == nil {
+				t.Fatal("malformed amount decoded")
+			}
+		})
+	}
+}

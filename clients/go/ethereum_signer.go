@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/big"
 	"strings"
+	"time"
 
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -25,7 +26,9 @@ type EthereumTransactionBackend interface {
 
 type ApproveContractWriteFunc func(context.Context, ContractWriteRequest) error
 
-// WritePolicy is the application's say over each contract write.
+// broadcastTimeout bounds a send that the caller's cancellation is no longer allowed to stop.
+const broadcastTimeout = 30 * time.Second
+
 type WritePolicy struct {
 	// Approve runs before signing; returning an error stops the write without a broadcast.
 	Approve ApproveContractWriteFunc
@@ -104,7 +107,7 @@ func (w *ethereumWriter) writeContract(ctx context.Context, request ContractWrit
 		return common.Hash{}, &SDKError{Code: "CHAIN_MISMATCH", Message: "transaction chain does not match wallet"}
 	}
 	request = cloneContractWrite(request)
-	// Approval runs before the serialization gate; the RPC chain is verified right before submission.
+	// Approval runs outside the serialization gate, so the chain is rechecked once this write holds it.
 	if err := w.policy.Approve(ctx, cloneContractWrite(request)); err != nil {
 		return common.Hash{}, err
 	}
@@ -135,10 +138,10 @@ func (w *ethereumWriter) writeContract(ctx context.Context, request ContractWrit
 	if w.policy.Submitting != nil {
 		w.policy.Submitting(cloneContractWrite(request), signed)
 	}
-	if err := ctx.Err(); err != nil {
-		return common.Hash{}, err
-	}
-	if err := w.backend.SendTransaction(ctx, signed); err != nil {
+	// The signed transaction must reach the RPC even if the caller gave up while it was being signed.
+	sendCtx, cancelSend := context.WithTimeout(context.WithoutCancel(ctx), broadcastTimeout)
+	defer cancelSend()
+	if err := w.backend.SendTransaction(sendCtx, signed); err != nil {
 		// A transport error cannot prove that the node rejected the signed transaction.
 		w.uncertain = newBroadcastUncertainError(signed.Hash(), err)
 		return common.Hash{}, w.uncertain

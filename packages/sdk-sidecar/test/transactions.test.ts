@@ -2,7 +2,7 @@ import { BaseSigner, SigningRejectedError, Token, type WriteContractConfig } fro
 import { encodeFunctionData, parseAbi } from "viem";
 import { expect, test, vi } from "vitest";
 import { bytes, json } from "../src/encoding.js";
-import { errorDetails } from "../src/errors.js";
+import { errorDetails, TransactionCallbackError } from "../src/errors.js";
 import { operationContext, RemoteSigner, type SignerStream } from "../src/remote-signer.js";
 import { createCoordinator } from "../src/coordination.js";
 import { SidecarRuntime } from "../src/runtime.js";
@@ -146,6 +146,30 @@ test.each([
   h.signer.dispose();
 });
 
+test("a wallet write error keeps an invalid retry hint classified as an invalid argument", async () => {
+  const h = setup();
+  const pending = h.write("invalid-retry");
+  h.reply(0, {
+    $case: "error",
+    error: {
+      code: "INVALID_ARGUMENT",
+      message: "Bad retry hint",
+      retryable: true,
+      retryAfterSeconds: 0,
+    },
+  });
+  const error = await pending.catch((error: unknown) => error);
+  expect(error).toMatchObject({ code: "INVALID_ARGUMENT", retryable: false });
+  expect(error).not.toBeInstanceOf(TransactionCallbackError);
+  expect(errorDetails(error)).toEqual({
+    code: "INVALID_ARGUMENT",
+    message: "Retry delay must be positive whole seconds within uint32 range.",
+    retryable: false,
+    retryAfterSeconds: undefined,
+  });
+  h.signer.dispose();
+});
+
 test("a transaction hash answering a typed-data request is a signing failure", async () => {
   const h = setup();
   const pending = operationContext.run({ id: "sign", signal: h.controller.signal }, () =>
@@ -160,8 +184,8 @@ test("cancellation after broadcast does not accept a late hash or replay on reco
   const h = setup();
   const pending = h.write("broadcast");
   const settled = pending.catch((error: unknown) => error);
-  h.controller.abort();
-  expect(await settled).toMatchObject({ code: "CANCELLED" });
+  h.controller.abort(h.signer.abortReason("broadcast"));
+  expect(await settled).toMatchObject({ code: "TRANSACTION_OUTCOME_UNKNOWN", retryable: false });
   h.reply(0, transactionHash());
   expect(frames(h.stream.messages, "cancelled")).toHaveLength(1);
   expect(frames(h.stream.messages, "replyError")).toHaveLength(1);
@@ -280,7 +304,7 @@ test("account updates cancel and drain contract writes before publishing the new
       contextId: id,
       account: { address: bytes(target), chainId: 31337n },
     });
-    expect(await settled).toMatchObject({ code: "CANCELLED" });
+    expect(await settled).toMatchObject({ code: "TRANSACTION_OUTCOME_UNKNOWN", retryable: false });
     expect(signer!.walletAccount.getSnapshot()?.address).toBe(target);
     expect(frames(stream.messages, "cancelled")).toHaveLength(1);
     const [action] = frames(stream.messages, "action");
@@ -352,3 +376,32 @@ test.each(["malformed", "native uncertainty", "channel loss"] as const)(
     }
   },
 );
+
+test.each([
+  ["typed data", "CANCELLED"],
+  ["contract write", "TRANSACTION_OUTCOME_UNKNOWN"],
+] as const)("cancelling an operation with a pending %s action reports %s", async (kind, code) => {
+  let signer: RemoteSigner | undefined;
+  const runtime = new SidecarRuntime(async (_, remote) => {
+    signer = remote;
+    return { sdk: fixture(remote).sdk, storageIdentities: [] };
+  }, createCoordinator());
+  const id = await runtime.createContext(contextRequest);
+  const stream = new FakeStream<SignerServerMessage>();
+  runtime.attachSigner(id, stream as unknown as SignerStream);
+  const caller = new AbortController();
+  try {
+    const pending = runtime.execute({ contextId: id, operationId: "cancel" }, caller.signal, () =>
+      kind === "contract write"
+        ? signer!.writeContract(config)
+        : signer!.signTypedData({ domain: {}, types: {}, message: {}, primaryType: "Test" }),
+    );
+    const settled = pending.catch((error: unknown) => error);
+    await vi.waitFor(() => expect(frames(stream.messages, "action")).toHaveLength(1));
+    caller.abort();
+    expect(await settled).toMatchObject({ code, retryable: false });
+    expect(frames(stream.messages, "cancelled")).toHaveLength(1);
+  } finally {
+    await runtime.close();
+  }
+});

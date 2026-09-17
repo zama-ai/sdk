@@ -17,27 +17,22 @@ import (
 const sepoliaChainID = 11155111
 
 func connectEthereum(ctx context.Context, config exampleConfig) (*ethclient.Client, sidecar.SignerConfig, error) {
-	signer, err := sidecar.NewPrivateKeySigner(config.privateKey, sepoliaChainID)
-	if err != nil {
-		return nil, sidecar.SignerConfig{}, err
-	}
-	if signer.Account.Address != config.owner {
-		return nil, sidecar.SignerConfig{}, errors.New("wallet does not match owner")
-	}
 	rpc, err := ethclient.DialContext(ctx, config.rpcURL)
 	if err != nil {
 		return nil, sidecar.SignerConfig{}, err
 	}
-	chain, err := rpc.ChainID(ctx)
-	if err != nil {
+	fail := func(err error) (*ethclient.Client, sidecar.SignerConfig, error) {
 		rpc.Close()
 		return nil, sidecar.SignerConfig{}, err
 	}
-	if !chain.IsUint64() || chain.Uint64() != sepoliaChainID {
-		rpc.Close()
-		return nil, sidecar.SignerConfig{}, errors.New("RPC must use Sepolia")
+	chain, err := rpc.ChainID(ctx)
+	if err != nil {
+		return fail(err)
 	}
-	signer, err = sidecar.NewEthereumSigner(config.privateKey, sepoliaChainID, rpc, sidecar.WritePolicy{
+	if !chain.IsUint64() || chain.Uint64() != sepoliaChainID {
+		return fail(errors.New("RPC must use Sepolia"))
+	}
+	signer, err := sidecar.NewEthereumSigner(config.privateKey, sepoliaChainID, rpc, sidecar.WritePolicy{
 		Approve: func(ctx context.Context, request sidecar.ContractWriteRequest) error {
 			if request.Address != config.token {
 				return fmt.Errorf("%w: example wallet only approves the configured token", sidecar.ErrSigningRejected)
@@ -50,8 +45,10 @@ func connectEthereum(ctx context.Context, config exampleConfig) (*ethclient.Clie
 		},
 	})
 	if err != nil {
-		rpc.Close()
-		return nil, sidecar.SignerConfig{}, err
+		return fail(err)
+	}
+	if signer.Account.Address != config.owner {
+		return fail(errors.New("wallet does not match owner"))
 	}
 	return rpc, signer, nil
 }

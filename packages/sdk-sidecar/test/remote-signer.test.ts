@@ -56,7 +56,7 @@ test("signer routes replies by operation and action without killing unrelated wo
 test("cancellation cancels the wallet action and rejects late SDK signer callbacks", async () => {
   const { controller, signer, stream, sign } = setup();
   const pending = sign("cancelled");
-  controller.abort();
+  controller.abort(signer.abortReason("cancelled"));
   await expect(pending).rejects.toMatchObject({ code: "CANCELLED" });
   expect(frames(stream.messages, "cancelled").at(-1)?.cancelled.operationId).toBe("cancelled");
   await expect(sign("late")).rejects.toMatchObject({ code: "CANCELLED" });

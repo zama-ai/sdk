@@ -3,9 +3,9 @@ use alloy_signer_local::PrivateKeySigner;
 use anyhow::{Result, ensure};
 use std::{collections::HashMap, env};
 use zama_sdk_sidecar::{
-    Address, ApplicationStorage, ChainConfig, Client, ContractWriteRequest, DerivationSecret,
-    MemoryStorage, ProcessRuntime, ProviderOptions, RelayerAuth, RelayerConfig, RelayerOptions,
-    RelayerTransport, Sdk, SdkConfig, SdkError, Signer, Storage, WalletAccount,
+    Address, ApplicationStorage, CancellationToken, ChainConfig, Client, ContractWriteRequest,
+    DerivationSecret, MemoryStorage, ProcessRuntime, ProviderOptions, RelayerAuth, RelayerConfig,
+    RelayerOptions, RelayerTransport, Sdk, SdkConfig, SdkError, Signer, Storage, WalletAccount,
     alloy::{AlloySigner, TxEnvelope, WritePolicy},
 };
 
@@ -104,7 +104,13 @@ impl Settings {
 
     /// EIP-712 signing plus transaction broadcasting; the SDK decides when either is needed.
     pub fn wallet(&self) -> Result<impl Signer + use<>> {
+        // A cached nonce can outlive a failed fill, so later writes would gap.
         let provider = ProviderBuilder::new()
+            .disable_recommended_fillers()
+            .with_gas_estimation()
+            .with_blob_gas_estimation()
+            .with_simple_nonce_management()
+            .fetch_chain_id()
             .wallet(self.signer.clone())
             .connect_reqwest(http_client()?, self.rpc_url.parse()?);
         Ok(AlloySigner::new(self.signer.clone()).with_transactions(
@@ -134,7 +140,11 @@ struct ExamplePolicy {
 }
 #[async_trait::async_trait]
 impl WritePolicy for ExamplePolicy {
-    async fn approve(&self, request: &ContractWriteRequest) -> Result<(), SdkError> {
+    async fn approve(
+        &self,
+        request: &ContractWriteRequest,
+        _cancel: &CancellationToken,
+    ) -> Result<(), SdkError> {
         if request.address != self.allowed_token {
             return Err(SdkError::signing_rejected(
                 "Example wallet only approves the configured token.",

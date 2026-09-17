@@ -15,13 +15,14 @@ type ContractWriteRequest struct {
 	ActionID    string
 	Account     WalletAccount
 	Address     common.Address
-	// Data is SDK-encoded calldata; JSON arguments retain bigints as decimal strings.
+	// Data is SDK-encoded calldata and must be broadcast unchanged.
 	Data         []byte
 	ABI          json.RawMessage
 	FunctionName string
-	Args         json.RawMessage
-	Value        *big.Int
-	Gas          *big.Int
+	// Args carries SDK bigint arguments as canonical decimal strings.
+	Args  json.RawMessage
+	Value *big.Int
+	Gas   *big.Int
 }
 
 // WriteContractFunc approves, signs and broadcasts once; cancellation cannot undo submission.
@@ -53,7 +54,7 @@ func optionalTransactionInteger(encoded *string) (*big.Int, error) {
 		return nil, nil
 	}
 	value, ok := new(big.Int).SetString(*encoded, 10)
-	if !ok || value.String() != *encoded {
+	if !ok || value.Sign() < 0 || value.String() != *encoded {
 		return nil, errors.New("invalid canonical transaction integer")
 	}
 	return value, nil

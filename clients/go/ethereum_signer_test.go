@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 const transactionTestKey = "0000000000000000000000000000000000000000000000000000000000000001"
@@ -161,27 +162,56 @@ func TestEthereumSignerReportsSignedTransactionBeforeBroadcast(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	var recorded []*types.Transaction
-	backend := &transactionBackend{chain: 1, beforeSend: func(context.Context) { cancel() }}
+	backend := &transactionBackend{chain: 1}
 	signer, err := NewEthereumSigner(transactionTestKey, 1, backend, WritePolicy{
-		Approve:    acceptTransaction,
-		Submitting: func(_ ContractWriteRequest, tx *types.Transaction) { recorded = append(recorded, tx) },
+		Approve: acceptTransaction,
+		// Cancelling here leaves the caller gone between signing and the send.
+		Submitting: func(_ ContractWriteRequest, tx *types.Transaction) { recorded = append(recorded, tx); cancel() },
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	hash, err := signer.WriteContract(ctx, transactionRequest(signer))
-	if err != nil || len(recorded) != 1 || recorded[0].Hash() != hash || backend.sent[0].Hash() != hash {
-		t.Fatalf("signed transaction not recorded before broadcast: %s %v", hash, err)
+	if err != nil || len(recorded) != 1 || recorded[0].Hash() != hash || len(backend.sent) != 1 || backend.sent[0].Hash() != hash {
+		t.Fatalf("recorded transaction not broadcast after cancellation: %s %v", hash, err)
 	}
 }
-func TestEthereumSignerCancellationAfterAcceptedBroadcastReturnsHash(t *testing.T) {
+func TestEthereumSignerBroadcastIgnoresCallerCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	backend := &transactionBackend{chain: 1, beforeSend: func(context.Context) { cancel() }}
+	backend := &transactionBackend{chain: 1}
+	backend.beforeSend = func(sendCtx context.Context) {
+		cancel()
+		select {
+		case <-sendCtx.Done():
+			backend.sendErr = sendCtx.Err()
+		case <-time.After(20 * time.Millisecond):
+		}
+	}
 	signer := transactionSigner(t, backend, acceptTransaction)
 	hash, err := signer.WriteContract(ctx, transactionRequest(signer))
 	if err != nil || hash != backend.sent[0].Hash() {
 		t.Fatalf("accepted hash lost: %s %v", hash, err)
+	}
+}
+
+func TestEthereumSignerBoundedBroadcastFailureStaysUncertain(t *testing.T) {
+	backend := &transactionBackend{chain: 1}
+	backend.beforeSend = func(sendCtx context.Context) {
+		deadline, bounded := sendCtx.Deadline()
+		if !bounded || time.Until(deadline) > broadcastTimeout {
+			t.Error("broadcast is not bounded by the adapter timeout")
+		}
+		short, stop := context.WithTimeout(sendCtx, time.Millisecond)
+		defer stop()
+		<-short.Done()
+		backend.sendErr = short.Err()
+	}
+	signer := transactionSigner(t, backend, acceptTransaction)
+	hash, err := signer.WriteContract(t.Context(), transactionRequest(signer))
+	var uncertain *BroadcastUncertainError
+	if hash != (common.Hash{}) || !errors.As(err, &uncertain) || uncertain.Hash != backend.sent[0].Hash() {
+		t.Fatalf("timed out broadcast misreported: %s %v", hash, err)
 	}
 }
 

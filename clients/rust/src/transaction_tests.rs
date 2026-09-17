@@ -68,14 +68,18 @@ struct TestWallet<F>(F);
 #[async_trait::async_trait]
 impl<F, Fut> Signer for TestWallet<F>
 where
-    F: Fn(ContractWriteRequest) -> Fut + Send + Sync,
+    F: Fn(ContractWriteRequest, CancellationToken) -> Fut + Send + Sync,
     Fut: Future<Output = Result<B256, SdkError>> + Send,
 {
     async fn sign_typed_data(&self, _request: SigningRequest) -> Result<Vec<u8>, SdkError> {
         Ok(vec![7])
     }
-    async fn write_contract(&self, request: ContractWriteRequest) -> Result<B256, SdkError> {
-        (self.0)(request).await
+    async fn write_contract(
+        &self,
+        request: ContractWriteRequest,
+        cancel: CancellationToken,
+    ) -> Result<B256, SdkError> {
+        (self.0)(request, cancel).await
     }
 }
 
@@ -88,20 +92,25 @@ async fn writes_correlate_reject_cancel_and_never_replay() {
     let (started, mut starts) = mpsc::unbounded_channel();
     let release = Arc::new(tokio::sync::Notify::new());
     let release_write = release.clone();
-    let signer = TestWallet(move |request: ContractWriteRequest| {
-        let started = started.clone();
-        let release = release_write.clone();
-        async move {
-            started.send(request.action_id.clone()).unwrap();
-            match request.action_id.as_str() {
-                "slow" => release.notified().await,
-                "cancel" => std::future::pending().await,
-                "reject" => return Err(SdkError::signing_rejected("declined")),
-                _ => (),
+    let signer = TestWallet(
+        move |request: ContractWriteRequest, cancel: CancellationToken| {
+            let started = started.clone();
+            let release = release_write.clone();
+            async move {
+                started.send(request.action_id.clone()).unwrap();
+                match request.action_id.as_str() {
+                    "slow" => release.notified().await,
+                    "cancel" => {
+                        cancel.cancelled().await;
+                        return Err(SdkError::signing_failed("cancelled before signing"));
+                    }
+                    "reject" => return Err(SdkError::signing_rejected("declined")),
+                    _ => (),
+                }
+                Ok(B256::repeat_byte(3))
             }
-            Ok(B256::repeat_byte(3))
-        }
-    });
+        },
+    );
     let mut callbacks = Callbacks {
         sign: Arc::new(signer),
         sender,
@@ -176,4 +185,44 @@ async fn writes_correlate_reject_cancel_and_never_replay() {
     drop(operation);
     callbacks.sweep_cancelled();
     assert!(callbacks.pending.is_empty());
+}
+
+#[tokio::test]
+async fn channel_teardown_never_kills_an_in_flight_broadcast() {
+    let operations = Arc::new(crate::operations::Operations::new());
+    let operation = operations.start("context");
+    let id = &operation.message.operation_id;
+    let (sender, replies) = mpsc::channel(16);
+    let (started, mut starts) = mpsc::unbounded_channel();
+    let (submitted, mut submissions) = mpsc::unbounded_channel();
+    let release = Arc::new(tokio::sync::Notify::new());
+    let release_write = release.clone();
+    let signer = TestWallet(
+        move |_request: ContractWriteRequest, _cancel: CancellationToken| {
+            let started = started.clone();
+            let submitted = submitted.clone();
+            let release = release_write.clone();
+            async move {
+                started.send(()).unwrap();
+                // Stands in for a broadcast the node has already accepted.
+                release.notified().await;
+                submitted.send(B256::repeat_byte(3)).unwrap();
+                Ok(B256::repeat_byte(3))
+            }
+        },
+    );
+    let mut callbacks = Callbacks {
+        sign: Arc::new(signer),
+        sender,
+        operations,
+        tasks: JoinSet::new(),
+        pending: HashMap::new(),
+    };
+    callbacks.start(write_action(id, "write")).unwrap();
+    starts.recv().await.unwrap();
+    // The channel loop and its reply sink go away while the write is held in the broadcast.
+    drop(callbacks);
+    drop(replies);
+    release.notify_one();
+    assert_eq!(submissions.recv().await.unwrap(), B256::repeat_byte(3));
 }
