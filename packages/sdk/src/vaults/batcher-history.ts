@@ -2,8 +2,10 @@ import { getAddress, type Address } from "viem";
 import type { ZamaSDK } from "../zama-sdk";
 import { currentBatchIdContract } from "./contracts";
 
+/** The two sides a vault has a batcher for. */
 export const BATCHER_DIRECTIONS = ["deposit", "redeem"] as const;
 
+/** Union of all {@link BATCHER_DIRECTIONS} values. */
 export type BatcherDirection = (typeof BATCHER_DIRECTIONS)[number];
 
 /**
@@ -11,6 +13,7 @@ export type BatcherDirection = (typeof BATCHER_DIRECTIONS)[number];
  * `currentBatchId` passes `lastBatchId`.
  */
 export interface RetiredBatcher {
+  /** The retired batcher contract. */
   readonly address: Address;
   /** The last batch this batcher accepts joins into. */
   readonly lastBatchId: bigint;

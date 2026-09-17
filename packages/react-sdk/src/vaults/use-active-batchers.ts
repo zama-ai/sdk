@@ -12,7 +12,9 @@ import { useVaultGroup } from "./use-vault-group";
 
 /** Configuration for {@link useActiveBatchers}. */
 export interface UseActiveBatchersConfig {
+  /** The group whose members to resolve. */
   group: VaultGroupConfig;
+  /** Which side of the group to read — the deposit or the redeem batchers. */
   direction: BatcherDirection;
 }
 

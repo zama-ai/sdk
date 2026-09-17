@@ -7,6 +7,7 @@ import { vaultQueryKeys } from "./query-keys";
 
 /** Configuration for {@link activeBatcherQueryOptions}. */
 export interface ActiveBatcherQueryConfig {
+  /** The vault's batcher history for one direction. */
   history: BatcherHistory;
   /** Additional TanStack Query options merged into the generated query (e.g. `staleTime`, `enabled`). */
   query?: Record<string, unknown>;
