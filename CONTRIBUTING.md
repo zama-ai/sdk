@@ -169,7 +169,7 @@ Release behavior:
 Release workflows:
 
 - `Release` (`.github/workflows/release.yml`): automatic publish on push to `main`, `beta`, and `alpha`, gated by `Vitest` and `Playwright`.
-- Manual publish: the same `Release` workflow (`release.yml`) also runs on `workflow_dispatch` (same `main`/`beta`/`alpha` restriction and `Vitest` + `Playwright` gates). Use it to recover when semantic-release created the tag but the npm publish step failed — a `publish-tag` input republishes from an existing tag, and a `dry-run` input is available.
+- Manual publish: the same `Release` workflow (`release.yml`) also runs on `workflow_dispatch`. Use it to recover when semantic-release created the tag but the npm publish step failed — a `publish-tag` input republishes from an existing tag, and a `dry-run` input is available. This path does **not** go through `validate-branch`/`Vitest`/`Playwright` — it only verifies that the tag resolves to a commit reachable from `main`, `beta`, or `alpha` before checking it out.
 - `Release Preview` (`.github/workflows/release-preview.yml`): manual dry-run restricted to `main`, `beta`, and `alpha` (`pnpm release:dry-run`), no publish side effects.
 
 Install channels:
@@ -183,6 +183,8 @@ Maintainer requirements:
 - Configure branch protection on `main` to require both `Vitest` and `Playwright` checks before merge.
 - Configure branch protection on `beta` and `alpha` with the same required checks.
 - Configure npm trusted publishers for `@zama-fhe/sdk` and `@zama-fhe/react-sdk` pointing to this repository's `release.yml` workflow.
+- Restrict creation/update of tags matching the release pattern (e.g. `v*`) to the release-bot identity, via a repo ruleset.
+- As one coordinated change (not independently — npm matches on repo + workflow filename only, so requiring the claim on one side without the other breaks every publish, including the automated path): add an `environment: npm-publish` key to both the `publish-from-tag` and `release` jobs in `release.yml`, configure that environment's deployment branch/tag policy to allow only `main`, `beta`, `alpha`, and the release-tag pattern, and update npm's trusted-publisher config to require that environment claim.
 
 ## Architecture Guidelines
 
