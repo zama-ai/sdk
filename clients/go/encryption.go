@@ -13,6 +13,7 @@ import (
 
 type EncryptInput struct {
 	wire *pb.EncryptInput
+	err  error
 }
 
 type EncryptParams struct {
@@ -37,49 +38,49 @@ func Ebool(value bool) EncryptInput {
 
 func EboolBigInt(value *big.Int) EncryptInput {
 	if value == nil {
-		return EncryptInput{}
+		return EncryptInput{err: errors.New("ebool value is nil")}
 	}
 	return EncryptInput{wire: &pb.EncryptInput{Value: &pb.EncryptInput_EboolBigint{EboolBigint: value.String()}}}
 }
 
 func Euint8(value *big.Int) EncryptInput {
 	if value == nil {
-		return EncryptInput{}
+		return EncryptInput{err: errors.New("euint8 value is nil")}
 	}
 	return EncryptInput{wire: &pb.EncryptInput{Value: &pb.EncryptInput_Euint8{Euint8: value.String()}}}
 }
 
 func Euint16(value *big.Int) EncryptInput {
 	if value == nil {
-		return EncryptInput{}
+		return EncryptInput{err: errors.New("euint16 value is nil")}
 	}
 	return EncryptInput{wire: &pb.EncryptInput{Value: &pb.EncryptInput_Euint16{Euint16: value.String()}}}
 }
 
 func Euint32(value *big.Int) EncryptInput {
 	if value == nil {
-		return EncryptInput{}
+		return EncryptInput{err: errors.New("euint32 value is nil")}
 	}
 	return EncryptInput{wire: &pb.EncryptInput{Value: &pb.EncryptInput_Euint32{Euint32: value.String()}}}
 }
 
 func Euint64(value *big.Int) EncryptInput {
 	if value == nil {
-		return EncryptInput{}
+		return EncryptInput{err: errors.New("euint64 value is nil")}
 	}
 	return EncryptInput{wire: &pb.EncryptInput{Value: &pb.EncryptInput_Euint64{Euint64: value.String()}}}
 }
 
 func Euint128(value *big.Int) EncryptInput {
 	if value == nil {
-		return EncryptInput{}
+		return EncryptInput{err: errors.New("euint128 value is nil")}
 	}
 	return EncryptInput{wire: &pb.EncryptInput{Value: &pb.EncryptInput_Euint128{Euint128: value.String()}}}
 }
 
 func Euint256(value *big.Int) EncryptInput {
 	if value == nil {
-		return EncryptInput{}
+		return EncryptInput{err: errors.New("euint256 value is nil")}
 	}
 	return EncryptInput{wire: &pb.EncryptInput{Value: &pb.EncryptInput_Euint256{Euint256: value.String()}}}
 }
@@ -91,6 +92,9 @@ func Eaddress(value common.Address) EncryptInput {
 func (s *SDKContext) Encrypt(ctx context.Context, params EncryptParams, options EncryptOptions) (*EncryptResult, error) {
 	values := make([]*pb.EncryptInput, len(params.Values))
 	for i, value := range params.Values {
+		if value.err != nil {
+			return nil, fmt.Errorf("encryption input %d: %w", i, value.err)
+		}
 		if value.wire == nil {
 			return nil, fmt.Errorf("encryption input %d: missing value", i)
 		}

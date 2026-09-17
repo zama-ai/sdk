@@ -147,8 +147,8 @@ func TestEncryptRejectsAbsentInputs(t *testing.T) {
 		message string
 	}{
 		{"zero value", EncryptInput{}, "encryption input 1: missing value"},
-		{"nil integer", Euint64(nil), "encryption input 1: missing value"},
-		{"nil boolean integer", EboolBigInt(nil), "encryption input 1: missing value"},
+		{"nil integer", Euint64(nil), "encryption input 1: euint64 value is nil"},
+		{"nil boolean integer", EboolBigInt(nil), "encryption input 1: ebool value is nil"},
 	} {
 		t.Run(absent.name, func(t *testing.T) {
 			params := EncryptParams{Values: []EncryptInput{Ebool(true), absent.input}}
