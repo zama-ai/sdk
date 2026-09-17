@@ -1,17 +1,12 @@
 use alloy_provider::{Provider, ProviderBuilder};
 use alloy_signer_local::PrivateKeySigner;
-use alloy_sol_types::sol;
 use anyhow::{Result, ensure};
 use std::{collections::HashMap, env};
-use zama_sdk_sidecar::{Address, B256, ChainConfig, RelayerAuth, SdkConfig, WalletAccount};
-
-sol! {
-    #[sol(rpc)]
-    interface ConfidentialToken {
-        function name() external view returns (string);
-        function confidentialBalanceOf(address account) external view returns (bytes32);
-    }
-}
+use zama_sdk_sidecar::{
+    Address, ApplicationStorage, ChainConfig, Client, DerivationSecret, MemoryStorage,
+    ProcessRuntime, ProviderOptions, RelayerAuth, RelayerConfig, RelayerOptions, RelayerType, Sdk,
+    SdkConfig, Storage, WalletAccount, alloy::AlloySigner,
+};
 
 pub struct Settings {
     pub socket: String,
@@ -20,11 +15,15 @@ pub struct Settings {
     pub config: SdkConfig,
     pub signer: PrivateKeySigner,
     rpc_url: String,
+    storage: Storage,
+    derivation_secret: Option<DerivationSecret>,
 }
 impl Settings {
     pub fn load() -> Result<Self> {
-        let values =
-            dotenvy::from_path_iter(".env.sidecar.local")?.collect::<Result<HashMap<_, _>, _>>()?;
+        let values = dotenvy::from_path_iter(".env.sidecar.local")
+            .map_err(|_| anyhow::anyhow!("cannot read example config"))?
+            .collect::<Result<HashMap<_, _>, _>>()
+            .map_err(|_| anyhow::anyhow!("cannot parse example config"))?;
         let required = |key: &str| {
             values
                 .get(key)
@@ -52,32 +51,106 @@ impl Settings {
         {
             chain = chain.with_auth(RelayerAuth::api_key(key));
         }
+        if let Some(timeout) = optional_number(&values, "SDK_RPC_TIMEOUT_MS")? {
+            chain.provider = Some(ProviderOptions {
+                timeout: Some(timeout),
+                ..Default::default()
+            });
+        }
+        let mut config = SdkConfig::from_chains(account.chain_id, vec![chain]);
+        if let Some(enabled) = optional_bool(&values, "SDK_SINGLE_THREAD")? {
+            config.process_runtime = Some(ProcessRuntime {
+                single_thread: Some(enabled),
+                ..Default::default()
+            });
+        }
+        if let Some(enabled) = optional_bool(&values, "SDK_BATCH_RPC_CALLS")? {
+            config.relayers = Some(std::collections::BTreeMap::from([(
+                account.chain_id,
+                RelayerConfig {
+                    kind: RelayerType::Node,
+                    options: Some(RelayerOptions {
+                        batch_rpc_calls: Some(enabled),
+                        ..Default::default()
+                    }),
+                },
+            )]));
+        }
         Ok(Self {
             socket: env::var("SIDECAR_SOCKET_PATH")
                 .unwrap_or_else(|_| "/tmp/zama-sdk-sidecar.sock".into()),
             account,
             token,
-            config: SdkConfig::from_chains(account.chain_id, vec![chain]),
+            config,
             signer,
             rpc_url,
+            storage: example_storage(&values)?,
+            derivation_secret: values
+                .get("TRANSPORT_KEY_PAIR_DERIVATION_SECRET")
+                .map(|value| DerivationSecret::text(value.clone())),
         })
     }
+
+    pub async fn connect_provider(&self) -> Result<impl Provider> {
+        // Some public RPC gateways return HTTP 404 without a User-Agent.
+        let http = reqwest::Client::builder()
+            .user_agent("zama-sdk-sidecar-example")
+            .build()?;
+        let provider = ProviderBuilder::new().connect_reqwest(http, self.rpc_url.parse()?);
+        ensure!(
+            provider.get_chain_id().await? == self.account.chain_id,
+            "example requires Sepolia"
+        );
+        Ok(provider)
+    }
+
+    pub async fn create_sdk(&self) -> Result<Sdk> {
+        let mut builder = Client::connect(&self.socket)
+            .await?
+            .sdk(self.config.clone())
+            .signer(Some(self.account), AlloySigner::new(self.signer.clone()))
+            .storage(self.storage.clone());
+        if let Some(secret) = &self.derivation_secret {
+            builder = builder.transport_key_pair_derivation_secret(secret.clone());
+        }
+        builder.build().await
+    }
 }
-pub async fn read_token(settings: &Settings) -> Result<(String, B256)> {
-    // Some public RPC gateways return HTTP 404 without a User-Agent.
-    let http = reqwest::Client::builder()
-        .user_agent("zama-sdk-sidecar-example")
-        .build()?;
-    let provider = ProviderBuilder::new().connect_reqwest(http, settings.rpc_url.parse()?);
-    ensure!(
-        provider.get_chain_id().await? == settings.account.chain_id,
-        "example requires Sepolia"
-    );
-    let ctoken = ConfidentialToken::new(settings.token, &provider);
-    let name = ctoken.name().call().await?;
-    let encrypted = ctoken
-        .confidentialBalanceOf(settings.account.address)
-        .call()
-        .await?;
-    Ok((name, encrypted))
+
+fn example_storage(values: &HashMap<String, String>) -> Result<Storage> {
+    match values
+        .get("CREDENTIAL_STORAGE")
+        .map(String::as_str)
+        .unwrap_or("application-memory")
+    {
+        "" | "application-memory" => Ok(ApplicationStorage::new(MemoryStorage::default()).into()),
+        "sidecar-memory" => Ok(Storage::Memory),
+        "persistent" => Ok(Storage::Persistent(
+            values
+                .get("CREDENTIAL_STORE_NAME")
+                .ok_or_else(|| anyhow::anyhow!("missing CREDENTIAL_STORE_NAME"))?
+                .clone(),
+        )),
+        _ => anyhow::bail!("invalid CREDENTIAL_STORAGE"),
+    }
+}
+
+fn optional_bool(values: &HashMap<String, String>, key: &str) -> Result<Option<bool>> {
+    values
+        .get(key)
+        .filter(|value| !value.is_empty())
+        .map(|value| match value.to_ascii_lowercase().as_str() {
+            "true" | "1" => Ok(true),
+            "false" | "0" => Ok(false),
+            _ => Err(anyhow::anyhow!("invalid {key}")),
+        })
+        .transpose()
+}
+
+fn optional_number(values: &HashMap<String, String>, key: &str) -> Result<Option<u32>> {
+    values
+        .get(key)
+        .filter(|value| !value.is_empty())
+        .map(|value| value.parse().map_err(|_| anyhow::anyhow!("invalid {key}")))
+        .transpose()
 }

@@ -167,12 +167,53 @@ fn default_handler(path: &str, bytes: &[u8]) -> Response<Body> {
 async fn preserves_context_options_typed_values_and_sdk_errors() {
     let revoked = Arc::new(Mutex::new(Vec::new()));
     let observed = revoked.clone();
+    let mut config = SdkConfig::new(11155111, "https://rpc.invalid").with_permit_ttl(90);
+    config.process_runtime = Some(ProcessRuntime {
+        module_versions: Some(crate::ModuleVersions::auto()),
+        single_thread: Some(false),
+        number_of_threads: Some(0),
+        auth: Some(RelayerAuth::api_key("runtime-secret")),
+        ..Default::default()
+    });
+    config.chains[0].provider = Some(ProviderOptions {
+        headers: Some(std::collections::BTreeMap::new()),
+        timeout: Some(0),
+        retry_count: Some(0),
+        batch: Some(crate::ProviderBatch::Enabled(false)),
+        ..Default::default()
+    });
+    config.relayers = Some(std::collections::BTreeMap::from([(
+        11155111,
+        crate::RelayerConfig {
+            kind: RelayerType::Node,
+            options: Some(crate::RelayerOptions {
+                batch_rpc_calls: Some(false),
+                fhe_encryption_key: Some(crate::FheEncryptionKey {
+                    public_key_bytes: crate::FhePublicKeyBytes {
+                        id: "key".into(),
+                        bytes: vec![0, 255],
+                    },
+                    crs_bytes: crate::FheCrsBytes {
+                        id: "crs".into(),
+                        capacity: 2048,
+                        bytes: vec![128],
+                    },
+                    metadata: crate::FheEncryptionKeyMetadata {
+                        relayer_url: "https://relayer.invalid".into(),
+                        chain_id: 11155111,
+                    },
+                }),
+                ..Default::default()
+            }),
+        },
+    )]));
+    let expected_config = generated::ContextConfig::try_from(config.clone()).unwrap();
     let handler = move |path: &str, bytes: &[u8]| match path.rsplit('/').next().unwrap() {
         "CreateContext" => {
             let request = CreateContextRequest::decode(bytes).unwrap();
             assert!(!request.signer_enabled);
             assert!(request.account.is_none());
-            assert_eq!(request.config.unwrap().permit_ttl, Some(90));
+            assert_eq!(request.config, Some(expected_config.clone()));
             response(CreateContextResponse {
                 context_id: "context".into(),
             })
@@ -274,10 +315,7 @@ async fn preserves_context_options_typed_values_and_sdk_errors() {
     let server = Server::start(Arc::new(handler)).await;
     let client = Client::connect(&server.socket).await.unwrap();
     let sdk = client
-        .create_context(
-            &SdkConfig::new(11155111, "https://rpc.invalid").with_permit_ttl(90),
-            SignerConfig::Disabled,
-        )
+        .create_context(config, SignerConfig::Disabled)
         .await
         .unwrap();
     let values = sdk.decryption().decrypt_values(&[], Some(1)).await.unwrap();
@@ -408,7 +446,7 @@ async fn signer_channel_replies_to_invalid_actions_and_keeps_processing() {
         .await
         .unwrap()
         .create_context(
-            &SdkConfig::new(11155111, "https://rpc.invalid"),
+            SdkConfig::new(11155111, "https://rpc.invalid"),
             SignerConfig::Enabled(None),
         )
         .await
@@ -574,7 +612,7 @@ async fn alloy_signer_preserves_structured_errors_on_the_channel() {
         .await
         .unwrap()
         .create_context(
-            &SdkConfig::new(11155111, "https://rpc.invalid"),
+            SdkConfig::new(11155111, "https://rpc.invalid"),
             SignerConfig::Enabled(None),
         )
         .await
@@ -639,7 +677,7 @@ async fn signer_channel_routes_concurrent_callbacks_rejection_and_cancellation()
         .await
         .unwrap()
         .create_context(
-            &SdkConfig::new(11155111, "https://rpc.invalid"),
+            SdkConfig::new(11155111, "https://rpc.invalid"),
             SignerConfig::Enabled(None),
         )
         .await
@@ -842,8 +880,11 @@ async fn deadline_covers_stalled_response_body() {
     assert_eq!(*server.timeouts.lock().unwrap(), vec![true]);
 }
 
-#[path = "storage_tests.rs"]
-mod storage_tests;
+#[path = "config_tests.rs"]
+mod config_tests;
 
 #[path = "lifecycle_tests.rs"]
 mod lifecycle_tests;
+
+#[path = "storage_tests.rs"]
+mod storage_tests;

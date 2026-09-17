@@ -593,7 +593,7 @@ function encryptOffloadBlocker(runtime: WireRuntimeConfig | undefined): string |
  *
  * @throws if the auth discriminator is not one of the supported kinds.
  */
-function toFhevmAuth(
+export function toFhevmAuth(
   auth: NonNullable<FheChain["auth"]>,
 ): NonNullable<FhevmRelayerOptions["auth"]> {
   const type = auth["__type"];

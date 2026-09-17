@@ -52,6 +52,7 @@ async function harness(signerEnabled = true, backing = storage(), permitTTL?: nu
       {
         storage: undefined,
         permitStorage: undefined,
+        transportKeyPairDerivationSecret: undefined,
         config: undefined,
         signerEnabled,
         account: signerEnabled
