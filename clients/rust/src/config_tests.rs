@@ -133,7 +133,7 @@ fn config_preserves_presence_and_raw_key_bytes() {
     let crs_bytes = vec![128];
     let crs_ptr = crs_bytes.as_ptr();
     let relayer = crate::RelayerConfig {
-        kind: RelayerType::Node,
+        transport: crate::RelayerTransport::Node,
         options: Some(crate::RelayerOptions {
             batch_rpc_calls: Some(false),
             module_versions: Some(crate::ModuleVersions::Pinned(
@@ -158,6 +158,10 @@ fn config_preserves_presence_and_raw_key_bytes() {
         }),
     }
     .wire();
+    assert_eq!(
+        relayer.transport,
+        crate::generated::RelayerTransport::Node as i32
+    );
     let options = relayer.options.unwrap();
     assert_eq!(options.batch_rpc_calls, Some(false));
     assert!(matches!(

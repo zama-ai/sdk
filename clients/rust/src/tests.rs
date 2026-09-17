@@ -185,7 +185,7 @@ async fn preserves_context_options_typed_values_and_sdk_errors() {
     config.relayers = Some(std::collections::BTreeMap::from([(
         11155111,
         crate::RelayerConfig {
-            kind: RelayerType::Node,
+            transport: crate::RelayerTransport::Node,
             options: Some(crate::RelayerOptions {
                 batch_rpc_calls: Some(false),
                 fhe_encryption_key: Some(crate::FheEncryptionKey {

@@ -68,6 +68,45 @@ export function storageMethodToJSON(object: StorageMethod): string {
   }
 }
 
+export enum RelayerTransport {
+  RELAYER_TRANSPORT_UNSPECIFIED = 0,
+  RELAYER_TRANSPORT_NODE = 1,
+  RELAYER_TRANSPORT_CLEARTEXT = 2,
+  UNRECOGNIZED = -1,
+}
+
+export function relayerTransportFromJSON(object: any): RelayerTransport {
+  switch (object) {
+    case 0:
+    case "RELAYER_TRANSPORT_UNSPECIFIED":
+      return RelayerTransport.RELAYER_TRANSPORT_UNSPECIFIED;
+    case 1:
+    case "RELAYER_TRANSPORT_NODE":
+      return RelayerTransport.RELAYER_TRANSPORT_NODE;
+    case 2:
+    case "RELAYER_TRANSPORT_CLEARTEXT":
+      return RelayerTransport.RELAYER_TRANSPORT_CLEARTEXT;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return RelayerTransport.UNRECOGNIZED;
+  }
+}
+
+export function relayerTransportToJSON(object: RelayerTransport): string {
+  switch (object) {
+    case RelayerTransport.RELAYER_TRANSPORT_UNSPECIFIED:
+      return "RELAYER_TRANSPORT_UNSPECIFIED";
+    case RelayerTransport.RELAYER_TRANSPORT_NODE:
+      return "RELAYER_TRANSPORT_NODE";
+    case RelayerTransport.RELAYER_TRANSPORT_CLEARTEXT:
+      return "RELAYER_TRANSPORT_CLEARTEXT";
+    case RelayerTransport.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
 export enum TransactionKind {
   TRANSACTION_KIND_UNSPECIFIED = 0,
   TRANSACTION_KIND_CONFIDENTIAL_TRANSFER = 1,
@@ -581,7 +620,7 @@ export interface RelayerMap_EntriesEntry {
 }
 
 export interface RelayerConfig {
-  type: string;
+  transport: RelayerTransport;
   options: RelayerOptions | undefined;
 }
 
@@ -6894,13 +6933,13 @@ export const RelayerMap_EntriesEntry: MessageFns<RelayerMap_EntriesEntry> = {
 };
 
 function createBaseRelayerConfig(): RelayerConfig {
-  return { type: "", options: undefined };
+  return { transport: 0, options: undefined };
 }
 
 export const RelayerConfig: MessageFns<RelayerConfig> = {
   encode(message: RelayerConfig, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.type !== "") {
-      writer.uint32(10).string(message.type);
+    if (message.transport !== 0) {
+      writer.uint32(8).int32(message.transport);
     }
     if (message.options !== undefined) {
       RelayerOptions.encode(message.options, writer.uint32(18).fork()).join();
@@ -6916,11 +6955,11 @@ export const RelayerConfig: MessageFns<RelayerConfig> = {
       const tag = reader.uint32();
       switch (tag >>> 3) {
         case 1: {
-          if (tag !== 10) {
+          if (tag !== 8) {
             break;
           }
 
-          message.type = reader.string();
+          message.transport = reader.int32() as any;
           continue;
         }
         case 2: {
@@ -6942,15 +6981,15 @@ export const RelayerConfig: MessageFns<RelayerConfig> = {
 
   fromJSON(object: any): RelayerConfig {
     return {
-      type: isSet(object.type) ? globalThis.String(object.type) : "",
+      transport: isSet(object.transport) ? relayerTransportFromJSON(object.transport) : 0,
       options: isSet(object.options) ? RelayerOptions.fromJSON(object.options) : undefined,
     };
   },
 
   toJSON(message: RelayerConfig): unknown {
     const obj: any = {};
-    if (message.type !== "") {
-      obj.type = message.type;
+    if (message.transport !== 0) {
+      obj.transport = relayerTransportToJSON(message.transport);
     }
     if (message.options !== undefined) {
       obj.options = RelayerOptions.toJSON(message.options);
@@ -6963,7 +7002,7 @@ export const RelayerConfig: MessageFns<RelayerConfig> = {
   },
   fromPartial(object: DeepPartial<RelayerConfig>): RelayerConfig {
     const message = createBaseRelayerConfig();
-    message.type = object.type ?? "";
+    message.transport = object.transport ?? 0;
     message.options = (object.options !== undefined && object.options !== null)
       ? RelayerOptions.fromPartial(object.options)
       : undefined;

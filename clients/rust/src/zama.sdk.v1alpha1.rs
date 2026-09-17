@@ -628,8 +628,8 @@ pub struct RelayerMap {
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RelayerConfig {
-    #[prost(string, tag = "1")]
-    pub r#type: ::prost::alloc::string::String,
+    #[prost(enumeration = "RelayerTransport", tag = "1")]
+    pub transport: i32,
     #[prost(message, optional, tag = "2")]
     pub options: ::core::option::Option<RelayerOptions>,
 }
@@ -981,6 +981,35 @@ impl StorageMethod {
             "STORAGE_METHOD_GET" => Some(Self::Get),
             "STORAGE_METHOD_SET" => Some(Self::Set),
             "STORAGE_METHOD_DELETE" => Some(Self::Delete),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum RelayerTransport {
+    Unspecified = 0,
+    Node = 1,
+    Cleartext = 2,
+}
+impl RelayerTransport {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "RELAYER_TRANSPORT_UNSPECIFIED",
+            Self::Node => "RELAYER_TRANSPORT_NODE",
+            Self::Cleartext => "RELAYER_TRANSPORT_CLEARTEXT",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "RELAYER_TRANSPORT_UNSPECIFIED" => Some(Self::Unspecified),
+            "RELAYER_TRANSPORT_NODE" => Some(Self::Node),
+            "RELAYER_TRANSPORT_CLEARTEXT" => Some(Self::Cleartext),
             _ => None,
         }
     }

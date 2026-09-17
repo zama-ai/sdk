@@ -41,7 +41,7 @@ pub use config_options::{
     CompatibilityCheck, DerivationSecret, FheCrsBytes, FheEncryptionKey, FheEncryptionKeyMetadata,
     FhePublicKeyBytes, KmsVersion, ModuleVersions, PinnedModuleVersions, ProcessRuntime,
     ProviderBatch, ProviderBatchOptions, ProviderOptions, RelayerConfig, RelayerOptions,
-    RelayerType, TfheVersion, WasmAssetLoadMode,
+    RelayerTransport, TfheVersion, WasmAssetLoadMode,
 };
 pub use decryption::{
     BatchItem, Decryption, DelegatedBatchOptions, DelegatedOptions, PublicDecryption,

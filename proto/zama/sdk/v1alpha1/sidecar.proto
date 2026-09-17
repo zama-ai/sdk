@@ -401,8 +401,13 @@ message PinnedModuleVersions {
 message RelayerMap {
   map<uint64, RelayerConfig> entries = 1;
 }
+enum RelayerTransport {
+  RELAYER_TRANSPORT_UNSPECIFIED = 0;
+  RELAYER_TRANSPORT_NODE = 1;
+  RELAYER_TRANSPORT_CLEARTEXT = 2;
+}
 message RelayerConfig {
-  string type = 1;
+  RelayerTransport transport = 1;
   RelayerOptions options = 2;
 }
 message RelayerOptions {
