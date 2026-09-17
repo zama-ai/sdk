@@ -227,6 +227,8 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
         expect(stdout).toContain("Fixture Confidential Token");
         expect(stdout).toContain(`Encrypted balance: ${VALID_ENCRYPTED_VALUE}`);
         expect(stdout).toContain("Decrypted balance: 1000");
+        expect(stdout).toContain("Prepared transaction: SetOperator");
+        expect(stdout).toContain("Signed transaction hash: 0x");
         const signed = stdout.match(/0x02[0-9a-f]{100,}/i)?.[0] as `0x02${string}` | undefined;
         if (signed === undefined) {
           throw new Error("example printed no signed EIP-1559 transaction");

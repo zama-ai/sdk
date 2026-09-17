@@ -37,12 +37,10 @@ pub async fn prepare_and_sign(
         "prepared sender does not match signing key"
     );
     let signed_bytes = sign_prepared(&prepared.unsigned_tx, account.chain_id, signer).await?;
-    println!(
-        "Prepared operator revocation and signed locally: 0x{}",
-        hex::encode(&signed_bytes)
-    );
+    println!("Prepared transaction: SetOperator");
+    println!("Signed transaction: 0x{}", hex::encode(&signed_bytes));
     println!("Signed transaction hash: {:#x}", keccak256(&signed_bytes));
-    println!("Not broadcast. The caller owns submission of the signed bytes to its RPC provider.");
+    println!("Not broadcast; the caller submits the signed bytes.");
     Ok(())
 }
 

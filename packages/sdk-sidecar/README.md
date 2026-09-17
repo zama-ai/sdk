@@ -1,6 +1,6 @@
 # Encrypt inputs, decrypt a balance and prepare an offline transaction from Rust or Go
 
-Use the maintained, permanently beta sidecar of `@zama-fhe/sdk` for external partner applications. Run it in Docker and drive it from a native Rust or Go application. Each entry point encrypts contract inputs, decrypts a balance, then asks the SDK to prepare a transaction that the application signs locally. The balance step prints:
+Use the maintained, permanently beta sidecar of `@zama-fhe/sdk` for external partner applications. Run it in Docker and drive it from a native Rust or Go application. Each entry point encrypts contract inputs, decrypts a balance, then asks the SDK to prepare a transaction that the application signs locally. Both examples print:
 
 ```text
 Encrypted input 0: 0x<handle>
@@ -11,6 +11,10 @@ User Address: <wallet address>
 Token: <name> (<token address>) https://eth-sepolia.blockscout.com/token/<token address>
 Encrypted balance: <ciphertext handle>
 Decrypted balance: <raw amount>
+Prepared transaction: SetOperator
+Signed transaction: 0x<signed transaction bytes>
+Signed transaction hash: 0x<transaction hash>
+Not broadcast; the caller submits the signed bytes.
 ```
 
 The encryption step passes typed plaintext inputs and explicit user/contract addresses to `sdk.encrypt`. The native application reads the token using Alloy or go-ethereum. It passes the encrypted handle to `sdk.decryption.decryptValues` through the sidecar. The SDK requests a wallet signature only when its credential flow needs one.
@@ -60,7 +64,7 @@ dc run --rm rust
 
 Use the [Go example](../../clients/go/examples/balance/main.go) or [Rust example](../../clients/rust/examples/balance/main.rs) as a starting point. Each entry point loads shared configuration, connects its wallet/provider, creates an SDK context, then runs the encryption, balance and offline steps. Setup lives in Go `config.go`/`ethereum.go` and Rust `support.rs`; `balance.go`/`balance.rs` receive SDK, provider, token and owner dependencies explicitly. Application-owned memory storage is the example default. The client manages callback channels. The encryption step sends `1000` as `euint64`, `true` as `ebool`, and the user address as `eaddress`, built with Go `Euint64`/`Ebool`/`Eaddress` or Rust `EncryptInput::Uint64`/`Bool`/`Address`. It prints one `Encrypted input <i>` line per returned handle, then the input proof.
 
-The offline step in `offline.go`/`offline.rs` asks the SDK to prepare a `SetOperator` revocation (`until: 1`), checks the prepared `TransactionKind` enum and that the prepared sender matches the local key, and signs the unsigned EIP-1559 bytes with the native Ethereum library. It prints the signed bytes and hash without broadcasting. Signing keys stay in the application, and submitting the signed bytes is the caller's responsibility. Neither example sends blockchain transactions.
+The offline step in `offline.go`/`offline.rs` asks the SDK to prepare a `SetOperator` revocation (`until: 1`), checks the prepared `TransactionKind` enum and that the prepared sender matches the local key, and signs the unsigned EIP-1559 bytes with the native Ethereum library. Signing keys stay in the application, and submitting the signed bytes is the caller's responsibility. Neither example sends blockchain transactions.
 
 The encrypted balance is the contract's ciphertext handle. The decrypted value is the raw amount for that same handle, without decimal formatting.
 

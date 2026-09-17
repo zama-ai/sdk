@@ -34,7 +34,10 @@ func prepareOffline(ctx context.Context, sdk *sidecar.SDKContext, token, owner c
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Offline %s: locally signed transaction %s\nSigned bytes: 0x%x\nCaller owns broadcasting; this demo does not broadcast.\n", prepared.Kind, signed.Hash(), encoded)
+	fmt.Println("Prepared transaction: SetOperator")
+	fmt.Printf("Signed transaction: 0x%x\n", encoded)
+	fmt.Printf("Signed transaction hash: %s\n", signed.Hash().Hex())
+	fmt.Println("Not broadcast; the caller submits the signed bytes.")
 	return nil
 }
 
