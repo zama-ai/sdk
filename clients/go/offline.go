@@ -5,7 +5,6 @@ import (
 	"errors"
 	"math"
 	"math/big"
-	"reflect"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -13,7 +12,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// TransactionRequest describes one SDK-prepared transaction, not a multi-step token workflow.
+// TransactionRequest is sealed; only the request types in this package implement it.
 type TransactionRequest interface {
 	prepareWire() (*pb.PrepareTransactionRequest, error)
 }
@@ -28,7 +27,7 @@ type PrepareFees struct {
 	MaxPriorityFeePerGas *big.Int
 }
 
-// TransactionKind aliases the wire enum values; String renders the wire name.
+// TransactionKind mirrors the wire enum; its values are the wire numbers.
 type TransactionKind int32
 
 const (
@@ -63,7 +62,7 @@ type PreparedTransaction struct {
 	UnsignedTx []byte
 }
 
-// decimal reports a nil value as a missing field instead of sending an empty string the sidecar rejects.
+// decimal rejects nil so a missing value never reaches the wire as an empty string.
 func decimal(name string, value *big.Int) (string, error) {
 	if value == nil {
 		return "", errors.New(name + " is required")
@@ -93,9 +92,9 @@ func prepareOptionsWire(options *PrepareOptions) (*pb.PrepareOptions, error) {
 	return result, nil
 }
 
-// PrepareTransaction leaves signing and broadcasting to the caller; SDK validation and defaults apply.
+// PrepareTransaction returns an unsigned transaction for the caller to sign and broadcast.
 func (s *SDKContext) PrepareTransaction(ctx context.Context, request TransactionRequest, options *PrepareOptions) (PreparedTransaction, error) {
-	if request == nil || (reflect.ValueOf(request).Kind() == reflect.Pointer && reflect.ValueOf(request).IsNil()) {
+	if request == nil {
 		return PreparedTransaction{}, errors.New("transaction request is required")
 	}
 	wire, err := request.prepareWire()
@@ -157,7 +156,7 @@ type SetOperatorRequest struct {
 	From     common.Address
 	Token    common.Address
 	Operator common.Address
-	// Until is a required Unix timestamp in whole seconds; a positive past value revokes. The SDK never defaults it.
+	// Until is a required Unix timestamp in seconds; a positive past value revokes.
 	Until *uint64
 }
 

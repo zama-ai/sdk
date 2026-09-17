@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { status, type ServiceError } from "@grpc/grpc-js";
-import { RpcRateLimitError, type PrepareTransactionRequest } from "@zama-fhe/sdk";
+import { RpcRateLimitError, type Address, type PrepareTransactionRequest } from "@zama-fhe/sdk";
 import { expect, test, vi } from "vitest";
 import { USER, TOKEN, DELEGATE } from "../../sdk/src/test-fixtures/constants.js";
 import { bytes } from "../src/encoding.js";
 import { errorDetails } from "../src/errors.js";
 import { prepareTransaction } from "../src/offline.js";
 import type * as rpc from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
-import { fixture, testServer } from "./support/harness.js";
+import { createContext, fixture, testServer } from "./support/harness.js";
 
 const from = bytes(USER);
 const base = { from, operation: undefined, options: undefined };
@@ -42,16 +42,44 @@ async function compare(request: PrepareTransactionRequest, wire: rpc.PrepareTran
   }
 }
 
-test.each([undefined, 0n, BigInt(Date.UTC(2099, 0, 1)) + 123n, 8_640_000_000_000_001n])(
-  "delegation expiry %s retains SDK defaults and validation",
-  async (milliseconds) => {
+const delegations: {
+  name: string;
+  delegateAddress: Address;
+  expirationDateMs: bigint | undefined;
+}[] = [
+  { name: "default expiry", delegateAddress: DELEGATE, expirationDateMs: undefined },
+  { name: "epoch expiry", delegateAddress: DELEGATE, expirationDateMs: 0n },
+  {
+    name: "far future expiry",
+    delegateAddress: DELEGATE,
+    expirationDateMs: BigInt(Date.UTC(2099, 0, 1)) + 123n,
+  },
+  {
+    name: "out of range expiry",
+    delegateAddress: DELEGATE,
+    expirationDateMs: 8_640_000_000_000_001n,
+  },
+  {
+    name: "expiry under one hour",
+    delegateAddress: DELEGATE,
+    expirationDateMs: BigInt(Date.now() + 60_000),
+  },
+  { name: "delegate equal to the caller", delegateAddress: USER, expirationDateMs: undefined },
+  { name: "delegate equal to the contract", delegateAddress: TOKEN, expirationDateMs: undefined },
+];
+
+test.each(delegations)(
+  "delegation $name retains SDK defaults and validation",
+  async ({ delegateAddress, expirationDateMs }) => {
     const [actual, expected] = await compare(
       {
         kind: "DelegateDecryption",
         from: USER,
         contractAddress: TOKEN,
-        delegateAddress: DELEGATE,
-        ...(milliseconds === undefined ? {} : { expirationDate: new Date(Number(milliseconds)) }),
+        delegateAddress,
+        ...(expirationDateMs === undefined
+          ? {}
+          : { expirationDate: new Date(Number(expirationDateMs)) }),
       },
       {
         ...base,
@@ -59,8 +87,8 @@ test.each([undefined, 0n, BigInt(Date.UTC(2099, 0, 1)) + 123n, 8_640_000_000_000
           $case: "delegateDecryption",
           delegateDecryption: {
             contractAddress: bytes(TOKEN),
-            delegateAddress: bytes(DELEGATE),
-            expirationDateMs: milliseconds,
+            delegateAddress: bytes(delegateAddress),
+            expirationDateMs,
           },
         },
       },
@@ -70,7 +98,16 @@ test.each([undefined, 0n, BigInt(Date.UTC(2099, 0, 1)) + 123n, 8_640_000_000_000
 );
 
 test.each([
-  ["operator expiry", { ...setOperator }],
+  [
+    "operator expiry",
+    {
+      ...base,
+      transaction: {
+        $case: "setOperator" as const,
+        setOperator: { token: bytes(TOKEN), operator: bytes(DELEGATE), until: 2n ** 53n },
+      },
+    },
+  ],
   [
     "delegation expiry",
     {
@@ -85,18 +122,8 @@ test.each([
       },
     },
   ],
-])("rejects %s beyond the SDK safe integer range", async (_, request) => {
+])("rejects %s beyond the SDK safe integer range", async (_, wire) => {
   const value = fixture(undefined);
-  const wire: rpc.PrepareTransactionRequest =
-    request.transaction?.$case === "setOperator"
-      ? {
-          ...request,
-          transaction: {
-            $case: "setOperator",
-            setOperator: { ...request.transaction.setOperator, until: 2n ** 53n },
-          },
-        }
-      : request;
   try {
     await expect(prepareTransaction(value.sdk, wire)).rejects.toMatchObject({
       code: "INVALID_ARGUMENT",
@@ -177,19 +204,7 @@ test("offline cancellation drains uninterruptible SDK work before context close"
   });
   const server = await testServer(async () => ({ sdk: value.sdk, storageIdentities: [] }));
   try {
-    const contextId = await new Promise<string>((resolve, reject) =>
-      server.client.createContext(
-        {
-          config: undefined,
-          signerEnabled: false,
-          account: undefined,
-          storage: undefined,
-          permitStorage: undefined,
-          transportKeyPairDerivationSecret: undefined,
-        },
-        (error, result) => (error ? reject(error) : resolve(result.contextId)),
-      ),
-    );
+    const contextId = await createContext(server.client);
     const result = Promise.withResolvers<ServiceError | null>();
     const call = server.client.prepareTransaction(
       { ...setOperator, operation: { contextId, operationId: randomUUID() } },

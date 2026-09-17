@@ -129,11 +129,8 @@ func TestOfflineRejectsNilRequestAndMalformedSender(t *testing.T) {
 		return &pb.CreateContextResponse{ContextId: "offline"}, nil
 	})
 	sdk := unsignedSDK(t, client)
-	var typedNil *SetOperatorRequest
-	for _, request := range []TransactionRequest{nil, typedNil} {
-		if _, err := sdk.PrepareTransaction(testContext(t), request, nil); err == nil {
-			t.Fatal("nil request accepted")
-		}
+	if _, err := sdk.PrepareTransaction(testContext(t), nil, nil); err == nil {
+		t.Fatal("nil request accepted")
 	}
 	if _, err := sdk.PrepareTransaction(testContext(t), SetOperatorRequest{Until: nonce(1)}, nil); err == nil {
 		t.Fatal("malformed sender accepted")

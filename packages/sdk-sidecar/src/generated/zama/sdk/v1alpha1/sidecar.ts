@@ -718,7 +718,6 @@ export interface EncryptResponse {
   inputProof: Buffer;
 }
 
-/** One SDK transaction kind per request; multi-step token flows stay in the TypeScript SDK. */
 export interface PrepareTransactionRequest {
   operation:
     | Operation

@@ -5165,7 +5165,6 @@ func (x *EncryptResponse) GetInputProof() []byte {
 	return nil
 }
 
-// One SDK transaction kind per request; multi-step token flows stay in the TypeScript SDK.
 type PrepareTransactionRequest struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	Operation *Operation             `protobuf:"bytes,1,opt,name=operation,proto3" json:"operation,omitempty"`

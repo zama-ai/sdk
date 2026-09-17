@@ -1,13 +1,13 @@
 use crate::{Address, BigInt, Offline, generated};
 use anyhow::{Context, Result, bail};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PrepareTransaction {
     pub from: Address,
     pub transaction: Transaction,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Transaction {
     ConfidentialTransfer {
         token: Address,
@@ -67,14 +67,14 @@ pub enum Transaction {
     },
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct PrepareOptions {
     pub nonce: Option<u64>,
     pub gas_limit: Option<BigInt>,
     pub fees: Option<PrepareFees>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PrepareFees {
     pub max_fee_per_gas: BigInt,
     pub max_priority_fee_per_gas: BigInt,

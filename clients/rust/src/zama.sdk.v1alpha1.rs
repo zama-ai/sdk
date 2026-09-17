@@ -778,7 +778,6 @@ pub struct EncryptResponse {
     #[prost(bytes = "vec", tag = "2")]
     pub input_proof: ::prost::alloc::vec::Vec<u8>,
 }
-/// One SDK transaction kind per request; multi-step token flows stay in the TypeScript SDK.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PrepareTransactionRequest {
     #[prost(message, optional, tag = "1")]

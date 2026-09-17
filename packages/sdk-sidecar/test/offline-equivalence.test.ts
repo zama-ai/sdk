@@ -5,7 +5,7 @@ import { bytesToHex, hexToBytes } from "viem";
 import { expect, test, vi } from "vitest";
 
 import { ACL, DELEGATE, TOKEN, USER, WRAPPER } from "../../sdk/src/test-fixtures/constants.js";
-import { fixture, storage, testServer } from "./support/harness.js";
+import { createContext, fixture, storage, testServer } from "./support/harness.js";
 import type * as rpc from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
 import { TransactionKind } from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
 
@@ -14,6 +14,7 @@ type Case = {
   wireKind: rpc.TransactionKind;
   request: PrepareTransactionRequest;
   transaction: NonNullable<rpc.PrepareTransactionRequest["transaction"]>;
+  setup?: (direct: ReturnType<typeof fixture>, remote: ReturnType<typeof fixture>) => void;
 };
 
 const wireBytes = (value: string) => Buffer.from(hexToBytes(value as Hex));
@@ -77,6 +78,11 @@ const cases: Case[] = [
       $case: "unwrapAll",
       unwrapAll: { token: wireBytes(WRAPPER), to: wireBytes(ACL) },
     },
+    setup: (direct, remote) => {
+      for (const value of [direct, remote]) {
+        vi.mocked(value.provider.readContract).mockResolvedValue(("0x" + "ab".repeat(32)) as never);
+      }
+    },
   },
   {
     name: "FinalizeUnwrap",
@@ -93,6 +99,19 @@ const cases: Case[] = [
         wrapper: wireBytes(WRAPPER),
         unwrapRequestIdOrAmount: wireBytes("0x" + "12".repeat(32)),
       },
+    },
+    setup: (direct, remote) => {
+      const result = {
+        clearValues: [{ type: "uint64", value: 13n }],
+        checkSignaturesArgs: {
+          handlesList: ["0x" + "12".repeat(32)],
+          abiEncodedCleartexts: "0x0d",
+          decryptionProof: "0xabcd",
+        },
+      } as never;
+      for (const value of [direct, remote]) {
+        vi.mocked(value.relayer.decryptPublicValuesWithSignatures).mockResolvedValue(result);
+      }
     },
   },
   {
@@ -193,19 +212,7 @@ async function harness(signerEnabled = false) {
     return { sdk: value.sdk, storageIdentities: ["offline-equivalence"] };
   });
   const { client } = server;
-  const contextId = await new Promise<string>((resolve, reject) =>
-    client.createContext(
-      {
-        config: undefined,
-        signerEnabled,
-        account: undefined,
-        storage: undefined,
-        permitStorage: undefined,
-        transportKeyPairDerivationSecret: undefined,
-      },
-      (error, value) => (error ? reject(error) : resolve(value.contextId)),
-    ),
-  );
+  const contextId = await createContext(client, { signerEnabled });
   return {
     client,
     fixtures,
@@ -216,19 +223,12 @@ async function harness(signerEnabled = false) {
 
 async function prepare(
   remote: Awaited<ReturnType<typeof harness>>,
-  item: Case,
-  explicitOptions = true,
-  transaction = item.transaction,
-  optionsValue: rpc.PrepareOptions = options,
+  transaction: Case["transaction"],
+  optionsValue?: rpc.PrepareOptions,
 ) {
   return new Promise<rpc.PrepareTransactionResponse>((resolve, reject) =>
     remote.client.prepareTransaction(
-      {
-        operation: remote.operation(),
-        from,
-        options: explicitOptions ? optionsValue : undefined,
-        transaction,
-      },
+      { operation: remote.operation(), from, options: optionsValue, transaction },
       new Metadata(),
       (error, value) => (error ? reject(error) : resolve(value)),
     ),
@@ -251,32 +251,13 @@ test.each(cases)("offline prepare equivalence: $name", async (item) => {
   const direct = fixture(undefined);
   const remote = await harness(false);
   try {
-    if (item.name === "UnwrapAll") {
-      vi.mocked(direct.provider.readContract).mockResolvedValue(("0x" + "ab".repeat(32)) as never);
-      vi.mocked(remote.fixtures[0]!.provider.readContract).mockResolvedValue(
-        ("0x" + "ab".repeat(32)) as never,
-      );
-    }
-    if (item.name === "FinalizeUnwrap") {
-      const result = {
-        clearValues: [{ type: "uint64", value: 13n }],
-        checkSignaturesArgs: {
-          handlesList: ["0x" + "12".repeat(32)],
-          abiEncodedCleartexts: "0x0d",
-          decryptionProof: "0xabcd",
-        },
-      } as never;
-      vi.mocked(direct.relayer.decryptPublicValuesWithSignatures).mockResolvedValue(result);
-      vi.mocked(remote.fixtures[0]!.relayer.decryptPublicValuesWithSignatures).mockResolvedValue(
-        result,
-      );
-    }
+    item.setup?.(direct, remote.fixtures[0]!);
     const expected = await direct.sdk.offline.prepare(item.request, {
       nonce: 0,
       gasLimit: 0n,
       fees: { maxFeePerGas: 0n, maxPriorityFeePerGas: 0n },
     });
-    const actual = await prepare(remote, item);
+    const actual = await prepare(remote, item.transaction, options);
     expect([expected.kind, actual.kind]).toEqual([item.request.kind, item.wireKind]);
     expect(bytesToHex(actual.from)).toBe(expected.from.toLowerCase());
     expect(bytesToHex(actual.unsignedTx)).toBe(expected.unsignedTx);
@@ -299,7 +280,7 @@ test.each(cases)("offline prepare preserves omitted options: $name", async (item
   const remote = await harness(false);
   try {
     const expected = await direct.sdk.offline.prepare(item.request);
-    const actual = await prepare(remote, item, false);
+    const actual = await prepare(remote, item.transaction);
     expect({
       kind: actual.kind,
       from: bytesToHex(actual.from),
@@ -322,7 +303,7 @@ test.each(cases)("offline prepare preserves omitted options: $name", async (item
 test("offline prepare rejects a nonce beyond the SDK safe integer range", async () => {
   const remote = await harness(false);
   try {
-    const error = await prepare(remote, cases[0]!, true, cases[0]!.transaction, {
+    const error = await prepare(remote, cases[0]!.transaction, {
       nonce: 2n ** 53n,
       gasLimit: undefined,
       fees: undefined,
@@ -357,7 +338,7 @@ test("offline prepare rejects SDK-invalid recipient data consistently", async ()
   };
   try {
     const directError = await direct.sdk.offline.prepare(request).catch((error) => error);
-    const actual = await prepare(remote, cases[0]!, false, transaction).catch((error) => error);
+    const actual = await prepare(remote, transaction).catch((error) => error);
     expect(errorCode(directError)).toBeDefined();
     expect(errorCode(actual)).toBe(errorCode(directError));
     expect(direct.provider.prepareTransaction).not.toHaveBeenCalled();
@@ -371,7 +352,7 @@ test("offline prepare rejects SDK-invalid recipient data consistently", async ()
 test("offline prepare rejects an omitted operator expiry instead of defaulting it", async () => {
   const remote = await harness(false);
   try {
-    const error = await prepare(remote, cases[2]!, false, {
+    const error = await prepare(remote, {
       $case: "setOperator",
       setOperator: { token: wireBytes(TOKEN), operator: wireBytes(DELEGATE), until: undefined },
     }).catch((error) => error);
@@ -391,7 +372,9 @@ test("offline prepare preserves provider failures and chain validation", async (
     vi.mocked(direct.provider.prepareTransaction).mockRejectedValue(failure);
     vi.mocked(remote.fixtures[0]!.provider.prepareTransaction).mockRejectedValue(failure);
     await expect(direct.sdk.offline.prepare(item.request)).rejects.toThrow("provider failed");
-    await expect(prepare(remote, item, false)).rejects.toMatchObject({ code: expect.anything() });
+    await expect(prepare(remote, item.transaction)).rejects.toMatchObject({
+      code: expect.anything(),
+    });
 
     vi.mocked(direct.provider.prepareTransaction).mockResolvedValue("0xdeadbeef" as Hex);
     vi.mocked(remote.fixtures[0]!.provider.prepareTransaction).mockResolvedValue(
@@ -400,7 +383,7 @@ test("offline prepare preserves provider failures and chain validation", async (
     vi.mocked(direct.provider.getChainId).mockResolvedValue(1);
     vi.mocked(remote.fixtures[0]!.provider.getChainId).mockResolvedValue(1);
     const directError = await direct.sdk.offline.prepare(item.request).catch((error) => error);
-    const remoteError = await prepare(remote, item, false).catch((error) => error);
+    const remoteError = await prepare(remote, item.transaction).catch((error) => error);
     expect(errorCode(remoteError)).toBe(errorCode(directError));
   } finally {
     direct.sdk.dispose();

@@ -486,7 +486,6 @@ message EncryptResponse {
   repeated bytes encrypted_values = 1;
   bytes input_proof = 2;
 }
-// One SDK transaction kind per request; multi-step token flows stay in the TypeScript SDK.
 message PrepareTransactionRequest {
   Operation operation = 1;
   // Sender the SDK binds encrypted inputs to; it must match the key that signs.

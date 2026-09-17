@@ -3,15 +3,8 @@ import type { PrepareOptions, PrepareTransactionRequest, TransactionKind } from 
 import type * as rpc from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import { TransactionKind as WireTransactionKind } from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import type { ContextSdk } from "./runtime.js";
-import { address, bytes, safeInteger } from "./encoding.js";
+import { address, bytes, integer, safeInteger } from "./encoding.js";
 import { invalidArgument } from "./errors.js";
-
-function decimal(value: string): bigint {
-  if (!/^(0|-?[1-9][0-9]*)$/.test(value)) {
-    throw invalidArgument("Bigint must be a canonical decimal string.");
-  }
-  return BigInt(value);
-}
 
 const wireKinds: Record<TransactionKind, rpc.TransactionKind> = {
   ConfidentialTransfer: WireTransactionKind.TRANSACTION_KIND_CONFIDENTIAL_TRANSFER,
@@ -27,13 +20,6 @@ const wireKinds: Record<TransactionKind, rpc.TransactionKind> = {
   RevokeDelegation: WireTransactionKind.TRANSACTION_KIND_REVOKE_DELEGATION,
 };
 
-function requireField<T>(value: T | undefined, name: string): T {
-  if (value === undefined) {
-    throw invalidArgument(`${name} is required.`);
-  }
-  return value;
-}
-
 function transactionRequest(request: rpc.PrepareTransactionRequest): PrepareTransactionRequest {
   const from = address(request.from);
   const transaction = request.transaction;
@@ -45,7 +31,7 @@ function transactionRequest(request: rpc.PrepareTransactionRequest): PrepareTran
         from,
         token: address(value.token),
         to: address(value.to),
-        amount: decimal(value.amount),
+        amount: integer(value.amount, "Amount"),
       };
     }
     case "confidentialTransferFrom": {
@@ -56,17 +42,20 @@ function transactionRequest(request: rpc.PrepareTransactionRequest): PrepareTran
         token: address(value.token),
         owner: address(value.owner),
         to: address(value.to),
-        amount: decimal(value.amount),
+        amount: integer(value.amount, "Amount"),
       };
     }
     case "setOperator": {
       const value = transaction.setOperator;
+      if (value.until === undefined) {
+        throw invalidArgument("Operator expiry is required.");
+      }
       return {
         kind: "SetOperator",
         from,
         token: address(value.token),
         operator: address(value.operator),
-        until: safeInteger(requireField(value.until, "Operator expiry"), "Operator expiry"),
+        until: safeInteger(value.until, "Operator expiry"),
       };
     }
     case "unwrap": {
@@ -76,7 +65,7 @@ function transactionRequest(request: rpc.PrepareTransactionRequest): PrepareTran
         from,
         token: address(value.token),
         to: address(value.to),
-        amount: decimal(value.amount),
+        amount: integer(value.amount, "Amount"),
       };
     }
     case "unwrapAll": {
@@ -99,7 +88,7 @@ function transactionRequest(request: rpc.PrepareTransactionRequest): PrepareTran
         from,
         underlying: address(value.underlying),
         spender: address(value.spender),
-        amount: decimal(value.amount),
+        amount: integer(value.amount, "Amount"),
       };
     }
     case "wrap": {
@@ -109,7 +98,7 @@ function transactionRequest(request: rpc.PrepareTransactionRequest): PrepareTran
         from,
         wrapper: address(value.wrapper),
         to: address(value.to),
-        amount: decimal(value.amount),
+        amount: integer(value.amount, "Amount"),
       };
     }
     case "transferAndCall": {
@@ -119,7 +108,7 @@ function transactionRequest(request: rpc.PrepareTransactionRequest): PrepareTran
         from,
         underlying: address(value.underlying),
         wrapper: address(value.wrapper),
-        amount: decimal(value.amount),
+        amount: integer(value.amount, "Amount"),
         ...(value.recipientData === undefined
           ? {}
           : { recipientData: bytesToHex(value.recipientData) }),
@@ -147,6 +136,7 @@ function transactionRequest(request: rpc.PrepareTransactionRequest): PrepareTran
       };
     }
     default:
+      transaction satisfies undefined;
       throw invalidArgument("An offline transaction kind is required.");
   }
 }
@@ -157,13 +147,16 @@ function prepareOptions(value: rpc.PrepareOptions | undefined): PrepareOptions |
   }
   return {
     ...(value.nonce === undefined ? {} : { nonce: safeInteger(value.nonce, "Nonce") }),
-    ...(value.gasLimit === undefined ? {} : { gasLimit: decimal(value.gasLimit) }),
+    ...(value.gasLimit === undefined ? {} : { gasLimit: integer(value.gasLimit, "Gas limit") }),
     ...(value.fees === undefined
       ? {}
       : {
           fees: {
-            maxFeePerGas: decimal(value.fees.maxFeePerGas),
-            maxPriorityFeePerGas: decimal(value.fees.maxPriorityFeePerGas),
+            maxFeePerGas: integer(value.fees.maxFeePerGas, "Max fee per gas"),
+            maxPriorityFeePerGas: integer(
+              value.fees.maxPriorityFeePerGas,
+              "Max priority fee per gas",
+            ),
           },
         }),
   };

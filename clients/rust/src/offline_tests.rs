@@ -1,11 +1,8 @@
 use super::*;
 use crate::{PrepareFees, PrepareOptions, PrepareTransaction, Transaction, TransactionKind};
 
-#[tokio::test]
-async fn prepares_every_kind_with_exact_fields_and_optional_presence() {
-    let seen = Arc::new(Mutex::new(Vec::new()));
-    let captured = seen.clone();
-    let server = Server::start(Arc::new(move |path, bytes| {
+fn capturing_server(captured: Arc<Mutex<Vec<PrepareTransactionRequest>>>) -> Handler {
+    Arc::new(move |path, bytes| {
         if path.ends_with("/PrepareTransaction") {
             captured
                 .lock()
@@ -19,8 +16,13 @@ async fn prepares_every_kind_with_exact_fields_and_optional_presence() {
         } else {
             default_handler(path, bytes)
         }
-    }))
-    .await;
+    })
+}
+
+#[tokio::test]
+async fn prepares_every_kind_with_exact_wire_fields() {
+    let captured = Arc::new(Mutex::new(Vec::new()));
+    let server = Server::start(capturing_server(captured.clone())).await;
     let sdk = Client::connect(&server.socket)
         .await
         .unwrap()
@@ -28,193 +30,237 @@ async fn prepares_every_kind_with_exact_fields_and_optional_presence() {
         .build()
         .await
         .unwrap();
-    let a = Address::repeat_byte(1);
-    let b = Address::repeat_byte(2);
-    let c = Address::repeat_byte(3);
-    let n: BigInt = "340282366920938463463374607431768211457".parse().unwrap();
-    let transactions = vec![
-        Transaction::ConfidentialTransfer {
-            token: a,
-            to: b,
-            amount: n.clone(),
-        },
-        Transaction::ConfidentialTransferFrom {
-            token: a,
-            owner: b,
-            to: c,
-            amount: n.clone(),
-        },
-        Transaction::SetOperator {
-            token: a,
-            operator: b,
-            until: 1,
-        },
-        Transaction::Unwrap {
-            token: a,
-            to: b,
-            amount: n.clone(),
-        },
-        Transaction::UnwrapAll { token: a, to: b },
-        Transaction::FinalizeUnwrap {
-            wrapper: a,
-            unwrap_request_id_or_amount: vec![255; 32],
-        },
-        Transaction::ApproveUnderlying {
-            underlying: a,
-            spender: b,
-            amount: n.clone(),
-        },
-        Transaction::Wrap {
-            wrapper: a,
-            to: b,
-            amount: n.clone(),
-        },
-        Transaction::TransferAndCall {
-            underlying: a,
-            wrapper: b,
-            amount: n.clone(),
-            recipient_data: None,
-        },
-        Transaction::DelegateDecryption {
-            contract_address: a,
-            delegate_address: b,
-            expiration_date_ms: None,
-        },
-        Transaction::RevokeDelegation {
-            contract_address: a,
-            delegate_address: b,
-        },
-        Transaction::TransferAndCall {
-            underlying: a,
-            wrapper: b,
-            amount: (-1).into(),
-            recipient_data: Some(vec![]),
-        },
-        Transaction::DelegateDecryption {
-            contract_address: a,
-            delegate_address: b,
-            expiration_date_ms: Some(0),
-        },
-    ];
-    for (index, transaction) in transactions.into_iter().enumerate() {
-        let options = (index != 0).then(|| PrepareOptions {
-            nonce: Some(0),
-            gas_limit: Some(0.into()),
-            fees: Some(PrepareFees {
-                max_fee_per_gas: n.clone(),
-                max_priority_fee_per_gas: 0.into(),
+    let token = Address::repeat_byte(1);
+    let peer = Address::repeat_byte(2);
+    let sender = Address::repeat_byte(3);
+    let amount: BigInt = "340282366920938463463374607431768211457".parse().unwrap();
+    use generated::prepare_transaction_request::Transaction as Wire;
+    let table = vec![
+        (
+            Transaction::ConfidentialTransfer {
+                token,
+                to: peer,
+                amount: amount.clone(),
+            },
+            Wire::ConfidentialTransfer(ConfidentialTransfer {
+                token: token.to_vec(),
+                to: peer.to_vec(),
+                amount: amount.to_string(),
             }),
-        });
-        let result = sdk
+        ),
+        (
+            Transaction::ConfidentialTransferFrom {
+                token,
+                owner: peer,
+                to: sender,
+                amount: amount.clone(),
+            },
+            Wire::ConfidentialTransferFrom(ConfidentialTransferFrom {
+                token: token.to_vec(),
+                owner: peer.to_vec(),
+                to: sender.to_vec(),
+                amount: amount.to_string(),
+            }),
+        ),
+        (
+            Transaction::SetOperator {
+                token,
+                operator: peer,
+                until: 1,
+            },
+            Wire::SetOperator(SetOperator {
+                token: token.to_vec(),
+                operator: peer.to_vec(),
+                until: Some(1),
+            }),
+        ),
+        (
+            Transaction::Unwrap {
+                token,
+                to: peer,
+                amount: amount.clone(),
+            },
+            Wire::Unwrap(Unwrap {
+                token: token.to_vec(),
+                to: peer.to_vec(),
+                amount: amount.to_string(),
+            }),
+        ),
+        (
+            Transaction::UnwrapAll { token, to: peer },
+            Wire::UnwrapAll(UnwrapAll {
+                token: token.to_vec(),
+                to: peer.to_vec(),
+            }),
+        ),
+        (
+            Transaction::FinalizeUnwrap {
+                wrapper: token,
+                unwrap_request_id_or_amount: vec![255; 32],
+            },
+            Wire::FinalizeUnwrap(FinalizeUnwrap {
+                wrapper: token.to_vec(),
+                unwrap_request_id_or_amount: vec![255; 32],
+            }),
+        ),
+        (
+            Transaction::ApproveUnderlying {
+                underlying: token,
+                spender: peer,
+                amount: amount.clone(),
+            },
+            Wire::ApproveUnderlying(ApproveUnderlying {
+                underlying: token.to_vec(),
+                spender: peer.to_vec(),
+                amount: amount.to_string(),
+            }),
+        ),
+        (
+            Transaction::Wrap {
+                wrapper: token,
+                to: peer,
+                amount: amount.clone(),
+            },
+            Wire::Wrap(Wrap {
+                wrapper: token.to_vec(),
+                to: peer.to_vec(),
+                amount: amount.to_string(),
+            }),
+        ),
+        (
+            Transaction::TransferAndCall {
+                underlying: token,
+                wrapper: peer,
+                amount: amount.clone(),
+                recipient_data: None,
+            },
+            Wire::TransferAndCall(TransferAndCall {
+                underlying: token.to_vec(),
+                wrapper: peer.to_vec(),
+                amount: amount.to_string(),
+                recipient_data: None,
+            }),
+        ),
+        (
+            Transaction::DelegateDecryption {
+                contract_address: token,
+                delegate_address: peer,
+                expiration_date_ms: None,
+            },
+            Wire::DelegateDecryption(DelegateDecryption {
+                contract_address: token.to_vec(),
+                delegate_address: peer.to_vec(),
+                expiration_date_ms: None,
+            }),
+        ),
+        (
+            Transaction::RevokeDelegation {
+                contract_address: token,
+                delegate_address: peer,
+            },
+            Wire::RevokeDelegation(RevokeDelegation {
+                contract_address: token.to_vec(),
+                delegate_address: peer.to_vec(),
+            }),
+        ),
+        (
+            Transaction::TransferAndCall {
+                underlying: token,
+                wrapper: peer,
+                amount: (-1).into(),
+                recipient_data: Some(vec![]),
+            },
+            Wire::TransferAndCall(TransferAndCall {
+                underlying: token.to_vec(),
+                wrapper: peer.to_vec(),
+                amount: "-1".into(),
+                recipient_data: Some(vec![]),
+            }),
+        ),
+        (
+            Transaction::DelegateDecryption {
+                contract_address: token,
+                delegate_address: peer,
+                expiration_date_ms: Some(0),
+            },
+            Wire::DelegateDecryption(DelegateDecryption {
+                contract_address: token.to_vec(),
+                delegate_address: peer.to_vec(),
+                expiration_date_ms: Some(0),
+            }),
+        ),
+    ];
+    let mut operation_ids = std::collections::HashSet::new();
+    for (transaction, expected) in table {
+        let prepared = sdk
             .offline()
             .prepare(
                 PrepareTransaction {
-                    from: c,
+                    from: sender,
                     transaction,
+                },
+                None,
+            )
+            .await
+            .unwrap();
+        assert_eq!(prepared.kind, TransactionKind::SetOperator);
+        assert_eq!(prepared.from, Address::repeat_byte(9));
+        assert_eq!(prepared.unsigned_tx, vec![2, 0, 255, 128]);
+        let request = captured.lock().unwrap().last().cloned().unwrap();
+        let operation = request.operation.as_ref().unwrap();
+        assert_eq!(operation.context_id, "context");
+        assert!(!operation.operation_id.is_empty());
+        assert!(operation_ids.insert(operation.operation_id.clone()));
+        assert_eq!(request.from, sender.to_vec());
+        assert_eq!(request.transaction, Some(expected));
+    }
+    sdk.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn sends_prepare_options_only_when_provided() {
+    let captured = Arc::new(Mutex::new(Vec::new()));
+    let server = Server::start(capturing_server(captured.clone())).await;
+    let sdk = Client::connect(&server.socket)
+        .await
+        .unwrap()
+        .sdk(SdkConfig::new(11155111, "http://localhost:8545"))
+        .build()
+        .await
+        .unwrap();
+    let amount: BigInt = "340282366920938463463374607431768211457".parse().unwrap();
+    let options = PrepareOptions {
+        nonce: Some(0),
+        gas_limit: Some(0.into()),
+        fees: Some(PrepareFees {
+            max_fee_per_gas: amount.clone(),
+            max_priority_fee_per_gas: 0.into(),
+        }),
+    };
+    for options in [Some(options), None] {
+        sdk.offline()
+            .prepare(
+                PrepareTransaction {
+                    from: Address::repeat_byte(3),
+                    transaction: Transaction::UnwrapAll {
+                        token: Address::repeat_byte(1),
+                        to: Address::repeat_byte(2),
+                    },
                 },
                 options,
             )
             .await
             .unwrap();
-        assert_eq!(result.kind, TransactionKind::SetOperator);
-        assert_eq!(result.from, Address::repeat_byte(9));
-        assert_eq!(result.unsigned_tx, vec![2, 0, 255, 128]);
     }
     sdk.close().await.unwrap();
-    let requests = seen.lock().unwrap();
-    let mut ids = std::collections::HashSet::new();
-    for (i, r) in requests.iter().enumerate() {
-        let op = r.operation.as_ref().unwrap();
-        assert_eq!(op.context_id, "context");
-        assert!(!op.operation_id.is_empty());
-        assert!(ids.insert(&op.operation_id));
-        assert_eq!(r.from, c.to_vec());
-        if i == 0 {
-            assert!(r.options.is_none());
-        } else {
-            let o = r.options.as_ref().unwrap();
-            assert_eq!(o.nonce, Some(0));
-            assert_eq!(o.gas_limit.as_deref(), Some("0"));
-            let f = o.fees.as_ref().unwrap();
-            assert_eq!(f.max_fee_per_gas, n.to_string());
-            assert_eq!(f.max_priority_fee_per_gas, "0");
-        }
-    }
-    use generated::prepare_transaction_request::Transaction as W;
-    let expected = vec![
-        W::ConfidentialTransfer(ConfidentialTransfer {
-            token: a.to_vec(),
-            to: b.to_vec(),
-            amount: n.to_string(),
-        }),
-        W::ConfidentialTransferFrom(ConfidentialTransferFrom {
-            token: a.to_vec(),
-            owner: b.to_vec(),
-            to: c.to_vec(),
-            amount: n.to_string(),
-        }),
-        W::SetOperator(SetOperator {
-            token: a.to_vec(),
-            operator: b.to_vec(),
-            until: Some(1),
-        }),
-        W::Unwrap(Unwrap {
-            token: a.to_vec(),
-            to: b.to_vec(),
-            amount: n.to_string(),
-        }),
-        W::UnwrapAll(UnwrapAll {
-            token: a.to_vec(),
-            to: b.to_vec(),
-        }),
-        W::FinalizeUnwrap(FinalizeUnwrap {
-            wrapper: a.to_vec(),
-            unwrap_request_id_or_amount: vec![255; 32],
-        }),
-        W::ApproveUnderlying(ApproveUnderlying {
-            underlying: a.to_vec(),
-            spender: b.to_vec(),
-            amount: n.to_string(),
-        }),
-        W::Wrap(Wrap {
-            wrapper: a.to_vec(),
-            to: b.to_vec(),
-            amount: n.to_string(),
-        }),
-        W::TransferAndCall(TransferAndCall {
-            underlying: a.to_vec(),
-            wrapper: b.to_vec(),
-            amount: n.to_string(),
-            recipient_data: None,
-        }),
-        W::DelegateDecryption(DelegateDecryption {
-            contract_address: a.to_vec(),
-            delegate_address: b.to_vec(),
-            expiration_date_ms: None,
-        }),
-        W::RevokeDelegation(RevokeDelegation {
-            contract_address: a.to_vec(),
-            delegate_address: b.to_vec(),
-        }),
-        W::TransferAndCall(TransferAndCall {
-            underlying: a.to_vec(),
-            wrapper: b.to_vec(),
-            amount: "-1".into(),
-            recipient_data: Some(vec![]),
-        }),
-        W::DelegateDecryption(DelegateDecryption {
-            contract_address: a.to_vec(),
-            delegate_address: b.to_vec(),
-            expiration_date_ms: Some(0),
-        }),
-    ];
-    assert_eq!(
-        requests
-            .iter()
-            .map(|r| r.transaction.as_ref().unwrap())
-            .collect::<Vec<_>>(),
-        expected.iter().collect::<Vec<_>>()
-    );
+    let requests = captured.lock().unwrap();
+    let sent = requests[0].options.as_ref().unwrap();
+    assert_eq!(sent.nonce, Some(0));
+    assert_eq!(sent.gas_limit.as_deref(), Some("0"));
+    let fees = sent.fees.as_ref().unwrap();
+    assert_eq!(fees.max_fee_per_gas, amount.to_string());
+    assert_eq!(fees.max_priority_fee_per_gas, "0");
+    assert!(requests[1].options.is_none());
 }
 
 #[tokio::test]
