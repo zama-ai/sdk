@@ -45,7 +45,7 @@ pub use config_options::{
 pub use decryption::{
     BatchItem, Decryption, DelegatedBatchOptions, DelegatedOptions, PublicDecryption,
 };
-pub use encryption::{EncryptInput, EncryptParams, EncryptResult};
+pub use encryption::{EncryptInput, EncryptOptions, EncryptParams, EncryptResult};
 pub use error::{RpcError, SdkError};
 pub use num_bigint::BigInt;
 pub use permits::{Offline, Permits, PreparePermit, PreparedPermit};

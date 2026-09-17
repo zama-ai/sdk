@@ -22,18 +22,22 @@ func TestEncryptWire(t *testing.T) {
 	client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 		if req, ok := request.(*pb.EncryptRequest); ok {
 			requests <- req
-			return &pb.EncryptResponse{EncryptedValues: [][]byte{handle}, InputProof: []byte{0, 255, 1}}, nil
+			handles := make([][]byte, len(req.Values))
+			for i := range handles {
+				handles[i] = handle
+			}
+			return &pb.EncryptResponse{EncryptedValues: handles, InputProof: []byte{0, 255, 1}}, nil
 		}
 		return &pb.CreateContextResponse{ContextId: "encrypt"}, nil
 	})
 	sdk := unsignedSDK(t, client)
 	large := new(big.Int).Lsh(big.NewInt(1), 255)
 	params := EncryptParams{ContractAddress: common.HexToAddress("0x1111111111111111111111111111111111111111"), UserAddress: common.HexToAddress("0x2222222222222222222222222222222222222222")}
-	types := []IntegerType{EUint8, EUint16, EUint32, EUint64, EUint128, EUint256}
-	for _, typ := range types {
-		params.Values = append(params.Values, IntegerInput{Type: typ, Value: large})
+	params.Values = []EncryptInput{
+		Euint8(large), Euint16(large), Euint32(large), Euint64(large), Euint128(large), Euint256(large),
+		Ebool(false), Ebool(true), EboolBigInt(big.NewInt(0)), EboolBigInt(big.NewInt(1)),
+		Eaddress(params.UserAddress), Euint8(big.NewInt(-1)),
 	}
-	params.Values = append(params.Values, BoolInput{Value: false}, BoolInput{Value: true}, BoolBigIntInput{Value: big.NewInt(0)}, BoolBigIntInput{Value: big.NewInt(1)}, AddressInput{Value: params.UserAddress}, IntegerInput{Type: EUint8, Value: big.NewInt(-1)})
 	result, err := sdk.Encrypt(testContext(t), params, EncryptOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -42,27 +46,29 @@ func TestEncryptWire(t *testing.T) {
 	if req.TimeoutMs != nil || req.Operation.ContextId != "encrypt" || req.Operation.OperationId == "" || !bytes.Equal(req.ContractAddress, params.ContractAddress.Bytes()) || !bytes.Equal(req.UserAddress, params.UserAddress.Bytes()) {
 		t.Fatalf("parameters lost: %v", req)
 	}
-	for i, typ := range types {
-		if req.Values[i].GetBigintValue() != large.String() || req.Values[i].Type != string(typ) {
+	integers := []string{req.Values[0].GetEuint8(), req.Values[1].GetEuint16(), req.Values[2].GetEuint32(), req.Values[3].GetEuint64(), req.Values[4].GetEuint128(), req.Values[5].GetEuint256()}
+	for _, value := range integers {
+		if value != large.String() {
 			t.Fatal("integer lost precision/type")
 		}
 	}
-	if _, ok := req.Values[6].Value.(*pb.EncryptInput_BoolValue); !ok || req.Values[6].GetBoolValue() || !req.Values[7].GetBoolValue() {
+	if _, ok := req.Values[6].Value.(*pb.EncryptInput_Ebool); !ok || req.Values[6].GetEbool() || !req.Values[7].GetEbool() {
 		t.Fatal("boolean representation lost")
 	}
-	if req.Values[8].GetBigintValue() != "0" || req.Values[9].GetBigintValue() != "1" || req.Values[11].GetBigintValue() != "-1" || !bytes.Equal(req.Values[10].GetAddressValue(), params.UserAddress.Bytes()) {
+	if req.Values[8].GetEboolBigint() != "0" || req.Values[9].GetEboolBigint() != "1" || req.Values[11].GetEuint8() != "-1" || !bytes.Equal(req.Values[10].GetEaddress(), params.UserAddress.Bytes()) {
 		t.Fatal("input representation lost")
 	}
-	if len(result.EncryptedValues) != 1 || result.EncryptedValues[0] != common.BytesToHash(handle) || !bytes.Equal(result.InputProof, []byte{0, 255, 1}) {
+	if len(result.EncryptedValues) != len(params.Values) || result.EncryptedValues[0] != common.BytesToHash(handle) || !bytes.Equal(result.InputProof, []byte{0, 255, 1}) {
 		t.Fatal("result changed")
 	}
-	zero := uint32(0)
-	if _, err := sdk.Encrypt(testContext(t), EncryptParams{}, EncryptOptions{TimeoutMS: &zero}); err != nil {
-		t.Fatal(err)
-	}
-	req = <-requests
-	if req.TimeoutMs == nil || *req.TimeoutMs != 0 || len(req.Values) != 0 {
-		t.Fatal("explicit zero or empty inputs changed")
+	for _, timeout := range []uint32{0, 500} {
+		if _, err := sdk.Encrypt(testContext(t), EncryptParams{}, EncryptOptions{TimeoutMS: &timeout}); err != nil {
+			t.Fatal(err)
+		}
+		req = <-requests
+		if req.TimeoutMs == nil || *req.TimeoutMs != timeout || len(req.Values) != 0 {
+			t.Fatalf("explicit timeout or empty inputs changed: %v", req)
+		}
 	}
 }
 
@@ -115,16 +121,41 @@ func TestEncryptRejectsMalformedHandle(t *testing.T) {
 		}
 		return &pb.CreateContextResponse{ContextId: "encrypt"}, nil
 	})
-	if _, err := unsignedSDK(t, client).Encrypt(testContext(t), EncryptParams{}, EncryptOptions{}); err == nil {
+	if _, err := unsignedSDK(t, client).Encrypt(testContext(t), EncryptParams{Values: []EncryptInput{Ebool(true)}}, EncryptOptions{}); err == nil {
 		t.Fatal("malformed handle accepted")
 	}
 }
 
-func TestEncryptRejectsAbsentInputs(t *testing.T) {
-	var pointer *BoolInput
-	for _, input := range []EncryptInput{nil, pointer, IntegerInput{Type: EUint64}, BoolBigIntInput{}} {
-		if _, err := (&SDKContext{}).Encrypt(context.Background(), EncryptParams{Values: []EncryptInput{input}}, EncryptOptions{}); err == nil {
-			t.Fatalf("absent input accepted: %#v", input)
+func TestEncryptRejectsHandleCountMismatch(t *testing.T) {
+	handle := bytes.Repeat([]byte{0xab}, 32)
+	client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+		if _, ok := request.(*pb.EncryptRequest); ok {
+			return &pb.EncryptResponse{EncryptedValues: [][]byte{handle}}, nil
 		}
+		return &pb.CreateContextResponse{ContextId: "encrypt"}, nil
+	})
+	params := EncryptParams{Values: []EncryptInput{Ebool(true), Ebool(false)}}
+	if _, err := unsignedSDK(t, client).Encrypt(testContext(t), params, EncryptOptions{}); err == nil {
+		t.Fatal("handle count mismatch accepted")
+	}
+}
+
+func TestEncryptRejectsAbsentInputs(t *testing.T) {
+	for _, absent := range []struct {
+		name    string
+		input   EncryptInput
+		message string
+	}{
+		{"zero value", EncryptInput{}, "encryption input 1: missing value"},
+		{"nil integer", Euint64(nil), "encryption input 1: missing value"},
+		{"nil boolean integer", EboolBigInt(nil), "encryption input 1: missing value"},
+	} {
+		t.Run(absent.name, func(t *testing.T) {
+			params := EncryptParams{Values: []EncryptInput{Ebool(true), absent.input}}
+			_, err := (&SDKContext{}).Encrypt(context.Background(), params, EncryptOptions{})
+			if err == nil || err.Error() != absent.message {
+				t.Fatalf("absent input accepted: %v", err)
+			}
+		})
 	}
 }

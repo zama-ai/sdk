@@ -11,6 +11,5 @@ export function createEncryptionValidationBackend() {
       },
     }),
   });
-  // Invalid inputs reject before runtime initialization or FHE key acquisition.
   return createFhevmEncryptClient({ publicClient, chain: toFhevmChain(anvil) }).encryptValues;
 }

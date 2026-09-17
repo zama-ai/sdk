@@ -1,7 +1,11 @@
 use anyhow::Result;
-use zama_sdk_sidecar::{Address, EncryptInput, EncryptParams, Sdk};
+use zama_sdk_sidecar::{Address, EncryptInput, EncryptOptions, EncryptParams, Sdk};
 
-pub async fn run(sdk: &Sdk, contract_address: Address, user_address: Address) -> Result<()> {
+pub async fn encrypt_inputs(
+    sdk: &Sdk,
+    contract_address: Address,
+    user_address: Address,
+) -> Result<()> {
     let inputs = [
         EncryptInput::Uint64(1000.into()),
         EncryptInput::Bool(true),
@@ -14,10 +18,12 @@ pub async fn run(sdk: &Sdk, contract_address: Address, user_address: Address) ->
                 contract_address,
                 user_address,
             },
-            None,
+            EncryptOptions::default(),
         )
         .await?;
-    println!("Encrypted inputs: {:?}", result.encrypted_values);
+    for (index, handle) in result.encrypted_values.iter().enumerate() {
+        println!("Encrypted input {index}: {handle}");
+    }
     println!(
         "Input proof: {}",
         alloy_primitives::hex::encode_prefixed(result.input_proof)

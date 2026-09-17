@@ -5,45 +5,34 @@ import type {
   EncryptInput as WireInput,
 } from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import type { ContextSdk } from "./runtime.js";
-import { address, bytes, unsignedInteger } from "./encoding.js";
+import { address, bytes, integer, unsignedInteger } from "./encoding.js";
 import { invalidArgument } from "./errors.js";
 
-function integer(value: string): bigint {
-  if (!/^(0|-[1-9][0-9]*|[1-9][0-9]*)$/.test(value)) {
-    throw invalidArgument("Encryption integers must use canonical decimal encoding.");
-  }
-  return BigInt(value);
-}
-
 export function encryptInput(input: WireInput): EncryptInput {
-  const { type, value } = input;
-  switch (type) {
-    case "euint8":
-    case "euint16":
-    case "euint32":
-    case "euint64":
-    case "euint128":
-    case "euint256":
-      if (value?.$case === "bigintValue") {
-        return { type, value: integer(value.bigintValue) };
-      }
-      break;
+  const value = input.value;
+  switch (value?.$case) {
     case "ebool":
-      if (value?.$case === "boolValue") {
-        return { type, value: value.boolValue };
-      }
-      if (value?.$case === "bigintValue") {
-        // The SDK owns value-range validation, including bigint boolean inputs.
-        return { type, value: integer(value.bigintValue) as 0n | 1n };
-      }
-      break;
+      return { type: "ebool", value: value.ebool };
+    case "eboolBigint":
+      // The SDK, not the sidecar, rejects bigints outside 0n and 1n.
+      return { type: "ebool", value: integer(value.eboolBigint) as 0n | 1n };
+    case "euint8":
+      return { type: "euint8", value: integer(value.euint8) };
+    case "euint16":
+      return { type: "euint16", value: integer(value.euint16) };
+    case "euint32":
+      return { type: "euint32", value: integer(value.euint32) };
+    case "euint64":
+      return { type: "euint64", value: integer(value.euint64) };
+    case "euint128":
+      return { type: "euint128", value: integer(value.euint128) };
+    case "euint256":
+      return { type: "euint256", value: integer(value.euint256) };
     case "eaddress":
-      if (value?.$case === "addressValue") {
-        return { type, value: address(value.addressValue) };
-      }
-      break;
+      return { type: "eaddress", value: address(value.eaddress) };
+    default:
+      throw invalidArgument("Encryption input requires a typed value.");
   }
-  throw invalidArgument("Encryption input type and value encoding do not match.");
 }
 
 export async function encrypt(

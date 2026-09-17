@@ -23,6 +23,7 @@ import {
   SidecarServiceClient,
   type ClearEntry,
   type ClearValue,
+  type CreateContextRequest,
   type SignerAction,
   type SignerClientMessage,
   type SignerServerMessage,
@@ -67,6 +68,25 @@ export function decodeValue(encoded: ClearValue | undefined) {
 export function decode(entries: ClearEntry[]) {
   return Object.fromEntries(
     entries.map((entry) => [bytesToHex(entry.encryptedValue), decodeValue(entry.value)]),
+  );
+}
+export function createContext(
+  client: SidecarServiceClient,
+  request: Partial<CreateContextRequest> = {},
+) {
+  return new Promise<string>((resolve, reject) =>
+    client.createContext(
+      {
+        config: undefined,
+        signerEnabled: false,
+        account: undefined,
+        storage: undefined,
+        permitStorage: undefined,
+        transportKeyPairDerivationSecret: undefined,
+        ...request,
+      },
+      (error, response) => (error ? reject(error) : resolve(response.contextId)),
+    ),
   );
 }
 export async function testServer(factory: ContextFactory) {

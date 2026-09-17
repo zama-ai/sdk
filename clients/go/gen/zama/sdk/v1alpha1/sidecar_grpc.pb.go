@@ -92,7 +92,7 @@ type SidecarServiceClient interface {
 	WarmTransportKeyPairScope(ctx context.Context, in *ScopeRequest, opts ...grpc.CallOption) (*WarmTransportKeyPairScopeResponse, error)
 	// Calls permits.revokeTransportKeyPair for the supplied credential scope.
 	RevokeTransportKeyPair(ctx context.Context, in *ScopeRequest, opts ...grpc.CallOption) (*RevokeTransportKeyPairResponse, error)
-	// Calls sdk.encrypt with explicit user/contract binding; no wallet signing is required.
+	// Calls sdk.encrypt; no wallet signing is required.
 	Encrypt(ctx context.Context, in *EncryptRequest, opts ...grpc.CallOption) (*EncryptResponse, error)
 }
 
@@ -379,7 +379,7 @@ type SidecarServiceServer interface {
 	WarmTransportKeyPairScope(context.Context, *ScopeRequest) (*WarmTransportKeyPairScopeResponse, error)
 	// Calls permits.revokeTransportKeyPair for the supplied credential scope.
 	RevokeTransportKeyPair(context.Context, *ScopeRequest) (*RevokeTransportKeyPairResponse, error)
-	// Calls sdk.encrypt with explicit user/contract binding; no wallet signing is required.
+	// Calls sdk.encrypt; no wallet signing is required.
 	Encrypt(context.Context, *EncryptRequest) (*EncryptResponse, error)
 	mustEmbedUnimplementedSidecarServiceServer()
 }

@@ -3,6 +3,7 @@ import { Metadata, status, type ServiceError } from "@grpc/grpc-js";
 import type { EncryptInput, EncryptParams, EncryptResult } from "@zama-fhe/sdk";
 import { bytesToHex, getAddress } from "viem";
 import { expect, test, vi } from "vitest";
+import { createEncryptionValidationBackend } from "../../sdk/src/test-fixtures/encryption.js";
 import { bytes } from "../src/encoding.js";
 import { serviceError } from "../src/errors.js";
 import { encrypt as adaptEncryption, encryptInput } from "../src/encryption.js";
@@ -12,7 +13,13 @@ import type {
   EncryptResponse,
 } from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
 import type { ContextSdk } from "../src/runtime.js";
-import { encryptionFixture, encryptionScenarios, encryptionServer } from "./support/encryption.js";
+import {
+  encryptionFixture,
+  encryptionServer,
+  type Scenario,
+  scenarioUrl,
+} from "./support/encryption.js";
+import { createContext } from "./support/harness.js";
 
 const contractAddress = getAddress("0x1234567890123456789012345678901234567890");
 const userAddress = getAddress("0xabcdefabcdefabcdefabcdefabcdefabcdefabcd");
@@ -27,32 +34,42 @@ const inputs: EncryptInput[] = [
   { type: "ebool", value: 1n },
   { type: "eaddress", value: userAddress },
 ];
-function wire(value: EncryptInput): WireInput {
-  return {
-    type: value.type,
-    value:
-      typeof value.value === "bigint"
-        ? { $case: "bigintValue", bigintValue: value.value.toString() }
-        : typeof value.value === "boolean"
-          ? { $case: "boolValue", boolValue: value.value }
-          : { $case: "addressValue", addressValue: bytes(value.value) },
-  };
+function wire(input: EncryptInput): WireInput {
+  switch (input.type) {
+    case "ebool":
+      return typeof input.value === "boolean"
+        ? { value: { $case: "ebool", ebool: input.value } }
+        : { value: { $case: "eboolBigint", eboolBigint: input.value.toString() } };
+    case "euint8":
+      return { value: { $case: "euint8", euint8: input.value.toString() } };
+    case "euint16":
+      return { value: { $case: "euint16", euint16: input.value.toString() } };
+    case "euint32":
+      return { value: { $case: "euint32", euint32: input.value.toString() } };
+    case "euint64":
+      return { value: { $case: "euint64", euint64: input.value.toString() } };
+    case "euint128":
+      return { value: { $case: "euint128", euint128: input.value.toString() } };
+    case "euint256":
+      return { value: { $case: "euint256", euint256: input.value.toString() } };
+    case "eaddress":
+    default:
+      return { value: { $case: "eaddress", eaddress: bytes(input.value) } };
+  }
 }
-async function harness(signerEnabled = false) {
+async function harness(scenario: Scenario = "", signerEnabled = false) {
   const server = await encryptionServer();
-  const contextId = await new Promise<string>((resolve, reject) =>
-    server.client.createContext(
-      {
-        config: undefined,
-        transportKeyPairDerivationSecret: undefined,
-        signerEnabled,
-        account: signerEnabled ? { address: bytes(contractAddress), chainId: 31337n } : undefined,
-        storage: undefined,
-        permitStorage: undefined,
-      },
-      (error, response) => (error ? reject(error) : resolve(response.contextId)),
-    ),
-  );
+  const contextId = await createContext(server.client, {
+    config: {
+      chains: [
+        { id: 31337n, relayerUrl: scenarioUrl(scenario), auth: undefined, provider: undefined },
+      ],
+      processRuntime: undefined,
+      relayers: undefined,
+    },
+    signerEnabled,
+    account: signerEnabled ? { address: bytes(contractAddress), chainId: 31337n } : undefined,
+  });
   const request = (values = inputs, timeoutMs?: number): EncryptRequest => ({
     operation: { contextId, operationId: randomUUID() },
     values: values.map(wire),
@@ -81,7 +98,7 @@ function decode(result: EncryptResponse): EncryptResult {
 test.each([undefined, 0, 1234, 0xffff_ffff])(
   "direct SDK and wire preserve all types, binding, and timeout %s",
   async (timeout) => {
-    const direct = encryptionFixture(undefined);
+    const direct = encryptionFixture("", undefined);
     const remote = await harness();
     try {
       const params: EncryptParams = { values: inputs, contractAddress, userAddress };
@@ -146,37 +163,35 @@ test("empty inputs and out-of-range integers reach SDK unchanged", async () => {
   }
 });
 
-test.each([
+test.each<{ scenario: Scenario; details: string; retryable: string[]; retryAfter: string[] }>([
   {
-    timeout: encryptionScenarios.rateLimited,
+    scenario: "rate-limited",
     details: "Encryption service busy",
     retryable: ["true"],
     retryAfter: ["7"],
   },
   {
-    timeout: encryptionScenarios.fractionalRetryHint,
+    scenario: "fractional-retry-hint",
     details: "Encryption retry hint is fractional",
     retryable: ["true"],
     retryAfter: [],
   },
   {
-    timeout: encryptionScenarios.unavailable,
+    scenario: "unavailable",
     details: "Encryption service unavailable",
     retryable: ["false"],
     retryAfter: [],
   },
 ])(
-  "SDK failure preserves only valid whole-second retry details for timeout $timeout",
-  async ({ timeout, details, retryable, retryAfter }) => {
-    const direct = encryptionFixture(undefined);
-    const remote = await harness();
+  "SDK failure preserves only valid whole-second retry details for $scenario",
+  async ({ scenario, details, retryable, retryAfter }) => {
+    const direct = encryptionFixture(scenario, undefined);
+    const remote = await harness(scenario);
     try {
       const expected = await direct.sdk
-        .encrypt({ values: inputs, contractAddress, userAddress }, { timeout })
+        .encrypt({ values: inputs, contractAddress, userAddress })
         .catch(serviceError);
-      const actual = await remote
-        .encrypt(remote.request(inputs, timeout))
-        .catch((error: ServiceError) => error);
+      const actual = await remote.encrypt().catch((error: ServiceError) => error);
       expect(actual).toMatchObject({ code: (expected as ServiceError).code, details });
       for (const key of [
         "zama-error-code",
@@ -199,21 +214,18 @@ test.each([
 );
 
 test("concurrent public encryption and cancellation remain isolated", async () => {
-  const remote = await harness(true);
+  const remote = await harness("cancelled", true);
   try {
     const start = () => {
       let call: ReturnType<typeof remote.client.encrypt>;
       const result = new Promise<ServiceError>((resolve, reject) => {
-        call = remote.client.encrypt(
-          remote.request(inputs, encryptionScenarios.cancelled),
-          (error) => {
-            if (error) {
-              resolve(error);
-            } else {
-              reject(new Error("blocked encryption unexpectedly completed"));
-            }
-          },
-        );
+        call = remote.client.encrypt(remote.request(), (error) => {
+          if (error) {
+            resolve(error);
+          } else {
+            reject(new Error("blocked encryption unexpectedly completed"));
+          }
+        });
       });
       return { call: call!, result };
     };
@@ -237,9 +249,9 @@ test("concurrent public encryption and cancellation remain isolated", async () =
 });
 
 test.each(["cancel", "deadline", "close"])("%s aborts SDK encryption", async (mode) => {
-  const remote = await harness();
+  const remote = await harness("cancelled");
   try {
-    const request = remote.request(inputs, encryptionScenarios.cancelled);
+    const request = remote.request();
     let call: ReturnType<typeof remote.client.encrypt>;
     const result = new Promise<EncryptResponse>((resolve, reject) => {
       call = remote.client.encrypt(
@@ -273,44 +285,45 @@ test.each(["cancel", "deadline", "close"])("%s aborts SDK encryption", async (mo
 
 test.each(["", "01", "-0", "1.5", "0x10", "+1", " 1"])(
   "rejects malformed decimal %j at the wire boundary",
-  (bigintValue) => {
-    expect(() =>
-      encryptInput({ type: "euint64", value: { $case: "bigintValue", bigintValue } }),
-    ).toThrow("canonical decimal");
+  (euint64) => {
+    expect(() => encryptInput({ value: { $case: "euint64", euint64 } })).toThrow(
+      "canonical decimal",
+    );
   },
 );
-test("rejects missing values, unsupported types and invalid address lengths", async () => {
-  for (const input of [
-    { type: "ebool", value: undefined },
-    { type: "euint160", value: { $case: "bigintValue", bigintValue: "1" } },
-    { type: "euint8", value: { $case: "boolValue", boolValue: true } },
-  ] satisfies WireInput[]) {
-    expect(() => encryptInput(input)).toThrow("type and value");
+test("rejects untyped values and invalid address lengths", async () => {
+  expect(() => encryptInput({ value: undefined })).toThrow("requires a typed value");
+  for (const length of [0, 19, 21]) {
+    expect(() =>
+      encryptInput({ value: { $case: "eaddress", eaddress: Buffer.alloc(length) } }),
+    ).toThrow("20 bytes");
   }
   const remote = await harness();
   try {
-    await expect(
-      remote.encrypt({ ...remote.request(), userAddress: Buffer.alloc(19) }),
-    ).rejects.toMatchObject({ code: status.INVALID_ARGUMENT });
-    expect(remote.fixtures[0]!.relayer.encryptValues).not.toHaveBeenCalled();
+    for (const addresses of [
+      { userAddress: Buffer.alloc(19) },
+      { contractAddress: Buffer.alloc(0) },
+    ]) {
+      await expect(remote.encrypt({ ...remote.request(), ...addresses })).rejects.toMatchObject({
+        code: status.INVALID_ARGUMENT,
+      });
+    }
+    expect(remote.fixtures[0]!.encryptValues).not.toHaveBeenCalled();
   } finally {
     await remote.close();
   }
 });
 
 test("canonical backend numeric rejection errors match direct SDK errors", async () => {
-  const { createEncryptionValidationBackend } =
-    await import("../../sdk/src/test-fixtures/encryption.js");
   const validate = createEncryptionValidationBackend();
-  const direct = encryptionFixture(undefined);
-  const remote = await harness();
-  direct.encryptValues.mockImplementation(validate);
-  remote.fixtures[0]!.encryptValues.mockImplementation(validate);
+  const direct = encryptionFixture("invalid-input", undefined);
+  const remote = await harness("invalid-input");
   try {
     for (const values of [
       [{ type: "euint8", value: -1n }],
       [{ type: "euint8", value: 256n }],
       [{ type: "euint256", value: 1n << 256n }],
+      [{ type: "ebool", value: -1n }],
       [{ type: "ebool", value: 2n }],
     ] as EncryptInput[][]) {
       const params = { values, contractAddress, userAddress };
@@ -337,7 +350,7 @@ test("canonical backend numeric rejection errors match direct SDK errors", async
 });
 
 test("explicit user binding stays independent from the connected wallet", async () => {
-  const remote = await harness(true);
+  const remote = await harness("", true);
   try {
     const result = decode(await remote.encrypt());
     expect(proof(result).userAddress).toBe(userAddress);
@@ -356,12 +369,12 @@ test("explicit user binding stays independent from the connected wallet", async 
 });
 
 test("a direct SDK call observes the same abort signal behavior", async () => {
-  const direct = encryptionFixture(undefined);
+  const direct = encryptionFixture("cancelled", undefined);
   const controller = new AbortController();
   try {
     const result = direct.sdk.encrypt(
       { values: inputs, contractAddress, userAddress },
-      { timeout: encryptionScenarios.cancelled, signal: controller.signal },
+      { signal: controller.signal },
     );
     const failed = result.catch((error: Error) => error);
     await expect.poll(() => direct.encryptValues.mock.calls.length).toBe(1);

@@ -13,7 +13,13 @@ async fn encrypt_preserves_wire_values_options_and_output_order() {
             .unwrap()
             .push(EncryptRequest::decode(bytes).unwrap());
         response(EncryptResponse {
-            encrypted_values: vec![vec![2; 32], vec![1; 32]],
+            encrypted_values: vec![
+                vec![2; 32],
+                vec![1; 32],
+                vec![3; 32],
+                vec![4; 32],
+                vec![5; 32],
+            ],
             input_proof: vec![0, 255, 128],
         })
     }))
@@ -39,11 +45,20 @@ async fn encrypt_preserves_wire_values_options_and_output_order() {
         contract_address: Address::repeat_byte(1),
         user_address: Address::repeat_byte(2),
     };
-    for timeout in [None, Some(0), Some(500)] {
-        let result = sdk.encrypt(params, timeout).await.unwrap();
+    for timeout_ms in [None, Some(0), Some(500)] {
+        let result = sdk
+            .encrypt(params, EncryptOptions { timeout_ms })
+            .await
+            .unwrap();
         assert_eq!(
             result.encrypted_values,
-            vec![B256::repeat_byte(2), B256::repeat_byte(1)]
+            vec![
+                B256::repeat_byte(2),
+                B256::repeat_byte(1),
+                B256::repeat_byte(3),
+                B256::repeat_byte(4),
+                B256::repeat_byte(5)
+            ]
         );
         assert_eq!(result.input_proof, vec![0, 255, 128]);
     }
@@ -58,20 +73,16 @@ async fn encrypt_preserves_wire_values_options_and_output_order() {
         vec![None, Some(0), Some(500)]
     );
     use encrypt_input::Value;
-    assert_eq!(first.values[0].r#type, "euint256");
     assert_eq!(
         first.values[0].value,
-        Some(Value::BigintValue(
+        Some(Value::Euint256(
             ((BigInt::from(1) << 300usize) + BigInt::from(5)).to_string()
         ))
     );
-    assert_eq!(first.values[1].value, Some(Value::BigintValue("-1".into())));
-    assert_eq!(first.values[2].value, Some(Value::BoolValue(false)));
-    assert_eq!(first.values[3].value, Some(Value::BigintValue("0".into())));
-    assert_eq!(
-        first.values[4].value,
-        Some(Value::AddressValue(vec![3; 20]))
-    );
+    assert_eq!(first.values[1].value, Some(Value::Euint8("-1".into())));
+    assert_eq!(first.values[2].value, Some(Value::Ebool(false)));
+    assert_eq!(first.values[3].value, Some(Value::EboolBigint("0".into())));
+    assert_eq!(first.values[4].value, Some(Value::Eaddress(vec![3; 20])));
 }
 
 #[tokio::test]
@@ -96,17 +107,66 @@ async fn encrypt_rejects_malformed_encrypted_value() {
         )
         .await
         .unwrap();
-    assert!(
-        sdk.encrypt(
+    let error = sdk
+        .encrypt(
             EncryptParams {
-                values: &[],
+                values: &[crate::EncryptInput::Bool(true)],
                 contract_address: Address::ZERO,
-                user_address: Address::ZERO
+                user_address: Address::ZERO,
             },
-            None
+            EncryptOptions::default(),
         )
         .await
-        .is_err()
+        .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("invalid encrypted handle length"),
+        "unexpected error: {error}"
+    );
+}
+
+#[tokio::test]
+async fn encrypt_rejects_mismatched_encrypted_value_count() {
+    let server = Server::start(Arc::new(|path, bytes| {
+        if path.ends_with("/Encrypt") {
+            response(EncryptResponse {
+                encrypted_values: vec![vec![1; 32]],
+                input_proof: vec![],
+            })
+        } else {
+            default_handler(path, bytes)
+        }
+    }))
+    .await;
+    let sdk = Client::connect(&server.socket)
+        .await
+        .unwrap()
+        .create_context(
+            SdkConfig::new(31337, "http://fixture.invalid"),
+            SignerConfig::Disabled,
+        )
+        .await
+        .unwrap();
+    let error = sdk
+        .encrypt(
+            EncryptParams {
+                values: &[
+                    crate::EncryptInput::Bool(true),
+                    crate::EncryptInput::Bool(false),
+                ],
+                contract_address: Address::ZERO,
+                user_address: Address::ZERO,
+            },
+            EncryptOptions::default(),
+        )
+        .await
+        .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("encrypted value count does not match inputs"),
+        "unexpected error: {error}"
     );
 }
 
@@ -151,7 +211,7 @@ async fn dropping_encrypt_and_deadlines_release_operation_guards() {
         contract_address: Address::ZERO,
         user_address: Address::ZERO,
     };
-    let mut operation = Box::pin(sdk.encrypt(params, None));
+    let mut operation = Box::pin(sdk.encrypt(params, EncryptOptions::default()));
     let id = tokio::select! {
         result = &mut operation => panic!("unexpected response: {result:?}"),
         id = starts.recv() => id.unwrap(),
@@ -162,10 +222,13 @@ async fn dropping_encrypt_and_deadlines_release_operation_guards() {
     assert!(!sdk.operations.contains(&id));
     let bounded = sdk.clone().with_timeout(Duration::from_millis(100));
     assert!(
-        tokio::time::timeout(Duration::from_secs(2), bounded.encrypt(params, None))
-            .await
-            .unwrap()
-            .is_err()
+        tokio::time::timeout(
+            Duration::from_secs(2),
+            bounded.encrypt(params, EncryptOptions::default())
+        )
+        .await
+        .unwrap()
+        .is_err()
     );
     let id = starts.recv().await.unwrap();
     assert!(!sdk.operations.contains(&id));

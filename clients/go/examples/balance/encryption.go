@@ -12,9 +12,9 @@ import (
 func encryptInputs(ctx context.Context, sdk *sidecar.SDKContext, contract, user common.Address) error {
 	result, err := sdk.Encrypt(ctx, sidecar.EncryptParams{
 		Values: []sidecar.EncryptInput{
-			sidecar.IntegerInput{Type: sidecar.EUint64, Value: big.NewInt(1000)},
-			sidecar.BoolInput{Value: true},
-			sidecar.AddressInput{Value: user},
+			sidecar.Euint64(big.NewInt(1000)),
+			sidecar.Ebool(true),
+			sidecar.Eaddress(user),
 		},
 		ContractAddress: contract,
 		UserAddress:     user,

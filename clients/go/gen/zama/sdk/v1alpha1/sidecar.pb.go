@@ -891,7 +891,7 @@ type DecryptValuesRequest struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	Operation *Operation             `protobuf:"bytes,1,opt,name=operation,proto3" json:"operation,omitempty"`
 	Inputs    []*EncryptedInput      `protobuf:"bytes,2,rep,name=inputs,proto3" json:"inputs,omitempty"`
-	// SDK timeout in whole milliseconds; independent of the gRPC deadline.
+	// SDK relayer timeout in whole milliseconds, independent of the gRPC deadline. Omit to keep the SDK default; zero is a zero-millisecond budget, not "no timeout".
 	TimeoutMs     *uint32 `protobuf:"varint,3,opt,name=timeout_ms,json=timeoutMs,proto3,oneof" json:"timeout_ms,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1072,7 +1072,7 @@ type DecryptPublicValuesRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Operation       *Operation             `protobuf:"bytes,1,opt,name=operation,proto3" json:"operation,omitempty"`
 	EncryptedValues [][]byte               `protobuf:"bytes,2,rep,name=encrypted_values,json=encryptedValues,proto3" json:"encrypted_values,omitempty"`
-	// SDK timeout in whole milliseconds; independent of the gRPC deadline.
+	// SDK relayer timeout in whole milliseconds, independent of the gRPC deadline. Omit to keep the SDK default; zero is a zero-millisecond budget, not "no timeout".
 	TimeoutMs     *uint32 `protobuf:"varint,3,opt,name=timeout_ms,json=timeoutMs,proto3,oneof" json:"timeout_ms,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -4717,12 +4717,17 @@ func (x *ProviderBatchOptions) GetWait() uint32 {
 
 type EncryptInput struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Type  string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
 	// Types that are valid to be assigned to Value:
 	//
-	//	*EncryptInput_BigintValue
-	//	*EncryptInput_BoolValue
-	//	*EncryptInput_AddressValue
+	//	*EncryptInput_Ebool
+	//	*EncryptInput_EboolBigint
+	//	*EncryptInput_Euint8
+	//	*EncryptInput_Euint16
+	//	*EncryptInput_Euint32
+	//	*EncryptInput_Euint64
+	//	*EncryptInput_Euint128
+	//	*EncryptInput_Euint256
+	//	*EncryptInput_Eaddress
 	Value         isEncryptInput_Value `protobuf_oneof:"value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -4758,13 +4763,6 @@ func (*EncryptInput) Descriptor() ([]byte, []int) {
 	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{74}
 }
 
-func (x *EncryptInput) GetType() string {
-	if x != nil {
-		return x.Type
-	}
-	return ""
-}
-
 func (x *EncryptInput) GetValue() isEncryptInput_Value {
 	if x != nil {
 		return x.Value
@@ -4772,28 +4770,82 @@ func (x *EncryptInput) GetValue() isEncryptInput_Value {
 	return nil
 }
 
-func (x *EncryptInput) GetBigintValue() string {
+func (x *EncryptInput) GetEbool() bool {
 	if x != nil {
-		if x, ok := x.Value.(*EncryptInput_BigintValue); ok {
-			return x.BigintValue
-		}
-	}
-	return ""
-}
-
-func (x *EncryptInput) GetBoolValue() bool {
-	if x != nil {
-		if x, ok := x.Value.(*EncryptInput_BoolValue); ok {
-			return x.BoolValue
+		if x, ok := x.Value.(*EncryptInput_Ebool); ok {
+			return x.Ebool
 		}
 	}
 	return false
 }
 
-func (x *EncryptInput) GetAddressValue() []byte {
+func (x *EncryptInput) GetEboolBigint() string {
 	if x != nil {
-		if x, ok := x.Value.(*EncryptInput_AddressValue); ok {
-			return x.AddressValue
+		if x, ok := x.Value.(*EncryptInput_EboolBigint); ok {
+			return x.EboolBigint
+		}
+	}
+	return ""
+}
+
+func (x *EncryptInput) GetEuint8() string {
+	if x != nil {
+		if x, ok := x.Value.(*EncryptInput_Euint8); ok {
+			return x.Euint8
+		}
+	}
+	return ""
+}
+
+func (x *EncryptInput) GetEuint16() string {
+	if x != nil {
+		if x, ok := x.Value.(*EncryptInput_Euint16); ok {
+			return x.Euint16
+		}
+	}
+	return ""
+}
+
+func (x *EncryptInput) GetEuint32() string {
+	if x != nil {
+		if x, ok := x.Value.(*EncryptInput_Euint32); ok {
+			return x.Euint32
+		}
+	}
+	return ""
+}
+
+func (x *EncryptInput) GetEuint64() string {
+	if x != nil {
+		if x, ok := x.Value.(*EncryptInput_Euint64); ok {
+			return x.Euint64
+		}
+	}
+	return ""
+}
+
+func (x *EncryptInput) GetEuint128() string {
+	if x != nil {
+		if x, ok := x.Value.(*EncryptInput_Euint128); ok {
+			return x.Euint128
+		}
+	}
+	return ""
+}
+
+func (x *EncryptInput) GetEuint256() string {
+	if x != nil {
+		if x, ok := x.Value.(*EncryptInput_Euint256); ok {
+			return x.Euint256
+		}
+	}
+	return ""
+}
+
+func (x *EncryptInput) GetEaddress() []byte {
+	if x != nil {
+		if x, ok := x.Value.(*EncryptInput_Eaddress); ok {
+			return x.Eaddress
 		}
 	}
 	return nil
@@ -4803,24 +4855,61 @@ type isEncryptInput_Value interface {
 	isEncryptInput_Value()
 }
 
-type EncryptInput_BigintValue struct {
-	// Canonical signed decimal encoding; the SDK validates the value range.
-	BigintValue string `protobuf:"bytes,2,opt,name=bigint_value,json=bigintValue,proto3,oneof"`
+type EncryptInput_Ebool struct {
+	Ebool bool `protobuf:"varint,1,opt,name=ebool,proto3,oneof"`
 }
 
-type EncryptInput_BoolValue struct {
-	BoolValue bool `protobuf:"varint,3,opt,name=bool_value,json=boolValue,proto3,oneof"`
+type EncryptInput_EboolBigint struct {
+	// Canonical signed decimal strings; the SDK validates each type's range.
+	EboolBigint string `protobuf:"bytes,2,opt,name=ebool_bigint,json=eboolBigint,proto3,oneof"`
 }
 
-type EncryptInput_AddressValue struct {
-	AddressValue []byte `protobuf:"bytes,4,opt,name=address_value,json=addressValue,proto3,oneof"`
+type EncryptInput_Euint8 struct {
+	Euint8 string `protobuf:"bytes,3,opt,name=euint8,proto3,oneof"`
 }
 
-func (*EncryptInput_BigintValue) isEncryptInput_Value() {}
+type EncryptInput_Euint16 struct {
+	Euint16 string `protobuf:"bytes,4,opt,name=euint16,proto3,oneof"`
+}
 
-func (*EncryptInput_BoolValue) isEncryptInput_Value() {}
+type EncryptInput_Euint32 struct {
+	Euint32 string `protobuf:"bytes,5,opt,name=euint32,proto3,oneof"`
+}
 
-func (*EncryptInput_AddressValue) isEncryptInput_Value() {}
+type EncryptInput_Euint64 struct {
+	Euint64 string `protobuf:"bytes,6,opt,name=euint64,proto3,oneof"`
+}
+
+type EncryptInput_Euint128 struct {
+	Euint128 string `protobuf:"bytes,7,opt,name=euint128,proto3,oneof"`
+}
+
+type EncryptInput_Euint256 struct {
+	Euint256 string `protobuf:"bytes,8,opt,name=euint256,proto3,oneof"`
+}
+
+type EncryptInput_Eaddress struct {
+	// 20 bytes.
+	Eaddress []byte `protobuf:"bytes,9,opt,name=eaddress,proto3,oneof"`
+}
+
+func (*EncryptInput_Ebool) isEncryptInput_Value() {}
+
+func (*EncryptInput_EboolBigint) isEncryptInput_Value() {}
+
+func (*EncryptInput_Euint8) isEncryptInput_Value() {}
+
+func (*EncryptInput_Euint16) isEncryptInput_Value() {}
+
+func (*EncryptInput_Euint32) isEncryptInput_Value() {}
+
+func (*EncryptInput_Euint64) isEncryptInput_Value() {}
+
+func (*EncryptInput_Euint128) isEncryptInput_Value() {}
+
+func (*EncryptInput_Euint256) isEncryptInput_Value() {}
+
+func (*EncryptInput_Eaddress) isEncryptInput_Value() {}
 
 type EncryptRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
@@ -4828,7 +4917,7 @@ type EncryptRequest struct {
 	Values          []*EncryptInput        `protobuf:"bytes,2,rep,name=values,proto3" json:"values,omitempty"`
 	ContractAddress []byte                 `protobuf:"bytes,3,opt,name=contract_address,json=contractAddress,proto3" json:"contract_address,omitempty"`
 	UserAddress     []byte                 `protobuf:"bytes,4,opt,name=user_address,json=userAddress,proto3" json:"user_address,omitempty"`
-	// SDK timeout in whole milliseconds; independent of the gRPC deadline.
+	// SDK relayer timeout in whole milliseconds, independent of the gRPC deadline. Omit to keep the SDK default; zero is a zero-millisecond budget, not "no timeout".
 	TimeoutMs     *uint32 `protobuf:"varint,5,opt,name=timeout_ms,json=timeoutMs,proto3,oneof" json:"timeout_ms,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -5305,13 +5394,17 @@ const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
 	"batch_size\x18\x01 \x01(\rH\x00R\tbatchSize\x88\x01\x01\x12\x17\n" +
 	"\x04wait\x18\x02 \x01(\rH\x01R\x04wait\x88\x01\x01B\r\n" +
 	"\v_batch_sizeB\a\n" +
-	"\x05_wait\"\x98\x01\n" +
-	"\fEncryptInput\x12\x12\n" +
-	"\x04type\x18\x01 \x01(\tR\x04type\x12#\n" +
-	"\fbigint_value\x18\x02 \x01(\tH\x00R\vbigintValue\x12\x1f\n" +
-	"\n" +
-	"bool_value\x18\x03 \x01(\bH\x00R\tboolValue\x12%\n" +
-	"\raddress_value\x18\x04 \x01(\fH\x00R\faddressValueB\a\n" +
+	"\x05_wait\"\x9c\x02\n" +
+	"\fEncryptInput\x12\x16\n" +
+	"\x05ebool\x18\x01 \x01(\bH\x00R\x05ebool\x12#\n" +
+	"\febool_bigint\x18\x02 \x01(\tH\x00R\veboolBigint\x12\x18\n" +
+	"\x06euint8\x18\x03 \x01(\tH\x00R\x06euint8\x12\x1a\n" +
+	"\aeuint16\x18\x04 \x01(\tH\x00R\aeuint16\x12\x1a\n" +
+	"\aeuint32\x18\x05 \x01(\tH\x00R\aeuint32\x12\x1a\n" +
+	"\aeuint64\x18\x06 \x01(\tH\x00R\aeuint64\x12\x1c\n" +
+	"\beuint128\x18\a \x01(\tH\x00R\beuint128\x12\x1c\n" +
+	"\beuint256\x18\b \x01(\tH\x00R\beuint256\x12\x1c\n" +
+	"\beaddress\x18\t \x01(\fH\x00R\beaddressB\a\n" +
 	"\x05value\"\x86\x02\n" +
 	"\x0eEncryptRequest\x12:\n" +
 	"\toperation\x18\x01 \x01(\v2\x1c.zama.sdk.v1alpha1.OperationR\toperation\x127\n" +
@@ -5658,9 +5751,15 @@ func file_zama_sdk_v1alpha1_sidecar_proto_init() {
 	}
 	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[73].OneofWrappers = []any{}
 	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[74].OneofWrappers = []any{
-		(*EncryptInput_BigintValue)(nil),
-		(*EncryptInput_BoolValue)(nil),
-		(*EncryptInput_AddressValue)(nil),
+		(*EncryptInput_Ebool)(nil),
+		(*EncryptInput_EboolBigint)(nil),
+		(*EncryptInput_Euint8)(nil),
+		(*EncryptInput_Euint16)(nil),
+		(*EncryptInput_Euint32)(nil),
+		(*EncryptInput_Euint64)(nil),
+		(*EncryptInput_Euint128)(nil),
+		(*EncryptInput_Euint256)(nil),
+		(*EncryptInput_Eaddress)(nil),
 	}
 	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[75].OneofWrappers = []any{}
 	type x struct{}

@@ -160,7 +160,7 @@ export interface ClearEntry {
 export interface DecryptValuesRequest {
   operation: Operation | undefined;
   inputs: EncryptedInput[];
-  /** SDK timeout in whole milliseconds; independent of the gRPC deadline. */
+  /** SDK relayer timeout in whole milliseconds, independent of the gRPC deadline. Omit to keep the SDK default; zero is a zero-millisecond budget, not "no timeout". */
   timeoutMs?: number | undefined;
 }
 
@@ -179,7 +179,7 @@ export interface DelegatedDecryptValuesRequest {
 export interface DecryptPublicValuesRequest {
   operation: Operation | undefined;
   encryptedValues: Buffer[];
-  /** SDK timeout in whole milliseconds; independent of the gRPC deadline. */
+  /** SDK relayer timeout in whole milliseconds, independent of the gRPC deadline. Omit to keep the SDK default; zero is a zero-millisecond budget, not "no timeout". */
   timeoutMs?: number | undefined;
 }
 
@@ -555,13 +555,20 @@ export interface ProviderBatchOptions {
 }
 
 export interface EncryptInput {
-  type: string;
   value:
+    | { $case: "ebool"; ebool: boolean }
     | //
-    /** Canonical signed decimal encoding; the SDK validates the value range. */
-    { $case: "bigintValue"; bigintValue: string }
-    | { $case: "boolValue"; boolValue: boolean }
-    | { $case: "addressValue"; addressValue: Buffer }
+    /** Canonical signed decimal strings; the SDK validates each type's range. */
+    { $case: "eboolBigint"; eboolBigint: string }
+    | { $case: "euint8"; euint8: string }
+    | { $case: "euint16"; euint16: string }
+    | { $case: "euint32"; euint32: string }
+    | { $case: "euint64"; euint64: string }
+    | { $case: "euint128"; euint128: string }
+    | { $case: "euint256"; euint256: string }
+    | //
+    /** 20 bytes. */
+    { $case: "eaddress"; eaddress: Buffer }
     | undefined;
 }
 
@@ -570,7 +577,7 @@ export interface EncryptRequest {
   values: EncryptInput[];
   contractAddress: Buffer;
   userAddress: Buffer;
-  /** SDK timeout in whole milliseconds; independent of the gRPC deadline. */
+  /** SDK relayer timeout in whole milliseconds, independent of the gRPC deadline. Omit to keep the SDK default; zero is a zero-millisecond budget, not "no timeout". */
   timeoutMs?: number | undefined;
 }
 
@@ -7755,23 +7762,38 @@ export const ProviderBatchOptions: MessageFns<ProviderBatchOptions> = {
 };
 
 function createBaseEncryptInput(): EncryptInput {
-  return { type: "", value: undefined };
+  return { value: undefined };
 }
 
 export const EncryptInput: MessageFns<EncryptInput> = {
   encode(message: EncryptInput, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.type !== "") {
-      writer.uint32(10).string(message.type);
-    }
     switch (message.value?.$case) {
-      case "bigintValue":
-        writer.uint32(18).string(message.value.bigintValue);
+      case "ebool":
+        writer.uint32(8).bool(message.value.ebool);
         break;
-      case "boolValue":
-        writer.uint32(24).bool(message.value.boolValue);
+      case "eboolBigint":
+        writer.uint32(18).string(message.value.eboolBigint);
         break;
-      case "addressValue":
-        writer.uint32(34).bytes(message.value.addressValue);
+      case "euint8":
+        writer.uint32(26).string(message.value.euint8);
+        break;
+      case "euint16":
+        writer.uint32(34).string(message.value.euint16);
+        break;
+      case "euint32":
+        writer.uint32(42).string(message.value.euint32);
+        break;
+      case "euint64":
+        writer.uint32(50).string(message.value.euint64);
+        break;
+      case "euint128":
+        writer.uint32(58).string(message.value.euint128);
+        break;
+      case "euint256":
+        writer.uint32(66).string(message.value.euint256);
+        break;
+      case "eaddress":
+        writer.uint32(74).bytes(message.value.eaddress);
         break;
     }
     return writer;
@@ -7785,11 +7807,11 @@ export const EncryptInput: MessageFns<EncryptInput> = {
       const tag = reader.uint32();
       switch (tag >>> 3) {
         case 1: {
-          if (tag !== 10) {
+          if (tag !== 8) {
             break;
           }
 
-          message.type = reader.string();
+          message.value = { $case: "ebool", ebool: reader.bool() };
           continue;
         }
         case 2: {
@@ -7797,15 +7819,15 @@ export const EncryptInput: MessageFns<EncryptInput> = {
             break;
           }
 
-          message.value = { $case: "bigintValue", bigintValue: reader.string() };
+          message.value = { $case: "eboolBigint", eboolBigint: reader.string() };
           continue;
         }
         case 3: {
-          if (tag !== 24) {
+          if (tag !== 26) {
             break;
           }
 
-          message.value = { $case: "boolValue", boolValue: reader.bool() };
+          message.value = { $case: "euint8", euint8: reader.string() };
           continue;
         }
         case 4: {
@@ -7813,7 +7835,47 @@ export const EncryptInput: MessageFns<EncryptInput> = {
             break;
           }
 
-          message.value = { $case: "addressValue", addressValue: Buffer.from(reader.bytes()) };
+          message.value = { $case: "euint16", euint16: reader.string() };
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.value = { $case: "euint32", euint32: reader.string() };
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.value = { $case: "euint64", euint64: reader.string() };
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.value = { $case: "euint128", euint128: reader.string() };
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.value = { $case: "euint256", euint256: reader.string() };
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.value = { $case: "eaddress", eaddress: Buffer.from(reader.bytes()) };
           continue;
         }
       }
@@ -7827,34 +7889,50 @@ export const EncryptInput: MessageFns<EncryptInput> = {
 
   fromJSON(object: any): EncryptInput {
     return {
-      type: isSet(object.type) ? globalThis.String(object.type) : "",
-      value: isSet(object.bigintValue)
-        ? { $case: "bigintValue", bigintValue: globalThis.String(object.bigintValue) }
-        : isSet(object.bigint_value)
-        ? { $case: "bigintValue", bigintValue: globalThis.String(object.bigint_value) }
-        : isSet(object.boolValue)
-        ? { $case: "boolValue", boolValue: globalThis.Boolean(object.boolValue) }
-        : isSet(object.bool_value)
-        ? { $case: "boolValue", boolValue: globalThis.Boolean(object.bool_value) }
-        : isSet(object.addressValue)
-        ? { $case: "addressValue", addressValue: Buffer.from(bytesFromBase64(object.addressValue)) }
-        : isSet(object.address_value)
-        ? { $case: "addressValue", addressValue: Buffer.from(bytesFromBase64(object.address_value)) }
+      value: isSet(object.ebool)
+        ? { $case: "ebool", ebool: globalThis.Boolean(object.ebool) }
+        : isSet(object.eboolBigint)
+        ? { $case: "eboolBigint", eboolBigint: globalThis.String(object.eboolBigint) }
+        : isSet(object.ebool_bigint)
+        ? { $case: "eboolBigint", eboolBigint: globalThis.String(object.ebool_bigint) }
+        : isSet(object.euint8)
+        ? { $case: "euint8", euint8: globalThis.String(object.euint8) }
+        : isSet(object.euint16)
+        ? { $case: "euint16", euint16: globalThis.String(object.euint16) }
+        : isSet(object.euint32)
+        ? { $case: "euint32", euint32: globalThis.String(object.euint32) }
+        : isSet(object.euint64)
+        ? { $case: "euint64", euint64: globalThis.String(object.euint64) }
+        : isSet(object.euint128)
+        ? { $case: "euint128", euint128: globalThis.String(object.euint128) }
+        : isSet(object.euint256)
+        ? { $case: "euint256", euint256: globalThis.String(object.euint256) }
+        : isSet(object.eaddress)
+        ? { $case: "eaddress", eaddress: Buffer.from(bytesFromBase64(object.eaddress)) }
         : undefined,
     };
   },
 
   toJSON(message: EncryptInput): unknown {
     const obj: any = {};
-    if (message.type !== "") {
-      obj.type = message.type;
-    }
-    if (message.value?.$case === "bigintValue") {
-      obj.bigintValue = message.value.bigintValue;
-    } else if (message.value?.$case === "boolValue") {
-      obj.boolValue = message.value.boolValue;
-    } else if (message.value?.$case === "addressValue") {
-      obj.addressValue = base64FromBytes(message.value.addressValue);
+    if (message.value?.$case === "ebool") {
+      obj.ebool = message.value.ebool;
+    } else if (message.value?.$case === "eboolBigint") {
+      obj.eboolBigint = message.value.eboolBigint;
+    } else if (message.value?.$case === "euint8") {
+      obj.euint8 = message.value.euint8;
+    } else if (message.value?.$case === "euint16") {
+      obj.euint16 = message.value.euint16;
+    } else if (message.value?.$case === "euint32") {
+      obj.euint32 = message.value.euint32;
+    } else if (message.value?.$case === "euint64") {
+      obj.euint64 = message.value.euint64;
+    } else if (message.value?.$case === "euint128") {
+      obj.euint128 = message.value.euint128;
+    } else if (message.value?.$case === "euint256") {
+      obj.euint256 = message.value.euint256;
+    } else if (message.value?.$case === "eaddress") {
+      obj.eaddress = base64FromBytes(message.value.eaddress);
     }
     return obj;
   },
@@ -7864,23 +7942,58 @@ export const EncryptInput: MessageFns<EncryptInput> = {
   },
   fromPartial(object: DeepPartial<EncryptInput>): EncryptInput {
     const message = createBaseEncryptInput();
-    message.type = object.type ?? "";
     switch (object.value?.$case) {
-      case "bigintValue": {
-        if (object.value?.bigintValue !== undefined && object.value?.bigintValue !== null) {
-          message.value = { $case: "bigintValue", bigintValue: object.value.bigintValue };
+      case "ebool": {
+        if (object.value?.ebool !== undefined && object.value?.ebool !== null) {
+          message.value = { $case: "ebool", ebool: object.value.ebool };
         }
         break;
       }
-      case "boolValue": {
-        if (object.value?.boolValue !== undefined && object.value?.boolValue !== null) {
-          message.value = { $case: "boolValue", boolValue: object.value.boolValue };
+      case "eboolBigint": {
+        if (object.value?.eboolBigint !== undefined && object.value?.eboolBigint !== null) {
+          message.value = { $case: "eboolBigint", eboolBigint: object.value.eboolBigint };
         }
         break;
       }
-      case "addressValue": {
-        if (object.value?.addressValue !== undefined && object.value?.addressValue !== null) {
-          message.value = { $case: "addressValue", addressValue: object.value.addressValue };
+      case "euint8": {
+        if (object.value?.euint8 !== undefined && object.value?.euint8 !== null) {
+          message.value = { $case: "euint8", euint8: object.value.euint8 };
+        }
+        break;
+      }
+      case "euint16": {
+        if (object.value?.euint16 !== undefined && object.value?.euint16 !== null) {
+          message.value = { $case: "euint16", euint16: object.value.euint16 };
+        }
+        break;
+      }
+      case "euint32": {
+        if (object.value?.euint32 !== undefined && object.value?.euint32 !== null) {
+          message.value = { $case: "euint32", euint32: object.value.euint32 };
+        }
+        break;
+      }
+      case "euint64": {
+        if (object.value?.euint64 !== undefined && object.value?.euint64 !== null) {
+          message.value = { $case: "euint64", euint64: object.value.euint64 };
+        }
+        break;
+      }
+      case "euint128": {
+        if (object.value?.euint128 !== undefined && object.value?.euint128 !== null) {
+          message.value = { $case: "euint128", euint128: object.value.euint128 };
+        }
+        break;
+      }
+      case "euint256": {
+        if (object.value?.euint256 !== undefined && object.value?.euint256 !== null) {
+          message.value = { $case: "euint256", euint256: object.value.euint256 };
+        }
+        break;
+      }
+      case "eaddress": {
+        if (object.value?.eaddress !== undefined && object.value?.eaddress !== null) {
+          message.value = { $case: "eaddress", eaddress: object.value.eaddress };
         }
         break;
       }
@@ -8361,7 +8474,7 @@ export const SidecarServiceService = {
     responseDeserialize: (value: Buffer): RevokeTransportKeyPairResponse =>
       RevokeTransportKeyPairResponse.decode(value),
   },
-  /** Calls sdk.encrypt with explicit user/contract binding; no wallet signing is required. */
+  /** Calls sdk.encrypt; no wallet signing is required. */
   encrypt: {
     path: "/zama.sdk.v1alpha1.SidecarService/Encrypt" as const,
     requestStream: false as const,
@@ -8416,7 +8529,7 @@ export interface SidecarServiceServer extends UntypedServiceImplementation {
   warmTransportKeyPairScope: handleUnaryCall<ScopeRequest, WarmTransportKeyPairScopeResponse>;
   /** Calls permits.revokeTransportKeyPair for the supplied credential scope. */
   revokeTransportKeyPair: handleUnaryCall<ScopeRequest, RevokeTransportKeyPairResponse>;
-  /** Calls sdk.encrypt with explicit user/contract binding; no wallet signing is required. */
+  /** Calls sdk.encrypt; no wallet signing is required. */
   encrypt: handleUnaryCall<EncryptRequest, EncryptResponse>;
 }
 
@@ -8739,7 +8852,7 @@ export interface SidecarServiceClient extends Client {
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: RevokeTransportKeyPairResponse) => void,
   ): ClientUnaryCall;
-  /** Calls sdk.encrypt with explicit user/contract binding; no wallet signing is required. */
+  /** Calls sdk.encrypt; no wallet signing is required. */
   encrypt(
     request: EncryptRequest,
     callback: (error: ServiceError | null, response: EncryptResponse) => void,

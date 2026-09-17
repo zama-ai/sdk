@@ -1,151 +1,112 @@
 use anyhow::Result;
-use serde::Deserialize;
-use serde_json::{Value, json};
 use std::time::Duration;
-use zama_sdk_sidecar::{Address, BigInt, Client, EncryptInput, EncryptParams, RpcError, SdkConfig};
+use zama_sdk_sidecar::{
+    Address, BigInt, Client, EncryptInput, EncryptOptions, EncryptParams, RpcError, Sdk, SdkConfig,
+};
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct EncryptionScenarios {
-    rate_limited: u32,
-    cancelled: u32,
-    invalid_input: u32,
+async fn context(client: &Client, scenario: &str) -> Result<Sdk> {
+    let mut config = SdkConfig::new(31337, "http://fixture.invalid/");
+    config.chains[0].relayer_url = Some(format!("http://fixture.invalid/{scenario}"));
+    client.sdk(config).build().await
 }
 
 #[tokio::test]
 #[ignore = "requires SDK-backed encryption fixture server"]
 async fn encryption_preserves_sdk_semantics() -> Result<()> {
     let socket = std::env::var("SIDECAR_ENCRYPT_TEST_SOCKET")?;
-    let EncryptionScenarios {
-        rate_limited,
-        cancelled,
-        invalid_input,
-    } = serde_json::from_str(&std::fs::read_to_string(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../proto/fixtures/encryption-scenarios.json"
-    ))?)?;
-    let sdk = Client::connect(socket)
-        .await?
-        .sdk(SdkConfig::new(31337, "http://fixture.invalid"))
-        .build()
-        .await?;
-    let huge: BigInt = (BigInt::from(1) << 256) - 1;
-    let address = Address::repeat_byte(0x3c);
+    let client = Client::connect(socket).await?;
+    let contract_address: Address = "0x1111111111111111111111111111111111111111".parse()?;
+    let user_address: Address = "0x2222222222222222222222222222222222222222".parse()?;
     let values = [
-        EncryptInput::Bool(true),
+        EncryptInput::Uint256((BigInt::from(1) << 256usize) - 1),
         EncryptInput::Bool(false),
-        EncryptInput::BoolBigInt(0.into()),
         EncryptInput::BoolBigInt(1.into()),
-        EncryptInput::Uint8(255.into()),
-        EncryptInput::Uint16(65535.into()),
-        EncryptInput::Uint32(4_294_967_295u64.into()),
-        EncryptInput::Uint64(u64::MAX.into()),
-        EncryptInput::Uint128(u128::MAX.into()),
-        EncryptInput::Uint256(huge.clone()),
-        EncryptInput::Address(address),
+        EncryptInput::Address(user_address),
         EncryptInput::Uint8((-1).into()),
+        EncryptInput::Uint8(42.into()),
+        EncryptInput::Uint16(42.into()),
+        EncryptInput::Uint32(42.into()),
+        EncryptInput::Uint64(42.into()),
+        EncryptInput::Uint128(42.into()),
     ];
     let params = EncryptParams {
         values: &values,
-        contract_address: Address::repeat_byte(0x1a),
-        user_address: Address::repeat_byte(0x2b),
+        contract_address,
+        user_address,
     };
-    let result = sdk.encrypt(params, None).await?;
-    assert_eq!(result.encrypted_values.len(), values.len());
-    let proof: Value = serde_json::from_slice(&result.input_proof)?;
-    assert_eq!(
-        proof["contractAddress"].as_str().unwrap().to_lowercase(),
-        format!("{:#x}", params.contract_address)
-    );
-    assert_eq!(
-        proof["userAddress"].as_str().unwrap().to_lowercase(),
-        format!("{:#x}", params.user_address)
-    );
-    assert!(proof.get("timeout").is_none());
-    let expected = [
-        ("ebool", json!(true)),
-        ("ebool", json!(false)),
-        ("ebool", json!("0")),
-        ("ebool", json!("1")),
-        ("euint8", json!("255")),
-        ("euint16", json!("65535")),
-        ("euint32", json!("4294967295")),
-        ("euint64", json!(u64::MAX.to_string())),
-        ("euint128", json!(u128::MAX.to_string())),
-        ("euint256", json!(huge.to_string())),
-        ("eaddress", json!(address.to_checksum(None))),
-        ("euint8", json!("-1")),
-    ];
-    for (actual, (kind, value)) in proof["values"].as_array().unwrap().iter().zip(expected) {
-        assert_eq!(actual["type"], kind);
-        assert_eq!(actual["value"], value);
-    }
-    let empty = sdk
+
+    let success = context(&client, "").await?;
+    let first = success.encrypt(params, EncryptOptions::default()).await?;
+    assert_eq!(first.encrypted_values.len(), values.len());
+    assert!(!first.input_proof.is_empty());
+    let second = success.encrypt(params, EncryptOptions::default()).await?;
+    assert_ne!(first.encrypted_values, second.encrypted_values);
+    success
         .encrypt(
-            EncryptParams {
-                values: &[],
-                ..params
+            params,
+            EncryptOptions {
+                timeout_ms: Some(0),
             },
-            Some(0),
         )
         .await?;
-    assert!(empty.encrypted_values.is_empty());
-    let proof: Value = serde_json::from_slice(&empty.input_proof)?;
-    assert_eq!(proof["timeout"], 0);
+    success
+        .encrypt(
+            params,
+            EncryptOptions {
+                timeout_ms: Some(500),
+            },
+        )
+        .await?;
 
-    let error = sdk.encrypt(params, Some(rate_limited)).await.unwrap_err();
-    let error = error.downcast_ref::<RpcError>().unwrap();
-    let sdk_error = error.sdk.as_ref().unwrap();
+    let rate_limited = context(&client, "rate-limited").await?;
+    let error = rate_limited
+        .encrypt(params, EncryptOptions::default())
+        .await
+        .unwrap_err();
+    let sdk_error = error
+        .downcast_ref::<RpcError>()
+        .unwrap()
+        .sdk
+        .as_ref()
+        .unwrap();
     assert_eq!(sdk_error.code, "RELAYER_REQUEST_FAILED");
     assert!(sdk_error.retryable);
     assert_eq!(sdk_error.retry_after_seconds, Some(7));
 
-    for invalid in [
-        EncryptInput::Uint8((-1).into()),
-        EncryptInput::Uint8(256.into()),
-        EncryptInput::BoolBigInt(2.into()),
-    ] {
-        let error = sdk
-            .encrypt(
-                EncryptParams {
-                    values: &[invalid],
-                    ..params
-                },
-                Some(invalid_input),
-            )
-            .await
-            .unwrap_err();
-        let error = error
-            .downcast_ref::<RpcError>()
-            .unwrap()
-            .sdk
-            .as_ref()
-            .unwrap();
-        assert_eq!(error.code, "ENCRYPTION_FAILED");
-        assert!(!error.retryable);
-    }
+    let invalid_input = context(&client, "invalid-input").await?;
+    let error = invalid_input
+        .encrypt(
+            EncryptParams {
+                values: &[EncryptInput::Uint8((-1).into())],
+                ..params
+            },
+            EncryptOptions::default(),
+        )
+        .await
+        .unwrap_err();
+    let sdk_error = error
+        .downcast_ref::<RpcError>()
+        .unwrap()
+        .sdk
+        .as_ref()
+        .unwrap();
+    assert_eq!(sdk_error.code, "ENCRYPTION_FAILED");
+    assert!(!sdk_error.retryable);
 
+    let cancelled = context(&client, "cancelled").await?;
     assert!(
         tokio::time::timeout(
             Duration::from_millis(100),
-            sdk.encrypt(params, Some(cancelled)),
+            cancelled.encrypt(params, EncryptOptions::default()),
         )
         .await
         .is_err()
     );
-    let bounded = sdk.clone().with_timeout(Duration::from_millis(100));
-    assert!(
-        tokio::time::timeout(
-            Duration::from_secs(2),
-            bounded.encrypt(params, Some(cancelled)),
-        )
-        .await?
-        .is_err()
-    );
-    assert_eq!(
-        sdk.encrypt(params, None).await?.encrypted_values.len(),
-        values.len()
-    );
-    sdk.close().await?;
+
+    success.close().await?;
+    rate_limited.close().await?;
+    invalid_input.close().await?;
+    // Never closed, not even on drop, so the driver observes the RPC abort alone.
+    std::mem::forget(cancelled);
     Ok(())
 }

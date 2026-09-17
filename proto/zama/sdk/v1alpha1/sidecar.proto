@@ -47,7 +47,7 @@ service SidecarService {
   rpc WarmTransportKeyPairScope(ScopeRequest) returns (WarmTransportKeyPairScopeResponse);
   // Calls permits.revokeTransportKeyPair for the supplied credential scope.
   rpc RevokeTransportKeyPair(ScopeRequest) returns (RevokeTransportKeyPairResponse);
-  // Calls sdk.encrypt with explicit user/contract binding; no wallet signing is required.
+  // Calls sdk.encrypt; no wallet signing is required.
   rpc Encrypt(EncryptRequest) returns (EncryptResponse);
 }
 message Empty {}
@@ -120,7 +120,7 @@ message ClearEntry {
 message DecryptValuesRequest {
   Operation operation = 1;
   repeated EncryptedInput inputs = 2;
-  // SDK timeout in whole milliseconds; independent of the gRPC deadline.
+  // SDK relayer timeout in whole milliseconds, independent of the gRPC deadline. Omit to keep the SDK default; zero is a zero-millisecond budget, not "no timeout".
   optional uint32 timeout_ms = 3;
 }
 message DecryptValuesResponse {
@@ -136,7 +136,7 @@ message DelegatedDecryptValuesRequest {
 message DecryptPublicValuesRequest {
   Operation operation = 1;
   repeated bytes encrypted_values = 2;
-  // SDK timeout in whole milliseconds; independent of the gRPC deadline.
+  // SDK relayer timeout in whole milliseconds, independent of the gRPC deadline. Omit to keep the SDK default; zero is a zero-millisecond budget, not "no timeout".
   optional uint32 timeout_ms = 3;
 }
 message DecryptPublicValuesResponse {
@@ -453,12 +453,18 @@ message ProviderBatchOptions {
   optional uint32 wait = 2;
 }
 message EncryptInput {
-  string type = 1;
   oneof value {
-    // Canonical signed decimal encoding; the SDK validates the value range.
-    string bigint_value = 2;
-    bool bool_value = 3;
-    bytes address_value = 4;
+    bool ebool = 1;
+    // Canonical signed decimal strings; the SDK validates each type's range.
+    string ebool_bigint = 2;
+    string euint8 = 3;
+    string euint16 = 4;
+    string euint32 = 5;
+    string euint64 = 6;
+    string euint128 = 7;
+    string euint256 = 8;
+    // 20 bytes.
+    bytes eaddress = 9;
   }
 }
 message EncryptRequest {
@@ -466,7 +472,7 @@ message EncryptRequest {
   repeated EncryptInput values = 2;
   bytes contract_address = 3;
   bytes user_address = 4;
-  // SDK timeout in whole milliseconds; independent of the gRPC deadline.
+  // SDK relayer timeout in whole milliseconds, independent of the gRPC deadline. Omit to keep the SDK default; zero is a zero-millisecond budget, not "no timeout".
   optional uint32 timeout_ms = 5;
 }
 message EncryptResponse {

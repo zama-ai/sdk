@@ -1,5 +1,5 @@
 use crate::{Address, B256, BigInt, Sdk, generated, types::handle};
-use anyhow::Result;
+use anyhow::{Result, ensure};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EncryptInput {
@@ -21,6 +21,12 @@ pub struct EncryptParams<'a> {
     pub user_address: Address,
 }
 
+#[derive(Clone, Copy, Debug, Default)]
+pub struct EncryptOptions {
+    /// Relayer timeout, not the RPC deadline; None keeps the SDK default.
+    pub timeout_ms: Option<u32>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EncryptResult {
     pub encrypted_values: Vec<B256>,
@@ -30,30 +36,26 @@ pub struct EncryptResult {
 impl From<&EncryptInput> for generated::EncryptInput {
     fn from(input: &EncryptInput) -> Self {
         use generated::encrypt_input::Value;
-        let (kind, value) = match input {
-            EncryptInput::Bool(value) => ("ebool", Value::BoolValue(*value)),
-            EncryptInput::BoolBigInt(value) => ("ebool", Value::BigintValue(value.to_string())),
-            EncryptInput::Uint8(value) => ("euint8", Value::BigintValue(value.to_string())),
-            EncryptInput::Uint16(value) => ("euint16", Value::BigintValue(value.to_string())),
-            EncryptInput::Uint32(value) => ("euint32", Value::BigintValue(value.to_string())),
-            EncryptInput::Uint64(value) => ("euint64", Value::BigintValue(value.to_string())),
-            EncryptInput::Uint128(value) => ("euint128", Value::BigintValue(value.to_string())),
-            EncryptInput::Uint256(value) => ("euint256", Value::BigintValue(value.to_string())),
-            EncryptInput::Address(value) => ("eaddress", Value::AddressValue(value.to_vec())),
+        let value = match input {
+            EncryptInput::Bool(value) => Value::Ebool(*value),
+            EncryptInput::BoolBigInt(value) => Value::EboolBigint(value.to_string()),
+            EncryptInput::Uint8(value) => Value::Euint8(value.to_string()),
+            EncryptInput::Uint16(value) => Value::Euint16(value.to_string()),
+            EncryptInput::Uint32(value) => Value::Euint32(value.to_string()),
+            EncryptInput::Uint64(value) => Value::Euint64(value.to_string()),
+            EncryptInput::Uint128(value) => Value::Euint128(value.to_string()),
+            EncryptInput::Uint256(value) => Value::Euint256(value.to_string()),
+            EncryptInput::Address(value) => Value::Eaddress(value.to_vec()),
         };
-        Self {
-            r#type: kind.into(),
-            value: Some(value),
-        }
+        Self { value: Some(value) }
     }
 }
 
 impl Sdk {
-    /// Dropping this future cancels the RPC; timeout_ms controls the SDK relayer timeout.
     pub async fn encrypt(
         &self,
         params: EncryptParams<'_>,
-        timeout_ms: Option<u32>,
+        options: EncryptOptions,
     ) -> Result<EncryptResult> {
         let response = rpc!(
             self,
@@ -62,10 +64,14 @@ impl Sdk {
                 values: params.values.iter().map(Into::into).collect(),
                 contract_address: params.contract_address.to_vec(),
                 user_address: params.user_address.to_vec(),
-                timeout_ms,
+                timeout_ms: options.timeout_ms,
             }
         )
         .await?;
+        ensure!(
+            response.encrypted_values.len() == params.values.len(),
+            "encrypted value count does not match inputs"
+        );
         Ok(EncryptResult {
             encrypted_values: response
                 .encrypted_values

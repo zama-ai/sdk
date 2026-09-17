@@ -46,7 +46,7 @@ vi.mock("@zama-fhe/sdk/node", () => ({
         const sign = relayer.signDecryptionPermit;
         return createMockRelayer({
           chain: sepolia,
-          encryptValues: syntheticEncryption,
+          encryptValues: syntheticEncryption(""),
           signDecryptionPermit: (params) =>
             sign({
               ...params,
