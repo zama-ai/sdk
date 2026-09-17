@@ -1,8 +1,11 @@
 # Encrypt inputs and decrypt a balance from Rust or Go
 
-Use the maintained, permanently beta sidecar of `@zama-fhe/sdk` for external partner applications. Run it in Docker to encrypt contract inputs and decrypt a balance from a native Rust or Go application. Both examples print the encrypted inputs, followed by:
+Use the maintained, permanently beta sidecar of `@zama-fhe/sdk` for external partner applications. Run it in Docker to encrypt contract inputs and decrypt a balance from a native Rust or Go application. Both examples print:
 
 ```text
+Encrypted input 0: 0x<handle>
+Encrypted input 1: 0x<handle>
+Encrypted input 2: 0x<handle>
 Input proof: 0x<proof bytes>
 User Address: <wallet address>
 Token: <name> (<token address>) https://eth-sepolia.blockscout.com/token/<token address>
@@ -55,7 +58,7 @@ dc run --rm go
 dc run --rm rust
 ```
 
-Use the [Go example](../../clients/go/examples/balance/main.go) or [Rust example](../../clients/rust/examples/balance/main.rs) as a starting point. Each entry point loads shared configuration, connects its wallet/provider, creates an SDK context, then runs the encryption and balance steps. Setup lives in Go `config.go`/`ethereum.go` and Rust `support.rs`; `balance.go`/`balance.rs` receive SDK, provider, token and owner dependencies explicitly. Application-owned memory storage is the example default. The client manages callback channels. The encryption step sends `1000` as `euint64`, `true` as `ebool`, and the user address as `eaddress`, then prints the encrypted values and proof. Neither example sends blockchain transactions.
+Use the [Go example](../../clients/go/examples/balance/main.go) or [Rust example](../../clients/rust/examples/balance/main.rs) as a starting point. Each entry point loads shared configuration, connects its wallet/provider, creates an SDK context, then runs the encryption and balance steps. Setup lives in Go `config.go`/`ethereum.go` and Rust `support.rs`; `balance.go`/`balance.rs` receive SDK, provider, token and owner dependencies explicitly. Application-owned memory storage is the example default. The client manages callback channels. The encryption step sends `1000` as `euint64`, `true` as `ebool`, and the user address as `eaddress`, built with Go `Euint64`/`Ebool`/`Eaddress` or Rust `EncryptInput::Uint64`/`Bool`/`Address`. It prints one `Encrypted input <i>` line per returned handle, then the input proof. Neither example sends blockchain transactions.
 
 The encrypted balance is the contract's ciphertext handle. The decrypted value is the raw amount for that same handle, without decimal formatting.
 
@@ -177,4 +180,4 @@ To run only native encryption and the complete example sequences with synthetic 
 SIDECAR_NATIVE_TESTS=1 pnpm --filter @zama-fhe/sdk-sidecar exec vitest run --config vitest.config.ts test/native-encryption.test.ts test/native-examples.test.ts
 ```
 
-Encryption checks cover lossless values, explicit binding addresses, omitted/zero timeouts, SDK errors, canonical backend rejection and cancellation. The complete examples also exercise shared runtime/provider settings and protected credentials. Synthetic encryption proofs are inspectable fixture data; live cryptographic verification remains separate.
+Encryption checks cover lossless values, explicit binding addresses, timeout presence (omitted keeps the SDK default, zero is a zero-millisecond budget), SDK errors, canonical backend rejection and cancellation. The complete examples also exercise shared runtime/provider settings and protected credentials. Synthetic encryption proofs are inspectable fixture data; live cryptographic verification remains separate.
