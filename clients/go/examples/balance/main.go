@@ -40,6 +40,10 @@ func run() error {
 		sdk.Close(cleanup)
 	}()
 
+	if err := encryptInputs(ctx, sdk, config.token, config.owner); err != nil {
+		return err
+	}
+
 	return showBalance(ctx, provider, sdk, config.token, config.owner)
 }
 

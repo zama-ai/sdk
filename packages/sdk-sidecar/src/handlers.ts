@@ -15,6 +15,7 @@ import {
   unsignedInteger,
 } from "./encoding.js";
 import { cancelled, errorDetails, invalidArgument, serviceError } from "./errors.js";
+import { encrypt } from "./encryption.js";
 
 function unary<Request, Response>(
   operation: (request: Request, signal: AbortSignal) => Promise<Response> | Response,
@@ -81,6 +82,7 @@ export function createHandlers(
     }),
     signerChannel: signerChannel(runtime),
     storageChannel: storageChannel(runtime),
+    encrypt: execute(encrypt, true),
     decryptValues: execute(async (sdk, request: rpc.DecryptValuesRequest, signal) => ({
       values: entries(
         await sdk.decryption.decryptValues(request.inputs.map(input), {

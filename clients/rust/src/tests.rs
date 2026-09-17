@@ -158,7 +158,7 @@ fn default_handler(path: &str, bytes: &[u8]) -> Response<Body> {
                 context_id: "context".into(),
             })
         }
-        "CloseContext" => response(Empty {}),
+        "CloseContext" => response(CloseContextResponse {}),
         _ => panic!("unexpected RPC {path}"),
     }
 }
@@ -888,3 +888,6 @@ mod lifecycle_tests;
 
 #[path = "storage_tests.rs"]
 mod storage_tests;
+
+#[path = "encryption_tests.rs"]
+mod encryption_tests;
