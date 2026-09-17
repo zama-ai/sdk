@@ -125,7 +125,7 @@ pub struct DecryptValuesRequest {
     pub operation: ::core::option::Option<Operation>,
     #[prost(message, repeated, tag = "2")]
     pub inputs: ::prost::alloc::vec::Vec<EncryptedInput>,
-    /// SDK timeout in whole milliseconds; independent of the gRPC deadline.
+    /// SDK relayer timeout in whole milliseconds, independent of the gRPC deadline. Omit to keep the SDK default; zero is a zero-millisecond budget, not "no timeout".
     #[prost(uint32, optional, tag = "3")]
     pub timeout_ms: ::core::option::Option<u32>,
 }
@@ -153,7 +153,7 @@ pub struct DecryptPublicValuesRequest {
     pub operation: ::core::option::Option<Operation>,
     #[prost(bytes = "vec", repeated, tag = "2")]
     pub encrypted_values: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
-    /// SDK timeout in whole milliseconds; independent of the gRPC deadline.
+    /// SDK relayer timeout in whole milliseconds, independent of the gRPC deadline. Omit to keep the SDK default; zero is a zero-millisecond budget, not "no timeout".
     #[prost(uint32, optional, tag = "3")]
     pub timeout_ms: ::core::option::Option<u32>,
 }
@@ -725,6 +725,58 @@ pub struct ProviderBatchOptions {
     /// Whole milliseconds.
     #[prost(uint32, optional, tag = "2")]
     pub wait: ::core::option::Option<u32>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct EncryptInput {
+    #[prost(oneof = "encrypt_input::Value", tags = "1, 2, 3, 4, 5, 6, 7, 8, 9")]
+    pub value: ::core::option::Option<encrypt_input::Value>,
+}
+/// Nested message and enum types in `EncryptInput`.
+pub mod encrypt_input {
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Value {
+        #[prost(bool, tag = "1")]
+        Ebool(bool),
+        /// Canonical signed decimal strings; the SDK validates each type's range.
+        #[prost(string, tag = "2")]
+        EboolBigint(::prost::alloc::string::String),
+        #[prost(string, tag = "3")]
+        Euint8(::prost::alloc::string::String),
+        #[prost(string, tag = "4")]
+        Euint16(::prost::alloc::string::String),
+        #[prost(string, tag = "5")]
+        Euint32(::prost::alloc::string::String),
+        #[prost(string, tag = "6")]
+        Euint64(::prost::alloc::string::String),
+        #[prost(string, tag = "7")]
+        Euint128(::prost::alloc::string::String),
+        #[prost(string, tag = "8")]
+        Euint256(::prost::alloc::string::String),
+        /// 20 bytes.
+        #[prost(bytes, tag = "9")]
+        Eaddress(::prost::alloc::vec::Vec<u8>),
+    }
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct EncryptRequest {
+    #[prost(message, optional, tag = "1")]
+    pub operation: ::core::option::Option<Operation>,
+    #[prost(message, repeated, tag = "2")]
+    pub values: ::prost::alloc::vec::Vec<EncryptInput>,
+    #[prost(bytes = "vec", tag = "3")]
+    pub contract_address: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "4")]
+    pub user_address: ::prost::alloc::vec::Vec<u8>,
+    /// SDK relayer timeout in whole milliseconds, independent of the gRPC deadline. Omit to keep the SDK default; zero is a zero-millisecond budget, not "no timeout".
+    #[prost(uint32, optional, tag = "5")]
+    pub timeout_ms: ::core::option::Option<u32>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct EncryptResponse {
+    #[prost(bytes = "vec", repeated, tag = "1")]
+    pub encrypted_values: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub input_proof: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
@@ -1442,6 +1494,31 @@ pub mod sidecar_service_client {
                         "RevokeTransportKeyPair",
                     ),
                 );
+            self.inner.unary(req, path, codec).await
+        }
+        /// Calls sdk.encrypt; no wallet signing is required.
+        pub async fn encrypt(
+            &mut self,
+            request: impl tonic::IntoRequest<super::EncryptRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::EncryptResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/zama.sdk.v1alpha1.SidecarService/Encrypt",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("zama.sdk.v1alpha1.SidecarService", "Encrypt"));
             self.inner.unary(req, path, codec).await
         }
     }

@@ -1,0 +1,30 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
+	sidecar "github.com/zama-ai/sdk/clients/go"
+)
+
+func encryptInputs(ctx context.Context, sdk *sidecar.SDKContext, contract, user common.Address) error {
+	result, err := sdk.Encrypt(ctx, sidecar.EncryptParams{
+		Values: []sidecar.EncryptInput{
+			sidecar.Euint64(big.NewInt(1000)),
+			sidecar.Ebool(true),
+			sidecar.Eaddress(user),
+		},
+		ContractAddress: contract,
+		UserAddress:     user,
+	}, sidecar.EncryptOptions{})
+	if err != nil {
+		return err
+	}
+	for i, value := range result.EncryptedValues {
+		fmt.Printf("Encrypted input %d: %s\n", i, value.Hex())
+	}
+	fmt.Printf("Input proof: 0x%x\n", result.InputProof)
+	return nil
+}

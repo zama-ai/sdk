@@ -1,3 +1,4 @@
+import { syntheticEncryption } from "./support/encryption.js";
 import { execFile } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
@@ -45,6 +46,7 @@ vi.mock("@zama-fhe/sdk/node", () => ({
         const sign = relayer.signDecryptionPermit;
         return createMockRelayer({
           chain: sepolia,
+          encryptValues: syntheticEncryption(""),
           signDecryptionPermit: (params) =>
             sign({
               ...params,
@@ -81,7 +83,7 @@ const repository = fileURLToPath(new URL("../../../", import.meta.url));
 const execute = promisify(execFile);
 
 test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
-  "Go and Rust example entry points run their complete balance sequence with protected credentials",
+  "Go and Rust example entry points run their complete encryption and balance sequence with protected credentials",
   async () => {
     const directory = await mkdtemp(join(tmpdir(), "native-examples-"));
     const socket = join(directory, "sdk.sock");
@@ -172,6 +174,8 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
           "--features",
           "alloy",
           "--locked",
+          "--target-dir",
+          join(repository, "clients/rust/target"),
         ],
         { timeout: 180_000 },
       );
@@ -185,6 +189,19 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
           env: { PATH: process.env.PATH, SIDECAR_SOCKET_PATH: socket },
           timeout: 30_000,
         });
+        expect(stdout).toContain("Encrypted input");
+        const proof = stdout.match(/Input proof: 0x([0-9a-f]+)/)?.[1];
+        expect(proof).toBeDefined();
+        expect(JSON.parse(Buffer.from(proof!, "hex").toString())).toEqual({
+          values: [
+            { type: "euint64", value: "1000" },
+            { type: "ebool", value: true },
+            { type: "eaddress", value: account.address },
+          ],
+          contractAddress: TOKEN,
+          userAddress: account.address,
+        });
+        expect(stdout.indexOf("Input proof:")).toBeLessThan(stdout.indexOf("Encrypted balance:"));
         expect(stdout).toContain("Fixture Confidential Token");
         expect(stdout).toContain(`Encrypted balance: ${VALID_ENCRYPTED_VALUE}`);
         expect(stdout).toContain("Decrypted balance: 1000");

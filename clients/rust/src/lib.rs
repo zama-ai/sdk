@@ -22,6 +22,7 @@ mod channel;
 mod config;
 mod config_options;
 mod decryption;
+mod encryption;
 mod error;
 mod lifetime;
 mod operations;
@@ -44,6 +45,7 @@ pub use config_options::{
 pub use decryption::{
     BatchItem, Decryption, DelegatedBatchOptions, DelegatedOptions, PublicDecryption,
 };
+pub use encryption::{EncryptInput, EncryptOptions, EncryptParams, EncryptResult};
 pub use error::{RpcError, SdkError};
 pub use num_bigint::BigInt;
 pub use permits::{Offline, Permits, PreparePermit, PreparedPermit};

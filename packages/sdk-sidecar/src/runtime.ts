@@ -12,7 +12,10 @@ import { credentialLockKeys, type Coordinate } from "./coordination.js";
 import { cancelled, invalidArgument, SidecarError } from "./errors.js";
 import { operationContext, RemoteSigner, type SignerStream } from "./remote-signer.js";
 
-export type ContextSdk = Pick<ZamaSDK, "decryption" | "permits" | "offline" | "dispose">;
+export type ContextSdk = Pick<
+  ZamaSDK,
+  "encrypt" | "decryption" | "permits" | "offline" | "dispose"
+>;
 export type ContextFactory = (
   request: CreateContextRequest,
   signer: RemoteSigner | undefined,

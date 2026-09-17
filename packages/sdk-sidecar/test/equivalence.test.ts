@@ -1,4 +1,11 @@
-import { storage, fixture, decode, decodeValue, testServer } from "./support/harness.js";
+import {
+  storage,
+  createContext,
+  fixture,
+  decode,
+  decodeValue,
+  testServer,
+} from "./support/harness.js";
 
 import { randomUUID } from "node:crypto";
 import { Metadata, type ServiceError } from "@grpc/grpc-js";
@@ -47,21 +54,12 @@ async function harness(signerEnabled = true, backing = storage(), permitTTL?: nu
     return { sdk: value.sdk, storageIdentities: ["shared-fixture"] };
   });
   const { client } = server;
-  const created = await new Promise<string>((resolve, reject) =>
-    client.createContext(
-      {
-        storage: undefined,
-        permitStorage: undefined,
-        transportKeyPairDerivationSecret: undefined,
-        config: undefined,
-        signerEnabled,
-        account: signerEnabled
-          ? { address: Buffer.from(hexToBytes(USER)), chainId: BigInt(anvil.id) }
-          : undefined,
-      },
-      (error, value) => (error ? reject(error) : resolve(value.contextId)),
-    ),
-  );
+  const created = await createContext(client, {
+    signerEnabled,
+    account: signerEnabled
+      ? { address: Buffer.from(hexToBytes(USER)), chainId: BigInt(anvil.id) }
+      : undefined,
+  });
   const local = new LocalSigner();
   if (signerEnabled) {
     await server.attachSigner(created, (action) =>
