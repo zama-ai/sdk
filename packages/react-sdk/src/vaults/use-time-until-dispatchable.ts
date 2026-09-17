@@ -12,11 +12,15 @@ export interface UseTimeUntilDispatchableConfig {
   address: Address;
   /** Batch to check. The query is disabled while `undefined`. */
   batchId: bigint | undefined;
-  /**
-   * Poll interval in milliseconds for a live countdown. Omit to fetch once —
-   * the value doesn't change on its own once fetched.
-   */
-  refetchInterval?: number;
+}
+
+/** TanStack Query options accepted by {@link useTimeUntilDispatchable} (excluding `queryKey`/`queryFn`). */
+export interface UseTimeUntilDispatchableOptions extends Omit<
+  UseQueryOptions<bigint | null>,
+  "queryKey" | "queryFn" | "enabled"
+> {
+  /** Set this to `false` to disable this query from automatically running. */
+  enabled?: boolean;
 }
 
 /**
@@ -26,31 +30,28 @@ export interface UseTimeUntilDispatchableConfig {
  *
  * `null` once the batch has left `Pending` and can never be dispatched again.
  *
- * @param config - The batcher address, batch id, and optional poll interval.
+ * @param config - The batcher address and batch id.
  * @param options - React Query options (forwarded to `useQuery`).
  *
  * @example
  * ```tsx
- * const { data: secondsLeft } = useTimeUntilDispatchable({
- *   address: "0xDepositBatcher",
- *   batchId,
- *   refetchInterval: 5_000,
- * });
+ * const { data: secondsLeft } = useTimeUntilDispatchable(
+ *   { address: "0xDepositBatcher", batchId },
+ *   { refetchInterval: 5_000 },
+ * );
  * ```
  */
 export function useTimeUntilDispatchable(
   config: UseTimeUntilDispatchableConfig,
-  options?: Omit<UseQueryOptions<bigint | null>, "queryKey" | "queryFn">,
+  options?: UseTimeUntilDispatchableOptions,
 ) {
+  const { enabled = true } = options ?? {};
   const batcher = useVaultBatcher(config.address);
-  const baseOpts = timeUntilDispatchableQueryOptions(batcher, {
-    batchId: config.batchId,
-    refetchInterval: config.refetchInterval,
-  });
+  const baseOptions = timeUntilDispatchableQueryOptions(batcher, { batchId: config.batchId });
 
-  return useQuery({
-    ...baseOpts,
+  return useQuery<bigint | null>({
+    ...baseOptions,
     ...options,
-    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
+    enabled: Boolean(baseOptions.enabled) && enabled,
   });
 }

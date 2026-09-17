@@ -2563,12 +2563,15 @@ export function batchMinBatchAgeContract(batcher: Address, batchId: bigint): {
 };
 
 // @public
-export enum BatchState {
-    Canceled = 3,
-    Dispatched = 1,
-    Finalized = 2,
-    Pending = 0
-}
+export const BatchState: {
+    readonly Pending: 0;
+    readonly Dispatched: 1;
+    readonly Finalized: 2;
+    readonly Canceled: 3;
+};
+
+// @public
+export type BatchState = (typeof BatchState)[keyof typeof BatchState];
 
 // @public
 export function batchStateContract(batcher: Address, batchId: bigint): {
@@ -11588,10 +11591,10 @@ export interface RecoverParams {
 }
 
 // @public
-export function requestWithdrawalMutationOptions(vault: Vault): MutationFactoryOptions<readonly ["zama.vault.requestWithdrawal", Address], RequestWithdrawalParams, JoinResult>;
+export function requestRedeemMutationOptions(vault: Vault): MutationFactoryOptions<readonly ["zama.vault.requestRedeem", Address], RequestRedeemParams, JoinResult>;
 
 // @public
-export interface RequestWithdrawalParams extends VaultJoinOptions {
+export interface RequestRedeemParams extends VaultJoinOptions {
     amount: bigint;
 }
 
@@ -11599,7 +11602,6 @@ export interface RequestWithdrawalParams extends VaultJoinOptions {
 export interface TimeUntilDispatchableQueryConfig {
     batchId?: bigint;
     query?: Record<string, unknown>;
-    refetchInterval?: number;
 }
 
 // @public
@@ -12878,14 +12880,14 @@ export function toTokenContract(batcher: Address): {
 // @public
 export class Vault {
     constructor(sdk: ZamaSDK, addresses: VaultAddresses);
+    // Warning: (ae-forgotten-export) The symbol "WrappedToken" needs to be exported by the entry point index.d.ts
+    cAsset(): Promise<WrappedToken>;
+    cShare(): Promise<WrappedToken>;
     deposit(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult>;
     readonly depositBatcher: VaultBatcher;
-    // Warning: (ae-forgotten-export) The symbol "WrappedToken" needs to be exported by the entry point index.d.ts
-    depositToken(): Promise<WrappedToken>;
     readonly redeemBatcher: VaultBatcher;
-    requestWithdrawal(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult>;
+    requestRedeem(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult>;
     readonly sdk: ZamaSDK;
-    shareToken(): Promise<WrappedToken>;
     vaultAddress(): Promise<Address>;
 }
 
@@ -13564,7 +13566,7 @@ export function vaultContract(batcher: Address): {
 // @public
 export interface VaultJoinOptions extends JoinOptions {
     beneficiary?: Address;
-    operatorDeadline?: number;
+    operatorUntil?: number;
 }
 
 // @public

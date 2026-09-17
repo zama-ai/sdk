@@ -45,10 +45,10 @@ export function useDeposit<TContext = unknown>(
     ...depositMutationOptions(vault),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
-      invalidateOnceResolved(vault.sdk, "deposit", vault.depositToken(), (depositToken) =>
+      invalidateOnceResolved(vault.sdk, "deposit", vault.cAsset(), (cAsset) =>
         invalidateAfterJoin(context.client, {
           batcherAddress: vault.depositBatcher.address,
-          fromToken: depositToken.address,
+          fromToken: cAsset.address,
         }),
       );
       return options?.onSuccess?.(data, variables, onMutateResult, context);

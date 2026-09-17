@@ -23,7 +23,7 @@ export interface UseJoinConfig {
 
 /**
  * Join the currently open batch on a single batcher directly. Low-level —
- * most apps should use `useDeposit` / `useRequestWithdrawal` instead, which
+ * most apps should use `useDeposit` / `useRequestRedeem` instead, which
  * also handle the operator-approval grant.
  *
  * @param config - The batcher address.

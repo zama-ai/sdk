@@ -11,6 +11,7 @@ import { Token } from "../token";
 import type { GenericSigner, TransactionResult, WriteContractConfig } from "../types";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 import { assertConfidentialBalance } from "../utils/assert-balance";
+import { assertBigint } from "../utils/assertions";
 import { isEncryptedValueZero } from "../utils/handles";
 import { submitTransaction as submitSdkTransaction } from "../utils/submit-transaction";
 import type { ZamaSDK } from "../zama-sdk";
@@ -143,7 +144,9 @@ export class VaultBatcher {
    *   {@link currentBatchId} — batch ids start at 1.
    */
   async batchState(batchId: bigint): Promise<BatchState> {
-    return this.sdk.provider.readContract(batchStateContract(this.address, batchId));
+    // The ABI types this uint8 enum as a plain `number`.
+    const state = await this.sdk.provider.readContract(batchStateContract(this.address, batchId));
+    return state as BatchState;
   }
 
   /** Whether the batcher is paused. While paused, `join` and `dispatchBatch` revert; `quit` and `claim` still work. */
@@ -256,9 +259,10 @@ export class VaultBatcher {
       { encryptedValue, contractAddress: this.address },
     ]);
     const value = result[encryptedValue];
-    if (typeof value !== "bigint") {
+    if (value === undefined) {
       throw new DecryptionFailedError(`Decryption returned no value for ${encryptedValue}`);
     }
+    assertBigint(value, "depositOf: result[encryptedValue]");
     return value;
   }
 

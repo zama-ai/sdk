@@ -85,15 +85,15 @@ describe("Vault", () => {
     });
   });
 
-  test("resolves and caches depositToken from the deposit batcher's fromToken", async ({
+  test("resolves and caches cAsset from the deposit batcher's fromToken", async ({
     sdk,
     provider,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(DEPOSIT_TOKEN);
     const vault = createVault(sdk, addresses());
 
-    const first = await vault.depositToken();
-    const second = await vault.depositToken();
+    const first = await vault.cAsset();
+    const second = await vault.cAsset();
 
     expect(first).toBeInstanceOf(WrappedToken);
     expect(first.address).toBe(DEPOSIT_TOKEN);
@@ -104,13 +104,13 @@ describe("Vault", () => {
     );
   });
 
-  test("resolves shareToken from the redeem batcher's fromToken", async ({ sdk, provider }) => {
+  test("resolves cShare from the redeem batcher's fromToken", async ({ sdk, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(SHARE_TOKEN);
     const vault = createVault(sdk, addresses());
 
-    const shareToken = await vault.shareToken();
+    const cShare = await vault.cShare();
 
-    expect(shareToken.address).toBe(SHARE_TOKEN);
+    expect(cShare.address).toBe(SHARE_TOKEN);
     expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({ address: REDEEM_BATCHER, functionName: "fromToken" }),
     );
@@ -190,7 +190,7 @@ describe("Vault", () => {
     });
   });
 
-  test("requestWithdrawal joins the redeem batcher using the share token's operator grant", async ({
+  test("requestRedeem joins the redeem batcher using the share token's operator grant", async ({
     sdk,
     provider,
     signer,
@@ -202,7 +202,7 @@ describe("Vault", () => {
     vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(true);
 
     const vault = createVault(sdk, addresses());
-    await vault.requestWithdrawal(500n);
+    await vault.requestRedeem(500n);
 
     expect(relayer.encryptValues).toHaveBeenCalledWith(
       expect.objectContaining({ contractAddress: REDEEM_BATCHER }),

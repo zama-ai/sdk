@@ -458,7 +458,7 @@
     },
     {
       "id": "doc:guides/vault-deposits",
-      "title": "Vault deposits and withdrawals",
+      "title": "Vault deposits and redemptions",
       "source_path": "docs/gitbook/src/guides/vault-deposits.md",
       "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-deposits.md",
       "source_type": "official-doc",

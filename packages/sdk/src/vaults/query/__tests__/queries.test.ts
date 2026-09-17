@@ -54,14 +54,10 @@ describe("timeUntilDispatchableQueryOptions", () => {
     expect(timeUntilDispatchableQueryOptions(batcher, { batchId: 58n }).enabled).toBe(true);
   });
 
-  test("delegates to batcher.timeUntilDispatchable and forwards refetchInterval", async () => {
+  test("delegates to batcher.timeUntilDispatchable", async () => {
     const batcher = createMockBatcher();
-    const options = timeUntilDispatchableQueryOptions(batcher, {
-      batchId: 58n,
-      refetchInterval: 5_000,
-    });
+    const options = timeUntilDispatchableQueryOptions(batcher, { batchId: 58n });
 
-    expect(options.refetchInterval).toBe(5_000);
     const result = await options.queryFn({ queryKey: options.queryKey } as never);
     expect(result).toBe(120n);
     expect(batcher.timeUntilDispatchable).toHaveBeenCalledWith(58n);

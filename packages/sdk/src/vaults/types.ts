@@ -3,20 +3,22 @@ import type { EncryptedValue } from "../relayer/types";
 import type { TransactionResult } from "../types";
 
 /**
- * A batch's lifecycle state. The values mirror the batcher contract's own
- * `BatchState` enum and must stay in that order. Which operation is legal
- * depends entirely on this value.
+ * A batch's lifecycle state. The numbers mirror the batcher contract's own
+ * enum, so they are part of the on-chain contract, not an arbitrary encoding.
  */
-export enum BatchState {
+export const BatchState = {
   /** Open: accepts joins and quits. Always the batcher's `currentBatchId`. */
-  Pending = 0,
+  Pending: 0,
   /** Closed; the aggregate amount is being decrypted. No user action is possible. */
-  Dispatched = 1,
+  Dispatched: 1,
   /** Settled with an exchange rate — the only state in which `claim` succeeds. */
-  Finalized = 2,
+  Finalized: 2,
   /** The route failed or the callback deadline passed; `quit` refunds the original deposit. */
-  Canceled = 3,
-}
+  Canceled: 3,
+} as const;
+
+/** Union of all {@link BatchState} values. */
+export type BatchState = (typeof BatchState)[keyof typeof BatchState];
 
 /** Addresses that make up one confidential vault. */
 export interface VaultAddresses {
@@ -41,7 +43,7 @@ export interface JoinOptions {
   skipBalanceCheck?: boolean;
 }
 
-/** Options for {@link Vault.deposit} and {@link Vault.requestWithdrawal}. */
+/** Options for {@link Vault.deposit} and {@link Vault.requestRedeem}. */
 export interface VaultJoinOptions extends JoinOptions {
   /**
    * Account credited in the batch. Defaults to the connected wallet address.
@@ -57,7 +59,7 @@ export interface VaultJoinOptions extends JoinOptions {
    * token is valid. Only used when a grant isn't already active. Defaults to
    * `Token.setOperator`'s own default (now + 1 hour).
    */
-  operatorDeadline?: number;
+  operatorUntil?: number;
 }
 
 /** What the batcher reported for a successful join. */

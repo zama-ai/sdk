@@ -12,7 +12,7 @@ import { JoinParams } from '@zama-fhe/sdk/vaults';
 import { JoinResult } from '@zama-fhe/sdk/vaults';
 import { QuitParams } from '@zama-fhe/sdk/vaults';
 import { RecoverParams } from '@zama-fhe/sdk/vaults';
-import { RequestWithdrawalParams } from '@zama-fhe/sdk/vaults';
+import { RequestRedeemParams } from '@zama-fhe/sdk/vaults';
 import { TransactionResult } from '@zama-fhe/sdk';
 import { UseMutationOptions } from '@tanstack/react-query';
 import { UseMutationResult } from '@tanstack/react-query';
@@ -23,12 +23,17 @@ import { VaultAddresses } from '@zama-fhe/sdk/vaults';
 import { VaultBatcher } from '@zama-fhe/sdk/vaults';
 
 // @public
-export function useBatchState(config: UseBatchStateConfig, options?: Omit<UseQueryOptions<BatchState>, "queryKey" | "queryFn">): UseQueryResult<BatchState, Error>;
+export function useBatchState(config: UseBatchStateConfig, options?: UseBatchStateOptions): UseQueryResult<BatchState, Error>;
 
 // @public
 export interface UseBatchStateConfig {
     address: Address;
     batchId: bigint | undefined;
+}
+
+// @public
+export interface UseBatchStateOptions extends Omit<UseQueryOptions<BatchState>, "queryKey" | "queryFn" | "enabled"> {
+    enabled?: boolean;
 }
 
 // @public
@@ -40,11 +45,16 @@ export interface UseClaimConfig {
 }
 
 // @public
-export function useCurrentBatchId(config: UseCurrentBatchIdConfig, options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">): UseQueryResult<bigint, Error>;
+export function useCurrentBatchId(config: UseCurrentBatchIdConfig, options?: UseCurrentBatchIdOptions): UseQueryResult<bigint, Error>;
 
 // @public
 export interface UseCurrentBatchIdConfig {
     address: Address;
+}
+
+// @public
+export interface UseCurrentBatchIdOptions extends Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn" | "enabled"> {
+    enabled?: boolean;
 }
 
 // @public
@@ -88,21 +98,25 @@ export interface UseRecoverConfig {
 }
 
 // @public
-export function useRequestWithdrawal<TContext = unknown>(config: UseRequestWithdrawalConfig, options?: UseMutationOptions<JoinResult, Error, RequestWithdrawalParams, TContext>): UseMutationResult<JoinResult, Error, RequestWithdrawalParams, TContext>;
+export function useRequestRedeem<TContext = unknown>(config: UseRequestRedeemConfig, options?: UseMutationOptions<JoinResult, Error, RequestRedeemParams, TContext>): UseMutationResult<JoinResult, Error, RequestRedeemParams, TContext>;
 
 // @public
-export interface UseRequestWithdrawalConfig {
+export interface UseRequestRedeemConfig {
     addresses: VaultAddresses;
 }
 
 // @public
-export function useTimeUntilDispatchable(config: UseTimeUntilDispatchableConfig, options?: Omit<UseQueryOptions<bigint | null>, "queryKey" | "queryFn">): UseQueryResult<bigint | null, Error>;
+export function useTimeUntilDispatchable(config: UseTimeUntilDispatchableConfig, options?: UseTimeUntilDispatchableOptions): UseQueryResult<bigint | null, Error>;
 
 // @public
 export interface UseTimeUntilDispatchableConfig {
     address: Address;
     batchId: bigint | undefined;
-    refetchInterval?: number;
+}
+
+// @public
+export interface UseTimeUntilDispatchableOptions extends Omit<UseQueryOptions<bigint | null>, "queryKey" | "queryFn" | "enabled"> {
+    enabled?: boolean;
 }
 
 // @public

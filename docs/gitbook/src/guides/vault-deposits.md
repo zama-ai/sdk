@@ -1,9 +1,9 @@
 ---
-title: Vault deposits and withdrawals
+title: Vault deposits and redemptions
 description: How to integrate confidential ERC-4626 vaults with the Zama SDK.
 ---
 
-# Vault deposits and withdrawals
+# Vault deposits and redemptions
 
 This guide covers **integrating** a confidential vault from the SDK. For what a confidential vault is, how batching and settlement work on-chain, and the contracts themselves, see the [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault) — in particular its [deposit guide](https://docs.zama.org/protocol/confidential-vault/guides/deposit).
 
@@ -12,9 +12,9 @@ Core SDK usage imports from `@zama-fhe/sdk/vaults`; React hooks import from `@za
 ## The two layers
 
 - **`VaultBatcher`** mirrors one on-chain batcher contract directly, the way `Token` mirrors an ERC-7984 confidential token. A vault has two directions — deposit and redeem — each behind its own batcher contract.
-- **`Vault`** pairs a deposit batcher and a redeem batcher into one object with ERC-20-style methods (`deposit`, `requestWithdrawal`, …), the way `WrappedToken` builds on `Token`. It also automates a step you'd otherwise have to do by hand: granting the batcher an operator approval before it can pull the joined amount — see [Operator approvals](./operator-approvals.md).
+- **`Vault`** pairs a deposit batcher and a redeem batcher into one object with ERC-20-style methods (`deposit`, `requestRedeem`, …), the way `WrappedToken` builds on `Token`. It also automates a step you'd otherwise have to do by hand: granting the batcher an operator approval before it can pull the joined amount — see [Operator approvals](./operator-approvals.md).
 
-Most apps should use `Vault` (`useVault` / `useDeposit` / `useRequestWithdrawal` in React). Reach for `VaultBatcher` (`useVaultBatcher` / `useJoin` / `useClaim` / …) directly only if you need a single direction, or want to control the operator grant yourself.
+Most apps should use `Vault` (`useVault` / `useDeposit` / `useRequestRedeem` in React). Reach for `VaultBatcher` (`useVaultBatcher` / `useJoin` / `useClaim` / …) directly only if you need a single direction, or want to control the operator grant yourself.
 
 ## Steps
 
@@ -74,7 +74,7 @@ deposit.mutate({ amount: 1_000_000n });
 
 `deposit` returns the `batchId` it joined, read back from the batcher's `Joined` event — keep it, since every later call (`batchState`, `claim`, `quit`) needs it.
 
-Pass `beneficiary` to credit a different account, and `operatorDeadline` to control how long the operator grant lasts (defaults to 1 hour, same as `Token.setOperator`). The React hook invalidates the deposit token's balance cache on success.
+Pass `beneficiary` to credit a different account, and `operatorUntil` to control how long the operator grant lasts (defaults to 1 hour, same as `Token.setOperator`). The React hook invalidates the deposit token's balance cache on success.
 
 {% hint style="warning" %}
 The beneficiary owns the position, not the caller: only they can `quit` it, and `claim` always pays out to them.
@@ -112,7 +112,7 @@ const { data: state } = useBatchState({
 
 | `BatchState` | What the user can do                            |
 | ------------ | ----------------------------------------------- |
-| `Pending`    | `deposit` / `requestWithdrawal`, or `quit`      |
+| `Pending`    | `deposit` / `requestRedeem`, or `quit`          |
 | `Dispatched` | Nothing — wait                                  |
 | `Finalized`  | `claim`                                         |
 | `Canceled`   | `quit` (or `recover`), to take the deposit back |
@@ -135,11 +135,10 @@ const secondsLeft = await vault.depositBatcher.timeUntilDispatchable(batchId);
 
 ```tsx
 // refetchInterval polls for a live countdown; omit it to fetch once.
-const { data: secondsLeft } = useTimeUntilDispatchable({
-  address: vault.depositBatcher.address,
-  batchId,
-  refetchInterval: 5_000,
-});
+const { data: secondsLeft } = useTimeUntilDispatchable(
+  { address: vault.depositBatcher.address, batchId },
+  { refetchInterval: 5_000 },
+);
 ```
 
 {% endtab %}
@@ -182,8 +181,8 @@ Dispatch only starts the decryption; finalization lands later. Wait for `batchSt
 // Only once batchState(batchId) === BatchState.Finalized.
 await vault.depositBatcher.claim(batchId);
 
-const shareToken = await vault.shareToken();
-const balance = await shareToken.balanceOf(myAddress);
+const cShare = await vault.cShare();
+const balance = await cShare.balanceOf(myAddress);
 ```
 
 {% endtab %}
@@ -195,36 +194,37 @@ claim.mutate({ batchId });
 
 // useConfidentialBalance works directly on the share token's address —
 // no vault-specific balance hook needed.
-const { data: balance } = useConfidentialBalance({ address: shareTokenAddress });
+const { data: balance } = useConfidentialBalance({ address: cShareAddress });
 ```
 
 {% endtab %}
 {% endtabs %}
 
-## Withdrawals
+## Redemptions
 
-Withdrawals mirror deposits exactly, using the redeem batcher instead:
+Redemptions mirror deposits exactly, using the redeem batcher instead. The amount is
+denominated in shares, not assets — ERC-4626 `redeem`, not `withdraw`:
 
 {% tabs %}
 {% tab title="Core SDK" %}
 
 ```ts
-const { batchId } = await vault.requestWithdrawal(500n);
+const { batchId } = await vault.requestRedeem(500n);
 
 await vault.redeemBatcher.dispatchBatch(); // once timeUntilDispatchable(batchId) is 0
 // …then wait for batchState(batchId) to reach BatchState.Finalized:
 await vault.redeemBatcher.claim(batchId);
 
-const depositToken = await vault.depositToken();
-const balance = await depositToken.balanceOf(myAddress);
+const cAsset = await vault.cAsset();
+const balance = await cAsset.balanceOf(myAddress);
 ```
 
 {% endtab %}
 {% tab title="React SDK" %}
 
 ```tsx
-const requestWithdrawal = useRequestWithdrawal({ addresses });
-requestWithdrawal.mutate({ amount: 500n });
+const requestRedeem = useRequestRedeem({ addresses });
+requestRedeem.mutate({ amount: 500n });
 
 const dispatchBatch = useDispatchBatch({ address: vault.redeemBatcher.address });
 const claim = useClaim({ address: vault.redeemBatcher.address });
@@ -280,5 +280,5 @@ recover.mutate({ batchId, account: "0xDepositor" });
 ## Next steps
 
 - [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault) — the protocol side: how batching, dispatch and settlement work
-- [Operator approvals](./operator-approvals.md) — the approval model `vault.deposit()` / `vault.requestWithdrawal()` automate
-- [Check balances](./check-balances.md) — reading confidential balances on `depositToken()` / `shareToken()`
+- [Operator approvals](./operator-approvals.md) — the approval model `vault.deposit()` / `vault.requestRedeem()` automate
+- [Check balances](./check-balances.md) — reading confidential balances on `cAsset()` / `cShare()`

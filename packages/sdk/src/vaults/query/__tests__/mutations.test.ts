@@ -8,7 +8,7 @@ import { depositMutationOptions } from "../deposit";
 import { dispatchBatchMutationOptions } from "../dispatch-batch";
 import { joinMutationOptions } from "../join";
 import { quitMutationOptions } from "../quit";
-import { requestWithdrawalMutationOptions } from "../request-withdrawal";
+import { requestRedeemMutationOptions } from "../request-redeem";
 
 const DEPOSIT_BATCHER = "0x1111111111111111111111111111111111111111" as Address;
 const REDEEM_BATCHER = "0x2222222222222222222222222222222222222222" as Address;
@@ -20,7 +20,7 @@ function createMockVault(): Vault {
     depositBatcher: { address: DEPOSIT_BATCHER },
     redeemBatcher: { address: REDEEM_BATCHER },
     deposit: vi.fn().mockResolvedValue(TX_RESULT),
-    requestWithdrawal: vi.fn().mockResolvedValue(TX_RESULT),
+    requestRedeem: vi.fn().mockResolvedValue(TX_RESULT),
   } as unknown as Vault;
 }
 
@@ -34,7 +34,7 @@ function createMockBatcher(address: Address): VaultBatcher {
   } as unknown as VaultBatcher;
 }
 
-describe("deposit / requestWithdrawal mutation options", () => {
+describe("deposit / requestRedeem mutation options", () => {
   test("depositMutationOptions delegates to vault.deposit", async () => {
     const vault = createMockVault();
     const options = depositMutationOptions(vault);
@@ -44,13 +44,13 @@ describe("deposit / requestWithdrawal mutation options", () => {
     expect(vault.deposit).toHaveBeenCalledWith(1_000n, { beneficiary: ACCOUNT });
   });
 
-  test("requestWithdrawalMutationOptions delegates to vault.requestWithdrawal", async () => {
+  test("requestRedeemMutationOptions delegates to vault.requestRedeem", async () => {
     const vault = createMockVault();
-    const options = requestWithdrawalMutationOptions(vault);
+    const options = requestRedeemMutationOptions(vault);
 
-    expect(options.mutationKey).toEqual(["zama.vault.requestWithdrawal", REDEEM_BATCHER]);
+    expect(options.mutationKey).toEqual(["zama.vault.requestRedeem", REDEEM_BATCHER]);
     await options.mutationFn({ amount: 500n });
-    expect(vault.requestWithdrawal).toHaveBeenCalledWith(500n, {});
+    expect(vault.requestRedeem).toHaveBeenCalledWith(500n, {});
   });
 });
 

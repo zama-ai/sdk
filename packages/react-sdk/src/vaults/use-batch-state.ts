@@ -14,6 +14,15 @@ export interface UseBatchStateConfig {
   batchId: bigint | undefined;
 }
 
+/** TanStack Query options accepted by {@link useBatchState} (excluding `queryKey`/`queryFn`). */
+export interface UseBatchStateOptions extends Omit<
+  UseQueryOptions<BatchState>,
+  "queryKey" | "queryFn" | "enabled"
+> {
+  /** Set this to `false` to disable this query from automatically running. */
+  enabled?: boolean;
+}
+
 /**
  * A batch's lifecycle state, which decides what the user may do next — see
  * {@link BatchState}. Claiming is possible only on `Finalized`; `Canceled`
@@ -27,16 +36,14 @@ export interface UseBatchStateConfig {
  * const { data: state } = useBatchState({ address: "0xDepositBatcher", batchId });
  * ```
  */
-export function useBatchState(
-  config: UseBatchStateConfig,
-  options?: Omit<UseQueryOptions<BatchState>, "queryKey" | "queryFn">,
-) {
+export function useBatchState(config: UseBatchStateConfig, options?: UseBatchStateOptions) {
+  const { enabled = true } = options ?? {};
   const batcher = useVaultBatcher(config.address);
-  const baseOpts = batchStateQueryOptions(batcher, { batchId: config.batchId });
+  const baseOptions = batchStateQueryOptions(batcher, { batchId: config.batchId });
 
-  return useQuery({
-    ...baseOpts,
+  return useQuery<BatchState>({
+    ...baseOptions,
     ...options,
-    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
+    enabled: Boolean(baseOptions.enabled) && enabled,
   });
 }

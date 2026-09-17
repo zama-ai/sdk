@@ -49,7 +49,7 @@ export {
   joinMutationOptions,
   quitMutationOptions,
   recoverMutationOptions,
-  requestWithdrawalMutationOptions,
+  requestRedeemMutationOptions,
   timeUntilDispatchableQueryOptions,
   vaultQueryKeys,
   type BatchStateQueryConfig,
@@ -59,6 +59,6 @@ export {
   type JoinParams,
   type QuitParams,
   type RecoverParams,
-  type RequestWithdrawalParams,
+  type RequestRedeemParams,
   type TimeUntilDispatchableQueryConfig,
 } from "./query";

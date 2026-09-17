@@ -39,10 +39,7 @@ describe("useBatchState", () => {
 });
 
 describe("useTimeUntilDispatchable", () => {
-  test("reads seconds remaining and forwards refetchInterval", async ({
-    renderWithProviders,
-    provider,
-  }) => {
+  test("reads seconds remaining", async ({ renderWithProviders, provider }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(BatchState.Pending) // batchState
       .mockResolvedValueOnce(1_000n) // batchCreatedAt
@@ -50,7 +47,10 @@ describe("useTimeUntilDispatchable", () => {
     vi.mocked(provider.getBlockTimestamp).mockResolvedValueOnce(2_000n); // now
 
     const { result } = renderWithProviders(() =>
-      useTimeUntilDispatchable({ address: BATCHER_ADDRESS, batchId: 58n, refetchInterval: 5_000 }),
+      useTimeUntilDispatchable(
+        { address: BATCHER_ADDRESS, batchId: 58n },
+        { refetchInterval: 5_000 },
+      ),
     );
 
     // eligible at 1_000 + 3_480 = 4_480; now is 2_000 → 2_480 remaining

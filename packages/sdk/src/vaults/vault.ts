@@ -7,7 +7,7 @@ import { VaultBatcher } from "./vault-batcher";
 
 /**
  * A confidential ERC-4626 vault: one deposit batcher and one redeem batcher
- * behind ERC-20-style `deposit` and `requestWithdrawal` methods.
+ * behind ERC-20-style `deposit` and `requestRedeem` methods.
  *
  * Claiming, quitting and batch state live on the two batchers directly —
  * `vault.depositBatcher.claim(batchId)`.
@@ -23,8 +23,8 @@ export class Vault {
   // The promise is cached, not just the resolved value, so concurrent callers
   // share one lookup and end up with the same instance.
   #vaultAddress: Promise<Address> | null = null;
-  #depositToken: Promise<WrappedToken> | null = null;
-  #shareToken: Promise<WrappedToken> | null = null;
+  #cAsset: Promise<WrappedToken> | null = null;
+  #cShare: Promise<WrappedToken> | null = null;
 
   readonly #expectedVaultAddress: Address | undefined;
 
@@ -52,33 +52,36 @@ export class Vault {
     return this.#vaultAddress;
   }
 
-  /** The confidential token deposited into this vault. Resolved once and cached. */
-  async depositToken(): Promise<WrappedToken> {
-    this.#depositToken ??= this.depositBatcher
+  /**
+   * The confidential wrapper of the vault's underlying asset — the token
+   * deposits are paid in. Resolved once and cached.
+   */
+  async cAsset(): Promise<WrappedToken> {
+    this.#cAsset ??= this.depositBatcher
       .fromToken()
       .then((address) => new WrappedToken(this.sdk, address))
       .catch((error: unknown) => {
-        this.#depositToken = null;
+        this.#cAsset = null;
         throw error;
       });
-    return this.#depositToken;
+    return this.#cAsset;
   }
 
   /**
    * The confidential share token this vault issues. Resolved once and cached.
    *
    * Read from the redeem batcher, which is the contract that actually pulls
-   * these shares and so decides which token a withdrawal must grant on.
+   * these shares and so decides which token a redemption must grant on.
    */
-  async shareToken(): Promise<WrappedToken> {
-    this.#shareToken ??= this.redeemBatcher
+  async cShare(): Promise<WrappedToken> {
+    this.#cShare ??= this.redeemBatcher
       .fromToken()
       .then((address) => new WrappedToken(this.sdk, address))
       .catch((error: unknown) => {
-        this.#shareToken = null;
+        this.#cShare = null;
         throw error;
       });
-    return this.#shareToken;
+    return this.#cShare;
   }
 
   /**
@@ -90,12 +93,12 @@ export class Vault {
    * @param amount - The plaintext amount to deposit.
    */
   async deposit(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult> {
-    const token = await this.depositToken();
+    const token = await this.cAsset();
     await this.#ensureOperator(
       "deposit",
       token,
       this.depositBatcher.address,
-      options?.operatorDeadline,
+      options?.operatorUntil,
     );
     return this.depositBatcher.join(amount, options?.beneficiary, {
       skipBalanceCheck: options?.skipBalanceCheck,
@@ -103,20 +106,21 @@ export class Vault {
   }
 
   /**
-   * Request a withdrawal by joining the current redeem batch with a
-   * plaintext amount of shares. Grants the redeem batcher an ERC-7984
-   * operator approval on the share token first, unless one is already
-   * active.
+   * Join the current redeem batch, which the vault later settles into the
+   * underlying asset at the batch's exchange rate. Grants the redeem batcher
+   * an ERC-7984 operator approval on the share token first, unless one is
+   * already active.
    *
-   * @param amount - The plaintext amount of shares to redeem.
+   * @param amount - The plaintext amount of shares — ERC-4626 `redeem`, not
+   *   `withdraw`, so this is denominated in shares, never in assets.
    */
-  async requestWithdrawal(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult> {
-    const token = await this.shareToken();
+  async requestRedeem(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult> {
+    const token = await this.cShare();
     await this.#ensureOperator(
-      "requestWithdrawal",
+      "requestRedeem",
       token,
       this.redeemBatcher.address,
-      options?.operatorDeadline,
+      options?.operatorUntil,
     );
     return this.redeemBatcher.join(amount, options?.beneficiary, {
       skipBalanceCheck: options?.skipBalanceCheck,

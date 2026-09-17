@@ -4,7 +4,7 @@ import { WrappedToken } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, mockJoinBalance, mockJoinReceipt, test, vi } from "../../test-fixtures";
 import { useDeposit } from "../use-deposit";
-import { useRequestWithdrawal } from "../use-request-withdrawal";
+import { useRequestRedeem } from "../use-request-redeem";
 
 const VAULT_ADDRESS = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const DEPOSIT_BATCHER = "0x7777777777777777777777777777777777777777" as Address;
@@ -51,7 +51,7 @@ describe("useDeposit", () => {
   });
 });
 
-describe("useRequestWithdrawal", () => {
+describe("useRequestRedeem", () => {
   test("joins the redeem batch and invalidates the share token's balance cache", async ({
     renderWithProviders,
     provider,
@@ -61,7 +61,7 @@ describe("useRequestWithdrawal", () => {
     mockJoinReceipt(provider, { batcher: REDEEM_BATCHER, account: userAddress });
     vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(true);
 
-    const { result, queryClient } = renderWithProviders(() => useRequestWithdrawal({ addresses }));
+    const { result, queryClient } = renderWithProviders(() => useRequestRedeem({ addresses }));
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(SHARE_TOKEN, userAddress);
     queryClient.setQueryData(balanceKey, 500n);

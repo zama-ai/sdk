@@ -12,6 +12,15 @@ export interface UseCurrentBatchIdConfig {
   address: Address;
 }
 
+/** TanStack Query options accepted by {@link useCurrentBatchId} (excluding `queryKey`/`queryFn`). */
+export interface UseCurrentBatchIdOptions extends Omit<
+  UseQueryOptions<bigint>,
+  "queryKey" | "queryFn" | "enabled"
+> {
+  /** Set this to `false` to disable this query from automatically running. */
+  enabled?: boolean;
+}
+
 /**
  * The id of a batcher's currently open (not-yet-dispatched) batch.
  *
@@ -25,14 +34,15 @@ export interface UseCurrentBatchIdConfig {
  */
 export function useCurrentBatchId(
   config: UseCurrentBatchIdConfig,
-  options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">,
+  options?: UseCurrentBatchIdOptions,
 ) {
+  const { enabled = true } = options ?? {};
   const batcher = useVaultBatcher(config.address);
-  const baseOpts = currentBatchIdQueryOptions(batcher);
+  const baseOptions = currentBatchIdQueryOptions(batcher);
 
-  return useQuery({
-    ...baseOpts,
+  return useQuery<bigint>({
+    ...baseOptions,
     ...options,
-    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
+    enabled: Boolean(baseOptions.enabled) && enabled,
   });
 }

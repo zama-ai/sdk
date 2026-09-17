@@ -13,10 +13,7 @@ export {
   type TimeUntilDispatchableQueryConfig,
 } from "./time-until-dispatchable";
 export { depositMutationOptions, type DepositParams } from "./deposit";
-export {
-  requestWithdrawalMutationOptions,
-  type RequestWithdrawalParams,
-} from "./request-withdrawal";
+export { requestRedeemMutationOptions, type RequestRedeemParams } from "./request-redeem";
 export { joinMutationOptions, type JoinParams } from "./join";
 export { claimMutationOptions, type ClaimParams } from "./claim";
 export { quitMutationOptions, type QuitParams } from "./quit";
