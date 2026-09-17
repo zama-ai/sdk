@@ -25,7 +25,7 @@ type ContractWriteRequest struct {
 	Gas   *big.Int
 }
 
-// WriteContractFunc approves, signs and broadcasts once; cancellation cannot undo submission.
+// WriteContractFunc signs and broadcasts once; cancellation cannot undo submission.
 // Callbacks may run concurrently. Return the broadcast hash without waiting for a receipt.
 type WriteContractFunc func(context.Context, ContractWriteRequest) (common.Hash, error)
 
@@ -58,17 +58,4 @@ func optionalTransactionInteger(encoded *string) (*big.Int, error) {
 		return nil, errors.New("invalid canonical transaction integer")
 	}
 	return value, nil
-}
-
-func cloneContractWrite(request ContractWriteRequest) ContractWriteRequest {
-	request.Data = append([]byte(nil), request.Data...)
-	request.ABI = append(json.RawMessage(nil), request.ABI...)
-	request.Args = append(json.RawMessage(nil), request.Args...)
-	if request.Value != nil {
-		request.Value = new(big.Int).Set(request.Value)
-	}
-	if request.Gas != nil {
-		request.Gas = new(big.Int).Set(request.Gas)
-	}
-	return request
 }

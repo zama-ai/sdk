@@ -3,63 +3,27 @@ use alloy_primitives::{TxKind, U256};
 use alloy_provider::{
     Provider, SendableTx, WalletProvider,
     fillers::{FillProvider, TxFiller},
-    network::{Ethereum, Network},
 };
 use alloy_rpc_types_eth::TransactionRequest;
-use std::{future::Future, time::Duration};
-use tokio::sync::Mutex;
+use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 
-pub type TxEnvelope = <Ethereum as Network>::TxEnvelope;
-
 /// Bounds a send that the caller's cancellation is no longer allowed to stop.
-const BROADCAST_TIMEOUT: Duration = Duration::from_secs(30);
+pub const DEFAULT_BROADCAST_TIMEOUT: Duration = Duration::from_secs(30);
 
-#[async_trait::async_trait]
-pub trait WritePolicy: Send + Sync {
-    /// Runs before signing; an error stops the write without a broadcast.
-    async fn approve(
-        &self,
-        request: &ContractWriteRequest,
-        cancel: &CancellationToken,
-    ) -> Result<(), SdkError>;
-    /// Receives the signed transaction before broadcast. Record it: a cancelled or lost
-    /// callback cannot report the hash afterwards.
-    fn submitting(&self, _request: &ContractWriteRequest, _transaction: &TxEnvelope) {}
-}
-#[async_trait::async_trait]
-impl<F, Fut> WritePolicy for F
-where
-    F: Fn(ContractWriteRequest, CancellationToken) -> Fut + Send + Sync,
-    Fut: Future<Output = Result<(), SdkError>> + Send,
-{
-    async fn approve(
-        &self,
-        request: &ContractWriteRequest,
-        cancel: &CancellationToken,
-    ) -> Result<(), SdkError> {
-        self(request.clone(), cancel.clone()).await
-    }
-}
-
-/// EIP-712 signing plus contract writes through one Alloy wallet provider.
-/// Share one wallet for each account and chain; writes are serialized per wallet instance.
-pub struct AlloyWallet<S, F, P, W>
+/// EIP-712 signing plus contract writes through one Alloy wallet provider: the EIP-712 signer and
+/// the provider's wallet must hold the same key.
+pub struct AlloyWallet<S, F, P>
 where
     F: TxFiller,
     P: Provider,
 {
     signer: AlloySigner<S>,
     provider: FillProvider<F, P>,
-    policy: W,
-    uncertain: Mutex<Option<B256>>,
+    broadcast_timeout: Duration,
 }
 impl<S> AlloySigner<S> {
-    pub fn with_transactions<F, P, W>(
-        self,
-        provider: FillProvider<F, P>,
-        policy: W,
-    ) -> AlloyWallet<S, F, P, W>
+    pub fn with_transactions<F, P>(self, provider: FillProvider<F, P>) -> AlloyWallet<S, F, P>
     where
         F: TxFiller,
         P: Provider,
@@ -67,24 +31,34 @@ impl<S> AlloySigner<S> {
         AlloyWallet {
             signer: self,
             provider,
-            policy,
-            uncertain: Mutex::new(None),
+            broadcast_timeout: DEFAULT_BROADCAST_TIMEOUT,
         }
     }
 }
+impl<S, F, P> AlloyWallet<S, F, P>
+where
+    F: TxFiller,
+    P: Provider,
+{
+    /// A zero timeout keeps [`DEFAULT_BROADCAST_TIMEOUT`].
+    pub fn broadcast_timeout(mut self, timeout: Duration) -> Self {
+        if !timeout.is_zero() {
+            self.broadcast_timeout = timeout;
+        }
+        self
+    }
+}
 #[async_trait::async_trait]
-impl<S, F, P, W> Signer for AlloyWallet<S, F, P, W>
+impl<S, F, P> Signer for AlloyWallet<S, F, P>
 where
     S: alloy_signer::Signer + Send + Sync,
     F: TxFiller,
     P: Provider,
     FillProvider<F, P>: WalletProvider,
-    W: WritePolicy,
 {
     async fn sign_typed_data(&self, request: SigningRequest) -> Result<Vec<u8>, SdkError> {
         self.signer.sign_typed_data(request).await
     }
-    // Approval runs outside the serialization gate, so the chain is rechecked once this write holds it.
     async fn write_contract(
         &self,
         request: ContractWriteRequest,
@@ -93,31 +67,12 @@ where
         if cancel.is_cancelled() {
             return Err(cancelled());
         }
-        if self.provider.default_signer_address() != request.account.address {
-            return Err(SdkError::signing_failed(
-                "Wallet does not control the requested account.",
-            ));
-        }
+        self.signer.ensure_account(
+            &request.account,
+            self.provider.default_signer_address(),
+            "Wallet does not control the requested account.",
+        )?;
         let transaction = transaction(&request)?;
-        self.policy.approve(&request, &cancel).await?;
-        let mut uncertain = self.uncertain.lock().await;
-        if cancel.is_cancelled() {
-            return Err(cancelled());
-        }
-        if let Some(hash) = *uncertain {
-            // This write never reached the RPC; only the earlier submission is uncertain.
-            return Err(SdkError::signing_failed(format!(
-                "Reconcile uncertain transaction {hash} before sending another."
-            )));
-        }
-        let chain = self.provider.get_chain_id().await.map_err(|error| {
-            SdkError::signing_failed(format!("Cannot read the wallet RPC chain ID: {error}"))
-        })?;
-        if chain != request.account.chain_id {
-            return Err(SdkError::chain_mismatch(
-                "RPC chain does not match the requested account.",
-            ));
-        }
         // Filling and signing happen before broadcast, so their failures are certain.
         let envelope = match self.provider.fill(transaction).await {
             Ok(SendableTx::Envelope(envelope)) => envelope,
@@ -132,27 +87,25 @@ where
                 )));
             }
         };
-        let hash = *envelope.tx_hash();
-        self.policy.submitting(&request, &envelope);
-        // A signed transaction can reach the node without a usable answer, so later writes stay blocked.
-        *uncertain = Some(hash);
-        match tokio::time::timeout(BROADCAST_TIMEOUT, self.provider.send_tx_envelope(envelope))
-            .await
-        {
-            Ok(Ok(_)) => (),
-            Ok(Err(error)) => {
-                return Err(SdkError::transaction_outcome_unknown(format!(
-                    "Submission of transaction {hash} failed: {error}; reconcile the wallet before retrying."
-                )));
-            }
-            Err(_) => {
-                return Err(SdkError::transaction_outcome_unknown(format!(
-                    "Submission of transaction {hash} timed out; reconcile the wallet before retrying."
-                )));
-            }
+        if cancel.is_cancelled() {
+            return Err(cancelled());
         }
-        *uncertain = None;
-        Ok(hash)
+        let hash = *envelope.tx_hash();
+        // Cancellation cannot recall a broadcast, so the send runs to its own timeout.
+        match tokio::time::timeout(
+            self.broadcast_timeout,
+            self.provider.send_tx_envelope(envelope),
+        )
+        .await
+        {
+            Ok(Ok(_)) => Ok(hash),
+            Ok(Err(error)) => Err(SdkError::transaction_outcome_unknown(format!(
+                "Submission of transaction {hash} failed: {error}; reconcile the wallet before retrying."
+            ))),
+            Err(_) => Err(SdkError::transaction_outcome_unknown(format!(
+                "Submission of transaction {hash} timed out; reconcile the wallet before retrying."
+            ))),
+        }
     }
 }
 fn cancelled() -> SdkError {
@@ -163,16 +116,17 @@ fn transaction(request: &ContractWriteRequest) -> Result<TransactionRequest, Sdk
         .value
         .as_ref()
         .map(|value| {
-            U256::from_str_radix(&value.to_string(), 10)
-                .map_err(|_| SdkError::signing_failed("Transaction value must fit uint256."))
+            value
+                .to_biguint()
+                .and_then(|value| U256::try_from_be_slice(&value.to_bytes_be()))
+                .ok_or_else(|| SdkError::signing_failed("Transaction value must fit uint256."))
         })
         .transpose()?;
     let gas = request
         .gas
         .as_ref()
         .map(|gas| {
-            gas.to_string()
-                .parse::<u64>()
+            u64::try_from(gas)
                 .map_err(|_| SdkError::signing_failed("Transaction gas must fit uint64."))
         })
         .transpose()?;

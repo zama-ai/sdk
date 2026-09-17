@@ -3,10 +3,9 @@ use alloy_signer_local::PrivateKeySigner;
 use anyhow::{Result, ensure};
 use std::{collections::HashMap, env};
 use zama_sdk_sidecar::{
-    Address, ApplicationStorage, CancellationToken, ChainConfig, Client, ContractWriteRequest,
-    DerivationSecret, MemoryStorage, ProcessRuntime, ProviderOptions, RelayerAuth, RelayerConfig,
-    RelayerOptions, RelayerTransport, Sdk, SdkConfig, SdkError, Signer, Storage, WalletAccount,
-    alloy::{AlloySigner, TxEnvelope, WritePolicy},
+    Address, ApplicationStorage, ChainConfig, Client, DerivationSecret, MemoryStorage,
+    ProcessRuntime, ProviderOptions, RelayerAuth, RelayerConfig, RelayerOptions, RelayerTransport,
+    Sdk, SdkConfig, Signer, Storage, WalletAccount, alloy::AlloySigner,
 };
 
 pub struct Settings {
@@ -102,9 +101,8 @@ impl Settings {
         Ok(provider)
     }
 
-    /// EIP-712 signing plus transaction broadcasting; the SDK decides when either is needed.
     pub fn wallet(&self) -> Result<impl Signer + use<>> {
-        // A cached nonce can outlive a failed fill, so later writes would gap.
+        // Alloy's cached nonce manager can advance past a failed fill and gap later writes.
         let provider = ProviderBuilder::new()
             .disable_recommended_fillers()
             .with_gas_estimation()
@@ -113,12 +111,7 @@ impl Settings {
             .fetch_chain_id()
             .wallet(self.signer.clone())
             .connect_reqwest(http_client()?, self.rpc_url.parse()?);
-        Ok(AlloySigner::new(self.signer.clone()).with_transactions(
-            provider,
-            ExamplePolicy {
-                allowed_token: self.token,
-            },
-        ))
+        Ok(AlloySigner::new(self.signer.clone()).with_transactions(provider))
     }
 
     pub async fn create_sdk(&self) -> Result<Sdk> {
@@ -131,30 +124,6 @@ impl Settings {
             builder = builder.transport_key_pair_derivation_secret(secret.clone());
         }
         builder.build().await
-    }
-}
-
-/// Approves writes to the configured token only and logs each signed transaction before broadcast.
-struct ExamplePolicy {
-    allowed_token: Address,
-}
-#[async_trait::async_trait]
-impl WritePolicy for ExamplePolicy {
-    async fn approve(
-        &self,
-        request: &ContractWriteRequest,
-        _cancel: &CancellationToken,
-    ) -> Result<(), SdkError> {
-        if request.address != self.allowed_token {
-            return Err(SdkError::signing_rejected(
-                "Example wallet only approves the configured token.",
-            ));
-        }
-        Ok(())
-    }
-    fn submitting(&self, _request: &ContractWriteRequest, transaction: &TxEnvelope) {
-        // A durable record lets the application reconcile a cancelled or lost callback.
-        println!("Submitting transaction {}", transaction.tx_hash());
     }
 }
 
