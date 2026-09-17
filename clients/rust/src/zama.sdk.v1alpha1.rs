@@ -30,6 +30,25 @@ pub struct CreateContextRequest {
     /// Omission shares storage, including its backend identity.
     #[prost(message, optional, tag = "5")]
     pub permit_storage: ::core::option::Option<StorageBinding>,
+    /// Fields 100–119 are allocated to configuration and credential protection.
+    #[prost(message, optional, tag = "100")]
+    pub transport_key_pair_derivation_secret: ::core::option::Option<DerivationSecret>,
+}
+/// Instance input for credential protection; never persisted with credentials and never logged.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DerivationSecret {
+    #[prost(oneof = "derivation_secret::Value", tags = "1, 2")]
+    pub value: ::core::option::Option<derivation_secret::Value>,
+}
+/// Nested message and enum types in `DerivationSecret`.
+pub mod derivation_secret {
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Value {
+        #[prost(string, tag = "1")]
+        Text(::prost::alloc::string::String),
+        #[prost(bytes, tag = "2")]
+        Bytes(::prost::alloc::vec::Vec<u8>),
+    }
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CreateContextResponse {
@@ -493,10 +512,15 @@ pub struct ContextConfig {
     /// Whole seconds.
     #[prost(uint32, optional, tag = "6")]
     pub registry_ttl: ::core::option::Option<u32>,
+    /// Fields 100–119 are allocated to configuration and credential protection.
+    #[prost(message, optional, tag = "100")]
+    pub process_runtime: ::core::option::Option<ProcessRuntimeConfig>,
+    #[prost(message, optional, tag = "101")]
+    pub relayers: ::core::option::Option<RelayerMap>,
 }
 /// Omitted fields inherit the SDK preset for id. Custom chains supply every required field.
 /// Contract addresses contain exactly 20 bytes, except explicitly cleared optional addresses.
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ChainConfig {
     #[prost(uint64, tag = "1")]
     pub id: u64,
@@ -529,6 +553,9 @@ pub struct ChainConfig {
     pub executor_address: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
     #[prost(message, optional, tag = "12")]
     pub auth: ::core::option::Option<ChainAuth>,
+    /// Fields 100–119 are allocated to configuration and credential protection.
+    #[prost(message, optional, tag = "100")]
+    pub provider: ::core::option::Option<HttpProviderConfig>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ChainAuth {
@@ -554,6 +581,150 @@ pub struct NamedCredential {
     pub name: ::core::option::Option<::prost::alloc::string::String>,
     #[prost(string, tag = "2")]
     pub value: ::prost::alloc::string::String,
+}
+/// Applied once per sidecar process; the first SDK configuration wins.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ProcessRuntimeConfig {
+    #[prost(string, optional, tag = "1")]
+    pub wasm_asset_load_mode: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(message, optional, tag = "2")]
+    pub module_versions: ::core::option::Option<ModuleVersions>,
+    #[prost(bool, optional, tag = "3")]
+    pub single_thread: ::core::option::Option<bool>,
+    #[prost(uint32, optional, tag = "4")]
+    pub number_of_threads: ::core::option::Option<u32>,
+    #[prost(message, optional, tag = "5")]
+    pub auth: ::core::option::Option<ChainAuth>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ModuleVersions {
+    #[prost(oneof = "module_versions::Selection", tags = "1, 2")]
+    pub selection: ::core::option::Option<module_versions::Selection>,
+}
+/// Nested message and enum types in `ModuleVersions`.
+pub mod module_versions {
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Selection {
+        #[prost(message, tag = "1")]
+        Auto(super::Empty),
+        #[prost(message, tag = "2")]
+        Pinned(super::PinnedModuleVersions),
+    }
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PinnedModuleVersions {
+    #[prost(string, optional, tag = "1")]
+    pub tfhe: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(string, optional, tag = "2")]
+    pub kms: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(string, optional, tag = "3")]
+    pub check_compatibility: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// A present empty map differs from omission: every configured chain needs a relayer.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct RelayerMap {
+    #[prost(map = "uint64, message", tag = "1")]
+    pub entries: ::std::collections::HashMap<u64, RelayerConfig>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RelayerConfig {
+    #[prost(string, tag = "1")]
+    pub r#type: ::prost::alloc::string::String,
+    #[prost(message, optional, tag = "2")]
+    pub options: ::core::option::Option<RelayerOptions>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RelayerOptions {
+    /// Whole milliseconds.
+    #[prost(uint32, optional, tag = "1")]
+    pub timeout: ::core::option::Option<u32>,
+    #[prost(bool, optional, tag = "2")]
+    pub debug: ::core::option::Option<bool>,
+    #[prost(bool, optional, tag = "3")]
+    pub batch_rpc_calls: ::core::option::Option<bool>,
+    #[prost(message, optional, tag = "4")]
+    pub module_versions: ::core::option::Option<ModuleVersions>,
+    #[prost(message, optional, tag = "5")]
+    pub fhe_encryption_key: ::core::option::Option<FheEncryptionKey>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct FheEncryptionKey {
+    #[prost(message, optional, tag = "1")]
+    pub public_key_bytes: ::core::option::Option<FhePublicKeyBytes>,
+    #[prost(message, optional, tag = "2")]
+    pub crs_bytes: ::core::option::Option<FheCrsBytes>,
+    #[prost(message, optional, tag = "3")]
+    pub metadata: ::core::option::Option<FheEncryptionKeyMetadata>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct FhePublicKeyBytes {
+    #[prost(string, tag = "1")]
+    pub id: ::prost::alloc::string::String,
+    #[prost(bytes = "vec", tag = "2")]
+    pub bytes: ::prost::alloc::vec::Vec<u8>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct FheCrsBytes {
+    #[prost(string, tag = "1")]
+    pub id: ::prost::alloc::string::String,
+    #[prost(uint32, tag = "2")]
+    pub capacity: u32,
+    #[prost(bytes = "vec", tag = "3")]
+    pub bytes: ::prost::alloc::vec::Vec<u8>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct FheEncryptionKeyMetadata {
+    #[prost(string, tag = "1")]
+    pub relayer_url: ::prost::alloc::string::String,
+    #[prost(uint64, tag = "2")]
+    pub chain_id: u64,
+}
+/// Timeouts, retry delays and polling intervals are whole milliseconds.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct HttpProviderConfig {
+    #[prost(message, optional, tag = "1")]
+    pub headers: ::core::option::Option<HttpHeaders>,
+    #[prost(uint32, optional, tag = "2")]
+    pub timeout: ::core::option::Option<u32>,
+    #[prost(uint32, optional, tag = "3")]
+    pub retry_count: ::core::option::Option<u32>,
+    #[prost(uint32, optional, tag = "4")]
+    pub retry_delay: ::core::option::Option<u32>,
+    #[prost(message, optional, tag = "5")]
+    pub batch: ::core::option::Option<ProviderBatch>,
+    #[prost(uint32, optional, tag = "6")]
+    pub polling_interval: ::core::option::Option<u32>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct HttpHeaders {
+    #[prost(map = "string, string", tag = "1")]
+    pub entries: ::std::collections::HashMap<
+        ::prost::alloc::string::String,
+        ::prost::alloc::string::String,
+    >,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ProviderBatch {
+    #[prost(oneof = "provider_batch::Selection", tags = "1, 2")]
+    pub selection: ::core::option::Option<provider_batch::Selection>,
+}
+/// Nested message and enum types in `ProviderBatch`.
+pub mod provider_batch {
+    #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Selection {
+        #[prost(bool, tag = "1")]
+        Enabled(bool),
+        #[prost(message, tag = "2")]
+        Options(super::ProviderBatchOptions),
+    }
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ProviderBatchOptions {
+    #[prost(uint32, optional, tag = "1")]
+    pub batch_size: ::core::option::Option<u32>,
+    /// Whole milliseconds.
+    #[prost(uint32, optional, tag = "2")]
+    pub wait: ::core::option::Option<u32>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
