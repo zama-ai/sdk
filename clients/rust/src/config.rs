@@ -89,7 +89,7 @@ impl SdkConfig {
             chain_id,
             chains,
             process_runtime: None,
-            relayers: Default::default(),
+            relayers: None,
             permit_ttl: None,
             transport_key_pair_ttl: None,
             transport_key_pair_scope: None,

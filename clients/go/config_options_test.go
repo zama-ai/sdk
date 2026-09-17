@@ -28,13 +28,17 @@ func TestConfigOptionsAreSentAsTypedProtobuf(t *testing.T) {
 			},
 		}},
 		ProcessRuntime: &ProcessRuntime{
-			SingleThread: &no, NumberOfThreads: &zero, ModuleVersions: AutoModuleVersions{},
+			WasmAssetLoadMode: WasmAssetLoadModeVerifiedBlob,
+			SingleThread:      &no, NumberOfThreads: &zero, ModuleVersions: AutoModuleVersions{},
 			Auth: APIKeyHeader{Value: "runtime-secret"},
 		},
 		Relayers: map[uint64]RelayerConfig{chainID: {
 			Type: RelayerNode,
 			Options: &RelayerOptions{
-				Debug: &no, BatchRPCCalls: &no, ModuleVersions: PinnedModuleVersions{},
+				Debug: &no, BatchRPCCalls: &no,
+				ModuleVersions: PinnedModuleVersions{
+					TFHE: "1.6.2", KMS: "0.13.20-0", CheckCompatibility: CompatibilityCheckWarn,
+				},
 				FHEEncryptionKey: &FHEEncryptionKey{
 					PublicKeyBytes: FHEPublicKeyBytes{ID: "key", Bytes: []byte{0, 255}},
 					CRSBytes:       FHECRSBytes{ID: "crs", Capacity: 2048, Bytes: []byte{128}},
@@ -83,6 +87,23 @@ func TestConfigOptionsAreSentAsTypedProtobuf(t *testing.T) {
 	}
 	if (&ProviderOptions{}).wire().Headers != nil {
 		t.Fatal("omitted provider headers became present")
+	}
+	if wire.ProcessRuntime.GetWasmAssetLoadMode() != "verified-blob" {
+		t.Fatal("wasm asset load mode constant changed on the wire")
+	}
+	pinned := relayer.Options.ModuleVersions.GetPinned()
+	if pinned.GetTfhe() != "1.6.2" || pinned.GetKms() != "0.13.20-0" || pinned.GetCheckCompatibility() != "warn" {
+		t.Fatal("pinned module version constants changed on the wire")
+	}
+	custom := PinnedModuleVersions{TFHE: TfheVersion("9.9.9-custom")}.wire().GetPinned()
+	if custom.GetTfhe() != "9.9.9-custom" {
+		t.Fatal("custom version string changed on the wire")
+	}
+	if custom.Kms != nil || custom.CheckCompatibility != nil {
+		t.Fatal("omitted pinned module versions became present")
+	}
+	if (ProcessRuntime{}).wire().WasmAssetLoadMode != nil {
+		t.Fatal("omitted wasm asset load mode became present")
 	}
 }
 

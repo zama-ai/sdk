@@ -14,21 +14,53 @@ func (AutoModuleVersions) wire() *pb.ModuleVersions {
 	return &pb.ModuleVersions{Selection: &pb.ModuleVersions_Auto{Auto: &pb.Empty{}}}
 }
 
+type TfheVersion string
+
+type KmsVersion string
+
+type CompatibilityCheck string
+
+const (
+	CompatibilityCheckThrow CompatibilityCheck = "throw"
+	CompatibilityCheckWarn  CompatibilityCheck = "warn"
+	CompatibilityCheckOff   CompatibilityCheck = "off"
+)
+
+type WasmAssetLoadMode string
+
+const (
+	WasmAssetLoadModeAuto              WasmAssetLoadMode = "auto"
+	WasmAssetLoadModeEmbeddedBase64    WasmAssetLoadMode = "embedded-base64"
+	WasmAssetLoadModeVerifiedBlob      WasmAssetLoadMode = "verified-blob"
+	WasmAssetLoadModePrecheckDirectURL WasmAssetLoadMode = "precheck-direct-url"
+	WasmAssetLoadModeTrustedDirectURL  WasmAssetLoadMode = "trusted-direct-url"
+)
+
+func optionalString[T ~string](value T) *string {
+	if value == "" {
+		return nil
+	}
+	sent := string(value)
+	return &sent
+}
+
 type PinnedModuleVersions struct {
-	TFHE               *string
-	KMS                *string
-	CheckCompatibility *string
+	TFHE               TfheVersion
+	KMS                KmsVersion
+	CheckCompatibility CompatibilityCheck
 }
 
 func (v PinnedModuleVersions) wire() *pb.ModuleVersions {
 	return &pb.ModuleVersions{Selection: &pb.ModuleVersions_Pinned{Pinned: &pb.PinnedModuleVersions{
-		Tfhe: v.TFHE, Kms: v.KMS, CheckCompatibility: v.CheckCompatibility,
+		Tfhe:               optionalString(v.TFHE),
+		Kms:                optionalString(v.KMS),
+		CheckCompatibility: optionalString(v.CheckCompatibility),
 	}}}
 }
 
 // ProcessRuntime is applied once per sidecar process; the first SDK config wins.
 type ProcessRuntime struct {
-	WasmAssetLoadMode *string
+	WasmAssetLoadMode WasmAssetLoadMode
 	ModuleVersions    ModuleVersions
 	SingleThread      *bool
 	NumberOfThreads   *uint32
@@ -37,7 +69,7 @@ type ProcessRuntime struct {
 
 func (r ProcessRuntime) wire() *pb.ProcessRuntimeConfig {
 	result := &pb.ProcessRuntimeConfig{
-		WasmAssetLoadMode: r.WasmAssetLoadMode,
+		WasmAssetLoadMode: optionalString(r.WasmAssetLoadMode),
 		SingleThread:      r.SingleThread,
 		NumberOfThreads:   r.NumberOfThreads,
 	}

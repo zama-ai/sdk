@@ -51,7 +51,9 @@ function supportedValue<Value extends string>(
   name: string,
 ): Value {
   if (!isSupported(value, values)) {
-    throw new ConfigurationError(`Unsupported ${name}.`);
+    throw new ConfigurationError(
+      `Unsupported ${name} "${value}". Supported values: ${Object.keys(values).join(", ")}.`,
+    );
   }
   return value;
 }

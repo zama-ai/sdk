@@ -5,15 +5,20 @@ import {
   type GenericProvider,
   type GenericLogger,
 } from "@zama-fhe/sdk";
+import { inspect } from "node:util";
 import { createHttpProvider } from "./provider.js";
 import type { StorageManager } from "./storage-manager.js";
 import { parseContextConfig } from "./sdk-config.js";
 import type { ContextFactory } from "./runtime.js";
 
 const noop = () => {};
+function writeLine(message: string, data: Record<string, unknown> | undefined): void {
+  const suffix = data === undefined ? "" : ` ${inspect(data)}`;
+  process.stderr.write(`${message}${suffix}\n`);
+}
 const stderrLogger: GenericLogger = {
-  error: (message) => process.stderr.write(`${message}\n`),
-  warn: (message) => process.stderr.write(`${message}\n`),
+  error: (message, data) => writeLine(message, data),
+  warn: (message, data) => writeLine(message, data),
   info: noop,
   debug: noop,
 };

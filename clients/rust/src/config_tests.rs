@@ -84,15 +84,33 @@ fn config_preserves_presence_and_raw_key_bytes() {
         single_thread: Some(false),
         number_of_threads: Some(0),
         module_versions: Some(crate::ModuleVersions::auto()),
+        wasm_asset_load_mode: Some(crate::WasmAssetLoadMode::EmbeddedBase64),
         ..Default::default()
     }
     .wire();
     assert_eq!(config.single_thread, Some(false));
     assert_eq!(config.number_of_threads, Some(0));
+    assert_eq!(
+        config.wasm_asset_load_mode.as_deref(),
+        Some("embedded-base64")
+    );
     assert!(matches!(
         config.module_versions.unwrap().selection,
         Some(module_versions::Selection::Auto(_))
     ));
+
+    let pinned = crate::ModuleVersions::Pinned(crate::PinnedModuleVersions {
+        tfhe: Some(crate::TfheVersion::V1_6_2),
+        kms: Some(crate::KmsVersion::from("0.13.99-rc1")),
+        check_compatibility: Some(crate::CompatibilityCheck::Warn),
+    })
+    .wire();
+    let Some(module_versions::Selection::Pinned(pinned)) = pinned.selection else {
+        panic!("expected pinned module versions");
+    };
+    assert_eq!(pinned.tfhe.as_deref(), Some("1.6.2"));
+    assert_eq!(pinned.kms.as_deref(), Some("0.13.99-rc1"));
+    assert_eq!(pinned.check_compatibility.as_deref(), Some("warn"));
 
     let provider = ProviderOptions {
         headers: Some(BTreeMap::new()),

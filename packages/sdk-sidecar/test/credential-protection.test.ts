@@ -139,6 +139,7 @@ test.each([undefined, "partner"])(
     const logs = ["log", "warn", "error", "debug"].map((level) =>
       vi.spyOn(console, level as "log").mockImplementation(() => {}),
     );
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     let manager = new StorageManager(directory);
     async function phase(options: ZamaSDKOptions, wire: DerivationSecret | undefined) {
       const sdk = direct(directStorage, directSigner, options, scope);
@@ -171,6 +172,12 @@ test.each([undefined, "partner"])(
       expect(persisted).toMatchObject({ wrappingVersion: 1 });
       expect(inspect(persisted)).not.toContain(TEST_PRIVATE_KEY);
       expect(await phase({}, undefined)).toMatchObject({ error: { code: "KEY_WRAPPING_FAILED" } });
+      const keyLabel = scope === undefined ? `keypair:${USER}` : `keypair:scope:${scope}`;
+      expect(
+        stderr.mock.calls.some(
+          ([chunk]) => typeof chunk === "string" && chunk.includes(`{ key: '${keyLabel}' }`),
+        ),
+      ).toBe(true);
       expect(await phase(protectedOption, wireSecret)).toEqual({ value: undefined });
       expect(sidecarSigner.signTypedData).toHaveBeenCalledTimes(1);
       const wrong = "other-synthetic-secret-".repeat(4);
@@ -190,6 +197,7 @@ test.each([undefined, "partner"])(
       expect(inspect(logs.flatMap((log) => log.mock.calls))).not.toContain(secretText);
     } finally {
       logs.forEach((log) => log.mockRestore());
+      stderr.mockRestore();
       directSigner.dispose();
       sidecarSigner.dispose();
       await manager.close();

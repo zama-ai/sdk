@@ -36,9 +36,10 @@ pub use async_trait::async_trait;
 pub use builder::SdkBuilder;
 pub use config::{ChainConfig, RelayerAuth, SdkConfig};
 pub use config_options::{
-    DerivationSecret, FheCrsBytes, FheEncryptionKey, FheEncryptionKeyMetadata, FhePublicKeyBytes,
-    ModuleVersions, PinnedModuleVersions, ProcessRuntime, ProviderBatch, ProviderBatchOptions,
-    ProviderOptions, RelayerConfig, RelayerOptions, RelayerType,
+    CompatibilityCheck, DerivationSecret, FheCrsBytes, FheEncryptionKey, FheEncryptionKeyMetadata,
+    FhePublicKeyBytes, KmsVersion, ModuleVersions, PinnedModuleVersions, ProcessRuntime,
+    ProviderBatch, ProviderBatchOptions, ProviderOptions, RelayerConfig, RelayerOptions,
+    RelayerType, TfheVersion, WasmAssetLoadMode,
 };
 pub use decryption::{
     BatchItem, Decryption, DelegatedBatchOptions, DelegatedOptions, PublicDecryption,

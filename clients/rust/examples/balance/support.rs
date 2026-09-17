@@ -139,7 +139,11 @@ fn optional_bool(values: &HashMap<String, String>, key: &str) -> Result<Option<b
     values
         .get(key)
         .filter(|value| !value.is_empty())
-        .map(|value| value.parse().map_err(|_| anyhow::anyhow!("invalid {key}")))
+        .map(|value| match value.to_ascii_lowercase().as_str() {
+            "true" | "1" => Ok(true),
+            "false" | "0" => Ok(false),
+            _ => Err(anyhow::anyhow!("invalid {key}")),
+        })
         .transpose()
 }
 

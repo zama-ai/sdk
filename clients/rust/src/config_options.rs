@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 
 #[derive(Clone, Debug)]
 pub enum ModuleVersions {
@@ -15,9 +15,11 @@ impl ModuleVersions {
         let selection = match self {
             Self::Auto => Selection::Auto(crate::generated::Empty {}),
             Self::Pinned(versions) => Selection::Pinned(crate::generated::PinnedModuleVersions {
-                tfhe: versions.tfhe,
-                kms: versions.kms,
-                check_compatibility: versions.check_compatibility,
+                tfhe: versions.tfhe.map(|version| version.0.into_owned()),
+                kms: versions.kms.map(|version| version.0.into_owned()),
+                check_compatibility: versions
+                    .check_compatibility
+                    .map(|check| check.as_str().to_owned()),
             }),
         };
         crate::generated::ModuleVersions {
@@ -26,17 +28,97 @@ impl ModuleVersions {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct PinnedModuleVersions {
-    pub tfhe: Option<String>,
-    pub kms: Option<String>,
-    pub check_compatibility: Option<String>,
+    pub tfhe: Option<TfheVersion>,
+    pub kms: Option<KmsVersion>,
+    pub check_compatibility: Option<CompatibilityCheck>,
+}
+
+/// The accepted set is decided by the sidecar SDK, so any string is allowed.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TfheVersion(Cow<'static, str>);
+impl TfheVersion {
+    pub const V1_5_3: Self = Self(Cow::Borrowed("1.5.3"));
+    pub const V1_6_2: Self = Self(Cow::Borrowed("1.6.2"));
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+impl From<String> for TfheVersion {
+    fn from(value: String) -> Self {
+        Self(Cow::Owned(value))
+    }
+}
+impl From<&str> for TfheVersion {
+    fn from(value: &str) -> Self {
+        Self(Cow::Owned(value.to_owned()))
+    }
+}
+
+/// The accepted set is decided by the sidecar SDK, so any string is allowed.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KmsVersion(Cow<'static, str>);
+impl KmsVersion {
+    pub const V0_13_10: Self = Self(Cow::Borrowed("0.13.10"));
+    pub const V0_13_20_0: Self = Self(Cow::Borrowed("0.13.20-0"));
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+impl From<String> for KmsVersion {
+    fn from(value: String) -> Self {
+        Self(Cow::Owned(value))
+    }
+}
+impl From<&str> for KmsVersion {
+    fn from(value: &str) -> Self {
+        Self(Cow::Owned(value.to_owned()))
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CompatibilityCheck {
+    Throw,
+    Warn,
+    Off,
+}
+impl CompatibilityCheck {
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::Throw => "throw",
+            Self::Warn => "warn",
+            Self::Off => "off",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WasmAssetLoadMode {
+    Auto,
+    EmbeddedBase64,
+    VerifiedBlob,
+    PrecheckDirectUrl,
+    TrustedDirectUrl,
+}
+impl WasmAssetLoadMode {
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::EmbeddedBase64 => "embedded-base64",
+            Self::VerifiedBlob => "verified-blob",
+            Self::PrecheckDirectUrl => "precheck-direct-url",
+            Self::TrustedDirectUrl => "trusted-direct-url",
+        }
+    }
 }
 
 /// Applied once per sidecar process; the first SDK config wins.
 #[derive(Clone, Debug, Default)]
 pub struct ProcessRuntime {
-    pub wasm_asset_load_mode: Option<String>,
+    pub wasm_asset_load_mode: Option<WasmAssetLoadMode>,
     pub module_versions: Option<ModuleVersions>,
     pub single_thread: Option<bool>,
     pub number_of_threads: Option<u32>,
@@ -45,7 +127,9 @@ pub struct ProcessRuntime {
 impl ProcessRuntime {
     pub(crate) fn wire(self) -> crate::generated::ProcessRuntimeConfig {
         crate::generated::ProcessRuntimeConfig {
-            wasm_asset_load_mode: self.wasm_asset_load_mode,
+            wasm_asset_load_mode: self
+                .wasm_asset_load_mode
+                .map(|mode| mode.as_str().to_owned()),
             module_versions: self.module_versions.map(ModuleVersions::wire),
             single_thread: self.single_thread,
             number_of_threads: self.number_of_threads,

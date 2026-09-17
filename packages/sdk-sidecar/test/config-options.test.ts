@@ -284,7 +284,7 @@ test("rejects unsupported runtime values before they reach the SDK", () => {
     auth: undefined,
   };
   expect(() => processRuntimeConfig({ ...base, wasmAssetLoadMode: "other" })).toThrow(
-    "Unsupported WASM asset load mode.",
+    'Unsupported WASM asset load mode "other". Supported values: embedded-base64, verified-blob, precheck-direct-url, trusted-direct-url, auto.',
   );
   for (const pinned of [{ tfhe: "1.6" }, { kms: "0.13.0" }, { checkCompatibility: "ignore" }]) {
     expect(() =>
