@@ -12,6 +12,11 @@ for (const { format, load } of [
     const sdk = await load("@zama-fhe/sdk");
     const internal = await load("@zama-fhe/sdk/internal");
     assert.equal("reviveZamaError" in sdk, false);
+    assert.equal("toFhevmAuth" in sdk, false);
+    assert.deepEqual(internal.toFhevmAuth({ __type: "BearerToken", token: "fixture" }), {
+      type: "BearerToken",
+      token: "fixture",
+    });
     const error = internal.reviveZamaError(sdk.ZamaErrorCode.SigningRejected, "rejected", {
       retryable: true,
     });

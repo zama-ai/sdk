@@ -1,10 +1,27 @@
-import { createPublicClient, http } from "viem";
-import { createConfig, ZamaSDK, ConfigurationError, type GenericProvider } from "@zama-fhe/sdk";
-import { node } from "@zama-fhe/sdk/node";
-import { ViemProvider } from "@zama-fhe/sdk/viem";
+import {
+  createConfig,
+  ZamaSDK,
+  ConfigurationError,
+  type GenericProvider,
+  type GenericLogger,
+} from "@zama-fhe/sdk";
+import { inspect } from "node:util";
+import { createHttpProvider } from "./provider.js";
 import type { StorageManager } from "./storage-manager.js";
 import { parseContextConfig } from "./sdk-config.js";
 import type { ContextFactory } from "./runtime.js";
+
+const noop = () => {};
+function writeLine(message: string, data: Record<string, unknown> | undefined): void {
+  const suffix = data === undefined ? "" : ` ${inspect(data)}`;
+  process.stderr.write(`${message}${suffix}\n`);
+}
+const stderrLogger: GenericLogger = {
+  error: (message, data) => writeLine(message, data),
+  warn: (message, data) => writeLine(message, data),
+  info: noop,
+  debug: noop,
+};
 
 export function createContextFactory(manager: StorageManager): ContextFactory {
   return async (request, signer, remote) => {
@@ -13,11 +30,11 @@ export function createContextFactory(manager: StorageManager): ContextFactory {
       request.permitStorage === undefined
         ? primary
         : await manager.resolve(request.permitStorage, remote);
-    const { chains, chainId, ...options } = parseContextConfig(request.config);
+    const { chains, chainId, providerConfigs, ...options } = parseContextConfig(request.config);
     const providers = new Map(
       chains.map((chain) => [
         chain.id,
-        new ViemProvider({ publicClient: createPublicClient({ transport: http(chain.network) }) }),
+        createHttpProvider(chain.network, providerConfigs.get(chain.id)),
       ]),
     );
     const current = () => {
@@ -35,6 +52,8 @@ export function createContextFactory(manager: StorageManager): ContextFactory {
       getBlockTimestamp: () => current().getBlockTimestamp(),
       prepareTransaction: (args) => current().prepareTransaction(args),
     };
+    const secret = request.transportKeyPairDerivationSecret;
+    const value = secret?.value;
     const sdk = new ZamaSDK(
       createConfig({
         chains,
@@ -42,9 +61,13 @@ export function createContextFactory(manager: StorageManager): ContextFactory {
         provider,
         storage: primary.storage,
         permitStorage: permits.storage,
-        relayers: Object.fromEntries(chains.map((chain) => [chain.id, node()])),
+        logger: stderrLogger,
         ...options,
       }),
+      // Presence with undefined enables protection; omission leaves the SDK option absent.
+      secret === undefined
+        ? {}
+        : { transportKeyPairDerivationSecret: value?.$case === "text" ? value.text : value?.bytes },
     );
     return {
       sdk,

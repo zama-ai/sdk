@@ -11,6 +11,7 @@ pub struct SdkBuilder {
     signer: Option<(Option<WalletAccount>, Arc<dyn Signer>)>,
     storage: Storage,
     permit_storage: Option<Storage>,
+    derivation_secret: Option<crate::DerivationSecret>,
 }
 impl SdkBuilder {
     pub(crate) fn new(client: Client, config: SdkConfig) -> Self {
@@ -20,6 +21,7 @@ impl SdkBuilder {
             signer: None,
             storage: Storage::Memory,
             permit_storage: None,
+            derivation_secret: None,
         }
     }
     pub fn signer(mut self, account: Option<WalletAccount>, signer: impl Signer + 'static) -> Self {
@@ -34,7 +36,12 @@ impl SdkBuilder {
         self.permit_storage = Some(storage.into());
         self
     }
+    pub fn transport_key_pair_derivation_secret(mut self, secret: crate::DerivationSecret) -> Self {
+        self.derivation_secret = Some(secret);
+        self
+    }
     pub async fn build(self) -> Result<Sdk> {
+        let config = self.config.try_into()?;
         let signer = self
             .signer
             .as_ref()
@@ -55,10 +62,11 @@ impl SdkBuilder {
         let context_id = self
             .client
             .create_context_with_storage(
-                &self.config,
+                config,
                 signer,
                 Some(self.storage.wire()),
                 self.permit_storage.as_ref().map(Storage::wire),
+                self.derivation_secret.map(crate::DerivationSecret::wire),
             )
             .await?;
         let operations = Arc::new(Operations::new());

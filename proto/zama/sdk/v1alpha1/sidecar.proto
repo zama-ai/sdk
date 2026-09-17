@@ -66,6 +66,15 @@ message CreateContextRequest {
   StorageBinding storage = 4;
   // Omission shares storage, including its backend identity.
   StorageBinding permit_storage = 5;
+  // Fields 100–119 are allocated to configuration and credential protection.
+  DerivationSecret transport_key_pair_derivation_secret = 100;
+}
+// Instance input for credential protection; never persisted with credentials and never logged.
+message DerivationSecret {
+  oneof value {
+    string text = 1 [debug_redact = true];
+    bytes bytes = 2 [debug_redact = true];
+  }
 }
 message CreateContextResponse {
   string context_id = 1;
@@ -329,6 +338,9 @@ message ContextConfig {
   optional string transport_key_pair_scope = 5;
   // Whole seconds.
   optional uint32 registry_ttl = 6;
+  // Fields 100–119 are allocated to configuration and credential protection.
+  ProcessRuntimeConfig process_runtime = 100;
+  RelayerMap relayers = 101;
 }
 // Omitted fields inherit the SDK preset for id. Custom chains supply every required field.
 // Contract addresses contain exactly 20 bytes, except explicitly cleared optional addresses.
@@ -346,6 +358,8 @@ message ChainConfig {
   optional bytes registry_address = 10;
   optional bytes executor_address = 11;
   ChainAuth auth = 12;
+  // Fields 100–119 are allocated to configuration and credential protection.
+  HttpProviderConfig provider = 100;
 }
 message ChainAuth {
   oneof credential {
@@ -358,4 +372,81 @@ message NamedCredential {
   // Omission preserves the SDK's default header or cookie name.
   optional string name = 1;
   string value = 2;
+}
+
+// Applied once per sidecar process; the first SDK configuration wins.
+message ProcessRuntimeConfig {
+  optional string wasm_asset_load_mode = 1;
+  ModuleVersions module_versions = 2;
+  optional bool single_thread = 3;
+  optional uint32 number_of_threads = 4;
+  ChainAuth auth = 5;
+}
+message ModuleVersions {
+  oneof selection {
+    Empty auto = 1;
+    PinnedModuleVersions pinned = 2;
+  }
+}
+message PinnedModuleVersions {
+  optional string tfhe = 1;
+  optional string kms = 2;
+  optional string check_compatibility = 3;
+}
+// A present empty map differs from omission: every configured chain needs a relayer.
+message RelayerMap {
+  map<uint64, RelayerConfig> entries = 1;
+}
+message RelayerConfig {
+  string type = 1;
+  RelayerOptions options = 2;
+}
+message RelayerOptions {
+  // Whole milliseconds.
+  optional uint32 timeout = 1;
+  optional bool debug = 2;
+  optional bool batch_rpc_calls = 3;
+  ModuleVersions module_versions = 4;
+  FheEncryptionKey fhe_encryption_key = 5;
+}
+message FheEncryptionKey {
+  FhePublicKeyBytes public_key_bytes = 1;
+  FheCrsBytes crs_bytes = 2;
+  FheEncryptionKeyMetadata metadata = 3;
+}
+message FhePublicKeyBytes {
+  string id = 1;
+  bytes bytes = 2;
+}
+message FheCrsBytes {
+  string id = 1;
+  uint32 capacity = 2;
+  bytes bytes = 3;
+}
+message FheEncryptionKeyMetadata {
+  string relayer_url = 1;
+  uint64 chain_id = 2;
+}
+// Timeouts, retry delays and polling intervals are whole milliseconds.
+message HttpProviderConfig {
+  HttpHeaders headers = 1;
+  optional uint32 timeout = 2;
+  optional uint32 retry_count = 3;
+  optional uint32 retry_delay = 4;
+  ProviderBatch batch = 5;
+  optional uint32 polling_interval = 6;
+}
+message HttpHeaders {
+  map<string, string> entries = 1;
+}
+message ProviderBatch {
+  oneof selection {
+    bool enabled = 1;
+    ProviderBatchOptions options = 2;
+  }
+}
+message ProviderBatchOptions {
+  optional uint32 batch_size = 1;
+  // Whole milliseconds.
+  optional uint32 wait = 2;
 }

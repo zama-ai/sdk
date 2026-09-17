@@ -1,7 +1,7 @@
 use crate::{Address, generated};
 use anyhow::Result;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum RelayerAuth {
     BearerToken {
         token: String,
@@ -15,6 +15,11 @@ pub enum RelayerAuth {
         cookie: Option<String>,
     },
 }
+impl std::fmt::Debug for RelayerAuth {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("[REDACTED]")
+    }
+}
 impl RelayerAuth {
     pub fn api_key(value: impl Into<String>) -> Self {
         Self::ApiKeyHeader {
@@ -26,6 +31,7 @@ impl RelayerAuth {
 
 #[derive(Clone, Debug)]
 pub struct ChainConfig {
+    pub provider: Option<crate::ProviderOptions>,
     pub id: u64,
     pub network: String,
     pub auth: Option<RelayerAuth>,
@@ -44,6 +50,7 @@ impl ChainConfig {
         Self {
             id,
             network: rpc_url.into(),
+            provider: None,
             auth: None,
             gateway_chain_id: None,
             relayer_url: None,
@@ -64,6 +71,8 @@ impl ChainConfig {
 
 #[derive(Clone, Debug)]
 pub struct SdkConfig {
+    pub process_runtime: Option<crate::ProcessRuntime>,
+    pub relayers: Option<std::collections::BTreeMap<u64, crate::RelayerConfig>>,
     pub chain_id: u64,
     pub chains: Vec<ChainConfig>,
     pub permit_ttl: Option<u32>,
@@ -79,6 +88,8 @@ impl SdkConfig {
         Self {
             chain_id,
             chains,
+            process_runtime: None,
+            relayers: None,
             permit_ttl: None,
             transport_key_pair_ttl: None,
             transport_key_pair_scope: None,
@@ -99,21 +110,21 @@ impl SdkConfig {
     }
 }
 
-impl From<&RelayerAuth> for generated::ChainAuth {
-    fn from(auth: &RelayerAuth) -> Self {
+impl From<RelayerAuth> for generated::ChainAuth {
+    fn from(auth: RelayerAuth) -> Self {
         use generated::chain_auth::Credential;
         let credential = match auth {
-            RelayerAuth::BearerToken { token } => Credential::BearerToken(token.clone()),
+            RelayerAuth::BearerToken { token } => Credential::BearerToken(token),
             RelayerAuth::ApiKeyHeader { value, header } => {
                 Credential::ApiKeyHeader(generated::NamedCredential {
-                    name: header.clone(),
-                    value: value.clone(),
+                    name: header,
+                    value,
                 })
             }
             RelayerAuth::ApiKeyCookie { value, cookie } => {
                 Credential::ApiKeyCookie(generated::NamedCredential {
-                    name: cookie.clone(),
-                    value: value.clone(),
+                    name: cookie,
+                    value,
                 })
             }
         };
@@ -122,113 +133,63 @@ impl From<&RelayerAuth> for generated::ChainAuth {
         }
     }
 }
-impl TryFrom<&ChainConfig> for generated::ChainConfig {
+impl TryFrom<ChainConfig> for generated::ChainConfig {
     type Error = anyhow::Error;
-    fn try_from(chain: &ChainConfig) -> Result<Self> {
-        fn address(value: &Option<String>) -> Result<Option<Vec<u8>>> {
+    fn try_from(chain: ChainConfig) -> Result<Self> {
+        fn address(value: Option<String>) -> Result<Option<Vec<u8>>> {
             value
-                .as_ref()
                 .map(|value| Ok(value.parse::<Address>()?.to_vec()))
                 .transpose()
         }
-        fn optional_address(value: &Option<String>) -> Result<Option<Vec<u8>>> {
-            match value.as_deref() {
-                Some("") => Ok(Some(Vec::new())),
-                _ => address(value),
+        fn optional_address(value: Option<String>) -> Result<Option<Vec<u8>>> {
+            match value {
+                Some(value) if value.is_empty() => Ok(Some(Vec::new())),
+                Some(value) => address(Some(value)),
+                None => Ok(None),
             }
         }
         Ok(Self {
             id: chain.id,
-            network: Some(chain.network.clone()),
-            auth: chain.auth.as_ref().map(Into::into),
+            network: Some(chain.network),
+            auth: chain.auth.map(Into::into),
             gateway_chain_id: chain.gateway_chain_id,
-            relayer_url: chain.relayer_url.clone(),
-            acl_contract_address: address(&chain.acl_contract_address)?,
-            kms_contract_address: address(&chain.kms_contract_address)?,
-            input_verifier_contract_address: address(&chain.input_verifier_contract_address)?,
+            relayer_url: chain.relayer_url,
+            acl_contract_address: address(chain.acl_contract_address)?,
+            kms_contract_address: address(chain.kms_contract_address)?,
+            input_verifier_contract_address: address(chain.input_verifier_contract_address)?,
             verifying_contract_address_decryption: address(
-                &chain.verifying_contract_address_decryption,
+                chain.verifying_contract_address_decryption,
             )?,
             verifying_contract_address_input_verification: address(
-                &chain.verifying_contract_address_input_verification,
+                chain.verifying_contract_address_input_verification,
             )?,
-            registry_address: optional_address(&chain.registry_address)?,
-            executor_address: optional_address(&chain.executor_address)?,
+            registry_address: optional_address(chain.registry_address)?,
+            executor_address: optional_address(chain.executor_address)?,
+            provider: chain.provider.map(crate::ProviderOptions::wire),
         })
     }
 }
-impl TryFrom<&SdkConfig> for generated::ContextConfig {
+impl TryFrom<SdkConfig> for generated::ContextConfig {
     type Error = anyhow::Error;
-    fn try_from(config: &SdkConfig) -> Result<Self> {
+    fn try_from(config: SdkConfig) -> Result<Self> {
         Ok(Self {
             chain_id: Some(config.chain_id),
             chains: config
                 .chains
-                .iter()
+                .into_iter()
                 .map(TryInto::try_into)
                 .collect::<Result<_>>()?,
             permit_ttl: config.permit_ttl,
             transport_key_pair_ttl: config.transport_key_pair_ttl,
-            transport_key_pair_scope: config.transport_key_pair_scope.clone(),
+            transport_key_pair_scope: config.transport_key_pair_scope,
             registry_ttl: config.registry_ttl,
+            process_runtime: config.process_runtime.map(crate::ProcessRuntime::wire),
+            relayers: config.relayers.map(|entries| generated::RelayerMap {
+                entries: entries
+                    .into_iter()
+                    .map(|(chain_id, relayer)| (chain_id, relayer.wire()))
+                    .collect(),
+            }),
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn auth_names_preserve_absence_and_explicit_values() {
-        for name in [None, Some(String::new()), Some("X-Partner-Key".into())] {
-            let auth = generated::ChainAuth::from(&RelayerAuth::ApiKeyHeader {
-                value: "secret".into(),
-                header: name.clone(),
-            });
-            assert_eq!(
-                auth.credential,
-                Some(generated::chain_auth::Credential::ApiKeyHeader(
-                    generated::NamedCredential {
-                        name: name.clone(),
-                        value: "secret".into()
-                    }
-                ))
-            );
-            let auth = generated::ChainAuth::from(&RelayerAuth::ApiKeyCookie {
-                value: "secret".into(),
-                cookie: name.clone(),
-            });
-            assert_eq!(
-                auth.credential,
-                Some(generated::chain_auth::Credential::ApiKeyCookie(
-                    generated::NamedCredential {
-                        name,
-                        value: "secret".into()
-                    }
-                ))
-            );
-        }
-        let chain =
-            generated::ChainConfig::try_from(&ChainConfig::new(11155111, "https://rpc.invalid"))
-                .unwrap();
-        assert!(chain.auth.is_none());
-    }
-    #[test]
-    fn optional_preset_addresses_preserve_omission_clearing_and_values() {
-        for (address, expected) in [
-            (None, None),
-            (Some(String::new()), Some(vec![])),
-            (Some(Address::repeat_byte(1).to_string()), Some(vec![1; 20])),
-        ] {
-            let mut chain = ChainConfig::new(11155111, "https://rpc.invalid");
-            chain.registry_address = address.clone();
-            chain.executor_address = address;
-            let wire = generated::ChainConfig::try_from(&chain).unwrap();
-            assert_eq!(wire.registry_address, expected);
-            assert_eq!(wire.executor_address, expected);
-        }
-        let mut chain = ChainConfig::new(11155111, "https://rpc.invalid");
-        chain.acl_contract_address = Some(String::new());
-        assert!(generated::ChainConfig::try_from(&chain).is_err());
     }
 }

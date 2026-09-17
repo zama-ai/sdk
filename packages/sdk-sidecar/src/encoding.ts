@@ -1,11 +1,14 @@
 import { bytesToHex, getAddress, hexToBytes } from "viem";
-import type {
-  Address,
-  ClearValue as SdkClearValue,
-  EncryptedValue,
-  WalletAccount as SdkWalletAccount,
+import {
+  ConfigurationError,
+  type FheChainAuth,
+  type Address,
+  type ClearValue as SdkClearValue,
+  type EncryptedValue,
+  type WalletAccount as SdkWalletAccount,
 } from "@zama-fhe/sdk";
 import type {
+  ChainAuth,
   ClearEntry,
   ClearValue,
   EncryptedInput,
@@ -84,4 +87,39 @@ export function encryptedValue(value: Uint8Array): EncryptedValue {
     throw invalidArgument("Encrypted value must contain 32 bytes.");
   }
   return bytesToHex(value);
+}
+
+export function chainAuth(value: ChainAuth): FheChainAuth {
+  switch (value.credential?.$case) {
+    case "bearerToken":
+      return { __type: "BearerToken", token: value.credential.bearerToken };
+    case "apiKeyHeader":
+      return {
+        __type: "ApiKeyHeader",
+        ...defined({ header: value.credential.apiKeyHeader.name }),
+        value: value.credential.apiKeyHeader.value,
+      };
+    case "apiKeyCookie":
+      return {
+        __type: "ApiKeyCookie",
+        ...defined({ cookie: value.credential.apiKeyCookie.name }),
+        value: value.credential.apiKeyCookie.value,
+      };
+    default:
+      throw new ConfigurationError("Chain authentication requires a credential.");
+  }
+}
+
+export function decodeOptional<T, R>(value: T | undefined, decode: (value: T) => R): R | undefined {
+  return value === undefined ? undefined : decode(value);
+}
+
+export function defined<T extends object>(value: T): Partial<T> {
+  const result: Partial<T> = { ...value };
+  for (const key in result) {
+    if (result[key] === undefined) {
+      delete result[key];
+    }
+  }
+  return result;
 }

@@ -20,6 +20,7 @@ pub mod alloy;
 mod builder;
 mod channel;
 mod config;
+mod config_options;
 mod decryption;
 mod error;
 mod lifetime;
@@ -34,6 +35,12 @@ pub use alloy_primitives::{Address, B256};
 pub use async_trait::async_trait;
 pub use builder::SdkBuilder;
 pub use config::{ChainConfig, RelayerAuth, SdkConfig};
+pub use config_options::{
+    CompatibilityCheck, DerivationSecret, FheCrsBytes, FheEncryptionKey, FheEncryptionKeyMetadata,
+    FhePublicKeyBytes, KmsVersion, ModuleVersions, PinnedModuleVersions, ProcessRuntime,
+    ProviderBatch, ProviderBatchOptions, ProviderOptions, RelayerConfig, RelayerOptions,
+    RelayerType, TfheVersion, WasmAssetLoadMode,
+};
 pub use decryption::{
     BatchItem, Decryption, DelegatedBatchOptions, DelegatedOptions, PublicDecryption,
 };
@@ -121,9 +128,9 @@ impl Client {
         .sdk_version)
     }
     #[cfg(test)]
-    async fn create_context(&self, config: &SdkConfig, signer: SignerConfig) -> Result<Sdk> {
+    async fn create_context(&self, config: SdkConfig, signer: SignerConfig) -> Result<Sdk> {
         let context_id = self
-            .create_context_with_storage(config, signer, None, None)
+            .create_context_with_storage(config.try_into()?, signer, None, None, None)
             .await?;
         Ok(Sdk::from_context(
             self.clone(),
@@ -134,10 +141,11 @@ impl Client {
     }
     async fn create_context_with_storage(
         &self,
-        config: &SdkConfig,
+        config: generated::ContextConfig,
         signer: SignerConfig,
         storage: Option<generated::StorageBinding>,
         permit_storage: Option<generated::StorageBinding>,
+        transport_key_pair_derivation_secret: Option<generated::DerivationSecret>,
     ) -> Result<String> {
         let (signer_enabled, account) = match signer {
             SignerConfig::Disabled => (false, None),
@@ -146,11 +154,12 @@ impl Client {
         let mut inner = self.inner.clone();
         let response = unary(
             generated::CreateContextRequest {
-                config: Some(config.try_into()?),
+                config: Some(config),
                 signer_enabled,
                 account,
                 storage,
                 permit_storage,
+                transport_key_pair_derivation_secret,
             },
             self.timeout,
             |r| inner.create_context(r),
