@@ -56,6 +56,18 @@ export function clearValue(value: SdkClearValue | number): ClearValue {
       throw new TypeError("Unsupported SDK clear value.");
   }
 }
+export function integer(value: string): bigint {
+  let parsed: bigint | undefined;
+  try {
+    parsed = BigInt(value);
+  } catch {
+    parsed = undefined;
+  }
+  if (parsed === undefined || parsed.toString() !== value) {
+    throw invalidArgument("Encryption integers must use canonical decimal encoding.");
+  }
+  return parsed;
+}
 export function entries(values: Record<EncryptedValue, SdkClearValue>): ClearEntry[] {
   return Object.entries(values).map(([handle, value]) => ({
     encryptedValue: bytes(handle as EncryptedValue),

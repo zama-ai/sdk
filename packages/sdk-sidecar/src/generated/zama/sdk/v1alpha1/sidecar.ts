@@ -160,7 +160,7 @@ export interface ClearEntry {
 export interface DecryptValuesRequest {
   operation: Operation | undefined;
   inputs: EncryptedInput[];
-  /** SDK timeout in whole milliseconds; independent of the gRPC deadline. */
+  /** SDK relayer timeout in whole milliseconds, independent of the gRPC deadline. Omit to keep the SDK default; zero is a zero-millisecond budget, not "no timeout". */
   timeoutMs?: number | undefined;
 }
 
@@ -179,7 +179,7 @@ export interface DelegatedDecryptValuesRequest {
 export interface DecryptPublicValuesRequest {
   operation: Operation | undefined;
   encryptedValues: Buffer[];
-  /** SDK timeout in whole milliseconds; independent of the gRPC deadline. */
+  /** SDK relayer timeout in whole milliseconds, independent of the gRPC deadline. Omit to keep the SDK default; zero is a zero-millisecond budget, not "no timeout". */
   timeoutMs?: number | undefined;
 }
 
@@ -552,6 +552,38 @@ export interface ProviderBatchOptions {
     | undefined;
   /** Whole milliseconds. */
   wait?: number | undefined;
+}
+
+export interface EncryptInput {
+  value:
+    | { $case: "ebool"; ebool: boolean }
+    | //
+    /** Canonical signed decimal strings; the SDK validates each type's range. */
+    { $case: "eboolBigint"; eboolBigint: string }
+    | { $case: "euint8"; euint8: string }
+    | { $case: "euint16"; euint16: string }
+    | { $case: "euint32"; euint32: string }
+    | { $case: "euint64"; euint64: string }
+    | { $case: "euint128"; euint128: string }
+    | { $case: "euint256"; euint256: string }
+    | //
+    /** 20 bytes. */
+    { $case: "eaddress"; eaddress: Buffer }
+    | undefined;
+}
+
+export interface EncryptRequest {
+  operation: Operation | undefined;
+  values: EncryptInput[];
+  contractAddress: Buffer;
+  userAddress: Buffer;
+  /** SDK relayer timeout in whole milliseconds, independent of the gRPC deadline. Omit to keep the SDK default; zero is a zero-millisecond budget, not "no timeout". */
+  timeoutMs?: number | undefined;
+}
+
+export interface EncryptResponse {
+  encryptedValues: Buffer[];
+  inputProof: Buffer;
 }
 
 function createBaseEmpty(): Empty {
@@ -7729,6 +7761,475 @@ export const ProviderBatchOptions: MessageFns<ProviderBatchOptions> = {
   },
 };
 
+function createBaseEncryptInput(): EncryptInput {
+  return { value: undefined };
+}
+
+export const EncryptInput: MessageFns<EncryptInput> = {
+  encode(message: EncryptInput, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    switch (message.value?.$case) {
+      case "ebool":
+        writer.uint32(8).bool(message.value.ebool);
+        break;
+      case "eboolBigint":
+        writer.uint32(18).string(message.value.eboolBigint);
+        break;
+      case "euint8":
+        writer.uint32(26).string(message.value.euint8);
+        break;
+      case "euint16":
+        writer.uint32(34).string(message.value.euint16);
+        break;
+      case "euint32":
+        writer.uint32(42).string(message.value.euint32);
+        break;
+      case "euint64":
+        writer.uint32(50).string(message.value.euint64);
+        break;
+      case "euint128":
+        writer.uint32(58).string(message.value.euint128);
+        break;
+      case "euint256":
+        writer.uint32(66).string(message.value.euint256);
+        break;
+      case "eaddress":
+        writer.uint32(74).bytes(message.value.eaddress);
+        break;
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): EncryptInput {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseEncryptInput();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.value = { $case: "ebool", ebool: reader.bool() };
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = { $case: "eboolBigint", eboolBigint: reader.string() };
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.value = { $case: "euint8", euint8: reader.string() };
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.value = { $case: "euint16", euint16: reader.string() };
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.value = { $case: "euint32", euint32: reader.string() };
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.value = { $case: "euint64", euint64: reader.string() };
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.value = { $case: "euint128", euint128: reader.string() };
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.value = { $case: "euint256", euint256: reader.string() };
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.value = { $case: "eaddress", eaddress: Buffer.from(reader.bytes()) };
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): EncryptInput {
+    return {
+      value: isSet(object.ebool)
+        ? { $case: "ebool", ebool: globalThis.Boolean(object.ebool) }
+        : isSet(object.eboolBigint)
+        ? { $case: "eboolBigint", eboolBigint: globalThis.String(object.eboolBigint) }
+        : isSet(object.ebool_bigint)
+        ? { $case: "eboolBigint", eboolBigint: globalThis.String(object.ebool_bigint) }
+        : isSet(object.euint8)
+        ? { $case: "euint8", euint8: globalThis.String(object.euint8) }
+        : isSet(object.euint16)
+        ? { $case: "euint16", euint16: globalThis.String(object.euint16) }
+        : isSet(object.euint32)
+        ? { $case: "euint32", euint32: globalThis.String(object.euint32) }
+        : isSet(object.euint64)
+        ? { $case: "euint64", euint64: globalThis.String(object.euint64) }
+        : isSet(object.euint128)
+        ? { $case: "euint128", euint128: globalThis.String(object.euint128) }
+        : isSet(object.euint256)
+        ? { $case: "euint256", euint256: globalThis.String(object.euint256) }
+        : isSet(object.eaddress)
+        ? { $case: "eaddress", eaddress: Buffer.from(bytesFromBase64(object.eaddress)) }
+        : undefined,
+    };
+  },
+
+  toJSON(message: EncryptInput): unknown {
+    const obj: any = {};
+    if (message.value?.$case === "ebool") {
+      obj.ebool = message.value.ebool;
+    } else if (message.value?.$case === "eboolBigint") {
+      obj.eboolBigint = message.value.eboolBigint;
+    } else if (message.value?.$case === "euint8") {
+      obj.euint8 = message.value.euint8;
+    } else if (message.value?.$case === "euint16") {
+      obj.euint16 = message.value.euint16;
+    } else if (message.value?.$case === "euint32") {
+      obj.euint32 = message.value.euint32;
+    } else if (message.value?.$case === "euint64") {
+      obj.euint64 = message.value.euint64;
+    } else if (message.value?.$case === "euint128") {
+      obj.euint128 = message.value.euint128;
+    } else if (message.value?.$case === "euint256") {
+      obj.euint256 = message.value.euint256;
+    } else if (message.value?.$case === "eaddress") {
+      obj.eaddress = base64FromBytes(message.value.eaddress);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<EncryptInput>): EncryptInput {
+    return EncryptInput.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<EncryptInput>): EncryptInput {
+    const message = createBaseEncryptInput();
+    switch (object.value?.$case) {
+      case "ebool": {
+        if (object.value?.ebool !== undefined && object.value?.ebool !== null) {
+          message.value = { $case: "ebool", ebool: object.value.ebool };
+        }
+        break;
+      }
+      case "eboolBigint": {
+        if (object.value?.eboolBigint !== undefined && object.value?.eboolBigint !== null) {
+          message.value = { $case: "eboolBigint", eboolBigint: object.value.eboolBigint };
+        }
+        break;
+      }
+      case "euint8": {
+        if (object.value?.euint8 !== undefined && object.value?.euint8 !== null) {
+          message.value = { $case: "euint8", euint8: object.value.euint8 };
+        }
+        break;
+      }
+      case "euint16": {
+        if (object.value?.euint16 !== undefined && object.value?.euint16 !== null) {
+          message.value = { $case: "euint16", euint16: object.value.euint16 };
+        }
+        break;
+      }
+      case "euint32": {
+        if (object.value?.euint32 !== undefined && object.value?.euint32 !== null) {
+          message.value = { $case: "euint32", euint32: object.value.euint32 };
+        }
+        break;
+      }
+      case "euint64": {
+        if (object.value?.euint64 !== undefined && object.value?.euint64 !== null) {
+          message.value = { $case: "euint64", euint64: object.value.euint64 };
+        }
+        break;
+      }
+      case "euint128": {
+        if (object.value?.euint128 !== undefined && object.value?.euint128 !== null) {
+          message.value = { $case: "euint128", euint128: object.value.euint128 };
+        }
+        break;
+      }
+      case "euint256": {
+        if (object.value?.euint256 !== undefined && object.value?.euint256 !== null) {
+          message.value = { $case: "euint256", euint256: object.value.euint256 };
+        }
+        break;
+      }
+      case "eaddress": {
+        if (object.value?.eaddress !== undefined && object.value?.eaddress !== null) {
+          message.value = { $case: "eaddress", eaddress: object.value.eaddress };
+        }
+        break;
+      }
+    }
+    return message;
+  },
+};
+
+function createBaseEncryptRequest(): EncryptRequest {
+  return {
+    operation: undefined,
+    values: [],
+    contractAddress: Buffer.alloc(0),
+    userAddress: Buffer.alloc(0),
+    timeoutMs: undefined,
+  };
+}
+
+export const EncryptRequest: MessageFns<EncryptRequest> = {
+  encode(message: EncryptRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.operation !== undefined) {
+      Operation.encode(message.operation, writer.uint32(10).fork()).join();
+    }
+    for (const v of message.values) {
+      EncryptInput.encode(v!, writer.uint32(18).fork()).join();
+    }
+    if (message.contractAddress.length !== 0) {
+      writer.uint32(26).bytes(message.contractAddress);
+    }
+    if (message.userAddress.length !== 0) {
+      writer.uint32(34).bytes(message.userAddress);
+    }
+    if (message.timeoutMs !== undefined) {
+      writer.uint32(40).uint32(message.timeoutMs);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): EncryptRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseEncryptRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.operation = Operation.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.values.push(EncryptInput.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.contractAddress = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.userAddress = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 5: {
+          if (tag !== 40) {
+            break;
+          }
+
+          message.timeoutMs = reader.uint32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): EncryptRequest {
+    return {
+      operation: isSet(object.operation) ? Operation.fromJSON(object.operation) : undefined,
+      values: globalThis.Array.isArray(object?.values) ? object.values.map((e: any) => EncryptInput.fromJSON(e)) : [],
+      contractAddress: isSet(object.contractAddress)
+        ? Buffer.from(bytesFromBase64(object.contractAddress))
+        : isSet(object.contract_address)
+        ? Buffer.from(bytesFromBase64(object.contract_address))
+        : Buffer.alloc(0),
+      userAddress: isSet(object.userAddress)
+        ? Buffer.from(bytesFromBase64(object.userAddress))
+        : isSet(object.user_address)
+        ? Buffer.from(bytesFromBase64(object.user_address))
+        : Buffer.alloc(0),
+      timeoutMs: isSet(object.timeoutMs)
+        ? globalThis.Number(object.timeoutMs)
+        : isSet(object.timeout_ms)
+        ? globalThis.Number(object.timeout_ms)
+        : undefined,
+    };
+  },
+
+  toJSON(message: EncryptRequest): unknown {
+    const obj: any = {};
+    if (message.operation !== undefined) {
+      obj.operation = Operation.toJSON(message.operation);
+    }
+    if (message.values?.length) {
+      obj.values = message.values.map((e) => EncryptInput.toJSON(e));
+    }
+    if (message.contractAddress.length !== 0) {
+      obj.contractAddress = base64FromBytes(message.contractAddress);
+    }
+    if (message.userAddress.length !== 0) {
+      obj.userAddress = base64FromBytes(message.userAddress);
+    }
+    if (message.timeoutMs !== undefined) {
+      obj.timeoutMs = Math.round(message.timeoutMs);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<EncryptRequest>): EncryptRequest {
+    return EncryptRequest.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<EncryptRequest>): EncryptRequest {
+    const message = createBaseEncryptRequest();
+    message.operation = (object.operation !== undefined && object.operation !== null)
+      ? Operation.fromPartial(object.operation)
+      : undefined;
+    message.values = object.values?.map((e) => EncryptInput.fromPartial(e)) || [];
+    message.contractAddress = object.contractAddress ?? Buffer.alloc(0);
+    message.userAddress = object.userAddress ?? Buffer.alloc(0);
+    message.timeoutMs = object.timeoutMs ?? undefined;
+    return message;
+  },
+};
+
+function createBaseEncryptResponse(): EncryptResponse {
+  return { encryptedValues: [], inputProof: Buffer.alloc(0) };
+}
+
+export const EncryptResponse: MessageFns<EncryptResponse> = {
+  encode(message: EncryptResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.encryptedValues) {
+      writer.uint32(10).bytes(v!);
+    }
+    if (message.inputProof.length !== 0) {
+      writer.uint32(18).bytes(message.inputProof);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): EncryptResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseEncryptResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.encryptedValues.push(Buffer.from(reader.bytes()));
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.inputProof = Buffer.from(reader.bytes());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): EncryptResponse {
+    return {
+      encryptedValues: globalThis.Array.isArray(object?.encryptedValues)
+        ? object.encryptedValues.map((e: any) => Buffer.from(bytesFromBase64(e)))
+        : globalThis.Array.isArray(object?.encrypted_values)
+        ? object.encrypted_values.map((e: any) => Buffer.from(bytesFromBase64(e)))
+        : [],
+      inputProof: isSet(object.inputProof)
+        ? Buffer.from(bytesFromBase64(object.inputProof))
+        : isSet(object.input_proof)
+        ? Buffer.from(bytesFromBase64(object.input_proof))
+        : Buffer.alloc(0),
+    };
+  },
+
+  toJSON(message: EncryptResponse): unknown {
+    const obj: any = {};
+    if (message.encryptedValues?.length) {
+      obj.encryptedValues = message.encryptedValues.map((e) => base64FromBytes(e));
+    }
+    if (message.inputProof.length !== 0) {
+      obj.inputProof = base64FromBytes(message.inputProof);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<EncryptResponse>): EncryptResponse {
+    return EncryptResponse.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<EncryptResponse>): EncryptResponse {
+    const message = createBaseEncryptResponse();
+    message.encryptedValues = object.encryptedValues?.map((e) => e) || [];
+    message.inputProof = object.inputProof ?? Buffer.alloc(0);
+    return message;
+  },
+};
+
 /**
  * SDK failures retain their code and retry information in gRPC trailers.
  * Integer durations and counts are exact; omitted optional values use SDK defaults.
@@ -7973,6 +8474,16 @@ export const SidecarServiceService = {
     responseDeserialize: (value: Buffer): RevokeTransportKeyPairResponse =>
       RevokeTransportKeyPairResponse.decode(value),
   },
+  /** Calls sdk.encrypt; no wallet signing is required. */
+  encrypt: {
+    path: "/zama.sdk.v1alpha1.SidecarService/Encrypt" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: EncryptRequest): Buffer => Buffer.from(EncryptRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): EncryptRequest => EncryptRequest.decode(value),
+    responseSerialize: (value: EncryptResponse): Buffer => Buffer.from(EncryptResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): EncryptResponse => EncryptResponse.decode(value),
+  },
 } as const;
 
 export interface SidecarServiceServer extends UntypedServiceImplementation {
@@ -8018,6 +8529,8 @@ export interface SidecarServiceServer extends UntypedServiceImplementation {
   warmTransportKeyPairScope: handleUnaryCall<ScopeRequest, WarmTransportKeyPairScopeResponse>;
   /** Calls permits.revokeTransportKeyPair for the supplied credential scope. */
   revokeTransportKeyPair: handleUnaryCall<ScopeRequest, RevokeTransportKeyPairResponse>;
+  /** Calls sdk.encrypt; no wallet signing is required. */
+  encrypt: handleUnaryCall<EncryptRequest, EncryptResponse>;
 }
 
 export interface SidecarServiceClient extends Client {
@@ -8338,6 +8851,22 @@ export interface SidecarServiceClient extends Client {
     metadata: Metadata,
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: RevokeTransportKeyPairResponse) => void,
+  ): ClientUnaryCall;
+  /** Calls sdk.encrypt; no wallet signing is required. */
+  encrypt(
+    request: EncryptRequest,
+    callback: (error: ServiceError | null, response: EncryptResponse) => void,
+  ): ClientUnaryCall;
+  encrypt(
+    request: EncryptRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: EncryptResponse) => void,
+  ): ClientUnaryCall;
+  encrypt(
+    request: EncryptRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: EncryptResponse) => void,
   ): ClientUnaryCall;
 }
 

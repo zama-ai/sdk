@@ -123,6 +123,7 @@ jobs:
       - name: Prepare native test drivers
         run: |
           cargo test --manifest-path clients/rust/Cargo.toml --test external_storage_restart --locked --no-run
+          cargo test --manifest-path clients/rust/Cargo.toml --test encryption --all-features --locked --no-run
           cd clients/go
           go test -run '^$' ./...
       - name: Verify SDK equivalence and native credential recovery

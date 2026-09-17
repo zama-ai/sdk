@@ -23,6 +23,7 @@ import {
   SidecarServiceClient,
   type ClearEntry,
   type ClearValue,
+  type CreateContextRequest,
   type SignerAction,
   type SignerClientMessage,
   type SignerServerMessage,
@@ -69,6 +70,25 @@ export function decode(entries: ClearEntry[]) {
     entries.map((entry) => [bytesToHex(entry.encryptedValue), decodeValue(entry.value)]),
   );
 }
+export function createContext(
+  client: SidecarServiceClient,
+  request: Partial<CreateContextRequest> = {},
+) {
+  return new Promise<string>((resolve, reject) =>
+    client.createContext(
+      {
+        config: undefined,
+        signerEnabled: false,
+        account: undefined,
+        storage: undefined,
+        permitStorage: undefined,
+        transportKeyPairDerivationSecret: undefined,
+        ...request,
+      },
+      (error, response) => (error ? reject(error) : resolve(response.contextId)),
+    ),
+  );
+}
 export async function testServer(factory: ContextFactory) {
   const directory = await mkdtemp(join(tmpdir(), "sdk-equivalence-"));
   const runtime = new SidecarRuntime(factory, createCoordinator());
@@ -78,6 +98,7 @@ export async function testServer(factory: ContextFactory) {
   const streams: ClientDuplexStream<SignerClientMessage, SignerServerMessage>[] = [];
   return {
     client,
+    socket,
     async attachSigner(contextId: string, sign: (action: SignerAction) => Promise<Hex>) {
       const stream = client.signerChannel();
       streams.push(stream);

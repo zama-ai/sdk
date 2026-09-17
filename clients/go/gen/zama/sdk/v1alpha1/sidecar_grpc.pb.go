@@ -40,6 +40,7 @@ const (
 	SidecarService_WarmTransportKeyPair_FullMethodName        = "/zama.sdk.v1alpha1.SidecarService/WarmTransportKeyPair"
 	SidecarService_WarmTransportKeyPairScope_FullMethodName   = "/zama.sdk.v1alpha1.SidecarService/WarmTransportKeyPairScope"
 	SidecarService_RevokeTransportKeyPair_FullMethodName      = "/zama.sdk.v1alpha1.SidecarService/RevokeTransportKeyPair"
+	SidecarService_Encrypt_FullMethodName                     = "/zama.sdk.v1alpha1.SidecarService/Encrypt"
 )
 
 // SidecarServiceClient is the client API for SidecarService service.
@@ -91,6 +92,8 @@ type SidecarServiceClient interface {
 	WarmTransportKeyPairScope(ctx context.Context, in *ScopeRequest, opts ...grpc.CallOption) (*WarmTransportKeyPairScopeResponse, error)
 	// Calls permits.revokeTransportKeyPair for the supplied credential scope.
 	RevokeTransportKeyPair(ctx context.Context, in *ScopeRequest, opts ...grpc.CallOption) (*RevokeTransportKeyPairResponse, error)
+	// Calls sdk.encrypt; no wallet signing is required.
+	Encrypt(ctx context.Context, in *EncryptRequest, opts ...grpc.CallOption) (*EncryptResponse, error)
 }
 
 type sidecarServiceClient struct {
@@ -317,6 +320,16 @@ func (c *sidecarServiceClient) RevokeTransportKeyPair(ctx context.Context, in *S
 	return out, nil
 }
 
+func (c *sidecarServiceClient) Encrypt(ctx context.Context, in *EncryptRequest, opts ...grpc.CallOption) (*EncryptResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EncryptResponse)
+	err := c.cc.Invoke(ctx, SidecarService_Encrypt_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SidecarServiceServer is the server API for SidecarService service.
 // All implementations must embed UnimplementedSidecarServiceServer
 // for forward compatibility.
@@ -366,6 +379,8 @@ type SidecarServiceServer interface {
 	WarmTransportKeyPairScope(context.Context, *ScopeRequest) (*WarmTransportKeyPairScopeResponse, error)
 	// Calls permits.revokeTransportKeyPair for the supplied credential scope.
 	RevokeTransportKeyPair(context.Context, *ScopeRequest) (*RevokeTransportKeyPairResponse, error)
+	// Calls sdk.encrypt; no wallet signing is required.
+	Encrypt(context.Context, *EncryptRequest) (*EncryptResponse, error)
 	mustEmbedUnimplementedSidecarServiceServer()
 }
 
@@ -438,6 +453,9 @@ func (UnimplementedSidecarServiceServer) WarmTransportKeyPairScope(context.Conte
 }
 func (UnimplementedSidecarServiceServer) RevokeTransportKeyPair(context.Context, *ScopeRequest) (*RevokeTransportKeyPairResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeTransportKeyPair not implemented")
+}
+func (UnimplementedSidecarServiceServer) Encrypt(context.Context, *EncryptRequest) (*EncryptResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Encrypt not implemented")
 }
 func (UnimplementedSidecarServiceServer) mustEmbedUnimplementedSidecarServiceServer() {}
 func (UnimplementedSidecarServiceServer) testEmbeddedByValue()                        {}
@@ -816,6 +834,24 @@ func _SidecarService_RevokeTransportKeyPair_Handler(srv interface{}, ctx context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SidecarService_Encrypt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EncryptRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SidecarServiceServer).Encrypt(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SidecarService_Encrypt_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SidecarServiceServer).Encrypt(ctx, req.(*EncryptRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SidecarService_ServiceDesc is the grpc.ServiceDesc for SidecarService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -898,6 +934,10 @@ var SidecarService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RevokeTransportKeyPair",
 			Handler:    _SidecarService_RevokeTransportKeyPair_Handler,
+		},
+		{
+			MethodName: "Encrypt",
+			Handler:    _SidecarService_Encrypt_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
