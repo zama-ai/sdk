@@ -24,7 +24,6 @@ import { TypedValue } from '@fhevm/sdk/types';
 
 // @public
 export interface ActiveBatcherQueryConfig {
-    // (undocumented)
     history: BatcherHistory;
     query?: Record<string, unknown>;
 }
@@ -37,7 +36,6 @@ export function activeBatcherQueryOptions(sdk: ZamaSDK, config: ActiveBatcherQue
 
 // @public
 export interface ActiveBatchersQueryConfig {
-    // (undocumented)
     direction: BatcherDirection;
     query?: Record<string, unknown>;
 }
@@ -48,7 +46,6 @@ export function activeBatchersQueryOptions(group: VaultGroup, config: ActiveBatc
 // @public
 export interface AllocationLeg {
     readonly amount: bigint;
-    // (undocumented)
     readonly batcher: Address;
     readonly token: Address;
 }
@@ -1958,10 +1955,10 @@ export function batchDispatchedAtContract(batcher: Address, batchId: bigint): {
     readonly args: readonly [bigint];
 };
 
-// @public (undocumented)
+// @public
 export const BATCHER_DIRECTIONS: readonly ["deposit", "redeem"];
 
-// @public (undocumented)
+// @public
 export type BatcherDirection = (typeof BATCHER_DIRECTIONS)[number];
 
 // @public
@@ -6485,7 +6482,6 @@ export function encodeAllocationData(allocation: EncryptedAllocation): Hex;
 
 // @public
 export interface EncryptedAllocation {
-    // (undocumented)
     readonly inputProof: Hex;
     readonly legs: readonly EncryptedAllocationLeg[];
 }
@@ -6493,12 +6489,8 @@ export interface EncryptedAllocation {
 // @public
 export interface EncryptedAllocationLeg {
     // Warning: (ae-forgotten-export) The symbol "EncryptedValue" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
     readonly amount: EncryptedValue;
-    // (undocumented)
     readonly batcher: Address;
-    // (undocumented)
     readonly token: Address;
 }
 
@@ -11692,7 +11684,6 @@ export function resolveActiveBatcher(sdk: ZamaSDK, history: BatcherHistory): Pro
 
 // @public
 export interface RetiredBatcher {
-    // (undocumented)
     readonly address: Address;
     readonly lastBatchId: bigint;
 }
@@ -13798,9 +13789,7 @@ export class VaultGroup {
     activeBatchers(direction: BatcherDirection): Promise<Readonly<Record<string, Address>>>;
     readonly asset: Address;
     deposit(vaultId: string, amount: bigint, options?: VaultGroupJoinOptions): Promise<VaultGroupJoinResult>;
-    // (undocumented)
     readonly id: string;
-    // (undocumented)
     member(vaultId: string): VaultMemberConfig;
     requestWithdrawal(vaultId: string, amount: bigint, options?: VaultGroupJoinOptions): Promise<VaultGroupJoinResult>;
     readonly router: VaultRouter | undefined;
@@ -13821,7 +13810,6 @@ export interface VaultGroupJoin {
     batcher: Address;
     batchId: bigint;
     confidentialJoinedAmount: EncryptedValue;
-    // (undocumented)
     vaultId: string;
 }
 
@@ -13849,7 +13837,6 @@ export interface VaultJoinOptions extends JoinOptions {
 
 // @public
 export interface VaultMemberConfig {
-    // (undocumented)
     readonly batchers: Readonly<Record<BatcherDirection, BatcherHistory>>;
     readonly id: string;
     readonly share: Address;

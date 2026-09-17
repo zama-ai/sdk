@@ -16,6 +16,7 @@ import { useVaultGroup } from "./use-vault-group";
 
 /** Configuration for {@link useGroupRequestWithdrawal}. */
 export interface UseGroupRequestWithdrawalConfig {
+  /** The group to redeem from. */
   group: VaultGroupConfig;
 }
 

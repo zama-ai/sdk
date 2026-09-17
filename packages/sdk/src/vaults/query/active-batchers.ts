@@ -7,6 +7,7 @@ import { vaultQueryKeys } from "./query-keys";
 
 /** Configuration for {@link activeBatchersQueryOptions}. */
 export interface ActiveBatchersQueryConfig {
+  /** Which side of the group to read — the deposit or the redeem batchers. */
   direction: BatcherDirection;
   /** Additional TanStack Query options merged into the generated query (e.g. `staleTime`, `enabled`). */
   query?: Record<string, unknown>;
