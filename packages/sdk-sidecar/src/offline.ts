@@ -1,6 +1,7 @@
 import { bytesToHex } from "viem";
-import type { PrepareOptions, PrepareTransactionRequest } from "@zama-fhe/sdk";
+import type { PrepareOptions, PrepareTransactionRequest, TransactionKind } from "@zama-fhe/sdk";
 import type * as rpc from "./generated/zama/sdk/v1alpha1/sidecar.js";
+import { TransactionKind as WireTransactionKind } from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import type { ContextSdk } from "./runtime.js";
 import { address, bytes, safeInteger } from "./encoding.js";
 import { invalidArgument } from "./errors.js";
@@ -11,6 +12,20 @@ function decimal(value: string): bigint {
   }
   return BigInt(value);
 }
+
+const wireKinds: Record<TransactionKind, rpc.TransactionKind> = {
+  ConfidentialTransfer: WireTransactionKind.TRANSACTION_KIND_CONFIDENTIAL_TRANSFER,
+  ConfidentialTransferFrom: WireTransactionKind.TRANSACTION_KIND_CONFIDENTIAL_TRANSFER_FROM,
+  SetOperator: WireTransactionKind.TRANSACTION_KIND_SET_OPERATOR,
+  Unwrap: WireTransactionKind.TRANSACTION_KIND_UNWRAP,
+  UnwrapAll: WireTransactionKind.TRANSACTION_KIND_UNWRAP_ALL,
+  FinalizeUnwrap: WireTransactionKind.TRANSACTION_KIND_FINALIZE_UNWRAP,
+  ApproveUnderlying: WireTransactionKind.TRANSACTION_KIND_APPROVE_UNDERLYING,
+  Wrap: WireTransactionKind.TRANSACTION_KIND_WRAP,
+  TransferAndCall: WireTransactionKind.TRANSACTION_KIND_TRANSFER_AND_CALL,
+  DelegateDecryption: WireTransactionKind.TRANSACTION_KIND_DELEGATE_DECRYPTION,
+  RevokeDelegation: WireTransactionKind.TRANSACTION_KIND_REVOKE_DELEGATION,
+};
 
 function requireField<T>(value: T | undefined, name: string): T {
   if (value === undefined) {
@@ -162,5 +177,9 @@ export async function prepareTransaction(
     transactionRequest(request),
     prepareOptions(request.options),
   );
-  return { kind: result.kind, from: bytes(result.from), unsignedTx: bytes(result.unsignedTx) };
+  return {
+    kind: wireKinds[result.kind],
+    from: bytes(result.from),
+    unsignedTx: bytes(result.unsignedTx),
+  };
 }

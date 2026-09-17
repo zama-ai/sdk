@@ -945,8 +945,8 @@ pub struct RevokeDelegation {
 /// SDK output unchanged: no signature is produced and nothing is broadcast.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PrepareTransactionResponse {
-    #[prost(string, tag = "1")]
-    pub kind: ::prost::alloc::string::String,
+    #[prost(enumeration = "TransactionKind", tag = "1")]
+    pub kind: i32,
     #[prost(bytes = "vec", tag = "2")]
     pub from: ::prost::alloc::vec::Vec<u8>,
     /// RLP-encoded unsigned EIP-1559 transaction.
@@ -981,6 +981,66 @@ impl StorageMethod {
             "STORAGE_METHOD_GET" => Some(Self::Get),
             "STORAGE_METHOD_SET" => Some(Self::Set),
             "STORAGE_METHOD_DELETE" => Some(Self::Delete),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum TransactionKind {
+    Unspecified = 0,
+    ConfidentialTransfer = 1,
+    ConfidentialTransferFrom = 2,
+    SetOperator = 3,
+    Unwrap = 4,
+    UnwrapAll = 5,
+    FinalizeUnwrap = 6,
+    ApproveUnderlying = 7,
+    Wrap = 8,
+    TransferAndCall = 9,
+    DelegateDecryption = 10,
+    RevokeDelegation = 11,
+}
+impl TransactionKind {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "TRANSACTION_KIND_UNSPECIFIED",
+            Self::ConfidentialTransfer => "TRANSACTION_KIND_CONFIDENTIAL_TRANSFER",
+            Self::ConfidentialTransferFrom => {
+                "TRANSACTION_KIND_CONFIDENTIAL_TRANSFER_FROM"
+            }
+            Self::SetOperator => "TRANSACTION_KIND_SET_OPERATOR",
+            Self::Unwrap => "TRANSACTION_KIND_UNWRAP",
+            Self::UnwrapAll => "TRANSACTION_KIND_UNWRAP_ALL",
+            Self::FinalizeUnwrap => "TRANSACTION_KIND_FINALIZE_UNWRAP",
+            Self::ApproveUnderlying => "TRANSACTION_KIND_APPROVE_UNDERLYING",
+            Self::Wrap => "TRANSACTION_KIND_WRAP",
+            Self::TransferAndCall => "TRANSACTION_KIND_TRANSFER_AND_CALL",
+            Self::DelegateDecryption => "TRANSACTION_KIND_DELEGATE_DECRYPTION",
+            Self::RevokeDelegation => "TRANSACTION_KIND_REVOKE_DELEGATION",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "TRANSACTION_KIND_UNSPECIFIED" => Some(Self::Unspecified),
+            "TRANSACTION_KIND_CONFIDENTIAL_TRANSFER" => Some(Self::ConfidentialTransfer),
+            "TRANSACTION_KIND_CONFIDENTIAL_TRANSFER_FROM" => {
+                Some(Self::ConfidentialTransferFrom)
+            }
+            "TRANSACTION_KIND_SET_OPERATOR" => Some(Self::SetOperator),
+            "TRANSACTION_KIND_UNWRAP" => Some(Self::Unwrap),
+            "TRANSACTION_KIND_UNWRAP_ALL" => Some(Self::UnwrapAll),
+            "TRANSACTION_KIND_FINALIZE_UNWRAP" => Some(Self::FinalizeUnwrap),
+            "TRANSACTION_KIND_APPROVE_UNDERLYING" => Some(Self::ApproveUnderlying),
+            "TRANSACTION_KIND_WRAP" => Some(Self::Wrap),
+            "TRANSACTION_KIND_TRANSFER_AND_CALL" => Some(Self::TransferAndCall),
+            "TRANSACTION_KIND_DELEGATE_DECRYPTION" => Some(Self::DelegateDecryption),
+            "TRANSACTION_KIND_REVOKE_DELEGATION" => Some(Self::RevokeDelegation),
             _ => None,
         }
     }

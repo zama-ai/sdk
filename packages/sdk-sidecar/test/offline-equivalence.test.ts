@@ -7,9 +7,11 @@ import { expect, test, vi } from "vitest";
 import { ACL, DELEGATE, TOKEN, USER, WRAPPER } from "../../sdk/src/test-fixtures/constants.js";
 import { fixture, storage, testServer } from "./support/harness.js";
 import type * as rpc from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
+import { TransactionKind } from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
 
 type Case = {
   name: string;
+  wireKind: rpc.TransactionKind;
   request: PrepareTransactionRequest;
   transaction: NonNullable<rpc.PrepareTransactionRequest["transaction"]>;
 };
@@ -21,6 +23,7 @@ const farFuture = new Date("2099-01-01T00:00:00.000Z");
 const cases: Case[] = [
   {
     name: "ConfidentialTransfer",
+    wireKind: TransactionKind.TRANSACTION_KIND_CONFIDENTIAL_TRANSFER,
     request: { kind: "ConfidentialTransfer", from: USER, token: TOKEN, to: ACL, amount: 7n },
     transaction: {
       $case: "confidentialTransfer",
@@ -29,6 +32,7 @@ const cases: Case[] = [
   },
   {
     name: "ConfidentialTransferFrom",
+    wireKind: TransactionKind.TRANSACTION_KIND_CONFIDENTIAL_TRANSFER_FROM,
     request: {
       kind: "ConfidentialTransferFrom",
       from: USER,
@@ -49,6 +53,7 @@ const cases: Case[] = [
   },
   {
     name: "SetOperator",
+    wireKind: TransactionKind.TRANSACTION_KIND_SET_OPERATOR,
     request: { kind: "SetOperator", from: USER, token: TOKEN, operator: DELEGATE, until: 123 },
     transaction: {
       $case: "setOperator",
@@ -57,6 +62,7 @@ const cases: Case[] = [
   },
   {
     name: "Unwrap",
+    wireKind: TransactionKind.TRANSACTION_KIND_UNWRAP,
     request: { kind: "Unwrap", from: USER, token: WRAPPER, to: ACL, amount: 9n },
     transaction: {
       $case: "unwrap",
@@ -65,6 +71,7 @@ const cases: Case[] = [
   },
   {
     name: "UnwrapAll",
+    wireKind: TransactionKind.TRANSACTION_KIND_UNWRAP_ALL,
     request: { kind: "UnwrapAll", from: USER, token: WRAPPER, to: ACL },
     transaction: {
       $case: "unwrapAll",
@@ -73,6 +80,7 @@ const cases: Case[] = [
   },
   {
     name: "FinalizeUnwrap",
+    wireKind: TransactionKind.TRANSACTION_KIND_FINALIZE_UNWRAP,
     request: {
       kind: "FinalizeUnwrap",
       from: USER,
@@ -89,6 +97,7 @@ const cases: Case[] = [
   },
   {
     name: "ApproveUnderlying",
+    wireKind: TransactionKind.TRANSACTION_KIND_APPROVE_UNDERLYING,
     request: {
       kind: "ApproveUnderlying",
       from: USER,
@@ -107,6 +116,7 @@ const cases: Case[] = [
   },
   {
     name: "Wrap",
+    wireKind: TransactionKind.TRANSACTION_KIND_WRAP,
     request: { kind: "Wrap", from: USER, wrapper: WRAPPER, to: ACL, amount: 11n },
     transaction: {
       $case: "wrap",
@@ -115,6 +125,7 @@ const cases: Case[] = [
   },
   {
     name: "TransferAndCall",
+    wireKind: TransactionKind.TRANSACTION_KIND_TRANSFER_AND_CALL,
     request: {
       kind: "TransferAndCall",
       from: USER,
@@ -135,6 +146,7 @@ const cases: Case[] = [
   },
   {
     name: "DelegateDecryption",
+    wireKind: TransactionKind.TRANSACTION_KIND_DELEGATE_DECRYPTION,
     request: {
       kind: "DelegateDecryption",
       from: USER,
@@ -153,6 +165,7 @@ const cases: Case[] = [
   },
   {
     name: "RevokeDelegation",
+    wireKind: TransactionKind.TRANSACTION_KIND_REVOKE_DELEGATION,
     request: {
       kind: "RevokeDelegation",
       from: USER,
@@ -264,7 +277,7 @@ test.each(cases)("offline prepare equivalence: $name", async (item) => {
       fees: { maxFeePerGas: 0n, maxPriorityFeePerGas: 0n },
     });
     const actual = await prepare(remote, item);
-    expect(actual.kind).toBe(expected.kind);
+    expect([expected.kind, actual.kind]).toEqual([item.request.kind, item.wireKind]);
     expect(bytesToHex(actual.from)).toBe(expected.from.toLowerCase());
     expect(bytesToHex(actual.unsignedTx)).toBe(expected.unsignedTx);
     expect(remote.fixtures[0]?.provider.prepareTransaction).toHaveBeenCalledTimes(1);
@@ -292,10 +305,11 @@ test.each(cases)("offline prepare preserves omitted options: $name", async (item
       from: bytesToHex(actual.from),
       unsignedTx: bytesToHex(actual.unsignedTx),
     }).toEqual({
-      kind: expected.kind,
+      kind: item.wireKind,
       from: expected.from.toLowerCase(),
       unsignedTx: expected.unsignedTx,
     });
+    expect(expected.kind).toBe(item.request.kind);
     expect(remote.fixtures[0]?.provider.prepareTransaction).toHaveBeenCalledWith(
       vi.mocked(direct.provider.prepareTransaction).mock.calls[0]?.[0],
     );

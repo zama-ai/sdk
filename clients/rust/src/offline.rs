@@ -1,5 +1,5 @@
 use crate::{Address, BigInt, Offline, generated};
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 
 #[derive(Clone, Debug)]
 pub struct PrepareTransaction {
@@ -80,9 +80,50 @@ pub struct PrepareFees {
     pub max_priority_fee_per_gas: BigInt,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TransactionKind {
+    ConfidentialTransfer,
+    ConfidentialTransferFrom,
+    SetOperator,
+    Unwrap,
+    UnwrapAll,
+    FinalizeUnwrap,
+    ApproveUnderlying,
+    Wrap,
+    TransferAndCall,
+    DelegateDecryption,
+    RevokeDelegation,
+}
+
+impl TryFrom<i32> for TransactionKind {
+    type Error = anyhow::Error;
+
+    fn try_from(value: i32) -> Result<Self> {
+        let Ok(kind) = generated::TransactionKind::try_from(value) else {
+            bail!("unknown prepared transaction kind");
+        };
+        Ok(match kind {
+            generated::TransactionKind::Unspecified => {
+                bail!("unspecified prepared transaction kind")
+            }
+            generated::TransactionKind::ConfidentialTransfer => Self::ConfidentialTransfer,
+            generated::TransactionKind::ConfidentialTransferFrom => Self::ConfidentialTransferFrom,
+            generated::TransactionKind::SetOperator => Self::SetOperator,
+            generated::TransactionKind::Unwrap => Self::Unwrap,
+            generated::TransactionKind::UnwrapAll => Self::UnwrapAll,
+            generated::TransactionKind::FinalizeUnwrap => Self::FinalizeUnwrap,
+            generated::TransactionKind::ApproveUnderlying => Self::ApproveUnderlying,
+            generated::TransactionKind::Wrap => Self::Wrap,
+            generated::TransactionKind::TransferAndCall => Self::TransferAndCall,
+            generated::TransactionKind::DelegateDecryption => Self::DelegateDecryption,
+            generated::TransactionKind::RevokeDelegation => Self::RevokeDelegation,
+        })
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PreparedTransaction {
-    pub kind: String,
+    pub kind: TransactionKind,
     pub from: Address,
     pub unsigned_tx: Vec<u8>,
 }
@@ -105,7 +146,7 @@ impl Offline {
         )
         .await?;
         Ok(PreparedTransaction {
-            kind: result.kind,
+            kind: TransactionKind::try_from(result.kind)?,
             from: Address::try_from(result.from.as_slice())
                 .context("invalid prepared sender address")?,
             unsigned_tx: result.unsigned_tx,

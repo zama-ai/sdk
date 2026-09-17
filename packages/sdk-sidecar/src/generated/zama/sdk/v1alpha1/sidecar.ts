@@ -68,6 +68,99 @@ export function storageMethodToJSON(object: StorageMethod): string {
   }
 }
 
+export enum TransactionKind {
+  TRANSACTION_KIND_UNSPECIFIED = 0,
+  TRANSACTION_KIND_CONFIDENTIAL_TRANSFER = 1,
+  TRANSACTION_KIND_CONFIDENTIAL_TRANSFER_FROM = 2,
+  TRANSACTION_KIND_SET_OPERATOR = 3,
+  TRANSACTION_KIND_UNWRAP = 4,
+  TRANSACTION_KIND_UNWRAP_ALL = 5,
+  TRANSACTION_KIND_FINALIZE_UNWRAP = 6,
+  TRANSACTION_KIND_APPROVE_UNDERLYING = 7,
+  TRANSACTION_KIND_WRAP = 8,
+  TRANSACTION_KIND_TRANSFER_AND_CALL = 9,
+  TRANSACTION_KIND_DELEGATE_DECRYPTION = 10,
+  TRANSACTION_KIND_REVOKE_DELEGATION = 11,
+  UNRECOGNIZED = -1,
+}
+
+export function transactionKindFromJSON(object: any): TransactionKind {
+  switch (object) {
+    case 0:
+    case "TRANSACTION_KIND_UNSPECIFIED":
+      return TransactionKind.TRANSACTION_KIND_UNSPECIFIED;
+    case 1:
+    case "TRANSACTION_KIND_CONFIDENTIAL_TRANSFER":
+      return TransactionKind.TRANSACTION_KIND_CONFIDENTIAL_TRANSFER;
+    case 2:
+    case "TRANSACTION_KIND_CONFIDENTIAL_TRANSFER_FROM":
+      return TransactionKind.TRANSACTION_KIND_CONFIDENTIAL_TRANSFER_FROM;
+    case 3:
+    case "TRANSACTION_KIND_SET_OPERATOR":
+      return TransactionKind.TRANSACTION_KIND_SET_OPERATOR;
+    case 4:
+    case "TRANSACTION_KIND_UNWRAP":
+      return TransactionKind.TRANSACTION_KIND_UNWRAP;
+    case 5:
+    case "TRANSACTION_KIND_UNWRAP_ALL":
+      return TransactionKind.TRANSACTION_KIND_UNWRAP_ALL;
+    case 6:
+    case "TRANSACTION_KIND_FINALIZE_UNWRAP":
+      return TransactionKind.TRANSACTION_KIND_FINALIZE_UNWRAP;
+    case 7:
+    case "TRANSACTION_KIND_APPROVE_UNDERLYING":
+      return TransactionKind.TRANSACTION_KIND_APPROVE_UNDERLYING;
+    case 8:
+    case "TRANSACTION_KIND_WRAP":
+      return TransactionKind.TRANSACTION_KIND_WRAP;
+    case 9:
+    case "TRANSACTION_KIND_TRANSFER_AND_CALL":
+      return TransactionKind.TRANSACTION_KIND_TRANSFER_AND_CALL;
+    case 10:
+    case "TRANSACTION_KIND_DELEGATE_DECRYPTION":
+      return TransactionKind.TRANSACTION_KIND_DELEGATE_DECRYPTION;
+    case 11:
+    case "TRANSACTION_KIND_REVOKE_DELEGATION":
+      return TransactionKind.TRANSACTION_KIND_REVOKE_DELEGATION;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return TransactionKind.UNRECOGNIZED;
+  }
+}
+
+export function transactionKindToJSON(object: TransactionKind): string {
+  switch (object) {
+    case TransactionKind.TRANSACTION_KIND_UNSPECIFIED:
+      return "TRANSACTION_KIND_UNSPECIFIED";
+    case TransactionKind.TRANSACTION_KIND_CONFIDENTIAL_TRANSFER:
+      return "TRANSACTION_KIND_CONFIDENTIAL_TRANSFER";
+    case TransactionKind.TRANSACTION_KIND_CONFIDENTIAL_TRANSFER_FROM:
+      return "TRANSACTION_KIND_CONFIDENTIAL_TRANSFER_FROM";
+    case TransactionKind.TRANSACTION_KIND_SET_OPERATOR:
+      return "TRANSACTION_KIND_SET_OPERATOR";
+    case TransactionKind.TRANSACTION_KIND_UNWRAP:
+      return "TRANSACTION_KIND_UNWRAP";
+    case TransactionKind.TRANSACTION_KIND_UNWRAP_ALL:
+      return "TRANSACTION_KIND_UNWRAP_ALL";
+    case TransactionKind.TRANSACTION_KIND_FINALIZE_UNWRAP:
+      return "TRANSACTION_KIND_FINALIZE_UNWRAP";
+    case TransactionKind.TRANSACTION_KIND_APPROVE_UNDERLYING:
+      return "TRANSACTION_KIND_APPROVE_UNDERLYING";
+    case TransactionKind.TRANSACTION_KIND_WRAP:
+      return "TRANSACTION_KIND_WRAP";
+    case TransactionKind.TRANSACTION_KIND_TRANSFER_AND_CALL:
+      return "TRANSACTION_KIND_TRANSFER_AND_CALL";
+    case TransactionKind.TRANSACTION_KIND_DELEGATE_DECRYPTION:
+      return "TRANSACTION_KIND_DELEGATE_DECRYPTION";
+    case TransactionKind.TRANSACTION_KIND_REVOKE_DELEGATION:
+      return "TRANSACTION_KIND_REVOKE_DELEGATION";
+    case TransactionKind.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
 export interface Empty {
 }
 
@@ -696,7 +789,7 @@ export interface RevokeDelegation {
 
 /** SDK output unchanged: no signature is produced and nothing is broadcast. */
 export interface PrepareTransactionResponse {
-  kind: string;
+  kind: TransactionKind;
   from: Buffer;
   /** RLP-encoded unsigned EIP-1559 transaction. */
   unsignedTx: Buffer;
@@ -9977,13 +10070,13 @@ export const RevokeDelegation: MessageFns<RevokeDelegation> = {
 };
 
 function createBasePrepareTransactionResponse(): PrepareTransactionResponse {
-  return { kind: "", from: Buffer.alloc(0), unsignedTx: Buffer.alloc(0) };
+  return { kind: 0, from: Buffer.alloc(0), unsignedTx: Buffer.alloc(0) };
 }
 
 export const PrepareTransactionResponse: MessageFns<PrepareTransactionResponse> = {
   encode(message: PrepareTransactionResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.kind !== "") {
-      writer.uint32(10).string(message.kind);
+    if (message.kind !== 0) {
+      writer.uint32(8).int32(message.kind);
     }
     if (message.from.length !== 0) {
       writer.uint32(18).bytes(message.from);
@@ -10002,11 +10095,11 @@ export const PrepareTransactionResponse: MessageFns<PrepareTransactionResponse> 
       const tag = reader.uint32();
       switch (tag >>> 3) {
         case 1: {
-          if (tag !== 10) {
+          if (tag !== 8) {
             break;
           }
 
-          message.kind = reader.string();
+          message.kind = reader.int32() as any;
           continue;
         }
         case 2: {
@@ -10036,7 +10129,7 @@ export const PrepareTransactionResponse: MessageFns<PrepareTransactionResponse> 
 
   fromJSON(object: any): PrepareTransactionResponse {
     return {
-      kind: isSet(object.kind) ? globalThis.String(object.kind) : "",
+      kind: isSet(object.kind) ? transactionKindFromJSON(object.kind) : 0,
       from: isSet(object.from) ? Buffer.from(bytesFromBase64(object.from)) : Buffer.alloc(0),
       unsignedTx: isSet(object.unsignedTx)
         ? Buffer.from(bytesFromBase64(object.unsignedTx))
@@ -10048,8 +10141,8 @@ export const PrepareTransactionResponse: MessageFns<PrepareTransactionResponse> 
 
   toJSON(message: PrepareTransactionResponse): unknown {
     const obj: any = {};
-    if (message.kind !== "") {
-      obj.kind = message.kind;
+    if (message.kind !== 0) {
+      obj.kind = transactionKindToJSON(message.kind);
     }
     if (message.from.length !== 0) {
       obj.from = base64FromBytes(message.from);
@@ -10065,7 +10158,7 @@ export const PrepareTransactionResponse: MessageFns<PrepareTransactionResponse> 
   },
   fromPartial(object: DeepPartial<PrepareTransactionResponse>): PrepareTransactionResponse {
     const message = createBasePrepareTransactionResponse();
-    message.kind = object.kind ?? "";
+    message.kind = object.kind ?? 0;
     message.from = object.from ?? Buffer.alloc(0);
     message.unsignedTx = object.unsignedTx ?? Buffer.alloc(0);
     return message;

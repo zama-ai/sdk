@@ -571,9 +571,23 @@ message RevokeDelegation {
   bytes contract_address = 1;
   bytes delegate_address = 2;
 }
+enum TransactionKind {
+  TRANSACTION_KIND_UNSPECIFIED = 0;
+  TRANSACTION_KIND_CONFIDENTIAL_TRANSFER = 1;
+  TRANSACTION_KIND_CONFIDENTIAL_TRANSFER_FROM = 2;
+  TRANSACTION_KIND_SET_OPERATOR = 3;
+  TRANSACTION_KIND_UNWRAP = 4;
+  TRANSACTION_KIND_UNWRAP_ALL = 5;
+  TRANSACTION_KIND_FINALIZE_UNWRAP = 6;
+  TRANSACTION_KIND_APPROVE_UNDERLYING = 7;
+  TRANSACTION_KIND_WRAP = 8;
+  TRANSACTION_KIND_TRANSFER_AND_CALL = 9;
+  TRANSACTION_KIND_DELEGATE_DECRYPTION = 10;
+  TRANSACTION_KIND_REVOKE_DELEGATION = 11;
+}
 // SDK output unchanged: no signature is produced and nothing is broadcast.
 message PrepareTransactionResponse {
-  string kind = 1;
+  TransactionKind kind = 1;
   bytes from = 2;
   // RLP-encoded unsigned EIP-1559 transaction.
   bytes unsigned_tx = 3;

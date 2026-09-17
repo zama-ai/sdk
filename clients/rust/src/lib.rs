@@ -51,6 +51,7 @@ pub use error::{RpcError, SdkError};
 pub use num_bigint::BigInt;
 pub use offline::{
     PrepareFees, PrepareOptions, PrepareTransaction, PreparedTransaction, Transaction,
+    TransactionKind,
 };
 pub use permits::{Offline, Permits, PreparePermit, PreparedPermit};
 pub use signer::{Signer, SigningRequest};

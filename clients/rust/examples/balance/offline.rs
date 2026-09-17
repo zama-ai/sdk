@@ -4,7 +4,9 @@ use alloy_rlp::Decodable;
 use alloy_signer::Signer;
 use alloy_signer_local::PrivateKeySigner;
 use anyhow::{Result, ensure};
-use zama_sdk_sidecar::{Address, PrepareTransaction, Sdk, Transaction, WalletAccount};
+use zama_sdk_sidecar::{
+    Address, PrepareTransaction, Sdk, Transaction, TransactionKind, WalletAccount,
+};
 
 pub async fn prepare_and_sign(
     sdk: &Sdk,
@@ -26,7 +28,10 @@ pub async fn prepare_and_sign(
             None,
         )
         .await?;
-    ensure!(prepared.kind == "SetOperator", "unexpected prepared kind");
+    ensure!(
+        prepared.kind == TransactionKind::SetOperator,
+        "unexpected prepared kind"
+    );
     ensure!(
         prepared.from == signer.address(),
         "prepared sender does not match signing key"

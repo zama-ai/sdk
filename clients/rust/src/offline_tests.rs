@@ -1,5 +1,5 @@
 use super::*;
-use crate::{PrepareFees, PrepareOptions, PrepareTransaction, Transaction};
+use crate::{PrepareFees, PrepareOptions, PrepareTransaction, Transaction, TransactionKind};
 
 #[tokio::test]
 async fn prepares_every_kind_with_exact_fields_and_optional_presence() {
@@ -12,7 +12,7 @@ async fn prepares_every_kind_with_exact_fields_and_optional_presence() {
                 .unwrap()
                 .push(PrepareTransactionRequest::decode(bytes).unwrap());
             response(generated::PrepareTransactionResponse {
-                kind: "SDKKind".into(),
+                kind: generated::TransactionKind::SetOperator as i32,
                 from: vec![9; 20],
                 unsigned_tx: vec![2, 0, 255, 128],
             })
@@ -116,7 +116,7 @@ async fn prepares_every_kind_with_exact_fields_and_optional_presence() {
             )
             .await
             .unwrap();
-        assert_eq!(result.kind, "SDKKind");
+        assert_eq!(result.kind, TransactionKind::SetOperator);
         assert_eq!(result.from, Address::repeat_byte(9));
         assert_eq!(result.unsigned_tx, vec![2, 0, 255, 128]);
     }
@@ -268,6 +268,53 @@ async fn preserves_sdk_validation_errors_and_empty_options() {
 }
 
 #[tokio::test]
+async fn rejects_unspecified_or_unknown_prepared_kind() {
+    for (kind, expected) in [
+        (
+            generated::TransactionKind::Unspecified as i32,
+            "unspecified prepared transaction kind",
+        ),
+        (99, "unknown prepared transaction kind"),
+    ] {
+        let server = Server::start(Arc::new(move |path, bytes| {
+            if path.ends_with("/PrepareTransaction") {
+                response(generated::PrepareTransactionResponse {
+                    kind,
+                    from: vec![9; 20],
+                    unsigned_tx: vec![2],
+                })
+            } else {
+                default_handler(path, bytes)
+            }
+        }))
+        .await;
+        let sdk = Client::connect(&server.socket)
+            .await
+            .unwrap()
+            .sdk(SdkConfig::new(11155111, "http://localhost:8545"))
+            .build()
+            .await
+            .unwrap();
+        let error = sdk
+            .offline()
+            .prepare(
+                PrepareTransaction {
+                    from: Address::repeat_byte(1),
+                    transaction: Transaction::RevokeDelegation {
+                        contract_address: Address::repeat_byte(2),
+                        delegate_address: Address::repeat_byte(3),
+                    },
+                },
+                None,
+            )
+            .await
+            .unwrap_err();
+        assert_eq!(error.to_string(), expected);
+        sdk.close().await.unwrap();
+    }
+}
+
+#[tokio::test]
 async fn preparation_honors_client_deadline() {
     let server = Server::start(Arc::new(|path, bytes| {
         if path.ends_with("/PrepareTransaction") {
@@ -316,7 +363,7 @@ async fn rejects_malformed_prepared_sender() {
     let server = Server::start(Arc::new(|path, bytes| {
         if path.ends_with("/PrepareTransaction") {
             response(generated::PrepareTransactionResponse {
-                kind: "SetOperator".into(),
+                kind: generated::TransactionKind::SetOperator as i32,
                 from: vec![1],
                 unsigned_tx: vec![2],
             })

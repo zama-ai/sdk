@@ -40,13 +40,13 @@ func TestOfflineEveryKindWire(t *testing.T) {
 		{RevokeDelegationRequest{from, token, to}, TransactionRevokeDelegation, `{"revokeDelegation":{"contractAddress":"AgAAAAAAAAAAAAAAAAAAAAAAAAA=","delegateAddress":"AwAAAAAAAAAAAAAAAAAAAAAAAAA="}}`},
 	}
 	for _, tt := range tests {
-		t.Run(string(tt.kind), func(t *testing.T) {
+		t.Run(tt.kind.String(), func(t *testing.T) {
 			requests := make(chan *pb.PrepareTransactionRequest, 1)
 			unsigned := []byte{2, 0, 255, 128}
 			client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 				if wire, ok := request.(*pb.PrepareTransactionRequest); ok {
 					requests <- wire
-					return &pb.PrepareTransactionResponse{Kind: string(tt.kind), From: from.Bytes(), UnsignedTx: unsigned}, nil
+					return &pb.PrepareTransactionResponse{Kind: pb.TransactionKind(tt.kind), From: from.Bytes(), UnsignedTx: unsigned}, nil
 				}
 				return &pb.CreateContextResponse{ContextId: "offline"}, nil
 			})
@@ -137,6 +137,28 @@ func TestOfflineRejectsNilRequestAndMalformedSender(t *testing.T) {
 	}
 	if _, err := sdk.PrepareTransaction(testContext(t), SetOperatorRequest{Until: nonce(1)}, nil); err == nil {
 		t.Fatal("malformed sender accepted")
+	}
+}
+
+func TestOfflineRejectsUnspecifiedOrUnknownKind(t *testing.T) {
+	tests := []struct {
+		kind pb.TransactionKind
+		want string
+	}{
+		{pb.TransactionKind_TRANSACTION_KIND_UNSPECIFIED, "prepared transaction has no kind"},
+		{pb.TransactionKind(99), "prepared transaction has an unknown kind"},
+	}
+	for _, tt := range tests {
+		client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+			if _, ok := request.(*pb.PrepareTransactionRequest); ok {
+				return &pb.PrepareTransactionResponse{Kind: tt.kind, From: common.Address{1}.Bytes(), UnsignedTx: []byte{2}}, nil
+			}
+			return &pb.CreateContextResponse{ContextId: "offline"}, nil
+		})
+		_, err := unsignedSDK(t, client).PrepareTransaction(testContext(t), SetOperatorRequest{Until: nonce(1)}, nil)
+		if err == nil || err.Error() != tt.want {
+			t.Fatalf("kind %d: got %v, want %s", tt.kind, err, tt.want)
+		}
 	}
 }
 

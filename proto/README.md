@@ -84,7 +84,7 @@ Amounts, gas limits and both EIP-1559 fee values are canonical base-10 strings, 
 
 `TransferAndCall.recipient_data` distinguishes omission from empty bytes. `DelegateDecryption.expiration_date_ms` omission keeps the SDK's permanent-delegation default; the SDK validates the minimum lead time. Go accepts `*time.Time` and rejects dates outside the millisecond range its time type can represent; Rust accepts `Option<u64>` milliseconds. Neither client chooses an expiry.
 
-The response carries the SDK's kind, sender and unsigned EIP-1559 bytes unchanged. This RPC signs nothing and broadcasts nothing. The caller verifies the sender and payload, signs with its own key or custodian, and broadcasts through its own provider. Permit preparation and registration stay separate RPCs.
+The response carries the SDK's kind as a `TransactionKind` enum, with the sender and unsigned EIP-1559 bytes unchanged. Native clients reject `TRANSACTION_KIND_UNSPECIFIED`. This RPC signs nothing and broadcasts nothing. The caller verifies the sender and payload, signs with its own key or custodian, and broadcasts through its own provider. Permit preparation and registration stay separate RPCs.
 
 Preparation uses the existing operation lifecycle and error trailers. The SDK method accepts no abort signal: cancellation ends the caller's wait, and started SDK work drains before context disposal or account changes. Requests are never replayed automatically.
 

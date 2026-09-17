@@ -28,21 +28,34 @@ type PrepareFees struct {
 	MaxPriorityFeePerGas *big.Int
 }
 
-type TransactionKind string
+// TransactionKind aliases the wire enum values; String renders the wire name.
+type TransactionKind int32
 
 const (
-	TransactionConfidentialTransfer     TransactionKind = "ConfidentialTransfer"
-	TransactionConfidentialTransferFrom TransactionKind = "ConfidentialTransferFrom"
-	TransactionSetOperator              TransactionKind = "SetOperator"
-	TransactionUnwrap                   TransactionKind = "Unwrap"
-	TransactionUnwrapAll                TransactionKind = "UnwrapAll"
-	TransactionFinalizeUnwrap           TransactionKind = "FinalizeUnwrap"
-	TransactionApproveUnderlying        TransactionKind = "ApproveUnderlying"
-	TransactionWrap                     TransactionKind = "Wrap"
-	TransactionTransferAndCall          TransactionKind = "TransferAndCall"
-	TransactionDelegateDecryption       TransactionKind = "DelegateDecryption"
-	TransactionRevokeDelegation         TransactionKind = "RevokeDelegation"
+	TransactionConfidentialTransfer     = TransactionKind(pb.TransactionKind_TRANSACTION_KIND_CONFIDENTIAL_TRANSFER)
+	TransactionConfidentialTransferFrom = TransactionKind(pb.TransactionKind_TRANSACTION_KIND_CONFIDENTIAL_TRANSFER_FROM)
+	TransactionSetOperator              = TransactionKind(pb.TransactionKind_TRANSACTION_KIND_SET_OPERATOR)
+	TransactionUnwrap                   = TransactionKind(pb.TransactionKind_TRANSACTION_KIND_UNWRAP)
+	TransactionUnwrapAll                = TransactionKind(pb.TransactionKind_TRANSACTION_KIND_UNWRAP_ALL)
+	TransactionFinalizeUnwrap           = TransactionKind(pb.TransactionKind_TRANSACTION_KIND_FINALIZE_UNWRAP)
+	TransactionApproveUnderlying        = TransactionKind(pb.TransactionKind_TRANSACTION_KIND_APPROVE_UNDERLYING)
+	TransactionWrap                     = TransactionKind(pb.TransactionKind_TRANSACTION_KIND_WRAP)
+	TransactionTransferAndCall          = TransactionKind(pb.TransactionKind_TRANSACTION_KIND_TRANSFER_AND_CALL)
+	TransactionDelegateDecryption       = TransactionKind(pb.TransactionKind_TRANSACTION_KIND_DELEGATE_DECRYPTION)
+	TransactionRevokeDelegation         = TransactionKind(pb.TransactionKind_TRANSACTION_KIND_REVOKE_DELEGATION)
 )
+
+func (k TransactionKind) String() string { return pb.TransactionKind(k).String() }
+
+func transactionKind(wire pb.TransactionKind) (TransactionKind, error) {
+	if wire == pb.TransactionKind_TRANSACTION_KIND_UNSPECIFIED {
+		return 0, errors.New("prepared transaction has no kind")
+	}
+	if _, known := pb.TransactionKind_name[int32(wire)]; !known {
+		return 0, errors.New("prepared transaction has an unknown kind")
+	}
+	return TransactionKind(wire), nil
+}
 
 type PreparedTransaction struct {
 	Kind       TransactionKind
@@ -102,7 +115,11 @@ func (s *SDKContext) PrepareTransaction(ctx context.Context, request Transaction
 	if len(response.From) != common.AddressLength {
 		return PreparedTransaction{}, errors.New("prepared transaction has invalid sender length")
 	}
-	return PreparedTransaction{Kind: TransactionKind(response.Kind), From: common.BytesToAddress(response.From), UnsignedTx: response.UnsignedTx}, nil
+	kind, err := transactionKind(response.Kind)
+	if err != nil {
+		return PreparedTransaction{}, err
+	}
+	return PreparedTransaction{Kind: kind, From: common.BytesToAddress(response.From), UnsignedTx: response.UnsignedTx}, nil
 }
 
 type ConfidentialTransferRequest struct {
