@@ -138,6 +138,19 @@ func TestEthereumSignerForwardsExplicitGasAndValue(t *testing.T) {
 	}
 }
 
+func TestEthereumSignerTreatsZeroGasAsEstimate(t *testing.T) {
+	backend := newTransactionBackend()
+	signer := transactionSigner(t, backend)
+	request := transactionRequest(signer)
+	request.Gas = big.NewInt(0)
+	if _, err := signer.WriteContract(t.Context(), request); err != nil {
+		t.Fatal(err)
+	}
+	if tx := backend.sent[0]; tx.Gas() == 0 || backend.count("EstimateGas") != 1 {
+		t.Fatalf("zero gas was not estimated: %v", tx)
+	}
+}
+
 func TestEthereumSignerEstimatesAbsentGasAndSendsZeroValue(t *testing.T) {
 	backend := newTransactionBackend()
 	signer := transactionSigner(t, backend)
