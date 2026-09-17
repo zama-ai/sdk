@@ -16,6 +16,7 @@ import { useVaultGroup } from "./use-vault-group";
 
 /** Configuration for {@link useGroupDeposit}. */
 export interface UseGroupDepositConfig {
+  /** The group to deposit into. */
   group: VaultGroupConfig;
 }
 

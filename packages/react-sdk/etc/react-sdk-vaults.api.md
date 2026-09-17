@@ -34,7 +34,6 @@ export function useActiveBatcher(config: UseActiveBatcherConfig, options?: Omit<
 
 // @public
 export interface UseActiveBatcherConfig {
-    // (undocumented)
     history: BatcherHistory;
 }
 
@@ -43,9 +42,7 @@ export function useActiveBatchers(config: UseActiveBatchersConfig, options?: Omi
 
 // @public
 export interface UseActiveBatchersConfig {
-    // (undocumented)
     direction: BatcherDirection;
-    // (undocumented)
     group: VaultGroupConfig;
 }
 
@@ -105,7 +102,6 @@ export function useGroupDeposit<TContext = unknown>(config: UseGroupDepositConfi
 
 // @public
 export interface UseGroupDepositConfig {
-    // (undocumented)
     group: VaultGroupConfig;
 }
 
@@ -114,7 +110,6 @@ export function useGroupRequestWithdrawal<TContext = unknown>(config: UseGroupRe
 
 // @public
 export interface UseGroupRequestWithdrawalConfig {
-    // (undocumented)
     group: VaultGroupConfig;
 }
 

@@ -34,6 +34,7 @@ export interface VaultMemberConfig {
   readonly vault: Address;
   /** The confidential wrapper of this vault's shares. */
   readonly share: Address;
+  /** This vault's batcher history, one entry per direction. */
   readonly batchers: Readonly<Record<BatcherDirection, BatcherHistory>>;
 }
 
@@ -72,6 +73,7 @@ export interface VaultGroupJoinOptions {
 
 /** What one leg's batcher reported. */
 export interface VaultGroupJoin {
+  /** The member this leg belongs to. */
   vaultId: string;
   /** The batcher it reached, as resolved at submission time. */
   batcher: Address;
@@ -125,6 +127,7 @@ function duplicate(values: readonly string[]): string | undefined {
 export class VaultGroup {
   /** The SDK instance this group reads and writes through. */
   readonly sdk: ZamaSDK;
+  /** Stable identifier for the group. */
   readonly id: string;
   /** The confidential asset every member takes deposits in. */
   readonly asset: Address;
@@ -173,6 +176,11 @@ export class VaultGroup {
     this.router = config.router ? new VaultRouter(sdk, config.router) : undefined;
   }
 
+  /**
+   * One member by its id.
+   *
+   * @throws if no member has that id. {@link ConfigurationError}
+   */
   member(vaultId: string): VaultMemberConfig {
     const member = this.vaults.find((candidate) => candidate.id === vaultId);
     if (!member) {

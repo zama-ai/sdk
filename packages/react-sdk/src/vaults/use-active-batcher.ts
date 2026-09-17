@@ -8,6 +8,7 @@ import { useQuery } from "../utils/query";
 
 /** Configuration for {@link useActiveBatcher}. */
 export interface UseActiveBatcherConfig {
+  /** The vault's batcher history for one direction. */
   history: BatcherHistory;
 }
 
