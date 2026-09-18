@@ -178,13 +178,6 @@ Install channels:
 - Beta: `npm i @zama-fhe/sdk@beta`
 - Alpha: `npm i @zama-fhe/sdk@alpha`
 
-Maintainer requirements:
-
-- Configure branch protection on `main` to require both `Vitest` and `Playwright` checks before merge.
-- Configure branch protection on `beta` and `alpha` with the same required checks.
-- Configure npm trusted publishers for `@zama-fhe/sdk` and `@zama-fhe/react-sdk` pointing to this repository's `release.yml` workflow.
-- Restrict creation/update of tags matching the release pattern (e.g. `v*`) to the release-bot identity, via a repo ruleset.
-
 ## Architecture Guidelines
 
 ### Key Design Principles
