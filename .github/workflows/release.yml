@@ -70,15 +70,18 @@ jobs:
         env:
           INPUT_TAG: ${{ inputs.publish-tag }}
         run: |
+          protected_branches="main beta alpha"
+          head_sha="$(git rev-parse HEAD)"
+
           # Reachable from a protected branch => it landed via a reviewed PR.
-          for branch in main beta alpha; do
+          for branch in ${protected_branches}; do
             if git merge-base --is-ancestor HEAD "origin/${branch}"; then
-              echo "Verified: $(git rev-parse HEAD) (tag '${INPUT_TAG}') is reachable from '${branch}'."
+              echo "Verified: ${head_sha} (tag '${INPUT_TAG}') is reachable from '${branch}'."
               exit 0
             fi
           done
 
-          echo "::error::Commit $(git rev-parse HEAD) (tag '${INPUT_TAG}') is not reachable from main, beta, or alpha. Refusing to publish from an unreviewed ref."
+          echo "::error::Commit ${head_sha} (tag '${INPUT_TAG}') is not reachable from any of: ${protected_branches}. Refusing to publish from an unreviewed ref."
           exit 1
 
       - name: Setup pnpm
