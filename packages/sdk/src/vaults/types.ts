@@ -43,7 +43,7 @@ export interface JoinOptions {
   skipBalanceCheck?: boolean;
 }
 
-/** Options for {@link Vault.deposit} and {@link Vault.requestRedeem}. */
+/** Options for {@link Vault.deposit} and {@link Vault.redeem}. */
 export interface VaultJoinOptions extends JoinOptions {
   /**
    * Account credited in the batch. Defaults to the connected wallet address.

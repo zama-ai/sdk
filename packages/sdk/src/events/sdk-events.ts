@@ -42,7 +42,10 @@ export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents
 
 /** Fields present on every SDK event; each concrete event extends this. */
 export interface BaseEvent {
-  /** Confidential token this event relates to, when the operation targets one. */
+  /**
+   * Contract this event relates to, when the operation targets one: the
+   * confidential token, or the vault batcher for {@link VaultSubmittedEvent}.
+   */
   tokenAddress?: Address;
   /** Unix epoch time (milliseconds) at which the event was emitted. */
   timestamp: number;

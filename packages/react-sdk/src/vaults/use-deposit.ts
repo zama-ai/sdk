@@ -12,6 +12,7 @@ import {
   type JoinResult,
   type VaultAddresses,
 } from "@zama-fhe/sdk/vaults";
+import { invalidateAfterSetOperator } from "@zama-fhe/sdk/query";
 import { invalidateOnceResolved } from "./invalidate-once-resolved";
 import { useVault } from "./use-vault";
 
@@ -24,7 +25,8 @@ export interface UseDepositConfig {
 /**
  * Deposit a plaintext amount into a vault, joining the current deposit batch.
  * Grants the deposit batcher an ERC-7984 operator approval first if one isn't
- * already active. Invalidates the deposit token's balance cache on success.
+ * already active. Invalidates the deposit token's balance and operator-status
+ * caches on success.
  *
  * @param config - The vault's addresses.
  * @param options - React Query mutation options.
@@ -45,12 +47,14 @@ export function useDeposit<TContext = unknown>(
     ...depositMutationOptions(vault),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
-      invalidateOnceResolved(vault.sdk, "deposit", vault.cAsset(), (cAsset) =>
+      invalidateOnceResolved(vault.sdk, "deposit", vault.cAsset(), (cAsset) => {
         invalidateAfterJoin(context.client, {
           batcherAddress: vault.depositBatcher.address,
           fromToken: cAsset.address,
-        }),
-      );
+        });
+        // The mutation may have granted the batcher an operator approval.
+        invalidateAfterSetOperator(context.client, cAsset.address);
+      });
       return options?.onSuccess?.(data, variables, onMutateResult, context);
     },
   }) as UseMutationResult<JoinResult, Error, DepositParams, TContext>;

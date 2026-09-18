@@ -4507,6 +4507,9 @@ export interface ClaimParams {
 export function createVault(sdk: ZamaSDK, addresses: VaultAddresses): Vault;
 
 // @public
+export function createVaultBatcher(sdk: ZamaSDK, address: Address): VaultBatcher;
+
+// @public
 export function currentBatchIdContract(batcher: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -11591,10 +11594,10 @@ export interface RecoverParams {
 }
 
 // @public
-export function requestRedeemMutationOptions(vault: Vault): MutationFactoryOptions<readonly ["zama.vault.requestRedeem", Address], RequestRedeemParams, JoinResult>;
+export function redeemMutationOptions(vault: Vault): MutationFactoryOptions<readonly ["zama.vault.redeem", Address], RedeemParams, JoinResult>;
 
 // @public
-export interface RequestRedeemParams extends VaultJoinOptions {
+export interface RedeemParams extends VaultJoinOptions {
     amount: bigint;
 }
 
@@ -12885,8 +12888,8 @@ export class Vault {
     cShare(): Promise<WrappedToken>;
     deposit(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult>;
     readonly depositBatcher: VaultBatcher;
+    redeem(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult>;
     readonly redeemBatcher: VaultBatcher;
-    requestRedeem(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult>;
     readonly sdk: ZamaSDK;
     vaultAddress(): Promise<Address>;
 }

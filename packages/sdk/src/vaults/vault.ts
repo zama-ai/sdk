@@ -1,5 +1,5 @@
 import { getAddress, type Address } from "viem";
-import { ConfigurationError } from "../errors";
+import { ConfigurationError, SignerNotConfiguredError } from "../errors";
 import { WrappedToken } from "../token";
 import type { ZamaSDK } from "../zama-sdk";
 import type { JoinResult, VaultAddresses, VaultJoinOptions } from "./types";
@@ -7,7 +7,7 @@ import { VaultBatcher } from "./vault-batcher";
 
 /**
  * A confidential ERC-4626 vault: one deposit batcher and one redeem batcher
- * behind ERC-20-style `deposit` and `requestRedeem` methods.
+ * behind ERC-20-style `deposit` and `redeem` methods.
  *
  * Claiming, quitting and batch state live on the two batchers directly —
  * `vault.depositBatcher.claim(batchId)`.
@@ -15,9 +15,9 @@ import { VaultBatcher } from "./vault-batcher";
 export class Vault {
   /** The SDK instance this vault reads and writes through. */
   readonly sdk: ZamaSDK;
-  /** The batcher deposits of the underlying asset join. */
+  /** Joined by deposits of the underlying asset. */
   readonly depositBatcher: VaultBatcher;
-  /** The batcher share redemptions join. */
+  /** Joined by share redemptions. */
   readonly redeemBatcher: VaultBatcher;
 
   // The promise is cached, not just the resolved value, so concurrent callers
@@ -91,9 +91,11 @@ export class Vault {
    * already active.
    *
    * @param amount - The plaintext amount to deposit.
+   * @throws before any approval is granted, if the batchers do not agree on
+   *   the vault. {@link ConfigurationError}
    */
   async deposit(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult> {
-    const token = await this.cAsset();
+    const [, token] = await Promise.all([this.vaultAddress(), this.cAsset()]);
     await this.#ensureOperator(
       "deposit",
       token,
@@ -113,15 +115,12 @@ export class Vault {
    *
    * @param amount - The plaintext amount of shares — ERC-4626 `redeem`, not
    *   `withdraw`, so this is denominated in shares, never in assets.
+   * @throws before any approval is granted, if the batchers do not agree on
+   *   the vault. {@link ConfigurationError}
    */
-  async requestRedeem(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult> {
-    const token = await this.cShare();
-    await this.#ensureOperator(
-      "requestRedeem",
-      token,
-      this.redeemBatcher.address,
-      options?.operatorUntil,
-    );
+  async redeem(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult> {
+    const [, token] = await Promise.all([this.vaultAddress(), this.cShare()]);
+    await this.#ensureOperator("redeem", token, this.redeemBatcher.address, options?.operatorUntil);
     return this.redeemBatcher.join(amount, options?.beneficiary, {
       skipBalanceCheck: options?.skipBalanceCheck,
     });
@@ -157,9 +156,7 @@ export class Vault {
     until: number | undefined,
   ): Promise<void> {
     if (!this.sdk.signer) {
-      // Nothing to check `isOperator` against; let the join raise instead, so
-      // the error names the operation the caller actually asked for.
-      return;
+      throw new SignerNotConfiguredError(operation);
     }
     const account = this.sdk.signer.requireWalletAccount(operation);
     const alreadyApproved = await token.isOperator(account.address, operator);

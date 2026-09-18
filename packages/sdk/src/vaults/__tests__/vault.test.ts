@@ -1,5 +1,5 @@
 import type { Address } from "viem";
-import { ConfigurationError } from "../../errors";
+import { ConfigurationError, SignerNotConfiguredError } from "../../errors";
 import { WrappedToken } from "../../token";
 import {
   beforeEach,
@@ -126,7 +126,7 @@ describe("Vault", () => {
       handle,
       inputProof,
     }) => {
-      mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN });
+      mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN, vault: VAULT_ADDRESS });
       mockJoinReceipt(provider, { batcher: DEPOSIT_BATCHER, account: userAddress });
       vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(false);
       const setOperator = vi
@@ -159,7 +159,7 @@ describe("Vault", () => {
       provider,
       userAddress,
     }) => {
-      mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN });
+      mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN, vault: VAULT_ADDRESS });
       mockJoinReceipt(provider, { batcher: DEPOSIT_BATCHER, account: userAddress });
       vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(true);
       const setOperator = vi.spyOn(WrappedToken.prototype, "setOperator");
@@ -170,6 +170,34 @@ describe("Vault", () => {
       expect(setOperator).not.toHaveBeenCalled();
     });
 
+    test("rejects a misconfigured batcher pair before granting any approval", async ({
+      sdk,
+      provider,
+      signer,
+    }) => {
+      // Batchers agree on `fromToken` but report a vault other than the configured one.
+      mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN, vault: OTHER_ADDRESS });
+      vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(false);
+      const setOperator = vi.spyOn(WrappedToken.prototype, "setOperator");
+
+      const vault = createVault(sdk, addresses());
+
+      await expect(vault.deposit(1_000n)).rejects.toThrow(ConfigurationError);
+      expect(setOperator).not.toHaveBeenCalled();
+      expect(signer.writeContract).not.toHaveBeenCalled();
+    });
+
+    test("throws without a configured signer, naming the operation", async ({
+      createSDK,
+      provider,
+    }) => {
+      mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN, vault: VAULT_ADDRESS });
+      const vault = createVault(createSDK({ signer: undefined }), addresses());
+      const error: unknown = await vault.deposit(1_000n).catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(SignerNotConfiguredError);
+      expect(error).toMatchObject({ operation: "deposit" });
+    });
+
     test("joins on behalf of an explicit beneficiary", async ({
       sdk,
       provider,
@@ -177,7 +205,7 @@ describe("Vault", () => {
       handle,
       inputProof,
     }) => {
-      mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN });
+      mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN, vault: VAULT_ADDRESS });
       mockJoinReceipt(provider, { batcher: DEPOSIT_BATCHER, account: OTHER_ADDRESS });
       vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(true);
 
@@ -190,19 +218,19 @@ describe("Vault", () => {
     });
   });
 
-  test("requestRedeem joins the redeem batcher using the share token's operator grant", async ({
+  test("redeem joins the redeem batcher using the share token's operator grant", async ({
     sdk,
     provider,
     signer,
     relayer,
     userAddress,
   }) => {
-    mockJoinBalance(provider, { fromToken: SHARE_TOKEN });
+    mockJoinBalance(provider, { fromToken: SHARE_TOKEN, vault: VAULT_ADDRESS });
     mockJoinReceipt(provider, { batcher: REDEEM_BATCHER, account: userAddress });
     vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(true);
 
     const vault = createVault(sdk, addresses());
-    await vault.requestRedeem(500n);
+    await vault.redeem(500n);
 
     expect(relayer.encryptValues).toHaveBeenCalledWith(
       expect.objectContaining({ contractAddress: REDEEM_BATCHER }),

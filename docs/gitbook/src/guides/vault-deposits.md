@@ -12,9 +12,9 @@ Core SDK usage imports from `@zama-fhe/sdk/vaults`; React hooks import from `@za
 ## The two layers
 
 - **`VaultBatcher`** mirrors one on-chain batcher contract directly, the way `Token` mirrors an ERC-7984 confidential token. A vault has two directions — deposit and redeem — each behind its own batcher contract.
-- **`Vault`** pairs a deposit batcher and a redeem batcher into one object with ERC-20-style methods (`deposit`, `requestRedeem`, …), the way `WrappedToken` builds on `Token`. It also automates a step you'd otherwise have to do by hand: granting the batcher an operator approval before it can pull the joined amount — see [Operator approvals](./operator-approvals.md).
+- **`Vault`** pairs a deposit batcher and a redeem batcher into one object with ERC-20-style methods (`deposit`, `redeem`, …), the way `WrappedToken` builds on `Token`. It also automates a step you'd otherwise have to do by hand: granting the batcher an operator approval before it can pull the joined amount — see [Operator approvals](./operator-approvals.md).
 
-Most apps should use `Vault` (`useVault` / `useDeposit` / `useRequestRedeem` in React). Reach for `VaultBatcher` (`useVaultBatcher` / `useJoin` / `useClaim` / …) directly only if you need a single direction, or want to control the operator grant yourself.
+Most apps should use `Vault` (`useVault` / `useDeposit` / `useRedeem` in React). Reach for `VaultBatcher` (`createVaultBatcher`, or `useVaultBatcher` / `useJoin` / `useClaim` / … in React) directly only if you need a single direction, or want to control the operator grant yourself.
 
 ## Steps
 
@@ -112,7 +112,7 @@ const { data: state } = useBatchState({
 
 | `BatchState` | What the user can do                            |
 | ------------ | ----------------------------------------------- |
-| `Pending`    | `deposit` / `requestRedeem`, or `quit`          |
+| `Pending`    | `deposit` / `redeem`, or `quit`                 |
 | `Dispatched` | Nothing — wait                                  |
 | `Finalized`  | `claim`                                         |
 | `Canceled`   | `quit` (or `recover`), to take the deposit back |
@@ -209,7 +209,7 @@ denominated in shares, not assets — ERC-4626 `redeem`, not `withdraw`:
 {% tab title="Core SDK" %}
 
 ```ts
-const { batchId } = await vault.requestRedeem(500n);
+const { batchId } = await vault.redeem(500n);
 
 await vault.redeemBatcher.dispatchBatch(); // once timeUntilDispatchable(batchId) is 0
 // …then wait for batchState(batchId) to reach BatchState.Finalized:
@@ -223,8 +223,8 @@ const balance = await cAsset.balanceOf(myAddress);
 {% tab title="React SDK" %}
 
 ```tsx
-const requestRedeem = useRequestRedeem({ addresses });
-requestRedeem.mutate({ amount: 500n });
+const redeem = useRedeem({ addresses });
+redeem.mutate({ amount: 500n });
 
 const dispatchBatch = useDispatchBatch({ address: vault.redeemBatcher.address });
 const claim = useClaim({ address: vault.redeemBatcher.address });
@@ -280,5 +280,5 @@ recover.mutate({ batchId, account: "0xDepositor" });
 ## Next steps
 
 - [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault) — the protocol side: how batching, dispatch and settlement work
-- [Operator approvals](./operator-approvals.md) — the approval model `vault.deposit()` / `vault.requestRedeem()` automate
+- [Operator approvals](./operator-approvals.md) — the approval model `vault.deposit()` / `vault.redeem()` automate
 - [Check balances](./check-balances.md) — reading confidential balances on `cAsset()` / `cShare()`

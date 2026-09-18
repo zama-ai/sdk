@@ -34,11 +34,16 @@ export function mockJoinReceipt(
   });
 }
 
-/** A join pre-flights the caller's balance on `fromToken` and throws without this. */
+/**
+ * A join pre-flights the caller's balance on `fromToken` and throws without this.
+ * Pass `vault` when joining through a `Vault`, which also checks both batchers report it.
+ */
 export function mockJoinBalance(
   provider: GenericProvider,
-  params: { fromToken: Address; balance?: bigint },
+  params: { fromToken: Address; vault?: Address; balance?: bigint },
 ): void {
-  vi.mocked(provider.readContract).mockResolvedValue(params.fromToken);
+  vi.mocked(provider.readContract).mockImplementation(async (config) =>
+    config.functionName === "vault" && params.vault ? params.vault : params.fromToken,
+  );
   vi.spyOn(Token.prototype, "balanceOf").mockResolvedValue(params.balance ?? 1_000_000_000n);
 }

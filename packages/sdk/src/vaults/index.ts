@@ -3,7 +3,7 @@
  *
  * @packageDocumentation
  */
-export { VaultBatcher } from "./vault-batcher";
+export { createVaultBatcher, VaultBatcher } from "./vault-batcher";
 export { createVault, Vault } from "./vault";
 export { BatchState } from "./types";
 export type { JoinOptions, JoinResult, VaultAddresses, VaultJoinOptions } from "./types";
@@ -49,7 +49,7 @@ export {
   joinMutationOptions,
   quitMutationOptions,
   recoverMutationOptions,
-  requestRedeemMutationOptions,
+  redeemMutationOptions,
   timeUntilDispatchableQueryOptions,
   vaultQueryKeys,
   type BatchStateQueryConfig,
@@ -59,6 +59,6 @@ export {
   type JoinParams,
   type QuitParams,
   type RecoverParams,
-  type RequestRedeemParams,
+  type RedeemParams,
   type TimeUntilDispatchableQueryConfig,
 } from "./query";

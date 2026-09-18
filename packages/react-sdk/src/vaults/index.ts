@@ -6,7 +6,7 @@
 export { useVault } from "./use-vault";
 export { useVaultBatcher } from "./use-vault-batcher";
 export { useDeposit, type UseDepositConfig } from "./use-deposit";
-export { useRequestRedeem, type UseRequestRedeemConfig } from "./use-request-redeem";
+export { useRedeem, type UseRedeemConfig } from "./use-redeem";
 export { useJoin, type UseJoinConfig } from "./use-join";
 export { useClaim, type UseClaimConfig } from "./use-claim";
 export { useQuit, type UseQuitConfig } from "./use-quit";

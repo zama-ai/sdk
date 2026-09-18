@@ -12,7 +12,7 @@ import { JoinParams } from '@zama-fhe/sdk/vaults';
 import { JoinResult } from '@zama-fhe/sdk/vaults';
 import { QuitParams } from '@zama-fhe/sdk/vaults';
 import { RecoverParams } from '@zama-fhe/sdk/vaults';
-import { RequestRedeemParams } from '@zama-fhe/sdk/vaults';
+import { RedeemParams } from '@zama-fhe/sdk/vaults';
 import { TransactionResult } from '@zama-fhe/sdk';
 import { UseMutationOptions } from '@tanstack/react-query';
 import { UseMutationResult } from '@tanstack/react-query';
@@ -98,10 +98,10 @@ export interface UseRecoverConfig {
 }
 
 // @public
-export function useRequestRedeem<TContext = unknown>(config: UseRequestRedeemConfig, options?: UseMutationOptions<JoinResult, Error, RequestRedeemParams, TContext>): UseMutationResult<JoinResult, Error, RequestRedeemParams, TContext>;
+export function useRedeem<TContext = unknown>(config: UseRedeemConfig, options?: UseMutationOptions<JoinResult, Error, RedeemParams, TContext>): UseMutationResult<JoinResult, Error, RedeemParams, TContext>;
 
 // @public
-export interface UseRequestRedeemConfig {
+export interface UseRedeemConfig {
     addresses: VaultAddresses;
 }
 

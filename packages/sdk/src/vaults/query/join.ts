@@ -13,7 +13,7 @@ export interface JoinParams extends JoinOptions {
 
 /**
  * Builds TanStack Query mutation options for {@link VaultBatcher.join | joining} a batch directly.
- * Low-level — most apps should use `depositMutationOptions` / `requestRedeemMutationOptions` instead.
+ * Low-level — most apps should use `depositMutationOptions` / `redeemMutationOptions` instead.
  */
 export function joinMutationOptions(
   batcher: VaultBatcher,

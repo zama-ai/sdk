@@ -444,8 +444,23 @@ export class VaultBatcher {
       signer: this.#requireSigner(operation),
       provider: this.sdk.provider,
       config,
-      emit: (input) => this.sdk.emitEvent(input),
+      emit: (input) => this.sdk.emitEvent(input, this.address),
       logger: this.sdk.logger,
     });
   }
+}
+
+/**
+ * Create a {@link VaultBatcher} bound to `sdk` for the batcher contract at `address`.
+ *
+ * @example
+ * ```ts
+ * import { createVaultBatcher } from "@zama-fhe/sdk/vaults";
+ *
+ * const depositBatcher = createVaultBatcher(sdk, "0xDepositBatcher");
+ * const { batchId } = await depositBatcher.join(1_000_000n);
+ * ```
+ */
+export function createVaultBatcher(sdk: ZamaSDK, address: Address): VaultBatcher {
+  return new VaultBatcher(sdk, address);
 }

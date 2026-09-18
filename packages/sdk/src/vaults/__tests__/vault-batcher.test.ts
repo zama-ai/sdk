@@ -1,6 +1,7 @@
 import type { EncryptValuesReturnType } from "@fhevm/sdk/actions/encrypt";
 import type { Address } from "viem";
 import { InsufficientConfidentialBalanceError, SignerNotConfiguredError } from "../../errors";
+import type { ZamaSDKEvent } from "../../events/sdk-events";
 import {
   describe,
   expect,
@@ -11,7 +12,7 @@ import {
   vi,
 } from "../../test-fixtures";
 import { BatchState } from "../types";
-import { VaultBatcher } from "../vault-batcher";
+import { createVaultBatcher, VaultBatcher } from "../vault-batcher";
 
 const BATCHER_ADDRESS = "0x7777777777777777777777777777777777777777" as Address;
 const OTHER_ADDRESS = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
@@ -20,7 +21,8 @@ const ZERO_ENCRYPTED = `0x${"00".repeat(32)}` as const;
 
 describe("VaultBatcher", () => {
   test("checksums the batcher address", ({ sdk }) => {
-    const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+    const batcher = createVaultBatcher(sdk, BATCHER_ADDRESS.toLowerCase() as Address);
+    expect(batcher).toBeInstanceOf(VaultBatcher);
     expect(batcher.address).toBe(BATCHER_ADDRESS);
   });
 
@@ -47,6 +49,28 @@ describe("VaultBatcher", () => {
       });
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "join", args: [userAddress, handle, inputProof] }),
+      );
+    });
+
+    test("tags the submitted event with the batcher address", async ({
+      createSDK,
+      provider,
+      userAddress,
+      events,
+    }) => {
+      const received: ZamaSDKEvent[] = [];
+      const sdk = createSDK({ onEvent: (event) => received.push(event) });
+      mockJoinBalance(provider, { fromToken: FROM_TOKEN });
+      mockJoinReceipt(provider, { batcher: BATCHER_ADDRESS, account: userAddress });
+
+      await new VaultBatcher(sdk, BATCHER_ADDRESS).join(1_000n);
+
+      expect(received).toContainEqual(
+        expect.objectContaining({
+          type: events.VaultSubmitted,
+          vaultOperation: "join",
+          tokenAddress: BATCHER_ADDRESS,
+        }),
       );
     });
 
