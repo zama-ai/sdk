@@ -1,6 +1,7 @@
 package sidecar
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"math/big"
@@ -15,16 +16,28 @@ import (
 
 const transactionTestKey = "0000000000000000000000000000000000000000000000000000000000000001"
 
+// fakeDataError mimics go-ethereum rpc.jsonError, the shape nodes use to attach a code and raw revert bytes to an RPC error.
+type fakeDataError struct {
+	msg  string
+	code int
+	data any
+}
+
+func (e *fakeDataError) Error() string  { return e.msg }
+func (e *fakeDataError) ErrorCode() int { return e.code }
+func (e *fakeDataError) ErrorData() any { return e.data }
+
 type transactionBackend struct {
-	mu         sync.Mutex
-	baseFee    *big.Int
-	nonce      uint64
-	calls      map[string]int
-	estimated  ethereum.CallMsg
-	sent       []*types.Transaction
-	sendErr    error
-	beforeSend func(context.Context)
-	onNonce    func()
+	mu          sync.Mutex
+	baseFee     *big.Int
+	nonce       uint64
+	calls       map[string]int
+	estimated   ethereum.CallMsg
+	sent        []*types.Transaction
+	sendErr     error
+	estimateErr error
+	beforeSend  func(context.Context)
+	onNonce     func()
 }
 
 func newTransactionBackend() *transactionBackend {
@@ -72,7 +85,11 @@ func (b *transactionBackend) EstimateGas(_ context.Context, msg ethereum.CallMsg
 	b.record("EstimateGas")
 	b.mu.Lock()
 	b.estimated = msg
+	err := b.estimateErr
 	b.mu.Unlock()
+	if err != nil {
+		return 0, err
+	}
 	return 50000, nil
 }
 func (b *transactionBackend) TransactionByHash(context.Context, common.Hash) (*types.Transaction, bool, error) {
@@ -298,6 +315,87 @@ func TestEthereumSignerConcurrentWritesAreNotSerialized(t *testing.T) {
 	group.Wait()
 	if len(backend.sent) != 2 || backend.count("PendingNonceAt") != 2 {
 		t.Fatalf("both writes must query the node: %v", backend.calls)
+	}
+}
+
+func TestEthereumSignerReportsExecutionRevertWithData(t *testing.T) {
+	backend := newTransactionBackend()
+	backend.estimateErr = &fakeDataError{msg: "execution reverted: AlreadyDelegatedOrRevokedInSameBlock()", code: 3, data: "0xdeadbeef"}
+	signer := transactionSigner(t, backend)
+	_, err := signer.WriteContract(t.Context(), transactionRequest(signer))
+	var revert *ExecutionRevertError
+	if !errors.As(err, &revert) {
+		t.Fatalf("revert not reported: %v", err)
+	}
+	if want := []byte{0xde, 0xad, 0xbe, 0xef}; !bytes.Equal(revert.Data, want) {
+		t.Fatalf("revert data lost: %x", revert.Data)
+	}
+	if len(backend.sent) != 0 {
+		t.Fatal("reverting estimation still broadcast")
+	}
+}
+
+func TestEthereumSignerReportsExecutionRevertWithoutData(t *testing.T) {
+	for name, dataErr := range map[string]error{
+		"nil data":     &fakeDataError{msg: "execution reverted", code: 3, data: nil},
+		"non-hex data": &fakeDataError{msg: "execution reverted", code: 3, data: "not hex"},
+		"message only": errors.New("execution reverted: foo"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			backend := newTransactionBackend()
+			backend.estimateErr = dataErr
+			signer := transactionSigner(t, backend)
+			_, err := signer.WriteContract(t.Context(), transactionRequest(signer))
+			var revert *ExecutionRevertError
+			if !errors.As(err, &revert) {
+				t.Fatalf("revert not reported: %v", err)
+			}
+			if len(revert.Data) != 0 {
+				t.Fatalf("revert data invented: %x", revert.Data)
+			}
+			if len(backend.sent) != 0 {
+				t.Fatal("reverting estimation still broadcast")
+			}
+		})
+	}
+}
+
+func TestEthereumSignerDoesNotReportRevertForNonRevertRPCErrors(t *testing.T) {
+	for name, dataErr := range map[string]error{
+		"insufficient funds, code -32000, no data": &fakeDataError{
+			msg: "insufficient funds for gas * price + value", code: -32000, data: nil,
+		},
+		"execution reverted mid-message, code -32000": &fakeDataError{
+			msg: "header not found: execution reverted while fetching", code: -32000, data: nil,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			backend := newTransactionBackend()
+			backend.estimateErr = dataErr
+			signer := transactionSigner(t, backend)
+			_, err := signer.WriteContract(t.Context(), transactionRequest(signer))
+			var revert *ExecutionRevertError
+			if errors.As(err, &revert) {
+				t.Fatalf("non-revert RPC error misreported as revert: %v", err)
+			}
+			if len(backend.sent) != 0 {
+				t.Fatal("failed estimation still broadcast")
+			}
+		})
+	}
+}
+
+func TestEthereumSignerLeavesOtherEstimationErrorsUnwrapped(t *testing.T) {
+	backend := newTransactionBackend()
+	backend.estimateErr = errors.New("connection reset")
+	signer := transactionSigner(t, backend)
+	_, err := signer.WriteContract(t.Context(), transactionRequest(signer))
+	var revert *ExecutionRevertError
+	if errors.As(err, &revert) {
+		t.Fatalf("unrelated error misreported as revert: %v", err)
+	}
+	if err == nil || err.Error() != "connection reset" {
+		t.Fatalf("unrelated estimation error changed: %v", err)
 	}
 }
 

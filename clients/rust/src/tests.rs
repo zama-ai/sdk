@@ -592,12 +592,14 @@ async fn alloy_signer_preserves_structured_errors_on_the_channel() {
             message: "Retry later.".into(),
             retryable: true,
             retry_after_seconds: Some(9),
+            revert_data: None,
         },
         crate::SdkError {
             code: "WALLET_ACCOUNT_NOT_READY".into(),
             message: "Wallet account is still loading.".into(),
             retryable: true,
             retry_after_seconds: None,
+            revert_data: None,
         },
     ];
     let signer = FailingAlloySigner {
@@ -717,6 +719,7 @@ async fn signer_channel_routes_concurrent_callbacks_rejection_and_cancellation()
                         message: "rejected".into(),
                         retryable: false,
                         retry_after_seconds: None,
+                        revert_data: None,
                     }),
                     "cancel" => {
                         let _drop = OnDrop(dropped);
@@ -896,5 +899,11 @@ mod storage_tests;
 #[path = "encryption_tests.rs"]
 mod encryption_tests;
 
+#[path = "decryption_tests.rs"]
+mod decryption_tests;
+
 #[path = "offline_tests.rs"]
 mod offline_tests;
+
+#[path = "delegation_tests.rs"]
+mod delegation_tests;

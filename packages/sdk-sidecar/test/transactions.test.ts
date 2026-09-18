@@ -1,5 +1,5 @@
 import { BaseSigner, SigningRejectedError, Token, type WriteContractConfig } from "@zama-fhe/sdk";
-import { encodeFunctionData, parseAbi } from "viem";
+import { encodeErrorResult, encodeFunctionData, getAddress, parseAbi } from "viem";
 import { expect, test, vi } from "vitest";
 import { bytes, json } from "../src/encoding.js";
 import { errorDetails, TransactionCallbackError } from "../src/errors.js";
@@ -40,6 +40,23 @@ const transactionHash = (value = bytes(hash)): Result => ({
   transactionHash: value,
 });
 const signature = (value: Buffer): Result => ({ $case: "signature", signature: value });
+const executionRevert = (data: Buffer, message = "execution reverted"): Result => ({
+  $case: "executionRevert",
+  executionRevert: { data, message },
+});
+// A write whose ABI declares the custom error the node reverted with.
+const revertConfig = {
+  ...config,
+  abi: parseAbi([
+    "error Cooldown(address who, uint256 blockNumber)",
+    "function store(uint256 amount, (address owner, int256 delta) info, bytes payload) payable",
+  ]),
+} as const;
+const cooldown = encodeErrorResult({
+  abi: revertConfig.abi,
+  errorName: "Cooldown",
+  args: [target, 7n],
+});
 const failure = (error: unknown): Result => ({ $case: "error", error: errorDetails(error) });
 
 function setup() {
@@ -144,6 +161,58 @@ test.each([
     retryable: false,
   });
   h.signer.dispose();
+});
+
+test.each([
+  {
+    name: "decoded against the request ABI",
+    data: cooldown,
+    message: `Execution reverted in store on ${target}: Cooldown(${json([getAddress(target), 7n])})`,
+    cause: {
+      data: { errorName: "Cooldown", args: [getAddress(target), 7n] },
+      raw: cooldown,
+      signature: cooldown.slice(0, 10),
+    },
+  },
+  {
+    name: "undecodable against the request ABI",
+    data: "0xdeadbeef0000000000000000000000000000000000000000000000000000000000000001",
+    message: `Execution reverted in store on ${target}: unrecognized error 0xdeadbeef`,
+    cause: {
+      data: undefined,
+      raw: "0xdeadbeef0000000000000000000000000000000000000000000000000000000000000001",
+      signature: "0xdeadbeef",
+    },
+  },
+  {
+    name: "empty",
+    data: "0x",
+    message: `Execution reverted in store on ${target}: execution reverted`,
+    cause: { data: undefined, raw: "0x", signature: undefined },
+  },
+])("a pre-broadcast revert with data $name fails the write for certain", async (item) => {
+  const h = setup();
+  try {
+    h.signer.track("revert");
+    const pending = h.write("revert", revertConfig);
+    const settled = pending.catch((error: unknown) => error);
+    h.reply(0, executionRevert(Buffer.from(item.data.slice(2), "hex")));
+    const error = await settled;
+    expect(error).toBeInstanceOf(TransactionCallbackError);
+    expect(error).toMatchObject({ code: "TRANSACTION_REVERTED", retryable: false });
+    expect((error as Error).message).toBe(item.message);
+    expect((error as Error).cause).toEqual(item.cause);
+    expect(errorDetails(error)).toEqual({
+      code: "TRANSACTION_REVERTED",
+      message: item.message,
+      retryable: false,
+      retryAfterSeconds: undefined,
+    });
+    // Nothing was broadcast, so a later cancellation has no uncertain outcome to report.
+    expect(errorDetails(h.signer.abortReason("revert"))).toMatchObject({ code: "CANCELLED" });
+  } finally {
+    h.signer.dispose();
+  }
 });
 
 test("a wallet write error keeps an invalid retry hint classified as an invalid argument", async () => {

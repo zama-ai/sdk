@@ -117,10 +117,11 @@ func (s *SDKContext) Encrypt(ctx context.Context, params EncryptParams, options 
 	}
 	result := &EncryptResult{EncryptedValues: make([]common.Hash, len(response.EncryptedValues)), InputProof: response.InputProof}
 	for i, value := range response.EncryptedValues {
-		if len(value) != common.HashLength {
-			return nil, errors.New("invalid encrypted value in response")
+		hash, err := hashFromWire(value, "invalid encrypted value in response")
+		if err != nil {
+			return nil, err
 		}
-		result.EncryptedValues[i] = common.BytesToHash(value)
+		result.EncryptedValues[i] = hash
 	}
 	return result, nil
 }

@@ -2,7 +2,7 @@
 
 The signer channel lets your native wallet sign and broadcast a contract write requested by `@zama-fhe/sdk`. Your wallet returns the transaction hash. The TypeScript SDK waits for the receipt and continues its workflow.
 
-This capability belongs to the maintained beta sidecar. Token and delegation transaction RPCs are not exposed yet. The balance examples configure transaction-capable wallets; SDK-backed integration tests exercise writes through `Token.setOperator`. A live write step will use the public token/delegation API once available.
+This capability belongs to the maintained beta sidecar. Token transaction RPCs are not exposed yet; on-chain delegation writes are (see [`DelegateDecryption`/`RevokeDelegation`](DELEGATIONS.md)). The balance examples configure transaction-capable wallets; SDK-backed integration tests exercise writes through `Token.setOperator`. A live token write step will use the public token API once available.
 
 ## Go wallet setup
 
@@ -38,6 +38,12 @@ Both native request types include operation/action IDs and the wallet's account/
 
 `value` preserves absence separately from explicit zero: Go uses nullable `*big.Int`; Rust uses `Option<BigInt>`. For `gas`, Go treats omitted and zero alike and lets `bind/v2` estimate, because a zero gas limit means automatic estimation there; Rust estimates only when `gas` is omitted and forwards an explicit zero unchanged. The built-in adapters require values to fit `uint256` and gas to fit `uint64`. A custom wallet can apply its own supported transaction policy. Fees and nonces belong to the native wallet because they are not fields of `GenericSigner.writeContract`.
 
+## Pre-broadcast reverts
+
+The node can reject a write during gas estimation, before anything is broadcast. Built-in adapters detect this and forward the node's revert data instead of a broadcast failure: the Go adapter returns `*ExecutionRevertError{Data, Cause}` from `WriteContractFunc`; the Rust adapter returns `SdkError::execution_reverted(message, data)`. A custom wallet callback does the same to get this treatment; any other pre-broadcast failure keeps `SIGNING_FAILED`.
+
+The bridge relays this as an `execution_revert` signer reply. The TypeScript SDK turns it into a certain `TRANSACTION_REVERTED` failure with the revert data decoded against the request ABI when possible, the same as it treats any other reverted write. Hash tracking and the `TRANSACTION_OUTCOME_UNKNOWN` rules below are unchanged: an `execution_revert` reply means nothing was broadcast, so there is no hash to reconcile.
+
 ## Failure and cancellation
 
 | Situation                                                                         | Behavior                                                                                                                                                                                                                                                        |
@@ -45,6 +51,7 @@ Both native request types include operation/action IDs and the wallet's account/
 | Custom callback rejects the write                                                 | Return `SIGNING_REJECTED`; no broadcast is attempted.                                                                                                                                                                                                           |
 | Account or chain mismatch                                                         | Built-in adapters stop before any RPC call with `SIGNING_FAILED` or `CHAIN_MISMATCH`.                                                                                                                                                                           |
 | Failure before submission                                                         | Certain `SIGNING_FAILED` with the underlying cause; the adapter does not retry.                                                                                                                                                                                 |
+| Node rejects the simulated write (gas estimation)                                 | Certain `TRANSACTION_REVERTED` with the revert data decoded against the request ABI when possible; nothing was broadcast.                                                                                                                                       |
 | Send fails or its outcome is lost                                                 | Uncertain `TRANSACTION_OUTCOME_UNKNOWN` with the signed hash; reconcile before the next write.                                                                                                                                                                  |
 | Pending write loses its signer channel                                            | The bridge reports nonretryable `TRANSACTION_OUTCOME_UNKNOWN`.                                                                                                                                                                                                  |
 | Invalid or mismatched transaction reply                                           | The bridge reports nonretryable `TRANSACTION_OUTCOME_UNKNOWN`.                                                                                                                                                                                                  |
