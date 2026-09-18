@@ -405,3 +405,148 @@ test.each([
     await runtime.close();
   }
 });
+
+async function broadcastRuntime() {
+  let created: ReturnType<typeof fixture> | undefined;
+  const runtime = new SidecarRuntime(async (_, signer) => {
+    created = fixture(signer);
+    return { sdk: created.sdk, storageIdentities: [] };
+  }, createCoordinator());
+  const contextId = await runtime.createContext(contextRequest);
+  const stream = new FakeStream<SignerServerMessage>();
+  const signer = runtime.attachSigner(contextId, stream as unknown as SignerStream);
+  const receipt = Promise.withResolvers<unknown>();
+  vi.mocked(created!.provider.waitForTransactionReceipt).mockReturnValue(receipt.promise as never);
+  const setOperator = (operationId: string, caller: AbortSignal) =>
+    runtime.execute({ contextId, operationId }, caller, () =>
+      new Token(created!.sdk, target).setOperator(account.address, 0),
+    );
+  const replyHash = async () => {
+    await vi.waitFor(() => expect(frames(stream.messages, "action")).toHaveLength(1));
+    const action = frames(stream.messages, "action")[0]!.action;
+    signer.reply({
+      operationId: action.operationId,
+      actionId: action.actionId,
+      result: transactionHash(),
+    });
+    await vi.waitFor(() =>
+      expect(created!.provider.waitForTransactionReceipt).toHaveBeenCalledWith(hash),
+    );
+  };
+  return { runtime, contextId, stream, signer, receipt, setOperator, replyHash };
+}
+
+test("cancelling while the SDK awaits a receipt reports the broadcast hash as uncertain", async () => {
+  const h = await broadcastRuntime();
+  const caller = new AbortController();
+  try {
+    const settled = h.setOperator("broadcast", caller.signal).catch((error: unknown) => error);
+    await h.replyHash();
+    caller.abort();
+    expect(errorDetails(await settled)).toEqual({
+      code: "TRANSACTION_OUTCOME_UNKNOWN",
+      message: expect.stringContaining(hash),
+      retryable: false,
+      retryAfterSeconds: undefined,
+    });
+  } finally {
+    h.receipt.resolve({ logs: [] });
+    await h.runtime.close();
+  }
+});
+
+test.each(["account update", "context close"] as const)(
+  "%s while the SDK awaits a receipt reports the broadcast hash as uncertain",
+  async (trigger) => {
+    const h = await broadcastRuntime();
+    try {
+      const settled = h
+        .setOperator("broadcast", new AbortController().signal)
+        .catch((error: unknown) => error);
+      await h.replyHash();
+      const draining =
+        trigger === "account update"
+          ? h.runtime.updateAccount({
+              contextId: h.contextId,
+              account: { address: bytes(target), chainId: 31337n },
+            })
+          : h.runtime.closeContext(h.contextId);
+      expect(errorDetails(await settled)).toEqual({
+        code: "TRANSACTION_OUTCOME_UNKNOWN",
+        message: expect.stringContaining(hash),
+        retryable: false,
+        retryAfterSeconds: undefined,
+      });
+      h.receipt.resolve({ logs: [] });
+      await draining;
+    } finally {
+      h.receipt.resolve({ logs: [] });
+      await h.runtime.close();
+    }
+  },
+);
+
+test("a settled operation releases its hash so a later cancellation reports CANCELLED", async () => {
+  const h = await broadcastRuntime();
+  const caller = new AbortController();
+  try {
+    const pending = h.setOperator("settled", new AbortController().signal);
+    await h.replyHash();
+    h.receipt.resolve({ logs: [] });
+    await pending;
+    await vi.waitFor(() =>
+      expect(errorDetails(h.signer.abortReason("settled"))).toMatchObject({ code: "CANCELLED" }),
+    );
+    const settled = h.runtime
+      .execute(
+        { contextId: h.contextId, operationId: "plain" },
+        caller.signal,
+        (_sdk, signal) =>
+          new Promise((_resolve, reject) =>
+            signal.addEventListener("abort", () => reject(signal.reason), { once: true }),
+          ),
+      )
+      .catch((error: unknown) => error);
+    caller.abort();
+    expect(errorDetails(await settled)).toMatchObject({ code: "CANCELLED", retryable: false });
+  } finally {
+    await h.runtime.close();
+  }
+});
+
+test("cancelling a second write still names the transaction already broadcast", async () => {
+  let signer: RemoteSigner | undefined;
+  const runtime = new SidecarRuntime(async (_, remote) => {
+    signer = remote;
+    return { sdk: fixture(remote).sdk, storageIdentities: [] };
+  }, createCoordinator());
+  const id = await runtime.createContext(contextRequest);
+  const stream = new FakeStream<SignerServerMessage>();
+  runtime.attachSigner(id, stream as unknown as SignerStream);
+  const caller = new AbortController();
+  try {
+    const settled = runtime
+      .execute({ contextId: id, operationId: "two-writes" }, caller.signal, async () => {
+        await signer!.writeContract(config);
+        return signer!.writeContract(config);
+      })
+      .catch((error: unknown) => error);
+    await vi.waitFor(() => expect(frames(stream.messages, "action")).toHaveLength(1));
+    const first = frames(stream.messages, "action")[0]!.action;
+    signer!.reply({
+      operationId: first.operationId,
+      actionId: first.actionId,
+      result: transactionHash(),
+    });
+    await vi.waitFor(() => expect(frames(stream.messages, "action")).toHaveLength(2));
+    caller.abort();
+    expect(errorDetails(await settled)).toEqual({
+      code: "TRANSACTION_OUTCOME_UNKNOWN",
+      message: expect.stringContaining(hash),
+      retryable: false,
+      retryAfterSeconds: undefined,
+    });
+  } finally {
+    await runtime.close();
+  }
+});

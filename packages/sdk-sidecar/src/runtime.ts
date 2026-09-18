@@ -215,6 +215,7 @@ export class SidecarRuntime {
     const done = Promise.resolve().then(() =>
       options.public ? execute() : this.coordinate(storageKeys, controller.signal, execute),
     );
+    context.signer?.track(reference.operationId);
     context.operations.set(reference.operationId, { controller, done });
     const abortResult = Promise.withResolvers<never>();
     const rejectCancelled = () => abortResult.reject(controller.signal.reason);
@@ -222,6 +223,7 @@ export class SidecarRuntime {
     void done
       .finally(() => {
         context.operations.delete(reference.operationId);
+        context.signer?.release(reference.operationId);
         signal.removeEventListener("abort", abort);
         controller.signal.removeEventListener("abort", rejectCancelled);
       })

@@ -87,6 +87,8 @@ export class RemoteSigner extends BaseSigner {
     }
   });
   #pending = new Map<string, Pending>();
+  // Hashes of live operations only; they outlive the write because the SDK then awaits a receipt.
+  #broadcast = new Map<string, Hex[]>();
   #onDisconnect: (operationId: string, reason: Error) => void;
   constructor(
     account: WalletAccount | undefined,
@@ -104,11 +106,29 @@ export class RemoteSigner extends BaseSigner {
     return false;
   }
   abortReason(operationId: string): Error {
-    return this.#hasPendingWrite(operationId)
-      ? transactionOutcomeUnknown(
-          "Operation cancelled after a transaction was requested; the wallet may have broadcast it.",
-        )
-      : cancelled();
+    const hashes = this.#broadcast.get(operationId) ?? [];
+    const pending = this.#hasPendingWrite(operationId);
+    if (hashes.length === 0) {
+      return pending
+        ? transactionOutcomeUnknown(
+            "Operation cancelled after a transaction was requested; the wallet may have broadcast it.",
+          )
+        : cancelled();
+    }
+    const subject =
+      hashes.length > 1 ? `transactions ${hashes.join(", ")} were` : `transaction ${hashes[0]} was`;
+    const receipts = hashes.length > 1 ? "their receipts" : "its receipt";
+    return transactionOutcomeUnknown(
+      pending
+        ? `Operation cancelled after ${subject} broadcast and a further transaction was requested; check ${receipts} before retrying.`
+        : `Operation cancelled after ${subject} broadcast; check ${receipts} before retrying.`,
+    );
+  }
+  track(operationId: string): void {
+    this.#broadcast.set(operationId, []);
+  }
+  release(operationId: string): void {
+    this.#broadcast.delete(operationId);
   }
   attach(stream: SignerStream): void {
     if (this.#connection.connected) {
@@ -151,7 +171,11 @@ export class RemoteSigner extends BaseSigner {
     this.#pending.delete(reply.actionId);
     pending.dispose();
     try {
-      pending.resolve(pending.kind.settle(reply.result));
+      const settled = pending.kind.settle(reply.result);
+      if (pending.kind === contractWrite) {
+        this.#broadcast.get(pending.operationId)?.push(settled);
+      }
+      pending.resolve(settled);
     } catch (error) {
       pending.reject(error as Error);
     }
@@ -238,6 +262,7 @@ export class RemoteSigner extends BaseSigner {
   override dispose(): void {
     this.#connection.close();
     this.#rejectAll(cancelled());
+    this.#broadcast.clear();
     super.dispose();
   }
 }
