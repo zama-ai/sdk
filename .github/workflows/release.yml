@@ -74,10 +74,17 @@ jobs:
           head_sha="$(git rev-parse HEAD)"
 
           # Reachable from a protected branch => it landed via a reviewed PR.
+          # --is-ancestor exits 1 for "not an ancestor" but any other non-zero
+          # code for a real git error (missing ref, bad fetch) — don't conflate
+          # the two into the same "not reachable" message.
           for branch in ${protected_branches}; do
-            if git merge-base --is-ancestor HEAD "origin/${branch}"; then
+            git merge-base --is-ancestor HEAD "origin/${branch}" && rc=0 || rc=$?
+            if [[ "${rc}" -eq 0 ]]; then
               echo "Verified: ${head_sha} (tag '${INPUT_TAG}') is reachable from '${branch}'."
               exit 0
+            elif [[ "${rc}" -ne 1 ]]; then
+              echo "::error::git merge-base failed unexpectedly (exit ${rc}) checking origin/${branch}."
+              exit "${rc}"
             fi
           done
 

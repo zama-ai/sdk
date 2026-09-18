@@ -169,7 +169,7 @@ Release behavior:
 Release workflows:
 
 - `Release` (`.github/workflows/release.yml`): automatic publish on push to `main`, `beta`, and `alpha`, gated by `Vitest` and `Playwright`.
-- Manual publish: the same `Release` workflow (`release.yml`) also runs on `workflow_dispatch`. Use it to recover when semantic-release created the tag but the npm publish step failed — a `publish-tag` input republishes from an existing tag, and a `dry-run` input is available. This path does **not** go through `validate-branch`/`Vitest`/`Playwright` — it only checks out the tag (which must resolve as a real tag, not a branch) and verifies it's reachable from `main`, `beta`, or `alpha` before installing or building anything.
+- Manual publish: the same `Release` workflow (`release.yml`) also runs on `workflow_dispatch`. Without a `publish-tag` input, it's the same `main`/`beta`/`alpha`-restricted, `Vitest`+`Playwright`-gated flow as the automatic push trigger. With `publish-tag` set, use it to recover when semantic-release created the tag but the npm publish step failed — it republishes from an existing tag (a `dry-run` input is available), and this path does **not** go through `validate-branch`/`Vitest`/`Playwright` — it only checks out the tag (which must resolve as a real tag, not a branch) and verifies it's reachable from `main`, `beta`, or `alpha` before installing or building anything.
 - `Release Preview` (`.github/workflows/release-preview.yml`): manual dry-run restricted to `main`, `beta`, and `alpha` (`pnpm release:dry-run`), no publish side effects.
 
 Install channels:
