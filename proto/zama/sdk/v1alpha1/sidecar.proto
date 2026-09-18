@@ -25,6 +25,8 @@ service SidecarService {
   rpc DecryptPublicValues(DecryptPublicValuesRequest) returns (DecryptPublicValuesResponse);
   // Calls decryption.delegatedBatchDecryptValues; per-item failures remain results, fatal SDK errors fail the RPC.
   rpc DelegatedBatchDecryptValues(DelegatedBatchDecryptValuesRequest) returns (DelegatedBatchDecryptValuesResponse);
+  // Calls offline.prepare; the caller signs and broadcasts the returned unsigned transaction.
+  rpc PrepareTransaction(PrepareTransactionRequest) returns (PrepareTransactionResponse);
   // Calls offline.preparePermit without signing; return the opaque envelope unchanged when registering.
   rpc PreparePermit(PreparePermitRequest) returns (PreparePermitResponse);
   // Calls permits.registerPermit with the prepared envelope and signature.
@@ -399,8 +401,13 @@ message PinnedModuleVersions {
 message RelayerMap {
   map<uint64, RelayerConfig> entries = 1;
 }
+enum RelayerTransport {
+  RELAYER_TRANSPORT_UNSPECIFIED = 0;
+  RELAYER_TRANSPORT_NODE = 1;
+  RELAYER_TRANSPORT_CLEARTEXT = 2;
+}
 message RelayerConfig {
-  string type = 1;
+  RelayerTransport transport = 1;
   RelayerOptions options = 2;
 }
 message RelayerOptions {
@@ -478,4 +485,114 @@ message EncryptRequest {
 message EncryptResponse {
   repeated bytes encrypted_values = 1;
   bytes input_proof = 2;
+}
+message PrepareTransactionRequest {
+  Operation operation = 1;
+  // Sender the SDK binds encrypted inputs to; it must match the key that signs.
+  bytes from = 2;
+  // Omission reads nonce, gas and fees from live chain state.
+  PrepareOptions options = 3;
+  oneof transaction {
+    ConfidentialTransfer confidential_transfer = 4;
+    ConfidentialTransferFrom confidential_transfer_from = 5;
+    SetOperator set_operator = 6;
+    Unwrap unwrap = 7;
+    UnwrapAll unwrap_all = 8;
+    FinalizeUnwrap finalize_unwrap = 9;
+    ApproveUnderlying approve_underlying = 10;
+    Wrap wrap = 11;
+    TransferAndCall transfer_and_call = 12;
+    DelegateDecryption delegate_decryption = 13;
+    RevokeDelegation revoke_delegation = 14;
+  }
+}
+// Each override has independent presence; amounts are canonical base-10 strings.
+message PrepareOptions {
+  optional uint64 nonce = 1;
+  optional string gas_limit = 2;
+  // The fee pair is supplied together or not at all.
+  PrepareFees fees = 3;
+}
+message PrepareFees {
+  string max_fee_per_gas = 1;
+  string max_priority_fee_per_gas = 2;
+}
+message ConfidentialTransfer {
+  bytes token = 1;
+  bytes to = 2;
+  string amount = 3;
+}
+message ConfidentialTransferFrom {
+  bytes token = 1;
+  bytes owner = 2;
+  bytes to = 3;
+  string amount = 4;
+}
+message SetOperator {
+  bytes token = 1;
+  bytes operator = 2;
+  // Required Unix timestamp in whole seconds; omission is rejected, never defaulted. A positive past value revokes.
+  optional uint64 until = 3;
+}
+message Unwrap {
+  bytes token = 1;
+  bytes to = 2;
+  string amount = 3;
+}
+message UnwrapAll {
+  bytes token = 1;
+  bytes to = 2;
+}
+message FinalizeUnwrap {
+  bytes wrapper = 1;
+  // unwrapRequestId or legacy encrypted amount from the UnwrapRequested log.
+  bytes unwrap_request_id_or_amount = 2;
+}
+message ApproveUnderlying {
+  bytes underlying = 1;
+  bytes spender = 2;
+  string amount = 3;
+}
+message Wrap {
+  bytes wrapper = 1;
+  bytes to = 2;
+  string amount = 3;
+}
+message TransferAndCall {
+  bytes underlying = 1;
+  bytes wrapper = 2;
+  string amount = 3;
+  // Omission self-shields to the sender; present empty bytes reach the SDK unchanged.
+  optional bytes recipient_data = 4;
+}
+message DelegateDecryption {
+  bytes contract_address = 1;
+  bytes delegate_address = 2;
+  // Unix time in whole milliseconds; omission requests a permanent delegation.
+  optional uint64 expiration_date_ms = 3;
+}
+message RevokeDelegation {
+  bytes contract_address = 1;
+  bytes delegate_address = 2;
+}
+enum TransactionKind {
+  TRANSACTION_KIND_UNSPECIFIED = 0;
+  TRANSACTION_KIND_CONFIDENTIAL_TRANSFER = 1;
+  TRANSACTION_KIND_CONFIDENTIAL_TRANSFER_FROM = 2;
+  TRANSACTION_KIND_SET_OPERATOR = 3;
+  TRANSACTION_KIND_UNWRAP = 4;
+  TRANSACTION_KIND_UNWRAP_ALL = 5;
+  TRANSACTION_KIND_FINALIZE_UNWRAP = 6;
+  TRANSACTION_KIND_APPROVE_UNDERLYING = 7;
+  TRANSACTION_KIND_WRAP = 8;
+  TRANSACTION_KIND_TRANSFER_AND_CALL = 9;
+  TRANSACTION_KIND_DELEGATE_DECRYPTION = 10;
+  TRANSACTION_KIND_REVOKE_DELEGATION = 11;
+}
+// SDK output unchanged: no signature is produced and nothing is broadcast.
+message PrepareTransactionResponse {
+  TransactionKind kind = 1;
+  bytes from = 2;
+  // RLP-encoded unsigned EIP-1559 transaction.
+  bytes unsigned_tx = 3;
 }

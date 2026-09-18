@@ -6,7 +6,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { encodeAbiParameters } from "viem";
+import {
+  encodeAbiParameters,
+  encodeFunctionData,
+  parseTransaction,
+  recoverTransactionAddress,
+  serializeTransaction,
+  type EncodeFunctionDataParameters,
+} from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { expect, test, vi } from "vitest";
 import type { GenericSigner } from "../../sdk/src/types/index.js";
@@ -33,7 +40,22 @@ vi.mock("@zama-fhe/sdk/viem", () => ({
     publicClient: { transport: { timeout?: number } };
   }) {
     forwarded.timeouts.push(publicClient.transport.timeout);
-    return createMockProvider({ getChainId: vi.fn().mockResolvedValue(11155111) });
+    return createMockProvider({
+      getChainId: vi.fn().mockResolvedValue(11155111),
+      prepareTransaction: vi.fn(async ({ calldata, nonce, gasLimit, fees }) =>
+        serializeTransaction({
+          type: "eip1559",
+          chainId: 11155111,
+          nonce: nonce ?? 0,
+          gas: gasLimit ?? 100_000n,
+          maxFeePerGas: fees?.maxFeePerGas ?? 2n,
+          maxPriorityFeePerGas: fees?.maxPriorityFeePerGas ?? 1n,
+          to: calldata.address,
+          data: encodeFunctionData(calldata as EncodeFunctionDataParameters),
+          value: 0n,
+        }),
+      ),
+    });
   }),
 }));
 vi.mock("@zama-fhe/sdk/node", () => ({
@@ -83,7 +105,7 @@ const repository = fileURLToPath(new URL("../../../", import.meta.url));
 const execute = promisify(execFile);
 
 test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
-  "Go and Rust example entry points run their complete encryption and balance sequence with protected credentials",
+  "Go and Rust example entry points encrypt inputs, decrypt a balance, then prepare and sign offline with protected credentials",
   async () => {
     const directory = await mkdtemp(join(tmpdir(), "native-examples-"));
     const socket = join(directory, "sdk.sock");
@@ -205,6 +227,17 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
         expect(stdout).toContain("Fixture Confidential Token");
         expect(stdout).toContain(`Encrypted balance: ${VALID_ENCRYPTED_VALUE}`);
         expect(stdout).toContain("Decrypted balance: 1000");
+        expect(stdout).toContain("Prepared transaction: SetOperator");
+        expect(stdout).toContain("Signed transaction hash: 0x");
+        const signed = stdout.match(/0x02[0-9a-f]{100,}/i)?.[0] as `0x02${string}` | undefined;
+        if (signed === undefined) {
+          throw new Error("example printed no signed EIP-1559 transaction");
+        }
+        expect(stdout.indexOf("Decrypted balance:")).toBeLessThan(stdout.indexOf(signed));
+        expect(await recoverTransactionAddress({ serializedTransaction: signed })).toBe(
+          account.address,
+        );
+        expect(parseTransaction(signed).chainId).toBe(11155111);
         expect(stdout + stderr).not.toContain(secret);
         expect(stdout + stderr).not.toContain(privateKey);
       }
@@ -213,6 +246,7 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
       expect(getAppliedWireRuntime()).toMatchObject({ singleThread: true });
       expect(methods.filter((method) => method === "eth_chainId")).toHaveLength(2);
       expect(methods.filter((method) => method === "eth_call")).toHaveLength(4);
+      expect(methods).not.toContain("eth_sendRawTransaction");
     } finally {
       await runtime.close();
       await stop?.();

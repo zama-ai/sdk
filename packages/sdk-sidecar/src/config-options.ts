@@ -8,6 +8,7 @@ import { toFhevmAuth } from "@zama-fhe/sdk/internal";
 import { node } from "@zama-fhe/sdk/node";
 import type { HttpTransportConfig } from "viem";
 import type * as Wire from "./generated/zama/sdk/v1alpha1/sidecar.js";
+import { RelayerTransport } from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import { chainAuth, decodeOptional, defined, safeInteger, unsignedInteger } from "./encoding.js";
 
 export type ProviderConfig = Pick<
@@ -169,10 +170,19 @@ export function relayerConfig(config?: Wire.RelayerConfig) {
   if (config === undefined) {
     return node();
   }
-  const factory =
-    config.type === "node" ? node : config.type === "cleartext" ? cleartext : undefined;
-  if (!factory) {
-    throw new ConfigurationError("Unsupported relayer transport.");
+  let factory;
+  switch (config.transport) {
+    case RelayerTransport.RELAYER_TRANSPORT_NODE:
+      factory = node;
+      break;
+    case RelayerTransport.RELAYER_TRANSPORT_CLEARTEXT:
+      factory = cleartext;
+      break;
+    case RelayerTransport.RELAYER_TRANSPORT_UNSPECIFIED:
+      throw new ConfigurationError("Relayer transport is required.");
+    default:
+      config.transport satisfies RelayerTransport.UNRECOGNIZED;
+      throw new ConfigurationError("Unsupported relayer transport.");
   }
   return config.options === undefined ? factory() : factory(relayerOptions(config.options));
 }

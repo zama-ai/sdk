@@ -3,6 +3,7 @@ import { parsePreparedPermit } from "@zama-fhe/sdk";
 import type { handleUnaryCall } from "@grpc/grpc-js";
 import type * as rpc from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import type { ContextSdk, SidecarRuntime } from "./runtime.js";
+import { prepareTransaction } from "./offline.js";
 import { signerChannel, storageChannel } from "./channels.js";
 import {
   address,
@@ -152,6 +153,7 @@ export function createHandlers(
         };
       },
     ),
+    prepareTransaction: execute(prepareTransaction, true),
     preparePermit: unary((request: rpc.PreparePermitRequest, signal) => {
       const signer = address(request.signerAddress);
       return runtime.execute(

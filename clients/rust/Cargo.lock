@@ -4847,10 +4847,12 @@ dependencies = [
 name = "zama-sdk-sidecar"
 version = "0.1.0"
 dependencies = [
+ "alloy-consensus",
  "alloy-contract",
  "alloy-dyn-abi",
  "alloy-primitives",
  "alloy-provider",
+ "alloy-rlp",
  "alloy-signer",
  "alloy-signer-local",
  "alloy-sol-types",

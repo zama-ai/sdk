@@ -127,20 +127,23 @@ func (options ProviderOptions) wire() *pb.HttpProviderConfig {
 	return result
 }
 
-type RelayerType string
+// RelayerTransport aliases the wire enum values; String renders the wire name.
+type RelayerTransport int32
 
 const (
-	RelayerNode      RelayerType = "node"
-	RelayerCleartext RelayerType = "cleartext"
+	RelayerNode      = RelayerTransport(pb.RelayerTransport_RELAYER_TRANSPORT_NODE)
+	RelayerCleartext = RelayerTransport(pb.RelayerTransport_RELAYER_TRANSPORT_CLEARTEXT)
 )
 
+func (transport RelayerTransport) String() string { return pb.RelayerTransport(transport).String() }
+
 type RelayerConfig struct {
-	Type    RelayerType
-	Options *RelayerOptions
+	Transport RelayerTransport
+	Options   *RelayerOptions
 }
 
 func (config RelayerConfig) wire() *pb.RelayerConfig {
-	result := &pb.RelayerConfig{Type: string(config.Type)}
+	result := &pb.RelayerConfig{Transport: pb.RelayerTransport(config.Transport)}
 	if config.Options != nil {
 		result.Options = config.Options.wire()
 	}

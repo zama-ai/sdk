@@ -189,29 +189,25 @@ impl ProviderOptions {
     }
 }
 
-#[derive(Clone, Debug)]
-pub enum RelayerType {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RelayerTransport {
     Node,
     Cleartext,
-}
-impl RelayerType {
-    fn as_str(&self) -> &'static str {
-        match self {
-            Self::Node => "node",
-            Self::Cleartext => "cleartext",
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
 pub struct RelayerConfig {
-    pub kind: RelayerType,
+    pub transport: RelayerTransport,
     pub options: Option<RelayerOptions>,
 }
 impl RelayerConfig {
     pub(crate) fn wire(self) -> crate::generated::RelayerConfig {
+        let transport = match self.transport {
+            RelayerTransport::Node => crate::generated::RelayerTransport::Node,
+            RelayerTransport::Cleartext => crate::generated::RelayerTransport::Cleartext,
+        };
         crate::generated::RelayerConfig {
-            r#type: self.kind.as_str().into(),
+            transport: transport as i32,
             options: self.options.map(RelayerOptions::wire),
         }
     }

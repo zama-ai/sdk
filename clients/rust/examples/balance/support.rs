@@ -4,8 +4,8 @@ use anyhow::{Result, ensure};
 use std::{collections::HashMap, env};
 use zama_sdk_sidecar::{
     Address, ApplicationStorage, ChainConfig, Client, DerivationSecret, MemoryStorage,
-    ProcessRuntime, ProviderOptions, RelayerAuth, RelayerConfig, RelayerOptions, RelayerType, Sdk,
-    SdkConfig, Storage, WalletAccount, alloy::AlloySigner,
+    ProcessRuntime, ProviderOptions, RelayerAuth, RelayerConfig, RelayerOptions, RelayerTransport,
+    Sdk, SdkConfig, Storage, WalletAccount, alloy::AlloySigner,
 };
 
 pub struct Settings {
@@ -68,7 +68,7 @@ impl Settings {
             config.relayers = Some(std::collections::BTreeMap::from([(
                 account.chain_id,
                 RelayerConfig {
-                    kind: RelayerType::Node,
+                    transport: RelayerTransport::Node,
                     options: Some(RelayerOptions {
                         batch_rpc_calls: Some(enabled),
                         ..Default::default()
