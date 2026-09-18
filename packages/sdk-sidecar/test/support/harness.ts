@@ -26,6 +26,7 @@ import {
   type CreateContextRequest,
   type SignerAction,
   type SignerClientMessage,
+  type SignerReply,
   type SignerServerMessage,
 } from "../../src/generated/zama/sdk/v1alpha1/sidecar.js";
 
@@ -99,7 +100,10 @@ export async function testServer(factory: ContextFactory) {
   return {
     client,
     socket,
-    async attachSigner(contextId: string, sign: (action: SignerAction) => Promise<Hex>) {
+    async attachWallet(
+      contextId: string,
+      respond: (action: SignerAction) => Promise<SignerReply["result"]>,
+    ) {
       const stream = client.signerChannel();
       streams.push(stream);
       const ready = Promise.withResolvers<void>();
@@ -112,33 +116,32 @@ export async function testServer(factory: ContextFactory) {
           return;
         }
         const action = message.action;
-        void sign(action).then(
-          (signature) =>
-            stream.write({
-              message: {
-                $case: "reply",
-                reply: {
-                  operationId: action.operationId,
-                  actionId: action.actionId,
-                  result: { $case: "signature", signature: bytes(signature) },
-                },
-              },
-            }),
-          (error) =>
-            stream.write({
-              message: {
-                $case: "reply",
-                reply: {
-                  operationId: action.operationId,
-                  actionId: action.actionId,
-                  result: { $case: "error", error: errorDetails(error) },
-                },
-              },
-            }),
+        void respond(action).then((result) =>
+          stream.write({
+            message: {
+              $case: "reply",
+              reply: { operationId: action.operationId, actionId: action.actionId, result },
+            },
+          }),
         );
       });
       stream.write({ message: { $case: "attach", attach: { contextId } } });
       await ready.promise;
+      return stream;
+    },
+    attachSigner(contextId: string, sign: (action: SignerAction) => Promise<Hex>) {
+      return this.attachWallet(contextId, (action) =>
+        sign(action).then(
+          (signature): SignerReply["result"] => ({
+            $case: "signature",
+            signature: bytes(signature),
+          }),
+          (error: unknown): SignerReply["result"] => ({
+            $case: "error",
+            error: errorDetails(error),
+          }),
+        ),
+      );
     },
     async close() {
       for (const stream of streams) {

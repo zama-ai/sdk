@@ -1,26 +1,26 @@
 import { syntheticEncryption } from "./support/encryption.js";
+import { createFakeChain } from "./support/fake-chain.js";
 import { execFile } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import {
-  encodeAbiParameters,
   encodeFunctionData,
   parseTransaction,
   recoverTransactionAddress,
   serializeTransaction,
   type EncodeFunctionDataParameters,
+  type PublicClient,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { expect, test, vi } from "vitest";
-import type { GenericSigner } from "../../sdk/src/types/index.js";
+import type * as viemModule from "../../sdk/src/viem/index.js";
+import type { GenericProvider, GenericSigner } from "../../sdk/src/types/index.js";
 import { getAppliedWireRuntime } from "../../sdk/src/relayer/applied-runtime.js";
 import { sepolia } from "../../sdk/src/chains/index.js";
 import { VALID_ENCRYPTED_VALUE, TOKEN } from "../../sdk/src/test-fixtures/constants.js";
-import { createMockProvider } from "../../sdk/src/test-fixtures/provider.js";
 import { createMockRelayer } from "../../sdk/src/test-fixtures/relayer.js";
 import { createCoordinator } from "../src/coordination.js";
 import { SidecarRuntime } from "../src/runtime.js";
@@ -33,16 +33,22 @@ const forwarded = vi.hoisted(() => ({
   relayers: [] as unknown[],
 }));
 
-vi.mock("@zama-fhe/sdk/viem", () => ({
-  ViemProvider: vi.fn(function ({
-    publicClient,
-  }: {
-    publicClient: { transport: { timeout?: number } };
-  }) {
-    forwarded.timeouts.push(publicClient.transport.timeout);
-    return createMockProvider({
-      getChainId: vi.fn().mockResolvedValue(11155111),
-      prepareTransaction: vi.fn(async ({ calldata, nonce, gasLimit, fees }) =>
+vi.mock("@zama-fhe/sdk/viem", async (importOriginal) => {
+  const actual = await importOriginal<typeof viemModule>();
+  return {
+    ...actual,
+    // Reads reach the fixture chain; only the offline preparation stays byte-for-byte fixed.
+    ViemProvider: vi.fn(function (config: {
+      publicClient: PublicClient & { transport: { timeout?: number } };
+    }) {
+      forwarded.timeouts.push(config.publicClient.transport.timeout);
+      const provider = new actual.ViemProvider(config);
+      const prepareTransaction = async ({
+        calldata,
+        nonce,
+        gasLimit,
+        fees,
+      }: Parameters<GenericProvider["prepareTransaction"]>[0]) =>
         serializeTransaction({
           type: "eip1559",
           chainId: 11155111,
@@ -53,11 +59,21 @@ vi.mock("@zama-fhe/sdk/viem", () => ({
           to: calldata.address,
           data: encodeFunctionData(calldata as EncodeFunctionDataParameters),
           value: 0n,
-        }),
-      ),
-    });
-  }),
-}));
+        });
+      // ViemProvider's other methods close over #private fields, so they must run bound to the
+      // real instance; only prepareTransaction is overridden here.
+      return new Proxy(provider, {
+        get: (target, property) => {
+          if (property === "prepareTransaction") {
+            return prepareTransaction;
+          }
+          const value: unknown = Reflect.get(target, property, target);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      });
+    }),
+  };
+});
 vi.mock("@zama-fhe/sdk/node", () => ({
   node: (options: unknown) => {
     forwarded.relayers.push(options);
@@ -103,54 +119,46 @@ vi.mock("@zama-fhe/sdk/node", () => ({
 
 const repository = fileURLToPath(new URL("../../../", import.meta.url));
 const execute = promisify(execFile);
+const TOKEN_NAME = "Fixture Confidential Token";
+// The examples default to this demo delegate when DELEGATE_ADDRESS is unset.
+const DELEGATE = "0x2222222222222222222222222222222222222222";
+
+// The JSON-RPC methods the fake chain fixture implements; see support/fake-chain.ts.
+const ALLOWED_METHODS = new Set([
+  "eth_chainId",
+  "eth_blockNumber",
+  "eth_getBlockByNumber",
+  "eth_gasPrice",
+  "eth_maxPriorityFeePerGas",
+  "eth_feeHistory",
+  "eth_getTransactionCount",
+  "eth_getCode",
+  "eth_estimateGas",
+  "eth_call",
+  "eth_sendRawTransaction",
+  "eth_getTransactionReceipt",
+]);
+
+/** Assert the lines appear in stdout in this order. */
+function expectOrder(stdout: string, lines: string[]): void {
+  let cursor = -1;
+  for (const line of lines) {
+    const index = stdout.indexOf(line, cursor + 1);
+    expect(index, `missing after position ${cursor}: ${line}`).toBeGreaterThan(cursor);
+    cursor = index;
+  }
+}
 
 test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
-  "Go and Rust example entry points encrypt inputs, decrypt a balance, then prepare and sign offline with protected credentials",
+  "Go and Rust example entry points encrypt inputs, decrypt a balance, prepare and sign offline, then grant and revoke an on-chain delegation with protected credentials",
   async () => {
     const directory = await mkdtemp(join(tmpdir(), "native-examples-"));
     const socket = join(directory, "sdk.sock");
     const privateKey = `0x${"01".repeat(32)}` as const;
     const secret = "fixture-example-synthetic-secret-".repeat(3);
     const account = privateKeyToAccount(privateKey);
-    const methods: string[] = [];
-    const rpc = createServer((request, response) => {
-      const handle = async () => {
-        let body = "";
-        for await (const chunk of request) {
-          body += String(chunk);
-        }
-        const reply = (call: {
-          id: number;
-          method: string;
-          params?: { data?: string; input?: string }[];
-        }) => {
-          methods.push(call.method);
-          const data = call.params?.[0]?.data ?? call.params?.[0]?.input;
-          const result =
-            call.method === "eth_chainId"
-              ? "0xaa36a7"
-              : call.method === "eth_call" && data?.startsWith("0x06fdde03")
-                ? encodeAbiParameters([{ type: "string" }], ["Fixture Confidential Token"])
-                : call.method === "eth_call"
-                  ? VALID_ENCRYPTED_VALUE
-                  : undefined;
-          return result === undefined
-            ? {
-                jsonrpc: "2.0",
-                id: call.id,
-                error: { code: -32601, message: "unsupported fixture method" },
-              }
-            : { jsonrpc: "2.0", id: call.id, result };
-        };
-        const payload = JSON.parse(body);
-        response.setHeader("content-type", "application/json");
-        response.end(JSON.stringify(Array.isArray(payload) ? payload.map(reply) : reply(payload)));
-      };
-      void handle().catch(() => {
-        response.statusCode = 500;
-        response.end("fixture request failed");
-      });
-    });
+    const chain = createFakeChain(TOKEN_NAME);
+    const rpc = chain.server;
     const manager = new StorageManager();
     const runtime = new SidecarRuntime(createContextFactory(manager), createCoordinator());
     let stop: (() => Promise<void>) | undefined;
@@ -206,6 +214,8 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
         [goExecutable, [socket, envFile]],
         [join(repository, "clients/rust/target/debug/examples/balance"), []],
       ] as const) {
+        const broadcastsBefore = chain.broadcasts.length;
+        const startedAt = Math.floor(Date.now() / 1000);
         const { stdout, stderr } = await execute(executable, [...args], {
           cwd: directory,
           env: { PATH: process.env.PATH, SIDECAR_SOCKET_PATH: socket },
@@ -224,7 +234,7 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
           userAddress: account.address,
         });
         expect(stdout.indexOf("Input proof:")).toBeLessThan(stdout.indexOf("Encrypted balance:"));
-        expect(stdout).toContain("Fixture Confidential Token");
+        expect(stdout).toContain(TOKEN_NAME);
         expect(stdout).toContain(`Encrypted balance: ${VALID_ENCRYPTED_VALUE}`);
         expect(stdout).toContain("Decrypted balance: 1000");
         expect(stdout).toContain("Prepared transaction: SetOperator");
@@ -238,15 +248,43 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
           account.address,
         );
         expect(parseTransaction(signed).chainId).toBe(11155111);
+
+        const sent = chain.broadcasts.slice(broadcastsBefore);
+        expect(sent).toHaveLength(2);
+        expect(sent.map((entry) => entry.from)).toEqual([account.address, account.address]);
+        const grant = sent[0]!;
+        const revoke = sent[1]!;
+        expect(grant.functionName).toBe("delegateForUserDecryption");
+        expect(revoke.functionName).toBe("revokeDelegationForUserDecryption");
+        for (const entry of sent) {
+          expect(String(entry.args[0]).toLowerCase()).toBe(DELEGATE);
+          expect(String(entry.args[1]).toLowerCase()).toBe(TOKEN.toLowerCase());
+        }
+        const expiry = grant.args[2] as bigint;
+        expect(expiry).toBeGreaterThanOrEqual(BigInt(startedAt + 86_400 - 120));
+        expect(expiry).toBeLessThanOrEqual(BigInt(Math.floor(Date.now() / 1000) + 86_400));
+        // The demo revokes what it granted, so the next run starts from an inactive delegation.
+        expect(chain.expiryOf(account.address, DELEGATE, TOKEN)).toBe(0n);
+
+        expect(stdout.match(/Delegate: (0x[0-9a-fA-F]{40})/)?.[1]?.toLowerCase()).toBe(DELEGATE);
+        expectOrder(stdout, [
+          "Delegation before: inactive (expiry 0)",
+          `Delegation granted: ${grant.hash}`,
+          `Delegation after grant: active (expiry ${expiry})`,
+          `Delegation revoked: ${revoke.hash}`,
+          "Delegation after revoke: inactive (expiry 0)",
+        ]);
         expect(stdout + stderr).not.toContain(secret);
         expect(stdout + stderr).not.toContain(privateKey);
       }
       expect(forwarded.timeouts).toEqual([5000, 5000]);
       expect(forwarded.relayers).toEqual([{ batchRpcCalls: false }, { batchRpcCalls: false }]);
       expect(getAppliedWireRuntime()).toMatchObject({ singleThread: true });
-      expect(methods.filter((method) => method === "eth_chainId")).toHaveLength(2);
-      expect(methods.filter((method) => method === "eth_call")).toHaveLength(4);
-      expect(methods).not.toContain("eth_sendRawTransaction");
+      // Fails loudly if a client starts asking the fixture for a method it does not support.
+      const unexpected = [...new Set(chain.methods)].filter(
+        (method) => !ALLOWED_METHODS.has(method),
+      );
+      expect(unexpected).toEqual([]);
     } finally {
       await runtime.close();
       await stop?.();

@@ -51,6 +51,16 @@ service SidecarService {
   rpc RevokeTransportKeyPair(ScopeRequest) returns (RevokeTransportKeyPairResponse);
   // Calls sdk.encrypt; no wallet signing is required.
   rpc Encrypt(EncryptRequest) returns (EncryptResponse);
+  // Calls delegations.delegateDecryption; the delegator is the signer account and the write is requested on the signer channel.
+  rpc DelegateDecryption(DelegateDecryptionRequest) returns (DelegateDecryptionResponse);
+  // Calls delegations.revokeDelegation for the signer account's on-chain delegation.
+  rpc RevokeDelegation(RevokeDelegationRequest) returns (RevokeDelegationResponse);
+  // Calls delegations.isActive without requiring a signer.
+  rpc IsDelegationActive(DelegationQuery) returns (IsDelegationActiveResponse);
+  // Calls delegations.getExpiry without requiring a signer.
+  rpc GetDelegationExpiry(DelegationQuery) returns (GetDelegationExpiryResponse);
+  // Calls delegations.getStatus without requiring a signer.
+  rpc GetDelegationStatus(DelegationQuery) returns (GetDelegationStatusResponse);
 }
 message Empty {}
 message GetInfoRequest {}
@@ -584,12 +594,14 @@ message TransferAndCall {
   // Omission self-shields to the sender; present empty bytes reach the SDK unchanged.
   optional bytes recipient_data = 4;
 }
+// Shared by PrepareTransaction and DelegateDecryption; offline-only fields belong on PrepareTransactionRequest.
 message DelegateDecryption {
   bytes contract_address = 1;
   bytes delegate_address = 2;
   // Unix time in whole milliseconds; omission requests a permanent delegation.
   optional uint64 expiration_date_ms = 3;
 }
+// Shared by PrepareTransaction and RevokeDelegation; offline-only fields belong on PrepareTransactionRequest.
 message RevokeDelegation {
   bytes contract_address = 1;
   bytes delegate_address = 2;
@@ -614,4 +626,48 @@ message PrepareTransactionResponse {
   bytes from = 2;
   // RLP-encoded unsigned EIP-1559 transaction.
   bytes unsigned_tx = 3;
+}
+// On-chain ACL delegation, distinct from the local delegation permits managed by the permit RPCs.
+message DelegateDecryptionRequest {
+  Operation operation = 1;
+  DelegateDecryption delegation = 2;
+}
+message RevokeDelegationRequest {
+  Operation operation = 1;
+  RevokeDelegation delegation = 2;
+}
+// Addresses contain exactly 20 bytes; the delegator is explicit because reads need no signer.
+message DelegationQuery {
+  Operation operation = 1;
+  bytes contract_address = 2;
+  bytes delegator_address = 3;
+  bytes delegate_address = 4;
+}
+// Mirrors the SDK TransactionResult: the broadcast hash and the mined receipt logs.
+message TransactionResult {
+  bytes transaction_hash = 1;
+  repeated TransactionLog logs = 2;
+}
+// Log emitter address is optional because provider adapters may omit it.
+message TransactionLog {
+  optional bytes address = 1;
+  repeated bytes topics = 2;
+  bytes data = 3;
+}
+message DelegateDecryptionResponse {
+  TransactionResult transaction = 1;
+}
+message RevokeDelegationResponse {
+  TransactionResult transaction = 1;
+}
+message IsDelegationActiveResponse {
+  bool is_active = 1;
+}
+// Unix time in whole seconds as stored by the ACL: 0 means no delegation, 2^64-1 means permanent.
+message GetDelegationExpiryResponse {
+  uint64 expiry_timestamp = 1;
+}
+message GetDelegationStatusResponse {
+  bool is_active = 1;
+  uint64 expiry_timestamp = 2;
 }

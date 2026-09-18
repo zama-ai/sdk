@@ -42,6 +42,11 @@ const (
 	SidecarService_WarmTransportKeyPairScope_FullMethodName   = "/zama.sdk.v1alpha1.SidecarService/WarmTransportKeyPairScope"
 	SidecarService_RevokeTransportKeyPair_FullMethodName      = "/zama.sdk.v1alpha1.SidecarService/RevokeTransportKeyPair"
 	SidecarService_Encrypt_FullMethodName                     = "/zama.sdk.v1alpha1.SidecarService/Encrypt"
+	SidecarService_DelegateDecryption_FullMethodName          = "/zama.sdk.v1alpha1.SidecarService/DelegateDecryption"
+	SidecarService_RevokeDelegation_FullMethodName            = "/zama.sdk.v1alpha1.SidecarService/RevokeDelegation"
+	SidecarService_IsDelegationActive_FullMethodName          = "/zama.sdk.v1alpha1.SidecarService/IsDelegationActive"
+	SidecarService_GetDelegationExpiry_FullMethodName         = "/zama.sdk.v1alpha1.SidecarService/GetDelegationExpiry"
+	SidecarService_GetDelegationStatus_FullMethodName         = "/zama.sdk.v1alpha1.SidecarService/GetDelegationStatus"
 )
 
 // SidecarServiceClient is the client API for SidecarService service.
@@ -97,6 +102,16 @@ type SidecarServiceClient interface {
 	RevokeTransportKeyPair(ctx context.Context, in *ScopeRequest, opts ...grpc.CallOption) (*RevokeTransportKeyPairResponse, error)
 	// Calls sdk.encrypt; no wallet signing is required.
 	Encrypt(ctx context.Context, in *EncryptRequest, opts ...grpc.CallOption) (*EncryptResponse, error)
+	// Calls delegations.delegateDecryption; the delegator is the signer account and the write is requested on the signer channel.
+	DelegateDecryption(ctx context.Context, in *DelegateDecryptionRequest, opts ...grpc.CallOption) (*DelegateDecryptionResponse, error)
+	// Calls delegations.revokeDelegation for the signer account's on-chain delegation.
+	RevokeDelegation(ctx context.Context, in *RevokeDelegationRequest, opts ...grpc.CallOption) (*RevokeDelegationResponse, error)
+	// Calls delegations.isActive without requiring a signer.
+	IsDelegationActive(ctx context.Context, in *DelegationQuery, opts ...grpc.CallOption) (*IsDelegationActiveResponse, error)
+	// Calls delegations.getExpiry without requiring a signer.
+	GetDelegationExpiry(ctx context.Context, in *DelegationQuery, opts ...grpc.CallOption) (*GetDelegationExpiryResponse, error)
+	// Calls delegations.getStatus without requiring a signer.
+	GetDelegationStatus(ctx context.Context, in *DelegationQuery, opts ...grpc.CallOption) (*GetDelegationStatusResponse, error)
 }
 
 type sidecarServiceClient struct {
@@ -343,6 +358,56 @@ func (c *sidecarServiceClient) Encrypt(ctx context.Context, in *EncryptRequest, 
 	return out, nil
 }
 
+func (c *sidecarServiceClient) DelegateDecryption(ctx context.Context, in *DelegateDecryptionRequest, opts ...grpc.CallOption) (*DelegateDecryptionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DelegateDecryptionResponse)
+	err := c.cc.Invoke(ctx, SidecarService_DelegateDecryption_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sidecarServiceClient) RevokeDelegation(ctx context.Context, in *RevokeDelegationRequest, opts ...grpc.CallOption) (*RevokeDelegationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeDelegationResponse)
+	err := c.cc.Invoke(ctx, SidecarService_RevokeDelegation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sidecarServiceClient) IsDelegationActive(ctx context.Context, in *DelegationQuery, opts ...grpc.CallOption) (*IsDelegationActiveResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IsDelegationActiveResponse)
+	err := c.cc.Invoke(ctx, SidecarService_IsDelegationActive_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sidecarServiceClient) GetDelegationExpiry(ctx context.Context, in *DelegationQuery, opts ...grpc.CallOption) (*GetDelegationExpiryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetDelegationExpiryResponse)
+	err := c.cc.Invoke(ctx, SidecarService_GetDelegationExpiry_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sidecarServiceClient) GetDelegationStatus(ctx context.Context, in *DelegationQuery, opts ...grpc.CallOption) (*GetDelegationStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetDelegationStatusResponse)
+	err := c.cc.Invoke(ctx, SidecarService_GetDelegationStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SidecarServiceServer is the server API for SidecarService service.
 // All implementations must embed UnimplementedSidecarServiceServer
 // for forward compatibility.
@@ -396,6 +461,16 @@ type SidecarServiceServer interface {
 	RevokeTransportKeyPair(context.Context, *ScopeRequest) (*RevokeTransportKeyPairResponse, error)
 	// Calls sdk.encrypt; no wallet signing is required.
 	Encrypt(context.Context, *EncryptRequest) (*EncryptResponse, error)
+	// Calls delegations.delegateDecryption; the delegator is the signer account and the write is requested on the signer channel.
+	DelegateDecryption(context.Context, *DelegateDecryptionRequest) (*DelegateDecryptionResponse, error)
+	// Calls delegations.revokeDelegation for the signer account's on-chain delegation.
+	RevokeDelegation(context.Context, *RevokeDelegationRequest) (*RevokeDelegationResponse, error)
+	// Calls delegations.isActive without requiring a signer.
+	IsDelegationActive(context.Context, *DelegationQuery) (*IsDelegationActiveResponse, error)
+	// Calls delegations.getExpiry without requiring a signer.
+	GetDelegationExpiry(context.Context, *DelegationQuery) (*GetDelegationExpiryResponse, error)
+	// Calls delegations.getStatus without requiring a signer.
+	GetDelegationStatus(context.Context, *DelegationQuery) (*GetDelegationStatusResponse, error)
 	mustEmbedUnimplementedSidecarServiceServer()
 }
 
@@ -474,6 +549,21 @@ func (UnimplementedSidecarServiceServer) RevokeTransportKeyPair(context.Context,
 }
 func (UnimplementedSidecarServiceServer) Encrypt(context.Context, *EncryptRequest) (*EncryptResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Encrypt not implemented")
+}
+func (UnimplementedSidecarServiceServer) DelegateDecryption(context.Context, *DelegateDecryptionRequest) (*DelegateDecryptionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DelegateDecryption not implemented")
+}
+func (UnimplementedSidecarServiceServer) RevokeDelegation(context.Context, *RevokeDelegationRequest) (*RevokeDelegationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeDelegation not implemented")
+}
+func (UnimplementedSidecarServiceServer) IsDelegationActive(context.Context, *DelegationQuery) (*IsDelegationActiveResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method IsDelegationActive not implemented")
+}
+func (UnimplementedSidecarServiceServer) GetDelegationExpiry(context.Context, *DelegationQuery) (*GetDelegationExpiryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetDelegationExpiry not implemented")
+}
+func (UnimplementedSidecarServiceServer) GetDelegationStatus(context.Context, *DelegationQuery) (*GetDelegationStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetDelegationStatus not implemented")
 }
 func (UnimplementedSidecarServiceServer) mustEmbedUnimplementedSidecarServiceServer() {}
 func (UnimplementedSidecarServiceServer) testEmbeddedByValue()                        {}
@@ -888,6 +978,96 @@ func _SidecarService_Encrypt_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SidecarService_DelegateDecryption_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DelegateDecryptionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SidecarServiceServer).DelegateDecryption(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SidecarService_DelegateDecryption_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SidecarServiceServer).DelegateDecryption(ctx, req.(*DelegateDecryptionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SidecarService_RevokeDelegation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeDelegationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SidecarServiceServer).RevokeDelegation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SidecarService_RevokeDelegation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SidecarServiceServer).RevokeDelegation(ctx, req.(*RevokeDelegationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SidecarService_IsDelegationActive_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DelegationQuery)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SidecarServiceServer).IsDelegationActive(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SidecarService_IsDelegationActive_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SidecarServiceServer).IsDelegationActive(ctx, req.(*DelegationQuery))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SidecarService_GetDelegationExpiry_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DelegationQuery)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SidecarServiceServer).GetDelegationExpiry(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SidecarService_GetDelegationExpiry_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SidecarServiceServer).GetDelegationExpiry(ctx, req.(*DelegationQuery))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SidecarService_GetDelegationStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DelegationQuery)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SidecarServiceServer).GetDelegationStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SidecarService_GetDelegationStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SidecarServiceServer).GetDelegationStatus(ctx, req.(*DelegationQuery))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SidecarService_ServiceDesc is the grpc.ServiceDesc for SidecarService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -978,6 +1158,26 @@ var SidecarService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Encrypt",
 			Handler:    _SidecarService_Encrypt_Handler,
+		},
+		{
+			MethodName: "DelegateDecryption",
+			Handler:    _SidecarService_DelegateDecryption_Handler,
+		},
+		{
+			MethodName: "RevokeDelegation",
+			Handler:    _SidecarService_RevokeDelegation_Handler,
+		},
+		{
+			MethodName: "IsDelegationActive",
+			Handler:    _SidecarService_IsDelegationActive_Handler,
+		},
+		{
+			MethodName: "GetDelegationExpiry",
+			Handler:    _SidecarService_GetDelegationExpiry_Handler,
+		},
+		{
+			MethodName: "GetDelegationStatus",
+			Handler:    _SidecarService_GetDelegationStatus_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

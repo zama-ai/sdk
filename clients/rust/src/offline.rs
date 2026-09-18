@@ -1,4 +1,6 @@
-use crate::{Address, BigInt, Offline, generated};
+use crate::{
+    Address, BigInt, DelegateDecryptionParams, Offline, RevokeDelegationParams, generated,
+};
 use anyhow::{Context, Result, bail};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -246,18 +248,24 @@ impl From<Transaction> for generated::prepare_transaction_request::Transaction {
                 contract_address,
                 delegate_address,
                 expiration_date_ms,
-            } => Self::DelegateDecryption(generated::DelegateDecryption {
-                contract_address: contract_address.to_vec(),
-                delegate_address: delegate_address.to_vec(),
-                expiration_date_ms,
-            }),
+            } => Self::DelegateDecryption(
+                DelegateDecryptionParams {
+                    contract_address,
+                    delegate_address,
+                    expiration_date_ms,
+                }
+                .into(),
+            ),
             Transaction::RevokeDelegation {
                 contract_address,
                 delegate_address,
-            } => Self::RevokeDelegation(generated::RevokeDelegation {
-                contract_address: contract_address.to_vec(),
-                delegate_address: delegate_address.to_vec(),
-            }),
+            } => Self::RevokeDelegation(
+                RevokeDelegationParams {
+                    contract_address,
+                    delegate_address,
+                }
+                .into(),
+            ),
         }
     }
 }

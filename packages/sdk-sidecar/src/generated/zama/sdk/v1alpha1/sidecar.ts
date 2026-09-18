@@ -837,6 +837,7 @@ export interface TransferAndCall {
   recipientData?: Buffer | undefined;
 }
 
+/** Shared by PrepareTransaction and DelegateDecryption; offline-only fields belong on PrepareTransactionRequest. */
 export interface DelegateDecryption {
   contractAddress: Buffer;
   delegateAddress: Buffer;
@@ -844,6 +845,7 @@ export interface DelegateDecryption {
   expirationDateMs?: bigint | undefined;
 }
 
+/** Shared by PrepareTransaction and RevokeDelegation; offline-only fields belong on PrepareTransactionRequest. */
 export interface RevokeDelegation {
   contractAddress: Buffer;
   delegateAddress: Buffer;
@@ -855,6 +857,60 @@ export interface PrepareTransactionResponse {
   from: Buffer;
   /** RLP-encoded unsigned EIP-1559 transaction. */
   unsignedTx: Buffer;
+}
+
+/** On-chain ACL delegation, distinct from the local delegation permits managed by the permit RPCs. */
+export interface DelegateDecryptionRequest {
+  operation: Operation | undefined;
+  delegation: DelegateDecryption | undefined;
+}
+
+export interface RevokeDelegationRequest {
+  operation: Operation | undefined;
+  delegation: RevokeDelegation | undefined;
+}
+
+/** Addresses contain exactly 20 bytes; the delegator is explicit because reads need no signer. */
+export interface DelegationQuery {
+  operation: Operation | undefined;
+  contractAddress: Buffer;
+  delegatorAddress: Buffer;
+  delegateAddress: Buffer;
+}
+
+/** Mirrors the SDK TransactionResult: the broadcast hash and the mined receipt logs. */
+export interface TransactionResult {
+  transactionHash: Buffer;
+  logs: TransactionLog[];
+}
+
+/** Log emitter address is optional because provider adapters may omit it. */
+export interface TransactionLog {
+  address?: Buffer | undefined;
+  topics: Buffer[];
+  data: Buffer;
+}
+
+export interface DelegateDecryptionResponse {
+  transaction: TransactionResult | undefined;
+}
+
+export interface RevokeDelegationResponse {
+  transaction: TransactionResult | undefined;
+}
+
+export interface IsDelegationActiveResponse {
+  isActive: boolean;
+}
+
+/** Unix time in whole seconds as stored by the ACL: 0 means no delegation, 2^64-1 means permanent. */
+export interface GetDelegationExpiryResponse {
+  expiryTimestamp: bigint;
+}
+
+export interface GetDelegationStatusResponse {
+  isActive: boolean;
+  expiryTimestamp: bigint;
 }
 
 function createBaseEmpty(): Empty {
@@ -10464,6 +10520,809 @@ export const PrepareTransactionResponse: MessageFns<PrepareTransactionResponse> 
   },
 };
 
+function createBaseDelegateDecryptionRequest(): DelegateDecryptionRequest {
+  return { operation: undefined, delegation: undefined };
+}
+
+export const DelegateDecryptionRequest: MessageFns<DelegateDecryptionRequest> = {
+  encode(message: DelegateDecryptionRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.operation !== undefined) {
+      Operation.encode(message.operation, writer.uint32(10).fork()).join();
+    }
+    if (message.delegation !== undefined) {
+      DelegateDecryption.encode(message.delegation, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DelegateDecryptionRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDelegateDecryptionRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.operation = Operation.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.delegation = DelegateDecryption.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): DelegateDecryptionRequest {
+    return {
+      operation: isSet(object.operation) ? Operation.fromJSON(object.operation) : undefined,
+      delegation: isSet(object.delegation) ? DelegateDecryption.fromJSON(object.delegation) : undefined,
+    };
+  },
+
+  toJSON(message: DelegateDecryptionRequest): unknown {
+    const obj: any = {};
+    if (message.operation !== undefined) {
+      obj.operation = Operation.toJSON(message.operation);
+    }
+    if (message.delegation !== undefined) {
+      obj.delegation = DelegateDecryption.toJSON(message.delegation);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<DelegateDecryptionRequest>): DelegateDecryptionRequest {
+    return DelegateDecryptionRequest.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<DelegateDecryptionRequest>): DelegateDecryptionRequest {
+    const message = createBaseDelegateDecryptionRequest();
+    message.operation = (object.operation !== undefined && object.operation !== null)
+      ? Operation.fromPartial(object.operation)
+      : undefined;
+    message.delegation = (object.delegation !== undefined && object.delegation !== null)
+      ? DelegateDecryption.fromPartial(object.delegation)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseRevokeDelegationRequest(): RevokeDelegationRequest {
+  return { operation: undefined, delegation: undefined };
+}
+
+export const RevokeDelegationRequest: MessageFns<RevokeDelegationRequest> = {
+  encode(message: RevokeDelegationRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.operation !== undefined) {
+      Operation.encode(message.operation, writer.uint32(10).fork()).join();
+    }
+    if (message.delegation !== undefined) {
+      RevokeDelegation.encode(message.delegation, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RevokeDelegationRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRevokeDelegationRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.operation = Operation.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.delegation = RevokeDelegation.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): RevokeDelegationRequest {
+    return {
+      operation: isSet(object.operation) ? Operation.fromJSON(object.operation) : undefined,
+      delegation: isSet(object.delegation) ? RevokeDelegation.fromJSON(object.delegation) : undefined,
+    };
+  },
+
+  toJSON(message: RevokeDelegationRequest): unknown {
+    const obj: any = {};
+    if (message.operation !== undefined) {
+      obj.operation = Operation.toJSON(message.operation);
+    }
+    if (message.delegation !== undefined) {
+      obj.delegation = RevokeDelegation.toJSON(message.delegation);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<RevokeDelegationRequest>): RevokeDelegationRequest {
+    return RevokeDelegationRequest.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<RevokeDelegationRequest>): RevokeDelegationRequest {
+    const message = createBaseRevokeDelegationRequest();
+    message.operation = (object.operation !== undefined && object.operation !== null)
+      ? Operation.fromPartial(object.operation)
+      : undefined;
+    message.delegation = (object.delegation !== undefined && object.delegation !== null)
+      ? RevokeDelegation.fromPartial(object.delegation)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseDelegationQuery(): DelegationQuery {
+  return {
+    operation: undefined,
+    contractAddress: Buffer.alloc(0),
+    delegatorAddress: Buffer.alloc(0),
+    delegateAddress: Buffer.alloc(0),
+  };
+}
+
+export const DelegationQuery: MessageFns<DelegationQuery> = {
+  encode(message: DelegationQuery, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.operation !== undefined) {
+      Operation.encode(message.operation, writer.uint32(10).fork()).join();
+    }
+    if (message.contractAddress.length !== 0) {
+      writer.uint32(18).bytes(message.contractAddress);
+    }
+    if (message.delegatorAddress.length !== 0) {
+      writer.uint32(26).bytes(message.delegatorAddress);
+    }
+    if (message.delegateAddress.length !== 0) {
+      writer.uint32(34).bytes(message.delegateAddress);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DelegationQuery {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDelegationQuery();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.operation = Operation.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.contractAddress = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.delegatorAddress = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.delegateAddress = Buffer.from(reader.bytes());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): DelegationQuery {
+    return {
+      operation: isSet(object.operation) ? Operation.fromJSON(object.operation) : undefined,
+      contractAddress: isSet(object.contractAddress)
+        ? Buffer.from(bytesFromBase64(object.contractAddress))
+        : isSet(object.contract_address)
+        ? Buffer.from(bytesFromBase64(object.contract_address))
+        : Buffer.alloc(0),
+      delegatorAddress: isSet(object.delegatorAddress)
+        ? Buffer.from(bytesFromBase64(object.delegatorAddress))
+        : isSet(object.delegator_address)
+        ? Buffer.from(bytesFromBase64(object.delegator_address))
+        : Buffer.alloc(0),
+      delegateAddress: isSet(object.delegateAddress)
+        ? Buffer.from(bytesFromBase64(object.delegateAddress))
+        : isSet(object.delegate_address)
+        ? Buffer.from(bytesFromBase64(object.delegate_address))
+        : Buffer.alloc(0),
+    };
+  },
+
+  toJSON(message: DelegationQuery): unknown {
+    const obj: any = {};
+    if (message.operation !== undefined) {
+      obj.operation = Operation.toJSON(message.operation);
+    }
+    if (message.contractAddress.length !== 0) {
+      obj.contractAddress = base64FromBytes(message.contractAddress);
+    }
+    if (message.delegatorAddress.length !== 0) {
+      obj.delegatorAddress = base64FromBytes(message.delegatorAddress);
+    }
+    if (message.delegateAddress.length !== 0) {
+      obj.delegateAddress = base64FromBytes(message.delegateAddress);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<DelegationQuery>): DelegationQuery {
+    return DelegationQuery.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<DelegationQuery>): DelegationQuery {
+    const message = createBaseDelegationQuery();
+    message.operation = (object.operation !== undefined && object.operation !== null)
+      ? Operation.fromPartial(object.operation)
+      : undefined;
+    message.contractAddress = object.contractAddress ?? Buffer.alloc(0);
+    message.delegatorAddress = object.delegatorAddress ?? Buffer.alloc(0);
+    message.delegateAddress = object.delegateAddress ?? Buffer.alloc(0);
+    return message;
+  },
+};
+
+function createBaseTransactionResult(): TransactionResult {
+  return { transactionHash: Buffer.alloc(0), logs: [] };
+}
+
+export const TransactionResult: MessageFns<TransactionResult> = {
+  encode(message: TransactionResult, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.transactionHash.length !== 0) {
+      writer.uint32(10).bytes(message.transactionHash);
+    }
+    for (const v of message.logs) {
+      TransactionLog.encode(v!, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): TransactionResult {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseTransactionResult();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.transactionHash = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.logs.push(TransactionLog.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): TransactionResult {
+    return {
+      transactionHash: isSet(object.transactionHash)
+        ? Buffer.from(bytesFromBase64(object.transactionHash))
+        : isSet(object.transaction_hash)
+        ? Buffer.from(bytesFromBase64(object.transaction_hash))
+        : Buffer.alloc(0),
+      logs: globalThis.Array.isArray(object?.logs) ? object.logs.map((e: any) => TransactionLog.fromJSON(e)) : [],
+    };
+  },
+
+  toJSON(message: TransactionResult): unknown {
+    const obj: any = {};
+    if (message.transactionHash.length !== 0) {
+      obj.transactionHash = base64FromBytes(message.transactionHash);
+    }
+    if (message.logs?.length) {
+      obj.logs = message.logs.map((e) => TransactionLog.toJSON(e));
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<TransactionResult>): TransactionResult {
+    return TransactionResult.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<TransactionResult>): TransactionResult {
+    const message = createBaseTransactionResult();
+    message.transactionHash = object.transactionHash ?? Buffer.alloc(0);
+    message.logs = object.logs?.map((e) => TransactionLog.fromPartial(e)) || [];
+    return message;
+  },
+};
+
+function createBaseTransactionLog(): TransactionLog {
+  return { address: undefined, topics: [], data: Buffer.alloc(0) };
+}
+
+export const TransactionLog: MessageFns<TransactionLog> = {
+  encode(message: TransactionLog, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.address !== undefined) {
+      writer.uint32(10).bytes(message.address);
+    }
+    for (const v of message.topics) {
+      writer.uint32(18).bytes(v!);
+    }
+    if (message.data.length !== 0) {
+      writer.uint32(26).bytes(message.data);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): TransactionLog {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseTransactionLog();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.address = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.topics.push(Buffer.from(reader.bytes()));
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.data = Buffer.from(reader.bytes());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): TransactionLog {
+    return {
+      address: isSet(object.address) ? Buffer.from(bytesFromBase64(object.address)) : undefined,
+      topics: globalThis.Array.isArray(object?.topics)
+        ? object.topics.map((e: any) => Buffer.from(bytesFromBase64(e)))
+        : [],
+      data: isSet(object.data) ? Buffer.from(bytesFromBase64(object.data)) : Buffer.alloc(0),
+    };
+  },
+
+  toJSON(message: TransactionLog): unknown {
+    const obj: any = {};
+    if (message.address !== undefined) {
+      obj.address = base64FromBytes(message.address);
+    }
+    if (message.topics?.length) {
+      obj.topics = message.topics.map((e) => base64FromBytes(e));
+    }
+    if (message.data.length !== 0) {
+      obj.data = base64FromBytes(message.data);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<TransactionLog>): TransactionLog {
+    return TransactionLog.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<TransactionLog>): TransactionLog {
+    const message = createBaseTransactionLog();
+    message.address = object.address ?? undefined;
+    message.topics = object.topics?.map((e) => e) || [];
+    message.data = object.data ?? Buffer.alloc(0);
+    return message;
+  },
+};
+
+function createBaseDelegateDecryptionResponse(): DelegateDecryptionResponse {
+  return { transaction: undefined };
+}
+
+export const DelegateDecryptionResponse: MessageFns<DelegateDecryptionResponse> = {
+  encode(message: DelegateDecryptionResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.transaction !== undefined) {
+      TransactionResult.encode(message.transaction, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DelegateDecryptionResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDelegateDecryptionResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.transaction = TransactionResult.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): DelegateDecryptionResponse {
+    return { transaction: isSet(object.transaction) ? TransactionResult.fromJSON(object.transaction) : undefined };
+  },
+
+  toJSON(message: DelegateDecryptionResponse): unknown {
+    const obj: any = {};
+    if (message.transaction !== undefined) {
+      obj.transaction = TransactionResult.toJSON(message.transaction);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<DelegateDecryptionResponse>): DelegateDecryptionResponse {
+    return DelegateDecryptionResponse.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<DelegateDecryptionResponse>): DelegateDecryptionResponse {
+    const message = createBaseDelegateDecryptionResponse();
+    message.transaction = (object.transaction !== undefined && object.transaction !== null)
+      ? TransactionResult.fromPartial(object.transaction)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseRevokeDelegationResponse(): RevokeDelegationResponse {
+  return { transaction: undefined };
+}
+
+export const RevokeDelegationResponse: MessageFns<RevokeDelegationResponse> = {
+  encode(message: RevokeDelegationResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.transaction !== undefined) {
+      TransactionResult.encode(message.transaction, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RevokeDelegationResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRevokeDelegationResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.transaction = TransactionResult.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): RevokeDelegationResponse {
+    return { transaction: isSet(object.transaction) ? TransactionResult.fromJSON(object.transaction) : undefined };
+  },
+
+  toJSON(message: RevokeDelegationResponse): unknown {
+    const obj: any = {};
+    if (message.transaction !== undefined) {
+      obj.transaction = TransactionResult.toJSON(message.transaction);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<RevokeDelegationResponse>): RevokeDelegationResponse {
+    return RevokeDelegationResponse.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<RevokeDelegationResponse>): RevokeDelegationResponse {
+    const message = createBaseRevokeDelegationResponse();
+    message.transaction = (object.transaction !== undefined && object.transaction !== null)
+      ? TransactionResult.fromPartial(object.transaction)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseIsDelegationActiveResponse(): IsDelegationActiveResponse {
+  return { isActive: false };
+}
+
+export const IsDelegationActiveResponse: MessageFns<IsDelegationActiveResponse> = {
+  encode(message: IsDelegationActiveResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.isActive !== false) {
+      writer.uint32(8).bool(message.isActive);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): IsDelegationActiveResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseIsDelegationActiveResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.isActive = reader.bool();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): IsDelegationActiveResponse {
+    return {
+      isActive: isSet(object.isActive)
+        ? globalThis.Boolean(object.isActive)
+        : isSet(object.is_active)
+        ? globalThis.Boolean(object.is_active)
+        : false,
+    };
+  },
+
+  toJSON(message: IsDelegationActiveResponse): unknown {
+    const obj: any = {};
+    if (message.isActive !== false) {
+      obj.isActive = message.isActive;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<IsDelegationActiveResponse>): IsDelegationActiveResponse {
+    return IsDelegationActiveResponse.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<IsDelegationActiveResponse>): IsDelegationActiveResponse {
+    const message = createBaseIsDelegationActiveResponse();
+    message.isActive = object.isActive ?? false;
+    return message;
+  },
+};
+
+function createBaseGetDelegationExpiryResponse(): GetDelegationExpiryResponse {
+  return { expiryTimestamp: 0n };
+}
+
+export const GetDelegationExpiryResponse: MessageFns<GetDelegationExpiryResponse> = {
+  encode(message: GetDelegationExpiryResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.expiryTimestamp !== 0n) {
+      if (BigInt.asUintN(64, message.expiryTimestamp) !== message.expiryTimestamp) {
+        throw new globalThis.Error("value provided for field message.expiryTimestamp of type uint64 too large");
+      }
+      writer.uint32(8).uint64(message.expiryTimestamp);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetDelegationExpiryResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetDelegationExpiryResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.expiryTimestamp = reader.uint64() as bigint;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): GetDelegationExpiryResponse {
+    return {
+      expiryTimestamp: isSet(object.expiryTimestamp)
+        ? BigInt(object.expiryTimestamp)
+        : isSet(object.expiry_timestamp)
+        ? BigInt(object.expiry_timestamp)
+        : 0n,
+    };
+  },
+
+  toJSON(message: GetDelegationExpiryResponse): unknown {
+    const obj: any = {};
+    if (message.expiryTimestamp !== 0n) {
+      obj.expiryTimestamp = message.expiryTimestamp.toString();
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<GetDelegationExpiryResponse>): GetDelegationExpiryResponse {
+    return GetDelegationExpiryResponse.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<GetDelegationExpiryResponse>): GetDelegationExpiryResponse {
+    const message = createBaseGetDelegationExpiryResponse();
+    message.expiryTimestamp = (object.expiryTimestamp !== undefined && object.expiryTimestamp !== null)
+      ? BigInt(object.expiryTimestamp)
+      : 0n;
+    return message;
+  },
+};
+
+function createBaseGetDelegationStatusResponse(): GetDelegationStatusResponse {
+  return { isActive: false, expiryTimestamp: 0n };
+}
+
+export const GetDelegationStatusResponse: MessageFns<GetDelegationStatusResponse> = {
+  encode(message: GetDelegationStatusResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.isActive !== false) {
+      writer.uint32(8).bool(message.isActive);
+    }
+    if (message.expiryTimestamp !== 0n) {
+      if (BigInt.asUintN(64, message.expiryTimestamp) !== message.expiryTimestamp) {
+        throw new globalThis.Error("value provided for field message.expiryTimestamp of type uint64 too large");
+      }
+      writer.uint32(16).uint64(message.expiryTimestamp);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetDelegationStatusResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetDelegationStatusResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.isActive = reader.bool();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.expiryTimestamp = reader.uint64() as bigint;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): GetDelegationStatusResponse {
+    return {
+      isActive: isSet(object.isActive)
+        ? globalThis.Boolean(object.isActive)
+        : isSet(object.is_active)
+        ? globalThis.Boolean(object.is_active)
+        : false,
+      expiryTimestamp: isSet(object.expiryTimestamp)
+        ? BigInt(object.expiryTimestamp)
+        : isSet(object.expiry_timestamp)
+        ? BigInt(object.expiry_timestamp)
+        : 0n,
+    };
+  },
+
+  toJSON(message: GetDelegationStatusResponse): unknown {
+    const obj: any = {};
+    if (message.isActive !== false) {
+      obj.isActive = message.isActive;
+    }
+    if (message.expiryTimestamp !== 0n) {
+      obj.expiryTimestamp = message.expiryTimestamp.toString();
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<GetDelegationStatusResponse>): GetDelegationStatusResponse {
+    return GetDelegationStatusResponse.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<GetDelegationStatusResponse>): GetDelegationStatusResponse {
+    const message = createBaseGetDelegationStatusResponse();
+    message.isActive = object.isActive ?? false;
+    message.expiryTimestamp = (object.expiryTimestamp !== undefined && object.expiryTimestamp !== null)
+      ? BigInt(object.expiryTimestamp)
+      : 0n;
+    return message;
+  },
+};
+
 /**
  * SDK failures retain their code and retry information in gRPC trailers.
  * Integer durations and counts are exact; omitted optional values use SDK defaults.
@@ -10730,6 +11589,63 @@ export const SidecarServiceService = {
     responseSerialize: (value: EncryptResponse): Buffer => Buffer.from(EncryptResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): EncryptResponse => EncryptResponse.decode(value),
   },
+  /** Calls delegations.delegateDecryption; the delegator is the signer account and the write is requested on the signer channel. */
+  delegateDecryption: {
+    path: "/zama.sdk.v1alpha1.SidecarService/DelegateDecryption" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: DelegateDecryptionRequest): Buffer =>
+      Buffer.from(DelegateDecryptionRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DelegateDecryptionRequest => DelegateDecryptionRequest.decode(value),
+    responseSerialize: (value: DelegateDecryptionResponse): Buffer =>
+      Buffer.from(DelegateDecryptionResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): DelegateDecryptionResponse => DelegateDecryptionResponse.decode(value),
+  },
+  /** Calls delegations.revokeDelegation for the signer account's on-chain delegation. */
+  revokeDelegation: {
+    path: "/zama.sdk.v1alpha1.SidecarService/RevokeDelegation" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: RevokeDelegationRequest): Buffer =>
+      Buffer.from(RevokeDelegationRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): RevokeDelegationRequest => RevokeDelegationRequest.decode(value),
+    responseSerialize: (value: RevokeDelegationResponse): Buffer =>
+      Buffer.from(RevokeDelegationResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): RevokeDelegationResponse => RevokeDelegationResponse.decode(value),
+  },
+  /** Calls delegations.isActive without requiring a signer. */
+  isDelegationActive: {
+    path: "/zama.sdk.v1alpha1.SidecarService/IsDelegationActive" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: DelegationQuery): Buffer => Buffer.from(DelegationQuery.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DelegationQuery => DelegationQuery.decode(value),
+    responseSerialize: (value: IsDelegationActiveResponse): Buffer =>
+      Buffer.from(IsDelegationActiveResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): IsDelegationActiveResponse => IsDelegationActiveResponse.decode(value),
+  },
+  /** Calls delegations.getExpiry without requiring a signer. */
+  getDelegationExpiry: {
+    path: "/zama.sdk.v1alpha1.SidecarService/GetDelegationExpiry" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: DelegationQuery): Buffer => Buffer.from(DelegationQuery.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DelegationQuery => DelegationQuery.decode(value),
+    responseSerialize: (value: GetDelegationExpiryResponse): Buffer =>
+      Buffer.from(GetDelegationExpiryResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GetDelegationExpiryResponse => GetDelegationExpiryResponse.decode(value),
+  },
+  /** Calls delegations.getStatus without requiring a signer. */
+  getDelegationStatus: {
+    path: "/zama.sdk.v1alpha1.SidecarService/GetDelegationStatus" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: DelegationQuery): Buffer => Buffer.from(DelegationQuery.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DelegationQuery => DelegationQuery.decode(value),
+    responseSerialize: (value: GetDelegationStatusResponse): Buffer =>
+      Buffer.from(GetDelegationStatusResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GetDelegationStatusResponse => GetDelegationStatusResponse.decode(value),
+  },
 } as const;
 
 export interface SidecarServiceServer extends UntypedServiceImplementation {
@@ -10779,6 +11695,16 @@ export interface SidecarServiceServer extends UntypedServiceImplementation {
   revokeTransportKeyPair: handleUnaryCall<ScopeRequest, RevokeTransportKeyPairResponse>;
   /** Calls sdk.encrypt; no wallet signing is required. */
   encrypt: handleUnaryCall<EncryptRequest, EncryptResponse>;
+  /** Calls delegations.delegateDecryption; the delegator is the signer account and the write is requested on the signer channel. */
+  delegateDecryption: handleUnaryCall<DelegateDecryptionRequest, DelegateDecryptionResponse>;
+  /** Calls delegations.revokeDelegation for the signer account's on-chain delegation. */
+  revokeDelegation: handleUnaryCall<RevokeDelegationRequest, RevokeDelegationResponse>;
+  /** Calls delegations.isActive without requiring a signer. */
+  isDelegationActive: handleUnaryCall<DelegationQuery, IsDelegationActiveResponse>;
+  /** Calls delegations.getExpiry without requiring a signer. */
+  getDelegationExpiry: handleUnaryCall<DelegationQuery, GetDelegationExpiryResponse>;
+  /** Calls delegations.getStatus without requiring a signer. */
+  getDelegationStatus: handleUnaryCall<DelegationQuery, GetDelegationStatusResponse>;
 }
 
 export interface SidecarServiceClient extends Client {
@@ -11131,6 +12057,86 @@ export interface SidecarServiceClient extends Client {
     metadata: Metadata,
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: EncryptResponse) => void,
+  ): ClientUnaryCall;
+  /** Calls delegations.delegateDecryption; the delegator is the signer account and the write is requested on the signer channel. */
+  delegateDecryption(
+    request: DelegateDecryptionRequest,
+    callback: (error: ServiceError | null, response: DelegateDecryptionResponse) => void,
+  ): ClientUnaryCall;
+  delegateDecryption(
+    request: DelegateDecryptionRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: DelegateDecryptionResponse) => void,
+  ): ClientUnaryCall;
+  delegateDecryption(
+    request: DelegateDecryptionRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: DelegateDecryptionResponse) => void,
+  ): ClientUnaryCall;
+  /** Calls delegations.revokeDelegation for the signer account's on-chain delegation. */
+  revokeDelegation(
+    request: RevokeDelegationRequest,
+    callback: (error: ServiceError | null, response: RevokeDelegationResponse) => void,
+  ): ClientUnaryCall;
+  revokeDelegation(
+    request: RevokeDelegationRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: RevokeDelegationResponse) => void,
+  ): ClientUnaryCall;
+  revokeDelegation(
+    request: RevokeDelegationRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: RevokeDelegationResponse) => void,
+  ): ClientUnaryCall;
+  /** Calls delegations.isActive without requiring a signer. */
+  isDelegationActive(
+    request: DelegationQuery,
+    callback: (error: ServiceError | null, response: IsDelegationActiveResponse) => void,
+  ): ClientUnaryCall;
+  isDelegationActive(
+    request: DelegationQuery,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: IsDelegationActiveResponse) => void,
+  ): ClientUnaryCall;
+  isDelegationActive(
+    request: DelegationQuery,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: IsDelegationActiveResponse) => void,
+  ): ClientUnaryCall;
+  /** Calls delegations.getExpiry without requiring a signer. */
+  getDelegationExpiry(
+    request: DelegationQuery,
+    callback: (error: ServiceError | null, response: GetDelegationExpiryResponse) => void,
+  ): ClientUnaryCall;
+  getDelegationExpiry(
+    request: DelegationQuery,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: GetDelegationExpiryResponse) => void,
+  ): ClientUnaryCall;
+  getDelegationExpiry(
+    request: DelegationQuery,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: GetDelegationExpiryResponse) => void,
+  ): ClientUnaryCall;
+  /** Calls delegations.getStatus without requiring a signer. */
+  getDelegationStatus(
+    request: DelegationQuery,
+    callback: (error: ServiceError | null, response: GetDelegationStatusResponse) => void,
+  ): ClientUnaryCall;
+  getDelegationStatus(
+    request: DelegationQuery,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: GetDelegationStatusResponse) => void,
+  ): ClientUnaryCall;
+  getDelegationStatus(
+    request: DelegationQuery,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: GetDelegationStatusResponse) => void,
   ): ClientUnaryCall;
 }
 

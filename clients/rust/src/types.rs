@@ -72,9 +72,12 @@ impl TryFrom<generated::ClearValue> for ClearValue {
         })
     }
 }
-pub(crate) fn handle(bytes: &[u8]) -> Result<B256> {
-    ensure!(bytes.len() == 32, "invalid encrypted handle length");
+pub(crate) fn word(bytes: &[u8], name: &str) -> Result<B256> {
+    ensure!(bytes.len() == 32, "invalid {name} length");
     Ok(B256::from_slice(bytes))
+}
+pub(crate) fn handle(bytes: &[u8]) -> Result<B256> {
+    word(bytes, "encrypted handle")
 }
 pub(crate) fn clear_values(entries: Vec<generated::ClearEntry>) -> Result<ClearValues> {
     let mut values = HashMap::new();

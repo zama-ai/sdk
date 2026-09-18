@@ -1,6 +1,6 @@
-# Encrypt inputs, decrypt a balance and prepare an offline transaction from Rust or Go
+# Encrypt inputs, decrypt a balance, prepare an offline transaction and manage on-chain delegation from Rust or Go
 
-Use the maintained, permanently beta sidecar of `@zama-fhe/sdk` for external partner applications. Run it in Docker and drive it from a native Rust or Go application. Each entry point encrypts contract inputs, decrypts a balance, then asks the SDK to prepare a transaction that the application signs locally. Both examples print:
+Use the maintained, permanently beta sidecar of `@zama-fhe/sdk` for external partner applications. Run it in Docker and drive it from a native Rust or Go application. Each entry point encrypts contract inputs, decrypts a balance, asks the SDK to prepare a transaction that the application signs locally, then grants and revokes an on-chain decryption delegation. Both examples print:
 
 ```text
 Encrypted input 0: 0x<handle>
@@ -15,9 +15,20 @@ Prepared transaction: SetOperator
 Signed transaction: 0x<signed transaction bytes>
 Signed transaction hash: 0x<transaction hash>
 Not broadcast; the caller submits the signed bytes.
+Delegate: <delegate address>
+Delegation before: <state>
+Delegation granted: <0x transaction hash>
+Delegation after grant: <state>
+Delegation revoked: <0x transaction hash>
+Delegation after revoke: <state>
 ```
 
-The encryption step passes typed plaintext inputs and explicit user/contract addresses to `sdk.encrypt`. The native application reads the token using Alloy or go-ethereum. It passes the encrypted handle to `sdk.decryption.decryptValues` through the sidecar. The SDK requests a wallet signature only when its credential flow needs one.
+If the delegation is already active before the demo runs, the delegation
+step instead prints `Delegation before: <state>` followed by
+`Existing delegation left in place; the demo only revokes what it granted.`
+and skips granting and revoking.
+
+The encryption step passes typed plaintext inputs and explicit user/contract addresses to `sdk.encrypt`. The native application reads the token using Alloy or go-ethereum. It passes the encrypted handle to `sdk.decryption.decryptValues` through the sidecar. The SDK requests a wallet signature only when its credential flow needs one. The delegation step broadcasts two real Sepolia transactions from the test wallet (grant then revoke) and needs gas; it never revokes a delegation it did not itself grant.
 
 ## Configure the examples
 
@@ -27,7 +38,7 @@ Run the commands from the repository root with Docker Compose installed. Copy th
 cp -n .env.sidecar.example .env.sidecar.local
 ```
 
-Fill `.env.sidecar.local` with your Sepolia RPC URL, wallet address, confidential token address and test wallet private key. Leave `RELAYER_API_KEY` empty for the public Sepolia relayer. These values configure the example application; the sidecar has no process-wide owner or chain.
+Fill `.env.sidecar.local` with your Sepolia RPC URL, wallet address, confidential token address and test wallet private key. Leave `RELAYER_API_KEY` empty for the public Sepolia relayer. `DELEGATE_ADDRESS` is optional; it defaults to `0x2222222222222222222222222222222222222222` and must differ from the owner address. These values configure the example application; the sidecar has no process-wide owner or chain.
 
 The file is mounted only into the native examples. The sidecar does not receive it.
 
@@ -64,7 +75,9 @@ dc run --rm rust
 
 Use the [Go example](../../clients/go/examples/balance/main.go) or [Rust example](../../clients/rust/examples/balance/main.rs) as a starting point. Each entry point loads shared configuration, connects its wallet/provider, creates an SDK context, then runs the encryption, balance and offline steps. Setup lives in Go `config.go`/`ethereum.go` and Rust `support.rs`; `balance.go`/`balance.rs` receive SDK, provider, token and owner dependencies explicitly. Application-owned memory storage is the example default. The client manages callback channels. The encryption step sends `1000` as `euint64`, `true` as `ebool`, and the user address as `eaddress`, built with Go `Euint64`/`Ebool`/`Eaddress` or Rust `EncryptInput::Uint64`/`Bool`/`Address`. It prints one `Encrypted input <i>` line per returned handle, then the input proof.
 
-The offline step in `offline.go`/`offline.rs` asks the SDK to prepare a `SetOperator` revocation (`until: 1`), checks the prepared `TransactionKind` enum and that the prepared sender matches the local key, and signs the unsigned EIP-1559 bytes with the native Ethereum library. Signing keys stay in the application, and submitting the signed bytes is the caller's responsibility. Wallet setup includes transaction signing and broadcasting adapters, but the current sequence sends no blockchain transactions; a write step requires the upcoming token/delegation RPCs. See [transaction callbacks](TRANSACTIONS.md) for custom wallets and failure handling.
+The offline step in `offline.go`/`offline.rs` asks the SDK to prepare a `SetOperator` revocation (`until: 1`), checks the prepared `TransactionKind` enum and that the prepared sender matches the local key, and signs the unsigned EIP-1559 bytes with the native Ethereum library. Signing keys stay in the application, and submitting the signed bytes is the caller's responsibility.
+
+The delegation step in `delegation.go`/`delegation.rs` runs after the offline step and uses the same wallet's transaction signing and broadcasting adapter to grant and revoke an on-chain decryption delegation for real, through [`sdk.delegations`](DELEGATIONS.md). A write step for token transactions still requires the upcoming token RPCs. See [transaction callbacks](TRANSACTIONS.md) and [manage on-chain delegation](DELEGATIONS.md) for custom wallets and failure handling.
 
 The encrypted balance is the contract's ciphertext handle. The decrypted value is the raw amount for that same handle, without decimal formatting.
 
@@ -149,7 +162,7 @@ dc run --rm go
 dc run --rm rust
 ```
 
-The balance workflow currently reads the encrypted handle with the native Ethereum library and uses SDK decryption. Integration with `Token.balanceOf` and additional token/delegation steps is deferred until those native public APIs are exposed. Credential reuse and restart behavior are exercised through SDK-backed integration tests.
+The balance workflow currently reads the encrypted handle with the native Ethereum library and uses SDK decryption. Integration with `Token.balanceOf` and other token steps is deferred until those native public APIs are exposed. On-chain delegation is exposed through the delegation step described above. Credential reuse and restart behavior are exercised through SDK-backed integration tests.
 
 ## Transport configuration
 

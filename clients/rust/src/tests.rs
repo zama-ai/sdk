@@ -898,3 +898,6 @@ mod encryption_tests;
 
 #[path = "offline_tests.rs"]
 mod offline_tests;
+
+#[path = "delegation_tests.rs"]
+mod delegation_tests;

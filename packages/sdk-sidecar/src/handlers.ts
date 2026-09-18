@@ -17,6 +17,13 @@ import {
 } from "./encoding.js";
 import { cancelled, errorDetails, invalidArgument, serviceError } from "./errors.js";
 import { encrypt } from "./encryption.js";
+import {
+  delegateDecryption,
+  getDelegationExpiry,
+  getDelegationStatus,
+  isDelegationActive,
+  revokeDelegation,
+} from "./delegations.js";
 
 function unary<Request, Response>(
   operation: (request: Request, signal: AbortSignal) => Promise<Response> | Response,
@@ -236,5 +243,10 @@ export function createHandlers(
       await sdk.permits.revokeTransportKeyPair(request.scopeId);
       return {};
     }),
+    delegateDecryption: execute(delegateDecryption, true),
+    revokeDelegation: execute(revokeDelegation, true),
+    isDelegationActive: execute(isDelegationActive, true),
+    getDelegationExpiry: execute(getDelegationExpiry, true),
+    getDelegationStatus: execute(getDelegationStatus, true),
   };
 }

@@ -3,7 +3,6 @@ package sidecar
 import (
 	"context"
 	"errors"
-	"math"
 	"math/big"
 	"time"
 
@@ -257,16 +256,11 @@ type DelegateDecryptionRequest struct {
 }
 
 func (r DelegateDecryptionRequest) prepareWire() (*pb.PrepareTransactionRequest, error) {
-	var expiration *uint64
-	if r.ExpirationDate != nil {
-		// Wire milliseconds are unsigned and UnixMilli overflows outside the int64 millisecond range.
-		if r.ExpirationDate.Before(time.UnixMilli(0)) || r.ExpirationDate.After(time.UnixMilli(math.MaxInt64)) {
-			return nil, errors.New("expiration date is outside the representable millisecond range")
-		}
-		value := uint64(r.ExpirationDate.UnixMilli())
-		expiration = &value
+	delegation, err := delegateDecryptionWire(DelegateDecryptionParams{ContractAddress: r.ContractAddress, DelegateAddress: r.DelegateAddress, ExpirationDate: r.ExpirationDate})
+	if err != nil {
+		return nil, err
 	}
-	return &pb.PrepareTransactionRequest{From: r.From.Bytes(), Transaction: &pb.PrepareTransactionRequest_DelegateDecryption{DelegateDecryption: &pb.DelegateDecryption{ContractAddress: r.ContractAddress.Bytes(), DelegateAddress: r.DelegateAddress.Bytes(), ExpirationDateMs: expiration}}}, nil
+	return &pb.PrepareTransactionRequest{From: r.From.Bytes(), Transaction: &pb.PrepareTransactionRequest_DelegateDecryption{DelegateDecryption: delegation}}, nil
 }
 
 type RevokeDelegationRequest struct {
@@ -276,5 +270,6 @@ type RevokeDelegationRequest struct {
 }
 
 func (r RevokeDelegationRequest) prepareWire() (*pb.PrepareTransactionRequest, error) {
-	return &pb.PrepareTransactionRequest{From: r.From.Bytes(), Transaction: &pb.PrepareTransactionRequest_RevokeDelegation{RevokeDelegation: &pb.RevokeDelegation{ContractAddress: r.ContractAddress.Bytes(), DelegateAddress: r.DelegateAddress.Bytes()}}}, nil
+	delegation := revokeDelegationWire(RevokeDelegationParams{ContractAddress: r.ContractAddress, DelegateAddress: r.DelegateAddress})
+	return &pb.PrepareTransactionRequest{From: r.From.Bytes(), Transaction: &pb.PrepareTransactionRequest_RevokeDelegation{RevokeDelegation: delegation}}, nil
 }

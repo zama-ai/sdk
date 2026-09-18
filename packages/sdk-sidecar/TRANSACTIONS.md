@@ -2,7 +2,7 @@
 
 The signer channel lets your native wallet sign and broadcast a contract write requested by `@zama-fhe/sdk`. Your wallet returns the transaction hash. The TypeScript SDK waits for the receipt and continues its workflow.
 
-This capability belongs to the maintained beta sidecar. Token and delegation transaction RPCs are not exposed yet. The balance examples configure transaction-capable wallets; SDK-backed integration tests exercise writes through `Token.setOperator`. A live write step will use the public token/delegation API once available.
+This capability belongs to the maintained beta sidecar. Token transaction RPCs are not exposed yet; on-chain delegation writes are (see [`DelegateDecryption`/`RevokeDelegation`](DELEGATIONS.md)). The balance examples configure transaction-capable wallets; SDK-backed integration tests exercise writes through `Token.setOperator`. A live token write step will use the public token API once available.
 
 ## Go wallet setup
 

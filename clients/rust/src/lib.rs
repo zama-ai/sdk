@@ -22,6 +22,7 @@ mod channel;
 mod config;
 mod config_options;
 mod decryption;
+mod delegations;
 mod encryption;
 mod error;
 mod lifetime;
@@ -46,6 +47,10 @@ pub use config_options::{
 };
 pub use decryption::{
     BatchItem, Decryption, DelegatedBatchOptions, DelegatedOptions, PublicDecryption,
+};
+pub use delegations::{
+    DelegateDecryptionParams, DelegationQuery, DelegationStatus, Delegations,
+    PERMANENT_DELEGATION_EXPIRY, RevokeDelegationParams, TransactionLog, TransactionResult,
 };
 pub use encryption::{EncryptInput, EncryptOptions, EncryptParams, EncryptResult};
 pub use error::{RpcError, SdkError};

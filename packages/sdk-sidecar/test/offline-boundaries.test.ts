@@ -55,11 +55,6 @@ const delegations: {
     expirationDateMs: BigInt(Date.UTC(2099, 0, 1)) + 123n,
   },
   {
-    name: "out of range expiry",
-    delegateAddress: DELEGATE,
-    expirationDateMs: 8_640_000_000_000_001n,
-  },
-  {
     name: "expiry under one hour",
     delegateAddress: DELEGATE,
     expirationDateMs: BigInt(Date.now() + 60_000),
@@ -128,6 +123,28 @@ test.each([
     await expect(prepareTransaction(value.sdk, wire)).rejects.toMatchObject({
       code: "INVALID_ARGUMENT",
     });
+    expect(value.provider.prepareTransaction).not.toHaveBeenCalled();
+  } finally {
+    value.sdk.dispose();
+  }
+});
+
+test("rejects a delegation expiry beyond the representable Date range", async () => {
+  const value = fixture(undefined);
+  try {
+    await expect(
+      prepareTransaction(value.sdk, {
+        ...base,
+        transaction: {
+          $case: "delegateDecryption",
+          delegateDecryption: {
+            contractAddress: bytes(TOKEN),
+            delegateAddress: bytes(DELEGATE),
+            expirationDateMs: 9_000_000_000_000_000n,
+          },
+        },
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
     expect(value.provider.prepareTransaction).not.toHaveBeenCalled();
   } finally {
     value.sdk.dispose();

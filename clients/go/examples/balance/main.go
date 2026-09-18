@@ -46,7 +46,10 @@ func run() error {
 	if err := showBalance(ctx, provider, sdk, config.token, config.owner); err != nil {
 		return err
 	}
-	return prepareOffline(ctx, sdk, config.token, config.owner, config.privateKey)
+	if err := prepareOffline(ctx, sdk, config.token, config.owner, config.privateKey); err != nil {
+		return err
+	}
+	return manageDelegation(ctx, sdk, config.token, config.owner, config.delegate)
 }
 
 func main() {

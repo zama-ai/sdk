@@ -5,6 +5,7 @@ import {
   type Address,
   type ClearValue as SdkClearValue,
   type EncryptedValue,
+  type TransactionResult,
   type WalletAccount as SdkWalletAccount,
 } from "@zama-fhe/sdk";
 import type {
@@ -12,6 +13,7 @@ import type {
   ClearEntry,
   ClearValue,
   EncryptedInput,
+  TransactionResult as WireTransactionResult,
   WalletAccount,
 } from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import { invalidArgument } from "./errors.js";
@@ -37,6 +39,17 @@ export function input(value: EncryptedInput) {
 }
 export function bytes(value: `0x${string}`): Buffer {
   return Buffer.from(hexToBytes(value));
+}
+export function transactionResult(result: TransactionResult): WireTransactionResult {
+  return {
+    transactionHash: bytes(result.txHash),
+    logs: result.receipt.logs.map((log) => ({
+      // Provider adapters may omit the emitter address.
+      ...(log.address === undefined ? {} : { address: bytes(log.address) }),
+      topics: log.topics.map(bytes),
+      data: bytes(log.data),
+    })),
+  };
 }
 export function clearValue(value: SdkClearValue | number): ClearValue {
   switch (typeof value) {

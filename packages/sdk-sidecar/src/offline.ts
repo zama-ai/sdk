@@ -4,6 +4,7 @@ import type * as rpc from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import { TransactionKind as WireTransactionKind } from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import type { ContextSdk } from "./runtime.js";
 import { address, bytes, integer, safeInteger } from "./encoding.js";
+import { delegateDecryptionParams, revokeDelegationParams } from "./delegations.js";
 import { invalidArgument } from "./errors.js";
 
 const wireKinds: Record<TransactionKind, rpc.TransactionKind> = {
@@ -114,27 +115,18 @@ function transactionRequest(request: rpc.PrepareTransactionRequest): PrepareTran
           : { recipientData: bytesToHex(value.recipientData) }),
       };
     }
-    case "delegateDecryption": {
-      const value = transaction.delegateDecryption;
+    case "delegateDecryption":
       return {
         kind: "DelegateDecryption",
         from,
-        contractAddress: address(value.contractAddress),
-        delegateAddress: address(value.delegateAddress),
-        ...(value.expirationDateMs === undefined
-          ? {}
-          : { expirationDate: new Date(safeInteger(value.expirationDateMs, "Expiration date")) }),
+        ...delegateDecryptionParams(transaction.delegateDecryption),
       };
-    }
-    case "revokeDelegation": {
-      const value = transaction.revokeDelegation;
+    case "revokeDelegation":
       return {
         kind: "RevokeDelegation",
         from,
-        contractAddress: address(value.contractAddress),
-        delegateAddress: address(value.delegateAddress),
+        ...revokeDelegationParams(transaction.revokeDelegation),
       };
-    }
     default:
       transaction satisfies undefined;
       throw invalidArgument("An offline transaction kind is required.");

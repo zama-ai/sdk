@@ -57,6 +57,11 @@ The SDK's inherited account-change credential/cache cleanup is asynchronous and 
 | `WarmTransportKeyPairScope`   | `sdk.permits.warmTransportKeyPairScope`      |
 | `RevokeTransportKeyPair`      | `sdk.permits.revokeTransportKeyPair`         |
 | `Encrypt`                     | `sdk.encrypt`                                |
+| `DelegateDecryption`          | `sdk.delegations.delegateDecryption`         |
+| `RevokeDelegation`            | `sdk.delegations.revokeDelegation`           |
+| `IsDelegationActive`          | `sdk.delegations.isActive`                   |
+| `GetDelegationExpiry`         | `sdk.delegations.getExpiry`                  |
+| `GetDelegationStatus`         | `sdk.delegations.getStatus`                  |
 
 Private decryption retains SDK credential acquisition, caching, zero-handle behavior and errors. Delegated calls preserve explicit delegator and optional account parameters. Public decryption returns clear values, ABI-encoded values and the decryption proof. Delegated batch results preserve input order, per-entry values or structured SDK errors, and fatal whole-call errors. Empty-input behavior, concurrency and propagation settings retain SDK semantics.
 
@@ -87,6 +92,14 @@ Amounts, gas limits and both EIP-1559 fee values are canonical base-10 strings, 
 The response carries the SDK's kind as a `TransactionKind` enum, with the sender and unsigned EIP-1559 bytes unchanged. Native clients reject `TRANSACTION_KIND_UNSPECIFIED`. This RPC signs nothing and broadcasts nothing. The caller verifies the sender and payload, signs with its own key or custodian, and broadcasts through its own provider. Permit preparation and registration stay separate RPCs.
 
 Preparation uses the existing operation lifecycle and error trailers. The SDK method accepts no abort signal: cancellation ends the caller's wait, and started SDK work drains before context disposal or account changes. Requests are never replayed automatically.
+
+## On-chain delegation
+
+`DelegateDecryption` and `RevokeDelegation` call `sdk.delegations.delegateDecryption`/`.revokeDelegation`; both write to the ACL contract and reuse the existing signer channel. The delegator is the signer account already attached to the context, so neither request carries a delegator field. `IsDelegationActive`, `GetDelegationExpiry` and `GetDelegationStatus` call the corresponding read methods and need no signer; `DelegationQuery` carries an explicit `contract_address`, `delegator_address` and `delegate_address` instead.
+
+`DelegateDecryption.expiration_date_ms` omission requests a permanent delegation, stored on-chain as `2^64 - 1`; an explicit value is milliseconds on the wire and the SDK enforces its minimum lead time before converting it to seconds for the ACL write. `GetDelegationExpiryResponse.expiry_timestamp` and `GetDelegationStatusResponse.expiry_timestamp` report that same whole-second ACL value: `0` means no delegation, `2^64 - 1` means permanent, any other value is compared against the current chain block timestamp. `TransactionResult` mirrors the SDK's own write result: a `transaction_hash` and the mined receipt's `logs`. These RPCs added no new field, type or oneof to any existing message, and used no shared-message coordination field-number range.
+
+This is distinct from the existing `GrantDelegationPermit`/`HasDelegationPermit` RPCs, which manage a local delegation permit (an SDK credential), not on-chain ACL state. See [manage on-chain delegation](../packages/sdk-sidecar/DELEGATIONS.md) for the full RPC-to-SDK mapping, error codes and native examples.
 
 ## Storage bindings and callbacks
 
@@ -134,15 +147,15 @@ RPC deadlines are independent of SDK relayer timeouts. Storage failures do not p
 
 ## Remaining API coverage
 
-Token/WrappedToken operations, registry access, executed delegation transactions and SDK event subscriptions are not exposed in this slice. Delegation changes are available only as offline-prepared transactions. Injection of arbitrary JavaScript providers, loggers and SDK event callbacks remains outside this wire API. Native storage implementations are supported through the storage bridge. This is partial SDK coverage; the methods above delegate their SDK behavior rather than reconstructing token flows.
+Token/WrappedToken operations, registry access and SDK event subscriptions are not exposed in this slice. Executed on-chain delegation transactions are now exposed through `DelegateDecryption`/`RevokeDelegation`; `PrepareTransaction`'s `delegate_decryption`/`revoke_delegation` kinds remain available separately for offline-prepared, self-signed delegation transactions. Injection of arbitrary JavaScript providers, loggers and SDK event callbacks remains outside this wire API. Native storage implementations are supported through the storage bridge. This is partial SDK coverage; the methods above delegate their SDK behavior rather than reconstructing token flows.
 
-The native balance examples perform Ethereum contract reads in Alloy/go-ethereum and pass the resulting encrypted handle to general decryption. The shared setup now accepts runtime/provider options, storage selection and optional credential protection before the encryption and balance steps, and its wallets include transaction adapters. Integration with `Token.balanceOf`, other token lifecycle steps and delegation transactions remains deferred until those public native APIs are exposed. SDK-backed tests exercise credential reuse, restart behavior and the transaction callback meanwhile.
+The native balance examples perform Ethereum contract reads in Alloy/go-ethereum and pass the resulting encrypted handle to general decryption. The shared setup now accepts runtime/provider options, storage selection and optional credential protection before the encryption and balance steps, and its wallets include transaction adapters, now exercised by a real delegation grant/revoke step. Integration with `Token.balanceOf` and other token lifecycle steps remains deferred until those public native APIs are exposed. SDK-backed tests exercise credential reuse, restart behavior and the transaction callback meanwhile.
 
 ## Equivalence verification
 
-Shared scenarios compare direct SDK calls with sidecar calls using deterministic provider and relayer fixtures and real SDK credential/decryption logic. They compare values, errors and signer interactions across signerless calls, multiple contexts/accounts, direct and delegated permits, omitted options, acquisition/reuse/recovery, public proofs, batch failures, cancellation and concurrent reads.
+Shared scenarios compare direct SDK calls with sidecar calls using deterministic provider and relayer fixtures and real SDK credential/decryption logic. They compare values, errors and signer interactions across signerless calls, multiple contexts/accounts, direct and delegated permits, on-chain delegation grants and revocations, omitted options, acquisition/reuse/recovery, public proofs, batch failures, cancellation and concurrent reads.
 
-Go and Rust wire tests cover typed values, callback correlation, rejection and deadlines. Native recovery tests use the production context factory and retain application-owned credentials across sidecar runtime replacement. Sidecar CI runs these checks without live wallet or RPC configuration. Live examples read encrypted balances using native Ethereum libraries, invoke general decryption, then prepare and locally sign an operator revocation without broadcasting; persistent reuse and restart scenarios remain in tests. Offline equivalence tests compare every preparation kind, omitted and explicit options, malformed encodings and provider failures against the direct SDK.
+Go and Rust wire tests cover typed values, callback correlation, rejection and deadlines. Native recovery tests use the production context factory and retain application-owned credentials across sidecar runtime replacement. Sidecar CI runs these checks without live wallet or RPC configuration. Live examples read encrypted balances using native Ethereum libraries, invoke general decryption, prepare and locally sign an operator revocation without broadcasting, then grant and revoke an on-chain delegation with two broadcast transactions; persistent reuse and restart scenarios remain in tests. Offline equivalence tests compare every preparation kind, omitted and explicit options, malformed encodings and provider failures against the direct SDK.
 
 Encryption equivalence tests compare direct SDK calls and wire calls across input types, explicit binding addresses, timeout presence, SDK failures and cancellation. Native tests use the real SDK with a synthetic relayer that returns randomized encrypted values and a fixture proof. The relayer URL path of each test context selects its fixture scenario, and the TypeScript driver asserts the SDK-side inputs, addresses and timeout presence of every recorded call. Separate canonical backend checks exercise numeric rejection errors before network access. These fixtures do not verify live cryptographic proofs.
 

@@ -12,6 +12,7 @@ pub struct Settings {
     pub socket: String,
     pub account: WalletAccount,
     pub token: Address,
+    pub delegate: Address,
     pub config: SdkConfig,
     pub signer: PrivateKeySigner,
     rpc_url: String,
@@ -40,6 +41,16 @@ impl Settings {
         ensure!(
             signer.address() == address,
             "wallet does not match user address"
+        );
+        let delegate: Address = match values.get("DELEGATE_ADDRESS").map(String::as_str) {
+            Some(value) if !value.is_empty() => value.parse()?,
+            _ => "0x2222222222222222222222222222222222222222"
+                .parse()
+                .unwrap(),
+        };
+        ensure!(
+            delegate != address,
+            "DELEGATE_ADDRESS must differ from OWNER_ADDRESS"
         );
         let account = WalletAccount {
             address,
@@ -81,6 +92,7 @@ impl Settings {
                 .unwrap_or_else(|_| "/tmp/zama-sdk-sidecar.sock".into()),
             account,
             token,
+            delegate,
             config,
             signer,
             rpc_url,
