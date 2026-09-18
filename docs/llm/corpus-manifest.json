@@ -97,6 +97,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:changelog/README",
+      "title": "Release channels",
+      "source_path": "docs/gitbook/src/changelog/README.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/README.md",
+      "source_type": "official-doc",
+      "category": "changelog",
+      "logical_path": "changelog/README",
+      "description": "What stable, beta, and alpha mean for @zama-fhe/sdk, and where to find what changed in each.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:changelog/beta",
       "title": "Beta",
       "source_path": "docs/gitbook/src/changelog/beta.md",
@@ -121,6 +133,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:changelog/v3-6",
+      "title": "3.6.x",
+      "source_path": "docs/gitbook/src/changelog/v3-6.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-6.md",
+      "source_type": "official-doc",
+      "category": "changelog",
+      "logical_path": "changelog/v3-6",
+      "description": "Web Worker encryption offload, structured wallet-signing and permit-failure events, an interrupted-unshield resume fix, and orphaned relayer entries that warn instead of throwing.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:changelog/v3-5",
       "title": "3.5.x",
       "source_path": "docs/gitbook/src/changelog/v3-5.md",
@@ -128,7 +152,7 @@
       "source_type": "official-doc",
       "category": "changelog",
       "logical_path": "changelog/v3-5",
-      "description": "Release notes for the 3.5.x line.",
+      "description": "Polygon presets, offline signing and decryption permits, at-rest transport-key encryption, and automatic KMS-context recovery.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -140,7 +164,7 @@
       "source_type": "official-doc",
       "category": "changelog",
       "logical_path": "changelog/v3-4",
-      "description": "Release notes for the 3.4.x line.",
+      "description": "An internal FHE backend migration to @fhevm/sdk, FHE runtime and client tuning knobs, shared transport key pairs for B2B2C, automatic decrypt-batch chunking, and a two-signature shield via wrap().",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -1160,7 +1184,7 @@
       "source_type": "official-doc",
       "category": "reference-react",
       "logical_path": "reference/react/useToken",
-      "description": "Hook returning a memoised Token instance for a given address.",
+      "description": "Hook returning a memoized Token instance for a given address.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -1172,7 +1196,7 @@
       "source_type": "official-doc",
       "category": "reference-react",
       "logical_path": "reference/react/useWrappedToken",
-      "description": "React hook returning a memoised WrappedToken instance.",
+      "description": "React hook returning a memoized WrappedToken instance.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

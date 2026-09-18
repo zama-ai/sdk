@@ -1,5 +1,5 @@
 /**
- * Scenario: Verify SDK / FhevmRelayer error behaviour and typed error matching.
+ * Scenario: Verify SDK / FhevmRelayer error behavior and typed error matching.
  * Domain-level error scenarios are covered by the browser e2e suite.
  */
 import { DecryptionFailedError, matchZamaError, NoCiphertextError } from "@zama-fhe/sdk";

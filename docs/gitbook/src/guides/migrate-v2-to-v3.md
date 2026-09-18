@@ -470,7 +470,7 @@ await setOperator({ operator: "0xOperator" });
 {% endtabs %}
 
 The write side is a pure rename — v2's `token.approve()` already called the
-on-chain `setOperator`, so behaviour is unchanged. The read side has one trap:
+on-chain `setOperator`, so behavior is unchanged. The read side has one trap:
 
 {% hint style="warning" %}
 **Reversed argument order.** `isApproved(spender, holder?)` became

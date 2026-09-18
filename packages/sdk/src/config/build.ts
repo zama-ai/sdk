@@ -13,6 +13,7 @@ import { LoggerService } from "../services/logger-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import { parseSchema } from "../validation";
 import { DEFAULT_REGISTRY_TTL_SECONDS, RegistryTTLSchema } from "../wrappers-registry";
+import { recordAppliedRuntimeConfig } from "../relayer/applied-runtime";
 import { resolveStorage } from "./resolve";
 import type { ZamaConfig, ZamaConfigBase } from "./types";
 
@@ -30,6 +31,17 @@ export function buildZamaConfig(
   const logger = new LoggerService(params.logger);
   const consumerLogger = params.logger;
 
+  const runtime = {
+    wasmAssetLoadMode: "auto" as const,
+    moduleVersions: "auto" as const,
+    logger: {
+      error: (message: string, cause?: unknown) => consumerLogger?.error(message, { cause }),
+      warn: (message: string) => consumerLogger?.warn(message),
+      debug: (message: string) => consumerLogger?.debug(message),
+    },
+    ...params.runtime,
+  };
+
   if (hasFhevmRuntimeConfig()) {
     // One config per signer is a supported pattern, so a second call is only worth warning about
     // when it carries runtime options that the already-locked runtime config will ignore.
@@ -40,21 +52,13 @@ export function buildZamaConfig(
       logger.warn(message);
     }
   } else {
-    setFhevmRuntimeConfig({
-      wasmAssetLoadMode: "auto",
-      moduleVersions: "auto",
-      logger: {
-        error: (message, cause) => consumerLogger?.error(message, { cause }),
-        warn: (message) => consumerLogger?.warn(message),
-        debug: (message) => consumerLogger?.debug(message),
-      },
-      ...params.runtime,
-    });
+    setFhevmRuntimeConfig(runtime);
+    recordAppliedRuntimeConfig(runtime);
   }
 
   const { storage, permitStorage } = resolveStorage(params.storage, params.permitStorage);
 
-  const router = new ChainRouter(params.chains, params.relayers);
+  const router = new ChainRouter(params.chains, params.relayers, logger);
 
   return {
     chains: params.chains,

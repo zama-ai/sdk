@@ -72,7 +72,7 @@ import { type DecryptInput } from "@zama-fhe/sdk";
 | `encryptedValue`  | `EncryptedValue` | The encrypted value (hex string) to decrypt.           |
 | `contractAddress` | `Address`        | Address of the contract that owns the encrypted value. |
 
-Inputs from different contracts can be mixed in a single call — `useDecryptValues` automatically groups them by contract address and issues one decryption request per unique contract:
+Inputs from different contracts can be mixed in a single call — `useDecryptValues` automatically groups them by contract address, splitting each group into one or more decryption requests to stay under the relayer's per-request cleartext-bit budget:
 
 ```tsx
 const { data } = useDecryptValues(

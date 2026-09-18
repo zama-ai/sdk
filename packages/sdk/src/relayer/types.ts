@@ -94,6 +94,30 @@ export type FhevmDecryptClient = ReturnType<typeof createFhevmDecryptClient>;
 /** @internal */
 export type FhevmEncryptClient = ReturnType<typeof createFhevmEncryptClient>;
 
+/**
+ * The subset of the encrypt client `FhevmRelayer` drives, narrow enough for a
+ * worker-offloaded backend to implement: the full client type also exposes
+ * members backed by the viem client and runtime modules, which cannot cross a
+ * worker boundary.
+ */
+export type FhevmEncryptBackend = Pick<
+  FhevmEncryptClient,
+  "init" | "encryptValue" | "encryptValues" | "fetchFheEncryptionKeyBytes"
+> & {
+  /** Releases what the backend holds (an encrypt worker) once in-flight work settles: safe to omit, safe to call twice. */
+  dispose?(): void;
+};
+
+/**
+ * The runtime-config fields an encrypt worker realm replicates. A `Pick` acts
+ * as an allowlist: a field added upstream is not forwarded, and might not
+ * survive `structuredClone`, until deliberately admitted here.
+ */
+export type WireRuntimeConfig = Pick<
+  FhevmRuntimeConfig,
+  "wasmAssetLoadMode" | "moduleVersions" | "singleThread" | "numberOfThreads" | "auth"
+>;
+
 /** Per-client `@fhevm/sdk` options (`batchRpcCalls`, `fheEncryptionKey`). */
 export type FhevmClientOptions = NonNullable<Parameters<typeof createFhevmClient>[0]["options"]>;
 
@@ -250,4 +274,9 @@ export interface RelayerSDK extends Pick<
   createUnsignedLegacyDecryptionPermitEip712(
     parameters: CreateUnsignedLegacyDecryptionPermitEip712Parameters,
   ): Promise<CreateUnsignedLegacyDecryptionPermitEip712ReturnType>;
+  /**
+   * Releases backend resources (e.g. an encrypt worker) once in-flight work
+   * finishes; a later call re-acquires them. Safe to omit and safe to call twice.
+   */
+  dispose?(): void;
 }

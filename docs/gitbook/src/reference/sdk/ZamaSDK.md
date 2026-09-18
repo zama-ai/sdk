@@ -81,9 +81,9 @@ const config = createConfig({
 
 ### relayers
 
-`Record<number, RelayerConfig>`
+`Record<number, RelayerConfig>`, one entry per chain in `chains`, keyed by chain id
 
-Per-chain relayer factories. Each chain in `chains` must have a matching entry.
+Per-chain relayer factories. A chain in `chains` without an entry fails `createConfig` with a `ConfigurationError`. An entry whose chain is not in `chains` is unused: `createConfig` warns through your `logger` and ignores it.
 
 ```ts
 import { web } from "@zama-fhe/sdk/web";
@@ -123,6 +123,25 @@ Transport key pair validity duration in seconds. Default: `2592000` (30 days). M
 
 Permit lifetime in days. Default: `30`. Controls how long each signed EIP-712 permit remains valid.
 
+### transportKeyPairScope
+
+`string | undefined`
+
+Opt-in shared-tenant scope for Wallet-as-a-Service / B2B2C operators managing many end-user wallets from one operator-controlled key store. An opaque identifier (typically a tenant ID) — every signer configured with the same scope shares one transport key pair instead of one per signer. Permits stay per-signer regardless of scope. Default: `undefined` (one transport key pair per signer).
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
+  transportKeyPairScope: "tenant-123", // opaque identifier, e.g. your tenant ID
+  storage: myPersistentStorage, // must be shared across every signer in this scope
+});
+```
+
+Sharing only works when every signer in the scope reads and writes the same storage instance. See [Security Model](../../concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators) for the tradeoff, and [`permits.warmTransportKeyPairScope`](#permits-warmtransportkeypairscope) / [`permits.revokeTransportKeyPair`](#permits-revoketransportkeypair) for the scope's lifecycle.
+
 ### registryTTL
 
 `number | undefined`
@@ -133,7 +152,7 @@ How long cached registry results remain valid, in seconds. Default: `86400` (24 
 
 `ZamaSDKEventListener | undefined`
 
-Lifecycle event callback for debugging and telemetry. Events never contain sensitive data.
+Lifecycle event callback for debugging and telemetry. Events never carry private keys, permit signatures, or ZK proofs — but `DecryptEnd`/`DecryptError` do carry decrypted cleartext values (see below), so avoid logging full event payloads for those two if your logging pipeline isn't already trusted with plaintext.
 
 ```ts
 const config = createConfig({
@@ -146,6 +165,91 @@ const config = createConfig({
   },
 });
 ```
+
+#### Events
+
+Every event extends a common shape (an optional `tokenAddress`, a `timestamp`, and, for multi-phase operations like unshield, a shared `operationId`), plus fields specific to its `type`:
+
+| Event                                                                                                                                                                                | Fires when                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EncryptStart` / `EncryptEnd` / `EncryptError`                                                                                                                                       | An FHE encryption begins, succeeds, or fails.                                                                                                                                                                                                                                                                                                           |
+| `DecryptStart` / `DecryptEnd` / `DecryptError`                                                                                                                                       | A decryption begins, succeeds, or fails — `DecryptEnd`/`DecryptError` carry decrypted cleartext values; see [`decryption.decryptValues`](#decryption-decryptvalues) for the full walkthrough and code samples.                                                                                                                                          |
+| `PermitError`                                                                                                                                                                        | `grantPermit`, `grantDelegationPermit`, or `registerPermit` fails — but not every failure of these methods: transport-key-pair issues (`TransportKeyPairChangedError`, `KeyWrappingError`) are deliberately excluded from this event.                                                                                                                   |
+| `TransactionError`                                                                                                                                                                   | `submitTransaction` itself rejects — before broadcast (estimation/validation) or while waiting for the receipt. It does **not** fire for a transaction that broadcasts successfully but reverts on execution: the SDK doesn't currently inspect `receipt.status`, so a mined-but-reverted transaction resolves as a success with no error and no event. |
+| `ShieldSubmitted`, `TransferSubmitted`, `TransferFromSubmitted`, `SetOperatorSubmitted`, `ApproveUnderlyingSubmitted`, `WrapSubmitted`, `UnwrapSubmitted`, `FinalizeUnwrapSubmitted` | The corresponding write transaction is submitted — each carries the transaction's `txHash`.                                                                                                                                                                                                                                                             |
+| `DelegationSubmitted` / `RevokeDelegationSubmitted`                                                                                                                                  | A delegation grant or revoke transaction is submitted — see [Delegation events](./delegation.md#events).                                                                                                                                                                                                                                                |
+| `UnshieldPhase1Submitted` / `UnshieldPhase2Started` / `UnshieldPhase2Submitted`                                                                                                      | The two-phase unshield flow's request and finalize steps progress.                                                                                                                                                                                                                                                                                      |
+
+`TransactionError` and `PermitError` usually carry the same classified error your `await` also throws or rejects with, so you can wire similar handling into telemetry — but don't assume they always match exactly. One documented exception: finalizing an already-finalized unshield concurrently (two tabs, a double click) emits `TransactionError` with the raw `TransactionRevertedError` from the losing finalize attempt, then `unshield()`/`unshieldAll()`/`resumeUnshield()` translates that into the more specific [`UnshieldAlreadyFinalizedError`](./errors.md#unshieldalreadyfinalizederror) before it reaches your `await`.
+
+```ts
+import { ZamaSDKEvents, type TransactionErrorEvent, type PermitErrorEvent } from "@zama-fhe/sdk";
+
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
+  onEvent: (event) => {
+    if (event.type === ZamaSDKEvents.TransactionError) {
+      const { operation, error } = event as TransactionErrorEvent;
+      console.error(`[zama] ${operation} failed:`, error);
+    }
+    if (event.type === ZamaSDKEvents.PermitError) {
+      const { operation, error } = event as PermitErrorEvent;
+      console.error(`[zama] ${operation} failed:`, error);
+    }
+  },
+});
+```
+
+`TransactionError.operation` is one of the write operations (`transfer`, `wrap`, `unwrap`, `finalizeUnwrap`, `delegateDecryption`, and others); `PermitError.operation` is `grantPermit`, `grantDelegationPermit`, or `registerPermit`. See [`SigningRejectedError`](./errors.md#signingrejectederror) and [`SigningFailedError`](./errors.md#signingfailederror) for the shapes `PermitError.error` most commonly carries.
+
+### runtime
+
+`FhevmRuntimeConfig | undefined`
+
+Global `@fhevm/sdk` runtime config — WASM asset loading, threading, module versions, and a process-wide fallback relayer `auth`. See [Configuration: tune FHE runtime performance and behavior](../../guides/configuration.md#8-optional-tune-fhe-runtime-performance-and-behavior) for the full field-by-field walkthrough and defaults.
+
+{% hint style="warning" %}
+**Applied once per process.** The underlying `@fhevm/sdk` runtime is a process-wide singleton, set by the first `createConfig` call. A later `createConfig` in the same process cannot reconfigure it — the original configuration stays in effect and a warning is logged instead.
+{% endhint %}
+
+`runtime.logger` is not forwarded — pass your logger via `createConfig`'s top-level [`logger`](#logger) instead. `runtime.auth` is a process-wide fallback relayer authentication, forwarded to `@fhevm/sdk` as-is; see [Authentication](../../guides/authentication.md) for the auth methods.
+
+### logger
+
+`GenericLogger | undefined`
+
+Optional logger for SDK diagnostics — a minimal four-level interface (`error`/`warn`/`info`/`debug`) that `console` and common logging libraries (pino, winston, an OpenTelemetry `DiagLogger`) satisfy directly. The SDK is silent by default and never bundles a logging library. See [Configuration: supply a logger](../../guides/configuration.md#7-optional-supply-a-logger) for level conventions.
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
+  logger: console,
+});
+```
+
+## Constructor options
+
+The `ZamaSDK` constructor takes the resolved `ZamaConfig` plus an optional second argument for options that apply to the SDK instance rather than the shared config:
+
+```ts
+const sdk = new ZamaSDK(config, {
+  transportKeyPairDerivationSecret: process.env.ZAMA_DERIVATION_SECRET,
+});
+```
+
+### transportKeyPairDerivationSecret
+
+`string | Uint8Array | undefined`
+
+Encrypts the transport private key before every write, for headless environments with no secure storage backend to delegate to (a CLI tool, an agent, a bare-metal box). Default: `undefined` — the transport key pair is stored in plaintext, and at-rest security is delegated to the `storage` backend. Rejected outside a headless environment (a browser or React Native constructor throws `ConfigurationError`), since those already have a secure default (IndexedDB, a platform keychain) that this option would only weaken.
+
+See [Configuration: wrap the transport key pair at rest](../../guides/configuration.md#10-optional-wrap-the-transport-key-pair-at-rest-headless-environments) for environment-by-environment guidance and [Security Model](../../concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the mechanism and entropy requirements.
 
 ## Properties
 
@@ -278,7 +382,7 @@ Renamed from `decryption.userDecrypt` (then briefly `decryptValuesFromPairs`) to
 
 Decrypt one or more FHE encrypted values. Returns cached values when available, only calling the relayer for uncached inputs. Results are written through the SDK's internal CachingService so subsequent calls for the same inputs return instantly.
 
-Inputs from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract (up to 5 concurrently). Zero encrypted values (32 zero bytes) resolve to `0n` without hitting the relayer.
+Inputs from different contracts can be mixed — they are grouped by `contractAddress`, and each group is sent to the relayer as one or more requests (up to 5 concurrently): a group is automatically split into multiple chunked requests when its cumulative cleartext-bit cost would exceed the KMS gateway's per-request budget, so an oversized batch for one contract still succeeds instead of being rejected. Zero encrypted values (32 zero bytes) resolve to `0n` without hitting the relayer.
 
 When the relayer is actually called, permits are resolved from the contract addresses of the full input set (including cached and zero entries), ensuring a stable permit scope regardless of which entries happen to be cached. If every entry is zero or already cached, no permits are needed and no wallet prompt is shown.
 
@@ -485,7 +589,7 @@ See the [Offline reference](./Offline.md#preparepermit) for the request/response
 
 `() => void`
 
-Unsubscribes from signer lifecycle events (disconnect, account change, chain change) without terminating the relayer. Use when you want to stop reacting to wallet events but keep the relayer alive for other SDK instances.
+Releases the SDK-owned resources: unsubscribes from signer lifecycle events (disconnect, account change, chain change) and releases the relayer backends' resources (an encrypt worker, if one is running). Work already in flight finishes, and the instance remains usable: a later operation re-acquires what it needs, respawning the encrypt worker on the next encryption.
 
 ```ts
 sdk.dispose();
@@ -495,7 +599,7 @@ sdk.dispose();
 
 `() => void`
 
-Full cleanup — calls `dispose()` and disposes the signer adapter's own event subscriptions. Call when the SDK is no longer needed.
+Full cleanup: calls `dispose()`, then also disposes the signer adapter's own event subscriptions. Call when the SDK is no longer needed. Like `dispose()`, it leaves the instance usable: a later operation re-acquires what it needs.
 
 ```ts
 sdk.terminate();

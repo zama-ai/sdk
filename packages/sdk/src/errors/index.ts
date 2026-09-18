@@ -1,7 +1,11 @@
 export { ZamaError, ZamaErrorCode, isRetryable, retryAfterSeconds } from "./base";
 export { matchZamaError, type ErrorForCode } from "./match";
-export { SigningRejectedError, SigningFailedError } from "./signing";
-export { EncryptionFailedError, DecryptionFailedError } from "./encryption";
+export { SigningRejectedError, SigningFailedError, type SigningErrorMetadata } from "./signing";
+export {
+  EncryptionFailedError,
+  DecryptionFailedError,
+  EncryptOffloadUnavailableError,
+} from "./encryption";
 export { TransactionRevertedError } from "./transaction";
 export {
   TransportKeyPairExpiredError,
@@ -44,6 +48,7 @@ export {
   ERC20ReadFailedError,
   type BalanceErrorDetails,
 } from "./balance";
+export { UnshieldAlreadyFinalizedError, type UnshieldAlreadyFinalizedDetails } from "./unshield";
 export { wrapDecryptError, type DecryptErrorContext } from "./decrypt";
 export { wrapEncryptError } from "./encrypt";
 export { isFatalBatchError } from "./fatal-batch";
