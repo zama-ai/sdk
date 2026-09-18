@@ -132,6 +132,7 @@ const entryPoints = {
   "node/index": "src/node/index.ts",
   "viem/index": "src/viem/index.ts",
   "ethers/index": "src/ethers/index.ts",
+  "vaults/index": "src/vaults/index.ts",
 };
 
 export default defineConfig([

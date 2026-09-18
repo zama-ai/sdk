@@ -59,6 +59,9 @@
       ],
       "chains": [
         "./dist/esm/chains/index.d.ts"
+      ],
+      "vaults": [
+        "./dist/esm/vaults/index.d.ts"
       ]
     }
   },
@@ -151,6 +154,17 @@
       },
       "default": "./dist/esm/chains/index.js"
     },
+    "./vaults": {
+      "import": {
+        "types": "./dist/esm/vaults/index.d.ts",
+        "default": "./dist/esm/vaults/index.js"
+      },
+      "require": {
+        "types": "./dist/esm/vaults/index.d.ts",
+        "default": "./dist/cjs/vaults/index.cjs"
+      },
+      "default": "./dist/esm/vaults/index.js"
+    },
     "./encrypt.worker.js": "./dist/esm/encrypt.worker.js",
     "./package.json": {
       "default": "./package.json"
@@ -163,8 +177,8 @@
     "build": "rm -rf dist && rolldown --config rolldown.config.ts",
     "lint": "oxlint",
     "typecheck": "tsc --noEmit",
-    "api-report": "api-extractor run --local -c api-extractor.json && api-extractor run --local -c api-extractor.web.json && api-extractor run --local -c api-extractor.viem.json && api-extractor run --local -c api-extractor.ethers.json && api-extractor run --local -c api-extractor.node.json && api-extractor run --local -c api-extractor.query.json",
-    "api-report:check": "api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.web.json && api-extractor run -c api-extractor.viem.json && api-extractor run -c api-extractor.ethers.json && api-extractor run -c api-extractor.node.json && api-extractor run -c api-extractor.query.json"
+    "api-report": "api-extractor run --local -c api-extractor.json && api-extractor run --local -c api-extractor.web.json && api-extractor run --local -c api-extractor.viem.json && api-extractor run --local -c api-extractor.ethers.json && api-extractor run --local -c api-extractor.node.json && api-extractor run --local -c api-extractor.query.json && api-extractor run --local -c api-extractor.vaults.json",
+    "api-report:check": "api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.web.json && api-extractor run -c api-extractor.viem.json && api-extractor run -c api-extractor.ethers.json && api-extractor run -c api-extractor.node.json && api-extractor run -c api-extractor.query.json && api-extractor run -c api-extractor.vaults.json"
   },
   "dependencies": {
     "@fhevm/sdk": "0.13.2",

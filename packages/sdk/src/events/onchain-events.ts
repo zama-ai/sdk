@@ -4,14 +4,17 @@
  */
 
 import type { EncryptedValue } from "../relayer/types";
-import { getAddress, keccak256, toBytes, type Address, type Hex } from "viem";
-import { prefixHex } from "../utils";
+import type { Address } from "viem";
 import type { RawLog } from "../types/transaction";
+import {
+  eventTopic,
+  topicToAddress,
+  topicToBytes32,
+  wordToAddress,
+  wordToBigInt,
+  wordToBytes32,
+} from "./log-decoding";
 export type { RawLog } from "../types/transaction";
-
-function eventTopic(signature: string): Hex {
-  return keccak256(toBytes(signature));
-}
 
 // ---------------------------------------------------------------------------
 // Event topic0 constants (keccak256 of canonical signature)
@@ -96,39 +99,6 @@ export type OnChainEvent =
   | WrapEvent
   | UnwrapRequestedEvent
   | UnwrapFinalizedEvent;
-
-// ---------------------------------------------------------------------------
-// ABI decoding helpers (no external deps)
-// ---------------------------------------------------------------------------
-
-function topicToAddress(topic: Hex): Address {
-  return getAddress(prefixHex(topic.slice(-40)));
-}
-
-function topicToBytes32(topic: Hex): EncryptedValue {
-  // EVM topics are already 32-byte 0x-prefixed hex — cast directly
-  return topic as EncryptedValue;
-}
-
-function wordAt(data: Hex, index: number): string {
-  // data starts with "0x", each word is 64 hex chars (32 bytes)
-  const start = 2 + index * 64;
-  const word = data.slice(start, start + 64);
-  return word.length === 64 ? word : word.padEnd(64, "0");
-}
-
-function wordToAddress(data: Hex, index: number): Address {
-  return getAddress(prefixHex(wordAt(data, index).slice(-40)));
-}
-
-function wordToBigInt(data: Hex, index: number): bigint {
-  return BigInt("0x" + wordAt(data, index));
-}
-
-function wordToBytes32(data: Hex, index: number): EncryptedValue {
-  // wordAt returns exactly 64 hex chars — prefix and cast directly
-  return prefixHex(wordAt(data, index)) as EncryptedValue;
-}
 
 // ---------------------------------------------------------------------------
 // Individual decoders
