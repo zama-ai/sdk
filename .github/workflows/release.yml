@@ -47,15 +47,10 @@ jobs:
     if: inputs.publish-tag != ''
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # Narrower than the workflow-level permissions: this job only reads and
-    # publishes, it never writes contents/issues/PRs.
     permissions:
       contents: read
       id-token: write
     steps:
-      # Hardening only — workflow_dispatch runs the YAML from the dispatched
-      # ref, so this isn't a boundary against a modified copy of this file
-      # dispatched from another branch. See CONTRIBUTING.md.
       - name: Checkout tag
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:

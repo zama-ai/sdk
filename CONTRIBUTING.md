@@ -168,8 +168,8 @@ Release behavior:
 
 Release workflows:
 
-- `Release` (`.github/workflows/release.yml`): automatic publish on push to `main`, `beta`, and `alpha`, gated by `Vitest` and `Playwright`.
-- Manual publish: the same `Release` workflow (`release.yml`) also runs on `workflow_dispatch`. Without a `publish-tag` input, it's the same `main`/`beta`/`alpha`-restricted, `Vitest`+`Playwright`-gated flow as the automatic push trigger. With `publish-tag` set, use it to recover when semantic-release created the tag but the npm publish step failed — it republishes from an existing tag (a `dry-run` input is available), and this path does **not** go through `validate-branch`/`Vitest`/`Playwright` — it only checks out the tag (which must resolve as a real tag, not a branch) and verifies it's reachable from `main`, `beta`, or `alpha` before installing or building anything.
+- `Release` (`.github/workflows/release.yml`): automatic publish on push to `main`, `beta`, and `alpha`, gated by `Vitest`, `Playwright`, and `Docs`.
+- Manual publish (`workflow_dispatch`): without `publish-tag`, same gates as above. With `publish-tag`, republish an existing tag when npm publish failed after semantic-release tagged it (`dry-run` input available) — skips CI, but requires the tag be reachable from `main`, `beta`, or `alpha`.
 - `Release Preview` (`.github/workflows/release-preview.yml`): manual dry-run restricted to `main`, `beta`, and `alpha` (`pnpm release:dry-run`), no publish side effects.
 
 Install channels:
@@ -184,7 +184,6 @@ Maintainer requirements:
 - Configure branch protection on `beta` and `alpha` with the same required checks.
 - Configure npm trusted publishers for `@zama-fhe/sdk` and `@zama-fhe/react-sdk` pointing to this repository's `release.yml` workflow.
 - Restrict creation/update of tags matching the release pattern (e.g. `v*`) to the release-bot identity, via a repo ruleset.
-- As one coordinated change (not independently — npm matches on repo + workflow filename only, so requiring the claim on one side without the other breaks every publish, including the automated path): add an `environment: npm-publish` key to both the `publish-from-tag` and `release` jobs in `release.yml`, configure that environment's deployment branch/tag policy to allow only `main`, `beta`, `alpha`, and the release-tag pattern, and update npm's trusted-publisher config to require that environment claim.
 
 ## Architecture Guidelines
 
