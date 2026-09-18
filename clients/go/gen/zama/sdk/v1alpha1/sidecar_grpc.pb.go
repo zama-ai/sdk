@@ -29,6 +29,7 @@ const (
 	SidecarService_DelegatedDecryptValues_FullMethodName      = "/zama.sdk.v1alpha1.SidecarService/DelegatedDecryptValues"
 	SidecarService_DecryptPublicValues_FullMethodName         = "/zama.sdk.v1alpha1.SidecarService/DecryptPublicValues"
 	SidecarService_DelegatedBatchDecryptValues_FullMethodName = "/zama.sdk.v1alpha1.SidecarService/DelegatedBatchDecryptValues"
+	SidecarService_PrepareTransaction_FullMethodName          = "/zama.sdk.v1alpha1.SidecarService/PrepareTransaction"
 	SidecarService_PreparePermit_FullMethodName               = "/zama.sdk.v1alpha1.SidecarService/PreparePermit"
 	SidecarService_RegisterPermit_FullMethodName              = "/zama.sdk.v1alpha1.SidecarService/RegisterPermit"
 	SidecarService_GrantPermit_FullMethodName                 = "/zama.sdk.v1alpha1.SidecarService/GrantPermit"
@@ -70,6 +71,8 @@ type SidecarServiceClient interface {
 	DecryptPublicValues(ctx context.Context, in *DecryptPublicValuesRequest, opts ...grpc.CallOption) (*DecryptPublicValuesResponse, error)
 	// Calls decryption.delegatedBatchDecryptValues; per-item failures remain results, fatal SDK errors fail the RPC.
 	DelegatedBatchDecryptValues(ctx context.Context, in *DelegatedBatchDecryptValuesRequest, opts ...grpc.CallOption) (*DelegatedBatchDecryptValuesResponse, error)
+	// Calls offline.prepare; the caller signs and broadcasts the returned unsigned transaction.
+	PrepareTransaction(ctx context.Context, in *PrepareTransactionRequest, opts ...grpc.CallOption) (*PrepareTransactionResponse, error)
 	// Calls offline.preparePermit without signing; return the opaque envelope unchanged when registering.
 	PreparePermit(ctx context.Context, in *PreparePermitRequest, opts ...grpc.CallOption) (*PreparePermitResponse, error)
 	// Calls permits.registerPermit with the prepared envelope and signature.
@@ -204,6 +207,16 @@ func (c *sidecarServiceClient) DelegatedBatchDecryptValues(ctx context.Context, 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DelegatedBatchDecryptValuesResponse)
 	err := c.cc.Invoke(ctx, SidecarService_DelegatedBatchDecryptValues_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sidecarServiceClient) PrepareTransaction(ctx context.Context, in *PrepareTransactionRequest, opts ...grpc.CallOption) (*PrepareTransactionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PrepareTransactionResponse)
+	err := c.cc.Invoke(ctx, SidecarService_PrepareTransaction_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -357,6 +370,8 @@ type SidecarServiceServer interface {
 	DecryptPublicValues(context.Context, *DecryptPublicValuesRequest) (*DecryptPublicValuesResponse, error)
 	// Calls decryption.delegatedBatchDecryptValues; per-item failures remain results, fatal SDK errors fail the RPC.
 	DelegatedBatchDecryptValues(context.Context, *DelegatedBatchDecryptValuesRequest) (*DelegatedBatchDecryptValuesResponse, error)
+	// Calls offline.prepare; the caller signs and broadcasts the returned unsigned transaction.
+	PrepareTransaction(context.Context, *PrepareTransactionRequest) (*PrepareTransactionResponse, error)
 	// Calls offline.preparePermit without signing; return the opaque envelope unchanged when registering.
 	PreparePermit(context.Context, *PreparePermitRequest) (*PreparePermitResponse, error)
 	// Calls permits.registerPermit with the prepared envelope and signature.
@@ -420,6 +435,9 @@ func (UnimplementedSidecarServiceServer) DecryptPublicValues(context.Context, *D
 }
 func (UnimplementedSidecarServiceServer) DelegatedBatchDecryptValues(context.Context, *DelegatedBatchDecryptValuesRequest) (*DelegatedBatchDecryptValuesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DelegatedBatchDecryptValues not implemented")
+}
+func (UnimplementedSidecarServiceServer) PrepareTransaction(context.Context, *PrepareTransactionRequest) (*PrepareTransactionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PrepareTransaction not implemented")
 }
 func (UnimplementedSidecarServiceServer) PreparePermit(context.Context, *PreparePermitRequest) (*PreparePermitResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method PreparePermit not implemented")
@@ -632,6 +650,24 @@ func _SidecarService_DelegatedBatchDecryptValues_Handler(srv interface{}, ctx co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SidecarServiceServer).DelegatedBatchDecryptValues(ctx, req.(*DelegatedBatchDecryptValuesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SidecarService_PrepareTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PrepareTransactionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SidecarServiceServer).PrepareTransaction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SidecarService_PrepareTransaction_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SidecarServiceServer).PrepareTransaction(ctx, req.(*PrepareTransactionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -890,6 +926,10 @@ var SidecarService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DelegatedBatchDecryptValues",
 			Handler:    _SidecarService_DelegatedBatchDecryptValues_Handler,
+		},
+		{
+			MethodName: "PrepareTransaction",
+			Handler:    _SidecarService_PrepareTransaction_Handler,
 		},
 		{
 			MethodName: "PreparePermit",

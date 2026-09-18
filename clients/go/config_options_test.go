@@ -33,7 +33,7 @@ func TestConfigOptionsAreSentAsTypedProtobuf(t *testing.T) {
 			Auth: APIKeyHeader{Value: "runtime-secret"},
 		},
 		Relayers: map[uint64]RelayerConfig{chainID: {
-			Type: RelayerNode,
+			Transport: RelayerNode,
 			Options: &RelayerOptions{
 				Debug: &no, BatchRPCCalls: &no,
 				ModuleVersions: PinnedModuleVersions{
@@ -78,7 +78,7 @@ func TestConfigOptionsAreSentAsTypedProtobuf(t *testing.T) {
 		t.Fatal("provider batch false changed")
 	}
 	relayer := wire.Relayers.Entries[chainID]
-	if relayer == nil || relayer.Type != "node" || relayer.Options == nil || relayer.Options.BatchRpcCalls == nil || *relayer.Options.BatchRpcCalls {
+	if relayer == nil || relayer.Transport != pb.RelayerTransport_RELAYER_TRANSPORT_NODE || relayer.Options == nil || relayer.Options.BatchRpcCalls == nil || *relayer.Options.BatchRpcCalls {
 		t.Fatal("relayer configuration changed")
 	}
 	key := relayer.Options.FheEncryptionKey

@@ -81,7 +81,7 @@ func (config exampleConfig) sdkConfig() (sidecar.SDKConfig, error) {
 			return sidecar.SDKConfig{}, errors.New("invalid SDK_BATCH_RPC_CALLS")
 		}
 		sdkConfig.Relayers = map[uint64]sidecar.RelayerConfig{
-			sepoliaChainID: {Type: sidecar.RelayerNode, Options: &sidecar.RelayerOptions{BatchRPCCalls: &enabled}},
+			sepoliaChainID: {Transport: sidecar.RelayerNode, Options: &sidecar.RelayerOptions{BatchRPCCalls: &enabled}},
 		}
 	}
 	return sdkConfig, nil

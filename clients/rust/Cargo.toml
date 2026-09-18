@@ -33,6 +33,8 @@ tonic-prost = "=0.14.6"
 tower = { version = "0.5", features = ["util"] }
 
 [dev-dependencies]
+alloy-consensus = { version = "=1.8.3", default-features = false }
+alloy-rlp = "0.3"
 reqwest = { version = "=0.13.5", default-features = false }
 alloy-contract = { version = "=1.8.3", default-features = false }
 alloy-provider = { version = "=1.8.3", default-features = false, features = [

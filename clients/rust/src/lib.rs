@@ -25,6 +25,7 @@ mod decryption;
 mod encryption;
 mod error;
 mod lifetime;
+mod offline;
 mod operations;
 mod permits;
 mod signer;
@@ -40,7 +41,7 @@ pub use config_options::{
     CompatibilityCheck, DerivationSecret, FheCrsBytes, FheEncryptionKey, FheEncryptionKeyMetadata,
     FhePublicKeyBytes, KmsVersion, ModuleVersions, PinnedModuleVersions, ProcessRuntime,
     ProviderBatch, ProviderBatchOptions, ProviderOptions, RelayerConfig, RelayerOptions,
-    RelayerType, TfheVersion, WasmAssetLoadMode,
+    RelayerTransport, TfheVersion, WasmAssetLoadMode,
 };
 pub use decryption::{
     BatchItem, Decryption, DelegatedBatchOptions, DelegatedOptions, PublicDecryption,
@@ -48,6 +49,10 @@ pub use decryption::{
 pub use encryption::{EncryptInput, EncryptOptions, EncryptParams, EncryptResult};
 pub use error::{RpcError, SdkError};
 pub use num_bigint::BigInt;
+pub use offline::{
+    PrepareFees, PrepareOptions, PrepareTransaction, PreparedTransaction, Transaction,
+    TransactionKind,
+};
 pub use permits::{Offline, Permits, PreparePermit, PreparedPermit};
 pub use signer::{Signer, SigningRequest};
 pub use storage::{ApplicationStorage, MemoryStorage, NativeStorage, Storage};

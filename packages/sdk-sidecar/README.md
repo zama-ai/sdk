@@ -1,6 +1,6 @@
-# Encrypt inputs and decrypt a balance from Rust or Go
+# Encrypt inputs, decrypt a balance and prepare an offline transaction from Rust or Go
 
-Use the maintained, permanently beta sidecar of `@zama-fhe/sdk` for external partner applications. Run it in Docker to encrypt contract inputs and decrypt a balance from a native Rust or Go application. Both examples print:
+Use the maintained, permanently beta sidecar of `@zama-fhe/sdk` for external partner applications. Run it in Docker and drive it from a native Rust or Go application. Each entry point encrypts contract inputs, decrypts a balance, then asks the SDK to prepare a transaction that the application signs locally. Both examples print:
 
 ```text
 Encrypted input 0: 0x<handle>
@@ -11,6 +11,10 @@ User Address: <wallet address>
 Token: <name> (<token address>) https://eth-sepolia.blockscout.com/token/<token address>
 Encrypted balance: <ciphertext handle>
 Decrypted balance: <raw amount>
+Prepared transaction: SetOperator
+Signed transaction: 0x<signed transaction bytes>
+Signed transaction hash: 0x<transaction hash>
+Not broadcast; the caller submits the signed bytes.
 ```
 
 The encryption step passes typed plaintext inputs and explicit user/contract addresses to `sdk.encrypt`. The native application reads the token using Alloy or go-ethereum. It passes the encrypted handle to `sdk.decryption.decryptValues` through the sidecar. The SDK requests a wallet signature only when its credential flow needs one.
@@ -58,7 +62,9 @@ dc run --rm go
 dc run --rm rust
 ```
 
-Use the [Go example](../../clients/go/examples/balance/main.go) or [Rust example](../../clients/rust/examples/balance/main.rs) as a starting point. Each entry point loads shared configuration, connects its wallet/provider, creates an SDK context, then runs the encryption and balance steps. Setup lives in Go `config.go`/`ethereum.go` and Rust `support.rs`; `balance.go`/`balance.rs` receive SDK, provider, token and owner dependencies explicitly. Application-owned memory storage is the example default. The client manages callback channels. The encryption step sends `1000` as `euint64`, `true` as `ebool`, and the user address as `eaddress`, built with Go `Euint64`/`Ebool`/`Eaddress` or Rust `EncryptInput::Uint64`/`Bool`/`Address`. It prints one `Encrypted input <i>` line per returned handle, then the input proof. Neither example sends blockchain transactions.
+Use the [Go example](../../clients/go/examples/balance/main.go) or [Rust example](../../clients/rust/examples/balance/main.rs) as a starting point. Each entry point loads shared configuration, connects its wallet/provider, creates an SDK context, then runs the encryption, balance and offline steps. Setup lives in Go `config.go`/`ethereum.go` and Rust `support.rs`; `balance.go`/`balance.rs` receive SDK, provider, token and owner dependencies explicitly. Application-owned memory storage is the example default. The client manages callback channels. The encryption step sends `1000` as `euint64`, `true` as `ebool`, and the user address as `eaddress`, built with Go `Euint64`/`Ebool`/`Eaddress` or Rust `EncryptInput::Uint64`/`Bool`/`Address`. It prints one `Encrypted input <i>` line per returned handle, then the input proof.
+
+The offline step in `offline.go`/`offline.rs` asks the SDK to prepare a `SetOperator` revocation (`until: 1`), checks the prepared `TransactionKind` enum and that the prepared sender matches the local key, and signs the unsigned EIP-1559 bytes with the native Ethereum library. Signing keys stay in the application, and submitting the signed bytes is the caller's responsibility. Neither example sends blockchain transactions.
 
 The encrypted balance is the contract's ciphertext handle. The decrypted value is the raw amount for that same handle, without decimal formatting.
 
@@ -168,9 +174,9 @@ cargo test --manifest-path clients/rust/Cargo.toml --all-features --all-targets 
 cargo clippy --manifest-path clients/rust/Cargo.toml --all-features --all-targets --locked -- -D warnings
 ```
 
-Run `SIDECAR_NATIVE_TESTS=1 pnpm sidecar:test` for the native integration suite. It verifies protected application-owned credentials across replacement of the SDK runtime: both native drivers retain their memory stores and decrypt fresh handles without another signature. It also builds and runs both complete encryption and balance examples against synthetic RPC and SDK fixtures, including caller configuration, storage callbacks, signing and optional credential protection. No live wallet or RPC is used.
+Run `SIDECAR_NATIVE_TESTS=1 pnpm sidecar:test` for the native integration suite. It verifies protected application-owned credentials across replacement of the SDK runtime: both native drivers retain their memory stores and decrypt fresh handles without another signature. It also builds and runs both complete examples against synthetic RPC and SDK fixtures, including caller configuration, storage callbacks, signing, optional credential protection, encryption and the offline step, and checks the recovered signer of the locally signed transaction and that nothing is broadcast. No live wallet or RPC is used.
 
-These checks use synthetic data. The Docker commands above exercise live encryption, RPC reads, signing and decryption with your configured wallet.
+Offline equivalence tests compare all 11 preparation kinds with the direct SDK, including overrides, defaults and errors. These checks use synthetic data. The Docker commands above exercise live encryption, RPC reads, signing, decryption and local transaction signing with your configured wallet.
 
 The Go example is a separate module. Regenerate its typed contract bindings with `(cd clients/go/examples/balance && go generate ./contracts)`. Sidecar CI checks both native clients, binding generation, and SDK equivalence without a live wallet or RPC.
 
