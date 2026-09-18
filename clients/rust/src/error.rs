@@ -35,6 +35,25 @@ impl SdkError {
             retry_after_seconds: None,
         }
     }
+
+    pub fn signer_not_configured(message: impl Into<String>) -> Self {
+        Self {
+            code: "SIGNER_NOT_CONFIGURED".into(),
+            message: message.into(),
+            retryable: false,
+            retry_after_seconds: None,
+        }
+    }
+
+    /// A contract write may have reached the network without yielding a hash.
+    pub fn transaction_outcome_unknown(message: impl Into<String>) -> Self {
+        Self {
+            code: "TRANSACTION_OUTCOME_UNKNOWN".into(),
+            message: message.into(),
+            retryable: false,
+            retry_after_seconds: None,
+        }
+    }
 }
 
 impl fmt::Display for SdkError {

@@ -1,4 +1,8 @@
-use crate::{SdkError, Signer, SigningRequest};
+#[path = "alloy_transactions.rs"]
+mod transactions;
+pub use transactions::{AlloyWallet, DEFAULT_BROADCAST_TIMEOUT};
+
+use crate::{Address, SdkError, Signer, SigningRequest, WalletAccount};
 use alloy_dyn_abi::eip712::TypedData;
 use async_trait::async_trait;
 
@@ -8,23 +12,37 @@ impl<S> AlloySigner<S> {
         Self(signer)
     }
 }
-#[async_trait]
-impl<S: alloy_signer::Signer + Send + Sync> Signer for AlloySigner<S> {
-    async fn sign_typed_data(&self, request: SigningRequest) -> Result<Vec<u8>, SdkError> {
-        if request.account.address != self.0.address() {
-            return Err(SdkError::signing_failed(
-                "Signer address does not match the requested account.",
-            ));
+impl<S: alloy_signer::Signer> AlloySigner<S> {
+    /// The compared address is a parameter because the write path signs with the provider's wallet.
+    fn ensure_account(
+        &self,
+        account: &WalletAccount,
+        address: Address,
+        address_mismatch: &str,
+    ) -> Result<(), SdkError> {
+        if account.address != address {
+            return Err(SdkError::signing_failed(address_mismatch));
         }
         if self
             .0
             .chain_id()
-            .is_some_and(|chain| chain != request.account.chain_id)
+            .is_some_and(|chain| chain != account.chain_id)
         {
             return Err(SdkError::chain_mismatch(
                 "Signer chain ID does not match the requested account.",
             ));
         }
+        Ok(())
+    }
+}
+#[async_trait]
+impl<S: alloy_signer::Signer + Send + Sync> Signer for AlloySigner<S> {
+    async fn sign_typed_data(&self, request: SigningRequest) -> Result<Vec<u8>, SdkError> {
+        self.ensure_account(
+            &request.account,
+            self.0.address(),
+            "Signer address does not match the requested account.",
+        )?;
         let typed: TypedData = serde_json::from_value(request.typed_data).map_err(|_| {
             SdkError::signing_failed("The signing request contains invalid EIP-712 typed data.")
         })?;
@@ -52,7 +70,6 @@ fn map_signer_error(error: alloy_signer::Error) -> SdkError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_primitives::Address;
 
     #[test]
     fn generic_alloy_errors_are_signing_failures_with_original_detail() {

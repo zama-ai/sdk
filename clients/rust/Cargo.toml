@@ -12,7 +12,7 @@ resolver = "3"
 
 [features]
 default = []
-alloy = ["dep:alloy-signer", "dep:alloy-dyn-abi"]
+alloy = ["dep:alloy-signer", "dep:alloy-dyn-abi", "dep:alloy-provider", "dep:alloy-rpc-types-eth"]
 
 [dependencies]
 async-trait = "0.1"
@@ -28,13 +28,21 @@ hyper-util = { version = "0.1", features = ["tokio"] }
 prost = "=0.14.4"
 serde_json = "1"
 tokio = { version = "1", features = ["net", "time", "sync", "rt", "macros"] }
+tokio-util = { version = "0.7", default-features = false }
 tonic = "=0.14.6"
 tonic-prost = "=0.14.6"
 tower = { version = "0.5", features = ["util"] }
 
+alloy-provider = { version = "=1.8.3", default-features = false, optional = true }
+alloy-rpc-types-eth = { version = "=1.8.3", default-features = false, optional = true }
+
 [dev-dependencies]
-alloy-consensus = { version = "=1.8.3", default-features = false }
+alloy-consensus = { version = "=1.8.3", default-features = false, features = ["k256"] }
 alloy-rlp = "0.3"
+alloy-eips = "=1.8.3"
+alloy-json-rpc = "=1.8.3"
+alloy-rpc-client = { version = "=1.8.3", default-features = false }
+alloy-transport = { version = "=1.8.3", default-features = false }
 reqwest = { version = "=0.13.5", default-features = false }
 alloy-contract = { version = "=1.8.3", default-features = false }
 alloy-provider = { version = "=1.8.3", default-features = false, features = [

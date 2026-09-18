@@ -23,6 +23,15 @@ func (e *SDKError) Error() string {
 	return e.Message
 }
 
+// As is promoted to the wrapper types that embed SDKError, so errors.As reaches their details.
+func (e *SDKError) As(target any) bool {
+	details, ok := target.(**SDKError)
+	if ok {
+		*details = e
+	}
+	return ok
+}
+
 func (e *SDKError) wire() *pb.SdkError {
 	return &pb.SdkError{Code: e.Code, Message: e.Message, Retryable: e.Retryable, RetryAfterSeconds: e.RetryAfterSeconds}
 }
@@ -38,14 +47,7 @@ func (e *RPCError) Error() string {
 	}
 	return e.cause.Error()
 }
-func (e *RPCError) Unwrap() error { return e.cause }
-func (e *RPCError) As(target any) bool {
-	details, ok := target.(**SDKError)
-	if ok {
-		*details = &e.SDKError
-	}
-	return ok
-}
+func (e *RPCError) Unwrap() error              { return e.cause }
 func (e *RPCError) GRPCStatus() *status.Status { return status.Convert(e.cause) }
 func rpcError(err error, trailers metadata.MD) error {
 	if err == nil {

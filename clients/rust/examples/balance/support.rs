@@ -5,7 +5,7 @@ use std::{collections::HashMap, env};
 use zama_sdk_sidecar::{
     Address, ApplicationStorage, ChainConfig, Client, DerivationSecret, MemoryStorage,
     ProcessRuntime, ProviderOptions, RelayerAuth, RelayerConfig, RelayerOptions, RelayerTransport,
-    Sdk, SdkConfig, Storage, WalletAccount, alloy::AlloySigner,
+    Sdk, SdkConfig, Signer, Storage, WalletAccount, alloy::AlloySigner,
 };
 
 pub struct Settings {
@@ -92,11 +92,8 @@ impl Settings {
     }
 
     pub async fn connect_provider(&self) -> Result<impl Provider> {
-        // Some public RPC gateways return HTTP 404 without a User-Agent.
-        let http = reqwest::Client::builder()
-            .user_agent("zama-sdk-sidecar-example")
-            .build()?;
-        let provider = ProviderBuilder::new().connect_reqwest(http, self.rpc_url.parse()?);
+        let provider =
+            ProviderBuilder::new().connect_reqwest(http_client()?, self.rpc_url.parse()?);
         ensure!(
             provider.get_chain_id().await? == self.account.chain_id,
             "example requires Sepolia"
@@ -104,17 +101,37 @@ impl Settings {
         Ok(provider)
     }
 
+    pub fn wallet(&self) -> Result<impl Signer + use<>> {
+        // Alloy's cached nonce manager can advance past a failed fill and gap later writes.
+        let provider = ProviderBuilder::new()
+            .disable_recommended_fillers()
+            .with_gas_estimation()
+            .with_blob_gas_estimation()
+            .with_simple_nonce_management()
+            .fetch_chain_id()
+            .wallet(self.signer.clone())
+            .connect_reqwest(http_client()?, self.rpc_url.parse()?);
+        Ok(AlloySigner::new(self.signer.clone()).with_transactions(provider))
+    }
+
     pub async fn create_sdk(&self) -> Result<Sdk> {
         let mut builder = Client::connect(&self.socket)
             .await?
             .sdk(self.config.clone())
-            .signer(Some(self.account), AlloySigner::new(self.signer.clone()))
+            .signer(Some(self.account), self.wallet()?)
             .storage(self.storage.clone());
         if let Some(secret) = &self.derivation_secret {
             builder = builder.transport_key_pair_derivation_secret(secret.clone());
         }
         builder.build().await
     }
+}
+
+fn http_client() -> Result<reqwest::Client> {
+    // Some public RPC gateways return HTTP 404 without a User-Agent.
+    Ok(reqwest::Client::builder()
+        .user_agent("zama-sdk-sidecar-example")
+        .build()?)
 }
 
 fn example_storage(values: &HashMap<String, String>) -> Result<Storage> {

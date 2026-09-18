@@ -12,7 +12,12 @@ import (
 )
 
 func (s *SDKContext) AttachSigner(ctx context.Context, sign SignTypedDataFunc) error {
-	if sign == nil {
+	return s.AttachWallet(ctx, SignerConfig{SignTypedData: sign})
+}
+
+// AttachWallet serves typed-data signing and contract writes on one signer channel.
+func (s *SDKContext) AttachWallet(ctx context.Context, signer SignerConfig) error {
+	if !signer.enabled() {
 		return errors.New("signer callback required")
 	}
 	return attachChannel(ctx, s, SignerChannel, &s.signer,
@@ -23,7 +28,7 @@ func (s *SDKContext) AttachSigner(ctx context.Context, sign SignTypedDataFunc) e
 		func(message *pb.SignerServerMessage) bool { return message.GetAttached() != nil },
 		func(_ context.Context, message *pb.SignerServerMessage, send func(*pb.SignerClientMessage)) error {
 			if action := message.GetAction(); action != nil {
-				s.dispatchSignature(action, sign, func(reply *pb.SignerReply) {
+				s.dispatchSignerAction(action, signer, func(reply *pb.SignerReply) {
 					send(&pb.SignerClientMessage{Message: &pb.SignerClientMessage_Reply{Reply: reply}})
 				})
 			}
@@ -46,7 +51,7 @@ func (s *SDKContext) AttachSigner(ctx context.Context, sign SignTypedDataFunc) e
 			return nil
 		})
 }
-func (s *SDKContext) dispatchSignature(action *pb.SignerAction, sign SignTypedDataFunc, send func(*pb.SignerReply)) {
+func (s *SDKContext) dispatchSignerAction(action *pb.SignerAction, signer SignerConfig, send func(*pb.SignerReply)) {
 	s.mu.Lock()
 	op := s.operations[action.OperationId]
 	if op == nil {
@@ -65,18 +70,7 @@ func (s *SDKContext) dispatchSignature(action *pb.SignerAction, sign SignTypedDa
 		defer cancel()
 		defer func() { s.mu.Lock(); delete(op.actions, action.ActionId); s.mu.Unlock() }()
 		reply := &pb.SignerReply{OperationId: action.OperationId, ActionId: action.ActionId}
-		var typed apitypes.TypedData
-		var err error
-		if action.Account == nil || len(action.Account.Address) != common.AddressLength {
-			err = errors.New("invalid signing account")
-		} else {
-			err = json.Unmarshal([]byte(action.TypedDataJson), &typed)
-		}
-		if err == nil {
-			var signature []byte
-			signature, err = sign(ctx, WalletAccount{Address: common.BytesToAddress(action.Account.Address), ChainID: action.Account.ChainId}, typed)
-			reply.Result = &pb.SignerReply_Signature{Signature: signature}
-		}
+		err := invokeSigner(ctx, action, signer, reply)
 		if ctx.Err() != nil {
 			return
 		}
@@ -85,4 +79,45 @@ func (s *SDKContext) dispatchSignature(action *pb.SignerAction, sign SignTypedDa
 		}
 		send(reply)
 	}()
+}
+
+// Decoding failures stay scoped to this action; the channel keeps serving others.
+func invokeSigner(ctx context.Context, action *pb.SignerAction, signer SignerConfig, reply *pb.SignerReply) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if action.Account == nil || len(action.Account.Address) != common.AddressLength {
+		return errors.New("invalid signing account")
+	}
+	account := WalletAccount{Address: common.BytesToAddress(action.Account.Address), ChainID: action.Account.ChainId}
+	switch request := action.Request.(type) {
+	case *pb.SignerAction_ContractWrite:
+		if signer.WriteContract == nil {
+			return &SDKError{Code: "SIGNER_NOT_CONFIGURED", Message: "contract write callback required"}
+		}
+		write, err := contractWriteRequest(action.OperationId, action.ActionId, account, request.ContractWrite)
+		if err != nil {
+			return err
+		}
+		hash, err := signer.WriteContract(ctx, write)
+		if err == nil {
+			reply.Result = &pb.SignerReply_TransactionHash{TransactionHash: hash.Bytes()}
+		}
+		return err
+	case *pb.SignerAction_TypedDataJson:
+		if signer.SignTypedData == nil {
+			return &SDKError{Code: "SIGNER_NOT_CONFIGURED", Message: "typed data signer callback required"}
+		}
+		var typed apitypes.TypedData
+		if err := json.Unmarshal([]byte(request.TypedDataJson), &typed); err != nil {
+			return err
+		}
+		signature, err := signer.SignTypedData(ctx, account, typed)
+		if err == nil {
+			reply.Result = &pb.SignerReply_Signature{Signature: signature}
+		}
+		return err
+	default:
+		return errors.New("signer action has no request")
+	}
 }
