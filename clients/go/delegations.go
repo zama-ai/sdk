@@ -37,17 +37,6 @@ type DelegationStatus struct {
 	ExpiryTimestamp uint64
 }
 
-type TransactionLog struct {
-	Address *common.Address
-	Topics  []common.Hash
-	Data    []byte
-}
-
-type TransactionResult struct {
-	TxHash common.Hash
-	Logs   []TransactionLog
-}
-
 // Wire milliseconds are unsigned and UnixMilli overflows outside the int64 millisecond range.
 func expirationMillis(expiration *time.Time) (*uint64, error) {
 	if expiration == nil {
@@ -59,57 +48,23 @@ func expirationMillis(expiration *time.Time) (*uint64, error) {
 	value := uint64(expiration.UnixMilli())
 	return &value, nil
 }
-func delegateDecryptionWire(params DelegateDecryptionParams) (*pb.DelegateDecryption, error) {
-	expiration, err := expirationMillis(params.ExpirationDate)
+func delegateDecryptionWire(contract, delegate common.Address, expirationDate *time.Time) (*pb.DelegateDecryption, error) {
+	expiration, err := expirationMillis(expirationDate)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.DelegateDecryption{ContractAddress: params.ContractAddress.Bytes(), DelegateAddress: params.DelegateAddress.Bytes(), ExpirationDateMs: expiration}, nil
+	return &pb.DelegateDecryption{ContractAddress: contract.Bytes(), DelegateAddress: delegate.Bytes(), ExpirationDateMs: expiration}, nil
 }
-func revokeDelegationWire(params RevokeDelegationParams) *pb.RevokeDelegation {
-	return &pb.RevokeDelegation{ContractAddress: params.ContractAddress.Bytes(), DelegateAddress: params.DelegateAddress.Bytes()}
+func revokeDelegationWire(contract, delegate common.Address) *pb.RevokeDelegation {
+	return &pb.RevokeDelegation{ContractAddress: contract.Bytes(), DelegateAddress: delegate.Bytes()}
 }
-func delegationQueryWire(query DelegationQuery, op *pb.Operation) *pb.DelegationQuery {
-	return &pb.DelegationQuery{Operation: op, ContractAddress: query.ContractAddress.Bytes(), DelegatorAddress: query.DelegatorAddress.Bytes(), DelegateAddress: query.DelegateAddress.Bytes()}
-}
-
-func transactionResult(wire *pb.TransactionResult) (*TransactionResult, error) {
-	if wire == nil {
-		return nil, errors.New("missing transaction result")
-	}
-	if len(wire.TransactionHash) != common.HashLength {
-		return nil, errors.New("invalid transaction hash")
-	}
-	logs := make([]TransactionLog, len(wire.Logs))
-	for i, log := range wire.Logs {
-		if log == nil {
-			return nil, errors.New("missing transaction log")
-		}
-		var address *common.Address
-		switch len(log.Address) {
-		case 0:
-			address = nil
-		case common.AddressLength:
-			value := common.BytesToAddress(log.Address)
-			address = &value
-		default:
-			return nil, errors.New("invalid transaction log address")
-		}
-		topics := make([]common.Hash, len(log.Topics))
-		for j, topic := range log.Topics {
-			if len(topic) != common.HashLength {
-				return nil, errors.New("invalid transaction log topic")
-			}
-			topics[j] = common.BytesToHash(topic)
-		}
-		logs[i] = TransactionLog{Address: address, Topics: topics, Data: append([]byte(nil), log.Data...)}
-	}
-	return &TransactionResult{TxHash: common.BytesToHash(wire.TransactionHash), Logs: logs}, nil
+func delegationQueryWire(query DelegationQuery, op *pb.Operation) *pb.DelegationQueryRequest {
+	return &pb.DelegationQueryRequest{Operation: op, ContractAddress: query.ContractAddress.Bytes(), DelegatorAddress: query.DelegatorAddress.Bytes(), DelegateAddress: query.DelegateAddress.Bytes()}
 }
 
-// DelegateDecryption is a write. The delegator is the signer account. It returns the mined transaction result.
+// DelegateDecryption grants decryption rights as the signer account and returns the mined transaction.
 func (s *SDKContext) DelegateDecryption(ctx context.Context, params DelegateDecryptionParams) (*TransactionResult, error) {
-	delegation, err := delegateDecryptionWire(params)
+	delegation, err := delegateDecryptionWire(params.ContractAddress, params.DelegateAddress, params.ExpirationDate)
 	if err != nil {
 		return nil, err
 	}
@@ -122,9 +77,9 @@ func (s *SDKContext) DelegateDecryption(ctx context.Context, params DelegateDecr
 	return transactionResult(response.Transaction)
 }
 
-// RevokeDelegation is a write. The delegator is the signer account. It returns the mined transaction result.
+// RevokeDelegation revokes decryption rights as the signer account and returns the mined transaction.
 func (s *SDKContext) RevokeDelegation(ctx context.Context, params RevokeDelegationParams) (*TransactionResult, error) {
-	delegation := revokeDelegationWire(params)
+	delegation := revokeDelegationWire(params.ContractAddress, params.DelegateAddress)
 	response, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.RevokeDelegationResponse, error) {
 		return s.client.rpc.RevokeDelegation(ctx, &pb.RevokeDelegationRequest{Operation: op, Delegation: delegation}, trailer)
 	})
@@ -145,7 +100,7 @@ func (s *SDKContext) IsDelegationActive(ctx context.Context, query DelegationQue
 	return response.IsActive, nil
 }
 
-// GetDelegationExpiry reads the delegation's expiry timestamp, without requiring a signer.
+// GetDelegationExpiry reads the delegation's expiry timestamp without requiring a signer: 0 means none, PermanentDelegationExpiry means permanent.
 func (s *SDKContext) GetDelegationExpiry(ctx context.Context, query DelegationQuery) (uint64, error) {
 	response, err := call(ctx, s, func(ctx context.Context, op *pb.Operation, trailer grpc.CallOption) (*pb.GetDelegationExpiryResponse, error) {
 		return s.client.rpc.GetDelegationExpiry(ctx, delegationQueryWire(query, op), trailer)

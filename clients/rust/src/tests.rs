@@ -899,6 +899,9 @@ mod storage_tests;
 #[path = "encryption_tests.rs"]
 mod encryption_tests;
 
+#[path = "decryption_tests.rs"]
+mod decryption_tests;
+
 #[path = "offline_tests.rs"]
 mod offline_tests;
 

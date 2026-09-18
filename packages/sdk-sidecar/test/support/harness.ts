@@ -116,7 +116,15 @@ export async function testServer(factory: ContextFactory) {
           return;
         }
         const action = message.action;
-        void respond(action).then((result) =>
+        // A throwing responder must still reply, or the caller hangs waiting for one.
+        const settle = async () => {
+          try {
+            return await respond(action);
+          } catch (error) {
+            return { $case: "error", error: errorDetails(error) } satisfies SignerReply["result"];
+          }
+        };
+        void settle().then((result) =>
           stream.write({
             message: {
               $case: "reply",

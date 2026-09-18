@@ -110,14 +110,15 @@ func (s *SDKContext) PrepareTransaction(ctx context.Context, request Transaction
 	if err != nil {
 		return PreparedTransaction{}, err
 	}
-	if len(response.From) != common.AddressLength {
-		return PreparedTransaction{}, errors.New("prepared transaction has invalid sender length")
+	from, err := addressFromWire(response.From, "prepared transaction has invalid sender length")
+	if err != nil {
+		return PreparedTransaction{}, err
 	}
 	kind, err := transactionKind(response.Kind)
 	if err != nil {
 		return PreparedTransaction{}, err
 	}
-	return PreparedTransaction{Kind: kind, From: common.BytesToAddress(response.From), UnsignedTx: response.UnsignedTx}, nil
+	return PreparedTransaction{Kind: kind, From: from, UnsignedTx: response.UnsignedTx}, nil
 }
 
 type ConfidentialTransferRequest struct {
@@ -256,7 +257,7 @@ type DelegateDecryptionRequest struct {
 }
 
 func (r DelegateDecryptionRequest) prepareWire() (*pb.PrepareTransactionRequest, error) {
-	delegation, err := delegateDecryptionWire(DelegateDecryptionParams{ContractAddress: r.ContractAddress, DelegateAddress: r.DelegateAddress, ExpirationDate: r.ExpirationDate})
+	delegation, err := delegateDecryptionWire(r.ContractAddress, r.DelegateAddress, r.ExpirationDate)
 	if err != nil {
 		return nil, err
 	}
@@ -270,6 +271,6 @@ type RevokeDelegationRequest struct {
 }
 
 func (r RevokeDelegationRequest) prepareWire() (*pb.PrepareTransactionRequest, error) {
-	delegation := revokeDelegationWire(RevokeDelegationParams{ContractAddress: r.ContractAddress, DelegateAddress: r.DelegateAddress})
+	delegation := revokeDelegationWire(r.ContractAddress, r.DelegateAddress)
 	return &pb.PrepareTransactionRequest{From: r.From.Bytes(), Transaction: &pb.PrepareTransactionRequest_RevokeDelegation{RevokeDelegation: delegation}}, nil
 }

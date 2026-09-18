@@ -13,13 +13,21 @@ import {
   recoverTransactionAddress,
   serializeTransaction,
   toFunctionSelector,
+  type Address,
   type EncodeFunctionDataParameters,
+  type Hex,
   type PublicClient,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { expect, test, vi } from "vitest";
 import type * as viemModule from "../../sdk/src/viem/index.js";
-import type { GenericProvider, GenericSigner } from "../../sdk/src/types/index.js";
+import type {
+  ContractAbi,
+  GenericSigner,
+  WriteContractArgs,
+  WriteContractConfig,
+  WriteFunctionName,
+} from "../../sdk/src/types/index.js";
 import { getAppliedWireRuntime } from "../../sdk/src/relayer/applied-runtime.js";
 import { sepolia } from "../../sdk/src/chains/index.js";
 import { VALID_ENCRYPTED_VALUE, TOKEN } from "../../sdk/src/test-fixtures/constants.js";
@@ -37,42 +45,44 @@ const forwarded = vi.hoisted(() => ({
 
 vi.mock("@zama-fhe/sdk/viem", async (importOriginal) => {
   const actual = await importOriginal<typeof viemModule>();
+  // Reads reach the fixture chain; only the offline preparation stays byte-for-byte fixed.
+  class FixedPrepareViemProvider extends actual.ViemProvider {
+    override async prepareTransaction<
+      const TAbi extends ContractAbi,
+      TFunctionName extends WriteFunctionName<TAbi>,
+      const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
+    >({
+      calldata,
+      nonce,
+      gasLimit,
+      fees,
+    }: {
+      from: Address;
+      calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+      nonce?: number;
+      gasLimit?: bigint;
+      fees?: { maxFeePerGas: bigint; maxPriorityFeePerGas: bigint };
+    }): Promise<Hex> {
+      return serializeTransaction({
+        type: "eip1559",
+        chainId: 11155111,
+        nonce: nonce ?? 0,
+        gas: gasLimit ?? 100_000n,
+        maxFeePerGas: fees?.maxFeePerGas ?? 2n,
+        maxPriorityFeePerGas: fees?.maxPriorityFeePerGas ?? 1n,
+        to: calldata.address,
+        data: encodeFunctionData(calldata as EncodeFunctionDataParameters),
+        value: 0n,
+      });
+    }
+  }
   return {
     ...actual,
-    // Reads reach the fixture chain; only the offline preparation stays byte-for-byte fixed.
     ViemProvider: vi.fn(function (config: {
       publicClient: PublicClient & { transport: { timeout?: number } };
     }) {
       forwarded.timeouts.push(config.publicClient.transport.timeout);
-      const provider = new actual.ViemProvider(config);
-      const prepareTransaction = async ({
-        calldata,
-        nonce,
-        gasLimit,
-        fees,
-      }: Parameters<GenericProvider["prepareTransaction"]>[0]) =>
-        serializeTransaction({
-          type: "eip1559",
-          chainId: 11155111,
-          nonce: nonce ?? 0,
-          gas: gasLimit ?? 100_000n,
-          maxFeePerGas: fees?.maxFeePerGas ?? 2n,
-          maxPriorityFeePerGas: fees?.maxPriorityFeePerGas ?? 1n,
-          to: calldata.address,
-          data: encodeFunctionData(calldata as EncodeFunctionDataParameters),
-          value: 0n,
-        });
-      // ViemProvider's other methods close over #private fields, so they must run bound to the
-      // real instance; only prepareTransaction is overridden here.
-      return new Proxy(provider, {
-        get: (target, property) => {
-          if (property === "prepareTransaction") {
-            return prepareTransaction;
-          }
-          const value: unknown = Reflect.get(target, property, target);
-          return typeof value === "function" ? value.bind(target) : value;
-        },
-      });
+      return new FixedPrepareViemProvider(config);
     }),
   };
 });
@@ -142,7 +152,6 @@ const ALREADY_DELEGATED_SELECTOR = toFunctionSelector(
   "AlreadyDelegatedOrRevokedInSameBlock(address,address,address,uint256)",
 );
 
-// The JSON-RPC methods the fake chain fixture implements; see support/fake-chain.ts.
 const ALLOWED_METHODS = new Set([
   "eth_chainId",
   "eth_blockNumber",
@@ -158,7 +167,6 @@ const ALLOWED_METHODS = new Set([
   "eth_getTransactionReceipt",
 ]);
 
-/** Assert the lines appear in stdout in this order. */
 function expectOrder(stdout: string, lines: string[]): void {
   let cursor = -1;
   for (const line of lines) {
@@ -334,7 +342,6 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
       }
 
       expect(getAppliedWireRuntime()).toMatchObject({ singleThread: true });
-      // Fails loudly if a client starts asking the fixture for a method it does not support.
       const unexpected = [...new Set(chain.methods)].filter(
         (method) => !ALLOWED_METHODS.has(method),
       );

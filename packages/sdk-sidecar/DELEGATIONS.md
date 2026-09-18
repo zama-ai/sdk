@@ -17,7 +17,7 @@
 
 `DelegateDecryption` and `RevokeDelegation` write to the ACL contract. The delegator is always the connected signer account; there is no field for it on the wire. The SDK resolves the delegator from the signer account, and the sidecar only omits the field.
 
-The three read RPCs take an explicit `contract_address`, `delegator_address` and `delegate_address` in `DelegationQuery` and work without a signer attached to the context.
+The three read RPCs take an explicit `contract_address`, `delegator_address` and `delegate_address` in `DelegationQueryRequest` and work without a signer attached to the context.
 
 ## One change per block
 
@@ -96,11 +96,11 @@ let status = sdk.delegations().get_status(query).await?;
 
 let granted = sdk
     .delegations()
-    .delegate_decryption(DelegateDecryptionParams {
-        contract_address: token,
-        delegate_address: delegate,
-        expiration_date_ms: Some(expiry_ms),
-    })
+    .delegate_decryption(DelegateDecryptionParams::expiring_at(
+        token,
+        delegate,
+        SystemTime::now() + Duration::from_secs(2 * 60 * 60),
+    )?)
     .await?;
 ```
 

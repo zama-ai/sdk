@@ -129,9 +129,9 @@ func TestTransactionResultRejectsMalformedShapes(t *testing.T) {
 
 func TestDelegationReadsWire(t *testing.T) {
 	contract, delegator, delegate := common.Address{6}, common.Address{7}, common.Address{8}
-	requests := make(chan *pb.DelegationQuery, 8)
+	requests := make(chan *pb.DelegationQueryRequest, 8)
 	client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
-		if req, ok := request.(*pb.DelegationQuery); ok {
+		if req, ok := request.(*pb.DelegationQueryRequest); ok {
 			requests <- req
 			return &pb.IsDelegationActiveResponse{}, nil
 		}
@@ -187,7 +187,7 @@ func TestDelegationReadMethods(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
-				if _, ok := request.(*pb.DelegationQuery); ok {
+				if _, ok := request.(*pb.DelegationQueryRequest); ok {
 					return tt.response, nil
 				}
 				return &pb.CreateContextResponse{ContextId: "delegations"}, nil
@@ -200,7 +200,7 @@ func TestDelegationReadMethods(t *testing.T) {
 func TestDelegationErrorTrailersSurfaceAsRPCError(t *testing.T) {
 	client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(ctx context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 		switch request.(type) {
-		case *pb.RevokeDelegationRequest, *pb.DelegationQuery, *pb.DelegateDecryptionRequest:
+		case *pb.RevokeDelegationRequest, *pb.DelegationQueryRequest, *pb.DelegateDecryptionRequest:
 			grpc.SetTrailer(ctx, metadata.Pairs("zama-error-code", "DELEGATION_NOT_FOUND", "zama-error-retryable", "false"))
 			return nil, status.Error(codes.NotFound, "no delegation")
 		}

@@ -56,11 +56,11 @@ service SidecarService {
   // Calls delegations.revokeDelegation for the signer account's on-chain delegation.
   rpc RevokeDelegation(RevokeDelegationRequest) returns (RevokeDelegationResponse);
   // Calls delegations.isActive without requiring a signer.
-  rpc IsDelegationActive(DelegationQuery) returns (IsDelegationActiveResponse);
+  rpc IsDelegationActive(DelegationQueryRequest) returns (IsDelegationActiveResponse);
   // Calls delegations.getExpiry without requiring a signer.
-  rpc GetDelegationExpiry(DelegationQuery) returns (GetDelegationExpiryResponse);
+  rpc GetDelegationExpiry(DelegationQueryRequest) returns (GetDelegationExpiryResponse);
   // Calls delegations.getStatus without requiring a signer.
-  rpc GetDelegationStatus(DelegationQuery) returns (GetDelegationStatusResponse);
+  rpc GetDelegationStatus(DelegationQueryRequest) returns (GetDelegationStatusResponse);
 }
 message Empty {}
 message GetInfoRequest {}
@@ -643,8 +643,8 @@ message RevokeDelegationRequest {
   Operation operation = 1;
   RevokeDelegation delegation = 2;
 }
-// Addresses contain exactly 20 bytes; the delegator is explicit because reads need no signer.
-message DelegationQuery {
+// The delegator is explicit because reads need no signer.
+message DelegationQueryRequest {
   Operation operation = 1;
   bytes contract_address = 2;
   bytes delegator_address = 3;
@@ -676,5 +676,6 @@ message GetDelegationExpiryResponse {
 }
 message GetDelegationStatusResponse {
   bool is_active = 1;
+  // Same sentinels as GetDelegationExpiryResponse: 0 means none, 2^64-1 means permanent.
   uint64 expiry_timestamp = 2;
 }

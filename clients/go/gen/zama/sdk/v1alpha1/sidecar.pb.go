@@ -6580,8 +6580,8 @@ func (x *RevokeDelegationRequest) GetDelegation() *RevokeDelegation {
 	return nil
 }
 
-// Addresses contain exactly 20 bytes; the delegator is explicit because reads need no signer.
-type DelegationQuery struct {
+// The delegator is explicit because reads need no signer.
+type DelegationQueryRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Operation        *Operation             `protobuf:"bytes,1,opt,name=operation,proto3" json:"operation,omitempty"`
 	ContractAddress  []byte                 `protobuf:"bytes,2,opt,name=contract_address,json=contractAddress,proto3" json:"contract_address,omitempty"`
@@ -6591,20 +6591,20 @@ type DelegationQuery struct {
 	sizeCache        protoimpl.SizeCache
 }
 
-func (x *DelegationQuery) Reset() {
-	*x = DelegationQuery{}
+func (x *DelegationQueryRequest) Reset() {
+	*x = DelegationQueryRequest{}
 	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[96]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *DelegationQuery) String() string {
+func (x *DelegationQueryRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DelegationQuery) ProtoMessage() {}
+func (*DelegationQueryRequest) ProtoMessage() {}
 
-func (x *DelegationQuery) ProtoReflect() protoreflect.Message {
+func (x *DelegationQueryRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[96]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -6616,33 +6616,33 @@ func (x *DelegationQuery) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DelegationQuery.ProtoReflect.Descriptor instead.
-func (*DelegationQuery) Descriptor() ([]byte, []int) {
+// Deprecated: Use DelegationQueryRequest.ProtoReflect.Descriptor instead.
+func (*DelegationQueryRequest) Descriptor() ([]byte, []int) {
 	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{96}
 }
 
-func (x *DelegationQuery) GetOperation() *Operation {
+func (x *DelegationQueryRequest) GetOperation() *Operation {
 	if x != nil {
 		return x.Operation
 	}
 	return nil
 }
 
-func (x *DelegationQuery) GetContractAddress() []byte {
+func (x *DelegationQueryRequest) GetContractAddress() []byte {
 	if x != nil {
 		return x.ContractAddress
 	}
 	return nil
 }
 
-func (x *DelegationQuery) GetDelegatorAddress() []byte {
+func (x *DelegationQueryRequest) GetDelegatorAddress() []byte {
 	if x != nil {
 		return x.DelegatorAddress
 	}
 	return nil
 }
 
-func (x *DelegationQuery) GetDelegateAddress() []byte {
+func (x *DelegationQueryRequest) GetDelegateAddress() []byte {
 	if x != nil {
 		return x.DelegateAddress
 	}
@@ -6941,9 +6941,10 @@ func (x *GetDelegationExpiryResponse) GetExpiryTimestamp() uint64 {
 }
 
 type GetDelegationStatusResponse struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	IsActive        bool                   `protobuf:"varint,1,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
-	ExpiryTimestamp uint64                 `protobuf:"varint,2,opt,name=expiry_timestamp,json=expiryTimestamp,proto3" json:"expiry_timestamp,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	IsActive bool                   `protobuf:"varint,1,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	// Same sentinels as GetDelegationExpiryResponse: 0 means none, 2^64-1 means permanent.
+	ExpiryTimestamp uint64 `protobuf:"varint,2,opt,name=expiry_timestamp,json=expiryTimestamp,proto3" json:"expiry_timestamp,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -7479,8 +7480,8 @@ const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
 	"\toperation\x18\x01 \x01(\v2\x1c.zama.sdk.v1alpha1.OperationR\toperation\x12C\n" +
 	"\n" +
 	"delegation\x18\x02 \x01(\v2#.zama.sdk.v1alpha1.RevokeDelegationR\n" +
-	"delegation\"\xd0\x01\n" +
-	"\x0fDelegationQuery\x12:\n" +
+	"delegation\"\xd7\x01\n" +
+	"\x16DelegationQueryRequest\x12:\n" +
 	"\toperation\x18\x01 \x01(\v2\x1c.zama.sdk.v1alpha1.OperationR\toperation\x12)\n" +
 	"\x10contract_address\x18\x02 \x01(\fR\x0fcontractAddress\x12+\n" +
 	"\x11delegator_address\x18\x03 \x01(\fR\x10delegatorAddress\x12)\n" +
@@ -7527,7 +7528,7 @@ const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
 	"\"TRANSACTION_KIND_TRANSFER_AND_CALL\x10\t\x12(\n" +
 	"$TRANSACTION_KIND_DELEGATE_DECRYPTION\x10\n" +
 	"\x12&\n" +
-	"\"TRANSACTION_KIND_REVOKE_DELEGATION\x10\v2\xa0\x17\n" +
+	"\"TRANSACTION_KIND_REVOKE_DELEGATION\x10\v2\xb5\x17\n" +
 	"\x0eSidecarService\x12P\n" +
 	"\aGetInfo\x12!.zama.sdk.v1alpha1.GetInfoRequest\x1a\".zama.sdk.v1alpha1.GetInfoResponse\x12b\n" +
 	"\rCreateContext\x12'.zama.sdk.v1alpha1.CreateContextRequest\x1a(.zama.sdk.v1alpha1.CreateContextResponse\x12Z\n" +
@@ -7553,10 +7554,10 @@ const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
 	"\x16RevokeTransportKeyPair\x12\x1f.zama.sdk.v1alpha1.ScopeRequest\x1a1.zama.sdk.v1alpha1.RevokeTransportKeyPairResponse\x12P\n" +
 	"\aEncrypt\x12!.zama.sdk.v1alpha1.EncryptRequest\x1a\".zama.sdk.v1alpha1.EncryptResponse\x12q\n" +
 	"\x12DelegateDecryption\x12,.zama.sdk.v1alpha1.DelegateDecryptionRequest\x1a-.zama.sdk.v1alpha1.DelegateDecryptionResponse\x12k\n" +
-	"\x10RevokeDelegation\x12*.zama.sdk.v1alpha1.RevokeDelegationRequest\x1a+.zama.sdk.v1alpha1.RevokeDelegationResponse\x12g\n" +
-	"\x12IsDelegationActive\x12\".zama.sdk.v1alpha1.DelegationQuery\x1a-.zama.sdk.v1alpha1.IsDelegationActiveResponse\x12i\n" +
-	"\x13GetDelegationExpiry\x12\".zama.sdk.v1alpha1.DelegationQuery\x1a..zama.sdk.v1alpha1.GetDelegationExpiryResponse\x12i\n" +
-	"\x13GetDelegationStatus\x12\".zama.sdk.v1alpha1.DelegationQuery\x1a..zama.sdk.v1alpha1.GetDelegationStatusResponseBEZCgithub.com/zama-ai/sdk/clients/go/gen/zama/sdk/v1alpha1;sdkv1alpha1b\x06proto3"
+	"\x10RevokeDelegation\x12*.zama.sdk.v1alpha1.RevokeDelegationRequest\x1a+.zama.sdk.v1alpha1.RevokeDelegationResponse\x12n\n" +
+	"\x12IsDelegationActive\x12).zama.sdk.v1alpha1.DelegationQueryRequest\x1a-.zama.sdk.v1alpha1.IsDelegationActiveResponse\x12p\n" +
+	"\x13GetDelegationExpiry\x12).zama.sdk.v1alpha1.DelegationQueryRequest\x1a..zama.sdk.v1alpha1.GetDelegationExpiryResponse\x12p\n" +
+	"\x13GetDelegationStatus\x12).zama.sdk.v1alpha1.DelegationQueryRequest\x1a..zama.sdk.v1alpha1.GetDelegationStatusResponseBEZCgithub.com/zama-ai/sdk/clients/go/gen/zama/sdk/v1alpha1;sdkv1alpha1b\x06proto3"
 
 var (
 	file_zama_sdk_v1alpha1_sidecar_proto_rawDescOnce sync.Once
@@ -7672,7 +7673,7 @@ var file_zama_sdk_v1alpha1_sidecar_proto_goTypes = []any{
 	(*PrepareTransactionResponse)(nil),          // 96: zama.sdk.v1alpha1.PrepareTransactionResponse
 	(*DelegateDecryptionRequest)(nil),           // 97: zama.sdk.v1alpha1.DelegateDecryptionRequest
 	(*RevokeDelegationRequest)(nil),             // 98: zama.sdk.v1alpha1.RevokeDelegationRequest
-	(*DelegationQuery)(nil),                     // 99: zama.sdk.v1alpha1.DelegationQuery
+	(*DelegationQueryRequest)(nil),              // 99: zama.sdk.v1alpha1.DelegationQueryRequest
 	(*TransactionResult)(nil),                   // 100: zama.sdk.v1alpha1.TransactionResult
 	(*TransactionLog)(nil),                      // 101: zama.sdk.v1alpha1.TransactionLog
 	(*DelegateDecryptionResponse)(nil),          // 102: zama.sdk.v1alpha1.DelegateDecryptionResponse
@@ -7779,7 +7780,7 @@ var file_zama_sdk_v1alpha1_sidecar_proto_depIdxs = []int32{
 	94,  // 92: zama.sdk.v1alpha1.DelegateDecryptionRequest.delegation:type_name -> zama.sdk.v1alpha1.DelegateDecryption
 	12,  // 93: zama.sdk.v1alpha1.RevokeDelegationRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
 	95,  // 94: zama.sdk.v1alpha1.RevokeDelegationRequest.delegation:type_name -> zama.sdk.v1alpha1.RevokeDelegation
-	12,  // 95: zama.sdk.v1alpha1.DelegationQuery.operation:type_name -> zama.sdk.v1alpha1.Operation
+	12,  // 95: zama.sdk.v1alpha1.DelegationQueryRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
 	101, // 96: zama.sdk.v1alpha1.TransactionResult.logs:type_name -> zama.sdk.v1alpha1.TransactionLog
 	100, // 97: zama.sdk.v1alpha1.DelegateDecryptionResponse.transaction:type_name -> zama.sdk.v1alpha1.TransactionResult
 	100, // 98: zama.sdk.v1alpha1.RevokeDelegationResponse.transaction:type_name -> zama.sdk.v1alpha1.TransactionResult
@@ -7809,9 +7810,9 @@ var file_zama_sdk_v1alpha1_sidecar_proto_depIdxs = []int32{
 	80,  // 122: zama.sdk.v1alpha1.SidecarService.Encrypt:input_type -> zama.sdk.v1alpha1.EncryptRequest
 	97,  // 123: zama.sdk.v1alpha1.SidecarService.DelegateDecryption:input_type -> zama.sdk.v1alpha1.DelegateDecryptionRequest
 	98,  // 124: zama.sdk.v1alpha1.SidecarService.RevokeDelegation:input_type -> zama.sdk.v1alpha1.RevokeDelegationRequest
-	99,  // 125: zama.sdk.v1alpha1.SidecarService.IsDelegationActive:input_type -> zama.sdk.v1alpha1.DelegationQuery
-	99,  // 126: zama.sdk.v1alpha1.SidecarService.GetDelegationExpiry:input_type -> zama.sdk.v1alpha1.DelegationQuery
-	99,  // 127: zama.sdk.v1alpha1.SidecarService.GetDelegationStatus:input_type -> zama.sdk.v1alpha1.DelegationQuery
+	99,  // 125: zama.sdk.v1alpha1.SidecarService.IsDelegationActive:input_type -> zama.sdk.v1alpha1.DelegationQueryRequest
+	99,  // 126: zama.sdk.v1alpha1.SidecarService.GetDelegationExpiry:input_type -> zama.sdk.v1alpha1.DelegationQueryRequest
+	99,  // 127: zama.sdk.v1alpha1.SidecarService.GetDelegationStatus:input_type -> zama.sdk.v1alpha1.DelegationQueryRequest
 	5,   // 128: zama.sdk.v1alpha1.SidecarService.GetInfo:output_type -> zama.sdk.v1alpha1.GetInfoResponse
 	9,   // 129: zama.sdk.v1alpha1.SidecarService.CreateContext:output_type -> zama.sdk.v1alpha1.CreateContextResponse
 	49,  // 130: zama.sdk.v1alpha1.SidecarService.CloseContext:output_type -> zama.sdk.v1alpha1.CloseContextResponse

@@ -18,7 +18,6 @@ import {
   ZamaError,
   type Hex,
   type RawLog,
-  type TransactionResult,
   type WriteContractConfig,
 } from "@zama-fhe/sdk";
 import {
@@ -191,18 +190,18 @@ const query = (env: Env, contract = TOKEN, delegator = USER, delegate = DELEGATE
   delegatorAddress: bytes(delegator),
   delegateAddress: bytes(delegate),
 });
-const isActive = (env: Env, request: rpc.DelegationQuery) =>
-  unary<rpc.DelegationQuery, rpc.IsDelegationActiveResponse>(
+const isActive = (env: Env, request: rpc.DelegationQueryRequest) =>
+  unary<rpc.DelegationQueryRequest, rpc.IsDelegationActiveResponse>(
     (req, metadata, callback) => env.client.isDelegationActive(req, metadata, callback),
     request,
   );
-const getExpiry = (env: Env, request: rpc.DelegationQuery) =>
-  unary<rpc.DelegationQuery, rpc.GetDelegationExpiryResponse>(
+const getExpiry = (env: Env, request: rpc.DelegationQueryRequest) =>
+  unary<rpc.DelegationQueryRequest, rpc.GetDelegationExpiryResponse>(
     (req, metadata, callback) => env.client.getDelegationExpiry(req, metadata, callback),
     request,
   );
-const getStatus = (env: Env, request: rpc.DelegationQuery) =>
-  unary<rpc.DelegationQuery, rpc.GetDelegationStatusResponse>(
+const getStatus = (env: Env, request: rpc.DelegationQueryRequest) =>
+  unary<rpc.DelegationQueryRequest, rpc.GetDelegationStatusResponse>(
     (req, metadata, callback) => env.client.getDelegationStatus(req, metadata, callback),
     request,
   );
@@ -221,16 +220,21 @@ function expectedWrite(config: WriteContractConfig) {
     argsJson: json(config.args),
   };
 }
-function expectedTransaction(result: TransactionResult): rpc.TransactionResult {
-  return {
-    transactionHash: bytes(result.txHash),
-    logs: result.receipt.logs.map((log) => ({
-      ...(log.address === undefined ? {} : { address: bytes(log.address) }),
-      topics: log.topics.map(bytes),
-      data: bytes(log.data),
-    })),
-  };
-}
+const expectedTransactionWithLogs: rpc.TransactionResult = {
+  transactionHash: Buffer.from(HASH.slice(2), "hex"),
+  logs: [
+    {
+      address: Buffer.from(TOKEN.slice(2), "hex"),
+      topics: [Buffer.from("11".repeat(32), "hex"), Buffer.from("22".repeat(32), "hex")],
+      data: Buffer.from("1234", "hex"),
+    },
+    { topics: [], data: Buffer.alloc(0) },
+  ],
+};
+const expectedEmptyTransaction: rpc.TransactionResult = {
+  transactionHash: Buffer.from(HASH.slice(2), "hex"),
+  logs: [],
+};
 
 test("granting without an expiry delegates permanently and round-trips the receipt logs", async () => {
   const env = await setup();
@@ -247,7 +251,7 @@ test("granting without an expiry delegates permanently and round-trips the recei
       expirationDateMs: undefined,
     });
     expect(expected.txHash).toBe(HASH);
-    expect(actual.transaction).toEqual(expectedTransaction(expected));
+    expect(actual.transaction).toEqual(expectedTransactionWithLogs);
     expect(actual.transaction?.logs.map((log) => log.address)).toEqual([bytes(TOKEN), undefined]);
     const config = env.directSigner.write.mock.calls[0]![0] as WriteContractConfig;
     expect(config.args).toEqual([DELEGATE, TOKEN, MAX_UINT64]);
@@ -279,7 +283,8 @@ test("granting with an explicit expiry forwards the whole-second deadline", asyn
       delegateAddress: bytes(DELEGATE),
       expirationDateMs: BigInt(expirationDateMs),
     });
-    expect(actual.transaction).toEqual(expectedTransaction(expected));
+    expect(expected.txHash).toBe(HASH);
+    expect(actual.transaction).toEqual(expectedEmptyTransaction);
     expect((env.directSigner.write.mock.calls[0]![0] as WriteContractConfig).args).toEqual([
       DELEGATE,
       TOKEN,
@@ -293,14 +298,14 @@ test("granting with an explicit expiry forwards the whole-second deadline", asyn
   }
 });
 
-test("granting rejects an expiry outside the representable Date range", async () => {
+test("granting rejects an expiry one millisecond past the largest representable Date", async () => {
   const env = await setup();
   try {
     const error = await failure(
       grant(env, {
         contractAddress: bytes(TOKEN),
         delegateAddress: bytes(DELEGATE),
-        expirationDateMs: 9_000_000_000_000_000n,
+        expirationDateMs: 8_640_000_000_000_001n,
       }),
     );
     expect(errorCode(error)).toBe("INVALID_ARGUMENT");
@@ -394,7 +399,8 @@ test("revoking an existing delegation calls the ACL revoke function", async () =
       contractAddress: bytes(TOKEN),
       delegateAddress: bytes(DELEGATE),
     });
-    expect(actual.transaction).toEqual(expectedTransaction(expected));
+    expect(expected.txHash).toBe(HASH);
+    expect(actual.transaction).toEqual(expectedTransactionWithLogs);
     expect(env.writes[0]).toMatchObject(
       expectedWrite(revokeDelegationContract(ACL, DELEGATE, TOKEN)),
     );

@@ -12,7 +12,9 @@ import type {
   ChainAuth,
   ClearEntry,
   ClearValue,
+  DelegateDecryption,
   EncryptedInput,
+  RevokeDelegation,
   TransactionResult as WireTransactionResult,
   WalletAccount,
 } from "./generated/zama/sdk/v1alpha1/sidecar.js";
@@ -44,11 +46,45 @@ export function transactionResult(result: TransactionResult): WireTransactionRes
   return {
     transactionHash: bytes(result.txHash),
     logs: result.receipt.logs.map((log) => ({
-      // Provider adapters may omit the emitter address.
       ...(log.address === undefined ? {} : { address: bytes(log.address) }),
       topics: log.topics.map(bytes),
       data: bytes(log.data),
     })),
+  };
+}
+
+export interface DelegateDecryptionParams {
+  contractAddress: Address;
+  delegateAddress: Address;
+  expirationDate?: Date;
+}
+export interface RevokeDelegationParams {
+  contractAddress: Address;
+  delegateAddress: Address;
+}
+
+export function delegateDecryptionParams(value: DelegateDecryption): DelegateDecryptionParams {
+  return {
+    contractAddress: address(value.contractAddress),
+    delegateAddress: address(value.delegateAddress),
+    // An omitted expiry requests a permanent delegation.
+    ...(value.expirationDateMs === undefined
+      ? {}
+      : { expirationDate: expirationDate(value.expirationDateMs) }),
+  };
+}
+function expirationDate(ms: bigint): Date {
+  const date = new Date(safeInteger(ms, "Expiration date"));
+  // A safe integer can still exceed the range a Date represents.
+  if (Number.isNaN(date.getTime())) {
+    throw invalidArgument("Expiration date is outside the representable range.");
+  }
+  return date;
+}
+export function revokeDelegationParams(value: RevokeDelegation): RevokeDelegationParams {
+  return {
+    contractAddress: address(value.contractAddress),
+    delegateAddress: address(value.delegateAddress),
   };
 }
 export function clearValue(value: SdkClearValue | number): ClearValue {

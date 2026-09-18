@@ -1,13 +1,13 @@
 use alloy_provider::Provider;
 use anyhow::{Context, Result};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime};
 use zama_sdk_sidecar::{
     Address, DelegateDecryptionParams, DelegationQuery, DelegationStatus,
     PERMANENT_DELEGATION_EXPIRY, RevokeDelegationParams, Sdk,
 };
 
 /// The SDK rejects expiries under 1 hour, so the demo grants comfortably above that.
-const GRANT_DURATION_MS: u64 = 2 * 60 * 60 * 1000;
+const GRANT_DURATION: Duration = Duration::from_secs(2 * 60 * 60);
 const BLOCK_POLL_INTERVAL: Duration = Duration::from_secs(2);
 const BLOCK_WAIT_TIMEOUT: Duration = Duration::from_secs(90);
 
@@ -31,22 +31,11 @@ pub async fn manage_delegation(
         return Ok(());
     }
 
-    let expiry_ms = u64::try_from(
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .context("system clock before unix epoch")?
-            .as_millis(),
-    )
-    .context("expiry does not fit in u64 milliseconds")?
-        + GRANT_DURATION_MS;
-    let granted = sdk
-        .delegations()
-        .delegate_decryption(DelegateDecryptionParams {
-            contract_address: token,
-            delegate_address: delegate,
-            expiration_date_ms: Some(expiry_ms),
-        })
-        .await?;
+    let expiring_at = SystemTime::now()
+        .checked_add(GRANT_DURATION)
+        .context("grant duration overflows the system clock")?;
+    let params = DelegateDecryptionParams::expiring_at(token, delegate, expiring_at)?;
+    let granted = sdk.delegations().delegate_decryption(params).await?;
     println!("Delegation granted: {}", granted.transaction_hash);
     let status = sdk.delegations().get_status(query).await?;
     println!(

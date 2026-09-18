@@ -19,9 +19,8 @@ impl From<WalletAccount> for generated::WalletAccount {
 impl TryFrom<generated::WalletAccount> for WalletAccount {
     type Error = anyhow::Error;
     fn try_from(value: generated::WalletAccount) -> Result<Self> {
-        ensure!(value.address.len() == 20, "invalid signer account address");
         Ok(Self {
-            address: Address::from_slice(&value.address),
+            address: address(&value.address, "invalid signer account address")?,
             chain_id: value.chain_id,
         })
     }
@@ -75,6 +74,12 @@ impl TryFrom<generated::ClearValue> for ClearValue {
 pub(crate) fn word(bytes: &[u8], name: &str) -> Result<B256> {
     ensure!(bytes.len() == 32, "invalid {name} length");
     Ok(B256::from_slice(bytes))
+}
+/// Decodes wire bytes into an address, or bails with `message` when the length is wrong.
+/// `Address::from_slice` panics on malformed input, so every wire decode site must go through this.
+pub(crate) fn address(bytes: &[u8], message: &str) -> Result<Address> {
+    ensure!(bytes.len() == 20, "{message}");
+    Ok(Address::from_slice(bytes))
 }
 pub(crate) fn handle(bytes: &[u8]) -> Result<B256> {
     word(bytes, "encrypted handle")

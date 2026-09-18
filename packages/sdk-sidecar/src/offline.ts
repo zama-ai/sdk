@@ -3,8 +3,14 @@ import type { PrepareOptions, PrepareTransactionRequest, TransactionKind } from 
 import type * as rpc from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import { TransactionKind as WireTransactionKind } from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import type { ContextSdk } from "./runtime.js";
-import { address, bytes, integer, safeInteger } from "./encoding.js";
-import { delegateDecryptionParams, revokeDelegationParams } from "./delegations.js";
+import {
+  address,
+  bytes,
+  delegateDecryptionParams,
+  integer,
+  revokeDelegationParams,
+  safeInteger,
+} from "./encoding.js";
 import { invalidArgument } from "./errors.js";
 
 const wireKinds: Record<TransactionKind, rpc.TransactionKind> = {

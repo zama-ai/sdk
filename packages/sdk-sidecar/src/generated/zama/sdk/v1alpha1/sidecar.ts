@@ -882,8 +882,8 @@ export interface RevokeDelegationRequest {
   delegation: RevokeDelegation | undefined;
 }
 
-/** Addresses contain exactly 20 bytes; the delegator is explicit because reads need no signer. */
-export interface DelegationQuery {
+/** The delegator is explicit because reads need no signer. */
+export interface DelegationQueryRequest {
   operation: Operation | undefined;
   contractAddress: Buffer;
   delegatorAddress: Buffer;
@@ -922,6 +922,7 @@ export interface GetDelegationExpiryResponse {
 
 export interface GetDelegationStatusResponse {
   isActive: boolean;
+  /** Same sentinels as GetDelegationExpiryResponse: 0 means none, 2^64-1 means permanent. */
   expiryTimestamp: bigint;
 }
 
@@ -10797,7 +10798,7 @@ export const RevokeDelegationRequest: MessageFns<RevokeDelegationRequest> = {
   },
 };
 
-function createBaseDelegationQuery(): DelegationQuery {
+function createBaseDelegationQueryRequest(): DelegationQueryRequest {
   return {
     operation: undefined,
     contractAddress: Buffer.alloc(0),
@@ -10806,8 +10807,8 @@ function createBaseDelegationQuery(): DelegationQuery {
   };
 }
 
-export const DelegationQuery: MessageFns<DelegationQuery> = {
-  encode(message: DelegationQuery, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+export const DelegationQueryRequest: MessageFns<DelegationQueryRequest> = {
+  encode(message: DelegationQueryRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.operation !== undefined) {
       Operation.encode(message.operation, writer.uint32(10).fork()).join();
     }
@@ -10823,10 +10824,10 @@ export const DelegationQuery: MessageFns<DelegationQuery> = {
     return writer;
   },
 
-  decode(input: BinaryReader | Uint8Array, length?: number): DelegationQuery {
+  decode(input: BinaryReader | Uint8Array, length?: number): DelegationQueryRequest {
     const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
     const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseDelegationQuery();
+    const message = createBaseDelegationQueryRequest();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -10871,7 +10872,7 @@ export const DelegationQuery: MessageFns<DelegationQuery> = {
     return message;
   },
 
-  fromJSON(object: any): DelegationQuery {
+  fromJSON(object: any): DelegationQueryRequest {
     return {
       operation: isSet(object.operation) ? Operation.fromJSON(object.operation) : undefined,
       contractAddress: isSet(object.contractAddress)
@@ -10892,7 +10893,7 @@ export const DelegationQuery: MessageFns<DelegationQuery> = {
     };
   },
 
-  toJSON(message: DelegationQuery): unknown {
+  toJSON(message: DelegationQueryRequest): unknown {
     const obj: any = {};
     if (message.operation !== undefined) {
       obj.operation = Operation.toJSON(message.operation);
@@ -10909,11 +10910,11 @@ export const DelegationQuery: MessageFns<DelegationQuery> = {
     return obj;
   },
 
-  create(base?: DeepPartial<DelegationQuery>): DelegationQuery {
-    return DelegationQuery.fromPartial(base ?? {});
+  create(base?: DeepPartial<DelegationQueryRequest>): DelegationQueryRequest {
+    return DelegationQueryRequest.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<DelegationQuery>): DelegationQuery {
-    const message = createBaseDelegationQuery();
+  fromPartial(object: DeepPartial<DelegationQueryRequest>): DelegationQueryRequest {
+    const message = createBaseDelegationQueryRequest();
     message.operation = (object.operation !== undefined && object.operation !== null)
       ? Operation.fromPartial(object.operation)
       : undefined;
@@ -11735,8 +11736,9 @@ export const SidecarServiceService = {
     path: "/zama.sdk.v1alpha1.SidecarService/IsDelegationActive" as const,
     requestStream: false as const,
     responseStream: false as const,
-    requestSerialize: (value: DelegationQuery): Buffer => Buffer.from(DelegationQuery.encode(value).finish()),
-    requestDeserialize: (value: Buffer): DelegationQuery => DelegationQuery.decode(value),
+    requestSerialize: (value: DelegationQueryRequest): Buffer =>
+      Buffer.from(DelegationQueryRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DelegationQueryRequest => DelegationQueryRequest.decode(value),
     responseSerialize: (value: IsDelegationActiveResponse): Buffer =>
       Buffer.from(IsDelegationActiveResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): IsDelegationActiveResponse => IsDelegationActiveResponse.decode(value),
@@ -11746,8 +11748,9 @@ export const SidecarServiceService = {
     path: "/zama.sdk.v1alpha1.SidecarService/GetDelegationExpiry" as const,
     requestStream: false as const,
     responseStream: false as const,
-    requestSerialize: (value: DelegationQuery): Buffer => Buffer.from(DelegationQuery.encode(value).finish()),
-    requestDeserialize: (value: Buffer): DelegationQuery => DelegationQuery.decode(value),
+    requestSerialize: (value: DelegationQueryRequest): Buffer =>
+      Buffer.from(DelegationQueryRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DelegationQueryRequest => DelegationQueryRequest.decode(value),
     responseSerialize: (value: GetDelegationExpiryResponse): Buffer =>
       Buffer.from(GetDelegationExpiryResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): GetDelegationExpiryResponse => GetDelegationExpiryResponse.decode(value),
@@ -11757,8 +11760,9 @@ export const SidecarServiceService = {
     path: "/zama.sdk.v1alpha1.SidecarService/GetDelegationStatus" as const,
     requestStream: false as const,
     responseStream: false as const,
-    requestSerialize: (value: DelegationQuery): Buffer => Buffer.from(DelegationQuery.encode(value).finish()),
-    requestDeserialize: (value: Buffer): DelegationQuery => DelegationQuery.decode(value),
+    requestSerialize: (value: DelegationQueryRequest): Buffer =>
+      Buffer.from(DelegationQueryRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DelegationQueryRequest => DelegationQueryRequest.decode(value),
     responseSerialize: (value: GetDelegationStatusResponse): Buffer =>
       Buffer.from(GetDelegationStatusResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): GetDelegationStatusResponse => GetDelegationStatusResponse.decode(value),
@@ -11817,11 +11821,11 @@ export interface SidecarServiceServer extends UntypedServiceImplementation {
   /** Calls delegations.revokeDelegation for the signer account's on-chain delegation. */
   revokeDelegation: handleUnaryCall<RevokeDelegationRequest, RevokeDelegationResponse>;
   /** Calls delegations.isActive without requiring a signer. */
-  isDelegationActive: handleUnaryCall<DelegationQuery, IsDelegationActiveResponse>;
+  isDelegationActive: handleUnaryCall<DelegationQueryRequest, IsDelegationActiveResponse>;
   /** Calls delegations.getExpiry without requiring a signer. */
-  getDelegationExpiry: handleUnaryCall<DelegationQuery, GetDelegationExpiryResponse>;
+  getDelegationExpiry: handleUnaryCall<DelegationQueryRequest, GetDelegationExpiryResponse>;
   /** Calls delegations.getStatus without requiring a signer. */
-  getDelegationStatus: handleUnaryCall<DelegationQuery, GetDelegationStatusResponse>;
+  getDelegationStatus: handleUnaryCall<DelegationQueryRequest, GetDelegationStatusResponse>;
 }
 
 export interface SidecarServiceClient extends Client {
@@ -12209,48 +12213,48 @@ export interface SidecarServiceClient extends Client {
   ): ClientUnaryCall;
   /** Calls delegations.isActive without requiring a signer. */
   isDelegationActive(
-    request: DelegationQuery,
+    request: DelegationQueryRequest,
     callback: (error: ServiceError | null, response: IsDelegationActiveResponse) => void,
   ): ClientUnaryCall;
   isDelegationActive(
-    request: DelegationQuery,
+    request: DelegationQueryRequest,
     metadata: Metadata,
     callback: (error: ServiceError | null, response: IsDelegationActiveResponse) => void,
   ): ClientUnaryCall;
   isDelegationActive(
-    request: DelegationQuery,
+    request: DelegationQueryRequest,
     metadata: Metadata,
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: IsDelegationActiveResponse) => void,
   ): ClientUnaryCall;
   /** Calls delegations.getExpiry without requiring a signer. */
   getDelegationExpiry(
-    request: DelegationQuery,
+    request: DelegationQueryRequest,
     callback: (error: ServiceError | null, response: GetDelegationExpiryResponse) => void,
   ): ClientUnaryCall;
   getDelegationExpiry(
-    request: DelegationQuery,
+    request: DelegationQueryRequest,
     metadata: Metadata,
     callback: (error: ServiceError | null, response: GetDelegationExpiryResponse) => void,
   ): ClientUnaryCall;
   getDelegationExpiry(
-    request: DelegationQuery,
+    request: DelegationQueryRequest,
     metadata: Metadata,
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: GetDelegationExpiryResponse) => void,
   ): ClientUnaryCall;
   /** Calls delegations.getStatus without requiring a signer. */
   getDelegationStatus(
-    request: DelegationQuery,
+    request: DelegationQueryRequest,
     callback: (error: ServiceError | null, response: GetDelegationStatusResponse) => void,
   ): ClientUnaryCall;
   getDelegationStatus(
-    request: DelegationQuery,
+    request: DelegationQueryRequest,
     metadata: Metadata,
     callback: (error: ServiceError | null, response: GetDelegationStatusResponse) => void,
   ): ClientUnaryCall;
   getDelegationStatus(
-    request: DelegationQuery,
+    request: DelegationQueryRequest,
     metadata: Metadata,
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: GetDelegationStatusResponse) => void,

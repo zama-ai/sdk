@@ -50,7 +50,7 @@ pub use decryption::{
 };
 pub use delegations::{
     DelegateDecryptionParams, DelegationQuery, DelegationStatus, Delegations,
-    PERMANENT_DELEGATION_EXPIRY, RevokeDelegationParams, TransactionLog, TransactionResult,
+    PERMANENT_DELEGATION_EXPIRY, RevokeDelegationParams,
 };
 pub use encryption::{EncryptInput, EncryptOptions, EncryptParams, EncryptResult};
 pub use error::{RpcError, SdkError};
@@ -63,7 +63,7 @@ pub use permits::{Offline, Permits, PreparePermit, PreparedPermit};
 pub use signer::{Signer, SigningRequest};
 pub use storage::{ApplicationStorage, MemoryStorage, NativeStorage, Storage};
 pub use tokio_util::sync::CancellationToken;
-pub use transactions::ContractWriteRequest;
+pub use transactions::{ContractWriteRequest, TransactionLog, TransactionResult};
 pub use types::{ClearValue, ClearValues, EncryptedInput, WalletAccount};
 #[allow(clippy::enum_variant_names)]
 mod generated {

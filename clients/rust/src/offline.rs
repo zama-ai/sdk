@@ -1,5 +1,7 @@
 use crate::{
-    Address, BigInt, DelegateDecryptionParams, Offline, RevokeDelegationParams, generated,
+    Address, BigInt, Offline,
+    delegations::{delegate_decryption_wire, revoke_delegation_wire},
+    generated,
 };
 use anyhow::{Context, Result, bail};
 
@@ -248,24 +250,15 @@ impl From<Transaction> for generated::prepare_transaction_request::Transaction {
                 contract_address,
                 delegate_address,
                 expiration_date_ms,
-            } => Self::DelegateDecryption(
-                DelegateDecryptionParams {
-                    contract_address,
-                    delegate_address,
-                    expiration_date_ms,
-                }
-                .into(),
-            ),
+            } => Self::DelegateDecryption(delegate_decryption_wire(
+                contract_address,
+                delegate_address,
+                expiration_date_ms,
+            )),
             Transaction::RevokeDelegation {
                 contract_address,
                 delegate_address,
-            } => Self::RevokeDelegation(
-                RevokeDelegationParams {
-                    contract_address,
-                    delegate_address,
-                }
-                .into(),
-            ),
+            } => Self::RevokeDelegation(revoke_delegation_wire(contract_address, delegate_address)),
         }
     }
 }

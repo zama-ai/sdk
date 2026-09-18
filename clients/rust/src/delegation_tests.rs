@@ -139,14 +139,14 @@ async fn queries_encode_addresses_and_succeed_without_a_signer() {
             "IsDelegationActive" => {
                 capture.lock().unwrap().push((
                     "IsDelegationActive",
-                    generated::DelegationQuery::decode(bytes).unwrap(),
+                    generated::DelegationQueryRequest::decode(bytes).unwrap(),
                 ));
                 response(IsDelegationActiveResponse { is_active: true })
             }
             "GetDelegationExpiry" => {
                 capture.lock().unwrap().push((
                     "GetDelegationExpiry",
-                    generated::DelegationQuery::decode(bytes).unwrap(),
+                    generated::DelegationQueryRequest::decode(bytes).unwrap(),
                 ));
                 response(GetDelegationExpiryResponse {
                     expiry_timestamp: u64::MAX,
@@ -155,7 +155,7 @@ async fn queries_encode_addresses_and_succeed_without_a_signer() {
             "GetDelegationStatus" => {
                 capture.lock().unwrap().push((
                     "GetDelegationStatus",
-                    generated::DelegationQuery::decode(bytes).unwrap(),
+                    generated::DelegationQueryRequest::decode(bytes).unwrap(),
                 ));
                 response(GetDelegationStatusResponse {
                     is_active: false,
@@ -356,4 +356,23 @@ async fn sdk_error_metadata_surfaces_on_revoke_delegation() {
     assert_eq!(error.sdk.as_ref().unwrap().message, "no active delegation");
     assert!(!error.sdk.as_ref().unwrap().retryable);
     sdk.close().await.unwrap();
+}
+
+#[test]
+fn expiring_at_rejects_a_time_before_the_unix_epoch() {
+    let before_epoch = std::time::UNIX_EPOCH - std::time::Duration::from_secs(1);
+    let error = DelegateDecryptionParams::expiring_at(
+        Address::repeat_byte(1),
+        Address::repeat_byte(2),
+        before_epoch,
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("predates the unix epoch"));
+    let params = DelegateDecryptionParams::expiring_at(
+        Address::repeat_byte(1),
+        Address::repeat_byte(2),
+        std::time::UNIX_EPOCH + std::time::Duration::from_millis(1_700_000_000_123),
+    )
+    .unwrap();
+    assert_eq!(params.expiration_date_ms, Some(1_700_000_000_123));
 }

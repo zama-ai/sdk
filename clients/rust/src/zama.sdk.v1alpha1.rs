@@ -1016,9 +1016,9 @@ pub struct RevokeDelegationRequest {
     #[prost(message, optional, tag = "2")]
     pub delegation: ::core::option::Option<RevokeDelegation>,
 }
-/// Addresses contain exactly 20 bytes; the delegator is explicit because reads need no signer.
+/// The delegator is explicit because reads need no signer.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct DelegationQuery {
+pub struct DelegationQueryRequest {
     #[prost(message, optional, tag = "1")]
     pub operation: ::core::option::Option<Operation>,
     #[prost(bytes = "vec", tag = "2")]
@@ -1071,6 +1071,7 @@ pub struct GetDelegationExpiryResponse {
 pub struct GetDelegationStatusResponse {
     #[prost(bool, tag = "1")]
     pub is_active: bool,
+    /// Same sentinels as GetDelegationExpiryResponse: 0 means none, 2^64-1 means permanent.
     #[prost(uint64, tag = "2")]
     pub expiry_timestamp: u64,
 }
@@ -1999,7 +2000,7 @@ pub mod sidecar_service_client {
         /// Calls delegations.isActive without requiring a signer.
         pub async fn is_delegation_active(
             &mut self,
-            request: impl tonic::IntoRequest<super::DelegationQuery>,
+            request: impl tonic::IntoRequest<super::DelegationQueryRequest>,
         ) -> std::result::Result<
             tonic::Response<super::IsDelegationActiveResponse>,
             tonic::Status,
@@ -2029,7 +2030,7 @@ pub mod sidecar_service_client {
         /// Calls delegations.getExpiry without requiring a signer.
         pub async fn get_delegation_expiry(
             &mut self,
-            request: impl tonic::IntoRequest<super::DelegationQuery>,
+            request: impl tonic::IntoRequest<super::DelegationQueryRequest>,
         ) -> std::result::Result<
             tonic::Response<super::GetDelegationExpiryResponse>,
             tonic::Status,
@@ -2059,7 +2060,7 @@ pub mod sidecar_service_client {
         /// Calls delegations.getStatus without requiring a signer.
         pub async fn get_delegation_status(
             &mut self,
-            request: impl tonic::IntoRequest<super::DelegationQuery>,
+            request: impl tonic::IntoRequest<super::DelegationQueryRequest>,
         ) -> std::result::Result<
             tonic::Response<super::GetDelegationStatusResponse>,
             tonic::Status,

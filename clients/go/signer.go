@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	pb "github.com/zama-ai/sdk/clients/go/gen/zama/sdk/v1alpha1"
 	"google.golang.org/grpc"
@@ -92,10 +91,14 @@ func invokeSigner(ctx context.Context, action *pb.SignerAction, signer SignerCon
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if action.Account == nil || len(action.Account.Address) != common.AddressLength {
+	if action.Account == nil {
 		return errors.New("invalid signing account")
 	}
-	account := WalletAccount{Address: common.BytesToAddress(action.Account.Address), ChainID: action.Account.ChainId}
+	address, err := addressFromWire(action.Account.Address, "invalid signing account")
+	if err != nil {
+		return err
+	}
+	account := WalletAccount{Address: address, ChainID: action.Account.ChainId}
 	switch request := action.Request.(type) {
 	case *pb.SignerAction_ContractWrite:
 		if signer.WriteContract == nil {

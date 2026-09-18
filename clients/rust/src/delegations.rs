@@ -1,5 +1,6 @@
-use crate::{Address, B256, Sdk, generated, types::word};
-use anyhow::{Context, Result, ensure};
+use crate::{Address, Sdk, TransactionResult, generated, transactions::transaction_result};
+use anyhow::{Context, Result};
+use std::time::SystemTime;
 
 pub struct Delegations(pub(crate) Sdk);
 
@@ -9,6 +10,27 @@ pub struct DelegateDecryptionParams {
     pub delegate_address: Address,
     /// Unix time in whole milliseconds; omission requests a permanent delegation.
     pub expiration_date_ms: Option<u64>,
+}
+
+impl DelegateDecryptionParams {
+    /// Converts `at` to whole Unix milliseconds with checked arithmetic.
+    pub fn expiring_at(
+        contract_address: Address,
+        delegate_address: Address,
+        at: SystemTime,
+    ) -> Result<Self> {
+        let millis = at
+            .duration_since(std::time::UNIX_EPOCH)
+            .context("expiry predates the unix epoch")?
+            .as_millis();
+        let expiration_date_ms =
+            u64::try_from(millis).context("expiry does not fit in u64 milliseconds")?;
+        Ok(Self {
+            contract_address,
+            delegate_address,
+            expiration_date_ms: Some(expiration_date_ms),
+        })
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -30,43 +52,51 @@ pub struct DelegationStatus {
     pub expiry_timestamp: u64,
 }
 
-/// The ACL's sentinel expiry for a permanent delegation.
 pub const PERMANENT_DELEGATION_EXPIRY: u64 = u64::MAX;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct TransactionResult {
-    pub transaction_hash: B256,
-    pub logs: Vec<TransactionLog>,
+/// Builds the wire message from fields directly, so callers that only have the fields
+/// (such as offline preparation) never need to construct the online params type.
+pub(crate) fn delegate_decryption_wire(
+    contract_address: Address,
+    delegate_address: Address,
+    expiration_date_ms: Option<u64>,
+) -> generated::DelegateDecryption {
+    generated::DelegateDecryption {
+        contract_address: contract_address.to_vec(),
+        delegate_address: delegate_address.to_vec(),
+        expiration_date_ms,
+    }
 }
 
-/// Log emitter address is absent when the provider adapter omits it.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct TransactionLog {
-    pub address: Option<Address>,
-    pub topics: Vec<B256>,
-    pub data: Vec<u8>,
+/// Builds the wire message from fields directly, so callers that only have the fields
+/// (such as offline preparation) never need to construct the online params type.
+pub(crate) fn revoke_delegation_wire(
+    contract_address: Address,
+    delegate_address: Address,
+) -> generated::RevokeDelegation {
+    generated::RevokeDelegation {
+        contract_address: contract_address.to_vec(),
+        delegate_address: delegate_address.to_vec(),
+    }
 }
 
 impl From<DelegateDecryptionParams> for generated::DelegateDecryption {
     fn from(value: DelegateDecryptionParams) -> Self {
-        Self {
-            contract_address: value.contract_address.to_vec(),
-            delegate_address: value.delegate_address.to_vec(),
-            expiration_date_ms: value.expiration_date_ms,
-        }
+        delegate_decryption_wire(
+            value.contract_address,
+            value.delegate_address,
+            value.expiration_date_ms,
+        )
     }
 }
 
 impl From<RevokeDelegationParams> for generated::RevokeDelegation {
     fn from(value: RevokeDelegationParams) -> Self {
-        Self {
-            contract_address: value.contract_address.to_vec(),
-            delegate_address: value.delegate_address.to_vec(),
-        }
+        revoke_delegation_wire(value.contract_address, value.delegate_address)
     }
 }
 
-impl From<DelegationQuery> for generated::DelegationQuery {
+impl From<DelegationQuery> for generated::DelegationQueryRequest {
     fn from(value: DelegationQuery) -> Self {
         Self {
             operation: None,
@@ -75,41 +105,6 @@ impl From<DelegationQuery> for generated::DelegationQuery {
             delegate_address: value.delegate_address.to_vec(),
         }
     }
-}
-
-fn transaction_log(log: generated::TransactionLog) -> Result<TransactionLog> {
-    let address = log
-        .address
-        .filter(|bytes| !bytes.is_empty())
-        .map(|bytes| {
-            ensure!(bytes.len() == 20, "invalid log address length");
-            Ok(Address::from_slice(&bytes))
-        })
-        .transpose()?;
-    let topics = log
-        .topics
-        .iter()
-        .map(|topic| word(topic, "transaction log topic"))
-        .collect::<Result<_>>()?;
-    Ok(TransactionLog {
-        address,
-        topics,
-        data: log.data,
-    })
-}
-
-fn transaction_result(
-    transaction: Option<generated::TransactionResult>,
-) -> Result<TransactionResult> {
-    let transaction = transaction.context("missing transaction result")?;
-    Ok(TransactionResult {
-        transaction_hash: word(&transaction.transaction_hash, "transaction hash")?,
-        logs: transaction
-            .logs
-            .into_iter()
-            .map(transaction_log)
-            .collect::<Result<_>>()?,
-    })
 }
 
 impl Sdk {
@@ -156,7 +151,7 @@ impl Delegations {
         Ok(rpc!(
             &self.0,
             is_delegation_active,
-            DelegationQuery { ..query.into() }
+            DelegationQueryRequest { ..query.into() }
         )
         .await?
         .is_active)
@@ -167,18 +162,18 @@ impl Delegations {
         Ok(rpc!(
             &self.0,
             get_delegation_expiry,
-            DelegationQuery { ..query.into() }
+            DelegationQueryRequest { ..query.into() }
         )
         .await?
         .expiry_timestamp)
     }
 
-    /// Reads without requiring a signer.
+    /// Reads without requiring a signer; 0 means none, u64::MAX means permanent.
     pub async fn get_status(&self, query: DelegationQuery) -> Result<DelegationStatus> {
         let response = rpc!(
             &self.0,
             get_delegation_status,
-            DelegationQuery { ..query.into() }
+            DelegationQueryRequest { ..query.into() }
         )
         .await?;
         Ok(DelegationStatus {
