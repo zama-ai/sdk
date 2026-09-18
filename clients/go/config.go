@@ -152,4 +152,7 @@ func (c ChainConfig) wire() (*pb.ChainConfig, error) {
 type SignerConfig struct {
 	Account       *WalletAccount
 	SignTypedData SignTypedDataFunc
+	WriteContract WriteContractFunc
 }
+
+func (s SignerConfig) enabled() bool { return s.SignTypedData != nil || s.WriteContract != nil }

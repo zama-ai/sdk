@@ -34,6 +34,8 @@ type signingServer struct {
 	afterSignature         chan struct{}
 	continueAfterSignature chan struct{}
 	staleReply             bool
+	contractWrite          *pb.ContractWriteRequest
+	duplicateActions       bool
 }
 
 func newSigningServer() *signingServer {
@@ -108,8 +110,14 @@ func (s *signingServer) DecryptValues(ctx context.Context, r *pb.DecryptValuesRe
 		s.mu.Unlock()
 		defer func() { s.mu.Lock(); delete(session.replies, id); s.mu.Unlock() }()
 		typed, _ := json.Marshal(map[string]any{"domain": map[string]any{"chainId": account.ChainId}, "types": map[string]any{"Request": []any{map[string]string{"name": "operation", "type": "string"}}}, "primaryType": "Request", "message": map[string]string{"operation": r.Operation.OperationId}})
-		action := &pb.SignerAction{OperationId: r.Operation.OperationId, ActionId: id, Account: account, TypedDataJson: string(typed)}
+		action := &pb.SignerAction{OperationId: r.Operation.OperationId, ActionId: id, Account: account, Request: &pb.SignerAction_TypedDataJson{TypedDataJson: string(typed)}}
+		if s.contractWrite != nil {
+			action.Request = &pb.SignerAction_ContractWrite{ContractWrite: s.contractWrite}
+		}
 		session.out <- &pb.SignerServerMessage{Message: &pb.SignerServerMessage_Action{Action: action}}
+		if s.duplicateActions {
+			session.out <- &pb.SignerServerMessage{Message: &pb.SignerServerMessage_Action{Action: action}}
+		}
 		select {
 		case <-ctx.Done():
 			session.out <- &pb.SignerServerMessage{Message: &pb.SignerServerMessage_Cancelled{Cancelled: &pb.SignerActionCancelled{OperationId: r.Operation.OperationId, ActionId: id}}}
@@ -122,6 +130,12 @@ func (s *signingServer) DecryptValues(ctx context.Context, r *pb.DecryptValuesRe
 				return nil, status.Error(codes.FailedPrecondition, result.GetError().Message)
 			}
 			signature = result.GetSignature()
+			if s.contractWrite != nil {
+				if len(result.GetTransactionHash()) != common.HashLength {
+					return nil, errors.New("invalid transaction reply")
+				}
+				signature = result.GetTransactionHash()
+			}
 			if s.staleReply {
 				session.out <- &pb.SignerServerMessage{Message: &pb.SignerServerMessage_ReplyError{ReplyError: &pb.SignerReplyError{OperationId: r.Operation.OperationId, ActionId: id, Error: &pb.SdkError{Code: "SIGNER_ACTION_NOT_FOUND", Message: "stale"}}}}
 			}

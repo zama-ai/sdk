@@ -31,6 +31,7 @@ mod permits;
 mod signer;
 mod storage;
 mod storage_channel;
+mod transactions;
 mod types;
 
 pub use alloy_primitives::{Address, B256};
@@ -56,6 +57,8 @@ pub use offline::{
 pub use permits::{Offline, Permits, PreparePermit, PreparedPermit};
 pub use signer::{Signer, SigningRequest};
 pub use storage::{ApplicationStorage, MemoryStorage, NativeStorage, Storage};
+pub use tokio_util::sync::CancellationToken;
+pub use transactions::ContractWriteRequest;
 pub use types::{ClearValue, ClearValues, EncryptedInput, WalletAccount};
 #[allow(clippy::enum_variant_names)]
 mod generated {

@@ -434,7 +434,9 @@ fn signer_action(
             operation_id: operation.into(),
             action_id: action.into(),
             account,
-            typed_data_json: typed_data_json.into(),
+            request: Some(generated::signer_action::Request::TypedDataJson(
+                typed_data_json.into(),
+            )),
         })),
     }
 }
@@ -644,13 +646,15 @@ async fn alloy_signer_preserves_structured_errors_on_the_channel() {
         let Some(signer_server_message::Message::Action(payload)) = message.message.as_mut() else {
             unreachable!()
         };
-        payload.typed_data_json = serde_json::json!({
-            "types": { "EIP712Domain": [] },
-            "primaryType": "EIP712Domain",
-            "domain": {},
-            "message": {}
-        })
-        .to_string();
+        payload.request = Some(generated::signer_action::Request::TypedDataJson(
+            serde_json::json!({
+                "types": { "EIP712Domain": [] },
+                "primaryType": "EIP712Domain",
+                "domain": {},
+                "message": {}
+            })
+            .to_string(),
+        ));
         server.actions.send(message).unwrap();
 
         let Some(signer_client_message::Message::Reply(reply)) = server.reply().await.message

@@ -62,9 +62,12 @@ async function harness(signerEnabled = true, backing = storage(), permitTTL?: nu
   });
   const local = new LocalSigner();
   if (signerEnabled) {
-    await server.attachSigner(created, (action) =>
-      local.signTypedData(JSON.parse(action.typedDataJson)),
-    );
+    await server.attachSigner(created, (action) => {
+      if (action.request?.$case !== "typedDataJson") {
+        throw new Error("expected a typed-data signer action");
+      }
+      return local.signTypedData(JSON.parse(action.request.typedDataJson));
+    });
   }
   const operation = () => ({ contextId: created, operationId: randomUUID() });
   const encryptedInputs = [{ encryptedValue: VALID_ENCRYPTED_VALUE, contractAddress: TOKEN }];

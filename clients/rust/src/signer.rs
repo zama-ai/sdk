@@ -1,12 +1,13 @@
 #[cfg(test)]
 use crate::Sdk;
-use crate::{RpcError, SdkError, WalletAccount, generated};
+use crate::{B256, ContractWriteRequest, RpcError, SdkError, WalletAccount, generated};
 use anyhow::{Context, Result};
 use std::{collections::HashMap, future::Future, sync::Arc};
 use tokio::{
     sync::mpsc,
     task::{AbortHandle, JoinSet},
 };
+use tokio_util::sync::CancellationToken;
 
 #[derive(Clone, Debug)]
 pub struct SigningRequest {
@@ -19,6 +20,17 @@ pub struct SigningRequest {
 #[async_trait::async_trait]
 pub trait Signer: Send + Sync {
     async fn sign_typed_data(&self, request: SigningRequest) -> Result<Vec<u8>, SdkError>;
+
+    /// Approves, signs and broadcasts once, returning the hash without waiting for a receipt.
+    async fn write_contract(
+        &self,
+        _request: ContractWriteRequest,
+        _cancel: CancellationToken,
+    ) -> Result<B256, SdkError> {
+        Err(SdkError::signer_not_configured(
+            "This signer does not support contract writes.",
+        ))
+    }
 }
 #[async_trait::async_trait]
 impl<F, Fut> Signer for F
@@ -34,6 +46,13 @@ where
 impl<S: Signer + ?Sized> Signer for Arc<S> {
     async fn sign_typed_data(&self, request: SigningRequest) -> Result<Vec<u8>, SdkError> {
         (**self).sign_typed_data(request).await
+    }
+    async fn write_contract(
+        &self,
+        request: ContractWriteRequest,
+        cancel: CancellationToken,
+    ) -> Result<B256, SdkError> {
+        (**self).write_contract(request, cancel).await
     }
 }
 
@@ -88,33 +107,74 @@ pub(crate) async fn attach_signer(
     }))
 }
 
-fn signing_request(action: generated::SignerAction) -> Result<SigningRequest, SdkError> {
-    Ok(SigningRequest {
-        operation_id: action.operation_id,
-        action_id: action.action_id,
-        account: action
+#[derive(Debug)]
+enum CallbackRequest {
+    TypedData(SigningRequest),
+    ContractWrite(ContractWriteRequest),
+}
+impl CallbackRequest {
+    fn decode(action: generated::SignerAction) -> Result<Self, SdkError> {
+        let account: WalletAccount = action
             .account
             .ok_or_else(|| SdkError::signing_failed("Missing signer account."))?
             .try_into()
             .map_err(|error: anyhow::Error| {
                 SdkError::signing_failed(format!("Invalid signer account: {error}"))
-            })?,
-        typed_data: serde_json::from_str(&action.typed_data_json).map_err(|error| {
-            SdkError::signing_failed(format!("Invalid signing request typed data: {error}"))
-        })?,
-    })
+            })?;
+        match action.request {
+            Some(generated::signer_action::Request::TypedDataJson(typed_data_json)) => {
+                Ok(Self::TypedData(SigningRequest {
+                    operation_id: action.operation_id,
+                    action_id: action.action_id,
+                    account,
+                    typed_data: serde_json::from_str(&typed_data_json).map_err(|error| {
+                        SdkError::signing_failed(format!(
+                            "Invalid signing request typed data: {error}"
+                        ))
+                    })?,
+                }))
+            }
+            Some(generated::signer_action::Request::ContractWrite(write)) => {
+                Ok(Self::ContractWrite(ContractWriteRequest::from_wire(
+                    action.operation_id,
+                    action.action_id,
+                    account,
+                    write,
+                )?))
+            }
+            None => Err(SdkError::signing_failed("Missing signer request.")),
+        }
+    }
+    async fn run(
+        self,
+        sign: &dyn Signer,
+        cancel: CancellationToken,
+    ) -> Result<generated::signer_reply::Result, SdkError> {
+        use generated::signer_reply::Result as Reply;
+        match self {
+            Self::TypedData(request) => sign.sign_typed_data(request).await.map(Reply::Signature),
+            Self::ContractWrite(request) => sign
+                .write_contract(request, cancel)
+                .await
+                .map(|hash| Reply::TransactionHash(hash.to_vec())),
+        }
+    }
 }
 
 type ActionKey = (String, String);
 
 enum Pending {
-    Running(AbortHandle),
+    Signing(AbortHandle),
+    // A write is asked to stop rather than dropped, because dropping cannot recall a broadcast.
+    Writing(CancellationToken),
     Settled,
 }
 impl Pending {
     fn cancel(&mut self) {
-        if let Self::Running(task) = std::mem::replace(self, Self::Settled) {
-            task.abort();
+        match std::mem::replace(self, Self::Settled) {
+            Self::Signing(task) => task.abort(),
+            Self::Writing(token) => token.cancel(),
+            Self::Settled => (),
         }
     }
 }
@@ -155,22 +215,49 @@ impl Callbacks {
         if self.pending.contains_key(&key) {
             return Ok(());
         }
-        let request = signing_request(action);
+        let cancel = CancellationToken::new();
+        let pending = match CallbackRequest::decode(action) {
+            // A write outlives the channel: teardown cannot recall a broadcast, so its task is
+            // detached rather than held by the set that teardown aborts.
+            Ok(request @ CallbackRequest::ContractWrite(_)) => {
+                let task = self.run(Ok(request), key.clone(), cancel.clone());
+                tokio::spawn(async move {
+                    // A reply nobody is left to receive is not a failure of the write.
+                    let _ = task.await;
+                });
+                Pending::Writing(cancel)
+            }
+            request => {
+                let task = self.run(request, key.clone(), cancel);
+                Pending::Signing(self.tasks.spawn(task))
+            }
+        };
+        self.pending.insert(key, pending);
+        Ok(())
+    }
+    /// Runs one decoded action and replies with its outcome unless it was cancelled.
+    fn run(
+        &self,
+        request: Result<CallbackRequest, SdkError>,
+        key: ActionKey,
+        cancel: CancellationToken,
+    ) -> impl Future<Output = Result<ActionKey>> + Send + 'static {
         let sign = self.sign.clone();
         let sender = self.sender.clone();
-        let result_key = key.clone();
-        let abort = self.tasks.spawn(async move {
+        async move {
             let result = match request {
-                Ok(request) => sign.sign_typed_data(request).await,
+                Ok(request) => request.run(sign.as_ref(), cancel.clone()).await,
                 Err(error) => Err(error),
             };
-            let result = match result {
-                Ok(signature) => generated::signer_reply::Result::Signature(signature),
-                Err(error) => generated::signer_reply::Result::Error(error.into()),
-            };
+            // A cancelled action has no reply to give.
+            if cancel.is_cancelled() {
+                return Ok(key);
+            }
+            let result =
+                result.unwrap_or_else(|error| generated::signer_reply::Result::Error(error.into()));
             let reply = generated::SignerReply {
-                operation_id: result_key.0.clone(),
-                action_id: result_key.1.clone(),
+                operation_id: key.0.clone(),
+                action_id: key.1.clone(),
                 result: Some(result),
             };
             sender
@@ -178,10 +265,8 @@ impl Callbacks {
                     message: Some(generated::signer_client_message::Message::Reply(reply)),
                 })
                 .await?;
-            Ok(result_key)
-        });
-        self.pending.insert(key, Pending::Running(abort));
-        Ok(())
+            Ok(key)
+        }
     }
     fn sweep_cancelled(&mut self) {
         self.pending.retain(|(operation, _), pending| {
@@ -222,3 +307,7 @@ impl Sdk {
         .await
     }
 }
+
+#[cfg(test)]
+#[path = "transaction_tests.rs"]
+mod transaction_tests;
