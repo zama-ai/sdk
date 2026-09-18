@@ -11,7 +11,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	bind "github.com/ethereum/go-ethereum/accounts/abi/bind/v2"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
 // DefaultBroadcastTimeout bounds a send that the caller's cancellation is no longer allowed to stop.
@@ -94,7 +96,7 @@ func (w *ethereumWriter) writeContract(ctx context.Context, request ContractWrit
 	contract := bind.NewBoundContract(request.Address, abi.ABI{}, nil, w.backend, nil)
 	signed, err := contract.RawTransact(&opts, request.Data)
 	if err != nil {
-		return common.Hash{}, err
+		return common.Hash{}, revertError(err)
 	}
 	if err := ctx.Err(); err != nil {
 		return common.Hash{}, err
@@ -107,4 +109,27 @@ func (w *ethereumWriter) writeContract(ctx context.Context, request ContractWrit
 		return common.Hash{}, newBroadcastUncertainError(signed.Hash(), err)
 	}
 	return signed.Hash(), nil
+}
+
+// revertError turns a gas-estimation failure carrying revert data into an ExecutionRevertError; other errors pass through unchanged.
+// A node JSON-RPC error is only a revert when it carries geth's dedicated code 3 (mirrors ethclient.RevertErrorData);
+// any other code, such as insufficient funds or an unresolved header, stays a plain error.
+func revertError(err error) error {
+	var rpcErr rpc.Error
+	var dataErr rpc.DataError
+	if errors.As(err, &rpcErr) && rpcErr.ErrorCode() == 3 && errors.As(err, &dataErr) {
+		var data []byte
+		if hexString, ok := dataErr.ErrorData().(string); ok {
+			if decoded, decodeErr := hexutil.Decode(hexString); decodeErr == nil {
+				data = decoded
+			}
+		}
+		return &ExecutionRevertError{Data: data, Cause: err}
+	}
+	// Fallback for nodes that revert without structured RPC error data; anchored to a prefix so an
+	// unrelated code carrying "execution reverted" mid-message is not misclassified.
+	if strings.HasPrefix(strings.ToLower(err.Error()), "execution reverted") {
+		return &ExecutionRevertError{Cause: err}
+	}
+	return err
 }

@@ -234,7 +234,14 @@ message SignerReply {
     SdkError error = 4;
     // 32-byte hash of the broadcast transaction; fields 140–159 are allocated to transactions.
     bytes transaction_hash = 140;
+    ExecutionRevert execution_revert = 141;
   }
+}
+// The node rejected the simulated write before broadcast; nothing was sent.
+message ExecutionRevert {
+  // Raw revert return data, possibly empty; the SDK decodes it against the request ABI.
+  bytes data = 1;
+  string message = 2;
 }
 message SignerClientMessage {
   oneof message {

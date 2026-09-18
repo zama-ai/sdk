@@ -297,7 +297,7 @@ pub struct SignerReply {
     pub operation_id: ::prost::alloc::string::String,
     #[prost(string, tag = "2")]
     pub action_id: ::prost::alloc::string::String,
-    #[prost(oneof = "signer_reply::Result", tags = "3, 4, 140")]
+    #[prost(oneof = "signer_reply::Result", tags = "3, 4, 140, 141")]
     pub result: ::core::option::Option<signer_reply::Result>,
 }
 /// Nested message and enum types in `SignerReply`.
@@ -311,7 +311,18 @@ pub mod signer_reply {
         /// 32-byte hash of the broadcast transaction; fields 140–159 are allocated to transactions.
         #[prost(bytes, tag = "140")]
         TransactionHash(::prost::alloc::vec::Vec<u8>),
+        #[prost(message, tag = "141")]
+        ExecutionRevert(super::ExecutionRevert),
     }
+}
+/// The node rejected the simulated write before broadcast; nothing was sent.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ExecutionRevert {
+    /// Raw revert return data, possibly empty; the SDK decodes it against the request ABI.
+    #[prost(bytes = "vec", tag = "1")]
+    pub data: ::prost::alloc::vec::Vec<u8>,
+    #[prost(string, tag = "2")]
+    pub message: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SignerClientMessage {

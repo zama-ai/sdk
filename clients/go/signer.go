@@ -75,7 +75,13 @@ func (s *SDKContext) dispatchSignerAction(action *pb.SignerAction, signer Signer
 			return
 		}
 		if err != nil {
-			reply.Result = &pb.SignerReply_Error{Error: signingError(err)}
+			var revert *ExecutionRevertError
+			// A revert reply only ever means the contract write itself was rejected pre-broadcast.
+			if action.GetContractWrite() != nil && errors.As(err, &revert) {
+				reply.Result = &pb.SignerReply_ExecutionRevert{ExecutionRevert: &pb.ExecutionRevert{Data: revert.Data, Message: revert.Error()}}
+			} else {
+				reply.Result = &pb.SignerReply_Error{Error: signingError(err)}
+			}
 		}
 		send(reply)
 	}()

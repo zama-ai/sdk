@@ -19,6 +19,7 @@ Delegate: <delegate address>
 Delegation before: <state>
 Delegation granted: <0x transaction hash>
 Delegation after grant: <state>
+Waiting for the next block before revoking.
 Delegation revoked: <0x transaction hash>
 Delegation after revoke: <state>
 ```
@@ -28,7 +29,7 @@ step instead prints `Delegation before: <state>` followed by
 `Existing delegation left in place; the demo only revokes what it granted.`
 and skips granting and revoking.
 
-The encryption step passes typed plaintext inputs and explicit user/contract addresses to `sdk.encrypt`. The native application reads the token using Alloy or go-ethereum. It passes the encrypted handle to `sdk.decryption.decryptValues` through the sidecar. The SDK requests a wallet signature only when its credential flow needs one. The delegation step broadcasts two real Sepolia transactions from the test wallet (grant then revoke) and needs gas; it never revokes a delegation it did not itself grant.
+The encryption step passes typed plaintext inputs and explicit user/contract addresses to `sdk.encrypt`. The native application reads the token using Alloy or go-ethereum. It passes the encrypted handle to `sdk.decryption.decryptValues` through the sidecar. The SDK requests a wallet signature only when its credential flow needs one. The delegation step broadcasts two real Sepolia transactions from the test wallet (grant then revoke) and needs gas; it never revokes a delegation it did not itself grant. The grant uses a 2-hour expiry, and the demo waits for the chain to advance a block past the grant before revoking: the ACL contract accepts only one delegate or revoke per tuple per block, so the demo needs two mined transactions with a block in between.
 
 ## Configure the examples
 

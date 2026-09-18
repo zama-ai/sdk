@@ -6,6 +6,8 @@ pub struct SdkError {
     pub message: String,
     pub retryable: bool,
     pub retry_after_seconds: Option<u32>,
+    /// Raw revert return data for a pre-broadcast simulation revert; absent otherwise.
+    pub revert_data: Option<Vec<u8>>,
 }
 
 impl SdkError {
@@ -15,6 +17,7 @@ impl SdkError {
             message: message.into(),
             retryable: false,
             retry_after_seconds: None,
+            revert_data: None,
         }
     }
 
@@ -24,6 +27,7 @@ impl SdkError {
             message: message.into(),
             retryable: false,
             retry_after_seconds: None,
+            revert_data: None,
         }
     }
 
@@ -33,6 +37,7 @@ impl SdkError {
             message: message.into(),
             retryable: false,
             retry_after_seconds: None,
+            revert_data: None,
         }
     }
 
@@ -42,6 +47,7 @@ impl SdkError {
             message: message.into(),
             retryable: false,
             retry_after_seconds: None,
+            revert_data: None,
         }
     }
 
@@ -52,6 +58,18 @@ impl SdkError {
             message: message.into(),
             retryable: false,
             retry_after_seconds: None,
+            revert_data: None,
+        }
+    }
+
+    /// The node rejected the write during simulation or gas estimation; nothing was broadcast.
+    pub fn execution_reverted(message: impl Into<String>, data: Vec<u8>) -> Self {
+        Self {
+            code: "TRANSACTION_REVERTED".into(),
+            message: message.into(),
+            retryable: false,
+            retry_after_seconds: None,
+            revert_data: Some(data),
         }
     }
 }
@@ -70,6 +88,8 @@ impl From<crate::generated::SdkError> for SdkError {
             message: value.message,
             retryable: value.retryable,
             retry_after_seconds: value.retry_after_seconds,
+            // The wire SdkError has no revert data; it travels in the ExecutionRevert reply.
+            revert_data: None,
         }
     }
 }
@@ -106,13 +126,19 @@ impl From<tonic::Status> for RpcError {
                     .get("zama-error-retry-after-seconds")
                     .and_then(|v| v.to_str().ok())
                     .and_then(|v| v.parse().ok()),
+                // Revert data travels over gRPC trailers via the dedicated reply variant, not here.
+                revert_data: None,
             });
         Self { status, sdk }
     }
 }
 impl fmt::Display for RpcError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.status.fmt(f)
+        // The SDK code from the trailer names the failure; the gRPC status alone does not.
+        match &self.sdk {
+            Some(sdk) => write!(f, "{}: {}", sdk.code, self.status.message()),
+            None => self.status.fmt(f),
+        }
     }
 }
 impl std::error::Error for RpcError {

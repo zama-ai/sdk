@@ -5,6 +5,7 @@ import {
   BaseSigner,
   ChainMismatchError,
   delegateForUserDecryptionContract,
+  DelegationCooldownError,
   DelegationDelegateEqualsContractError,
   DelegationExpirationTooSoonError,
   DelegationExpiryUnchangedError,
@@ -20,10 +21,17 @@ import {
   type TransactionResult,
   type WriteContractConfig,
 } from "@zama-fhe/sdk";
-import { bytesToHex, encodeFunctionData } from "viem";
+import {
+  bytesToHex,
+  encodeErrorResult,
+  encodeFunctionData,
+  parseAbi,
+  toFunctionSelector,
+} from "viem";
 import { expect, test, vi } from "vitest";
 
 import { DELEGATE, DELEGATOR, TOKEN, USER } from "../../sdk/src/test-fixtures/constants.js";
+import { matchAclRevert } from "../../sdk/src/errors/acl-revert.js";
 import { createContext, fixture, storage, testServer } from "./support/harness.js";
 import { FakeStream } from "./support/fake-stream.js";
 import { frames } from "./support/frames.js";
@@ -31,13 +39,33 @@ import { bytes, json } from "../src/encoding.js";
 import { errorDetails } from "../src/errors.js";
 import { createCoordinator } from "../src/coordination.js";
 import { SidecarRuntime } from "../src/runtime.js";
-import type { SignerStream } from "../src/remote-signer.js";
+import { operationContext, RemoteSigner, type SignerStream } from "../src/remote-signer.js";
 import type * as rpc from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
 
 const MAX_UINT64 = 2n ** 64n - 1n;
 const ACL = anvil.aclContractAddress;
 const HASH = `0x${"ab".repeat(32)}` as Hex;
 const account = { address: USER, chainId: anvil.id };
+// ACL.sol declares this revert; the SDK aclAbi carries no error entries, so only tests decode it.
+const COOLDOWN_ABI = parseAbi([
+  "error AlreadyDelegatedOrRevokedInSameBlock(address delegator, address delegate, address contractAddress, uint256 blockNumber)",
+]);
+const COOLDOWN_SELECTOR = toFunctionSelector(
+  "AlreadyDelegatedOrRevokedInSameBlock(address,address,address,uint256)",
+);
+const COOLDOWN_DATA = encodeErrorResult({
+  abi: COOLDOWN_ABI,
+  errorName: "AlreadyDelegatedOrRevokedInSameBlock",
+  args: [USER, DELEGATE, TOKEN, 0x1234n],
+});
+const cooldownRevert = (): rpc.SignerReply["result"] => ({
+  $case: "executionRevert",
+  executionRevert: {
+    data: Buffer.from(COOLDOWN_DATA.slice(2), "hex"),
+    message: "execution reverted",
+  },
+});
+
 const logs: RawLog[] = [
   { address: TOKEN, topics: [`0x${"11".repeat(32)}`, `0x${"22".repeat(32)}`], data: "0x1234" },
   { topics: [], data: "0x" },
@@ -77,22 +105,27 @@ async function setup(signerEnabled = true) {
     account: signerEnabled ? { address: bytes(USER), chainId: BigInt(anvil.id) } : undefined,
   });
   const writes: rpc.ContractWriteRequest[] = [];
-  const wallet = { sign: async (): Promise<Hex> => HASH };
+  const wallet: { sign: () => Promise<Hex>; reply?: () => rpc.SignerReply["result"] } = {
+    sign: async () => HASH,
+  };
   if (signerEnabled) {
     await server.attachWallet(contextId, async (action) => {
       if (action.request?.$case !== "contractWrite") {
         return { $case: "error", error: errorDetails(new Error("Unexpected signer action")) };
       }
       writes.push(action.request.contractWrite);
-      return wallet.sign().then(
-        (hash): rpc.SignerReply["result"] => ({
-          $case: "transactionHash",
-          transactionHash: bytes(hash),
-        }),
-        (error: unknown): rpc.SignerReply["result"] => ({
-          $case: "error",
-          error: errorDetails(error),
-        }),
+      return (
+        wallet.reply?.() ??
+        wallet.sign().then(
+          (hash): rpc.SignerReply["result"] => ({
+            $case: "transactionHash",
+            transactionHash: bytes(hash),
+          }),
+          (error: unknown): rpc.SignerReply["result"] => ({
+            $case: "error",
+            error: errorDetails(error),
+          }),
+        )
       );
     });
   }
@@ -621,5 +654,77 @@ test("cancelling while the SDK awaits the delegation receipt reports the broadca
   } finally {
     pendingReceipt.resolve({ logs: [] });
     await runtime.close();
+  }
+});
+
+test("a pre-broadcast ACL revert reports TRANSACTION_REVERTED with the selector, since the SDK aclAbi declares no errors, exactly like a viem simulation revert on the direct signer", async () => {
+  const env = await setup();
+  try {
+    expiry(env, MAX_UINT64);
+    env.wallet.reply = cooldownRevert;
+    env.directSigner.write.mockRejectedValue(
+      Object.assign(new Error(`Execution reverted (${COOLDOWN_SELECTOR})`), {
+        cause: { data: undefined, raw: COOLDOWN_DATA, signature: COOLDOWN_SELECTOR },
+      }),
+    );
+    const directError = await failure(
+      env.direct.sdk.delegations.revokeDelegation({
+        contractAddress: TOKEN,
+        delegateAddress: DELEGATE,
+      }),
+    );
+    const remoteError = await failure(
+      revoke(env, { contractAddress: bytes(TOKEN), delegateAddress: bytes(DELEGATE) }),
+    );
+    expect(directError).toBeInstanceOf(TransactionRevertedError);
+    expect(errorCode(remoteError)).toBe(errorCode(directError));
+    expect(errorCode(remoteError)).toBe("TRANSACTION_REVERTED");
+    expect((remoteError as ServiceError).details).toContain(COOLDOWN_SELECTOR);
+    expect(env.writes).toHaveLength(1);
+    // Nothing was broadcast, so neither side waits for a receipt.
+    expect(env.remote().provider.waitForTransactionReceipt).not.toHaveBeenCalled();
+    expect(env.direct.provider.waitForTransactionReceipt).not.toHaveBeenCalled();
+  } finally {
+    await env.close();
+  }
+});
+
+test("a pre-broadcast ACL revert decoded against an ABI carrying the error entry maps to the delegation cooldown error", async () => {
+  const controller = new AbortController();
+  const signer = new RemoteSigner(account, () => controller.abort());
+  const stream = new FakeStream<rpc.SignerServerMessage>();
+  signer.attach(stream as unknown as SignerStream);
+  try {
+    const config = revokeDelegationContract(ACL, DELEGATE, TOKEN);
+    const settled = operationContext
+      .run({ id: "revoke", signal: controller.signal }, () =>
+        signer.writeContract({
+          ...config,
+          abi: [...config.abi, ...COOLDOWN_ABI],
+        } as WriteContractConfig),
+      )
+      .catch((error: unknown) => error);
+    const action = frames(stream.messages, "action")[0]!.action;
+    signer.reply({
+      operationId: action.operationId,
+      actionId: action.actionId,
+      result: cooldownRevert(),
+    });
+    const error = await settled;
+    expect((error as Error).cause).toEqual({
+      data: {
+        errorName: "AlreadyDelegatedOrRevokedInSameBlock",
+        args: [USER, DELEGATE, TOKEN, 0x1234n],
+      },
+      raw: COOLDOWN_DATA,
+      signature: COOLDOWN_SELECTOR,
+    });
+    expect(errorDetails(error)).toMatchObject({
+      code: "TRANSACTION_REVERTED",
+      message: `Execution reverted in revokeDelegationForUserDecryption on ${ACL}: AlreadyDelegatedOrRevokedInSameBlock(${json([USER, DELEGATE, TOKEN, 0x1234n])})`,
+    });
+    expect(matchAclRevert(error, error)).toBeInstanceOf(DelegationCooldownError);
+  } finally {
+    signer.dispose();
   }
 });

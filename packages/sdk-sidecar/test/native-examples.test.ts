@@ -7,10 +7,12 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import {
+  encodeErrorResult,
   encodeFunctionData,
   parseTransaction,
   recoverTransactionAddress,
   serializeTransaction,
+  toFunctionSelector,
   type EncodeFunctionDataParameters,
   type PublicClient,
 } from "viem";
@@ -122,6 +124,23 @@ const execute = promisify(execFile);
 const TOKEN_NAME = "Fixture Confidential Token";
 // The examples default to this demo delegate when DELEGATE_ADDRESS is unset.
 const DELEGATE = "0x2222222222222222222222222222222222222222";
+
+// The SDK's aclAbi has no error entries, so the revert is decoded against a local fragment.
+const ALREADY_DELEGATED_ABI = [
+  {
+    type: "error",
+    name: "AlreadyDelegatedOrRevokedInSameBlock",
+    inputs: [
+      { name: "delegator", type: "address" },
+      { name: "delegate", type: "address" },
+      { name: "contractAddress", type: "address" },
+      { name: "blockNumber", type: "uint256" },
+    ],
+  },
+] as const;
+const ALREADY_DELEGATED_SELECTOR = toFunctionSelector(
+  "AlreadyDelegatedOrRevokedInSameBlock(address,address,address,uint256)",
+);
 
 // The JSON-RPC methods the fake chain fixture implements; see support/fake-chain.ts.
 const ALLOWED_METHODS = new Set([
@@ -261,8 +280,8 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
           expect(String(entry.args[1]).toLowerCase()).toBe(TOKEN.toLowerCase());
         }
         const expiry = grant.args[2] as bigint;
-        expect(expiry).toBeGreaterThanOrEqual(BigInt(startedAt + 86_400 - 120));
-        expect(expiry).toBeLessThanOrEqual(BigInt(Math.floor(Date.now() / 1000) + 86_400));
+        expect(expiry).toBeGreaterThanOrEqual(BigInt(startedAt + 7_200 - 120));
+        expect(expiry).toBeLessThanOrEqual(BigInt(Math.floor(Date.now() / 1000) + 7_200));
         // The demo revokes what it granted, so the next run starts from an inactive delegation.
         expect(chain.expiryOf(account.address, DELEGATE, TOKEN)).toBe(0n);
 
@@ -271,14 +290,49 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
           "Delegation before: inactive (expiry 0)",
           `Delegation granted: ${grant.hash}`,
           `Delegation after grant: active (expiry ${expiry})`,
+          "Waiting for the next block before revoking.",
           `Delegation revoked: ${revoke.hash}`,
           "Delegation after revoke: inactive (expiry 0)",
         ]);
         expect(stdout + stderr).not.toContain(secret);
         expect(stdout + stderr).not.toContain(privateKey);
       }
+      // Asserted here: the revert runs below reuse the same provider/relayer wiring.
       expect(forwarded.timeouts).toEqual([5000, 5000]);
       expect(forwarded.relayers).toEqual([{ batchRpcCalls: false }, { batchRpcCalls: false }]);
+
+      // Round 2: a pre-broadcast revert on the grant must surface, not silently retry or hide.
+      for (const [executable, args] of [
+        [goExecutable, [socket, envFile]],
+        [join(repository, "clients/rust/target/debug/examples/balance"), []],
+      ] as const) {
+        const broadcastsBefore = chain.broadcasts.length;
+        chain.revertNextEstimate(
+          encodeErrorResult({
+            abi: ALREADY_DELEGATED_ABI,
+            errorName: "AlreadyDelegatedOrRevokedInSameBlock",
+            args: [account.address, DELEGATE, TOKEN, 1n],
+          }),
+        );
+        const failure = await execute(executable, [...args], {
+          cwd: directory,
+          env: { PATH: process.env.PATH, SIDECAR_SOCKET_PATH: socket },
+          timeout: 30_000,
+        }).then(
+          () => undefined,
+          (rejection: unknown) => rejection as { code?: number; stdout: string; stderr: string },
+        );
+        expect(failure).toBeDefined();
+        const { code, stdout, stderr } = failure!;
+        expect(code).not.toBe(0);
+        expect(stdout + stderr).toContain("TRANSACTION_REVERTED");
+        expect(stdout + stderr).toContain(ALREADY_DELEGATED_SELECTOR);
+        expect(chain.broadcasts.length).toBe(broadcastsBefore);
+        expect(chain.expiryOf(account.address, DELEGATE, TOKEN)).toBe(0n);
+        expect(stdout).toContain("Delegation before: inactive (expiry 0)");
+        expect(stdout).not.toContain("Delegation granted");
+      }
+
       expect(getAppliedWireRuntime()).toMatchObject({ singleThread: true });
       // Fails loudly if a client starts asking the fixture for a method it does not support.
       const unexpected = [...new Set(chain.methods)].filter(

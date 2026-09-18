@@ -49,7 +49,7 @@ func run() error {
 	if err := prepareOffline(ctx, sdk, config.token, config.owner, config.privateKey); err != nil {
 		return err
 	}
-	return manageDelegation(ctx, sdk, config.token, config.owner, config.delegate)
+	return manageDelegation(ctx, sdk, provider, config.token, config.owner, config.delegate)
 }
 
 func main() {

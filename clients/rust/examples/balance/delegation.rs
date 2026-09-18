@@ -1,12 +1,19 @@
+use alloy_provider::Provider;
 use anyhow::{Context, Result};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use zama_sdk_sidecar::{
     Address, DelegateDecryptionParams, DelegationQuery, DelegationStatus,
     PERMANENT_DELEGATION_EXPIRY, RevokeDelegationParams, Sdk,
 };
 
+/// The SDK rejects expiries under 1 hour, so the demo grants comfortably above that.
+const GRANT_DURATION_MS: u64 = 2 * 60 * 60 * 1000;
+const BLOCK_POLL_INTERVAL: Duration = Duration::from_secs(2);
+const BLOCK_WAIT_TIMEOUT: Duration = Duration::from_secs(90);
+
 pub async fn manage_delegation(
     sdk: &Sdk,
+    provider: &impl Provider,
     token: Address,
     owner: Address,
     delegate: Address,
@@ -31,7 +38,7 @@ pub async fn manage_delegation(
             .as_millis(),
     )
     .context("expiry does not fit in u64 milliseconds")?
-        + 24 * 60 * 60 * 1000;
+        + GRANT_DURATION_MS;
     let granted = sdk
         .delegations()
         .delegate_decryption(DelegateDecryptionParams {
@@ -47,6 +54,9 @@ pub async fn manage_delegation(
         delegation_status_line(&status)
     );
 
+    println!("Waiting for the next block before revoking.");
+    wait_for_next_block(provider).await?;
+
     let revoked = sdk
         .delegations()
         .revoke_delegation(RevokeDelegationParams {
@@ -61,6 +71,30 @@ pub async fn manage_delegation(
         delegation_status_line(&status)
     );
     Ok(())
+}
+
+/// Polls the block number until it advances past the block observed right after the grant.
+async fn wait_for_next_block(provider: &impl Provider) -> Result<()> {
+    let starting_block = provider
+        .get_block_number()
+        .await
+        .context("read the current block number")?;
+    let deadline = tokio::time::Instant::now() + BLOCK_WAIT_TIMEOUT;
+    loop {
+        let block = provider
+            .get_block_number()
+            .await
+            .context("read the current block number")?;
+        if block > starting_block {
+            return Ok(());
+        }
+        if tokio::time::Instant::now() >= deadline {
+            anyhow::bail!(
+                "timed out after {BLOCK_WAIT_TIMEOUT:?} waiting for a block past {starting_block}"
+            );
+        }
+        tokio::time::sleep(BLOCK_POLL_INTERVAL).await;
+    }
 }
 
 fn delegation_status_line(status: &DelegationStatus) -> String {

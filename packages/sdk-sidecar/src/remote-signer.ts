@@ -21,14 +21,15 @@ import type {
   SignerAction,
 } from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import { bytes, json } from "./encoding.js";
-import { callbackError, decodeCallbackError } from "./callback-errors.js";
+import { callbackError, decodeCallbackError, executionRevertError } from "./callback-errors.js";
 import { cancelled, errorDetails, SidecarError, TransactionCallbackError } from "./errors.js";
 
 export type SignerStream = ServerDuplexStream<SignerClientMessage, SignerServerMessage>;
 export const operationContext = new AsyncLocalStorage<{ id: string; signal: AbortSignal }>();
+type Request = NonNullable<SignerAction["request"]>;
 type Kind = {
   method: "signTypedData" | "writeContract";
-  settle: (result: SignerReply["result"]) => Hex;
+  settle: (result: SignerReply["result"], request: Request) => Hex;
   lost: (channelError: Error) => Error;
 };
 const typedData: Kind = {
@@ -47,7 +48,13 @@ const typedData: Kind = {
 };
 const contractWrite: Kind = {
   method: "writeContract",
-  settle(result) {
+  settle(result, request) {
+    if (result?.$case === "executionRevert") {
+      throw executionRevertError(
+        result.executionRevert,
+        request.$case === "contractWrite" ? request.contractWrite : undefined,
+      );
+    }
     if (result?.$case === "error") {
       const decoded = decodeCallbackError(result.error);
       // Codes outside the SDK taxonomy must survive the SDK's transaction wrapper; INTERNAL stays opaque.
@@ -67,6 +74,7 @@ const contractWrite: Kind = {
 type Pending = {
   operationId: string;
   kind: Kind;
+  request: Request;
   resolve: (signature: Hex) => void;
   reject: (error: Error) => void;
   dispose: () => void;
@@ -171,7 +179,7 @@ export class RemoteSigner extends BaseSigner {
     this.#pending.delete(reply.actionId);
     pending.dispose();
     try {
-      const settled = pending.kind.settle(reply.result);
+      const settled = pending.kind.settle(reply.result, pending.request);
       if (pending.kind === contractWrite) {
         this.#broadcast.get(pending.operationId)?.push(settled);
       }
@@ -202,7 +210,7 @@ export class RemoteSigner extends BaseSigner {
       },
     });
   }
-  #request(kind: Kind, request: NonNullable<SignerAction["request"]>): Promise<Hex> {
+  #request(kind: Kind, request: Request): Promise<Hex> {
     const operation = operationContext.getStore();
     if (!operation || operation.signal.aborted) {
       throw cancelled();
@@ -229,6 +237,7 @@ export class RemoteSigner extends BaseSigner {
       this.#pending.set(actionId, {
         operationId: operation.id,
         kind,
+        request,
         resolve,
         reject,
         dispose: () => operation.signal.removeEventListener("abort", abort),

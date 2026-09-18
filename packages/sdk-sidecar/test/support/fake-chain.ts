@@ -26,10 +26,19 @@ export interface FakeChain {
   broadcasts: Broadcast[];
   /** Current ACL expiry for a (delegator, delegate, contract) triple. */
   expiryOf(delegator: string, delegate: string, contract: string): bigint;
+  /** Make the next `eth_estimateGas` fail like geth does on a reverting simulation. */
+  revertNextEstimate(data: Hex): void;
+}
+
+/** A JSON-RPC error the fixture returns verbatim, including geth's `data` field. */
+class RpcFailure extends Error {
+  constructor(readonly payload: { code: number; message: string; data?: string }) {
+    super(payload.message);
+  }
 }
 
 const ACL = sepolia.aclContractAddress.toLowerCase();
-const BLOCK_NUMBER = 0x1234n;
+const FIRST_BLOCK = 0x1234n;
 const BASE_FEE = 0x3b9aca00n;
 const GAS_LIMIT = 0x1c9c380n;
 const ZERO_HASH = `0x${"00".repeat(32)}` as const;
@@ -39,9 +48,9 @@ const quantity = (value: bigint) => `0x${value.toString(16)}`;
 const key = (delegator: string, delegate: string, contract: string) =>
   [delegator, delegate, contract].map((address) => address.toLowerCase()).join("|");
 
-function block(timestamp: bigint) {
+function block(number: bigint, timestamp: bigint) {
   return {
-    number: quantity(BLOCK_NUMBER),
+    number: quantity(number),
     hash: `0x${"11".repeat(32)}`,
     parentHash: `0x${"22".repeat(32)}`,
     sha3Uncles: `0x${"33".repeat(32)}`,
@@ -78,6 +87,9 @@ export function createFakeChain(tokenName: string): FakeChain {
   const methods: string[] = [];
   const broadcasts: Broadcast[] = [];
   const nonces = new Map<string, number>();
+  // Every observation advances the head so the examples' wait-for-next-block loop terminates.
+  let blockNumber = FIRST_BLOCK;
+  let estimateRevert: Hex | undefined;
   const expiries = new Map<string, bigint>();
 
   const call = (to: string | undefined, data: Hex | undefined): Hex => {
@@ -132,16 +144,16 @@ export function createFakeChain(tokenName: string): FakeChain {
       case "eth_chainId":
         return "0xaa36a7";
       case "eth_blockNumber":
-        return quantity(BLOCK_NUMBER);
+        return quantity(blockNumber++);
       case "eth_getBlockByNumber":
-        return block(BigInt(Math.floor(Date.now() / 1000)));
+        return block(blockNumber, BigInt(Math.floor(Date.now() / 1000)));
       case "eth_gasPrice":
         return quantity(BASE_FEE * 2n);
       case "eth_maxPriorityFeePerGas":
         return quantity(BASE_FEE / 2n);
       case "eth_feeHistory":
         return {
-          oldestBlock: quantity(BLOCK_NUMBER),
+          oldestBlock: quantity(blockNumber),
           baseFeePerGas: [quantity(BASE_FEE), quantity(BASE_FEE)],
           gasUsedRatio: [0.5],
           reward: [[quantity(BASE_FEE / 2n)]],
@@ -151,8 +163,14 @@ export function createFakeChain(tokenName: string): FakeChain {
       case "eth_getCode":
         // go-ethereum's bind refuses to build a write against an address with no code.
         return "0x60006000";
-      case "eth_estimateGas":
+      case "eth_estimateGas": {
+        if (estimateRevert !== undefined) {
+          const data = estimateRevert;
+          estimateRevert = undefined;
+          throw new RpcFailure({ code: 3, message: "execution reverted", data });
+        }
         return "0x186a0";
+      }
       case "eth_call": {
         const request = first as { to?: string; data?: Hex; input?: Hex };
         return call(request.to, request.data ?? request.input);
@@ -168,7 +186,8 @@ export function createFakeChain(tokenName: string): FakeChain {
               transactionHash: sent.hash,
               transactionIndex: "0x0",
               blockHash: `0x${"11".repeat(32)}`,
-              blockNumber: quantity(BLOCK_NUMBER),
+              // Mined in the first block, so it stays behind the advancing head.
+              blockNumber: quantity(FIRST_BLOCK),
               from: sent.from,
               to: sepolia.aclContractAddress,
               cumulativeGasUsed: "0x186a0",
@@ -203,7 +222,10 @@ export function createFakeChain(tokenName: string): FakeChain {
           return {
             jsonrpc: "2.0",
             id: rpcCall.id,
-            error: { code: -32601, message: `fixture: ${(error as Error).message}` },
+            error:
+              error instanceof RpcFailure
+                ? error.payload
+                : { code: -32601, message: `fixture: ${(error as Error).message}` },
           };
         }
       };
@@ -227,5 +249,8 @@ export function createFakeChain(tokenName: string): FakeChain {
     broadcasts,
     expiryOf: (delegator, delegate, contract) =>
       expiries.get(key(delegator, delegate, contract)) ?? 0n,
+    revertNextEstimate: (data) => {
+      estimateRevert = data;
+    },
   };
 }

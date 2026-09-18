@@ -17,6 +17,7 @@ async fn main() -> Result<()> {
         offline::prepare_and_sign(&sdk, &settings.signer, settings.account, settings.token).await?;
         delegation::manage_delegation(
             &sdk,
+            &provider,
             settings.token,
             settings.account.address,
             settings.delegate,

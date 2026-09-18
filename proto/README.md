@@ -101,6 +101,8 @@ Preparation uses the existing operation lifecycle and error trailers. The SDK me
 
 This is distinct from the existing `GrantDelegationPermit`/`HasDelegationPermit` RPCs, which manage a local delegation permit (an SDK credential), not on-chain ACL state. See [manage on-chain delegation](../packages/sdk-sidecar/DELEGATIONS.md) for the full RPC-to-SDK mapping, error codes and native examples.
 
+The ACL contract accepts one delegate or revoke per `(delegator, delegate, contract)` tuple per block; a second write to the same tuple in the same block reverts. The native examples wait for the chain to advance a block between granting and revoking.
+
 ## Storage bindings and callbacks
 
 `CreateContext.storage` selects a fresh sidecar memory store, a named persistent store, or an application backend ID. Omission selects fresh memory, matching the SDK's Node default. `permit_storage` independently selects a permit store; omission aliases the primary store.
@@ -125,7 +127,9 @@ Optional scalar presence is significant. Durations, timeouts, concurrency and re
 
 Every SDK operation has a context ID and a client-generated operation ID. Clients can submit concurrent calls; the runtime coordinates credential operations sharing a storage identity and signer or key scope. There is no process-wide busy rejection.
 
-`SignerChannel` attaches to a signer-enabled context and acknowledges attachment before delivering actions. Each action includes operation/action IDs, the wallet account and exactly one `request`: SDK EIP-712 typed data or a `contract_write`. Replies require exactly one `result`: signature bytes, a 32-byte `transaction_hash` or a structured error; `SIGNING_REJECTED` represents wallet rejection. `typed_data_json` kept field 4 when it joined the `request` union, so existing frames decode unchanged; a native client that sets both variants now loses one on the wire instead of producing an ambiguous action.
+`SignerChannel` attaches to a signer-enabled context and acknowledges attachment before delivering actions. Each action includes operation/action IDs, the wallet account and exactly one `request`: SDK EIP-712 typed data or a `contract_write`. Replies require exactly one `result`: signature bytes, a 32-byte `transaction_hash`, an `execution_revert` (field 141; fields 140-159 are allocated to transactions) or a structured error; `SIGNING_REJECTED` represents wallet rejection. `typed_data_json` kept field 4 when it joined the `request` union, so existing frames decode unchanged; a native client that sets both variants now loses one on the wire instead of producing an ambiguous action.
+
+`execution_revert` reports that the node rejected a simulated contract write before broadcast: nothing was sent. It carries the raw revert return data, which may be empty, and the adapter's own message. Native adapters never decode this data; the SDK decodes it against the request ABI. This is a certain failure like a structured error, not an uncertain one: no hash exists to reconcile.
 
 Contract writes carry the destination, canonical calldata, ABI/function/arguments and optional decimal value/gas. TypeScript encodes calldata; native wallets sign and broadcast it, then return the hash. The SDK owns receipt waiting and workflow continuation. Bigint arguments in JSON use decimal strings interpreted through the ABI; optional value/gas retain absence and explicit zero. See [native transaction setup and failure behavior](../packages/sdk-sidecar/TRANSACTIONS.md).
 
@@ -147,7 +151,7 @@ RPC deadlines are independent of SDK relayer timeouts. Storage failures do not p
 
 ## Remaining API coverage
 
-Token/WrappedToken operations, registry access and SDK event subscriptions are not exposed in this slice. Executed on-chain delegation transactions are now exposed through `DelegateDecryption`/`RevokeDelegation`; `PrepareTransaction`'s `delegate_decryption`/`revoke_delegation` kinds remain available separately for offline-prepared, self-signed delegation transactions. Injection of arbitrary JavaScript providers, loggers and SDK event callbacks remains outside this wire API. Native storage implementations are supported through the storage bridge. This is partial SDK coverage; the methods above delegate their SDK behavior rather than reconstructing token flows.
+Token/WrappedToken operations, registry access and SDK event subscriptions are not exposed. Executed on-chain delegation transactions are exposed through `DelegateDecryption`/`RevokeDelegation`; `PrepareTransaction`'s `delegate_decryption`/`revoke_delegation` kinds remain available separately for offline-prepared, self-signed delegation transactions. Injection of arbitrary JavaScript providers, loggers and SDK event callbacks remains outside this wire API. Native storage implementations are supported through the storage bridge. This is partial SDK coverage; the methods above delegate their SDK behavior rather than reconstructing token flows.
 
 The native balance examples perform Ethereum contract reads in Alloy/go-ethereum and pass the resulting encrypted handle to general decryption. The shared setup now accepts runtime/provider options, storage selection and optional credential protection before the encryption and balance steps, and its wallets include transaction adapters, now exercised by a real delegation grant/revoke step. Integration with `Token.balanceOf` and other token lifecycle steps remains deferred until those public native APIs are exposed. SDK-backed tests exercise credential reuse, restart behavior and the transaction callback meanwhile.
 

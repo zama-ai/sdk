@@ -27,7 +27,22 @@ type ContractWriteRequest struct {
 
 // WriteContractFunc signs and broadcasts once; cancellation cannot undo submission.
 // Callbacks may run concurrently. Return the broadcast hash without waiting for a receipt.
+// Return *ExecutionRevertError only when nothing was broadcast (a pre-broadcast simulation/estimation revert).
 type WriteContractFunc func(context.Context, ContractWriteRequest) (common.Hash, error)
+
+// ExecutionRevertError reports that the node rejected the simulated write before broadcast; nothing was sent.
+type ExecutionRevertError struct {
+	Data  []byte
+	Cause error
+}
+
+func (e *ExecutionRevertError) Error() string {
+	if e.Cause != nil {
+		return e.Cause.Error()
+	}
+	return "execution reverted"
+}
+func (e *ExecutionRevertError) Unwrap() error { return e.Cause }
 
 func contractWriteRequest(operationID, actionID string, account WalletAccount, wire *pb.ContractWriteRequest) (ContractWriteRequest, error) {
 	if wire == nil || len(wire.Address) != common.AddressLength || len(wire.Data) < 4 || wire.FunctionName == "" || !json.Valid([]byte(wire.AbiJson)) || !json.Valid([]byte(wire.ArgsJson)) {

@@ -408,9 +408,21 @@ export interface ScopeRequest {
 export interface SignerReply {
   operationId: string;
   actionId: string;
-  result: { $case: "signature"; signature: Buffer } | { $case: "error"; error: SdkError } | //
-  /** 32-byte hash of the broadcast transaction; fields 140–159 are allocated to transactions. */
-  { $case: "transactionHash"; transactionHash: Buffer } | undefined;
+  result:
+    | { $case: "signature"; signature: Buffer }
+    | { $case: "error"; error: SdkError }
+    | //
+    /** 32-byte hash of the broadcast transaction; fields 140–159 are allocated to transactions. */
+    { $case: "transactionHash"; transactionHash: Buffer }
+    | { $case: "executionRevert"; executionRevert: ExecutionRevert }
+    | undefined;
+}
+
+/** The node rejected the simulated write before broadcast; nothing was sent. */
+export interface ExecutionRevert {
+  /** Raw revert return data, possibly empty; the SDK decodes it against the request ABI. */
+  data: Buffer;
+  message: string;
 }
 
 export interface SignerClientMessage {
@@ -3886,6 +3898,9 @@ export const SignerReply: MessageFns<SignerReply> = {
       case "transactionHash":
         writer.uint32(1122).bytes(message.result.transactionHash);
         break;
+      case "executionRevert":
+        ExecutionRevert.encode(message.result.executionRevert, writer.uint32(1130).fork()).join();
+        break;
     }
     return writer;
   },
@@ -3937,6 +3952,17 @@ export const SignerReply: MessageFns<SignerReply> = {
           message.result = { $case: "transactionHash", transactionHash: Buffer.from(reader.bytes()) };
           continue;
         }
+        case 141: {
+          if (tag !== 1130) {
+            break;
+          }
+
+          message.result = {
+            $case: "executionRevert",
+            executionRevert: ExecutionRevert.decode(reader, reader.uint32()),
+          };
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -3966,6 +3992,10 @@ export const SignerReply: MessageFns<SignerReply> = {
         ? { $case: "transactionHash", transactionHash: Buffer.from(bytesFromBase64(object.transactionHash)) }
         : isSet(object.transaction_hash)
         ? { $case: "transactionHash", transactionHash: Buffer.from(bytesFromBase64(object.transaction_hash)) }
+        : isSet(object.executionRevert)
+        ? { $case: "executionRevert", executionRevert: ExecutionRevert.fromJSON(object.executionRevert) }
+        : isSet(object.execution_revert)
+        ? { $case: "executionRevert", executionRevert: ExecutionRevert.fromJSON(object.execution_revert) }
         : undefined,
     };
   },
@@ -3984,6 +4014,8 @@ export const SignerReply: MessageFns<SignerReply> = {
       obj.error = SdkError.toJSON(message.result.error);
     } else if (message.result?.$case === "transactionHash") {
       obj.transactionHash = base64FromBytes(message.result.transactionHash);
+    } else if (message.result?.$case === "executionRevert") {
+      obj.executionRevert = ExecutionRevert.toJSON(message.result.executionRevert);
     }
     return obj;
   },
@@ -4014,7 +4046,92 @@ export const SignerReply: MessageFns<SignerReply> = {
         }
         break;
       }
+      case "executionRevert": {
+        if (object.result?.executionRevert !== undefined && object.result?.executionRevert !== null) {
+          message.result = {
+            $case: "executionRevert",
+            executionRevert: ExecutionRevert.fromPartial(object.result.executionRevert),
+          };
+        }
+        break;
+      }
     }
+    return message;
+  },
+};
+
+function createBaseExecutionRevert(): ExecutionRevert {
+  return { data: Buffer.alloc(0), message: "" };
+}
+
+export const ExecutionRevert: MessageFns<ExecutionRevert> = {
+  encode(message: ExecutionRevert, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.data.length !== 0) {
+      writer.uint32(10).bytes(message.data);
+    }
+    if (message.message !== "") {
+      writer.uint32(18).string(message.message);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ExecutionRevert {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseExecutionRevert();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.data = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.message = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ExecutionRevert {
+    return {
+      data: isSet(object.data) ? Buffer.from(bytesFromBase64(object.data)) : Buffer.alloc(0),
+      message: isSet(object.message) ? globalThis.String(object.message) : "",
+    };
+  },
+
+  toJSON(message: ExecutionRevert): unknown {
+    const obj: any = {};
+    if (message.data.length !== 0) {
+      obj.data = base64FromBytes(message.data);
+    }
+    if (message.message !== "") {
+      obj.message = message.message;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ExecutionRevert>): ExecutionRevert {
+    return ExecutionRevert.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ExecutionRevert>): ExecutionRevert {
+    const message = createBaseExecutionRevert();
+    message.data = object.data ?? Buffer.alloc(0);
+    message.message = object.message ?? "";
     return message;
   },
 };
