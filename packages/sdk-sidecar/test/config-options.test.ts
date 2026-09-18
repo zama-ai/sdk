@@ -10,6 +10,7 @@ import {
   ModuleVersions,
   ProviderBatch,
   RelayerConfig,
+  RelayerTransport,
 } from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
 import { processRuntimeConfig, relayerConfig } from "../src/config-options.js";
 import { parseContextConfig } from "../src/sdk-config.js";
@@ -145,7 +146,7 @@ test("preserves runtime, relayer, empty maps, zeroes, and explicit false", () =>
           [
             chainId,
             RelayerConfig.fromPartial({
-              type: "node",
+              transport: RelayerTransport.RELAYER_TRANSPORT_NODE,
               options: {
                 debug: false,
                 timeout: 0,
@@ -251,7 +252,7 @@ test("preserves chain auth names and preset address omission, clear, and overrid
 
 test("supports cleartext and rejects incomplete typed selections", () => {
   relayerConfig({
-    type: "cleartext",
+    transport: RelayerTransport.RELAYER_TRANSPORT_CLEARTEXT,
     options: {
       timeout: undefined,
       debug: undefined,
@@ -261,9 +262,15 @@ test("supports cleartext and rejects incomplete typed selections", () => {
     },
   });
   expect(cleartext).toHaveBeenLastCalledWith({ batchRpcCalls: false, moduleVersions: "auto" });
-  expect(() => relayerConfig({ type: "unsupported", options: undefined })).toThrow(
-    ConfigurationError,
-  );
+  expect(() =>
+    relayerConfig({ transport: RelayerTransport.UNRECOGNIZED, options: undefined }),
+  ).toThrow(new ConfigurationError("Unsupported relayer transport."));
+  expect(() =>
+    relayerConfig({
+      transport: RelayerTransport.RELAYER_TRANSPORT_UNSPECIFIED,
+      options: undefined,
+    }),
+  ).toThrow(new ConfigurationError("Relayer transport is required."));
   expect(() =>
     processRuntimeConfig({
       wasmAssetLoadMode: undefined,
@@ -307,7 +314,7 @@ test("omitted and explicit empty relayer maps stay distinct", () => {
 
 test("forwards prefetched encryption key bytes without base64 adaptation", () => {
   relayerConfig({
-    type: "node",
+    transport: RelayerTransport.RELAYER_TRANSPORT_NODE,
     options: {
       timeout: undefined,
       debug: undefined,
@@ -332,7 +339,7 @@ test("forwards prefetched encryption key bytes without base64 adaptation", () =>
 test("rejects an incomplete prefetched encryption key envelope", () => {
   expect(() =>
     relayerConfig({
-      type: "node",
+      transport: RelayerTransport.RELAYER_TRANSPORT_NODE,
       options: {
         timeout: undefined,
         debug: undefined,
@@ -347,7 +354,7 @@ test("rejects an incomplete prefetched encryption key envelope", () => {
 test("rejects an invalid prefetched CRS capacity", () => {
   expect(() =>
     relayerConfig({
-      type: "node",
+      transport: RelayerTransport.RELAYER_TRANSPORT_NODE,
       options: {
         timeout: undefined,
         debug: undefined,

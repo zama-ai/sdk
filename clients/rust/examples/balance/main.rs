@@ -1,5 +1,6 @@
 mod balance;
 mod encryption;
+mod offline;
 mod support;
 
 use anyhow::Result;
@@ -11,7 +12,8 @@ async fn main() -> Result<()> {
     let sdk = settings.create_sdk().await?;
     let result = async {
         encryption::encrypt_inputs(&sdk, settings.token, settings.account.address).await?;
-        balance::show_balance(&sdk, &provider, settings.token, settings.account.address).await
+        balance::show_balance(&sdk, &provider, settings.token, settings.account.address).await?;
+        offline::prepare_and_sign(&sdk, &settings.signer, settings.account, settings.token).await
     }
     .await;
     let closed = sdk.close().await;
