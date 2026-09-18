@@ -64,6 +64,8 @@ export type {
 } from "./token";
 
 export {
+  VALID_ENCRYPTED_VALUE,
+  VALID_INPUT_PROOF,
   TEST_SIGNATURE,
   TEST_SIGNED_TX,
   TEST_TX_HASH,
@@ -73,4 +75,10 @@ export {
 } from "./constants";
 
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
-export { joinedLog, mockJoinBalance, mockJoinReceipt } from "./vaults";
+export {
+  joinedLog,
+  mockCurrentBatchIds,
+  mockEncryptedLegs,
+  mockJoinBalance,
+  mockJoinReceipt,
+} from "./vaults";

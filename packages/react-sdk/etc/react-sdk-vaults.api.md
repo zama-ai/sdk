@@ -5,9 +5,13 @@
 ```ts
 
 import { Address } from '@zama-fhe/sdk';
+import { BatcherDirection } from '@zama-fhe/sdk/vaults';
+import { BatcherHistory } from '@zama-fhe/sdk/vaults';
 import { BatchState } from '@zama-fhe/sdk/vaults';
 import { ClaimParams } from '@zama-fhe/sdk/vaults';
 import { DepositParams } from '@zama-fhe/sdk/vaults';
+import { GroupDepositParams } from '@zama-fhe/sdk/vaults';
+import { GroupRequestWithdrawalParams } from '@zama-fhe/sdk/vaults';
 import { JoinParams } from '@zama-fhe/sdk/vaults';
 import { JoinResult } from '@zama-fhe/sdk/vaults';
 import { QuitParams } from '@zama-fhe/sdk/vaults';
@@ -21,6 +25,26 @@ import { UseQueryResult } from '@tanstack/react-query';
 import { Vault } from '@zama-fhe/sdk/vaults';
 import { VaultAddresses } from '@zama-fhe/sdk/vaults';
 import { VaultBatcher } from '@zama-fhe/sdk/vaults';
+import { VaultGroup } from '@zama-fhe/sdk/vaults';
+import { VaultGroupConfig } from '@zama-fhe/sdk/vaults';
+import { VaultGroupJoinResult } from '@zama-fhe/sdk/vaults';
+
+// @public
+export function useActiveBatcher(config: UseActiveBatcherConfig, options?: Omit<UseQueryOptions<Address>, "queryKey" | "queryFn">): UseQueryResult<`0x${string}`, Error>;
+
+// @public
+export interface UseActiveBatcherConfig {
+    history: BatcherHistory;
+}
+
+// @public
+export function useActiveBatchers(config: UseActiveBatchersConfig, options?: Omit<UseQueryOptions<Readonly<Record<string, Address>>>, "queryKey" | "queryFn">): UseQueryResult<Readonly<Record<string, `0x${string}`>>, Error>;
+
+// @public
+export interface UseActiveBatchersConfig {
+    direction: BatcherDirection;
+    group: VaultGroupConfig;
+}
 
 // @public
 export function useBatchState(config: UseBatchStateConfig, options?: UseBatchStateOptions): UseQueryResult<BatchState, Error>;
@@ -74,6 +98,22 @@ export interface UseDispatchBatchConfig {
 }
 
 // @public
+export function useGroupDeposit<TContext = unknown>(config: UseGroupDepositConfig, options?: UseMutationOptions<VaultGroupJoinResult, Error, GroupDepositParams, TContext>): UseMutationResult<VaultGroupJoinResult, Error, GroupDepositParams, TContext>;
+
+// @public
+export interface UseGroupDepositConfig {
+    group: VaultGroupConfig;
+}
+
+// @public
+export function useGroupRequestWithdrawal<TContext = unknown>(config: UseGroupRequestWithdrawalConfig, options?: UseMutationOptions<VaultGroupJoinResult, Error, GroupRequestWithdrawalParams, TContext>): UseMutationResult<VaultGroupJoinResult, Error, GroupRequestWithdrawalParams, TContext>;
+
+// @public
+export interface UseGroupRequestWithdrawalConfig {
+    group: VaultGroupConfig;
+}
+
+// @public
 export function useJoin<TContext = unknown>(config: UseJoinConfig, options?: UseMutationOptions<JoinResult, Error, JoinParams, TContext>): UseMutationResult<JoinResult, Error, JoinParams, TContext>;
 
 // @public
@@ -124,6 +164,9 @@ export function useVault(addresses: VaultAddresses): Vault;
 
 // @public
 export function useVaultBatcher(address: Address): VaultBatcher;
+
+// @public
+export function useVaultGroup(config: VaultGroupConfig): VaultGroup;
 
 // (No @packageDocumentation comment for this package)
 
