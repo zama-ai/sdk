@@ -2189,7 +2189,7 @@ Plain-language release notes for the `3.x` line — the current, actively-mainta
 
 - [**3.6.x**](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/changelog/v3-6.md) — Web Worker encryption offload, structured wallet-signing/permit-failure events, an interrupted-unshield resume fix, and orphaned relayer entries that warn instead of throwing.
 - [**3.5.x**](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/changelog/v3-5.md) — Polygon presets, offline signing and decryption permits, at-rest transport-key encryption, and automatic KMS-context recovery.
-- [**3.4.x**](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/changelog/v3-4.md) — Release notes for the 3.4.x line.
+- [**3.4.x**](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/changelog/v3-4.md) — An internal FHE backend migration to `@fhevm/sdk` (no API changes for `Token`/hooks apps), FHE runtime and client tuning knobs, shared transport key pairs for B2B2C, automatic decrypt-batch chunking, and a two-signature shield via `wrap()`.
 - [**3.3.x**](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/changelog/v3-3.md) — `confidentialTransferAndCall`, automatic pending-unshield recovery, and typed decryption errors.
 - [**3.2.x**](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/changelog/v3-2.md) — configurable, silent-by-default logging; upgrade codemods; and a `Wrap` event decoding fix.
 - [**3.1.x**](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/changelog/v3-1.md) — `createConfig`, transport factories, the provider/signer split, the `Token` / `WrappedToken` hierarchy, and top-level FHE primitives.
@@ -2568,7 +2568,7 @@ Balance validation, chain-alignment checks, and error handling match [`confident
 
 
 > [!WARNING]
-> The recipient **must** implement the ERC-7984 receiver hook. Sending to a plain wallet address or a contract without the hook will revert with `TransactionRevertedError`. Use plain [`confidentialTransfer`](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/guides/transfer-privately.md) for ordinary recipients.
+> The receiver hook only applies to deployed contracts. If `to` is a deployed contract that doesn't implement the hook (or the hook reverts), the whole transaction reverts with `TransactionRevertedError`. If `to` has no code — a plain wallet address, or a contract that hasn't been deployed yet — the hook is silently skipped and the transfer succeeds like a plain transfer, with no way for the recipient to react. Use plain [`confidentialTransfer`](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/guides/transfer-privately.md) for ordinary recipients.
 
 
 ### Automatic pending-unshield recovery
@@ -3121,6 +3121,8 @@ import { node } from "@zama-fhe/sdk/node";
 ```
 
 Chain-specific data (`relayerUrl`, `network`, `executorAddress`, etc.) comes from the chain preset, so a bare call is all most apps need. Each factory also accepts an optional options object forwarded to `@fhevm/sdk` for per-client tuning (e.g. `batchRpcCalls`, `fheEncryptionKey`, `moduleVersions`, `timeout`) — see the [`web()`](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/RelayerWeb.md#parameters) / [`node()`](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/RelayerNode.md#parameters) / [`cleartext()`](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/RelayerCleartext.md#parameters) reference for the full option list and defaults.
+
+`web()` additionally runs encryption in a dedicated Web Worker by default, so `encryptValue()`/`encryptValues()` calls don't block the main thread. Tune or opt out of this with `offloadEncrypt`, `offloadWorker`, and `offloadTimeouts` — see [`web()`'s encryption offload options](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/RelayerWeb.md#offloadencrypt) for the full behavior and defaults. If your app sets a Content Security Policy, it needs `worker-src 'self' blob:` for the offload worker to start.
 
 ```ts
 // Browser — uses relayerUrl from the chain preset
@@ -4001,7 +4003,7 @@ await wrap.mutateAsync({ amount: 1000n });
 ```
 
 
-`wrap()` validates the ERC-20 balance and the current allowance before submitting: it throws `InsufficientERC20BalanceError` if the balance is too low, and `InsufficientAllowanceError` if the wrapper is not approved for the amount (call `approveUnderlying()` first). Pass `{ to }` to mint the confidential balance to a different recipient.
+`wrap()` validates the ERC-20 balance and the current allowance before submitting: it throws `InsufficientERC20BalanceError` if the balance is too low, and `InsufficientAllowanceError` if the wrapper is not approved for the amount (call `approveUnderlying()` first). Pass `{ to }` to mint the confidential balance to a different recipient, or `{ onWrapSubmitted }` to observe the transaction hash as soon as it's submitted.
 
 ## Next steps
 
@@ -4180,7 +4182,12 @@ The `matchZamaError` helper maps SDK error codes to user-friendly messages. See 
 
 ## Transfer into a contract (receiver hook)
 
-Sometimes the recipient is a contract that needs to _react_ to the transfer — for example a confidential vault that credits a deposit, or a payment splitter that fans the amount out. `confidentialTransferAndCall` moves the encrypted amount **and** invokes the recipient's ERC-7984 receiver hook in a single transaction, so the deposit can never land without the contract being told about it.
+Sometimes the recipient is a contract that needs to _react_ to the transfer — for example a confidential vault that credits a deposit, or a payment splitter that fans the amount out. `confidentialTransferAndCall` moves the encrypted amount **and** invokes the recipient's ERC-7984 receiver hook (`onConfidentialTransferReceived`) in a single transaction. If `to` is a deployed contract that doesn't implement the hook (or the hook itself reverts), the whole transaction reverts with `TransactionRevertedError` — transfer and hook invocation are atomic there, so there's no way to land only the transfer.
+
+
+> [!WARNING]
+> This guarantee only holds for deployed contracts. If `to` has no code — a plain wallet address, or a contract that hasn't been deployed yet — the hook is silently skipped and the transfer succeeds exactly like a plain `confidentialTransfer`, with no error and no way for the recipient to react. Double-check the address before relying on this for vault-style integrations.
+
 
 Use `token.confidentialTransferAndCall()` (or the `useConfidentialTransferAndCall` hook). The third argument, `data`, is an opaque payload forwarded verbatim to the receiver's hook. The SDK never encodes, validates, or inspects it — its layout is defined by the receiving contract's ABI, not the token's. Encode it with viem's `encodeAbiParameters` to match what the contract expects.
 
@@ -4936,42 +4943,43 @@ All errors thrown by `@zama-fhe/sdk` and `@zama-fhe/react-sdk` extend `ZamaError
 
 Every SDK error is an instance of `ZamaError`, which extends the native `Error` class. Each subclass has a unique `.code` property:
 
-| Error                                     | Code                                     | What happened                                                                                       |
-| ----------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `SigningRejectedError`                    | `SIGNING_REJECTED`                       | User rejected the wallet signature                                                                  |
-| `SigningFailedError`                      | `SIGNING_FAILED`                         | Wallet signature failed (connectivity or firmware issue)                                            |
-| `EncryptionFailedError`                   | `ENCRYPTION_FAILED`                      | FHE encryption failed in the WASM runtime                                                           |
-| `DecryptionFailedError`                   | `DECRYPTION_FAILED`                      | FHE decryption failed                                                                               |
-| `TransactionRevertedError`                | `TRANSACTION_REVERTED`                   | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                      |
-| `InvalidTransportKeyPairError`            | `INVALID_KEYPAIR`                        | Relayer rejected transport key pair (stale or malformed)                                            |
-| `TransportKeyPairExpiredError`            | `KEYPAIR_EXPIRED`                        | Transport key pair expired -- user needs to re-sign                                                 |
-| `RevokedKmsContextError`                  | `REVOKED_KMS_CONTEXT`                    | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit     |
-| `NoCiphertextError`                       | `NO_CIPHERTEXT`                          | No encrypted balance exists for this account                                                        |
-| `RelayerRequestFailedError`               | `RELAYER_REQUEST_FAILED`                 | Relayer HTTP request failed (check `.statusCode`); retryable on back-pressure (429)                 |
-| `NotEntitledError`                        | `NOT_ENTITLED`                           | Actor lacks the on-chain ACL grant to decrypt this value — terminal, don't retry                    |
-| `RpcRateLimitError`                       | `RPC_RATE_LIMITED`                       | Consumer's RPC provider rate-limited an on-chain read (retryable)                                   |
-| `ConfigurationError`                      | `CONFIGURATION`                          | Invalid SDK config or FHE runtime failed to initialize                                              |
-| `InsufficientConfidentialBalanceError`    | `INSUFFICIENT_CONFIDENTIAL_BALANCE`      | Confidential balance too low for transfer or unshield                                               |
-| `InsufficientERC20BalanceError`           | `INSUFFICIENT_ERC20_BALANCE`             | ERC-20 balance too low for shield                                                                   |
-| `InsufficientAllowanceError`              | `INSUFFICIENT_ALLOWANCE`                 | ERC-20 allowance too low for a manual `wrap` (approve first)                                        |
-| `BalanceCheckUnavailableError`            | `BALANCE_CHECK_UNAVAILABLE`              | Balance check impossible (no stored permits)                                                        |
-| `ERC20ReadFailedError`                    | `ERC20_READ_FAILED`                      | Public ERC-20 read failed (network or contract error)                                               |
-| `DelegationSelfNotAllowedError`           | `DELEGATION_SELF_NOT_ALLOWED`            | Delegation cannot target self                                                                       |
-| `DelegationCooldownError`                 | `DELEGATION_COOLDOWN`                    | Only one delegate/revoke per tuple per block (retryable)                                            |
-| `DelegationNotFoundError`                 | `DELEGATION_NOT_FOUND`                   | No active delegation for this tuple                                                                 |
-| `SignerRequiredError`                     | `SIGNER_REQUIRED`                        | Write/sign/decrypt called without a signer                                                          |
-| `DelegationExpiredError`                  | `DELEGATION_EXPIRED`                     | The delegation has expired                                                                          |
-| `SignerNotConfiguredError`                | `SIGNER_NOT_CONFIGURED`                  | SDK operation needs a signer but none is configured (subclass of `SignerRequiredError`)             |
-| `WalletNotConnectedError`                 | `WALLET_NOT_CONNECTED`                   | Signer exists but has no connected wallet account (subclass of `SignerRequiredError`)               |
-| `WalletAccountNotReadyError`              | `WALLET_ACCOUNT_NOT_READY`               | Async signer adapter hasn't resolved its account yet (subclass of `SignerRequiredError`, retryable) |
-| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains                                                         |
-| `DelegationContractIsSelfError`           | `DELEGATION_CONTRACT_IS_SELF`            | Delegation contract address equals the caller                                                       |
-| `DelegationDelegateEqualsContractError`   | `DELEGATION_DELEGATE_EQUALS_CONTRACT`    | Delegate equals the contract address                                                                |
-| `DelegationDelegateCannotBeWildcardError` | `DELEGATION_DELEGATE_CANNOT_BE_WILDCARD` | Delegate address is the wildcard address                                                            |
-| `DelegationExpirationTooSoonError`        | `DELEGATION_EXPIRATION_TOO_SOON`         | Expiration date less than 1 hour in the future                                                      |
-| `DelegationExpiryUnchangedError`          | `DELEGATION_EXPIRY_UNCHANGED`            | New expiry matches the current value                                                                |
-| `DelegationNotPropagatedError`            | `DELEGATION_NOT_PROPAGATED`              | Delegated decrypt failed transiently (gateway not synced, or delegator ACL read stale) — retry      |
-| `AclPausedError`                          | `ACL_PAUSED`                             | The ACL contract is paused                                                                          |
+| Error                                     | Code                                     | What happened                                                                                                  |
+| ----------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `SigningRejectedError`                    | `SIGNING_REJECTED`                       | User rejected the wallet signature                                                                             |
+| `SigningFailedError`                      | `SIGNING_FAILED`                         | Wallet signature failed (connectivity or firmware issue)                                                       |
+| `EncryptionFailedError`                   | `ENCRYPTION_FAILED`                      | FHE encryption failed in the WASM runtime                                                                      |
+| `DecryptionFailedError`                   | `DECRYPTION_FAILED`                      | FHE decryption failed                                                                                          |
+| `TransactionRevertedError`                | `TRANSACTION_REVERTED`                   | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                 |
+| `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | `resumeUnshield()` called for an unwrap that was already finalized -- funds already arrived, nothing to resume |
+| `InvalidTransportKeyPairError`            | `INVALID_KEYPAIR`                        | Relayer rejected transport key pair (stale or malformed)                                                       |
+| `TransportKeyPairExpiredError`            | `KEYPAIR_EXPIRED`                        | Transport key pair expired -- user needs to re-sign                                                            |
+| `RevokedKmsContextError`                  | `REVOKED_KMS_CONTEXT`                    | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                |
+| `NoCiphertextError`                       | `NO_CIPHERTEXT`                          | No encrypted balance exists for this account                                                                   |
+| `RelayerRequestFailedError`               | `RELAYER_REQUEST_FAILED`                 | Relayer HTTP request failed (check `.statusCode`); retryable on back-pressure (429)                            |
+| `NotEntitledError`                        | `NOT_ENTITLED`                           | Actor lacks the on-chain ACL grant to decrypt this value — terminal, don't retry                               |
+| `RpcRateLimitError`                       | `RPC_RATE_LIMITED`                       | Consumer's RPC provider rate-limited an on-chain read (retryable)                                              |
+| `ConfigurationError`                      | `CONFIGURATION`                          | Invalid SDK config or FHE runtime failed to initialize                                                         |
+| `InsufficientConfidentialBalanceError`    | `INSUFFICIENT_CONFIDENTIAL_BALANCE`      | Confidential balance too low for transfer or unshield                                                          |
+| `InsufficientERC20BalanceError`           | `INSUFFICIENT_ERC20_BALANCE`             | ERC-20 balance too low for shield                                                                              |
+| `InsufficientAllowanceError`              | `INSUFFICIENT_ALLOWANCE`                 | ERC-20 allowance too low for a manual `wrap` (approve first)                                                   |
+| `BalanceCheckUnavailableError`            | `BALANCE_CHECK_UNAVAILABLE`              | Balance check impossible (no stored permits)                                                                   |
+| `ERC20ReadFailedError`                    | `ERC20_READ_FAILED`                      | Public ERC-20 read failed (network or contract error)                                                          |
+| `DelegationSelfNotAllowedError`           | `DELEGATION_SELF_NOT_ALLOWED`            | Delegation cannot target self                                                                                  |
+| `DelegationCooldownError`                 | `DELEGATION_COOLDOWN`                    | Only one delegate/revoke per tuple per block (retryable)                                                       |
+| `DelegationNotFoundError`                 | `DELEGATION_NOT_FOUND`                   | No active delegation for this tuple                                                                            |
+| `SignerRequiredError`                     | `SIGNER_REQUIRED`                        | Write/sign/decrypt called without a signer                                                                     |
+| `DelegationExpiredError`                  | `DELEGATION_EXPIRED`                     | The delegation has expired                                                                                     |
+| `SignerNotConfiguredError`                | `SIGNER_NOT_CONFIGURED`                  | SDK operation needs a signer but none is configured (subclass of `SignerRequiredError`)                        |
+| `WalletNotConnectedError`                 | `WALLET_NOT_CONNECTED`                   | Signer exists but has no connected wallet account (subclass of `SignerRequiredError`)                          |
+| `WalletAccountNotReadyError`              | `WALLET_ACCOUNT_NOT_READY`               | Async signer adapter hasn't resolved its account yet (subclass of `SignerRequiredError`, retryable)            |
+| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains                                                                    |
+| `DelegationContractIsSelfError`           | `DELEGATION_CONTRACT_IS_SELF`            | Delegation contract address equals the caller                                                                  |
+| `DelegationDelegateEqualsContractError`   | `DELEGATION_DELEGATE_EQUALS_CONTRACT`    | Delegate equals the contract address                                                                           |
+| `DelegationDelegateCannotBeWildcardError` | `DELEGATION_DELEGATE_CANNOT_BE_WILDCARD` | Delegate address is the wildcard address                                                                       |
+| `DelegationExpirationTooSoonError`        | `DELEGATION_EXPIRATION_TOO_SOON`         | Expiration date less than 1 hour in the future                                                                 |
+| `DelegationExpiryUnchangedError`          | `DELEGATION_EXPIRY_UNCHANGED`            | New expiry matches the current value                                                                           |
+| `DelegationNotPropagatedError`            | `DELEGATION_NOT_PROPAGATED`              | Delegated decrypt failed transiently (gateway not synced, or delegator ACL read stale) — retry                 |
+| `AclPausedError`                          | `ACL_PAUSED`                             | The ACL contract is paused                                                                                     |
 
 ### 2. Catch with instanceof
 
@@ -5148,15 +5156,15 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 
 ### 7. Common problems troubleshooting
 
-| What you see                              | Why                                         | Fix                                                                                                     |
-| ----------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `SigningRejectedError` on every decrypt   | Wallet rejected the EIP-712 signature       | Make sure the wallet supports `eth_signTypedData_v4`. Some hardware wallets need a firmware update.     |
-| Balance always `undefined`                | Encrypted value is zero (never shielded)    | Check if the user has shielded tokens first. Catch `NoCiphertextError`.                                 |
-| `ConfigurationError` on first operation   | FHE runtime failed to initialize            | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`. Check transport config.             |
-| `EncryptionFailedError`                   | FHE encryption failed during an operation   | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`.                                     |
-| `DecryptionFailedError` after page reload | Unshield was interrupted                    | Use `getPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.                    |
-| `TransactionRevertedError` on finalize    | Unwrap already finalized or tx hash invalid | Check the unwrap tx. If it was already finalized, the unshield is complete -- stop prompting to resume. |
-| `RelayerRequestFailedError`               | Relayer URL wrong or auth missing           | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.           |
+| What you see                              | Why                                                    | Fix                                                                                                                                                                                                                   |
+| ----------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SigningRejectedError` on every decrypt   | Wallet rejected the EIP-712 signature                  | Make sure the wallet supports `eth_signTypedData_v4`. Some hardware wallets need a firmware update.                                                                                                                   |
+| Balance always `undefined`                | Encrypted value is zero (never shielded)               | Check if the user has shielded tokens first. Catch `NoCiphertextError`.                                                                                                                                               |
+| `ConfigurationError` on first operation   | FHE runtime failed to initialize                       | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`. Check transport config.                                                                                                                           |
+| `EncryptionFailedError`                   | FHE encryption failed during an operation              | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`.                                                                                                                                                   |
+| `DecryptionFailedError` after page reload | Unshield was interrupted                               | Use `getPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.                                                                                                                                  |
+| `UnshieldAlreadyFinalizedError` on resume | Unwrap was already finalized before the resume attempt | Funds already arrived -- treat as completion, not failure. `useResumeUnshield` refreshes balances automatically; if calling `resumeUnshield()` directly, catch this error and dismiss the prompt instead of retrying. |
+| `RelayerRequestFailedError`               | Relayer URL wrong or auth missing                      | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.                                                                                                                         |
 
 ### 8. Retry transient failures
 
@@ -7375,7 +7383,7 @@ How long cached registry results remain valid, in seconds. Default: `86400` (24 
 
 `ZamaSDKEventListener | undefined`
 
-Lifecycle event callback for debugging and telemetry. Events never contain sensitive data.
+Lifecycle event callback for debugging and telemetry. Events never carry private keys, permit signatures, or ZK proofs — but `DecryptEnd`/`DecryptError` do carry decrypted cleartext values (see below), so avoid logging full event payloads for those two if your logging pipeline isn't already trusted with plaintext.
 
 ```ts
 const config = createConfig({
@@ -7388,6 +7396,45 @@ const config = createConfig({
   },
 });
 ```
+
+#### Events
+
+Every event extends a common shape (an optional `tokenAddress`, a `timestamp`, and, for multi-phase operations like unshield, a shared `operationId`), plus fields specific to its `type`:
+
+| Event                                                                                                                                                                                | Fires when                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EncryptStart` / `EncryptEnd` / `EncryptError`                                                                                                                                       | An FHE encryption begins, succeeds, or fails.                                                                                                                                                                                                                                                                                                           |
+| `DecryptStart` / `DecryptEnd` / `DecryptError`                                                                                                                                       | A decryption begins, succeeds, or fails — `DecryptEnd`/`DecryptError` carry decrypted cleartext values; see [`decryption.decryptValues`](#decryption-decryptvalues) for the full walkthrough and code samples.                                                                                                                                          |
+| `PermitError`                                                                                                                                                                        | `grantPermit`, `grantDelegationPermit`, or `registerPermit` fails — but not every failure of these methods: transport-key-pair issues (`TransportKeyPairChangedError`, `KeyWrappingError`) are deliberately excluded from this event.                                                                                                                   |
+| `TransactionError`                                                                                                                                                                   | `submitTransaction` itself rejects — before broadcast (estimation/validation) or while waiting for the receipt. It does **not** fire for a transaction that broadcasts successfully but reverts on execution: the SDK doesn't currently inspect `receipt.status`, so a mined-but-reverted transaction resolves as a success with no error and no event. |
+| `ShieldSubmitted`, `TransferSubmitted`, `TransferFromSubmitted`, `SetOperatorSubmitted`, `ApproveUnderlyingSubmitted`, `WrapSubmitted`, `UnwrapSubmitted`, `FinalizeUnwrapSubmitted` | The corresponding write transaction is submitted — each carries the transaction's `txHash`.                                                                                                                                                                                                                                                             |
+| `DelegationSubmitted` / `RevokeDelegationSubmitted`                                                                                                                                  | A delegation grant or revoke transaction is submitted — see [Delegation events](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/delegation.md#events).                                                                                                                                                                                                                                                |
+| `UnshieldPhase1Submitted` / `UnshieldPhase2Started` / `UnshieldPhase2Submitted`                                                                                                      | The two-phase unshield flow's request and finalize steps progress.                                                                                                                                                                                                                                                                                      |
+
+`TransactionError` and `PermitError` usually carry the same classified error your `await` also throws or rejects with, so you can wire similar handling into telemetry — but don't assume they always match exactly. One documented exception: finalizing an already-finalized unshield concurrently (two tabs, a double click) emits `TransactionError` with the raw `TransactionRevertedError` from the losing finalize attempt, then `unshield()`/`unshieldAll()`/`resumeUnshield()` translates that into the more specific [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) before it reaches your `await`.
+
+```ts
+import { ZamaSDKEvents, type TransactionErrorEvent, type PermitErrorEvent } from "@zama-fhe/sdk";
+
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
+  onEvent: (event) => {
+    if (event.type === ZamaSDKEvents.TransactionError) {
+      const { operation, error } = event as TransactionErrorEvent;
+      console.error(`[zama] ${operation} failed:`, error);
+    }
+    if (event.type === ZamaSDKEvents.PermitError) {
+      const { operation, error } = event as PermitErrorEvent;
+      console.error(`[zama] ${operation} failed:`, error);
+    }
+  },
+});
+```
+
+`TransactionError.operation` is one of the write operations (`transfer`, `wrap`, `unwrap`, `finalizeUnwrap`, `delegateDecryption`, and others); `PermitError.operation` is `grantPermit`, `grantDelegationPermit`, or `registerPermit`. See [`SigningRejectedError`](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/errors.md#signingrejectederror) and [`SigningFailedError`](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/errors.md#signingfailederror) for the shapes `PermitError.error` most commonly carries.
 
 ### runtime
 
@@ -7568,7 +7615,7 @@ See the [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/alpha/
 
 Decrypt one or more FHE encrypted values. Returns cached values when available, only calling the relayer for uncached inputs. Results are written through the SDK's internal CachingService so subsequent calls for the same inputs return instantly.
 
-Inputs from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract (up to 5 concurrently). Zero encrypted values (32 zero bytes) resolve to `0n` without hitting the relayer.
+Inputs from different contracts can be mixed — they are grouped by `contractAddress`, and each group is sent to the relayer as one or more requests (up to 5 concurrently): a group is automatically split into multiple chunked requests when its cumulative cleartext-bit cost would exceed the KMS gateway's per-request budget, so an oversized batch for one contract still succeeds instead of being rejected. Zero encrypted values (32 zero bytes) resolve to `0n` without hitting the relayer.
 
 When the relayer is actually called, permits are resolved from the contract addresses of the full input set (including cached and zero entries), ensuring a stable permit scope regardless of which entries happen to be cached. If every entry is zero or already cached, no permits are needed and no wallet prompt is shown.
 
@@ -9592,10 +9639,13 @@ import {
   SigningRejectedError,
   SigningFailedError,
   EncryptionFailedError,
+  EncryptOffloadUnavailableError,
   DecryptionFailedError,
   TransactionRevertedError,
+  UnshieldAlreadyFinalizedError,
   InvalidTransportKeyPairError,
   TransportKeyPairExpiredError,
+  RevokedKmsContextError,
   NoCiphertextError,
   KeyWrappingError,
   TransportKeyPairChangedError,
@@ -9655,6 +9705,31 @@ const message = matchZamaError(error, {
 | `handlers` | `{ [K in ErrorCode]?: (e: ErrorForCode[K]) => T } & { _?: (e: unknown) => T }` | Map of error codes to handler functions |
 
 The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler receives the error class for its code, so subclass fields like `InsufficientConfidentialBalanceError.available` or `RelayerRequestFailedError.statusCode` are available without a cast.
+
+## Retryability
+
+Every `ZamaError` declares whether it's safe to retry via a `readonly retryable: boolean` field — usually determined by its error code, though `RelayerRequestFailedError` sets it per-instance based on the HTTP status instead. Use `isRetryable()` and `retryAfterSeconds()` instead of hardcoding a set of retryable codes yourself — they stay correct as the error taxonomy grows.
+
+```ts
+import { isRetryable, retryAfterSeconds } from "@zama-fhe/sdk";
+
+try {
+  await token.confidentialTransfer(to, amount);
+} catch (error) {
+  if (!isRetryable(error)) {
+    throw error; // terminal — don't retry
+  }
+  const delaySeconds = retryAfterSeconds(error) ?? 2; // backoff when the server gives no hint
+  // ... wait, then retry
+}
+```
+
+| Function            | Signature                                                      | Description                                                                                                                                                                                                                                          |
+| ------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `isRetryable`       | `(error: unknown) => error is ZamaError & { retryable: true }` | `true` only for a `ZamaError` instance whose `.retryable` is `true`; `false` for anything else, including non-SDK errors.                                                                                                                            |
+| `retryAfterSeconds` | `(error: unknown) => number \| undefined`                      | Reads the error's own `retryAfter` field when the error is retryable and carries one. Only `RelayerRequestFailedError` and `RpcRateLimitError` currently carry `retryAfter` — treat `undefined` as "retry with your own backoff," not "don't retry." |
+
+Exactly five error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, and `WalletAccountNotReadyError`. See [Retry transient failures](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
 
 ## Error summary
 
@@ -17941,7 +18016,7 @@ import { type DecryptInput } from "@zama-fhe/sdk";
 | `encryptedValue`  | `EncryptedValue` | The encrypted value (hex string) to decrypt.           |
 | `contractAddress` | `Address`        | Address of the contract that owns the encrypted value. |
 
-Inputs from different contracts can be mixed in a single call — `useDecryptValues` automatically groups them by contract address and issues one decryption request per unique contract:
+Inputs from different contracts can be mixed in a single call — `useDecryptValues` automatically groups them by contract address, splitting each group into one or more decryption requests to stay under the relayer's per-request cleartext-bit budget:
 
 ```tsx
 const { data } = useDecryptValues(
