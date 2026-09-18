@@ -8,6 +8,7 @@ export {
   setOperatorContract,
   unwrapContract,
   unwrapFromBalanceContract,
+  unwrapRequesterContract,
   confidentialTotalSupplyContract,
   rateContract,
   finalizeUnwrapContract,

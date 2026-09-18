@@ -91,7 +91,7 @@ confirmation — paste any hash into
 
 ### Section 1 — Setup
 
-Initialises the ethers `Wallet` + `JsonRpcProvider`, then creates one SDK config per
+Initializes the ethers `Wallet` + `JsonRpcProvider`, then creates one SDK config per
 wallet with:
 
 - `createConfig` from `@zama-fhe/sdk/ethers`

@@ -3,6 +3,7 @@ import {
   createFhevmBaseClient,
   createFhevmDecryptClient,
   createFhevmEncryptClient,
+  hasFhevmRuntimeConfig,
 } from "@fhevm/sdk/viem";
 import {
   createFhevmCleartextBaseClient,
@@ -13,15 +14,28 @@ import { createPublicClient, custom, http } from "viem";
 import { toFhevmChain } from "../chains/to-fhevm-chain";
 import type { FheChain } from "../chains/types";
 import { ConfigurationError } from "../errors";
+import { getAppliedWireRuntime, hasAppliedLocateFile } from "./applied-runtime";
+import type { LoggerService } from "../services/logger-service";
+import {
+  DEFAULT_ENCRYPT_WORKER_TIMEOUTS,
+  EncryptWorkerClient,
+  type EncryptWorkerClientConfig,
+  type EncryptWorkerTimeouts,
+} from "../worker/encrypt-worker-client";
+import { BUNDLED_ENCRYPT_WORKER } from "../worker/spawn";
 import type {
   FhevmBaseClient,
   FhevmClient,
   FhevmDecryptClient,
-  FhevmEncryptClient,
+  FhevmEncryptBackend,
   FhevmRelayerOptions,
   RelayerSDK,
   RelayerOptions,
+  WireRuntimeConfig,
 } from "./types";
+
+/** The `@fhevm/sdk` client inputs the worker realm rebuilds its own client from. */
+type EncryptInitPayload = EncryptWorkerClientConfig["initPayload"];
 
 /** Construction config for {@link FhevmRelayer}. */
 export interface FhevmRelayerConfig {
@@ -38,6 +52,14 @@ export interface FhevmRelayerConfig {
    * default request `timeout` applied to every relayer round-trip on the chain.
    */
   options?: RelayerOptions;
+  /** Encrypt-worker offload mode; see `web()`'s `offloadEncrypt` option. */
+  offloadEncrypt?: "auto" | boolean;
+  /** Watchdog deadlines for the encrypt worker; `web()` defaults every field before it gets here. */
+  offloadTimeouts?: EncryptWorkerTimeouts;
+  /** Custom source for the encrypt worker; see `web()`'s `offloadWorker` option. */
+  offloadWorker?: string | URL | (() => Worker);
+  /** Receives worker log lines and offload-fallback warnings. */
+  logger: LoggerService;
 }
 
 /**
@@ -66,7 +88,7 @@ export class FhevmRelayer implements RelayerSDK {
   readonly #chain: FheChain;
   readonly #base: FhevmBaseClient;
   readonly #decrypt: FhevmDecryptClient;
-  readonly #encrypt: FhevmEncryptClient;
+  readonly #encrypt: FhevmEncryptBackend;
   readonly #defaultOptions: Partial<FhevmRelayerOptions>;
   #encryptInitPromise: Promise<void> | undefined;
 
@@ -89,19 +111,95 @@ export class FhevmRelayer implements RelayerSDK {
       chain: toFhevmChain(this.#chain),
       options: { batchRpcCalls, moduleVersions, fheEncryptionKey },
     };
-    if (config.cleartext) {
-      this.#base = createFhevmCleartextBaseClient(params);
-      this.#decrypt = createFhevmCleartextDecryptClient(params);
-      this.#encrypt = createFhevmCleartextEncryptClient(params);
-    } else {
-      this.#base = createFhevmBaseClient(params);
-      this.#decrypt = createFhevmDecryptClient(params);
-      this.#encrypt = createFhevmEncryptClient(params);
-    }
     this.#defaultOptions = {
       ...(auth !== undefined && { auth }),
       ...(timeout !== undefined && { timeout }),
       ...(debug !== undefined && { debug }),
+    };
+    // The FHE key is always fetched here, on the calling thread, so the chain's
+    // default request options (auth in particular) apply; a worker realm has no
+    // access to them.
+    const prefetchKey = () =>
+      this.#base.fetchFheEncryptionKeyBytes({ options: this.#defaultOptions });
+    // Re-listed rather than spread: the upstream client exposes an enumerable
+    // `ready` getter, and a spread would call it, starting init at construction.
+    const withInlineInit = (client: FhevmEncryptBackend): FhevmEncryptBackend => ({
+      init: async () => {
+        await prefetchKey();
+        await client.init();
+      },
+      encryptValue: (parameters) => client.encryptValue(parameters),
+      encryptValues: (parameters) => client.encryptValues(parameters),
+      fetchFheEncryptionKeyBytes: (parameters) => client.fetchFheEncryptionKeyBytes(parameters),
+    });
+    if (config.cleartext) {
+      this.#base = createFhevmCleartextBaseClient(params);
+      this.#decrypt = createFhevmCleartextDecryptClient(params);
+      this.#encrypt = withInlineInit(createFhevmCleartextEncryptClient(params));
+    } else {
+      this.#base = createFhevmBaseClient(params);
+      this.#decrypt = createFhevmDecryptClient(params);
+      this.#encrypt = this.#buildEncryptBackend(config, params, {
+        prefetchKey,
+        createInlineClient: () => withInlineInit(createFhevmEncryptClient(params)),
+      });
+    }
+  }
+
+  /**
+   * Picks the encrypt backend for a non-cleartext chain: the worker client when
+   * offload is on and reachable, the inline calling-thread client otherwise.
+   */
+  #buildEncryptBackend(
+    config: FhevmRelayerConfig,
+    params: { chain: EncryptInitPayload["chain"]; options: EncryptInitPayload["clientOptions"] },
+    inline: {
+      prefetchKey: EncryptWorkerClientConfig["prefetchKey"];
+      createInlineClient: () => FhevmEncryptBackend;
+    },
+  ): FhevmEncryptBackend {
+    const offload = config.offloadEncrypt ?? false;
+    const strict = offload === true;
+    const workerAvailable =
+      typeof Worker === "function" &&
+      (config.offloadWorker !== undefined || BUNDLED_ENCRYPT_WORKER);
+    // Silent both ways: offload off is what the caller asked for, and a realm
+    // with no Worker is an environment fact that would warn on every SSR
+    // render. Strict skips the capability check, since construction runs during
+    // that render and the failure must surface at call time instead.
+    if (offload === false || !(strict || workerAvailable)) {
+      return inline.createInlineClient();
+    }
+    const runtime = getAppliedWireRuntime();
+    const blocker = encryptOffloadBlocker(runtime);
+    if (blocker !== undefined && !strict) {
+      // Always on the console: the alternative is an opaque rejection at
+      // encrypt time, or WASM assets silently resolved from the default URLs.
+      config.logger.warnAlways(`Encryption runs on the calling thread: ${blocker}.`);
+      return inline.createInlineClient();
+    }
+    const workerClient = new EncryptWorkerClient({
+      initPayload: { chain: params.chain, clientOptions: params.options, runtime: runtime ?? {} },
+      network: this.#chain.network,
+      prefetchKey: inline.prefetchKey,
+      createInlineClient: inline.createInlineClient,
+      logger: config.logger,
+      timeouts: config.offloadTimeouts ?? DEFAULT_ENCRYPT_WORKER_TIMEOUTS,
+      workerSource: config.offloadWorker,
+      // Strict with a blocker: the client degrades at init, which rejects at
+      // call time rather than at config time.
+      blockedReason: blocker,
+      strict,
+    });
+    return {
+      init: () => workerClient.init(),
+      encryptValue: (parameters) => workerClient.encryptValue(parameters),
+      encryptValues: (parameters) => workerClient.encryptValues(parameters),
+      // Served from the calling thread: routing it through the worker would
+      // structured-clone the ~50 MB key back out on every call. `ignoreCache`
+      // therefore refreshes this thread's cache, not the worker's seeded key.
+      fetchFheEncryptionKeyBytes: (parameters) => this.#base.fetchFheEncryptionKeyBytes(parameters),
+      dispose: () => workerClient.dispose(),
     };
   }
 
@@ -110,11 +208,23 @@ export class FhevmRelayer implements RelayerSDK {
     return this.#chain;
   }
 
+  // Only a fulfilled init is memoized: a rejection clears the memo so the next
+  // encryption retries instead of inheriting a transient key-fetch failure.
   #initEncrypt = (): Promise<void> => {
-    this.#encryptInitPromise ??= this.#base
-      .fetchFheEncryptionKeyBytes({ options: this.#defaultOptions })
-      .then(() => this.#encrypt.init());
+    this.#encryptInitPromise ??= this.#encrypt.init().catch((error: unknown) => {
+      this.#encryptInitPromise = undefined;
+      throw error;
+    });
     return this.#encryptInitPromise;
+  };
+
+  /**
+   * Releases the encrypt worker once in-flight encryptions settle and drops the
+   * memoized init; the next encryption spawns a fresh worker and re-initializes.
+   */
+  dispose = (): void => {
+    this.#encryptInitPromise = undefined;
+    this.#encrypt.dispose?.();
   };
 
   /**
@@ -312,8 +422,11 @@ export class FhevmRelayer implements RelayerSDK {
    * ```
    */
   fetchFheEncryptionKeyBytes: FhevmClient["fetchFheEncryptionKeyBytes"] = async (parameters) => {
-    await this.#initEncrypt();
-    return this.#encrypt.fetchFheEncryptionKeyBytes({
+    // Served from the base client, which shares the key cache with the encrypt
+    // client: initializing encryption here would spawn the encrypt worker and
+    // wait out its bring-up for a key this thread fetches itself.
+    await this.#base.init();
+    return this.#base.fetchFheEncryptionKeyBytes({
       ...parameters,
       options: { ...this.#defaultOptions, ...parameters?.options },
     });
@@ -454,6 +567,24 @@ export class FhevmRelayer implements RelayerSDK {
     await this.#decrypt.init();
     return this.#decrypt.generateTransportKeyPair();
   };
+}
+
+/**
+ * The one reason, if any, this thread's configuration cannot be reproduced in
+ * the worker realm, so offload is worse than inline there.
+ */
+function encryptOffloadBlocker(runtime: WireRuntimeConfig | undefined): string | undefined {
+  // A runtime `locateFile` is a function: it cannot be cloned into the worker
+  // realm, which would silently resolve WASM assets from the default URLs.
+  if (hasAppliedLocateFile()) {
+    return "a runtime locateFile cannot cross the encrypt worker boundary";
+  }
+  // Unreadable here, so the worker would run on fhevm defaults: an auth it
+  // carries would 401 inside the worker as an application error, which never degrades.
+  if (runtime === undefined && hasFhevmRuntimeConfig()) {
+    return "a runtime config set outside createConfig cannot be replicated in the encrypt worker realm";
+  }
+  return undefined;
 }
 
 /**

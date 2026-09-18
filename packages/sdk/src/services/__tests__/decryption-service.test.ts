@@ -673,7 +673,7 @@ describe("DecryptionService", () => {
       gate();
 
       await expect(second).resolves.toEqual({ [HANDLE_B]: 20n });
-      // One re-grant for the two revoked failures: the second call recognised
+      // One re-grant for the two revoked failures: the second call recognized
       // its permit as already replaced and retried with the fresh one.
       expect(vi.mocked(relayer.signDecryptionPermit).mock.calls.length).toBe(grantsBefore + 1);
       expect(signer.signTypedData).toHaveBeenCalledOnce();
