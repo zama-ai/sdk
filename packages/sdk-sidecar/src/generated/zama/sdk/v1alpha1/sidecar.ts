@@ -408,7 +408,9 @@ export interface ScopeRequest {
 export interface SignerReply {
   operationId: string;
   actionId: string;
-  result: { $case: "signature"; signature: Buffer } | { $case: "error"; error: SdkError } | undefined;
+  result: { $case: "signature"; signature: Buffer } | { $case: "error"; error: SdkError } | //
+  /** 32-byte hash of the broadcast transaction; fields 140–159 are allocated to transactions. */
+  { $case: "transactionHash"; transactionHash: Buffer } | undefined;
 }
 
 export interface SignerClientMessage {
@@ -418,8 +420,30 @@ export interface SignerClientMessage {
 export interface SignerAction {
   operationId: string;
   actionId: string;
-  account: WalletAccount | undefined;
-  typedDataJson: string;
+  account:
+    | WalletAccount
+    | undefined;
+  /** typed_data_json keeps its original field number; the union prevents a mixed request. */
+  request: { $case: "typedDataJson"; typedDataJson: string } | {
+    $case: "contractWrite";
+    contractWrite: ContractWriteRequest;
+  } | undefined;
+}
+
+/** Mirrors GenericSigner.writeContract; the SDK encodes data once and native wallets broadcast it unchanged. */
+export interface ContractWriteRequest {
+  address: Buffer;
+  data: Buffer;
+  abiJson: string;
+  functionName: string;
+  /** Bigint arguments are base-10 strings interpreted through the ABI. */
+  argsJson: string;
+  /** Base-10 wei; omission keeps the SDK/wallet default, "0" is explicit. */
+  value?:
+    | string
+    | undefined;
+  /** Base-10 gas limit; omission lets the wallet estimate. */
+  gas?: string | undefined;
 }
 
 export interface SignerReplyError {
@@ -3803,6 +3827,9 @@ export const SignerReply: MessageFns<SignerReply> = {
       case "error":
         SdkError.encode(message.result.error, writer.uint32(34).fork()).join();
         break;
+      case "transactionHash":
+        writer.uint32(1122).bytes(message.result.transactionHash);
+        break;
     }
     return writer;
   },
@@ -3846,6 +3873,14 @@ export const SignerReply: MessageFns<SignerReply> = {
           message.result = { $case: "error", error: SdkError.decode(reader, reader.uint32()) };
           continue;
         }
+        case 140: {
+          if (tag !== 1122) {
+            break;
+          }
+
+          message.result = { $case: "transactionHash", transactionHash: Buffer.from(reader.bytes()) };
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -3871,6 +3906,10 @@ export const SignerReply: MessageFns<SignerReply> = {
         ? { $case: "signature", signature: Buffer.from(bytesFromBase64(object.signature)) }
         : isSet(object.error)
         ? { $case: "error", error: SdkError.fromJSON(object.error) }
+        : isSet(object.transactionHash)
+        ? { $case: "transactionHash", transactionHash: Buffer.from(bytesFromBase64(object.transactionHash)) }
+        : isSet(object.transaction_hash)
+        ? { $case: "transactionHash", transactionHash: Buffer.from(bytesFromBase64(object.transaction_hash)) }
         : undefined,
     };
   },
@@ -3887,6 +3926,8 @@ export const SignerReply: MessageFns<SignerReply> = {
       obj.signature = base64FromBytes(message.result.signature);
     } else if (message.result?.$case === "error") {
       obj.error = SdkError.toJSON(message.result.error);
+    } else if (message.result?.$case === "transactionHash") {
+      obj.transactionHash = base64FromBytes(message.result.transactionHash);
     }
     return obj;
   },
@@ -3908,6 +3949,12 @@ export const SignerReply: MessageFns<SignerReply> = {
       case "error": {
         if (object.result?.error !== undefined && object.result?.error !== null) {
           message.result = { $case: "error", error: SdkError.fromPartial(object.result.error) };
+        }
+        break;
+      }
+      case "transactionHash": {
+        if (object.result?.transactionHash !== undefined && object.result?.transactionHash !== null) {
+          message.result = { $case: "transactionHash", transactionHash: object.result.transactionHash };
         }
         break;
       }
@@ -4009,7 +4056,7 @@ export const SignerClientMessage: MessageFns<SignerClientMessage> = {
 };
 
 function createBaseSignerAction(): SignerAction {
-  return { operationId: "", actionId: "", account: undefined, typedDataJson: "" };
+  return { operationId: "", actionId: "", account: undefined, request: undefined };
 }
 
 export const SignerAction: MessageFns<SignerAction> = {
@@ -4023,8 +4070,13 @@ export const SignerAction: MessageFns<SignerAction> = {
     if (message.account !== undefined) {
       WalletAccount.encode(message.account, writer.uint32(26).fork()).join();
     }
-    if (message.typedDataJson !== "") {
-      writer.uint32(34).string(message.typedDataJson);
+    switch (message.request?.$case) {
+      case "typedDataJson":
+        writer.uint32(34).string(message.request.typedDataJson);
+        break;
+      case "contractWrite":
+        ContractWriteRequest.encode(message.request.contractWrite, writer.uint32(1122).fork()).join();
+        break;
     }
     return writer;
   },
@@ -4065,7 +4117,18 @@ export const SignerAction: MessageFns<SignerAction> = {
             break;
           }
 
-          message.typedDataJson = reader.string();
+          message.request = { $case: "typedDataJson", typedDataJson: reader.string() };
+          continue;
+        }
+        case 140: {
+          if (tag !== 1122) {
+            break;
+          }
+
+          message.request = {
+            $case: "contractWrite",
+            contractWrite: ContractWriteRequest.decode(reader, reader.uint32()),
+          };
           continue;
         }
       }
@@ -4090,11 +4153,15 @@ export const SignerAction: MessageFns<SignerAction> = {
         ? globalThis.String(object.action_id)
         : "",
       account: isSet(object.account) ? WalletAccount.fromJSON(object.account) : undefined,
-      typedDataJson: isSet(object.typedDataJson)
-        ? globalThis.String(object.typedDataJson)
+      request: isSet(object.typedDataJson)
+        ? { $case: "typedDataJson", typedDataJson: globalThis.String(object.typedDataJson) }
         : isSet(object.typed_data_json)
-        ? globalThis.String(object.typed_data_json)
-        : "",
+        ? { $case: "typedDataJson", typedDataJson: globalThis.String(object.typed_data_json) }
+        : isSet(object.contractWrite)
+        ? { $case: "contractWrite", contractWrite: ContractWriteRequest.fromJSON(object.contractWrite) }
+        : isSet(object.contract_write)
+        ? { $case: "contractWrite", contractWrite: ContractWriteRequest.fromJSON(object.contract_write) }
+        : undefined,
     };
   },
 
@@ -4109,8 +4176,10 @@ export const SignerAction: MessageFns<SignerAction> = {
     if (message.account !== undefined) {
       obj.account = WalletAccount.toJSON(message.account);
     }
-    if (message.typedDataJson !== "") {
-      obj.typedDataJson = message.typedDataJson;
+    if (message.request?.$case === "typedDataJson") {
+      obj.typedDataJson = message.request.typedDataJson;
+    } else if (message.request?.$case === "contractWrite") {
+      obj.contractWrite = ContractWriteRequest.toJSON(message.request.contractWrite);
     }
     return obj;
   },
@@ -4125,7 +4194,199 @@ export const SignerAction: MessageFns<SignerAction> = {
     message.account = (object.account !== undefined && object.account !== null)
       ? WalletAccount.fromPartial(object.account)
       : undefined;
-    message.typedDataJson = object.typedDataJson ?? "";
+    switch (object.request?.$case) {
+      case "typedDataJson": {
+        if (object.request?.typedDataJson !== undefined && object.request?.typedDataJson !== null) {
+          message.request = { $case: "typedDataJson", typedDataJson: object.request.typedDataJson };
+        }
+        break;
+      }
+      case "contractWrite": {
+        if (object.request?.contractWrite !== undefined && object.request?.contractWrite !== null) {
+          message.request = {
+            $case: "contractWrite",
+            contractWrite: ContractWriteRequest.fromPartial(object.request.contractWrite),
+          };
+        }
+        break;
+      }
+    }
+    return message;
+  },
+};
+
+function createBaseContractWriteRequest(): ContractWriteRequest {
+  return {
+    address: Buffer.alloc(0),
+    data: Buffer.alloc(0),
+    abiJson: "",
+    functionName: "",
+    argsJson: "",
+    value: undefined,
+    gas: undefined,
+  };
+}
+
+export const ContractWriteRequest: MessageFns<ContractWriteRequest> = {
+  encode(message: ContractWriteRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.address.length !== 0) {
+      writer.uint32(10).bytes(message.address);
+    }
+    if (message.data.length !== 0) {
+      writer.uint32(18).bytes(message.data);
+    }
+    if (message.abiJson !== "") {
+      writer.uint32(26).string(message.abiJson);
+    }
+    if (message.functionName !== "") {
+      writer.uint32(34).string(message.functionName);
+    }
+    if (message.argsJson !== "") {
+      writer.uint32(42).string(message.argsJson);
+    }
+    if (message.value !== undefined) {
+      writer.uint32(50).string(message.value);
+    }
+    if (message.gas !== undefined) {
+      writer.uint32(58).string(message.gas);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ContractWriteRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseContractWriteRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.address = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.data = Buffer.from(reader.bytes());
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.abiJson = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.functionName = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.argsJson = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.gas = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ContractWriteRequest {
+    return {
+      address: isSet(object.address) ? Buffer.from(bytesFromBase64(object.address)) : Buffer.alloc(0),
+      data: isSet(object.data) ? Buffer.from(bytesFromBase64(object.data)) : Buffer.alloc(0),
+      abiJson: isSet(object.abiJson)
+        ? globalThis.String(object.abiJson)
+        : isSet(object.abi_json)
+        ? globalThis.String(object.abi_json)
+        : "",
+      functionName: isSet(object.functionName)
+        ? globalThis.String(object.functionName)
+        : isSet(object.function_name)
+        ? globalThis.String(object.function_name)
+        : "",
+      argsJson: isSet(object.argsJson)
+        ? globalThis.String(object.argsJson)
+        : isSet(object.args_json)
+        ? globalThis.String(object.args_json)
+        : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : undefined,
+      gas: isSet(object.gas) ? globalThis.String(object.gas) : undefined,
+    };
+  },
+
+  toJSON(message: ContractWriteRequest): unknown {
+    const obj: any = {};
+    if (message.address.length !== 0) {
+      obj.address = base64FromBytes(message.address);
+    }
+    if (message.data.length !== 0) {
+      obj.data = base64FromBytes(message.data);
+    }
+    if (message.abiJson !== "") {
+      obj.abiJson = message.abiJson;
+    }
+    if (message.functionName !== "") {
+      obj.functionName = message.functionName;
+    }
+    if (message.argsJson !== "") {
+      obj.argsJson = message.argsJson;
+    }
+    if (message.value !== undefined) {
+      obj.value = message.value;
+    }
+    if (message.gas !== undefined) {
+      obj.gas = message.gas;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ContractWriteRequest>): ContractWriteRequest {
+    return ContractWriteRequest.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ContractWriteRequest>): ContractWriteRequest {
+    const message = createBaseContractWriteRequest();
+    message.address = object.address ?? Buffer.alloc(0);
+    message.data = object.data ?? Buffer.alloc(0);
+    message.abiJson = object.abiJson ?? "";
+    message.functionName = object.functionName ?? "";
+    message.argsJson = object.argsJson ?? "";
+    message.value = object.value ?? undefined;
+    message.gas = object.gas ?? undefined;
     return message;
   },
 };

@@ -69,7 +69,7 @@ func (c *Client) CreateContext(ctx context.Context, config SDKConfig, signer Sig
 	var trailers metadata.MD
 	response, err := c.rpc.CreateContext(ctx, &pb.CreateContextRequest{
 		Config: serialized, TransportKeyPairDerivationSecret: wireDerivationSecret(config.TransportKeyPairDerivationSecret),
-		SignerEnabled: signer.SignTypedData != nil, Account: accountWire(signer.Account), Storage: storage, PermitStorage: permits,
+		SignerEnabled: signer.enabled(), Account: accountWire(signer.Account), Storage: storage, PermitStorage: permits,
 	}, grpc.Trailer(&trailers))
 	if err != nil {
 		return nil, rpcError(err, trailers)
@@ -91,8 +91,8 @@ func (c *Client) CreateContext(ctx context.Context, config SDKConfig, signer Sig
 			return nil, err
 		}
 	}
-	if signer.SignTypedData != nil {
-		if err := sdk.AttachSigner(ctx, signer.SignTypedData); err != nil {
+	if signer.enabled() {
+		if err := sdk.AttachWallet(ctx, signer); err != nil {
 			return nil, err
 		}
 	}

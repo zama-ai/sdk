@@ -2114,6 +2114,7 @@ type SignerReply struct {
 	//
 	//	*SignerReply_Signature
 	//	*SignerReply_Error
+	//	*SignerReply_TransactionHash
 	Result        isSignerReply_Result `protobuf_oneof:"result"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2188,6 +2189,15 @@ func (x *SignerReply) GetError() *SdkError {
 	return nil
 }
 
+func (x *SignerReply) GetTransactionHash() []byte {
+	if x != nil {
+		if x, ok := x.Result.(*SignerReply_TransactionHash); ok {
+			return x.TransactionHash
+		}
+	}
+	return nil
+}
+
 type isSignerReply_Result interface {
 	isSignerReply_Result()
 }
@@ -2200,9 +2210,16 @@ type SignerReply_Error struct {
 	Error *SdkError `protobuf:"bytes,4,opt,name=error,proto3,oneof"`
 }
 
+type SignerReply_TransactionHash struct {
+	// 32-byte hash of the broadcast transaction; fields 140–159 are allocated to transactions.
+	TransactionHash []byte `protobuf:"bytes,140,opt,name=transaction_hash,json=transactionHash,proto3,oneof"`
+}
+
 func (*SignerReply_Signature) isSignerReply_Result() {}
 
 func (*SignerReply_Error) isSignerReply_Result() {}
+
+func (*SignerReply_TransactionHash) isSignerReply_Result() {}
 
 type SignerClientMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -2287,11 +2304,17 @@ func (*SignerClientMessage_Attach) isSignerClientMessage_Message() {}
 func (*SignerClientMessage_Reply) isSignerClientMessage_Message() {}
 
 type SignerAction struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	OperationId   string                 `protobuf:"bytes,1,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
-	ActionId      string                 `protobuf:"bytes,2,opt,name=action_id,json=actionId,proto3" json:"action_id,omitempty"`
-	Account       *WalletAccount         `protobuf:"bytes,3,opt,name=account,proto3" json:"account,omitempty"`
-	TypedDataJson string                 `protobuf:"bytes,4,opt,name=typed_data_json,json=typedDataJson,proto3" json:"typed_data_json,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	OperationId string                 `protobuf:"bytes,1,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
+	ActionId    string                 `protobuf:"bytes,2,opt,name=action_id,json=actionId,proto3" json:"action_id,omitempty"`
+	Account     *WalletAccount         `protobuf:"bytes,3,opt,name=account,proto3" json:"account,omitempty"`
+	// typed_data_json keeps its original field number; the union prevents a mixed request.
+	//
+	// Types that are valid to be assigned to Request:
+	//
+	//	*SignerAction_TypedDataJson
+	//	*SignerAction_ContractWrite
+	Request       isSignerAction_Request `protobuf_oneof:"request"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2347,9 +2370,139 @@ func (x *SignerAction) GetAccount() *WalletAccount {
 	return nil
 }
 
+func (x *SignerAction) GetRequest() isSignerAction_Request {
+	if x != nil {
+		return x.Request
+	}
+	return nil
+}
+
 func (x *SignerAction) GetTypedDataJson() string {
 	if x != nil {
-		return x.TypedDataJson
+		if x, ok := x.Request.(*SignerAction_TypedDataJson); ok {
+			return x.TypedDataJson
+		}
+	}
+	return ""
+}
+
+func (x *SignerAction) GetContractWrite() *ContractWriteRequest {
+	if x != nil {
+		if x, ok := x.Request.(*SignerAction_ContractWrite); ok {
+			return x.ContractWrite
+		}
+	}
+	return nil
+}
+
+type isSignerAction_Request interface {
+	isSignerAction_Request()
+}
+
+type SignerAction_TypedDataJson struct {
+	TypedDataJson string `protobuf:"bytes,4,opt,name=typed_data_json,json=typedDataJson,proto3,oneof"`
+}
+
+type SignerAction_ContractWrite struct {
+	ContractWrite *ContractWriteRequest `protobuf:"bytes,140,opt,name=contract_write,json=contractWrite,proto3,oneof"`
+}
+
+func (*SignerAction_TypedDataJson) isSignerAction_Request() {}
+
+func (*SignerAction_ContractWrite) isSignerAction_Request() {}
+
+// Mirrors GenericSigner.writeContract; the SDK encodes data once and native wallets broadcast it unchanged.
+type ContractWriteRequest struct {
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Address      []byte                 `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	Data         []byte                 `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	AbiJson      string                 `protobuf:"bytes,3,opt,name=abi_json,json=abiJson,proto3" json:"abi_json,omitempty"`
+	FunctionName string                 `protobuf:"bytes,4,opt,name=function_name,json=functionName,proto3" json:"function_name,omitempty"`
+	// Bigint arguments are base-10 strings interpreted through the ABI.
+	ArgsJson string `protobuf:"bytes,5,opt,name=args_json,json=argsJson,proto3" json:"args_json,omitempty"`
+	// Base-10 wei; omission keeps the SDK/wallet default, "0" is explicit.
+	Value *string `protobuf:"bytes,6,opt,name=value,proto3,oneof" json:"value,omitempty"`
+	// Base-10 gas limit; omission lets the wallet estimate.
+	Gas           *string `protobuf:"bytes,7,opt,name=gas,proto3,oneof" json:"gas,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ContractWriteRequest) Reset() {
+	*x = ContractWriteRequest{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ContractWriteRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ContractWriteRequest) ProtoMessage() {}
+
+func (x *ContractWriteRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ContractWriteRequest.ProtoReflect.Descriptor instead.
+func (*ContractWriteRequest) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *ContractWriteRequest) GetAddress() []byte {
+	if x != nil {
+		return x.Address
+	}
+	return nil
+}
+
+func (x *ContractWriteRequest) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+func (x *ContractWriteRequest) GetAbiJson() string {
+	if x != nil {
+		return x.AbiJson
+	}
+	return ""
+}
+
+func (x *ContractWriteRequest) GetFunctionName() string {
+	if x != nil {
+		return x.FunctionName
+	}
+	return ""
+}
+
+func (x *ContractWriteRequest) GetArgsJson() string {
+	if x != nil {
+		return x.ArgsJson
+	}
+	return ""
+}
+
+func (x *ContractWriteRequest) GetValue() string {
+	if x != nil && x.Value != nil {
+		return *x.Value
+	}
+	return ""
+}
+
+func (x *ContractWriteRequest) GetGas() string {
+	if x != nil && x.Gas != nil {
+		return *x.Gas
 	}
 	return ""
 }
@@ -2365,7 +2518,7 @@ type SignerReplyError struct {
 
 func (x *SignerReplyError) Reset() {
 	*x = SignerReplyError{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[35]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2377,7 +2530,7 @@ func (x *SignerReplyError) String() string {
 func (*SignerReplyError) ProtoMessage() {}
 
 func (x *SignerReplyError) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[35]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2390,7 +2543,7 @@ func (x *SignerReplyError) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SignerReplyError.ProtoReflect.Descriptor instead.
 func (*SignerReplyError) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{35}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *SignerReplyError) GetOperationId() string {
@@ -2424,7 +2577,7 @@ type SignerActionCancelled struct {
 
 func (x *SignerActionCancelled) Reset() {
 	*x = SignerActionCancelled{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[36]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2436,7 +2589,7 @@ func (x *SignerActionCancelled) String() string {
 func (*SignerActionCancelled) ProtoMessage() {}
 
 func (x *SignerActionCancelled) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[36]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2449,7 +2602,7 @@ func (x *SignerActionCancelled) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SignerActionCancelled.ProtoReflect.Descriptor instead.
 func (*SignerActionCancelled) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{36}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *SignerActionCancelled) GetOperationId() string {
@@ -2481,7 +2634,7 @@ type SignerServerMessage struct {
 
 func (x *SignerServerMessage) Reset() {
 	*x = SignerServerMessage{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[37]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2493,7 +2646,7 @@ func (x *SignerServerMessage) String() string {
 func (*SignerServerMessage) ProtoMessage() {}
 
 func (x *SignerServerMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[37]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2506,7 +2659,7 @@ func (x *SignerServerMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SignerServerMessage.ProtoReflect.Descriptor instead.
 func (*SignerServerMessage) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{37}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *SignerServerMessage) GetMessage() isSignerServerMessage_Message {
@@ -2594,7 +2747,7 @@ type StorageBinding struct {
 
 func (x *StorageBinding) Reset() {
 	*x = StorageBinding{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[38]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2606,7 +2759,7 @@ func (x *StorageBinding) String() string {
 func (*StorageBinding) ProtoMessage() {}
 
 func (x *StorageBinding) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[38]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2619,7 +2772,7 @@ func (x *StorageBinding) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StorageBinding.ProtoReflect.Descriptor instead.
 func (*StorageBinding) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{38}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *StorageBinding) GetBackend() isStorageBinding_Backend {
@@ -2691,7 +2844,7 @@ type StorageAction struct {
 
 func (x *StorageAction) Reset() {
 	*x = StorageAction{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[39]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2703,7 +2856,7 @@ func (x *StorageAction) String() string {
 func (*StorageAction) ProtoMessage() {}
 
 func (x *StorageAction) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[39]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2716,7 +2869,7 @@ func (x *StorageAction) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StorageAction.ProtoReflect.Descriptor instead.
 func (*StorageAction) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{39}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *StorageAction) GetRequestId() string {
@@ -2772,7 +2925,7 @@ type StorageReply struct {
 
 func (x *StorageReply) Reset() {
 	*x = StorageReply{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[40]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2784,7 +2937,7 @@ func (x *StorageReply) String() string {
 func (*StorageReply) ProtoMessage() {}
 
 func (x *StorageReply) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[40]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2797,7 +2950,7 @@ func (x *StorageReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StorageReply.ProtoReflect.Descriptor instead.
 func (*StorageReply) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{40}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *StorageReply) GetRequestId() string {
@@ -2891,7 +3044,7 @@ type StorageClientMessage struct {
 
 func (x *StorageClientMessage) Reset() {
 	*x = StorageClientMessage{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[41]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2903,7 +3056,7 @@ func (x *StorageClientMessage) String() string {
 func (*StorageClientMessage) ProtoMessage() {}
 
 func (x *StorageClientMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[41]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2916,7 +3069,7 @@ func (x *StorageClientMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StorageClientMessage.ProtoReflect.Descriptor instead.
 func (*StorageClientMessage) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{41}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *StorageClientMessage) GetMessage() isStorageClientMessage_Message {
@@ -2970,7 +3123,7 @@ type StorageReplyError struct {
 
 func (x *StorageReplyError) Reset() {
 	*x = StorageReplyError{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[42]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2982,7 +3135,7 @@ func (x *StorageReplyError) String() string {
 func (*StorageReplyError) ProtoMessage() {}
 
 func (x *StorageReplyError) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[42]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2995,7 +3148,7 @@ func (x *StorageReplyError) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StorageReplyError.ProtoReflect.Descriptor instead.
 func (*StorageReplyError) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{42}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *StorageReplyError) GetRequestId() string {
@@ -3026,7 +3179,7 @@ type StorageServerMessage struct {
 
 func (x *StorageServerMessage) Reset() {
 	*x = StorageServerMessage{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[43]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3038,7 +3191,7 @@ func (x *StorageServerMessage) String() string {
 func (*StorageServerMessage) ProtoMessage() {}
 
 func (x *StorageServerMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[43]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3051,7 +3204,7 @@ func (x *StorageServerMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StorageServerMessage.ProtoReflect.Descriptor instead.
 func (*StorageServerMessage) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{43}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *StorageServerMessage) GetMessage() isStorageServerMessage_Message {
@@ -3118,7 +3271,7 @@ type CloseContextResponse struct {
 
 func (x *CloseContextResponse) Reset() {
 	*x = CloseContextResponse{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[44]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3130,7 +3283,7 @@ func (x *CloseContextResponse) String() string {
 func (*CloseContextResponse) ProtoMessage() {}
 
 func (x *CloseContextResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[44]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3143,7 +3296,7 @@ func (x *CloseContextResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseContextResponse.ProtoReflect.Descriptor instead.
 func (*CloseContextResponse) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{44}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{45}
 }
 
 type UpdateAccountResponse struct {
@@ -3154,7 +3307,7 @@ type UpdateAccountResponse struct {
 
 func (x *UpdateAccountResponse) Reset() {
 	*x = UpdateAccountResponse{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[45]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3166,7 +3319,7 @@ func (x *UpdateAccountResponse) String() string {
 func (*UpdateAccountResponse) ProtoMessage() {}
 
 func (x *UpdateAccountResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[45]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3179,7 +3332,7 @@ func (x *UpdateAccountResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAccountResponse.ProtoReflect.Descriptor instead.
 func (*UpdateAccountResponse) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{45}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{46}
 }
 
 type RegisterPermitResponse struct {
@@ -3190,7 +3343,7 @@ type RegisterPermitResponse struct {
 
 func (x *RegisterPermitResponse) Reset() {
 	*x = RegisterPermitResponse{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[46]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3202,7 +3355,7 @@ func (x *RegisterPermitResponse) String() string {
 func (*RegisterPermitResponse) ProtoMessage() {}
 
 func (x *RegisterPermitResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[46]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3215,7 +3368,7 @@ func (x *RegisterPermitResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterPermitResponse.ProtoReflect.Descriptor instead.
 func (*RegisterPermitResponse) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{46}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{47}
 }
 
 type GrantPermitResponse struct {
@@ -3226,7 +3379,7 @@ type GrantPermitResponse struct {
 
 func (x *GrantPermitResponse) Reset() {
 	*x = GrantPermitResponse{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[47]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3238,7 +3391,7 @@ func (x *GrantPermitResponse) String() string {
 func (*GrantPermitResponse) ProtoMessage() {}
 
 func (x *GrantPermitResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[47]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3251,7 +3404,7 @@ func (x *GrantPermitResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GrantPermitResponse.ProtoReflect.Descriptor instead.
 func (*GrantPermitResponse) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{47}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{48}
 }
 
 type GrantDelegationPermitResponse struct {
@@ -3262,7 +3415,7 @@ type GrantDelegationPermitResponse struct {
 
 func (x *GrantDelegationPermitResponse) Reset() {
 	*x = GrantDelegationPermitResponse{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[48]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3274,7 +3427,7 @@ func (x *GrantDelegationPermitResponse) String() string {
 func (*GrantDelegationPermitResponse) ProtoMessage() {}
 
 func (x *GrantDelegationPermitResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[48]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3287,7 +3440,7 @@ func (x *GrantDelegationPermitResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GrantDelegationPermitResponse.ProtoReflect.Descriptor instead.
 func (*GrantDelegationPermitResponse) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{48}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{49}
 }
 
 type RevokePermitsResponse struct {
@@ -3298,7 +3451,7 @@ type RevokePermitsResponse struct {
 
 func (x *RevokePermitsResponse) Reset() {
 	*x = RevokePermitsResponse{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[49]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3310,7 +3463,7 @@ func (x *RevokePermitsResponse) String() string {
 func (*RevokePermitsResponse) ProtoMessage() {}
 
 func (x *RevokePermitsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[49]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3323,7 +3476,7 @@ func (x *RevokePermitsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokePermitsResponse.ProtoReflect.Descriptor instead.
 func (*RevokePermitsResponse) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{49}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{50}
 }
 
 type ClearPermitsResponse struct {
@@ -3334,7 +3487,7 @@ type ClearPermitsResponse struct {
 
 func (x *ClearPermitsResponse) Reset() {
 	*x = ClearPermitsResponse{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[50]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3346,7 +3499,7 @@ func (x *ClearPermitsResponse) String() string {
 func (*ClearPermitsResponse) ProtoMessage() {}
 
 func (x *ClearPermitsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[50]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3359,7 +3512,7 @@ func (x *ClearPermitsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClearPermitsResponse.ProtoReflect.Descriptor instead.
 func (*ClearPermitsResponse) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{50}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{51}
 }
 
 type WarmTransportKeyPairResponse struct {
@@ -3370,7 +3523,7 @@ type WarmTransportKeyPairResponse struct {
 
 func (x *WarmTransportKeyPairResponse) Reset() {
 	*x = WarmTransportKeyPairResponse{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[51]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3382,7 +3535,7 @@ func (x *WarmTransportKeyPairResponse) String() string {
 func (*WarmTransportKeyPairResponse) ProtoMessage() {}
 
 func (x *WarmTransportKeyPairResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[51]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3395,7 +3548,7 @@ func (x *WarmTransportKeyPairResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WarmTransportKeyPairResponse.ProtoReflect.Descriptor instead.
 func (*WarmTransportKeyPairResponse) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{51}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{52}
 }
 
 type WarmTransportKeyPairScopeResponse struct {
@@ -3406,7 +3559,7 @@ type WarmTransportKeyPairScopeResponse struct {
 
 func (x *WarmTransportKeyPairScopeResponse) Reset() {
 	*x = WarmTransportKeyPairScopeResponse{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[52]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3418,7 +3571,7 @@ func (x *WarmTransportKeyPairScopeResponse) String() string {
 func (*WarmTransportKeyPairScopeResponse) ProtoMessage() {}
 
 func (x *WarmTransportKeyPairScopeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[52]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3431,7 +3584,7 @@ func (x *WarmTransportKeyPairScopeResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use WarmTransportKeyPairScopeResponse.ProtoReflect.Descriptor instead.
 func (*WarmTransportKeyPairScopeResponse) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{52}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{53}
 }
 
 type RevokeTransportKeyPairResponse struct {
@@ -3442,7 +3595,7 @@ type RevokeTransportKeyPairResponse struct {
 
 func (x *RevokeTransportKeyPairResponse) Reset() {
 	*x = RevokeTransportKeyPairResponse{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[53]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3454,7 +3607,7 @@ func (x *RevokeTransportKeyPairResponse) String() string {
 func (*RevokeTransportKeyPairResponse) ProtoMessage() {}
 
 func (x *RevokeTransportKeyPairResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[53]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3467,7 +3620,7 @@ func (x *RevokeTransportKeyPairResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeTransportKeyPairResponse.ProtoReflect.Descriptor instead.
 func (*RevokeTransportKeyPairResponse) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{53}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{54}
 }
 
 type DelegatedDecryptValuesResponse struct {
@@ -3479,7 +3632,7 @@ type DelegatedDecryptValuesResponse struct {
 
 func (x *DelegatedDecryptValuesResponse) Reset() {
 	*x = DelegatedDecryptValuesResponse{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[54]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3491,7 +3644,7 @@ func (x *DelegatedDecryptValuesResponse) String() string {
 func (*DelegatedDecryptValuesResponse) ProtoMessage() {}
 
 func (x *DelegatedDecryptValuesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[54]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3504,7 +3657,7 @@ func (x *DelegatedDecryptValuesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DelegatedDecryptValuesResponse.ProtoReflect.Descriptor instead.
 func (*DelegatedDecryptValuesResponse) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{54}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *DelegatedDecryptValuesResponse) GetValues() []*ClearEntry {
@@ -3523,7 +3676,7 @@ type HasDelegationPermitResponse struct {
 
 func (x *HasDelegationPermitResponse) Reset() {
 	*x = HasDelegationPermitResponse{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[55]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3535,7 +3688,7 @@ func (x *HasDelegationPermitResponse) String() string {
 func (*HasDelegationPermitResponse) ProtoMessage() {}
 
 func (x *HasDelegationPermitResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[55]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3548,7 +3701,7 @@ func (x *HasDelegationPermitResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HasDelegationPermitResponse.ProtoReflect.Descriptor instead.
 func (*HasDelegationPermitResponse) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{55}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *HasDelegationPermitResponse) GetHasPermit() bool {
@@ -3580,7 +3733,7 @@ type ContextConfig struct {
 
 func (x *ContextConfig) Reset() {
 	*x = ContextConfig{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[56]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3592,7 +3745,7 @@ func (x *ContextConfig) String() string {
 func (*ContextConfig) ProtoMessage() {}
 
 func (x *ContextConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[56]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3605,7 +3758,7 @@ func (x *ContextConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContextConfig.ProtoReflect.Descriptor instead.
 func (*ContextConfig) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{56}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *ContextConfig) GetChains() []*ChainConfig {
@@ -3689,7 +3842,7 @@ type ChainConfig struct {
 
 func (x *ChainConfig) Reset() {
 	*x = ChainConfig{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[57]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3701,7 +3854,7 @@ func (x *ChainConfig) String() string {
 func (*ChainConfig) ProtoMessage() {}
 
 func (x *ChainConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[57]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3714,7 +3867,7 @@ func (x *ChainConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChainConfig.ProtoReflect.Descriptor instead.
 func (*ChainConfig) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{57}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *ChainConfig) GetId() uint64 {
@@ -3822,7 +3975,7 @@ type ChainAuth struct {
 
 func (x *ChainAuth) Reset() {
 	*x = ChainAuth{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[58]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3834,7 +3987,7 @@ func (x *ChainAuth) String() string {
 func (*ChainAuth) ProtoMessage() {}
 
 func (x *ChainAuth) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[58]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3847,7 +4000,7 @@ func (x *ChainAuth) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChainAuth.ProtoReflect.Descriptor instead.
 func (*ChainAuth) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{58}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *ChainAuth) GetCredential() isChainAuth_Credential {
@@ -3917,7 +4070,7 @@ type NamedCredential struct {
 
 func (x *NamedCredential) Reset() {
 	*x = NamedCredential{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[59]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3929,7 +4082,7 @@ func (x *NamedCredential) String() string {
 func (*NamedCredential) ProtoMessage() {}
 
 func (x *NamedCredential) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[59]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3942,7 +4095,7 @@ func (x *NamedCredential) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NamedCredential.ProtoReflect.Descriptor instead.
 func (*NamedCredential) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{59}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *NamedCredential) GetName() string {
@@ -3973,7 +4126,7 @@ type ProcessRuntimeConfig struct {
 
 func (x *ProcessRuntimeConfig) Reset() {
 	*x = ProcessRuntimeConfig{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[60]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3985,7 +4138,7 @@ func (x *ProcessRuntimeConfig) String() string {
 func (*ProcessRuntimeConfig) ProtoMessage() {}
 
 func (x *ProcessRuntimeConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[60]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3998,7 +4151,7 @@ func (x *ProcessRuntimeConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProcessRuntimeConfig.ProtoReflect.Descriptor instead.
 func (*ProcessRuntimeConfig) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{60}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *ProcessRuntimeConfig) GetWasmAssetLoadMode() string {
@@ -4049,7 +4202,7 @@ type ModuleVersions struct {
 
 func (x *ModuleVersions) Reset() {
 	*x = ModuleVersions{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[61]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4061,7 +4214,7 @@ func (x *ModuleVersions) String() string {
 func (*ModuleVersions) ProtoMessage() {}
 
 func (x *ModuleVersions) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[61]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4074,7 +4227,7 @@ func (x *ModuleVersions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ModuleVersions.ProtoReflect.Descriptor instead.
 func (*ModuleVersions) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{61}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *ModuleVersions) GetSelection() isModuleVersions_Selection {
@@ -4129,7 +4282,7 @@ type PinnedModuleVersions struct {
 
 func (x *PinnedModuleVersions) Reset() {
 	*x = PinnedModuleVersions{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[62]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4141,7 +4294,7 @@ func (x *PinnedModuleVersions) String() string {
 func (*PinnedModuleVersions) ProtoMessage() {}
 
 func (x *PinnedModuleVersions) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[62]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4154,7 +4307,7 @@ func (x *PinnedModuleVersions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PinnedModuleVersions.ProtoReflect.Descriptor instead.
 func (*PinnedModuleVersions) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{62}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *PinnedModuleVersions) GetTfhe() string {
@@ -4188,7 +4341,7 @@ type RelayerMap struct {
 
 func (x *RelayerMap) Reset() {
 	*x = RelayerMap{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[63]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4200,7 +4353,7 @@ func (x *RelayerMap) String() string {
 func (*RelayerMap) ProtoMessage() {}
 
 func (x *RelayerMap) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[63]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4213,7 +4366,7 @@ func (x *RelayerMap) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RelayerMap.ProtoReflect.Descriptor instead.
 func (*RelayerMap) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{63}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *RelayerMap) GetEntries() map[uint64]*RelayerConfig {
@@ -4233,7 +4386,7 @@ type RelayerConfig struct {
 
 func (x *RelayerConfig) Reset() {
 	*x = RelayerConfig{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[64]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4245,7 +4398,7 @@ func (x *RelayerConfig) String() string {
 func (*RelayerConfig) ProtoMessage() {}
 
 func (x *RelayerConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[64]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4258,7 +4411,7 @@ func (x *RelayerConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RelayerConfig.ProtoReflect.Descriptor instead.
 func (*RelayerConfig) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{64}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *RelayerConfig) GetTransport() RelayerTransport {
@@ -4289,7 +4442,7 @@ type RelayerOptions struct {
 
 func (x *RelayerOptions) Reset() {
 	*x = RelayerOptions{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[65]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4301,7 +4454,7 @@ func (x *RelayerOptions) String() string {
 func (*RelayerOptions) ProtoMessage() {}
 
 func (x *RelayerOptions) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[65]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4314,7 +4467,7 @@ func (x *RelayerOptions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RelayerOptions.ProtoReflect.Descriptor instead.
 func (*RelayerOptions) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{65}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *RelayerOptions) GetTimeout() uint32 {
@@ -4363,7 +4516,7 @@ type FheEncryptionKey struct {
 
 func (x *FheEncryptionKey) Reset() {
 	*x = FheEncryptionKey{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[66]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4375,7 +4528,7 @@ func (x *FheEncryptionKey) String() string {
 func (*FheEncryptionKey) ProtoMessage() {}
 
 func (x *FheEncryptionKey) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[66]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4388,7 +4541,7 @@ func (x *FheEncryptionKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FheEncryptionKey.ProtoReflect.Descriptor instead.
 func (*FheEncryptionKey) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{66}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *FheEncryptionKey) GetPublicKeyBytes() *FhePublicKeyBytes {
@@ -4422,7 +4575,7 @@ type FhePublicKeyBytes struct {
 
 func (x *FhePublicKeyBytes) Reset() {
 	*x = FhePublicKeyBytes{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[67]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4434,7 +4587,7 @@ func (x *FhePublicKeyBytes) String() string {
 func (*FhePublicKeyBytes) ProtoMessage() {}
 
 func (x *FhePublicKeyBytes) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[67]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4447,7 +4600,7 @@ func (x *FhePublicKeyBytes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FhePublicKeyBytes.ProtoReflect.Descriptor instead.
 func (*FhePublicKeyBytes) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{67}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *FhePublicKeyBytes) GetId() string {
@@ -4475,7 +4628,7 @@ type FheCrsBytes struct {
 
 func (x *FheCrsBytes) Reset() {
 	*x = FheCrsBytes{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[68]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4487,7 +4640,7 @@ func (x *FheCrsBytes) String() string {
 func (*FheCrsBytes) ProtoMessage() {}
 
 func (x *FheCrsBytes) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[68]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4500,7 +4653,7 @@ func (x *FheCrsBytes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FheCrsBytes.ProtoReflect.Descriptor instead.
 func (*FheCrsBytes) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{68}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *FheCrsBytes) GetId() string {
@@ -4534,7 +4687,7 @@ type FheEncryptionKeyMetadata struct {
 
 func (x *FheEncryptionKeyMetadata) Reset() {
 	*x = FheEncryptionKeyMetadata{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[69]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4546,7 +4699,7 @@ func (x *FheEncryptionKeyMetadata) String() string {
 func (*FheEncryptionKeyMetadata) ProtoMessage() {}
 
 func (x *FheEncryptionKeyMetadata) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[69]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4559,7 +4712,7 @@ func (x *FheEncryptionKeyMetadata) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FheEncryptionKeyMetadata.ProtoReflect.Descriptor instead.
 func (*FheEncryptionKeyMetadata) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{69}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *FheEncryptionKeyMetadata) GetRelayerUrl() string {
@@ -4591,7 +4744,7 @@ type HttpProviderConfig struct {
 
 func (x *HttpProviderConfig) Reset() {
 	*x = HttpProviderConfig{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[70]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4603,7 +4756,7 @@ func (x *HttpProviderConfig) String() string {
 func (*HttpProviderConfig) ProtoMessage() {}
 
 func (x *HttpProviderConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[70]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4616,7 +4769,7 @@ func (x *HttpProviderConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HttpProviderConfig.ProtoReflect.Descriptor instead.
 func (*HttpProviderConfig) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{70}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *HttpProviderConfig) GetHeaders() *HttpHeaders {
@@ -4670,7 +4823,7 @@ type HttpHeaders struct {
 
 func (x *HttpHeaders) Reset() {
 	*x = HttpHeaders{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[71]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4682,7 +4835,7 @@ func (x *HttpHeaders) String() string {
 func (*HttpHeaders) ProtoMessage() {}
 
 func (x *HttpHeaders) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[71]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4695,7 +4848,7 @@ func (x *HttpHeaders) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HttpHeaders.ProtoReflect.Descriptor instead.
 func (*HttpHeaders) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{71}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *HttpHeaders) GetEntries() map[string]string {
@@ -4718,7 +4871,7 @@ type ProviderBatch struct {
 
 func (x *ProviderBatch) Reset() {
 	*x = ProviderBatch{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[72]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4730,7 +4883,7 @@ func (x *ProviderBatch) String() string {
 func (*ProviderBatch) ProtoMessage() {}
 
 func (x *ProviderBatch) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[72]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4743,7 +4896,7 @@ func (x *ProviderBatch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProviderBatch.ProtoReflect.Descriptor instead.
 func (*ProviderBatch) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{72}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *ProviderBatch) GetSelection() isProviderBatch_Selection {
@@ -4798,7 +4951,7 @@ type ProviderBatchOptions struct {
 
 func (x *ProviderBatchOptions) Reset() {
 	*x = ProviderBatchOptions{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[73]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4810,7 +4963,7 @@ func (x *ProviderBatchOptions) String() string {
 func (*ProviderBatchOptions) ProtoMessage() {}
 
 func (x *ProviderBatchOptions) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[73]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4823,7 +4976,7 @@ func (x *ProviderBatchOptions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProviderBatchOptions.ProtoReflect.Descriptor instead.
 func (*ProviderBatchOptions) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{73}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *ProviderBatchOptions) GetBatchSize() uint32 {
@@ -4860,7 +5013,7 @@ type EncryptInput struct {
 
 func (x *EncryptInput) Reset() {
 	*x = EncryptInput{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[74]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4872,7 +5025,7 @@ func (x *EncryptInput) String() string {
 func (*EncryptInput) ProtoMessage() {}
 
 func (x *EncryptInput) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[74]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4885,7 +5038,7 @@ func (x *EncryptInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EncryptInput.ProtoReflect.Descriptor instead.
 func (*EncryptInput) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{74}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *EncryptInput) GetValue() isEncryptInput_Value {
@@ -5050,7 +5203,7 @@ type EncryptRequest struct {
 
 func (x *EncryptRequest) Reset() {
 	*x = EncryptRequest{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[75]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5062,7 +5215,7 @@ func (x *EncryptRequest) String() string {
 func (*EncryptRequest) ProtoMessage() {}
 
 func (x *EncryptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[75]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5075,7 +5228,7 @@ func (x *EncryptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EncryptRequest.ProtoReflect.Descriptor instead.
 func (*EncryptRequest) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{75}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *EncryptRequest) GetOperation() *Operation {
@@ -5123,7 +5276,7 @@ type EncryptResponse struct {
 
 func (x *EncryptResponse) Reset() {
 	*x = EncryptResponse{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[76]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5135,7 +5288,7 @@ func (x *EncryptResponse) String() string {
 func (*EncryptResponse) ProtoMessage() {}
 
 func (x *EncryptResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[76]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5148,7 +5301,7 @@ func (x *EncryptResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EncryptResponse.ProtoReflect.Descriptor instead.
 func (*EncryptResponse) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{76}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *EncryptResponse) GetEncryptedValues() [][]byte {
@@ -5192,7 +5345,7 @@ type PrepareTransactionRequest struct {
 
 func (x *PrepareTransactionRequest) Reset() {
 	*x = PrepareTransactionRequest{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[77]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5204,7 +5357,7 @@ func (x *PrepareTransactionRequest) String() string {
 func (*PrepareTransactionRequest) ProtoMessage() {}
 
 func (x *PrepareTransactionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[77]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5217,7 +5370,7 @@ func (x *PrepareTransactionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PrepareTransactionRequest.ProtoReflect.Descriptor instead.
 func (*PrepareTransactionRequest) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{77}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *PrepareTransactionRequest) GetOperation() *Operation {
@@ -5431,7 +5584,7 @@ type PrepareOptions struct {
 
 func (x *PrepareOptions) Reset() {
 	*x = PrepareOptions{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[78]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5443,7 +5596,7 @@ func (x *PrepareOptions) String() string {
 func (*PrepareOptions) ProtoMessage() {}
 
 func (x *PrepareOptions) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[78]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5456,7 +5609,7 @@ func (x *PrepareOptions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PrepareOptions.ProtoReflect.Descriptor instead.
 func (*PrepareOptions) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{78}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *PrepareOptions) GetNonce() uint64 {
@@ -5490,7 +5643,7 @@ type PrepareFees struct {
 
 func (x *PrepareFees) Reset() {
 	*x = PrepareFees{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[79]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5502,7 +5655,7 @@ func (x *PrepareFees) String() string {
 func (*PrepareFees) ProtoMessage() {}
 
 func (x *PrepareFees) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[79]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5515,7 +5668,7 @@ func (x *PrepareFees) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PrepareFees.ProtoReflect.Descriptor instead.
 func (*PrepareFees) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{79}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *PrepareFees) GetMaxFeePerGas() string {
@@ -5543,7 +5696,7 @@ type ConfidentialTransfer struct {
 
 func (x *ConfidentialTransfer) Reset() {
 	*x = ConfidentialTransfer{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[80]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5555,7 +5708,7 @@ func (x *ConfidentialTransfer) String() string {
 func (*ConfidentialTransfer) ProtoMessage() {}
 
 func (x *ConfidentialTransfer) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[80]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5568,7 +5721,7 @@ func (x *ConfidentialTransfer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfidentialTransfer.ProtoReflect.Descriptor instead.
 func (*ConfidentialTransfer) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{80}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *ConfidentialTransfer) GetToken() []byte {
@@ -5604,7 +5757,7 @@ type ConfidentialTransferFrom struct {
 
 func (x *ConfidentialTransferFrom) Reset() {
 	*x = ConfidentialTransferFrom{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[81]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5616,7 +5769,7 @@ func (x *ConfidentialTransferFrom) String() string {
 func (*ConfidentialTransferFrom) ProtoMessage() {}
 
 func (x *ConfidentialTransferFrom) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[81]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5629,7 +5782,7 @@ func (x *ConfidentialTransferFrom) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfidentialTransferFrom.ProtoReflect.Descriptor instead.
 func (*ConfidentialTransferFrom) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{81}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *ConfidentialTransferFrom) GetToken() []byte {
@@ -5672,7 +5825,7 @@ type SetOperator struct {
 
 func (x *SetOperator) Reset() {
 	*x = SetOperator{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[82]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5684,7 +5837,7 @@ func (x *SetOperator) String() string {
 func (*SetOperator) ProtoMessage() {}
 
 func (x *SetOperator) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[82]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5697,7 +5850,7 @@ func (x *SetOperator) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetOperator.ProtoReflect.Descriptor instead.
 func (*SetOperator) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{82}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *SetOperator) GetToken() []byte {
@@ -5732,7 +5885,7 @@ type Unwrap struct {
 
 func (x *Unwrap) Reset() {
 	*x = Unwrap{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[83]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5744,7 +5897,7 @@ func (x *Unwrap) String() string {
 func (*Unwrap) ProtoMessage() {}
 
 func (x *Unwrap) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[83]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5757,7 +5910,7 @@ func (x *Unwrap) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Unwrap.ProtoReflect.Descriptor instead.
 func (*Unwrap) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{83}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *Unwrap) GetToken() []byte {
@@ -5791,7 +5944,7 @@ type UnwrapAll struct {
 
 func (x *UnwrapAll) Reset() {
 	*x = UnwrapAll{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[84]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5803,7 +5956,7 @@ func (x *UnwrapAll) String() string {
 func (*UnwrapAll) ProtoMessage() {}
 
 func (x *UnwrapAll) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[84]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5816,7 +5969,7 @@ func (x *UnwrapAll) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnwrapAll.ProtoReflect.Descriptor instead.
 func (*UnwrapAll) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{84}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *UnwrapAll) GetToken() []byte {
@@ -5844,7 +5997,7 @@ type FinalizeUnwrap struct {
 
 func (x *FinalizeUnwrap) Reset() {
 	*x = FinalizeUnwrap{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[85]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5856,7 +6009,7 @@ func (x *FinalizeUnwrap) String() string {
 func (*FinalizeUnwrap) ProtoMessage() {}
 
 func (x *FinalizeUnwrap) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[85]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5869,7 +6022,7 @@ func (x *FinalizeUnwrap) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FinalizeUnwrap.ProtoReflect.Descriptor instead.
 func (*FinalizeUnwrap) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{85}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *FinalizeUnwrap) GetWrapper() []byte {
@@ -5897,7 +6050,7 @@ type ApproveUnderlying struct {
 
 func (x *ApproveUnderlying) Reset() {
 	*x = ApproveUnderlying{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[86]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5909,7 +6062,7 @@ func (x *ApproveUnderlying) String() string {
 func (*ApproveUnderlying) ProtoMessage() {}
 
 func (x *ApproveUnderlying) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[86]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5922,7 +6075,7 @@ func (x *ApproveUnderlying) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveUnderlying.ProtoReflect.Descriptor instead.
 func (*ApproveUnderlying) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{86}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *ApproveUnderlying) GetUnderlying() []byte {
@@ -5957,7 +6110,7 @@ type Wrap struct {
 
 func (x *Wrap) Reset() {
 	*x = Wrap{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[87]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[88]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5969,7 +6122,7 @@ func (x *Wrap) String() string {
 func (*Wrap) ProtoMessage() {}
 
 func (x *Wrap) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[87]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[88]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5982,7 +6135,7 @@ func (x *Wrap) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Wrap.ProtoReflect.Descriptor instead.
 func (*Wrap) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{87}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *Wrap) GetWrapper() []byte {
@@ -6019,7 +6172,7 @@ type TransferAndCall struct {
 
 func (x *TransferAndCall) Reset() {
 	*x = TransferAndCall{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[88]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[89]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6031,7 +6184,7 @@ func (x *TransferAndCall) String() string {
 func (*TransferAndCall) ProtoMessage() {}
 
 func (x *TransferAndCall) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[88]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[89]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6044,7 +6197,7 @@ func (x *TransferAndCall) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransferAndCall.ProtoReflect.Descriptor instead.
 func (*TransferAndCall) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{88}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *TransferAndCall) GetUnderlying() []byte {
@@ -6087,7 +6240,7 @@ type DelegateDecryption struct {
 
 func (x *DelegateDecryption) Reset() {
 	*x = DelegateDecryption{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[89]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6099,7 +6252,7 @@ func (x *DelegateDecryption) String() string {
 func (*DelegateDecryption) ProtoMessage() {}
 
 func (x *DelegateDecryption) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[89]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6112,7 +6265,7 @@ func (x *DelegateDecryption) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DelegateDecryption.ProtoReflect.Descriptor instead.
 func (*DelegateDecryption) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{89}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *DelegateDecryption) GetContractAddress() []byte {
@@ -6146,7 +6299,7 @@ type RevokeDelegation struct {
 
 func (x *RevokeDelegation) Reset() {
 	*x = RevokeDelegation{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[90]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6158,7 +6311,7 @@ func (x *RevokeDelegation) String() string {
 func (*RevokeDelegation) ProtoMessage() {}
 
 func (x *RevokeDelegation) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[90]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6171,7 +6324,7 @@ func (x *RevokeDelegation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeDelegation.ProtoReflect.Descriptor instead.
 func (*RevokeDelegation) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{90}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *RevokeDelegation) GetContractAddress() []byte {
@@ -6201,7 +6354,7 @@ type PrepareTransactionResponse struct {
 
 func (x *PrepareTransactionResponse) Reset() {
 	*x = PrepareTransactionResponse{}
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[91]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[92]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6213,7 +6366,7 @@ func (x *PrepareTransactionResponse) String() string {
 func (*PrepareTransactionResponse) ProtoMessage() {}
 
 func (x *PrepareTransactionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[91]
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[92]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6226,7 +6379,7 @@ func (x *PrepareTransactionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PrepareTransactionResponse.ProtoReflect.Descriptor instead.
 func (*PrepareTransactionResponse) Descriptor() ([]byte, []int) {
-	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{91}
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *PrepareTransactionResponse) GetKind() TransactionKind {
@@ -6388,22 +6541,35 @@ const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
 	"\tcontracts\x18\x02 \x01(\v2\x1f.zama.sdk.v1alpha1.ContractListR\tcontracts\"e\n" +
 	"\fScopeRequest\x12:\n" +
 	"\toperation\x18\x01 \x01(\v2\x1c.zama.sdk.v1alpha1.OperationR\toperation\x12\x19\n" +
-	"\bscope_id\x18\x02 \x01(\tR\ascopeId\"\xac\x01\n" +
+	"\bscope_id\x18\x02 \x01(\tR\ascopeId\"\xda\x01\n" +
 	"\vSignerReply\x12!\n" +
 	"\foperation_id\x18\x01 \x01(\tR\voperationId\x12\x1b\n" +
 	"\taction_id\x18\x02 \x01(\tR\bactionId\x12\x1e\n" +
 	"\tsignature\x18\x03 \x01(\fH\x00R\tsignature\x123\n" +
-	"\x05error\x18\x04 \x01(\v2\x1b.zama.sdk.v1alpha1.SdkErrorH\x00R\x05errorB\b\n" +
+	"\x05error\x18\x04 \x01(\v2\x1b.zama.sdk.v1alpha1.SdkErrorH\x00R\x05error\x12,\n" +
+	"\x10transaction_hash\x18\x8c\x01 \x01(\fH\x00R\x0ftransactionHashB\b\n" +
 	"\x06result\"\x95\x01\n" +
 	"\x13SignerClientMessage\x12;\n" +
 	"\x06attach\x18\x01 \x01(\v2!.zama.sdk.v1alpha1.ContextRequestH\x00R\x06attach\x126\n" +
 	"\x05reply\x18\x02 \x01(\v2\x1e.zama.sdk.v1alpha1.SignerReplyH\x00R\x05replyB\t\n" +
-	"\amessage\"\xb2\x01\n" +
+	"\amessage\"\x92\x02\n" +
 	"\fSignerAction\x12!\n" +
 	"\foperation_id\x18\x01 \x01(\tR\voperationId\x12\x1b\n" +
 	"\taction_id\x18\x02 \x01(\tR\bactionId\x12:\n" +
-	"\aaccount\x18\x03 \x01(\v2 .zama.sdk.v1alpha1.WalletAccountR\aaccount\x12&\n" +
-	"\x0ftyped_data_json\x18\x04 \x01(\tR\rtypedDataJson\"\x85\x01\n" +
+	"\aaccount\x18\x03 \x01(\v2 .zama.sdk.v1alpha1.WalletAccountR\aaccount\x12(\n" +
+	"\x0ftyped_data_json\x18\x04 \x01(\tH\x00R\rtypedDataJson\x12Q\n" +
+	"\x0econtract_write\x18\x8c\x01 \x01(\v2'.zama.sdk.v1alpha1.ContractWriteRequestH\x00R\rcontractWriteB\t\n" +
+	"\arequest\"\xe5\x01\n" +
+	"\x14ContractWriteRequest\x12\x18\n" +
+	"\aaddress\x18\x01 \x01(\fR\aaddress\x12\x12\n" +
+	"\x04data\x18\x02 \x01(\fR\x04data\x12\x19\n" +
+	"\babi_json\x18\x03 \x01(\tR\aabiJson\x12#\n" +
+	"\rfunction_name\x18\x04 \x01(\tR\ffunctionName\x12\x1b\n" +
+	"\targs_json\x18\x05 \x01(\tR\bargsJson\x12\x19\n" +
+	"\x05value\x18\x06 \x01(\tH\x00R\x05value\x88\x01\x01\x12\x15\n" +
+	"\x03gas\x18\a \x01(\tH\x01R\x03gas\x88\x01\x01B\b\n" +
+	"\x06_valueB\x06\n" +
+	"\x04_gas\"\x85\x01\n" +
 	"\x10SignerReplyError\x12!\n" +
 	"\foperation_id\x18\x01 \x01(\tR\voperationId\x12\x1b\n" +
 	"\taction_id\x18\x02 \x01(\tR\bactionId\x121\n" +
@@ -6772,7 +6938,7 @@ func file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP() []byte {
 }
 
 var file_zama_sdk_v1alpha1_sidecar_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_zama_sdk_v1alpha1_sidecar_proto_msgTypes = make([]protoimpl.MessageInfo, 94)
+var file_zama_sdk_v1alpha1_sidecar_proto_msgTypes = make([]protoimpl.MessageInfo, 95)
 var file_zama_sdk_v1alpha1_sidecar_proto_goTypes = []any{
 	(StorageMethod)(0),                          // 0: zama.sdk.v1alpha1.StorageMethod
 	(RelayerTransport)(0),                       // 1: zama.sdk.v1alpha1.RelayerTransport
@@ -6812,71 +6978,72 @@ var file_zama_sdk_v1alpha1_sidecar_proto_goTypes = []any{
 	(*SignerReply)(nil),                         // 35: zama.sdk.v1alpha1.SignerReply
 	(*SignerClientMessage)(nil),                 // 36: zama.sdk.v1alpha1.SignerClientMessage
 	(*SignerAction)(nil),                        // 37: zama.sdk.v1alpha1.SignerAction
-	(*SignerReplyError)(nil),                    // 38: zama.sdk.v1alpha1.SignerReplyError
-	(*SignerActionCancelled)(nil),               // 39: zama.sdk.v1alpha1.SignerActionCancelled
-	(*SignerServerMessage)(nil),                 // 40: zama.sdk.v1alpha1.SignerServerMessage
-	(*StorageBinding)(nil),                      // 41: zama.sdk.v1alpha1.StorageBinding
-	(*StorageAction)(nil),                       // 42: zama.sdk.v1alpha1.StorageAction
-	(*StorageReply)(nil),                        // 43: zama.sdk.v1alpha1.StorageReply
-	(*StorageClientMessage)(nil),                // 44: zama.sdk.v1alpha1.StorageClientMessage
-	(*StorageReplyError)(nil),                   // 45: zama.sdk.v1alpha1.StorageReplyError
-	(*StorageServerMessage)(nil),                // 46: zama.sdk.v1alpha1.StorageServerMessage
-	(*CloseContextResponse)(nil),                // 47: zama.sdk.v1alpha1.CloseContextResponse
-	(*UpdateAccountResponse)(nil),               // 48: zama.sdk.v1alpha1.UpdateAccountResponse
-	(*RegisterPermitResponse)(nil),              // 49: zama.sdk.v1alpha1.RegisterPermitResponse
-	(*GrantPermitResponse)(nil),                 // 50: zama.sdk.v1alpha1.GrantPermitResponse
-	(*GrantDelegationPermitResponse)(nil),       // 51: zama.sdk.v1alpha1.GrantDelegationPermitResponse
-	(*RevokePermitsResponse)(nil),               // 52: zama.sdk.v1alpha1.RevokePermitsResponse
-	(*ClearPermitsResponse)(nil),                // 53: zama.sdk.v1alpha1.ClearPermitsResponse
-	(*WarmTransportKeyPairResponse)(nil),        // 54: zama.sdk.v1alpha1.WarmTransportKeyPairResponse
-	(*WarmTransportKeyPairScopeResponse)(nil),   // 55: zama.sdk.v1alpha1.WarmTransportKeyPairScopeResponse
-	(*RevokeTransportKeyPairResponse)(nil),      // 56: zama.sdk.v1alpha1.RevokeTransportKeyPairResponse
-	(*DelegatedDecryptValuesResponse)(nil),      // 57: zama.sdk.v1alpha1.DelegatedDecryptValuesResponse
-	(*HasDelegationPermitResponse)(nil),         // 58: zama.sdk.v1alpha1.HasDelegationPermitResponse
-	(*ContextConfig)(nil),                       // 59: zama.sdk.v1alpha1.ContextConfig
-	(*ChainConfig)(nil),                         // 60: zama.sdk.v1alpha1.ChainConfig
-	(*ChainAuth)(nil),                           // 61: zama.sdk.v1alpha1.ChainAuth
-	(*NamedCredential)(nil),                     // 62: zama.sdk.v1alpha1.NamedCredential
-	(*ProcessRuntimeConfig)(nil),                // 63: zama.sdk.v1alpha1.ProcessRuntimeConfig
-	(*ModuleVersions)(nil),                      // 64: zama.sdk.v1alpha1.ModuleVersions
-	(*PinnedModuleVersions)(nil),                // 65: zama.sdk.v1alpha1.PinnedModuleVersions
-	(*RelayerMap)(nil),                          // 66: zama.sdk.v1alpha1.RelayerMap
-	(*RelayerConfig)(nil),                       // 67: zama.sdk.v1alpha1.RelayerConfig
-	(*RelayerOptions)(nil),                      // 68: zama.sdk.v1alpha1.RelayerOptions
-	(*FheEncryptionKey)(nil),                    // 69: zama.sdk.v1alpha1.FheEncryptionKey
-	(*FhePublicKeyBytes)(nil),                   // 70: zama.sdk.v1alpha1.FhePublicKeyBytes
-	(*FheCrsBytes)(nil),                         // 71: zama.sdk.v1alpha1.FheCrsBytes
-	(*FheEncryptionKeyMetadata)(nil),            // 72: zama.sdk.v1alpha1.FheEncryptionKeyMetadata
-	(*HttpProviderConfig)(nil),                  // 73: zama.sdk.v1alpha1.HttpProviderConfig
-	(*HttpHeaders)(nil),                         // 74: zama.sdk.v1alpha1.HttpHeaders
-	(*ProviderBatch)(nil),                       // 75: zama.sdk.v1alpha1.ProviderBatch
-	(*ProviderBatchOptions)(nil),                // 76: zama.sdk.v1alpha1.ProviderBatchOptions
-	(*EncryptInput)(nil),                        // 77: zama.sdk.v1alpha1.EncryptInput
-	(*EncryptRequest)(nil),                      // 78: zama.sdk.v1alpha1.EncryptRequest
-	(*EncryptResponse)(nil),                     // 79: zama.sdk.v1alpha1.EncryptResponse
-	(*PrepareTransactionRequest)(nil),           // 80: zama.sdk.v1alpha1.PrepareTransactionRequest
-	(*PrepareOptions)(nil),                      // 81: zama.sdk.v1alpha1.PrepareOptions
-	(*PrepareFees)(nil),                         // 82: zama.sdk.v1alpha1.PrepareFees
-	(*ConfidentialTransfer)(nil),                // 83: zama.sdk.v1alpha1.ConfidentialTransfer
-	(*ConfidentialTransferFrom)(nil),            // 84: zama.sdk.v1alpha1.ConfidentialTransferFrom
-	(*SetOperator)(nil),                         // 85: zama.sdk.v1alpha1.SetOperator
-	(*Unwrap)(nil),                              // 86: zama.sdk.v1alpha1.Unwrap
-	(*UnwrapAll)(nil),                           // 87: zama.sdk.v1alpha1.UnwrapAll
-	(*FinalizeUnwrap)(nil),                      // 88: zama.sdk.v1alpha1.FinalizeUnwrap
-	(*ApproveUnderlying)(nil),                   // 89: zama.sdk.v1alpha1.ApproveUnderlying
-	(*Wrap)(nil),                                // 90: zama.sdk.v1alpha1.Wrap
-	(*TransferAndCall)(nil),                     // 91: zama.sdk.v1alpha1.TransferAndCall
-	(*DelegateDecryption)(nil),                  // 92: zama.sdk.v1alpha1.DelegateDecryption
-	(*RevokeDelegation)(nil),                    // 93: zama.sdk.v1alpha1.RevokeDelegation
-	(*PrepareTransactionResponse)(nil),          // 94: zama.sdk.v1alpha1.PrepareTransactionResponse
-	nil,                                         // 95: zama.sdk.v1alpha1.RelayerMap.EntriesEntry
-	nil,                                         // 96: zama.sdk.v1alpha1.HttpHeaders.EntriesEntry
+	(*ContractWriteRequest)(nil),                // 38: zama.sdk.v1alpha1.ContractWriteRequest
+	(*SignerReplyError)(nil),                    // 39: zama.sdk.v1alpha1.SignerReplyError
+	(*SignerActionCancelled)(nil),               // 40: zama.sdk.v1alpha1.SignerActionCancelled
+	(*SignerServerMessage)(nil),                 // 41: zama.sdk.v1alpha1.SignerServerMessage
+	(*StorageBinding)(nil),                      // 42: zama.sdk.v1alpha1.StorageBinding
+	(*StorageAction)(nil),                       // 43: zama.sdk.v1alpha1.StorageAction
+	(*StorageReply)(nil),                        // 44: zama.sdk.v1alpha1.StorageReply
+	(*StorageClientMessage)(nil),                // 45: zama.sdk.v1alpha1.StorageClientMessage
+	(*StorageReplyError)(nil),                   // 46: zama.sdk.v1alpha1.StorageReplyError
+	(*StorageServerMessage)(nil),                // 47: zama.sdk.v1alpha1.StorageServerMessage
+	(*CloseContextResponse)(nil),                // 48: zama.sdk.v1alpha1.CloseContextResponse
+	(*UpdateAccountResponse)(nil),               // 49: zama.sdk.v1alpha1.UpdateAccountResponse
+	(*RegisterPermitResponse)(nil),              // 50: zama.sdk.v1alpha1.RegisterPermitResponse
+	(*GrantPermitResponse)(nil),                 // 51: zama.sdk.v1alpha1.GrantPermitResponse
+	(*GrantDelegationPermitResponse)(nil),       // 52: zama.sdk.v1alpha1.GrantDelegationPermitResponse
+	(*RevokePermitsResponse)(nil),               // 53: zama.sdk.v1alpha1.RevokePermitsResponse
+	(*ClearPermitsResponse)(nil),                // 54: zama.sdk.v1alpha1.ClearPermitsResponse
+	(*WarmTransportKeyPairResponse)(nil),        // 55: zama.sdk.v1alpha1.WarmTransportKeyPairResponse
+	(*WarmTransportKeyPairScopeResponse)(nil),   // 56: zama.sdk.v1alpha1.WarmTransportKeyPairScopeResponse
+	(*RevokeTransportKeyPairResponse)(nil),      // 57: zama.sdk.v1alpha1.RevokeTransportKeyPairResponse
+	(*DelegatedDecryptValuesResponse)(nil),      // 58: zama.sdk.v1alpha1.DelegatedDecryptValuesResponse
+	(*HasDelegationPermitResponse)(nil),         // 59: zama.sdk.v1alpha1.HasDelegationPermitResponse
+	(*ContextConfig)(nil),                       // 60: zama.sdk.v1alpha1.ContextConfig
+	(*ChainConfig)(nil),                         // 61: zama.sdk.v1alpha1.ChainConfig
+	(*ChainAuth)(nil),                           // 62: zama.sdk.v1alpha1.ChainAuth
+	(*NamedCredential)(nil),                     // 63: zama.sdk.v1alpha1.NamedCredential
+	(*ProcessRuntimeConfig)(nil),                // 64: zama.sdk.v1alpha1.ProcessRuntimeConfig
+	(*ModuleVersions)(nil),                      // 65: zama.sdk.v1alpha1.ModuleVersions
+	(*PinnedModuleVersions)(nil),                // 66: zama.sdk.v1alpha1.PinnedModuleVersions
+	(*RelayerMap)(nil),                          // 67: zama.sdk.v1alpha1.RelayerMap
+	(*RelayerConfig)(nil),                       // 68: zama.sdk.v1alpha1.RelayerConfig
+	(*RelayerOptions)(nil),                      // 69: zama.sdk.v1alpha1.RelayerOptions
+	(*FheEncryptionKey)(nil),                    // 70: zama.sdk.v1alpha1.FheEncryptionKey
+	(*FhePublicKeyBytes)(nil),                   // 71: zama.sdk.v1alpha1.FhePublicKeyBytes
+	(*FheCrsBytes)(nil),                         // 72: zama.sdk.v1alpha1.FheCrsBytes
+	(*FheEncryptionKeyMetadata)(nil),            // 73: zama.sdk.v1alpha1.FheEncryptionKeyMetadata
+	(*HttpProviderConfig)(nil),                  // 74: zama.sdk.v1alpha1.HttpProviderConfig
+	(*HttpHeaders)(nil),                         // 75: zama.sdk.v1alpha1.HttpHeaders
+	(*ProviderBatch)(nil),                       // 76: zama.sdk.v1alpha1.ProviderBatch
+	(*ProviderBatchOptions)(nil),                // 77: zama.sdk.v1alpha1.ProviderBatchOptions
+	(*EncryptInput)(nil),                        // 78: zama.sdk.v1alpha1.EncryptInput
+	(*EncryptRequest)(nil),                      // 79: zama.sdk.v1alpha1.EncryptRequest
+	(*EncryptResponse)(nil),                     // 80: zama.sdk.v1alpha1.EncryptResponse
+	(*PrepareTransactionRequest)(nil),           // 81: zama.sdk.v1alpha1.PrepareTransactionRequest
+	(*PrepareOptions)(nil),                      // 82: zama.sdk.v1alpha1.PrepareOptions
+	(*PrepareFees)(nil),                         // 83: zama.sdk.v1alpha1.PrepareFees
+	(*ConfidentialTransfer)(nil),                // 84: zama.sdk.v1alpha1.ConfidentialTransfer
+	(*ConfidentialTransferFrom)(nil),            // 85: zama.sdk.v1alpha1.ConfidentialTransferFrom
+	(*SetOperator)(nil),                         // 86: zama.sdk.v1alpha1.SetOperator
+	(*Unwrap)(nil),                              // 87: zama.sdk.v1alpha1.Unwrap
+	(*UnwrapAll)(nil),                           // 88: zama.sdk.v1alpha1.UnwrapAll
+	(*FinalizeUnwrap)(nil),                      // 89: zama.sdk.v1alpha1.FinalizeUnwrap
+	(*ApproveUnderlying)(nil),                   // 90: zama.sdk.v1alpha1.ApproveUnderlying
+	(*Wrap)(nil),                                // 91: zama.sdk.v1alpha1.Wrap
+	(*TransferAndCall)(nil),                     // 92: zama.sdk.v1alpha1.TransferAndCall
+	(*DelegateDecryption)(nil),                  // 93: zama.sdk.v1alpha1.DelegateDecryption
+	(*RevokeDelegation)(nil),                    // 94: zama.sdk.v1alpha1.RevokeDelegation
+	(*PrepareTransactionResponse)(nil),          // 95: zama.sdk.v1alpha1.PrepareTransactionResponse
+	nil,                                         // 96: zama.sdk.v1alpha1.RelayerMap.EntriesEntry
+	nil,                                         // 97: zama.sdk.v1alpha1.HttpHeaders.EntriesEntry
 }
 var file_zama_sdk_v1alpha1_sidecar_proto_depIdxs = []int32{
-	59,  // 0: zama.sdk.v1alpha1.CreateContextRequest.config:type_name -> zama.sdk.v1alpha1.ContextConfig
+	60,  // 0: zama.sdk.v1alpha1.CreateContextRequest.config:type_name -> zama.sdk.v1alpha1.ContextConfig
 	6,   // 1: zama.sdk.v1alpha1.CreateContextRequest.account:type_name -> zama.sdk.v1alpha1.WalletAccount
-	41,  // 2: zama.sdk.v1alpha1.CreateContextRequest.storage:type_name -> zama.sdk.v1alpha1.StorageBinding
-	41,  // 3: zama.sdk.v1alpha1.CreateContextRequest.permit_storage:type_name -> zama.sdk.v1alpha1.StorageBinding
+	42,  // 2: zama.sdk.v1alpha1.CreateContextRequest.storage:type_name -> zama.sdk.v1alpha1.StorageBinding
+	42,  // 3: zama.sdk.v1alpha1.CreateContextRequest.permit_storage:type_name -> zama.sdk.v1alpha1.StorageBinding
 	8,   // 4: zama.sdk.v1alpha1.CreateContextRequest.transport_key_pair_derivation_secret:type_name -> zama.sdk.v1alpha1.DerivationSecret
 	6,   // 5: zama.sdk.v1alpha1.UpdateAccountRequest.account:type_name -> zama.sdk.v1alpha1.WalletAccount
 	12,  // 6: zama.sdk.v1alpha1.OperationRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
@@ -6905,115 +7072,116 @@ var file_zama_sdk_v1alpha1_sidecar_proto_depIdxs = []int32{
 	10,  // 29: zama.sdk.v1alpha1.SignerClientMessage.attach:type_name -> zama.sdk.v1alpha1.ContextRequest
 	35,  // 30: zama.sdk.v1alpha1.SignerClientMessage.reply:type_name -> zama.sdk.v1alpha1.SignerReply
 	6,   // 31: zama.sdk.v1alpha1.SignerAction.account:type_name -> zama.sdk.v1alpha1.WalletAccount
-	23,  // 32: zama.sdk.v1alpha1.SignerReplyError.error:type_name -> zama.sdk.v1alpha1.SdkError
-	3,   // 33: zama.sdk.v1alpha1.SignerServerMessage.attached:type_name -> zama.sdk.v1alpha1.Empty
-	37,  // 34: zama.sdk.v1alpha1.SignerServerMessage.action:type_name -> zama.sdk.v1alpha1.SignerAction
-	38,  // 35: zama.sdk.v1alpha1.SignerServerMessage.reply_error:type_name -> zama.sdk.v1alpha1.SignerReplyError
-	39,  // 36: zama.sdk.v1alpha1.SignerServerMessage.cancelled:type_name -> zama.sdk.v1alpha1.SignerActionCancelled
-	3,   // 37: zama.sdk.v1alpha1.StorageBinding.memory:type_name -> zama.sdk.v1alpha1.Empty
-	0,   // 38: zama.sdk.v1alpha1.StorageAction.method:type_name -> zama.sdk.v1alpha1.StorageMethod
-	23,  // 39: zama.sdk.v1alpha1.StorageReply.error:type_name -> zama.sdk.v1alpha1.SdkError
-	3,   // 40: zama.sdk.v1alpha1.StorageReply.not_found:type_name -> zama.sdk.v1alpha1.Empty
-	3,   // 41: zama.sdk.v1alpha1.StorageReply.ack:type_name -> zama.sdk.v1alpha1.Empty
-	10,  // 42: zama.sdk.v1alpha1.StorageClientMessage.attach:type_name -> zama.sdk.v1alpha1.ContextRequest
-	43,  // 43: zama.sdk.v1alpha1.StorageClientMessage.reply:type_name -> zama.sdk.v1alpha1.StorageReply
-	23,  // 44: zama.sdk.v1alpha1.StorageReplyError.error:type_name -> zama.sdk.v1alpha1.SdkError
-	3,   // 45: zama.sdk.v1alpha1.StorageServerMessage.attached:type_name -> zama.sdk.v1alpha1.Empty
-	42,  // 46: zama.sdk.v1alpha1.StorageServerMessage.action:type_name -> zama.sdk.v1alpha1.StorageAction
-	45,  // 47: zama.sdk.v1alpha1.StorageServerMessage.reply_error:type_name -> zama.sdk.v1alpha1.StorageReplyError
-	16,  // 48: zama.sdk.v1alpha1.DelegatedDecryptValuesResponse.values:type_name -> zama.sdk.v1alpha1.ClearEntry
-	60,  // 49: zama.sdk.v1alpha1.ContextConfig.chains:type_name -> zama.sdk.v1alpha1.ChainConfig
-	63,  // 50: zama.sdk.v1alpha1.ContextConfig.process_runtime:type_name -> zama.sdk.v1alpha1.ProcessRuntimeConfig
-	66,  // 51: zama.sdk.v1alpha1.ContextConfig.relayers:type_name -> zama.sdk.v1alpha1.RelayerMap
-	61,  // 52: zama.sdk.v1alpha1.ChainConfig.auth:type_name -> zama.sdk.v1alpha1.ChainAuth
-	73,  // 53: zama.sdk.v1alpha1.ChainConfig.provider:type_name -> zama.sdk.v1alpha1.HttpProviderConfig
-	62,  // 54: zama.sdk.v1alpha1.ChainAuth.api_key_header:type_name -> zama.sdk.v1alpha1.NamedCredential
-	62,  // 55: zama.sdk.v1alpha1.ChainAuth.api_key_cookie:type_name -> zama.sdk.v1alpha1.NamedCredential
-	64,  // 56: zama.sdk.v1alpha1.ProcessRuntimeConfig.module_versions:type_name -> zama.sdk.v1alpha1.ModuleVersions
-	61,  // 57: zama.sdk.v1alpha1.ProcessRuntimeConfig.auth:type_name -> zama.sdk.v1alpha1.ChainAuth
-	3,   // 58: zama.sdk.v1alpha1.ModuleVersions.auto:type_name -> zama.sdk.v1alpha1.Empty
-	65,  // 59: zama.sdk.v1alpha1.ModuleVersions.pinned:type_name -> zama.sdk.v1alpha1.PinnedModuleVersions
-	95,  // 60: zama.sdk.v1alpha1.RelayerMap.entries:type_name -> zama.sdk.v1alpha1.RelayerMap.EntriesEntry
-	1,   // 61: zama.sdk.v1alpha1.RelayerConfig.transport:type_name -> zama.sdk.v1alpha1.RelayerTransport
-	68,  // 62: zama.sdk.v1alpha1.RelayerConfig.options:type_name -> zama.sdk.v1alpha1.RelayerOptions
-	64,  // 63: zama.sdk.v1alpha1.RelayerOptions.module_versions:type_name -> zama.sdk.v1alpha1.ModuleVersions
-	69,  // 64: zama.sdk.v1alpha1.RelayerOptions.fhe_encryption_key:type_name -> zama.sdk.v1alpha1.FheEncryptionKey
-	70,  // 65: zama.sdk.v1alpha1.FheEncryptionKey.public_key_bytes:type_name -> zama.sdk.v1alpha1.FhePublicKeyBytes
-	71,  // 66: zama.sdk.v1alpha1.FheEncryptionKey.crs_bytes:type_name -> zama.sdk.v1alpha1.FheCrsBytes
-	72,  // 67: zama.sdk.v1alpha1.FheEncryptionKey.metadata:type_name -> zama.sdk.v1alpha1.FheEncryptionKeyMetadata
-	74,  // 68: zama.sdk.v1alpha1.HttpProviderConfig.headers:type_name -> zama.sdk.v1alpha1.HttpHeaders
-	75,  // 69: zama.sdk.v1alpha1.HttpProviderConfig.batch:type_name -> zama.sdk.v1alpha1.ProviderBatch
-	96,  // 70: zama.sdk.v1alpha1.HttpHeaders.entries:type_name -> zama.sdk.v1alpha1.HttpHeaders.EntriesEntry
-	76,  // 71: zama.sdk.v1alpha1.ProviderBatch.options:type_name -> zama.sdk.v1alpha1.ProviderBatchOptions
-	12,  // 72: zama.sdk.v1alpha1.EncryptRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	77,  // 73: zama.sdk.v1alpha1.EncryptRequest.values:type_name -> zama.sdk.v1alpha1.EncryptInput
-	12,  // 74: zama.sdk.v1alpha1.PrepareTransactionRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	81,  // 75: zama.sdk.v1alpha1.PrepareTransactionRequest.options:type_name -> zama.sdk.v1alpha1.PrepareOptions
-	83,  // 76: zama.sdk.v1alpha1.PrepareTransactionRequest.confidential_transfer:type_name -> zama.sdk.v1alpha1.ConfidentialTransfer
-	84,  // 77: zama.sdk.v1alpha1.PrepareTransactionRequest.confidential_transfer_from:type_name -> zama.sdk.v1alpha1.ConfidentialTransferFrom
-	85,  // 78: zama.sdk.v1alpha1.PrepareTransactionRequest.set_operator:type_name -> zama.sdk.v1alpha1.SetOperator
-	86,  // 79: zama.sdk.v1alpha1.PrepareTransactionRequest.unwrap:type_name -> zama.sdk.v1alpha1.Unwrap
-	87,  // 80: zama.sdk.v1alpha1.PrepareTransactionRequest.unwrap_all:type_name -> zama.sdk.v1alpha1.UnwrapAll
-	88,  // 81: zama.sdk.v1alpha1.PrepareTransactionRequest.finalize_unwrap:type_name -> zama.sdk.v1alpha1.FinalizeUnwrap
-	89,  // 82: zama.sdk.v1alpha1.PrepareTransactionRequest.approve_underlying:type_name -> zama.sdk.v1alpha1.ApproveUnderlying
-	90,  // 83: zama.sdk.v1alpha1.PrepareTransactionRequest.wrap:type_name -> zama.sdk.v1alpha1.Wrap
-	91,  // 84: zama.sdk.v1alpha1.PrepareTransactionRequest.transfer_and_call:type_name -> zama.sdk.v1alpha1.TransferAndCall
-	92,  // 85: zama.sdk.v1alpha1.PrepareTransactionRequest.delegate_decryption:type_name -> zama.sdk.v1alpha1.DelegateDecryption
-	93,  // 86: zama.sdk.v1alpha1.PrepareTransactionRequest.revoke_delegation:type_name -> zama.sdk.v1alpha1.RevokeDelegation
-	82,  // 87: zama.sdk.v1alpha1.PrepareOptions.fees:type_name -> zama.sdk.v1alpha1.PrepareFees
-	2,   // 88: zama.sdk.v1alpha1.PrepareTransactionResponse.kind:type_name -> zama.sdk.v1alpha1.TransactionKind
-	67,  // 89: zama.sdk.v1alpha1.RelayerMap.EntriesEntry.value:type_name -> zama.sdk.v1alpha1.RelayerConfig
-	4,   // 90: zama.sdk.v1alpha1.SidecarService.GetInfo:input_type -> zama.sdk.v1alpha1.GetInfoRequest
-	7,   // 91: zama.sdk.v1alpha1.SidecarService.CreateContext:input_type -> zama.sdk.v1alpha1.CreateContextRequest
-	10,  // 92: zama.sdk.v1alpha1.SidecarService.CloseContext:input_type -> zama.sdk.v1alpha1.ContextRequest
-	11,  // 93: zama.sdk.v1alpha1.SidecarService.UpdateAccount:input_type -> zama.sdk.v1alpha1.UpdateAccountRequest
-	36,  // 94: zama.sdk.v1alpha1.SidecarService.SignerChannel:input_type -> zama.sdk.v1alpha1.SignerClientMessage
-	44,  // 95: zama.sdk.v1alpha1.SidecarService.StorageChannel:input_type -> zama.sdk.v1alpha1.StorageClientMessage
-	17,  // 96: zama.sdk.v1alpha1.SidecarService.DecryptValues:input_type -> zama.sdk.v1alpha1.DecryptValuesRequest
-	19,  // 97: zama.sdk.v1alpha1.SidecarService.DelegatedDecryptValues:input_type -> zama.sdk.v1alpha1.DelegatedDecryptValuesRequest
-	20,  // 98: zama.sdk.v1alpha1.SidecarService.DecryptPublicValues:input_type -> zama.sdk.v1alpha1.DecryptPublicValuesRequest
-	22,  // 99: zama.sdk.v1alpha1.SidecarService.DelegatedBatchDecryptValues:input_type -> zama.sdk.v1alpha1.DelegatedBatchDecryptValuesRequest
-	80,  // 100: zama.sdk.v1alpha1.SidecarService.PrepareTransaction:input_type -> zama.sdk.v1alpha1.PrepareTransactionRequest
-	26,  // 101: zama.sdk.v1alpha1.SidecarService.PreparePermit:input_type -> zama.sdk.v1alpha1.PreparePermitRequest
-	28,  // 102: zama.sdk.v1alpha1.SidecarService.RegisterPermit:input_type -> zama.sdk.v1alpha1.RegisterPermitRequest
-	29,  // 103: zama.sdk.v1alpha1.SidecarService.GrantPermit:input_type -> zama.sdk.v1alpha1.ContractsRequest
-	30,  // 104: zama.sdk.v1alpha1.SidecarService.GrantDelegationPermit:input_type -> zama.sdk.v1alpha1.DelegationContractsRequest
-	29,  // 105: zama.sdk.v1alpha1.SidecarService.HasPermit:input_type -> zama.sdk.v1alpha1.ContractsRequest
-	30,  // 106: zama.sdk.v1alpha1.SidecarService.HasDelegationPermit:input_type -> zama.sdk.v1alpha1.DelegationContractsRequest
-	33,  // 107: zama.sdk.v1alpha1.SidecarService.RevokePermits:input_type -> zama.sdk.v1alpha1.RevokePermitsRequest
-	13,  // 108: zama.sdk.v1alpha1.SidecarService.ClearPermits:input_type -> zama.sdk.v1alpha1.OperationRequest
-	13,  // 109: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPair:input_type -> zama.sdk.v1alpha1.OperationRequest
-	34,  // 110: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPairScope:input_type -> zama.sdk.v1alpha1.ScopeRequest
-	34,  // 111: zama.sdk.v1alpha1.SidecarService.RevokeTransportKeyPair:input_type -> zama.sdk.v1alpha1.ScopeRequest
-	78,  // 112: zama.sdk.v1alpha1.SidecarService.Encrypt:input_type -> zama.sdk.v1alpha1.EncryptRequest
-	5,   // 113: zama.sdk.v1alpha1.SidecarService.GetInfo:output_type -> zama.sdk.v1alpha1.GetInfoResponse
-	9,   // 114: zama.sdk.v1alpha1.SidecarService.CreateContext:output_type -> zama.sdk.v1alpha1.CreateContextResponse
-	47,  // 115: zama.sdk.v1alpha1.SidecarService.CloseContext:output_type -> zama.sdk.v1alpha1.CloseContextResponse
-	48,  // 116: zama.sdk.v1alpha1.SidecarService.UpdateAccount:output_type -> zama.sdk.v1alpha1.UpdateAccountResponse
-	40,  // 117: zama.sdk.v1alpha1.SidecarService.SignerChannel:output_type -> zama.sdk.v1alpha1.SignerServerMessage
-	46,  // 118: zama.sdk.v1alpha1.SidecarService.StorageChannel:output_type -> zama.sdk.v1alpha1.StorageServerMessage
-	18,  // 119: zama.sdk.v1alpha1.SidecarService.DecryptValues:output_type -> zama.sdk.v1alpha1.DecryptValuesResponse
-	57,  // 120: zama.sdk.v1alpha1.SidecarService.DelegatedDecryptValues:output_type -> zama.sdk.v1alpha1.DelegatedDecryptValuesResponse
-	21,  // 121: zama.sdk.v1alpha1.SidecarService.DecryptPublicValues:output_type -> zama.sdk.v1alpha1.DecryptPublicValuesResponse
-	25,  // 122: zama.sdk.v1alpha1.SidecarService.DelegatedBatchDecryptValues:output_type -> zama.sdk.v1alpha1.DelegatedBatchDecryptValuesResponse
-	94,  // 123: zama.sdk.v1alpha1.SidecarService.PrepareTransaction:output_type -> zama.sdk.v1alpha1.PrepareTransactionResponse
-	27,  // 124: zama.sdk.v1alpha1.SidecarService.PreparePermit:output_type -> zama.sdk.v1alpha1.PreparePermitResponse
-	49,  // 125: zama.sdk.v1alpha1.SidecarService.RegisterPermit:output_type -> zama.sdk.v1alpha1.RegisterPermitResponse
-	50,  // 126: zama.sdk.v1alpha1.SidecarService.GrantPermit:output_type -> zama.sdk.v1alpha1.GrantPermitResponse
-	51,  // 127: zama.sdk.v1alpha1.SidecarService.GrantDelegationPermit:output_type -> zama.sdk.v1alpha1.GrantDelegationPermitResponse
-	31,  // 128: zama.sdk.v1alpha1.SidecarService.HasPermit:output_type -> zama.sdk.v1alpha1.HasPermitResponse
-	58,  // 129: zama.sdk.v1alpha1.SidecarService.HasDelegationPermit:output_type -> zama.sdk.v1alpha1.HasDelegationPermitResponse
-	52,  // 130: zama.sdk.v1alpha1.SidecarService.RevokePermits:output_type -> zama.sdk.v1alpha1.RevokePermitsResponse
-	53,  // 131: zama.sdk.v1alpha1.SidecarService.ClearPermits:output_type -> zama.sdk.v1alpha1.ClearPermitsResponse
-	54,  // 132: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPair:output_type -> zama.sdk.v1alpha1.WarmTransportKeyPairResponse
-	55,  // 133: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPairScope:output_type -> zama.sdk.v1alpha1.WarmTransportKeyPairScopeResponse
-	56,  // 134: zama.sdk.v1alpha1.SidecarService.RevokeTransportKeyPair:output_type -> zama.sdk.v1alpha1.RevokeTransportKeyPairResponse
-	79,  // 135: zama.sdk.v1alpha1.SidecarService.Encrypt:output_type -> zama.sdk.v1alpha1.EncryptResponse
-	113, // [113:136] is the sub-list for method output_type
-	90,  // [90:113] is the sub-list for method input_type
-	90,  // [90:90] is the sub-list for extension type_name
-	90,  // [90:90] is the sub-list for extension extendee
-	0,   // [0:90] is the sub-list for field type_name
+	38,  // 32: zama.sdk.v1alpha1.SignerAction.contract_write:type_name -> zama.sdk.v1alpha1.ContractWriteRequest
+	23,  // 33: zama.sdk.v1alpha1.SignerReplyError.error:type_name -> zama.sdk.v1alpha1.SdkError
+	3,   // 34: zama.sdk.v1alpha1.SignerServerMessage.attached:type_name -> zama.sdk.v1alpha1.Empty
+	37,  // 35: zama.sdk.v1alpha1.SignerServerMessage.action:type_name -> zama.sdk.v1alpha1.SignerAction
+	39,  // 36: zama.sdk.v1alpha1.SignerServerMessage.reply_error:type_name -> zama.sdk.v1alpha1.SignerReplyError
+	40,  // 37: zama.sdk.v1alpha1.SignerServerMessage.cancelled:type_name -> zama.sdk.v1alpha1.SignerActionCancelled
+	3,   // 38: zama.sdk.v1alpha1.StorageBinding.memory:type_name -> zama.sdk.v1alpha1.Empty
+	0,   // 39: zama.sdk.v1alpha1.StorageAction.method:type_name -> zama.sdk.v1alpha1.StorageMethod
+	23,  // 40: zama.sdk.v1alpha1.StorageReply.error:type_name -> zama.sdk.v1alpha1.SdkError
+	3,   // 41: zama.sdk.v1alpha1.StorageReply.not_found:type_name -> zama.sdk.v1alpha1.Empty
+	3,   // 42: zama.sdk.v1alpha1.StorageReply.ack:type_name -> zama.sdk.v1alpha1.Empty
+	10,  // 43: zama.sdk.v1alpha1.StorageClientMessage.attach:type_name -> zama.sdk.v1alpha1.ContextRequest
+	44,  // 44: zama.sdk.v1alpha1.StorageClientMessage.reply:type_name -> zama.sdk.v1alpha1.StorageReply
+	23,  // 45: zama.sdk.v1alpha1.StorageReplyError.error:type_name -> zama.sdk.v1alpha1.SdkError
+	3,   // 46: zama.sdk.v1alpha1.StorageServerMessage.attached:type_name -> zama.sdk.v1alpha1.Empty
+	43,  // 47: zama.sdk.v1alpha1.StorageServerMessage.action:type_name -> zama.sdk.v1alpha1.StorageAction
+	46,  // 48: zama.sdk.v1alpha1.StorageServerMessage.reply_error:type_name -> zama.sdk.v1alpha1.StorageReplyError
+	16,  // 49: zama.sdk.v1alpha1.DelegatedDecryptValuesResponse.values:type_name -> zama.sdk.v1alpha1.ClearEntry
+	61,  // 50: zama.sdk.v1alpha1.ContextConfig.chains:type_name -> zama.sdk.v1alpha1.ChainConfig
+	64,  // 51: zama.sdk.v1alpha1.ContextConfig.process_runtime:type_name -> zama.sdk.v1alpha1.ProcessRuntimeConfig
+	67,  // 52: zama.sdk.v1alpha1.ContextConfig.relayers:type_name -> zama.sdk.v1alpha1.RelayerMap
+	62,  // 53: zama.sdk.v1alpha1.ChainConfig.auth:type_name -> zama.sdk.v1alpha1.ChainAuth
+	74,  // 54: zama.sdk.v1alpha1.ChainConfig.provider:type_name -> zama.sdk.v1alpha1.HttpProviderConfig
+	63,  // 55: zama.sdk.v1alpha1.ChainAuth.api_key_header:type_name -> zama.sdk.v1alpha1.NamedCredential
+	63,  // 56: zama.sdk.v1alpha1.ChainAuth.api_key_cookie:type_name -> zama.sdk.v1alpha1.NamedCredential
+	65,  // 57: zama.sdk.v1alpha1.ProcessRuntimeConfig.module_versions:type_name -> zama.sdk.v1alpha1.ModuleVersions
+	62,  // 58: zama.sdk.v1alpha1.ProcessRuntimeConfig.auth:type_name -> zama.sdk.v1alpha1.ChainAuth
+	3,   // 59: zama.sdk.v1alpha1.ModuleVersions.auto:type_name -> zama.sdk.v1alpha1.Empty
+	66,  // 60: zama.sdk.v1alpha1.ModuleVersions.pinned:type_name -> zama.sdk.v1alpha1.PinnedModuleVersions
+	96,  // 61: zama.sdk.v1alpha1.RelayerMap.entries:type_name -> zama.sdk.v1alpha1.RelayerMap.EntriesEntry
+	1,   // 62: zama.sdk.v1alpha1.RelayerConfig.transport:type_name -> zama.sdk.v1alpha1.RelayerTransport
+	69,  // 63: zama.sdk.v1alpha1.RelayerConfig.options:type_name -> zama.sdk.v1alpha1.RelayerOptions
+	65,  // 64: zama.sdk.v1alpha1.RelayerOptions.module_versions:type_name -> zama.sdk.v1alpha1.ModuleVersions
+	70,  // 65: zama.sdk.v1alpha1.RelayerOptions.fhe_encryption_key:type_name -> zama.sdk.v1alpha1.FheEncryptionKey
+	71,  // 66: zama.sdk.v1alpha1.FheEncryptionKey.public_key_bytes:type_name -> zama.sdk.v1alpha1.FhePublicKeyBytes
+	72,  // 67: zama.sdk.v1alpha1.FheEncryptionKey.crs_bytes:type_name -> zama.sdk.v1alpha1.FheCrsBytes
+	73,  // 68: zama.sdk.v1alpha1.FheEncryptionKey.metadata:type_name -> zama.sdk.v1alpha1.FheEncryptionKeyMetadata
+	75,  // 69: zama.sdk.v1alpha1.HttpProviderConfig.headers:type_name -> zama.sdk.v1alpha1.HttpHeaders
+	76,  // 70: zama.sdk.v1alpha1.HttpProviderConfig.batch:type_name -> zama.sdk.v1alpha1.ProviderBatch
+	97,  // 71: zama.sdk.v1alpha1.HttpHeaders.entries:type_name -> zama.sdk.v1alpha1.HttpHeaders.EntriesEntry
+	77,  // 72: zama.sdk.v1alpha1.ProviderBatch.options:type_name -> zama.sdk.v1alpha1.ProviderBatchOptions
+	12,  // 73: zama.sdk.v1alpha1.EncryptRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	78,  // 74: zama.sdk.v1alpha1.EncryptRequest.values:type_name -> zama.sdk.v1alpha1.EncryptInput
+	12,  // 75: zama.sdk.v1alpha1.PrepareTransactionRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	82,  // 76: zama.sdk.v1alpha1.PrepareTransactionRequest.options:type_name -> zama.sdk.v1alpha1.PrepareOptions
+	84,  // 77: zama.sdk.v1alpha1.PrepareTransactionRequest.confidential_transfer:type_name -> zama.sdk.v1alpha1.ConfidentialTransfer
+	85,  // 78: zama.sdk.v1alpha1.PrepareTransactionRequest.confidential_transfer_from:type_name -> zama.sdk.v1alpha1.ConfidentialTransferFrom
+	86,  // 79: zama.sdk.v1alpha1.PrepareTransactionRequest.set_operator:type_name -> zama.sdk.v1alpha1.SetOperator
+	87,  // 80: zama.sdk.v1alpha1.PrepareTransactionRequest.unwrap:type_name -> zama.sdk.v1alpha1.Unwrap
+	88,  // 81: zama.sdk.v1alpha1.PrepareTransactionRequest.unwrap_all:type_name -> zama.sdk.v1alpha1.UnwrapAll
+	89,  // 82: zama.sdk.v1alpha1.PrepareTransactionRequest.finalize_unwrap:type_name -> zama.sdk.v1alpha1.FinalizeUnwrap
+	90,  // 83: zama.sdk.v1alpha1.PrepareTransactionRequest.approve_underlying:type_name -> zama.sdk.v1alpha1.ApproveUnderlying
+	91,  // 84: zama.sdk.v1alpha1.PrepareTransactionRequest.wrap:type_name -> zama.sdk.v1alpha1.Wrap
+	92,  // 85: zama.sdk.v1alpha1.PrepareTransactionRequest.transfer_and_call:type_name -> zama.sdk.v1alpha1.TransferAndCall
+	93,  // 86: zama.sdk.v1alpha1.PrepareTransactionRequest.delegate_decryption:type_name -> zama.sdk.v1alpha1.DelegateDecryption
+	94,  // 87: zama.sdk.v1alpha1.PrepareTransactionRequest.revoke_delegation:type_name -> zama.sdk.v1alpha1.RevokeDelegation
+	83,  // 88: zama.sdk.v1alpha1.PrepareOptions.fees:type_name -> zama.sdk.v1alpha1.PrepareFees
+	2,   // 89: zama.sdk.v1alpha1.PrepareTransactionResponse.kind:type_name -> zama.sdk.v1alpha1.TransactionKind
+	68,  // 90: zama.sdk.v1alpha1.RelayerMap.EntriesEntry.value:type_name -> zama.sdk.v1alpha1.RelayerConfig
+	4,   // 91: zama.sdk.v1alpha1.SidecarService.GetInfo:input_type -> zama.sdk.v1alpha1.GetInfoRequest
+	7,   // 92: zama.sdk.v1alpha1.SidecarService.CreateContext:input_type -> zama.sdk.v1alpha1.CreateContextRequest
+	10,  // 93: zama.sdk.v1alpha1.SidecarService.CloseContext:input_type -> zama.sdk.v1alpha1.ContextRequest
+	11,  // 94: zama.sdk.v1alpha1.SidecarService.UpdateAccount:input_type -> zama.sdk.v1alpha1.UpdateAccountRequest
+	36,  // 95: zama.sdk.v1alpha1.SidecarService.SignerChannel:input_type -> zama.sdk.v1alpha1.SignerClientMessage
+	45,  // 96: zama.sdk.v1alpha1.SidecarService.StorageChannel:input_type -> zama.sdk.v1alpha1.StorageClientMessage
+	17,  // 97: zama.sdk.v1alpha1.SidecarService.DecryptValues:input_type -> zama.sdk.v1alpha1.DecryptValuesRequest
+	19,  // 98: zama.sdk.v1alpha1.SidecarService.DelegatedDecryptValues:input_type -> zama.sdk.v1alpha1.DelegatedDecryptValuesRequest
+	20,  // 99: zama.sdk.v1alpha1.SidecarService.DecryptPublicValues:input_type -> zama.sdk.v1alpha1.DecryptPublicValuesRequest
+	22,  // 100: zama.sdk.v1alpha1.SidecarService.DelegatedBatchDecryptValues:input_type -> zama.sdk.v1alpha1.DelegatedBatchDecryptValuesRequest
+	81,  // 101: zama.sdk.v1alpha1.SidecarService.PrepareTransaction:input_type -> zama.sdk.v1alpha1.PrepareTransactionRequest
+	26,  // 102: zama.sdk.v1alpha1.SidecarService.PreparePermit:input_type -> zama.sdk.v1alpha1.PreparePermitRequest
+	28,  // 103: zama.sdk.v1alpha1.SidecarService.RegisterPermit:input_type -> zama.sdk.v1alpha1.RegisterPermitRequest
+	29,  // 104: zama.sdk.v1alpha1.SidecarService.GrantPermit:input_type -> zama.sdk.v1alpha1.ContractsRequest
+	30,  // 105: zama.sdk.v1alpha1.SidecarService.GrantDelegationPermit:input_type -> zama.sdk.v1alpha1.DelegationContractsRequest
+	29,  // 106: zama.sdk.v1alpha1.SidecarService.HasPermit:input_type -> zama.sdk.v1alpha1.ContractsRequest
+	30,  // 107: zama.sdk.v1alpha1.SidecarService.HasDelegationPermit:input_type -> zama.sdk.v1alpha1.DelegationContractsRequest
+	33,  // 108: zama.sdk.v1alpha1.SidecarService.RevokePermits:input_type -> zama.sdk.v1alpha1.RevokePermitsRequest
+	13,  // 109: zama.sdk.v1alpha1.SidecarService.ClearPermits:input_type -> zama.sdk.v1alpha1.OperationRequest
+	13,  // 110: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPair:input_type -> zama.sdk.v1alpha1.OperationRequest
+	34,  // 111: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPairScope:input_type -> zama.sdk.v1alpha1.ScopeRequest
+	34,  // 112: zama.sdk.v1alpha1.SidecarService.RevokeTransportKeyPair:input_type -> zama.sdk.v1alpha1.ScopeRequest
+	79,  // 113: zama.sdk.v1alpha1.SidecarService.Encrypt:input_type -> zama.sdk.v1alpha1.EncryptRequest
+	5,   // 114: zama.sdk.v1alpha1.SidecarService.GetInfo:output_type -> zama.sdk.v1alpha1.GetInfoResponse
+	9,   // 115: zama.sdk.v1alpha1.SidecarService.CreateContext:output_type -> zama.sdk.v1alpha1.CreateContextResponse
+	48,  // 116: zama.sdk.v1alpha1.SidecarService.CloseContext:output_type -> zama.sdk.v1alpha1.CloseContextResponse
+	49,  // 117: zama.sdk.v1alpha1.SidecarService.UpdateAccount:output_type -> zama.sdk.v1alpha1.UpdateAccountResponse
+	41,  // 118: zama.sdk.v1alpha1.SidecarService.SignerChannel:output_type -> zama.sdk.v1alpha1.SignerServerMessage
+	47,  // 119: zama.sdk.v1alpha1.SidecarService.StorageChannel:output_type -> zama.sdk.v1alpha1.StorageServerMessage
+	18,  // 120: zama.sdk.v1alpha1.SidecarService.DecryptValues:output_type -> zama.sdk.v1alpha1.DecryptValuesResponse
+	58,  // 121: zama.sdk.v1alpha1.SidecarService.DelegatedDecryptValues:output_type -> zama.sdk.v1alpha1.DelegatedDecryptValuesResponse
+	21,  // 122: zama.sdk.v1alpha1.SidecarService.DecryptPublicValues:output_type -> zama.sdk.v1alpha1.DecryptPublicValuesResponse
+	25,  // 123: zama.sdk.v1alpha1.SidecarService.DelegatedBatchDecryptValues:output_type -> zama.sdk.v1alpha1.DelegatedBatchDecryptValuesResponse
+	95,  // 124: zama.sdk.v1alpha1.SidecarService.PrepareTransaction:output_type -> zama.sdk.v1alpha1.PrepareTransactionResponse
+	27,  // 125: zama.sdk.v1alpha1.SidecarService.PreparePermit:output_type -> zama.sdk.v1alpha1.PreparePermitResponse
+	50,  // 126: zama.sdk.v1alpha1.SidecarService.RegisterPermit:output_type -> zama.sdk.v1alpha1.RegisterPermitResponse
+	51,  // 127: zama.sdk.v1alpha1.SidecarService.GrantPermit:output_type -> zama.sdk.v1alpha1.GrantPermitResponse
+	52,  // 128: zama.sdk.v1alpha1.SidecarService.GrantDelegationPermit:output_type -> zama.sdk.v1alpha1.GrantDelegationPermitResponse
+	31,  // 129: zama.sdk.v1alpha1.SidecarService.HasPermit:output_type -> zama.sdk.v1alpha1.HasPermitResponse
+	59,  // 130: zama.sdk.v1alpha1.SidecarService.HasDelegationPermit:output_type -> zama.sdk.v1alpha1.HasDelegationPermitResponse
+	53,  // 131: zama.sdk.v1alpha1.SidecarService.RevokePermits:output_type -> zama.sdk.v1alpha1.RevokePermitsResponse
+	54,  // 132: zama.sdk.v1alpha1.SidecarService.ClearPermits:output_type -> zama.sdk.v1alpha1.ClearPermitsResponse
+	55,  // 133: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPair:output_type -> zama.sdk.v1alpha1.WarmTransportKeyPairResponse
+	56,  // 134: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPairScope:output_type -> zama.sdk.v1alpha1.WarmTransportKeyPairScopeResponse
+	57,  // 135: zama.sdk.v1alpha1.SidecarService.RevokeTransportKeyPair:output_type -> zama.sdk.v1alpha1.RevokeTransportKeyPairResponse
+	80,  // 136: zama.sdk.v1alpha1.SidecarService.Encrypt:output_type -> zama.sdk.v1alpha1.EncryptResponse
+	114, // [114:137] is the sub-list for method output_type
+	91,  // [91:114] is the sub-list for method input_type
+	91,  // [91:91] is the sub-list for extension type_name
+	91,  // [91:91] is the sub-list for extension extendee
+	0,   // [0:91] is the sub-list for field type_name
 }
 
 func init() { file_zama_sdk_v1alpha1_sidecar_proto_init() }
@@ -7045,59 +7213,65 @@ func file_zama_sdk_v1alpha1_sidecar_proto_init() {
 	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[32].OneofWrappers = []any{
 		(*SignerReply_Signature)(nil),
 		(*SignerReply_Error)(nil),
+		(*SignerReply_TransactionHash)(nil),
 	}
 	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[33].OneofWrappers = []any{
 		(*SignerClientMessage_Attach)(nil),
 		(*SignerClientMessage_Reply)(nil),
 	}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[37].OneofWrappers = []any{
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[34].OneofWrappers = []any{
+		(*SignerAction_TypedDataJson)(nil),
+		(*SignerAction_ContractWrite)(nil),
+	}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[35].OneofWrappers = []any{}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[38].OneofWrappers = []any{
 		(*SignerServerMessage_Attached)(nil),
 		(*SignerServerMessage_Action)(nil),
 		(*SignerServerMessage_ReplyError)(nil),
 		(*SignerServerMessage_Cancelled)(nil),
 	}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[38].OneofWrappers = []any{
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[39].OneofWrappers = []any{
 		(*StorageBinding_Memory)(nil),
 		(*StorageBinding_Persistent)(nil),
 		(*StorageBinding_Application)(nil),
 	}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[40].OneofWrappers = []any{
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[41].OneofWrappers = []any{
 		(*StorageReply_Value)(nil),
 		(*StorageReply_Error)(nil),
 		(*StorageReply_NotFound)(nil),
 		(*StorageReply_Ack)(nil),
 	}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[41].OneofWrappers = []any{
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[42].OneofWrappers = []any{
 		(*StorageClientMessage_Attach)(nil),
 		(*StorageClientMessage_Reply)(nil),
 	}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[43].OneofWrappers = []any{
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[44].OneofWrappers = []any{
 		(*StorageServerMessage_Attached)(nil),
 		(*StorageServerMessage_Action)(nil),
 		(*StorageServerMessage_ReplyError)(nil),
 	}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[56].OneofWrappers = []any{}
 	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[57].OneofWrappers = []any{}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[58].OneofWrappers = []any{
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[58].OneofWrappers = []any{}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[59].OneofWrappers = []any{
 		(*ChainAuth_BearerToken)(nil),
 		(*ChainAuth_ApiKeyHeader)(nil),
 		(*ChainAuth_ApiKeyCookie)(nil),
 	}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[59].OneofWrappers = []any{}
 	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[60].OneofWrappers = []any{}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[61].OneofWrappers = []any{
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[61].OneofWrappers = []any{}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[62].OneofWrappers = []any{
 		(*ModuleVersions_Auto)(nil),
 		(*ModuleVersions_Pinned)(nil),
 	}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[62].OneofWrappers = []any{}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[65].OneofWrappers = []any{}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[70].OneofWrappers = []any{}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[72].OneofWrappers = []any{
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[63].OneofWrappers = []any{}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[66].OneofWrappers = []any{}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[71].OneofWrappers = []any{}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[73].OneofWrappers = []any{
 		(*ProviderBatch_Enabled)(nil),
 		(*ProviderBatch_Options)(nil),
 	}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[73].OneofWrappers = []any{}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[74].OneofWrappers = []any{
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[74].OneofWrappers = []any{}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[75].OneofWrappers = []any{
 		(*EncryptInput_Ebool)(nil),
 		(*EncryptInput_EboolBigint)(nil),
 		(*EncryptInput_Euint8)(nil),
@@ -7108,8 +7282,8 @@ func file_zama_sdk_v1alpha1_sidecar_proto_init() {
 		(*EncryptInput_Euint256)(nil),
 		(*EncryptInput_Eaddress)(nil),
 	}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[75].OneofWrappers = []any{}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[77].OneofWrappers = []any{
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[76].OneofWrappers = []any{}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[78].OneofWrappers = []any{
 		(*PrepareTransactionRequest_ConfidentialTransfer)(nil),
 		(*PrepareTransactionRequest_ConfidentialTransferFrom)(nil),
 		(*PrepareTransactionRequest_SetOperator)(nil),
@@ -7122,17 +7296,17 @@ func file_zama_sdk_v1alpha1_sidecar_proto_init() {
 		(*PrepareTransactionRequest_DelegateDecryption)(nil),
 		(*PrepareTransactionRequest_RevokeDelegation)(nil),
 	}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[78].OneofWrappers = []any{}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[82].OneofWrappers = []any{}
-	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[88].OneofWrappers = []any{}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[79].OneofWrappers = []any{}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[83].OneofWrappers = []any{}
 	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[89].OneofWrappers = []any{}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[90].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zama_sdk_v1alpha1_sidecar_proto_rawDesc), len(file_zama_sdk_v1alpha1_sidecar_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   94,
+			NumMessages:   95,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

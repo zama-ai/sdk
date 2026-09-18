@@ -1,6 +1,7 @@
 import { FakeStream } from "./support/fake-stream.js";
 import { frames } from "./support/frames.js";
 import { expect, test } from "vitest";
+import { parseAbi } from "viem";
 import { operationContext, RemoteSigner, type SignerStream } from "../src/remote-signer.js";
 import type { SignerServerMessage } from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
 
@@ -56,7 +57,7 @@ test("signer routes replies by operation and action without killing unrelated wo
 test("cancellation cancels the wallet action and rejects late SDK signer callbacks", async () => {
   const { controller, signer, stream, sign } = setup();
   const pending = sign("cancelled");
-  controller.abort();
+  controller.abort(signer.abortReason("cancelled"));
   await expect(pending).rejects.toMatchObject({ code: "CANCELLED" });
   expect(frames(stream.messages, "cancelled").at(-1)?.cancelled.operationId).toBe("cancelled");
   await expect(sign("late")).rejects.toMatchObject({ code: "CANCELLED" });
@@ -113,5 +114,45 @@ test("a missing signer result rejects only the corresponding operation", async (
     result: undefined,
   });
   await expect(pending).rejects.toMatchObject({ code: "SIGNING_FAILED" });
+  signer.dispose();
+});
+
+test("recorded write hashes survive the reply and disappear on release", async () => {
+  const { controller, signer, stream } = setup();
+  const config = {
+    address: "0x2222222222222222222222222222222222222222",
+    abi: parseAbi(["function store(uint256 amount)"]),
+    functionName: "store",
+    args: [1n],
+  } as const;
+  const hash = `0x${"ab".repeat(32)}`;
+  signer.track("write");
+  const pending = operationContext.run({ id: "write", signal: controller.signal }, () =>
+    signer.writeContract(config),
+  );
+  signer.reply({
+    operationId: "write",
+    actionId: frames(stream.messages, "action")[0]!.action.actionId,
+    result: { $case: "transactionHash", transactionHash: Buffer.from(hash.slice(2), "hex") },
+  });
+  await expect(pending).resolves.toBe(hash);
+  expect(signer.abortReason("write")).toMatchObject({
+    code: "TRANSACTION_OUTCOME_UNKNOWN",
+    retryable: false,
+    message: expect.stringContaining(hash),
+  });
+  signer.release("write");
+  expect(signer.abortReason("write")).toMatchObject({ code: "CANCELLED" });
+  // A reply for an operation that already settled must not resurrect its entry.
+  const late = operationContext.run({ id: "write", signal: controller.signal }, () =>
+    signer.writeContract(config),
+  );
+  signer.reply({
+    operationId: "write",
+    actionId: frames(stream.messages, "action")[1]!.action.actionId,
+    result: { $case: "transactionHash", transactionHash: Buffer.from(hash.slice(2), "hex") },
+  });
+  await expect(late).resolves.toBe(hash);
+  expect(signer.abortReason("write")).toMatchObject({ code: "CANCELLED" });
   signer.dispose();
 });

@@ -1,6 +1,6 @@
 # Sidecar v1alpha1 contract
 
-The canonical schema is [sidecar.proto](zama/sdk/v1alpha1/sidecar.proto). It exposes the TypeScript SDK's encryption, decryption, permit and offline transaction methods through unary RPCs, with a bidirectional channel for external signing. This maintained, permanently beta sidecar is intended for external partners; its versioned protocol can evolve. Transport adapts arguments and results; `@zama-fhe/sdk` owns cryptography, credentials, defaults, caching, delegation checks, batching and recovery.
+The canonical schema is [sidecar.proto](zama/sdk/v1alpha1/sidecar.proto). It exposes the TypeScript SDK's encryption, decryption, permit and offline transaction methods through unary RPCs, with a bidirectional channel for external signing and transaction broadcasting. This maintained, permanently beta sidecar is intended for external partners; its versioned protocol can evolve with its native clients. Transport adapts arguments and results; `@zama-fhe/sdk` owns cryptography, credentials, defaults, caching, delegation checks, batching and recovery.
 
 ## SDK contexts
 
@@ -112,9 +112,11 @@ Optional scalar presence is significant. Durations, timeouts, concurrency and re
 
 Every SDK operation has a context ID and a client-generated operation ID. Clients can submit concurrent calls; the runtime coordinates credential operations sharing a storage identity and signer or key scope. There is no process-wide busy rejection.
 
-`SignerChannel` attaches to a signer-enabled context and acknowledges attachment before delivering actions. Each action includes operation/action IDs, the wallet account and SDK EIP-712 typed data. Replies require exactly one result: signature bytes or a structured signing error; `SIGNING_REJECTED` represents wallet rejection.
+`SignerChannel` attaches to a signer-enabled context and acknowledges attachment before delivering actions. Each action includes operation/action IDs, the wallet account and exactly one `request`: SDK EIP-712 typed data or a `contract_write`. Replies require exactly one `result`: signature bytes, a 32-byte `transaction_hash` or a structured error; `SIGNING_REJECTED` represents wallet rejection. `typed_data_json` kept field 4 when it joined the `request` union, so existing frames decode unchanged; a native client that sets both variants now loses one on the wire instead of producing an ambiguous action.
 
-Cancellation frames stop pending wallet callbacks. Unknown or stale replies receive an action-scoped error and do not cancel unrelated work. Clients do not automatically replay signing requests after reconnection.
+Contract writes carry the destination, canonical calldata, ABI/function/arguments and optional decimal value/gas. TypeScript encodes calldata; native wallets sign and broadcast it, then return the hash. The SDK owns receipt waiting and workflow continuation. Bigint arguments in JSON use decimal strings interpreted through the ABI; optional value/gas retain absence and explicit zero. See [native transaction setup and failure behavior](../packages/sdk-sidecar/TRANSACTIONS.md).
+
+Cancellation frames stop pending wallet callbacks. Cancellation cannot undo a broadcast. An outstanding write whose channel disappears has an uncertain outcome; the bridge reports nonretryable `TRANSACTION_OUTCOME_UNKNOWN`. A reply whose result variant does not match the requested action reports the same uncertainty for writes and a signing failure for typed data. Account changes cancel old callbacks before publishing a new snapshot. Native adapters report an uncertain submission with its hash and do not block later writes, so reconcile the account before retrying. Unknown or stale replies receive an action-scoped error and do not cancel unrelated work. Clients do not automatically replay signing requests after reconnection.
 
 A disconnected signer channel aborts operations waiting for its outstanding signing actions. The SDK context remains available for independent work. Go supports explicit signer reattachment; Rust applications recreate their managed SDK with the same storage binding. Closing the context ends its operations and SDK instance. Operation IDs do not provide durable resumption or exactly-once submission.
 
@@ -122,7 +124,7 @@ Cancellation does not roll back completed SDK storage changes. SDK work that can
 
 ## Errors and transport limits
 
-SDK errors retain their code, message, retryability and optional integer retry delay in seconds. Callback errors use the SDK's canonical retryability for fixed error codes; relayer-request failures retain per-instance retryability. Unary RPCs carry these in `zama-error-code`, `zama-error-retryable` and `zama-error-retry-after-seconds` trailers. Batch items and signer messages use the corresponding `SdkError` fields. Use the SDK code for application decisions; gRPC status also represents transport failures.
+SDK errors retain their code, message, retryability and optional integer retry delay in seconds. Callback errors use the SDK's canonical retryability for fixed error codes; relayer-request failures retain per-instance retryability. Contract-write callback errors with a code outside the SDK taxonomy, such as `TRANSACTION_OUTCOME_UNKNOWN`, survive the SDK's transaction error wrapper so native callers still see the broadcast outcome. Unary RPCs carry these in `zama-error-code`, `zama-error-retryable` and `zama-error-retry-after-seconds` trailers. Batch items and signer messages use the corresponding `SdkError` fields. Use the SDK code for application decisions; gRPC status also represents transport failures.
 
 Go exposes `RPCError` and preserves `status.Code`. Rust exposes `RpcError` with the SDK details and underlying tonic status. Neither client automatically retries SDK operations or signing requests.
 
@@ -132,9 +134,9 @@ RPC deadlines are independent of SDK relayer timeouts. Storage failures do not p
 
 ## Remaining API coverage
 
-Token/WrappedToken operations, registry access, executed delegation transactions, transaction-signing callbacks and SDK event subscriptions are not exposed in this slice. Delegation changes are available only as offline-prepared transactions. Injection of arbitrary JavaScript providers, loggers and SDK event callbacks remains outside this wire API. Native storage implementations are supported through the storage bridge. This is partial SDK coverage; the methods above delegate their SDK behavior rather than reconstructing token flows.
+Token/WrappedToken operations, registry access, executed delegation transactions and SDK event subscriptions are not exposed in this slice. Delegation changes are available only as offline-prepared transactions. Injection of arbitrary JavaScript providers, loggers and SDK event callbacks remains outside this wire API. Native storage implementations are supported through the storage bridge. This is partial SDK coverage; the methods above delegate their SDK behavior rather than reconstructing token flows.
 
-The native balance examples perform Ethereum contract reads in Alloy/go-ethereum and pass the resulting encrypted handle to general decryption. The shared setup now accepts runtime/provider options, storage selection and optional credential protection before the encryption and balance steps. Integration with `Token.balanceOf`, other token lifecycle steps and delegation transactions remains deferred until those public native APIs are exposed. SDK-backed tests exercise credential reuse and restart behavior meanwhile.
+The native balance examples perform Ethereum contract reads in Alloy/go-ethereum and pass the resulting encrypted handle to general decryption. The shared setup now accepts runtime/provider options, storage selection and optional credential protection before the encryption and balance steps, and its wallets include transaction adapters. Integration with `Token.balanceOf`, other token lifecycle steps and delegation transactions remains deferred until those public native APIs are exposed. SDK-backed tests exercise credential reuse, restart behavior and the transaction callback meanwhile.
 
 ## Equivalence verification
 

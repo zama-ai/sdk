@@ -14,25 +14,27 @@ import (
 const sepoliaChainID = 11155111
 
 func connectEthereum(ctx context.Context, config exampleConfig) (*ethclient.Client, sidecar.SignerConfig, error) {
-	signer, err := sidecar.NewPrivateKeySigner(config.privateKey, sepoliaChainID)
-	if err != nil {
-		return nil, sidecar.SignerConfig{}, err
-	}
-	if signer.Account.Address != config.owner {
-		return nil, sidecar.SignerConfig{}, errors.New("wallet does not match owner")
-	}
 	rpc, err := ethclient.DialContext(ctx, config.rpcURL)
 	if err != nil {
 		return nil, sidecar.SignerConfig{}, err
 	}
-	chain, err := rpc.ChainID(ctx)
-	if err != nil {
+	fail := func(err error) (*ethclient.Client, sidecar.SignerConfig, error) {
 		rpc.Close()
 		return nil, sidecar.SignerConfig{}, err
 	}
+	chain, err := rpc.ChainID(ctx)
+	if err != nil {
+		return fail(err)
+	}
 	if !chain.IsUint64() || chain.Uint64() != sepoliaChainID {
-		rpc.Close()
-		return nil, sidecar.SignerConfig{}, errors.New("RPC must use Sepolia")
+		return fail(errors.New("RPC must use Sepolia"))
+	}
+	signer, err := sidecar.NewEthereumSigner(config.privateKey, sepoliaChainID, rpc)
+	if err != nil {
+		return fail(err)
+	}
+	if signer.Account.Address != config.owner {
+		return fail(errors.New("wallet does not match owner"))
 	}
 	return rpc, signer, nil
 }
