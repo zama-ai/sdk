@@ -376,3 +376,19 @@ fn expiring_at_rejects_a_time_before_the_unix_epoch() {
     .unwrap();
     assert_eq!(params.expiration_date_ms, Some(1_700_000_000_123));
 }
+#[test]
+fn expiring_at_rejects_a_time_whose_millisecond_count_exceeds_u64() {
+    let beyond_u64_millis =
+        std::time::UNIX_EPOCH + std::time::Duration::from_secs(u64::MAX / 1_000 + 1);
+    let error = DelegateDecryptionParams::expiring_at(
+        Address::repeat_byte(1),
+        Address::repeat_byte(2),
+        beyond_u64_millis,
+    )
+    .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("does not fit in u64 milliseconds")
+    );
+}

@@ -152,21 +152,6 @@ const ALREADY_DELEGATED_SELECTOR = toFunctionSelector(
   "AlreadyDelegatedOrRevokedInSameBlock(address,address,address,uint256)",
 );
 
-const ALLOWED_METHODS = new Set([
-  "eth_chainId",
-  "eth_blockNumber",
-  "eth_getBlockByNumber",
-  "eth_gasPrice",
-  "eth_maxPriorityFeePerGas",
-  "eth_feeHistory",
-  "eth_getTransactionCount",
-  "eth_getCode",
-  "eth_estimateGas",
-  "eth_call",
-  "eth_sendRawTransaction",
-  "eth_getTransactionReceipt",
-]);
-
 function expectOrder(stdout: string, lines: string[]): void {
   let cursor = -1;
   for (const line of lines) {
@@ -342,10 +327,7 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
       }
 
       expect(getAppliedWireRuntime()).toMatchObject({ singleThread: true });
-      const unexpected = [...new Set(chain.methods)].filter(
-        (method) => !ALLOWED_METHODS.has(method),
-      );
-      expect(unexpected).toEqual([]);
+      expect([...new Set(chain.unsupportedMethods)]).toEqual([]);
     } finally {
       await runtime.close();
       await stop?.();

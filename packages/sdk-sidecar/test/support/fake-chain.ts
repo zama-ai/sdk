@@ -23,6 +23,8 @@ export interface FakeChain {
   server: Server;
   /** Every JSON-RPC method the clients and the sidecar asked for, in order. */
   methods: string[];
+  /** Methods that reached the fixture without a handler, in order. */
+  unsupportedMethods: string[];
   broadcasts: Broadcast[];
   /** Current ACL expiry for a (delegator, delegate, contract) triple. */
   expiryOf(delegator: string, delegate: string, contract: string): bigint;
@@ -85,6 +87,7 @@ function block(number: bigint, timestamp: bigint) {
  */
 export function createFakeChain(tokenName: string): FakeChain {
   const methods: string[] = [];
+  const unsupportedMethods: string[] = [];
   const broadcasts: Broadcast[] = [];
   const nonces = new Map<string, number>();
   // Every observation advances the head so the examples' wait-for-next-block loop terminates.
@@ -201,6 +204,7 @@ export function createFakeChain(tokenName: string): FakeChain {
             };
       }
       default:
+        unsupportedMethods.push(method);
         throw new Error(`unsupported fixture method ${method}`);
     }
   };
@@ -246,6 +250,7 @@ export function createFakeChain(tokenName: string): FakeChain {
   return {
     server,
     methods,
+    unsupportedMethods,
     broadcasts,
     expiryOf: (delegator, delegate, contract) =>
       expiries.get(key(delegator, delegate, contract)) ?? 0n,
