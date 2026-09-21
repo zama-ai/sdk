@@ -454,6 +454,24 @@ fn a_plain_insufficient_funds_error_is_not_a_revert() {
     assert_eq!(revert_data(&error), None);
 }
 #[test]
+fn an_insufficient_funds_error_carrying_data_is_not_a_revert() {
+    let error = error_resp(
+        -32000,
+        "insufficient funds for gas * price + value",
+        Some(serde_json::json!("0x")),
+    );
+    assert_eq!(revert_data(&error), None);
+}
+#[test]
+fn a_revert_message_on_an_unrelated_code_carries_its_data() {
+    let error = error_resp(
+        -32000,
+        "execution reverted: custom",
+        Some(serde_json::json!("0x1234")),
+    );
+    assert_eq!(revert_data(&error), Some(vec![0x12, 0x34]));
+}
+#[test]
 fn code_three_with_empty_string_data_is_a_revert_with_empty_bytes() {
     let error = error_resp(3, "execution reverted", Some(serde_json::json!("")));
     assert_eq!(revert_data(&error), Some(Vec::new()));

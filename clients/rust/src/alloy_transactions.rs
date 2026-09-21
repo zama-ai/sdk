@@ -133,7 +133,7 @@ fn revert_data(error: &TransportError) -> Option<Vec<u8>> {
         .message
         .to_lowercase()
         .starts_with("execution reverted");
-    (payload.code == 3 || is_revert_message || data.is_some()).then(|| data.unwrap_or_default())
+    (payload.code == 3 || is_revert_message).then(|| data.unwrap_or_default())
 }
 fn transaction(request: &ContractWriteRequest) -> Result<TransactionRequest, SdkError> {
     let value = request

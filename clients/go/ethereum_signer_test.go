@@ -335,6 +335,23 @@ func TestEthereumSignerReportsExecutionRevertWithData(t *testing.T) {
 	}
 }
 
+func TestEthereumSignerReportsExecutionRevertWithDataOnNonDedicatedCode(t *testing.T) {
+	backend := newTransactionBackend()
+	backend.estimateErr = &fakeDataError{msg: "execution reverted: custom", code: -32000, data: "0x1234"}
+	signer := transactionSigner(t, backend)
+	_, err := signer.WriteContract(t.Context(), transactionRequest(signer))
+	var revert *ExecutionRevertError
+	if !errors.As(err, &revert) {
+		t.Fatalf("revert not reported: %v", err)
+	}
+	if want := []byte{0x12, 0x34}; !bytes.Equal(revert.Data, want) {
+		t.Fatalf("revert data lost: %x", revert.Data)
+	}
+	if len(backend.sent) != 0 {
+		t.Fatal("reverting estimation still broadcast")
+	}
+}
+
 func TestEthereumSignerReportsExecutionRevertWithoutData(t *testing.T) {
 	for name, dataErr := range map[string]error{
 		"nil data":     &fakeDataError{msg: "execution reverted", code: 3, data: nil},

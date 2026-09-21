@@ -112,24 +112,26 @@ func (w *ethereumWriter) writeContract(ctx context.Context, request ContractWrit
 }
 
 // revertError turns a gas-estimation failure carrying revert data into an ExecutionRevertError; other errors pass through unchanged.
-// A node JSON-RPC error is only a revert when it carries geth's dedicated code 3 (mirrors ethclient.RevertErrorData);
-// any other code, such as insufficient funds or an unresolved header, stays a plain error.
+// A node JSON-RPC error is a revert when it carries geth's dedicated code 3 (mirrors ethclient.RevertErrorData) or when
+// its message starts with the revert marker; any other code, such as insufficient funds, stays a plain error.
 func revertError(err error) error {
-	var rpcErr rpc.Error
+	var data []byte
 	var dataErr rpc.DataError
-	if errors.As(err, &rpcErr) && rpcErr.ErrorCode() == 3 && errors.As(err, &dataErr) {
-		var data []byte
+	if errors.As(err, &dataErr) {
 		if hexString, ok := dataErr.ErrorData().(string); ok {
 			if decoded, decodeErr := hexutil.Decode(hexString); decodeErr == nil {
 				data = decoded
 			}
 		}
+	}
+	var rpcErr rpc.Error
+	if errors.As(err, &rpcErr) && rpcErr.ErrorCode() == 3 {
 		return &ExecutionRevertError{Data: data, Cause: err}
 	}
-	// Fallback for nodes that revert without structured RPC error data; anchored to a prefix so an
+	// Fallback for nodes that revert under a non-dedicated code; anchored to a prefix so an
 	// unrelated code carrying "execution reverted" mid-message is not misclassified.
 	if strings.HasPrefix(strings.ToLower(err.Error()), "execution reverted") {
-		return &ExecutionRevertError{Cause: err}
+		return &ExecutionRevertError{Data: data, Cause: err}
 	}
 	return err
 }
