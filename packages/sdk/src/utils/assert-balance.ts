@@ -9,10 +9,11 @@ import type { GenericProvider, GenericSigner } from "../types";
 import { requireAlignedWalletAccount } from "./alignment";
 
 /**
- * Decrypt the connected account's confidential balance on `tokenAddress` and
- * compare it against `amount`. If credentials are cached the decrypt happens
- * silently; if not, throws {@link BalanceCheckUnavailableError} rather than
- * triggering a surprise EIP-712 popup.
+ * Pre-flight for a write that would silently move zero on a short balance:
+ * decrypt the connected account's balance on `tokenAddress` and throw if it
+ * is below `amount`. Decrypting can prompt for a permit signature when none
+ * is cached. A failure that is not already a typed SDK error surfaces as
+ * {@link BalanceCheckUnavailableError}.
  *
  * @internal
  */

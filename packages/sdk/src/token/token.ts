@@ -857,10 +857,8 @@ export class Token {
   }
 
   /**
-   * Pre-flight check: decrypt the confidential balance and compare against the
-   * requested amount. If credentials are cached the decrypt happens silently;
-   * if not, throws {@link BalanceCheckUnavailableError} instead of triggering
-   * a surprise EIP-712 popup.
+   * Pre-flight the connected account's balance on this token before a write
+   * that would otherwise move zero on a short balance.
    *
    * @internal
    */

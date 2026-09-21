@@ -7,7 +7,7 @@ import { VaultBatcher } from "./vault-batcher";
 
 /**
  * A confidential ERC-4626 vault: one deposit batcher and one redeem batcher
- * behind ERC-20-style `deposit` and `redeem` methods.
+ * behind ERC-4626-style `deposit` and `redeem` methods.
  *
  * Claiming, quitting and batch state live on the two batchers directly —
  * `vault.depositBatcher.claim(batchId)`.
