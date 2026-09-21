@@ -56,21 +56,7 @@ The sidecar does not add delegation-specific error codes. It forwards the SDK's 
 
 ### Pre-broadcast reverts
 
-A delegate or revoke can fail before anything is broadcast: the node rejects the simulated write during gas estimation. The native wallet reports this as a revert instead of a broadcast hash, and the SDK surfaces it the same way it surfaces any other reverted write: code `TRANSACTION_REVERTED`, with a message naming the function and contract and carrying the decoded error name and arguments when the request ABI declares the error, or `unrecognized error 0x…` with the 4-byte selector otherwise.
-
-The SDK maps these ACL revert names to delegation error codes when the revert decodes:
-
-| ACL error name                         | SDK code                              |
-| -------------------------------------- | ------------------------------------- |
-| `AlreadyDelegatedOrRevokedInSameBlock` | `DELEGATION_COOLDOWN`                 |
-| `NotDelegatedYet`                      | `DELEGATION_NOT_FOUND`                |
-| `SenderCannotBeDelegate`               | `DELEGATION_SELF_NOT_ALLOWED`         |
-| `DelegateCannotBeContractAddress`      | `DELEGATION_DELEGATE_EQUALS_CONTRACT` |
-| `ExpirationDateAlreadySetToSameValue`  | `DELEGATION_EXPIRY_UNCHANGED`         |
-| `EnforcedPause`                        | `ACL_PAUSED`                          |
-| `SenderCannotBeContractAddress`        | `DELEGATION_CONTRACT_IS_SELF`         |
-
-The SDK ACL ABI declares functions only, so ACL reverts decode to their 4-byte selector; the SDK maps named ACL errors when its ABI carries the error entries.
+A delegate or revoke can fail before anything is broadcast: the node rejects the simulated write during gas estimation. The native wallet reports this as a revert instead of a broadcast hash, and the sidecar surfaces it as code `TRANSACTION_REVERTED`, the same as an on-chain revert. The SDK's ACL ABI declares no error entries, so the revert bytes decode to their 4-byte selector only and the message carries it as `unrecognized error 0x…`, or the wallet's own message when the node returned no revert data.
 
 ## Transaction result
 
