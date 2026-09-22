@@ -95,14 +95,16 @@ type ProgressKind int32
 
 const (
 	ProgressKindUnspecified   = ProgressKind(pb.ProgressKind_PROGRESS_KIND_UNSPECIFIED)
-	EncryptComplete           = ProgressKind(pb.ProgressKind_PROGRESS_KIND_ENCRYPT_COMPLETE)
+	ProgressEncryptComplete   = ProgressKind(pb.ProgressKind_PROGRESS_KIND_ENCRYPT_COMPLETE)
 	ProgressTransferSubmitted = ProgressKind(pb.ProgressKind_PROGRESS_KIND_TRANSFER_SUBMITTED)
 	ProgressApprovalSubmitted = ProgressKind(pb.ProgressKind_PROGRESS_KIND_APPROVAL_SUBMITTED)
 	ProgressShieldSubmitted   = ProgressKind(pb.ProgressKind_PROGRESS_KIND_SHIELD_SUBMITTED)
 	ProgressWrapSubmitted     = ProgressKind(pb.ProgressKind_PROGRESS_KIND_WRAP_SUBMITTED)
 	ProgressUnwrapSubmitted   = ProgressKind(pb.ProgressKind_PROGRESS_KIND_UNWRAP_SUBMITTED)
-	Finalizing                = ProgressKind(pb.ProgressKind_PROGRESS_KIND_FINALIZING)
+	ProgressFinalizing        = ProgressKind(pb.ProgressKind_PROGRESS_KIND_FINALIZING)
 	ProgressFinalizeSubmitted = ProgressKind(pb.ProgressKind_PROGRESS_KIND_FINALIZE_SUBMITTED)
+	EncryptComplete           = ProgressEncryptComplete
+	Finalizing                = ProgressFinalizing
 )
 
 func (kind ProgressKind) String() string { return pb.ProgressKind(kind).String() }

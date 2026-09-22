@@ -15,15 +15,98 @@ impl<E: TryFrom<i32>> EventEnum<E> {
         }
     }
 }
-impl<E: fmt::Debug> fmt::Display for EventEnum<E> {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Known(value) => write!(formatter, "{value:?}"),
-            Self::Unknown(value) => write!(formatter, "Unknown({value})"),
+macro_rules! native_event_enum {
+    ($name:ident { $($variant:ident),+ $(,)? }) => {
+        #[non_exhaustive]
+        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+        pub enum $name { $($variant),+ }
+
+        impl TryFrom<i32> for $name {
+            type Error = ();
+            fn try_from(raw: i32) -> std::result::Result<Self, Self::Error> {
+                match generated::$name::try_from(raw).map_err(|_| ())? {
+                    $(generated::$name::$variant => Ok(Self::$variant)),+
+                }
+            }
         }
-    }
+
+        impl fmt::Display for EventEnum<$name> {
+            fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                match self {
+                    $(Self::Known($name::$variant) => formatter.write_str(generated::$name::$variant.as_str_name()),)+
+                    Self::Unknown(raw) => write!(formatter, "Unknown({raw})"),
+                }
+            }
+        }
+    };
 }
-pub type EventKind = EventEnum<generated::SdkEventKind>;
+native_event_enum!(SdkEventKind {
+    Unspecified,
+    EncryptStart,
+    EncryptEnd,
+    EncryptError,
+    DecryptStart,
+    DecryptEnd,
+    DecryptError,
+    PermitError,
+    TransactionError,
+    ShieldSubmitted,
+    TransferSubmitted,
+    TransferFromSubmitted,
+    SetOperatorSubmitted,
+    ApproveUnderlyingSubmitted,
+    WrapSubmitted,
+    UnwrapSubmitted,
+    FinalizeUnwrapSubmitted,
+    DelegationSubmitted,
+    RevokeDelegationSubmitted,
+    UnshieldPhase1Submitted,
+    UnshieldPhase2Started,
+    UnshieldPhase2Submitted,
+});
+native_event_enum!(EventOperation {
+    Unspecified,
+    GrantPermit,
+    GrantDelegationPermit,
+    RegisterPermit,
+    ApproveUnderlying,
+    ApproveUnderlyingReset,
+    DelegateDecryption,
+    FinalizeUnwrap,
+    RevokeDelegation,
+    SetOperator,
+    ShieldTransferAndCall,
+    ShieldApproveAndWrap,
+    Wrap,
+    Transfer,
+    TransferAndCall,
+    TransferFrom,
+    TransferFromAndCall,
+    Unwrap,
+    UnwrapAll,
+});
+native_event_enum!(ShieldPath {
+    Unspecified,
+    TransferAndCall,
+    ApproveAndWrap
+});
+native_event_enum!(ApprovalStep {
+    Unspecified,
+    Reset,
+    Approve
+});
+native_event_enum!(ProgressKind {
+    Unspecified,
+    EncryptComplete,
+    TransferSubmitted,
+    ApprovalSubmitted,
+    ShieldSubmitted,
+    WrapSubmitted,
+    UnwrapSubmitted,
+    Finalizing,
+    FinalizeSubmitted,
+});
+pub type EventKind = EventEnum<SdkEventKind>;
 
 /// May contain decrypted plaintext; select metadata explicitly when writing diagnostics.
 #[derive(Clone, Debug, PartialEq)]
@@ -37,10 +120,10 @@ pub struct SdkEvent {
     pub encrypted_values: Vec<B256>,
     pub result: ClearValues,
     pub error: Option<SdkError>,
-    pub operation: Option<EventEnum<generated::EventOperation>>,
+    pub operation: Option<EventEnum<EventOperation>>,
     pub tx_hash: Option<B256>,
-    pub shield_path: Option<EventEnum<generated::ShieldPath>>,
-    pub step: Option<EventEnum<generated::ApprovalStep>>,
+    pub shield_path: Option<EventEnum<ShieldPath>>,
+    pub step: Option<EventEnum<ApprovalStep>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -52,9 +135,10 @@ pub struct EventContext {
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OperationProgress {
-    pub kind: EventEnum<generated::ProgressKind>,
+    pub kind: EventEnum<ProgressKind>,
     pub tx_hash: Option<B256>,
 }
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
 pub enum Notification {
     Lifecycle(Box<SdkEvent>),

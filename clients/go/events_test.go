@@ -3,6 +3,7 @@ package sidecar
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"testing"
@@ -239,6 +240,90 @@ func TestImmediateEventReattachWaitsForRemoteDetach(t *testing.T) {
 	}
 }
 
+type delayedLossEventServer struct {
+	pb.UnimplementedSidecarServiceServer
+	mu       sync.Mutex
+	active   bool
+	first    bool
+	release  chan struct{}
+	rejected chan struct{}
+	once     sync.Once
+}
+
+func (s *delayedLossEventServer) CreateContext(context.Context, *pb.CreateContextRequest) (*pb.CreateContextResponse, error) {
+	return &pb.CreateContextResponse{ContextId: "events"}, nil
+}
+
+func (s *delayedLossEventServer) EventChannel(stream grpc.BidiStreamingServer[pb.EventClientMessage, pb.EventServerMessage]) error {
+	if _, err := stream.Recv(); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	if s.active {
+		s.mu.Unlock()
+		stream.SetTrailer(metadata.Pairs("zama-error-code", "EVENT_ATTACHED"))
+		s.once.Do(func() { close(s.rejected) })
+		return status.Error(codes.AlreadyExists, "event channel already attached")
+	}
+	s.active = true
+	first := s.first
+	s.first = false
+	s.mu.Unlock()
+	if err := stream.Send(&pb.EventServerMessage{Message: &pb.EventServerMessage_Attached{Attached: &pb.Empty{}}}); err != nil {
+		return err
+	}
+	if first {
+		go func() {
+			<-s.release
+			s.mu.Lock()
+			s.active = false
+			s.mu.Unlock()
+		}()
+		return status.Error(codes.Unavailable, "event transport lost")
+	}
+	<-stream.Context().Done()
+	s.mu.Lock()
+	s.active = false
+	s.mu.Unlock()
+	return nil
+}
+
+func TestEventReattachAfterTransportLossWaitsForRemoteDetach(t *testing.T) {
+	server := &delayedLossEventServer{first: true, release: make(chan struct{}), rejected: make(chan struct{})}
+	client := testClient(t, server, nil)
+	sdk := unsignedSDK(t, client)
+	if _, err := sdk.SubscribeEvents(testContext(t), EventHandlers{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := sdk.WaitChannelFailure(testContext(t), EventChannel); status.Code(err) != codes.Unavailable {
+		t.Fatalf("transport failure was not reported: %v", err)
+	}
+	type result struct {
+		subscription *EventSubscription
+		err          error
+	}
+	reattached := make(chan result, 1)
+	go func() {
+		subscription, err := sdk.SubscribeEvents(testContext(t), EventHandlers{})
+		reattached <- result{subscription, err}
+	}()
+	select {
+	case <-server.rejected:
+	case <-testContext(t).Done():
+		t.Fatal("reattach did not reach the remotely attached server")
+	}
+	close(server.release)
+	select {
+	case result := <-reattached:
+		if result.err != nil {
+			t.Fatalf("event reattach failed after transport loss: %v", result.err)
+		}
+		result.subscription.Close()
+	case <-testContext(t).Done():
+		t.Fatal("event reattach did not complete after transport loss")
+	}
+}
+
 func TestEventPayload(t *testing.T) {
 	large := new(big.Int).Lsh(big.NewInt(1), 200)
 	hash := common.HexToHash("0x01")
@@ -346,13 +431,32 @@ func TestEventContextMismatchClosesChannel(t *testing.T) {
 	frame := deliverEvent(1)
 	frame.GetDelivery().ContextId = "other-context"
 	server.outgoing <- frame
-	if err := sdk.WaitChannelFailure(testContext(t), EventChannel); err == nil || errors.Is(err, context.DeadlineExceeded) {
+	if err := sdk.WaitChannelFailure(testContext(t), EventChannel); err == nil || err.Error() != "event delivery context mismatch" {
 		t.Fatalf("mismatched context did not fail event channel: %v", err)
 	}
 	select {
 	case <-called:
 		t.Fatal("mismatched delivery reached handler")
 	default:
+	}
+}
+
+func TestEventDeliveryCorrelationErrors(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		delivery *pb.EventDelivery
+		want     string
+	}{
+		{"nil delivery", nil, "missing event delivery"},
+		{"wrong context", &pb.EventDelivery{ContextId: "other", Sequence: 3}, "event delivery context mismatch"},
+		{"duplicate sequence", &pb.EventDelivery{ContextId: "events", Sequence: 2}, "event sequence 2 is not greater than 2"},
+		{"decreasing sequence", &pb.EventDelivery{ContextId: "events", Sequence: 1}, "event sequence 1 is not greater than 2"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if err := validateEventDelivery(test.delivery, "events", 2); err == nil || err.Error() != test.want {
+				t.Fatalf("unexpected correlation error: %v", err)
+			}
+		})
 	}
 }
 
@@ -376,7 +480,7 @@ func TestEventSequenceMustIncrease(t *testing.T) {
 				t.Fatal("first delivery was not acknowledged")
 			}
 			server.outgoing <- deliverEvent(sequence)
-			if err := sdk.WaitChannelFailure(testContext(t), EventChannel); err == nil || errors.Is(err, context.DeadlineExceeded) {
+			if err := sdk.WaitChannelFailure(testContext(t), EventChannel); err == nil || err.Error() != fmt.Sprintf("event sequence %d is not greater than 2", sequence) {
 				t.Fatalf("nonincreasing sequence did not terminate channel: %v", err)
 			}
 			select {
@@ -532,7 +636,7 @@ func TestEventBackpressureCancelsActiveHandler(t *testing.T) {
 	case <-testContext(t).Done():
 		t.Fatal("missing first handler")
 	}
-	for sequence := uint64(2); sequence <= 258; sequence++ {
+	for sequence := uint64(2); sequence <= uint64(eventDeliveryWindow+2); sequence++ {
 		server.outgoing <- deliverEvent(sequence)
 	}
 	if err := sdk.WaitChannelFailure(testContext(t), EventChannel); err == nil {

@@ -57,9 +57,9 @@ pub use delegations::{
 pub use encryption::{EncryptInput, EncryptOptions, EncryptParams, EncryptResult};
 pub use error::{RpcError, SdkError};
 pub use events::{
-    EventContext, EventEnum, EventHandler, EventKind, Notification, OperationProgress, SdkEvent,
+    ApprovalStep, EventContext, EventEnum, EventHandler, EventKind, EventOperation, Notification,
+    OperationProgress, ProgressKind, SdkEvent, SdkEventKind, ShieldPath,
 };
-pub use generated::{ApprovalStep, EventOperation, ProgressKind, SdkEventKind, ShieldPath};
 pub use num_bigint::BigInt;
 pub use offline::{
     PrepareFees, PrepareOptions, PrepareTransaction, PreparedTransaction, Transaction,

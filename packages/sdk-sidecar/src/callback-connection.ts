@@ -1,14 +1,11 @@
 import type { ServerDuplexStream } from "@grpc/grpc-js";
 import { serviceError } from "./errors.js";
-import { ChannelWriter } from "./channel-writer.js";
+import { ChannelBackpressureError, ChannelWriter } from "./channel-writer.js";
 
 export class CallbackConnection<Request, Response> {
   #stream?: ServerDuplexStream<Request, Response>;
   #writer?: ChannelWriter<Response>;
-  constructor(
-    private readonly onDisconnect: (error?: unknown) => void,
-    private readonly queueLimit?: { maximum: number; error: Error },
-  ) {}
+  constructor(private readonly onDisconnect: (error?: unknown) => void) {}
 
   get connected(): boolean {
     return this.#stream !== undefined;
@@ -16,7 +13,7 @@ export class CallbackConnection<Request, Response> {
 
   attach(stream: ServerDuplexStream<Request, Response>): void {
     this.#stream = stream;
-    this.#writer = new ChannelWriter(stream, this.queueLimit);
+    this.#writer = new ChannelWriter(stream);
     const disconnect = (error?: unknown) => this.#disconnect(stream, error);
     stream.once("cancelled", disconnect);
     stream.once("error", disconnect);
@@ -42,7 +39,10 @@ export class CallbackConnection<Request, Response> {
       return;
     }
     void this.#writer?.write(message).catch((error: unknown) => {
-      if (this.queueLimit && error instanceof Error && this.#stream === stream) {
+      if (this.#stream !== stream) {
+        return;
+      }
+      if (error instanceof ChannelBackpressureError) {
         this.fail(error);
         return;
       }

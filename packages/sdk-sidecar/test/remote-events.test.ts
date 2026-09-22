@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+import { createWalletAccountStore, type GenericSigner } from "@zama-fhe/sdk";
 import { RemoteEvents, type EventStream } from "../src/remote-events.js";
 import { operationContext } from "../src/remote-signer.js";
 import {
@@ -6,6 +7,7 @@ import {
   type EventServerMessage,
 } from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
 import { FakeStream } from "./support/fake-stream.js";
+import { fixture } from "./support/harness.js";
 
 const payload = {
   $case: "progress",
@@ -85,22 +87,39 @@ test("channel cancellation clears outstanding notifications without replay", () 
 
 test("context cleanup closes notifications and unsubscribes the wallet", () => {
   const { events, stream } = setup();
-  let subscribed = true;
+  const walletAccount = createWalletAccountStore();
+  const signer: GenericSigner = {
+    walletAccount,
+    requireWalletAccount: () => {
+      throw new Error("unused");
+    },
+    signTypedData: async () => {
+      throw new Error("unused");
+    },
+    writeContract: async () => {
+      throw new Error("unused");
+    },
+  };
+  const sdk = fixture(signer).sdk;
   let closed = false;
   stream.on("close", () => {
     closed = true;
   });
-  events.observeWallet({
-    onWalletAccountChange: () => () => {
-      subscribed = false;
-    },
-  });
-  events.notify(payload);
-  events.dispose();
-  events.notify(payload);
-  expect(subscribed).toBe(false);
-  expect(closed).toBe(true);
-  expect(stream.messages).toHaveLength(2);
+  try {
+    events.observeWallet(sdk);
+    events.notify(payload);
+    events.dispose();
+    walletAccount.setSnapshot({
+      address: "0x1111111111111111111111111111111111111111",
+      chainId: 31337,
+    });
+    events.notify(payload);
+    expect(closed).toBe(true);
+    expect(stream.messages).toHaveLength(2);
+  } finally {
+    events.dispose();
+    sdk.dispose();
+  }
 });
 
 test("a missing notification outcome is rejected", () => {

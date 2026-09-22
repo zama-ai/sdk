@@ -503,7 +503,7 @@ func (ApprovalStep) EnumDescriptor() ([]byte, []int) {
 	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{6}
 }
 
-// Token callback stages retain their SDK timing; they are not inferred from lifecycle events.
+// SDK callback timing can differ from similarly named lifecycle events.
 type ProgressKind int32
 
 const (

@@ -1571,7 +1571,7 @@ impl ApprovalStep {
         }
     }
 }
-/// Token callback stages retain their SDK timing; they are not inferred from lifecycle events.
+/// SDK callback timing can differ from similarly named lifecycle events.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum ProgressKind {

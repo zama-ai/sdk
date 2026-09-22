@@ -1,5 +1,6 @@
 import { status, type ServerDuplexStream } from "@grpc/grpc-js";
-import type { WalletAccountListener, ZamaSDKEvent } from "@zama-fhe/sdk";
+import type { ZamaSDK, ZamaSDKEvent } from "@zama-fhe/sdk";
+import { subscribeWalletAccountChanges } from "@zama-fhe/sdk/internal";
 import { CallbackConnection } from "./callback-connection.js";
 import { sdkEvent, walletChange } from "./event-encoding.js";
 import { errorDetails, invalidArgument, SidecarError } from "./errors.js";
@@ -10,24 +11,10 @@ const EVENT_WINDOW_SIZE = 256;
 
 export type EventStream = ServerDuplexStream<rpc.EventClientMessage, rpc.EventServerMessage>;
 type DeliveryPayload = NonNullable<rpc.EventDelivery["payload"]>;
-type WalletNotifications = { onWalletAccountChange(listener: WalletAccountListener): () => void };
-
-// Published SDK declarations omit this internal hook.
-function supportsWalletNotifications(sdk: object): sdk is WalletNotifications {
-  return "onWalletAccountChange" in sdk && typeof sdk.onWalletAccountChange === "function";
-}
 
 export class RemoteEvents {
-  #connection = new CallbackConnection<rpc.EventClientMessage, rpc.EventServerMessage>(
-    () => this.#pending.clear(),
-    {
-      maximum: EVENT_WINDOW_SIZE,
-      error: new SidecarError(
-        "EVENT_BACKPRESSURE",
-        status.RESOURCE_EXHAUSTED,
-        "Event channel output queue exceeded its limit.",
-      ),
-    },
+  #connection = new CallbackConnection<rpc.EventClientMessage, rpc.EventServerMessage>(() =>
+    this.#pending.clear(),
   );
   #sequence = 0n;
   #pending = new Set<bigint>();
@@ -35,25 +22,36 @@ export class RemoteEvents {
 
   constructor(private readonly contextId: string) {}
 
-  observeWallet(sdk: object): void {
-    if (!supportsWalletNotifications(sdk)) {
-      throw new SidecarError(
-        "EVENT_UNSUPPORTED",
-        status.FAILED_PRECONDITION,
-        "SDK wallet lifecycle subscription is unavailable.",
-      );
-    }
+  observeWallet(sdk: ZamaSDK): void {
     this.#unsubscribeWallet?.();
-    this.#unsubscribeWallet = sdk.onWalletAccountChange((change) => {
-      this.notify({ $case: "walletAccount", walletAccount: walletChange(change) });
+    this.#unsubscribeWallet = subscribeWalletAccountChanges(sdk, (change) => {
+      this.#encodeAndNotify(() => ({
+        $case: "walletAccount",
+        walletAccount: walletChange(change),
+      }));
     });
   }
 
   onEvent = (event: ZamaSDKEvent): void => {
-    if (this.#connection.connected) {
-      this.notify({ $case: "event", event: sdkEvent(event) });
-    }
+    this.#encodeAndNotify(() => ({ $case: "event", event: sdkEvent(event) }));
   };
+
+  #encodeAndNotify(encode: () => DeliveryPayload): void {
+    if (!this.#connection.connected) {
+      return;
+    }
+    try {
+      this.notify(encode());
+    } catch {
+      this.#connection.fail(
+        new SidecarError(
+          "EVENT_ENCODING_FAILED",
+          status.INTERNAL,
+          "SDK notification could not be encoded.",
+        ),
+      );
+    }
+  }
 
   attach(stream: EventStream): void {
     if (this.#connection.connected) {
@@ -127,6 +125,7 @@ export class RemoteEvents {
 
   dispose(): void {
     this.#unsubscribeWallet?.();
+    this.#unsubscribeWallet = undefined;
     this.#connection.close();
     this.#pending.clear();
   }

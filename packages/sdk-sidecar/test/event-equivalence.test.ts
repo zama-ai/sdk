@@ -10,7 +10,9 @@ import {
 import { createContext, fixture, storage, testServer } from "./support/harness.js";
 import { sdkEvent, walletChange } from "../src/event-encoding.js";
 import { bytes } from "../src/encoding.js";
-import { RemoteEvents } from "../src/remote-events.js";
+import { RemoteEvents, type EventStream } from "../src/remote-events.js";
+import { subscribeWalletAccountChanges } from "@zama-fhe/sdk/internal";
+import { FakeStream } from "./support/fake-stream.js";
 import type {
   EventDelivery,
   EventServerMessage,
@@ -120,12 +122,10 @@ test("wallet bridge observes SDK lifecycle completion without synthesizing signe
   const sdk = fixture(signer);
   const expected: WalletAccountChange[] = [];
   const observer = new RemoteEvents("wallet");
+  observer.attach(new FakeStream<EventServerMessage>() as unknown as EventStream);
   const notify = vi.spyOn(observer, "notify");
   observer.observeWallet(sdk.sdk);
-  const lifecycle = sdk.sdk as unknown as {
-    onWalletAccountChange(listener: (change: WalletAccountChange) => void): () => void;
-  };
-  const unsubscribe = lifecycle.onWalletAccountChange((change) => expected.push(change));
+  const unsubscribe = subscribeWalletAccountChanges(sdk.sdk, (change) => expected.push(change));
   try {
     await new Promise((resolve) => setTimeout(resolve, 0));
     notify.mockClear();

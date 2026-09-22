@@ -1,15 +1,25 @@
 import type { Writable } from "node:stream";
-import { cancelled } from "./errors.js";
+import { status } from "@grpc/grpc-js";
+import { cancelled, SidecarError } from "./errors.js";
+
+export const CALLBACK_OUTPUT_LIMIT = 256;
+
+export class ChannelBackpressureError extends SidecarError {
+  constructor() {
+    super(
+      "CALLBACK_BACKPRESSURE",
+      status.RESOURCE_EXHAUSTED,
+      "Callback channel output queue exceeded its limit.",
+    );
+  }
+}
 
 type Entry<Message> = { message: Message; resolve: () => void; reject: (error: Error) => void };
 export class ChannelWriter<Message> {
   #queue: Entry<Message>[] = [];
   #blocked = false;
   #error?: Error;
-  constructor(
-    private readonly stream: Writable,
-    private readonly queueLimit?: { maximum: number; error: Error },
-  ) {
+  constructor(private readonly stream: Writable) {
     stream.on("drain", () => {
       this.#blocked = false;
       this.#pump();
@@ -18,9 +28,13 @@ export class ChannelWriter<Message> {
     stream.once("error", (error: Error) => this.#fail(error));
   }
   write(message: Message): Promise<void> {
-    if (this.queueLimit && this.#queue.length >= this.queueLimit.maximum) {
-      this.#fail(this.queueLimit.error);
-      return Promise.reject(this.queueLimit.error);
+    if (this.#error) {
+      return Promise.reject(this.#error);
+    }
+    if (this.#queue.length >= CALLBACK_OUTPUT_LIMIT) {
+      const error = new ChannelBackpressureError();
+      this.#fail(error);
+      return Promise.reject(error);
     }
     return new Promise((resolve, reject) => {
       this.#queue.push({ message, resolve, reject });

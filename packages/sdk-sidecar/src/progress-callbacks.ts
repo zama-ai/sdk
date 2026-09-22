@@ -8,9 +8,12 @@ import { bytes } from "./encoding.js";
 import { ProgressKind } from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import type { RemoteEvents } from "./remote-events.js";
 
-export function progressCallbacks(
-  events: RemoteEvents,
-): TransferCallbacks & ShieldCallbacks & UnshieldCallbacks & Pick<WrapOptions, "onWrapSubmitted"> {
+type ProgressCallbacks = TransferCallbacks &
+  ShieldCallbacks &
+  UnshieldCallbacks &
+  Pick<WrapOptions, "onWrapSubmitted">;
+
+export function progressCallbacks(events: RemoteEvents): Required<ProgressCallbacks> {
   const notify = (kind: ProgressKind, txHash?: `0x${string}`): void =>
     events.notify({
       $case: "progress",
@@ -25,5 +28,5 @@ export function progressCallbacks(
     onUnwrapSubmitted: (hash) => notify(ProgressKind.PROGRESS_KIND_UNWRAP_SUBMITTED, hash),
     onFinalizing: () => notify(ProgressKind.PROGRESS_KIND_FINALIZING),
     onFinalizeSubmitted: (hash) => notify(ProgressKind.PROGRESS_KIND_FINALIZE_SUBMITTED, hash),
-  };
+  } satisfies Required<ProgressCallbacks>;
 }

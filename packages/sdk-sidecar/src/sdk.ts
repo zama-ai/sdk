@@ -52,12 +52,7 @@ export function createContextFactory(manager: StorageManager): ContextFactory {
         ? {}
         : { transportKeyPairDerivationSecret: value?.$case === "text" ? value.text : value?.bytes },
     );
-    try {
-      events.observeWallet(sdk);
-    } catch (error) {
-      sdk.dispose();
-      throw error;
-    }
+    events.observeWallet(sdk);
     return {
       sdk,
       credentialScope: options.transportKeyPairScope,

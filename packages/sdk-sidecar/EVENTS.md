@@ -31,7 +31,7 @@ Token operations are not yet exposed by the sidecar. The examples include typed 
 
 ## Handle callback failures
 
-Return an error from a notification handler when your local sink fails. The client acknowledges the error, and SDK orchestration continues. Go recovers handler panics as `CALLBACK_FAILED`; a Rust handler panic terminates the event subscription. Process notifications promptly: more than 256 unacknowledged deliveries terminates the event subscription. See the [wire contract](../../proto/README.md#cleanup-and-backpressure) for cancellation, output limits and cleanup behavior.
+Return an error from a notification handler when your local sink fails. The client acknowledges the error, and SDK orchestration continues. Go recovers handler panics as `CALLBACK_FAILED`; a Rust handler panic terminates the event subscription. Process notifications promptly: the server allows at most 256 unacknowledged deliveries and terminates the subscription when another is attempted. Native clients also bound their local queues. See the [wire contract](../../proto/README.md#cleanup-and-backpressure) for cancellation, output limits and cleanup behavior.
 
 Return-valued callbacks such as batch decryption fallbacks are not part of this channel yet; they arrive with Token coverage.
 

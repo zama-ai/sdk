@@ -54,8 +54,12 @@ function attachChannel<Reply, Response>(
         clear();
       } else if (attached && message?.$case === "reply") {
         attached.reply(message.reply);
+      } else if (message?.$case === "attach") {
+        throw invalidArgument("This callback stream is already attached.");
+      } else if (!attached) {
+        throw invalidArgument("The first callback frame must attach a context.");
       } else {
-        throw invalidArgument("Attach a context before replying to callback requests.");
+        throw invalidArgument("Expected a callback reply on the attached stream.");
       }
     } catch (error) {
       stream.emit("error", serviceError(error));

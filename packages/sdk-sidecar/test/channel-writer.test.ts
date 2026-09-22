@@ -33,3 +33,20 @@ test("disconnect rejects queued frames and never replays them after a late drain
   await expect(writer.write(3)).rejects.toMatchObject({ code: "CANCELLED" });
   expect(stream.messages).toEqual([1]);
 });
+
+test("all writers bound blocked output and preserve the overflow error", async () => {
+  const stream = new Stream();
+  const writer = new ChannelWriter<number>(stream as unknown as Writable);
+  await writer.write(0);
+  const queued = Array.from({ length: 256 }, (_, index) => writer.write(index + 1));
+  const outcomes = Promise.allSettled(queued);
+  await expect(writer.write(257)).rejects.toMatchObject({ code: "CALLBACK_BACKPRESSURE" });
+  expect(
+    (await outcomes).every(
+      (result) => result.status === "rejected" && result.reason.code === "CALLBACK_BACKPRESSURE",
+    ),
+  ).toBe(true);
+  stream.emit("drain");
+  await expect(writer.write(258)).rejects.toMatchObject({ code: "CALLBACK_BACKPRESSURE" });
+  expect(stream.messages).toEqual([0]);
+});

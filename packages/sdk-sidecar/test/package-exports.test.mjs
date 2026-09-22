@@ -8,9 +8,12 @@ for (const { format, load } of [
   { format: "ESM", load: (specifier) => import(specifier) },
   { format: "CommonJS", load: (specifier) => require(specifier) },
 ]) {
-  test(`${format} retains the internal wallet hook used by the sidecar`, async () => {
-    const { ZamaSDK, createConfig, createWalletAccountStore, anvil, MemoryStorage } =
-      await load("@zama-fhe/sdk");
+  test(`${format} exposes the internal wallet subscription helper`, async () => {
+    const sdkPackage = await load("@zama-fhe/sdk");
+    const { ZamaSDK, createConfig, createWalletAccountStore, anvil, MemoryStorage } = sdkPackage;
+    const { subscribeWalletAccountChanges } = await load("@zama-fhe/sdk/internal");
+    assert.equal(typeof subscribeWalletAccountChanges, "function");
+    assert.equal("subscribeWalletAccountChanges" in sdkPackage, false);
     const walletAccount = createWalletAccountStore();
     const sdk = new ZamaSDK(
       createConfig({
@@ -21,17 +24,15 @@ for (const { format, load } of [
       }),
     );
     try {
-      // This runtime hook is intentionally absent from the public declarations.
-      assert.equal(typeof sdk.onWalletAccountChange, "function");
       const changes = [];
-      const unsubscribe = sdk.onWalletAccountChange((change) => changes.push(change));
+      const unsubscribe = subscribeWalletAccountChanges(sdk, (change) => changes.push(change));
       async function transition(next) {
         let stop;
         let timeout;
         try {
           await new Promise((resolve, reject) => {
             timeout = setTimeout(() => reject(new Error("Wallet notification timed out")), 2000);
-            stop = sdk.onWalletAccountChange(resolve);
+            stop = subscribeWalletAccountChanges(sdk, resolve);
             walletAccount.setSnapshot(next);
           });
         } finally {

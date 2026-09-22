@@ -570,7 +570,7 @@ export function approvalStepToJSON(object: ApprovalStep): string {
   }
 }
 
-/** Token callback stages retain their SDK timing; they are not inferred from lifecycle events. */
+/** SDK callback timing can differ from similarly named lifecycle events. */
 export enum ProgressKind {
   PROGRESS_KIND_UNSPECIFIED = 0,
   PROGRESS_KIND_ENCRYPT_COMPLETE = 1,

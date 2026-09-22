@@ -18,12 +18,15 @@ type EventSubscription struct {
 
 var errEventSubscriptionClosed = errors.New("event subscription closed")
 
+const eventDeliveryWindow = 256
+
 // Close cancels queued and active callbacks; it does not wait for application handlers to return.
 func (s *EventSubscription) Close() {
 	s.sdk.channelFailed(s.channel, EventChannel, errEventSubscriptionClosed)
 }
 
-// StopEvents closes the current event subscription, including one attached through SDKConfig.Events.
+// StopEvents cancels the active event subscription and its queued and running handlers.
+// It is safe to call when no subscription exists or after one has stopped.
 func (s *SDKContext) StopEvents() {
 	s.mu.Lock()
 	channel := s.events
@@ -50,9 +53,9 @@ type eventDispatcher struct {
 
 func (s *SDKContext) SubscribeEvents(ctx context.Context, handlers EventHandlers) (*EventSubscription, error) {
 	s.mu.Lock()
-	replacingClosed := s.events != nil && errors.Is(s.events.err, errEventSubscriptionClosed)
+	replacingFailed := s.events != nil && s.events.err != nil
 	s.mu.Unlock()
-	dispatcher := &eventDispatcher{handlers: handlers, pending: make(map[uint64]context.CancelFunc), queue: make(chan eventWork, 256)}
+	dispatcher := &eventDispatcher{handlers: handlers, pending: make(map[uint64]context.CancelFunc), queue: make(chan eventWork, eventDeliveryWindow)}
 	var channel *callbackChannel
 	attach := func() (*callbackChannel, error) {
 		return attachChannel(ctx, s, EventChannel, &s.events,
@@ -76,8 +79,8 @@ func (s *SDKContext) SubscribeEvents(ctx context.Context, handlers EventHandlers
 					return nil
 				}
 				delivery := message.GetDelivery()
-				if delivery == nil || delivery.ContextId != s.id || delivery.Sequence <= dispatcher.sequence {
-					return errors.New("invalid event delivery correlation")
+				if err := validateEventDelivery(delivery, s.id, dispatcher.sequence); err != nil {
+					return err
 				}
 				callback, err := dispatcher.decode(delivery)
 				if err != nil {
@@ -94,7 +97,7 @@ func (s *SDKContext) SubscribeEvents(ctx context.Context, handlers EventHandlers
 					return nil
 				default:
 					cancel()
-					return errors.New("event delivery queue exceeded 256 entries")
+					return fmt.Errorf("event delivery queue exceeded %d entries", eventDeliveryWindow)
 				}
 			})
 	}
@@ -102,7 +105,7 @@ func (s *SDKContext) SubscribeEvents(ctx context.Context, handlers EventHandlers
 	for attempt := 0; ; attempt++ {
 		channel, err = attach()
 		var rpc *RPCError
-		if err == nil || !replacingClosed || !errors.As(err, &rpc) || rpc.Code != "EVENT_ATTACHED" || attempt >= 39 {
+		if err == nil || !replacingFailed || !errors.As(err, &rpc) || rpc.Code != "EVENT_ATTACHED" || attempt >= 39 {
 			break
 		}
 		timer := time.NewTimer(25 * time.Millisecond)
@@ -117,6 +120,19 @@ func (s *SDKContext) SubscribeEvents(ctx context.Context, handlers EventHandlers
 		return nil, err
 	}
 	return &EventSubscription{sdk: s, channel: channel}, nil
+}
+
+func validateEventDelivery(delivery *pb.EventDelivery, contextID string, previous uint64) error {
+	if delivery == nil {
+		return errors.New("missing event delivery")
+	}
+	if delivery.ContextId != contextID {
+		return errors.New("event delivery context mismatch")
+	}
+	if delivery.Sequence <= previous {
+		return fmt.Errorf("event sequence %d is not greater than %d", delivery.Sequence, previous)
+	}
+	return nil
 }
 
 func (d *eventDispatcher) run(ctx context.Context) {

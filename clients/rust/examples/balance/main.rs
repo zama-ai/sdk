@@ -12,6 +12,7 @@ async fn main() -> Result<()> {
     let settings = support::Settings::load()?;
     let provider = settings.connect_provider().await?;
     let sdk = settings.create_sdk().await?;
+    let event_monitor = events::observe_channel(sdk.clone());
     let result = async {
         encryption::encrypt_inputs(&sdk, settings.token, settings.account.address).await?;
         balance::show_balance(&sdk, &provider, settings.token, settings.account.address).await?;
@@ -26,6 +27,8 @@ async fn main() -> Result<()> {
         .await
     }
     .await;
+    event_monitor.abort();
+    let _ = event_monitor.await;
     let closed = sdk.close().await;
     result?;
     closed?;

@@ -762,7 +762,7 @@ message WalletAccountChanged {
   WalletAccount previous = 1;
   WalletAccount next = 2;
 }
-// Token callback stages retain their SDK timing; they are not inferred from lifecycle events.
+// SDK callback timing can differ from similarly named lifecycle events.
 enum ProgressKind {
   PROGRESS_KIND_UNSPECIFIED = 0;
   PROGRESS_KIND_ENCRYPT_COMPLETE = 1;

@@ -31,6 +31,8 @@ function directCallbacks(observations: Observation[]) {
       notify(ProgressKind.PROGRESS_KIND_APPROVAL_SUBMITTED, hash),
     onShieldSubmitted: (hash: `0x${string}`) =>
       notify(ProgressKind.PROGRESS_KIND_SHIELD_SUBMITTED, hash),
+    onWrapSubmitted: (hash: `0x${string}`) =>
+      notify(ProgressKind.PROGRESS_KIND_WRAP_SUBMITTED, hash),
     onUnwrapSubmitted: (hash: `0x${string}`) =>
       notify(ProgressKind.PROGRESS_KIND_UNWRAP_SUBMITTED, hash),
     onFinalizing: () => notify(ProgressKind.PROGRESS_KIND_FINALIZING),
@@ -47,6 +49,12 @@ function configureProvider(provider: GenericProvider, scenario: string, user: Ad
       .mockResolvedValueOnce(false)
       .mockResolvedValueOnce(1000n)
       .mockResolvedValueOnce(0n);
+  }
+  if (scenario === "wrap") {
+    vi.mocked(provider.readContract)
+      .mockResolvedValueOnce(user)
+      .mockResolvedValueOnce(1000n)
+      .mockResolvedValueOnce(1000n);
   }
   vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
     logs:
@@ -66,7 +74,7 @@ function configureProvider(provider: GenericProvider, scenario: string, user: Ad
 }
 
 describe("SDK progress callback equivalence", () => {
-  for (const scenario of ["transfer", "shield", "unshield"] as const) {
+  for (const scenario of ["transfer", "shield", "unshield", "wrap"] as const) {
     test(`${scenario} preserves callback payloads and interleaving with SDK events`, async ({
       createSDK,
       createToken,
@@ -104,6 +112,8 @@ describe("SDK progress callback equivalence", () => {
                   });
                 case "shield":
                   return wrapped.shield(50n, callbacks);
+                case "wrap":
+                  return wrapped.wrap(50n, callbacks);
                 case "unshield":
                   return wrapped.unshield(50n, { ...callbacks, skipBalanceCheck: true });
                 default:
@@ -141,7 +151,7 @@ describe("SDK progress callback equivalence", () => {
       }
       expect(adapted).toEqual(direct);
       expect(adapted.filter((item) => "kind" in item)).toHaveLength(
-        scenario === "unshield" ? 3 : 2,
+        scenario === "unshield" ? 3 : scenario === "wrap" ? 1 : 2,
       );
       events.dispose();
     });

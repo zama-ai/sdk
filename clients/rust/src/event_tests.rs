@@ -40,6 +40,17 @@ impl EventHandler for HandlerEvents {
         .into())
     }
 }
+struct PanickingEvents;
+#[async_trait]
+impl EventHandler for PanickingEvents {
+    async fn on_notification(
+        &self,
+        _context: EventContext,
+        _notification: Notification,
+    ) -> Result<()> {
+        panic!("event handler failed")
+    }
+}
 fn delivery(sequence: u64, payload: event_delivery::Payload) -> EventServerMessage {
     EventServerMessage {
         message: Some(event_server_message::Message::Delivery(EventDelivery {
@@ -181,7 +192,7 @@ async fn events_preserve_order_ack_after_handler_and_unknown_kinds() {
         .unwrap();
     let (_, notification) = observations.recv().await.unwrap();
     assert!(
-        matches!(notification, Notification::Lifecycle(event) if event.kind == crate::EventKind::Known(generated::SdkEventKind::EncryptEnd))
+        matches!(notification, Notification::Lifecycle(event) if event.kind == crate::EventKind::Known(crate::SdkEventKind::EncryptEnd))
     );
     gate.add_permits(1);
     assert_eq!(next_reply(&mut server).await.sequence, 5);
@@ -248,7 +259,7 @@ async fn future_delivery_payload_and_frame_are_skipped_before_next_event() {
     let (context, notification) = observed.recv().await.unwrap();
     assert_eq!(context.sequence, 2);
     assert!(
-        matches!(notification, Notification::Progress(progress) if progress.kind == crate::EventEnum::Known(generated::ProgressKind::EncryptComplete))
+        matches!(notification, Notification::Progress(progress) if progress.kind == crate::EventEnum::Known(crate::ProgressKind::EncryptComplete))
     );
     assert_eq!(next_reply(&mut server).await.sequence, 2);
     sdk.close().await.unwrap();
@@ -285,9 +296,9 @@ fn lifecycle_payload_preserves_clear_values_and_errors() {
     let event = crate::SdkEvent::try_from(wire).unwrap();
     assert_eq!(
         event.kind,
-        crate::EventKind::Known(generated::SdkEventKind::DecryptEnd)
+        crate::EventKind::Known(crate::SdkEventKind::DecryptEnd)
     );
-    assert_eq!(event.kind.to_string(), "DecryptEnd");
+    assert_eq!(event.kind.to_string(), "SDK_EVENT_KIND_DECRYPT_END");
     assert_eq!(event.timestamp, 1.5);
     assert_eq!(event.duration_ms, Some(2.5));
     assert_eq!(
@@ -298,19 +309,15 @@ fn lifecycle_payload_preserves_clear_values_and_errors() {
     assert_eq!(event.sdk_operation_id.as_deref(), Some("sdk-op"));
     assert_eq!(
         event.operation,
-        Some(crate::EventEnum::Known(
-            generated::EventOperation::GrantPermit
-        ))
+        Some(crate::EventEnum::Known(crate::EventOperation::GrantPermit))
     );
     assert_eq!(
         event.shield_path,
-        Some(crate::EventEnum::Known(
-            generated::ShieldPath::TransferAndCall
-        ))
+        Some(crate::EventEnum::Known(crate::ShieldPath::TransferAndCall))
     );
     assert_eq!(
         event.step,
-        Some(crate::EventEnum::Known(generated::ApprovalStep::Reset))
+        Some(crate::EventEnum::Known(crate::ApprovalStep::Reset))
     );
     let progress = crate::OperationProgress::try_from(generated::OperationProgress {
         kind: generated::ProgressKind::TransferSubmitted as i32,
@@ -319,7 +326,7 @@ fn lifecycle_payload_preserves_clear_values_and_errors() {
     .unwrap();
     assert_eq!(
         progress.kind,
-        crate::EventEnum::Known(generated::ProgressKind::TransferSubmitted)
+        crate::EventEnum::Known(crate::ProgressKind::TransferSubmitted)
     );
     assert_eq!(progress.tx_hash, None);
     let unspecified = crate::OperationProgress::try_from(generated::OperationProgress {
@@ -329,7 +336,7 @@ fn lifecycle_payload_preserves_clear_values_and_errors() {
     .unwrap();
     assert_eq!(
         unspecified.kind,
-        crate::EventEnum::Known(generated::ProgressKind::Unspecified)
+        crate::EventEnum::Known(crate::ProgressKind::Unspecified)
     );
     assert!(
         crate::OperationProgress::try_from(generated::OperationProgress {
@@ -566,4 +573,44 @@ async fn sdk_close_drops_active_notification() {
         .unwrap()
         .unwrap()
         .forget();
+}
+
+#[tokio::test]
+async fn panicking_event_handler_terminates_subscription() {
+    let mut server = Server::start(Arc::new(default_handler)).await;
+    server
+        .event_actions
+        .send(EventServerMessage {
+            message: Some(event_server_message::Message::Attached(Empty {})),
+        })
+        .unwrap();
+    let sdk = Client::connect(&server.socket)
+        .await
+        .unwrap()
+        .sdk(SdkConfig::new(11155111, "https://rpc.invalid"))
+        .events(PanickingEvents)
+        .build()
+        .await
+        .unwrap();
+    server.event_replies.recv().await.unwrap();
+    server
+        .event_actions
+        .send(delivery(
+            1,
+            event_delivery::Payload::Progress(generated::OperationProgress {
+                kind: generated::ProgressKind::EncryptComplete as i32,
+                tx_hash: None,
+            }),
+        ))
+        .unwrap();
+    let error = tokio::time::timeout(
+        Duration::from_secs(2),
+        sdk.wait_channel_closed(CallbackChannel::Events),
+    )
+    .await
+    .unwrap()
+    .unwrap_err();
+    assert!(error.to_string().contains("notification worker failed"));
+    assert!(server.event_replies.try_recv().is_err());
+    sdk.close().await.unwrap();
 }

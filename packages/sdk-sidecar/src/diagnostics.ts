@@ -1,6 +1,7 @@
 import type { GenericLogger } from "@zama-fhe/sdk";
+import { runtimeConfigLockedMessage } from "@zama-fhe/sdk/internal";
 
-const runtimeWarning = "[zama-sdk] runtime configuration is already set and cannot be changed.";
+const runtimeWarning = `[zama-sdk] ${runtimeConfigLockedMessage}`;
 const noop = () => {};
 
 export const diagnosticsLogger: GenericLogger = {

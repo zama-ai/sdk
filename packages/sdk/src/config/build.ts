@@ -17,6 +17,9 @@ import { recordAppliedRuntimeConfig } from "../relayer/applied-runtime";
 import { resolveStorage } from "./resolve";
 import type { ZamaConfig, ZamaConfigBase } from "./types";
 
+export const runtimeConfigLockedMessage =
+  "runtime configuration is already set and cannot be changed.";
+
 /**
  * @internal Shared config builder — not part of the public API.
  *
@@ -45,11 +48,10 @@ export function buildZamaConfig(
   if (hasFhevmRuntimeConfig()) {
     // One config per signer is a supported pattern, so a second call is only worth warning about
     // when it carries runtime options that the already-locked runtime config will ignore.
-    const message = "runtime configuration is already set and cannot be changed.";
     if (params.runtime === undefined) {
-      logger.debug(message);
+      logger.debug(runtimeConfigLockedMessage);
     } else {
-      logger.warn(message);
+      logger.warn(runtimeConfigLockedMessage);
     }
   } else {
     setFhevmRuntimeConfig(runtime);
