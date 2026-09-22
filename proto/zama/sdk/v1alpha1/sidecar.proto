@@ -682,7 +682,7 @@ message GetDelegationStatusResponse {
   uint64 expiry_timestamp = 2;
 }
 
-// SDK lifecycle event kinds. Unknown numeric values must be handled by clients without closing the channel.
+// Preserve unknown numeric values without closing the channel.
 enum SdkEventKind {
   SDK_EVENT_KIND_UNSPECIFIED = 0;
   SDK_EVENT_KIND_ENCRYPT_START = 1;
@@ -774,7 +774,7 @@ enum ProgressKind {
   PROGRESS_KIND_FINALIZING = 7;
   PROGRESS_KIND_FINALIZE_SUBMITTED = 8;
 }
-// Optional hash is present only after the corresponding transaction is submitted.
+// Submitted stages normally include a hash; clients also accept its absence.
 message OperationProgress {
   ProgressKind kind = 1;
   optional bytes tx_hash = 2;
@@ -785,14 +785,14 @@ message EventDelivery {
   // Empty for lifecycle events that do not belong to a tracked RPC.
   string operation_id = 2;
   uint64 sequence = 3;
+  // Acknowledge and skip unknown payloads after checking context and sequence.
   oneof payload {
     SdkEvent event = 4;
     WalletAccountChanged wallet_account = 5;
     OperationProgress progress = 6;
   }
 }
-// Acknowledgment completes a notification. A handler error is reported without
-// failing the SDK operation that emitted it.
+// Handler errors do not fail the SDK operation that emitted the notification.
 message EventReply {
   uint64 sequence = 1;
   oneof outcome {
@@ -807,12 +807,10 @@ message EventClientMessage {
     EventReply reply = 2;
   }
 }
-// The sidecar could not apply a reply to the referenced delivery.
 message EventReplyError {
   uint64 sequence = 1;
   SdkError error = 2;
 }
-// Confirms attachment, delivers a notification, or rejects a stale/invalid reply.
 message EventServerMessage {
   oneof message {
     Empty attached = 1;

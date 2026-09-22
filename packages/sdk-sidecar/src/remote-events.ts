@@ -12,7 +12,7 @@ export type EventStream = ServerDuplexStream<rpc.EventClientMessage, rpc.EventSe
 type DeliveryPayload = NonNullable<rpc.EventDelivery["payload"]>;
 type WalletNotifications = { onWalletAccountChange(listener: WalletAccountListener): () => void };
 
-// Published SDK declarations omit this internal hook; check availability before subscribing.
+// Published SDK declarations omit this internal hook.
 function supportsWalletNotifications(sdk: object): sdk is WalletNotifications {
   return "onWalletAccountChange" in sdk && typeof sdk.onWalletAccountChange === "function";
 }

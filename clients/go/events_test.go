@@ -13,6 +13,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/protowire"
+	"google.golang.org/protobuf/proto"
 )
 
 type eventServer struct {
@@ -440,6 +442,70 @@ func TestUnknownProgressKindIsPreserved(t *testing.T) {
 	progress, err = operationProgress(&pb.OperationProgress{Kind: pb.ProgressKind_PROGRESS_KIND_SHIELD_SUBMITTED})
 	if err != nil || progress.Kind != ProgressShieldSubmitted || progress.TxHash != nil {
 		t.Fatalf("missing optional transaction hash was not preserved: %+v, %v", progress, err)
+	}
+}
+
+func TestUnknownEventFramesAreSkippedAndChannelContinues(t *testing.T) {
+	server, client := eventFixture(t)
+	sdk := unsignedSDK(t, client)
+	called := make(chan EventCorrelation, 1)
+	subscription, err := sdk.SubscribeEvents(testContext(t), EventHandlers{OnEvent: func(_ context.Context, correlation EventCorrelation, _ SDKEvent) error {
+		called <- correlation
+		return nil
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer subscription.Close()
+
+	var futureOuter pb.EventServerMessage
+	outerWire := protowire.AppendTag(nil, 4, protowire.BytesType)
+	outerWire = protowire.AppendBytes(outerWire, []byte{1})
+	if err := proto.Unmarshal(outerWire, &futureOuter); err != nil || futureOuter.Message != nil {
+		t.Fatalf("future outer frame did not decode as unknown: %v", err)
+	}
+	server.outgoing <- &futureOuter
+
+	knownDelivery, err := proto.Marshal(&pb.EventDelivery{ContextId: "events", Sequence: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	unknownPayload := protowire.AppendTag(knownDelivery, 7, protowire.BytesType)
+	unknownPayload = protowire.AppendBytes(unknownPayload, []byte{1})
+	var futureDelivery pb.EventDelivery
+	if err := proto.Unmarshal(unknownPayload, &futureDelivery); err != nil || futureDelivery.Payload != nil {
+		t.Fatalf("future payload did not decode as unknown: %v", err)
+	}
+	server.outgoing <- &pb.EventServerMessage{Message: &pb.EventServerMessage_Delivery{Delivery: &futureDelivery}}
+	select {
+	case reply := <-server.replies:
+		if reply.Sequence != 1 || reply.GetAcknowledged() == nil {
+			t.Fatalf("future payload was not acknowledged: %v", reply)
+		}
+	case <-testContext(t).Done():
+		t.Fatal("future payload was not acknowledged")
+	}
+	select {
+	case correlation := <-called:
+		t.Fatalf("future payload reached a handler: %+v", correlation)
+	default:
+	}
+	server.outgoing <- deliverEvent(2)
+	select {
+	case correlation := <-called:
+		if correlation.Sequence != 2 {
+			t.Fatalf("wrong subsequent delivery: %+v", correlation)
+		}
+	case <-testContext(t).Done():
+		t.Fatal("future frame closed event channel")
+	}
+	select {
+	case reply := <-server.replies:
+		if reply.Sequence != 2 || reply.GetAcknowledged() == nil {
+			t.Fatalf("subsequent delivery was not acknowledged: %v", reply)
+		}
+	case <-testContext(t).Done():
+		t.Fatal("subsequent delivery was not acknowledged")
 	}
 }
 

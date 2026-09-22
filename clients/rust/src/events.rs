@@ -1,5 +1,6 @@
 use crate::{Address, B256, ClearValues, SdkError, WalletAccount, async_trait, generated};
 use anyhow::{Result, ensure};
+use std::fmt;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EventEnum<E> {
@@ -14,15 +15,15 @@ impl<E: TryFrom<i32>> EventEnum<E> {
         }
     }
 }
-pub type EventKind = EventEnum<generated::SdkEventKind>;
-impl EventEnum<generated::SdkEventKind> {
-    pub fn as_str(self) -> &'static str {
+impl<E: fmt::Debug> fmt::Display for EventEnum<E> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Known(kind) => kind.as_str_name(),
-            Self::Unknown(_) => "SDK_EVENT_KIND_UNKNOWN",
+            Self::Known(value) => write!(formatter, "{value:?}"),
+            Self::Unknown(value) => write!(formatter, "Unknown({value})"),
         }
     }
 }
+pub type EventKind = EventEnum<generated::SdkEventKind>;
 
 /// May contain decrypted plaintext; select metadata explicitly when writing diagnostics.
 #[derive(Clone, Debug, PartialEq)]

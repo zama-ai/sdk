@@ -63,6 +63,9 @@ func (s *SDKContext) SubscribeEvents(ctx context.Context, handlers EventHandlers
 			func(message *pb.EventServerMessage) bool { return message.GetAttached() != nil },
 			func(ctx context.Context, message *pb.EventServerMessage, send func(*pb.EventClientMessage)) error {
 				dispatcher.once.Do(func() { go dispatcher.run(ctx) })
+				if message.Message == nil && len(message.ProtoReflect().GetUnknown()) != 0 {
+					return nil
+				}
 				if rejected := message.GetReplyError(); rejected != nil {
 					if rejected.Error == nil {
 						return errors.New("missing event reply error")
@@ -166,6 +169,9 @@ func eventReply(ctx context.Context, sequence uint64, callback eventCallback) (r
 }
 
 func (d *eventDispatcher) decode(delivery *pb.EventDelivery) (eventCallback, error) {
+	if delivery.Payload == nil && len(delivery.ProtoReflect().GetUnknown()) != 0 {
+		return func(context.Context) error { return nil }, nil
+	}
 	correlation := EventCorrelation{ContextID: delivery.ContextId, OperationID: delivery.OperationId, Sequence: delivery.Sequence}
 	switch payload := delivery.Payload.(type) {
 	case *pb.EventDelivery_Event:

@@ -200,7 +200,7 @@ export function transactionKindToJSON(object: TransactionKind): string {
   }
 }
 
-/** SDK lifecycle event kinds. Unknown numeric values must be handled by clients without closing the channel. */
+/** Preserve unknown numeric values without closing the channel. */
 export enum SdkEventKind {
   SDK_EVENT_KIND_UNSPECIFIED = 0,
   SDK_EVENT_KIND_ENCRYPT_START = 1,
@@ -1397,7 +1397,7 @@ export interface WalletAccountChanged {
   next: WalletAccount | undefined;
 }
 
-/** Optional hash is present only after the corresponding transaction is submitted. */
+/** Submitted stages normally include a hash; clients also accept its absence. */
 export interface OperationProgress {
   kind: ProgressKind;
   txHash?: Buffer | undefined;
@@ -1409,16 +1409,14 @@ export interface EventDelivery {
   /** Empty for lifecycle events that do not belong to a tracked RPC. */
   operationId: string;
   sequence: bigint;
+  /** Acknowledge and skip unknown payloads after checking context and sequence. */
   payload: { $case: "event"; event: SdkEvent } | { $case: "walletAccount"; walletAccount: WalletAccountChanged } | {
     $case: "progress";
     progress: OperationProgress;
   } | undefined;
 }
 
-/**
- * Acknowledgment completes a notification. A handler error is reported without
- * failing the SDK operation that emitted it.
- */
+/** Handler errors do not fail the SDK operation that emitted the notification. */
 export interface EventReply {
   sequence: bigint;
   outcome: { $case: "acknowledged"; acknowledged: Empty } | { $case: "error"; error: SdkError } | undefined;
@@ -1429,13 +1427,11 @@ export interface EventClientMessage {
   message: { $case: "attach"; attach: ContextRequest } | { $case: "reply"; reply: EventReply } | undefined;
 }
 
-/** The sidecar could not apply a reply to the referenced delivery. */
 export interface EventReplyError {
   sequence: bigint;
   error: SdkError | undefined;
 }
 
-/** Confirms attachment, delivers a notification, or rejects a stale/invalid reply. */
 export interface EventServerMessage {
   message: { $case: "attached"; attached: Empty } | { $case: "delivery"; delivery: EventDelivery } | {
     $case: "replyError";

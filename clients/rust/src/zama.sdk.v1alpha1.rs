@@ -1112,7 +1112,7 @@ pub struct WalletAccountChanged {
     #[prost(message, optional, tag = "2")]
     pub next: ::core::option::Option<WalletAccount>,
 }
-/// Optional hash is present only after the corresponding transaction is submitted.
+/// Submitted stages normally include a hash; clients also accept its absence.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct OperationProgress {
     #[prost(enumeration = "ProgressKind", tag = "1")]
@@ -1130,11 +1130,13 @@ pub struct EventDelivery {
     pub operation_id: ::prost::alloc::string::String,
     #[prost(uint64, tag = "3")]
     pub sequence: u64,
+    /// Acknowledge and skip unknown payloads after checking context and sequence.
     #[prost(oneof = "event_delivery::Payload", tags = "4, 5, 6")]
     pub payload: ::core::option::Option<event_delivery::Payload>,
 }
 /// Nested message and enum types in `EventDelivery`.
 pub mod event_delivery {
+    /// Acknowledge and skip unknown payloads after checking context and sequence.
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Payload {
         #[prost(message, tag = "4")]
@@ -1145,8 +1147,7 @@ pub mod event_delivery {
         Progress(super::OperationProgress),
     }
 }
-/// Acknowledgment completes a notification. A handler error is reported without
-/// failing the SDK operation that emitted it.
+/// Handler errors do not fail the SDK operation that emitted the notification.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct EventReply {
     #[prost(uint64, tag = "1")]
@@ -1180,7 +1181,6 @@ pub mod event_client_message {
         Reply(super::EventReply),
     }
 }
-/// The sidecar could not apply a reply to the referenced delivery.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct EventReplyError {
     #[prost(uint64, tag = "1")]
@@ -1188,7 +1188,6 @@ pub struct EventReplyError {
     #[prost(message, optional, tag = "2")]
     pub error: ::core::option::Option<SdkError>,
 }
-/// Confirms attachment, delivers a notification, or rejects a stale/invalid reply.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EventServerMessage {
     #[prost(oneof = "event_server_message::Message", tags = "1, 2, 3")]
@@ -1327,7 +1326,7 @@ impl TransactionKind {
         }
     }
 }
-/// SDK lifecycle event kinds. Unknown numeric values must be handled by clients without closing the channel.
+/// Preserve unknown numeric values without closing the channel.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum SdkEventKind {

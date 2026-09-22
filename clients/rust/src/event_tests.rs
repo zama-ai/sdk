@@ -1,6 +1,13 @@
 use super::*;
 use crate::{EventContext, EventHandler, Notification};
+use prost::Message;
 use tokio::sync::Semaphore;
+
+#[derive(Clone, PartialEq, Message)]
+struct FutureEventField {
+    #[prost(message, optional, tag = "42")]
+    value: Option<Empty>,
+}
 
 struct HandlerEvents {
     seen: mpsc::UnboundedSender<(EventContext, Notification)>,
@@ -41,6 +48,26 @@ fn delivery(sequence: u64, payload: event_delivery::Payload) -> EventServerMessa
             sequence,
             payload: Some(payload),
         })),
+    }
+}
+fn future_delivery(sequence: u64) -> EventServerMessage {
+    let mut encoded = EventDelivery {
+        context_id: "context".into(),
+        operation_id: "operation".into(),
+        sequence,
+        payload: None,
+    }
+    .encode_to_vec();
+    encoded.extend(
+        FutureEventField {
+            value: Some(Empty {}),
+        }
+        .encode_to_vec(),
+    );
+    let delivery = EventDelivery::decode(encoded.as_slice()).unwrap();
+    assert!(delivery.payload.is_none());
+    EventServerMessage {
+        message: Some(event_server_message::Message::Delivery(delivery)),
     }
 }
 async fn next_reply(server: &mut Server) -> EventReply {
@@ -166,6 +193,67 @@ async fn events_preserve_order_ack_after_handler_and_unknown_kinds() {
     );
 }
 
+#[tokio::test]
+async fn future_delivery_payload_and_frame_are_skipped_before_next_event() {
+    let mut server = Server::start(Arc::new(default_handler)).await;
+    server
+        .event_actions
+        .send(EventServerMessage {
+            message: Some(event_server_message::Message::Attached(Empty {})),
+        })
+        .unwrap();
+    let (seen, mut observed) = mpsc::unbounded_channel();
+    let gate = Arc::new(Semaphore::new(1));
+    let sdk = Client::connect(&server.socket)
+        .await
+        .unwrap()
+        .sdk(SdkConfig::new(11155111, "https://rpc.invalid"))
+        .events(HandlerEvents {
+            seen,
+            gate,
+            dropped: Arc::new(Semaphore::new(0)),
+        })
+        .build()
+        .await
+        .unwrap();
+    server.event_replies.recv().await.unwrap();
+    let future_frame = EventServerMessage::decode(
+        FutureEventField {
+            value: Some(Empty {}),
+        }
+        .encode_to_vec()
+        .as_slice(),
+    )
+    .unwrap();
+    assert!(future_frame.message.is_none());
+    server.event_actions.send(future_frame).unwrap();
+    server.event_actions.send(future_delivery(1)).unwrap();
+    let skipped = next_reply(&mut server).await;
+    assert_eq!(skipped.sequence, 1);
+    assert!(matches!(
+        skipped.outcome,
+        Some(event_reply::Outcome::Acknowledged(_))
+    ));
+    assert!(observed.try_recv().is_err());
+    server
+        .event_actions
+        .send(delivery(
+            2,
+            event_delivery::Payload::Progress(generated::OperationProgress {
+                kind: generated::ProgressKind::EncryptComplete as i32,
+                tx_hash: None,
+            }),
+        ))
+        .unwrap();
+    let (context, notification) = observed.recv().await.unwrap();
+    assert_eq!(context.sequence, 2);
+    assert!(
+        matches!(notification, Notification::Progress(progress) if progress.kind == crate::EventEnum::Known(generated::ProgressKind::EncryptComplete))
+    );
+    assert_eq!(next_reply(&mut server).await.sequence, 2);
+    sdk.close().await.unwrap();
+}
+
 #[test]
 fn lifecycle_payload_preserves_clear_values_and_errors() {
     let wire = generated::SdkEvent {
@@ -199,6 +287,7 @@ fn lifecycle_payload_preserves_clear_values_and_errors() {
         event.kind,
         crate::EventKind::Known(generated::SdkEventKind::DecryptEnd)
     );
+    assert_eq!(event.kind.to_string(), "DecryptEnd");
     assert_eq!(event.timestamp, 1.5);
     assert_eq!(event.duration_ms, Some(2.5));
     assert_eq!(
@@ -258,7 +347,9 @@ fn lifecycle_payload_preserves_clear_values_and_errors() {
     })
     .unwrap();
     assert_eq!(unknown.kind, crate::EventKind::Unknown(100));
+    assert_eq!(unknown.kind.to_string(), "Unknown(100)");
     assert_eq!(unknown.operation, Some(crate::EventEnum::Unknown(101)));
+    assert_eq!(unknown.operation.unwrap().to_string(), "Unknown(101)");
     assert_eq!(unknown.shield_path, Some(crate::EventEnum::Unknown(102)));
     assert_eq!(unknown.step, Some(crate::EventEnum::Unknown(103)));
 }
@@ -344,13 +435,7 @@ async fn mismatched_event_context_closes_channel_without_delivery() {
         .await
         .unwrap();
     server.event_replies.recv().await.unwrap();
-    let mut wrong = delivery(
-        1,
-        event_delivery::Payload::Progress(generated::OperationProgress {
-            kind: 100,
-            tx_hash: None,
-        }),
-    );
+    let mut wrong = future_delivery(1);
     if let Some(event_server_message::Message::Delivery(delivery)) = &mut wrong.message {
         delivery.context_id = "other-context".into();
     }

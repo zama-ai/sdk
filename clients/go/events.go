@@ -47,6 +47,7 @@ const (
 )
 
 const (
+	SDKEventKindUnspecified    = SDKEventKind(pb.SdkEventKind_SDK_EVENT_KIND_UNSPECIFIED)
 	EncryptStart               = SDKEventKind(pb.SdkEventKind_SDK_EVENT_KIND_ENCRYPT_START)
 	EncryptEnd                 = SDKEventKind(pb.SdkEventKind_SDK_EVENT_KIND_ENCRYPT_END)
 	EncryptError               = SDKEventKind(pb.SdkEventKind_SDK_EVENT_KIND_ENCRYPT_ERROR)
@@ -93,6 +94,7 @@ type WalletAccountChanged struct{ Previous, Next *WalletAccount }
 type ProgressKind int32
 
 const (
+	ProgressKindUnspecified   = ProgressKind(pb.ProgressKind_PROGRESS_KIND_UNSPECIFIED)
 	EncryptComplete           = ProgressKind(pb.ProgressKind_PROGRESS_KIND_ENCRYPT_COMPLETE)
 	ProgressTransferSubmitted = ProgressKind(pb.ProgressKind_PROGRESS_KIND_TRANSFER_SUBMITTED)
 	ProgressApprovalSubmitted = ProgressKind(pb.ProgressKind_PROGRESS_KIND_APPROVAL_SUBMITTED)

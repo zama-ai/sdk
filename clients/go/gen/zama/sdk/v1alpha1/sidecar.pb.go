@@ -198,7 +198,7 @@ func (TransactionKind) EnumDescriptor() ([]byte, []int) {
 	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{2}
 }
 
-// SDK lifecycle event kinds. Unknown numeric values must be handled by clients without closing the channel.
+// Preserve unknown numeric values without closing the channel.
 type SdkEventKind int32
 
 const (
@@ -7553,7 +7553,7 @@ func (x *WalletAccountChanged) GetNext() *WalletAccount {
 	return nil
 }
 
-// Optional hash is present only after the corresponding transaction is submitted.
+// Submitted stages normally include a hash; clients also accept its absence.
 type OperationProgress struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Kind          ProgressKind           `protobuf:"varint,1,opt,name=kind,proto3,enum=zama.sdk.v1alpha1.ProgressKind" json:"kind,omitempty"`
@@ -7613,6 +7613,8 @@ type EventDelivery struct {
 	// Empty for lifecycle events that do not belong to a tracked RPC.
 	OperationId string `protobuf:"bytes,2,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
 	Sequence    uint64 `protobuf:"varint,3,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	// Acknowledge and skip unknown payloads after checking context and sequence.
+	//
 	// Types that are valid to be assigned to Payload:
 	//
 	//	*EventDelivery_Event
@@ -7730,8 +7732,7 @@ func (*EventDelivery_WalletAccount) isEventDelivery_Payload() {}
 
 func (*EventDelivery_Progress) isEventDelivery_Payload() {}
 
-// Acknowledgment completes a notification. A handler error is reported without
-// failing the SDK operation that emitted it.
+// Handler errors do not fail the SDK operation that emitted the notification.
 type EventReply struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Sequence uint64                 `protobuf:"varint,1,opt,name=sequence,proto3" json:"sequence,omitempty"`
@@ -7905,7 +7906,6 @@ func (*EventClientMessage_Attach) isEventClientMessage_Message() {}
 
 func (*EventClientMessage_Reply) isEventClientMessage_Message() {}
 
-// The sidecar could not apply a reply to the referenced delivery.
 type EventReplyError struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Sequence      uint64                 `protobuf:"varint,1,opt,name=sequence,proto3" json:"sequence,omitempty"`
@@ -7958,7 +7958,6 @@ func (x *EventReplyError) GetError() *SdkError {
 	return nil
 }
 
-// Confirms attachment, delivers a notification, or rejects a stale/invalid reply.
 type EventServerMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Message:

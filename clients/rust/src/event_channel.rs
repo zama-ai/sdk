@@ -63,7 +63,7 @@ pub(crate) async fn attach_events(
 }
 struct Notifications {
     context_id: String,
-    notifications: mpsc::Sender<(EventContext, Notification)>,
+    notifications: mpsc::Sender<(EventContext, Option<Notification>)>,
     sequence: u64,
 }
 impl Notifications {
@@ -73,7 +73,9 @@ impl Notifications {
             Some(ServerMessage::ReplyError(error)) => {
                 crate::channel::check_reply_error(error.error, "EVENT_DELIVERY_NOT_FOUND")
             }
-            _ => anyhow::bail!("unexpected event channel frame"),
+            // Prost discards unknown oneof tags, so an empty frame has the same shape.
+            None => Ok(()),
+            Some(ServerMessage::Attached(_)) => anyhow::bail!("unexpected event attachment"),
         }
     }
     fn deliver(&mut self, delivery: generated::EventDelivery) -> Result<()> {
@@ -91,11 +93,10 @@ impl Notifications {
             operation_id: (!delivery.operation_id.is_empty()).then_some(delivery.operation_id),
             sequence: delivery.sequence,
         };
+        // Prost discards unknown oneof tags, so future payloads also look absent.
+        let notification = delivery.payload.map(notification).transpose()?;
         self.notifications
-            .try_send((
-                context,
-                notification(delivery.payload.context("missing event payload")?)?,
-            ))
+            .try_send((context, notification))
             .map_err(|error| match error {
                 TrySendError::Full(_) => anyhow::anyhow!("event notification window exceeded"),
                 TrySendError::Closed(_) => anyhow::anyhow!("event notification worker closed"),
@@ -114,15 +115,18 @@ fn notification(payload: Payload) -> Result<Notification> {
     })
 }
 async fn process_notifications(
-    mut receiver: mpsc::Receiver<(EventContext, Notification)>,
+    mut receiver: mpsc::Receiver<(EventContext, Option<Notification>)>,
     handler: Arc<dyn EventHandler>,
     sender: Sender,
 ) -> Result<()> {
     while let Some((context, notification)) = receiver.recv().await {
         let sequence = context.sequence;
-        let outcome = match handler.on_notification(context, notification).await {
-            Ok(()) => Outcome::Acknowledged(generated::Empty {}),
-            Err(error) => Outcome::Error(callback_error(error).into()),
+        let outcome = match notification {
+            Some(notification) => match handler.on_notification(context, notification).await {
+                Ok(()) => Outcome::Acknowledged(generated::Empty {}),
+                Err(error) => Outcome::Error(callback_error(error).into()),
+            },
+            None => Outcome::Acknowledged(generated::Empty {}),
         };
         reply(&sender, sequence, outcome).await?;
     }

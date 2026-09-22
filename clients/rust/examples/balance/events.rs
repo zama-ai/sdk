@@ -13,11 +13,9 @@ impl EventHandler for Diagnostics {
         notification: Notification,
     ) -> Result<()> {
         match notification {
-            Notification::Lifecycle(event) => eprintln!(
-                "SDK event {} (sequence {})",
-                event.kind.as_str(),
-                context.sequence
-            ),
+            Notification::Lifecycle(event) => {
+                eprintln!("SDK event {} (sequence {})", event.kind, context.sequence)
+            }
             Notification::WalletAccountChanged { .. } => eprintln!("SDK wallet account changed"),
             Notification::Progress(progress) => {
                 let stage = match progress.kind {
@@ -33,7 +31,7 @@ impl EventHandler for Diagnostics {
                         "unknown"
                     }
                 };
-                eprintln!("SDK progress: {stage}");
+                eprintln!("SDK progress: {stage} ({})", progress.kind);
             }
         }
         Ok(())
