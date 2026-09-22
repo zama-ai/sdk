@@ -50,6 +50,7 @@ export class RemoteEvents {
           "SDK notification could not be encoded.",
         ),
       );
+      process.stderr.write("[zama-sidecar] EVENT_ENCODING_FAILED (details omitted)\n");
     }
   }
 

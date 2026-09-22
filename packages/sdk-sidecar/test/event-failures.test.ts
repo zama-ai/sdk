@@ -1,5 +1,5 @@
 import type { ServiceError } from "@grpc/grpc-js";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import { RemoteEvents, type EventStream } from "../src/remote-events.js";
 import { EventReply, type EventServerMessage } from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
 import { FakeStream } from "./support/fake-stream.js";
@@ -11,19 +11,27 @@ test("event encoding failure terminates the subscription with a safe typed error
   const errors: ServiceError[] = [];
   stream.on("error", (error) => errors.push(error));
   events.attach(stream as unknown as EventStream);
-  events.onEvent({
-    type: "decrypt:end",
-    timestamp: 1,
-    durationMs: 1,
-    encryptedValues: ["0xzz"],
-    result: {},
-  });
-  expect(errors).toHaveLength(1);
-  expect(errors[0]?.metadata.get("zama-error-code")).toEqual(["EVENT_ENCODING_FAILED"]);
-  expect(errors[0]?.message).toBe("SDK notification could not be encoded.");
-  events.onEvent({ type: "encrypt:start", timestamp: 2 });
-  expect(stream.messages).toHaveLength(1);
-  events.dispose();
+  const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+  try {
+    events.onEvent({
+      type: "decrypt:end",
+      timestamp: 1,
+      durationMs: 1,
+      encryptedValues: ["0xzz"],
+      result: {},
+    });
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.metadata.get("zama-error-code")).toEqual(["EVENT_ENCODING_FAILED"]);
+    expect(errors[0]?.message).toBe("SDK notification could not be encoded.");
+    events.onEvent({ type: "encrypt:start", timestamp: 2 });
+    expect(stream.messages).toHaveLength(1);
+    expect(stderr.mock.calls).toEqual([
+      ["[zama-sidecar] EVENT_ENCODING_FAILED (details omitted)\n"],
+    ]);
+  } finally {
+    stderr.mockRestore();
+    events.dispose();
+  }
 });
 
 test("an unknown reply outcome is rejected without freeing delivery state", () => {

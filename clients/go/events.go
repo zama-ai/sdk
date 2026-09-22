@@ -103,8 +103,6 @@ const (
 	ProgressUnwrapSubmitted   = ProgressKind(pb.ProgressKind_PROGRESS_KIND_UNWRAP_SUBMITTED)
 	ProgressFinalizing        = ProgressKind(pb.ProgressKind_PROGRESS_KIND_FINALIZING)
 	ProgressFinalizeSubmitted = ProgressKind(pb.ProgressKind_PROGRESS_KIND_FINALIZE_SUBMITTED)
-	EncryptComplete           = ProgressEncryptComplete
-	Finalizing                = ProgressFinalizing
 )
 
 func (kind ProgressKind) String() string { return pb.ProgressKind(kind).String() }

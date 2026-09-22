@@ -28,5 +28,5 @@ export function progressCallbacks(events: RemoteEvents): Required<ProgressCallba
     onUnwrapSubmitted: (hash) => notify(ProgressKind.PROGRESS_KIND_UNWRAP_SUBMITTED, hash),
     onFinalizing: () => notify(ProgressKind.PROGRESS_KIND_FINALIZING),
     onFinalizeSubmitted: (hash) => notify(ProgressKind.PROGRESS_KIND_FINALIZE_SUBMITTED, hash),
-  } satisfies Required<ProgressCallbacks>;
+  };
 }
