@@ -81,16 +81,16 @@ func attachChannel[C, S any](
 	open func(context.Context) (grpc.BidiStreamingClient[C, S], error),
 	attach *C, attached func(*S) bool,
 	handle func(context.Context, *S, func(*C)) error,
-) error {
+) (*callbackChannel, error) {
 	sdk.mu.Lock()
 	if sdk.terminal != nil {
 		err := sdk.terminal
 		sdk.mu.Unlock()
-		return err
+		return nil, err
 	}
 	if *slot != nil && (*slot).err == nil {
 		sdk.mu.Unlock()
-		return fmt.Errorf("%s channel already attached", kind)
+		return nil, fmt.Errorf("%s channel already attached", kind)
 	}
 	channelctx, cancel := context.WithCancel(context.Background())
 	channel := &callbackChannel{cancel: cancel, done: make(chan struct{})}
@@ -123,11 +123,11 @@ func attachChannel[C, S any](
 	select {
 	case <-ctx.Done():
 		fail(ctx.Err())
-		return ctx.Err()
+		return nil, ctx.Err()
 	case result := <-ready:
 		if result.err != nil {
 			fail(result.err)
-			return result.err
+			return nil, result.err
 		}
 		stream = result.stream
 	}
@@ -153,5 +153,5 @@ func attachChannel[C, S any](
 			}
 		}
 	}()
-	return nil
+	return channel, nil
 }

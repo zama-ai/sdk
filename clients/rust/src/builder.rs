@@ -42,7 +42,7 @@ impl SdkBuilder {
         self.derivation_secret = Some(secret);
         self
     }
-    /// Attaches before returning the SDK; close or dropping the SDK removes the subscription.
+    /// Subscribes to lifecycle, wallet, and progress notifications before build returns.
     pub fn events(mut self, handler: impl crate::EventHandler + 'static) -> Self {
         self.events = Some(Arc::new(handler));
         self

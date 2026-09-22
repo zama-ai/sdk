@@ -6,6 +6,8 @@ import { errorDetails, invalidArgument, SidecarError } from "./errors.js";
 import type * as rpc from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import { operationContext } from "./remote-signer.js";
 
+const EVENT_WINDOW_SIZE = 256;
+
 export type EventStream = ServerDuplexStream<rpc.EventClientMessage, rpc.EventServerMessage>;
 type DeliveryPayload = NonNullable<rpc.EventDelivery["payload"]>;
 type WalletNotifications = { onWalletAccountChange(listener: WalletAccountListener): () => void };
@@ -19,7 +21,7 @@ export class RemoteEvents {
   #connection = new CallbackConnection<rpc.EventClientMessage, rpc.EventServerMessage>(
     () => this.#pending.clear(),
     {
-      maximum: 256,
+      maximum: EVENT_WINDOW_SIZE,
       error: new SidecarError(
         "EVENT_BACKPRESSURE",
         status.RESOURCE_EXHAUSTED,
@@ -83,7 +85,7 @@ export class RemoteEvents {
     if (!this.#connection.connected) {
       return;
     }
-    if (this.#pending.size >= 256) {
+    if (this.#pending.size >= EVENT_WINDOW_SIZE) {
       this.#connection.fail(
         new SidecarError(
           "EVENT_BACKPRESSURE",
@@ -117,10 +119,10 @@ export class RemoteEvents {
       });
       return;
     }
-    this.#pending.delete(reply.sequence);
     if (reply.outcome?.$case !== "acknowledged" && reply.outcome?.$case !== "error") {
       throw invalidArgument("Notifications require an acknowledgment or handler error.");
     }
+    this.#pending.delete(reply.sequence);
   }
 
   dispose(): void {

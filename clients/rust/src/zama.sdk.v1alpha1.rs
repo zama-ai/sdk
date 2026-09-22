@@ -1145,7 +1145,8 @@ pub mod event_delivery {
         Progress(super::OperationProgress),
     }
 }
-/// Replies acknowledge a notification or report its handler error.
+/// Acknowledgment completes a notification. A handler error is reported without
+/// failing the SDK operation that emitted it.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct EventReply {
     #[prost(uint64, tag = "1")]
@@ -1187,7 +1188,7 @@ pub struct EventReplyError {
     #[prost(message, optional, tag = "2")]
     pub error: ::core::option::Option<SdkError>,
 }
-/// Server attachment, delivery, and callback outcome notifications.
+/// Confirms attachment, delivers a notification, or rejects a stale/invalid reply.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EventServerMessage {
     #[prost(oneof = "event_server_message::Message", tags = "1, 2, 3")]
@@ -1427,7 +1428,7 @@ impl SdkEventKind {
         }
     }
 }
-/// Permit and transaction operations share this field; only the matching event kind uses it.
+/// Distinguishes permit failures from transaction failures, including transaction routes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum EventOperation {
@@ -1571,7 +1572,7 @@ impl ApprovalStep {
         }
     }
 }
-/// Progress callback kinds provided by the SDK Token API.
+/// Token callback stages retain their SDK timing; they are not inferred from lifecycle events.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum ProgressKind {

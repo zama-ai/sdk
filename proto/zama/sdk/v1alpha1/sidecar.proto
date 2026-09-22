@@ -707,7 +707,7 @@ enum SdkEventKind {
   SDK_EVENT_KIND_UNSHIELD_PHASE2_STARTED = 20;
   SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED = 21;
 }
-// Permit and transaction operations share this field; only the matching event kind uses it.
+// Distinguishes permit failures from transaction failures, including transaction routes.
 enum EventOperation {
   EVENT_OPERATION_UNSPECIFIED = 0;
   EVENT_OPERATION_GRANT_PERMIT = 1;
@@ -762,7 +762,7 @@ message WalletAccountChanged {
   WalletAccount previous = 1;
   WalletAccount next = 2;
 }
-// Progress callback kinds provided by the SDK Token API.
+// Token callback stages retain their SDK timing; they are not inferred from lifecycle events.
 enum ProgressKind {
   PROGRESS_KIND_UNSPECIFIED = 0;
   PROGRESS_KIND_ENCRYPT_COMPLETE = 1;
@@ -791,7 +791,8 @@ message EventDelivery {
     OperationProgress progress = 6;
   }
 }
-// Replies acknowledge a notification or report its handler error.
+// Acknowledgment completes a notification. A handler error is reported without
+// failing the SDK operation that emitted it.
 message EventReply {
   uint64 sequence = 1;
   oneof outcome {
@@ -811,7 +812,7 @@ message EventReplyError {
   uint64 sequence = 1;
   SdkError error = 2;
 }
-// Server attachment, delivery, and callback outcome notifications.
+// Confirms attachment, delivers a notification, or rejects a stale/invalid reply.
 message EventServerMessage {
   oneof message {
     Empty attached = 1;

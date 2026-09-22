@@ -119,3 +119,49 @@ test("measured event durations retain fractional milliseconds", () => {
   const encoded = SdkEvent.decode(SdkEvent.encode(sdkEvent(event)).finish());
   expect(encoded.durationMs).toBe(1.25);
 });
+
+test.each([
+  ["grantPermit", EventOperation.EVENT_OPERATION_GRANT_PERMIT],
+  ["grantDelegationPermit", EventOperation.EVENT_OPERATION_GRANT_DELEGATION_PERMIT],
+  ["registerPermit", EventOperation.EVENT_OPERATION_REGISTER_PERMIT],
+] as const)("permit operation %s survives the wire round-trip", (operation, expected) => {
+  const event: ZamaSDKEvent = { ...base, type: "permit:error", operation, error };
+  expect(SdkEvent.decode(SdkEvent.encode(sdkEvent(event)).finish()).operation).toBe(expected);
+});
+
+test.each([
+  ["approveUnderlying", EventOperation.EVENT_OPERATION_APPROVE_UNDERLYING],
+  ["approveUnderlying:reset", EventOperation.EVENT_OPERATION_APPROVE_UNDERLYING_RESET],
+  ["delegateDecryption", EventOperation.EVENT_OPERATION_DELEGATE_DECRYPTION],
+  ["finalizeUnwrap", EventOperation.EVENT_OPERATION_FINALIZE_UNWRAP],
+  ["revokeDelegation", EventOperation.EVENT_OPERATION_REVOKE_DELEGATION],
+  ["setOperator", EventOperation.EVENT_OPERATION_SET_OPERATOR],
+  ["shield:transferAndCall", EventOperation.EVENT_OPERATION_SHIELD_TRANSFER_AND_CALL],
+  ["shield:approveAndWrap", EventOperation.EVENT_OPERATION_SHIELD_APPROVE_AND_WRAP],
+  ["wrap", EventOperation.EVENT_OPERATION_WRAP],
+  ["transfer", EventOperation.EVENT_OPERATION_TRANSFER],
+  ["transferAndCall", EventOperation.EVENT_OPERATION_TRANSFER_AND_CALL],
+  ["transferFrom", EventOperation.EVENT_OPERATION_TRANSFER_FROM],
+  ["transferFromAndCall", EventOperation.EVENT_OPERATION_TRANSFER_FROM_AND_CALL],
+  ["unwrap", EventOperation.EVENT_OPERATION_UNWRAP],
+  ["unwrapAll", EventOperation.EVENT_OPERATION_UNWRAP_ALL],
+] as const)("transaction operation %s survives the wire round-trip", (operation, expected) => {
+  const event: ZamaSDKEvent = { ...base, type: "transaction:error", operation, error };
+  expect(SdkEvent.decode(SdkEvent.encode(sdkEvent(event)).finish()).operation).toBe(expected);
+});
+
+test.each([
+  ["transferAndCall", ShieldPath.SHIELD_PATH_TRANSFER_AND_CALL],
+  ["approveAndWrap", ShieldPath.SHIELD_PATH_APPROVE_AND_WRAP],
+] as const)("shield path %s survives the wire round-trip", (shieldPath, expected) => {
+  const event: ZamaSDKEvent = { ...base, type: "shield:submitted", shieldPath, txHash: hash };
+  expect(SdkEvent.decode(SdkEvent.encode(sdkEvent(event)).finish()).shieldPath).toBe(expected);
+});
+
+test.each([
+  ["reset", ApprovalStep.APPROVAL_STEP_RESET],
+  ["approve", ApprovalStep.APPROVAL_STEP_APPROVE],
+] as const)("approval step %s survives the wire round-trip", (step, expected) => {
+  const event: ZamaSDKEvent = { ...base, type: "approveUnderlying:submitted", step, txHash: hash };
+  expect(SdkEvent.decode(SdkEvent.encode(sdkEvent(event)).finish()).step).toBe(expected);
+});

@@ -104,11 +104,13 @@ test("context cleanup closes notifications and unsubscribes the wallet", () => {
 });
 
 test("a missing notification outcome is rejected", () => {
-  const { events } = setup();
+  const { events, stream } = setup();
   events.notify(payload);
   expect(() => events.reply({ sequence: 1n, outcome: undefined })).toThrow(
     "acknowledgment or handler error",
   );
+  events.reply({ sequence: 1n, outcome: { $case: "acknowledged", acknowledged: {} } });
+  expect(stream.messages).toHaveLength(2);
   events.dispose();
 });
 

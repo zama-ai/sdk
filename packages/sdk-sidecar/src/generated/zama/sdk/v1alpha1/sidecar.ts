@@ -354,7 +354,7 @@ export function sdkEventKindToJSON(object: SdkEventKind): string {
   }
 }
 
-/** Permit and transaction operations share this field; only the matching event kind uses it. */
+/** Distinguishes permit failures from transaction failures, including transaction routes. */
 export enum EventOperation {
   EVENT_OPERATION_UNSPECIFIED = 0,
   EVENT_OPERATION_GRANT_PERMIT = 1,
@@ -570,7 +570,7 @@ export function approvalStepToJSON(object: ApprovalStep): string {
   }
 }
 
-/** Progress callback kinds provided by the SDK Token API. */
+/** Token callback stages retain their SDK timing; they are not inferred from lifecycle events. */
 export enum ProgressKind {
   PROGRESS_KIND_UNSPECIFIED = 0,
   PROGRESS_KIND_ENCRYPT_COMPLETE = 1,
@@ -1415,7 +1415,10 @@ export interface EventDelivery {
   } | undefined;
 }
 
-/** Replies acknowledge a notification or report its handler error. */
+/**
+ * Acknowledgment completes a notification. A handler error is reported without
+ * failing the SDK operation that emitted it.
+ */
 export interface EventReply {
   sequence: bigint;
   outcome: { $case: "acknowledged"; acknowledged: Empty } | { $case: "error"; error: SdkError } | undefined;
@@ -1432,7 +1435,7 @@ export interface EventReplyError {
   error: SdkError | undefined;
 }
 
-/** Server attachment, delivery, and callback outcome notifications. */
+/** Confirms attachment, delivers a notification, or rejects a stale/invalid reply. */
 export interface EventServerMessage {
   message: { $case: "attached"; attached: Empty } | { $case: "delivery"; delivery: EventDelivery } | {
     $case: "replyError";

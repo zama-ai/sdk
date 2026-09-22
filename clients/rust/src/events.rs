@@ -1,5 +1,5 @@
 use crate::{Address, B256, ClearValues, SdkError, WalletAccount, async_trait, generated};
-use anyhow::{Context, Result, ensure};
+use anyhow::{Result, ensure};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EventEnum<E> {
@@ -30,7 +30,7 @@ pub struct SdkEvent {
     pub kind: EventKind,
     pub timestamp: f64,
     pub token_address: Option<Address>,
-    /// SDK multi-phase correlation, independent of the enclosing RPC operation ID.
+    /// ID assigned by the SDK; it can differ from the RPC operation ID.
     pub sdk_operation_id: Option<String>,
     pub duration_ms: Option<f64>,
     pub encrypted_values: Vec<B256>,
@@ -50,15 +50,9 @@ pub struct EventContext {
     pub sequence: u64,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum OperationProgress {
-    EncryptComplete,
-    TransferSubmitted(B256),
-    ApprovalSubmitted(B256),
-    ShieldSubmitted(B256),
-    WrapSubmitted(B256),
-    UnwrapSubmitted(B256),
-    Finalizing,
-    FinalizeSubmitted(B256),
+pub struct OperationProgress {
+    pub kind: EventEnum<generated::ProgressKind>,
+    pub tx_hash: Option<B256>,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub enum Notification {
@@ -69,7 +63,7 @@ pub enum Notification {
     },
     Progress(OperationProgress),
 }
-/// Notifications run sequentially. Returned errors are reported without failing SDK operations.
+/// Notifications run sequentially. Errors are reported to the sidecar; a panic closes the subscription.
 #[async_trait]
 pub trait EventHandler: Send + Sync {
     async fn on_notification(
@@ -113,25 +107,13 @@ impl TryFrom<generated::SdkEvent> for SdkEvent {
 impl TryFrom<generated::OperationProgress> for OperationProgress {
     type Error = anyhow::Error;
     fn try_from(progress: generated::OperationProgress) -> Result<Self> {
-        use generated::ProgressKind;
-        let hash = || {
-            crate::types::handle(
-                progress
-                    .tx_hash
-                    .as_deref()
-                    .context("missing progress transaction hash")?,
-            )
-        };
-        Ok(match ProgressKind::try_from(progress.kind)? {
-            ProgressKind::EncryptComplete => Self::EncryptComplete,
-            ProgressKind::TransferSubmitted => Self::TransferSubmitted(hash()?),
-            ProgressKind::ApprovalSubmitted => Self::ApprovalSubmitted(hash()?),
-            ProgressKind::ShieldSubmitted => Self::ShieldSubmitted(hash()?),
-            ProgressKind::WrapSubmitted => Self::WrapSubmitted(hash()?),
-            ProgressKind::UnwrapSubmitted => Self::UnwrapSubmitted(hash()?),
-            ProgressKind::Finalizing => Self::Finalizing,
-            ProgressKind::FinalizeSubmitted => Self::FinalizeSubmitted(hash()?),
-            ProgressKind::Unspecified => anyhow::bail!("unspecified progress kind"),
+        Ok(Self {
+            kind: EventEnum::from_raw(progress.kind),
+            tx_hash: progress
+                .tx_hash
+                .as_deref()
+                .map(crate::types::handle)
+                .transpose()?,
         })
     }
 }

@@ -113,6 +113,22 @@ async fn events_preserve_order_ack_after_handler_and_unknown_kinds() {
         .event_actions
         .send(delivery(
             3,
+            event_delivery::Payload::Progress(generated::OperationProgress {
+                kind: 100,
+                tx_hash: None,
+            }),
+        ))
+        .unwrap();
+    let (_, notification) = observations.recv().await.unwrap();
+    assert!(
+        matches!(notification, Notification::Progress(progress) if progress.kind == crate::EventEnum::Unknown(100) && progress.tx_hash.is_none())
+    );
+    gate.add_permits(1);
+    assert_eq!(next_reply(&mut server).await.sequence, 3);
+    server
+        .event_actions
+        .send(delivery(
+            4,
             event_delivery::Payload::Event(Box::new(generated::SdkEvent {
                 r#type: 100,
                 operation: Some(101),
@@ -125,7 +141,23 @@ async fn events_preserve_order_ack_after_handler_and_unknown_kinds() {
         matches!(notification, Notification::Lifecycle(event) if event.kind == crate::EventKind::Unknown(100) && event.operation == Some(crate::EventEnum::Unknown(101)))
     );
     gate.add_permits(1);
-    assert_eq!(next_reply(&mut server).await.sequence, 3);
+    assert_eq!(next_reply(&mut server).await.sequence, 4);
+    server
+        .event_actions
+        .send(delivery(
+            5,
+            event_delivery::Payload::Event(Box::new(generated::SdkEvent {
+                r#type: generated::SdkEventKind::EncryptEnd as i32,
+                ..Default::default()
+            })),
+        ))
+        .unwrap();
+    let (_, notification) = observations.recv().await.unwrap();
+    assert!(
+        matches!(notification, Notification::Lifecycle(event) if event.kind == crate::EventKind::Known(generated::SdkEventKind::EncryptEnd))
+    );
+    gate.add_permits(1);
+    assert_eq!(next_reply(&mut server).await.sequence, 5);
     sdk.close().await.unwrap();
     assert!(
         sdk.wait_channel_closed(CallbackChannel::Events)
@@ -191,10 +223,29 @@ fn lifecycle_payload_preserves_clear_values_and_errors() {
         event.step,
         Some(crate::EventEnum::Known(generated::ApprovalStep::Reset))
     );
+    let progress = crate::OperationProgress::try_from(generated::OperationProgress {
+        kind: generated::ProgressKind::TransferSubmitted as i32,
+        tx_hash: None,
+    })
+    .unwrap();
+    assert_eq!(
+        progress.kind,
+        crate::EventEnum::Known(generated::ProgressKind::TransferSubmitted)
+    );
+    assert_eq!(progress.tx_hash, None);
+    let unspecified = crate::OperationProgress::try_from(generated::OperationProgress {
+        kind: generated::ProgressKind::Unspecified as i32,
+        tx_hash: None,
+    })
+    .unwrap();
+    assert_eq!(
+        unspecified.kind,
+        crate::EventEnum::Known(generated::ProgressKind::Unspecified)
+    );
     assert!(
         crate::OperationProgress::try_from(generated::OperationProgress {
-            kind: 2,
-            tx_hash: None
+            kind: 100,
+            tx_hash: Some(vec![1]),
         })
         .is_err()
     );
@@ -266,6 +317,52 @@ async fn malformed_event_sequence_closes_channel_without_replay() {
     .unwrap_err();
     assert!(failure.to_string().contains("sequence"));
     assert_eq!(observed.recv().await.unwrap().0.sequence, 10);
+    assert!(observed.recv().await.is_none());
+    sdk.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn mismatched_event_context_closes_channel_without_delivery() {
+    let mut server = Server::start(Arc::new(default_handler)).await;
+    server
+        .event_actions
+        .send(EventServerMessage {
+            message: Some(event_server_message::Message::Attached(Empty {})),
+        })
+        .unwrap();
+    let (seen, mut observed) = mpsc::unbounded_channel();
+    let sdk = Client::connect(&server.socket)
+        .await
+        .unwrap()
+        .sdk(SdkConfig::new(11155111, "https://rpc.invalid"))
+        .events(HandlerEvents {
+            seen,
+            gate: Arc::new(Semaphore::new(1)),
+            dropped: Arc::new(Semaphore::new(0)),
+        })
+        .build()
+        .await
+        .unwrap();
+    server.event_replies.recv().await.unwrap();
+    let mut wrong = delivery(
+        1,
+        event_delivery::Payload::Progress(generated::OperationProgress {
+            kind: 100,
+            tx_hash: None,
+        }),
+    );
+    if let Some(event_server_message::Message::Delivery(delivery)) = &mut wrong.message {
+        delivery.context_id = "other-context".into();
+    }
+    server.event_actions.send(wrong).unwrap();
+    let error = tokio::time::timeout(
+        Duration::from_secs(2),
+        sdk.wait_channel_closed(CallbackChannel::Events),
+    )
+    .await
+    .unwrap()
+    .unwrap_err();
+    assert!(error.to_string().contains("context mismatch"));
     assert!(observed.recv().await.is_none());
     sdk.close().await.unwrap();
 }

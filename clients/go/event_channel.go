@@ -54,12 +54,9 @@ func (s *SDKContext) SubscribeEvents(ctx context.Context, handlers EventHandlers
 	s.mu.Unlock()
 	dispatcher := &eventDispatcher{handlers: handlers, pending: make(map[uint64]context.CancelFunc), queue: make(chan eventWork, 256)}
 	var channel *callbackChannel
-	attach := func() error {
+	attach := func() (*callbackChannel, error) {
 		return attachChannel(ctx, s, EventChannel, &s.events,
 			func(ctx context.Context) (grpc.BidiStreamingClient[pb.EventClientMessage, pb.EventServerMessage], error) {
-				s.mu.Lock()
-				channel = s.events
-				s.mu.Unlock()
 				return s.client.rpc.EventChannel(ctx)
 			},
 			&pb.EventClientMessage{Message: &pb.EventClientMessage_Attach{Attach: &pb.ContextRequest{ContextId: s.id}}},
@@ -100,7 +97,7 @@ func (s *SDKContext) SubscribeEvents(ctx context.Context, handlers EventHandlers
 	}
 	var err error
 	for attempt := 0; ; attempt++ {
-		err = attach()
+		channel, err = attach()
 		var rpc *RPCError
 		if err == nil || !replacingClosed || !errors.As(err, &rpc) || rpc.Code != "EVENT_ATTACHED" || attempt >= 39 {
 			break
@@ -214,17 +211,11 @@ func operationProgress(value *pb.OperationProgress) (OperationProgress, error) {
 	if value == nil {
 		return OperationProgress{}, errors.New("missing progress notification")
 	}
-	progress := OperationProgress{Kind: value.Kind}
+	progress := OperationProgress{Kind: ProgressKind(value.Kind)}
 	var err error
 	progress.TxHash, err = eventHash(value.TxHash)
 	if err != nil {
 		return progress, err
-	}
-	switch progress.Kind {
-	case ProgressTransferSubmitted, ProgressApprovalSubmitted, ProgressShieldSubmitted, ProgressWrapSubmitted, ProgressUnwrapSubmitted, ProgressFinalizeSubmitted:
-		if progress.TxHash == nil {
-			return progress, errors.New("missing progress transaction hash")
-		}
 	}
 	return progress, nil
 }

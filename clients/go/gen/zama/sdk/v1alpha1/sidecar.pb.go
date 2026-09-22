@@ -305,7 +305,7 @@ func (SdkEventKind) EnumDescriptor() ([]byte, []int) {
 	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{3}
 }
 
-// Permit and transaction operations share this field; only the matching event kind uses it.
+// Distinguishes permit failures from transaction failures, including transaction routes.
 type EventOperation int32
 
 const (
@@ -503,7 +503,7 @@ func (ApprovalStep) EnumDescriptor() ([]byte, []int) {
 	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{6}
 }
 
-// Progress callback kinds provided by the SDK Token API.
+// Token callback stages retain their SDK timing; they are not inferred from lifecycle events.
 type ProgressKind int32
 
 const (
@@ -7730,7 +7730,8 @@ func (*EventDelivery_WalletAccount) isEventDelivery_Payload() {}
 
 func (*EventDelivery_Progress) isEventDelivery_Payload() {}
 
-// Replies acknowledge a notification or report its handler error.
+// Acknowledgment completes a notification. A handler error is reported without
+// failing the SDK operation that emitted it.
 type EventReply struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Sequence uint64                 `protobuf:"varint,1,opt,name=sequence,proto3" json:"sequence,omitempty"`
@@ -7957,7 +7958,7 @@ func (x *EventReplyError) GetError() *SdkError {
 	return nil
 }
 
-// Server attachment, delivery, and callback outcome notifications.
+// Confirms attachment, delivers a notification, or rejects a stale/invalid reply.
 type EventServerMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Message:

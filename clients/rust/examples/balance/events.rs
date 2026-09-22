@@ -1,5 +1,7 @@
 use anyhow::Result;
-use zama_sdk_sidecar::{EventContext, EventHandler, Notification, async_trait};
+use zama_sdk_sidecar::{
+    EventContext, EventEnum, EventHandler, Notification, ProgressKind, async_trait,
+};
 
 pub struct Diagnostics;
 
@@ -18,20 +20,17 @@ impl EventHandler for Diagnostics {
             ),
             Notification::WalletAccountChanged { .. } => eprintln!("SDK wallet account changed"),
             Notification::Progress(progress) => {
-                let stage = match progress {
-                    zama_sdk_sidecar::OperationProgress::EncryptComplete => "encrypted",
-                    zama_sdk_sidecar::OperationProgress::TransferSubmitted(_) => {
-                        "transfer submitted"
-                    }
-                    zama_sdk_sidecar::OperationProgress::ApprovalSubmitted(_) => {
-                        "approval submitted"
-                    }
-                    zama_sdk_sidecar::OperationProgress::ShieldSubmitted(_) => "shield submitted",
-                    zama_sdk_sidecar::OperationProgress::WrapSubmitted(_) => "wrap submitted",
-                    zama_sdk_sidecar::OperationProgress::UnwrapSubmitted(_) => "unwrap submitted",
-                    zama_sdk_sidecar::OperationProgress::Finalizing => "finalizing",
-                    zama_sdk_sidecar::OperationProgress::FinalizeSubmitted(_) => {
-                        "finalize submitted"
+                let stage = match progress.kind {
+                    EventEnum::Known(ProgressKind::EncryptComplete) => "encrypted",
+                    EventEnum::Known(ProgressKind::TransferSubmitted) => "transfer submitted",
+                    EventEnum::Known(ProgressKind::ApprovalSubmitted) => "approval submitted",
+                    EventEnum::Known(ProgressKind::ShieldSubmitted) => "shield submitted",
+                    EventEnum::Known(ProgressKind::WrapSubmitted) => "wrap submitted",
+                    EventEnum::Known(ProgressKind::UnwrapSubmitted) => "unwrap submitted",
+                    EventEnum::Known(ProgressKind::Finalizing) => "finalizing",
+                    EventEnum::Known(ProgressKind::FinalizeSubmitted) => "finalize submitted",
+                    EventEnum::Known(ProgressKind::Unspecified) | EventEnum::Unknown(_) => {
+                        "unknown"
                     }
                 };
                 eprintln!("SDK progress: {stage}");

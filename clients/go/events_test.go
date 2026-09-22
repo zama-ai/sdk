@@ -57,7 +57,7 @@ func eventFixture(t *testing.T) (*eventServer, *Client) {
 	return server, testClient(t, server, nil)
 }
 func deliverEvent(sequence uint64) *pb.EventServerMessage {
-	return &pb.EventServerMessage{Message: &pb.EventServerMessage_Delivery{Delivery: &pb.EventDelivery{ContextId: "events", OperationId: "rpc-1", Sequence: sequence, Payload: &pb.EventDelivery_Event{Event: &pb.SdkEvent{Type: DecryptStart}}}}}
+	return &pb.EventServerMessage{Message: &pb.EventServerMessage_Delivery{Delivery: &pb.EventDelivery{ContextId: "events", OperationId: "rpc-1", Sequence: sequence, Payload: &pb.EventDelivery_Event{Event: &pb.SdkEvent{Type: pb.SdkEventKind_SDK_EVENT_KIND_DECRYPT_START}}}}}
 }
 func TestEventsOrderedCleanupAndReattach(t *testing.T) {
 	server, client := eventFixture(t)
@@ -242,9 +242,18 @@ func TestEventPayload(t *testing.T) {
 	hash := common.HexToHash("0x01")
 	duration := 0.125
 	sdkID := "sdk-operation"
-	decoded, err := sdkEvent(&pb.SdkEvent{Type: DecryptEnd, Timestamp: 123.5, SdkOperationId: &sdkID, DurationMs: &duration, EncryptedValues: [][]byte{hash.Bytes()}, Result: []*pb.ClearEntry{{EncryptedValue: hash.Bytes(), Value: &pb.ClearValue{Value: &pb.ClearValue_BigintValue{BigintValue: large.String()}}}}})
+	operation := pb.EventOperation_EVENT_OPERATION_GRANT_PERMIT
+	path := pb.ShieldPath_SHIELD_PATH_TRANSFER_AND_CALL
+	step := pb.ApprovalStep_APPROVAL_STEP_RESET
+	decoded, err := sdkEvent(&pb.SdkEvent{Type: pb.SdkEventKind_SDK_EVENT_KIND_DECRYPT_END, Timestamp: 123.5, SdkOperationId: &sdkID, DurationMs: &duration, Operation: &operation, ShieldPath: &path, Step: &step, EncryptedValues: [][]byte{hash.Bytes()}, Result: []*pb.ClearEntry{{EncryptedValue: hash.Bytes(), Value: &pb.ClearValue{Value: &pb.ClearValue_BigintValue{BigintValue: large.String()}}}}})
 	if err != nil || decoded.Result[hash].Integer.Cmp(large) != 0 || decoded.SDKOperationID == nil || decoded.Timestamp != 123.5 || decoded.DurationMS == nil || *decoded.DurationMS != duration {
 		t.Fatalf("lost event payload: %+v %v", decoded, err)
+	}
+	if decoded.Operation == nil || *decoded.Operation != EventOperationGrantPermit || decoded.ShieldPath == nil || *decoded.ShieldPath != ShieldPathTransferAndCall || decoded.Step == nil || *decoded.Step != ApprovalStepReset {
+		t.Fatalf("lost event enum payload: %+v", decoded)
+	}
+	if decoded.Kind.String() != pb.SdkEventKind_SDK_EVENT_KIND_DECRYPT_END.String() || decoded.Operation.String() != operation.String() || decoded.ShieldPath.String() != path.String() || decoded.Step.String() != step.String() || ProgressShieldSubmitted.String() != pb.ProgressKind_PROGRESS_KIND_SHIELD_SUBMITTED.String() {
+		t.Fatal("native enum strings differ from protobuf")
 	}
 }
 func TestManagedEventsAndChannelLoss(t *testing.T) {
@@ -284,6 +293,7 @@ func TestManagedEventsCanStopAndReattach(t *testing.T) {
 		t.Fatal("managed handler did not receive delivery")
 	}
 	sdk.StopEvents()
+	sdk.StopEvents()
 	if err := sdk.WaitChannelFailure(testContext(t), EventChannel); !errors.Is(err, errEventSubscriptionClosed) {
 		t.Fatalf("managed subscription did not stop: %v", err)
 	}
@@ -306,6 +316,41 @@ func TestManagedEventsCanStopAndReattach(t *testing.T) {
 	case <-secondCall:
 	case <-testContext(t).Done():
 		t.Fatal("replacement handler did not receive delivery")
+	}
+}
+
+func TestStopEventsWithoutSubscription(t *testing.T) {
+	_, client := eventFixture(t)
+	sdk := unsignedSDK(t, client)
+	sdk.StopEvents()
+	sdk.StopEvents()
+	if err := sdk.WaitChannelFailure(testContext(t), EventChannel); err == nil || err.Error() != "callback channel has not been attached" {
+		t.Fatalf("unexpected event channel state: %v", err)
+	}
+}
+
+func TestEventContextMismatchClosesChannel(t *testing.T) {
+	server, client := eventFixture(t)
+	sdk := unsignedSDK(t, client)
+	called := make(chan struct{}, 1)
+	subscription, err := sdk.SubscribeEvents(testContext(t), EventHandlers{OnEvent: func(context.Context, EventCorrelation, SDKEvent) error {
+		called <- struct{}{}
+		return nil
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer subscription.Close()
+	frame := deliverEvent(1)
+	frame.GetDelivery().ContextId = "other-context"
+	server.outgoing <- frame
+	if err := sdk.WaitChannelFailure(testContext(t), EventChannel); err == nil || errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("mismatched context did not fail event channel: %v", err)
+	}
+	select {
+	case <-called:
+		t.Fatal("mismatched delivery reached handler")
+	default:
 	}
 }
 
@@ -353,16 +398,16 @@ func TestUnknownEventEnumsReachHandlerWithoutClosingChannel(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer subscription.Close()
-	operation := EventOperation(97)
-	path := ShieldPath(98)
-	step := ApprovalStep(99)
+	operation := pb.EventOperation(97)
+	path := pb.ShieldPath(98)
+	step := pb.ApprovalStep(99)
 	server.outgoing <- &pb.EventServerMessage{Message: &pb.EventServerMessage_Delivery{Delivery: &pb.EventDelivery{
 		ContextId: "events", Sequence: 1,
-		Payload: &pb.EventDelivery_Event{Event: &pb.SdkEvent{Type: SDKEventKind(96), Operation: &operation, ShieldPath: &path, Step: &step}},
+		Payload: &pb.EventDelivery_Event{Event: &pb.SdkEvent{Type: pb.SdkEventKind(96), Operation: &operation, ShieldPath: &path, Step: &step}},
 	}}}
 	select {
 	case event := <-received:
-		if event.Kind != 96 || event.Operation == nil || *event.Operation != operation || event.ShieldPath == nil || *event.ShieldPath != path || event.Step == nil || *event.Step != step {
+		if event.Kind != 96 || event.Operation == nil || *event.Operation != EventOperation(operation) || event.ShieldPath == nil || *event.ShieldPath != ShieldPath(path) || event.Step == nil || *event.Step != ApprovalStep(step) {
 			t.Fatalf("unknown enum values were lost: %+v", event)
 		}
 	case <-testContext(t).Done():
@@ -388,9 +433,13 @@ func TestUnknownEventEnumsReachHandlerWithoutClosingChannel(t *testing.T) {
 }
 
 func TestUnknownProgressKindIsPreserved(t *testing.T) {
-	progress, err := operationProgress(&pb.OperationProgress{Kind: ProgressKind(99)})
+	progress, err := operationProgress(&pb.OperationProgress{Kind: pb.ProgressKind(99)})
 	if err != nil || progress.Kind != 99 {
 		t.Fatalf("unknown progress kind was lost: %+v, %v", progress, err)
+	}
+	progress, err = operationProgress(&pb.OperationProgress{Kind: pb.ProgressKind_PROGRESS_KIND_SHIELD_SUBMITTED})
+	if err != nil || progress.Kind != ProgressShieldSubmitted || progress.TxHash != nil {
+		t.Fatalf("missing optional transaction hash was not preserved: %+v, %v", progress, err)
 	}
 }
 
@@ -481,10 +530,9 @@ func decodedEventReply(t *testing.T, dispatcher *eventDispatcher, delivery *pb.E
 
 func TestMalformedEventPayloadClosesChannel(t *testing.T) {
 	tests := map[string]*pb.EventDelivery{
-		"missing submitted hash":      {Payload: &pb.EventDelivery_Progress{Progress: &pb.OperationProgress{Kind: pb.ProgressKind_PROGRESS_KIND_SHIELD_SUBMITTED}}},
 		"malformed progress hash":     {Payload: &pb.EventDelivery_Progress{Progress: &pb.OperationProgress{Kind: pb.ProgressKind_PROGRESS_KIND_SHIELD_SUBMITTED, TxHash: []byte{1}}}},
-		"malformed SDK event address": {Payload: &pb.EventDelivery_Event{Event: &pb.SdkEvent{Type: DecryptStart, TokenAddress: []byte{1}}}},
-		"malformed clear value":       {Payload: &pb.EventDelivery_Event{Event: &pb.SdkEvent{Type: DecryptEnd, Result: []*pb.ClearEntry{{EncryptedValue: make([]byte, 32), Value: &pb.ClearValue{Value: &pb.ClearValue_BigintValue{BigintValue: "01"}}}}}}},
+		"malformed SDK event address": {Payload: &pb.EventDelivery_Event{Event: &pb.SdkEvent{Type: pb.SdkEventKind_SDK_EVENT_KIND_DECRYPT_START, TokenAddress: []byte{1}}}},
+		"malformed clear value":       {Payload: &pb.EventDelivery_Event{Event: &pb.SdkEvent{Type: pb.SdkEventKind_SDK_EVENT_KIND_DECRYPT_END, Result: []*pb.ClearEntry{{EncryptedValue: make([]byte, 32), Value: &pb.ClearValue{Value: &pb.ClearValue_BigintValue{BigintValue: "01"}}}}}}},
 		"missing payload":             {},
 	}
 	for name, delivery := range tests {
