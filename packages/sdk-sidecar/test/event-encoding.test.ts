@@ -2,7 +2,13 @@ import { expect, expectTypeOf, test } from "vitest";
 import { SigningRejectedError, ZamaSDKEvents, type ZamaSDKEvent } from "@zama-fhe/sdk";
 import { bytesToHex } from "viem";
 import { sdkEvent } from "../src/event-encoding.js";
-import { SdkEvent } from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
+import {
+  ApprovalStep,
+  EventOperation,
+  SdkEvent,
+  SdkEventKind,
+  ShieldPath,
+} from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
 import { decode } from "./support/harness.js";
 
 const hash = `0x${"ab".repeat(32)}` as const;
@@ -38,6 +44,29 @@ const events: ZamaSDKEvent[] = [
   { ...base, type: "unshield:phase2_started" },
   { ...base, type: "unshield:phase2_submitted", txHash: hash },
 ];
+const expectedKinds = [
+  SdkEventKind.SDK_EVENT_KIND_ENCRYPT_START,
+  SdkEventKind.SDK_EVENT_KIND_ENCRYPT_END,
+  SdkEventKind.SDK_EVENT_KIND_ENCRYPT_ERROR,
+  SdkEventKind.SDK_EVENT_KIND_DECRYPT_START,
+  SdkEventKind.SDK_EVENT_KIND_DECRYPT_END,
+  SdkEventKind.SDK_EVENT_KIND_DECRYPT_ERROR,
+  SdkEventKind.SDK_EVENT_KIND_PERMIT_ERROR,
+  SdkEventKind.SDK_EVENT_KIND_TRANSACTION_ERROR,
+  SdkEventKind.SDK_EVENT_KIND_SHIELD_SUBMITTED,
+  SdkEventKind.SDK_EVENT_KIND_TRANSFER_SUBMITTED,
+  SdkEventKind.SDK_EVENT_KIND_TRANSFER_FROM_SUBMITTED,
+  SdkEventKind.SDK_EVENT_KIND_SET_OPERATOR_SUBMITTED,
+  SdkEventKind.SDK_EVENT_KIND_APPROVE_UNDERLYING_SUBMITTED,
+  SdkEventKind.SDK_EVENT_KIND_WRAP_SUBMITTED,
+  SdkEventKind.SDK_EVENT_KIND_UNWRAP_SUBMITTED,
+  SdkEventKind.SDK_EVENT_KIND_FINALIZE_UNWRAP_SUBMITTED,
+  SdkEventKind.SDK_EVENT_KIND_DELEGATION_SUBMITTED,
+  SdkEventKind.SDK_EVENT_KIND_REVOKE_DELEGATION_SUBMITTED,
+  SdkEventKind.SDK_EVENT_KIND_UNSHIELD_PHASE1_SUBMITTED,
+  SdkEventKind.SDK_EVENT_KIND_UNSHIELD_PHASE2_STARTED,
+  SdkEventKind.SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED,
+];
 
 test("every SDK lifecycle variant and field is represented by the wire adapter", () => {
   type Fields<Event> = Event extends unknown ? keyof Event : never;
@@ -56,9 +85,9 @@ test("every SDK lifecycle variant and field is represented by the wire adapter",
     | "step";
   expectTypeOf<Exclude<Fields<ZamaSDKEvent>, MappedFields>>().toEqualTypeOf<never>();
   expect(events.map((event) => event.type).sort()).toEqual(Object.values(ZamaSDKEvents).sort());
-  for (const event of events) {
+  for (const [index, event] of events.entries()) {
     const value = SdkEvent.decode(SdkEvent.encode(sdkEvent(event)).finish());
-    expect(value.type).toBe(event.type);
+    expect(value.type).toBe(expectedKinds[index]);
     expect(value.timestamp).toBe(base.timestamp);
     expect(bytesToHex(value.tokenAddress!)).toBe(token);
     expect(value.sdkOperationId).toBe(base.operationId);
@@ -68,12 +97,20 @@ test("every SDK lifecycle variant and field is represented by the wire adapter",
     );
     expect(decode(value.result)).toEqual("result" in event ? event.result : {});
     expect(value.error?.code).toBe("error" in event ? error.code : undefined);
-    expect(value.operation).toBe("operation" in event ? event.operation : undefined);
+    expect(value.operation).toBe(
+      event.type === "permit:error"
+        ? EventOperation.EVENT_OPERATION_REGISTER_PERMIT
+        : event.type === "transaction:error"
+          ? EventOperation.EVENT_OPERATION_TRANSFER
+          : undefined,
+    );
     expect(value.txHash === undefined ? undefined : bytesToHex(value.txHash)).toBe(
       "txHash" in event ? hash : undefined,
     );
-    expect(value.shieldPath).toBe("shieldPath" in event ? event.shieldPath : undefined);
-    expect(value.step).toBe("step" in event ? event.step : undefined);
+    expect(value.shieldPath).toBe(
+      "shieldPath" in event ? ShieldPath.SHIELD_PATH_APPROVE_AND_WRAP : undefined,
+    );
+    expect(value.step).toBe("step" in event ? ApprovalStep.APPROVAL_STEP_RESET : undefined);
   }
 });
 

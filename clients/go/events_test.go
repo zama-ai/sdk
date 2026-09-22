@@ -20,6 +20,7 @@ type eventServer struct {
 	outgoing chan *pb.EventServerMessage
 	replies  chan *pb.EventReply
 	done     chan struct{}
+	detached chan struct{}
 }
 
 func (s *eventServer) CreateContext(context.Context, *pb.CreateContextRequest) (*pb.CreateContextResponse, error) {
@@ -29,6 +30,9 @@ func (s *eventServer) CloseContext(context.Context, *pb.ContextRequest) (*pb.Clo
 	return &pb.CloseContextResponse{}, nil
 }
 func (s *eventServer) EventChannel(stream grpc.BidiStreamingServer[pb.EventClientMessage, pb.EventServerMessage]) error {
+	if s.detached != nil {
+		defer func() { s.detached <- struct{}{} }()
+	}
 	attach, err := stream.Recv()
 	if err != nil {
 		return err
@@ -53,16 +57,21 @@ func eventFixture(t *testing.T) (*eventServer, *Client) {
 	return server, testClient(t, server, nil)
 }
 func deliverEvent(sequence uint64) *pb.EventServerMessage {
-	return &pb.EventServerMessage{Message: &pb.EventServerMessage_Delivery{Delivery: &pb.EventDelivery{ContextId: "events", OperationId: "rpc-1", Sequence: sequence, Payload: &pb.EventDelivery_Event{Event: &pb.SdkEvent{Type: "decrypt:start"}}}}}
+	return &pb.EventServerMessage{Message: &pb.EventServerMessage_Delivery{Delivery: &pb.EventDelivery{ContextId: "events", OperationId: "rpc-1", Sequence: sequence, Payload: &pb.EventDelivery_Event{Event: &pb.SdkEvent{Type: DecryptStart}}}}}
 }
-func TestEventsOrderedCancellationCleanupAndReattach(t *testing.T) {
+func TestEventsOrderedCleanupAndReattach(t *testing.T) {
 	server, client := eventFixture(t)
 	sdk := unsignedSDK(t, client)
 	entered := make(chan uint64, 3)
+	release := make(chan struct{})
 	sub, err := sdk.SubscribeEvents(testContext(t), EventHandlers{OnEvent: func(ctx context.Context, c EventCorrelation, event SDKEvent) error {
 		entered <- c.Sequence
 		if c.Sequence == 1 {
-			<-ctx.Done()
+			select {
+			case <-release:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 		}
 		return errors.New("notification failure")
 	}})
@@ -80,22 +89,29 @@ func TestEventsOrderedCancellationCleanupAndReattach(t *testing.T) {
 		t.Fatal("handler did not start")
 	}
 	server.outgoing <- deliverEvent(2)
-	server.outgoing <- &pb.EventServerMessage{Message: &pb.EventServerMessage_Cancelled{Cancelled: &pb.EventCancelled{Sequence: 1}}}
+	select {
+	case seq := <-entered:
+		t.Fatalf("notification %d overtook blocked notification", seq)
+	default:
+	}
+	close(release)
 	select {
 	case seq := <-entered:
 		if seq != 2 {
 			t.Fatal(seq)
 		}
 	case <-testContext(t).Done():
-		t.Fatal("cancellation blocked behind handler")
+		t.Fatal("second handler did not start")
 	}
-	select {
-	case reply := <-server.replies:
-		if reply.Sequence != 2 || reply.GetError() == nil {
-			t.Fatalf("unexpected reply %v", reply)
+	for _, sequence := range []uint64{1, 2} {
+		select {
+		case reply := <-server.replies:
+			if reply.Sequence != sequence || reply.GetError() == nil {
+				t.Fatalf("unexpected reply %v", reply)
+			}
+		case <-testContext(t).Done():
+			t.Fatal("missing reply")
 		}
-	case <-testContext(t).Done():
-		t.Fatal("missing reply")
 	}
 	sub.Close()
 	if err := sdk.WaitChannelFailure(testContext(t), EventChannel); err == nil {
@@ -118,41 +134,33 @@ func TestEventsOrderedCancellationCleanupAndReattach(t *testing.T) {
 	}
 }
 
-func TestBatchCallbackDoesNotWaitForNotification(t *testing.T) {
+func TestClosingEventsCancelsActiveHandler(t *testing.T) {
 	server, client := eventFixture(t)
 	sdk := unsignedSDK(t, client)
 	entered := make(chan struct{})
+	cancelled := make(chan struct{})
 	subscription, err := sdk.SubscribeEvents(testContext(t), EventHandlers{
 		OnEvent: func(ctx context.Context, _ EventCorrelation, _ SDKEvent) error {
 			close(entered)
 			<-ctx.Done()
+			close(cancelled)
 			return nil
-		},
-		OnBatchError: func(_ context.Context, _ EventCorrelation, _ BatchErrorCallback) (*big.Int, error) {
-			return big.NewInt(42), nil
 		},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer subscription.Close()
 	server.outgoing <- deliverEvent(1)
 	select {
 	case <-entered:
 	case <-testContext(t).Done():
 		t.Fatal("notification did not start")
 	}
-	server.outgoing <- &pb.EventServerMessage{Message: &pb.EventServerMessage_Delivery{Delivery: &pb.EventDelivery{
-		ContextId: "events", OperationId: "rpc-2", Sequence: 2,
-		Payload: &pb.EventDelivery_BatchError{BatchError: &pb.BatchErrorCallback{TokenAddress: make([]byte, 20), Error: &pb.SdkError{Code: "FAILED"}}},
-	}}}
+	subscription.Close()
 	select {
-	case reply := <-server.replies:
-		if reply.Sequence != 2 || reply.GetFallbackBigint() != "42" {
-			t.Fatalf("batch callback blocked or misrouted: %v", reply)
-		}
+	case <-cancelled:
 	case <-testContext(t).Done():
-		t.Fatal("batch callback blocked behind notification")
+		t.Fatal("closing subscription did not cancel handler")
 	}
 }
 
@@ -229,34 +237,14 @@ func TestImmediateEventReattachWaitsForRemoteDetach(t *testing.T) {
 	}
 }
 
-func TestEventPayloadAndBatchReplies(t *testing.T) {
+func TestEventPayload(t *testing.T) {
 	large := new(big.Int).Lsh(big.NewInt(1), 200)
 	hash := common.HexToHash("0x01")
 	duration := 0.125
 	sdkID := "sdk-operation"
-	decoded, err := sdkEvent(&pb.SdkEvent{Type: "decrypt:end", Timestamp: 123.5, SdkOperationId: &sdkID, DurationMs: &duration, EncryptedValues: [][]byte{hash.Bytes()}, Result: []*pb.ClearEntry{{EncryptedValue: hash.Bytes(), Value: &pb.ClearValue{Value: &pb.ClearValue_BigintValue{BigintValue: large.String()}}}}})
+	decoded, err := sdkEvent(&pb.SdkEvent{Type: DecryptEnd, Timestamp: 123.5, SdkOperationId: &sdkID, DurationMs: &duration, EncryptedValues: [][]byte{hash.Bytes()}, Result: []*pb.ClearEntry{{EncryptedValue: hash.Bytes(), Value: &pb.ClearValue{Value: &pb.ClearValue_BigintValue{BigintValue: large.String()}}}}})
 	if err != nil || decoded.Result[hash].Integer.Cmp(large) != 0 || decoded.SDKOperationID == nil || decoded.Timestamp != 123.5 || decoded.DurationMS == nil || *decoded.DurationMS != duration {
 		t.Fatalf("lost event payload: %+v %v", decoded, err)
-	}
-	dispatcher := &eventDispatcher{handlers: EventHandlers{OnBatchError: func(_ context.Context, c EventCorrelation, e BatchErrorCallback) (*big.Int, error) {
-		if c.OperationID != "rpc" || c.Sequence != 3 || e.Error.Code != "FAILED" {
-			t.Error("lost correlation/error")
-		}
-		return large, nil
-	}}}
-	delivery := &pb.EventDelivery{Sequence: 3, OperationId: "rpc", Payload: &pb.EventDelivery_BatchError{BatchError: &pb.BatchErrorCallback{TokenAddress: make([]byte, 20), Error: &pb.SdkError{Code: "FAILED"}}}}
-	if reply := decodedEventReply(t, dispatcher, delivery); reply.GetFallbackBigint() != large.String() {
-		t.Fatal(reply)
-	}
-	dispatcher.handlers.OnBatchError = func(context.Context, EventCorrelation, BatchErrorCallback) (*big.Int, error) {
-		return nil, &SDKError{Code: "CUSTOM", Message: "rejected", Retryable: true}
-	}
-	if reply := decodedEventReply(t, dispatcher, delivery); reply.GetError().Code != "CUSTOM" || !reply.GetError().Retryable {
-		t.Fatal(reply)
-	}
-	dispatcher.handlers.OnBatchError = nil
-	if reply := decodedEventReply(t, dispatcher, delivery); reply.GetError() == nil {
-		t.Fatal("missing handler accepted")
 	}
 }
 func TestManagedEventsAndChannelLoss(t *testing.T) {
@@ -275,6 +263,134 @@ func TestManagedEventsAndChannelLoss(t *testing.T) {
 	close(server.done)
 	if err := sdk.WaitChannelFailure(testContext(t), EventChannel); err == nil {
 		t.Fatal("loss unreported")
+	}
+}
+
+func TestManagedEventsCanStopAndReattach(t *testing.T) {
+	server, client := eventFixture(t)
+	server.detached = make(chan struct{}, 1)
+	firstCall := make(chan struct{}, 1)
+	sdk, err := client.CreateContext(testContext(t), SDKConfig{Events: &EventHandlers{OnEvent: func(context.Context, EventCorrelation, SDKEvent) error {
+		firstCall <- struct{}{}
+		return nil
+	}}}, SignerConfig{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	server.outgoing <- deliverEvent(1)
+	select {
+	case <-firstCall:
+	case <-testContext(t).Done():
+		t.Fatal("managed handler did not receive delivery")
+	}
+	sdk.StopEvents()
+	if err := sdk.WaitChannelFailure(testContext(t), EventChannel); !errors.Is(err, errEventSubscriptionClosed) {
+		t.Fatalf("managed subscription did not stop: %v", err)
+	}
+	select {
+	case <-server.detached:
+	case <-testContext(t).Done():
+		t.Fatal("managed stream did not detach")
+	}
+	secondCall := make(chan struct{}, 1)
+	replacement, err := sdk.SubscribeEvents(testContext(t), EventHandlers{OnEvent: func(context.Context, EventCorrelation, SDKEvent) error {
+		secondCall <- struct{}{}
+		return nil
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer replacement.Close()
+	server.outgoing <- deliverEvent(1)
+	select {
+	case <-secondCall:
+	case <-testContext(t).Done():
+		t.Fatal("replacement handler did not receive delivery")
+	}
+}
+
+func TestEventSequenceMustIncrease(t *testing.T) {
+	for name, sequence := range map[string]uint64{"duplicate": 2, "decreasing": 1} {
+		t.Run(name, func(t *testing.T) {
+			server, client := eventFixture(t)
+			sdk := unsignedSDK(t, client)
+			subscription, err := sdk.SubscribeEvents(testContext(t), EventHandlers{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer subscription.Close()
+			server.outgoing <- deliverEvent(2)
+			select {
+			case reply := <-server.replies:
+				if reply.Sequence != 2 {
+					t.Fatalf("unexpected first reply: %v", reply)
+				}
+			case <-testContext(t).Done():
+				t.Fatal("first delivery was not acknowledged")
+			}
+			server.outgoing <- deliverEvent(sequence)
+			if err := sdk.WaitChannelFailure(testContext(t), EventChannel); err == nil || errors.Is(err, context.DeadlineExceeded) {
+				t.Fatalf("nonincreasing sequence did not terminate channel: %v", err)
+			}
+			select {
+			case reply := <-server.replies:
+				t.Fatalf("invalid delivery acknowledged: %v", reply)
+			default:
+			}
+		})
+	}
+}
+
+func TestUnknownEventEnumsReachHandlerWithoutClosingChannel(t *testing.T) {
+	server, client := eventFixture(t)
+	sdk := unsignedSDK(t, client)
+	received := make(chan SDKEvent, 1)
+	subscription, err := sdk.SubscribeEvents(testContext(t), EventHandlers{OnEvent: func(_ context.Context, _ EventCorrelation, event SDKEvent) error {
+		received <- event
+		return nil
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer subscription.Close()
+	operation := EventOperation(97)
+	path := ShieldPath(98)
+	step := ApprovalStep(99)
+	server.outgoing <- &pb.EventServerMessage{Message: &pb.EventServerMessage_Delivery{Delivery: &pb.EventDelivery{
+		ContextId: "events", Sequence: 1,
+		Payload: &pb.EventDelivery_Event{Event: &pb.SdkEvent{Type: SDKEventKind(96), Operation: &operation, ShieldPath: &path, Step: &step}},
+	}}}
+	select {
+	case event := <-received:
+		if event.Kind != 96 || event.Operation == nil || *event.Operation != operation || event.ShieldPath == nil || *event.ShieldPath != path || event.Step == nil || *event.Step != step {
+			t.Fatalf("unknown enum values were lost: %+v", event)
+		}
+	case <-testContext(t).Done():
+		t.Fatal("unknown event was not delivered")
+	}
+	select {
+	case reply := <-server.replies:
+		if reply.Sequence != 1 || reply.GetAcknowledged() == nil {
+			t.Fatalf("unknown event not acknowledged: %v", reply)
+		}
+	case <-testContext(t).Done():
+		t.Fatal("unknown event was not acknowledged")
+	}
+	server.outgoing <- deliverEvent(2)
+	select {
+	case event := <-received:
+		if event.Kind != DecryptStart {
+			t.Fatalf("subsequent event was lost: %+v", event)
+		}
+	case <-testContext(t).Done():
+		t.Fatal("channel closed after unknown event")
+	}
+}
+
+func TestUnknownProgressKindIsPreserved(t *testing.T) {
+	progress, err := operationProgress(&pb.OperationProgress{Kind: ProgressKind(99)})
+	if err != nil || progress.Kind != 99 {
+		t.Fatalf("unknown progress kind was lost: %+v, %v", progress, err)
 	}
 }
 
@@ -367,10 +483,8 @@ func TestMalformedEventPayloadClosesChannel(t *testing.T) {
 	tests := map[string]*pb.EventDelivery{
 		"missing submitted hash":      {Payload: &pb.EventDelivery_Progress{Progress: &pb.OperationProgress{Kind: pb.ProgressKind_PROGRESS_KIND_SHIELD_SUBMITTED}}},
 		"malformed progress hash":     {Payload: &pb.EventDelivery_Progress{Progress: &pb.OperationProgress{Kind: pb.ProgressKind_PROGRESS_KIND_SHIELD_SUBMITTED, TxHash: []byte{1}}}},
-		"unknown progress kind":       {Payload: &pb.EventDelivery_Progress{Progress: &pb.OperationProgress{Kind: 99}}},
-		"unknown SDK event":           {Payload: &pb.EventDelivery_Event{Event: &pb.SdkEvent{Type: "future:event"}}},
-		"malformed SDK event address": {Payload: &pb.EventDelivery_Event{Event: &pb.SdkEvent{Type: "decrypt:start", TokenAddress: []byte{1}}}},
-		"malformed clear value":       {Payload: &pb.EventDelivery_Event{Event: &pb.SdkEvent{Type: "decrypt:end", Result: []*pb.ClearEntry{{EncryptedValue: make([]byte, 32), Value: &pb.ClearValue{Value: &pb.ClearValue_BigintValue{BigintValue: "01"}}}}}}},
+		"malformed SDK event address": {Payload: &pb.EventDelivery_Event{Event: &pb.SdkEvent{Type: DecryptStart, TokenAddress: []byte{1}}}},
+		"malformed clear value":       {Payload: &pb.EventDelivery_Event{Event: &pb.SdkEvent{Type: DecryptEnd, Result: []*pb.ClearEntry{{EncryptedValue: make([]byte, 32), Value: &pb.ClearValue{Value: &pb.ClearValue_BigintValue{BigintValue: "01"}}}}}}},
 		"missing payload":             {},
 	}
 	for name, delivery := range tests {

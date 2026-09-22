@@ -3,36 +3,38 @@ package sidecar
 import (
 	"context"
 	"errors"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	pb "github.com/zama-ai/sdk/clients/go/gen/zama/sdk/v1alpha1"
 )
 
-type SDKEventKind string
+type SDKEventKind = pb.SdkEventKind
+type EventOperation = pb.EventOperation
+type ShieldPath = pb.ShieldPath
+type ApprovalStep = pb.ApprovalStep
 
 const (
-	EncryptStart               SDKEventKind = "encrypt:start"
-	EncryptEnd                 SDKEventKind = "encrypt:end"
-	EncryptError               SDKEventKind = "encrypt:error"
-	DecryptStart               SDKEventKind = "decrypt:start"
-	DecryptEnd                 SDKEventKind = "decrypt:end"
-	DecryptError               SDKEventKind = "decrypt:error"
-	PermitError                SDKEventKind = "permit:error"
-	TransactionError           SDKEventKind = "transaction:error"
-	ShieldSubmitted            SDKEventKind = "shield:submitted"
-	TransferSubmitted          SDKEventKind = "transfer:submitted"
-	TransferFromSubmitted      SDKEventKind = "transferFrom:submitted"
-	SetOperatorSubmitted       SDKEventKind = "setOperator:submitted"
-	ApproveUnderlyingSubmitted SDKEventKind = "approveUnderlying:submitted"
-	WrapSubmitted              SDKEventKind = "wrap:submitted"
-	UnwrapSubmitted            SDKEventKind = "unwrap:submitted"
-	FinalizeUnwrapSubmitted    SDKEventKind = "finalizeUnwrap:submitted"
-	DelegationSubmitted        SDKEventKind = "delegation:submitted"
-	RevokeDelegationSubmitted  SDKEventKind = "revokeDelegation:submitted"
-	UnshieldPhase1Submitted    SDKEventKind = "unshield:phase1_submitted"
-	UnshieldPhase2Started      SDKEventKind = "unshield:phase2_started"
-	UnshieldPhase2Submitted    SDKEventKind = "unshield:phase2_submitted"
+	EncryptStart               SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_ENCRYPT_START
+	EncryptEnd                 SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_ENCRYPT_END
+	EncryptError               SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_ENCRYPT_ERROR
+	DecryptStart               SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_DECRYPT_START
+	DecryptEnd                 SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_DECRYPT_END
+	DecryptError               SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_DECRYPT_ERROR
+	PermitError                SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_PERMIT_ERROR
+	TransactionError           SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_TRANSACTION_ERROR
+	ShieldSubmitted            SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_SHIELD_SUBMITTED
+	TransferSubmitted          SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_TRANSFER_SUBMITTED
+	TransferFromSubmitted      SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_TRANSFER_FROM_SUBMITTED
+	SetOperatorSubmitted       SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_SET_OPERATOR_SUBMITTED
+	ApproveUnderlyingSubmitted SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_APPROVE_UNDERLYING_SUBMITTED
+	WrapSubmitted              SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_WRAP_SUBMITTED
+	UnwrapSubmitted            SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_UNWRAP_SUBMITTED
+	FinalizeUnwrapSubmitted    SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_FINALIZE_UNWRAP_SUBMITTED
+	DelegationSubmitted        SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_DELEGATION_SUBMITTED
+	RevokeDelegationSubmitted  SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_REVOKE_DELEGATION_SUBMITTED
+	UnshieldPhase1Submitted    SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_UNSHIELD_PHASE1_SUBMITTED
+	UnshieldPhase2Started      SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_UNSHIELD_PHASE2_STARTED
+	UnshieldPhase2Submitted    SDKEventKind = pb.SdkEventKind_SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED
 )
 
 type SDKEvent struct {
@@ -44,10 +46,10 @@ type SDKEvent struct {
 	EncryptedValues []common.Hash
 	Result          map[common.Hash]ClearValue
 	Error           *SDKError
-	Operation       *string
+	Operation       *EventOperation
 	TxHash          *common.Hash
-	ShieldPath      *string
-	Step            *string
+	ShieldPath      *ShieldPath
+	Step            *ApprovalStep
 }
 type EventCorrelation struct {
 	ContextID   string
@@ -55,34 +57,30 @@ type EventCorrelation struct {
 	Sequence    uint64
 }
 type WalletAccountChanged struct{ Previous, Next *WalletAccount }
-type ProgressKind int32
+type ProgressKind = pb.ProgressKind
 
 const (
-	EncryptComplete           ProgressKind = 1
-	ProgressTransferSubmitted ProgressKind = 2
-	ProgressApprovalSubmitted ProgressKind = 3
-	ProgressShieldSubmitted   ProgressKind = 4
-	ProgressWrapSubmitted     ProgressKind = 5
-	ProgressUnwrapSubmitted   ProgressKind = 6
-	Finalizing                ProgressKind = 7
-	ProgressFinalizeSubmitted ProgressKind = 8
+	EncryptComplete           ProgressKind = pb.ProgressKind_PROGRESS_KIND_ENCRYPT_COMPLETE
+	ProgressTransferSubmitted ProgressKind = pb.ProgressKind_PROGRESS_KIND_TRANSFER_SUBMITTED
+	ProgressApprovalSubmitted ProgressKind = pb.ProgressKind_PROGRESS_KIND_APPROVAL_SUBMITTED
+	ProgressShieldSubmitted   ProgressKind = pb.ProgressKind_PROGRESS_KIND_SHIELD_SUBMITTED
+	ProgressWrapSubmitted     ProgressKind = pb.ProgressKind_PROGRESS_KIND_WRAP_SUBMITTED
+	ProgressUnwrapSubmitted   ProgressKind = pb.ProgressKind_PROGRESS_KIND_UNWRAP_SUBMITTED
+	Finalizing                ProgressKind = pb.ProgressKind_PROGRESS_KIND_FINALIZING
+	ProgressFinalizeSubmitted ProgressKind = pb.ProgressKind_PROGRESS_KIND_FINALIZE_SUBMITTED
 )
 
 type OperationProgress struct {
 	Kind   ProgressKind
 	TxHash *common.Hash
 }
-type BatchErrorCallback struct {
-	TokenAddress common.Address
-	Error        *SDKError
-}
 
-// Handlers run in delivery order and must honor cancellation; notification errors are acknowledged without failing SDK operations.
+// EventHandlers process notifications in delivery order.
+// Handlers must honor cancellation; notification errors do not fail SDK operations.
 type EventHandlers struct {
 	OnEvent                func(context.Context, EventCorrelation, SDKEvent) error
 	OnWalletAccountChanged func(context.Context, EventCorrelation, WalletAccountChanged) error
 	OnProgress             func(context.Context, EventCorrelation, OperationProgress) error
-	OnBatchError           func(context.Context, EventCorrelation, BatchErrorCallback) (*big.Int, error)
 }
 
 func eventAddress(value []byte) (*common.Address, error) {
@@ -122,12 +120,7 @@ func sdkEvent(value *pb.SdkEvent) (SDKEvent, error) {
 	if value == nil {
 		return SDKEvent{}, errors.New("missing SDK event")
 	}
-	switch SDKEventKind(value.Type) {
-	case EncryptStart, EncryptEnd, EncryptError, DecryptStart, DecryptEnd, DecryptError, PermitError, TransactionError, ShieldSubmitted, TransferSubmitted, TransferFromSubmitted, SetOperatorSubmitted, ApproveUnderlyingSubmitted, WrapSubmitted, UnwrapSubmitted, FinalizeUnwrapSubmitted, DelegationSubmitted, RevokeDelegationSubmitted, UnshieldPhase1Submitted, UnshieldPhase2Started, UnshieldPhase2Submitted:
-	default:
-		return SDKEvent{}, errors.New("unknown SDK event kind")
-	}
-	result := SDKEvent{Kind: SDKEventKind(value.Type), Timestamp: value.Timestamp, SDKOperationID: value.SdkOperationId, DurationMS: value.DurationMs, Operation: value.Operation, ShieldPath: value.ShieldPath, Step: value.Step}
+	result := SDKEvent{Kind: value.Type, Timestamp: value.Timestamp, SDKOperationID: value.SdkOperationId, DurationMS: value.DurationMs, Operation: value.Operation, ShieldPath: value.ShieldPath, Step: value.Step}
 	var err error
 	result.TokenAddress, err = eventAddress(value.TokenAddress)
 	if err != nil {

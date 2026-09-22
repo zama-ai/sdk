@@ -8,7 +8,11 @@ import {
 import { bytesToHex } from "viem";
 import { expect, test, vi } from "vitest";
 import { DELEGATE, TOKEN, USER } from "../../sdk/src/test-fixtures/constants.js";
-import type { EventServerMessage } from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
+import {
+  SdkEventKind,
+  EventOperation,
+  type EventServerMessage,
+} from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
 import { operationContext } from "../src/remote-signer.js";
 import { RemoteEvents, type EventStream } from "../src/remote-events.js";
 import { FakeStream } from "./support/fake-stream.js";
@@ -72,13 +76,13 @@ test("SDK delegation grants and revokes keep event order, hashes and RPC correla
       {
         contextId: "delegation-context",
         operationId: "grant-rpc",
-        type: "delegation:submitted",
+        type: SdkEventKind.SDK_EVENT_KIND_DELEGATION_SUBMITTED,
         hash: HASH,
       },
       {
         contextId: "delegation-context",
         operationId: "revoke-rpc",
-        type: "revokeDelegation:submitted",
+        type: SdkEventKind.SDK_EVENT_KIND_REVOKE_DELEGATION_SUBMITTED,
         hash: HASH,
       },
     ]);
@@ -117,8 +121,8 @@ test("a rejected delegation write emits one correlated transaction error", async
     ).toEqual([
       {
         operationId: "failed-grant",
-        type: "transaction:error",
-        operation: "delegateDecryption",
+        type: SdkEventKind.SDK_EVENT_KIND_TRANSACTION_ERROR,
+        operation: EventOperation.EVENT_OPERATION_DELEGATE_DECRYPTION,
         errorCode: "SIGNING_REJECTED",
       },
     ]);
@@ -156,13 +160,13 @@ test("a failed delegation receipt delivers submitted then transaction error in o
     ).toEqual([
       {
         operationId: "failed-receipt",
-        type: "delegation:submitted",
+        type: SdkEventKind.SDK_EVENT_KIND_DELEGATION_SUBMITTED,
         hash: HASH,
         errorCode: undefined,
       },
       {
         operationId: "failed-receipt",
-        type: "transaction:error",
+        type: SdkEventKind.SDK_EVENT_KIND_TRANSACTION_ERROR,
         hash: undefined,
         errorCode: "TRANSACTION_REVERTED",
       },

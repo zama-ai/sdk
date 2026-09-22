@@ -5,8 +5,10 @@ import { Topics } from "../../sdk/src/events/index.js";
 import type { ZamaSDKEvent } from "../../sdk/src/events/sdk-events.js";
 import type { GenericProvider } from "../../sdk/src/types/index.js";
 import type { Address } from "viem";
+import { sdkEvent } from "../src/event-encoding.js";
 import {
   ProgressKind,
+  type SdkEventKind,
   type EventServerMessage,
 } from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
 import { progressCallbacks } from "../src/progress-callbacks.js";
@@ -15,7 +17,7 @@ import { operationContext } from "../src/remote-signer.js";
 import { FakeStream } from "./support/fake-stream.js";
 
 const HASH = `0x${"ab".repeat(32)}` as const;
-type Observation = { event: string } | { kind: ProgressKind; txHash?: string };
+type Observation = { event: SdkEventKind } | { kind: ProgressKind; txHash?: string };
 
 function directCallbacks(observations: Observation[]) {
   const notify = (kind: ProgressKind, txHash?: string) => {
@@ -84,7 +86,7 @@ describe("SDK progress callback equivalence", () => {
         const onEvent = adapted
           ? events.onEvent
           : (event: ZamaSDKEvent) => {
-              direct.push({ event: event.type });
+              direct.push({ event: sdkEvent(event).type });
             };
         const sdk = createSDK({ onEvent });
         const callbacks = adapted ? progressCallbacks(events) : directCallbacks(direct);

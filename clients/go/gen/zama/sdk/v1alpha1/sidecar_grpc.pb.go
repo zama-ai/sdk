@@ -69,6 +69,7 @@ type SidecarServiceClient interface {
 	SignerChannel(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[SignerClientMessage, SignerServerMessage], error)
 	// Attach once per context to serve application storage; keys and values remain opaque.
 	StorageChannel(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[StorageClientMessage, StorageServerMessage], error)
+	// Attaches one event subscriber per context; deliveries keep their sequence across reattachment.
 	EventChannel(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[EventClientMessage, EventServerMessage], error)
 	// Calls decryption.decryptValues, including automatic permit acquisition and credential recovery.
 	DecryptValues(ctx context.Context, in *DecryptValuesRequest, opts ...grpc.CallOption) (*DecryptValuesResponse, error)
@@ -442,6 +443,7 @@ type SidecarServiceServer interface {
 	SignerChannel(grpc.BidiStreamingServer[SignerClientMessage, SignerServerMessage]) error
 	// Attach once per context to serve application storage; keys and values remain opaque.
 	StorageChannel(grpc.BidiStreamingServer[StorageClientMessage, StorageServerMessage]) error
+	// Attaches one event subscriber per context; deliveries keep their sequence across reattachment.
 	EventChannel(grpc.BidiStreamingServer[EventClientMessage, EventServerMessage]) error
 	// Calls decryption.decryptValues, including automatic permit acquisition and credential recovery.
 	DecryptValues(context.Context, *DecryptValuesRequest) (*DecryptValuesResponse, error)

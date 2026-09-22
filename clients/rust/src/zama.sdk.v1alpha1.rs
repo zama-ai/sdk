@@ -1075,10 +1075,12 @@ pub struct GetDelegationStatusResponse {
     #[prost(uint64, tag = "2")]
     pub expiry_timestamp: u64,
 }
+/// A lifecycle event; timestamp is Unix epoch milliseconds, and timestamp and
+/// duration_ms preserve fractional milliseconds.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SdkEvent {
-    #[prost(string, tag = "1")]
-    pub r#type: ::prost::alloc::string::String,
+    #[prost(enumeration = "SdkEventKind", tag = "1")]
+    pub r#type: i32,
     #[prost(double, tag = "2")]
     pub timestamp: f64,
     #[prost(bytes = "vec", optional, tag = "3")]
@@ -1093,15 +1095,16 @@ pub struct SdkEvent {
     pub result: ::prost::alloc::vec::Vec<ClearEntry>,
     #[prost(message, optional, tag = "8")]
     pub error: ::core::option::Option<SdkError>,
-    #[prost(string, optional, tag = "9")]
-    pub operation: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(enumeration = "EventOperation", optional, tag = "9")]
+    pub operation: ::core::option::Option<i32>,
     #[prost(bytes = "vec", optional, tag = "10")]
     pub tx_hash: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
-    #[prost(string, optional, tag = "11")]
-    pub shield_path: ::core::option::Option<::prost::alloc::string::String>,
-    #[prost(string, optional, tag = "12")]
-    pub step: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(enumeration = "ShieldPath", optional, tag = "11")]
+    pub shield_path: ::core::option::Option<i32>,
+    #[prost(enumeration = "ApprovalStep", optional, tag = "12")]
+    pub step: ::core::option::Option<i32>,
 }
+/// Account transition delivered even when no SDK operation is active.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct WalletAccountChanged {
     #[prost(message, optional, tag = "1")]
@@ -1109,6 +1112,7 @@ pub struct WalletAccountChanged {
     #[prost(message, optional, tag = "2")]
     pub next: ::core::option::Option<WalletAccount>,
 }
+/// Optional hash is present only after the corresponding transaction is submitted.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct OperationProgress {
     #[prost(enumeration = "ProgressKind", tag = "1")]
@@ -1116,22 +1120,17 @@ pub struct OperationProgress {
     #[prost(bytes = "vec", optional, tag = "2")]
     pub tx_hash: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
 }
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct BatchErrorCallback {
-    #[prost(bytes = "vec", tag = "1")]
-    pub token_address: ::prost::alloc::vec::Vec<u8>,
-    #[prost(message, optional, tag = "2")]
-    pub error: ::core::option::Option<SdkError>,
-}
+/// sequence is context-wide and does not reset when the channel is reattached.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EventDelivery {
     #[prost(string, tag = "1")]
     pub context_id: ::prost::alloc::string::String,
+    /// Empty for lifecycle events that do not belong to a tracked RPC.
     #[prost(string, tag = "2")]
     pub operation_id: ::prost::alloc::string::String,
     #[prost(uint64, tag = "3")]
     pub sequence: u64,
-    #[prost(oneof = "event_delivery::Payload", tags = "4, 5, 6, 7")]
+    #[prost(oneof = "event_delivery::Payload", tags = "4, 5, 6")]
     pub payload: ::core::option::Option<event_delivery::Payload>,
 }
 /// Nested message and enum types in `EventDelivery`.
@@ -1144,15 +1143,14 @@ pub mod event_delivery {
         WalletAccount(super::WalletAccountChanged),
         #[prost(message, tag = "6")]
         Progress(super::OperationProgress),
-        #[prost(message, tag = "7")]
-        BatchError(super::BatchErrorCallback),
     }
 }
+/// Replies acknowledge a notification or report its handler error.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct EventReply {
     #[prost(uint64, tag = "1")]
     pub sequence: u64,
-    #[prost(oneof = "event_reply::Outcome", tags = "2, 3, 4")]
+    #[prost(oneof = "event_reply::Outcome", tags = "2, 3")]
     pub outcome: ::core::option::Option<event_reply::Outcome>,
 }
 /// Nested message and enum types in `EventReply`.
@@ -1161,12 +1159,11 @@ pub mod event_reply {
     pub enum Outcome {
         #[prost(message, tag = "2")]
         Acknowledged(super::Empty),
-        #[prost(string, tag = "3")]
-        FallbackBigint(::prost::alloc::string::String),
-        #[prost(message, tag = "4")]
+        #[prost(message, tag = "3")]
         Error(super::SdkError),
     }
 }
+/// The first client message attaches; later messages reply to deliveries.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct EventClientMessage {
     #[prost(oneof = "event_client_message::Message", tags = "1, 2")]
@@ -1182,6 +1179,7 @@ pub mod event_client_message {
         Reply(super::EventReply),
     }
 }
+/// The sidecar could not apply a reply to the referenced delivery.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct EventReplyError {
     #[prost(uint64, tag = "1")]
@@ -1189,14 +1187,10 @@ pub struct EventReplyError {
     #[prost(message, optional, tag = "2")]
     pub error: ::core::option::Option<SdkError>,
 }
-#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct EventCancelled {
-    #[prost(uint64, tag = "1")]
-    pub sequence: u64,
-}
+/// Server attachment, delivery, and callback outcome notifications.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EventServerMessage {
-    #[prost(oneof = "event_server_message::Message", tags = "1, 2, 3, 4")]
+    #[prost(oneof = "event_server_message::Message", tags = "1, 2, 3")]
     pub message: ::core::option::Option<event_server_message::Message>,
 }
 /// Nested message and enum types in `EventServerMessage`.
@@ -1209,8 +1203,6 @@ pub mod event_server_message {
         Delivery(super::EventDelivery),
         #[prost(message, tag = "3")]
         ReplyError(super::EventReplyError),
-        #[prost(message, tag = "4")]
-        Cancelled(super::EventCancelled),
     }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
@@ -1334,6 +1326,252 @@ impl TransactionKind {
         }
     }
 }
+/// SDK lifecycle event kinds. Unknown numeric values must be handled by clients without closing the channel.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum SdkEventKind {
+    Unspecified = 0,
+    EncryptStart = 1,
+    EncryptEnd = 2,
+    EncryptError = 3,
+    DecryptStart = 4,
+    DecryptEnd = 5,
+    DecryptError = 6,
+    PermitError = 7,
+    TransactionError = 8,
+    ShieldSubmitted = 9,
+    TransferSubmitted = 10,
+    TransferFromSubmitted = 11,
+    SetOperatorSubmitted = 12,
+    ApproveUnderlyingSubmitted = 13,
+    WrapSubmitted = 14,
+    UnwrapSubmitted = 15,
+    FinalizeUnwrapSubmitted = 16,
+    DelegationSubmitted = 17,
+    RevokeDelegationSubmitted = 18,
+    UnshieldPhase1Submitted = 19,
+    UnshieldPhase2Started = 20,
+    UnshieldPhase2Submitted = 21,
+}
+impl SdkEventKind {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "SDK_EVENT_KIND_UNSPECIFIED",
+            Self::EncryptStart => "SDK_EVENT_KIND_ENCRYPT_START",
+            Self::EncryptEnd => "SDK_EVENT_KIND_ENCRYPT_END",
+            Self::EncryptError => "SDK_EVENT_KIND_ENCRYPT_ERROR",
+            Self::DecryptStart => "SDK_EVENT_KIND_DECRYPT_START",
+            Self::DecryptEnd => "SDK_EVENT_KIND_DECRYPT_END",
+            Self::DecryptError => "SDK_EVENT_KIND_DECRYPT_ERROR",
+            Self::PermitError => "SDK_EVENT_KIND_PERMIT_ERROR",
+            Self::TransactionError => "SDK_EVENT_KIND_TRANSACTION_ERROR",
+            Self::ShieldSubmitted => "SDK_EVENT_KIND_SHIELD_SUBMITTED",
+            Self::TransferSubmitted => "SDK_EVENT_KIND_TRANSFER_SUBMITTED",
+            Self::TransferFromSubmitted => "SDK_EVENT_KIND_TRANSFER_FROM_SUBMITTED",
+            Self::SetOperatorSubmitted => "SDK_EVENT_KIND_SET_OPERATOR_SUBMITTED",
+            Self::ApproveUnderlyingSubmitted => {
+                "SDK_EVENT_KIND_APPROVE_UNDERLYING_SUBMITTED"
+            }
+            Self::WrapSubmitted => "SDK_EVENT_KIND_WRAP_SUBMITTED",
+            Self::UnwrapSubmitted => "SDK_EVENT_KIND_UNWRAP_SUBMITTED",
+            Self::FinalizeUnwrapSubmitted => "SDK_EVENT_KIND_FINALIZE_UNWRAP_SUBMITTED",
+            Self::DelegationSubmitted => "SDK_EVENT_KIND_DELEGATION_SUBMITTED",
+            Self::RevokeDelegationSubmitted => {
+                "SDK_EVENT_KIND_REVOKE_DELEGATION_SUBMITTED"
+            }
+            Self::UnshieldPhase1Submitted => "SDK_EVENT_KIND_UNSHIELD_PHASE1_SUBMITTED",
+            Self::UnshieldPhase2Started => "SDK_EVENT_KIND_UNSHIELD_PHASE2_STARTED",
+            Self::UnshieldPhase2Submitted => "SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "SDK_EVENT_KIND_UNSPECIFIED" => Some(Self::Unspecified),
+            "SDK_EVENT_KIND_ENCRYPT_START" => Some(Self::EncryptStart),
+            "SDK_EVENT_KIND_ENCRYPT_END" => Some(Self::EncryptEnd),
+            "SDK_EVENT_KIND_ENCRYPT_ERROR" => Some(Self::EncryptError),
+            "SDK_EVENT_KIND_DECRYPT_START" => Some(Self::DecryptStart),
+            "SDK_EVENT_KIND_DECRYPT_END" => Some(Self::DecryptEnd),
+            "SDK_EVENT_KIND_DECRYPT_ERROR" => Some(Self::DecryptError),
+            "SDK_EVENT_KIND_PERMIT_ERROR" => Some(Self::PermitError),
+            "SDK_EVENT_KIND_TRANSACTION_ERROR" => Some(Self::TransactionError),
+            "SDK_EVENT_KIND_SHIELD_SUBMITTED" => Some(Self::ShieldSubmitted),
+            "SDK_EVENT_KIND_TRANSFER_SUBMITTED" => Some(Self::TransferSubmitted),
+            "SDK_EVENT_KIND_TRANSFER_FROM_SUBMITTED" => Some(Self::TransferFromSubmitted),
+            "SDK_EVENT_KIND_SET_OPERATOR_SUBMITTED" => Some(Self::SetOperatorSubmitted),
+            "SDK_EVENT_KIND_APPROVE_UNDERLYING_SUBMITTED" => {
+                Some(Self::ApproveUnderlyingSubmitted)
+            }
+            "SDK_EVENT_KIND_WRAP_SUBMITTED" => Some(Self::WrapSubmitted),
+            "SDK_EVENT_KIND_UNWRAP_SUBMITTED" => Some(Self::UnwrapSubmitted),
+            "SDK_EVENT_KIND_FINALIZE_UNWRAP_SUBMITTED" => {
+                Some(Self::FinalizeUnwrapSubmitted)
+            }
+            "SDK_EVENT_KIND_DELEGATION_SUBMITTED" => Some(Self::DelegationSubmitted),
+            "SDK_EVENT_KIND_REVOKE_DELEGATION_SUBMITTED" => {
+                Some(Self::RevokeDelegationSubmitted)
+            }
+            "SDK_EVENT_KIND_UNSHIELD_PHASE1_SUBMITTED" => {
+                Some(Self::UnshieldPhase1Submitted)
+            }
+            "SDK_EVENT_KIND_UNSHIELD_PHASE2_STARTED" => Some(Self::UnshieldPhase2Started),
+            "SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED" => {
+                Some(Self::UnshieldPhase2Submitted)
+            }
+            _ => None,
+        }
+    }
+}
+/// Permit and transaction operations share this field; only the matching event kind uses it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum EventOperation {
+    Unspecified = 0,
+    GrantPermit = 1,
+    GrantDelegationPermit = 2,
+    RegisterPermit = 3,
+    ApproveUnderlying = 4,
+    ApproveUnderlyingReset = 5,
+    DelegateDecryption = 6,
+    FinalizeUnwrap = 7,
+    RevokeDelegation = 8,
+    SetOperator = 9,
+    ShieldTransferAndCall = 10,
+    ShieldApproveAndWrap = 11,
+    Wrap = 12,
+    Transfer = 13,
+    TransferAndCall = 14,
+    TransferFrom = 15,
+    TransferFromAndCall = 16,
+    Unwrap = 17,
+    UnwrapAll = 18,
+}
+impl EventOperation {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "EVENT_OPERATION_UNSPECIFIED",
+            Self::GrantPermit => "EVENT_OPERATION_GRANT_PERMIT",
+            Self::GrantDelegationPermit => "EVENT_OPERATION_GRANT_DELEGATION_PERMIT",
+            Self::RegisterPermit => "EVENT_OPERATION_REGISTER_PERMIT",
+            Self::ApproveUnderlying => "EVENT_OPERATION_APPROVE_UNDERLYING",
+            Self::ApproveUnderlyingReset => "EVENT_OPERATION_APPROVE_UNDERLYING_RESET",
+            Self::DelegateDecryption => "EVENT_OPERATION_DELEGATE_DECRYPTION",
+            Self::FinalizeUnwrap => "EVENT_OPERATION_FINALIZE_UNWRAP",
+            Self::RevokeDelegation => "EVENT_OPERATION_REVOKE_DELEGATION",
+            Self::SetOperator => "EVENT_OPERATION_SET_OPERATOR",
+            Self::ShieldTransferAndCall => "EVENT_OPERATION_SHIELD_TRANSFER_AND_CALL",
+            Self::ShieldApproveAndWrap => "EVENT_OPERATION_SHIELD_APPROVE_AND_WRAP",
+            Self::Wrap => "EVENT_OPERATION_WRAP",
+            Self::Transfer => "EVENT_OPERATION_TRANSFER",
+            Self::TransferAndCall => "EVENT_OPERATION_TRANSFER_AND_CALL",
+            Self::TransferFrom => "EVENT_OPERATION_TRANSFER_FROM",
+            Self::TransferFromAndCall => "EVENT_OPERATION_TRANSFER_FROM_AND_CALL",
+            Self::Unwrap => "EVENT_OPERATION_UNWRAP",
+            Self::UnwrapAll => "EVENT_OPERATION_UNWRAP_ALL",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "EVENT_OPERATION_UNSPECIFIED" => Some(Self::Unspecified),
+            "EVENT_OPERATION_GRANT_PERMIT" => Some(Self::GrantPermit),
+            "EVENT_OPERATION_GRANT_DELEGATION_PERMIT" => {
+                Some(Self::GrantDelegationPermit)
+            }
+            "EVENT_OPERATION_REGISTER_PERMIT" => Some(Self::RegisterPermit),
+            "EVENT_OPERATION_APPROVE_UNDERLYING" => Some(Self::ApproveUnderlying),
+            "EVENT_OPERATION_APPROVE_UNDERLYING_RESET" => {
+                Some(Self::ApproveUnderlyingReset)
+            }
+            "EVENT_OPERATION_DELEGATE_DECRYPTION" => Some(Self::DelegateDecryption),
+            "EVENT_OPERATION_FINALIZE_UNWRAP" => Some(Self::FinalizeUnwrap),
+            "EVENT_OPERATION_REVOKE_DELEGATION" => Some(Self::RevokeDelegation),
+            "EVENT_OPERATION_SET_OPERATOR" => Some(Self::SetOperator),
+            "EVENT_OPERATION_SHIELD_TRANSFER_AND_CALL" => {
+                Some(Self::ShieldTransferAndCall)
+            }
+            "EVENT_OPERATION_SHIELD_APPROVE_AND_WRAP" => Some(Self::ShieldApproveAndWrap),
+            "EVENT_OPERATION_WRAP" => Some(Self::Wrap),
+            "EVENT_OPERATION_TRANSFER" => Some(Self::Transfer),
+            "EVENT_OPERATION_TRANSFER_AND_CALL" => Some(Self::TransferAndCall),
+            "EVENT_OPERATION_TRANSFER_FROM" => Some(Self::TransferFrom),
+            "EVENT_OPERATION_TRANSFER_FROM_AND_CALL" => Some(Self::TransferFromAndCall),
+            "EVENT_OPERATION_UNWRAP" => Some(Self::Unwrap),
+            "EVENT_OPERATION_UNWRAP_ALL" => Some(Self::UnwrapAll),
+            _ => None,
+        }
+    }
+}
+/// The SDK-selected route for a submitted shield transaction.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum ShieldPath {
+    Unspecified = 0,
+    TransferAndCall = 1,
+    ApproveAndWrap = 2,
+}
+impl ShieldPath {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "SHIELD_PATH_UNSPECIFIED",
+            Self::TransferAndCall => "SHIELD_PATH_TRANSFER_AND_CALL",
+            Self::ApproveAndWrap => "SHIELD_PATH_APPROVE_AND_WRAP",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "SHIELD_PATH_UNSPECIFIED" => Some(Self::Unspecified),
+            "SHIELD_PATH_TRANSFER_AND_CALL" => Some(Self::TransferAndCall),
+            "SHIELD_PATH_APPROVE_AND_WRAP" => Some(Self::ApproveAndWrap),
+            _ => None,
+        }
+    }
+}
+/// Distinguishes a zero-reset approval from the amount approval.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum ApprovalStep {
+    Unspecified = 0,
+    Reset = 1,
+    Approve = 2,
+}
+impl ApprovalStep {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "APPROVAL_STEP_UNSPECIFIED",
+            Self::Reset => "APPROVAL_STEP_RESET",
+            Self::Approve => "APPROVAL_STEP_APPROVE",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "APPROVAL_STEP_UNSPECIFIED" => Some(Self::Unspecified),
+            "APPROVAL_STEP_RESET" => Some(Self::Reset),
+            "APPROVAL_STEP_APPROVE" => Some(Self::Approve),
+            _ => None,
+        }
+    }
+}
+/// Progress callback kinds provided by the SDK Token API.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum ProgressKind {
@@ -1638,6 +1876,7 @@ pub mod sidecar_service_client {
                 );
             self.inner.streaming(req, path, codec).await
         }
+        /// Attaches one event subscriber per context; deliveries keep their sequence across reattachment.
         pub async fn event_channel(
             &mut self,
             request: impl tonic::IntoStreamingRequest<

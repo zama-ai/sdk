@@ -33,6 +33,8 @@ func serveCallback[C, S any](stream grpc.BidiStreamingServer[C, S], outgoing <-c
 	}()
 	for {
 		select {
+		case <-stream.Context().Done():
+			return stream.Context().Err()
 		case <-done:
 			return status.Error(codes.Unavailable, "callback disconnected")
 		case err := <-receiveError:

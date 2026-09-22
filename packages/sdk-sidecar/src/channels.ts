@@ -14,6 +14,7 @@ function attachChannel<Reply, Response>(
   attach: (contextId: string) => { reply(value: Reply): void },
 ): void {
   let attached: ReturnType<typeof attach> | undefined;
+  let closed = false;
   const deadline = setTimeout(() => {
     // grpc-js sends error trailers from its error handler; destroy() skips finalization.
     stream.emit(
@@ -29,15 +30,24 @@ function attachChannel<Reply, Response>(
   }, timeoutMs);
   deadline.unref();
   const clear = () => clearTimeout(deadline);
-  stream.once("close", clear);
-  stream.once("error", clear);
-  stream.once("end", () => {
+  const close = () => {
+    closed = true;
     clear();
+    stream.off("data", receive);
+  };
+  stream.once("close", close);
+  stream.once("error", close);
+  stream.once("cancelled", close);
+  stream.once("end", () => {
+    close();
     if (!attached) {
       stream.end();
     }
   });
-  stream.on("data", ({ message }: ClientFrame<Reply>) => {
+  function receive({ message }: ClientFrame<Reply>): void {
+    if (closed) {
+      return;
+    }
     try {
       if (!attached && message?.$case === "attach") {
         attached = attach(message.attach.contextId);
@@ -50,7 +60,8 @@ function attachChannel<Reply, Response>(
     } catch (error) {
       stream.emit("error", serviceError(error));
     }
-  });
+  }
+  stream.on("data", receive);
 }
 
 export function signerChannel(runtime: SidecarRuntime): rpc.SidecarServiceServer["signerChannel"] {

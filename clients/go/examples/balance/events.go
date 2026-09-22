@@ -19,7 +19,7 @@ func subscribeEvents(ctx context.Context, sdk *sidecar.SDKContext, output io.Wri
 			return err
 		},
 		OnProgress: func(_ context.Context, _ sidecar.EventCorrelation, progress sidecar.OperationProgress) error {
-			_, err := fmt.Fprintf(output, "SDK progress: %d\n", progress.Kind)
+			_, err := fmt.Fprintf(output, "SDK progress: %s\n", progress.Kind)
 			return err
 		},
 	})

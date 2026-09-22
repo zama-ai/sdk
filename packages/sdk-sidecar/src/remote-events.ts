@@ -1,50 +1,37 @@
 import { status, type ServerDuplexStream } from "@grpc/grpc-js";
-import type { Address, WalletAccountListener, ZamaSDKEvent } from "@zama-fhe/sdk";
+import type { WalletAccountListener, ZamaSDKEvent } from "@zama-fhe/sdk";
 import { CallbackConnection } from "./callback-connection.js";
-import { callbackError } from "./callback-errors.js";
-import { bytes } from "./encoding.js";
 import { sdkEvent, walletChange } from "./event-encoding.js";
-import { cancelled, errorDetails, invalidArgument, serviceError, SidecarError } from "./errors.js";
+import { errorDetails, invalidArgument, SidecarError } from "./errors.js";
 import type * as rpc from "./generated/zama/sdk/v1alpha1/sidecar.js";
 import { operationContext } from "./remote-signer.js";
 
 export type EventStream = ServerDuplexStream<rpc.EventClientMessage, rpc.EventServerMessage>;
 type DeliveryPayload = NonNullable<rpc.EventDelivery["payload"]>;
-type Notification = Exclude<DeliveryPayload, { $case: "batchError" }>;
-type PendingCallback = {
-  resolve: (value: bigint) => void;
-  reject: (error: Error) => void;
-  dispose: () => void;
-};
 type WalletNotifications = { onWalletAccountChange(listener: WalletAccountListener): () => void };
 
-// The SDK implements lifecycle subscriptions but strips this internal method from published declarations.
+// Published SDK declarations omit this internal hook; check availability before subscribing.
 function supportsWalletNotifications(sdk: object): sdk is WalletNotifications {
   return "onWalletAccountChange" in sdk && typeof sdk.onWalletAccountChange === "function";
 }
 
 export class RemoteEvents {
   #connection = new CallbackConnection<rpc.EventClientMessage, rpc.EventServerMessage>(
-    (error) => this.#clear(error instanceof Error ? error : cancelled()),
+    () => this.#pending.clear(),
     {
       maximum: 256,
-      error: serviceError(
-        new SidecarError(
-          "EVENT_BACKPRESSURE",
-          status.RESOURCE_EXHAUSTED,
-          "Event channel output queue exceeded its limit.",
-        ),
+      error: new SidecarError(
+        "EVENT_BACKPRESSURE",
+        status.RESOURCE_EXHAUSTED,
+        "Event channel output queue exceeded its limit.",
       ),
     },
   );
   #sequence = 0n;
-  #pending = new Map<bigint, PendingCallback | undefined>();
+  #pending = new Set<bigint>();
   #unsubscribeWallet?: () => void;
 
-  constructor(
-    private readonly contextId: string,
-    private readonly capacity = 256,
-  ) {}
+  constructor(private readonly contextId: string) {}
 
   observeWallet(sdk: object): void {
     if (!supportsWalletNotifications(sdk)) {
@@ -78,25 +65,6 @@ export class RemoteEvents {
     this.#connection.send({ message: { $case: "attached", attached: {} } });
   }
 
-  #reserve(): bigint | undefined {
-    if (!this.#connection.connected) {
-      return undefined;
-    }
-    if (this.#pending.size >= this.capacity) {
-      this.#connection.fail(
-        serviceError(
-          new SidecarError(
-            "EVENT_BACKPRESSURE",
-            status.RESOURCE_EXHAUSTED,
-            "Event subscription exceeded its unacknowledged delivery limit.",
-          ),
-        ),
-      );
-      return undefined;
-    }
-    return ++this.#sequence;
-  }
-
   #send(sequence: bigint, payload: DeliveryPayload): void {
     this.#connection.send({
       message: {
@@ -111,48 +79,23 @@ export class RemoteEvents {
     });
   }
 
-  notify(payload: Notification): void {
-    const sequence = this.#reserve();
-    if (sequence === undefined) {
+  notify(payload: DeliveryPayload): void {
+    if (!this.#connection.connected) {
       return;
     }
-    this.#pending.set(sequence, undefined);
-    this.#send(sequence, payload);
-  }
-
-  async requestBatchFallback(error: Error, tokenAddress: Address): Promise<bigint> {
-    const operation = operationContext.getStore();
-    if (!operation || operation.signal.aborted) {
-      throw cancelled();
-    }
-    const batchError = { tokenAddress: bytes(tokenAddress), error: errorDetails(error) };
-    const sequence = this.#reserve();
-    if (sequence === undefined) {
-      throw new SidecarError(
-        "EVENT_DISCONNECTED",
-        status.FAILED_PRECONDITION,
-        "Event channel is not connected.",
+    if (this.#pending.size >= 256) {
+      this.#connection.fail(
+        new SidecarError(
+          "EVENT_BACKPRESSURE",
+          status.RESOURCE_EXHAUSTED,
+          "Event subscription exceeded its unacknowledged delivery limit.",
+        ),
       );
+      return;
     }
-    return new Promise<bigint>((resolve, reject) => {
-      const abort = () => {
-        const pending = this.#pending.get(sequence);
-        if (!pending) {
-          return;
-        }
-        this.#pending.delete(sequence);
-        pending.dispose();
-        reject(cancelled());
-        this.#connection.send({ message: { $case: "cancelled", cancelled: { sequence } } });
-      };
-      operation.signal.addEventListener("abort", abort, { once: true });
-      this.#pending.set(sequence, {
-        resolve,
-        reject,
-        dispose: () => operation.signal.removeEventListener("abort", abort),
-      });
-      this.#send(sequence, { $case: "batchError", batchError });
-    });
+    const sequence = ++this.#sequence;
+    this.#pending.add(sequence);
+    this.#send(sequence, payload);
   }
 
   reply(reply: rpc.EventReply): void {
@@ -174,43 +117,15 @@ export class RemoteEvents {
       });
       return;
     }
-    const pending = this.#pending.get(reply.sequence);
     this.#pending.delete(reply.sequence);
-    if (!pending) {
-      if (reply.outcome?.$case !== "acknowledged" && reply.outcome?.$case !== "error") {
-        throw invalidArgument("Notifications require an acknowledgment or handler error.");
-      }
-      return;
+    if (reply.outcome?.$case !== "acknowledged" && reply.outcome?.$case !== "error") {
+      throw invalidArgument("Notifications require an acknowledgment or handler error.");
     }
-    pending.dispose();
-    const outcome = reply.outcome;
-    if (outcome?.$case === "error") {
-      pending.reject(callbackError(outcome.error));
-    } else if (
-      outcome?.$case === "fallbackBigint" &&
-      /^(0|-?[1-9][0-9]*)$/.test(outcome.fallbackBigint)
-    ) {
-      pending.resolve(BigInt(outcome.fallbackBigint));
-    } else {
-      pending.reject(
-        invalidArgument(
-          "Batch error callbacks must return a canonical decimal bigint or an error.",
-        ),
-      );
-    }
-  }
-
-  #clear(error: Error): void {
-    for (const pending of this.#pending.values()) {
-      pending?.dispose();
-      pending?.reject(error);
-    }
-    this.#pending.clear();
   }
 
   dispose(): void {
     this.#unsubscribeWallet?.();
     this.#connection.close();
-    this.#clear(cancelled());
+    this.#pending.clear();
   }
 }

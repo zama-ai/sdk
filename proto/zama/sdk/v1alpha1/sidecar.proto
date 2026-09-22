@@ -17,6 +17,7 @@ service SidecarService {
   rpc SignerChannel(stream SignerClientMessage) returns (stream SignerServerMessage);
   // Attach once per context to serve application storage; keys and values remain opaque.
   rpc StorageChannel(stream StorageClientMessage) returns (stream StorageServerMessage);
+  // Attaches one event subscriber per context; deliveries keep their sequence across reattachment.
   rpc EventChannel(stream EventClientMessage) returns (stream EventServerMessage);
   // Calls decryption.decryptValues, including automatic permit acquisition and credential recovery.
   rpc DecryptValues(DecryptValuesRequest) returns (DecryptValuesResponse);
@@ -681,8 +682,69 @@ message GetDelegationStatusResponse {
   uint64 expiry_timestamp = 2;
 }
 
+// SDK lifecycle event kinds. Unknown numeric values must be handled by clients without closing the channel.
+enum SdkEventKind {
+  SDK_EVENT_KIND_UNSPECIFIED = 0;
+  SDK_EVENT_KIND_ENCRYPT_START = 1;
+  SDK_EVENT_KIND_ENCRYPT_END = 2;
+  SDK_EVENT_KIND_ENCRYPT_ERROR = 3;
+  SDK_EVENT_KIND_DECRYPT_START = 4;
+  SDK_EVENT_KIND_DECRYPT_END = 5;
+  SDK_EVENT_KIND_DECRYPT_ERROR = 6;
+  SDK_EVENT_KIND_PERMIT_ERROR = 7;
+  SDK_EVENT_KIND_TRANSACTION_ERROR = 8;
+  SDK_EVENT_KIND_SHIELD_SUBMITTED = 9;
+  SDK_EVENT_KIND_TRANSFER_SUBMITTED = 10;
+  SDK_EVENT_KIND_TRANSFER_FROM_SUBMITTED = 11;
+  SDK_EVENT_KIND_SET_OPERATOR_SUBMITTED = 12;
+  SDK_EVENT_KIND_APPROVE_UNDERLYING_SUBMITTED = 13;
+  SDK_EVENT_KIND_WRAP_SUBMITTED = 14;
+  SDK_EVENT_KIND_UNWRAP_SUBMITTED = 15;
+  SDK_EVENT_KIND_FINALIZE_UNWRAP_SUBMITTED = 16;
+  SDK_EVENT_KIND_DELEGATION_SUBMITTED = 17;
+  SDK_EVENT_KIND_REVOKE_DELEGATION_SUBMITTED = 18;
+  SDK_EVENT_KIND_UNSHIELD_PHASE1_SUBMITTED = 19;
+  SDK_EVENT_KIND_UNSHIELD_PHASE2_STARTED = 20;
+  SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED = 21;
+}
+// Permit and transaction operations share this field; only the matching event kind uses it.
+enum EventOperation {
+  EVENT_OPERATION_UNSPECIFIED = 0;
+  EVENT_OPERATION_GRANT_PERMIT = 1;
+  EVENT_OPERATION_GRANT_DELEGATION_PERMIT = 2;
+  EVENT_OPERATION_REGISTER_PERMIT = 3;
+  EVENT_OPERATION_APPROVE_UNDERLYING = 4;
+  EVENT_OPERATION_APPROVE_UNDERLYING_RESET = 5;
+  EVENT_OPERATION_DELEGATE_DECRYPTION = 6;
+  EVENT_OPERATION_FINALIZE_UNWRAP = 7;
+  EVENT_OPERATION_REVOKE_DELEGATION = 8;
+  EVENT_OPERATION_SET_OPERATOR = 9;
+  EVENT_OPERATION_SHIELD_TRANSFER_AND_CALL = 10;
+  EVENT_OPERATION_SHIELD_APPROVE_AND_WRAP = 11;
+  EVENT_OPERATION_WRAP = 12;
+  EVENT_OPERATION_TRANSFER = 13;
+  EVENT_OPERATION_TRANSFER_AND_CALL = 14;
+  EVENT_OPERATION_TRANSFER_FROM = 15;
+  EVENT_OPERATION_TRANSFER_FROM_AND_CALL = 16;
+  EVENT_OPERATION_UNWRAP = 17;
+  EVENT_OPERATION_UNWRAP_ALL = 18;
+}
+// The SDK-selected route for a submitted shield transaction.
+enum ShieldPath {
+  SHIELD_PATH_UNSPECIFIED = 0;
+  SHIELD_PATH_TRANSFER_AND_CALL = 1;
+  SHIELD_PATH_APPROVE_AND_WRAP = 2;
+}
+// Distinguishes a zero-reset approval from the amount approval.
+enum ApprovalStep {
+  APPROVAL_STEP_UNSPECIFIED = 0;
+  APPROVAL_STEP_RESET = 1;
+  APPROVAL_STEP_APPROVE = 2;
+}
+// A lifecycle event; timestamp is Unix epoch milliseconds, and timestamp and
+// duration_ms preserve fractional milliseconds.
 message SdkEvent {
-  string type = 1;
+  SdkEventKind type = 1;
   double timestamp = 2;
   optional bytes token_address = 3;
   optional string sdk_operation_id = 4;
@@ -690,15 +752,17 @@ message SdkEvent {
   repeated bytes encrypted_values = 6;
   repeated ClearEntry result = 7;
   SdkError error = 8;
-  optional string operation = 9;
+  optional EventOperation operation = 9;
   optional bytes tx_hash = 10;
-  optional string shield_path = 11;
-  optional string step = 12;
+  optional ShieldPath shield_path = 11;
+  optional ApprovalStep step = 12;
 }
+// Account transition delivered even when no SDK operation is active.
 message WalletAccountChanged {
   WalletAccount previous = 1;
   WalletAccount next = 2;
 }
+// Progress callback kinds provided by the SDK Token API.
 enum ProgressKind {
   PROGRESS_KIND_UNSPECIFIED = 0;
   PROGRESS_KIND_ENCRYPT_COMPLETE = 1;
@@ -710,51 +774,48 @@ enum ProgressKind {
   PROGRESS_KIND_FINALIZING = 7;
   PROGRESS_KIND_FINALIZE_SUBMITTED = 8;
 }
+// Optional hash is present only after the corresponding transaction is submitted.
 message OperationProgress {
   ProgressKind kind = 1;
   optional bytes tx_hash = 2;
 }
-message BatchErrorCallback {
-  bytes token_address = 1;
-  SdkError error = 2;
-}
+// sequence is context-wide and does not reset when the channel is reattached.
 message EventDelivery {
   string context_id = 1;
+  // Empty for lifecycle events that do not belong to a tracked RPC.
   string operation_id = 2;
   uint64 sequence = 3;
   oneof payload {
     SdkEvent event = 4;
     WalletAccountChanged wallet_account = 5;
     OperationProgress progress = 6;
-    BatchErrorCallback batch_error = 7;
   }
 }
+// Replies acknowledge a notification or report its handler error.
 message EventReply {
   uint64 sequence = 1;
   oneof outcome {
     Empty acknowledged = 2;
-    string fallback_bigint = 3;
-    SdkError error = 4;
+    SdkError error = 3;
   }
 }
+// The first client message attaches; later messages reply to deliveries.
 message EventClientMessage {
   oneof message {
     ContextRequest attach = 1;
     EventReply reply = 2;
   }
 }
+// The sidecar could not apply a reply to the referenced delivery.
 message EventReplyError {
   uint64 sequence = 1;
   SdkError error = 2;
 }
-message EventCancelled {
-  uint64 sequence = 1;
-}
+// Server attachment, delivery, and callback outcome notifications.
 message EventServerMessage {
   oneof message {
     Empty attached = 1;
     EventDelivery delivery = 2;
     EventReplyError reply_error = 3;
-    EventCancelled cancelled = 4;
   }
 }

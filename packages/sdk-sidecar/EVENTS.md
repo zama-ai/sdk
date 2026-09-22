@@ -31,9 +31,9 @@ Token operations are not yet exposed by the sidecar. The examples include typed 
 
 ## Handle callback failures
 
-Return an error from a notification handler when your local sink fails. The client acknowledges the error, and SDK orchestration continues. Process notifications promptly: more than 256 unacknowledged deliveries terminates the event subscription. See the [wire contract](../../proto/README.md#cleanup-and-backpressure) for cancellation, output limits and cleanup behavior.
+Return an error from a notification handler when your local sink fails. The client acknowledges the error, and SDK orchestration continues. Go recovers handler panics as `CALLBACK_FAILED`; a Rust handler panic terminates the event subscription. Process notifications promptly: more than 256 unacknowledged deliveries terminates the event subscription. See the [wire contract](../../proto/README.md#cleanup-and-backpressure) for cancellation, output limits and cleanup behavior.
 
-The typed batch-error handler returns a native arbitrary-precision integer or an error. This is transport infrastructure for future Token integration; no currently exposed operation requests it. SDK-370 leaves the synchronous Token batch-fallback acceptance criterion unresolved. SDK-367 must inspect whether native processing of structured per-token results preserves failure selection, callback ordering and thrown errors. If it cannot, propose an upstream async-callback change. This ticket introduces no synchronous worker bridge or SDK callback API change. Do not attach this handler expecting it to change `DelegatedBatchDecryptValues` results.
+Return-valued callbacks such as batch decryption fallbacks are not part of this channel yet; they arrive with Token coverage.
 
 ## Verify without a wallet
 

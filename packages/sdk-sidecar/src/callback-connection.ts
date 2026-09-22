@@ -1,4 +1,5 @@
 import type { ServerDuplexStream } from "@grpc/grpc-js";
+import { serviceError } from "./errors.js";
 import { ChannelWriter } from "./channel-writer.js";
 
 export class CallbackConnection<Request, Response> {
@@ -62,7 +63,7 @@ export class CallbackConnection<Request, Response> {
     if (stream) {
       this.#disconnect(stream, error);
       // Let grpc-js end the writable side and send the failure status to the client.
-      stream.emit("error", error);
+      stream.emit("error", serviceError(error));
     }
   }
 }

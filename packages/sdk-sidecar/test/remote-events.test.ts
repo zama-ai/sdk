@@ -1,5 +1,4 @@
 import { expect, test } from "vitest";
-import { SigningRejectedError } from "@zama-fhe/sdk";
 import { RemoteEvents, type EventStream } from "../src/remote-events.js";
 import { operationContext } from "../src/remote-signer.js";
 import {
@@ -8,30 +7,20 @@ import {
 } from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
 import { FakeStream } from "./support/fake-stream.js";
 
-const token = "0x1111111111111111111111111111111111111111";
 const payload = {
   $case: "progress",
   progress: { kind: ProgressKind.PROGRESS_KIND_FINALIZING, txHash: undefined },
 } as const;
-function setup(capacity = 256) {
-  const events = new RemoteEvents("context", capacity);
+function setup() {
+  const events = new RemoteEvents("context");
   const stream = new FakeStream<EventServerMessage>();
   events.attach(stream as unknown as EventStream);
-  const controller = new AbortController();
-  return {
-    events,
-    stream,
-    controller,
-    request: () =>
-      operationContext.run({ id: "operation", signal: controller.signal }, () =>
-        events.requestBatchFallback(new SigningRejectedError("rejected"), token),
-      ),
-  };
+  return { events, stream };
 }
 
-test("notification ordering, operation correlation and acknowledgment window", () => {
-  const { events, stream, controller } = setup(2);
-  operationContext.run({ id: "operation", signal: controller.signal }, () =>
+test("notifications preserve order and distinct RPC correlation", () => {
+  const { events, stream } = setup();
+  operationContext.run({ id: "operation", signal: new AbortController().signal }, () =>
     events.notify(payload),
   );
   events.notify(payload);
@@ -39,93 +28,88 @@ test("notification ordering, operation correlation and acknowledgment window", (
     { delivery: { sequence: 1n, contextId: "context", operationId: "operation" } },
     { delivery: { sequence: 2n, operationId: "" } },
   ]);
-  events.reply({ sequence: 1n, outcome: { $case: "acknowledged", acknowledged: {} } });
-  events.notify(payload);
-  expect(stream.messages).toHaveLength(4);
-  events.notify(payload);
-  const replacement = new FakeStream<EventServerMessage>();
-  events.attach(replacement as unknown as EventStream);
-  events.notify(payload);
-  expect(replacement.messages).toHaveLength(2);
-  expect(replacement.messages[1]?.message).toMatchObject({ delivery: { sequence: 4n } });
   events.dispose();
 });
 
-test("batch callbacks preserve arbitrary bigint, errors and stale reply isolation", async () => {
-  const { events, request, stream } = setup();
-  const result = request();
-  events.reply({ sequence: 99n, outcome: { $case: "fallbackBigint", fallbackBigint: "1" } });
-  expect(stream.messages.at(-1)?.message).toMatchObject({
-    replyError: { error: { code: "EVENT_DELIVERY_NOT_FOUND" } },
-  });
-  events.reply({
-    sequence: 1n,
-    outcome: { $case: "fallbackBigint", fallbackBigint: (2n ** 255n).toString() },
-  });
-  await expect(result).resolves.toBe(2n ** 255n);
-  const failed = request();
+test("the 256 delivery window frees capacity on acknowledgment or handler error", () => {
+  const { events, stream } = setup();
+  for (let index = 0; index < 256; index++) {
+    events.notify(payload);
+  }
+  expect(stream.messages).toHaveLength(257);
+  events.reply({ sequence: 1n, outcome: { $case: "acknowledged", acknowledged: {} } });
   events.reply({
     sequence: 2n,
     outcome: {
       $case: "error",
       error: {
-        code: "SIGNING_REJECTED",
-        message: "callback rejected",
+        code: "CALLBACK_FAILED",
+        message: "sink failed",
         retryable: false,
         retryAfterSeconds: undefined,
       },
     },
   });
-  await expect(failed).rejects.toMatchObject({
-    code: "SIGNING_REJECTED",
-    message: "callback rejected",
-  });
-  const malformed = request();
-  events.reply({ sequence: 3n, outcome: { $case: "fallbackBigint", fallbackBigint: "01" } });
-  await expect(malformed).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
-  events.dispose();
-});
-
-test("cancellation retires a callback and never replays it", async () => {
-  const { events, controller, request, stream } = setup();
-  const pending = request();
-  controller.abort();
-  await expect(pending).rejects.toMatchObject({ code: "CANCELLED" });
-  expect(stream.messages.at(-1)?.message).toEqual({
-    $case: "cancelled",
-    cancelled: { sequence: 1n },
-  });
-  events.reply({ sequence: 1n, outcome: { $case: "fallbackBigint", fallbackBigint: "0" } });
-  expect(stream.messages.at(-1)?.message?.$case).toBe("replyError");
-  events.dispose();
-});
-
-test("channel loss rejects pending callbacks; notifications stay nonblocking", async () => {
-  const { events, request, stream } = setup();
-  const pending = request();
-  stream.emit("cancelled");
-  await expect(pending).rejects.toMatchObject({ code: "CANCELLED" });
   events.notify(payload);
-  await expect(request()).rejects.toMatchObject({ code: "EVENT_DISCONNECTED" });
+  events.notify(payload);
+  expect(stream.messages).toHaveLength(259);
+  const failed: unknown[] = [];
+  stream.on("error", (error) => failed.push(error));
+  events.notify(payload);
+  expect(stream.messages).toHaveLength(259);
+  expect(failed).toHaveLength(1);
+  expect(failed[0]).toMatchObject({ code: 8 });
+  const replacement = new FakeStream<EventServerMessage>();
+  events.attach(replacement as unknown as EventStream);
+  events.notify(payload);
+  expect(replacement.messages[1]?.message).toMatchObject({ delivery: { sequence: 259n } });
+  events.dispose();
+});
+
+test("channel cancellation clears outstanding notifications without replay", () => {
+  const { events, stream } = setup();
+  events.notify(payload);
+  stream.emit("cancelled");
+  events.notify(payload);
   const replacement = new FakeStream<EventServerMessage>();
   events.attach(replacement as unknown as EventStream);
   expect(replacement.messages).toHaveLength(1);
+  events.reply({ sequence: 1n, outcome: { $case: "acknowledged", acknowledged: {} } });
+  expect(replacement.messages.at(-1)?.message).toMatchObject({
+    replyError: { sequence: 1n, error: { code: "EVENT_DELIVERY_NOT_FOUND" } },
+  });
+  events.notify(payload);
+  expect(replacement.messages.at(-1)?.message).toMatchObject({ delivery: { sequence: 2n } });
   events.dispose();
 });
 
-test("overflow rejects callbacks and context cleanup unsubscribes wallet", async () => {
-  const { events, request } = setup(1);
+test("context cleanup closes notifications and unsubscribes the wallet", () => {
+  const { events, stream } = setup();
   let subscribed = true;
+  let closed = false;
+  stream.on("close", () => {
+    closed = true;
+  });
   events.observeWallet({
     onWalletAccountChange: () => () => {
       subscribed = false;
     },
   });
-  const pending = request();
   events.notify(payload);
-  await expect(pending).rejects.toThrow("unacknowledged delivery limit");
   events.dispose();
+  events.notify(payload);
   expect(subscribed).toBe(false);
+  expect(closed).toBe(true);
+  expect(stream.messages).toHaveLength(2);
+});
+
+test("a missing notification outcome is rejected", () => {
+  const { events } = setup();
+  events.notify(payload);
+  expect(() => events.reply({ sequence: 1n, outcome: undefined })).toThrow(
+    "acknowledgment or handler error",
+  );
+  events.dispose();
 });
 
 test("stale replies cannot grow a blocked output queue without bound", async () => {
@@ -135,26 +119,6 @@ test("stale replies cannot grow a blocked output queue without bound", async () 
     events.reply({ sequence: 999n, outcome: { $case: "acknowledged", acknowledged: {} } });
   }
   await Promise.resolve();
-  const replacement = new FakeStream<EventServerMessage>();
-  expect(() => events.attach(replacement as unknown as EventStream)).not.toThrow();
-  events.dispose();
-});
-
-test("repeated callback cancellation cannot bypass the blocked output limit", async () => {
-  const { events, stream } = setup();
-  stream.write = () => false;
-  const pending: Promise<bigint>[] = [];
-  for (let index = 0; index < 300; index++) {
-    const controller = new AbortController();
-    pending.push(
-      operationContext.run({ id: `operation-${index}`, signal: controller.signal }, () =>
-        events.requestBatchFallback(new Error("failure"), token),
-      ),
-    );
-    controller.abort();
-  }
-  const outcomes = await Promise.allSettled(pending);
-  expect(outcomes.every((outcome) => outcome.status === "rejected")).toBe(true);
   const replacement = new FakeStream<EventServerMessage>();
   expect(() => events.attach(replacement as unknown as EventStream)).not.toThrow();
   events.dispose();

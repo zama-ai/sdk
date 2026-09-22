@@ -45,6 +45,13 @@ func run() error {
 		return err
 	}
 	defer subscription.Close()
+	monitorCtx, stopMonitor := context.WithCancel(ctx)
+	defer stopMonitor()
+	go func() {
+		if err := sdk.WaitChannelFailure(monitorCtx, sidecar.EventChannel); err != nil && monitorCtx.Err() == nil {
+			fmt.Fprintln(os.Stderr, "SDK event channel failed; event notifications may be incomplete")
+		}
+	}()
 
 	if err := encryptInputs(ctx, sdk, config.token, config.owner); err != nil {
 		return err

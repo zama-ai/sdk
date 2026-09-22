@@ -5,8 +5,7 @@ use tokio::sync::Semaphore;
 struct HandlerEvents {
     seen: mpsc::UnboundedSender<(EventContext, Notification)>,
     gate: Arc<Semaphore>,
-    batch_started: Arc<Semaphore>,
-    batch_dropped: Arc<Semaphore>,
+    dropped: Arc<Semaphore>,
 }
 struct Dropped(Arc<Semaphore>);
 impl Drop for Dropped {
@@ -22,6 +21,7 @@ impl EventHandler for HandlerEvents {
         notification: Notification,
     ) -> Result<()> {
         self.seen.send((context, notification))?;
+        let _dropped = Dropped(self.dropped.clone());
         self.gate.acquire().await?.forget();
         Err(crate::SdkError {
             code: "OBSERVER_ERROR".into(),
@@ -31,28 +31,6 @@ impl EventHandler for HandlerEvents {
             revert_data: None,
         }
         .into())
-    }
-    async fn on_batch_error(
-        &self,
-        context: EventContext,
-        _callback: crate::BatchErrorCallback,
-    ) -> Result<BigInt> {
-        if context.sequence == 5 {
-            return Err(crate::SdkError {
-                code: "BATCH_POLICY".into(),
-                message: "policy".into(),
-                retryable: true,
-                retry_after_seconds: Some(3),
-                revert_data: None,
-            }
-            .into());
-        }
-        if context.sequence == 3 {
-            let _dropped = Dropped(self.batch_dropped.clone());
-            self.batch_started.add_permits(1);
-            std::future::pending::<()>().await;
-        }
-        Ok("123456789012345678901234567890".parse()?)
     }
 }
 fn delivery(sequence: u64, payload: event_delivery::Payload) -> EventServerMessage {
@@ -76,7 +54,7 @@ async fn next_reply(server: &mut Server) -> EventReply {
     reply
 }
 #[tokio::test]
-async fn events_preserve_order_ack_after_handler_and_cancel_batch_while_notification_blocks() {
+async fn events_preserve_order_ack_after_handler_and_unknown_kinds() {
     let mut server = Server::start(Arc::new(default_handler)).await;
     server
         .event_actions
@@ -86,8 +64,6 @@ async fn events_preserve_order_ack_after_handler_and_cancel_batch_while_notifica
         .unwrap();
     let (seen, mut observations) = mpsc::unbounded_channel();
     let gate = Arc::new(Semaphore::new(0));
-    let started = Arc::new(Semaphore::new(0));
-    let dropped = Arc::new(Semaphore::new(0));
     let sdk = Client::connect(&server.socket)
         .await
         .unwrap()
@@ -95,8 +71,7 @@ async fn events_preserve_order_ack_after_handler_and_cancel_batch_while_notifica
         .events(HandlerEvents {
             seen,
             gate: gate.clone(),
-            batch_started: started.clone(),
-            batch_dropped: dropped.clone(),
+            dropped: Arc::new(Semaphore::new(0)),
         })
         .build()
         .await
@@ -125,49 +100,6 @@ async fn events_preserve_order_ack_after_handler_and_cancel_batch_while_notifica
     assert_eq!(first.0.operation_id.as_deref(), Some("operation"));
     assert!(server.event_replies.try_recv().is_err());
     assert!(observations.try_recv().is_err());
-    let batch = || {
-        event_delivery::Payload::BatchError(generated::BatchErrorCallback {
-            token_address: vec![1; 20],
-            error: Some(generated::SdkError {
-                code: "FAILED".into(),
-                ..Default::default()
-            }),
-        })
-    };
-    server.event_actions.send(delivery(3, batch())).unwrap();
-    tokio::time::timeout(Duration::from_secs(2), started.acquire())
-        .await
-        .unwrap()
-        .unwrap()
-        .forget();
-    server
-        .event_actions
-        .send(EventServerMessage {
-            message: Some(event_server_message::Message::Cancelled(EventCancelled {
-                sequence: 3,
-            })),
-        })
-        .unwrap();
-    tokio::time::timeout(Duration::from_secs(2), dropped.acquire())
-        .await
-        .unwrap()
-        .unwrap()
-        .forget();
-    server.event_actions.send(delivery(4, batch())).unwrap();
-    let fallback = next_reply(&mut server).await;
-    assert_eq!(fallback.sequence, 4);
-    assert_eq!(
-        fallback.outcome,
-        Some(event_reply::Outcome::FallbackBigint(
-            "123456789012345678901234567890".into()
-        ))
-    );
-    server.event_actions.send(delivery(5, batch())).unwrap();
-    let failure = next_reply(&mut server).await;
-    assert_eq!(failure.sequence, 5);
-    assert!(
-        matches!(failure.outcome, Some(event_reply::Outcome::Error(error)) if error.code == "BATCH_POLICY" && error.retry_after_seconds == Some(3))
-    );
     gate.add_permits(1);
     let ack = next_reply(&mut server).await;
     assert_eq!(ack.sequence, 1);
@@ -177,6 +109,23 @@ async fn events_preserve_order_ack_after_handler_and_cancel_batch_while_notifica
     assert_eq!(observations.recv().await.unwrap().0.sequence, 2);
     gate.add_permits(1);
     assert_eq!(next_reply(&mut server).await.sequence, 2);
+    server
+        .event_actions
+        .send(delivery(
+            3,
+            event_delivery::Payload::Event(Box::new(generated::SdkEvent {
+                r#type: 100,
+                operation: Some(101),
+                ..Default::default()
+            })),
+        ))
+        .unwrap();
+    let (_, notification) = observations.recv().await.unwrap();
+    assert!(
+        matches!(notification, Notification::Lifecycle(event) if event.kind == crate::EventKind::Unknown(100) && event.operation == Some(crate::EventEnum::Unknown(101)))
+    );
+    gate.add_permits(1);
+    assert_eq!(next_reply(&mut server).await.sequence, 3);
     sdk.close().await.unwrap();
     assert!(
         sdk.wait_channel_closed(CallbackChannel::Events)
@@ -188,7 +137,7 @@ async fn events_preserve_order_ack_after_handler_and_cancel_batch_while_notifica
 #[test]
 fn lifecycle_payload_preserves_clear_values_and_errors() {
     let wire = generated::SdkEvent {
-        r#type: "decrypt:end".into(),
+        r#type: generated::SdkEventKind::DecryptEnd as i32,
         timestamp: 1.5,
         sdk_operation_id: Some("sdk-op".into()),
         duration_ms: Some(2.5),
@@ -208,10 +157,16 @@ fn lifecycle_payload_preserves_clear_values_and_errors() {
             retryable: true,
             retry_after_seconds: Some(1),
         }),
+        operation: Some(generated::EventOperation::GrantPermit as i32),
+        shield_path: Some(generated::ShieldPath::TransferAndCall as i32),
+        step: Some(generated::ApprovalStep::Reset as i32),
         ..Default::default()
     };
     let event = crate::SdkEvent::try_from(wire).unwrap();
-    assert_eq!(event.kind, crate::EventKind::DecryptEnd);
+    assert_eq!(
+        event.kind,
+        crate::EventKind::Known(generated::SdkEventKind::DecryptEnd)
+    );
     assert_eq!(event.timestamp, 1.5);
     assert_eq!(event.duration_ms, Some(2.5));
     assert_eq!(
@@ -220,6 +175,22 @@ fn lifecycle_payload_preserves_clear_values_and_errors() {
     );
     assert_eq!(event.error.unwrap().retry_after_seconds, Some(1));
     assert_eq!(event.sdk_operation_id.as_deref(), Some("sdk-op"));
+    assert_eq!(
+        event.operation,
+        Some(crate::EventEnum::Known(
+            generated::EventOperation::GrantPermit
+        ))
+    );
+    assert_eq!(
+        event.shield_path,
+        Some(crate::EventEnum::Known(
+            generated::ShieldPath::TransferAndCall
+        ))
+    );
+    assert_eq!(
+        event.step,
+        Some(crate::EventEnum::Known(generated::ApprovalStep::Reset))
+    );
     assert!(
         crate::OperationProgress::try_from(generated::OperationProgress {
             kind: 2,
@@ -227,7 +198,18 @@ fn lifecycle_payload_preserves_clear_values_and_errors() {
         })
         .is_err()
     );
-    assert!(crate::EventKind::try_from("future:event").is_err());
+    let unknown = crate::SdkEvent::try_from(generated::SdkEvent {
+        r#type: 100,
+        operation: Some(101),
+        shield_path: Some(102),
+        step: Some(103),
+        ..Default::default()
+    })
+    .unwrap();
+    assert_eq!(unknown.kind, crate::EventKind::Unknown(100));
+    assert_eq!(unknown.operation, Some(crate::EventEnum::Unknown(101)));
+    assert_eq!(unknown.shield_path, Some(crate::EventEnum::Unknown(102)));
+    assert_eq!(unknown.step, Some(crate::EventEnum::Unknown(103)));
 }
 
 #[tokio::test]
@@ -247,8 +229,7 @@ async fn malformed_event_sequence_closes_channel_without_replay() {
         .events(HandlerEvents {
             seen,
             gate: Arc::new(Semaphore::new(2)),
-            batch_started: Arc::new(Semaphore::new(0)),
-            batch_dropped: Arc::new(Semaphore::new(0)),
+            dropped: Arc::new(Semaphore::new(0)),
         })
         .build()
         .await
@@ -294,7 +275,6 @@ async fn blocking_events() -> (
     Sdk,
     mpsc::UnboundedReceiver<(EventContext, Notification)>,
     Arc<Semaphore>,
-    Arc<Semaphore>,
 ) {
     let server = Server::start(Arc::new(default_handler)).await;
     server
@@ -304,7 +284,6 @@ async fn blocking_events() -> (
         })
         .unwrap();
     let (seen, observations) = mpsc::unbounded_channel();
-    let started = Arc::new(Semaphore::new(0));
     let dropped = Arc::new(Semaphore::new(0));
     let sdk = Client::connect(&server.socket)
         .await
@@ -313,18 +292,17 @@ async fn blocking_events() -> (
         .events(HandlerEvents {
             seen,
             gate: Arc::new(Semaphore::new(0)),
-            batch_started: started.clone(),
-            batch_dropped: dropped.clone(),
+            dropped: dropped.clone(),
         })
         .build()
         .await
         .unwrap();
-    (server, sdk, observations, started, dropped)
+    (server, sdk, observations, dropped)
 }
 
 #[tokio::test]
 async fn event_notification_overflow_closes_channel_and_discards_queued_handlers() {
-    let (server, sdk, mut observations, _, _) = blocking_events().await;
+    let (server, sdk, mut observations, _) = blocking_events().await;
     let notification = |sequence| {
         delivery(
             sequence,
@@ -356,31 +334,30 @@ async fn event_notification_overflow_closes_channel_and_discards_queued_handlers
     sdk.close().await.unwrap();
 }
 
-async fn start_blocked_batch(server: &Server, started: &Semaphore) {
+async fn start_blocked_notification(
+    server: &Server,
+    observations: &mut mpsc::UnboundedReceiver<(EventContext, Notification)>,
+) {
     server
         .event_actions
         .send(delivery(
-            3,
-            event_delivery::Payload::BatchError(generated::BatchErrorCallback {
-                token_address: vec![1; 20],
-                error: Some(generated::SdkError {
-                    code: "FAILED".into(),
-                    ..Default::default()
-                }),
+            1,
+            event_delivery::Payload::Progress(generated::OperationProgress {
+                kind: 1,
+                tx_hash: None,
             }),
         ))
         .unwrap();
-    tokio::time::timeout(Duration::from_secs(2), started.acquire())
+    tokio::time::timeout(Duration::from_secs(2), observations.recv())
         .await
         .unwrap()
-        .unwrap()
-        .forget();
+        .unwrap();
 }
 
 #[tokio::test]
-async fn event_channel_eof_drops_active_batch_future() {
-    let (mut server, sdk, _, started, dropped) = blocking_events().await;
-    start_blocked_batch(&server, &started).await;
+async fn event_channel_eof_drops_active_notification() {
+    let (mut server, sdk, mut observations, dropped) = blocking_events().await;
+    start_blocked_notification(&server, &mut observations).await;
     let (replacement, _) = mpsc::unbounded_channel();
     drop(std::mem::replace(&mut server.event_actions, replacement));
     let _ = tokio::time::timeout(
@@ -398,9 +375,9 @@ async fn event_channel_eof_drops_active_batch_future() {
 }
 
 #[tokio::test]
-async fn sdk_close_drops_active_batch_future() {
-    let (server, sdk, _, started, dropped) = blocking_events().await;
-    start_blocked_batch(&server, &started).await;
+async fn sdk_close_drops_active_notification() {
+    let (server, sdk, mut observations, dropped) = blocking_events().await;
+    start_blocked_notification(&server, &mut observations).await;
     sdk.close().await.unwrap();
     tokio::time::timeout(Duration::from_secs(2), dropped.acquire())
         .await
