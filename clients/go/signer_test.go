@@ -36,6 +36,7 @@ type signingServer struct {
 	staleReply             bool
 	contractWrite          *pb.ContractWriteRequest
 	duplicateActions       bool
+	capturedRevert         *pb.ExecutionRevert
 }
 
 func newSigningServer() *signingServer {
@@ -128,6 +129,12 @@ func (s *signingServer) DecryptValues(ctx context.Context, r *pb.DecryptValuesRe
 			if result.GetError() != nil {
 				grpc.SetTrailer(ctx, metadata.Pairs("zama-error-code", result.GetError().Code))
 				return nil, status.Error(codes.FailedPrecondition, result.GetError().Message)
+			}
+			if revert := result.GetExecutionRevert(); revert != nil {
+				s.mu.Lock()
+				s.capturedRevert = revert
+				s.mu.Unlock()
+				return nil, status.Error(codes.FailedPrecondition, revert.Message)
 			}
 			signature = result.GetSignature()
 			if s.contractWrite != nil {
@@ -306,6 +313,25 @@ func TestSignerRejectionAndDisconnect(t *testing.T) {
 				t.Fatalf("reattached signer failed: %v", err)
 			}
 		})
+	}
+}
+
+func TestTypedDataRevertStaysAnErrorReply(t *testing.T) {
+	server := newSigningServer()
+	client := testClient(t, server, nil)
+	sdk := signedSDK(t, client, common.Address{1}, func(context.Context, WalletAccount, apitypes.TypedData) ([]byte, error) {
+		return nil, &ExecutionRevertError{Data: []byte{0xde, 0xad}, Cause: errors.New("execution reverted")}
+	})
+	_, err := decrypt(sdk, testContext(t))
+	var rpc *RPCError
+	if !errors.As(err, &rpc) || rpc.Code != "SIGNING_FAILED" {
+		t.Fatalf("typed-data revert must stay a plain error reply: %v", err)
+	}
+	server.mu.Lock()
+	revert := server.capturedRevert
+	server.mu.Unlock()
+	if revert != nil {
+		t.Fatalf("typed-data action must never produce an execution_revert reply: %v", revert)
 	}
 }
 

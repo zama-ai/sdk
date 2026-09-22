@@ -1,4 +1,51 @@
-use crate::{Address, BigInt, SdkError, WalletAccount, generated};
+use crate::{Address, B256, BigInt, SdkError, WalletAccount, generated, types::word};
+use anyhow::{Context, Result};
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TransactionResult {
+    pub transaction_hash: B256,
+    pub logs: Vec<TransactionLog>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TransactionLog {
+    /// Absent when the provider adapter omits the log emitter.
+    pub address: Option<Address>,
+    pub topics: Vec<B256>,
+    pub data: Vec<u8>,
+}
+
+pub(crate) fn transaction_log(log: generated::TransactionLog) -> Result<TransactionLog> {
+    let address = log
+        .address
+        .filter(|bytes| !bytes.is_empty())
+        .map(|bytes| crate::types::address(&bytes, "invalid log address length"))
+        .transpose()?;
+    let topics = log
+        .topics
+        .iter()
+        .map(|topic| word(topic, "transaction log topic"))
+        .collect::<Result<_>>()?;
+    Ok(TransactionLog {
+        address,
+        topics,
+        data: log.data,
+    })
+}
+
+pub(crate) fn transaction_result(
+    transaction: Option<generated::TransactionResult>,
+) -> Result<TransactionResult> {
+    let transaction = transaction.context("missing transaction result")?;
+    Ok(TransactionResult {
+        transaction_hash: word(&transaction.transaction_hash, "transaction hash")?,
+        logs: transaction
+            .logs
+            .into_iter()
+            .map(transaction_log)
+            .collect::<Result<_>>()?,
+    })
+}
 
 #[derive(Clone, Debug)]
 pub struct ContractWriteRequest {
@@ -25,9 +72,8 @@ impl ContractWriteRequest {
         let invalid = |detail: &str| {
             SdkError::signing_failed(format!("Invalid contract write request: {detail}"))
         };
-        if write.address.len() != 20 {
-            return Err(invalid("address must contain 20 bytes"));
-        }
+        let address = crate::types::address(&write.address, "address must contain 20 bytes")
+            .map_err(|error| invalid(&error.to_string()))?;
         let abi: serde_json::Value =
             serde_json::from_str(&write.abi_json).map_err(|error| invalid(&error.to_string()))?;
         let args: serde_json::Value =
@@ -39,7 +85,7 @@ impl ContractWriteRequest {
             operation_id,
             action_id,
             account,
-            address: Address::from_slice(&write.address),
+            address,
             data: write.data,
             abi,
             function_name: write.function_name,

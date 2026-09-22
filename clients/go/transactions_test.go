@@ -1,6 +1,7 @@
 package sidecar
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"math/big"
@@ -181,6 +182,59 @@ func TestConcurrentTransactionCallbacksRemainCorrelated(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("first transaction did not finish")
+	}
+}
+
+func TestTransactionChannelReportsExecutionRevert(t *testing.T) {
+	server := newSigningServer()
+	server.contractWrite = transactionWire()
+	client := testClient(t, server, nil)
+	revertErr := &ExecutionRevertError{Data: []byte{0xde, 0xad}, Cause: errors.New("execution reverted: AlreadyDelegatedOrRevokedInSameBlock()")}
+	sdk, err := client.CreateContext(testContext(t), SDKConfig{}, SignerConfig{Account: &WalletAccount{Address: common.Address{1}, ChainID: 1}, WriteContract: func(context.Context, ContractWriteRequest) (common.Hash, error) {
+		return common.Hash{}, revertErr
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sdk.Close(testContext(t))
+	if _, err := decrypt(sdk, testContext(t)); err == nil {
+		t.Fatal("reverted write succeeded")
+	}
+	server.mu.Lock()
+	revert := server.capturedRevert
+	server.mu.Unlock()
+	if revert == nil {
+		t.Fatal("execution_revert reply not sent")
+	}
+	if !bytes.Equal(revert.Data, revertErr.Data) {
+		t.Fatalf("revert data lost over the wire: %x", revert.Data)
+	}
+	if revert.Message != revertErr.Error() {
+		t.Fatalf("revert message lost: %q", revert.Message)
+	}
+}
+
+func TestTransactionChannelStillReportsSigningFailedForPlainErrors(t *testing.T) {
+	server := newSigningServer()
+	server.contractWrite = transactionWire()
+	client := testClient(t, server, nil)
+	sdk, err := client.CreateContext(testContext(t), SDKConfig{}, SignerConfig{Account: &WalletAccount{Address: common.Address{1}, ChainID: 1}, WriteContract: func(context.Context, ContractWriteRequest) (common.Hash, error) {
+		return common.Hash{}, errors.New("wallet locked")
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sdk.Close(testContext(t))
+	_, err = decrypt(sdk, testContext(t))
+	var details *RPCError
+	if !errors.As(err, &details) || details.Code != "SIGNING_FAILED" {
+		t.Fatalf("plain callback error misreported: %v", err)
+	}
+	server.mu.Lock()
+	revert := server.capturedRevert
+	server.mu.Unlock()
+	if revert != nil {
+		t.Fatal("plain error misreported as execution revert")
 	}
 }
 
