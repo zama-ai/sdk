@@ -28,10 +28,13 @@ Most apps should use `Vault` (`useVault` / `useDeposit` / `useRedeem` in React).
 ```ts
 import { createVault } from "@zama-fhe/sdk/vaults";
 
-const addresses = { depositBatcher: "0xDepositBatcher", redeemBatcher: "0xRedeemBatcher" };
+const addresses = {
+  depositBatcher: "0xDepositBatcher",
+  redeemBatcher: "0xRedeemBatcher",
+  vault: "0xVault", // optional — verified against what the batchers report, not trusted
+};
 const vault = createVault(sdk, addresses);
 
-// Resolved from the batchers on first use, then cached:
 const vaultAddress = await vault.vaultAddress();
 ```
 
@@ -41,14 +44,20 @@ const vaultAddress = await vault.vaultAddress();
 ```tsx
 import { useVault } from "@zama-fhe/react-sdk/vaults";
 
-const addresses = { depositBatcher: "0xDepositBatcher", redeemBatcher: "0xRedeemBatcher" };
+const addresses = {
+  depositBatcher: "0xDepositBatcher",
+  redeemBatcher: "0xRedeemBatcher",
+  vault: "0xVault", // optional — verified against what the batchers report, not trusted
+};
 const vault = useVault(addresses);
 ```
 
 {% endtab %}
 {% endtabs %}
 
-You don't have to supply the underlying ERC-4626 vault address: both batchers report it on-chain, and `vaultAddress()` reads it once and caches it. Pass `vault` anyway if you want it checked — a pair of batchers that report different vaults, or a configured address the batchers disagree with, throws instead of silently settling against the wrong contract.
+You don't have to supply the underlying ERC-4626 vault address: both batchers report it on-chain, and `vaultAddress()` reads it once and caches it. Pass `vault` anyway if you want it checked, as above — a pair of batchers that report different vaults, or a configured address the batchers disagree with, throws instead of silently settling against the wrong contract.
+
+The snippets below reuse `sdk`, `addresses` and `vault` from this step, and `address` is the connected wallet.
 
 ### 2. Deposit
 
@@ -65,12 +74,16 @@ const { txHash, batchId } = await vault.deposit(1_000_000n);
 {% tab title="React SDK" %}
 
 ```tsx
+import { useDeposit } from "@zama-fhe/react-sdk/vaults";
+
 const deposit = useDeposit({ addresses });
 deposit.mutate({ amount: 1_000_000n });
 ```
 
 {% endtab %}
 {% endtabs %}
+
+The amount is denominated in the confidential asset token's base units — the token `vault.cAsset()` returns, with its `decimals()` — so `1_000_000n` is one unit of a 6-decimal asset.
 
 `deposit` returns the `batchId` it joined, read back from the batcher's `Joined` event — keep it, since every later call (`batchState`, `claim`, `quit`) needs it.
 
@@ -97,16 +110,18 @@ const state = await vault.depositBatcher.batchState(batchId);
 {% tab title="React SDK" %}
 
 ```tsx
-// deposit.data.batchId once the mutation resolves; useCurrentBatchId reads
-// whichever batch is open right now, for a "next batch" display.
-const { data: state } = useBatchState({
-  address: vault.depositBatcher.address,
-  batchId: deposit.data?.batchId,
-});
+import { useBatchState, useCurrentBatchId } from "@zama-fhe/react-sdk/vaults";
+
+const batchId = deposit.data?.batchId;
+const { data: state } = useBatchState({ address: vault.depositBatcher.address, batchId });
+
+const { data: openBatchId } = useCurrentBatchId({ address: vault.depositBatcher.address });
 ```
 
 {% endtab %}
 {% endtabs %}
+
+`useCurrentBatchId` reads whichever batch is open right now — for a "next batch" display, not for following a deposit you already made, since the open id moves on at every dispatch.
 
 `batchState` decides which action is legal, so read it before offering the user a button:
 
@@ -118,7 +133,7 @@ const { data: state } = useBatchState({
 | `Canceled`   | `quit` (or `recover`), to take the deposit back |
 
 {% hint style="warning" %}
-`Canceled` is the last enum value, not "done". Claiming a canceled batch reverts — a canceled batch never executed, so there is nothing to claim, only a deposit to take back.
+Claiming a canceled batch reverts — a canceled batch never executed, so there is nothing to claim, only a deposit to take back with `quit` or `recover`.
 {% endhint %}
 
 To show a countdown, or decide when to poll again, use `timeUntilDispatchable`:
@@ -134,7 +149,8 @@ const secondsLeft = await vault.depositBatcher.timeUntilDispatchable(batchId);
 {% tab title="React SDK" %}
 
 ```tsx
-// refetchInterval polls for a live countdown; omit it to fetch once.
+import { useTimeUntilDispatchable } from "@zama-fhe/react-sdk/vaults";
+
 const { data: secondsLeft } = useTimeUntilDispatchable(
   { address: vault.depositBatcher.address, batchId },
   { refetchInterval: 5_000 },
@@ -161,6 +177,8 @@ await vault.depositBatcher.dispatchBatch();
 {% tab title="React SDK" %}
 
 ```tsx
+import { useDispatchBatch } from "@zama-fhe/react-sdk/vaults";
+
 const dispatchBatch = useDispatchBatch({ address: vault.depositBatcher.address });
 dispatchBatch.mutate();
 ```
@@ -178,27 +196,30 @@ Dispatch only starts the decryption; finalization lands later. Wait for `batchSt
 {% tab title="Core SDK" %}
 
 ```ts
-// Only once batchState(batchId) === BatchState.Finalized.
 await vault.depositBatcher.claim(batchId);
 
 const cShare = await vault.cShare();
-const balance = await cShare.balanceOf(myAddress);
+const balance = await cShare.balanceOf(address);
 ```
 
 {% endtab %}
 {% tab title="React SDK" %}
 
 ```tsx
+import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useClaim } from "@zama-fhe/react-sdk/vaults";
+
 const claim = useClaim({ address: vault.depositBatcher.address });
 claim.mutate({ batchId });
 
-// useConfidentialBalance works directly on the share token's address —
-// no vault-specific balance hook needed.
-const { data: balance } = useConfidentialBalance({ address: cShareAddress });
+const cShareAddress = "0xCShare";
+const { data: balance } = useConfidentialBalance({ address: cShareAddress, account: address });
 ```
 
 {% endtab %}
 {% endtabs %}
+
+The share token is an ordinary confidential token, so `useConfidentialBalance` reads it directly — there is no vault-specific balance hook, and none that resolves the share token's address. Configure `cShareAddress` alongside the batcher addresses, as above, or read it once with `(await vault.cShare()).address` — in a `useEffect`, or a `useQuery` keyed on the vault — and keep it in state. The address is fixed at deploy time, so one read is enough.
 
 ## Redemptions
 
@@ -216,22 +237,23 @@ await vault.redeemBatcher.dispatchBatch(); // once timeUntilDispatchable(batchId
 await vault.redeemBatcher.claim(batchId);
 
 const cAsset = await vault.cAsset();
-const balance = await cAsset.balanceOf(myAddress);
+const balance = await cAsset.balanceOf(address);
 ```
 
 {% endtab %}
 {% tab title="React SDK" %}
 
 ```tsx
+import { useRedeem } from "@zama-fhe/react-sdk/vaults";
+
 const redeem = useRedeem({ addresses });
 redeem.mutate({ amount: 500n });
-
-const dispatchBatch = useDispatchBatch({ address: vault.redeemBatcher.address });
-const claim = useClaim({ address: vault.redeemBatcher.address });
 ```
 
 {% endtab %}
 {% endtabs %}
+
+From here, steps 3 to 5 apply unchanged with `vault.redeemBatcher.address` in place of `vault.depositBatcher.address`; the claimed assets land on `vault.cAsset()`.
 
 ## Getting a deposit back
 
@@ -241,7 +263,6 @@ const claim = useClaim({ address: vault.redeemBatcher.address });
 {% tab title="Core SDK" %}
 
 ```ts
-// Legal while batchState(batchId) is Pending or Canceled.
 await vault.depositBatcher.quit(batchId);
 ```
 
@@ -249,6 +270,8 @@ await vault.depositBatcher.quit(batchId);
 {% tab title="React SDK" %}
 
 ```tsx
+import { useQuit } from "@zama-fhe/react-sdk/vaults";
+
 const quit = useQuit({ address: vault.depositBatcher.address });
 quit.mutate({ batchId });
 ```
@@ -262,7 +285,6 @@ quit.mutate({ batchId });
 {% tab title="Core SDK" %}
 
 ```ts
-// Legal only while batchState(batchId) is Canceled.
 await vault.depositBatcher.recover(batchId, "0xDepositor");
 ```
 
@@ -270,6 +292,8 @@ await vault.depositBatcher.recover(batchId, "0xDepositor");
 {% tab title="React SDK" %}
 
 ```tsx
+import { useRecover } from "@zama-fhe/react-sdk/vaults";
+
 const recover = useRecover({ address: vault.depositBatcher.address });
 recover.mutate({ batchId, account: "0xDepositor" });
 ```
@@ -279,6 +303,8 @@ recover.mutate({ batchId, account: "0xDepositor" });
 
 ## Next steps
 
+- [`Vault`](../reference/sdk/Vault.md) and [`VaultBatcher`](../reference/sdk/VaultBatcher.md) — full API reference, including the per-batch reads
+- [`useDeposit`](../reference/react/useDeposit.md), [`useRedeem`](../reference/react/useRedeem.md), [`useBatchState`](../reference/react/useBatchState.md), [`useClaim`](../reference/react/useClaim.md) — the React hooks used above
 - [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault) — the protocol side: how batching, dispatch and settlement work
 - [Operator approvals](./operator-approvals.md) — the approval model `vault.deposit()` / `vault.redeem()` automate
 - [Check balances](./check-balances.md) — reading confidential balances on `cAsset()` / `cShare()`
