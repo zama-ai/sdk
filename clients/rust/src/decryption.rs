@@ -2,7 +2,7 @@ use crate::{
     Address, B256, ClearValue, ClearValues, EncryptedInput, Sdk, SdkError,
     types::{clear_values, handle},
 };
-use anyhow::{Result, ensure};
+use anyhow::Result;
 
 pub struct Decryption(pub(crate) Sdk);
 #[derive(Clone, Copy, Debug, Default)]
@@ -108,10 +108,6 @@ impl Decryption {
             .items
             .into_iter()
             .map(|item| {
-                ensure!(
-                    item.contract_address.len() == 20,
-                    "invalid batch contract address"
-                );
                 let result = match item.result {
                     Some(crate::generated::batch_item::Result::Value(value)) => {
                         Ok(value.try_into()?)
@@ -121,7 +117,10 @@ impl Decryption {
                 };
                 Ok(BatchItem {
                     encrypted_value: handle(&item.encrypted_value)?,
-                    contract_address: Address::from_slice(&item.contract_address),
+                    contract_address: crate::types::address(
+                        &item.contract_address,
+                        "invalid batch contract address",
+                    )?,
                     result,
                 })
             })

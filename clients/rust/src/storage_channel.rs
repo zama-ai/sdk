@@ -111,6 +111,7 @@ fn invalid(message: &str) -> SdkError {
         message: message.into(),
         retryable: false,
         retry_after_seconds: None,
+        revert_data: None,
     }
 }
 
@@ -136,6 +137,7 @@ mod tests {
             message: "retry".into(),
             retryable: true,
             retry_after_seconds: Some(2),
+            revert_data: None,
         };
         let error = RpcError {
             status: tonic::Status::unavailable("retry"),

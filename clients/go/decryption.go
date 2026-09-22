@@ -94,14 +94,17 @@ func clearValue(value *pb.ClearValue) (ClearValue, error) {
 func clearEntries(entries []*pb.ClearEntry) (map[common.Hash]ClearValue, error) {
 	values := make(map[common.Hash]ClearValue, len(entries))
 	for _, entry := range entries {
-		if entry == nil || len(entry.EncryptedValue) != common.HashLength {
+		if entry == nil {
 			return nil, errors.New("invalid encrypted value in response")
+		}
+		handle, err := hashFromWire(entry.EncryptedValue, "invalid encrypted value in response")
+		if err != nil {
+			return nil, err
 		}
 		value, err := clearValue(entry.Value)
 		if err != nil {
 			return nil, err
 		}
-		handle := common.BytesToHash(entry.EncryptedValue)
 		if _, exists := values[handle]; exists {
 			return nil, errors.New("duplicate encrypted value in response")
 		}
@@ -153,10 +156,18 @@ func (s *SDKContext) DelegatedBatchDecryptValues(ctx context.Context, inputs []E
 	}
 	items := make([]BatchItem, len(response.Items))
 	for i, item := range response.Items {
-		if item == nil || len(item.EncryptedValue) != common.HashLength || len(item.ContractAddress) != common.AddressLength {
+		if item == nil {
 			return nil, errors.New("invalid batch response address")
 		}
-		items[i] = BatchItem{EncryptedValue: common.BytesToHash(item.EncryptedValue), ContractAddress: common.BytesToAddress(item.ContractAddress)}
+		encryptedValue, err := hashFromWire(item.EncryptedValue, "invalid batch response address")
+		if err != nil {
+			return nil, err
+		}
+		contractAddress, err := addressFromWire(item.ContractAddress, "invalid batch response address")
+		if err != nil {
+			return nil, err
+		}
+		items[i] = BatchItem{EncryptedValue: encryptedValue, ContractAddress: contractAddress}
 		switch result := item.Result.(type) {
 		case *pb.BatchItem_Value:
 			value, err := clearValue(result.Value)
