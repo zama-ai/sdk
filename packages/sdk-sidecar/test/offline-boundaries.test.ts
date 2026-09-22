@@ -55,11 +55,6 @@ const delegations: {
     expirationDateMs: BigInt(Date.UTC(2099, 0, 1)) + 123n,
   },
   {
-    name: "out of range expiry",
-    delegateAddress: DELEGATE,
-    expirationDateMs: 8_640_000_000_000_001n,
-  },
-  {
     name: "expiry under one hour",
     delegateAddress: DELEGATE,
     expirationDateMs: BigInt(Date.now() + 60_000),
@@ -128,6 +123,41 @@ test.each([
     await expect(prepareTransaction(value.sdk, wire)).rejects.toMatchObject({
       code: "INVALID_ARGUMENT",
     });
+    expect(value.provider.prepareTransaction).not.toHaveBeenCalled();
+  } finally {
+    value.sdk.dispose();
+  }
+});
+
+// 8_640_000_000_000_000 ms is the largest instant a Date represents.
+const expiryRequest = (expirationDateMs: bigint) => ({
+  ...base,
+  transaction: {
+    $case: "delegateDecryption" as const,
+    delegateDecryption: {
+      contractAddress: bytes(TOKEN),
+      delegateAddress: bytes(DELEGATE),
+      expirationDateMs,
+    },
+  },
+});
+
+test("prepares a delegation expiring at the largest representable Date", async () => {
+  const value = fixture(undefined);
+  try {
+    await prepareTransaction(value.sdk, expiryRequest(8_640_000_000_000_000n));
+    expect(value.provider.prepareTransaction).toHaveBeenCalledTimes(1);
+  } finally {
+    value.sdk.dispose();
+  }
+});
+
+test("rejects a delegation expiry one millisecond past the largest representable Date", async () => {
+  const value = fixture(undefined);
+  try {
+    await expect(
+      prepareTransaction(value.sdk, expiryRequest(8_640_000_000_000_001n)),
+    ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
     expect(value.provider.prepareTransaction).not.toHaveBeenCalled();
   } finally {
     value.sdk.dispose();

@@ -188,6 +188,92 @@ async fn writes_correlate_reject_cancel_and_never_replay() {
 }
 
 #[tokio::test]
+async fn a_pre_broadcast_revert_replies_with_execution_revert_and_a_plain_error_stays_an_error() {
+    let operations = Arc::new(crate::operations::Operations::new());
+    let operation = operations.start("context");
+    let id = &operation.message.operation_id;
+    let (sender, mut replies) = mpsc::channel(16);
+    let signer = TestWallet(
+        move |request: ContractWriteRequest, _cancel: CancellationToken| async move {
+            match request.action_id.as_str() {
+                "revert" => Err(SdkError::execution_reverted(
+                    "Cannot prepare the transaction: execution reverted",
+                    vec![0xab, 0xcd],
+                )),
+                _ => Err(SdkError::signing_failed("gas estimation unavailable")),
+            }
+        },
+    );
+    let mut callbacks = Callbacks {
+        sign: Arc::new(signer),
+        sender,
+        operations,
+        tasks: JoinSet::new(),
+        pending: HashMap::new(),
+    };
+    callbacks.start(write_action(id, "revert")).unwrap();
+    let revert = reply(replies.recv().await.unwrap());
+    let Some(Reply::ExecutionRevert(revert)) = revert.result else {
+        panic!()
+    };
+    assert_eq!(revert.data, vec![0xab, 0xcd]);
+    assert_eq!(
+        revert.message,
+        "Cannot prepare the transaction: execution reverted"
+    );
+
+    callbacks.start(write_action(id, "plain")).unwrap();
+    let plain = reply(replies.recv().await.unwrap());
+    let Some(Reply::Error(error)) = plain.result else {
+        panic!()
+    };
+    assert_eq!(error.code, "SIGNING_FAILED");
+}
+
+struct RevertingTypedDataWallet;
+#[async_trait::async_trait]
+impl Signer for RevertingTypedDataWallet {
+    async fn sign_typed_data(&self, _request: SigningRequest) -> Result<Vec<u8>, SdkError> {
+        Err(SdkError::execution_reverted(
+            "Cannot prepare the transaction: execution reverted",
+            vec![0xab, 0xcd],
+        ))
+    }
+    async fn write_contract(
+        &self,
+        _request: ContractWriteRequest,
+        _cancel: CancellationToken,
+    ) -> Result<B256, SdkError> {
+        panic!("not exercised by this test")
+    }
+}
+#[tokio::test]
+async fn a_typed_data_error_with_revert_data_stays_an_error_reply() {
+    let operations = Arc::new(crate::operations::Operations::new());
+    let operation = operations.start("context");
+    let id = &operation.message.operation_id;
+    let (sender, mut replies) = mpsc::channel(16);
+    let mut callbacks = Callbacks {
+        sign: Arc::new(RevertingTypedDataWallet),
+        sender,
+        operations,
+        tasks: JoinSet::new(),
+        pending: HashMap::new(),
+    };
+    callbacks
+        .start(generated::SignerAction {
+            request: Some(Request::TypedDataJson("{}".into())),
+            ..write_action(id, "typed")
+        })
+        .unwrap();
+    let reply = reply(replies.recv().await.unwrap());
+    let Some(Reply::Error(error)) = reply.result else {
+        panic!("typed-data revert must stay an error reply, not execution_revert")
+    };
+    assert_eq!(error.code, "TRANSACTION_REVERTED");
+}
+
+#[tokio::test]
 async fn channel_teardown_never_kills_an_in_flight_broadcast() {
     let operations = Arc::new(crate::operations::Operations::new());
     let operation = operations.start("context");

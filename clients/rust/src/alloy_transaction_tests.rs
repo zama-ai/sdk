@@ -93,6 +93,9 @@ async fn account_and_chain_mismatch_are_refused_without_any_rpc() {
     assert!(rpc.read_q().is_empty());
 }
 
+/// A revert message and optional raw revert data, for a queued eth_estimateGas error response.
+type RevertGas = (&'static str, Option<&'static str>);
+
 /// Answers the recommended filler stack, records broadcasts, and can disturb any of the two steps.
 #[derive(Clone)]
 struct TestNetwork {
@@ -101,6 +104,8 @@ struct TestNetwork {
     hold: Option<Arc<Semaphore>>,
     fail_next_broadcast: Arc<SyncMutex<bool>>,
     fail_gas_once: Arc<SyncMutex<bool>>,
+    /// When set, eth_estimateGas answers with this JSON-RPC error instead of a gas value.
+    revert_gas: Arc<SyncMutex<Option<RevertGas>>>,
     /// Advances the answered nonce per request; otherwise every fill reads the same one.
     advance_nonce: Option<Arc<AtomicU64>>,
     /// Cancels while the write is still filling, so it holds an unsent transaction.
@@ -114,6 +119,7 @@ impl Default for TestNetwork {
             hold: None,
             fail_next_broadcast: Arc::default(),
             fail_gas_once: Arc::default(),
+            revert_gas: Arc::default(),
             advance_nonce: None,
             cancel_on_nonce: None,
             nonce_served: Arc::new(watch::channel(false).0),
@@ -151,6 +157,23 @@ impl TestNetwork {
                             "reward": [["0x1"]],
                         }),
                         "eth_estimateGas" => {
+                            if let Some((message, data)) = network.revert_gas.lock().unwrap().take()
+                            {
+                                let error = match data {
+                                    Some(data) => {
+                                        serde_json::json!({"code": 3, "message": message, "data": data})
+                                    }
+                                    None => serde_json::json!({"code": 3, "message": message}),
+                                };
+                                return Ok::<_, alloy_transport::TransportError>(
+                                    serde_json::from_value::<alloy_json_rpc::ResponsePacket>(
+                                        serde_json::json!({
+                                            "jsonrpc": "2.0", "id": packet["id"], "error": error,
+                                        }),
+                                    )
+                                    .unwrap(),
+                                );
+                            }
                             if std::mem::take(&mut *network.fail_gas_once.lock().unwrap()) {
                                 // The nonce read of the same fill has to settle first; the timeout
                                 // only keeps a broken stack from hanging.
@@ -218,6 +241,11 @@ impl TestNetwork {
     fn only_hash(&self) -> B256 {
         *self.sent.lock().unwrap()[0].tx_hash()
     }
+}
+fn reverting_network(data: Option<&'static str>) -> TestNetwork {
+    let network = TestNetwork::default();
+    *network.revert_gas.lock().unwrap() = Some(("execution reverted", data));
+    network
 }
 fn holding_network() -> TestNetwork {
     TestNetwork {
@@ -385,4 +413,71 @@ async fn concurrent_writes_both_reach_the_network_with_provider_nonces() {
     }
     nonces.sort_unstable();
     assert_eq!(nonces, [5, 6]);
+}
+#[tokio::test]
+async fn a_simulation_revert_with_data_is_certain_and_carries_the_bytes() {
+    let network = reverting_network(Some("0x1234abcd"));
+    let error = network
+        .wallet()
+        .write_contract(request(test_signer().address()), CancellationToken::new())
+        .await
+        .unwrap_err();
+    assert_eq!(error.code, "TRANSACTION_REVERTED");
+    assert!(!error.retryable);
+    assert_eq!(error.revert_data, Some(vec![0x12, 0x34, 0xab, 0xcd]));
+    assert!(network.sent.lock().unwrap().is_empty());
+}
+#[tokio::test]
+async fn a_simulation_revert_without_data_carries_empty_bytes() {
+    let network = reverting_network(None);
+    let error = network
+        .wallet()
+        .write_contract(request(test_signer().address()), CancellationToken::new())
+        .await
+        .unwrap_err();
+    assert_eq!(error.code, "TRANSACTION_REVERTED");
+    assert_eq!(error.revert_data, Some(Vec::new()));
+    assert!(network.sent.lock().unwrap().is_empty());
+}
+
+fn error_resp(code: i64, message: &str, data: Option<serde_json::Value>) -> TransportError {
+    let data = data.map(|value| serde_json::value::to_raw_value(&value).unwrap());
+    TransportError::ErrorResp(alloy_json_rpc::ErrorPayload {
+        code,
+        message: message.to_string().into(),
+        data,
+    })
+}
+#[test]
+fn a_plain_insufficient_funds_error_is_not_a_revert() {
+    let error = error_resp(-32000, "insufficient funds for gas * price + value", None);
+    assert_eq!(revert_data(&error), None);
+}
+#[test]
+fn an_insufficient_funds_error_carrying_data_is_not_a_revert() {
+    let error = error_resp(
+        -32000,
+        "insufficient funds for gas * price + value",
+        Some(serde_json::json!("0x")),
+    );
+    assert_eq!(revert_data(&error), None);
+}
+#[test]
+fn a_revert_message_on_an_unrelated_code_carries_its_data() {
+    let error = error_resp(
+        -32000,
+        "execution reverted: custom",
+        Some(serde_json::json!("0x1234")),
+    );
+    assert_eq!(revert_data(&error), Some(vec![0x12, 0x34]));
+}
+#[test]
+fn code_three_with_empty_string_data_is_a_revert_with_empty_bytes() {
+    let error = error_resp(3, "execution reverted", Some(serde_json::json!("")));
+    assert_eq!(revert_data(&error), Some(Vec::new()));
+}
+#[test]
+fn non_string_data_on_an_unrelated_code_is_not_a_revert() {
+    let error = error_resp(-32000, "header not found", Some(serde_json::json!(1234)));
+    assert_eq!(revert_data(&error), None);
 }

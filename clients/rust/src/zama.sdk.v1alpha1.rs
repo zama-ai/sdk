@@ -297,7 +297,7 @@ pub struct SignerReply {
     pub operation_id: ::prost::alloc::string::String,
     #[prost(string, tag = "2")]
     pub action_id: ::prost::alloc::string::String,
-    #[prost(oneof = "signer_reply::Result", tags = "3, 4, 140")]
+    #[prost(oneof = "signer_reply::Result", tags = "3, 4, 140, 141")]
     pub result: ::core::option::Option<signer_reply::Result>,
 }
 /// Nested message and enum types in `SignerReply`.
@@ -311,7 +311,18 @@ pub mod signer_reply {
         /// 32-byte hash of the broadcast transaction; fields 140–159 are allocated to transactions.
         #[prost(bytes, tag = "140")]
         TransactionHash(::prost::alloc::vec::Vec<u8>),
+        #[prost(message, tag = "141")]
+        ExecutionRevert(super::ExecutionRevert),
     }
+}
+/// The node rejected the simulated write before broadcast; nothing was sent.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ExecutionRevert {
+    /// Raw revert return data, possibly empty; the SDK decodes it against the request ABI.
+    #[prost(bytes = "vec", tag = "1")]
+    pub data: ::prost::alloc::vec::Vec<u8>,
+    #[prost(string, tag = "2")]
+    pub message: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SignerClientMessage {
@@ -960,6 +971,7 @@ pub struct TransferAndCall {
     #[prost(bytes = "vec", optional, tag = "4")]
     pub recipient_data: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
 }
+/// Shared by PrepareTransaction and DelegateDecryption; offline-only fields belong on PrepareTransactionRequest.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct DelegateDecryption {
     #[prost(bytes = "vec", tag = "1")]
@@ -970,6 +982,7 @@ pub struct DelegateDecryption {
     #[prost(uint64, optional, tag = "3")]
     pub expiration_date_ms: ::core::option::Option<u64>,
 }
+/// Shared by PrepareTransaction and RevokeDelegation; offline-only fields belong on PrepareTransactionRequest.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RevokeDelegation {
     #[prost(bytes = "vec", tag = "1")]
@@ -987,6 +1000,80 @@ pub struct PrepareTransactionResponse {
     /// RLP-encoded unsigned EIP-1559 transaction.
     #[prost(bytes = "vec", tag = "3")]
     pub unsigned_tx: ::prost::alloc::vec::Vec<u8>,
+}
+/// On-chain ACL delegation, distinct from the local delegation permits managed by the permit RPCs.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DelegateDecryptionRequest {
+    #[prost(message, optional, tag = "1")]
+    pub operation: ::core::option::Option<Operation>,
+    #[prost(message, optional, tag = "2")]
+    pub delegation: ::core::option::Option<DelegateDecryption>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RevokeDelegationRequest {
+    #[prost(message, optional, tag = "1")]
+    pub operation: ::core::option::Option<Operation>,
+    #[prost(message, optional, tag = "2")]
+    pub delegation: ::core::option::Option<RevokeDelegation>,
+}
+/// The delegator is explicit because reads need no signer.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DelegationQueryRequest {
+    #[prost(message, optional, tag = "1")]
+    pub operation: ::core::option::Option<Operation>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub contract_address: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "3")]
+    pub delegator_address: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "4")]
+    pub delegate_address: ::prost::alloc::vec::Vec<u8>,
+}
+/// Mirrors the SDK TransactionResult: the broadcast hash and the mined receipt logs.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct TransactionResult {
+    #[prost(bytes = "vec", tag = "1")]
+    pub transaction_hash: ::prost::alloc::vec::Vec<u8>,
+    #[prost(message, repeated, tag = "2")]
+    pub logs: ::prost::alloc::vec::Vec<TransactionLog>,
+}
+/// Log emitter address is optional because provider adapters may omit it.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct TransactionLog {
+    #[prost(bytes = "vec", optional, tag = "1")]
+    pub address: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
+    #[prost(bytes = "vec", repeated, tag = "2")]
+    pub topics: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
+    #[prost(bytes = "vec", tag = "3")]
+    pub data: ::prost::alloc::vec::Vec<u8>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DelegateDecryptionResponse {
+    #[prost(message, optional, tag = "1")]
+    pub transaction: ::core::option::Option<TransactionResult>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct RevokeDelegationResponse {
+    #[prost(message, optional, tag = "1")]
+    pub transaction: ::core::option::Option<TransactionResult>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct IsDelegationActiveResponse {
+    #[prost(bool, tag = "1")]
+    pub is_active: bool,
+}
+/// Unix time in whole seconds as stored by the ACL: 0 means no delegation, 2^64-1 means permanent.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetDelegationExpiryResponse {
+    #[prost(uint64, tag = "1")]
+    pub expiry_timestamp: u64,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetDelegationStatusResponse {
+    #[prost(bool, tag = "1")]
+    pub is_active: bool,
+    /// Same sentinels as GetDelegationExpiryResponse: 0 means none, 2^64-1 means permanent.
+    #[prost(uint64, tag = "2")]
+    pub expiry_timestamp: u64,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
@@ -1848,6 +1935,156 @@ pub mod sidecar_service_client {
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(GrpcMethod::new("zama.sdk.v1alpha1.SidecarService", "Encrypt"));
+            self.inner.unary(req, path, codec).await
+        }
+        /// Calls delegations.delegateDecryption; the delegator is the signer account and the write is requested on the signer channel.
+        pub async fn delegate_decryption(
+            &mut self,
+            request: impl tonic::IntoRequest<super::DelegateDecryptionRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::DelegateDecryptionResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/zama.sdk.v1alpha1.SidecarService/DelegateDecryption",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "zama.sdk.v1alpha1.SidecarService",
+                        "DelegateDecryption",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        /// Calls delegations.revokeDelegation for the signer account's on-chain delegation.
+        pub async fn revoke_delegation(
+            &mut self,
+            request: impl tonic::IntoRequest<super::RevokeDelegationRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::RevokeDelegationResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/zama.sdk.v1alpha1.SidecarService/RevokeDelegation",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "zama.sdk.v1alpha1.SidecarService",
+                        "RevokeDelegation",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        /// Calls delegations.isActive without requiring a signer.
+        pub async fn is_delegation_active(
+            &mut self,
+            request: impl tonic::IntoRequest<super::DelegationQueryRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::IsDelegationActiveResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/zama.sdk.v1alpha1.SidecarService/IsDelegationActive",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "zama.sdk.v1alpha1.SidecarService",
+                        "IsDelegationActive",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        /// Calls delegations.getExpiry without requiring a signer.
+        pub async fn get_delegation_expiry(
+            &mut self,
+            request: impl tonic::IntoRequest<super::DelegationQueryRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetDelegationExpiryResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/zama.sdk.v1alpha1.SidecarService/GetDelegationExpiry",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "zama.sdk.v1alpha1.SidecarService",
+                        "GetDelegationExpiry",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        /// Calls delegations.getStatus without requiring a signer.
+        pub async fn get_delegation_status(
+            &mut self,
+            request: impl tonic::IntoRequest<super::DelegationQueryRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetDelegationStatusResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/zama.sdk.v1alpha1.SidecarService/GetDelegationStatus",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "zama.sdk.v1alpha1.SidecarService",
+                        "GetDelegationStatus",
+                    ),
+                );
             self.inner.unary(req, path, codec).await
         }
     }

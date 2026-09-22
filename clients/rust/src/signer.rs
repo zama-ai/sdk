@@ -22,6 +22,9 @@ pub trait Signer: Send + Sync {
     async fn sign_typed_data(&self, request: SigningRequest) -> Result<Vec<u8>, SdkError>;
 
     /// Approves, signs and broadcasts once, returning the hash without waiting for a receipt.
+    ///
+    /// Returning [`SdkError::execution_reverted`] forwards a pre-broadcast revert: the node
+    /// rejected the simulated write, so nothing was sent.
     async fn write_contract(
         &self,
         _request: ContractWriteRequest,
@@ -244,6 +247,8 @@ impl Callbacks {
     ) -> impl Future<Output = Result<ActionKey>> + Send + 'static {
         let sign = self.sign.clone();
         let sender = self.sender.clone();
+        // Only a contract write can be rejected pre-broadcast; a typed-data action always stays an error reply.
+        let is_contract_write = matches!(request, Ok(CallbackRequest::ContractWrite(_)));
         async move {
             let result = match request {
                 Ok(request) => request.run(sign.as_ref(), cancel.clone()).await,
@@ -253,8 +258,15 @@ impl Callbacks {
             if cancel.is_cancelled() {
                 return Ok(key);
             }
-            let result =
-                result.unwrap_or_else(|error| generated::signer_reply::Result::Error(error.into()));
+            let result = result.unwrap_or_else(|error| match error.revert_data {
+                Some(data) if is_contract_write => {
+                    generated::signer_reply::Result::ExecutionRevert(generated::ExecutionRevert {
+                        data,
+                        message: error.message,
+                    })
+                }
+                _ => generated::signer_reply::Result::Error(error.into()),
+            });
             let reply = generated::SignerReply {
                 operation_id: key.0.clone(),
                 action_id: key.1.clone(),

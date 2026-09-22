@@ -14,7 +14,7 @@ import { operationContext, RemoteSigner, type SignerStream } from "./remote-sign
 
 export type ContextSdk = Pick<
   ZamaSDK,
-  "encrypt" | "decryption" | "permits" | "offline" | "dispose"
+  "encrypt" | "decryption" | "permits" | "offline" | "delegations" | "dispose"
 >;
 export type ContextFactory = (
   request: CreateContextRequest,

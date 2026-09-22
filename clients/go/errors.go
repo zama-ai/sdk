@@ -41,9 +41,10 @@ type RPCError struct {
 	cause error
 }
 
+// Error names the SDK code and the status message; GRPCStatus keeps the transport framing reachable.
 func (e *RPCError) Error() string {
 	if e.Code != "" {
-		return e.Code + ": " + e.cause.Error()
+		return e.Code + ": " + status.Convert(e.cause).Message()
 	}
 	return e.cause.Error()
 }

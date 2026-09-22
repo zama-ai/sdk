@@ -1,5 +1,6 @@
 use crate::{B256, ContractWriteRequest, SdkError, Signer, SigningRequest, alloy::AlloySigner};
 use alloy_primitives::{TxKind, U256};
+use alloy_provider::transport::TransportError;
 use alloy_provider::{
     Provider, SendableTx, WalletProvider,
     fillers::{FillProvider, TxFiller},
@@ -82,9 +83,15 @@ where
                 ));
             }
             Err(error) => {
-                return Err(SdkError::signing_failed(format!(
-                    "Cannot prepare the transaction: {error}"
-                )));
+                return Err(match revert_data(&error) {
+                    Some(data) => SdkError::execution_reverted(
+                        format!("Cannot prepare the transaction: {error}"),
+                        data,
+                    ),
+                    None => {
+                        SdkError::signing_failed(format!("Cannot prepare the transaction: {error}"))
+                    }
+                });
             }
         };
         if cancel.is_cancelled() {
@@ -110,6 +117,23 @@ where
 }
 fn cancelled() -> SdkError {
     SdkError::signing_failed("Contract write was cancelled.")
+}
+/// Some when the node rejected the transaction during simulation or gas estimation; the bytes
+/// are the raw revert return data, empty when the node did not provide any.
+/// Code 3 is geth's dedicated revert code; the message check is anchored to a prefix so an
+/// unrelated error carrying "execution reverted" mid-message is not misclassified.
+fn revert_data(error: &TransportError) -> Option<Vec<u8>> {
+    let payload = error.as_error_resp()?;
+    let data = payload.data.as_ref().and_then(|raw| {
+        let text = serde_json::from_str::<String>(raw.get()).ok()?;
+        let hex = text.strip_prefix("0x")?;
+        alloy_primitives::hex::decode(hex).ok()
+    });
+    let is_revert_message = payload
+        .message
+        .to_lowercase()
+        .starts_with("execution reverted");
+    (payload.code == 3 || is_revert_message).then(|| data.unwrap_or_default())
 }
 fn transaction(request: &ContractWriteRequest) -> Result<TransactionRequest, SdkError> {
     let value = request

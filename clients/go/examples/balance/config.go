@@ -16,6 +16,7 @@ type exampleConfig struct {
 	rpcURL        string
 	token         common.Address
 	owner         common.Address
+	delegate      common.Address
 	privateKey    string
 	relayerAPIKey string
 	values        map[string]string
@@ -34,7 +35,18 @@ func loadConfig(args []string) (exampleConfig, error) {
 			return exampleConfig{}, fmt.Errorf("invalid %s", field)
 		}
 	}
-	return exampleConfig{socket: args[0], rpcURL: config["SEPOLIA_RPC_URL"], token: common.HexToAddress(config["CONFIDENTIAL_TOKEN_ADDRESS"]), owner: common.HexToAddress(config["OWNER_ADDRESS"]), privateKey: config["TEST_WALLET_PRIVATE_KEY"], relayerAPIKey: config["RELAYER_API_KEY"], values: config}, nil
+	owner := common.HexToAddress(config["OWNER_ADDRESS"])
+	delegate := common.HexToAddress("0x2222222222222222222222222222222222222222")
+	if value := config["DELEGATE_ADDRESS"]; value != "" {
+		if !common.IsHexAddress(value) {
+			return exampleConfig{}, errors.New("invalid DELEGATE_ADDRESS")
+		}
+		delegate = common.HexToAddress(value)
+	}
+	if delegate == owner {
+		return exampleConfig{}, errors.New("DELEGATE_ADDRESS must not equal OWNER_ADDRESS")
+	}
+	return exampleConfig{socket: args[0], rpcURL: config["SEPOLIA_RPC_URL"], token: common.HexToAddress(config["CONFIDENTIAL_TOKEN_ADDRESS"]), owner: owner, delegate: delegate, privateKey: config["TEST_WALLET_PRIVATE_KEY"], relayerAPIKey: config["RELAYER_API_KEY"], values: config}, nil
 }
 
 func (config exampleConfig) sdkConfig() (sidecar.SDKConfig, error) {

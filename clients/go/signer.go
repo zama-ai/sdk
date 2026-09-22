@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	pb "github.com/zama-ai/sdk/clients/go/gen/zama/sdk/v1alpha1"
 	"google.golang.org/grpc"
@@ -75,7 +74,13 @@ func (s *SDKContext) dispatchSignerAction(action *pb.SignerAction, signer Signer
 			return
 		}
 		if err != nil {
-			reply.Result = &pb.SignerReply_Error{Error: signingError(err)}
+			var revert *ExecutionRevertError
+			// A revert reply only ever means the contract write itself was rejected pre-broadcast.
+			if action.GetContractWrite() != nil && errors.As(err, &revert) {
+				reply.Result = &pb.SignerReply_ExecutionRevert{ExecutionRevert: &pb.ExecutionRevert{Data: revert.Data, Message: revert.Error()}}
+			} else {
+				reply.Result = &pb.SignerReply_Error{Error: signingError(err)}
+			}
 		}
 		send(reply)
 	}()
@@ -86,10 +91,14 @@ func invokeSigner(ctx context.Context, action *pb.SignerAction, signer SignerCon
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if action.Account == nil || len(action.Account.Address) != common.AddressLength {
+	if action.Account == nil {
 		return errors.New("invalid signing account")
 	}
-	account := WalletAccount{Address: common.BytesToAddress(action.Account.Address), ChainID: action.Account.ChainId}
+	address, err := addressFromWire(action.Account.Address, "invalid signing account")
+	if err != nil {
+		return err
+	}
+	account := WalletAccount{Address: address, ChainID: action.Account.ChainId}
 	switch request := action.Request.(type) {
 	case *pb.SignerAction_ContractWrite:
 		if signer.WriteContract == nil {

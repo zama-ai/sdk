@@ -22,6 +22,7 @@ mod channel;
 mod config;
 mod config_options;
 mod decryption;
+mod delegations;
 mod encryption;
 mod error;
 mod lifetime;
@@ -47,6 +48,10 @@ pub use config_options::{
 pub use decryption::{
     BatchItem, Decryption, DelegatedBatchOptions, DelegatedOptions, PublicDecryption,
 };
+pub use delegations::{
+    DelegateDecryptionParams, DelegationQuery, DelegationStatus, Delegations,
+    PERMANENT_DELEGATION_EXPIRY, RevokeDelegationParams,
+};
 pub use encryption::{EncryptInput, EncryptOptions, EncryptParams, EncryptResult};
 pub use error::{RpcError, SdkError};
 pub use num_bigint::BigInt;
@@ -58,7 +63,7 @@ pub use permits::{Offline, Permits, PreparePermit, PreparedPermit};
 pub use signer::{Signer, SigningRequest};
 pub use storage::{ApplicationStorage, MemoryStorage, NativeStorage, Storage};
 pub use tokio_util::sync::CancellationToken;
-pub use transactions::ContractWriteRequest;
+pub use transactions::{ContractWriteRequest, TransactionLog, TransactionResult};
 pub use types::{ClearValue, ClearValues, EncryptedInput, WalletAccount};
 #[allow(clippy::enum_variant_names)]
 mod generated {
