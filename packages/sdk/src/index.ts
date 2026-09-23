@@ -149,6 +149,8 @@ export type {
   UnshieldPhase2StartedEvent,
   UnshieldPhase2SubmittedEvent,
   UnwrapSubmittedEvent,
+  VaultOperation,
+  VaultSubmittedEvent,
   WrapSubmittedEvent,
   ZamaSDKEvent,
   ZamaSDKEventListener,

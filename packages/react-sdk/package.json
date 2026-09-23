@@ -45,6 +45,11 @@
       "import": "./dist/wagmi/index.js",
       "default": "./dist/wagmi/index.js"
     },
+    "./vaults": {
+      "types": "./dist/vaults/index.d.ts",
+      "import": "./dist/vaults/index.js",
+      "default": "./dist/vaults/index.js"
+    },
     "./package.json": {
       "default": "./package.json"
     }
@@ -56,8 +61,8 @@
     "build": "rm -rf dist && rolldown --config rolldown.config.ts",
     "lint": "oxlint",
     "typecheck": "tsc --noEmit",
-    "api-report": "api-extractor run --local -c api-extractor.json && api-extractor run --local -c api-extractor.wagmi.json",
-    "api-report:check": "api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.wagmi.json"
+    "api-report": "api-extractor run --local -c api-extractor.json && api-extractor run --local -c api-extractor.wagmi.json && api-extractor run --local -c api-extractor.vaults.json",
+    "api-report:check": "api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.wagmi.json && api-extractor run -c api-extractor.vaults.json"
   },
   "devDependencies": {
     "@zama-fhe/sdk": "workspace:*",

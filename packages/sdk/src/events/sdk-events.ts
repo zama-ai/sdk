@@ -25,6 +25,7 @@ export const ZamaSDKEvents = {
   WrapSubmitted: "wrap:submitted",
   UnwrapSubmitted: "unwrap:submitted",
   FinalizeUnwrapSubmitted: "finalizeUnwrap:submitted",
+  VaultSubmitted: "vault:submitted",
   // Delegation operations
   DelegationSubmitted: "delegation:submitted",
   RevokeDelegationSubmitted: "revokeDelegation:submitted",
@@ -41,7 +42,10 @@ export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents
 
 /** Fields present on every SDK event; each concrete event extends this. */
 export interface BaseEvent {
-  /** Confidential token this event relates to, when the operation targets one. */
+  /**
+   * Contract this event relates to, when the operation targets one: the
+   * confidential token, or the vault batcher for {@link VaultSubmittedEvent}.
+   */
   tokenAddress?: Address;
   /** Unix epoch time (milliseconds) at which the event was emitted. */
   timestamp: number;
@@ -174,6 +178,19 @@ export interface SetOperatorSubmittedEvent extends BaseEvent {
   txHash: Hex;
 }
 
+/** Which vault batcher write a {@link VaultSubmittedEvent} describes. */
+export type VaultOperation = "join" | "quit" | "claim" | "recover" | "dispatchBatch";
+
+/** Emitted when a vault batcher transaction has been submitted to the network. */
+export interface VaultSubmittedEvent extends BaseEvent {
+  /** Event type discriminant. */
+  type: typeof ZamaSDKEvents.VaultSubmitted;
+  /** Hash of the submitted batcher transaction. */
+  txHash: Hex;
+  /** The batcher write this transaction performs. */
+  vaultOperation: VaultOperation;
+}
+
 /** Emitted when an underlying-ERC-20 approval transaction has been submitted to the network. */
 export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
   /** Event type discriminant. */
@@ -271,6 +288,7 @@ export type ZamaSDKEvent =
   | TransferSubmittedEvent
   | TransferFromSubmittedEvent
   | SetOperatorSubmittedEvent
+  | VaultSubmittedEvent
   | ApproveUnderlyingSubmittedEvent
   | WrapSubmittedEvent
   | UnwrapSubmittedEvent
@@ -317,7 +335,12 @@ export type TransactionOperation =
   | "transferFrom"
   | "transferFromAndCall"
   | "unwrap"
-  | "unwrapAll";
+  | "unwrapAll"
+  | "vault:join"
+  | "vault:quit"
+  | "vault:claim"
+  | "vault:recover"
+  | "vault:dispatchBatch";
 
 /**
  * Single source of truth for each transaction operation's submitted-event payload.
@@ -385,4 +408,39 @@ export const transactionOperationMetadata = {
   },
   unwrap: { submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.UnwrapSubmitted, txHash }) },
   unwrapAll: { submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.UnwrapSubmitted, txHash }) },
+  "vault:join": {
+    submittedEvent: (txHash: Hex) => ({
+      type: ZamaSDKEvents.VaultSubmitted,
+      txHash,
+      vaultOperation: "join" as const,
+    }),
+  },
+  "vault:quit": {
+    submittedEvent: (txHash: Hex) => ({
+      type: ZamaSDKEvents.VaultSubmitted,
+      txHash,
+      vaultOperation: "quit" as const,
+    }),
+  },
+  "vault:claim": {
+    submittedEvent: (txHash: Hex) => ({
+      type: ZamaSDKEvents.VaultSubmitted,
+      txHash,
+      vaultOperation: "claim" as const,
+    }),
+  },
+  "vault:recover": {
+    submittedEvent: (txHash: Hex) => ({
+      type: ZamaSDKEvents.VaultSubmitted,
+      txHash,
+      vaultOperation: "recover" as const,
+    }),
+  },
+  "vault:dispatchBatch": {
+    submittedEvent: (txHash: Hex) => ({
+      type: ZamaSDKEvents.VaultSubmitted,
+      txHash,
+      vaultOperation: "dispatchBatch" as const,
+    }),
+  },
 } satisfies Record<TransactionOperation, { submittedEvent: (txHash: Hex) => ZamaSDKEventInput }>;

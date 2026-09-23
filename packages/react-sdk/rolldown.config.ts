@@ -2,7 +2,11 @@ import { defineConfig } from "rolldown";
 import { dts } from "rolldown-plugin-dts";
 
 export default defineConfig({
-  input: { index: "src/index.ts", "wagmi/index": "src/wagmi/index.ts" },
+  input: {
+    index: "src/index.ts",
+    "wagmi/index": "src/wagmi/index.ts",
+    "vaults/index": "src/vaults/index.ts",
+  },
   output: { dir: "dist", format: "esm", sourcemap: true, minify: true, banner: '"use client";' },
   external: [
     /^react/,

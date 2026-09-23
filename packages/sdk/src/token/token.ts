@@ -15,11 +15,9 @@ import {
   symbolContract,
 } from "../contracts";
 import {
-  BalanceCheckUnavailableError,
   ConfigurationError,
   DecryptionFailedError,
   EncryptionFailedError,
-  InsufficientConfidentialBalanceError,
   isFatalBatchError,
   requireConfigured,
   ZamaError,
@@ -28,6 +26,7 @@ import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-even
 import type { EncryptedValue } from "../relayer/types";
 import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
+import { assertConfidentialBalance } from "../utils/assert-balance";
 import { assertBigint } from "../utils/assertions";
 import { pLimit } from "../utils/concurrency";
 import { isEncryptedValueZero } from "../utils/handles";
@@ -858,41 +857,20 @@ export class Token {
   }
 
   /**
-   * Pre-flight check: decrypt the confidential balance and compare against the
-   * requested amount. If credentials are cached the decrypt happens silently;
-   * if not, throws {@link BalanceCheckUnavailableError} instead of triggering
-   * a surprise EIP-712 popup.
+   * Pre-flight the connected account's balance on this token before a write
+   * that would otherwise move zero on a short balance.
    *
    * @internal
    */
   protected async assertConfidentialBalance(amount: bigint): Promise<void> {
-    if (amount === 0n) {
-      return;
-    }
-
-    let balance: bigint;
-    try {
-      const account = await requireAlignedWalletAccount(
-        "assertConfidentialBalance",
-        this.sdk.signer,
-        this.sdk.provider,
-      );
-      balance = await this.balanceOf(getAddress(account.address));
-    } catch (error) {
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new BalanceCheckUnavailableError(`Balance validation failed (token: ${this.address})`, {
-        cause: error,
-      });
-    }
-
-    if (balance < amount) {
-      throw new InsufficientConfidentialBalanceError(
-        `Insufficient confidential balance: requested ${amount}, available ${balance} (token: ${this.address})`,
-        { requested: amount, available: balance, token: this.address },
-      );
-    }
+    return assertConfidentialBalance({
+      operation: "assertConfidentialBalance",
+      tokenAddress: this.address,
+      amount,
+      signer: this.sdk.signer,
+      provider: this.sdk.provider,
+      readBalance: (owner) => this.balanceOf(owner),
+    });
   }
 
   /**
