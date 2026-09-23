@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.7.0-beta.1](https://github.com/zama-ai/sdk/compare/v3.6.0...v3.7.0-beta.1) (2026-09-23)
+
+### Features
+
+- add confidential ERC-4626 vault support (batched deposits/withdrawals) ([#748](https://github.com/zama-ai/sdk/issues/748)) ([426198a]())
+
 ## [3.6.0](https://github.com/zama-ai/sdk/compare/v3.5.1...v3.6.0) (2026-09-11)
 
 ### Features
