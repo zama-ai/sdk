@@ -7,7 +7,7 @@ description: Confidential ERC-4626 vault interface — deposit and redeem throug
 
 `Vault` is the high-level interface for a confidential ERC-4626 vault. It pairs the vault's two on-chain batcher contracts — one for deposits, one for redemptions — behind ERC-4626-style `deposit` and `redeem` methods, the way [`WrappedToken`](WrappedToken.md) builds on [`Token`](Token.md).
 
-Both methods encrypt the amount, check the caller's confidential balance, grant the batcher an ERC-7984 operator approval if one isn't already active, and join the currently open batch. Everything after the join — tracking the batch, dispatching it, claiming, quitting — lives on the two [`VaultBatcher`](VaultBatcher.md) instances the vault exposes as `depositBatcher` and `redeemBatcher`.
+Both methods grant the batcher an ERC-7984 operator approval if one isn't already active, check the caller's confidential balance, encrypt the amount, and join the currently open batch. Everything after the join — tracking the batch, dispatching it, claiming, quitting — lives on the two [`VaultBatcher`](VaultBatcher.md) instances the vault exposes as `depositBatcher` and `redeemBatcher`.
 
 ## Import
 

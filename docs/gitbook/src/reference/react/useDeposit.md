@@ -5,7 +5,7 @@ description: Mutation hook that deposits into a confidential ERC-4626 vault by j
 
 # useDeposit
 
-Mutation hook that deposits a plaintext amount into a confidential vault. It encrypts the amount, grants the deposit batcher an ERC-7984 operator approval if one isn't already active, checks the caller's confidential balance, and joins the currently open deposit batch — the same flow as [`Vault.deposit`](../sdk/Vault.md#deposit).
+Mutation hook that deposits a plaintext amount into a confidential vault. It grants the deposit batcher an ERC-7984 operator approval if one isn't already active, checks the caller's confidential balance, encrypts the amount, and joins the currently open deposit batch — the same flow as [`Vault.deposit`](../sdk/Vault.md#deposit).
 
 The deposit is not settled when the mutation resolves: it has joined a batch. Keep the returned `batchId` and follow the batch with [`useBatchState`](./useBatchState.md), then [`useClaim`](./useClaim.md) once it is `Finalized`.
 

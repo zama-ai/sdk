@@ -2176,7 +2176,7 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 
 Both packages gain a `vaults` subpath — `@zama-fhe/sdk/vaults` and `@zama-fhe/react-sdk/vaults` — for depositing into and redeeming from confidential ERC-4626 vaults. Vault operations are batched on-chain: a deposit or redemption joins the currently open batch, anyone can dispatch the batch once it is old enough, and participants claim their shares or assets after finalization. The subpath is opt-in, so apps that don't use vaults don't bundle it.
 
-`Vault` (`createVault`, or `useVault` in React) pairs a vault's deposit and redeem batchers behind ERC-4626-style `deposit` and `redeem` methods. Both encrypt the amount, check the caller's confidential balance the way `Token.confidentialTransfer` does, grant the batcher an operator approval when one isn't already active, and return the `batchId` they joined. The React hooks are `useDeposit` and `useRedeem`.
+`Vault` (`createVault`, or `useVault` in React) pairs a vault's deposit and redeem batchers behind ERC-4626-style `deposit` and `redeem` methods. Both grant the batcher an operator approval when one isn't already active, check the caller's confidential balance the way `Token.confidentialTransfer` does, encrypt the amount, and return the `batchId` they joined. The React hooks are `useDeposit` and `useRedeem`.
 
 `VaultBatcher` (`createVaultBatcher` / `useVaultBatcher`) mirrors one batcher contract directly for the rest of the lifecycle: `batchState`, `timeUntilDispatchable`, `dispatchBatch`, `claim`, `quit` and `recover`, with matching `useBatchState`, `useTimeUntilDispatchable`, `useCurrentBatchId`, `useDispatchBatch`, `useClaim`, `useQuit` and `useRecover` hooks. `Vault` exposes its two batchers as `depositBatcher` and `redeemBatcher`, and resolves the underlying vault, asset and share tokens from them on first use.
 
@@ -7209,7 +7209,7 @@ The snippets below reuse `sdk`, `addresses` and `vault` from this step, and `add
 
 ### 2. Deposit
 
-Depositing encrypts the amount, grants the deposit batcher an operator approval on the underlying token if one isn't already active, and joins the currently open batch:
+Depositing grants the deposit batcher an operator approval on the underlying token if one isn't already active, checks the caller's confidential balance, encrypts the amount, and joins the currently open batch:
 
 
 ### Tab: Core SDK
@@ -8788,7 +8788,7 @@ console.log(sepolia.registryAddress); // "0x2f0750Bb..."
 
 `Vault` is the high-level interface for a confidential ERC-4626 vault. It pairs the vault's two on-chain batcher contracts — one for deposits, one for redemptions — behind ERC-4626-style `deposit` and `redeem` methods, the way [`WrappedToken`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/WrappedToken.md) builds on [`Token`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Token.md).
 
-Both methods encrypt the amount, check the caller's confidential balance, grant the batcher an ERC-7984 operator approval if one isn't already active, and join the currently open batch. Everything after the join — tracking the batch, dispatching it, claiming, quitting — lives on the two [`VaultBatcher`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md) instances the vault exposes as `depositBatcher` and `redeemBatcher`.
+Both methods grant the batcher an ERC-7984 operator approval if one isn't already active, check the caller's confidential balance, encrypt the amount, and join the currently open batch. Everything after the join — tracking the batch, dispatching it, claiming, quitting — lives on the two [`VaultBatcher`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md) instances the vault exposes as `depositBatcher` and `redeemBatcher`.
 
 ## Import
 
@@ -20057,7 +20057,7 @@ function DepositedAmount({ batchId, account }: { batchId: bigint; account: `0x${
 
 # useDeposit
 
-Mutation hook that deposits a plaintext amount into a confidential vault. It encrypts the amount, grants the deposit batcher an ERC-7984 operator approval if one isn't already active, checks the caller's confidential balance, and joins the currently open deposit batch — the same flow as [`Vault.deposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md#deposit).
+Mutation hook that deposits a plaintext amount into a confidential vault. It grants the deposit batcher an ERC-7984 operator approval if one isn't already active, checks the caller's confidential balance, encrypts the amount, and joins the currently open deposit batch — the same flow as [`Vault.deposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md#deposit).
 
 The deposit is not settled when the mutation resolves: it has joined a batch. Keep the returned `batchId` and follow the batch with [`useBatchState`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md), then [`useClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md) once it is `Finalized`.
 
@@ -20262,7 +20262,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useRedeem
 
-Mutation hook that redeems a plaintext amount of shares from a confidential vault. It encrypts the amount, grants the redeem batcher an ERC-7984 operator approval on the share token if one isn't already active, checks the caller's share balance, and joins the currently open redeem batch — the same flow as [`Vault.redeem`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md#redeem).
+Mutation hook that redeems a plaintext amount of shares from a confidential vault. It grants the redeem batcher an ERC-7984 operator approval on the share token if one isn't already active, checks the caller's share balance, encrypts the amount, and joins the currently open redeem batch — the same flow as [`Vault.redeem`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md#redeem).
 
 The amount is denominated in **shares**, never in assets — ERC-4626 `redeem`, not `withdraw`. The vault settles the batch into the underlying asset at the batch's exchange rate; claim the proceeds with [`useClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md) on the redeem batcher once the batch is `Finalized`.
 
@@ -20449,7 +20449,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useJoin
 
-Mutation hook that joins the currently open batch on one batcher contract — the same call as [`VaultBatcher.join`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#join). It encrypts the amount, checks the caller's balance on the batcher's input token, and submits the join.
+Mutation hook that joins the currently open batch on one batcher contract — the same call as [`VaultBatcher.join`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#join). It checks the caller's balance on the batcher's input token, encrypts the amount, and submits the join.
 
 This is the low-level escape hatch. It does **not** grant the batcher an operator approval, so the caller must already have set one on the input token (see [`useConfidentialSetOperator`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useConfidentialSetOperator.md)) or the batcher cannot pull the amount. Most apps should use [`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md) / [`useRedeem`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRedeem.md), which handle the grant.
 

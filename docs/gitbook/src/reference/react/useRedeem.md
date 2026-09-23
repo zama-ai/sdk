@@ -5,7 +5,7 @@ description: Mutation hook that redeems confidential vault shares by joining the
 
 # useRedeem
 
-Mutation hook that redeems a plaintext amount of shares from a confidential vault. It encrypts the amount, grants the redeem batcher an ERC-7984 operator approval on the share token if one isn't already active, checks the caller's share balance, and joins the currently open redeem batch — the same flow as [`Vault.redeem`](../sdk/Vault.md#redeem).
+Mutation hook that redeems a plaintext amount of shares from a confidential vault. It grants the redeem batcher an ERC-7984 operator approval on the share token if one isn't already active, checks the caller's share balance, encrypts the amount, and joins the currently open redeem batch — the same flow as [`Vault.redeem`](../sdk/Vault.md#redeem).
 
 The amount is denominated in **shares**, never in assets — ERC-4626 `redeem`, not `withdraw`. The vault settles the batch into the underlying asset at the batch's exchange rate; claim the proceeds with [`useClaim`](./useClaim.md) on the redeem batcher once the batch is `Finalized`.
 

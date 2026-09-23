@@ -61,7 +61,7 @@ The snippets below reuse `sdk`, `addresses` and `vault` from this step, and `add
 
 ### 2. Deposit
 
-Depositing encrypts the amount, grants the deposit batcher an operator approval on the underlying token if one isn't already active, and joins the currently open batch:
+Depositing grants the deposit batcher an operator approval on the underlying token if one isn't already active, checks the caller's confidential balance, encrypts the amount, and joins the currently open batch:
 
 {% tabs %}
 {% tab title="Core SDK" %}

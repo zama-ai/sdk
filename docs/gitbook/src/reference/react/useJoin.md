@@ -5,7 +5,7 @@ description: Low-level mutation hook that joins a single vault batcher's open ba
 
 # useJoin
 
-Mutation hook that joins the currently open batch on one batcher contract — the same call as [`VaultBatcher.join`](../sdk/VaultBatcher.md#join). It encrypts the amount, checks the caller's balance on the batcher's input token, and submits the join.
+Mutation hook that joins the currently open batch on one batcher contract — the same call as [`VaultBatcher.join`](../sdk/VaultBatcher.md#join). It checks the caller's balance on the batcher's input token, encrypts the amount, and submits the join.
 
 This is the low-level escape hatch. It does **not** grant the batcher an operator approval, so the caller must already have set one on the input token (see [`useConfidentialSetOperator`](./useConfidentialSetOperator.md)) or the batcher cannot pull the amount. Most apps should use [`useDeposit`](./useDeposit.md) / [`useRedeem`](./useRedeem.md), which handle the grant.
 
