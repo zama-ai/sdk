@@ -1,6 +1,7 @@
 use crate::{
-    Client, ClientError, Result, Sdk, SdkConfig, Signer, SignerConfig, Storage, WalletAccount,
+    Client, ClientError, Result, Sdk, SdkConfig, Signer, Storage, WalletAccount,
     operations::Operations, signer::attach_signer, storage_channel::attach_storage,
+    types::SignerConfig,
 };
 use std::{collections::HashMap, sync::Arc};
 

@@ -1,44 +1,10 @@
-use crate::{Address, ClientError, ErrorKind, Result, Sdk, generated};
+use crate::{Address, Result, Sdk, generated};
 
 pub struct Permits(pub(crate) Sdk);
-pub struct Offline(pub(crate) Sdk);
-pub struct PreparePermit<'a> {
-    pub signer: Address,
-    pub contracts: &'a [Address],
-    pub delegator: Option<Address>,
-    pub duration_days: Option<u32>,
-}
-fn addresses(values: &[Address]) -> Vec<Vec<u8>> {
+pub(crate) fn addresses(values: &[Address]) -> Vec<Vec<u8>> {
     values.iter().map(|a| a.to_vec()).collect()
 }
 
-#[derive(Clone, Debug)]
-pub struct PreparedPermit {
-    pub envelope: Vec<u8>,
-    pub typed_data: serde_json::Value,
-}
-
-impl Offline {
-    pub async fn prepare_permit(&self, request: PreparePermit<'_>) -> Result<PreparedPermit> {
-        let response = rpc!(
-            &self.0,
-            prepare_permit,
-            PreparePermitRequest {
-                signer_address: request.signer.to_vec(),
-                contract_addresses: addresses(request.contracts),
-                delegator_address: request.delegator.map(|a| a.to_vec()),
-                duration_days: request.duration_days,
-            }
-        )
-        .await?;
-        Ok(PreparedPermit {
-            envelope: response.prepared_permit,
-            typed_data: serde_json::from_str(&response.typed_data_json).map_err(|error| {
-                ClientError::with_source(ErrorKind::Protocol, "invalid permit typed data", error)
-            })?,
-        })
-    }
-}
 impl Permits {
     pub async fn register_permit(&self, prepared_permit: &[u8], signature: &[u8]) -> Result<()> {
         rpc!(

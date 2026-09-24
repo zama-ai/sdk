@@ -21,7 +21,7 @@ impl Drop for NotificationWorker {
 }
 
 pub(crate) async fn attach_events(
-    mut client: crate::Service,
+    mut client: crate::client::Service,
     context_id: &str,
     handler: Arc<dyn EventHandler>,
 ) -> Result<crate::channel::Connection> {

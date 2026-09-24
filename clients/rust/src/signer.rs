@@ -1,5 +1,3 @@
-#[cfg(test)]
-use crate::Sdk;
 use crate::{
     B256, ClientError, ContractWriteRequest, ErrorKind, SdkError, WalletAccount, generated,
 };
@@ -61,7 +59,7 @@ impl<S: Signer + ?Sized> Signer for Arc<S> {
 }
 
 pub(crate) async fn attach_signer(
-    mut client: crate::Service,
+    mut client: crate::client::Service,
     context_id: &str,
     operations: Arc<crate::operations::Operations>,
     sign: Arc<dyn Signer>,
@@ -311,25 +309,4 @@ impl Callbacks {
 }
 
 #[cfg(test)]
-impl Sdk {
-    pub(crate) async fn attach_signer<F, Fut>(
-        &self,
-        sign: F,
-    ) -> crate::Result<crate::channel::Connection>
-    where
-        F: Fn(SigningRequest) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<Vec<u8>, SdkError>> + Send + 'static,
-    {
-        attach_signer(
-            self.client.service(),
-            &self.context_id,
-            self.operations.clone(),
-            Arc::new(sign),
-        )
-        .await
-    }
-}
-
-#[cfg(test)]
-#[path = "transaction_tests.rs"]
-mod transaction_tests;
+mod tests;

@@ -4,7 +4,7 @@ use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{sync::mpsc, task::JoinSet};
 
 pub(crate) async fn attach_storage(
-    mut client: crate::Service,
+    mut client: crate::client::Service,
     context_id: &str,
     backends: HashMap<String, Arc<dyn NativeStorage>>,
 ) -> Result<crate::channel::Connection> {

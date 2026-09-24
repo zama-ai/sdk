@@ -1,8 +1,11 @@
 use crate::{
-    Address, BigInt, ClientError, Offline,
+    Address, BigInt, ClientError, ErrorKind, Result, Sdk,
     delegations::{delegate_decryption_wire, revoke_delegation_wire},
     generated,
+    permits::addresses,
 };
+
+pub struct Offline(pub(crate) Sdk);
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PrepareTransaction {
@@ -133,6 +136,19 @@ pub struct PreparedTransaction {
     pub unsigned_tx: Vec<u8>,
 }
 
+pub struct PreparePermit<'a> {
+    pub signer: Address,
+    pub contracts: &'a [Address],
+    pub delegator: Option<Address>,
+    pub duration_days: Option<u32>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PreparedPermit {
+    pub envelope: Vec<u8>,
+    pub typed_data: serde_json::Value,
+}
+
 impl Offline {
     /// Prepares through the SDK; the caller owns signing and broadcasting the returned bytes.
     pub async fn prepare(
@@ -154,6 +170,25 @@ impl Offline {
             kind: TransactionKind::try_from(result.kind)?,
             from: crate::types::address(&result.from, "invalid prepared sender address")?,
             unsigned_tx: result.unsigned_tx,
+        })
+    }
+    pub async fn prepare_permit(&self, request: PreparePermit<'_>) -> Result<PreparedPermit> {
+        let response = rpc!(
+            &self.0,
+            prepare_permit,
+            PreparePermitRequest {
+                signer_address: request.signer.to_vec(),
+                contract_addresses: addresses(request.contracts),
+                delegator_address: request.delegator.map(|a| a.to_vec()),
+                duration_days: request.duration_days,
+            }
+        )
+        .await?;
+        Ok(PreparedPermit {
+            envelope: response.prepared_permit,
+            typed_data: serde_json::from_str(&response.typed_data_json).map_err(|error| {
+                ClientError::with_source(ErrorKind::Protocol, "invalid permit typed data", error)
+            })?,
         })
     }
 }
