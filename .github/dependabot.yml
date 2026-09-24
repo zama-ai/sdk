@@ -14,7 +14,6 @@ updates:
     cooldown:
       default-days: 3
       exclude:
-        - "@zama-fhe/relayer-sdk"
         - "@zama-fhe/sdk"
         - "@zama-fhe/react-sdk"
         - "@zama-fhe/test-components"
