@@ -8746,7 +8746,7 @@ const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
 	"\x10RevokeDelegation\x12*.zama.sdk.v1alpha1.RevokeDelegationRequest\x1a+.zama.sdk.v1alpha1.RevokeDelegationResponse\x12n\n" +
 	"\x12IsDelegationActive\x12).zama.sdk.v1alpha1.DelegationQueryRequest\x1a-.zama.sdk.v1alpha1.IsDelegationActiveResponse\x12p\n" +
 	"\x13GetDelegationExpiry\x12).zama.sdk.v1alpha1.DelegationQueryRequest\x1a..zama.sdk.v1alpha1.GetDelegationExpiryResponse\x12p\n" +
-	"\x13GetDelegationStatus\x12).zama.sdk.v1alpha1.DelegationQueryRequest\x1a..zama.sdk.v1alpha1.GetDelegationStatusResponseBEZCgithub.com/zama-ai/sdk/clients/go/gen/zama/sdk/v1alpha1;sdkv1alpha1b\x06proto3"
+	"\x13GetDelegationStatus\x12).zama.sdk.v1alpha1.DelegationQueryRequest\x1a..zama.sdk.v1alpha1.GetDelegationStatusResponseBNZLgithub.com/zama-ai/sdk/clients/go/internal/gen/zama/sdk/v1alpha1;sdkv1alpha1b\x06proto3"
 
 var (
 	file_zama_sdk_v1alpha1_sidecar_proto_rawDescOnce sync.Once

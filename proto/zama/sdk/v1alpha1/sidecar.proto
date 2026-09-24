@@ -1,7 +1,7 @@
 syntax = "proto3";
 package zama.sdk.v1alpha1;
 
-option go_package = "github.com/zama-ai/sdk/clients/go/gen/zama/sdk/v1alpha1;sdkv1alpha1";
+option go_package = "github.com/zama-ai/sdk/clients/go/internal/gen/zama/sdk/v1alpha1;sdkv1alpha1";
 // SDK failures retain their code and retry information in gRPC trailers.
 // Integer durations and counts are exact; omitted optional values use SDK defaults.
 service SidecarService {
