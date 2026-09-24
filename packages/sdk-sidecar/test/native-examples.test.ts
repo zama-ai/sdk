@@ -173,6 +173,7 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
     const rpc = chain.server;
     const manager = new StorageManager();
     const runtime = new SidecarRuntime(createContextFactory(manager), createCoordinator());
+    const attached = vi.spyOn(runtime, "attachEvents");
     let stop: (() => Promise<void>) | undefined;
     try {
       await new Promise<void>((resolve, reject) => {
@@ -287,12 +288,14 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
           `Delegation revoked: ${revoke.hash}`,
           "Delegation after revoke: inactive (expiry 0)",
         ]);
+        expect(stdout + stderr).toContain("SDK event");
         expect(stdout + stderr).not.toContain(secret);
         expect(stdout + stderr).not.toContain(privateKey);
       }
       // Asserted here: the revert runs below reuse the same provider/relayer wiring.
       expect(forwarded.timeouts).toEqual([5000, 5000]);
       expect(forwarded.relayers).toEqual([{ batchRpcCalls: false }, { batchRpcCalls: false }]);
+      expect(attached).toHaveBeenCalledTimes(2);
 
       // Round 2: a pre-broadcast revert on the grant must surface, not silently retry or hide.
       for (const [executable, args] of [

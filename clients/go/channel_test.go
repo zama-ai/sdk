@@ -33,6 +33,8 @@ func serveCallback[C, S any](stream grpc.BidiStreamingServer[C, S], outgoing <-c
 	}()
 	for {
 		select {
+		case <-stream.Context().Done():
+			return stream.Context().Err()
 		case <-done:
 			return status.Error(codes.Unavailable, "callback disconnected")
 		case err := <-receiveError:
@@ -108,13 +110,14 @@ func TestAttachCancellationIncludesStreamOpening(t *testing.T) {
 	cancelled := make(chan struct{})
 	result := make(chan error, 1)
 	go func() {
-		result <- attachChannel(ctx, sdk, StorageChannel, &sdk.storage,
+		_, err := attachChannel(ctx, sdk, StorageChannel, &sdk.storage,
 			func(ctx context.Context) (grpc.BidiStreamingClient[int, int], error) {
 				close(opening)
 				<-ctx.Done()
 				close(cancelled)
 				return nil, ctx.Err()
 			}, new(int), func(*int) bool { return true }, func(context.Context, *int, func(*int)) error { return nil })
+		result <- err
 	}()
 	<-opening
 	cancel()

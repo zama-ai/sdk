@@ -12,6 +12,7 @@ pub struct SdkBuilder {
     storage: Storage,
     permit_storage: Option<Storage>,
     derivation_secret: Option<crate::DerivationSecret>,
+    events: Option<Arc<dyn crate::EventHandler>>,
 }
 impl SdkBuilder {
     pub(crate) fn new(client: Client, config: SdkConfig) -> Self {
@@ -22,6 +23,7 @@ impl SdkBuilder {
             storage: Storage::Memory,
             permit_storage: None,
             derivation_secret: None,
+            events: None,
         }
     }
     pub fn signer(mut self, account: Option<WalletAccount>, signer: impl Signer + 'static) -> Self {
@@ -38,6 +40,11 @@ impl SdkBuilder {
     }
     pub fn transport_key_pair_derivation_secret(mut self, secret: crate::DerivationSecret) -> Self {
         self.derivation_secret = Some(secret);
+        self
+    }
+    /// Subscribes to lifecycle, wallet, and progress notifications before build returns.
+    pub fn events(mut self, handler: impl crate::EventHandler + 'static) -> Self {
+        self.events = Some(Arc::new(handler));
         self
     }
     pub async fn build(self) -> Result<Sdk> {
@@ -77,6 +84,16 @@ impl SdkBuilder {
             None,
         );
         let result = async {
+            if let Some(handler) = self.events {
+                resources.events = Some(
+                    crate::event_channel::attach_events(
+                        self.client.inner.clone(),
+                        &context_id,
+                        handler,
+                    )
+                    .await?,
+                );
+            }
             if !backends.is_empty() {
                 resources.storage =
                     Some(attach_storage(self.client.inner.clone(), &context_id, backends).await?);

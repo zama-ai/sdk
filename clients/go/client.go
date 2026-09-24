@@ -96,6 +96,11 @@ func (c *Client) CreateContext(ctx context.Context, config SDKConfig, signer Sig
 			return nil, err
 		}
 	}
+	if config.Events != nil {
+		if _, err := sdk.SubscribeEvents(ctx, *config.Events); err != nil {
+			return nil, err
+		}
+	}
 	initialized = true
 	return sdk, nil
 }

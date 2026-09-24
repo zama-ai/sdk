@@ -13,6 +13,7 @@ pub(crate) struct Resources {
     closing: Mutex<()>,
     pub signer: Option<Connection>,
     pub storage: Option<Connection>,
+    pub events: Option<Connection>,
 }
 impl Resources {
     pub fn new(
@@ -28,6 +29,7 @@ impl Resources {
             closing: Mutex::new(()),
             signer,
             storage,
+            events: None,
         }
     }
     pub async fn close(&self, timeout: Option<Duration>) -> Result<()> {
@@ -47,7 +49,12 @@ impl Resources {
         if result.is_ok() {
             self.closed.store(true, Ordering::Release);
         }
-        for connection in self.signer.iter().chain(self.storage.iter()) {
+        for connection in self
+            .signer
+            .iter()
+            .chain(self.storage.iter())
+            .chain(self.events.iter())
+        {
             connection.abort();
         }
         result?;
@@ -64,6 +71,7 @@ impl Drop for Resources {
             let context_id = self.context_id.clone();
             let signer = self.signer.take();
             let storage = self.storage.take();
+            let events = self.events.take();
             runtime.spawn(async move {
                 let _ = tokio::time::timeout(
                     Duration::from_secs(5),
@@ -72,6 +80,7 @@ impl Drop for Resources {
                 .await;
                 drop(signer);
                 drop(storage);
+                drop(events);
             });
         }
     }
