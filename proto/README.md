@@ -157,7 +157,7 @@ Event transport errors include `EVENT_ATTACHED` for a duplicate attachment, `EVE
 
 Subscriptions are opt-in and do not enable a logger. The native examples select event kinds and progress stages for diagnostics; they never log complete event objects. Decryption events contain plaintext results. Raw error messages, token/account addresses and arbitrary SDK logger metadata can also reveal application data.
 
-Use the typed notification handler as your SDK diagnostics sink and select only the metadata your application needs. The default sidecar writes generic warning/error severity to stderr, plus the fixed SDK runtime-configuration warning. It omits arbitrary `GenericLogger` messages and metadata. This keeps arbitrary SDK diagnostics from becoming sensitive-data logs by default. See the [event integration guide](../packages/sdk-sidecar/EVENTS.md).
+Use the typed notification handler as your SDK diagnostics sink and select only the metadata your application needs. The default sidecar writes SDK warn and error messages to stderr verbatim and never writes their structured data; info and debug messages are dropped. See the [event integration guide](../packages/sdk-sidecar/EVENTS.md).
 
 ## Signing and operation lifecycle
 

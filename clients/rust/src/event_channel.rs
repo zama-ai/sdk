@@ -1,3 +1,4 @@
+use crate::error::sdk_error_in_chain;
 use crate::{EventContext, EventHandler, Notification, RpcError, SdkError, generated};
 use anyhow::{Context, Result, ensure};
 use generated::{
@@ -144,19 +145,54 @@ async fn reply(sender: &Sender, sequence: u64, outcome: Outcome) -> Result<()> {
     Ok(())
 }
 fn callback_error(error: anyhow::Error) -> SdkError {
-    error
-        .downcast_ref::<SdkError>()
-        .cloned()
-        .or_else(|| {
-            error
-                .downcast_ref::<RpcError>()
-                .and_then(|rpc| rpc.sdk.clone())
-        })
-        .unwrap_or_else(|| SdkError {
-            code: "CALLBACK_FAILED".into(),
-            message: error.to_string(),
-            retryable: false,
-            retry_after_seconds: None,
+    sdk_error_in_chain(&error).unwrap_or_else(|| SdkError {
+        code: "CALLBACK_FAILED".into(),
+        message: error.to_string(),
+        retryable: false,
+        retry_after_seconds: None,
+        revert_data: None,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::error::test_support::AppError;
+
+    fn sdk(code: &str) -> SdkError {
+        SdkError {
+            code: code.into(),
+            message: "boom".into(),
+            retryable: true,
+            retry_after_seconds: Some(3),
             revert_data: None,
-        })
+        }
+    }
+
+    #[test]
+    fn callback_error_preserves_sdk_error_behind_application_source() {
+        let expected = sdk("SIGNING_REJECTED");
+        let error = AppError(Box::new(expected.clone()));
+        assert_eq!(callback_error(anyhow::Error::new(error)), expected);
+    }
+
+    #[test]
+    fn callback_error_preserves_rpc_sdk_error_behind_application_source() {
+        let expected = sdk("RELAYER_UNAVAILABLE");
+        let error = AppError(Box::new(RpcError {
+            status: tonic::Status::unavailable("boom"),
+            sdk: Some(expected.clone()),
+        }));
+        assert_eq!(
+            callback_error(anyhow::Error::new(error).context("handler")),
+            expected
+        );
+    }
+
+    #[test]
+    fn callback_error_falls_back_without_typed_cause() {
+        let error = callback_error(anyhow::anyhow!("plain"));
+        assert_eq!(error.code, "CALLBACK_FAILED");
+        assert_eq!(error.message, "plain");
+    }
 }

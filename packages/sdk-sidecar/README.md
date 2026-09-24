@@ -105,7 +105,7 @@ Create one SDK context for each configuration and signer lifecycle your applicat
 
 Supply a signer for private decryption. The Go Ethereum adapter and the optional Rust Alloy adapter sign EIP-712 typed data and broadcast contract writes; custom wallet callbacks remain supported. A context without a signer supports encryption, public decryption and the SDK's signer-independent offline and permit operations. Close contexts when finished.
 
-Observe callback-channel termination with Go `WaitChannelFailure(ctx, SignerChannel)` / `StorageChannel`, or Rust `wait_channel_closed(CallbackChannel::Signer)` / `CallbackChannel::Storage`. Go supports explicit reattachment. In Rust, close the failed SDK and build another with the same storage binding. Interrupted operations are not retried automatically.
+Observe callback-channel termination with Go `WaitChannelFailure(ctx, SignerChannel)` / `StorageChannel` / `EventChannel`, or Rust `wait_channel_closed(CallbackChannel::Signer)` / `CallbackChannel::Storage` / `CallbackChannel::Events`. Go supports explicit reattachment. In Rust, close the failed SDK and build another with the same storage binding. Interrupted operations are not retried automatically.
 
 For a local deployment, place the native application and sidecar in the same Linux environment with matching UID and a private shared socket directory. Docker Desktop uses a named volume between containers; a macOS host cannot access the Linux VM's socket through a normal bind mount.
 

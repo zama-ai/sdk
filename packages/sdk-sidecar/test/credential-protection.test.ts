@@ -185,7 +185,13 @@ test.each([undefined, "partner"])(
           ([chunk]) => typeof chunk === "string" && chunk.includes(`{ key: '${keyLabel}' }`),
         ),
       ).toBe(false);
-      expect(inspect(stderr.mock.calls)).toContain("[zama-sdk] error (details omitted)");
+      const stderrText = stderr.mock.calls.map(([chunk]) => String(chunk)).join("");
+      expect(stderrText).toContain(
+        "is wrapped, but this instance has no transportKeyPairDerivationSecret configured.",
+      );
+      expect(stderrText).toMatch(/\[zama-sdk\] Transport key pair for /);
+      expect(stderrText).not.toContain(secretText);
+      expect(stderrText).not.toContain(TEST_PRIVATE_KEY);
       expect(await phase(protectedOption, wireSecret)).toEqual({ value: undefined });
       expect(sidecarSigner.signTypedData).toHaveBeenCalledTimes(1);
       const wrong = "other-synthetic-secret-".repeat(4);

@@ -530,7 +530,7 @@ func TestUnknownEventEnumsReachHandlerWithoutClosingChannel(t *testing.T) {
 	server.outgoing <- deliverEvent(2)
 	select {
 	case event := <-received:
-		if event.Kind != DecryptStart {
+		if event.Kind != SDKEventDecryptStart {
 			t.Fatalf("subsequent event was lost: %+v", event)
 		}
 	case <-testContext(t).Done():

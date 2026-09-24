@@ -1,17 +1,14 @@
 import type { GenericLogger } from "@zama-fhe/sdk";
-import { runtimeConfigLockedMessage } from "@zama-fhe/sdk/internal";
 
-const runtimeWarning = `[zama-sdk] ${runtimeConfigLockedMessage}`;
 const noop = () => {};
 
+// SDK log messages carry no secrets; the data argument may, so it is never written.
 export const diagnosticsLogger: GenericLogger = {
   warn: (message) => {
-    process.stderr.write(
-      `${message === runtimeWarning ? runtimeWarning : "[zama-sdk] warning (details omitted)"}\n`,
-    );
+    process.stderr.write(`${message}\n`);
   },
-  error: () => {
-    process.stderr.write("[zama-sdk] error (details omitted)\n");
+  error: (message) => {
+    process.stderr.write(`${message}\n`);
   },
   info: noop,
   debug: noop,

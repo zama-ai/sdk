@@ -1,22 +1,19 @@
 import { expect, test, vi } from "vitest";
 import { diagnosticsLogger } from "../src/diagnostics.js";
 
-test("default diagnostics preserve the fixed runtime warning and omit arbitrary messages/data", () => {
+test("diagnostics write warn and error messages verbatim and never write data", () => {
   const write = vi.spyOn(process.stderr, "write").mockReturnValue(true);
   try {
-    const secret = "private-wallet-or-plaintext";
-    diagnosticsLogger.warn(secret, { error: new Error(secret) });
-    diagnosticsLogger.error(secret, { result: secret });
-    diagnosticsLogger.debug(secret);
-    diagnosticsLogger.info(secret);
-    diagnosticsLogger.warn(
-      "[zama-sdk] runtime configuration is already set and cannot be changed.",
-    );
+    const marker = "private-wallet-or-plaintext";
+    diagnosticsLogger.warn("[zama-sdk] warning message", { error: new Error(marker) });
+    diagnosticsLogger.error("[zama-sdk] error message", { result: marker });
+    diagnosticsLogger.debug("[zama-sdk] debug message", { result: marker });
+    diagnosticsLogger.info("[zama-sdk] info message", { result: marker });
     expect(write.mock.calls).toEqual([
-      ["[zama-sdk] warning (details omitted)\n"],
-      ["[zama-sdk] error (details omitted)\n"],
-      ["[zama-sdk] runtime configuration is already set and cannot be changed.\n"],
+      ["[zama-sdk] warning message\n"],
+      ["[zama-sdk] error message\n"],
     ]);
+    expect(JSON.stringify(write.mock.calls)).not.toContain(marker);
   } finally {
     write.mockRestore();
   }
