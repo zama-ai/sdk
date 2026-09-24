@@ -182,13 +182,13 @@ importers:
     dependencies:
       '@tanstack/react-query':
         specifier: '>=5'
-        version: 5.102.8(react@19.3.0)
+        version: 5.103.1(react@19.3.0)
       react:
         specifier: '>=18'
         version: 19.3.0
       wagmi:
         specifier: '>=2'
-        version: 3.7.7(@tanstack/query-core@5.103.1)(@tanstack/react-query@5.102.8(react@19.3.0))(@types/react@19.3.0)(react@19.3.0)(typescript@7.0.2)(viem@2.56.0(typescript@7.0.2)(zod@4.6.2))
+        version: 3.7.7(@tanstack/query-core@5.103.1)(@tanstack/react-query@5.103.1(react@19.3.0))(@types/react@19.3.0)(react@19.3.0)(typescript@7.0.2)(viem@2.56.0(typescript@7.0.2)(zod@4.6.2))
     devDependencies:
       '@zama-fhe/sdk':
         specifier: workspace:*
@@ -1664,16 +1664,8 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
 
-  '@tanstack/query-core@5.102.8':
-    resolution: {integrity: sha512-ZNjkJ33CqvPNec/6lZBnHqLc3EVGPZ9ySLhYahU9TcuRFdmwXewuj0c4hwSWcGHqEUwcSrKeZ+oGcvPBqXcQcg==}
-
   '@tanstack/query-core@5.103.1':
     resolution: {integrity: sha512-rms8HqTGp6zA00dM+cUQ2eBcgzNJefuu5CAMB37i/6MiGT1zulPOytCFu2a0qjLqVR2n1jENPj9woqFQNuCzWA==}
-
-  '@tanstack/react-query@5.102.8':
-    resolution: {integrity: sha512-TYBea4OuXWD7MhaSHq069TWbFe7rcwWN6kzT7JF0OKi1K6c1gTv2IzD6A6ExJsCMozdkqBWeuIUZmu4KQg0O5A==}
-    peerDependencies:
-      react: ^18 || ^19
 
   '@tanstack/react-query@5.103.1':
     resolution: {integrity: sha512-rmAPPApNEK17VXRJhtE1rja53n23VV5w30C0saCgJhhX+EpdUnVqMGV/s5nnzV43X75KTHKzuoiuxSzGTBIkag==}
@@ -5456,14 +5448,7 @@ snapshots:
       tailwindcss: 4.3.1
       vite: 8.3.0(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.0)
 
-  '@tanstack/query-core@5.102.8': {}
-
   '@tanstack/query-core@5.103.1': {}
-
-  '@tanstack/react-query@5.102.8(react@19.3.0)':
-    dependencies:
-      '@tanstack/query-core': 5.102.8
-      react: 19.3.0
 
   '@tanstack/react-query@5.103.1(react@19.3.0)':
     dependencies:
@@ -7799,28 +7784,6 @@ snapshots:
       vscode-languageserver-types: 3.18.0
 
   vscode-languageserver-types@3.18.0: {}
-
-  wagmi@3.7.7(@tanstack/query-core@5.103.1)(@tanstack/react-query@5.102.8(react@19.3.0))(@types/react@19.3.0)(react@19.3.0)(typescript@7.0.2)(viem@2.56.0(typescript@7.0.2)(zod@4.6.2)):
-    dependencies:
-      '@tanstack/react-query': 5.102.8(react@19.3.0)
-      '@wagmi/connectors': 8.2.0(@wagmi/core@3.6.5(@tanstack/query-core@5.103.1)(@types/react@19.3.0)(react@19.3.0)(typescript@7.0.2)(use-sync-external-store@1.4.0(react@19.3.0))(viem@2.56.0(typescript@7.0.2)(zod@4.6.2)))(typescript@7.0.2)(viem@2.56.0(typescript@7.0.2)(zod@4.6.2))
-      '@wagmi/core': 3.6.5(@tanstack/query-core@5.103.1)(@types/react@19.3.0)(react@19.3.0)(typescript@7.0.2)(use-sync-external-store@1.4.0(react@19.3.0))(viem@2.56.0(typescript@7.0.2)(zod@4.6.2))
-      react: 19.3.0
-      use-sync-external-store: 1.4.0(react@19.3.0)
-      viem: 2.56.0(typescript@7.0.2)(zod@4.6.2)
-    optionalDependencies:
-      typescript: 7.0.2
-    transitivePeerDependencies:
-      - '@base-org/account'
-      - '@coinbase/wallet-sdk'
-      - '@metamask/connect-evm'
-      - '@safe-global/safe-apps-provider'
-      - '@safe-global/safe-apps-sdk'
-      - '@tanstack/query-core'
-      - '@types/react'
-      - '@walletconnect/ethereum-provider'
-      - accounts
-      - immer
 
   wagmi@3.7.7(@tanstack/query-core@5.103.1)(@tanstack/react-query@5.103.1(react@19.3.0))(@types/react@19.3.0)(react@19.3.0)(typescript@7.0.2)(viem@2.56.0(typescript@7.0.2)(zod@4.6.2)):
     dependencies:
