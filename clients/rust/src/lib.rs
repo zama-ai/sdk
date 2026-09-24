@@ -7,8 +7,10 @@ macro_rules! rpc {
                 operation: Some(operation.message.clone()),
                 $($fields)*
             };
-            let mut client = sdk.client.inner.clone();
-            let result = crate::unary(request, sdk.client.timeout, |request| client.$method(request)).await;
+            let result = sdk
+                .client
+                .unary(request, |mut client, request| async move { client.$method(request).await })
+                .await;
             drop(operation);
             result
         }
@@ -55,7 +57,7 @@ pub use delegations::{
     PERMANENT_DELEGATION_EXPIRY, RevokeDelegationParams,
 };
 pub use encryption::{EncryptInput, EncryptOptions, EncryptParams, EncryptResult};
-pub use error::{RpcError, SdkError};
+pub use error::{ClientError, ErrorKind, Result, SdkError};
 pub use events::{
     ApprovalStep, EventContext, EventEnum, EventHandler, EventKind, EventOperation, Notification,
     OperationProgress, ProgressKind, SdkEvent, SdkEventKind, ShieldPath,
@@ -76,7 +78,6 @@ mod generated {
     include!("zama.sdk.v1alpha1.rs");
 }
 
-use anyhow::{Context, Result};
 use generated::sidecar_service_client::SidecarServiceClient;
 use hyper_util::rt::TokioIo;
 use std::{future::Future, path::Path, sync::Arc, time::Duration};
@@ -119,7 +120,8 @@ impl Client {
                         .map(TokioIo::new)
                 }
             }))
-            .await?;
+            .await
+            .map_err(|error| ClientError::transport("failed to connect to sidecar", error))?;
         Ok(Self {
             inner: SidecarServiceClient::new(channel)
                 .max_decoding_message_size(4 * 1024 * 1024)
@@ -141,13 +143,35 @@ impl Client {
         self.timeout = Some(timeout);
         self
     }
+    fn service(&self) -> Service {
+        self.inner.clone()
+    }
+    async fn unary<T, R, F>(
+        &self,
+        message: T,
+        operation: impl FnOnce(Service, tonic::Request<T>) -> F,
+    ) -> Result<R>
+    where
+        F: Future<Output = std::result::Result<tonic::Response<R>, tonic::Status>>,
+    {
+        let mut request = tonic::Request::new(message);
+        let response = if let Some(timeout) = self.timeout {
+            request.set_timeout(timeout);
+            tokio::time::timeout(timeout, operation(self.service(), request))
+                .await
+                .map_err(|_| ClientError::timeout("sidecar request timed out"))?
+        } else {
+            operation(self.service(), request).await
+        };
+        Ok(response?.into_inner())
+    }
     pub async fn sdk_version(&self) -> Result<String> {
-        let mut inner = self.inner.clone();
-        Ok(unary(generated::GetInfoRequest {}, self.timeout, |r| {
-            inner.get_info(r)
-        })
-        .await?
-        .sdk_version)
+        Ok(self
+            .unary(generated::GetInfoRequest {}, |mut inner, r| async move {
+                inner.get_info(r).await
+            })
+            .await?
+            .sdk_version)
     }
     #[cfg(test)]
     async fn create_context(&self, config: SdkConfig, signer: SignerConfig) -> Result<Sdk> {
@@ -158,7 +182,7 @@ impl Client {
             self.clone(),
             context_id.clone(),
             Arc::new(operations::Operations::new()),
-            lifetime::Resources::new(self.inner.clone(), context_id.clone(), None, None),
+            lifetime::Resources::new(self.clone(), context_id.clone(), None, None),
         ))
     }
     async fn create_context_with_storage(
@@ -173,21 +197,22 @@ impl Client {
             SignerConfig::Disabled => (false, None),
             SignerConfig::Enabled(account) => (true, account.map(Into::into)),
         };
-        let mut inner = self.inner.clone();
-        let response = unary(
-            generated::CreateContextRequest {
-                config: Some(config),
-                signer_enabled,
-                account,
-                storage,
-                permit_storage,
-                transport_key_pair_derivation_secret,
-            },
-            self.timeout,
-            |r| inner.create_context(r),
-        )
-        .await?;
-        anyhow::ensure!(!response.context_id.is_empty(), "missing SDK context ID");
+        let response = self
+            .unary(
+                generated::CreateContextRequest {
+                    config: Some(config),
+                    signer_enabled,
+                    account,
+                    storage,
+                    permit_storage,
+                    transport_key_pair_derivation_secret,
+                },
+                |mut inner, r| async move { inner.create_context(r).await },
+            )
+            .await?;
+        if response.context_id.is_empty() {
+            return Err(ClientError::protocol("missing SDK context ID"));
+        }
         Ok(response.context_id)
     }
 }
@@ -212,7 +237,7 @@ impl Sdk {
             CallbackChannel::Storage => self.resources.storage.as_ref(),
             CallbackChannel::Events => self.resources.events.as_ref(),
         }
-        .context("SDK has no such callback channel")?;
+        .ok_or_else(|| ClientError::invalid_input("SDK has no such callback channel"))?;
         connection.wait().await
     }
     pub fn context_id(&self) -> &str {
@@ -232,45 +257,24 @@ impl Sdk {
         Offline(self.clone())
     }
     pub async fn update_account(&self, account: Option<WalletAccount>) -> Result<()> {
-        let mut inner = self.client.inner.clone();
-        unary(
-            generated::UpdateAccountRequest {
-                context_id: self.context_id.to_string(),
-                account: account.map(Into::into),
-            },
-            self.client.timeout,
-            |r| inner.update_account(r),
-        )
-        .await?;
+        self.client
+            .unary(
+                generated::UpdateAccountRequest {
+                    context_id: self.context_id.to_string(),
+                    account: account.map(Into::into),
+                },
+                |mut inner, r| async move { inner.update_account(r).await },
+            )
+            .await?;
         Ok(())
     }
     pub async fn close(&self) -> Result<()> {
-        self.resources.close(self.client.timeout).await
+        self.resources.close(&self.client).await
     }
 
     fn operation(&self) -> operations::OperationGuard {
         self.operations.start(&self.context_id)
     }
 }
-async fn unary<T, R, F>(
-    message: T,
-    timeout: Option<Duration>,
-    operation: impl FnOnce(tonic::Request<T>) -> F,
-) -> Result<R>
-where
-    F: Future<Output = Result<tonic::Response<R>, tonic::Status>>,
-{
-    let mut request = tonic::Request::new(message);
-    let response = if let Some(timeout) = timeout {
-        request.set_timeout(timeout);
-        tokio::time::timeout(timeout, operation(request))
-            .await
-            .context("sidecar request timed out")?
-    } else {
-        operation(request).await
-    };
-    Ok(response.map_err(RpcError::from)?.into_inner())
-}
-
 #[cfg(test)]
 mod tests;

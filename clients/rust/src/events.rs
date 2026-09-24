@@ -1,5 +1,7 @@
-use crate::{Address, B256, ClearValues, SdkError, WalletAccount, async_trait, generated};
-use anyhow::{Result, ensure};
+use crate::{
+    Address, B256, ClearValues, ClientError, Result, SdkError, WalletAccount, async_trait,
+    generated,
+};
 use std::fmt;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -155,15 +157,14 @@ pub trait EventHandler: Send + Sync {
         &self,
         context: EventContext,
         notification: Notification,
-    ) -> Result<()>;
+    ) -> anyhow::Result<()>;
 }
 
 pub(crate) fn address(bytes: &[u8]) -> Result<Address> {
-    ensure!(bytes.len() == 20, "invalid event token address");
-    Ok(Address::from_slice(bytes))
+    crate::types::address(bytes, "invalid event token address")
 }
 impl TryFrom<generated::SdkEvent> for SdkEvent {
-    type Error = anyhow::Error;
+    type Error = ClientError;
     fn try_from(event: generated::SdkEvent) -> Result<Self> {
         Ok(Self {
             kind: EventKind::from_raw(event.r#type),
@@ -190,7 +191,7 @@ impl TryFrom<generated::SdkEvent> for SdkEvent {
     }
 }
 impl TryFrom<generated::OperationProgress> for OperationProgress {
-    type Error = anyhow::Error;
+    type Error = ClientError;
     fn try_from(progress: generated::OperationProgress) -> Result<Self> {
         Ok(Self {
             kind: EventEnum::from_raw(progress.kind),

@@ -1,9 +1,8 @@
 use crate::{
-    Address, BigInt, Offline,
+    Address, BigInt, ClientError, Offline,
     delegations::{delegate_decryption_wire, revoke_delegation_wire},
     generated,
 };
-use anyhow::{Context, Result, bail};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PrepareTransaction {
@@ -100,15 +99,17 @@ pub enum TransactionKind {
 }
 
 impl TryFrom<i32> for TransactionKind {
-    type Error = anyhow::Error;
+    type Error = ClientError;
 
-    fn try_from(value: i32) -> Result<Self> {
+    fn try_from(value: i32) -> crate::Result<Self> {
         let Ok(kind) = generated::TransactionKind::try_from(value) else {
-            bail!("unknown prepared transaction kind");
+            return Err(ClientError::protocol("unknown prepared transaction kind"));
         };
         Ok(match kind {
             generated::TransactionKind::Unspecified => {
-                bail!("unspecified prepared transaction kind")
+                return Err(ClientError::protocol(
+                    "unspecified prepared transaction kind",
+                ));
             }
             generated::TransactionKind::ConfidentialTransfer => Self::ConfidentialTransfer,
             generated::TransactionKind::ConfidentialTransferFrom => Self::ConfidentialTransferFrom,
@@ -138,7 +139,7 @@ impl Offline {
         &self,
         request: PrepareTransaction,
         options: Option<PrepareOptions>,
-    ) -> Result<PreparedTransaction> {
+    ) -> crate::Result<PreparedTransaction> {
         let result = rpc!(
             &self.0,
             prepare_transaction,
@@ -151,8 +152,7 @@ impl Offline {
         .await?;
         Ok(PreparedTransaction {
             kind: TransactionKind::try_from(result.kind)?,
-            from: Address::try_from(result.from.as_slice())
-                .context("invalid prepared sender address")?,
+            from: crate::types::address(&result.from, "invalid prepared sender address")?,
             unsigned_tx: result.unsigned_tx,
         })
     }

@@ -302,14 +302,11 @@ async fn preserves_sdk_validation_errors_and_empty_options() {
         )
         .await
         .unwrap_err();
-    let error = error.downcast_ref::<RpcError>().unwrap();
-    assert_eq!(error.status.code(), tonic::Code::InvalidArgument);
-    assert_eq!(error.sdk.as_ref().unwrap().code, "CONFIGURATION_ERROR");
-    assert_eq!(
-        error.sdk.as_ref().unwrap().message,
-        "SDK rejects recipient bytes"
-    );
-    assert!(!error.sdk.as_ref().unwrap().retryable);
+    assert_eq!(error.kind(), crate::ErrorKind::InvalidInput);
+    let sdk_error = error.sdk_error().unwrap();
+    assert_eq!(sdk_error.code, "CONFIGURATION_ERROR");
+    assert_eq!(sdk_error.message, "SDK rejects recipient bytes");
+    assert!(!sdk_error.retryable);
     sdk.close().await.unwrap();
 }
 
@@ -367,8 +364,10 @@ async fn preparation_honors_client_deadline() {
             Response::builder()
                 .header("content-type", "application/grpc")
                 .body(
-                    StreamBody::new(tokio_stream::pending::<Result<Frame<Bytes>, Infallible>>())
-                        .boxed(),
+                    StreamBody::new(tokio_stream::pending::<
+                        std::result::Result<Frame<Bytes>, Infallible>,
+                    >())
+                    .boxed(),
                 )
                 .unwrap()
         } else {

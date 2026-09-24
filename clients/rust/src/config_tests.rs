@@ -243,3 +243,14 @@ async fn derivation_secret_is_a_separate_instance_option() {
         sdk.close().await.unwrap();
     }
 }
+
+#[tokio::test]
+async fn build_classifies_invalid_configuration() {
+    let server = Server::start(Arc::new(default_handler)).await;
+    let client = Client::connect(&server.socket).await.unwrap();
+    let mut config = SdkConfig::new(11_155_111, "http://localhost");
+    config.chains[0].acl_contract_address = Some("invalid address".into());
+    let error = client.sdk(config).build().await.err().unwrap();
+    assert_eq!(error.kind(), crate::ErrorKind::InvalidInput);
+    assert!(std::error::Error::source(&error).is_some());
+}

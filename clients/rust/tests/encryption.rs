@@ -1,13 +1,13 @@
 use anyhow::Result;
 use std::time::Duration;
 use zama_sdk_sidecar::{
-    Address, BigInt, Client, EncryptInput, EncryptOptions, EncryptParams, RpcError, Sdk, SdkConfig,
+    Address, BigInt, Client, EncryptInput, EncryptOptions, EncryptParams, ErrorKind, Sdk, SdkConfig,
 };
 
 async fn context(client: &Client, scenario: &str) -> Result<Sdk> {
     let mut config = SdkConfig::new(31337, "http://fixture.invalid/");
     config.chains[0].relayer_url = Some(format!("http://fixture.invalid/{scenario}"));
-    client.sdk(config).build().await
+    Ok(client.sdk(config).build().await?)
 }
 
 #[tokio::test]
@@ -63,12 +63,8 @@ async fn encryption_preserves_sdk_semantics() -> Result<()> {
         .encrypt(params, EncryptOptions::default())
         .await
         .unwrap_err();
-    let sdk_error = error
-        .downcast_ref::<RpcError>()
-        .unwrap()
-        .sdk
-        .as_ref()
-        .unwrap();
+    assert_eq!(error.kind(), ErrorKind::Sdk);
+    let sdk_error = error.sdk_error().unwrap();
     assert_eq!(sdk_error.code, "RELAYER_REQUEST_FAILED");
     assert!(sdk_error.retryable);
     assert_eq!(sdk_error.retry_after_seconds, Some(7));
@@ -84,12 +80,8 @@ async fn encryption_preserves_sdk_semantics() -> Result<()> {
         )
         .await
         .unwrap_err();
-    let sdk_error = error
-        .downcast_ref::<RpcError>()
-        .unwrap()
-        .sdk
-        .as_ref()
-        .unwrap();
+    assert_eq!(error.kind(), ErrorKind::Sdk);
+    let sdk_error = error.sdk_error().unwrap();
     assert_eq!(sdk_error.code, "ENCRYPTION_FAILED");
     assert!(!sdk_error.retryable);
 

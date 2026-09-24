@@ -1,5 +1,4 @@
-use crate::{Address, B256, BigInt, SdkError, WalletAccount, generated, types::word};
-use anyhow::{Context, Result};
+use crate::{Address, B256, BigInt, ClientError, SdkError, WalletAccount, generated, types::word};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TransactionResult {
@@ -15,7 +14,7 @@ pub struct TransactionLog {
     pub data: Vec<u8>,
 }
 
-pub(crate) fn transaction_log(log: generated::TransactionLog) -> Result<TransactionLog> {
+pub(crate) fn transaction_log(log: generated::TransactionLog) -> crate::Result<TransactionLog> {
     let address = log
         .address
         .filter(|bytes| !bytes.is_empty())
@@ -25,7 +24,7 @@ pub(crate) fn transaction_log(log: generated::TransactionLog) -> Result<Transact
         .topics
         .iter()
         .map(|topic| word(topic, "transaction log topic"))
-        .collect::<Result<_>>()?;
+        .collect::<crate::Result<_>>()?;
     Ok(TransactionLog {
         address,
         topics,
@@ -35,15 +34,16 @@ pub(crate) fn transaction_log(log: generated::TransactionLog) -> Result<Transact
 
 pub(crate) fn transaction_result(
     transaction: Option<generated::TransactionResult>,
-) -> Result<TransactionResult> {
-    let transaction = transaction.context("missing transaction result")?;
+) -> crate::Result<TransactionResult> {
+    let transaction =
+        transaction.ok_or_else(|| ClientError::protocol("missing transaction result"))?;
     Ok(TransactionResult {
         transaction_hash: word(&transaction.transaction_hash, "transaction hash")?,
         logs: transaction
             .logs
             .into_iter()
             .map(transaction_log)
-            .collect::<Result<_>>()?,
+            .collect::<crate::Result<_>>()?,
     })
 }
 

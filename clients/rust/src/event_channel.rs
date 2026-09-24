@@ -1,8 +1,8 @@
 use crate::error::sdk_error_in_chain;
 use crate::{
-    EventContext, EventHandler, Notification, RpcError, SdkError, WalletAccount, generated,
+    ClientError, ErrorKind, EventContext, EventHandler, Notification, Result, SdkError,
+    WalletAccount, generated,
 };
-use anyhow::{Context, Result, ensure};
 use generated::{
     event_client_message::Message as ClientMessage, event_delivery::Payload, event_reply::Outcome,
     event_server_message::Message as ServerMessage,
@@ -53,11 +53,11 @@ pub(crate) async fn attach_events(
         loop {
             tokio::select! {
                 result = &mut worker.0 => {
-                    result.context("notification worker failed")??;
+                    result.map_err(|error| ClientError::callback("notification worker failed", error))??;
                     return Ok(());
                 }
                 frame = stream.message() => {
-                    let Some(frame) = frame.map_err(RpcError::from)? else { return Ok(()); };
+                    let Some(frame) = frame? else { return Ok(()); };
                     callbacks.handle_frame(frame)?;
                 }
             }
@@ -78,18 +78,18 @@ impl Notifications {
             }
             // Prost discards unknown oneof tags, so an empty frame has the same shape.
             None => Ok(()),
-            Some(ServerMessage::Attached(_)) => anyhow::bail!("unexpected event attachment"),
+            Some(ServerMessage::Attached(_)) => {
+                Err(ClientError::protocol("unexpected event attachment"))
+            }
         }
     }
     fn deliver(&mut self, delivery: generated::EventDelivery) -> Result<()> {
-        ensure!(
-            delivery.context_id == self.context_id,
-            "event context mismatch"
-        );
-        ensure!(
-            delivery.sequence > self.sequence,
-            "event sequence is not increasing"
-        );
+        if delivery.context_id != self.context_id {
+            return Err(ClientError::protocol("event context mismatch"));
+        }
+        if delivery.sequence <= self.sequence {
+            return Err(ClientError::protocol("event sequence is not increasing"));
+        }
         self.sequence = delivery.sequence;
         let context = EventContext {
             context_id: delivery.context_id,
@@ -101,8 +101,10 @@ impl Notifications {
         self.notifications
             .try_send((context, notification))
             .map_err(|error| match error {
-                TrySendError::Full(_) => anyhow::anyhow!("event notification window exceeded"),
-                TrySendError::Closed(_) => anyhow::anyhow!("event notification worker closed"),
+                TrySendError::Full(_) => {
+                    ClientError::new(ErrorKind::Callback, "event notification window exceeded")
+                }
+                TrySendError::Closed(_) => ClientError::closed("event notification worker closed"),
             })
     }
 }
@@ -149,7 +151,8 @@ async fn reply(sender: &Sender, sequence: u64, outcome: Outcome) -> Result<()> {
                 outcome: Some(outcome),
             })),
         })
-        .await?;
+        .await
+        .map_err(|_| ClientError::closed("event notification reply channel closed"))?;
     Ok(())
 }
 fn callback_error(error: anyhow::Error) -> SdkError {
@@ -165,7 +168,6 @@ fn callback_error(error: anyhow::Error) -> SdkError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::test_support::AppError;
 
     #[test]
     fn malformed_lifecycle_hash_names_the_transaction_hash() {
@@ -211,23 +213,17 @@ mod tests {
     }
 
     #[test]
-    fn callback_error_preserves_sdk_error_behind_application_source() {
+    fn callback_error_preserves_sdk_error_in_chain() {
         let expected = sdk("SIGNING_REJECTED");
-        let error = AppError(Box::new(expected.clone()));
-        assert_eq!(callback_error(anyhow::Error::new(error)), expected);
+        let error = anyhow::Error::new(expected.clone()).context("handler");
+        assert_eq!(callback_error(error), expected);
     }
 
     #[test]
-    fn callback_error_preserves_rpc_sdk_error_behind_application_source() {
+    fn callback_error_preserves_client_sdk_error_in_chain() {
         let expected = sdk("RELAYER_UNAVAILABLE");
-        let error = AppError(Box::new(RpcError {
-            status: tonic::Status::unavailable("boom"),
-            sdk: Some(expected.clone()),
-        }));
-        assert_eq!(
-            callback_error(anyhow::Error::new(error).context("handler")),
-            expected
-        );
+        let error = anyhow::Error::new(ClientError::from(expected.clone())).context("handler");
+        assert_eq!(callback_error(error), expected);
     }
 
     #[test]

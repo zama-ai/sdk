@@ -163,7 +163,7 @@ async fn alloy_signer_preserves_structured_errors_on_the_channel() {
         })
         .unwrap();
     let connection = crate::signer::attach_signer(
-        sdk.client.inner.clone(),
+        sdk.client.service(),
         &sdk.context_id,
         sdk.operations.clone(),
         Arc::new(crate::alloy::AlloySigner::new(signer)),

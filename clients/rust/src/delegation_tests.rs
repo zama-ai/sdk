@@ -322,7 +322,7 @@ async fn sdk_error_metadata_surfaces_on_revoke_delegation() {
         if path.ends_with("/RevokeDelegation") {
             Response::builder()
                 .header("content-type", "application/grpc")
-                .header("grpc-status", "5")
+                .header("grpc-status", "9")
                 .header("grpc-message", "no active delegation")
                 .header("zama-error-code", "DELEGATION_NOT_FOUND")
                 .header("zama-error-retryable", "false")
@@ -350,11 +350,11 @@ async fn sdk_error_metadata_surfaces_on_revoke_delegation() {
         })
         .await
         .unwrap_err();
-    let error = error.downcast_ref::<RpcError>().unwrap();
-    assert_eq!(error.status.code(), tonic::Code::NotFound);
-    assert_eq!(error.sdk.as_ref().unwrap().code, "DELEGATION_NOT_FOUND");
-    assert_eq!(error.sdk.as_ref().unwrap().message, "no active delegation");
-    assert!(!error.sdk.as_ref().unwrap().retryable);
+    assert_eq!(error.kind(), crate::ErrorKind::Sdk);
+    let sdk_error = error.sdk_error().unwrap();
+    assert_eq!(sdk_error.code, "DELEGATION_NOT_FOUND");
+    assert_eq!(sdk_error.message, "no active delegation");
+    assert!(!sdk_error.retryable);
     sdk.close().await.unwrap();
 }
 
@@ -386,6 +386,7 @@ fn expiring_at_rejects_a_time_whose_millisecond_count_exceeds_u64() {
         beyond_u64_millis,
     )
     .unwrap_err();
+    assert_eq!(error.kind(), crate::ErrorKind::InvalidInput);
     assert!(
         error
             .to_string()

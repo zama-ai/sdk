@@ -1,6 +1,4 @@
-use crate::error::{TypedCause, typed_cause};
-use crate::{RpcError, SdkError, generated};
-use anyhow::{Context, Result, ensure};
+use crate::{ClientError, Result, SdkError, generated};
 use std::{future::Future, time::Duration};
 use tokio::{
     sync::{mpsc, watch},
@@ -8,40 +6,15 @@ use tokio::{
 };
 use tokio_stream::wrappers::ReceiverStream;
 
-#[derive(Clone)]
-enum Failure {
-    Sdk(SdkError),
-    Rpc(RpcError),
-    Other(String),
-}
-impl From<anyhow::Error> for Failure {
-    fn from(error: anyhow::Error) -> Self {
-        match typed_cause(&error) {
-            Some(TypedCause::Sdk(sdk)) => Self::Sdk(sdk.clone()),
-            Some(TypedCause::Rpc(rpc)) => Self::Rpc(rpc.clone()),
-            None => Self::Other(format!("{error:#}")),
-        }
-    }
-}
-impl Failure {
-    fn into_error(self) -> anyhow::Error {
-        match self {
-            Self::Sdk(error) => error.into(),
-            Self::Rpc(error) => error.into(),
-            Self::Other(message) => anyhow::Error::msg(message),
-        }
-    }
-}
-
 pub(crate) struct Connection {
     task: JoinHandle<()>,
-    outcome: watch::Receiver<Option<Result<(), Failure>>>,
+    outcome: watch::Receiver<Option<Result<()>>>,
 }
 impl Connection {
     pub fn spawn(task: impl Future<Output = Result<()>> + Send + 'static) -> Self {
         let (sender, outcome) = watch::channel(None);
         let task = tokio::spawn(async move {
-            sender.send_replace(Some(task.await.map_err(Failure::from)));
+            sender.send_replace(Some(task.await));
         });
         Self { task, outcome }
     }
@@ -52,12 +25,12 @@ impl Connection {
         let mut outcome = self.outcome.clone();
         loop {
             if let Some(result) = outcome.borrow_and_update().clone() {
-                return result.map_err(Failure::into_error);
+                return result;
             }
             outcome
                 .changed()
                 .await
-                .context("callback channel task stopped")?;
+                .map_err(|_| ClientError::closed("callback channel task stopped"))?;
         }
     }
     #[cfg(test)]
@@ -80,27 +53,28 @@ pub(crate) async fn attach<T, R, F>(
 ) -> Result<(mpsc::Sender<T>, tonic::Streaming<R>)>
 where
     T: Send + 'static,
-    F: Future<Output = Result<tonic::Response<tonic::Streaming<R>>, tonic::Status>>,
+    F: Future<Output = std::result::Result<tonic::Response<tonic::Streaming<R>>, tonic::Status>>,
 {
     let (sender, receiver) = mpsc::channel(32);
     sender
         .send(message)
         .await
-        .map_err(|_| anyhow::anyhow!("{label} attachment queue closed"))?;
+        .map_err(|_| ClientError::closed(format!("{label} attachment queue closed")))?;
     let mut stream = tokio::time::timeout(timeout, open(ReceiverStream::new(receiver)))
         .await
-        .with_context(|| format!("{label} attachment timed out"))?
-        .map_err(RpcError::from)?
+        .map_err(|_| ClientError::timeout(format!("{label} attachment timed out")))??
         .into_inner();
     let first = tokio::time::timeout(timeout, stream.message())
         .await
-        .with_context(|| format!("{label} attachment acknowledgment timed out"))?
-        .map_err(RpcError::from)?
-        .with_context(|| format!("{label} channel closed before attachment"))?;
-    ensure!(
-        attached(&first),
-        "missing {label} attachment acknowledgment"
-    );
+        .map_err(|_| ClientError::timeout(format!("{label} attachment acknowledgment timed out")))??
+        .ok_or_else(|| {
+            ClientError::protocol(format!("{label} channel closed before attachment"))
+        })?;
+    if !attached(&first) {
+        return Err(ClientError::protocol(format!(
+            "missing {label} attachment acknowledgment"
+        )));
+    }
     Ok((sender, stream))
 }
 
@@ -108,7 +82,7 @@ pub(crate) fn check_reply_error(
     error: Option<generated::SdkError>,
     stale_code: &str,
 ) -> Result<()> {
-    let error = error.context("missing callback reply error")?;
+    let error = error.ok_or_else(|| ClientError::protocol("missing callback reply error"))?;
     // Cancellation can retire a request before its callback reply arrives.
     if error.code == stale_code {
         return Ok(());
@@ -119,19 +93,46 @@ pub(crate) fn check_reply_error(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::test_support::AppError;
 
-    #[test]
-    fn failure_finds_typed_errors_behind_application_source() {
+    #[tokio::test]
+    async fn connection_reports_the_task_error() {
         let sdk = SdkError::signing_rejected("no");
-        let wrapped = anyhow::Error::new(AppError(Box::new(sdk.clone())));
-        assert!(matches!(Failure::from(wrapped), Failure::Sdk(found) if found == sdk));
+        let error =
+            Connection::spawn(async { Err(ClientError::from(SdkError::signing_rejected("no"))) })
+                .closed()
+                .await
+                .unwrap_err();
+        assert_eq!(error.kind(), crate::ErrorKind::Sdk);
+        assert_eq!(error.sdk_error(), Some(&sdk));
+    }
 
-        let rpc = RpcError::from(tonic::Status::unavailable("down"));
-        let wrapped = anyhow::Error::new(AppError(Box::new(rpc)));
-        assert!(matches!(
-            Failure::from(wrapped),
-            Failure::Rpc(found) if found.status.code() == tonic::Code::Unavailable
-        ));
+    #[tokio::test]
+    async fn wait_reports_closed_when_the_task_is_dropped() {
+        let connection = Connection::spawn(std::future::pending());
+        connection.abort();
+        let error = connection.wait().await.unwrap_err();
+        assert_eq!(error.kind(), crate::ErrorKind::Closed);
+    }
+
+    #[tokio::test]
+    async fn attach_times_out_when_the_stream_never_opens() {
+        let result = attach(
+            generated::Empty {},
+            |_| {
+                std::future::pending::<
+                    std::result::Result<
+                        tonic::Response<tonic::Streaming<generated::Empty>>,
+                        tonic::Status,
+                    >,
+                >()
+            },
+            |_| true,
+            "test",
+            Duration::from_millis(10),
+        )
+        .await;
+        let error = result.err().unwrap();
+        assert_eq!(error.kind(), crate::ErrorKind::Timeout);
+        assert_eq!(error.to_string(), "test attachment timed out");
     }
 }

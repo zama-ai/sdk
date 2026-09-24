@@ -1,7 +1,8 @@
 #[cfg(test)]
 use crate::Sdk;
-use crate::{B256, ContractWriteRequest, RpcError, SdkError, WalletAccount, generated};
-use anyhow::{Context, Result};
+use crate::{
+    B256, ClientError, ContractWriteRequest, ErrorKind, SdkError, WalletAccount, generated,
+};
 use std::{collections::HashMap, future::Future, sync::Arc};
 use tokio::{
     sync::mpsc,
@@ -64,7 +65,7 @@ pub(crate) async fn attach_signer(
     context_id: &str,
     operations: Arc<crate::operations::Operations>,
     sign: Arc<dyn Signer>,
-) -> Result<crate::channel::Connection> {
+) -> crate::Result<crate::channel::Connection> {
     use generated::{
         signer_client_message::Message as ClientMessage,
         signer_server_message::Message as ServerMessage,
@@ -93,7 +94,7 @@ pub(crate) async fn attach_signer(
         loop {
             tokio::select! {
                 frame = stream.message() => {
-                    let Some(frame) = frame.map_err(RpcError::from)? else { return Ok(()); };
+                    let Some(frame) = frame? else { return Ok(()); };
                     callbacks.handle_frame(frame)?;
                 },
                 result = cancelled.recv() => {
@@ -103,7 +104,7 @@ pub(crate) async fn attach_signer(
                     }
                 },
                 result = callbacks.tasks.join_next(), if !callbacks.tasks.is_empty() => {
-                    callbacks.settle(result.context("missing signer callback task")?)?;
+                    callbacks.settle(result.ok_or_else(|| ClientError::new(ErrorKind::Callback, "missing signer callback task"))?)?;
                 }
             }
         }
@@ -121,7 +122,7 @@ impl CallbackRequest {
             .account
             .ok_or_else(|| SdkError::signing_failed("Missing signer account."))?
             .try_into()
-            .map_err(|error: anyhow::Error| {
+            .map_err(|error: ClientError| {
                 SdkError::signing_failed(format!("Invalid signer account: {error}"))
             })?;
         match action.request {
@@ -185,12 +186,12 @@ struct Callbacks {
     sign: Arc<dyn Signer>,
     sender: mpsc::Sender<generated::SignerClientMessage>,
     operations: Arc<crate::operations::Operations>,
-    tasks: JoinSet<Result<ActionKey>>,
+    tasks: JoinSet<crate::Result<ActionKey>>,
     // Settled actions remain a replay guard until their owning operation ends.
     pending: HashMap<ActionKey, Pending>,
 }
 impl Callbacks {
-    fn handle_frame(&mut self, frame: generated::SignerServerMessage) -> Result<()> {
+    fn handle_frame(&mut self, frame: generated::SignerServerMessage) -> crate::Result<()> {
         use generated::signer_server_message::Message;
         match frame.message {
             Some(Message::Action(action)) => self.start(action),
@@ -206,10 +207,10 @@ impl Callbacks {
             Some(Message::ReplyError(error)) => {
                 crate::channel::check_reply_error(error.error, "SIGNER_ACTION_NOT_FOUND")
             }
-            _ => anyhow::bail!("unexpected signer channel frame"),
+            _ => Err(ClientError::protocol("unexpected signer channel frame")),
         }
     }
-    fn start(&mut self, action: generated::SignerAction) -> Result<()> {
+    fn start(&mut self, action: generated::SignerAction) -> crate::Result<()> {
         // An operation can finish while its last signer action is still in transit.
         if !self.operations.contains(&action.operation_id) {
             return Ok(());
@@ -244,7 +245,7 @@ impl Callbacks {
         request: Result<CallbackRequest, SdkError>,
         key: ActionKey,
         cancel: CancellationToken,
-    ) -> impl Future<Output = Result<ActionKey>> + Send + 'static {
+    ) -> impl Future<Output = crate::Result<ActionKey>> + Send + 'static {
         let sign = self.sign.clone();
         let sender = self.sender.clone();
         // Only a contract write can be rejected pre-broadcast; a typed-data action always stays an error reply.
@@ -276,7 +277,8 @@ impl Callbacks {
                 .send(generated::SignerClientMessage {
                     message: Some(generated::signer_client_message::Message::Reply(reply)),
                 })
-                .await?;
+                .await
+                .map_err(|_| ClientError::closed("signer reply channel closed"))?;
             Ok(key)
         }
     }
@@ -289,11 +291,16 @@ impl Callbacks {
             false
         });
     }
-    fn settle(&mut self, result: Result<Result<ActionKey>, tokio::task::JoinError>) -> Result<()> {
+    fn settle(
+        &mut self,
+        result: Result<crate::Result<ActionKey>, tokio::task::JoinError>,
+    ) -> crate::Result<()> {
         match result {
             Err(error) if error.is_cancelled() => Ok(()),
             result => {
-                let key = result??;
+                let key = result.map_err(|error| {
+                    ClientError::callback("signer callback task failed", error)
+                })??;
                 if let Some(pending) = self.pending.get_mut(&key) {
                     *pending = Pending::Settled;
                 }
@@ -305,13 +312,16 @@ impl Callbacks {
 
 #[cfg(test)]
 impl Sdk {
-    pub(crate) async fn attach_signer<F, Fut>(&self, sign: F) -> Result<crate::channel::Connection>
+    pub(crate) async fn attach_signer<F, Fut>(
+        &self,
+        sign: F,
+    ) -> crate::Result<crate::channel::Connection>
     where
         F: Fn(SigningRequest) -> Fut + Send + Sync + 'static,
         Fut: Future<Output = Result<Vec<u8>, SdkError>> + Send + 'static,
     {
         attach_signer(
-            self.client.inner.clone(),
+            self.client.service(),
             &self.context_id,
             self.operations.clone(),
             Arc::new(sign),
