@@ -198,6 +198,379 @@ func (TransactionKind) EnumDescriptor() ([]byte, []int) {
 	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{2}
 }
 
+// Preserve unknown numeric values without closing the channel.
+type SdkEventKind int32
+
+const (
+	SdkEventKind_SDK_EVENT_KIND_UNSPECIFIED                  SdkEventKind = 0
+	SdkEventKind_SDK_EVENT_KIND_ENCRYPT_START                SdkEventKind = 1
+	SdkEventKind_SDK_EVENT_KIND_ENCRYPT_END                  SdkEventKind = 2
+	SdkEventKind_SDK_EVENT_KIND_ENCRYPT_ERROR                SdkEventKind = 3
+	SdkEventKind_SDK_EVENT_KIND_DECRYPT_START                SdkEventKind = 4
+	SdkEventKind_SDK_EVENT_KIND_DECRYPT_END                  SdkEventKind = 5
+	SdkEventKind_SDK_EVENT_KIND_DECRYPT_ERROR                SdkEventKind = 6
+	SdkEventKind_SDK_EVENT_KIND_PERMIT_ERROR                 SdkEventKind = 7
+	SdkEventKind_SDK_EVENT_KIND_TRANSACTION_ERROR            SdkEventKind = 8
+	SdkEventKind_SDK_EVENT_KIND_SHIELD_SUBMITTED             SdkEventKind = 9
+	SdkEventKind_SDK_EVENT_KIND_TRANSFER_SUBMITTED           SdkEventKind = 10
+	SdkEventKind_SDK_EVENT_KIND_TRANSFER_FROM_SUBMITTED      SdkEventKind = 11
+	SdkEventKind_SDK_EVENT_KIND_SET_OPERATOR_SUBMITTED       SdkEventKind = 12
+	SdkEventKind_SDK_EVENT_KIND_APPROVE_UNDERLYING_SUBMITTED SdkEventKind = 13
+	SdkEventKind_SDK_EVENT_KIND_WRAP_SUBMITTED               SdkEventKind = 14
+	SdkEventKind_SDK_EVENT_KIND_UNWRAP_SUBMITTED             SdkEventKind = 15
+	SdkEventKind_SDK_EVENT_KIND_FINALIZE_UNWRAP_SUBMITTED    SdkEventKind = 16
+	SdkEventKind_SDK_EVENT_KIND_DELEGATION_SUBMITTED         SdkEventKind = 17
+	SdkEventKind_SDK_EVENT_KIND_REVOKE_DELEGATION_SUBMITTED  SdkEventKind = 18
+	SdkEventKind_SDK_EVENT_KIND_UNSHIELD_PHASE1_SUBMITTED    SdkEventKind = 19
+	SdkEventKind_SDK_EVENT_KIND_UNSHIELD_PHASE2_STARTED      SdkEventKind = 20
+	SdkEventKind_SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED    SdkEventKind = 21
+)
+
+// Enum value maps for SdkEventKind.
+var (
+	SdkEventKind_name = map[int32]string{
+		0:  "SDK_EVENT_KIND_UNSPECIFIED",
+		1:  "SDK_EVENT_KIND_ENCRYPT_START",
+		2:  "SDK_EVENT_KIND_ENCRYPT_END",
+		3:  "SDK_EVENT_KIND_ENCRYPT_ERROR",
+		4:  "SDK_EVENT_KIND_DECRYPT_START",
+		5:  "SDK_EVENT_KIND_DECRYPT_END",
+		6:  "SDK_EVENT_KIND_DECRYPT_ERROR",
+		7:  "SDK_EVENT_KIND_PERMIT_ERROR",
+		8:  "SDK_EVENT_KIND_TRANSACTION_ERROR",
+		9:  "SDK_EVENT_KIND_SHIELD_SUBMITTED",
+		10: "SDK_EVENT_KIND_TRANSFER_SUBMITTED",
+		11: "SDK_EVENT_KIND_TRANSFER_FROM_SUBMITTED",
+		12: "SDK_EVENT_KIND_SET_OPERATOR_SUBMITTED",
+		13: "SDK_EVENT_KIND_APPROVE_UNDERLYING_SUBMITTED",
+		14: "SDK_EVENT_KIND_WRAP_SUBMITTED",
+		15: "SDK_EVENT_KIND_UNWRAP_SUBMITTED",
+		16: "SDK_EVENT_KIND_FINALIZE_UNWRAP_SUBMITTED",
+		17: "SDK_EVENT_KIND_DELEGATION_SUBMITTED",
+		18: "SDK_EVENT_KIND_REVOKE_DELEGATION_SUBMITTED",
+		19: "SDK_EVENT_KIND_UNSHIELD_PHASE1_SUBMITTED",
+		20: "SDK_EVENT_KIND_UNSHIELD_PHASE2_STARTED",
+		21: "SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED",
+	}
+	SdkEventKind_value = map[string]int32{
+		"SDK_EVENT_KIND_UNSPECIFIED":                  0,
+		"SDK_EVENT_KIND_ENCRYPT_START":                1,
+		"SDK_EVENT_KIND_ENCRYPT_END":                  2,
+		"SDK_EVENT_KIND_ENCRYPT_ERROR":                3,
+		"SDK_EVENT_KIND_DECRYPT_START":                4,
+		"SDK_EVENT_KIND_DECRYPT_END":                  5,
+		"SDK_EVENT_KIND_DECRYPT_ERROR":                6,
+		"SDK_EVENT_KIND_PERMIT_ERROR":                 7,
+		"SDK_EVENT_KIND_TRANSACTION_ERROR":            8,
+		"SDK_EVENT_KIND_SHIELD_SUBMITTED":             9,
+		"SDK_EVENT_KIND_TRANSFER_SUBMITTED":           10,
+		"SDK_EVENT_KIND_TRANSFER_FROM_SUBMITTED":      11,
+		"SDK_EVENT_KIND_SET_OPERATOR_SUBMITTED":       12,
+		"SDK_EVENT_KIND_APPROVE_UNDERLYING_SUBMITTED": 13,
+		"SDK_EVENT_KIND_WRAP_SUBMITTED":               14,
+		"SDK_EVENT_KIND_UNWRAP_SUBMITTED":             15,
+		"SDK_EVENT_KIND_FINALIZE_UNWRAP_SUBMITTED":    16,
+		"SDK_EVENT_KIND_DELEGATION_SUBMITTED":         17,
+		"SDK_EVENT_KIND_REVOKE_DELEGATION_SUBMITTED":  18,
+		"SDK_EVENT_KIND_UNSHIELD_PHASE1_SUBMITTED":    19,
+		"SDK_EVENT_KIND_UNSHIELD_PHASE2_STARTED":      20,
+		"SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED":    21,
+	}
+)
+
+func (x SdkEventKind) Enum() *SdkEventKind {
+	p := new(SdkEventKind)
+	*p = x
+	return p
+}
+
+func (x SdkEventKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SdkEventKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_zama_sdk_v1alpha1_sidecar_proto_enumTypes[3].Descriptor()
+}
+
+func (SdkEventKind) Type() protoreflect.EnumType {
+	return &file_zama_sdk_v1alpha1_sidecar_proto_enumTypes[3]
+}
+
+func (x SdkEventKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SdkEventKind.Descriptor instead.
+func (SdkEventKind) EnumDescriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{3}
+}
+
+// Distinguishes permit failures from transaction failures, including transaction routes.
+type EventOperation int32
+
+const (
+	EventOperation_EVENT_OPERATION_UNSPECIFIED              EventOperation = 0
+	EventOperation_EVENT_OPERATION_GRANT_PERMIT             EventOperation = 1
+	EventOperation_EVENT_OPERATION_GRANT_DELEGATION_PERMIT  EventOperation = 2
+	EventOperation_EVENT_OPERATION_REGISTER_PERMIT          EventOperation = 3
+	EventOperation_EVENT_OPERATION_APPROVE_UNDERLYING       EventOperation = 4
+	EventOperation_EVENT_OPERATION_APPROVE_UNDERLYING_RESET EventOperation = 5
+	EventOperation_EVENT_OPERATION_DELEGATE_DECRYPTION      EventOperation = 6
+	EventOperation_EVENT_OPERATION_FINALIZE_UNWRAP          EventOperation = 7
+	EventOperation_EVENT_OPERATION_REVOKE_DELEGATION        EventOperation = 8
+	EventOperation_EVENT_OPERATION_SET_OPERATOR             EventOperation = 9
+	EventOperation_EVENT_OPERATION_SHIELD_TRANSFER_AND_CALL EventOperation = 10
+	EventOperation_EVENT_OPERATION_SHIELD_APPROVE_AND_WRAP  EventOperation = 11
+	EventOperation_EVENT_OPERATION_WRAP                     EventOperation = 12
+	EventOperation_EVENT_OPERATION_TRANSFER                 EventOperation = 13
+	EventOperation_EVENT_OPERATION_TRANSFER_AND_CALL        EventOperation = 14
+	EventOperation_EVENT_OPERATION_TRANSFER_FROM            EventOperation = 15
+	EventOperation_EVENT_OPERATION_TRANSFER_FROM_AND_CALL   EventOperation = 16
+	EventOperation_EVENT_OPERATION_UNWRAP                   EventOperation = 17
+	EventOperation_EVENT_OPERATION_UNWRAP_ALL               EventOperation = 18
+)
+
+// Enum value maps for EventOperation.
+var (
+	EventOperation_name = map[int32]string{
+		0:  "EVENT_OPERATION_UNSPECIFIED",
+		1:  "EVENT_OPERATION_GRANT_PERMIT",
+		2:  "EVENT_OPERATION_GRANT_DELEGATION_PERMIT",
+		3:  "EVENT_OPERATION_REGISTER_PERMIT",
+		4:  "EVENT_OPERATION_APPROVE_UNDERLYING",
+		5:  "EVENT_OPERATION_APPROVE_UNDERLYING_RESET",
+		6:  "EVENT_OPERATION_DELEGATE_DECRYPTION",
+		7:  "EVENT_OPERATION_FINALIZE_UNWRAP",
+		8:  "EVENT_OPERATION_REVOKE_DELEGATION",
+		9:  "EVENT_OPERATION_SET_OPERATOR",
+		10: "EVENT_OPERATION_SHIELD_TRANSFER_AND_CALL",
+		11: "EVENT_OPERATION_SHIELD_APPROVE_AND_WRAP",
+		12: "EVENT_OPERATION_WRAP",
+		13: "EVENT_OPERATION_TRANSFER",
+		14: "EVENT_OPERATION_TRANSFER_AND_CALL",
+		15: "EVENT_OPERATION_TRANSFER_FROM",
+		16: "EVENT_OPERATION_TRANSFER_FROM_AND_CALL",
+		17: "EVENT_OPERATION_UNWRAP",
+		18: "EVENT_OPERATION_UNWRAP_ALL",
+	}
+	EventOperation_value = map[string]int32{
+		"EVENT_OPERATION_UNSPECIFIED":              0,
+		"EVENT_OPERATION_GRANT_PERMIT":             1,
+		"EVENT_OPERATION_GRANT_DELEGATION_PERMIT":  2,
+		"EVENT_OPERATION_REGISTER_PERMIT":          3,
+		"EVENT_OPERATION_APPROVE_UNDERLYING":       4,
+		"EVENT_OPERATION_APPROVE_UNDERLYING_RESET": 5,
+		"EVENT_OPERATION_DELEGATE_DECRYPTION":      6,
+		"EVENT_OPERATION_FINALIZE_UNWRAP":          7,
+		"EVENT_OPERATION_REVOKE_DELEGATION":        8,
+		"EVENT_OPERATION_SET_OPERATOR":             9,
+		"EVENT_OPERATION_SHIELD_TRANSFER_AND_CALL": 10,
+		"EVENT_OPERATION_SHIELD_APPROVE_AND_WRAP":  11,
+		"EVENT_OPERATION_WRAP":                     12,
+		"EVENT_OPERATION_TRANSFER":                 13,
+		"EVENT_OPERATION_TRANSFER_AND_CALL":        14,
+		"EVENT_OPERATION_TRANSFER_FROM":            15,
+		"EVENT_OPERATION_TRANSFER_FROM_AND_CALL":   16,
+		"EVENT_OPERATION_UNWRAP":                   17,
+		"EVENT_OPERATION_UNWRAP_ALL":               18,
+	}
+)
+
+func (x EventOperation) Enum() *EventOperation {
+	p := new(EventOperation)
+	*p = x
+	return p
+}
+
+func (x EventOperation) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EventOperation) Descriptor() protoreflect.EnumDescriptor {
+	return file_zama_sdk_v1alpha1_sidecar_proto_enumTypes[4].Descriptor()
+}
+
+func (EventOperation) Type() protoreflect.EnumType {
+	return &file_zama_sdk_v1alpha1_sidecar_proto_enumTypes[4]
+}
+
+func (x EventOperation) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EventOperation.Descriptor instead.
+func (EventOperation) EnumDescriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{4}
+}
+
+// The SDK-selected route for a submitted shield transaction.
+type ShieldPath int32
+
+const (
+	ShieldPath_SHIELD_PATH_UNSPECIFIED       ShieldPath = 0
+	ShieldPath_SHIELD_PATH_TRANSFER_AND_CALL ShieldPath = 1
+	ShieldPath_SHIELD_PATH_APPROVE_AND_WRAP  ShieldPath = 2
+)
+
+// Enum value maps for ShieldPath.
+var (
+	ShieldPath_name = map[int32]string{
+		0: "SHIELD_PATH_UNSPECIFIED",
+		1: "SHIELD_PATH_TRANSFER_AND_CALL",
+		2: "SHIELD_PATH_APPROVE_AND_WRAP",
+	}
+	ShieldPath_value = map[string]int32{
+		"SHIELD_PATH_UNSPECIFIED":       0,
+		"SHIELD_PATH_TRANSFER_AND_CALL": 1,
+		"SHIELD_PATH_APPROVE_AND_WRAP":  2,
+	}
+)
+
+func (x ShieldPath) Enum() *ShieldPath {
+	p := new(ShieldPath)
+	*p = x
+	return p
+}
+
+func (x ShieldPath) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ShieldPath) Descriptor() protoreflect.EnumDescriptor {
+	return file_zama_sdk_v1alpha1_sidecar_proto_enumTypes[5].Descriptor()
+}
+
+func (ShieldPath) Type() protoreflect.EnumType {
+	return &file_zama_sdk_v1alpha1_sidecar_proto_enumTypes[5]
+}
+
+func (x ShieldPath) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ShieldPath.Descriptor instead.
+func (ShieldPath) EnumDescriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{5}
+}
+
+// Distinguishes a zero-reset approval from the amount approval.
+type ApprovalStep int32
+
+const (
+	ApprovalStep_APPROVAL_STEP_UNSPECIFIED ApprovalStep = 0
+	ApprovalStep_APPROVAL_STEP_RESET       ApprovalStep = 1
+	ApprovalStep_APPROVAL_STEP_APPROVE     ApprovalStep = 2
+)
+
+// Enum value maps for ApprovalStep.
+var (
+	ApprovalStep_name = map[int32]string{
+		0: "APPROVAL_STEP_UNSPECIFIED",
+		1: "APPROVAL_STEP_RESET",
+		2: "APPROVAL_STEP_APPROVE",
+	}
+	ApprovalStep_value = map[string]int32{
+		"APPROVAL_STEP_UNSPECIFIED": 0,
+		"APPROVAL_STEP_RESET":       1,
+		"APPROVAL_STEP_APPROVE":     2,
+	}
+)
+
+func (x ApprovalStep) Enum() *ApprovalStep {
+	p := new(ApprovalStep)
+	*p = x
+	return p
+}
+
+func (x ApprovalStep) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ApprovalStep) Descriptor() protoreflect.EnumDescriptor {
+	return file_zama_sdk_v1alpha1_sidecar_proto_enumTypes[6].Descriptor()
+}
+
+func (ApprovalStep) Type() protoreflect.EnumType {
+	return &file_zama_sdk_v1alpha1_sidecar_proto_enumTypes[6]
+}
+
+func (x ApprovalStep) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ApprovalStep.Descriptor instead.
+func (ApprovalStep) EnumDescriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{6}
+}
+
+// SDK callback timing can differ from similarly named lifecycle events.
+type ProgressKind int32
+
+const (
+	ProgressKind_PROGRESS_KIND_UNSPECIFIED        ProgressKind = 0
+	ProgressKind_PROGRESS_KIND_ENCRYPT_COMPLETE   ProgressKind = 1
+	ProgressKind_PROGRESS_KIND_TRANSFER_SUBMITTED ProgressKind = 2
+	ProgressKind_PROGRESS_KIND_APPROVAL_SUBMITTED ProgressKind = 3
+	ProgressKind_PROGRESS_KIND_SHIELD_SUBMITTED   ProgressKind = 4
+	ProgressKind_PROGRESS_KIND_WRAP_SUBMITTED     ProgressKind = 5
+	ProgressKind_PROGRESS_KIND_UNWRAP_SUBMITTED   ProgressKind = 6
+	ProgressKind_PROGRESS_KIND_FINALIZING         ProgressKind = 7
+	ProgressKind_PROGRESS_KIND_FINALIZE_SUBMITTED ProgressKind = 8
+)
+
+// Enum value maps for ProgressKind.
+var (
+	ProgressKind_name = map[int32]string{
+		0: "PROGRESS_KIND_UNSPECIFIED",
+		1: "PROGRESS_KIND_ENCRYPT_COMPLETE",
+		2: "PROGRESS_KIND_TRANSFER_SUBMITTED",
+		3: "PROGRESS_KIND_APPROVAL_SUBMITTED",
+		4: "PROGRESS_KIND_SHIELD_SUBMITTED",
+		5: "PROGRESS_KIND_WRAP_SUBMITTED",
+		6: "PROGRESS_KIND_UNWRAP_SUBMITTED",
+		7: "PROGRESS_KIND_FINALIZING",
+		8: "PROGRESS_KIND_FINALIZE_SUBMITTED",
+	}
+	ProgressKind_value = map[string]int32{
+		"PROGRESS_KIND_UNSPECIFIED":        0,
+		"PROGRESS_KIND_ENCRYPT_COMPLETE":   1,
+		"PROGRESS_KIND_TRANSFER_SUBMITTED": 2,
+		"PROGRESS_KIND_APPROVAL_SUBMITTED": 3,
+		"PROGRESS_KIND_SHIELD_SUBMITTED":   4,
+		"PROGRESS_KIND_WRAP_SUBMITTED":     5,
+		"PROGRESS_KIND_UNWRAP_SUBMITTED":   6,
+		"PROGRESS_KIND_FINALIZING":         7,
+		"PROGRESS_KIND_FINALIZE_SUBMITTED": 8,
+	}
+)
+
+func (x ProgressKind) Enum() *ProgressKind {
+	p := new(ProgressKind)
+	*p = x
+	return p
+}
+
+func (x ProgressKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ProgressKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_zama_sdk_v1alpha1_sidecar_proto_enumTypes[7].Descriptor()
+}
+
+func (ProgressKind) Type() protoreflect.EnumType {
+	return &file_zama_sdk_v1alpha1_sidecar_proto_enumTypes[7]
+}
+
+func (x ProgressKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ProgressKind.Descriptor instead.
+func (ProgressKind) EnumDescriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{7}
+}
+
 type Empty struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -6993,6 +7366,696 @@ func (x *GetDelegationStatusResponse) GetExpiryTimestamp() uint64 {
 	return 0
 }
 
+// A lifecycle event; timestamp is Unix epoch milliseconds, and timestamp and
+// duration_ms preserve fractional milliseconds.
+type SdkEvent struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Type            SdkEventKind           `protobuf:"varint,1,opt,name=type,proto3,enum=zama.sdk.v1alpha1.SdkEventKind" json:"type,omitempty"`
+	Timestamp       float64                `protobuf:"fixed64,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	TokenAddress    []byte                 `protobuf:"bytes,3,opt,name=token_address,json=tokenAddress,proto3,oneof" json:"token_address,omitempty"`
+	SdkOperationId  *string                `protobuf:"bytes,4,opt,name=sdk_operation_id,json=sdkOperationId,proto3,oneof" json:"sdk_operation_id,omitempty"`
+	DurationMs      *float64               `protobuf:"fixed64,5,opt,name=duration_ms,json=durationMs,proto3,oneof" json:"duration_ms,omitempty"`
+	EncryptedValues [][]byte               `protobuf:"bytes,6,rep,name=encrypted_values,json=encryptedValues,proto3" json:"encrypted_values,omitempty"`
+	Result          []*ClearEntry          `protobuf:"bytes,7,rep,name=result,proto3" json:"result,omitempty"`
+	Error           *SdkError              `protobuf:"bytes,8,opt,name=error,proto3" json:"error,omitempty"`
+	Operation       *EventOperation        `protobuf:"varint,9,opt,name=operation,proto3,enum=zama.sdk.v1alpha1.EventOperation,oneof" json:"operation,omitempty"`
+	TxHash          []byte                 `protobuf:"bytes,10,opt,name=tx_hash,json=txHash,proto3,oneof" json:"tx_hash,omitempty"`
+	ShieldPath      *ShieldPath            `protobuf:"varint,11,opt,name=shield_path,json=shieldPath,proto3,enum=zama.sdk.v1alpha1.ShieldPath,oneof" json:"shield_path,omitempty"`
+	Step            *ApprovalStep          `protobuf:"varint,12,opt,name=step,proto3,enum=zama.sdk.v1alpha1.ApprovalStep,oneof" json:"step,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *SdkEvent) Reset() {
+	*x = SdkEvent{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[104]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SdkEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SdkEvent) ProtoMessage() {}
+
+func (x *SdkEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[104]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SdkEvent.ProtoReflect.Descriptor instead.
+func (*SdkEvent) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{104}
+}
+
+func (x *SdkEvent) GetType() SdkEventKind {
+	if x != nil {
+		return x.Type
+	}
+	return SdkEventKind_SDK_EVENT_KIND_UNSPECIFIED
+}
+
+func (x *SdkEvent) GetTimestamp() float64 {
+	if x != nil {
+		return x.Timestamp
+	}
+	return 0
+}
+
+func (x *SdkEvent) GetTokenAddress() []byte {
+	if x != nil {
+		return x.TokenAddress
+	}
+	return nil
+}
+
+func (x *SdkEvent) GetSdkOperationId() string {
+	if x != nil && x.SdkOperationId != nil {
+		return *x.SdkOperationId
+	}
+	return ""
+}
+
+func (x *SdkEvent) GetDurationMs() float64 {
+	if x != nil && x.DurationMs != nil {
+		return *x.DurationMs
+	}
+	return 0
+}
+
+func (x *SdkEvent) GetEncryptedValues() [][]byte {
+	if x != nil {
+		return x.EncryptedValues
+	}
+	return nil
+}
+
+func (x *SdkEvent) GetResult() []*ClearEntry {
+	if x != nil {
+		return x.Result
+	}
+	return nil
+}
+
+func (x *SdkEvent) GetError() *SdkError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+func (x *SdkEvent) GetOperation() EventOperation {
+	if x != nil && x.Operation != nil {
+		return *x.Operation
+	}
+	return EventOperation_EVENT_OPERATION_UNSPECIFIED
+}
+
+func (x *SdkEvent) GetTxHash() []byte {
+	if x != nil {
+		return x.TxHash
+	}
+	return nil
+}
+
+func (x *SdkEvent) GetShieldPath() ShieldPath {
+	if x != nil && x.ShieldPath != nil {
+		return *x.ShieldPath
+	}
+	return ShieldPath_SHIELD_PATH_UNSPECIFIED
+}
+
+func (x *SdkEvent) GetStep() ApprovalStep {
+	if x != nil && x.Step != nil {
+		return *x.Step
+	}
+	return ApprovalStep_APPROVAL_STEP_UNSPECIFIED
+}
+
+// Account transition delivered even when no SDK operation is active.
+type WalletAccountChanged struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Previous      *WalletAccount         `protobuf:"bytes,1,opt,name=previous,proto3" json:"previous,omitempty"`
+	Next          *WalletAccount         `protobuf:"bytes,2,opt,name=next,proto3" json:"next,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WalletAccountChanged) Reset() {
+	*x = WalletAccountChanged{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[105]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WalletAccountChanged) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WalletAccountChanged) ProtoMessage() {}
+
+func (x *WalletAccountChanged) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[105]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WalletAccountChanged.ProtoReflect.Descriptor instead.
+func (*WalletAccountChanged) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{105}
+}
+
+func (x *WalletAccountChanged) GetPrevious() *WalletAccount {
+	if x != nil {
+		return x.Previous
+	}
+	return nil
+}
+
+func (x *WalletAccountChanged) GetNext() *WalletAccount {
+	if x != nil {
+		return x.Next
+	}
+	return nil
+}
+
+// Submitted stages normally include a hash; clients also accept its absence.
+type OperationProgress struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Kind          ProgressKind           `protobuf:"varint,1,opt,name=kind,proto3,enum=zama.sdk.v1alpha1.ProgressKind" json:"kind,omitempty"`
+	TxHash        []byte                 `protobuf:"bytes,2,opt,name=tx_hash,json=txHash,proto3,oneof" json:"tx_hash,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OperationProgress) Reset() {
+	*x = OperationProgress{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[106]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OperationProgress) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OperationProgress) ProtoMessage() {}
+
+func (x *OperationProgress) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[106]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OperationProgress.ProtoReflect.Descriptor instead.
+func (*OperationProgress) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{106}
+}
+
+func (x *OperationProgress) GetKind() ProgressKind {
+	if x != nil {
+		return x.Kind
+	}
+	return ProgressKind_PROGRESS_KIND_UNSPECIFIED
+}
+
+func (x *OperationProgress) GetTxHash() []byte {
+	if x != nil {
+		return x.TxHash
+	}
+	return nil
+}
+
+// sequence is context-wide and does not reset when the channel is reattached.
+type EventDelivery struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	ContextId string                 `protobuf:"bytes,1,opt,name=context_id,json=contextId,proto3" json:"context_id,omitempty"`
+	// Empty for lifecycle events that do not belong to a tracked RPC.
+	OperationId string `protobuf:"bytes,2,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
+	Sequence    uint64 `protobuf:"varint,3,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	// Acknowledge and skip unknown payloads after checking context and sequence.
+	//
+	// Types that are valid to be assigned to Payload:
+	//
+	//	*EventDelivery_Event
+	//	*EventDelivery_WalletAccount
+	//	*EventDelivery_Progress
+	Payload       isEventDelivery_Payload `protobuf_oneof:"payload"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EventDelivery) Reset() {
+	*x = EventDelivery{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[107]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventDelivery) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventDelivery) ProtoMessage() {}
+
+func (x *EventDelivery) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[107]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventDelivery.ProtoReflect.Descriptor instead.
+func (*EventDelivery) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{107}
+}
+
+func (x *EventDelivery) GetContextId() string {
+	if x != nil {
+		return x.ContextId
+	}
+	return ""
+}
+
+func (x *EventDelivery) GetOperationId() string {
+	if x != nil {
+		return x.OperationId
+	}
+	return ""
+}
+
+func (x *EventDelivery) GetSequence() uint64 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+func (x *EventDelivery) GetPayload() isEventDelivery_Payload {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+func (x *EventDelivery) GetEvent() *SdkEvent {
+	if x != nil {
+		if x, ok := x.Payload.(*EventDelivery_Event); ok {
+			return x.Event
+		}
+	}
+	return nil
+}
+
+func (x *EventDelivery) GetWalletAccount() *WalletAccountChanged {
+	if x != nil {
+		if x, ok := x.Payload.(*EventDelivery_WalletAccount); ok {
+			return x.WalletAccount
+		}
+	}
+	return nil
+}
+
+func (x *EventDelivery) GetProgress() *OperationProgress {
+	if x != nil {
+		if x, ok := x.Payload.(*EventDelivery_Progress); ok {
+			return x.Progress
+		}
+	}
+	return nil
+}
+
+type isEventDelivery_Payload interface {
+	isEventDelivery_Payload()
+}
+
+type EventDelivery_Event struct {
+	Event *SdkEvent `protobuf:"bytes,4,opt,name=event,proto3,oneof"`
+}
+
+type EventDelivery_WalletAccount struct {
+	WalletAccount *WalletAccountChanged `protobuf:"bytes,5,opt,name=wallet_account,json=walletAccount,proto3,oneof"`
+}
+
+type EventDelivery_Progress struct {
+	Progress *OperationProgress `protobuf:"bytes,6,opt,name=progress,proto3,oneof"`
+}
+
+func (*EventDelivery_Event) isEventDelivery_Payload() {}
+
+func (*EventDelivery_WalletAccount) isEventDelivery_Payload() {}
+
+func (*EventDelivery_Progress) isEventDelivery_Payload() {}
+
+// Handler errors do not fail the SDK operation that emitted the notification.
+type EventReply struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Sequence uint64                 `protobuf:"varint,1,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	// Types that are valid to be assigned to Outcome:
+	//
+	//	*EventReply_Acknowledged
+	//	*EventReply_Error
+	Outcome       isEventReply_Outcome `protobuf_oneof:"outcome"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EventReply) Reset() {
+	*x = EventReply{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[108]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventReply) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventReply) ProtoMessage() {}
+
+func (x *EventReply) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[108]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventReply.ProtoReflect.Descriptor instead.
+func (*EventReply) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{108}
+}
+
+func (x *EventReply) GetSequence() uint64 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+func (x *EventReply) GetOutcome() isEventReply_Outcome {
+	if x != nil {
+		return x.Outcome
+	}
+	return nil
+}
+
+func (x *EventReply) GetAcknowledged() *Empty {
+	if x != nil {
+		if x, ok := x.Outcome.(*EventReply_Acknowledged); ok {
+			return x.Acknowledged
+		}
+	}
+	return nil
+}
+
+func (x *EventReply) GetError() *SdkError {
+	if x != nil {
+		if x, ok := x.Outcome.(*EventReply_Error); ok {
+			return x.Error
+		}
+	}
+	return nil
+}
+
+type isEventReply_Outcome interface {
+	isEventReply_Outcome()
+}
+
+type EventReply_Acknowledged struct {
+	Acknowledged *Empty `protobuf:"bytes,2,opt,name=acknowledged,proto3,oneof"`
+}
+
+type EventReply_Error struct {
+	Error *SdkError `protobuf:"bytes,3,opt,name=error,proto3,oneof"`
+}
+
+func (*EventReply_Acknowledged) isEventReply_Outcome() {}
+
+func (*EventReply_Error) isEventReply_Outcome() {}
+
+// The first client message attaches; later messages reply to deliveries.
+type EventClientMessage struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Message:
+	//
+	//	*EventClientMessage_Attach
+	//	*EventClientMessage_Reply
+	Message       isEventClientMessage_Message `protobuf_oneof:"message"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EventClientMessage) Reset() {
+	*x = EventClientMessage{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[109]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventClientMessage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventClientMessage) ProtoMessage() {}
+
+func (x *EventClientMessage) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[109]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventClientMessage.ProtoReflect.Descriptor instead.
+func (*EventClientMessage) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{109}
+}
+
+func (x *EventClientMessage) GetMessage() isEventClientMessage_Message {
+	if x != nil {
+		return x.Message
+	}
+	return nil
+}
+
+func (x *EventClientMessage) GetAttach() *ContextRequest {
+	if x != nil {
+		if x, ok := x.Message.(*EventClientMessage_Attach); ok {
+			return x.Attach
+		}
+	}
+	return nil
+}
+
+func (x *EventClientMessage) GetReply() *EventReply {
+	if x != nil {
+		if x, ok := x.Message.(*EventClientMessage_Reply); ok {
+			return x.Reply
+		}
+	}
+	return nil
+}
+
+type isEventClientMessage_Message interface {
+	isEventClientMessage_Message()
+}
+
+type EventClientMessage_Attach struct {
+	Attach *ContextRequest `protobuf:"bytes,1,opt,name=attach,proto3,oneof"`
+}
+
+type EventClientMessage_Reply struct {
+	Reply *EventReply `protobuf:"bytes,2,opt,name=reply,proto3,oneof"`
+}
+
+func (*EventClientMessage_Attach) isEventClientMessage_Message() {}
+
+func (*EventClientMessage_Reply) isEventClientMessage_Message() {}
+
+type EventReplyError struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Sequence      uint64                 `protobuf:"varint,1,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	Error         *SdkError              `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EventReplyError) Reset() {
+	*x = EventReplyError{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[110]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventReplyError) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventReplyError) ProtoMessage() {}
+
+func (x *EventReplyError) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[110]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventReplyError.ProtoReflect.Descriptor instead.
+func (*EventReplyError) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{110}
+}
+
+func (x *EventReplyError) GetSequence() uint64 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+func (x *EventReplyError) GetError() *SdkError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+type EventServerMessage struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Message:
+	//
+	//	*EventServerMessage_Attached
+	//	*EventServerMessage_Delivery
+	//	*EventServerMessage_ReplyError
+	Message       isEventServerMessage_Message `protobuf_oneof:"message"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EventServerMessage) Reset() {
+	*x = EventServerMessage{}
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[111]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventServerMessage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventServerMessage) ProtoMessage() {}
+
+func (x *EventServerMessage) ProtoReflect() protoreflect.Message {
+	mi := &file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[111]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventServerMessage.ProtoReflect.Descriptor instead.
+func (*EventServerMessage) Descriptor() ([]byte, []int) {
+	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP(), []int{111}
+}
+
+func (x *EventServerMessage) GetMessage() isEventServerMessage_Message {
+	if x != nil {
+		return x.Message
+	}
+	return nil
+}
+
+func (x *EventServerMessage) GetAttached() *Empty {
+	if x != nil {
+		if x, ok := x.Message.(*EventServerMessage_Attached); ok {
+			return x.Attached
+		}
+	}
+	return nil
+}
+
+func (x *EventServerMessage) GetDelivery() *EventDelivery {
+	if x != nil {
+		if x, ok := x.Message.(*EventServerMessage_Delivery); ok {
+			return x.Delivery
+		}
+	}
+	return nil
+}
+
+func (x *EventServerMessage) GetReplyError() *EventReplyError {
+	if x != nil {
+		if x, ok := x.Message.(*EventServerMessage_ReplyError); ok {
+			return x.ReplyError
+		}
+	}
+	return nil
+}
+
+type isEventServerMessage_Message interface {
+	isEventServerMessage_Message()
+}
+
+type EventServerMessage_Attached struct {
+	Attached *Empty `protobuf:"bytes,1,opt,name=attached,proto3,oneof"`
+}
+
+type EventServerMessage_Delivery struct {
+	Delivery *EventDelivery `protobuf:"bytes,2,opt,name=delivery,proto3,oneof"`
+}
+
+type EventServerMessage_ReplyError struct {
+	ReplyError *EventReplyError `protobuf:"bytes,3,opt,name=reply_error,json=replyError,proto3,oneof"`
+}
+
+func (*EventServerMessage_Attached) isEventServerMessage_Message() {}
+
+func (*EventServerMessage_Delivery) isEventServerMessage_Message() {}
+
+func (*EventServerMessage_ReplyError) isEventServerMessage_Message() {}
+
 var File_zama_sdk_v1alpha1_sidecar_proto protoreflect.FileDescriptor
 
 const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
@@ -7505,7 +8568,68 @@ const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
 	"\x10expiry_timestamp\x18\x01 \x01(\x04R\x0fexpiryTimestamp\"e\n" +
 	"\x1bGetDelegationStatusResponse\x12\x1b\n" +
 	"\tis_active\x18\x01 \x01(\bR\bisActive\x12)\n" +
-	"\x10expiry_timestamp\x18\x02 \x01(\x04R\x0fexpiryTimestamp*z\n" +
+	"\x10expiry_timestamp\x18\x02 \x01(\x04R\x0fexpiryTimestamp\"\xbe\x05\n" +
+	"\bSdkEvent\x123\n" +
+	"\x04type\x18\x01 \x01(\x0e2\x1f.zama.sdk.v1alpha1.SdkEventKindR\x04type\x12\x1c\n" +
+	"\ttimestamp\x18\x02 \x01(\x01R\ttimestamp\x12(\n" +
+	"\rtoken_address\x18\x03 \x01(\fH\x00R\ftokenAddress\x88\x01\x01\x12-\n" +
+	"\x10sdk_operation_id\x18\x04 \x01(\tH\x01R\x0esdkOperationId\x88\x01\x01\x12$\n" +
+	"\vduration_ms\x18\x05 \x01(\x01H\x02R\n" +
+	"durationMs\x88\x01\x01\x12)\n" +
+	"\x10encrypted_values\x18\x06 \x03(\fR\x0fencryptedValues\x125\n" +
+	"\x06result\x18\a \x03(\v2\x1d.zama.sdk.v1alpha1.ClearEntryR\x06result\x121\n" +
+	"\x05error\x18\b \x01(\v2\x1b.zama.sdk.v1alpha1.SdkErrorR\x05error\x12D\n" +
+	"\toperation\x18\t \x01(\x0e2!.zama.sdk.v1alpha1.EventOperationH\x03R\toperation\x88\x01\x01\x12\x1c\n" +
+	"\atx_hash\x18\n" +
+	" \x01(\fH\x04R\x06txHash\x88\x01\x01\x12C\n" +
+	"\vshield_path\x18\v \x01(\x0e2\x1d.zama.sdk.v1alpha1.ShieldPathH\x05R\n" +
+	"shieldPath\x88\x01\x01\x128\n" +
+	"\x04step\x18\f \x01(\x0e2\x1f.zama.sdk.v1alpha1.ApprovalStepH\x06R\x04step\x88\x01\x01B\x10\n" +
+	"\x0e_token_addressB\x13\n" +
+	"\x11_sdk_operation_idB\x0e\n" +
+	"\f_duration_msB\f\n" +
+	"\n" +
+	"_operationB\n" +
+	"\n" +
+	"\b_tx_hashB\x0e\n" +
+	"\f_shield_pathB\a\n" +
+	"\x05_step\"\x8a\x01\n" +
+	"\x14WalletAccountChanged\x12<\n" +
+	"\bprevious\x18\x01 \x01(\v2 .zama.sdk.v1alpha1.WalletAccountR\bprevious\x124\n" +
+	"\x04next\x18\x02 \x01(\v2 .zama.sdk.v1alpha1.WalletAccountR\x04next\"r\n" +
+	"\x11OperationProgress\x123\n" +
+	"\x04kind\x18\x01 \x01(\x0e2\x1f.zama.sdk.v1alpha1.ProgressKindR\x04kind\x12\x1c\n" +
+	"\atx_hash\x18\x02 \x01(\fH\x00R\x06txHash\x88\x01\x01B\n" +
+	"\n" +
+	"\b_tx_hash\"\xc3\x02\n" +
+	"\rEventDelivery\x12\x1d\n" +
+	"\n" +
+	"context_id\x18\x01 \x01(\tR\tcontextId\x12!\n" +
+	"\foperation_id\x18\x02 \x01(\tR\voperationId\x12\x1a\n" +
+	"\bsequence\x18\x03 \x01(\x04R\bsequence\x123\n" +
+	"\x05event\x18\x04 \x01(\v2\x1b.zama.sdk.v1alpha1.SdkEventH\x00R\x05event\x12P\n" +
+	"\x0ewallet_account\x18\x05 \x01(\v2'.zama.sdk.v1alpha1.WalletAccountChangedH\x00R\rwalletAccount\x12B\n" +
+	"\bprogress\x18\x06 \x01(\v2$.zama.sdk.v1alpha1.OperationProgressH\x00R\bprogressB\t\n" +
+	"\apayload\"\xa8\x01\n" +
+	"\n" +
+	"EventReply\x12\x1a\n" +
+	"\bsequence\x18\x01 \x01(\x04R\bsequence\x12>\n" +
+	"\facknowledged\x18\x02 \x01(\v2\x18.zama.sdk.v1alpha1.EmptyH\x00R\facknowledged\x123\n" +
+	"\x05error\x18\x03 \x01(\v2\x1b.zama.sdk.v1alpha1.SdkErrorH\x00R\x05errorB\t\n" +
+	"\aoutcome\"\x93\x01\n" +
+	"\x12EventClientMessage\x12;\n" +
+	"\x06attach\x18\x01 \x01(\v2!.zama.sdk.v1alpha1.ContextRequestH\x00R\x06attach\x125\n" +
+	"\x05reply\x18\x02 \x01(\v2\x1d.zama.sdk.v1alpha1.EventReplyH\x00R\x05replyB\t\n" +
+	"\amessage\"`\n" +
+	"\x0fEventReplyError\x12\x1a\n" +
+	"\bsequence\x18\x01 \x01(\x04R\bsequence\x121\n" +
+	"\x05error\x18\x02 \x01(\v2\x1b.zama.sdk.v1alpha1.SdkErrorR\x05error\"\xde\x01\n" +
+	"\x12EventServerMessage\x126\n" +
+	"\battached\x18\x01 \x01(\v2\x18.zama.sdk.v1alpha1.EmptyH\x00R\battached\x12>\n" +
+	"\bdelivery\x18\x02 \x01(\v2 .zama.sdk.v1alpha1.EventDeliveryH\x00R\bdelivery\x12E\n" +
+	"\vreply_error\x18\x03 \x01(\v2\".zama.sdk.v1alpha1.EventReplyErrorH\x00R\n" +
+	"replyErrorB\t\n" +
+	"\amessage*z\n" +
 	"\rStorageMethod\x12\x1e\n" +
 	"\x1aSTORAGE_METHOD_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12STORAGE_METHOD_GET\x10\x01\x12\x16\n" +
@@ -7528,14 +8652,79 @@ const file_zama_sdk_v1alpha1_sidecar_proto_rawDesc = "" +
 	"\"TRANSACTION_KIND_TRANSFER_AND_CALL\x10\t\x12(\n" +
 	"$TRANSACTION_KIND_DELEGATE_DECRYPTION\x10\n" +
 	"\x12&\n" +
-	"\"TRANSACTION_KIND_REVOKE_DELEGATION\x10\v2\xb5\x17\n" +
+	"\"TRANSACTION_KIND_REVOKE_DELEGATION\x10\v*\xe8\x06\n" +
+	"\fSdkEventKind\x12\x1e\n" +
+	"\x1aSDK_EVENT_KIND_UNSPECIFIED\x10\x00\x12 \n" +
+	"\x1cSDK_EVENT_KIND_ENCRYPT_START\x10\x01\x12\x1e\n" +
+	"\x1aSDK_EVENT_KIND_ENCRYPT_END\x10\x02\x12 \n" +
+	"\x1cSDK_EVENT_KIND_ENCRYPT_ERROR\x10\x03\x12 \n" +
+	"\x1cSDK_EVENT_KIND_DECRYPT_START\x10\x04\x12\x1e\n" +
+	"\x1aSDK_EVENT_KIND_DECRYPT_END\x10\x05\x12 \n" +
+	"\x1cSDK_EVENT_KIND_DECRYPT_ERROR\x10\x06\x12\x1f\n" +
+	"\x1bSDK_EVENT_KIND_PERMIT_ERROR\x10\a\x12$\n" +
+	" SDK_EVENT_KIND_TRANSACTION_ERROR\x10\b\x12#\n" +
+	"\x1fSDK_EVENT_KIND_SHIELD_SUBMITTED\x10\t\x12%\n" +
+	"!SDK_EVENT_KIND_TRANSFER_SUBMITTED\x10\n" +
+	"\x12*\n" +
+	"&SDK_EVENT_KIND_TRANSFER_FROM_SUBMITTED\x10\v\x12)\n" +
+	"%SDK_EVENT_KIND_SET_OPERATOR_SUBMITTED\x10\f\x12/\n" +
+	"+SDK_EVENT_KIND_APPROVE_UNDERLYING_SUBMITTED\x10\r\x12!\n" +
+	"\x1dSDK_EVENT_KIND_WRAP_SUBMITTED\x10\x0e\x12#\n" +
+	"\x1fSDK_EVENT_KIND_UNWRAP_SUBMITTED\x10\x0f\x12,\n" +
+	"(SDK_EVENT_KIND_FINALIZE_UNWRAP_SUBMITTED\x10\x10\x12'\n" +
+	"#SDK_EVENT_KIND_DELEGATION_SUBMITTED\x10\x11\x12.\n" +
+	"*SDK_EVENT_KIND_REVOKE_DELEGATION_SUBMITTED\x10\x12\x12,\n" +
+	"(SDK_EVENT_KIND_UNSHIELD_PHASE1_SUBMITTED\x10\x13\x12*\n" +
+	"&SDK_EVENT_KIND_UNSHIELD_PHASE2_STARTED\x10\x14\x12,\n" +
+	"(SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED\x10\x15*\xd7\x05\n" +
+	"\x0eEventOperation\x12\x1f\n" +
+	"\x1bEVENT_OPERATION_UNSPECIFIED\x10\x00\x12 \n" +
+	"\x1cEVENT_OPERATION_GRANT_PERMIT\x10\x01\x12+\n" +
+	"'EVENT_OPERATION_GRANT_DELEGATION_PERMIT\x10\x02\x12#\n" +
+	"\x1fEVENT_OPERATION_REGISTER_PERMIT\x10\x03\x12&\n" +
+	"\"EVENT_OPERATION_APPROVE_UNDERLYING\x10\x04\x12,\n" +
+	"(EVENT_OPERATION_APPROVE_UNDERLYING_RESET\x10\x05\x12'\n" +
+	"#EVENT_OPERATION_DELEGATE_DECRYPTION\x10\x06\x12#\n" +
+	"\x1fEVENT_OPERATION_FINALIZE_UNWRAP\x10\a\x12%\n" +
+	"!EVENT_OPERATION_REVOKE_DELEGATION\x10\b\x12 \n" +
+	"\x1cEVENT_OPERATION_SET_OPERATOR\x10\t\x12,\n" +
+	"(EVENT_OPERATION_SHIELD_TRANSFER_AND_CALL\x10\n" +
+	"\x12+\n" +
+	"'EVENT_OPERATION_SHIELD_APPROVE_AND_WRAP\x10\v\x12\x18\n" +
+	"\x14EVENT_OPERATION_WRAP\x10\f\x12\x1c\n" +
+	"\x18EVENT_OPERATION_TRANSFER\x10\r\x12%\n" +
+	"!EVENT_OPERATION_TRANSFER_AND_CALL\x10\x0e\x12!\n" +
+	"\x1dEVENT_OPERATION_TRANSFER_FROM\x10\x0f\x12*\n" +
+	"&EVENT_OPERATION_TRANSFER_FROM_AND_CALL\x10\x10\x12\x1a\n" +
+	"\x16EVENT_OPERATION_UNWRAP\x10\x11\x12\x1e\n" +
+	"\x1aEVENT_OPERATION_UNWRAP_ALL\x10\x12*n\n" +
+	"\n" +
+	"ShieldPath\x12\x1b\n" +
+	"\x17SHIELD_PATH_UNSPECIFIED\x10\x00\x12!\n" +
+	"\x1dSHIELD_PATH_TRANSFER_AND_CALL\x10\x01\x12 \n" +
+	"\x1cSHIELD_PATH_APPROVE_AND_WRAP\x10\x02*a\n" +
+	"\fApprovalStep\x12\x1d\n" +
+	"\x19APPROVAL_STEP_UNSPECIFIED\x10\x00\x12\x17\n" +
+	"\x13APPROVAL_STEP_RESET\x10\x01\x12\x19\n" +
+	"\x15APPROVAL_STEP_APPROVE\x10\x02*\xcb\x02\n" +
+	"\fProgressKind\x12\x1d\n" +
+	"\x19PROGRESS_KIND_UNSPECIFIED\x10\x00\x12\"\n" +
+	"\x1ePROGRESS_KIND_ENCRYPT_COMPLETE\x10\x01\x12$\n" +
+	" PROGRESS_KIND_TRANSFER_SUBMITTED\x10\x02\x12$\n" +
+	" PROGRESS_KIND_APPROVAL_SUBMITTED\x10\x03\x12\"\n" +
+	"\x1ePROGRESS_KIND_SHIELD_SUBMITTED\x10\x04\x12 \n" +
+	"\x1cPROGRESS_KIND_WRAP_SUBMITTED\x10\x05\x12\"\n" +
+	"\x1ePROGRESS_KIND_UNWRAP_SUBMITTED\x10\x06\x12\x1c\n" +
+	"\x18PROGRESS_KIND_FINALIZING\x10\a\x12$\n" +
+	" PROGRESS_KIND_FINALIZE_SUBMITTED\x10\b2\x97\x18\n" +
 	"\x0eSidecarService\x12P\n" +
 	"\aGetInfo\x12!.zama.sdk.v1alpha1.GetInfoRequest\x1a\".zama.sdk.v1alpha1.GetInfoResponse\x12b\n" +
 	"\rCreateContext\x12'.zama.sdk.v1alpha1.CreateContextRequest\x1a(.zama.sdk.v1alpha1.CreateContextResponse\x12Z\n" +
 	"\fCloseContext\x12!.zama.sdk.v1alpha1.ContextRequest\x1a'.zama.sdk.v1alpha1.CloseContextResponse\x12b\n" +
 	"\rUpdateAccount\x12'.zama.sdk.v1alpha1.UpdateAccountRequest\x1a(.zama.sdk.v1alpha1.UpdateAccountResponse\x12c\n" +
 	"\rSignerChannel\x12&.zama.sdk.v1alpha1.SignerClientMessage\x1a&.zama.sdk.v1alpha1.SignerServerMessage(\x010\x01\x12f\n" +
-	"\x0eStorageChannel\x12'.zama.sdk.v1alpha1.StorageClientMessage\x1a'.zama.sdk.v1alpha1.StorageServerMessage(\x010\x01\x12b\n" +
+	"\x0eStorageChannel\x12'.zama.sdk.v1alpha1.StorageClientMessage\x1a'.zama.sdk.v1alpha1.StorageServerMessage(\x010\x01\x12`\n" +
+	"\fEventChannel\x12%.zama.sdk.v1alpha1.EventClientMessage\x1a%.zama.sdk.v1alpha1.EventServerMessage(\x010\x01\x12b\n" +
 	"\rDecryptValues\x12'.zama.sdk.v1alpha1.DecryptValuesRequest\x1a(.zama.sdk.v1alpha1.DecryptValuesResponse\x12}\n" +
 	"\x16DelegatedDecryptValues\x120.zama.sdk.v1alpha1.DelegatedDecryptValuesRequest\x1a1.zama.sdk.v1alpha1.DelegatedDecryptValuesResponse\x12t\n" +
 	"\x13DecryptPublicValues\x12-.zama.sdk.v1alpha1.DecryptPublicValuesRequest\x1a..zama.sdk.v1alpha1.DecryptPublicValuesResponse\x12\x8c\x01\n" +
@@ -7571,281 +8760,316 @@ func file_zama_sdk_v1alpha1_sidecar_proto_rawDescGZIP() []byte {
 	return file_zama_sdk_v1alpha1_sidecar_proto_rawDescData
 }
 
-var file_zama_sdk_v1alpha1_sidecar_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_zama_sdk_v1alpha1_sidecar_proto_msgTypes = make([]protoimpl.MessageInfo, 106)
+var file_zama_sdk_v1alpha1_sidecar_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
+var file_zama_sdk_v1alpha1_sidecar_proto_msgTypes = make([]protoimpl.MessageInfo, 114)
 var file_zama_sdk_v1alpha1_sidecar_proto_goTypes = []any{
 	(StorageMethod)(0),                          // 0: zama.sdk.v1alpha1.StorageMethod
 	(RelayerTransport)(0),                       // 1: zama.sdk.v1alpha1.RelayerTransport
 	(TransactionKind)(0),                        // 2: zama.sdk.v1alpha1.TransactionKind
-	(*Empty)(nil),                               // 3: zama.sdk.v1alpha1.Empty
-	(*GetInfoRequest)(nil),                      // 4: zama.sdk.v1alpha1.GetInfoRequest
-	(*GetInfoResponse)(nil),                     // 5: zama.sdk.v1alpha1.GetInfoResponse
-	(*WalletAccount)(nil),                       // 6: zama.sdk.v1alpha1.WalletAccount
-	(*CreateContextRequest)(nil),                // 7: zama.sdk.v1alpha1.CreateContextRequest
-	(*DerivationSecret)(nil),                    // 8: zama.sdk.v1alpha1.DerivationSecret
-	(*CreateContextResponse)(nil),               // 9: zama.sdk.v1alpha1.CreateContextResponse
-	(*ContextRequest)(nil),                      // 10: zama.sdk.v1alpha1.ContextRequest
-	(*UpdateAccountRequest)(nil),                // 11: zama.sdk.v1alpha1.UpdateAccountRequest
-	(*Operation)(nil),                           // 12: zama.sdk.v1alpha1.Operation
-	(*OperationRequest)(nil),                    // 13: zama.sdk.v1alpha1.OperationRequest
-	(*EncryptedInput)(nil),                      // 14: zama.sdk.v1alpha1.EncryptedInput
-	(*ClearValue)(nil),                          // 15: zama.sdk.v1alpha1.ClearValue
-	(*ClearEntry)(nil),                          // 16: zama.sdk.v1alpha1.ClearEntry
-	(*DecryptValuesRequest)(nil),                // 17: zama.sdk.v1alpha1.DecryptValuesRequest
-	(*DecryptValuesResponse)(nil),               // 18: zama.sdk.v1alpha1.DecryptValuesResponse
-	(*DelegatedDecryptValuesRequest)(nil),       // 19: zama.sdk.v1alpha1.DelegatedDecryptValuesRequest
-	(*DecryptPublicValuesRequest)(nil),          // 20: zama.sdk.v1alpha1.DecryptPublicValuesRequest
-	(*DecryptPublicValuesResponse)(nil),         // 21: zama.sdk.v1alpha1.DecryptPublicValuesResponse
-	(*DelegatedBatchDecryptValuesRequest)(nil),  // 22: zama.sdk.v1alpha1.DelegatedBatchDecryptValuesRequest
-	(*SdkError)(nil),                            // 23: zama.sdk.v1alpha1.SdkError
-	(*BatchItem)(nil),                           // 24: zama.sdk.v1alpha1.BatchItem
-	(*DelegatedBatchDecryptValuesResponse)(nil), // 25: zama.sdk.v1alpha1.DelegatedBatchDecryptValuesResponse
-	(*PreparePermitRequest)(nil),                // 26: zama.sdk.v1alpha1.PreparePermitRequest
-	(*PreparePermitResponse)(nil),               // 27: zama.sdk.v1alpha1.PreparePermitResponse
-	(*RegisterPermitRequest)(nil),               // 28: zama.sdk.v1alpha1.RegisterPermitRequest
-	(*ContractsRequest)(nil),                    // 29: zama.sdk.v1alpha1.ContractsRequest
-	(*DelegationContractsRequest)(nil),          // 30: zama.sdk.v1alpha1.DelegationContractsRequest
-	(*HasPermitResponse)(nil),                   // 31: zama.sdk.v1alpha1.HasPermitResponse
-	(*ContractList)(nil),                        // 32: zama.sdk.v1alpha1.ContractList
-	(*RevokePermitsRequest)(nil),                // 33: zama.sdk.v1alpha1.RevokePermitsRequest
-	(*ScopeRequest)(nil),                        // 34: zama.sdk.v1alpha1.ScopeRequest
-	(*SignerReply)(nil),                         // 35: zama.sdk.v1alpha1.SignerReply
-	(*ExecutionRevert)(nil),                     // 36: zama.sdk.v1alpha1.ExecutionRevert
-	(*SignerClientMessage)(nil),                 // 37: zama.sdk.v1alpha1.SignerClientMessage
-	(*SignerAction)(nil),                        // 38: zama.sdk.v1alpha1.SignerAction
-	(*ContractWriteRequest)(nil),                // 39: zama.sdk.v1alpha1.ContractWriteRequest
-	(*SignerReplyError)(nil),                    // 40: zama.sdk.v1alpha1.SignerReplyError
-	(*SignerActionCancelled)(nil),               // 41: zama.sdk.v1alpha1.SignerActionCancelled
-	(*SignerServerMessage)(nil),                 // 42: zama.sdk.v1alpha1.SignerServerMessage
-	(*StorageBinding)(nil),                      // 43: zama.sdk.v1alpha1.StorageBinding
-	(*StorageAction)(nil),                       // 44: zama.sdk.v1alpha1.StorageAction
-	(*StorageReply)(nil),                        // 45: zama.sdk.v1alpha1.StorageReply
-	(*StorageClientMessage)(nil),                // 46: zama.sdk.v1alpha1.StorageClientMessage
-	(*StorageReplyError)(nil),                   // 47: zama.sdk.v1alpha1.StorageReplyError
-	(*StorageServerMessage)(nil),                // 48: zama.sdk.v1alpha1.StorageServerMessage
-	(*CloseContextResponse)(nil),                // 49: zama.sdk.v1alpha1.CloseContextResponse
-	(*UpdateAccountResponse)(nil),               // 50: zama.sdk.v1alpha1.UpdateAccountResponse
-	(*RegisterPermitResponse)(nil),              // 51: zama.sdk.v1alpha1.RegisterPermitResponse
-	(*GrantPermitResponse)(nil),                 // 52: zama.sdk.v1alpha1.GrantPermitResponse
-	(*GrantDelegationPermitResponse)(nil),       // 53: zama.sdk.v1alpha1.GrantDelegationPermitResponse
-	(*RevokePermitsResponse)(nil),               // 54: zama.sdk.v1alpha1.RevokePermitsResponse
-	(*ClearPermitsResponse)(nil),                // 55: zama.sdk.v1alpha1.ClearPermitsResponse
-	(*WarmTransportKeyPairResponse)(nil),        // 56: zama.sdk.v1alpha1.WarmTransportKeyPairResponse
-	(*WarmTransportKeyPairScopeResponse)(nil),   // 57: zama.sdk.v1alpha1.WarmTransportKeyPairScopeResponse
-	(*RevokeTransportKeyPairResponse)(nil),      // 58: zama.sdk.v1alpha1.RevokeTransportKeyPairResponse
-	(*DelegatedDecryptValuesResponse)(nil),      // 59: zama.sdk.v1alpha1.DelegatedDecryptValuesResponse
-	(*HasDelegationPermitResponse)(nil),         // 60: zama.sdk.v1alpha1.HasDelegationPermitResponse
-	(*ContextConfig)(nil),                       // 61: zama.sdk.v1alpha1.ContextConfig
-	(*ChainConfig)(nil),                         // 62: zama.sdk.v1alpha1.ChainConfig
-	(*ChainAuth)(nil),                           // 63: zama.sdk.v1alpha1.ChainAuth
-	(*NamedCredential)(nil),                     // 64: zama.sdk.v1alpha1.NamedCredential
-	(*ProcessRuntimeConfig)(nil),                // 65: zama.sdk.v1alpha1.ProcessRuntimeConfig
-	(*ModuleVersions)(nil),                      // 66: zama.sdk.v1alpha1.ModuleVersions
-	(*PinnedModuleVersions)(nil),                // 67: zama.sdk.v1alpha1.PinnedModuleVersions
-	(*RelayerMap)(nil),                          // 68: zama.sdk.v1alpha1.RelayerMap
-	(*RelayerConfig)(nil),                       // 69: zama.sdk.v1alpha1.RelayerConfig
-	(*RelayerOptions)(nil),                      // 70: zama.sdk.v1alpha1.RelayerOptions
-	(*FheEncryptionKey)(nil),                    // 71: zama.sdk.v1alpha1.FheEncryptionKey
-	(*FhePublicKeyBytes)(nil),                   // 72: zama.sdk.v1alpha1.FhePublicKeyBytes
-	(*FheCrsBytes)(nil),                         // 73: zama.sdk.v1alpha1.FheCrsBytes
-	(*FheEncryptionKeyMetadata)(nil),            // 74: zama.sdk.v1alpha1.FheEncryptionKeyMetadata
-	(*HttpProviderConfig)(nil),                  // 75: zama.sdk.v1alpha1.HttpProviderConfig
-	(*HttpHeaders)(nil),                         // 76: zama.sdk.v1alpha1.HttpHeaders
-	(*ProviderBatch)(nil),                       // 77: zama.sdk.v1alpha1.ProviderBatch
-	(*ProviderBatchOptions)(nil),                // 78: zama.sdk.v1alpha1.ProviderBatchOptions
-	(*EncryptInput)(nil),                        // 79: zama.sdk.v1alpha1.EncryptInput
-	(*EncryptRequest)(nil),                      // 80: zama.sdk.v1alpha1.EncryptRequest
-	(*EncryptResponse)(nil),                     // 81: zama.sdk.v1alpha1.EncryptResponse
-	(*PrepareTransactionRequest)(nil),           // 82: zama.sdk.v1alpha1.PrepareTransactionRequest
-	(*PrepareOptions)(nil),                      // 83: zama.sdk.v1alpha1.PrepareOptions
-	(*PrepareFees)(nil),                         // 84: zama.sdk.v1alpha1.PrepareFees
-	(*ConfidentialTransfer)(nil),                // 85: zama.sdk.v1alpha1.ConfidentialTransfer
-	(*ConfidentialTransferFrom)(nil),            // 86: zama.sdk.v1alpha1.ConfidentialTransferFrom
-	(*SetOperator)(nil),                         // 87: zama.sdk.v1alpha1.SetOperator
-	(*Unwrap)(nil),                              // 88: zama.sdk.v1alpha1.Unwrap
-	(*UnwrapAll)(nil),                           // 89: zama.sdk.v1alpha1.UnwrapAll
-	(*FinalizeUnwrap)(nil),                      // 90: zama.sdk.v1alpha1.FinalizeUnwrap
-	(*ApproveUnderlying)(nil),                   // 91: zama.sdk.v1alpha1.ApproveUnderlying
-	(*Wrap)(nil),                                // 92: zama.sdk.v1alpha1.Wrap
-	(*TransferAndCall)(nil),                     // 93: zama.sdk.v1alpha1.TransferAndCall
-	(*DelegateDecryption)(nil),                  // 94: zama.sdk.v1alpha1.DelegateDecryption
-	(*RevokeDelegation)(nil),                    // 95: zama.sdk.v1alpha1.RevokeDelegation
-	(*PrepareTransactionResponse)(nil),          // 96: zama.sdk.v1alpha1.PrepareTransactionResponse
-	(*DelegateDecryptionRequest)(nil),           // 97: zama.sdk.v1alpha1.DelegateDecryptionRequest
-	(*RevokeDelegationRequest)(nil),             // 98: zama.sdk.v1alpha1.RevokeDelegationRequest
-	(*DelegationQueryRequest)(nil),              // 99: zama.sdk.v1alpha1.DelegationQueryRequest
-	(*TransactionResult)(nil),                   // 100: zama.sdk.v1alpha1.TransactionResult
-	(*TransactionLog)(nil),                      // 101: zama.sdk.v1alpha1.TransactionLog
-	(*DelegateDecryptionResponse)(nil),          // 102: zama.sdk.v1alpha1.DelegateDecryptionResponse
-	(*RevokeDelegationResponse)(nil),            // 103: zama.sdk.v1alpha1.RevokeDelegationResponse
-	(*IsDelegationActiveResponse)(nil),          // 104: zama.sdk.v1alpha1.IsDelegationActiveResponse
-	(*GetDelegationExpiryResponse)(nil),         // 105: zama.sdk.v1alpha1.GetDelegationExpiryResponse
-	(*GetDelegationStatusResponse)(nil),         // 106: zama.sdk.v1alpha1.GetDelegationStatusResponse
-	nil,                                         // 107: zama.sdk.v1alpha1.RelayerMap.EntriesEntry
-	nil,                                         // 108: zama.sdk.v1alpha1.HttpHeaders.EntriesEntry
+	(SdkEventKind)(0),                           // 3: zama.sdk.v1alpha1.SdkEventKind
+	(EventOperation)(0),                         // 4: zama.sdk.v1alpha1.EventOperation
+	(ShieldPath)(0),                             // 5: zama.sdk.v1alpha1.ShieldPath
+	(ApprovalStep)(0),                           // 6: zama.sdk.v1alpha1.ApprovalStep
+	(ProgressKind)(0),                           // 7: zama.sdk.v1alpha1.ProgressKind
+	(*Empty)(nil),                               // 8: zama.sdk.v1alpha1.Empty
+	(*GetInfoRequest)(nil),                      // 9: zama.sdk.v1alpha1.GetInfoRequest
+	(*GetInfoResponse)(nil),                     // 10: zama.sdk.v1alpha1.GetInfoResponse
+	(*WalletAccount)(nil),                       // 11: zama.sdk.v1alpha1.WalletAccount
+	(*CreateContextRequest)(nil),                // 12: zama.sdk.v1alpha1.CreateContextRequest
+	(*DerivationSecret)(nil),                    // 13: zama.sdk.v1alpha1.DerivationSecret
+	(*CreateContextResponse)(nil),               // 14: zama.sdk.v1alpha1.CreateContextResponse
+	(*ContextRequest)(nil),                      // 15: zama.sdk.v1alpha1.ContextRequest
+	(*UpdateAccountRequest)(nil),                // 16: zama.sdk.v1alpha1.UpdateAccountRequest
+	(*Operation)(nil),                           // 17: zama.sdk.v1alpha1.Operation
+	(*OperationRequest)(nil),                    // 18: zama.sdk.v1alpha1.OperationRequest
+	(*EncryptedInput)(nil),                      // 19: zama.sdk.v1alpha1.EncryptedInput
+	(*ClearValue)(nil),                          // 20: zama.sdk.v1alpha1.ClearValue
+	(*ClearEntry)(nil),                          // 21: zama.sdk.v1alpha1.ClearEntry
+	(*DecryptValuesRequest)(nil),                // 22: zama.sdk.v1alpha1.DecryptValuesRequest
+	(*DecryptValuesResponse)(nil),               // 23: zama.sdk.v1alpha1.DecryptValuesResponse
+	(*DelegatedDecryptValuesRequest)(nil),       // 24: zama.sdk.v1alpha1.DelegatedDecryptValuesRequest
+	(*DecryptPublicValuesRequest)(nil),          // 25: zama.sdk.v1alpha1.DecryptPublicValuesRequest
+	(*DecryptPublicValuesResponse)(nil),         // 26: zama.sdk.v1alpha1.DecryptPublicValuesResponse
+	(*DelegatedBatchDecryptValuesRequest)(nil),  // 27: zama.sdk.v1alpha1.DelegatedBatchDecryptValuesRequest
+	(*SdkError)(nil),                            // 28: zama.sdk.v1alpha1.SdkError
+	(*BatchItem)(nil),                           // 29: zama.sdk.v1alpha1.BatchItem
+	(*DelegatedBatchDecryptValuesResponse)(nil), // 30: zama.sdk.v1alpha1.DelegatedBatchDecryptValuesResponse
+	(*PreparePermitRequest)(nil),                // 31: zama.sdk.v1alpha1.PreparePermitRequest
+	(*PreparePermitResponse)(nil),               // 32: zama.sdk.v1alpha1.PreparePermitResponse
+	(*RegisterPermitRequest)(nil),               // 33: zama.sdk.v1alpha1.RegisterPermitRequest
+	(*ContractsRequest)(nil),                    // 34: zama.sdk.v1alpha1.ContractsRequest
+	(*DelegationContractsRequest)(nil),          // 35: zama.sdk.v1alpha1.DelegationContractsRequest
+	(*HasPermitResponse)(nil),                   // 36: zama.sdk.v1alpha1.HasPermitResponse
+	(*ContractList)(nil),                        // 37: zama.sdk.v1alpha1.ContractList
+	(*RevokePermitsRequest)(nil),                // 38: zama.sdk.v1alpha1.RevokePermitsRequest
+	(*ScopeRequest)(nil),                        // 39: zama.sdk.v1alpha1.ScopeRequest
+	(*SignerReply)(nil),                         // 40: zama.sdk.v1alpha1.SignerReply
+	(*ExecutionRevert)(nil),                     // 41: zama.sdk.v1alpha1.ExecutionRevert
+	(*SignerClientMessage)(nil),                 // 42: zama.sdk.v1alpha1.SignerClientMessage
+	(*SignerAction)(nil),                        // 43: zama.sdk.v1alpha1.SignerAction
+	(*ContractWriteRequest)(nil),                // 44: zama.sdk.v1alpha1.ContractWriteRequest
+	(*SignerReplyError)(nil),                    // 45: zama.sdk.v1alpha1.SignerReplyError
+	(*SignerActionCancelled)(nil),               // 46: zama.sdk.v1alpha1.SignerActionCancelled
+	(*SignerServerMessage)(nil),                 // 47: zama.sdk.v1alpha1.SignerServerMessage
+	(*StorageBinding)(nil),                      // 48: zama.sdk.v1alpha1.StorageBinding
+	(*StorageAction)(nil),                       // 49: zama.sdk.v1alpha1.StorageAction
+	(*StorageReply)(nil),                        // 50: zama.sdk.v1alpha1.StorageReply
+	(*StorageClientMessage)(nil),                // 51: zama.sdk.v1alpha1.StorageClientMessage
+	(*StorageReplyError)(nil),                   // 52: zama.sdk.v1alpha1.StorageReplyError
+	(*StorageServerMessage)(nil),                // 53: zama.sdk.v1alpha1.StorageServerMessage
+	(*CloseContextResponse)(nil),                // 54: zama.sdk.v1alpha1.CloseContextResponse
+	(*UpdateAccountResponse)(nil),               // 55: zama.sdk.v1alpha1.UpdateAccountResponse
+	(*RegisterPermitResponse)(nil),              // 56: zama.sdk.v1alpha1.RegisterPermitResponse
+	(*GrantPermitResponse)(nil),                 // 57: zama.sdk.v1alpha1.GrantPermitResponse
+	(*GrantDelegationPermitResponse)(nil),       // 58: zama.sdk.v1alpha1.GrantDelegationPermitResponse
+	(*RevokePermitsResponse)(nil),               // 59: zama.sdk.v1alpha1.RevokePermitsResponse
+	(*ClearPermitsResponse)(nil),                // 60: zama.sdk.v1alpha1.ClearPermitsResponse
+	(*WarmTransportKeyPairResponse)(nil),        // 61: zama.sdk.v1alpha1.WarmTransportKeyPairResponse
+	(*WarmTransportKeyPairScopeResponse)(nil),   // 62: zama.sdk.v1alpha1.WarmTransportKeyPairScopeResponse
+	(*RevokeTransportKeyPairResponse)(nil),      // 63: zama.sdk.v1alpha1.RevokeTransportKeyPairResponse
+	(*DelegatedDecryptValuesResponse)(nil),      // 64: zama.sdk.v1alpha1.DelegatedDecryptValuesResponse
+	(*HasDelegationPermitResponse)(nil),         // 65: zama.sdk.v1alpha1.HasDelegationPermitResponse
+	(*ContextConfig)(nil),                       // 66: zama.sdk.v1alpha1.ContextConfig
+	(*ChainConfig)(nil),                         // 67: zama.sdk.v1alpha1.ChainConfig
+	(*ChainAuth)(nil),                           // 68: zama.sdk.v1alpha1.ChainAuth
+	(*NamedCredential)(nil),                     // 69: zama.sdk.v1alpha1.NamedCredential
+	(*ProcessRuntimeConfig)(nil),                // 70: zama.sdk.v1alpha1.ProcessRuntimeConfig
+	(*ModuleVersions)(nil),                      // 71: zama.sdk.v1alpha1.ModuleVersions
+	(*PinnedModuleVersions)(nil),                // 72: zama.sdk.v1alpha1.PinnedModuleVersions
+	(*RelayerMap)(nil),                          // 73: zama.sdk.v1alpha1.RelayerMap
+	(*RelayerConfig)(nil),                       // 74: zama.sdk.v1alpha1.RelayerConfig
+	(*RelayerOptions)(nil),                      // 75: zama.sdk.v1alpha1.RelayerOptions
+	(*FheEncryptionKey)(nil),                    // 76: zama.sdk.v1alpha1.FheEncryptionKey
+	(*FhePublicKeyBytes)(nil),                   // 77: zama.sdk.v1alpha1.FhePublicKeyBytes
+	(*FheCrsBytes)(nil),                         // 78: zama.sdk.v1alpha1.FheCrsBytes
+	(*FheEncryptionKeyMetadata)(nil),            // 79: zama.sdk.v1alpha1.FheEncryptionKeyMetadata
+	(*HttpProviderConfig)(nil),                  // 80: zama.sdk.v1alpha1.HttpProviderConfig
+	(*HttpHeaders)(nil),                         // 81: zama.sdk.v1alpha1.HttpHeaders
+	(*ProviderBatch)(nil),                       // 82: zama.sdk.v1alpha1.ProviderBatch
+	(*ProviderBatchOptions)(nil),                // 83: zama.sdk.v1alpha1.ProviderBatchOptions
+	(*EncryptInput)(nil),                        // 84: zama.sdk.v1alpha1.EncryptInput
+	(*EncryptRequest)(nil),                      // 85: zama.sdk.v1alpha1.EncryptRequest
+	(*EncryptResponse)(nil),                     // 86: zama.sdk.v1alpha1.EncryptResponse
+	(*PrepareTransactionRequest)(nil),           // 87: zama.sdk.v1alpha1.PrepareTransactionRequest
+	(*PrepareOptions)(nil),                      // 88: zama.sdk.v1alpha1.PrepareOptions
+	(*PrepareFees)(nil),                         // 89: zama.sdk.v1alpha1.PrepareFees
+	(*ConfidentialTransfer)(nil),                // 90: zama.sdk.v1alpha1.ConfidentialTransfer
+	(*ConfidentialTransferFrom)(nil),            // 91: zama.sdk.v1alpha1.ConfidentialTransferFrom
+	(*SetOperator)(nil),                         // 92: zama.sdk.v1alpha1.SetOperator
+	(*Unwrap)(nil),                              // 93: zama.sdk.v1alpha1.Unwrap
+	(*UnwrapAll)(nil),                           // 94: zama.sdk.v1alpha1.UnwrapAll
+	(*FinalizeUnwrap)(nil),                      // 95: zama.sdk.v1alpha1.FinalizeUnwrap
+	(*ApproveUnderlying)(nil),                   // 96: zama.sdk.v1alpha1.ApproveUnderlying
+	(*Wrap)(nil),                                // 97: zama.sdk.v1alpha1.Wrap
+	(*TransferAndCall)(nil),                     // 98: zama.sdk.v1alpha1.TransferAndCall
+	(*DelegateDecryption)(nil),                  // 99: zama.sdk.v1alpha1.DelegateDecryption
+	(*RevokeDelegation)(nil),                    // 100: zama.sdk.v1alpha1.RevokeDelegation
+	(*PrepareTransactionResponse)(nil),          // 101: zama.sdk.v1alpha1.PrepareTransactionResponse
+	(*DelegateDecryptionRequest)(nil),           // 102: zama.sdk.v1alpha1.DelegateDecryptionRequest
+	(*RevokeDelegationRequest)(nil),             // 103: zama.sdk.v1alpha1.RevokeDelegationRequest
+	(*DelegationQueryRequest)(nil),              // 104: zama.sdk.v1alpha1.DelegationQueryRequest
+	(*TransactionResult)(nil),                   // 105: zama.sdk.v1alpha1.TransactionResult
+	(*TransactionLog)(nil),                      // 106: zama.sdk.v1alpha1.TransactionLog
+	(*DelegateDecryptionResponse)(nil),          // 107: zama.sdk.v1alpha1.DelegateDecryptionResponse
+	(*RevokeDelegationResponse)(nil),            // 108: zama.sdk.v1alpha1.RevokeDelegationResponse
+	(*IsDelegationActiveResponse)(nil),          // 109: zama.sdk.v1alpha1.IsDelegationActiveResponse
+	(*GetDelegationExpiryResponse)(nil),         // 110: zama.sdk.v1alpha1.GetDelegationExpiryResponse
+	(*GetDelegationStatusResponse)(nil),         // 111: zama.sdk.v1alpha1.GetDelegationStatusResponse
+	(*SdkEvent)(nil),                            // 112: zama.sdk.v1alpha1.SdkEvent
+	(*WalletAccountChanged)(nil),                // 113: zama.sdk.v1alpha1.WalletAccountChanged
+	(*OperationProgress)(nil),                   // 114: zama.sdk.v1alpha1.OperationProgress
+	(*EventDelivery)(nil),                       // 115: zama.sdk.v1alpha1.EventDelivery
+	(*EventReply)(nil),                          // 116: zama.sdk.v1alpha1.EventReply
+	(*EventClientMessage)(nil),                  // 117: zama.sdk.v1alpha1.EventClientMessage
+	(*EventReplyError)(nil),                     // 118: zama.sdk.v1alpha1.EventReplyError
+	(*EventServerMessage)(nil),                  // 119: zama.sdk.v1alpha1.EventServerMessage
+	nil,                                         // 120: zama.sdk.v1alpha1.RelayerMap.EntriesEntry
+	nil,                                         // 121: zama.sdk.v1alpha1.HttpHeaders.EntriesEntry
 }
 var file_zama_sdk_v1alpha1_sidecar_proto_depIdxs = []int32{
-	61,  // 0: zama.sdk.v1alpha1.CreateContextRequest.config:type_name -> zama.sdk.v1alpha1.ContextConfig
-	6,   // 1: zama.sdk.v1alpha1.CreateContextRequest.account:type_name -> zama.sdk.v1alpha1.WalletAccount
-	43,  // 2: zama.sdk.v1alpha1.CreateContextRequest.storage:type_name -> zama.sdk.v1alpha1.StorageBinding
-	43,  // 3: zama.sdk.v1alpha1.CreateContextRequest.permit_storage:type_name -> zama.sdk.v1alpha1.StorageBinding
-	8,   // 4: zama.sdk.v1alpha1.CreateContextRequest.transport_key_pair_derivation_secret:type_name -> zama.sdk.v1alpha1.DerivationSecret
-	6,   // 5: zama.sdk.v1alpha1.UpdateAccountRequest.account:type_name -> zama.sdk.v1alpha1.WalletAccount
-	12,  // 6: zama.sdk.v1alpha1.OperationRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	3,   // 7: zama.sdk.v1alpha1.ClearValue.undefined_value:type_name -> zama.sdk.v1alpha1.Empty
-	15,  // 8: zama.sdk.v1alpha1.ClearEntry.value:type_name -> zama.sdk.v1alpha1.ClearValue
-	12,  // 9: zama.sdk.v1alpha1.DecryptValuesRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	14,  // 10: zama.sdk.v1alpha1.DecryptValuesRequest.inputs:type_name -> zama.sdk.v1alpha1.EncryptedInput
-	16,  // 11: zama.sdk.v1alpha1.DecryptValuesResponse.values:type_name -> zama.sdk.v1alpha1.ClearEntry
-	12,  // 12: zama.sdk.v1alpha1.DelegatedDecryptValuesRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	14,  // 13: zama.sdk.v1alpha1.DelegatedDecryptValuesRequest.inputs:type_name -> zama.sdk.v1alpha1.EncryptedInput
-	12,  // 14: zama.sdk.v1alpha1.DecryptPublicValuesRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	16,  // 15: zama.sdk.v1alpha1.DecryptPublicValuesResponse.values:type_name -> zama.sdk.v1alpha1.ClearEntry
-	12,  // 16: zama.sdk.v1alpha1.DelegatedBatchDecryptValuesRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	14,  // 17: zama.sdk.v1alpha1.DelegatedBatchDecryptValuesRequest.inputs:type_name -> zama.sdk.v1alpha1.EncryptedInput
-	15,  // 18: zama.sdk.v1alpha1.BatchItem.value:type_name -> zama.sdk.v1alpha1.ClearValue
-	23,  // 19: zama.sdk.v1alpha1.BatchItem.error:type_name -> zama.sdk.v1alpha1.SdkError
-	24,  // 20: zama.sdk.v1alpha1.DelegatedBatchDecryptValuesResponse.items:type_name -> zama.sdk.v1alpha1.BatchItem
-	12,  // 21: zama.sdk.v1alpha1.PreparePermitRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	12,  // 22: zama.sdk.v1alpha1.RegisterPermitRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	12,  // 23: zama.sdk.v1alpha1.ContractsRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	12,  // 24: zama.sdk.v1alpha1.DelegationContractsRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	12,  // 25: zama.sdk.v1alpha1.RevokePermitsRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	32,  // 26: zama.sdk.v1alpha1.RevokePermitsRequest.contracts:type_name -> zama.sdk.v1alpha1.ContractList
-	12,  // 27: zama.sdk.v1alpha1.ScopeRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	23,  // 28: zama.sdk.v1alpha1.SignerReply.error:type_name -> zama.sdk.v1alpha1.SdkError
-	36,  // 29: zama.sdk.v1alpha1.SignerReply.execution_revert:type_name -> zama.sdk.v1alpha1.ExecutionRevert
-	10,  // 30: zama.sdk.v1alpha1.SignerClientMessage.attach:type_name -> zama.sdk.v1alpha1.ContextRequest
-	35,  // 31: zama.sdk.v1alpha1.SignerClientMessage.reply:type_name -> zama.sdk.v1alpha1.SignerReply
-	6,   // 32: zama.sdk.v1alpha1.SignerAction.account:type_name -> zama.sdk.v1alpha1.WalletAccount
-	39,  // 33: zama.sdk.v1alpha1.SignerAction.contract_write:type_name -> zama.sdk.v1alpha1.ContractWriteRequest
-	23,  // 34: zama.sdk.v1alpha1.SignerReplyError.error:type_name -> zama.sdk.v1alpha1.SdkError
-	3,   // 35: zama.sdk.v1alpha1.SignerServerMessage.attached:type_name -> zama.sdk.v1alpha1.Empty
-	38,  // 36: zama.sdk.v1alpha1.SignerServerMessage.action:type_name -> zama.sdk.v1alpha1.SignerAction
-	40,  // 37: zama.sdk.v1alpha1.SignerServerMessage.reply_error:type_name -> zama.sdk.v1alpha1.SignerReplyError
-	41,  // 38: zama.sdk.v1alpha1.SignerServerMessage.cancelled:type_name -> zama.sdk.v1alpha1.SignerActionCancelled
-	3,   // 39: zama.sdk.v1alpha1.StorageBinding.memory:type_name -> zama.sdk.v1alpha1.Empty
+	66,  // 0: zama.sdk.v1alpha1.CreateContextRequest.config:type_name -> zama.sdk.v1alpha1.ContextConfig
+	11,  // 1: zama.sdk.v1alpha1.CreateContextRequest.account:type_name -> zama.sdk.v1alpha1.WalletAccount
+	48,  // 2: zama.sdk.v1alpha1.CreateContextRequest.storage:type_name -> zama.sdk.v1alpha1.StorageBinding
+	48,  // 3: zama.sdk.v1alpha1.CreateContextRequest.permit_storage:type_name -> zama.sdk.v1alpha1.StorageBinding
+	13,  // 4: zama.sdk.v1alpha1.CreateContextRequest.transport_key_pair_derivation_secret:type_name -> zama.sdk.v1alpha1.DerivationSecret
+	11,  // 5: zama.sdk.v1alpha1.UpdateAccountRequest.account:type_name -> zama.sdk.v1alpha1.WalletAccount
+	17,  // 6: zama.sdk.v1alpha1.OperationRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	8,   // 7: zama.sdk.v1alpha1.ClearValue.undefined_value:type_name -> zama.sdk.v1alpha1.Empty
+	20,  // 8: zama.sdk.v1alpha1.ClearEntry.value:type_name -> zama.sdk.v1alpha1.ClearValue
+	17,  // 9: zama.sdk.v1alpha1.DecryptValuesRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	19,  // 10: zama.sdk.v1alpha1.DecryptValuesRequest.inputs:type_name -> zama.sdk.v1alpha1.EncryptedInput
+	21,  // 11: zama.sdk.v1alpha1.DecryptValuesResponse.values:type_name -> zama.sdk.v1alpha1.ClearEntry
+	17,  // 12: zama.sdk.v1alpha1.DelegatedDecryptValuesRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	19,  // 13: zama.sdk.v1alpha1.DelegatedDecryptValuesRequest.inputs:type_name -> zama.sdk.v1alpha1.EncryptedInput
+	17,  // 14: zama.sdk.v1alpha1.DecryptPublicValuesRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	21,  // 15: zama.sdk.v1alpha1.DecryptPublicValuesResponse.values:type_name -> zama.sdk.v1alpha1.ClearEntry
+	17,  // 16: zama.sdk.v1alpha1.DelegatedBatchDecryptValuesRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	19,  // 17: zama.sdk.v1alpha1.DelegatedBatchDecryptValuesRequest.inputs:type_name -> zama.sdk.v1alpha1.EncryptedInput
+	20,  // 18: zama.sdk.v1alpha1.BatchItem.value:type_name -> zama.sdk.v1alpha1.ClearValue
+	28,  // 19: zama.sdk.v1alpha1.BatchItem.error:type_name -> zama.sdk.v1alpha1.SdkError
+	29,  // 20: zama.sdk.v1alpha1.DelegatedBatchDecryptValuesResponse.items:type_name -> zama.sdk.v1alpha1.BatchItem
+	17,  // 21: zama.sdk.v1alpha1.PreparePermitRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	17,  // 22: zama.sdk.v1alpha1.RegisterPermitRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	17,  // 23: zama.sdk.v1alpha1.ContractsRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	17,  // 24: zama.sdk.v1alpha1.DelegationContractsRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	17,  // 25: zama.sdk.v1alpha1.RevokePermitsRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	37,  // 26: zama.sdk.v1alpha1.RevokePermitsRequest.contracts:type_name -> zama.sdk.v1alpha1.ContractList
+	17,  // 27: zama.sdk.v1alpha1.ScopeRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	28,  // 28: zama.sdk.v1alpha1.SignerReply.error:type_name -> zama.sdk.v1alpha1.SdkError
+	41,  // 29: zama.sdk.v1alpha1.SignerReply.execution_revert:type_name -> zama.sdk.v1alpha1.ExecutionRevert
+	15,  // 30: zama.sdk.v1alpha1.SignerClientMessage.attach:type_name -> zama.sdk.v1alpha1.ContextRequest
+	40,  // 31: zama.sdk.v1alpha1.SignerClientMessage.reply:type_name -> zama.sdk.v1alpha1.SignerReply
+	11,  // 32: zama.sdk.v1alpha1.SignerAction.account:type_name -> zama.sdk.v1alpha1.WalletAccount
+	44,  // 33: zama.sdk.v1alpha1.SignerAction.contract_write:type_name -> zama.sdk.v1alpha1.ContractWriteRequest
+	28,  // 34: zama.sdk.v1alpha1.SignerReplyError.error:type_name -> zama.sdk.v1alpha1.SdkError
+	8,   // 35: zama.sdk.v1alpha1.SignerServerMessage.attached:type_name -> zama.sdk.v1alpha1.Empty
+	43,  // 36: zama.sdk.v1alpha1.SignerServerMessage.action:type_name -> zama.sdk.v1alpha1.SignerAction
+	45,  // 37: zama.sdk.v1alpha1.SignerServerMessage.reply_error:type_name -> zama.sdk.v1alpha1.SignerReplyError
+	46,  // 38: zama.sdk.v1alpha1.SignerServerMessage.cancelled:type_name -> zama.sdk.v1alpha1.SignerActionCancelled
+	8,   // 39: zama.sdk.v1alpha1.StorageBinding.memory:type_name -> zama.sdk.v1alpha1.Empty
 	0,   // 40: zama.sdk.v1alpha1.StorageAction.method:type_name -> zama.sdk.v1alpha1.StorageMethod
-	23,  // 41: zama.sdk.v1alpha1.StorageReply.error:type_name -> zama.sdk.v1alpha1.SdkError
-	3,   // 42: zama.sdk.v1alpha1.StorageReply.not_found:type_name -> zama.sdk.v1alpha1.Empty
-	3,   // 43: zama.sdk.v1alpha1.StorageReply.ack:type_name -> zama.sdk.v1alpha1.Empty
-	10,  // 44: zama.sdk.v1alpha1.StorageClientMessage.attach:type_name -> zama.sdk.v1alpha1.ContextRequest
-	45,  // 45: zama.sdk.v1alpha1.StorageClientMessage.reply:type_name -> zama.sdk.v1alpha1.StorageReply
-	23,  // 46: zama.sdk.v1alpha1.StorageReplyError.error:type_name -> zama.sdk.v1alpha1.SdkError
-	3,   // 47: zama.sdk.v1alpha1.StorageServerMessage.attached:type_name -> zama.sdk.v1alpha1.Empty
-	44,  // 48: zama.sdk.v1alpha1.StorageServerMessage.action:type_name -> zama.sdk.v1alpha1.StorageAction
-	47,  // 49: zama.sdk.v1alpha1.StorageServerMessage.reply_error:type_name -> zama.sdk.v1alpha1.StorageReplyError
-	16,  // 50: zama.sdk.v1alpha1.DelegatedDecryptValuesResponse.values:type_name -> zama.sdk.v1alpha1.ClearEntry
-	62,  // 51: zama.sdk.v1alpha1.ContextConfig.chains:type_name -> zama.sdk.v1alpha1.ChainConfig
-	65,  // 52: zama.sdk.v1alpha1.ContextConfig.process_runtime:type_name -> zama.sdk.v1alpha1.ProcessRuntimeConfig
-	68,  // 53: zama.sdk.v1alpha1.ContextConfig.relayers:type_name -> zama.sdk.v1alpha1.RelayerMap
-	63,  // 54: zama.sdk.v1alpha1.ChainConfig.auth:type_name -> zama.sdk.v1alpha1.ChainAuth
-	75,  // 55: zama.sdk.v1alpha1.ChainConfig.provider:type_name -> zama.sdk.v1alpha1.HttpProviderConfig
-	64,  // 56: zama.sdk.v1alpha1.ChainAuth.api_key_header:type_name -> zama.sdk.v1alpha1.NamedCredential
-	64,  // 57: zama.sdk.v1alpha1.ChainAuth.api_key_cookie:type_name -> zama.sdk.v1alpha1.NamedCredential
-	66,  // 58: zama.sdk.v1alpha1.ProcessRuntimeConfig.module_versions:type_name -> zama.sdk.v1alpha1.ModuleVersions
-	63,  // 59: zama.sdk.v1alpha1.ProcessRuntimeConfig.auth:type_name -> zama.sdk.v1alpha1.ChainAuth
-	3,   // 60: zama.sdk.v1alpha1.ModuleVersions.auto:type_name -> zama.sdk.v1alpha1.Empty
-	67,  // 61: zama.sdk.v1alpha1.ModuleVersions.pinned:type_name -> zama.sdk.v1alpha1.PinnedModuleVersions
-	107, // 62: zama.sdk.v1alpha1.RelayerMap.entries:type_name -> zama.sdk.v1alpha1.RelayerMap.EntriesEntry
+	28,  // 41: zama.sdk.v1alpha1.StorageReply.error:type_name -> zama.sdk.v1alpha1.SdkError
+	8,   // 42: zama.sdk.v1alpha1.StorageReply.not_found:type_name -> zama.sdk.v1alpha1.Empty
+	8,   // 43: zama.sdk.v1alpha1.StorageReply.ack:type_name -> zama.sdk.v1alpha1.Empty
+	15,  // 44: zama.sdk.v1alpha1.StorageClientMessage.attach:type_name -> zama.sdk.v1alpha1.ContextRequest
+	50,  // 45: zama.sdk.v1alpha1.StorageClientMessage.reply:type_name -> zama.sdk.v1alpha1.StorageReply
+	28,  // 46: zama.sdk.v1alpha1.StorageReplyError.error:type_name -> zama.sdk.v1alpha1.SdkError
+	8,   // 47: zama.sdk.v1alpha1.StorageServerMessage.attached:type_name -> zama.sdk.v1alpha1.Empty
+	49,  // 48: zama.sdk.v1alpha1.StorageServerMessage.action:type_name -> zama.sdk.v1alpha1.StorageAction
+	52,  // 49: zama.sdk.v1alpha1.StorageServerMessage.reply_error:type_name -> zama.sdk.v1alpha1.StorageReplyError
+	21,  // 50: zama.sdk.v1alpha1.DelegatedDecryptValuesResponse.values:type_name -> zama.sdk.v1alpha1.ClearEntry
+	67,  // 51: zama.sdk.v1alpha1.ContextConfig.chains:type_name -> zama.sdk.v1alpha1.ChainConfig
+	70,  // 52: zama.sdk.v1alpha1.ContextConfig.process_runtime:type_name -> zama.sdk.v1alpha1.ProcessRuntimeConfig
+	73,  // 53: zama.sdk.v1alpha1.ContextConfig.relayers:type_name -> zama.sdk.v1alpha1.RelayerMap
+	68,  // 54: zama.sdk.v1alpha1.ChainConfig.auth:type_name -> zama.sdk.v1alpha1.ChainAuth
+	80,  // 55: zama.sdk.v1alpha1.ChainConfig.provider:type_name -> zama.sdk.v1alpha1.HttpProviderConfig
+	69,  // 56: zama.sdk.v1alpha1.ChainAuth.api_key_header:type_name -> zama.sdk.v1alpha1.NamedCredential
+	69,  // 57: zama.sdk.v1alpha1.ChainAuth.api_key_cookie:type_name -> zama.sdk.v1alpha1.NamedCredential
+	71,  // 58: zama.sdk.v1alpha1.ProcessRuntimeConfig.module_versions:type_name -> zama.sdk.v1alpha1.ModuleVersions
+	68,  // 59: zama.sdk.v1alpha1.ProcessRuntimeConfig.auth:type_name -> zama.sdk.v1alpha1.ChainAuth
+	8,   // 60: zama.sdk.v1alpha1.ModuleVersions.auto:type_name -> zama.sdk.v1alpha1.Empty
+	72,  // 61: zama.sdk.v1alpha1.ModuleVersions.pinned:type_name -> zama.sdk.v1alpha1.PinnedModuleVersions
+	120, // 62: zama.sdk.v1alpha1.RelayerMap.entries:type_name -> zama.sdk.v1alpha1.RelayerMap.EntriesEntry
 	1,   // 63: zama.sdk.v1alpha1.RelayerConfig.transport:type_name -> zama.sdk.v1alpha1.RelayerTransport
-	70,  // 64: zama.sdk.v1alpha1.RelayerConfig.options:type_name -> zama.sdk.v1alpha1.RelayerOptions
-	66,  // 65: zama.sdk.v1alpha1.RelayerOptions.module_versions:type_name -> zama.sdk.v1alpha1.ModuleVersions
-	71,  // 66: zama.sdk.v1alpha1.RelayerOptions.fhe_encryption_key:type_name -> zama.sdk.v1alpha1.FheEncryptionKey
-	72,  // 67: zama.sdk.v1alpha1.FheEncryptionKey.public_key_bytes:type_name -> zama.sdk.v1alpha1.FhePublicKeyBytes
-	73,  // 68: zama.sdk.v1alpha1.FheEncryptionKey.crs_bytes:type_name -> zama.sdk.v1alpha1.FheCrsBytes
-	74,  // 69: zama.sdk.v1alpha1.FheEncryptionKey.metadata:type_name -> zama.sdk.v1alpha1.FheEncryptionKeyMetadata
-	76,  // 70: zama.sdk.v1alpha1.HttpProviderConfig.headers:type_name -> zama.sdk.v1alpha1.HttpHeaders
-	77,  // 71: zama.sdk.v1alpha1.HttpProviderConfig.batch:type_name -> zama.sdk.v1alpha1.ProviderBatch
-	108, // 72: zama.sdk.v1alpha1.HttpHeaders.entries:type_name -> zama.sdk.v1alpha1.HttpHeaders.EntriesEntry
-	78,  // 73: zama.sdk.v1alpha1.ProviderBatch.options:type_name -> zama.sdk.v1alpha1.ProviderBatchOptions
-	12,  // 74: zama.sdk.v1alpha1.EncryptRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	79,  // 75: zama.sdk.v1alpha1.EncryptRequest.values:type_name -> zama.sdk.v1alpha1.EncryptInput
-	12,  // 76: zama.sdk.v1alpha1.PrepareTransactionRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	83,  // 77: zama.sdk.v1alpha1.PrepareTransactionRequest.options:type_name -> zama.sdk.v1alpha1.PrepareOptions
-	85,  // 78: zama.sdk.v1alpha1.PrepareTransactionRequest.confidential_transfer:type_name -> zama.sdk.v1alpha1.ConfidentialTransfer
-	86,  // 79: zama.sdk.v1alpha1.PrepareTransactionRequest.confidential_transfer_from:type_name -> zama.sdk.v1alpha1.ConfidentialTransferFrom
-	87,  // 80: zama.sdk.v1alpha1.PrepareTransactionRequest.set_operator:type_name -> zama.sdk.v1alpha1.SetOperator
-	88,  // 81: zama.sdk.v1alpha1.PrepareTransactionRequest.unwrap:type_name -> zama.sdk.v1alpha1.Unwrap
-	89,  // 82: zama.sdk.v1alpha1.PrepareTransactionRequest.unwrap_all:type_name -> zama.sdk.v1alpha1.UnwrapAll
-	90,  // 83: zama.sdk.v1alpha1.PrepareTransactionRequest.finalize_unwrap:type_name -> zama.sdk.v1alpha1.FinalizeUnwrap
-	91,  // 84: zama.sdk.v1alpha1.PrepareTransactionRequest.approve_underlying:type_name -> zama.sdk.v1alpha1.ApproveUnderlying
-	92,  // 85: zama.sdk.v1alpha1.PrepareTransactionRequest.wrap:type_name -> zama.sdk.v1alpha1.Wrap
-	93,  // 86: zama.sdk.v1alpha1.PrepareTransactionRequest.transfer_and_call:type_name -> zama.sdk.v1alpha1.TransferAndCall
-	94,  // 87: zama.sdk.v1alpha1.PrepareTransactionRequest.delegate_decryption:type_name -> zama.sdk.v1alpha1.DelegateDecryption
-	95,  // 88: zama.sdk.v1alpha1.PrepareTransactionRequest.revoke_delegation:type_name -> zama.sdk.v1alpha1.RevokeDelegation
-	84,  // 89: zama.sdk.v1alpha1.PrepareOptions.fees:type_name -> zama.sdk.v1alpha1.PrepareFees
+	75,  // 64: zama.sdk.v1alpha1.RelayerConfig.options:type_name -> zama.sdk.v1alpha1.RelayerOptions
+	71,  // 65: zama.sdk.v1alpha1.RelayerOptions.module_versions:type_name -> zama.sdk.v1alpha1.ModuleVersions
+	76,  // 66: zama.sdk.v1alpha1.RelayerOptions.fhe_encryption_key:type_name -> zama.sdk.v1alpha1.FheEncryptionKey
+	77,  // 67: zama.sdk.v1alpha1.FheEncryptionKey.public_key_bytes:type_name -> zama.sdk.v1alpha1.FhePublicKeyBytes
+	78,  // 68: zama.sdk.v1alpha1.FheEncryptionKey.crs_bytes:type_name -> zama.sdk.v1alpha1.FheCrsBytes
+	79,  // 69: zama.sdk.v1alpha1.FheEncryptionKey.metadata:type_name -> zama.sdk.v1alpha1.FheEncryptionKeyMetadata
+	81,  // 70: zama.sdk.v1alpha1.HttpProviderConfig.headers:type_name -> zama.sdk.v1alpha1.HttpHeaders
+	82,  // 71: zama.sdk.v1alpha1.HttpProviderConfig.batch:type_name -> zama.sdk.v1alpha1.ProviderBatch
+	121, // 72: zama.sdk.v1alpha1.HttpHeaders.entries:type_name -> zama.sdk.v1alpha1.HttpHeaders.EntriesEntry
+	83,  // 73: zama.sdk.v1alpha1.ProviderBatch.options:type_name -> zama.sdk.v1alpha1.ProviderBatchOptions
+	17,  // 74: zama.sdk.v1alpha1.EncryptRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	84,  // 75: zama.sdk.v1alpha1.EncryptRequest.values:type_name -> zama.sdk.v1alpha1.EncryptInput
+	17,  // 76: zama.sdk.v1alpha1.PrepareTransactionRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	88,  // 77: zama.sdk.v1alpha1.PrepareTransactionRequest.options:type_name -> zama.sdk.v1alpha1.PrepareOptions
+	90,  // 78: zama.sdk.v1alpha1.PrepareTransactionRequest.confidential_transfer:type_name -> zama.sdk.v1alpha1.ConfidentialTransfer
+	91,  // 79: zama.sdk.v1alpha1.PrepareTransactionRequest.confidential_transfer_from:type_name -> zama.sdk.v1alpha1.ConfidentialTransferFrom
+	92,  // 80: zama.sdk.v1alpha1.PrepareTransactionRequest.set_operator:type_name -> zama.sdk.v1alpha1.SetOperator
+	93,  // 81: zama.sdk.v1alpha1.PrepareTransactionRequest.unwrap:type_name -> zama.sdk.v1alpha1.Unwrap
+	94,  // 82: zama.sdk.v1alpha1.PrepareTransactionRequest.unwrap_all:type_name -> zama.sdk.v1alpha1.UnwrapAll
+	95,  // 83: zama.sdk.v1alpha1.PrepareTransactionRequest.finalize_unwrap:type_name -> zama.sdk.v1alpha1.FinalizeUnwrap
+	96,  // 84: zama.sdk.v1alpha1.PrepareTransactionRequest.approve_underlying:type_name -> zama.sdk.v1alpha1.ApproveUnderlying
+	97,  // 85: zama.sdk.v1alpha1.PrepareTransactionRequest.wrap:type_name -> zama.sdk.v1alpha1.Wrap
+	98,  // 86: zama.sdk.v1alpha1.PrepareTransactionRequest.transfer_and_call:type_name -> zama.sdk.v1alpha1.TransferAndCall
+	99,  // 87: zama.sdk.v1alpha1.PrepareTransactionRequest.delegate_decryption:type_name -> zama.sdk.v1alpha1.DelegateDecryption
+	100, // 88: zama.sdk.v1alpha1.PrepareTransactionRequest.revoke_delegation:type_name -> zama.sdk.v1alpha1.RevokeDelegation
+	89,  // 89: zama.sdk.v1alpha1.PrepareOptions.fees:type_name -> zama.sdk.v1alpha1.PrepareFees
 	2,   // 90: zama.sdk.v1alpha1.PrepareTransactionResponse.kind:type_name -> zama.sdk.v1alpha1.TransactionKind
-	12,  // 91: zama.sdk.v1alpha1.DelegateDecryptionRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	94,  // 92: zama.sdk.v1alpha1.DelegateDecryptionRequest.delegation:type_name -> zama.sdk.v1alpha1.DelegateDecryption
-	12,  // 93: zama.sdk.v1alpha1.RevokeDelegationRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	95,  // 94: zama.sdk.v1alpha1.RevokeDelegationRequest.delegation:type_name -> zama.sdk.v1alpha1.RevokeDelegation
-	12,  // 95: zama.sdk.v1alpha1.DelegationQueryRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
-	101, // 96: zama.sdk.v1alpha1.TransactionResult.logs:type_name -> zama.sdk.v1alpha1.TransactionLog
-	100, // 97: zama.sdk.v1alpha1.DelegateDecryptionResponse.transaction:type_name -> zama.sdk.v1alpha1.TransactionResult
-	100, // 98: zama.sdk.v1alpha1.RevokeDelegationResponse.transaction:type_name -> zama.sdk.v1alpha1.TransactionResult
-	69,  // 99: zama.sdk.v1alpha1.RelayerMap.EntriesEntry.value:type_name -> zama.sdk.v1alpha1.RelayerConfig
-	4,   // 100: zama.sdk.v1alpha1.SidecarService.GetInfo:input_type -> zama.sdk.v1alpha1.GetInfoRequest
-	7,   // 101: zama.sdk.v1alpha1.SidecarService.CreateContext:input_type -> zama.sdk.v1alpha1.CreateContextRequest
-	10,  // 102: zama.sdk.v1alpha1.SidecarService.CloseContext:input_type -> zama.sdk.v1alpha1.ContextRequest
-	11,  // 103: zama.sdk.v1alpha1.SidecarService.UpdateAccount:input_type -> zama.sdk.v1alpha1.UpdateAccountRequest
-	37,  // 104: zama.sdk.v1alpha1.SidecarService.SignerChannel:input_type -> zama.sdk.v1alpha1.SignerClientMessage
-	46,  // 105: zama.sdk.v1alpha1.SidecarService.StorageChannel:input_type -> zama.sdk.v1alpha1.StorageClientMessage
-	17,  // 106: zama.sdk.v1alpha1.SidecarService.DecryptValues:input_type -> zama.sdk.v1alpha1.DecryptValuesRequest
-	19,  // 107: zama.sdk.v1alpha1.SidecarService.DelegatedDecryptValues:input_type -> zama.sdk.v1alpha1.DelegatedDecryptValuesRequest
-	20,  // 108: zama.sdk.v1alpha1.SidecarService.DecryptPublicValues:input_type -> zama.sdk.v1alpha1.DecryptPublicValuesRequest
-	22,  // 109: zama.sdk.v1alpha1.SidecarService.DelegatedBatchDecryptValues:input_type -> zama.sdk.v1alpha1.DelegatedBatchDecryptValuesRequest
-	82,  // 110: zama.sdk.v1alpha1.SidecarService.PrepareTransaction:input_type -> zama.sdk.v1alpha1.PrepareTransactionRequest
-	26,  // 111: zama.sdk.v1alpha1.SidecarService.PreparePermit:input_type -> zama.sdk.v1alpha1.PreparePermitRequest
-	28,  // 112: zama.sdk.v1alpha1.SidecarService.RegisterPermit:input_type -> zama.sdk.v1alpha1.RegisterPermitRequest
-	29,  // 113: zama.sdk.v1alpha1.SidecarService.GrantPermit:input_type -> zama.sdk.v1alpha1.ContractsRequest
-	30,  // 114: zama.sdk.v1alpha1.SidecarService.GrantDelegationPermit:input_type -> zama.sdk.v1alpha1.DelegationContractsRequest
-	29,  // 115: zama.sdk.v1alpha1.SidecarService.HasPermit:input_type -> zama.sdk.v1alpha1.ContractsRequest
-	30,  // 116: zama.sdk.v1alpha1.SidecarService.HasDelegationPermit:input_type -> zama.sdk.v1alpha1.DelegationContractsRequest
-	33,  // 117: zama.sdk.v1alpha1.SidecarService.RevokePermits:input_type -> zama.sdk.v1alpha1.RevokePermitsRequest
-	13,  // 118: zama.sdk.v1alpha1.SidecarService.ClearPermits:input_type -> zama.sdk.v1alpha1.OperationRequest
-	13,  // 119: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPair:input_type -> zama.sdk.v1alpha1.OperationRequest
-	34,  // 120: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPairScope:input_type -> zama.sdk.v1alpha1.ScopeRequest
-	34,  // 121: zama.sdk.v1alpha1.SidecarService.RevokeTransportKeyPair:input_type -> zama.sdk.v1alpha1.ScopeRequest
-	80,  // 122: zama.sdk.v1alpha1.SidecarService.Encrypt:input_type -> zama.sdk.v1alpha1.EncryptRequest
-	97,  // 123: zama.sdk.v1alpha1.SidecarService.DelegateDecryption:input_type -> zama.sdk.v1alpha1.DelegateDecryptionRequest
-	98,  // 124: zama.sdk.v1alpha1.SidecarService.RevokeDelegation:input_type -> zama.sdk.v1alpha1.RevokeDelegationRequest
-	99,  // 125: zama.sdk.v1alpha1.SidecarService.IsDelegationActive:input_type -> zama.sdk.v1alpha1.DelegationQueryRequest
-	99,  // 126: zama.sdk.v1alpha1.SidecarService.GetDelegationExpiry:input_type -> zama.sdk.v1alpha1.DelegationQueryRequest
-	99,  // 127: zama.sdk.v1alpha1.SidecarService.GetDelegationStatus:input_type -> zama.sdk.v1alpha1.DelegationQueryRequest
-	5,   // 128: zama.sdk.v1alpha1.SidecarService.GetInfo:output_type -> zama.sdk.v1alpha1.GetInfoResponse
-	9,   // 129: zama.sdk.v1alpha1.SidecarService.CreateContext:output_type -> zama.sdk.v1alpha1.CreateContextResponse
-	49,  // 130: zama.sdk.v1alpha1.SidecarService.CloseContext:output_type -> zama.sdk.v1alpha1.CloseContextResponse
-	50,  // 131: zama.sdk.v1alpha1.SidecarService.UpdateAccount:output_type -> zama.sdk.v1alpha1.UpdateAccountResponse
-	42,  // 132: zama.sdk.v1alpha1.SidecarService.SignerChannel:output_type -> zama.sdk.v1alpha1.SignerServerMessage
-	48,  // 133: zama.sdk.v1alpha1.SidecarService.StorageChannel:output_type -> zama.sdk.v1alpha1.StorageServerMessage
-	18,  // 134: zama.sdk.v1alpha1.SidecarService.DecryptValues:output_type -> zama.sdk.v1alpha1.DecryptValuesResponse
-	59,  // 135: zama.sdk.v1alpha1.SidecarService.DelegatedDecryptValues:output_type -> zama.sdk.v1alpha1.DelegatedDecryptValuesResponse
-	21,  // 136: zama.sdk.v1alpha1.SidecarService.DecryptPublicValues:output_type -> zama.sdk.v1alpha1.DecryptPublicValuesResponse
-	25,  // 137: zama.sdk.v1alpha1.SidecarService.DelegatedBatchDecryptValues:output_type -> zama.sdk.v1alpha1.DelegatedBatchDecryptValuesResponse
-	96,  // 138: zama.sdk.v1alpha1.SidecarService.PrepareTransaction:output_type -> zama.sdk.v1alpha1.PrepareTransactionResponse
-	27,  // 139: zama.sdk.v1alpha1.SidecarService.PreparePermit:output_type -> zama.sdk.v1alpha1.PreparePermitResponse
-	51,  // 140: zama.sdk.v1alpha1.SidecarService.RegisterPermit:output_type -> zama.sdk.v1alpha1.RegisterPermitResponse
-	52,  // 141: zama.sdk.v1alpha1.SidecarService.GrantPermit:output_type -> zama.sdk.v1alpha1.GrantPermitResponse
-	53,  // 142: zama.sdk.v1alpha1.SidecarService.GrantDelegationPermit:output_type -> zama.sdk.v1alpha1.GrantDelegationPermitResponse
-	31,  // 143: zama.sdk.v1alpha1.SidecarService.HasPermit:output_type -> zama.sdk.v1alpha1.HasPermitResponse
-	60,  // 144: zama.sdk.v1alpha1.SidecarService.HasDelegationPermit:output_type -> zama.sdk.v1alpha1.HasDelegationPermitResponse
-	54,  // 145: zama.sdk.v1alpha1.SidecarService.RevokePermits:output_type -> zama.sdk.v1alpha1.RevokePermitsResponse
-	55,  // 146: zama.sdk.v1alpha1.SidecarService.ClearPermits:output_type -> zama.sdk.v1alpha1.ClearPermitsResponse
-	56,  // 147: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPair:output_type -> zama.sdk.v1alpha1.WarmTransportKeyPairResponse
-	57,  // 148: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPairScope:output_type -> zama.sdk.v1alpha1.WarmTransportKeyPairScopeResponse
-	58,  // 149: zama.sdk.v1alpha1.SidecarService.RevokeTransportKeyPair:output_type -> zama.sdk.v1alpha1.RevokeTransportKeyPairResponse
-	81,  // 150: zama.sdk.v1alpha1.SidecarService.Encrypt:output_type -> zama.sdk.v1alpha1.EncryptResponse
-	102, // 151: zama.sdk.v1alpha1.SidecarService.DelegateDecryption:output_type -> zama.sdk.v1alpha1.DelegateDecryptionResponse
-	103, // 152: zama.sdk.v1alpha1.SidecarService.RevokeDelegation:output_type -> zama.sdk.v1alpha1.RevokeDelegationResponse
-	104, // 153: zama.sdk.v1alpha1.SidecarService.IsDelegationActive:output_type -> zama.sdk.v1alpha1.IsDelegationActiveResponse
-	105, // 154: zama.sdk.v1alpha1.SidecarService.GetDelegationExpiry:output_type -> zama.sdk.v1alpha1.GetDelegationExpiryResponse
-	106, // 155: zama.sdk.v1alpha1.SidecarService.GetDelegationStatus:output_type -> zama.sdk.v1alpha1.GetDelegationStatusResponse
-	128, // [128:156] is the sub-list for method output_type
-	100, // [100:128] is the sub-list for method input_type
-	100, // [100:100] is the sub-list for extension type_name
-	100, // [100:100] is the sub-list for extension extendee
-	0,   // [0:100] is the sub-list for field type_name
+	17,  // 91: zama.sdk.v1alpha1.DelegateDecryptionRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	99,  // 92: zama.sdk.v1alpha1.DelegateDecryptionRequest.delegation:type_name -> zama.sdk.v1alpha1.DelegateDecryption
+	17,  // 93: zama.sdk.v1alpha1.RevokeDelegationRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	100, // 94: zama.sdk.v1alpha1.RevokeDelegationRequest.delegation:type_name -> zama.sdk.v1alpha1.RevokeDelegation
+	17,  // 95: zama.sdk.v1alpha1.DelegationQueryRequest.operation:type_name -> zama.sdk.v1alpha1.Operation
+	106, // 96: zama.sdk.v1alpha1.TransactionResult.logs:type_name -> zama.sdk.v1alpha1.TransactionLog
+	105, // 97: zama.sdk.v1alpha1.DelegateDecryptionResponse.transaction:type_name -> zama.sdk.v1alpha1.TransactionResult
+	105, // 98: zama.sdk.v1alpha1.RevokeDelegationResponse.transaction:type_name -> zama.sdk.v1alpha1.TransactionResult
+	3,   // 99: zama.sdk.v1alpha1.SdkEvent.type:type_name -> zama.sdk.v1alpha1.SdkEventKind
+	21,  // 100: zama.sdk.v1alpha1.SdkEvent.result:type_name -> zama.sdk.v1alpha1.ClearEntry
+	28,  // 101: zama.sdk.v1alpha1.SdkEvent.error:type_name -> zama.sdk.v1alpha1.SdkError
+	4,   // 102: zama.sdk.v1alpha1.SdkEvent.operation:type_name -> zama.sdk.v1alpha1.EventOperation
+	5,   // 103: zama.sdk.v1alpha1.SdkEvent.shield_path:type_name -> zama.sdk.v1alpha1.ShieldPath
+	6,   // 104: zama.sdk.v1alpha1.SdkEvent.step:type_name -> zama.sdk.v1alpha1.ApprovalStep
+	11,  // 105: zama.sdk.v1alpha1.WalletAccountChanged.previous:type_name -> zama.sdk.v1alpha1.WalletAccount
+	11,  // 106: zama.sdk.v1alpha1.WalletAccountChanged.next:type_name -> zama.sdk.v1alpha1.WalletAccount
+	7,   // 107: zama.sdk.v1alpha1.OperationProgress.kind:type_name -> zama.sdk.v1alpha1.ProgressKind
+	112, // 108: zama.sdk.v1alpha1.EventDelivery.event:type_name -> zama.sdk.v1alpha1.SdkEvent
+	113, // 109: zama.sdk.v1alpha1.EventDelivery.wallet_account:type_name -> zama.sdk.v1alpha1.WalletAccountChanged
+	114, // 110: zama.sdk.v1alpha1.EventDelivery.progress:type_name -> zama.sdk.v1alpha1.OperationProgress
+	8,   // 111: zama.sdk.v1alpha1.EventReply.acknowledged:type_name -> zama.sdk.v1alpha1.Empty
+	28,  // 112: zama.sdk.v1alpha1.EventReply.error:type_name -> zama.sdk.v1alpha1.SdkError
+	15,  // 113: zama.sdk.v1alpha1.EventClientMessage.attach:type_name -> zama.sdk.v1alpha1.ContextRequest
+	116, // 114: zama.sdk.v1alpha1.EventClientMessage.reply:type_name -> zama.sdk.v1alpha1.EventReply
+	28,  // 115: zama.sdk.v1alpha1.EventReplyError.error:type_name -> zama.sdk.v1alpha1.SdkError
+	8,   // 116: zama.sdk.v1alpha1.EventServerMessage.attached:type_name -> zama.sdk.v1alpha1.Empty
+	115, // 117: zama.sdk.v1alpha1.EventServerMessage.delivery:type_name -> zama.sdk.v1alpha1.EventDelivery
+	118, // 118: zama.sdk.v1alpha1.EventServerMessage.reply_error:type_name -> zama.sdk.v1alpha1.EventReplyError
+	74,  // 119: zama.sdk.v1alpha1.RelayerMap.EntriesEntry.value:type_name -> zama.sdk.v1alpha1.RelayerConfig
+	9,   // 120: zama.sdk.v1alpha1.SidecarService.GetInfo:input_type -> zama.sdk.v1alpha1.GetInfoRequest
+	12,  // 121: zama.sdk.v1alpha1.SidecarService.CreateContext:input_type -> zama.sdk.v1alpha1.CreateContextRequest
+	15,  // 122: zama.sdk.v1alpha1.SidecarService.CloseContext:input_type -> zama.sdk.v1alpha1.ContextRequest
+	16,  // 123: zama.sdk.v1alpha1.SidecarService.UpdateAccount:input_type -> zama.sdk.v1alpha1.UpdateAccountRequest
+	42,  // 124: zama.sdk.v1alpha1.SidecarService.SignerChannel:input_type -> zama.sdk.v1alpha1.SignerClientMessage
+	51,  // 125: zama.sdk.v1alpha1.SidecarService.StorageChannel:input_type -> zama.sdk.v1alpha1.StorageClientMessage
+	117, // 126: zama.sdk.v1alpha1.SidecarService.EventChannel:input_type -> zama.sdk.v1alpha1.EventClientMessage
+	22,  // 127: zama.sdk.v1alpha1.SidecarService.DecryptValues:input_type -> zama.sdk.v1alpha1.DecryptValuesRequest
+	24,  // 128: zama.sdk.v1alpha1.SidecarService.DelegatedDecryptValues:input_type -> zama.sdk.v1alpha1.DelegatedDecryptValuesRequest
+	25,  // 129: zama.sdk.v1alpha1.SidecarService.DecryptPublicValues:input_type -> zama.sdk.v1alpha1.DecryptPublicValuesRequest
+	27,  // 130: zama.sdk.v1alpha1.SidecarService.DelegatedBatchDecryptValues:input_type -> zama.sdk.v1alpha1.DelegatedBatchDecryptValuesRequest
+	87,  // 131: zama.sdk.v1alpha1.SidecarService.PrepareTransaction:input_type -> zama.sdk.v1alpha1.PrepareTransactionRequest
+	31,  // 132: zama.sdk.v1alpha1.SidecarService.PreparePermit:input_type -> zama.sdk.v1alpha1.PreparePermitRequest
+	33,  // 133: zama.sdk.v1alpha1.SidecarService.RegisterPermit:input_type -> zama.sdk.v1alpha1.RegisterPermitRequest
+	34,  // 134: zama.sdk.v1alpha1.SidecarService.GrantPermit:input_type -> zama.sdk.v1alpha1.ContractsRequest
+	35,  // 135: zama.sdk.v1alpha1.SidecarService.GrantDelegationPermit:input_type -> zama.sdk.v1alpha1.DelegationContractsRequest
+	34,  // 136: zama.sdk.v1alpha1.SidecarService.HasPermit:input_type -> zama.sdk.v1alpha1.ContractsRequest
+	35,  // 137: zama.sdk.v1alpha1.SidecarService.HasDelegationPermit:input_type -> zama.sdk.v1alpha1.DelegationContractsRequest
+	38,  // 138: zama.sdk.v1alpha1.SidecarService.RevokePermits:input_type -> zama.sdk.v1alpha1.RevokePermitsRequest
+	18,  // 139: zama.sdk.v1alpha1.SidecarService.ClearPermits:input_type -> zama.sdk.v1alpha1.OperationRequest
+	18,  // 140: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPair:input_type -> zama.sdk.v1alpha1.OperationRequest
+	39,  // 141: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPairScope:input_type -> zama.sdk.v1alpha1.ScopeRequest
+	39,  // 142: zama.sdk.v1alpha1.SidecarService.RevokeTransportKeyPair:input_type -> zama.sdk.v1alpha1.ScopeRequest
+	85,  // 143: zama.sdk.v1alpha1.SidecarService.Encrypt:input_type -> zama.sdk.v1alpha1.EncryptRequest
+	102, // 144: zama.sdk.v1alpha1.SidecarService.DelegateDecryption:input_type -> zama.sdk.v1alpha1.DelegateDecryptionRequest
+	103, // 145: zama.sdk.v1alpha1.SidecarService.RevokeDelegation:input_type -> zama.sdk.v1alpha1.RevokeDelegationRequest
+	104, // 146: zama.sdk.v1alpha1.SidecarService.IsDelegationActive:input_type -> zama.sdk.v1alpha1.DelegationQueryRequest
+	104, // 147: zama.sdk.v1alpha1.SidecarService.GetDelegationExpiry:input_type -> zama.sdk.v1alpha1.DelegationQueryRequest
+	104, // 148: zama.sdk.v1alpha1.SidecarService.GetDelegationStatus:input_type -> zama.sdk.v1alpha1.DelegationQueryRequest
+	10,  // 149: zama.sdk.v1alpha1.SidecarService.GetInfo:output_type -> zama.sdk.v1alpha1.GetInfoResponse
+	14,  // 150: zama.sdk.v1alpha1.SidecarService.CreateContext:output_type -> zama.sdk.v1alpha1.CreateContextResponse
+	54,  // 151: zama.sdk.v1alpha1.SidecarService.CloseContext:output_type -> zama.sdk.v1alpha1.CloseContextResponse
+	55,  // 152: zama.sdk.v1alpha1.SidecarService.UpdateAccount:output_type -> zama.sdk.v1alpha1.UpdateAccountResponse
+	47,  // 153: zama.sdk.v1alpha1.SidecarService.SignerChannel:output_type -> zama.sdk.v1alpha1.SignerServerMessage
+	53,  // 154: zama.sdk.v1alpha1.SidecarService.StorageChannel:output_type -> zama.sdk.v1alpha1.StorageServerMessage
+	119, // 155: zama.sdk.v1alpha1.SidecarService.EventChannel:output_type -> zama.sdk.v1alpha1.EventServerMessage
+	23,  // 156: zama.sdk.v1alpha1.SidecarService.DecryptValues:output_type -> zama.sdk.v1alpha1.DecryptValuesResponse
+	64,  // 157: zama.sdk.v1alpha1.SidecarService.DelegatedDecryptValues:output_type -> zama.sdk.v1alpha1.DelegatedDecryptValuesResponse
+	26,  // 158: zama.sdk.v1alpha1.SidecarService.DecryptPublicValues:output_type -> zama.sdk.v1alpha1.DecryptPublicValuesResponse
+	30,  // 159: zama.sdk.v1alpha1.SidecarService.DelegatedBatchDecryptValues:output_type -> zama.sdk.v1alpha1.DelegatedBatchDecryptValuesResponse
+	101, // 160: zama.sdk.v1alpha1.SidecarService.PrepareTransaction:output_type -> zama.sdk.v1alpha1.PrepareTransactionResponse
+	32,  // 161: zama.sdk.v1alpha1.SidecarService.PreparePermit:output_type -> zama.sdk.v1alpha1.PreparePermitResponse
+	56,  // 162: zama.sdk.v1alpha1.SidecarService.RegisterPermit:output_type -> zama.sdk.v1alpha1.RegisterPermitResponse
+	57,  // 163: zama.sdk.v1alpha1.SidecarService.GrantPermit:output_type -> zama.sdk.v1alpha1.GrantPermitResponse
+	58,  // 164: zama.sdk.v1alpha1.SidecarService.GrantDelegationPermit:output_type -> zama.sdk.v1alpha1.GrantDelegationPermitResponse
+	36,  // 165: zama.sdk.v1alpha1.SidecarService.HasPermit:output_type -> zama.sdk.v1alpha1.HasPermitResponse
+	65,  // 166: zama.sdk.v1alpha1.SidecarService.HasDelegationPermit:output_type -> zama.sdk.v1alpha1.HasDelegationPermitResponse
+	59,  // 167: zama.sdk.v1alpha1.SidecarService.RevokePermits:output_type -> zama.sdk.v1alpha1.RevokePermitsResponse
+	60,  // 168: zama.sdk.v1alpha1.SidecarService.ClearPermits:output_type -> zama.sdk.v1alpha1.ClearPermitsResponse
+	61,  // 169: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPair:output_type -> zama.sdk.v1alpha1.WarmTransportKeyPairResponse
+	62,  // 170: zama.sdk.v1alpha1.SidecarService.WarmTransportKeyPairScope:output_type -> zama.sdk.v1alpha1.WarmTransportKeyPairScopeResponse
+	63,  // 171: zama.sdk.v1alpha1.SidecarService.RevokeTransportKeyPair:output_type -> zama.sdk.v1alpha1.RevokeTransportKeyPairResponse
+	86,  // 172: zama.sdk.v1alpha1.SidecarService.Encrypt:output_type -> zama.sdk.v1alpha1.EncryptResponse
+	107, // 173: zama.sdk.v1alpha1.SidecarService.DelegateDecryption:output_type -> zama.sdk.v1alpha1.DelegateDecryptionResponse
+	108, // 174: zama.sdk.v1alpha1.SidecarService.RevokeDelegation:output_type -> zama.sdk.v1alpha1.RevokeDelegationResponse
+	109, // 175: zama.sdk.v1alpha1.SidecarService.IsDelegationActive:output_type -> zama.sdk.v1alpha1.IsDelegationActiveResponse
+	110, // 176: zama.sdk.v1alpha1.SidecarService.GetDelegationExpiry:output_type -> zama.sdk.v1alpha1.GetDelegationExpiryResponse
+	111, // 177: zama.sdk.v1alpha1.SidecarService.GetDelegationStatus:output_type -> zama.sdk.v1alpha1.GetDelegationStatusResponse
+	149, // [149:178] is the sub-list for method output_type
+	120, // [120:149] is the sub-list for method input_type
+	120, // [120:120] is the sub-list for extension type_name
+	120, // [120:120] is the sub-list for extension extendee
+	0,   // [0:120] is the sub-list for field type_name
 }
 
 func init() { file_zama_sdk_v1alpha1_sidecar_proto_init() }
@@ -7966,13 +9190,33 @@ func file_zama_sdk_v1alpha1_sidecar_proto_init() {
 	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[90].OneofWrappers = []any{}
 	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[91].OneofWrappers = []any{}
 	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[98].OneofWrappers = []any{}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[104].OneofWrappers = []any{}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[106].OneofWrappers = []any{}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[107].OneofWrappers = []any{
+		(*EventDelivery_Event)(nil),
+		(*EventDelivery_WalletAccount)(nil),
+		(*EventDelivery_Progress)(nil),
+	}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[108].OneofWrappers = []any{
+		(*EventReply_Acknowledged)(nil),
+		(*EventReply_Error)(nil),
+	}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[109].OneofWrappers = []any{
+		(*EventClientMessage_Attach)(nil),
+		(*EventClientMessage_Reply)(nil),
+	}
+	file_zama_sdk_v1alpha1_sidecar_proto_msgTypes[111].OneofWrappers = []any{
+		(*EventServerMessage_Attached)(nil),
+		(*EventServerMessage_Delivery)(nil),
+		(*EventServerMessage_ReplyError)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zama_sdk_v1alpha1_sidecar_proto_rawDesc), len(file_zama_sdk_v1alpha1_sidecar_proto_rawDesc)),
-			NumEnums:      3,
-			NumMessages:   106,
+			NumEnums:      8,
+			NumMessages:   114,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

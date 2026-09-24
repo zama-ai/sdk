@@ -40,6 +40,7 @@ type SDKContext struct {
 	terminal   error
 	signer     *callbackChannel
 	storage    *callbackChannel
+	events     *callbackChannel
 	stores     map[string]*storageBackend
 }
 
@@ -54,7 +55,7 @@ func (s *SDKContext) Close(ctx context.Context) error {
 	_, err := s.client.rpc.CloseContext(ctx, &pb.ContextRequest{ContextId: s.id}, grpc.Trailer(&trailers))
 	s.stop(errors.New("SDK context closed"))
 	s.mu.Lock()
-	for _, channel := range []*callbackChannel{s.signer, s.storage} {
+	for _, channel := range []*callbackChannel{s.signer, s.storage, s.events} {
 		if channel != nil {
 			channel.cancel()
 		}

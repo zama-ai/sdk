@@ -9,13 +9,16 @@ type ClientFrame<Reply> = {
 
 function attachChannel<Reply, Response>(
   stream: ServerDuplexStream<ClientFrame<Reply>, Response>,
-  kind: "SIGNER" | "STORAGE",
+  kind: "SIGNER" | "STORAGE" | "EVENT",
   timeoutMs: number,
   attach: (contextId: string) => { reply(value: Reply): void },
 ): void {
   let attached: ReturnType<typeof attach> | undefined;
+  let closed = false;
   const deadline = setTimeout(() => {
-    stream.destroy(
+    // grpc-js sends error trailers from its error handler; destroy() skips finalization.
+    stream.emit(
+      "error",
       serviceError(
         new SidecarError(
           `${kind}_ATTACH_TIMEOUT`,
@@ -27,28 +30,42 @@ function attachChannel<Reply, Response>(
   }, timeoutMs);
   deadline.unref();
   const clear = () => clearTimeout(deadline);
-  stream.once("close", clear);
-  stream.once("error", clear);
-  stream.once("end", () => {
+  const close = () => {
+    closed = true;
     clear();
+    stream.off("data", receive);
+  };
+  stream.once("close", close);
+  stream.once("error", close);
+  stream.once("cancelled", close);
+  stream.once("end", () => {
+    close();
     if (!attached) {
       stream.end();
     }
   });
-  stream.on("data", ({ message }: ClientFrame<Reply>) => {
+  function receive({ message }: ClientFrame<Reply>): void {
+    if (closed) {
+      return;
+    }
     try {
       if (!attached && message?.$case === "attach") {
         attached = attach(message.attach.contextId);
         clear();
       } else if (attached && message?.$case === "reply") {
         attached.reply(message.reply);
+      } else if (message?.$case === "attach") {
+        throw invalidArgument("This callback stream is already attached.");
+      } else if (!attached) {
+        throw invalidArgument("The first callback frame must attach a context.");
       } else {
-        throw invalidArgument("Attach a context before replying to callback requests.");
+        throw invalidArgument("Expected a callback reply on the attached stream.");
       }
     } catch (error) {
-      stream.destroy(serviceError(error));
+      stream.emit("error", serviceError(error));
     }
-  });
+  }
+  stream.on("data", receive);
 }
 
 export function signerChannel(runtime: SidecarRuntime): rpc.SidecarServiceServer["signerChannel"] {
@@ -61,4 +78,8 @@ export function storageChannel(
 ): rpc.SidecarServiceServer["storageChannel"] {
   return (stream) =>
     attachChannel(stream, "STORAGE", 10_000, (id) => runtime.attachStorage(id, stream));
+}
+
+export function eventChannel(runtime: SidecarRuntime): rpc.SidecarServiceServer["eventChannel"] {
+  return (stream) => attachChannel(stream, "EVENT", 5000, (id) => runtime.attachEvents(id, stream));
 }

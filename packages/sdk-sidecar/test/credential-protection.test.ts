@@ -1,3 +1,4 @@
+import { RemoteEvents } from "../src/remote-events.js";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -118,7 +119,12 @@ test.each([
     sdk.dispose();
   });
   const actual = await outcome(async () => {
-    const context = await createContextFactory(manager)(config, wallet, new RemoteStorage());
+    const context = await createContextFactory(manager)(
+      config,
+      wallet,
+      new RemoteStorage(),
+      new RemoteEvents("fixture"),
+    );
     context.sdk.dispose();
   });
   expect(actual).toEqual(expected);
@@ -147,6 +153,7 @@ test.each([undefined, "partner"])(
         request(wire, scope),
         sidecarSigner,
         new RemoteStorage(),
+        new RemoteEvents("fixture"),
       );
       try {
         const expected = await outcome(() => sdk.permits.grantPermit([TOKEN]));
@@ -177,7 +184,14 @@ test.each([undefined, "partner"])(
         stderr.mock.calls.some(
           ([chunk]) => typeof chunk === "string" && chunk.includes(`{ key: '${keyLabel}' }`),
         ),
-      ).toBe(true);
+      ).toBe(false);
+      const stderrText = stderr.mock.calls.map(([chunk]) => String(chunk)).join("");
+      expect(stderrText).toContain(
+        "is wrapped, but this instance has no transportKeyPairDerivationSecret configured.",
+      );
+      expect(stderrText).toMatch(/\[zama-sdk\] Transport key pair for /);
+      expect(stderrText).not.toContain(secretText);
+      expect(stderrText).not.toContain(TEST_PRIVATE_KEY);
       expect(await phase(protectedOption, wireSecret)).toEqual({ value: undefined });
       expect(sidecarSigner.signTypedData).toHaveBeenCalledTimes(1);
       const wrong = "other-synthetic-secret-".repeat(4);

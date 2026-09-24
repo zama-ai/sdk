@@ -105,7 +105,7 @@ Create one SDK context for each configuration and signer lifecycle your applicat
 
 Supply a signer for private decryption. The Go Ethereum adapter and the optional Rust Alloy adapter sign EIP-712 typed data and broadcast contract writes; custom wallet callbacks remain supported. A context without a signer supports encryption, public decryption and the SDK's signer-independent offline and permit operations. Close contexts when finished.
 
-Observe callback-channel termination with Go `WaitChannelFailure(ctx, SignerChannel)` / `StorageChannel`, or Rust `wait_channel_closed(CallbackChannel::Signer)` / `CallbackChannel::Storage`. Go supports explicit reattachment. In Rust, close the failed SDK and build another with the same storage binding. Interrupted operations are not retried automatically.
+Observe callback-channel termination with Go `WaitChannelFailure(ctx, SignerChannel)` / `StorageChannel` / `EventChannel`, or Rust `wait_channel_closed(CallbackChannel::Signer)` / `CallbackChannel::Storage` / `CallbackChannel::Events`. Go supports explicit reattachment. In Rust, close the failed SDK and build another with the same storage binding. Interrupted operations are not retried automatically.
 
 For a local deployment, place the native application and sidecar in the same Linux environment with matching UID and a private shared socket directory. Docker Desktop uses a named volume between containers; a macOS host cannot access the Linux VM's socket through a normal bind mount.
 
@@ -169,7 +169,7 @@ The balance workflow currently reads the encrypted handle with the native Ethere
 
 Messages default to a 4 MiB maximum in the server and both clients. Larger batches and prefetched FHE encryption keys require `SIDECAR_MAX_MESSAGE_BYTES` on the server plus the matching native client option: Go `DialOptions.MaxMessageBytes`, or Rust `Client::with_message_limit`. Set both limits above the encoded request size; prefetched keys are commonly about 50 MiB.
 
-`SIDECAR_MAX_CONCURRENT_STREAMS`, `SIDECAR_MAX_CONTEXTS` and `SIDECAR_MAX_OPERATIONS_PER_CONTEXT` optionally set deployment resource limits. The sidecar does not impose the prototype's fixed 16-stream, 64-context or 128-operation caps by default. Each active signer or application-storage channel uses one stream.
+`SIDECAR_MAX_CONCURRENT_STREAMS`, `SIDECAR_MAX_CONTEXTS` and `SIDECAR_MAX_OPERATIONS_PER_CONTEXT` optionally set deployment resource limits. The sidecar does not impose the prototype's fixed 16-stream, 64-context or 128-operation caps by default. Each active signer, application-storage or event channel uses one stream.
 
 ## Develop and test
 
@@ -201,3 +201,7 @@ SIDECAR_NATIVE_TESTS=1 pnpm --filter @zama-fhe/sdk-sidecar exec vitest run --con
 ```
 
 Encryption checks cover lossless values, explicit binding addresses, timeout presence (omitted keeps the SDK default, zero is a zero-millisecond budget), SDK errors, canonical backend rejection and cancellation. The complete examples also exercise shared runtime/provider settings and protected credentials. Synthetic encryption proofs are inspectable fixture data; live cryptographic verification remains separate.
+
+## Event subscriptions
+
+Both native examples attach metadata-only lifecycle diagnostics before running the shared encryption, balance, offline preparation and delegation sequence. Subscription helpers remain separate from workflow steps. See [event delivery and diagnostics](EVENTS.md) for ordering, cleanup, backpressure and the explicitly unresolved Token batch-fallback integration.

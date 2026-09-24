@@ -1,3 +1,4 @@
+use crate::error::sdk_error_in_chain;
 use crate::{NativeStorage, RpcError, SdkError, generated};
 use anyhow::{Context, Result, ensure};
 use std::{collections::HashMap, sync::Arc, time::Duration};
@@ -116,20 +117,13 @@ fn invalid(message: &str) -> SdkError {
 }
 
 fn storage_error(error: anyhow::Error) -> SdkError {
-    error
-        .downcast_ref::<SdkError>()
-        .cloned()
-        .or_else(|| {
-            error
-                .downcast_ref::<RpcError>()
-                .and_then(|rpc| rpc.sdk.clone())
-        })
-        .unwrap_or_else(|| invalid(&error.to_string()))
+    sdk_error_in_chain(&error).unwrap_or_else(|| invalid(&error.to_string()))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::test_support::AppError;
     #[test]
     fn preserves_wrapped_rpc_storage_metadata() {
         let expected = SdkError {
@@ -143,6 +137,26 @@ mod tests {
             status: tonic::Status::unavailable("retry"),
             sdk: Some(expected.clone()),
         };
+        assert_eq!(
+            storage_error(anyhow::Error::new(error).context("backend call")),
+            expected
+        );
+    }
+
+    #[test]
+    fn preserves_sdk_error_behind_application_source() {
+        let expected = invalid("disk full");
+        let error = AppError(Box::new(expected.clone()));
+        assert_eq!(storage_error(anyhow::Error::new(error)), expected);
+    }
+
+    #[test]
+    fn preserves_rpc_sdk_error_behind_application_source() {
+        let expected = invalid("retry");
+        let error = AppError(Box::new(RpcError {
+            status: tonic::Status::unavailable("retry"),
+            sdk: Some(expected.clone()),
+        }));
         assert_eq!(
             storage_error(anyhow::Error::new(error).context("backend call")),
             expected

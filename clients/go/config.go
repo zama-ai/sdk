@@ -59,6 +59,7 @@ type ChainConfig struct {
 }
 
 type SDKConfig struct {
+	Events                           *EventHandlers
 	ProcessRuntime                   *ProcessRuntime
 	Relayers                         map[uint64]RelayerConfig
 	TransportKeyPairDerivationSecret DerivationSecret

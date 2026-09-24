@@ -94,12 +94,15 @@ test("unattached signer streams expire without imposing a wallet signing deadlin
     }, createCoordinator());
     const stream = new FakeStream<SignerServerMessage>();
     const closed = vi.fn();
+    const failed = vi.fn(() => stream.end());
+    stream.on("error", failed);
     stream.on("close", closed);
     createHandlers(runtime, "test").signerChannel(stream as unknown as SignerStream);
     await vi.advanceTimersByTimeAsync(4999);
     expect(closed).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     expect(closed).toHaveBeenCalledOnce();
+    expect(failed).toHaveBeenCalledWith(expect.objectContaining({ code: 4 }));
   } finally {
     vi.useRealTimers();
   }

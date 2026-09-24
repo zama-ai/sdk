@@ -13,7 +13,7 @@ func (s *SDKContext) AttachStorage(ctx context.Context) error {
 	if len(s.stores) == 0 {
 		return errors.New("no application storage configured")
 	}
-	return attachChannel(ctx, s, StorageChannel, &s.storage,
+	_, err := attachChannel(ctx, s, StorageChannel, &s.storage,
 		func(ctx context.Context) (grpc.BidiStreamingClient[pb.StorageClientMessage, pb.StorageServerMessage], error) {
 			return s.client.rpc.StorageChannel(ctx)
 		},
@@ -38,6 +38,7 @@ func (s *SDKContext) AttachStorage(ctx context.Context) error {
 			}
 			return nil
 		})
+	return err
 }
 func (s *SDKContext) storageReply(ctx context.Context, action *pb.StorageAction) *pb.StorageReply {
 	reply := &pb.StorageReply{RequestId: action.RequestId}

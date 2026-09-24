@@ -146,3 +146,46 @@ impl std::error::Error for RpcError {
         Some(&self.status)
     }
 }
+
+pub(crate) enum TypedCause<'a> {
+    Sdk(&'a SdkError),
+    Rpc(&'a RpcError),
+}
+
+/// Walks the whole cause chain so wrapped handler errors keep their SDK code.
+pub(crate) fn typed_cause(error: &anyhow::Error) -> Option<TypedCause<'_>> {
+    error.chain().find_map(|cause| {
+        if let Some(sdk) = cause.downcast_ref::<SdkError>() {
+            Some(TypedCause::Sdk(sdk))
+        } else {
+            cause.downcast_ref::<RpcError>().map(TypedCause::Rpc)
+        }
+    })
+}
+
+/// First SDK error in the cause chain, direct or carried by an `RpcError`.
+pub(crate) fn sdk_error_in_chain(error: &anyhow::Error) -> Option<SdkError> {
+    match typed_cause(error)? {
+        TypedCause::Sdk(sdk) => Some(sdk.clone()),
+        TypedCause::Rpc(rpc) => rpc.sdk.clone(),
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod test_support {
+    use std::fmt;
+
+    /// Application error that hides a typed cause behind `source()`.
+    #[derive(Debug)]
+    pub(crate) struct AppError(pub Box<dyn std::error::Error + Send + Sync + 'static>);
+    impl fmt::Display for AppError {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("application handler failed")
+        }
+    }
+    impl std::error::Error for AppError {
+        fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+            Some(self.0.as_ref())
+        }
+    }
+}

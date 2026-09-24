@@ -40,10 +40,23 @@ func run() error {
 		sdk.Close(cleanup)
 	}()
 
+	subscription, err := subscribeEvents(ctx, sdk, os.Stderr)
+	if err != nil {
+		return err
+	}
+	defer subscription.Close()
+	monitorCtx, stopMonitor := context.WithCancel(ctx)
+	defer stopMonitor()
+	go func() {
+		if err := sdk.WaitChannelFailure(monitorCtx, sidecar.EventChannel); err != nil && monitorCtx.Err() == nil {
+			fmt.Fprintln(os.Stderr, "SDK event channel failed; event notifications may be incomplete")
+		}
+	}()
+
 	if err := encryptInputs(ctx, sdk, config.token, config.owner); err != nil {
 		return err
 	}
-	if err := showBalance(ctx, provider, sdk, config.token, config.owner); err != nil {
+	if err := showBalance(ctx, provider, sdk, config.token, config.owner, os.Stdout); err != nil {
 		return err
 	}
 	if err := prepareOffline(ctx, sdk, config.token, config.owner, config.privateKey); err != nil {
