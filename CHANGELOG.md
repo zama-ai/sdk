@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.7.0-beta.2](https://github.com/zama-ai/sdk/compare/v3.7.0-beta.1...v3.7.0-beta.2) (2026-09-24)
+
+### Bug Fixes
+
+- **sdk:** normalize permit signature recovery byte to 27/28 ([#806](https://github.com/zama-ai/sdk/issues/806)) ([9de6352]())
+
 ## [3.7.0-beta.1](https://github.com/zama-ai/sdk/compare/v3.6.0...v3.7.0-beta.1) (2026-09-23)
 
 ### Features
