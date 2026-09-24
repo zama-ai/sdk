@@ -182,7 +182,7 @@ impl TryFrom<generated::SdkEvent> for SdkEvent {
             tx_hash: event
                 .tx_hash
                 .as_deref()
-                .map(crate::types::handle)
+                .map(|bytes| crate::types::word(bytes, "transaction hash"))
                 .transpose()?,
             shield_path: event.shield_path.map(EventEnum::from_raw),
             step: event.step.map(EventEnum::from_raw),
@@ -197,7 +197,7 @@ impl TryFrom<generated::OperationProgress> for OperationProgress {
             tx_hash: progress
                 .tx_hash
                 .as_deref()
-                .map(crate::types::handle)
+                .map(|bytes| crate::types::word(bytes, "transaction hash"))
                 .transpose()?,
         })
     }

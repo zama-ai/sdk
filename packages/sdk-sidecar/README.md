@@ -169,7 +169,7 @@ The balance workflow currently reads the encrypted handle with the native Ethere
 
 Messages default to a 4 MiB maximum in the server and both clients. Larger batches and prefetched FHE encryption keys require `SIDECAR_MAX_MESSAGE_BYTES` on the server plus the matching native client option: Go `DialOptions.MaxMessageBytes`, or Rust `Client::with_message_limit`. Set both limits above the encoded request size; prefetched keys are commonly about 50 MiB.
 
-`SIDECAR_MAX_CONCURRENT_STREAMS`, `SIDECAR_MAX_CONTEXTS` and `SIDECAR_MAX_OPERATIONS_PER_CONTEXT` optionally set deployment resource limits. The sidecar does not impose the prototype's fixed 16-stream, 64-context or 128-operation caps by default. Each active signer or application-storage channel uses one stream.
+`SIDECAR_MAX_CONCURRENT_STREAMS`, `SIDECAR_MAX_CONTEXTS` and `SIDECAR_MAX_OPERATIONS_PER_CONTEXT` optionally set deployment resource limits. The sidecar does not impose the prototype's fixed 16-stream, 64-context or 128-operation caps by default. Each active signer, application-storage or event channel uses one stream.
 
 ## Develop and test
 

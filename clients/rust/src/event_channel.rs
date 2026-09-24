@@ -1,5 +1,7 @@
 use crate::error::sdk_error_in_chain;
-use crate::{EventContext, EventHandler, Notification, RpcError, SdkError, generated};
+use crate::{
+    EventContext, EventHandler, Notification, RpcError, SdkError, WalletAccount, generated,
+};
 use anyhow::{Context, Result, ensure};
 use generated::{
     event_client_message::Message as ClientMessage, event_delivery::Payload, event_reply::Outcome,
@@ -109,10 +111,16 @@ fn notification(payload: Payload) -> Result<Notification> {
     Ok(match payload {
         Payload::Event(event) => Notification::Lifecycle(Box::new((*event).try_into()?)),
         Payload::WalletAccount(account) => Notification::WalletAccountChanged {
-            previous: account.previous.map(TryInto::try_into).transpose()?,
-            next: account.next.map(TryInto::try_into).transpose()?,
+            previous: account.previous.map(wallet_account).transpose()?,
+            next: account.next.map(wallet_account).transpose()?,
         },
         Payload::Progress(progress) => Notification::Progress(progress.try_into()?),
+    })
+}
+fn wallet_account(account: generated::WalletAccount) -> Result<WalletAccount> {
+    Ok(WalletAccount {
+        address: crate::types::address(&account.address, "invalid wallet account address")?,
+        chain_id: account.chain_id,
     })
 }
 async fn process_notifications(
@@ -158,6 +166,39 @@ fn callback_error(error: anyhow::Error) -> SdkError {
 mod tests {
     use super::*;
     use crate::error::test_support::AppError;
+
+    #[test]
+    fn malformed_lifecycle_hash_names_the_transaction_hash() {
+        let event = generated::SdkEvent {
+            tx_hash: Some(vec![1; 31]),
+            ..Default::default()
+        };
+        let error = notification(Payload::Event(Box::new(event))).unwrap_err();
+        assert_eq!(error.to_string(), "invalid transaction hash length");
+    }
+
+    #[test]
+    fn malformed_progress_hash_names_the_transaction_hash() {
+        let progress = generated::OperationProgress {
+            kind: 0,
+            tx_hash: Some(vec![1; 33]),
+        };
+        let error = notification(Payload::Progress(progress)).unwrap_err();
+        assert_eq!(error.to_string(), "invalid transaction hash length");
+    }
+
+    #[test]
+    fn malformed_wallet_change_address_names_the_wallet_account() {
+        let change = generated::WalletAccountChanged {
+            previous: None,
+            next: Some(generated::WalletAccount {
+                address: vec![1; 19],
+                chain_id: 1,
+            }),
+        };
+        let error = notification(Payload::WalletAccount(change)).unwrap_err();
+        assert_eq!(error.to_string(), "invalid wallet account address");
+    }
 
     fn sdk(code: &str) -> SdkError {
         SdkError {
