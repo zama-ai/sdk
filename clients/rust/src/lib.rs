@@ -29,6 +29,7 @@ mod encryption;
 mod error;
 mod event_channel;
 mod events;
+mod generated;
 mod lifetime;
 mod offline;
 mod operations;
@@ -73,10 +74,6 @@ pub use storage::{ApplicationStorage, MemoryStorage, NativeStorage, Storage};
 pub use tokio_util::sync::CancellationToken;
 pub use transactions::{ContractWriteRequest, TransactionLog, TransactionResult};
 pub use types::{ClearValue, ClearValues, EncryptedInput, WalletAccount};
-#[allow(clippy::enum_variant_names)]
-mod generated {
-    include!("zama.sdk.v1alpha1.rs");
-}
 
 use generated::sidecar_service_client::SidecarServiceClient;
 use hyper_util::rt::TokioIo;
