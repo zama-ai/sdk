@@ -1,10 +1,6 @@
 version: 2
 updates:
-  # SDK core packages, workspace tooling, and test apps -- one pnpm workspace
-  # sharing one pnpm-lock.yaml, kept in a single entry with "/" in scope. A
-  # separate "test apps" entry without "/" couldn't regenerate the shared
-  # lockfile, so every lockfile-touching bump it proposed broke CI
-  # (ERR_PNPM_OUTDATED_LOCKFILE).
+  # SDK core, workspace tooling, and test apps -- one pnpm workspace, "/" must stay in scope for the shared lockfile.
   - package-ecosystem: npm
     target-branch: beta
     directories:
