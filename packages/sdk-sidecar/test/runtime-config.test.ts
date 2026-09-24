@@ -1,3 +1,4 @@
+import { RemoteEvents } from "../src/remote-events.js";
 /// <reference lib="dom" />
 import type * as Sdk from "@zama-fhe/sdk";
 import { expect, test, vi } from "vitest";
@@ -47,6 +48,7 @@ async function compare(config: Partial<ContextConfig>, direct: () => unknown) {
       CreateContextRequest.fromPartial({ config: wireConfig(config) }),
       undefined,
       new RemoteStorage(),
+      new RemoteEvents("fixture"),
     );
     context.sdk.dispose();
   } catch (error) {
@@ -89,6 +91,7 @@ test("typed runtime reaches the canonical SDK lock and the first configuration w
           }),
           undefined,
           new RemoteStorage(),
+          new RemoteEvents("fixture"),
         ),
       ).rejects.toThrow("Unsupported");
       expect(getAppliedWireRuntime()).toBe(before);
@@ -97,6 +100,7 @@ test("typed runtime reaches the canonical SDK lock and the first configuration w
       CreateContextRequest.fromPartial({ config: wireConfig({ processRuntime: fullRuntime }) }),
       undefined,
       new RemoteStorage(),
+      new RemoteEvents("fixture"),
     );
     context.sdk.dispose();
     const applied = getAppliedWireRuntime();
@@ -116,6 +120,7 @@ test("typed runtime reaches the canonical SDK lock and the first configuration w
       }),
       undefined,
       new RemoteStorage(),
+      new RemoteEvents("fixture"),
     );
     later.sdk.dispose();
     expect(warn).toHaveBeenCalledWith(
@@ -162,6 +167,7 @@ test.each([{ permitTtl: -1 }, { transportKeyPairTtl: -1 }, { registryTtl: -1 }])
           CreateContextRequest.fromPartial({ config: wireConfig(wire) }),
           undefined,
           new RemoteStorage(),
+          new RemoteEvents("fixture"),
         ),
       ).rejects.toThrow("unsigned 32-bit integer");
     } finally {

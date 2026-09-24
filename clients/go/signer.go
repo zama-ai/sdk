@@ -19,7 +19,7 @@ func (s *SDKContext) AttachWallet(ctx context.Context, signer SignerConfig) erro
 	if !signer.enabled() {
 		return errors.New("signer callback required")
 	}
-	return attachChannel(ctx, s, SignerChannel, &s.signer,
+	_, err := attachChannel(ctx, s, SignerChannel, &s.signer,
 		func(ctx context.Context) (grpc.BidiStreamingClient[pb.SignerClientMessage, pb.SignerServerMessage], error) {
 			return s.client.rpc.SignerChannel(ctx)
 		},
@@ -49,6 +49,7 @@ func (s *SDKContext) AttachWallet(ctx context.Context, signer SignerConfig) erro
 			}
 			return nil
 		})
+	return err
 }
 func (s *SDKContext) dispatchSignerAction(action *pb.SignerAction, signer SignerConfig, send func(*pb.SignerReply)) {
 	s.mu.Lock()

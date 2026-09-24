@@ -11,6 +11,7 @@ import { walletAccount } from "./encoding.js";
 import { credentialLockKeys, type Coordinate } from "./coordination.js";
 import { cancelled, invalidArgument, SidecarError } from "./errors.js";
 import { operationContext, RemoteSigner, type SignerStream } from "./remote-signer.js";
+import { RemoteEvents, type EventStream } from "./remote-events.js";
 
 export type ContextSdk = Pick<
   ZamaSDK,
@@ -20,6 +21,7 @@ export type ContextFactory = (
   request: CreateContextRequest,
   signer: RemoteSigner | undefined,
   storage: RemoteStorage,
+  events: RemoteEvents,
 ) => Promise<{ sdk: ContextSdk; credentialScope?: string; storageIdentities: string[] }>;
 type ActiveOperation = { controller: AbortController; done: Promise<unknown> };
 type Context = {
@@ -27,6 +29,7 @@ type Context = {
   credentialScope?: string;
   storageIdentities: string[];
   storage: RemoteStorage;
+  events: RemoteEvents;
   signer: RemoteSigner | undefined;
   operations: Map<string, ActiveOperation>;
   updating: boolean;
@@ -61,12 +64,14 @@ export class SidecarRuntime {
         )
       : undefined;
     const storage = new RemoteStorage();
+    const events = new RemoteEvents(id);
     const creation = Promise.withResolvers<void>();
     this.#creations.add(creation.promise);
     try {
-      const created = await this.factory(request, signer, storage);
+      const created = await this.factory(request, signer, storage, events);
       if (this.#closing) {
         storage.dispose();
+        events.dispose();
         created.sdk.dispose();
         signer?.dispose();
         throw cancelled();
@@ -75,12 +80,14 @@ export class SidecarRuntime {
         ...created,
         signer,
         storage,
+        events,
         operations: new Map(),
         updating: false,
       });
       return id;
     } catch (error) {
       storage.dispose();
+      events.dispose();
       signer?.dispose();
       throw error;
     } finally {
@@ -118,6 +125,11 @@ export class SidecarRuntime {
     const storage = this.#get(id).storage;
     storage.attach(stream);
     return storage;
+  }
+  attachEvents(id: string, stream: EventStream): RemoteEvents {
+    const events = this.#get(id).events;
+    events.attach(stream);
+    return events;
   }
   async updateAccount(request: UpdateAccountRequest, signal?: AbortSignal): Promise<void> {
     if (signal?.aborted) {
@@ -239,6 +251,7 @@ export class SidecarRuntime {
       this.#contexts.delete(id);
       context.signer?.dispose();
       context.storage.dispose();
+      context.events.dispose();
       await Promise.allSettled([...context.operations.values()].map((operation) => operation.done));
       context.sdk.dispose();
     } finally {

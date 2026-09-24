@@ -38,6 +38,7 @@ import { bytes, json } from "../src/encoding.js";
 import { errorDetails } from "../src/errors.js";
 import { createCoordinator } from "../src/coordination.js";
 import { SidecarRuntime } from "../src/runtime.js";
+import type { EventStream } from "../src/remote-events.js";
 import { operationContext, RemoteSigner, type SignerStream } from "../src/remote-signer.js";
 import type * as rpc from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
 
@@ -611,10 +612,10 @@ test.each([
   }
 });
 
-test("cancelling while the SDK awaits the delegation receipt reports the broadcast hash", async () => {
+test("losing events then cancelling during a delegation receipt preserves the broadcast hash", async () => {
   let created: ReturnType<typeof fixture> | undefined;
-  const runtime = new SidecarRuntime(async (_, signer) => {
-    created = fixture(signer);
+  const runtime = new SidecarRuntime(async (_, signer, _storage, events) => {
+    created = fixture(signer, undefined, undefined, events.onEvent);
     return { sdk: created.sdk, storageIdentities: [] };
   }, createCoordinator());
   const contextId = await runtime.createContext({
@@ -627,6 +628,8 @@ test("cancelling while the SDK awaits the delegation receipt reports the broadca
   });
   const stream = new FakeStream<rpc.SignerServerMessage>();
   const signer = runtime.attachSigner(contextId, stream as unknown as SignerStream);
+  const eventStream = new FakeStream<rpc.EventServerMessage>();
+  runtime.attachEvents(contextId, eventStream as unknown as EventStream);
   const pendingReceipt = Promise.withResolvers<unknown>();
   vi.mocked(created!.provider.readContract).mockResolvedValue(0n as never);
   vi.mocked(created!.provider.waitForTransactionReceipt).mockReturnValue(
@@ -650,6 +653,8 @@ test("cancelling while the SDK awaits the delegation receipt reports the broadca
     await vi.waitFor(() =>
       expect(created!.provider.waitForTransactionReceipt).toHaveBeenCalledWith(HASH),
     );
+    expect(frames(eventStream.messages, "delivery")).toHaveLength(1);
+    eventStream.end();
     caller.abort();
     expect(errorDetails(await settled)).toEqual({
       code: "TRANSACTION_OUTCOME_UNKNOWN",

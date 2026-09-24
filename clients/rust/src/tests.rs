@@ -29,3 +29,6 @@ mod delegation_tests;
 
 #[path = "signer_channel_tests.rs"]
 mod signer_channel_tests;
+
+#[path = "event_tests.rs"]
+mod event_tests;

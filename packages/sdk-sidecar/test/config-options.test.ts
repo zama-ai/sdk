@@ -1,3 +1,4 @@
+import { RemoteEvents } from "../src/remote-events.js";
 import type * as Sdk from "@zama-fhe/sdk";
 import type * as NodeSdk from "@zama-fhe/sdk/node";
 import type * as ViemSdk from "@zama-fhe/sdk/viem";
@@ -102,6 +103,7 @@ test("forwards every supported typed provider option to viem", async () => {
       },
       undefined,
       new RemoteStorage(),
+      new RemoteEvents("fixture"),
     );
     context.sdk.dispose();
     expect(viemCalls.http).toContainEqual([

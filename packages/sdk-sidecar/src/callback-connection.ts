@@ -1,5 +1,6 @@
 import type { ServerDuplexStream } from "@grpc/grpc-js";
-import { ChannelWriter } from "./channel-writer.js";
+import { serviceError } from "./errors.js";
+import { ChannelBackpressureError, ChannelWriter } from "./channel-writer.js";
 
 export class CallbackConnection<Request, Response> {
   #stream?: ServerDuplexStream<Request, Response>;
@@ -38,6 +39,13 @@ export class CallbackConnection<Request, Response> {
       return;
     }
     void this.#writer?.write(message).catch((error: unknown) => {
+      if (this.#stream !== stream) {
+        return;
+      }
+      if (error instanceof ChannelBackpressureError) {
+        this.fail(error);
+        return;
+      }
       this.#disconnect(stream, error);
       stream.end();
     });
@@ -48,5 +56,14 @@ export class CallbackConnection<Request, Response> {
     this.#stream = undefined;
     this.#writer = undefined;
     stream?.end();
+  }
+
+  fail(error: Error): void {
+    const stream = this.#stream;
+    if (stream) {
+      this.#disconnect(stream, error);
+      // Let grpc-js end the writable side and send the failure status to the client.
+      stream.emit("error", serviceError(error));
+    }
   }
 }

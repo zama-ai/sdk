@@ -1,30 +1,12 @@
-import {
-  createConfig,
-  ZamaSDK,
-  ConfigurationError,
-  type GenericProvider,
-  type GenericLogger,
-} from "@zama-fhe/sdk";
-import { inspect } from "node:util";
+import { createConfig, ZamaSDK, ConfigurationError, type GenericProvider } from "@zama-fhe/sdk";
 import { createHttpProvider } from "./provider.js";
 import type { StorageManager } from "./storage-manager.js";
 import { parseContextConfig } from "./sdk-config.js";
 import type { ContextFactory } from "./runtime.js";
-
-const noop = () => {};
-function writeLine(message: string, data: Record<string, unknown> | undefined): void {
-  const suffix = data === undefined ? "" : ` ${inspect(data)}`;
-  process.stderr.write(`${message}${suffix}\n`);
-}
-const stderrLogger: GenericLogger = {
-  error: (message, data) => writeLine(message, data),
-  warn: (message, data) => writeLine(message, data),
-  info: noop,
-  debug: noop,
-};
+import { diagnosticsLogger } from "./diagnostics.js";
 
 export function createContextFactory(manager: StorageManager): ContextFactory {
-  return async (request, signer, remote) => {
+  return async (request, signer, remote, events) => {
     const primary = await manager.resolve(request.storage, remote);
     const permits =
       request.permitStorage === undefined
@@ -61,14 +43,16 @@ export function createContextFactory(manager: StorageManager): ContextFactory {
         provider,
         storage: primary.storage,
         permitStorage: permits.storage,
-        logger: stderrLogger,
+        logger: diagnosticsLogger,
         ...options,
+        onEvent: events.onEvent,
       }),
       // Presence with undefined enables protection; omission leaves the SDK option absent.
       secret === undefined
         ? {}
         : { transportKeyPairDerivationSecret: value?.$case === "text" ? value.text : value?.bytes },
     );
+    events.observeWallet(sdk);
     return {
       sdk,
       credentialScope: options.transportKeyPairScope,

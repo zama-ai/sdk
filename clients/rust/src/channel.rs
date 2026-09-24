@@ -1,3 +1,4 @@
+use crate::error::{TypedCause, typed_cause};
 use crate::{RpcError, SdkError, generated};
 use anyhow::{Context, Result, ensure};
 use std::{future::Future, time::Duration};
@@ -15,12 +16,10 @@ enum Failure {
 }
 impl From<anyhow::Error> for Failure {
     fn from(error: anyhow::Error) -> Self {
-        if let Some(sdk) = error.downcast_ref::<SdkError>() {
-            Self::Sdk(sdk.clone())
-        } else if let Some(rpc) = error.downcast_ref::<RpcError>() {
-            Self::Rpc(rpc.clone())
-        } else {
-            Self::Other(format!("{error:#}"))
+        match typed_cause(&error) {
+            Some(TypedCause::Sdk(sdk)) => Self::Sdk(sdk.clone()),
+            Some(TypedCause::Rpc(rpc)) => Self::Rpc(rpc.clone()),
+            None => Self::Other(format!("{error:#}")),
         }
     }
 }
@@ -115,4 +114,24 @@ pub(crate) fn check_reply_error(
         return Ok(());
     }
     Err(SdkError::from(error).into())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::error::test_support::AppError;
+
+    #[test]
+    fn failure_finds_typed_errors_behind_application_source() {
+        let sdk = SdkError::signing_rejected("no");
+        let wrapped = anyhow::Error::new(AppError(Box::new(sdk.clone())));
+        assert!(matches!(Failure::from(wrapped), Failure::Sdk(found) if found == sdk));
+
+        let rpc = RpcError::from(tonic::Status::unavailable("down"));
+        let wrapped = anyhow::Error::new(AppError(Box::new(rpc)));
+        assert!(matches!(
+            Failure::from(wrapped),
+            Failure::Rpc(found) if found.status.code() == tonic::Code::Unavailable
+        ));
+    }
 }
