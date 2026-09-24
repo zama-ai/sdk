@@ -1,6 +1,6 @@
 use std::{fmt, sync::Arc};
 
-/// Errors returned by client operations.
+/// Error returned by client operations; [`source`](std::error::Error::source) yields the original cause.
 #[derive(Clone, Debug)]
 pub struct ClientError {
     kind: ErrorKind,
@@ -10,7 +10,7 @@ pub struct ClientError {
     source: Option<Arc<dyn std::error::Error + Send + Sync + 'static>>,
 }
 
-/// Stable categories for failures at the client boundary.
+/// Failure category; match with a fallback arm.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 #[non_exhaustive]
 pub enum ErrorKind {
@@ -34,7 +34,7 @@ pub enum ErrorKind {
     Sdk,
 }
 
-/// Result returned by client operations. Callback implementations may use their own error types.
+/// Result returned by client operations.
 pub type Result<T> = std::result::Result<T, ClientError>;
 
 impl ClientError {
@@ -44,13 +44,13 @@ impl ClientError {
         self.kind
     }
 
-    /// Structured details reported by the SDK, when present.
+    /// SDK error code and retry metadata reported by the sidecar, if any.
     #[must_use]
     pub fn sdk_error(&self) -> Option<&SdkError> {
         self.sdk.as_deref()
     }
 
-    /// Whether a write may have reached the network even though the call failed.
+    /// Whether a contract write may have been submitted despite the failure.
     pub fn is_outcome_unknown(&self) -> bool {
         match self.kind {
             ErrorKind::Timeout | ErrorKind::Transport => true,
@@ -156,7 +156,7 @@ impl From<tonic::Status> for ClientError {
                     .get("zama-error-retry-after-seconds")
                     .and_then(|v| v.to_str().ok())
                     .and_then(|v| v.parse().ok()),
-                // Revert data travels over gRPC trailers via the dedicated reply variant, not here.
+                // Status trailers never carry revert data.
                 revert_data: None,
             });
         let kind = match status.code() {
