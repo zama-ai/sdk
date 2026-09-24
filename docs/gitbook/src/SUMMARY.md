@@ -50,6 +50,7 @@
 - [Delegated decryption](guides/delegated-decryption.md)
 - [Encrypt & decrypt](guides/encrypt-decrypt.md)
 - [Vault deposits and redemptions](guides/vault-deposits.md)
+- [Vault groups](guides/vault-groups.md)
 
 ## API References
 
