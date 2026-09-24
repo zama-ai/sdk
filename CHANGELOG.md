@@ -1,5 +1,15 @@
 # Changelog
 
+## [4.0.0-alpha.1](https://github.com/zama-ai/sdk/compare/v3.7.0-alpha.2...v4.0.0-alpha.1) (2026-09-24)
+
+### ⚠ BREAKING CHANGES
+
+- bump major for the @fhevm/sdk 0.14 upgrade (#809)
+
+### Features
+
+- bump major for the @fhevm/sdk 0.14 upgrade ([#809](https://github.com/zama-ai/sdk/issues/809)) ([f78242f]())
+
 ## [3.7.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.7.0-alpha.1...v3.7.0-alpha.2) (2026-09-15)
 
 ### Features
