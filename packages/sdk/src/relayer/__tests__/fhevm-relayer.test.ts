@@ -545,7 +545,8 @@ describe("FhevmRelayer capability initialization", () => {
     {
       label: "signed permit parsing",
       capability: "base" as const,
-      invoke: (relayer: FhevmRelayer) => relayer.parseSignedDecryptionPermit({} as never),
+      invoke: (relayer: FhevmRelayer) =>
+        relayer.parseSignedDecryptionPermit({ serializedPermit: { signature: "0x" } } as never),
       delegatedAction: clients.baseClient.parseSignedDecryptionPermit,
     },
     {
@@ -567,6 +568,46 @@ describe("FhevmRelayer capability initialization", () => {
       expect(clients.encryptClient.init).toHaveBeenCalledTimes(capability === "encrypt" ? 1 : 0);
     },
   );
+});
+
+describe("FhevmRelayer permit signature normalization", () => {
+  const r = "11".repeat(32);
+  const s = "22".repeat(32);
+  const sig = (v: string) => `0x${r}${s}${v}`;
+  const permitWith = (signature: string) => ({
+    version: 1,
+    eip712: {} as never,
+    signature,
+    signerAddress: "0x0000000000000000000000000000000000000001",
+  });
+
+  test.each([
+    { label: "v=0 becomes 27", input: sig("00"), expected: sig("1b") },
+    { label: "v=1 becomes 28", input: sig("01"), expected: sig("1c") },
+    { label: "v=27 is unchanged", input: sig("1b"), expected: sig("1b") },
+    { label: "v=28 is unchanged", input: sig("1c"), expected: sig("1c") },
+    { label: "an unknown v is unchanged", input: sig("05"), expected: sig("05") },
+    { label: "a non-65-byte signature is unchanged", input: `0x${r}${s}`, expected: `0x${r}${s}` },
+  ])("$label before delegating", async ({ input, expected }) => {
+    const relayer = makeRelayer({ chain: anvil });
+    const serializedPermit = permitWith(input);
+
+    await relayer.parseSignedDecryptionPermit({ serializedPermit, transportKeyPair: {} } as never);
+
+    expect(clients.baseClient.parseSignedDecryptionPermit).toHaveBeenCalledWith({
+      serializedPermit: { ...serializedPermit, signature: expected },
+      transportKeyPair: {},
+    });
+  });
+
+  test("does not mutate the caller's serialized permit", async () => {
+    const relayer = makeRelayer({ chain: anvil });
+    const serializedPermit = permitWith(sig("00"));
+
+    await relayer.parseSignedDecryptionPermit({ serializedPermit, transportKeyPair: {} } as never);
+
+    expect(serializedPermit.signature).toBe(sig("00"));
+  });
 });
 
 describe("FhevmRelayer request options", () => {

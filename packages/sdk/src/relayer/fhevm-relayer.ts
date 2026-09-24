@@ -549,7 +549,14 @@ export class FhevmRelayer implements RelayerSDK {
    */
   parseSignedDecryptionPermit: FhevmClient["parseSignedDecryptionPermit"] = async (parameters) => {
     await this.#base.init();
-    return this.#base.parseSignedDecryptionPermit(parameters);
+    const { serializedPermit } = parameters;
+    return this.#base.parseSignedDecryptionPermit({
+      ...parameters,
+      serializedPermit: {
+        ...serializedPermit,
+        signature: normalizeSignatureV(serializedPermit.signature),
+      },
+    });
   };
 
   /**
@@ -567,6 +574,22 @@ export class FhevmRelayer implements RelayerSDK {
     await this.#decrypt.init();
     return this.#decrypt.generateTransportKeyPair();
   };
+}
+
+/**
+ * Rewrites a 65-byte signature's recovery byte from 0/1 to 27/28. The gateway
+ * verifies V1 permits on-chain with OpenZeppelin `ECDSA.recover`, which rejects
+ * 0/1. Longer signatures (ERC-1271, concatenated) pass through untouched.
+ */
+function normalizeSignatureV(signature: string): string {
+  if (signature.length !== 132) {
+    return signature;
+  }
+  const v = parseInt(signature.slice(130), 16);
+  if (v !== 0 && v !== 1) {
+    return signature;
+  }
+  return `${signature.slice(0, 130)}${v === 0 ? "1b" : "1c"}`;
 }
 
 /**

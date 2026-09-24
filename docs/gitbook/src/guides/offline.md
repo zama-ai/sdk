@@ -179,6 +179,8 @@ Then register the signature. This verifies it against `prepared.eip712` and pers
 await sdk.permits.registerPermit(prepared, signature);
 ```
 
+The recovery byte may be either `0`/`1` or `27`/`28`: the SDK normalizes it before the permit is verified.
+
 One permit per call: unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks a request over 10 contracts — `contracts` maps to exactly one signature.
 
 {% hint style="warning" %}
