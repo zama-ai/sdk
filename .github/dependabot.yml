@@ -1,18 +1,27 @@
 version: 2
 updates:
-  # SDK core packages and workspace tooling
+  # SDK core packages, workspace tooling, and test apps -- one pnpm workspace
+  # sharing one pnpm-lock.yaml, kept in a single entry with "/" in scope. A
+  # separate "test apps" entry without "/" couldn't regenerate the shared
+  # lockfile, so every lockfile-touching bump it proposed broke CI
+  # (ERR_PNPM_OUTDATED_LOCKFILE).
   - package-ecosystem: npm
     target-branch: beta
     directories:
       - /
       - /packages/sdk
       - /packages/react-sdk
+      - /test/test-nextjs
+      - /test/test-vite
     schedule:
       interval: weekly
     cooldown:
       default-days: 3
       exclude:
         - "@zama-fhe/relayer-sdk"
+        - "@zama-fhe/sdk"
+        - "@zama-fhe/react-sdk"
+        - "@zama-fhe/test-components"
     groups:
       sdk:
         update-types:
@@ -24,30 +33,6 @@ updates:
           - version-update:semver-patch
       # Protocol-version-tied; bumped via alpha, not routine Dependabot.
       - dependency-name: "@fhevm/sdk"
-
-  # Test apps
-  - package-ecosystem: npm
-    target-branch: beta
-    directories:
-      - /test/test-nextjs
-      - /test/test-vite
-    schedule:
-      interval: weekly
-    cooldown:
-      default-days: 3
-      exclude:
-        - "@zama-fhe/sdk"
-        - "@zama-fhe/react-sdk"
-        - "@zama-fhe/test-components"
-    groups:
-      test-apps:
-        update-types:
-          - minor
-          - patch
-    ignore:
-      - dependency-name: "*"
-        update-types:
-          - version-update:semver-patch
 
   # Example apps
   - package-ecosystem: npm
