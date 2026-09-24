@@ -2172,7 +2172,9 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 > **Unreleased.** The changes on this page are on the prerelease (`beta`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
 
 
-_Nothing is staged for the next release yet._
+## Permit signatures with a 0/1 recovery byte
+
+`parseSignedDecryptionPermit` (and `sdk.permits.registerPermit`, which uses it) now accepts 65-byte permit signatures whose recovery byte is `0`/`1` as well as `27`/`28`. The SDK normalizes the byte before the permit is verified; signatures already in `27`/`28` form and longer ERC-1271 signatures are unchanged.
 
 ## 3.x
 
@@ -5593,6 +5595,8 @@ Then register the signature. This verifies it against `prepared.eip712` and pers
 ```ts
 await sdk.permits.registerPermit(prepared, signature);
 ```
+
+The recovery byte may be either `0`/`1` or `27`/`28`: the SDK normalizes it before the permit is verified.
 
 One permit per call: unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks a request over 10 contracts — `contracts` maps to exactly one signature.
 
