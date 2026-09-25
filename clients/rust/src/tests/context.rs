@@ -234,10 +234,14 @@ async fn preserves_context_options_typed_values_and_sdk_errors() {
         .unwrap();
     sdk.update_account(None).await.unwrap();
     let error = sdk.permits().has_permit(&[]).await.unwrap_err();
-    let error = error.downcast_ref::<RpcError>().unwrap();
-    assert_eq!(error.status.code(), tonic::Code::Unavailable);
-    assert_eq!(error.sdk.as_ref().unwrap().retry_after_seconds, Some(1));
-    assert!(error.sdk.as_ref().unwrap().retryable);
+    assert_eq!(error.kind(), crate::ErrorKind::Transport);
+    let status = std::error::Error::source(&error)
+        .unwrap()
+        .downcast_ref::<tonic::Status>()
+        .unwrap();
+    assert_eq!(status.code(), tonic::Code::Unavailable);
+    assert_eq!(error.sdk_error().unwrap().retry_after_seconds, Some(1));
+    assert!(error.sdk_error().unwrap().retryable);
     sdk.close().await.unwrap();
     assert!(
         server
@@ -256,7 +260,7 @@ async fn deadline_covers_stalled_response_body() {
             .header("content-type", "application/grpc")
             .body(
                 StreamBody::new(futures_util::stream::pending::<
-                    Result<Frame<Bytes>, Infallible>,
+                    std::result::Result<Frame<Bytes>, Infallible>,
                 >())
                 .boxed(),
             )
@@ -270,6 +274,6 @@ async fn deadline_covers_stalled_response_body() {
     let result = tokio::time::timeout(Duration::from_secs(1), client.sdk_version())
         .await
         .expect("client deadline failed");
-    assert!(result.is_err());
+    assert_eq!(result.unwrap_err().kind(), crate::ErrorKind::Timeout);
     assert_eq!(*server.timeouts.lock().unwrap(), vec![true]);
 }

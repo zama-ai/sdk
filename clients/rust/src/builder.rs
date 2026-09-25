@@ -1,8 +1,8 @@
 use crate::{
-    Client, Sdk, SdkConfig, Signer, SignerConfig, Storage, WalletAccount, operations::Operations,
-    signer::attach_signer, storage_channel::attach_storage,
+    Client, ClientError, Result, Sdk, SdkConfig, Signer, Storage, WalletAccount,
+    operations::Operations, signer::attach_signer, storage_channel::attach_storage,
+    types::SignerConfig,
 };
-use anyhow::Result;
 use std::{collections::HashMap, sync::Arc};
 
 pub struct SdkBuilder {
@@ -59,11 +59,11 @@ impl SdkBuilder {
         for storage in std::iter::once(&self.storage).chain(self.permit_storage.as_ref()) {
             if let Storage::Application(storage) = storage
                 && let Some(previous) = backends.insert(storage.id.clone(), storage.backend.clone())
+                && !Arc::ptr_eq(&previous, &storage.backend)
             {
-                anyhow::ensure!(
-                    Arc::ptr_eq(&previous, &storage.backend),
-                    "application storage identity refers to different backends"
-                );
+                return Err(ClientError::invalid_input(
+                    "application storage identity refers to different backends",
+                ));
             }
         }
         let context_id = self
@@ -77,17 +77,13 @@ impl SdkBuilder {
             )
             .await?;
         let operations = Arc::new(Operations::new());
-        let mut resources = crate::lifetime::Resources::new(
-            self.client.inner.clone(),
-            context_id.clone(),
-            None,
-            None,
-        );
+        let mut resources =
+            crate::lifetime::Resources::new(self.client.clone(), context_id.clone(), None, None);
         let result = async {
             if let Some(handler) = self.events {
                 resources.events = Some(
                     crate::event_channel::attach_events(
-                        self.client.inner.clone(),
+                        self.client.service(),
                         &context_id,
                         handler,
                     )
@@ -96,12 +92,12 @@ impl SdkBuilder {
             }
             if !backends.is_empty() {
                 resources.storage =
-                    Some(attach_storage(self.client.inner.clone(), &context_id, backends).await?);
+                    Some(attach_storage(self.client.service(), &context_id, backends).await?);
             }
             if let Some((_, signer)) = self.signer {
                 resources.signer = Some(
                     attach_signer(
-                        self.client.inner.clone(),
+                        self.client.service(),
                         &context_id,
                         operations.clone(),
                         signer,
@@ -109,12 +105,17 @@ impl SdkBuilder {
                     .await?,
                 );
             }
-            Ok::<_, anyhow::Error>(())
+            Ok::<_, ClientError>(())
         }
         .await;
         if let Err(error) = result {
             let _ = resources
-                .close(Some(std::time::Duration::from_secs(5)))
+                .close(
+                    &self
+                        .client
+                        .clone()
+                        .with_timeout(std::time::Duration::from_secs(5)),
+                )
                 .await;
             return Err(error);
         }

@@ -1,34 +1,15 @@
-#[path = "test_support.rs"]
-mod test_support;
+//! Tests that drive the whole Sdk against the in-process mock sidecar; unit tests for a single module stay next to that module.
+mod support;
 
-use test_support::*;
+use support::*;
 
-#[path = "config_tests.rs"]
-mod config_tests;
-
-#[path = "context_tests.rs"]
-mod context_tests;
-
-#[path = "lifecycle_tests.rs"]
-mod lifecycle_tests;
-
-#[path = "storage_tests.rs"]
-mod storage_tests;
-
-#[path = "encryption_tests.rs"]
-mod encryption_tests;
-
-#[path = "decryption_tests.rs"]
-mod decryption_tests;
-
-#[path = "offline_tests.rs"]
-mod offline_tests;
-
-#[path = "delegation_tests.rs"]
-mod delegation_tests;
-
-#[path = "signer_channel_tests.rs"]
-mod signer_channel_tests;
-
-#[path = "event_tests.rs"]
-mod event_tests;
+mod config;
+mod context;
+mod decryption;
+mod delegation;
+mod encryption;
+mod event;
+mod lifecycle;
+mod offline;
+mod signer_channel;
+mod storage;

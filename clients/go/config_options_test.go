@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	pb "github.com/zama-ai/sdk/clients/go/gen/zama/sdk/v1alpha1"
+	pb "github.com/zama-ai/sdk/clients/go/internal/gen/zama/sdk/v1alpha1"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
