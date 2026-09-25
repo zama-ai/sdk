@@ -187,7 +187,6 @@ impl From<tonic::Status> for ClientError {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-#[non_exhaustive]
 pub struct SdkError {
     pub code: String,
     pub message: String,
