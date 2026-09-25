@@ -75,7 +75,7 @@ func TestTypedConfigurationAndStorageChoices(t *testing.T) {
 	if r.Config.PermitTtl == nil || *r.Config.PermitTtl != 0 || r.Config.GetChainId() != 11155111 || r.Config.Chains[0].Auth.GetApiKeyHeader().Value != "example" {
 		t.Fatal("typed SDK config changed")
 	}
-	config.Storage = PersistentStorage("credentials")
+	config.Storage = DaemonPersistentStorage("credentials")
 	permitStorage := DaemonMemoryStorage()
 	config.PermitStorage = &permitStorage
 	if _, err := client.CreateContext(testContext(t), config, SignerConfig{}); err != nil {

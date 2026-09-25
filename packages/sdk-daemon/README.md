@@ -127,7 +127,7 @@ For a custom backend, implement [Go Storage](../../clients/go/storage.go) or [Ru
 
 Use Go `NamedApplicationStorage` or Rust `ApplicationStorage::shared` for adapters accessing the same durable namespace. A matching name coordinates credential operations within one daemon; it does not provide distributed database locking across multiple daemons. Backend methods must support concurrent calls. Rust futures and Go contexts carry callback cancellation when the storage channel closes.
 
-Select Go `PersistentStorage("partner")` or Rust `Storage::Persistent("partner".into())` to use daemon persistence. That deployment must set `ZAMA_SDK_DAEMON_STORAGE_DIR` and mount a private writable directory there. Named stores are isolated; reusing a name intentionally shares the store. The default Compose example does not configure this option.
+Select Go `DaemonPersistentStorage("partner")` or Rust `Storage::Persistent("partner".into())` to use daemon persistence. That deployment must set `ZAMA_SDK_DAEMON_STORAGE_DIR` and mount a private writable directory there. Named stores are isolated; reusing a name intentionally shares the store. The default Compose example does not configure this option.
 
 Set Go `SDKConfig.PermitStorage` or Rust builder `.permit_storage(...)` to separate permits from transport keys. Omission preserves the SDK default of sharing the primary store.
 

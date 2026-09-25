@@ -61,7 +61,7 @@ type StorageConfig struct {
 }
 
 func DaemonMemoryStorage() StorageConfig { return StorageConfig{kind: "memory"} }
-func PersistentStorage(name string) StorageConfig {
+func DaemonPersistentStorage(name string) StorageConfig {
 	return StorageConfig{kind: "persistent", name: name}
 }
 

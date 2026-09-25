@@ -73,7 +73,7 @@ func (config exampleConfig) sdkConfig() (zama.SDKConfig, error) {
 		if !present {
 			return zama.SDKConfig{}, errors.New("missing CREDENTIAL_STORE_NAME")
 		}
-		sdkConfig.Storage = zama.PersistentStorage(name)
+		sdkConfig.Storage = zama.DaemonPersistentStorage(name)
 	default:
 		return zama.SDKConfig{}, errors.New("invalid CREDENTIAL_STORAGE")
 	}
