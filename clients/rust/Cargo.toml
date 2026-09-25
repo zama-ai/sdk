@@ -1,9 +1,17 @@
 [package]
 name = "zama-sdk"
-version = "0.1.0"
+version = "3.6.0"
 edition = "2024"
-rust-version = "1.98"
-publish = false
+rust-version = "1.91"
+description = "Rust client for the Zama SDK daemon: encrypts, decrypts and prepares confidential transactions over a Unix socket."
+license = "BSD-3-Clause-Clear"
+repository = "https://github.com/zama-ai/sdk"
+keywords = ["zama", "fhe", "fhevm", "confidential", "ethereum"]
+categories = ["cryptography", "api-bindings"]
+exclude = ["/tests/", "/Dockerfile", "/Dockerfile.dockerignore"]
+
+[package.metadata.docs.rs]
+all-features = true
 
 [workspace]
 members = ["generator"]
@@ -18,43 +26,45 @@ alloy = ["dep:alloy-signer", "dep:alloy-dyn-abi", "dep:alloy-provider", "dep:all
 async-trait = "0.1"
 serde = { version = "1", features = ["derive"] }
 uuid = { version = "1", features = ["v4"] }
-alloy-signer = { version = "=1.8.3", optional = true }
-alloy-dyn-abi = { version = "=1.7.2", features = ["eip712"], optional = true }
-alloy-primitives = { version = "=1.7.2", default-features = false, features = ["std"] }
+alloy-signer = { version = "1.8.3", optional = true }
+alloy-dyn-abi = { version = "1.7.2", features = ["eip712"], optional = true }
+alloy-primitives = { version = "1.7.2", default-features = false, features = ["std"] }
 anyhow = "1"
 num-bigint = "0.4"
 tokio-stream = "0.1"
 hyper-util = { version = "0.1", features = ["tokio"] }
-prost = "=0.14.4"
 serde_json = "1"
 tokio = { version = "1", features = ["net", "time", "sync", "rt", "macros"] }
 tokio-util = { version = "0.7", default-features = false }
-tonic = "=0.14.6"
-tonic-prost = "=0.14.6"
 tower = { version = "0.5", features = ["util"] }
 
-alloy-provider = { version = "=1.8.3", default-features = false, optional = true }
-alloy-rpc-types-eth = { version = "=1.8.3", default-features = false, optional = true }
+# Floors match the generator versions the checked-in bindings were built with.
+prost = "0.14.4"
+tonic = "0.14.6"
+tonic-prost = "0.14.6"
+
+alloy-provider = { version = "1.8.3", default-features = false, optional = true }
+alloy-rpc-types-eth = { version = "1.8.3", default-features = false, optional = true }
 
 [dev-dependencies]
-alloy-consensus = { version = "=1.8.3", default-features = false, features = ["k256"] }
+alloy-consensus = { version = "1.8.3", default-features = false, features = ["k256"] }
 alloy-rlp = "0.3"
-alloy-eips = "=1.8.3"
-alloy-json-rpc = "=1.8.3"
-alloy-rpc-client = { version = "=1.8.3", default-features = false }
-alloy-transport = { version = "=1.8.3", default-features = false }
-reqwest = { version = "=0.13.5", default-features = false }
-alloy-contract = { version = "=1.8.3", default-features = false }
-alloy-provider = { version = "=1.8.3", default-features = false, features = [
+alloy-eips = "1.8.3"
+alloy-json-rpc = "1.8.3"
+alloy-rpc-client = { version = "1.8.3", default-features = false }
+alloy-transport = { version = "1.8.3", default-features = false }
+reqwest = { version = "0.13.5", default-features = false }
+alloy-contract = { version = "1.8.3", default-features = false }
+alloy-provider = { version = "1.8.3", default-features = false, features = [
   "reqwest",
   "reqwest-rustls-tls",
 ] }
-alloy-sol-types = "=1.7.2"
+alloy-sol-types = "1.7.2"
 tempfile = "3"
 futures-util = "0.3"
 http-body-util = "0.1"
 hyper = { version = "1", features = ["server", "http2"] }
-alloy-signer-local = { version = "=1.8.3", default-features = false, features = ["zeroize"] }
+alloy-signer-local = { version = "1.8.3", default-features = false, features = ["zeroize"] }
 dotenvy = "0.15"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
