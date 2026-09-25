@@ -16,7 +16,7 @@ async fn create(
     storage: ApplicationStorage,
     signatures: Arc<AtomicUsize>,
 ) -> Result<Sdk> {
-    Client::connect(socket)
+    Ok(Client::connect(socket)
         .await?
         .sdk(SdkConfig::new(31337, "http://fixture.invalid"))
         .storage(storage)
@@ -34,7 +34,7 @@ async fn create(
             },
         )
         .build()
-        .await
+        .await?)
 }
 async fn decrypt(sdk: &Sdk, marker: u8) -> Result<()> {
     let handle = B256::repeat_byte(marker);

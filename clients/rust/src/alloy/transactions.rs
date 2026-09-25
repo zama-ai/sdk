@@ -166,5 +166,4 @@ fn transaction(request: &ContractWriteRequest) -> Result<TransactionRequest, Sdk
 }
 
 #[cfg(test)]
-#[path = "alloy_transaction_tests.rs"]
 mod tests;

@@ -3,7 +3,7 @@ package sidecar
 import (
 	"fmt"
 
-	pb "github.com/zama-ai/sdk/clients/go/gen/zama/sdk/v1alpha1"
+	pb "github.com/zama-ai/sdk/clients/go/internal/gen/zama/sdk/v1alpha1"
 )
 
 type ModuleVersions interface{ wire() *pb.ModuleVersions }

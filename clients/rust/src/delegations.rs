@@ -1,5 +1,7 @@
-use crate::{Address, Sdk, TransactionResult, generated, transactions::transaction_result};
-use anyhow::{Context, Result};
+use crate::{
+    Address, ClientError, ErrorKind, Result, Sdk, TransactionResult, generated,
+    transactions::transaction_result,
+};
 use std::time::SystemTime;
 
 pub struct Delegations(pub(crate) Sdk);
@@ -21,10 +23,21 @@ impl DelegateDecryptionParams {
     ) -> Result<Self> {
         let millis = at
             .duration_since(std::time::UNIX_EPOCH)
-            .context("expiry predates the unix epoch")?
+            .map_err(|error| {
+                ClientError::with_source(
+                    ErrorKind::InvalidInput,
+                    "expiry predates the unix epoch",
+                    error,
+                )
+            })?
             .as_millis();
-        let expiration_date_ms =
-            u64::try_from(millis).context("expiry does not fit in u64 milliseconds")?;
+        let expiration_date_ms = u64::try_from(millis).map_err(|error| {
+            ClientError::with_source(
+                ErrorKind::InvalidInput,
+                "expiry does not fit in u64 milliseconds",
+                error,
+            )
+        })?;
         Ok(Self {
             contract_address,
             delegate_address,

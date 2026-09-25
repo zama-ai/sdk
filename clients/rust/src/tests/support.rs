@@ -1,3 +1,4 @@
+pub(super) use crate::types::SignerConfig;
 pub(super) use crate::*;
 pub(super) use generated::*;
 pub(super) use http_body_util::{BodyExt, Full, StreamBody, combinators::BoxBody};
@@ -7,8 +8,10 @@ pub(super) use hyper::{
     server::conn::http2,
 };
 pub(super) use hyper_util::rt::TokioExecutor;
+pub(super) use hyper_util::rt::TokioIo;
 pub(super) use prost::Message;
 pub(super) use std::{collections::HashMap, convert::Infallible, sync::Mutex};
+pub(super) use std::{sync::Arc, time::Duration};
 pub(super) use tokio::sync::mpsc;
 pub(super) use tokio_stream::{StreamExt, wrappers::UnboundedReceiverStream};
 
@@ -231,4 +234,47 @@ impl alloy_signer::Signer for FailingAlloySigner {
     }
 
     fn set_chain_id(&mut self, _chain_id: Option<u64>) {}
+}
+
+pub(super) trait ClientTestExt {
+    async fn create_context(&self, config: SdkConfig, signer: SignerConfig) -> Result<Sdk>;
+}
+impl ClientTestExt for Client {
+    async fn create_context(&self, config: SdkConfig, signer: SignerConfig) -> Result<Sdk> {
+        let context_id = self
+            .create_context_with_storage(config.try_into()?, signer, None, None, None)
+            .await?;
+        Ok(Sdk::from_context(
+            self.clone(),
+            context_id.clone(),
+            Arc::new(operations::Operations::new()),
+            lifetime::Resources::new(self.clone(), context_id.clone(), None, None),
+        ))
+    }
+}
+
+pub(super) trait SdkTestExt {
+    async fn attach_signer<F, Fut>(&self, sign: F) -> Result<crate::channel::Connection>
+    where
+        F: Fn(SigningRequest) -> Fut + Send + Sync + 'static,
+        Fut: std::future::Future<Output = std::result::Result<Vec<u8>, crate::SdkError>>
+            + Send
+            + 'static;
+}
+impl SdkTestExt for Sdk {
+    async fn attach_signer<F, Fut>(&self, sign: F) -> Result<crate::channel::Connection>
+    where
+        F: Fn(SigningRequest) -> Fut + Send + Sync + 'static,
+        Fut: std::future::Future<Output = std::result::Result<Vec<u8>, crate::SdkError>>
+            + Send
+            + 'static,
+    {
+        crate::signer::attach_signer(
+            self.client.service(),
+            &self.context_id,
+            self.operations.clone(),
+            Arc::new(sign),
+        )
+        .await
+    }
 }

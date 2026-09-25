@@ -26,7 +26,7 @@ impl EventHandler for HandlerEvents {
         &self,
         context: EventContext,
         notification: Notification,
-    ) -> Result<()> {
+    ) -> anyhow::Result<()> {
         self.seen.send((context, notification))?;
         let _dropped = Dropped(self.dropped.clone());
         self.gate.acquire().await?.forget();
@@ -47,7 +47,7 @@ impl EventHandler for PanickingEvents {
         &self,
         _context: EventContext,
         _notification: Notification,
-    ) -> Result<()> {
+    ) -> anyhow::Result<()> {
         panic!("event handler failed")
     }
 }
@@ -413,6 +413,7 @@ async fn malformed_event_sequence_closes_channel_without_replay() {
     .await
     .unwrap()
     .unwrap_err();
+    assert_eq!(failure.kind(), crate::ErrorKind::Protocol);
     assert!(failure.to_string().contains("sequence"));
     assert_eq!(observed.recv().await.unwrap().0.sequence, 10);
     assert!(observed.recv().await.is_none());
@@ -454,6 +455,7 @@ async fn mismatched_event_context_closes_channel_without_delivery() {
     .await
     .unwrap()
     .unwrap_err();
+    assert_eq!(error.kind(), crate::ErrorKind::Protocol);
     assert!(error.to_string().contains("context mismatch"));
     assert!(observed.recv().await.is_none());
     sdk.close().await.unwrap();
@@ -610,6 +612,7 @@ async fn panicking_event_handler_terminates_subscription() {
     .await
     .unwrap()
     .unwrap_err();
+    assert_eq!(error.kind(), crate::ErrorKind::Callback);
     assert!(error.to_string().contains("notification worker failed"));
     assert!(server.event_replies.try_recv().is_err());
     sdk.close().await.unwrap();

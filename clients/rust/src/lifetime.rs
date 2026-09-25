@@ -1,5 +1,4 @@
-use crate::{Service, channel::Connection, generated, unary};
-use anyhow::Result;
+use crate::{Client, Result, channel::Connection, generated};
 use std::{
     sync::atomic::{AtomicBool, Ordering},
     time::Duration,
@@ -7,7 +6,7 @@ use std::{
 use tokio::sync::Mutex;
 
 pub(crate) struct Resources {
-    client: Service,
+    client: Client,
     context_id: String,
     closed: AtomicBool,
     closing: Mutex<()>,
@@ -17,7 +16,7 @@ pub(crate) struct Resources {
 }
 impl Resources {
     pub fn new(
-        client: Service,
+        client: Client,
         context_id: String,
         signer: Option<Connection>,
         storage: Option<Connection>,
@@ -32,20 +31,19 @@ impl Resources {
             events: None,
         }
     }
-    pub async fn close(&self, timeout: Option<Duration>) -> Result<()> {
+    pub async fn close(&self, client: &Client) -> Result<()> {
         let _closing = self.closing.lock().await;
         if self.closed.load(Ordering::Acquire) {
             return Ok(());
         }
-        let mut client = self.client.clone();
-        let result = unary(
-            generated::ContextRequest {
-                context_id: self.context_id.clone(),
-            },
-            timeout,
-            |request| client.close_context(request),
-        )
-        .await;
+        let result = client
+            .unary(
+                generated::ContextRequest {
+                    context_id: self.context_id.clone(),
+                },
+                |mut client, request| async move { client.close_context(request).await },
+            )
+            .await;
         if result.is_ok() {
             self.closed.store(true, Ordering::Release);
         }
@@ -67,17 +65,18 @@ impl Drop for Resources {
             return;
         }
         if let Ok(runtime) = tokio::runtime::Handle::try_current() {
-            let mut client = self.client.clone();
+            let client = self.client.clone().with_timeout(Duration::from_secs(5));
             let context_id = self.context_id.clone();
             let signer = self.signer.take();
             let storage = self.storage.take();
             let events = self.events.take();
             runtime.spawn(async move {
-                let _ = tokio::time::timeout(
-                    Duration::from_secs(5),
-                    client.close_context(generated::ContextRequest { context_id }),
-                )
-                .await;
+                let _ = client
+                    .unary(
+                        generated::ContextRequest { context_id },
+                        |mut client, request| async move { client.close_context(request).await },
+                    )
+                    .await;
                 drop(signer);
                 drop(storage);
                 drop(events);

@@ -135,7 +135,7 @@ impl Settings {
         if let Some(secret) = &self.derivation_secret {
             builder = builder.transport_key_pair_derivation_secret(secret.clone());
         }
-        builder.events(crate::events::Diagnostics).build().await
+        Ok(builder.events(crate::events::Diagnostics).build().await?)
     }
 }
 

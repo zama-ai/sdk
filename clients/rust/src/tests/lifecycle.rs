@@ -80,6 +80,13 @@ async fn managed_channel_wait_ignores_stale_replies_and_preserves_other_errors()
         .await
         .unwrap();
     server.storage_replies.recv().await.unwrap();
+    assert_eq!(
+        sdk.wait_channel_closed(CallbackChannel::Events)
+            .await
+            .unwrap_err()
+            .kind(),
+        crate::ErrorKind::InvalidInput
+    );
     let send_error = |code: &str| {
         server
             .storage_actions
@@ -116,7 +123,8 @@ async fn managed_channel_wait_ignores_stale_replies_and_preserves_other_errors()
         .await
         .unwrap()
         .unwrap_err();
-        let sdk_error = error.downcast_ref::<crate::SdkError>().unwrap();
+        assert_eq!(error.kind(), crate::ErrorKind::Sdk);
+        let sdk_error = error.sdk_error().unwrap();
         assert_eq!(sdk_error.code, "STORAGE_FAILED");
         assert!(sdk_error.retryable);
         assert_eq!(sdk_error.retry_after_seconds, Some(1));
@@ -133,10 +141,25 @@ async fn channel_wait_preserves_rpc_error_metadata() {
     status
         .metadata_mut()
         .insert("zama-error-retryable", "true".parse().unwrap());
-    let connection =
-        crate::channel::Connection::spawn(async { Err(RpcError::from(status).into()) });
+    let connection = crate::channel::Connection::spawn(async { Err(ClientError::from(status)) });
     let error = connection.wait().await.unwrap_err();
-    let rpc = error.downcast_ref::<RpcError>().unwrap();
-    assert_eq!(rpc.sdk.as_ref().unwrap().code, "RELAYER_REQUEST_FAILED");
-    assert!(rpc.sdk.as_ref().unwrap().retryable);
+    assert_eq!(error.kind(), crate::ErrorKind::Transport);
+    assert_eq!(error.sdk_error().unwrap().code, "RELAYER_REQUEST_FAILED");
+    assert!(error.sdk_error().unwrap().retryable);
+}
+
+#[tokio::test]
+async fn connect_to_a_missing_socket_is_a_transport_error() {
+    let directory = tempfile::tempdir().unwrap();
+    let error = Client::connect(directory.path().join("missing.sock"))
+        .await
+        .err()
+        .unwrap();
+    assert_eq!(error.kind(), crate::ErrorKind::Transport);
+    assert!(
+        std::error::Error::source(&error)
+            .unwrap()
+            .downcast_ref::<tonic::transport::Error>()
+            .is_some()
+    );
 }
