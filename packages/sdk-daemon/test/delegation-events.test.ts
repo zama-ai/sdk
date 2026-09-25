@@ -12,7 +12,7 @@ import {
   SdkEventKind,
   EventOperation,
   type EventServerMessage,
-} from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
+} from "../src/generated/zama/sdk/v1beta1/daemon.js";
 import { operationContext } from "../src/remote-signer.js";
 import { RemoteEvents, type EventStream } from "../src/remote-events.js";
 import { FakeStream } from "./support/fake-stream.js";

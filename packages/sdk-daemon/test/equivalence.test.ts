@@ -32,7 +32,7 @@ import {
 import type {
   ClearEntry,
   DelegatedBatchDecryptValuesResponse,
-} from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
+} from "../src/generated/zama/sdk/v1beta1/daemon.js";
 
 class LocalSigner extends BaseSigner {
   sign = vi.fn(async (_: EIP712TypedData): Promise<Hex> => TEST_SIGNATURE);

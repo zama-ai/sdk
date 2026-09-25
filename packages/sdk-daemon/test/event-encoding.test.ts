@@ -8,7 +8,7 @@ import {
   SdkEvent,
   SdkEventKind,
   ShieldPath,
-} from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
+} from "../src/generated/zama/sdk/v1beta1/daemon.js";
 import { decode } from "./support/harness.js";
 
 const hash = `0x${"ab".repeat(32)}` as const;

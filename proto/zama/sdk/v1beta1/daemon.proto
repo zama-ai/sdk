@@ -1,10 +1,10 @@
 syntax = "proto3";
-package zama.sdk.v1alpha1;
+package zama.sdk.v1beta1;
 
-option go_package = "github.com/zama-ai/sdk/clients/go/internal/gen/zama/sdk/v1alpha1;sdkv1alpha1";
+option go_package = "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1;sdkv1beta1";
 // SDK failures retain their code and retry information in gRPC trailers.
 // Integer durations and counts are exact; omitted optional values use SDK defaults.
-service SidecarService {
+service DaemonService {
   // Reports the version of @zama-fhe/sdk executing operations in this process.
   rpc GetInfo(GetInfoRequest) returns (GetInfoResponse);
   // Creates an independent SDK instance; no account or signer is required for public operations.
@@ -416,7 +416,7 @@ message NamedCredential {
   string value = 2;
 }
 
-// Applied once per sidecar process; the first SDK configuration wins.
+// Applied once per daemon process; the first SDK configuration wins.
 message ProcessRuntimeConfig {
   optional string wasm_asset_load_mode = 1;
   ModuleVersions module_versions = 2;

@@ -37,10 +37,10 @@ import { frames } from "./support/frames.js";
 import { bytes, json } from "../src/encoding.js";
 import { errorDetails } from "../src/errors.js";
 import { createCoordinator } from "../src/coordination.js";
-import { SidecarRuntime } from "../src/runtime.js";
+import { DaemonRuntime } from "../src/runtime.js";
 import type { EventStream } from "../src/remote-events.js";
 import { operationContext, RemoteSigner, type SignerStream } from "../src/remote-signer.js";
-import type * as rpc from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
+import type * as rpc from "../src/generated/zama/sdk/v1beta1/daemon.js";
 
 const MAX_UINT64 = 2n ** 64n - 1n;
 const ACL = anvil.aclContractAddress;
@@ -614,7 +614,7 @@ test.each([
 
 test("losing events then cancelling during a delegation receipt preserves the broadcast hash", async () => {
   let created: ReturnType<typeof fixture> | undefined;
-  const runtime = new SidecarRuntime(async (_, signer, _storage, events) => {
+  const runtime = new DaemonRuntime(async (_, signer, _storage, events) => {
     created = fixture(signer, undefined, undefined, events.onEvent);
     return { sdk: created.sdk, storageIdentities: [] };
   }, createCoordinator());

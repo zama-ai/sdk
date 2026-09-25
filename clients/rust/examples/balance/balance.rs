@@ -1,7 +1,7 @@
 use alloy_provider::Provider;
 use alloy_sol_types::sol;
 use anyhow::Result;
-use zama_sdk_sidecar::{Address, ClearValue, EncryptedInput, Sdk};
+use zama_sdk::{Address, ClearValue, EncryptedInput, Sdk};
 
 sol! {
     #[sol(rpc)]

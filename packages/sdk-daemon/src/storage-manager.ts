@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { MemoryStorage, type GenericStorage } from "@zama-fhe/sdk";
-import type { StorageBinding } from "./generated/zama/sdk/v1alpha1/sidecar.js";
+import type { StorageBinding } from "./generated/zama/sdk/v1beta1/daemon.js";
 import type { RemoteStorage } from "./remote-storage.js";
 import { invalidArgument } from "./errors.js";
 import type { CredentialStorage } from "./storage.js";

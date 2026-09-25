@@ -1,4 +1,4 @@
-import type * as rpc from "./generated/zama/sdk/v1alpha1/sidecar.js";
+import type * as rpc from "./generated/zama/sdk/v1beta1/daemon.js";
 import type { ContextSdk } from "./runtime.js";
 import {
   address,

@@ -5,13 +5,13 @@ import type {
   WalletAccountChange,
   ZamaSDKEvent,
 } from "@zama-fhe/sdk";
-import type * as rpc from "./generated/zama/sdk/v1alpha1/sidecar.js";
+import type * as rpc from "./generated/zama/sdk/v1beta1/daemon.js";
 import {
   ApprovalStep,
   EventOperation,
   SdkEventKind,
   ShieldPath,
-} from "./generated/zama/sdk/v1alpha1/sidecar.js";
+} from "./generated/zama/sdk/v1beta1/daemon.js";
 import { bytes, entries } from "./encoding.js";
 import { errorDetails } from "./errors.js";
 

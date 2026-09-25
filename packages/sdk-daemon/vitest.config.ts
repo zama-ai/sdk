@@ -6,5 +6,5 @@ export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),
   plugins: [iifeStub()],
   resolve: sharedResolve,
-  test: { name: "sdk-sidecar", include: ["test/**/*.test.ts"], environment: "node" },
+  test: { name: "sdk-daemon", include: ["test/**/*.test.ts"], environment: "node" },
 });

@@ -14,7 +14,7 @@ import {
   ContextConfig,
   CreateContextRequest,
   ProcessRuntimeConfig,
-} from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
+} from "../src/generated/zama/sdk/v1beta1/daemon.js";
 
 vi.mock("@zama-fhe/sdk/node", () => ({
   node: () => ({ type: "test", createRelayer: () => createMockRelayer() }),

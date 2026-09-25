@@ -3,7 +3,7 @@ import { frames } from "./support/frames.js";
 import { expect, test } from "vitest";
 import { parseAbi } from "viem";
 import { operationContext, RemoteSigner, type SignerStream } from "../src/remote-signer.js";
-import type { SignerServerMessage } from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
+import type { SignerServerMessage } from "../src/generated/zama/sdk/v1beta1/daemon.js";
 
 const account = {
   address: "0x1111111111111111111111111111111111111111" as const,
@@ -85,11 +85,11 @@ test("wallet actions are not capped at an arbitrary count", async () => {
 test("unattached signer streams expire without imposing a wallet signing deadline", async () => {
   const { vi } = await import("vitest");
   const { createHandlers } = await import("../src/handlers.js");
-  const { SidecarRuntime } = await import("../src/runtime.js");
+  const { DaemonRuntime } = await import("../src/runtime.js");
   const { createCoordinator } = await import("../src/coordination.js");
   vi.useFakeTimers();
   try {
-    const runtime = new SidecarRuntime(async () => {
+    const runtime = new DaemonRuntime(async () => {
       throw new Error("unused");
     }, createCoordinator());
     const stream = new FakeStream<SignerServerMessage>();

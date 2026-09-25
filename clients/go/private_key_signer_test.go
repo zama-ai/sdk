@@ -1,4 +1,4 @@
-package sidecar
+package zama
 
 import (
 	"encoding/json"

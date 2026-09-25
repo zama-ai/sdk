@@ -5,12 +5,12 @@ import { bytes, json } from "../src/encoding.js";
 import { errorDetails, TransactionCallbackError } from "../src/errors.js";
 import { operationContext, RemoteSigner, type SignerStream } from "../src/remote-signer.js";
 import { createCoordinator } from "../src/coordination.js";
-import { SidecarRuntime } from "../src/runtime.js";
+import { DaemonRuntime } from "../src/runtime.js";
 import {
   SignerAction,
   type SignerReply,
   type SignerServerMessage,
-} from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
+} from "../src/generated/zama/sdk/v1beta1/daemon.js";
 import { FakeStream } from "./support/fake-stream.js";
 import { frames } from "./support/frames.js";
 import { fixture } from "./support/harness.js";
@@ -354,7 +354,7 @@ test.each(["success", "rejection", "broadcast failure", "receipt revert"] as con
 
 test("account updates cancel and drain contract writes before publishing the new snapshot", async () => {
   let signer: RemoteSigner | undefined;
-  const runtime = new SidecarRuntime(async (_, remote) => {
+  const runtime = new DaemonRuntime(async (_, remote) => {
     signer = remote;
     return { sdk: fixture(remote).sdk, storageIdentities: [] };
   }, createCoordinator());
@@ -392,7 +392,7 @@ test.each(["malformed", "native uncertainty", "channel loss"] as const)(
   "SDK-backed runtime preserves actionable transaction uncertainty: %s",
   async (scenario) => {
     let sdk: ReturnType<typeof fixture>["sdk"];
-    const runtime = new SidecarRuntime(async (_, signer) => {
+    const runtime = new DaemonRuntime(async (_, signer) => {
       sdk = fixture(signer).sdk;
       return { sdk, storageIdentities: [] };
     }, createCoordinator());
@@ -451,7 +451,7 @@ test.each([
   ["contract write", "TRANSACTION_OUTCOME_UNKNOWN"],
 ] as const)("cancelling an operation with a pending %s action reports %s", async (kind, code) => {
   let signer: RemoteSigner | undefined;
-  const runtime = new SidecarRuntime(async (_, remote) => {
+  const runtime = new DaemonRuntime(async (_, remote) => {
     signer = remote;
     return { sdk: fixture(remote).sdk, storageIdentities: [] };
   }, createCoordinator());
@@ -477,7 +477,7 @@ test.each([
 
 async function broadcastRuntime() {
   let created: ReturnType<typeof fixture> | undefined;
-  const runtime = new SidecarRuntime(async (_, signer) => {
+  const runtime = new DaemonRuntime(async (_, signer) => {
     created = fixture(signer);
     return { sdk: created.sdk, storageIdentities: [] };
   }, createCoordinator());
@@ -585,7 +585,7 @@ test("a settled operation releases its hash so a later cancellation reports CANC
 
 test("cancelling a second write still names the transaction already broadcast", async () => {
   let signer: RemoteSigner | undefined;
-  const runtime = new SidecarRuntime(async (_, remote) => {
+  const runtime = new DaemonRuntime(async (_, remote) => {
     signer = remote;
     return { sdk: fixture(remote).sdk, storageIdentities: [] };
   }, createCoordinator());

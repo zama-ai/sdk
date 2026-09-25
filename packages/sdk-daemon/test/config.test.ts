@@ -1,10 +1,10 @@
 import { expect, test } from "vitest";
 import { readConfig } from "../src/config.js";
 
-test("memory/application storage requires no sidecar persistence directory", () => {
+test("memory/application storage requires no daemon persistence directory", () => {
   expect(
     readConfig({
-      SIDECAR_SOCKET_PATH: "/tmp/sdk.sock",
+      ZAMA_SDK_DAEMON_SOCKET_PATH: "/tmp/sdk.sock",
       PRIVATE_KEY: "",
       TEST_WALLET_PRIVATE_KEY: "",
     }),
@@ -19,11 +19,11 @@ test("memory/application storage requires no sidecar persistence directory", () 
 test("deployment resource limits are explicit and configurable", () => {
   expect(
     readConfig({
-      SIDECAR_SOCKET_PATH: "/tmp/sdk.sock",
-      SIDECAR_MAX_MESSAGE_BYTES: "8388608",
-      SIDECAR_MAX_CONCURRENT_STREAMS: "100",
-      SIDECAR_MAX_CONTEXTS: "20",
-      SIDECAR_MAX_OPERATIONS_PER_CONTEXT: "30",
+      ZAMA_SDK_DAEMON_SOCKET_PATH: "/tmp/sdk.sock",
+      ZAMA_SDK_DAEMON_MAX_MESSAGE_BYTES: "8388608",
+      ZAMA_SDK_DAEMON_MAX_CONCURRENT_STREAMS: "100",
+      ZAMA_SDK_DAEMON_MAX_CONTEXTS: "20",
+      ZAMA_SDK_DAEMON_MAX_OPERATIONS_PER_CONTEXT: "30",
     }),
   ).toMatchObject({
     grpc: { maxMessageBytes: 8388608, maxConcurrentStreams: 100 },
@@ -33,6 +33,9 @@ test("deployment resource limits are explicit and configurable", () => {
 
 test.each(["0", "-1", "1.5", "Infinity", ""])("rejects invalid transport limit %j", (value) => {
   expect(() =>
-    readConfig({ SIDECAR_SOCKET_PATH: "/tmp/sdk.sock", SIDECAR_MAX_MESSAGE_BYTES: value }),
+    readConfig({
+      ZAMA_SDK_DAEMON_SOCKET_PATH: "/tmp/sdk.sock",
+      ZAMA_SDK_DAEMON_MAX_MESSAGE_BYTES: value,
+    }),
   ).toThrow("must be a positive integer");
 });

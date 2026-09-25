@@ -19,10 +19,10 @@ import type {
   SignerServerMessage,
   SignerReply,
   SignerAction,
-} from "./generated/zama/sdk/v1alpha1/sidecar.js";
+} from "./generated/zama/sdk/v1beta1/daemon.js";
 import { bytes, json } from "./encoding.js";
 import { callbackError, decodeCallbackError, executionRevertError } from "./callback-errors.js";
-import { cancelled, errorDetails, SidecarError, TransactionCallbackError } from "./errors.js";
+import { cancelled, errorDetails, DaemonError, TransactionCallbackError } from "./errors.js";
 
 export type SignerStream = ServerDuplexStream<SignerClientMessage, SignerServerMessage>;
 export const operationContext = new AsyncLocalStorage<{ id: string; signal: AbortSignal }>();
@@ -140,7 +140,7 @@ export class RemoteSigner extends BaseSigner {
   }
   attach(stream: SignerStream): void {
     if (this.#connection.connected) {
-      throw new SidecarError(
+      throw new DaemonError(
         "SIGNER_ATTACHED",
         status.ALREADY_EXISTS,
         "Signer channel already attached.",
@@ -159,7 +159,7 @@ export class RemoteSigner extends BaseSigner {
   reply(reply: SignerReply): void {
     const pending = this.#pending.get(reply.actionId);
     if (!pending || pending.operationId !== reply.operationId) {
-      const error = new SidecarError(
+      const error = new DaemonError(
         "SIGNER_ACTION_NOT_FOUND",
         status.NOT_FOUND,
         "Signer action no longer exists.",
@@ -276,7 +276,7 @@ export class RemoteSigner extends BaseSigner {
   }
 }
 
-function transactionCallbackError(error: SidecarError): TransactionCallbackError {
+function transactionCallbackError(error: DaemonError): TransactionCallbackError {
   const uncertain = error.code === "TRANSACTION_OUTCOME_UNKNOWN";
   return new TransactionCallbackError(
     error.code,

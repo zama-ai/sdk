@@ -7,7 +7,7 @@ import {
 import type {
   ChainConfig,
   ContextConfig as WireConfig,
-} from "./generated/zama/sdk/v1alpha1/sidecar.js";
+} from "./generated/zama/sdk/v1beta1/daemon.js";
 import {
   processRuntimeConfig,
   providerConfig,

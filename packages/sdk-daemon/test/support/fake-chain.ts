@@ -21,7 +21,7 @@ export interface Broadcast {
 
 export interface FakeChain {
   server: Server;
-  /** Every JSON-RPC method the clients and the sidecar asked for, in order. */
+  /** Every JSON-RPC method the clients and the daemon asked for, in order. */
   methods: string[];
   /** Methods that reached the fixture without a handler, in order. */
   unsupportedMethods: string[];

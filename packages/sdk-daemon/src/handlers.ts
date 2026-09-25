@@ -1,8 +1,8 @@
 import { bytesToHex } from "viem";
 import { parsePreparedPermit } from "@zama-fhe/sdk";
 import type { handleUnaryCall } from "@grpc/grpc-js";
-import type * as rpc from "./generated/zama/sdk/v1alpha1/sidecar.js";
-import type { ContextSdk, SidecarRuntime } from "./runtime.js";
+import type * as rpc from "./generated/zama/sdk/v1beta1/daemon.js";
+import type { ContextSdk, DaemonRuntime } from "./runtime.js";
 import { prepareTransaction } from "./offline.js";
 import { signerChannel, storageChannel, eventChannel } from "./channels.js";
 import {
@@ -55,9 +55,9 @@ function unary<Request, Response>(
   };
 }
 export function createHandlers(
-  runtime: SidecarRuntime,
+  runtime: DaemonRuntime,
   sdkVersion: string,
-): rpc.SidecarServiceServer {
+): rpc.DaemonServiceServer {
   const execute = <Request extends { operation?: rpc.Operation }, Response>(
     action: (sdk: ContextSdk, request: Request, signal: AbortSignal) => Promise<Response>,
     publicOperation = false,

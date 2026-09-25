@@ -1,8 +1,8 @@
 import { ZamaError, retryAfterSeconds as sdkRetryAfterSeconds } from "@zama-fhe/sdk";
 import { Metadata, status, type ServiceError } from "@grpc/grpc-js";
-import type { SdkError } from "./generated/zama/sdk/v1alpha1/sidecar.js";
+import type { SdkError } from "./generated/zama/sdk/v1beta1/daemon.js";
 
-export class SidecarError extends Error {
+export class DaemonError extends Error {
   constructor(
     readonly code: string,
     readonly grpcStatus: status,
@@ -13,12 +13,12 @@ export class SidecarError extends Error {
     super(message);
   }
 }
-export class TransactionCallbackError extends SidecarError {}
-export function invalidArgument(message = "Invalid request."): SidecarError {
-  return new SidecarError("INVALID_ARGUMENT", status.INVALID_ARGUMENT, message);
+export class TransactionCallbackError extends DaemonError {}
+export function invalidArgument(message = "Invalid request."): DaemonError {
+  return new DaemonError("INVALID_ARGUMENT", status.INVALID_ARGUMENT, message);
 }
-export function cancelled(): SidecarError {
-  return new SidecarError("CANCELLED", status.CANCELLED, "Operation cancelled.");
+export function cancelled(): DaemonError {
+  return new DaemonError("CANCELLED", status.CANCELLED, "Operation cancelled.");
 }
 export function errorDetails(error: unknown): SdkError {
   // The SDK wraps wallet errors; native callers still need the broadcast outcome.
@@ -33,7 +33,7 @@ export function errorDetails(error: unknown): SdkError {
       retryAfterSeconds: integerRetryDelay(sdkRetryAfterSeconds(error)),
     };
   }
-  if (error instanceof SidecarError) {
+  if (error instanceof DaemonError) {
     return {
       code: error.code,
       message: error.message,
@@ -57,7 +57,7 @@ export function serviceError(error: unknown): ServiceError {
     metadata.set("zama-error-retry-after-seconds", String(details.retryAfterSeconds));
   }
   const code =
-    error instanceof SidecarError
+    error instanceof DaemonError
       ? error.grpcStatus
       : error instanceof ZamaError
         ? status.FAILED_PRECONDITION

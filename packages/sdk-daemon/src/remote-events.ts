@@ -3,8 +3,8 @@ import type { ZamaSDK, ZamaSDKEvent } from "@zama-fhe/sdk";
 import { subscribeWalletAccountChanges } from "@zama-fhe/sdk/internal";
 import { CallbackConnection } from "./callback-connection.js";
 import { sdkEvent, walletChange } from "./event-encoding.js";
-import { errorDetails, invalidArgument, SidecarError } from "./errors.js";
-import type * as rpc from "./generated/zama/sdk/v1alpha1/sidecar.js";
+import { errorDetails, invalidArgument, DaemonError } from "./errors.js";
+import type * as rpc from "./generated/zama/sdk/v1beta1/daemon.js";
 import { operationContext } from "./remote-signer.js";
 
 const EVENT_WINDOW_SIZE = 256;
@@ -44,19 +44,19 @@ export class RemoteEvents {
       this.notify(encode());
     } catch {
       this.#connection.fail(
-        new SidecarError(
+        new DaemonError(
           "EVENT_ENCODING_FAILED",
           status.INTERNAL,
           "SDK notification could not be encoded.",
         ),
       );
-      process.stderr.write("[zama-sidecar] EVENT_ENCODING_FAILED (details omitted)\n");
+      process.stderr.write("[zama-daemon] EVENT_ENCODING_FAILED (details omitted)\n");
     }
   }
 
   attach(stream: EventStream): void {
     if (this.#connection.connected) {
-      throw new SidecarError(
+      throw new DaemonError(
         "EVENT_ATTACHED",
         status.ALREADY_EXISTS,
         "Event channel already attached.",
@@ -86,7 +86,7 @@ export class RemoteEvents {
     }
     if (this.#pending.size >= EVENT_WINDOW_SIZE) {
       this.#connection.fail(
-        new SidecarError(
+        new DaemonError(
           "EVENT_BACKPRESSURE",
           status.RESOURCE_EXHAUSTED,
           "Event subscription exceeded its unacknowledged delivery limit.",
@@ -107,7 +107,7 @@ export class RemoteEvents {
           replyError: {
             sequence: reply.sequence,
             error: errorDetails(
-              new SidecarError(
+              new DaemonError(
                 "EVENT_DELIVERY_NOT_FOUND",
                 status.NOT_FOUND,
                 "Event delivery no longer exists.",

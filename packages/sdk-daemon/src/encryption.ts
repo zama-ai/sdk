@@ -3,7 +3,7 @@ import type {
   EncryptRequest,
   EncryptResponse,
   EncryptInput as WireInput,
-} from "./generated/zama/sdk/v1alpha1/sidecar.js";
+} from "./generated/zama/sdk/v1beta1/daemon.js";
 import type { ContextSdk } from "./runtime.js";
 import { address, bytes, integer, unsignedInteger } from "./encoding.js";
 import { invalidArgument } from "./errors.js";
@@ -14,7 +14,7 @@ export function encryptInput(input: WireInput): EncryptInput {
     case "ebool":
       return { type: "ebool", value: value.ebool };
     case "eboolBigint":
-      // The SDK, not the sidecar, rejects bigints outside 0n and 1n.
+      // The SDK, not the daemon, rejects bigints outside 0n and 1n.
       return { type: "ebool", value: integer(value.eboolBigint, "Encryption integer") as 0n | 1n };
     case "euint8":
       return { type: "euint8", value: integer(value.euint8, "Encryption integer") };

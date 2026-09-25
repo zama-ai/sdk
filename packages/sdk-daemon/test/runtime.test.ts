@@ -1,11 +1,11 @@
 import { expect, test, vi } from "vitest";
-import { SidecarRuntime, type ContextSdk } from "../src/runtime.js";
+import { DaemonRuntime, type ContextSdk } from "../src/runtime.js";
 import { createCoordinator } from "../src/coordination.js";
 
 function setup() {
   const dispose = vi.fn();
   const sdk = { dispose } as unknown as ContextSdk;
-  const runtime = new SidecarRuntime(
+  const runtime = new DaemonRuntime(
     async () => ({ sdk, storageIdentities: ["shared-fixture"] }),
     createCoordinator(),
   );
@@ -101,7 +101,7 @@ test("closing a context cancels work and cannot replay it through an old identif
 test("shutdown waits for context creation and disposes the late SDK before returning", async () => {
   const creating = Promise.withResolvers<void>();
   const dispose = vi.fn();
-  const runtime = new SidecarRuntime(async () => {
+  const runtime = new DaemonRuntime(async () => {
     await creating.promise;
     return { storageIdentities: ["shared-fixture"], sdk: { dispose } as unknown as ContextSdk };
   }, createCoordinator());
@@ -167,7 +167,7 @@ test("shutdown waits for a context whose close request is already settling SDK w
 
 test("an explicit disconnected snapshot resolves signer account readiness", async () => {
   let ready = () => false;
-  const runtime = new SidecarRuntime(async (_, signer) => {
+  const runtime = new DaemonRuntime(async (_, signer) => {
     if (!signer) {
       throw new Error("Expected signer adapter");
     }
@@ -186,7 +186,7 @@ test("an explicit disconnected snapshot resolves signer account readiness", asyn
 
 test("a cancelled wallet update cannot apply later after previous SDK work settles", async () => {
   let walletAddress = () => "";
-  const runtime = new SidecarRuntime(async (_, signer) => {
+  const runtime = new DaemonRuntime(async (_, signer) => {
     if (!signer) {
       throw new Error("Expected signer adapter");
     }

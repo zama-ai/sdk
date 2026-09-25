@@ -150,7 +150,7 @@ pub enum Notification {
     },
     Progress(OperationProgress),
 }
-/// Notifications run sequentially. Errors are reported to the sidecar; a panic closes the subscription.
+/// Notifications run sequentially. Errors are reported to the daemon; a panic closes the subscription.
 #[async_trait]
 pub trait EventHandler: Send + Sync {
     async fn on_notification(

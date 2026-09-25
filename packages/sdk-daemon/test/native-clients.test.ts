@@ -10,8 +10,8 @@ import { fixture, testServer } from "./support/harness.js";
 const repository = fileURLToPath(new URL("../../../", import.meta.url));
 const execute = promisify(execFile);
 
-test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
-  "Go immediately resubscribes after closing an event stream against the real sidecar",
+test.skipIf(process.env.ZAMA_SDK_DAEMON_NATIVE_TESTS !== "1")(
+  "Go immediately resubscribes after closing an event stream against the real daemon",
   async () => {
     const directory = await mkdtemp(join(tmpdir(), "native-events-"));
     let server: Awaited<ReturnType<typeof testServer>> | undefined;
@@ -27,17 +27,17 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
       });
       const { stdout } = await execute(
         executable,
-        ["-test.run=^TestEventResubscribeAcrossRealSidecar$", "-test.v"],
+        ["-test.run=^TestEventResubscribeAcrossRealDaemon$", "-test.v"],
         {
           cwd: join(repository, "clients/go"),
-          env: { ...process.env, SIDECAR_EVENT_RESUBSCRIBE_SOCKET: server.socket },
+          env: { ...process.env, ZAMA_SDK_DAEMON_EVENT_RESUBSCRIBE_SOCKET: server.socket },
           timeout: 30_000,
         },
       ).catch((error: unknown) => {
         const failure = error as Error & { stdout?: string; stderr?: string };
         throw new Error(`${failure.message}\n${failure.stdout ?? ""}\n${failure.stderr ?? ""}`);
       });
-      expect(stdout).toContain("--- PASS: TestEventResubscribeAcrossRealSidecar");
+      expect(stdout).toContain("--- PASS: TestEventResubscribeAcrossRealDaemon");
     } finally {
       try {
         await server?.close();

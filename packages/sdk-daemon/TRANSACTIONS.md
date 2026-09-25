@@ -2,7 +2,7 @@
 
 The signer channel lets your native wallet sign and broadcast a contract write requested by `@zama-fhe/sdk`. Your wallet returns the transaction hash. The TypeScript SDK waits for the receipt and continues its workflow.
 
-This capability belongs to the maintained beta sidecar. Token transaction RPCs are not exposed yet; on-chain delegation writes are (see [`DelegateDecryption`/`RevokeDelegation`](DELEGATIONS.md)). The balance examples configure transaction-capable wallets; SDK-backed integration tests exercise writes through `Token.setOperator`. A live token write step will use the public token API once available.
+This capability belongs to the maintained beta daemon. Token transaction RPCs are not exposed yet; on-chain delegation writes are (see [`DelegateDecryption`/`RevokeDelegation`](DELEGATIONS.md)). The balance examples configure transaction-capable wallets; SDK-backed integration tests exercise writes through `Token.setOperator`. A live token write step will use the public token API once available.
 
 ## Go wallet setup
 
@@ -42,7 +42,7 @@ Both native request types include operation/action IDs and the wallet's account/
 
 The node can reject a write during gas estimation, before anything is broadcast. Built-in adapters detect this and forward the node's revert data instead of a broadcast failure: the Go adapter returns `*ExecutionRevertError{Data, Cause}` from `WriteContractFunc`; the Rust adapter returns `SdkError::execution_reverted(message, data)`. A custom wallet callback does the same to get this treatment; any other pre-broadcast failure keeps `SIGNING_FAILED`.
 
-The bridge relays this as an `execution_revert` signer reply. The sidecar decodes the revert data against the request ABI when the ABI declares the error and reports a certain `TRANSACTION_REVERTED` failure, the same as any other reverted write. Hash tracking and the `TRANSACTION_OUTCOME_UNKNOWN` rules below are unchanged: an `execution_revert` reply means nothing was broadcast, so there is no hash to reconcile.
+The bridge relays this as an `execution_revert` signer reply. The daemon decodes the revert data against the request ABI when the ABI declares the error and reports a certain `TRANSACTION_REVERTED` failure, the same as any other reverted write. Hash tracking and the `TRANSACTION_OUTCOME_UNKNOWN` rules below are unchanged: an `execution_revert` reply means nothing was broadcast, so there is no hash to reconcile.
 
 ## Failure and cancellation
 
@@ -51,7 +51,7 @@ The bridge relays this as an `execution_revert` signer reply. The sidecar decode
 | Custom callback rejects the write                                                 | Return `SIGNING_REJECTED`; no broadcast is attempted.                                                                                                                                                                                                           |
 | Account or chain mismatch                                                         | Built-in adapters stop before any RPC call with `SIGNING_FAILED` or `CHAIN_MISMATCH`.                                                                                                                                                                           |
 | Failure before submission                                                         | Certain `SIGNING_FAILED` with the underlying cause; the adapter does not retry.                                                                                                                                                                                 |
-| Node rejects the simulated write (gas estimation)                                 | Certain `TRANSACTION_REVERTED`; the sidecar decodes the revert data against the request ABI when possible, and nothing was broadcast.                                                                                                                           |
+| Node rejects the simulated write (gas estimation)                                 | Certain `TRANSACTION_REVERTED`; the daemon decodes the revert data against the request ABI when possible, and nothing was broadcast.                                                                                                                            |
 | Send fails or its outcome is lost                                                 | Uncertain `TRANSACTION_OUTCOME_UNKNOWN` with the signed hash; reconcile before the next write.                                                                                                                                                                  |
 | Pending write loses its signer channel                                            | The bridge reports nonretryable `TRANSACTION_OUTCOME_UNKNOWN`.                                                                                                                                                                                                  |
 | Invalid or mismatched transaction reply                                           | The bridge reports nonretryable `TRANSACTION_OUTCOME_UNKNOWN`.                                                                                                                                                                                                  |
@@ -59,7 +59,7 @@ The bridge relays this as an `execution_revert` signer reply. The sidecar decode
 | Cancellation, account update, deadline or context close, write already dispatched | The bridge reports nonretryable `TRANSACTION_OUTCOME_UNKNOWN`; a submitted transaction can still be mined. The message names the transaction hash when the wallet returned one. Native adapters stop before the send; once it starts they run it to completion. |
 | Hash received successfully, then receipt lookup fails or reverts                  | The SDK owns receipt handling and its transaction error. The bridge does not resubmit.                                                                                                                                                                          |
 
-Callback errors retain their SDK code and retry metadata. Failures known to precede broadcast reuse SDK codes such as `SIGNING_REJECTED`, `SIGNING_FAILED`, `CHAIN_MISMATCH` and `SIGNER_NOT_CONFIGURED`, so applications handle them like an in-process signer. `TRANSACTION_OUTCOME_UNKNOWN` is the one sidecar-specific code. An in-process SDK user can also be left unsure whether a transaction was submitted, by an RPC failure or a process crash; the sidecar adds the cases where the callback channel is lost or the operation is cancelled while the wallet holds a write. Codes outside the SDK taxonomy survive the SDK's transaction error wrapper at the transport boundary. Native clients can observe a transport error or context cancellation before the unary SDK error arrives. Interpret those failures as uncertain whenever a transaction callback had started, regardless of the outer error code. Nothing replays a signer action or an SDK operation automatically.
+Callback errors retain their SDK code and retry metadata. Failures known to precede broadcast reuse SDK codes such as `SIGNING_REJECTED`, `SIGNING_FAILED`, `CHAIN_MISMATCH` and `SIGNER_NOT_CONFIGURED`, so applications handle them like an in-process signer. `TRANSACTION_OUTCOME_UNKNOWN` is the one daemon-specific code. An in-process SDK user can also be left unsure whether a transaction was submitted, by an RPC failure or a process crash; the daemon adds the cases where the callback channel is lost or the operation is cancelled while the wallet holds a write. Codes outside the SDK taxonomy survive the SDK's transaction error wrapper at the transport boundary. Native clients can observe a transport error or context cancellation before the unary SDK error arrives. Interpret those failures as uncertain whenever a transaction callback had started, regardless of the outer error code. Nothing replays a signer action or an SDK operation automatically.
 
 A callback wrapper and an SDK-operation caller see different amounts of detail. Natively, your wrapper reads the hash, `BroadcastUncertainError.Hash` and the cause. After protobuf conversion, the SDK-operation caller receives only the error code and its message.
 
@@ -73,7 +73,7 @@ After an uncertain send, the adapters do not coordinate anything on your behalf.
 From the repository root, after the [development setup](README.md#develop-and-test):
 
 ```sh
-pnpm sidecar:test
+pnpm daemon:test
 (cd clients/go && go test -race ./... && go vet ./...)
 (cd clients/go/examples/balance && go test -race ./... && go vet ./...)
 cargo test --manifest-path clients/rust/Cargo.toml --all-features --all-targets --locked

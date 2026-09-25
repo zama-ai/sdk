@@ -6,10 +6,10 @@ import type {
   CreateContextRequest,
   Operation,
   UpdateAccountRequest,
-} from "./generated/zama/sdk/v1alpha1/sidecar.js";
+} from "./generated/zama/sdk/v1beta1/daemon.js";
 import { walletAccount } from "./encoding.js";
 import { credentialLockKeys, type Coordinate } from "./coordination.js";
-import { cancelled, invalidArgument, SidecarError } from "./errors.js";
+import { cancelled, invalidArgument, DaemonError } from "./errors.js";
 import { operationContext, RemoteSigner, type SignerStream } from "./remote-signer.js";
 import { RemoteEvents, type EventStream } from "./remote-events.js";
 
@@ -34,7 +34,7 @@ type Context = {
   operations: Map<string, ActiveOperation>;
   updating: boolean;
 };
-export class SidecarRuntime {
+export class DaemonRuntime {
   #contexts = new Map<string, Context>();
   #creations = new Set<Promise<void>>();
   #retirements = new Set<Promise<void>>();
@@ -52,7 +52,7 @@ export class SidecarRuntime {
       this.limits.maxContexts !== undefined &&
       this.#contexts.size + this.#creations.size >= this.limits.maxContexts
     ) {
-      throw new SidecarError("CONTEXT_LIMIT", status.RESOURCE_EXHAUSTED, "Too many SDK contexts.");
+      throw new DaemonError("CONTEXT_LIMIT", status.RESOURCE_EXHAUSTED, "Too many SDK contexts.");
     }
     if (request.account && !request.signerEnabled) {
       throw invalidArgument("An account requires an enabled signer.");
@@ -98,7 +98,7 @@ export class SidecarRuntime {
   #get(id: string): Context {
     const context = this.#contexts.get(id);
     if (!context) {
-      throw new SidecarError("CONTEXT_NOT_FOUND", status.NOT_FOUND, "SDK context does not exist.");
+      throw new DaemonError("CONTEXT_NOT_FOUND", status.NOT_FOUND, "SDK context does not exist.");
     }
     return context;
   }
@@ -141,7 +141,7 @@ export class SidecarRuntime {
       throw invalidArgument("SDK context has no signer adapter.");
     }
     if (context.updating) {
-      throw new SidecarError(
+      throw new DaemonError(
         "ACCOUNT_CHANGING",
         status.FAILED_PRECONDITION,
         "Account update is already in progress.",
@@ -168,14 +168,14 @@ export class SidecarRuntime {
   #admit(reference: Operation): Context {
     const context = this.#get(reference.contextId);
     if (context.updating) {
-      throw new SidecarError(
+      throw new DaemonError(
         "ACCOUNT_CHANGING",
         status.FAILED_PRECONDITION,
         "Account update is in progress.",
       );
     }
     if (context.operations.has(reference.operationId)) {
-      throw new SidecarError(
+      throw new DaemonError(
         "OPERATION_EXISTS",
         status.ALREADY_EXISTS,
         "Operation ID is already active.",
@@ -185,7 +185,7 @@ export class SidecarRuntime {
       this.limits.maxOperationsPerContext !== undefined &&
       context.operations.size >= this.limits.maxOperationsPerContext
     ) {
-      throw new SidecarError(
+      throw new DaemonError(
         "OPERATION_LIMIT",
         status.RESOURCE_EXHAUSTED,
         "Too many active operations.",

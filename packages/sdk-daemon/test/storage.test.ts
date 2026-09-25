@@ -11,7 +11,7 @@ afterEach(async () => {
   );
 });
 async function directory(): Promise<string> {
-  const path = await mkdtemp(join(tmpdir(), "sidecar-storage-"));
+  const path = await mkdtemp(join(tmpdir(), "daemon-storage-"));
   directories.push(path);
   return path;
 }

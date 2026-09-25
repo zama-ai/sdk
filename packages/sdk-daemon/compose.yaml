@@ -1,16 +1,16 @@
 x-build-args: &build-args
-  RUNTIME_UID: ${SIDECAR_UID:-1000}
-  RUNTIME_GID: ${SIDECAR_GID:-1000}
+  RUNTIME_UID: ${ZAMA_SDK_DAEMON_UID:-1000}
+  RUNTIME_GID: ${ZAMA_SDK_DAEMON_GID:-1000}
 
 services:
-  sidecar:
-    image: zama-sdk-sidecar:dev
+  daemon:
+    image: zama-sdk-daemon:dev
     build:
       context: ../..
-      dockerfile: packages/sdk-sidecar/Dockerfile
+      dockerfile: packages/sdk-daemon/Dockerfile
       args: *build-args
     environment:
-      SIDECAR_SOCKET_PATH: /run/zama/sdk.sock
+      ZAMA_SDK_DAEMON_SOCKET_PATH: /run/zama/sdk.sock
     volumes:
       - socket:/run/zama
     read_only: true
@@ -25,7 +25,7 @@ services:
       args: *build-args
     volumes:
       - socket:/run/zama:ro
-      - ../../.env.sidecar.local:/config/.env.sidecar.local:ro
+      - ../../.env.daemon.local:/config/.env.daemon.local:ro
     read_only: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
@@ -36,10 +36,10 @@ services:
       dockerfile: clients/rust/Dockerfile
       args: *build-args
     environment:
-      SIDECAR_SOCKET_PATH: /run/zama/sdk.sock
+      ZAMA_SDK_DAEMON_SOCKET_PATH: /run/zama/sdk.sock
     volumes:
       - socket:/run/zama:ro
-      - ../../.env.sidecar.local:/config/.env.sidecar.local:ro
+      - ../../.env.daemon.local:/config/.env.daemon.local:ro
     read_only: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]

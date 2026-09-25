@@ -22,7 +22,7 @@ import {
   ContextConfig,
   CreateContextRequest,
   DerivationSecret,
-} from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
+} from "../src/generated/zama/sdk/v1beta1/daemon.js";
 
 vi.mock("@zama-fhe/sdk/viem", () => ({
   ViemProvider: vi.fn(function () {
@@ -141,7 +141,7 @@ test.each([undefined, "partner"])(
     const directStorage = new MemoryStorage();
     const writes = vi.spyOn(directStorage, "set");
     const directSigner = signer();
-    const sidecarSigner = signer();
+    const daemonSigner = signer();
     const logs = ["log", "warn", "error", "debug"].map((level) =>
       vi.spyOn(console, level as "log").mockImplementation(() => {}),
     );
@@ -151,7 +151,7 @@ test.each([undefined, "partner"])(
       const sdk = direct(directStorage, directSigner, options, scope);
       const remote = await createContextFactory(manager)(
         request(wire, scope),
-        sidecarSigner,
+        daemonSigner,
         new RemoteStorage(),
         new RemoteEvents("fixture"),
       );
@@ -160,7 +160,7 @@ test.each([undefined, "partner"])(
         const actual = await outcome(() => remote.sdk.permits.grantPermit([TOKEN]));
         expect(actual).toEqual(expected);
         expect(inspect(actual)).not.toContain(secretText);
-        expect(sidecarSigner.signTypedData).toHaveBeenCalledTimes(
+        expect(daemonSigner.signTypedData).toHaveBeenCalledTimes(
           vi.mocked(directSigner.signTypedData).mock.calls.length,
         );
         return actual;
@@ -174,7 +174,7 @@ test.each([undefined, "partner"])(
     try {
       expect(await phase(protectedOption, wireSecret)).toEqual({ value: undefined });
       expect(await phase(protectedOption, wireSecret)).toEqual({ value: undefined });
-      expect(sidecarSigner.signTypedData).toHaveBeenCalledTimes(1);
+      expect(daemonSigner.signTypedData).toHaveBeenCalledTimes(1);
       const persisted = writes.mock.calls.find(([key]) => key.startsWith("keypair:"))?.[1];
       expect(persisted).toMatchObject({ wrappingVersion: 1 });
       expect(inspect(persisted)).not.toContain(TEST_PRIVATE_KEY);
@@ -193,7 +193,7 @@ test.each([undefined, "partner"])(
       expect(stderrText).not.toContain(secretText);
       expect(stderrText).not.toContain(TEST_PRIVATE_KEY);
       expect(await phase(protectedOption, wireSecret)).toEqual({ value: undefined });
-      expect(sidecarSigner.signTypedData).toHaveBeenCalledTimes(1);
+      expect(daemonSigner.signTypedData).toHaveBeenCalledTimes(1);
       const wrong = "other-synthetic-secret-".repeat(4);
       await phase(
         { transportKeyPairDerivationSecret: wrong },
@@ -213,7 +213,7 @@ test.each([undefined, "partner"])(
       logs.forEach((log) => log.mockRestore());
       stderr.mockRestore();
       directSigner.dispose();
-      sidecarSigner.dispose();
+      daemonSigner.dispose();
       await manager.close();
       await rm(directory, { recursive: true, force: true });
     }

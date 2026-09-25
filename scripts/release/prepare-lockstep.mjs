@@ -10,7 +10,7 @@ if (!nextVersion) {
 const targets = [
   "packages/sdk/package.json",
   "packages/react-sdk/package.json",
-  "packages/sdk-sidecar/package.json",
+  "packages/sdk-daemon/package.json",
 ];
 
 for (const path of targets) {

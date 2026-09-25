@@ -23,7 +23,7 @@ function main() {
   const base = process.argv[2];
   if (!base || process.argv.length !== 3) {
     throw new Error(
-      "Usage: pnpm exec node scripts/sidecar/check-proto-compatibility.mjs <base-ref>",
+      "Usage: pnpm exec node scripts/daemon/check-proto-compatibility.mjs <base-ref>",
     );
   }
   const commit = run("git", ["rev-parse", "--verify", "--end-of-options", `${base}^{commit}`]);

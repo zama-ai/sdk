@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
-	sidecar "github.com/zama-ai/sdk/clients/go"
+	"github.com/zama-ai/sdk/clients/go/v3"
 )
 
 func TestSignPreparedTransaction(t *testing.T) {
@@ -25,7 +25,7 @@ func TestSignPreparedTransaction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	prepared := sidecar.PreparedTransaction{Kind: sidecar.TransactionSetOperator, From: from, UnsignedTx: append([]byte{2}, encoded...)}
+	prepared := zama.PreparedTransaction{Kind: zama.TransactionSetOperator, From: from, UnsignedTx: append([]byte{2}, encoded...)}
 	tx, err := signPreparedTransaction(prepared, keyHex)
 	if err != nil {
 		t.Fatal(err)

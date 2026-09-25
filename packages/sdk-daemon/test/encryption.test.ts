@@ -11,7 +11,7 @@ import type {
   EncryptInput as WireInput,
   EncryptRequest,
   EncryptResponse,
-} from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
+} from "../src/generated/zama/sdk/v1beta1/daemon.js";
 import type { ContextSdk } from "../src/runtime.js";
 import {
   encryptionFixture,

@@ -4,7 +4,7 @@ import { iifeStub, sharedResolve } from "./vitest.shared.mjs";
 export default defineConfig({
   test: {
     projects: [
-      "packages/sdk-sidecar/vitest.config.ts",
+      "packages/sdk-daemon/vitest.config.ts",
       {
         plugins: [iifeStub()],
         test: {

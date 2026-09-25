@@ -6,8 +6,8 @@ import { expect, test, vi } from "vitest";
 
 import { ACL, DELEGATE, TOKEN, USER, WRAPPER } from "../../sdk/src/test-fixtures/constants.js";
 import { createContext, fixture, storage, testServer } from "./support/harness.js";
-import type * as rpc from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
-import { TransactionKind } from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
+import type * as rpc from "../src/generated/zama/sdk/v1beta1/daemon.js";
+import { TransactionKind } from "../src/generated/zama/sdk/v1beta1/daemon.js";
 
 type Case = {
   name: string;

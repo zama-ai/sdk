@@ -4,9 +4,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { credentials, Metadata, status, type ServiceError } from "@grpc/grpc-js";
 import { expect, test, vi } from "vitest";
-import { SidecarServiceClient } from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
+import { DaemonServiceClient } from "../src/generated/zama/sdk/v1beta1/daemon.js";
 import { createCoordinator } from "../src/coordination.js";
-import { SidecarRuntime, type ContextSdk } from "../src/runtime.js";
+import { type ContextSdk, DaemonRuntime } from "../src/runtime.js";
 import { startServer } from "../src/server.js";
 
 vi.mock("node:fs/promises", async (importOriginal) => {
@@ -15,9 +15,9 @@ vi.mock("node:fs/promises", async (importOriginal) => {
 });
 
 test("serves typed unary calls over a private socket and sanitizes errors", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "sidecar-socket-"));
+  const directory = await mkdtemp(join(tmpdir(), "daemon-socket-"));
   const socketPath = join(directory, "sdk.sock");
-  const runtime = new SidecarRuntime(
+  const runtime = new DaemonRuntime(
     async () => ({
       storageIdentities: ["shared-fixture"],
       sdk: {
@@ -32,7 +32,7 @@ test("serves typed unary calls over a private socket and sanitizes errors", asyn
     createCoordinator(),
   );
   const stop = await startServer(runtime, socketPath, "test-version");
-  const client = new SidecarServiceClient(`unix:${socketPath}`, credentials.createInsecure());
+  const client = new DaemonServiceClient(`unix:${socketPath}`, credentials.createInsecure());
   try {
     expect((await stat(socketPath)).mode & 0o077).toBe(0);
     const info = await new Promise<{ sdkVersion: string }>((resolve, reject) =>
@@ -79,9 +79,9 @@ test("serves typed unary calls over a private socket and sanitizes errors", asyn
 
 test("closes the bound listener if socket permissions cannot be applied", async () => {
   const filesystem = await import("node:fs/promises");
-  const directory = await mkdtemp(join(tmpdir(), "sidecar-bind-fail-"));
+  const directory = await mkdtemp(join(tmpdir(), "daemon-bind-fail-"));
   const socket = join(directory, "sdk.sock");
-  const runtime = new SidecarRuntime(async () => {
+  const runtime = new DaemonRuntime(async () => {
     throw new Error("unused");
   }, createCoordinator());
   const chmod = vi.mocked(filesystem.chmod).mockRejectedValueOnce(new Error("chmod failed"));
@@ -103,12 +103,12 @@ test.each(["cancel", "deadline"] as const)(
     vi.mocked(filesystem.chmod).mockImplementation(
       (await vi.importActual<typeof FileSystem>("node:fs/promises")).chmod,
     );
-    const directory = await mkdtemp(join(tmpdir(), "sidecar-cancel-"));
+    const directory = await mkdtemp(join(tmpdir(), "daemon-cancel-"));
     const socket = join(directory, "sdk.sock");
     const entered = Promise.withResolvers<void>();
     const aborted = Promise.withResolvers<void>();
     const completion = Promise.withResolvers<Record<`0x${string}`, bigint>>();
-    const runtime = new SidecarRuntime(
+    const runtime = new DaemonRuntime(
       async () => ({
         storageIdentities: ["shared-fixture"],
         sdk: {
@@ -133,7 +133,7 @@ test.each(["cancel", "deadline"] as const)(
       account: undefined,
     });
     const stop = await startServer(runtime, socket, "test");
-    const client = new SidecarServiceClient(`unix:${socket}`, credentials.createInsecure());
+    const client = new DaemonServiceClient(`unix:${socket}`, credentials.createInsecure());
     try {
       const response = Promise.withResolvers<ServiceError | null>();
       const call = client.decryptValues(
@@ -163,9 +163,9 @@ test.each(["cancel", "deadline"] as const)(
 );
 
 test("closing contexts with both callback channels permits prompt server shutdown", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "sidecar-duplex-close-"));
+  const directory = await mkdtemp(join(tmpdir(), "daemon-duplex-close-"));
   const socket = join(directory, "sdk.sock");
-  const runtime = new SidecarRuntime(
+  const runtime = new DaemonRuntime(
     async () => ({
       storageIdentities: ["shared-fixture"],
       sdk: { dispose: () => {} } as unknown as ContextSdk,
@@ -173,7 +173,7 @@ test("closing contexts with both callback channels permits prompt server shutdow
     createCoordinator(),
   );
   const stop = await startServer(runtime, socket, "test");
-  const client = new SidecarServiceClient(`unix:${socket}`, credentials.createInsecure());
+  const client = new DaemonServiceClient(`unix:${socket}`, credentials.createInsecure());
   try {
     const created = await new Promise<{ contextId: string }>((resolve, reject) =>
       client.createContext(

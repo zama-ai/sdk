@@ -1,4 +1,4 @@
-package sidecar
+package zama
 
 import (
 	"context"
@@ -24,9 +24,9 @@ func encryptionContext(ctx context.Context, t *testing.T, client *Client, scenar
 }
 
 func TestEncryptionSDKIntegration(t *testing.T) {
-	socket := os.Getenv("SIDECAR_ENCRYPT_TEST_SOCKET")
+	socket := os.Getenv("ZAMA_SDK_DAEMON_ENCRYPT_TEST_SOCKET")
 	if socket == "" {
-		t.Skip("set SIDECAR_ENCRYPT_TEST_SOCKET with the SDK encryption fixture")
+		t.Skip("set ZAMA_SDK_DAEMON_ENCRYPT_TEST_SOCKET with the SDK encryption fixture")
 	}
 	client, err := Dial(socket)
 	if err != nil {

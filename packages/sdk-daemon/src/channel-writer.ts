@@ -1,10 +1,10 @@
 import type { Writable } from "node:stream";
 import { status } from "@grpc/grpc-js";
-import { cancelled, SidecarError } from "./errors.js";
+import { cancelled, DaemonError } from "./errors.js";
 
 export const CALLBACK_OUTPUT_LIMIT = 256;
 
-export class ChannelBackpressureError extends SidecarError {
+export class ChannelBackpressureError extends DaemonError {
   constructor() {
     super(
       "CALLBACK_BACKPRESSURE",

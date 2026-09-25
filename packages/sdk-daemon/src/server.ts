@@ -1,12 +1,12 @@
 import { chmod, unlink } from "node:fs/promises";
 import { Server, ServerCredentials } from "@grpc/grpc-js";
-import { SidecarServiceService } from "./generated/zama/sdk/v1alpha1/sidecar.js";
+import { DaemonServiceService } from "./generated/zama/sdk/v1beta1/daemon.js";
 import { prepareSocket } from "./socket.js";
-import type { SidecarRuntime } from "./runtime.js";
+import type { DaemonRuntime } from "./runtime.js";
 import { createHandlers } from "./handlers.js";
 
 export async function startServer(
-  runtime: SidecarRuntime,
+  runtime: DaemonRuntime,
   socketPath: string,
   sdkVersion: string,
   options: { maxMessageBytes?: number; maxConcurrentStreams?: number } = {},
@@ -19,7 +19,7 @@ export async function startServer(
       ? {}
       : { "grpc.max_concurrent_streams": options.maxConcurrentStreams }),
   });
-  server.addService(SidecarServiceService, createHandlers(runtime, sdkVersion));
+  server.addService(DaemonServiceService, createHandlers(runtime, sdkVersion));
   let bound = false;
   try {
     await new Promise<void>((resolve, reject) =>

@@ -1,7 +1,7 @@
 import type { ServiceError } from "@grpc/grpc-js";
 import { expect, test, vi } from "vitest";
 import { RemoteEvents, type EventStream } from "../src/remote-events.js";
-import { EventReply, type EventServerMessage } from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
+import { EventReply, type EventServerMessage } from "../src/generated/zama/sdk/v1beta1/daemon.js";
 import { FakeStream } from "./support/fake-stream.js";
 import { operationContext } from "../src/remote-signer.js";
 
@@ -26,7 +26,7 @@ test("event encoding failure terminates the subscription with a safe typed error
     events.onEvent({ type: "encrypt:start", timestamp: 2 });
     expect(stream.messages).toHaveLength(1);
     expect(stderr.mock.calls).toEqual([
-      ["[zama-sidecar] EVENT_ENCODING_FAILED (details omitted)\n"],
+      ["[zama-daemon] EVENT_ENCODING_FAILED (details omitted)\n"],
     ]);
   } finally {
     stderr.mockRestore();

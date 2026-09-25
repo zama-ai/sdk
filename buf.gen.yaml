@@ -1,7 +1,7 @@
 version: v2
 plugins:
   - local: protoc-gen-ts_proto
-    out: packages/sdk-sidecar/src/generated
+    out: packages/sdk-daemon/src/generated
     opt:
       - oneof=unions
       - env=node

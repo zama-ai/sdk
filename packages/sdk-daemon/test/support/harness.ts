@@ -18,10 +18,10 @@ import { createMockRelayer } from "../../../sdk/src/test-fixtures/relayer.js";
 import { createCoordinator } from "../../src/coordination.js";
 import { bytes } from "../../src/encoding.js";
 import { errorDetails } from "../../src/errors.js";
-import { SidecarRuntime, type ContextFactory } from "../../src/runtime.js";
+import { DaemonRuntime, type ContextFactory } from "../../src/runtime.js";
 import { startServer } from "../../src/server.js";
 import {
-  SidecarServiceClient,
+  DaemonServiceClient,
   type ClearEntry,
   type ClearValue,
   type CreateContextRequest,
@@ -29,7 +29,7 @@ import {
   type SignerClientMessage,
   type SignerReply,
   type SignerServerMessage,
-} from "../../src/generated/zama/sdk/v1alpha1/sidecar.js";
+} from "../../src/generated/zama/sdk/v1beta1/daemon.js";
 
 export const storage = () => new MemoryStorage();
 export function fixture(
@@ -75,7 +75,7 @@ export function decode(entries: ClearEntry[]) {
   );
 }
 export function createContext(
-  client: SidecarServiceClient,
+  client: DaemonServiceClient,
   request: Partial<CreateContextRequest> = {},
 ) {
   return new Promise<string>((resolve, reject) =>
@@ -95,10 +95,10 @@ export function createContext(
 }
 export async function testServer(factory: ContextFactory) {
   const directory = await mkdtemp(join(tmpdir(), "sdk-equivalence-"));
-  const runtime = new SidecarRuntime(factory, createCoordinator());
+  const runtime = new DaemonRuntime(factory, createCoordinator());
   const socket = join(directory, "sdk.sock");
   const stop = await startServer(runtime, socket, "test");
-  const client = new SidecarServiceClient(`unix:${socket}`, credentials.createInsecure());
+  const client = new DaemonServiceClient(`unix:${socket}`, credentials.createInsecure());
   const streams: ClientDuplexStream<SignerClientMessage, SignerServerMessage>[] = [];
   return {
     client,

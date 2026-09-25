@@ -33,7 +33,7 @@ import { sepolia } from "../../sdk/src/chains/index.js";
 import { VALID_ENCRYPTED_VALUE, TOKEN } from "../../sdk/src/test-fixtures/constants.js";
 import { createMockRelayer } from "../../sdk/src/test-fixtures/relayer.js";
 import { createCoordinator } from "../src/coordination.js";
-import { SidecarRuntime } from "../src/runtime.js";
+import { DaemonRuntime } from "../src/runtime.js";
 import { createContextFactory } from "../src/sdk.js";
 import { startServer } from "../src/server.js";
 import { StorageManager } from "../src/storage-manager.js";
@@ -161,7 +161,7 @@ function expectOrder(stdout: string, lines: string[]): void {
   }
 }
 
-test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
+test.skipIf(process.env.ZAMA_SDK_DAEMON_NATIVE_TESTS !== "1")(
   "Go and Rust example entry points encrypt inputs, decrypt a balance, prepare and sign offline, then grant and revoke an on-chain delegation with protected credentials",
   async () => {
     const directory = await mkdtemp(join(tmpdir(), "native-examples-"));
@@ -172,7 +172,7 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
     const chain = createFakeChain(TOKEN_NAME);
     const rpc = chain.server;
     const manager = new StorageManager();
-    const runtime = new SidecarRuntime(createContextFactory(manager), createCoordinator());
+    const runtime = new DaemonRuntime(createContextFactory(manager), createCoordinator());
     const attached = vi.spyOn(runtime, "attachEvents");
     let stop: (() => Promise<void>) | undefined;
     try {
@@ -184,7 +184,7 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
       if (address === null || typeof address === "string") {
         throw new Error("missing fixture port");
       }
-      const envFile = join(directory, ".env.sidecar.local");
+      const envFile = join(directory, ".env.daemon.local");
       await writeFile(
         envFile,
         [
@@ -231,7 +231,7 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
         const startedAt = Math.floor(Date.now() / 1000);
         const { stdout, stderr } = await execute(executable, [...args], {
           cwd: directory,
-          env: { PATH: process.env.PATH, SIDECAR_SOCKET_PATH: socket },
+          env: { PATH: process.env.PATH, ZAMA_SDK_DAEMON_SOCKET_PATH: socket },
           timeout: 30_000,
         });
         expect(stdout).toContain("Encrypted input");
@@ -312,7 +312,7 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1")(
         );
         const failure = await execute(executable, [...args], {
           cwd: directory,
-          env: { PATH: process.env.PATH, SIDECAR_SOCKET_PATH: socket },
+          env: { PATH: process.env.PATH, ZAMA_SDK_DAEMON_SOCKET_PATH: socket },
           timeout: 30_000,
         }).then(
           () => undefined,

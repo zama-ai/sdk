@@ -5,7 +5,7 @@ import type {
   WrapOptions,
 } from "@zama-fhe/sdk";
 import { bytes } from "./encoding.js";
-import { ProgressKind } from "./generated/zama/sdk/v1alpha1/sidecar.js";
+import { ProgressKind } from "./generated/zama/sdk/v1beta1/daemon.js";
 import type { RemoteEvents } from "./remote-events.js";
 
 type ProgressCallbacks = TransferCallbacks &

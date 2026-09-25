@@ -1,17 +1,17 @@
-import { SidecarError } from "./errors.js";
+import { DaemonError } from "./errors.js";
 import { createRequire } from "node:module";
 import { readConfig } from "./config.js";
 import { StorageManager } from "./storage-manager.js";
 import { createContextFactory } from "./sdk.js";
 import { createCoordinator } from "./coordination.js";
-import { SidecarRuntime } from "./runtime.js";
+import { DaemonRuntime } from "./runtime.js";
 import { startServer } from "./server.js";
 
 async function main(): Promise<void> {
   process.umask(0o077);
   const config = readConfig(process.env);
   const storage = new StorageManager(config.storageDirectory);
-  const runtime = new SidecarRuntime(
+  const runtime = new DaemonRuntime(
     createContextFactory(storage),
     createCoordinator(),
     config.runtimeLimits,
@@ -37,7 +37,7 @@ async function main(): Promise<void> {
     };
     process.once("SIGTERM", shutdown);
     process.once("SIGINT", shutdown);
-    process.stdout.write("Sidecar ready.\n");
+    process.stdout.write("Daemon ready.\n");
   } catch (error) {
     await runtime.close();
     await storage.close();
@@ -47,9 +47,9 @@ async function main(): Promise<void> {
 
 void main().catch((error: unknown) => {
   process.stderr.write(
-    error instanceof SidecarError
-      ? `Sidecar startup failed: ${error.message}\n`
-      : "Sidecar startup failed. Check configuration and private storage/socket paths.\n",
+    error instanceof DaemonError
+      ? `Daemon startup failed: ${error.message}\n`
+      : "Daemon startup failed. Check configuration and private storage/socket paths.\n",
   );
   process.exitCode = 1;
 });

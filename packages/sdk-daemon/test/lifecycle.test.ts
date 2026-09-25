@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { expect, test } from "vitest";
 import { CredentialStorage } from "../src/storage.js";
 import { createCoordinator } from "../src/coordination.js";
-import { SidecarRuntime } from "../src/runtime.js";
+import { DaemonRuntime } from "../src/runtime.js";
 import { startServer } from "../src/server.js";
 
 async function startChild(script: string, args: string[]) {
@@ -23,7 +23,7 @@ async function startChild(script: string, args: string[]) {
 }
 
 test("retains the database lock across commits and releases it after SIGKILL", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "sidecar-crash-"));
+  const directory = await mkdtemp(join(tmpdir(), "daemon-crash-"));
   const initial = await CredentialStorage.open(directory);
   await initial.set("permit", { signature: "test" });
   await expect(CredentialStorage.open(directory)).rejects.toThrow("database is locked");
@@ -64,7 +64,7 @@ test("retains the database lock across commits and releases it after SIGKILL", a
 });
 
 test("recovers a crashed socket and restarts cleanly", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "sidecar-socket-crash-"));
+  const directory = await mkdtemp(join(tmpdir(), "daemon-socket-crash-"));
   const socket = join(directory, "sdk.sock");
   const child = await startChild(
     `
@@ -76,7 +76,7 @@ test("recovers a crashed socket and restarts cleanly", async () => {
   const exited = once(child, "exit");
   child.kill("SIGKILL");
   await exited;
-  const runtime = new SidecarRuntime(async () => {
+  const runtime = new DaemonRuntime(async () => {
     throw new Error("unused");
   }, createCoordinator());
   try {

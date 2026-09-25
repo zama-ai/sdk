@@ -9,7 +9,7 @@ import { createContextFactory } from "../src/sdk.js";
 import { createMockProvider } from "../../sdk/src/test-fixtures/provider.js";
 import { createMockRelayer } from "../../sdk/src/test-fixtures/relayer.js";
 import { createCoordinator } from "../src/coordination.js";
-import { SidecarRuntime } from "../src/runtime.js";
+import { DaemonRuntime } from "../src/runtime.js";
 import { StorageManager } from "../src/storage-manager.js";
 import { startServer } from "../src/server.js";
 
@@ -26,7 +26,7 @@ const repository = fileURLToPath(new URL("../../../", import.meta.url));
 
 async function fixtureServer(socket: string) {
   const manager = new StorageManager();
-  const runtime = new SidecarRuntime(createContextFactory(manager), createCoordinator());
+  const runtime = new DaemonRuntime(createContextFactory(manager), createCoordinator());
   const stop = await startServer(runtime, socket, "test");
   return async () => {
     await runtime.close();
@@ -35,11 +35,11 @@ async function fixtureServer(socket: string) {
   };
 }
 
-test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1").each([
+test.skipIf(process.env.ZAMA_SDK_DAEMON_NATIVE_TESTS !== "1").each([
   {
     name: "Go",
     command: "go",
-    args: ["test", "-count=1", "-run", "^TestExternalStorageAcrossSidecarRestart$", "-v", "."],
+    args: ["test", "-count=1", "-run", "^TestExternalStorageAcrossDaemonRestart$", "-v", "."],
     cwd: join(repository, "clients/go"),
   },
   {
@@ -66,12 +66,12 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1").each([
     if (command === "go") {
       executable = join(directory, "go-storage-test");
       await promisify(execFile)("go", ["test", "-c", "-o", executable, "."], { cwd });
-      argumentsToRun = ["-test.run=^TestExternalStorageAcrossSidecarRestart$", "-test.v"];
+      argumentsToRun = ["-test.run=^TestExternalStorageAcrossDaemonRestart$", "-test.v"];
     }
     let stop = await fixtureServer(socket);
     const child = spawn(executable, argumentsToRun, {
       cwd,
-      env: { ...process.env, SIDECAR_STORAGE_TEST_SOCKET: socket },
+      env: { ...process.env, ZAMA_SDK_DAEMON_STORAGE_TEST_SOCKET: socket },
       stdio: ["pipe", "pipe", "pipe"],
     });
     let output = "";

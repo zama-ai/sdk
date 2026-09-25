@@ -7,7 +7,7 @@ import { RemoteStorage, type StorageStream } from "../src/remote-storage.js";
 import type {
   SignerServerMessage,
   StorageServerMessage,
-} from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
+} from "../src/generated/zama/sdk/v1beta1/daemon.js";
 import { FakeStream } from "./support/fake-stream.js";
 
 const account = {

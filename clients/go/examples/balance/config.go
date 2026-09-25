@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	sidecar "github.com/zama-ai/sdk/clients/go"
+	"github.com/zama-ai/sdk/clients/go/v3"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/joho/godotenv"
@@ -49,51 +49,51 @@ func loadConfig(args []string) (exampleConfig, error) {
 	return exampleConfig{socket: args[0], rpcURL: config["SEPOLIA_RPC_URL"], token: common.HexToAddress(config["CONFIDENTIAL_TOKEN_ADDRESS"]), owner: owner, delegate: delegate, privateKey: config["TEST_WALLET_PRIVATE_KEY"], relayerAPIKey: config["RELAYER_API_KEY"], values: config}, nil
 }
 
-func (config exampleConfig) sdkConfig() (sidecar.SDKConfig, error) {
-	chain := sidecar.ChainConfig{ID: sepoliaChainID, Network: &config.rpcURL}
+func (config exampleConfig) sdkConfig() (zama.SDKConfig, error) {
+	chain := zama.ChainConfig{ID: sepoliaChainID, Network: &config.rpcURL}
 	if config.relayerAPIKey != "" {
-		chain.Auth = sidecar.APIKeyHeader{Value: config.relayerAPIKey}
+		chain.Auth = zama.APIKeyHeader{Value: config.relayerAPIKey}
 	}
 	if value := config.values["SDK_RPC_TIMEOUT_MS"]; value != "" {
 		timeout, err := strconv.ParseUint(value, 10, 32)
 		if err != nil {
-			return sidecar.SDKConfig{}, errors.New("invalid SDK_RPC_TIMEOUT_MS")
+			return zama.SDKConfig{}, errors.New("invalid SDK_RPC_TIMEOUT_MS")
 		}
 		timeoutValue := uint32(timeout)
-		chain.Provider = &sidecar.ProviderOptions{Timeout: &timeoutValue}
+		chain.Provider = &zama.ProviderOptions{Timeout: &timeoutValue}
 	}
-	sdkConfig := sidecar.SDKConfig{Chains: []sidecar.ChainConfig{chain}}
+	sdkConfig := zama.SDKConfig{Chains: []zama.ChainConfig{chain}}
 	switch config.values["CREDENTIAL_STORAGE"] {
 	case "", "application-memory":
-		sdkConfig.Storage = sidecar.ApplicationStorage(sidecar.NewMemoryStorage())
-	case "sidecar-memory":
-		sdkConfig.Storage = sidecar.SidecarMemoryStorage()
+		sdkConfig.Storage = zama.ApplicationStorage(zama.NewMemoryStorage())
+	case "daemon-memory":
+		sdkConfig.Storage = zama.DaemonMemoryStorage()
 	case "persistent":
 		name, present := config.values["CREDENTIAL_STORE_NAME"]
 		if !present {
-			return sidecar.SDKConfig{}, errors.New("missing CREDENTIAL_STORE_NAME")
+			return zama.SDKConfig{}, errors.New("missing CREDENTIAL_STORE_NAME")
 		}
-		sdkConfig.Storage = sidecar.PersistentStorage(name)
+		sdkConfig.Storage = zama.PersistentStorage(name)
 	default:
-		return sidecar.SDKConfig{}, errors.New("invalid CREDENTIAL_STORAGE")
+		return zama.SDKConfig{}, errors.New("invalid CREDENTIAL_STORAGE")
 	}
 	if value, present := config.values["TRANSPORT_KEY_PAIR_DERIVATION_SECRET"]; present {
-		sdkConfig.TransportKeyPairDerivationSecret = sidecar.TextDerivationSecret(value)
+		sdkConfig.TransportKeyPairDerivationSecret = zama.TextDerivationSecret(value)
 	}
 	if value := config.values["SDK_SINGLE_THREAD"]; value != "" {
 		enabled, err := strconv.ParseBool(value)
 		if err != nil {
-			return sidecar.SDKConfig{}, errors.New("invalid SDK_SINGLE_THREAD")
+			return zama.SDKConfig{}, errors.New("invalid SDK_SINGLE_THREAD")
 		}
-		sdkConfig.ProcessRuntime = &sidecar.ProcessRuntime{SingleThread: &enabled}
+		sdkConfig.ProcessRuntime = &zama.ProcessRuntime{SingleThread: &enabled}
 	}
 	if value := config.values["SDK_BATCH_RPC_CALLS"]; value != "" {
 		enabled, err := strconv.ParseBool(value)
 		if err != nil {
-			return sidecar.SDKConfig{}, errors.New("invalid SDK_BATCH_RPC_CALLS")
+			return zama.SDKConfig{}, errors.New("invalid SDK_BATCH_RPC_CALLS")
 		}
-		sdkConfig.Relayers = map[uint64]sidecar.RelayerConfig{
-			sepoliaChainID: {Transport: sidecar.RelayerNode, Options: &sidecar.RelayerOptions{BatchRPCCalls: &enabled}},
+		sdkConfig.Relayers = map[uint64]zama.RelayerConfig{
+			sepoliaChainID: {Transport: zama.RelayerNode, Options: &zama.RelayerOptions{BatchRPCCalls: &enabled}},
 		}
 	}
 	return sdkConfig, nil

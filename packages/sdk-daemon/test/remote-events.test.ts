@@ -2,10 +2,7 @@ import { expect, test } from "vitest";
 import { createWalletAccountStore, type GenericSigner } from "@zama-fhe/sdk";
 import { RemoteEvents, type EventStream } from "../src/remote-events.js";
 import { operationContext } from "../src/remote-signer.js";
-import {
-  ProgressKind,
-  type EventServerMessage,
-} from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
+import { ProgressKind, type EventServerMessage } from "../src/generated/zama/sdk/v1beta1/daemon.js";
 import { FakeStream } from "./support/fake-stream.js";
 import { fixture } from "./support/harness.js";
 

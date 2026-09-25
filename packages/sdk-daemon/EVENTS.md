@@ -27,7 +27,7 @@ dc run --rm rust
 
 The examples log lifecycle kinds alongside the encryption, balance, offline signing and delegation results. Their diagnostics handlers select safe metadata explicitly; they do not dump decrypted event results or error messages.
 
-Token operations are not yet exposed by the sidecar. The examples include typed progress handling, but these operations do not produce transfer/shield/unshield progress. Adding those steps depends on the Token capability. The SDK-backed tests exercise the progress adapter in the meantime.
+Token operations are not yet exposed by the daemon. The examples include typed progress handling, but these operations do not produce transfer/shield/unshield progress. Adding those steps depends on the Token capability. The SDK-backed tests exercise the progress adapter in the meantime.
 
 ## Handle callback failures
 
@@ -40,8 +40,8 @@ Return-valued callbacks such as batch decryption fallbacks are not part of this 
 From the repository root:
 
 ```sh
-pnpm sidecar:build
-pnpm sidecar:test
+pnpm daemon:build
+pnpm daemon:test
 (cd clients/go && go test -race ./... && go vet ./...)
 (cd clients/go/examples/balance && go test -race ./... && go vet ./...)
 cargo test --manifest-path clients/rust/Cargo.toml --all-features --all-targets --locked
@@ -53,7 +53,7 @@ These checks cover SDK decryption event equivalence, SDK-backed token progress o
 Run both complete native examples against local synthetic Ethereum and SDK fixtures:
 
 ```sh
-SIDECAR_NATIVE_TESTS=1 pnpm exec vitest run --config packages/sdk-sidecar/vitest.config.ts packages/sdk-sidecar/test/native-examples.test.ts
+ZAMA_SDK_DAEMON_NATIVE_TESTS=1 pnpm exec vitest run --config packages/sdk-daemon/vitest.config.ts packages/sdk-daemon/test/native-examples.test.ts
 ```
 
 This check builds both example binaries, supplies a synthetic wallet in a temporary directory, and runs their shared setup and complete encryption, balance, offline signing and delegation sequence. It does not contact a live chain. Subscription close cancels queued notifications, so the last diagnostics message can still be pending when the example exits.

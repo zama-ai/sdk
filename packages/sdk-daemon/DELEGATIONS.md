@@ -1,6 +1,6 @@
 # Manage on-chain decryption delegation
 
-`@zama-fhe/sdk` lets a contract owner grant another address the right to decrypt values on their behalf. The sidecar exposes that as five RPCs backed by `sdk.delegations`.
+`@zama-fhe/sdk` lets a contract owner grant another address the right to decrypt values on their behalf. The daemon exposes that as five RPCs backed by `sdk.delegations`.
 
 > [!WARNING]
 > On-chain delegation is not the same thing as a **delegation permit** (`GrantDelegationPermit` / `HasDelegationPermit`). A delegation permit is a local credential: it lets the SDK sign decryption requests for a delegator without asking the wallet again. The RPCs on this page change ACL state on the host chain instead. Granting a permit does not grant delegation, and granting delegation does not create or require a permit.
@@ -15,7 +15,7 @@
 | `GetDelegationExpiry` | `sdk.delegations.getExpiry`          | No             |
 | `GetDelegationStatus` | `sdk.delegations.getStatus`          | No             |
 
-`DelegateDecryption` and `RevokeDelegation` write to the ACL contract. The delegator is always the connected signer account; there is no field for it on the wire. The SDK resolves the delegator from the signer account, and the sidecar only omits the field.
+`DelegateDecryption` and `RevokeDelegation` write to the ACL contract. The delegator is always the connected signer account; there is no field for it on the wire. The SDK resolves the delegator from the signer account, and the daemon only omits the field.
 
 The three read RPCs take an explicit `contract_address`, `delegator_address` and `delegate_address` in `DelegationQueryRequest` and work without a signer attached to the context.
 
@@ -38,7 +38,7 @@ The ACL contract accepts one delegate or revoke per `(delegator, delegate, contr
 
 ## Errors
 
-The sidecar does not add delegation-specific error codes. It forwards the SDK's codes verbatim in the `zama-error-code` trailer (see [the wire contract's error section](../../proto/README.md#errors-and-transport-limits)). Codes these RPCs surface:
+The daemon does not add delegation-specific error codes. It forwards the SDK's codes verbatim in the `zama-error-code` trailer (see [the wire contract's error section](../../proto/README.md#errors-and-transport-limits)). Codes these RPCs surface:
 
 | Code                                  | When                                                                                                            |
 | ------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
@@ -52,11 +52,11 @@ The sidecar does not add delegation-specific error codes. It forwards the SDK's 
 | `DELEGATION_NOT_FOUND`                | `RevokeDelegation` when the current expiry is `0` (nothing to revoke).                                          |
 | `TRANSACTION_REVERTED`                | The ACL contract reverted the write, or the wallet's gas estimation rejected it before broadcast.               |
 
-`TRANSACTION_OUTCOME_UNKNOWN` is the one sidecar-specific code, not an SDK delegation code. It surfaces when the operation is cancelled or the signer channel is lost after the wallet has broadcast a delegation write; see [transaction callbacks](TRANSACTIONS.md#failure-and-cancellation) for the full table of when it applies.
+`TRANSACTION_OUTCOME_UNKNOWN` is the one daemon-specific code, not an SDK delegation code. It surfaces when the operation is cancelled or the signer channel is lost after the wallet has broadcast a delegation write; see [transaction callbacks](TRANSACTIONS.md#failure-and-cancellation) for the full table of when it applies.
 
 ### Pre-broadcast reverts
 
-A delegate or revoke can fail before anything is broadcast: the node rejects the simulated write during gas estimation. The native wallet reports this as a revert instead of a broadcast hash, and the sidecar surfaces it as code `TRANSACTION_REVERTED`, the same as an on-chain revert. The SDK's ACL ABI declares no error entries, so the revert bytes decode to their 4-byte selector only and the message carries it as `unrecognized error 0x…`, or the wallet's own message when the node returned no revert data.
+A delegate or revoke can fail before anything is broadcast: the node rejects the simulated write during gas estimation. The native wallet reports this as a revert instead of a broadcast hash, and the daemon surfaces it as code `TRANSACTION_REVERTED`, the same as an on-chain revert. The SDK's ACL ABI declares no error entries, so the revert bytes decode to their 4-byte selector only and the message carries it as `unrecognized error 0x…`, or the wallet's own message when the node returned no revert data.
 
 ## Transaction result
 
@@ -65,11 +65,11 @@ A delegate or revoke can fail before anything is broadcast: the node rejects the
 ## Native examples
 
 ```go
-query := sidecar.DelegationQuery{ContractAddress: token, DelegatorAddress: owner, DelegateAddress: delegate}
+query := zama.DelegationQuery{ContractAddress: token, DelegatorAddress: owner, DelegateAddress: delegate}
 status, err := sdk.GetDelegationStatus(ctx, query)
 
 expiry := time.Now().Add(2 * time.Hour)
-granted, err := sdk.DelegateDecryption(ctx, sidecar.DelegateDecryptionParams{
+granted, err := sdk.DelegateDecryption(ctx, zama.DelegateDecryptionParams{
 	ContractAddress: token,
 	DelegateAddress: delegate,
 	ExpirationDate:  &expiry,
@@ -94,4 +94,4 @@ The full sequence, including the block wait before revoking and status formattin
 
 ## Writes and events
 
-`DelegateDecryption` and `RevokeDelegation` request their write the same way every other SDK write does: over the signer channel to your native wallet adapter. See [transaction callbacks](TRANSACTIONS.md) for wallet setup, request fields and failure/cancellation behavior. The SDK, not the sidecar, waits for the receipt before the RPC returns. `@zama-fhe/sdk` emits transaction lifecycle events for these operations inside the sidecar process; the sidecar exposes no event channel.
+`DelegateDecryption` and `RevokeDelegation` request their write the same way every other SDK write does: over the signer channel to your native wallet adapter. See [transaction callbacks](TRANSACTIONS.md) for wallet setup, request fields and failure/cancellation behavior. The SDK, not the daemon, waits for the receipt before the RPC returns. `@zama-fhe/sdk` emits transaction lifecycle events for these operations inside the daemon process; the daemon exposes no event channel.

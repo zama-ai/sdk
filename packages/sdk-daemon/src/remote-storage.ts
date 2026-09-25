@@ -8,10 +8,10 @@ import {
   type StorageServerMessage,
   type StorageAction,
   type StorageReply,
-} from "./generated/zama/sdk/v1alpha1/sidecar.js";
+} from "./generated/zama/sdk/v1beta1/daemon.js";
 import { callbackError } from "./callback-errors.js";
 import { decodeStorage, encodeStorage } from "./storage-codec.js";
-import { errorDetails, invalidArgument, SidecarError } from "./errors.js";
+import { errorDetails, invalidArgument, DaemonError } from "./errors.js";
 
 export type StorageStream = ServerDuplexStream<StorageClientMessage, StorageServerMessage>;
 type Pending = {
@@ -64,7 +64,7 @@ export class RemoteStorage {
       pending.timer = setTimeout(() => {
         this.#pending.delete(requestId);
         result.reject(
-          new SidecarError(
+          new DaemonError(
             "STORAGE_ATTACH_TIMEOUT",
             status.DEADLINE_EXCEEDED,
             "Application storage channel was not attached.",
@@ -77,7 +77,7 @@ export class RemoteStorage {
   }
   attach(stream: StorageStream): void {
     if (this.#state === "closed" || this.#connection.connected) {
-      throw new SidecarError(
+      throw new DaemonError(
         "STORAGE_CHANNEL_EXISTS",
         status.FAILED_PRECONDITION,
         "Storage channel is closed or already attached.",
@@ -101,7 +101,7 @@ export class RemoteStorage {
   reply(reply: StorageReply): void {
     const pending = this.#pending.get(reply.requestId);
     if (!pending) {
-      const error = new SidecarError(
+      const error = new DaemonError(
         "STORAGE_REQUEST_NOT_FOUND",
         status.NOT_FOUND,
         "Storage request is no longer pending.",
@@ -138,8 +138,8 @@ export class RemoteStorage {
       pending.reject(invalidArgument("Storage reply does not match the requested operation."));
     }
   }
-  #unavailable(): SidecarError {
-    return new SidecarError(
+  #unavailable(): DaemonError {
+    return new DaemonError(
       "STORAGE_UNAVAILABLE",
       status.UNAVAILABLE,
       "Application storage channel is unavailable.",

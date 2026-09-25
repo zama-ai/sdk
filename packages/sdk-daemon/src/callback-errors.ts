@@ -1,6 +1,6 @@
 import { status } from "@grpc/grpc-js";
 import { bytesToHex, decodeErrorResult, getAddress, type Abi, type Hex } from "viem";
-import { invalidArgument, SidecarError, TransactionCallbackError } from "./errors.js";
+import { invalidArgument, DaemonError, TransactionCallbackError } from "./errors.js";
 import { json } from "./encoding.js";
 import { ZamaErrorCode } from "@zama-fhe/sdk";
 import { reviveZamaError } from "@zama-fhe/sdk/internal";
@@ -8,11 +8,11 @@ import type {
   ContractWriteRequest,
   ExecutionRevert,
   SdkError,
-} from "./generated/zama/sdk/v1alpha1/sidecar.js";
+} from "./generated/zama/sdk/v1beta1/daemon.js";
 
 export type DecodedCallbackError =
   | { kind: "zama" | "provider"; error: Error }
-  | { kind: "invalid" | "foreign"; error: SidecarError };
+  | { kind: "invalid" | "foreign"; error: DaemonError };
 
 export function decodeCallbackError(value: SdkError): DecodedCallbackError {
   if (
@@ -41,7 +41,7 @@ export function decodeCallbackError(value: SdkError): DecodedCallbackError {
   }
   return {
     kind: "foreign",
-    error: new SidecarError(
+    error: new DaemonError(
       value.code,
       status.FAILED_PRECONDITION,
       value.message,

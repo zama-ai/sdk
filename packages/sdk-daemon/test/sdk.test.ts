@@ -1,4 +1,4 @@
-import { ContextConfig } from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
+import { ContextConfig } from "../src/generated/zama/sdk/v1beta1/daemon.js";
 import type * as Viem from "viem";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -34,7 +34,7 @@ vi.mock("viem", async (importOriginal) => {
 });
 
 test("context factory preserves signerless public decryption and zero-value lazy signing", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "sidecar-zero-"));
+  const directory = await mkdtemp(join(tmpdir(), "daemon-zero-"));
   const storage = new StorageManager(directory);
   const factory = createContextFactory(storage);
   const request = {

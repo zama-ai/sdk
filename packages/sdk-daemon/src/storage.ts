@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { serialize, deserialize } from "node:v8";
 import type { GenericStorage } from "@zama-fhe/sdk";
 import { status } from "@grpc/grpc-js";
-import { SidecarError } from "./errors.js";
+import { DaemonError } from "./errors.js";
 
 export class CredentialStorage implements GenericStorage {
   #failed = false;
@@ -51,8 +51,8 @@ export class CredentialStorage implements GenericStorage {
     }
   }
 
-  #failure(): SidecarError {
-    return new SidecarError(
+  #failure(): DaemonError {
+    return new DaemonError(
       "STORAGE_FAILED",
       status.UNAVAILABLE,
       "Credential storage failed; restart required.",

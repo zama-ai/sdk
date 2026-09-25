@@ -6,7 +6,7 @@ import { USER, TOKEN, DELEGATE } from "../../sdk/src/test-fixtures/constants.js"
 import { bytes } from "../src/encoding.js";
 import { errorDetails } from "../src/errors.js";
 import { prepareTransaction } from "../src/offline.js";
-import type * as rpc from "../src/generated/zama/sdk/v1alpha1/sidecar.js";
+import type * as rpc from "../src/generated/zama/sdk/v1beta1/daemon.js";
 import { createContext, fixture, testServer } from "./support/harness.js";
 
 const from = bytes(USER);

@@ -1,7 +1,7 @@
 import { status } from "@grpc/grpc-js";
 import { SigningFailedError, TransportKeyPairChangedError } from "@zama-fhe/sdk";
 import { expect, test } from "vitest";
-import { serviceError, SidecarError } from "../src/errors.js";
+import { DaemonError, serviceError } from "../src/errors.js";
 
 test("retains canonical SDK codes and messages without reclassifying signing failures", () => {
   const signature = serviceError(new SigningFailedError("Wallet unavailable"));
@@ -13,7 +13,7 @@ test("retains canonical SDK codes and messages without reclassifying signing fai
     serviceError(new TransportKeyPairChangedError("Key changed")).metadata.get("zama-error-code"),
   ).toEqual(["TRANSPORT_KEY_PAIR_CHANGED"]);
   const wrapped = new SigningFailedError("Signing failed", {
-    cause: new SidecarError("TRANSPORT_FAILURE", status.UNAVAILABLE, "Disconnected"),
+    cause: new DaemonError("TRANSPORT_FAILURE", status.UNAVAILABLE, "Disconnected"),
   });
   expect(serviceError(wrapped).metadata.get("zama-error-code")).toEqual(["SIGNING_FAILED"]);
   expect(serviceError(new Error("private implementation detail")).details).toBe(
@@ -56,13 +56,7 @@ test.each([0, -1, 0.5, Infinity, 4294967296])(
   "invalid retry hint %s is omitted without hiding the original failure",
   (retryAfterSeconds) => {
     const error = serviceError(
-      new SidecarError(
-        "STORAGE_FAILED",
-        status.UNAVAILABLE,
-        "Unavailable",
-        true,
-        retryAfterSeconds,
-      ),
+      new DaemonError("STORAGE_FAILED", status.UNAVAILABLE, "Unavailable", true, retryAfterSeconds),
     );
     expect(error.details).toBe("Unavailable");
     expect(error.metadata.get("zama-error-code")).toEqual(["STORAGE_FAILED"]);

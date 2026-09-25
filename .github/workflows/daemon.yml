@@ -1,13 +1,13 @@
-name: Sidecar CI
+name: Daemon CI
 
 on:
   pull_request:
     paths:
       - "clients/**"
       - "proto/**"
-      - "scripts/sidecar/**"
+      - "scripts/daemon/**"
       - "packages/sdk/**"
-      - "packages/sdk-sidecar/**"
+      - "packages/sdk-daemon/**"
       - "buf*.yaml"
       - "vitest.config.ts"
       - "vitest.shared.mts"
@@ -16,11 +16,11 @@ on:
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - ".github/actions/install-deps/**"
-      - ".github/workflows/sidecar.yml"
+      - ".github/workflows/daemon.yml"
   workflow_dispatch:
 
 concurrency:
-  group: sidecar-ci-${{ github.ref }}
+  group: daemon-ci-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -85,7 +85,7 @@ jobs:
         run: cargo clippy --manifest-path clients/rust/Cargo.toml --all-features --all-targets --locked -- -D warnings
       - name: Regenerate protobuf bindings
         run: |
-          cargo run --manifest-path clients/rust/Cargo.toml -p zama-sdk-sidecar-codegen --locked
+          cargo run --manifest-path clients/rust/Cargo.toml -p zama-sdk-codegen --locked
           git diff --exit-code -- clients/rust
 
   equivalence:
@@ -103,7 +103,7 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: pnpm exec node scripts/sidecar/check-proto-compatibility.mjs "$BASE_SHA"
+        run: pnpm exec node scripts/daemon/check-proto-compatibility.mjs "$BASE_SHA"
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version-file: clients/go/go.mod
@@ -113,13 +113,13 @@ jobs:
       - name: Regenerate TypeScript and Go protobuf bindings
         run: |
           pnpm exec buf format --diff --exit-code
-          pnpm sidecar:generate
+          pnpm daemon:generate
           sh clients/go/generate.sh
-          git diff --exit-code -- packages/sdk-sidecar/src/generated clients/go/internal/gen
-      - name: Build SDK and sidecar
-        run: pnpm sidecar:build
+          git diff --exit-code -- packages/sdk-daemon/src/generated clients/go/internal/gen
+      - name: Build SDK and daemon
+        run: pnpm daemon:build
       - name: Verify built package exports
-        run: node --test packages/sdk-sidecar/test/package-exports.test.mjs
+        run: node --test packages/sdk-daemon/test/package-exports.test.mjs
       - name: Prepare native test drivers
         run: |
           cargo test --manifest-path clients/rust/Cargo.toml --test external_storage_restart --locked --no-run
@@ -128,5 +128,5 @@ jobs:
           go test -run '^$' ./...
       - name: Verify SDK equivalence and native credential recovery
         env:
-          SIDECAR_NATIVE_TESTS: "1"
-        run: pnpm sidecar:test
+          ZAMA_SDK_DAEMON_NATIVE_TESTS: "1"
+        run: pnpm daemon:test

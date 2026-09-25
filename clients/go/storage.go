@@ -1,4 +1,4 @@
-package sidecar
+package zama
 
 import (
 	"bytes"
@@ -60,7 +60,7 @@ type StorageConfig struct {
 	backend *storageBackend
 }
 
-func SidecarMemoryStorage() StorageConfig { return StorageConfig{kind: "memory"} }
+func DaemonMemoryStorage() StorageConfig { return StorageConfig{kind: "memory"} }
 func PersistentStorage(name string) StorageConfig {
 	return StorageConfig{kind: "persistent", name: name}
 }

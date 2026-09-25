@@ -2,7 +2,7 @@ import { status, type ServiceError } from "@grpc/grpc-js";
 import { expect, test } from "vitest";
 import { createHandlers } from "../src/handlers.js";
 import { createCoordinator } from "../src/coordination.js";
-import { SidecarRuntime } from "../src/runtime.js";
+import { DaemonRuntime } from "../src/runtime.js";
 import type { EventStream } from "../src/remote-events.js";
 import { FakeStream } from "./support/fake-stream.js";
 import { createContext, fixture, testServer } from "./support/harness.js";
@@ -55,7 +55,7 @@ for (const kind of ["signer", "storage"] as const) {
 }
 
 test.each(["end", "error", "cancelled", "close"])("%s stops accepting callback frames", (event) => {
-  const runtime = new SidecarRuntime(async () => {
+  const runtime = new DaemonRuntime(async () => {
     throw new Error("unused");
   }, createCoordinator());
   const stream = new FakeStream();

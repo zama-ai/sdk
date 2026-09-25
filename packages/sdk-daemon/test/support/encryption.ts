@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { bytesToHex } from "viem";
 import { json } from "../../src/encoding.js";
 import { createEncryptionValidationBackend } from "../../../sdk/src/test-fixtures/encryption.js";
-import type { CreateContextRequest } from "../../src/generated/zama/sdk/v1alpha1/sidecar.js";
+import type { CreateContextRequest } from "../../src/generated/zama/sdk/v1beta1/daemon.js";
 import { fixture, testServer } from "./harness.js";
 
 type EncryptionOperation = ReturnType<typeof fixture>["relayer"]["encryptValues"];

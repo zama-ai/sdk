@@ -7,8 +7,8 @@ import {
 import { toFhevmAuth } from "@zama-fhe/sdk/internal";
 import { node } from "@zama-fhe/sdk/node";
 import type { HttpTransportConfig } from "viem";
-import type * as Wire from "./generated/zama/sdk/v1alpha1/sidecar.js";
-import { RelayerTransport } from "./generated/zama/sdk/v1alpha1/sidecar.js";
+import type * as Wire from "./generated/zama/sdk/v1beta1/daemon.js";
+import { RelayerTransport } from "./generated/zama/sdk/v1beta1/daemon.js";
 import { chainAuth, decodeOptional, defined, safeInteger, unsignedInteger } from "./encoding.js";
 
 export type ProviderConfig = Pick<

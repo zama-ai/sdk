@@ -1,7 +1,7 @@
 import { invalidArgument } from "./errors.js";
 import { isAbsolute } from "node:path";
 
-export interface SidecarConfig {
+export interface DaemonConfig {
   readonly storageDirectory?: string;
   readonly socketPath: string;
   readonly grpc: { maxMessageBytes: number; maxConcurrentStreams?: number };
@@ -20,25 +20,25 @@ function positiveInteger(env: NodeJS.ProcessEnv, name: string): number | undefin
   return parsed;
 }
 
-export function readConfig(env: NodeJS.ProcessEnv): SidecarConfig {
-  const socketPath = env.SIDECAR_SOCKET_PATH;
-  const storageDirectory = env.SIDECAR_STORAGE_DIR;
+export function readConfig(env: NodeJS.ProcessEnv): DaemonConfig {
+  const socketPath = env.ZAMA_SDK_DAEMON_SOCKET_PATH;
+  const storageDirectory = env.ZAMA_SDK_DAEMON_STORAGE_DIR;
   if (!socketPath || !isAbsolute(socketPath)) {
-    throw invalidArgument("Configure an absolute sidecar socket path.");
+    throw invalidArgument("Configure an absolute daemon socket path.");
   }
   if (storageDirectory !== undefined && !isAbsolute(storageDirectory)) {
-    throw invalidArgument("The sidecar storage directory must be an absolute path.");
+    throw invalidArgument("The daemon storage directory must be an absolute path.");
   }
   return {
     socketPath,
     storageDirectory,
     grpc: {
-      maxMessageBytes: positiveInteger(env, "SIDECAR_MAX_MESSAGE_BYTES") ?? 4 * 1024 * 1024,
-      maxConcurrentStreams: positiveInteger(env, "SIDECAR_MAX_CONCURRENT_STREAMS"),
+      maxMessageBytes: positiveInteger(env, "ZAMA_SDK_DAEMON_MAX_MESSAGE_BYTES") ?? 4 * 1024 * 1024,
+      maxConcurrentStreams: positiveInteger(env, "ZAMA_SDK_DAEMON_MAX_CONCURRENT_STREAMS"),
     },
     runtimeLimits: {
-      maxContexts: positiveInteger(env, "SIDECAR_MAX_CONTEXTS"),
-      maxOperationsPerContext: positiveInteger(env, "SIDECAR_MAX_OPERATIONS_PER_CONTEXT"),
+      maxContexts: positiveInteger(env, "ZAMA_SDK_DAEMON_MAX_CONTEXTS"),
+      maxOperationsPerContext: positiveInteger(env, "ZAMA_SDK_DAEMON_MAX_OPERATIONS_PER_CONTEXT"),
     },
   };
 }

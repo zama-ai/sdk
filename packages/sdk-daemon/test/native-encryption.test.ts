@@ -31,7 +31,7 @@ function calls(
   return matching[0]!.encryptValues.mock.calls.map(([params]) => params);
 }
 
-test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1").each([
+test.skipIf(process.env.ZAMA_SDK_DAEMON_NATIVE_TESTS !== "1").each([
   {
     name: "Go",
     command: "go",
@@ -60,7 +60,7 @@ test.skipIf(process.env.SIDECAR_NATIVE_TESTS !== "1").each([
     try {
       const result = await run(command, args, {
         cwd: fileURLToPath(new URL(`../../../clients/${directory}/`, import.meta.url)),
-        env: { ...process.env, SIDECAR_ENCRYPT_TEST_SOCKET: server.socket },
+        env: { ...process.env, ZAMA_SDK_DAEMON_ENCRYPT_TEST_SOCKET: server.socket },
         timeout: 180_000,
         maxBuffer: 4 * 1024 * 1024,
       });

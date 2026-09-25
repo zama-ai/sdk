@@ -1,7 +1,7 @@
 import { status, type ServerDuplexStream } from "@grpc/grpc-js";
-import type * as rpc from "./generated/zama/sdk/v1alpha1/sidecar.js";
-import type { SidecarRuntime } from "./runtime.js";
-import { invalidArgument, serviceError, SidecarError } from "./errors.js";
+import type * as rpc from "./generated/zama/sdk/v1beta1/daemon.js";
+import type { DaemonRuntime } from "./runtime.js";
+import { DaemonError, invalidArgument, serviceError } from "./errors.js";
 
 type ClientFrame<Reply> = {
   message?: { $case: "attach"; attach: rpc.ContextRequest } | { $case: "reply"; reply: Reply };
@@ -20,7 +20,7 @@ function attachChannel<Reply, Response>(
     stream.emit(
       "error",
       serviceError(
-        new SidecarError(
+        new DaemonError(
           `${kind}_ATTACH_TIMEOUT`,
           status.DEADLINE_EXCEEDED,
           `Attach a ${kind.toLowerCase()} context within ${timeoutMs / 1000} seconds.`,
@@ -68,18 +68,16 @@ function attachChannel<Reply, Response>(
   stream.on("data", receive);
 }
 
-export function signerChannel(runtime: SidecarRuntime): rpc.SidecarServiceServer["signerChannel"] {
+export function signerChannel(runtime: DaemonRuntime): rpc.DaemonServiceServer["signerChannel"] {
   return (stream) =>
     attachChannel(stream, "SIGNER", 5000, (id) => runtime.attachSigner(id, stream));
 }
 
-export function storageChannel(
-  runtime: SidecarRuntime,
-): rpc.SidecarServiceServer["storageChannel"] {
+export function storageChannel(runtime: DaemonRuntime): rpc.DaemonServiceServer["storageChannel"] {
   return (stream) =>
     attachChannel(stream, "STORAGE", 10_000, (id) => runtime.attachStorage(id, stream));
 }
 
-export function eventChannel(runtime: SidecarRuntime): rpc.SidecarServiceServer["eventChannel"] {
+export function eventChannel(runtime: DaemonRuntime): rpc.DaemonServiceServer["eventChannel"] {
   return (stream) => attachChannel(stream, "EVENT", 5000, (id) => runtime.attachEvents(id, stream));
 }
