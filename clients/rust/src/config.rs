@@ -1,5 +1,4 @@
-use crate::{Address, generated};
-use anyhow::Result;
+use crate::{Address, ClientError, ErrorKind, Result, generated};
 
 #[derive(Clone)]
 pub enum RelayerAuth {
@@ -134,11 +133,20 @@ impl From<RelayerAuth> for generated::ChainAuth {
     }
 }
 impl TryFrom<ChainConfig> for generated::ChainConfig {
-    type Error = anyhow::Error;
+    type Error = ClientError;
     fn try_from(chain: ChainConfig) -> Result<Self> {
         fn address(value: Option<String>) -> Result<Option<Vec<u8>>> {
             value
-                .map(|value| Ok(value.parse::<Address>()?.to_vec()))
+                .map(|value| {
+                    let address = value.parse::<Address>().map_err(|error| {
+                        ClientError::with_source(
+                            ErrorKind::InvalidInput,
+                            "invalid contract address",
+                            error,
+                        )
+                    })?;
+                    Ok(address.to_vec())
+                })
                 .transpose()
         }
         fn optional_address(value: Option<String>) -> Result<Option<Vec<u8>>> {
@@ -170,7 +178,7 @@ impl TryFrom<ChainConfig> for generated::ChainConfig {
     }
 }
 impl TryFrom<SdkConfig> for generated::ContextConfig {
-    type Error = anyhow::Error;
+    type Error = ClientError;
     fn try_from(config: SdkConfig) -> Result<Self> {
         Ok(Self {
             chain_id: Some(config.chain_id),

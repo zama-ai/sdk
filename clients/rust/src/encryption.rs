@@ -1,5 +1,5 @@
 use crate::{Address, B256, BigInt, Sdk, generated, types::handle};
-use anyhow::{Result, ensure};
+use crate::{ClientError, Result};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EncryptInput {
@@ -68,10 +68,11 @@ impl Sdk {
             }
         )
         .await?;
-        ensure!(
-            response.encrypted_values.len() == params.values.len(),
-            "encrypted value count does not match inputs"
-        );
+        if response.encrypted_values.len() != params.values.len() {
+            return Err(ClientError::protocol(
+                "encrypted value count does not match inputs",
+            ));
+        }
         Ok(EncryptResult {
             encrypted_values: response
                 .encrypted_values

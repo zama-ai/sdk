@@ -118,6 +118,7 @@ async fn encrypt_rejects_malformed_encrypted_value() {
         )
         .await
         .unwrap_err();
+    assert_eq!(error.kind(), crate::ErrorKind::Protocol);
     assert!(
         error
             .to_string()
@@ -162,6 +163,7 @@ async fn encrypt_rejects_mismatched_encrypted_value_count() {
         )
         .await
         .unwrap_err();
+    assert_eq!(error.kind(), crate::ErrorKind::Protocol);
     assert!(
         error
             .to_string()
@@ -190,7 +192,7 @@ async fn dropping_encrypt_and_deadlines_release_operation_guards() {
             .header("content-type", "application/grpc")
             .body(
                 StreamBody::new(futures_util::stream::pending::<
-                    Result<Frame<Bytes>, Infallible>,
+                    std::result::Result<Frame<Bytes>, Infallible>,
                 >())
                 .boxed(),
             )

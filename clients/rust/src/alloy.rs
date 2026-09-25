@@ -1,4 +1,3 @@
-#[path = "alloy_transactions.rs"]
 mod transactions;
 pub use transactions::{AlloyWallet, DEFAULT_BROADCAST_TIMEOUT};
 

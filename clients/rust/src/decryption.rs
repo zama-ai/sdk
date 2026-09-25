@@ -1,8 +1,7 @@
 use crate::{
-    Address, B256, ClearValue, ClearValues, EncryptedInput, Sdk, SdkError,
+    Address, B256, ClearValue, ClearValues, ClientError, EncryptedInput, Result, Sdk, SdkError,
     types::{clear_values, handle},
 };
-use anyhow::Result;
 
 pub struct Decryption(pub(crate) Sdk);
 #[derive(Clone, Copy, Debug, Default)]
@@ -27,7 +26,7 @@ pub struct PublicDecryption {
 pub struct BatchItem {
     pub encrypted_value: B256,
     pub contract_address: Address,
-    pub result: Result<ClearValue, SdkError>,
+    pub result: std::result::Result<ClearValue, SdkError>,
 }
 
 impl Decryption {
@@ -113,7 +112,9 @@ impl Decryption {
                         Ok(value.try_into()?)
                     }
                     Some(crate::generated::batch_item::Result::Error(error)) => Err(error.into()),
-                    _ => anyhow::bail!("invalid batch result"),
+                    _ => {
+                        return Err(ClientError::protocol("invalid batch result"));
+                    }
                 };
                 Ok(BatchItem {
                     encrypted_value: handle(&item.encrypted_value)?,

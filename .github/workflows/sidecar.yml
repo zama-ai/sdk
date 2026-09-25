@@ -115,7 +115,7 @@ jobs:
           pnpm exec buf format --diff --exit-code
           pnpm sidecar:generate
           sh clients/go/generate.sh
-          git diff --exit-code -- packages/sdk-sidecar/src/generated clients/go/gen
+          git diff --exit-code -- packages/sdk-sidecar/src/generated clients/go/internal/gen
       - name: Build SDK and sidecar
         run: pnpm sidecar:build
       - name: Verify built package exports

@@ -1,9 +1,11 @@
 use crate::{
-    Address, BigInt, Offline,
+    Address, BigInt, ClientError, ErrorKind, Result, Sdk,
     delegations::{delegate_decryption_wire, revoke_delegation_wire},
     generated,
+    permits::addresses,
 };
-use anyhow::{Context, Result, bail};
+
+pub struct Offline(pub(crate) Sdk);
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PrepareTransaction {
@@ -100,15 +102,17 @@ pub enum TransactionKind {
 }
 
 impl TryFrom<i32> for TransactionKind {
-    type Error = anyhow::Error;
+    type Error = ClientError;
 
-    fn try_from(value: i32) -> Result<Self> {
+    fn try_from(value: i32) -> crate::Result<Self> {
         let Ok(kind) = generated::TransactionKind::try_from(value) else {
-            bail!("unknown prepared transaction kind");
+            return Err(ClientError::protocol("unknown prepared transaction kind"));
         };
         Ok(match kind {
             generated::TransactionKind::Unspecified => {
-                bail!("unspecified prepared transaction kind")
+                return Err(ClientError::protocol(
+                    "unspecified prepared transaction kind",
+                ));
             }
             generated::TransactionKind::ConfidentialTransfer => Self::ConfidentialTransfer,
             generated::TransactionKind::ConfidentialTransferFrom => Self::ConfidentialTransferFrom,
@@ -132,13 +136,26 @@ pub struct PreparedTransaction {
     pub unsigned_tx: Vec<u8>,
 }
 
+pub struct PreparePermit<'a> {
+    pub signer: Address,
+    pub contracts: &'a [Address],
+    pub delegator: Option<Address>,
+    pub duration_days: Option<u32>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PreparedPermit {
+    pub envelope: Vec<u8>,
+    pub typed_data: serde_json::Value,
+}
+
 impl Offline {
     /// Prepares through the SDK; the caller owns signing and broadcasting the returned bytes.
     pub async fn prepare(
         &self,
         request: PrepareTransaction,
         options: Option<PrepareOptions>,
-    ) -> Result<PreparedTransaction> {
+    ) -> crate::Result<PreparedTransaction> {
         let result = rpc!(
             &self.0,
             prepare_transaction,
@@ -151,9 +168,27 @@ impl Offline {
         .await?;
         Ok(PreparedTransaction {
             kind: TransactionKind::try_from(result.kind)?,
-            from: Address::try_from(result.from.as_slice())
-                .context("invalid prepared sender address")?,
+            from: crate::types::address(&result.from, "invalid prepared sender address")?,
             unsigned_tx: result.unsigned_tx,
+        })
+    }
+    pub async fn prepare_permit(&self, request: PreparePermit<'_>) -> Result<PreparedPermit> {
+        let response = rpc!(
+            &self.0,
+            prepare_permit,
+            PreparePermitRequest {
+                signer_address: request.signer.to_vec(),
+                contract_addresses: addresses(request.contracts),
+                delegator_address: request.delegator.map(|a| a.to_vec()),
+                duration_days: request.duration_days,
+            }
+        )
+        .await?;
+        Ok(PreparedPermit {
+            envelope: response.prepared_permit,
+            typed_data: serde_json::from_str(&response.typed_data_json).map_err(|error| {
+                ClientError::with_source(ErrorKind::Protocol, "invalid permit typed data", error)
+            })?,
         })
     }
 }

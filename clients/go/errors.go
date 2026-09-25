@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strconv"
 
-	pb "github.com/zama-ai/sdk/clients/go/gen/zama/sdk/v1alpha1"
+	pb "github.com/zama-ai/sdk/clients/go/internal/gen/zama/sdk/v1alpha1"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
