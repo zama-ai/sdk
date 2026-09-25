@@ -44,7 +44,7 @@ function main() {
   }
 
   const baseline = `.#format=git,ref=${sha}`;
-  // Buf uses exit 100 for both schema errors and compatibility findings.
+  // `buf breaking` exits 100 for both schema errors and findings, so build both schemas first.
   for (const input of [".", baseline]) {
     const build = run("buf", ["build", input]);
     if (build.status !== 0) {

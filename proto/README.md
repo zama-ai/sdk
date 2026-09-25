@@ -199,6 +199,10 @@ Go and Rust wire tests cover typed values, callback correlation, rejection and d
 
 Encryption equivalence tests compare direct SDK calls and wire calls across input types, explicit binding addresses, timeout presence, SDK failures and cancellation. Native tests use the real SDK with a synthetic relayer that returns randomized encrypted values and a fixture proof. The relayer URL path of each test context selects its fixture scenario, and the TypeScript driver asserts the SDK-side inputs, addresses and timeout presence of every recorded call. Separate canonical backend checks exercise numeric rejection errors before network access. These fixtures do not verify live cryptographic proofs.
 
+## Compatibility check
+
+On pull requests that change the schema, CI runs `buf breaking` against the base branch. Findings are reported as a warning and in the job summary without failing the check; schema or tool errors fail it. A package move shows up only as a deleted file, so diff the moved file by hand.
+
 ## Regenerate bindings
 
 Generated bindings ship with both clients. From the repository root:
