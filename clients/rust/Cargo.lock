@@ -4845,7 +4845,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "zama-sdk-sidecar"
+name = "zama-sdk"
 version = "0.1.0"
 dependencies = [
  "alloy-consensus",
@@ -4885,7 +4885,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "zama-sdk-sidecar-codegen"
+name = "zama-sdk-codegen"
 version = "0.1.0"
 dependencies = [
  "prost-build",

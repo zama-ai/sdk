@@ -2,7 +2,7 @@
 // versions:
 //   protoc-gen-ts_proto  v2.12.0
 //   protoc               unknown
-// source: zama/sdk/v1alpha1/sidecar.proto
+// source: zama/sdk/v1beta1/daemon.proto
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
@@ -21,7 +21,7 @@ import {
   type UntypedServiceImplementation,
 } from "@grpc/grpc-js";
 
-export const protobufPackage = "zama.sdk.v1alpha1";
+export const protobufPackage = "zama.sdk.v1beta1";
 
 export enum StorageMethod {
   STORAGE_METHOD_UNSPECIFIED = 0,
@@ -1072,7 +1072,7 @@ export interface NamedCredential {
   value: string;
 }
 
-/** Applied once per sidecar process; the first SDK configuration wins. */
+/** Applied once per daemon process; the first SDK configuration wins. */
 export interface ProcessRuntimeConfig {
   wasmAssetLoadMode?: string | undefined;
   moduleVersions: ModuleVersions | undefined;
@@ -12974,11 +12974,11 @@ export const EventServerMessage: MessageFns<EventServerMessage> = {
  * SDK failures retain their code and retry information in gRPC trailers.
  * Integer durations and counts are exact; omitted optional values use SDK defaults.
  */
-export type SidecarServiceService = typeof SidecarServiceService;
-export const SidecarServiceService = {
+export type DaemonServiceService = typeof DaemonServiceService;
+export const DaemonServiceService = {
   /** Reports the version of @zama-fhe/sdk executing operations in this process. */
   getInfo: {
-    path: "/zama.sdk.v1alpha1.SidecarService/GetInfo" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/GetInfo" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: GetInfoRequest): Buffer => Buffer.from(GetInfoRequest.encode(value).finish()),
@@ -12988,7 +12988,7 @@ export const SidecarServiceService = {
   },
   /** Creates an independent SDK instance; no account or signer is required for public operations. */
   createContext: {
-    path: "/zama.sdk.v1alpha1.SidecarService/CreateContext" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/CreateContext" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: CreateContextRequest): Buffer => Buffer.from(CreateContextRequest.encode(value).finish()),
@@ -12999,7 +12999,7 @@ export const SidecarServiceService = {
   },
   /** Cancels active operations and disposes this context and its callback channels. */
   closeContext: {
-    path: "/zama.sdk.v1alpha1.SidecarService/CloseContext" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/CloseContext" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: ContextRequest): Buffer => Buffer.from(ContextRequest.encode(value).finish()),
@@ -13010,7 +13010,7 @@ export const SidecarServiceService = {
   },
   /** Cancels pending operations before changing the signer account; omission disconnects it. */
   updateAccount: {
-    path: "/zama.sdk.v1alpha1.SidecarService/UpdateAccount" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/UpdateAccount" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: UpdateAccountRequest): Buffer => Buffer.from(UpdateAccountRequest.encode(value).finish()),
@@ -13021,7 +13021,7 @@ export const SidecarServiceService = {
   },
   /** Attach once per context before signing. Actions may overlap; correlate both action and operation IDs. */
   signerChannel: {
-    path: "/zama.sdk.v1alpha1.SidecarService/SignerChannel" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/SignerChannel" as const,
     requestStream: true as const,
     responseStream: true as const,
     requestSerialize: (value: SignerClientMessage): Buffer => Buffer.from(SignerClientMessage.encode(value).finish()),
@@ -13031,7 +13031,7 @@ export const SidecarServiceService = {
   },
   /** Attach once per context to serve application storage; keys and values remain opaque. */
   storageChannel: {
-    path: "/zama.sdk.v1alpha1.SidecarService/StorageChannel" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/StorageChannel" as const,
     requestStream: true as const,
     responseStream: true as const,
     requestSerialize: (value: StorageClientMessage): Buffer => Buffer.from(StorageClientMessage.encode(value).finish()),
@@ -13042,7 +13042,7 @@ export const SidecarServiceService = {
   },
   /** Attaches one event subscriber per context; deliveries keep their sequence across reattachment. */
   eventChannel: {
-    path: "/zama.sdk.v1alpha1.SidecarService/EventChannel" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/EventChannel" as const,
     requestStream: true as const,
     responseStream: true as const,
     requestSerialize: (value: EventClientMessage): Buffer => Buffer.from(EventClientMessage.encode(value).finish()),
@@ -13052,7 +13052,7 @@ export const SidecarServiceService = {
   },
   /** Calls decryption.decryptValues, including automatic permit acquisition and credential recovery. */
   decryptValues: {
-    path: "/zama.sdk.v1alpha1.SidecarService/DecryptValues" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/DecryptValues" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: DecryptValuesRequest): Buffer => Buffer.from(DecryptValuesRequest.encode(value).finish()),
@@ -13063,7 +13063,7 @@ export const SidecarServiceService = {
   },
   /** Calls decryption.delegatedDecryptValues; an omitted account uses the delegator address. */
   delegatedDecryptValues: {
-    path: "/zama.sdk.v1alpha1.SidecarService/DelegatedDecryptValues" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/DelegatedDecryptValues" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: DelegatedDecryptValuesRequest): Buffer =>
@@ -13076,7 +13076,7 @@ export const SidecarServiceService = {
   },
   /** Calls decryption.decryptPublicValues without requiring a signer. */
   decryptPublicValues: {
-    path: "/zama.sdk.v1alpha1.SidecarService/DecryptPublicValues" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/DecryptPublicValues" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: DecryptPublicValuesRequest): Buffer =>
@@ -13088,7 +13088,7 @@ export const SidecarServiceService = {
   },
   /** Calls decryption.delegatedBatchDecryptValues; per-item failures remain results, fatal SDK errors fail the RPC. */
   delegatedBatchDecryptValues: {
-    path: "/zama.sdk.v1alpha1.SidecarService/DelegatedBatchDecryptValues" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/DelegatedBatchDecryptValues" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: DelegatedBatchDecryptValuesRequest): Buffer =>
@@ -13102,7 +13102,7 @@ export const SidecarServiceService = {
   },
   /** Calls offline.prepare; the caller signs and broadcasts the returned unsigned transaction. */
   prepareTransaction: {
-    path: "/zama.sdk.v1alpha1.SidecarService/PrepareTransaction" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/PrepareTransaction" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: PrepareTransactionRequest): Buffer =>
@@ -13114,7 +13114,7 @@ export const SidecarServiceService = {
   },
   /** Calls offline.preparePermit without signing; return the opaque envelope unchanged when registering. */
   preparePermit: {
-    path: "/zama.sdk.v1alpha1.SidecarService/PreparePermit" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/PreparePermit" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: PreparePermitRequest): Buffer => Buffer.from(PreparePermitRequest.encode(value).finish()),
@@ -13125,7 +13125,7 @@ export const SidecarServiceService = {
   },
   /** Calls permits.registerPermit with the prepared envelope and signature. */
   registerPermit: {
-    path: "/zama.sdk.v1alpha1.SidecarService/RegisterPermit" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/RegisterPermit" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: RegisterPermitRequest): Buffer =>
@@ -13137,7 +13137,7 @@ export const SidecarServiceService = {
   },
   /** Calls permits.grantPermit; any wallet signing is requested on the signer channel. */
   grantPermit: {
-    path: "/zama.sdk.v1alpha1.SidecarService/GrantPermit" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/GrantPermit" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: ContractsRequest): Buffer => Buffer.from(ContractsRequest.encode(value).finish()),
@@ -13147,7 +13147,7 @@ export const SidecarServiceService = {
   },
   /** Calls permits.grantDelegationPermit for the supplied delegator and contracts. */
   grantDelegationPermit: {
-    path: "/zama.sdk.v1alpha1.SidecarService/GrantDelegationPermit" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/GrantDelegationPermit" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: DelegationContractsRequest): Buffer =>
@@ -13159,7 +13159,7 @@ export const SidecarServiceService = {
   },
   /** Calls permits.hasPermit using the SDK credential store and expiry rules. */
   hasPermit: {
-    path: "/zama.sdk.v1alpha1.SidecarService/HasPermit" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/HasPermit" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: ContractsRequest): Buffer => Buffer.from(ContractsRequest.encode(value).finish()),
@@ -13169,7 +13169,7 @@ export const SidecarServiceService = {
   },
   /** Calls permits.hasDelegationPermit for the supplied delegator and contracts. */
   hasDelegationPermit: {
-    path: "/zama.sdk.v1alpha1.SidecarService/HasDelegationPermit" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/HasDelegationPermit" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: DelegationContractsRequest): Buffer =>
@@ -13181,7 +13181,7 @@ export const SidecarServiceService = {
   },
   /** Calls permits.revokePermits; omitted contracts and an empty list retain their distinct SDK meanings. */
   revokePermits: {
-    path: "/zama.sdk.v1alpha1.SidecarService/RevokePermits" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/RevokePermits" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: RevokePermitsRequest): Buffer => Buffer.from(RevokePermitsRequest.encode(value).finish()),
@@ -13192,7 +13192,7 @@ export const SidecarServiceService = {
   },
   /** Calls permits.clear to clear locally stored permits. */
   clearPermits: {
-    path: "/zama.sdk.v1alpha1.SidecarService/ClearPermits" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/ClearPermits" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: OperationRequest): Buffer => Buffer.from(OperationRequest.encode(value).finish()),
@@ -13203,7 +13203,7 @@ export const SidecarServiceService = {
   },
   /** Calls permits.warmTransportKeyPair; signing is requested only when the SDK requires it. */
   warmTransportKeyPair: {
-    path: "/zama.sdk.v1alpha1.SidecarService/WarmTransportKeyPair" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/WarmTransportKeyPair" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: OperationRequest): Buffer => Buffer.from(OperationRequest.encode(value).finish()),
@@ -13214,7 +13214,7 @@ export const SidecarServiceService = {
   },
   /** Calls permits.warmTransportKeyPairScope for a shared credential scope. */
   warmTransportKeyPairScope: {
-    path: "/zama.sdk.v1alpha1.SidecarService/WarmTransportKeyPairScope" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/WarmTransportKeyPairScope" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: ScopeRequest): Buffer => Buffer.from(ScopeRequest.encode(value).finish()),
@@ -13226,7 +13226,7 @@ export const SidecarServiceService = {
   },
   /** Calls permits.revokeTransportKeyPair for the supplied credential scope. */
   revokeTransportKeyPair: {
-    path: "/zama.sdk.v1alpha1.SidecarService/RevokeTransportKeyPair" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/RevokeTransportKeyPair" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: ScopeRequest): Buffer => Buffer.from(ScopeRequest.encode(value).finish()),
@@ -13238,7 +13238,7 @@ export const SidecarServiceService = {
   },
   /** Calls sdk.encrypt; no wallet signing is required. */
   encrypt: {
-    path: "/zama.sdk.v1alpha1.SidecarService/Encrypt" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/Encrypt" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: EncryptRequest): Buffer => Buffer.from(EncryptRequest.encode(value).finish()),
@@ -13248,7 +13248,7 @@ export const SidecarServiceService = {
   },
   /** Calls delegations.delegateDecryption; the delegator is the signer account and the write is requested on the signer channel. */
   delegateDecryption: {
-    path: "/zama.sdk.v1alpha1.SidecarService/DelegateDecryption" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/DelegateDecryption" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: DelegateDecryptionRequest): Buffer =>
@@ -13260,7 +13260,7 @@ export const SidecarServiceService = {
   },
   /** Calls delegations.revokeDelegation for the signer account's on-chain delegation. */
   revokeDelegation: {
-    path: "/zama.sdk.v1alpha1.SidecarService/RevokeDelegation" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/RevokeDelegation" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: RevokeDelegationRequest): Buffer =>
@@ -13272,7 +13272,7 @@ export const SidecarServiceService = {
   },
   /** Calls delegations.isActive without requiring a signer. */
   isDelegationActive: {
-    path: "/zama.sdk.v1alpha1.SidecarService/IsDelegationActive" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/IsDelegationActive" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: DelegationQueryRequest): Buffer =>
@@ -13284,7 +13284,7 @@ export const SidecarServiceService = {
   },
   /** Calls delegations.getExpiry without requiring a signer. */
   getDelegationExpiry: {
-    path: "/zama.sdk.v1alpha1.SidecarService/GetDelegationExpiry" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/GetDelegationExpiry" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: DelegationQueryRequest): Buffer =>
@@ -13296,7 +13296,7 @@ export const SidecarServiceService = {
   },
   /** Calls delegations.getStatus without requiring a signer. */
   getDelegationStatus: {
-    path: "/zama.sdk.v1alpha1.SidecarService/GetDelegationStatus" as const,
+    path: "/zama.sdk.v1beta1.DaemonService/GetDelegationStatus" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: DelegationQueryRequest): Buffer =>
@@ -13308,7 +13308,7 @@ export const SidecarServiceService = {
   },
 } as const;
 
-export interface SidecarServiceServer extends UntypedServiceImplementation {
+export interface DaemonServiceServer extends UntypedServiceImplementation {
   /** Reports the version of @zama-fhe/sdk executing operations in this process. */
   getInfo: handleUnaryCall<GetInfoRequest, GetInfoResponse>;
   /** Creates an independent SDK instance; no account or signer is required for public operations. */
@@ -13369,7 +13369,7 @@ export interface SidecarServiceServer extends UntypedServiceImplementation {
   getDelegationStatus: handleUnaryCall<DelegationQueryRequest, GetDelegationStatusResponse>;
 }
 
-export interface SidecarServiceClient extends Client {
+export interface DaemonServiceClient extends Client {
   /** Reports the version of @zama-fhe/sdk executing operations in this process. */
   getInfo(
     request: GetInfoRequest,
@@ -13809,12 +13809,12 @@ export interface SidecarServiceClient extends Client {
   ): ClientUnaryCall;
 }
 
-export const SidecarServiceClient = makeGenericClientConstructor(
-  SidecarServiceService,
-  "zama.sdk.v1alpha1.SidecarService",
+export const DaemonServiceClient = makeGenericClientConstructor(
+  DaemonServiceService,
+  "zama.sdk.v1beta1.DaemonService",
 ) as unknown as {
-  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): SidecarServiceClient;
-  service: typeof SidecarServiceService;
+  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): DaemonServiceClient;
+  service: typeof DaemonServiceService;
   serviceName: string;
 };
 

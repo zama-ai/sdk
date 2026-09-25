@@ -629,7 +629,7 @@ pub struct NamedCredential {
     #[prost(string, tag = "2")]
     pub value: ::prost::alloc::string::String,
 }
-/// Applied once per sidecar process; the first SDK configuration wins.
+/// Applied once per daemon process; the first SDK configuration wins.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ProcessRuntimeConfig {
     #[prost(string, optional, tag = "1")]
@@ -1620,7 +1620,7 @@ impl ProgressKind {
     }
 }
 /// Generated client implementations.
-pub mod sidecar_service_client {
+pub mod daemon_service_client {
     #![allow(
         unused_variables,
         dead_code,
@@ -1633,10 +1633,10 @@ pub mod sidecar_service_client {
     /// SDK failures retain their code and retry information in gRPC trailers.
     /// Integer durations and counts are exact; omitted optional values use SDK defaults.
     #[derive(Debug, Clone)]
-    pub struct SidecarServiceClient<T> {
+    pub struct DaemonServiceClient<T> {
         inner: tonic::client::Grpc<T>,
     }
-    impl SidecarServiceClient<tonic::transport::Channel> {
+    impl DaemonServiceClient<tonic::transport::Channel> {
         /// Attempt to create a new client by connecting to a given endpoint.
         pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
         where
@@ -1647,7 +1647,7 @@ pub mod sidecar_service_client {
             Ok(Self::new(conn))
         }
     }
-    impl<T> SidecarServiceClient<T>
+    impl<T> DaemonServiceClient<T>
     where
         T: tonic::client::GrpcService<tonic::body::Body>,
         T::Error: Into<StdError>,
@@ -1665,7 +1665,7 @@ pub mod sidecar_service_client {
         pub fn with_interceptor<F>(
             inner: T,
             interceptor: F,
-        ) -> SidecarServiceClient<InterceptedService<T, F>>
+        ) -> DaemonServiceClient<InterceptedService<T, F>>
         where
             F: tonic::service::Interceptor,
             T::ResponseBody: Default,
@@ -1679,7 +1679,7 @@ pub mod sidecar_service_client {
                 http::Request<tonic::body::Body>,
             >>::Error: Into<StdError> + std::marker::Send + std::marker::Sync,
         {
-            SidecarServiceClient::new(InterceptedService::new(inner, interceptor))
+            DaemonServiceClient::new(InterceptedService::new(inner, interceptor))
         }
         /// Compress requests with the given encoding.
         ///
@@ -1730,11 +1730,11 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/GetInfo",
+                "/zama.sdk.v1beta1.DaemonService/GetInfo",
             );
             let mut req = request.into_request();
             req.extensions_mut()
-                .insert(GrpcMethod::new("zama.sdk.v1alpha1.SidecarService", "GetInfo"));
+                .insert(GrpcMethod::new("zama.sdk.v1beta1.DaemonService", "GetInfo"));
             self.inner.unary(req, path, codec).await
         }
         /// Creates an independent SDK instance; no account or signer is required for public operations.
@@ -1755,12 +1755,12 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/CreateContext",
+                "/zama.sdk.v1beta1.DaemonService/CreateContext",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new("zama.sdk.v1alpha1.SidecarService", "CreateContext"),
+                    GrpcMethod::new("zama.sdk.v1beta1.DaemonService", "CreateContext"),
                 );
             self.inner.unary(req, path, codec).await
         }
@@ -1782,12 +1782,12 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/CloseContext",
+                "/zama.sdk.v1beta1.DaemonService/CloseContext",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new("zama.sdk.v1alpha1.SidecarService", "CloseContext"),
+                    GrpcMethod::new("zama.sdk.v1beta1.DaemonService", "CloseContext"),
                 );
             self.inner.unary(req, path, codec).await
         }
@@ -1809,12 +1809,12 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/UpdateAccount",
+                "/zama.sdk.v1beta1.DaemonService/UpdateAccount",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new("zama.sdk.v1alpha1.SidecarService", "UpdateAccount"),
+                    GrpcMethod::new("zama.sdk.v1beta1.DaemonService", "UpdateAccount"),
                 );
             self.inner.unary(req, path, codec).await
         }
@@ -1838,12 +1838,12 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/SignerChannel",
+                "/zama.sdk.v1beta1.DaemonService/SignerChannel",
             );
             let mut req = request.into_streaming_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new("zama.sdk.v1alpha1.SidecarService", "SignerChannel"),
+                    GrpcMethod::new("zama.sdk.v1beta1.DaemonService", "SignerChannel"),
                 );
             self.inner.streaming(req, path, codec).await
         }
@@ -1867,12 +1867,12 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/StorageChannel",
+                "/zama.sdk.v1beta1.DaemonService/StorageChannel",
             );
             let mut req = request.into_streaming_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new("zama.sdk.v1alpha1.SidecarService", "StorageChannel"),
+                    GrpcMethod::new("zama.sdk.v1beta1.DaemonService", "StorageChannel"),
                 );
             self.inner.streaming(req, path, codec).await
         }
@@ -1896,12 +1896,12 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/EventChannel",
+                "/zama.sdk.v1beta1.DaemonService/EventChannel",
             );
             let mut req = request.into_streaming_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new("zama.sdk.v1alpha1.SidecarService", "EventChannel"),
+                    GrpcMethod::new("zama.sdk.v1beta1.DaemonService", "EventChannel"),
                 );
             self.inner.streaming(req, path, codec).await
         }
@@ -1923,12 +1923,12 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/DecryptValues",
+                "/zama.sdk.v1beta1.DaemonService/DecryptValues",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new("zama.sdk.v1alpha1.SidecarService", "DecryptValues"),
+                    GrpcMethod::new("zama.sdk.v1beta1.DaemonService", "DecryptValues"),
                 );
             self.inner.unary(req, path, codec).await
         }
@@ -1950,13 +1950,13 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/DelegatedDecryptValues",
+                "/zama.sdk.v1beta1.DaemonService/DelegatedDecryptValues",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
-                        "zama.sdk.v1alpha1.SidecarService",
+                        "zama.sdk.v1beta1.DaemonService",
                         "DelegatedDecryptValues",
                     ),
                 );
@@ -1980,13 +1980,13 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/DecryptPublicValues",
+                "/zama.sdk.v1beta1.DaemonService/DecryptPublicValues",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
-                        "zama.sdk.v1alpha1.SidecarService",
+                        "zama.sdk.v1beta1.DaemonService",
                         "DecryptPublicValues",
                     ),
                 );
@@ -2010,13 +2010,13 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/DelegatedBatchDecryptValues",
+                "/zama.sdk.v1beta1.DaemonService/DelegatedBatchDecryptValues",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
-                        "zama.sdk.v1alpha1.SidecarService",
+                        "zama.sdk.v1beta1.DaemonService",
                         "DelegatedBatchDecryptValues",
                     ),
                 );
@@ -2040,13 +2040,13 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/PrepareTransaction",
+                "/zama.sdk.v1beta1.DaemonService/PrepareTransaction",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
-                        "zama.sdk.v1alpha1.SidecarService",
+                        "zama.sdk.v1beta1.DaemonService",
                         "PrepareTransaction",
                     ),
                 );
@@ -2070,12 +2070,12 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/PreparePermit",
+                "/zama.sdk.v1beta1.DaemonService/PreparePermit",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new("zama.sdk.v1alpha1.SidecarService", "PreparePermit"),
+                    GrpcMethod::new("zama.sdk.v1beta1.DaemonService", "PreparePermit"),
                 );
             self.inner.unary(req, path, codec).await
         }
@@ -2097,12 +2097,12 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/RegisterPermit",
+                "/zama.sdk.v1beta1.DaemonService/RegisterPermit",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new("zama.sdk.v1alpha1.SidecarService", "RegisterPermit"),
+                    GrpcMethod::new("zama.sdk.v1beta1.DaemonService", "RegisterPermit"),
                 );
             self.inner.unary(req, path, codec).await
         }
@@ -2124,12 +2124,12 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/GrantPermit",
+                "/zama.sdk.v1beta1.DaemonService/GrantPermit",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new("zama.sdk.v1alpha1.SidecarService", "GrantPermit"),
+                    GrpcMethod::new("zama.sdk.v1beta1.DaemonService", "GrantPermit"),
                 );
             self.inner.unary(req, path, codec).await
         }
@@ -2151,13 +2151,13 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/GrantDelegationPermit",
+                "/zama.sdk.v1beta1.DaemonService/GrantDelegationPermit",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
-                        "zama.sdk.v1alpha1.SidecarService",
+                        "zama.sdk.v1beta1.DaemonService",
                         "GrantDelegationPermit",
                     ),
                 );
@@ -2181,13 +2181,11 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/HasPermit",
+                "/zama.sdk.v1beta1.DaemonService/HasPermit",
             );
             let mut req = request.into_request();
             req.extensions_mut()
-                .insert(
-                    GrpcMethod::new("zama.sdk.v1alpha1.SidecarService", "HasPermit"),
-                );
+                .insert(GrpcMethod::new("zama.sdk.v1beta1.DaemonService", "HasPermit"));
             self.inner.unary(req, path, codec).await
         }
         /// Calls permits.hasDelegationPermit for the supplied delegator and contracts.
@@ -2208,13 +2206,13 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/HasDelegationPermit",
+                "/zama.sdk.v1beta1.DaemonService/HasDelegationPermit",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
-                        "zama.sdk.v1alpha1.SidecarService",
+                        "zama.sdk.v1beta1.DaemonService",
                         "HasDelegationPermit",
                     ),
                 );
@@ -2238,12 +2236,12 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/RevokePermits",
+                "/zama.sdk.v1beta1.DaemonService/RevokePermits",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new("zama.sdk.v1alpha1.SidecarService", "RevokePermits"),
+                    GrpcMethod::new("zama.sdk.v1beta1.DaemonService", "RevokePermits"),
                 );
             self.inner.unary(req, path, codec).await
         }
@@ -2265,12 +2263,12 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/ClearPermits",
+                "/zama.sdk.v1beta1.DaemonService/ClearPermits",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new("zama.sdk.v1alpha1.SidecarService", "ClearPermits"),
+                    GrpcMethod::new("zama.sdk.v1beta1.DaemonService", "ClearPermits"),
                 );
             self.inner.unary(req, path, codec).await
         }
@@ -2292,13 +2290,13 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/WarmTransportKeyPair",
+                "/zama.sdk.v1beta1.DaemonService/WarmTransportKeyPair",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
-                        "zama.sdk.v1alpha1.SidecarService",
+                        "zama.sdk.v1beta1.DaemonService",
                         "WarmTransportKeyPair",
                     ),
                 );
@@ -2322,13 +2320,13 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/WarmTransportKeyPairScope",
+                "/zama.sdk.v1beta1.DaemonService/WarmTransportKeyPairScope",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
-                        "zama.sdk.v1alpha1.SidecarService",
+                        "zama.sdk.v1beta1.DaemonService",
                         "WarmTransportKeyPairScope",
                     ),
                 );
@@ -2352,13 +2350,13 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/RevokeTransportKeyPair",
+                "/zama.sdk.v1beta1.DaemonService/RevokeTransportKeyPair",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
-                        "zama.sdk.v1alpha1.SidecarService",
+                        "zama.sdk.v1beta1.DaemonService",
                         "RevokeTransportKeyPair",
                     ),
                 );
@@ -2382,11 +2380,11 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/Encrypt",
+                "/zama.sdk.v1beta1.DaemonService/Encrypt",
             );
             let mut req = request.into_request();
             req.extensions_mut()
-                .insert(GrpcMethod::new("zama.sdk.v1alpha1.SidecarService", "Encrypt"));
+                .insert(GrpcMethod::new("zama.sdk.v1beta1.DaemonService", "Encrypt"));
             self.inner.unary(req, path, codec).await
         }
         /// Calls delegations.delegateDecryption; the delegator is the signer account and the write is requested on the signer channel.
@@ -2407,13 +2405,13 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/DelegateDecryption",
+                "/zama.sdk.v1beta1.DaemonService/DelegateDecryption",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
-                        "zama.sdk.v1alpha1.SidecarService",
+                        "zama.sdk.v1beta1.DaemonService",
                         "DelegateDecryption",
                     ),
                 );
@@ -2437,15 +2435,12 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/RevokeDelegation",
+                "/zama.sdk.v1beta1.DaemonService/RevokeDelegation",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new(
-                        "zama.sdk.v1alpha1.SidecarService",
-                        "RevokeDelegation",
-                    ),
+                    GrpcMethod::new("zama.sdk.v1beta1.DaemonService", "RevokeDelegation"),
                 );
             self.inner.unary(req, path, codec).await
         }
@@ -2467,13 +2462,13 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/IsDelegationActive",
+                "/zama.sdk.v1beta1.DaemonService/IsDelegationActive",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
-                        "zama.sdk.v1alpha1.SidecarService",
+                        "zama.sdk.v1beta1.DaemonService",
                         "IsDelegationActive",
                     ),
                 );
@@ -2497,13 +2492,13 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/GetDelegationExpiry",
+                "/zama.sdk.v1beta1.DaemonService/GetDelegationExpiry",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
-                        "zama.sdk.v1alpha1.SidecarService",
+                        "zama.sdk.v1beta1.DaemonService",
                         "GetDelegationExpiry",
                     ),
                 );
@@ -2527,13 +2522,13 @@ pub mod sidecar_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/zama.sdk.v1alpha1.SidecarService/GetDelegationStatus",
+                "/zama.sdk.v1beta1.DaemonService/GetDelegationStatus",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
-                        "zama.sdk.v1alpha1.SidecarService",
+                        "zama.sdk.v1beta1.DaemonService",
                         "GetDelegationStatus",
                     ),
                 );

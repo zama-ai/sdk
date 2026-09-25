@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.2
 // - protoc             (unknown)
-// source: zama/sdk/v1alpha1/sidecar.proto
+// source: zama/sdk/v1beta1/daemon.proto
 
-package sdkv1alpha1
+package sdkv1beta1
 
 import (
 	context "context"
@@ -19,44 +19,44 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SidecarService_GetInfo_FullMethodName                     = "/zama.sdk.v1alpha1.SidecarService/GetInfo"
-	SidecarService_CreateContext_FullMethodName               = "/zama.sdk.v1alpha1.SidecarService/CreateContext"
-	SidecarService_CloseContext_FullMethodName                = "/zama.sdk.v1alpha1.SidecarService/CloseContext"
-	SidecarService_UpdateAccount_FullMethodName               = "/zama.sdk.v1alpha1.SidecarService/UpdateAccount"
-	SidecarService_SignerChannel_FullMethodName               = "/zama.sdk.v1alpha1.SidecarService/SignerChannel"
-	SidecarService_StorageChannel_FullMethodName              = "/zama.sdk.v1alpha1.SidecarService/StorageChannel"
-	SidecarService_EventChannel_FullMethodName                = "/zama.sdk.v1alpha1.SidecarService/EventChannel"
-	SidecarService_DecryptValues_FullMethodName               = "/zama.sdk.v1alpha1.SidecarService/DecryptValues"
-	SidecarService_DelegatedDecryptValues_FullMethodName      = "/zama.sdk.v1alpha1.SidecarService/DelegatedDecryptValues"
-	SidecarService_DecryptPublicValues_FullMethodName         = "/zama.sdk.v1alpha1.SidecarService/DecryptPublicValues"
-	SidecarService_DelegatedBatchDecryptValues_FullMethodName = "/zama.sdk.v1alpha1.SidecarService/DelegatedBatchDecryptValues"
-	SidecarService_PrepareTransaction_FullMethodName          = "/zama.sdk.v1alpha1.SidecarService/PrepareTransaction"
-	SidecarService_PreparePermit_FullMethodName               = "/zama.sdk.v1alpha1.SidecarService/PreparePermit"
-	SidecarService_RegisterPermit_FullMethodName              = "/zama.sdk.v1alpha1.SidecarService/RegisterPermit"
-	SidecarService_GrantPermit_FullMethodName                 = "/zama.sdk.v1alpha1.SidecarService/GrantPermit"
-	SidecarService_GrantDelegationPermit_FullMethodName       = "/zama.sdk.v1alpha1.SidecarService/GrantDelegationPermit"
-	SidecarService_HasPermit_FullMethodName                   = "/zama.sdk.v1alpha1.SidecarService/HasPermit"
-	SidecarService_HasDelegationPermit_FullMethodName         = "/zama.sdk.v1alpha1.SidecarService/HasDelegationPermit"
-	SidecarService_RevokePermits_FullMethodName               = "/zama.sdk.v1alpha1.SidecarService/RevokePermits"
-	SidecarService_ClearPermits_FullMethodName                = "/zama.sdk.v1alpha1.SidecarService/ClearPermits"
-	SidecarService_WarmTransportKeyPair_FullMethodName        = "/zama.sdk.v1alpha1.SidecarService/WarmTransportKeyPair"
-	SidecarService_WarmTransportKeyPairScope_FullMethodName   = "/zama.sdk.v1alpha1.SidecarService/WarmTransportKeyPairScope"
-	SidecarService_RevokeTransportKeyPair_FullMethodName      = "/zama.sdk.v1alpha1.SidecarService/RevokeTransportKeyPair"
-	SidecarService_Encrypt_FullMethodName                     = "/zama.sdk.v1alpha1.SidecarService/Encrypt"
-	SidecarService_DelegateDecryption_FullMethodName          = "/zama.sdk.v1alpha1.SidecarService/DelegateDecryption"
-	SidecarService_RevokeDelegation_FullMethodName            = "/zama.sdk.v1alpha1.SidecarService/RevokeDelegation"
-	SidecarService_IsDelegationActive_FullMethodName          = "/zama.sdk.v1alpha1.SidecarService/IsDelegationActive"
-	SidecarService_GetDelegationExpiry_FullMethodName         = "/zama.sdk.v1alpha1.SidecarService/GetDelegationExpiry"
-	SidecarService_GetDelegationStatus_FullMethodName         = "/zama.sdk.v1alpha1.SidecarService/GetDelegationStatus"
+	DaemonService_GetInfo_FullMethodName                     = "/zama.sdk.v1beta1.DaemonService/GetInfo"
+	DaemonService_CreateContext_FullMethodName               = "/zama.sdk.v1beta1.DaemonService/CreateContext"
+	DaemonService_CloseContext_FullMethodName                = "/zama.sdk.v1beta1.DaemonService/CloseContext"
+	DaemonService_UpdateAccount_FullMethodName               = "/zama.sdk.v1beta1.DaemonService/UpdateAccount"
+	DaemonService_SignerChannel_FullMethodName               = "/zama.sdk.v1beta1.DaemonService/SignerChannel"
+	DaemonService_StorageChannel_FullMethodName              = "/zama.sdk.v1beta1.DaemonService/StorageChannel"
+	DaemonService_EventChannel_FullMethodName                = "/zama.sdk.v1beta1.DaemonService/EventChannel"
+	DaemonService_DecryptValues_FullMethodName               = "/zama.sdk.v1beta1.DaemonService/DecryptValues"
+	DaemonService_DelegatedDecryptValues_FullMethodName      = "/zama.sdk.v1beta1.DaemonService/DelegatedDecryptValues"
+	DaemonService_DecryptPublicValues_FullMethodName         = "/zama.sdk.v1beta1.DaemonService/DecryptPublicValues"
+	DaemonService_DelegatedBatchDecryptValues_FullMethodName = "/zama.sdk.v1beta1.DaemonService/DelegatedBatchDecryptValues"
+	DaemonService_PrepareTransaction_FullMethodName          = "/zama.sdk.v1beta1.DaemonService/PrepareTransaction"
+	DaemonService_PreparePermit_FullMethodName               = "/zama.sdk.v1beta1.DaemonService/PreparePermit"
+	DaemonService_RegisterPermit_FullMethodName              = "/zama.sdk.v1beta1.DaemonService/RegisterPermit"
+	DaemonService_GrantPermit_FullMethodName                 = "/zama.sdk.v1beta1.DaemonService/GrantPermit"
+	DaemonService_GrantDelegationPermit_FullMethodName       = "/zama.sdk.v1beta1.DaemonService/GrantDelegationPermit"
+	DaemonService_HasPermit_FullMethodName                   = "/zama.sdk.v1beta1.DaemonService/HasPermit"
+	DaemonService_HasDelegationPermit_FullMethodName         = "/zama.sdk.v1beta1.DaemonService/HasDelegationPermit"
+	DaemonService_RevokePermits_FullMethodName               = "/zama.sdk.v1beta1.DaemonService/RevokePermits"
+	DaemonService_ClearPermits_FullMethodName                = "/zama.sdk.v1beta1.DaemonService/ClearPermits"
+	DaemonService_WarmTransportKeyPair_FullMethodName        = "/zama.sdk.v1beta1.DaemonService/WarmTransportKeyPair"
+	DaemonService_WarmTransportKeyPairScope_FullMethodName   = "/zama.sdk.v1beta1.DaemonService/WarmTransportKeyPairScope"
+	DaemonService_RevokeTransportKeyPair_FullMethodName      = "/zama.sdk.v1beta1.DaemonService/RevokeTransportKeyPair"
+	DaemonService_Encrypt_FullMethodName                     = "/zama.sdk.v1beta1.DaemonService/Encrypt"
+	DaemonService_DelegateDecryption_FullMethodName          = "/zama.sdk.v1beta1.DaemonService/DelegateDecryption"
+	DaemonService_RevokeDelegation_FullMethodName            = "/zama.sdk.v1beta1.DaemonService/RevokeDelegation"
+	DaemonService_IsDelegationActive_FullMethodName          = "/zama.sdk.v1beta1.DaemonService/IsDelegationActive"
+	DaemonService_GetDelegationExpiry_FullMethodName         = "/zama.sdk.v1beta1.DaemonService/GetDelegationExpiry"
+	DaemonService_GetDelegationStatus_FullMethodName         = "/zama.sdk.v1beta1.DaemonService/GetDelegationStatus"
 )
 
-// SidecarServiceClient is the client API for SidecarService service.
+// DaemonServiceClient is the client API for DaemonService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
 // SDK failures retain their code and retry information in gRPC trailers.
 // Integer durations and counts are exact; omitted optional values use SDK defaults.
-type SidecarServiceClient interface {
+type DaemonServiceClient interface {
 	// Reports the version of @zama-fhe/sdk executing operations in this process.
 	GetInfo(ctx context.Context, in *GetInfoRequest, opts ...grpc.CallOption) (*GetInfoResponse, error)
 	// Creates an independent SDK instance; no account or signer is required for public operations.
@@ -117,57 +117,57 @@ type SidecarServiceClient interface {
 	GetDelegationStatus(ctx context.Context, in *DelegationQueryRequest, opts ...grpc.CallOption) (*GetDelegationStatusResponse, error)
 }
 
-type sidecarServiceClient struct {
+type daemonServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewSidecarServiceClient(cc grpc.ClientConnInterface) SidecarServiceClient {
-	return &sidecarServiceClient{cc}
+func NewDaemonServiceClient(cc grpc.ClientConnInterface) DaemonServiceClient {
+	return &daemonServiceClient{cc}
 }
 
-func (c *sidecarServiceClient) GetInfo(ctx context.Context, in *GetInfoRequest, opts ...grpc.CallOption) (*GetInfoResponse, error) {
+func (c *daemonServiceClient) GetInfo(ctx context.Context, in *GetInfoRequest, opts ...grpc.CallOption) (*GetInfoResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetInfoResponse)
-	err := c.cc.Invoke(ctx, SidecarService_GetInfo_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_GetInfo_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) CreateContext(ctx context.Context, in *CreateContextRequest, opts ...grpc.CallOption) (*CreateContextResponse, error) {
+func (c *daemonServiceClient) CreateContext(ctx context.Context, in *CreateContextRequest, opts ...grpc.CallOption) (*CreateContextResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateContextResponse)
-	err := c.cc.Invoke(ctx, SidecarService_CreateContext_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_CreateContext_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) CloseContext(ctx context.Context, in *ContextRequest, opts ...grpc.CallOption) (*CloseContextResponse, error) {
+func (c *daemonServiceClient) CloseContext(ctx context.Context, in *ContextRequest, opts ...grpc.CallOption) (*CloseContextResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CloseContextResponse)
-	err := c.cc.Invoke(ctx, SidecarService_CloseContext_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_CloseContext_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) UpdateAccount(ctx context.Context, in *UpdateAccountRequest, opts ...grpc.CallOption) (*UpdateAccountResponse, error) {
+func (c *daemonServiceClient) UpdateAccount(ctx context.Context, in *UpdateAccountRequest, opts ...grpc.CallOption) (*UpdateAccountResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateAccountResponse)
-	err := c.cc.Invoke(ctx, SidecarService_UpdateAccount_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_UpdateAccount_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) SignerChannel(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[SignerClientMessage, SignerServerMessage], error) {
+func (c *daemonServiceClient) SignerChannel(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[SignerClientMessage, SignerServerMessage], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &SidecarService_ServiceDesc.Streams[0], SidecarService_SignerChannel_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &DaemonService_ServiceDesc.Streams[0], DaemonService_SignerChannel_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -176,11 +176,11 @@ func (c *sidecarServiceClient) SignerChannel(ctx context.Context, opts ...grpc.C
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type SidecarService_SignerChannelClient = grpc.BidiStreamingClient[SignerClientMessage, SignerServerMessage]
+type DaemonService_SignerChannelClient = grpc.BidiStreamingClient[SignerClientMessage, SignerServerMessage]
 
-func (c *sidecarServiceClient) StorageChannel(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[StorageClientMessage, StorageServerMessage], error) {
+func (c *daemonServiceClient) StorageChannel(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[StorageClientMessage, StorageServerMessage], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &SidecarService_ServiceDesc.Streams[1], SidecarService_StorageChannel_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &DaemonService_ServiceDesc.Streams[1], DaemonService_StorageChannel_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -189,11 +189,11 @@ func (c *sidecarServiceClient) StorageChannel(ctx context.Context, opts ...grpc.
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type SidecarService_StorageChannelClient = grpc.BidiStreamingClient[StorageClientMessage, StorageServerMessage]
+type DaemonService_StorageChannelClient = grpc.BidiStreamingClient[StorageClientMessage, StorageServerMessage]
 
-func (c *sidecarServiceClient) EventChannel(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[EventClientMessage, EventServerMessage], error) {
+func (c *daemonServiceClient) EventChannel(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[EventClientMessage, EventServerMessage], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &SidecarService_ServiceDesc.Streams[2], SidecarService_EventChannel_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &DaemonService_ServiceDesc.Streams[2], DaemonService_EventChannel_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -202,235 +202,235 @@ func (c *sidecarServiceClient) EventChannel(ctx context.Context, opts ...grpc.Ca
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type SidecarService_EventChannelClient = grpc.BidiStreamingClient[EventClientMessage, EventServerMessage]
+type DaemonService_EventChannelClient = grpc.BidiStreamingClient[EventClientMessage, EventServerMessage]
 
-func (c *sidecarServiceClient) DecryptValues(ctx context.Context, in *DecryptValuesRequest, opts ...grpc.CallOption) (*DecryptValuesResponse, error) {
+func (c *daemonServiceClient) DecryptValues(ctx context.Context, in *DecryptValuesRequest, opts ...grpc.CallOption) (*DecryptValuesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DecryptValuesResponse)
-	err := c.cc.Invoke(ctx, SidecarService_DecryptValues_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_DecryptValues_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) DelegatedDecryptValues(ctx context.Context, in *DelegatedDecryptValuesRequest, opts ...grpc.CallOption) (*DelegatedDecryptValuesResponse, error) {
+func (c *daemonServiceClient) DelegatedDecryptValues(ctx context.Context, in *DelegatedDecryptValuesRequest, opts ...grpc.CallOption) (*DelegatedDecryptValuesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DelegatedDecryptValuesResponse)
-	err := c.cc.Invoke(ctx, SidecarService_DelegatedDecryptValues_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_DelegatedDecryptValues_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) DecryptPublicValues(ctx context.Context, in *DecryptPublicValuesRequest, opts ...grpc.CallOption) (*DecryptPublicValuesResponse, error) {
+func (c *daemonServiceClient) DecryptPublicValues(ctx context.Context, in *DecryptPublicValuesRequest, opts ...grpc.CallOption) (*DecryptPublicValuesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DecryptPublicValuesResponse)
-	err := c.cc.Invoke(ctx, SidecarService_DecryptPublicValues_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_DecryptPublicValues_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) DelegatedBatchDecryptValues(ctx context.Context, in *DelegatedBatchDecryptValuesRequest, opts ...grpc.CallOption) (*DelegatedBatchDecryptValuesResponse, error) {
+func (c *daemonServiceClient) DelegatedBatchDecryptValues(ctx context.Context, in *DelegatedBatchDecryptValuesRequest, opts ...grpc.CallOption) (*DelegatedBatchDecryptValuesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DelegatedBatchDecryptValuesResponse)
-	err := c.cc.Invoke(ctx, SidecarService_DelegatedBatchDecryptValues_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_DelegatedBatchDecryptValues_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) PrepareTransaction(ctx context.Context, in *PrepareTransactionRequest, opts ...grpc.CallOption) (*PrepareTransactionResponse, error) {
+func (c *daemonServiceClient) PrepareTransaction(ctx context.Context, in *PrepareTransactionRequest, opts ...grpc.CallOption) (*PrepareTransactionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PrepareTransactionResponse)
-	err := c.cc.Invoke(ctx, SidecarService_PrepareTransaction_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_PrepareTransaction_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) PreparePermit(ctx context.Context, in *PreparePermitRequest, opts ...grpc.CallOption) (*PreparePermitResponse, error) {
+func (c *daemonServiceClient) PreparePermit(ctx context.Context, in *PreparePermitRequest, opts ...grpc.CallOption) (*PreparePermitResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PreparePermitResponse)
-	err := c.cc.Invoke(ctx, SidecarService_PreparePermit_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_PreparePermit_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) RegisterPermit(ctx context.Context, in *RegisterPermitRequest, opts ...grpc.CallOption) (*RegisterPermitResponse, error) {
+func (c *daemonServiceClient) RegisterPermit(ctx context.Context, in *RegisterPermitRequest, opts ...grpc.CallOption) (*RegisterPermitResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RegisterPermitResponse)
-	err := c.cc.Invoke(ctx, SidecarService_RegisterPermit_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_RegisterPermit_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) GrantPermit(ctx context.Context, in *ContractsRequest, opts ...grpc.CallOption) (*GrantPermitResponse, error) {
+func (c *daemonServiceClient) GrantPermit(ctx context.Context, in *ContractsRequest, opts ...grpc.CallOption) (*GrantPermitResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GrantPermitResponse)
-	err := c.cc.Invoke(ctx, SidecarService_GrantPermit_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_GrantPermit_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) GrantDelegationPermit(ctx context.Context, in *DelegationContractsRequest, opts ...grpc.CallOption) (*GrantDelegationPermitResponse, error) {
+func (c *daemonServiceClient) GrantDelegationPermit(ctx context.Context, in *DelegationContractsRequest, opts ...grpc.CallOption) (*GrantDelegationPermitResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GrantDelegationPermitResponse)
-	err := c.cc.Invoke(ctx, SidecarService_GrantDelegationPermit_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_GrantDelegationPermit_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) HasPermit(ctx context.Context, in *ContractsRequest, opts ...grpc.CallOption) (*HasPermitResponse, error) {
+func (c *daemonServiceClient) HasPermit(ctx context.Context, in *ContractsRequest, opts ...grpc.CallOption) (*HasPermitResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(HasPermitResponse)
-	err := c.cc.Invoke(ctx, SidecarService_HasPermit_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_HasPermit_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) HasDelegationPermit(ctx context.Context, in *DelegationContractsRequest, opts ...grpc.CallOption) (*HasDelegationPermitResponse, error) {
+func (c *daemonServiceClient) HasDelegationPermit(ctx context.Context, in *DelegationContractsRequest, opts ...grpc.CallOption) (*HasDelegationPermitResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(HasDelegationPermitResponse)
-	err := c.cc.Invoke(ctx, SidecarService_HasDelegationPermit_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_HasDelegationPermit_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) RevokePermits(ctx context.Context, in *RevokePermitsRequest, opts ...grpc.CallOption) (*RevokePermitsResponse, error) {
+func (c *daemonServiceClient) RevokePermits(ctx context.Context, in *RevokePermitsRequest, opts ...grpc.CallOption) (*RevokePermitsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RevokePermitsResponse)
-	err := c.cc.Invoke(ctx, SidecarService_RevokePermits_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_RevokePermits_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) ClearPermits(ctx context.Context, in *OperationRequest, opts ...grpc.CallOption) (*ClearPermitsResponse, error) {
+func (c *daemonServiceClient) ClearPermits(ctx context.Context, in *OperationRequest, opts ...grpc.CallOption) (*ClearPermitsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ClearPermitsResponse)
-	err := c.cc.Invoke(ctx, SidecarService_ClearPermits_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_ClearPermits_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) WarmTransportKeyPair(ctx context.Context, in *OperationRequest, opts ...grpc.CallOption) (*WarmTransportKeyPairResponse, error) {
+func (c *daemonServiceClient) WarmTransportKeyPair(ctx context.Context, in *OperationRequest, opts ...grpc.CallOption) (*WarmTransportKeyPairResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(WarmTransportKeyPairResponse)
-	err := c.cc.Invoke(ctx, SidecarService_WarmTransportKeyPair_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_WarmTransportKeyPair_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) WarmTransportKeyPairScope(ctx context.Context, in *ScopeRequest, opts ...grpc.CallOption) (*WarmTransportKeyPairScopeResponse, error) {
+func (c *daemonServiceClient) WarmTransportKeyPairScope(ctx context.Context, in *ScopeRequest, opts ...grpc.CallOption) (*WarmTransportKeyPairScopeResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(WarmTransportKeyPairScopeResponse)
-	err := c.cc.Invoke(ctx, SidecarService_WarmTransportKeyPairScope_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_WarmTransportKeyPairScope_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) RevokeTransportKeyPair(ctx context.Context, in *ScopeRequest, opts ...grpc.CallOption) (*RevokeTransportKeyPairResponse, error) {
+func (c *daemonServiceClient) RevokeTransportKeyPair(ctx context.Context, in *ScopeRequest, opts ...grpc.CallOption) (*RevokeTransportKeyPairResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RevokeTransportKeyPairResponse)
-	err := c.cc.Invoke(ctx, SidecarService_RevokeTransportKeyPair_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_RevokeTransportKeyPair_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) Encrypt(ctx context.Context, in *EncryptRequest, opts ...grpc.CallOption) (*EncryptResponse, error) {
+func (c *daemonServiceClient) Encrypt(ctx context.Context, in *EncryptRequest, opts ...grpc.CallOption) (*EncryptResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(EncryptResponse)
-	err := c.cc.Invoke(ctx, SidecarService_Encrypt_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_Encrypt_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) DelegateDecryption(ctx context.Context, in *DelegateDecryptionRequest, opts ...grpc.CallOption) (*DelegateDecryptionResponse, error) {
+func (c *daemonServiceClient) DelegateDecryption(ctx context.Context, in *DelegateDecryptionRequest, opts ...grpc.CallOption) (*DelegateDecryptionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DelegateDecryptionResponse)
-	err := c.cc.Invoke(ctx, SidecarService_DelegateDecryption_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_DelegateDecryption_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) RevokeDelegation(ctx context.Context, in *RevokeDelegationRequest, opts ...grpc.CallOption) (*RevokeDelegationResponse, error) {
+func (c *daemonServiceClient) RevokeDelegation(ctx context.Context, in *RevokeDelegationRequest, opts ...grpc.CallOption) (*RevokeDelegationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RevokeDelegationResponse)
-	err := c.cc.Invoke(ctx, SidecarService_RevokeDelegation_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_RevokeDelegation_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) IsDelegationActive(ctx context.Context, in *DelegationQueryRequest, opts ...grpc.CallOption) (*IsDelegationActiveResponse, error) {
+func (c *daemonServiceClient) IsDelegationActive(ctx context.Context, in *DelegationQueryRequest, opts ...grpc.CallOption) (*IsDelegationActiveResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(IsDelegationActiveResponse)
-	err := c.cc.Invoke(ctx, SidecarService_IsDelegationActive_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_IsDelegationActive_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) GetDelegationExpiry(ctx context.Context, in *DelegationQueryRequest, opts ...grpc.CallOption) (*GetDelegationExpiryResponse, error) {
+func (c *daemonServiceClient) GetDelegationExpiry(ctx context.Context, in *DelegationQueryRequest, opts ...grpc.CallOption) (*GetDelegationExpiryResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetDelegationExpiryResponse)
-	err := c.cc.Invoke(ctx, SidecarService_GetDelegationExpiry_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_GetDelegationExpiry_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sidecarServiceClient) GetDelegationStatus(ctx context.Context, in *DelegationQueryRequest, opts ...grpc.CallOption) (*GetDelegationStatusResponse, error) {
+func (c *daemonServiceClient) GetDelegationStatus(ctx context.Context, in *DelegationQueryRequest, opts ...grpc.CallOption) (*GetDelegationStatusResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetDelegationStatusResponse)
-	err := c.cc.Invoke(ctx, SidecarService_GetDelegationStatus_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DaemonService_GetDelegationStatus_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// SidecarServiceServer is the server API for SidecarService service.
-// All implementations must embed UnimplementedSidecarServiceServer
+// DaemonServiceServer is the server API for DaemonService service.
+// All implementations must embed UnimplementedDaemonServiceServer
 // for forward compatibility.
 //
 // SDK failures retain their code and retry information in gRPC trailers.
 // Integer durations and counts are exact; omitted optional values use SDK defaults.
-type SidecarServiceServer interface {
+type DaemonServiceServer interface {
 	// Reports the version of @zama-fhe/sdk executing operations in this process.
 	GetInfo(context.Context, *GetInfoRequest) (*GetInfoResponse, error)
 	// Creates an independent SDK instance; no account or signer is required for public operations.
@@ -489,744 +489,744 @@ type SidecarServiceServer interface {
 	GetDelegationExpiry(context.Context, *DelegationQueryRequest) (*GetDelegationExpiryResponse, error)
 	// Calls delegations.getStatus without requiring a signer.
 	GetDelegationStatus(context.Context, *DelegationQueryRequest) (*GetDelegationStatusResponse, error)
-	mustEmbedUnimplementedSidecarServiceServer()
+	mustEmbedUnimplementedDaemonServiceServer()
 }
 
-// UnimplementedSidecarServiceServer must be embedded to have
+// UnimplementedDaemonServiceServer must be embedded to have
 // forward compatible implementations.
 //
 // NOTE: this should be embedded by value instead of pointer to avoid a nil
 // pointer dereference when methods are called.
-type UnimplementedSidecarServiceServer struct{}
+type UnimplementedDaemonServiceServer struct{}
 
-func (UnimplementedSidecarServiceServer) GetInfo(context.Context, *GetInfoRequest) (*GetInfoResponse, error) {
+func (UnimplementedDaemonServiceServer) GetInfo(context.Context, *GetInfoRequest) (*GetInfoResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetInfo not implemented")
 }
-func (UnimplementedSidecarServiceServer) CreateContext(context.Context, *CreateContextRequest) (*CreateContextResponse, error) {
+func (UnimplementedDaemonServiceServer) CreateContext(context.Context, *CreateContextRequest) (*CreateContextResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateContext not implemented")
 }
-func (UnimplementedSidecarServiceServer) CloseContext(context.Context, *ContextRequest) (*CloseContextResponse, error) {
+func (UnimplementedDaemonServiceServer) CloseContext(context.Context, *ContextRequest) (*CloseContextResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CloseContext not implemented")
 }
-func (UnimplementedSidecarServiceServer) UpdateAccount(context.Context, *UpdateAccountRequest) (*UpdateAccountResponse, error) {
+func (UnimplementedDaemonServiceServer) UpdateAccount(context.Context, *UpdateAccountRequest) (*UpdateAccountResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateAccount not implemented")
 }
-func (UnimplementedSidecarServiceServer) SignerChannel(grpc.BidiStreamingServer[SignerClientMessage, SignerServerMessage]) error {
+func (UnimplementedDaemonServiceServer) SignerChannel(grpc.BidiStreamingServer[SignerClientMessage, SignerServerMessage]) error {
 	return status.Error(codes.Unimplemented, "method SignerChannel not implemented")
 }
-func (UnimplementedSidecarServiceServer) StorageChannel(grpc.BidiStreamingServer[StorageClientMessage, StorageServerMessage]) error {
+func (UnimplementedDaemonServiceServer) StorageChannel(grpc.BidiStreamingServer[StorageClientMessage, StorageServerMessage]) error {
 	return status.Error(codes.Unimplemented, "method StorageChannel not implemented")
 }
-func (UnimplementedSidecarServiceServer) EventChannel(grpc.BidiStreamingServer[EventClientMessage, EventServerMessage]) error {
+func (UnimplementedDaemonServiceServer) EventChannel(grpc.BidiStreamingServer[EventClientMessage, EventServerMessage]) error {
 	return status.Error(codes.Unimplemented, "method EventChannel not implemented")
 }
-func (UnimplementedSidecarServiceServer) DecryptValues(context.Context, *DecryptValuesRequest) (*DecryptValuesResponse, error) {
+func (UnimplementedDaemonServiceServer) DecryptValues(context.Context, *DecryptValuesRequest) (*DecryptValuesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DecryptValues not implemented")
 }
-func (UnimplementedSidecarServiceServer) DelegatedDecryptValues(context.Context, *DelegatedDecryptValuesRequest) (*DelegatedDecryptValuesResponse, error) {
+func (UnimplementedDaemonServiceServer) DelegatedDecryptValues(context.Context, *DelegatedDecryptValuesRequest) (*DelegatedDecryptValuesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DelegatedDecryptValues not implemented")
 }
-func (UnimplementedSidecarServiceServer) DecryptPublicValues(context.Context, *DecryptPublicValuesRequest) (*DecryptPublicValuesResponse, error) {
+func (UnimplementedDaemonServiceServer) DecryptPublicValues(context.Context, *DecryptPublicValuesRequest) (*DecryptPublicValuesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DecryptPublicValues not implemented")
 }
-func (UnimplementedSidecarServiceServer) DelegatedBatchDecryptValues(context.Context, *DelegatedBatchDecryptValuesRequest) (*DelegatedBatchDecryptValuesResponse, error) {
+func (UnimplementedDaemonServiceServer) DelegatedBatchDecryptValues(context.Context, *DelegatedBatchDecryptValuesRequest) (*DelegatedBatchDecryptValuesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DelegatedBatchDecryptValues not implemented")
 }
-func (UnimplementedSidecarServiceServer) PrepareTransaction(context.Context, *PrepareTransactionRequest) (*PrepareTransactionResponse, error) {
+func (UnimplementedDaemonServiceServer) PrepareTransaction(context.Context, *PrepareTransactionRequest) (*PrepareTransactionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method PrepareTransaction not implemented")
 }
-func (UnimplementedSidecarServiceServer) PreparePermit(context.Context, *PreparePermitRequest) (*PreparePermitResponse, error) {
+func (UnimplementedDaemonServiceServer) PreparePermit(context.Context, *PreparePermitRequest) (*PreparePermitResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method PreparePermit not implemented")
 }
-func (UnimplementedSidecarServiceServer) RegisterPermit(context.Context, *RegisterPermitRequest) (*RegisterPermitResponse, error) {
+func (UnimplementedDaemonServiceServer) RegisterPermit(context.Context, *RegisterPermitRequest) (*RegisterPermitResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RegisterPermit not implemented")
 }
-func (UnimplementedSidecarServiceServer) GrantPermit(context.Context, *ContractsRequest) (*GrantPermitResponse, error) {
+func (UnimplementedDaemonServiceServer) GrantPermit(context.Context, *ContractsRequest) (*GrantPermitResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GrantPermit not implemented")
 }
-func (UnimplementedSidecarServiceServer) GrantDelegationPermit(context.Context, *DelegationContractsRequest) (*GrantDelegationPermitResponse, error) {
+func (UnimplementedDaemonServiceServer) GrantDelegationPermit(context.Context, *DelegationContractsRequest) (*GrantDelegationPermitResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GrantDelegationPermit not implemented")
 }
-func (UnimplementedSidecarServiceServer) HasPermit(context.Context, *ContractsRequest) (*HasPermitResponse, error) {
+func (UnimplementedDaemonServiceServer) HasPermit(context.Context, *ContractsRequest) (*HasPermitResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method HasPermit not implemented")
 }
-func (UnimplementedSidecarServiceServer) HasDelegationPermit(context.Context, *DelegationContractsRequest) (*HasDelegationPermitResponse, error) {
+func (UnimplementedDaemonServiceServer) HasDelegationPermit(context.Context, *DelegationContractsRequest) (*HasDelegationPermitResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method HasDelegationPermit not implemented")
 }
-func (UnimplementedSidecarServiceServer) RevokePermits(context.Context, *RevokePermitsRequest) (*RevokePermitsResponse, error) {
+func (UnimplementedDaemonServiceServer) RevokePermits(context.Context, *RevokePermitsRequest) (*RevokePermitsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokePermits not implemented")
 }
-func (UnimplementedSidecarServiceServer) ClearPermits(context.Context, *OperationRequest) (*ClearPermitsResponse, error) {
+func (UnimplementedDaemonServiceServer) ClearPermits(context.Context, *OperationRequest) (*ClearPermitsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ClearPermits not implemented")
 }
-func (UnimplementedSidecarServiceServer) WarmTransportKeyPair(context.Context, *OperationRequest) (*WarmTransportKeyPairResponse, error) {
+func (UnimplementedDaemonServiceServer) WarmTransportKeyPair(context.Context, *OperationRequest) (*WarmTransportKeyPairResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method WarmTransportKeyPair not implemented")
 }
-func (UnimplementedSidecarServiceServer) WarmTransportKeyPairScope(context.Context, *ScopeRequest) (*WarmTransportKeyPairScopeResponse, error) {
+func (UnimplementedDaemonServiceServer) WarmTransportKeyPairScope(context.Context, *ScopeRequest) (*WarmTransportKeyPairScopeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method WarmTransportKeyPairScope not implemented")
 }
-func (UnimplementedSidecarServiceServer) RevokeTransportKeyPair(context.Context, *ScopeRequest) (*RevokeTransportKeyPairResponse, error) {
+func (UnimplementedDaemonServiceServer) RevokeTransportKeyPair(context.Context, *ScopeRequest) (*RevokeTransportKeyPairResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeTransportKeyPair not implemented")
 }
-func (UnimplementedSidecarServiceServer) Encrypt(context.Context, *EncryptRequest) (*EncryptResponse, error) {
+func (UnimplementedDaemonServiceServer) Encrypt(context.Context, *EncryptRequest) (*EncryptResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Encrypt not implemented")
 }
-func (UnimplementedSidecarServiceServer) DelegateDecryption(context.Context, *DelegateDecryptionRequest) (*DelegateDecryptionResponse, error) {
+func (UnimplementedDaemonServiceServer) DelegateDecryption(context.Context, *DelegateDecryptionRequest) (*DelegateDecryptionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DelegateDecryption not implemented")
 }
-func (UnimplementedSidecarServiceServer) RevokeDelegation(context.Context, *RevokeDelegationRequest) (*RevokeDelegationResponse, error) {
+func (UnimplementedDaemonServiceServer) RevokeDelegation(context.Context, *RevokeDelegationRequest) (*RevokeDelegationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeDelegation not implemented")
 }
-func (UnimplementedSidecarServiceServer) IsDelegationActive(context.Context, *DelegationQueryRequest) (*IsDelegationActiveResponse, error) {
+func (UnimplementedDaemonServiceServer) IsDelegationActive(context.Context, *DelegationQueryRequest) (*IsDelegationActiveResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method IsDelegationActive not implemented")
 }
-func (UnimplementedSidecarServiceServer) GetDelegationExpiry(context.Context, *DelegationQueryRequest) (*GetDelegationExpiryResponse, error) {
+func (UnimplementedDaemonServiceServer) GetDelegationExpiry(context.Context, *DelegationQueryRequest) (*GetDelegationExpiryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetDelegationExpiry not implemented")
 }
-func (UnimplementedSidecarServiceServer) GetDelegationStatus(context.Context, *DelegationQueryRequest) (*GetDelegationStatusResponse, error) {
+func (UnimplementedDaemonServiceServer) GetDelegationStatus(context.Context, *DelegationQueryRequest) (*GetDelegationStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetDelegationStatus not implemented")
 }
-func (UnimplementedSidecarServiceServer) mustEmbedUnimplementedSidecarServiceServer() {}
-func (UnimplementedSidecarServiceServer) testEmbeddedByValue()                        {}
+func (UnimplementedDaemonServiceServer) mustEmbedUnimplementedDaemonServiceServer() {}
+func (UnimplementedDaemonServiceServer) testEmbeddedByValue()                       {}
 
-// UnsafeSidecarServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to SidecarServiceServer will
+// UnsafeDaemonServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to DaemonServiceServer will
 // result in compilation errors.
-type UnsafeSidecarServiceServer interface {
-	mustEmbedUnimplementedSidecarServiceServer()
+type UnsafeDaemonServiceServer interface {
+	mustEmbedUnimplementedDaemonServiceServer()
 }
 
-func RegisterSidecarServiceServer(s grpc.ServiceRegistrar, srv SidecarServiceServer) {
-	// If the following call panics, it indicates UnimplementedSidecarServiceServer was
+func RegisterDaemonServiceServer(s grpc.ServiceRegistrar, srv DaemonServiceServer) {
+	// If the following call panics, it indicates UnimplementedDaemonServiceServer was
 	// embedded by pointer and is nil.  This will cause panics if an
 	// unimplemented method is ever invoked, so we test this at initialization
 	// time to prevent it from happening at runtime later due to I/O.
 	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
 		t.testEmbeddedByValue()
 	}
-	s.RegisterService(&SidecarService_ServiceDesc, srv)
+	s.RegisterService(&DaemonService_ServiceDesc, srv)
 }
 
-func _SidecarService_GetInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_GetInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetInfoRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).GetInfo(ctx, in)
+		return srv.(DaemonServiceServer).GetInfo(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_GetInfo_FullMethodName,
+		FullMethod: DaemonService_GetInfo_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).GetInfo(ctx, req.(*GetInfoRequest))
+		return srv.(DaemonServiceServer).GetInfo(ctx, req.(*GetInfoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_CreateContext_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_CreateContext_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateContextRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).CreateContext(ctx, in)
+		return srv.(DaemonServiceServer).CreateContext(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_CreateContext_FullMethodName,
+		FullMethod: DaemonService_CreateContext_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).CreateContext(ctx, req.(*CreateContextRequest))
+		return srv.(DaemonServiceServer).CreateContext(ctx, req.(*CreateContextRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_CloseContext_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_CloseContext_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ContextRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).CloseContext(ctx, in)
+		return srv.(DaemonServiceServer).CloseContext(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_CloseContext_FullMethodName,
+		FullMethod: DaemonService_CloseContext_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).CloseContext(ctx, req.(*ContextRequest))
+		return srv.(DaemonServiceServer).CloseContext(ctx, req.(*ContextRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_UpdateAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_UpdateAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UpdateAccountRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).UpdateAccount(ctx, in)
+		return srv.(DaemonServiceServer).UpdateAccount(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_UpdateAccount_FullMethodName,
+		FullMethod: DaemonService_UpdateAccount_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).UpdateAccount(ctx, req.(*UpdateAccountRequest))
+		return srv.(DaemonServiceServer).UpdateAccount(ctx, req.(*UpdateAccountRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_SignerChannel_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(SidecarServiceServer).SignerChannel(&grpc.GenericServerStream[SignerClientMessage, SignerServerMessage]{ServerStream: stream})
+func _DaemonService_SignerChannel_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(DaemonServiceServer).SignerChannel(&grpc.GenericServerStream[SignerClientMessage, SignerServerMessage]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type SidecarService_SignerChannelServer = grpc.BidiStreamingServer[SignerClientMessage, SignerServerMessage]
+type DaemonService_SignerChannelServer = grpc.BidiStreamingServer[SignerClientMessage, SignerServerMessage]
 
-func _SidecarService_StorageChannel_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(SidecarServiceServer).StorageChannel(&grpc.GenericServerStream[StorageClientMessage, StorageServerMessage]{ServerStream: stream})
+func _DaemonService_StorageChannel_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(DaemonServiceServer).StorageChannel(&grpc.GenericServerStream[StorageClientMessage, StorageServerMessage]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type SidecarService_StorageChannelServer = grpc.BidiStreamingServer[StorageClientMessage, StorageServerMessage]
+type DaemonService_StorageChannelServer = grpc.BidiStreamingServer[StorageClientMessage, StorageServerMessage]
 
-func _SidecarService_EventChannel_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(SidecarServiceServer).EventChannel(&grpc.GenericServerStream[EventClientMessage, EventServerMessage]{ServerStream: stream})
+func _DaemonService_EventChannel_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(DaemonServiceServer).EventChannel(&grpc.GenericServerStream[EventClientMessage, EventServerMessage]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type SidecarService_EventChannelServer = grpc.BidiStreamingServer[EventClientMessage, EventServerMessage]
+type DaemonService_EventChannelServer = grpc.BidiStreamingServer[EventClientMessage, EventServerMessage]
 
-func _SidecarService_DecryptValues_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_DecryptValues_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DecryptValuesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).DecryptValues(ctx, in)
+		return srv.(DaemonServiceServer).DecryptValues(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_DecryptValues_FullMethodName,
+		FullMethod: DaemonService_DecryptValues_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).DecryptValues(ctx, req.(*DecryptValuesRequest))
+		return srv.(DaemonServiceServer).DecryptValues(ctx, req.(*DecryptValuesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_DelegatedDecryptValues_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_DelegatedDecryptValues_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DelegatedDecryptValuesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).DelegatedDecryptValues(ctx, in)
+		return srv.(DaemonServiceServer).DelegatedDecryptValues(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_DelegatedDecryptValues_FullMethodName,
+		FullMethod: DaemonService_DelegatedDecryptValues_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).DelegatedDecryptValues(ctx, req.(*DelegatedDecryptValuesRequest))
+		return srv.(DaemonServiceServer).DelegatedDecryptValues(ctx, req.(*DelegatedDecryptValuesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_DecryptPublicValues_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_DecryptPublicValues_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DecryptPublicValuesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).DecryptPublicValues(ctx, in)
+		return srv.(DaemonServiceServer).DecryptPublicValues(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_DecryptPublicValues_FullMethodName,
+		FullMethod: DaemonService_DecryptPublicValues_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).DecryptPublicValues(ctx, req.(*DecryptPublicValuesRequest))
+		return srv.(DaemonServiceServer).DecryptPublicValues(ctx, req.(*DecryptPublicValuesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_DelegatedBatchDecryptValues_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_DelegatedBatchDecryptValues_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DelegatedBatchDecryptValuesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).DelegatedBatchDecryptValues(ctx, in)
+		return srv.(DaemonServiceServer).DelegatedBatchDecryptValues(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_DelegatedBatchDecryptValues_FullMethodName,
+		FullMethod: DaemonService_DelegatedBatchDecryptValues_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).DelegatedBatchDecryptValues(ctx, req.(*DelegatedBatchDecryptValuesRequest))
+		return srv.(DaemonServiceServer).DelegatedBatchDecryptValues(ctx, req.(*DelegatedBatchDecryptValuesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_PrepareTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_PrepareTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PrepareTransactionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).PrepareTransaction(ctx, in)
+		return srv.(DaemonServiceServer).PrepareTransaction(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_PrepareTransaction_FullMethodName,
+		FullMethod: DaemonService_PrepareTransaction_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).PrepareTransaction(ctx, req.(*PrepareTransactionRequest))
+		return srv.(DaemonServiceServer).PrepareTransaction(ctx, req.(*PrepareTransactionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_PreparePermit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_PreparePermit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PreparePermitRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).PreparePermit(ctx, in)
+		return srv.(DaemonServiceServer).PreparePermit(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_PreparePermit_FullMethodName,
+		FullMethod: DaemonService_PreparePermit_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).PreparePermit(ctx, req.(*PreparePermitRequest))
+		return srv.(DaemonServiceServer).PreparePermit(ctx, req.(*PreparePermitRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_RegisterPermit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_RegisterPermit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RegisterPermitRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).RegisterPermit(ctx, in)
+		return srv.(DaemonServiceServer).RegisterPermit(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_RegisterPermit_FullMethodName,
+		FullMethod: DaemonService_RegisterPermit_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).RegisterPermit(ctx, req.(*RegisterPermitRequest))
+		return srv.(DaemonServiceServer).RegisterPermit(ctx, req.(*RegisterPermitRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_GrantPermit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_GrantPermit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ContractsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).GrantPermit(ctx, in)
+		return srv.(DaemonServiceServer).GrantPermit(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_GrantPermit_FullMethodName,
+		FullMethod: DaemonService_GrantPermit_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).GrantPermit(ctx, req.(*ContractsRequest))
+		return srv.(DaemonServiceServer).GrantPermit(ctx, req.(*ContractsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_GrantDelegationPermit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_GrantDelegationPermit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DelegationContractsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).GrantDelegationPermit(ctx, in)
+		return srv.(DaemonServiceServer).GrantDelegationPermit(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_GrantDelegationPermit_FullMethodName,
+		FullMethod: DaemonService_GrantDelegationPermit_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).GrantDelegationPermit(ctx, req.(*DelegationContractsRequest))
+		return srv.(DaemonServiceServer).GrantDelegationPermit(ctx, req.(*DelegationContractsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_HasPermit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_HasPermit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ContractsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).HasPermit(ctx, in)
+		return srv.(DaemonServiceServer).HasPermit(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_HasPermit_FullMethodName,
+		FullMethod: DaemonService_HasPermit_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).HasPermit(ctx, req.(*ContractsRequest))
+		return srv.(DaemonServiceServer).HasPermit(ctx, req.(*ContractsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_HasDelegationPermit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_HasDelegationPermit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DelegationContractsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).HasDelegationPermit(ctx, in)
+		return srv.(DaemonServiceServer).HasDelegationPermit(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_HasDelegationPermit_FullMethodName,
+		FullMethod: DaemonService_HasDelegationPermit_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).HasDelegationPermit(ctx, req.(*DelegationContractsRequest))
+		return srv.(DaemonServiceServer).HasDelegationPermit(ctx, req.(*DelegationContractsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_RevokePermits_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_RevokePermits_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RevokePermitsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).RevokePermits(ctx, in)
+		return srv.(DaemonServiceServer).RevokePermits(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_RevokePermits_FullMethodName,
+		FullMethod: DaemonService_RevokePermits_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).RevokePermits(ctx, req.(*RevokePermitsRequest))
+		return srv.(DaemonServiceServer).RevokePermits(ctx, req.(*RevokePermitsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_ClearPermits_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_ClearPermits_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(OperationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).ClearPermits(ctx, in)
+		return srv.(DaemonServiceServer).ClearPermits(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_ClearPermits_FullMethodName,
+		FullMethod: DaemonService_ClearPermits_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).ClearPermits(ctx, req.(*OperationRequest))
+		return srv.(DaemonServiceServer).ClearPermits(ctx, req.(*OperationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_WarmTransportKeyPair_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_WarmTransportKeyPair_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(OperationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).WarmTransportKeyPair(ctx, in)
+		return srv.(DaemonServiceServer).WarmTransportKeyPair(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_WarmTransportKeyPair_FullMethodName,
+		FullMethod: DaemonService_WarmTransportKeyPair_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).WarmTransportKeyPair(ctx, req.(*OperationRequest))
+		return srv.(DaemonServiceServer).WarmTransportKeyPair(ctx, req.(*OperationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_WarmTransportKeyPairScope_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_WarmTransportKeyPairScope_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ScopeRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).WarmTransportKeyPairScope(ctx, in)
+		return srv.(DaemonServiceServer).WarmTransportKeyPairScope(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_WarmTransportKeyPairScope_FullMethodName,
+		FullMethod: DaemonService_WarmTransportKeyPairScope_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).WarmTransportKeyPairScope(ctx, req.(*ScopeRequest))
+		return srv.(DaemonServiceServer).WarmTransportKeyPairScope(ctx, req.(*ScopeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_RevokeTransportKeyPair_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_RevokeTransportKeyPair_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ScopeRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).RevokeTransportKeyPair(ctx, in)
+		return srv.(DaemonServiceServer).RevokeTransportKeyPair(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_RevokeTransportKeyPair_FullMethodName,
+		FullMethod: DaemonService_RevokeTransportKeyPair_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).RevokeTransportKeyPair(ctx, req.(*ScopeRequest))
+		return srv.(DaemonServiceServer).RevokeTransportKeyPair(ctx, req.(*ScopeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_Encrypt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_Encrypt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(EncryptRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).Encrypt(ctx, in)
+		return srv.(DaemonServiceServer).Encrypt(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_Encrypt_FullMethodName,
+		FullMethod: DaemonService_Encrypt_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).Encrypt(ctx, req.(*EncryptRequest))
+		return srv.(DaemonServiceServer).Encrypt(ctx, req.(*EncryptRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_DelegateDecryption_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_DelegateDecryption_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DelegateDecryptionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).DelegateDecryption(ctx, in)
+		return srv.(DaemonServiceServer).DelegateDecryption(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_DelegateDecryption_FullMethodName,
+		FullMethod: DaemonService_DelegateDecryption_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).DelegateDecryption(ctx, req.(*DelegateDecryptionRequest))
+		return srv.(DaemonServiceServer).DelegateDecryption(ctx, req.(*DelegateDecryptionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_RevokeDelegation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_RevokeDelegation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RevokeDelegationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).RevokeDelegation(ctx, in)
+		return srv.(DaemonServiceServer).RevokeDelegation(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_RevokeDelegation_FullMethodName,
+		FullMethod: DaemonService_RevokeDelegation_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).RevokeDelegation(ctx, req.(*RevokeDelegationRequest))
+		return srv.(DaemonServiceServer).RevokeDelegation(ctx, req.(*RevokeDelegationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_IsDelegationActive_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_IsDelegationActive_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DelegationQueryRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).IsDelegationActive(ctx, in)
+		return srv.(DaemonServiceServer).IsDelegationActive(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_IsDelegationActive_FullMethodName,
+		FullMethod: DaemonService_IsDelegationActive_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).IsDelegationActive(ctx, req.(*DelegationQueryRequest))
+		return srv.(DaemonServiceServer).IsDelegationActive(ctx, req.(*DelegationQueryRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_GetDelegationExpiry_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_GetDelegationExpiry_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DelegationQueryRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).GetDelegationExpiry(ctx, in)
+		return srv.(DaemonServiceServer).GetDelegationExpiry(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_GetDelegationExpiry_FullMethodName,
+		FullMethod: DaemonService_GetDelegationExpiry_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).GetDelegationExpiry(ctx, req.(*DelegationQueryRequest))
+		return srv.(DaemonServiceServer).GetDelegationExpiry(ctx, req.(*DelegationQueryRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SidecarService_GetDelegationStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DaemonService_GetDelegationStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DelegationQueryRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SidecarServiceServer).GetDelegationStatus(ctx, in)
+		return srv.(DaemonServiceServer).GetDelegationStatus(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SidecarService_GetDelegationStatus_FullMethodName,
+		FullMethod: DaemonService_GetDelegationStatus_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SidecarServiceServer).GetDelegationStatus(ctx, req.(*DelegationQueryRequest))
+		return srv.(DaemonServiceServer).GetDelegationStatus(ctx, req.(*DelegationQueryRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// SidecarService_ServiceDesc is the grpc.ServiceDesc for SidecarService service.
+// DaemonService_ServiceDesc is the grpc.ServiceDesc for DaemonService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var SidecarService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "zama.sdk.v1alpha1.SidecarService",
-	HandlerType: (*SidecarServiceServer)(nil),
+var DaemonService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "zama.sdk.v1beta1.DaemonService",
+	HandlerType: (*DaemonServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "GetInfo",
-			Handler:    _SidecarService_GetInfo_Handler,
+			Handler:    _DaemonService_GetInfo_Handler,
 		},
 		{
 			MethodName: "CreateContext",
-			Handler:    _SidecarService_CreateContext_Handler,
+			Handler:    _DaemonService_CreateContext_Handler,
 		},
 		{
 			MethodName: "CloseContext",
-			Handler:    _SidecarService_CloseContext_Handler,
+			Handler:    _DaemonService_CloseContext_Handler,
 		},
 		{
 			MethodName: "UpdateAccount",
-			Handler:    _SidecarService_UpdateAccount_Handler,
+			Handler:    _DaemonService_UpdateAccount_Handler,
 		},
 		{
 			MethodName: "DecryptValues",
-			Handler:    _SidecarService_DecryptValues_Handler,
+			Handler:    _DaemonService_DecryptValues_Handler,
 		},
 		{
 			MethodName: "DelegatedDecryptValues",
-			Handler:    _SidecarService_DelegatedDecryptValues_Handler,
+			Handler:    _DaemonService_DelegatedDecryptValues_Handler,
 		},
 		{
 			MethodName: "DecryptPublicValues",
-			Handler:    _SidecarService_DecryptPublicValues_Handler,
+			Handler:    _DaemonService_DecryptPublicValues_Handler,
 		},
 		{
 			MethodName: "DelegatedBatchDecryptValues",
-			Handler:    _SidecarService_DelegatedBatchDecryptValues_Handler,
+			Handler:    _DaemonService_DelegatedBatchDecryptValues_Handler,
 		},
 		{
 			MethodName: "PrepareTransaction",
-			Handler:    _SidecarService_PrepareTransaction_Handler,
+			Handler:    _DaemonService_PrepareTransaction_Handler,
 		},
 		{
 			MethodName: "PreparePermit",
-			Handler:    _SidecarService_PreparePermit_Handler,
+			Handler:    _DaemonService_PreparePermit_Handler,
 		},
 		{
 			MethodName: "RegisterPermit",
-			Handler:    _SidecarService_RegisterPermit_Handler,
+			Handler:    _DaemonService_RegisterPermit_Handler,
 		},
 		{
 			MethodName: "GrantPermit",
-			Handler:    _SidecarService_GrantPermit_Handler,
+			Handler:    _DaemonService_GrantPermit_Handler,
 		},
 		{
 			MethodName: "GrantDelegationPermit",
-			Handler:    _SidecarService_GrantDelegationPermit_Handler,
+			Handler:    _DaemonService_GrantDelegationPermit_Handler,
 		},
 		{
 			MethodName: "HasPermit",
-			Handler:    _SidecarService_HasPermit_Handler,
+			Handler:    _DaemonService_HasPermit_Handler,
 		},
 		{
 			MethodName: "HasDelegationPermit",
-			Handler:    _SidecarService_HasDelegationPermit_Handler,
+			Handler:    _DaemonService_HasDelegationPermit_Handler,
 		},
 		{
 			MethodName: "RevokePermits",
-			Handler:    _SidecarService_RevokePermits_Handler,
+			Handler:    _DaemonService_RevokePermits_Handler,
 		},
 		{
 			MethodName: "ClearPermits",
-			Handler:    _SidecarService_ClearPermits_Handler,
+			Handler:    _DaemonService_ClearPermits_Handler,
 		},
 		{
 			MethodName: "WarmTransportKeyPair",
-			Handler:    _SidecarService_WarmTransportKeyPair_Handler,
+			Handler:    _DaemonService_WarmTransportKeyPair_Handler,
 		},
 		{
 			MethodName: "WarmTransportKeyPairScope",
-			Handler:    _SidecarService_WarmTransportKeyPairScope_Handler,
+			Handler:    _DaemonService_WarmTransportKeyPairScope_Handler,
 		},
 		{
 			MethodName: "RevokeTransportKeyPair",
-			Handler:    _SidecarService_RevokeTransportKeyPair_Handler,
+			Handler:    _DaemonService_RevokeTransportKeyPair_Handler,
 		},
 		{
 			MethodName: "Encrypt",
-			Handler:    _SidecarService_Encrypt_Handler,
+			Handler:    _DaemonService_Encrypt_Handler,
 		},
 		{
 			MethodName: "DelegateDecryption",
-			Handler:    _SidecarService_DelegateDecryption_Handler,
+			Handler:    _DaemonService_DelegateDecryption_Handler,
 		},
 		{
 			MethodName: "RevokeDelegation",
-			Handler:    _SidecarService_RevokeDelegation_Handler,
+			Handler:    _DaemonService_RevokeDelegation_Handler,
 		},
 		{
 			MethodName: "IsDelegationActive",
-			Handler:    _SidecarService_IsDelegationActive_Handler,
+			Handler:    _DaemonService_IsDelegationActive_Handler,
 		},
 		{
 			MethodName: "GetDelegationExpiry",
-			Handler:    _SidecarService_GetDelegationExpiry_Handler,
+			Handler:    _DaemonService_GetDelegationExpiry_Handler,
 		},
 		{
 			MethodName: "GetDelegationStatus",
-			Handler:    _SidecarService_GetDelegationStatus_Handler,
+			Handler:    _DaemonService_GetDelegationStatus_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "SignerChannel",
-			Handler:       _SidecarService_SignerChannel_Handler,
+			Handler:       _DaemonService_SignerChannel_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
 		{
 			StreamName:    "StorageChannel",
-			Handler:       _SidecarService_StorageChannel_Handler,
+			Handler:       _DaemonService_StorageChannel_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
 		{
 			StreamName:    "EventChannel",
-			Handler:       _SidecarService_EventChannel_Handler,
+			Handler:       _DaemonService_EventChannel_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
 	},
-	Metadata: "zama/sdk/v1alpha1/sidecar.proto",
+	Metadata: "zama/sdk/v1beta1/daemon.proto",
 }
