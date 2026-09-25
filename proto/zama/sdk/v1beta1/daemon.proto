@@ -1,0 +1,820 @@
+syntax = "proto3";
+package zama.sdk.v1beta1;
+
+option go_package = "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1;sdkv1beta1";
+// SDK failures retain their code and retry information in gRPC trailers.
+// Integer durations and counts are exact; omitted optional values use SDK defaults.
+service DaemonService {
+  // Reports the version of @zama-fhe/sdk executing operations in this process.
+  rpc GetInfo(GetInfoRequest) returns (GetInfoResponse);
+  // Creates an independent SDK instance; no account or signer is required for public operations.
+  rpc CreateContext(CreateContextRequest) returns (CreateContextResponse);
+  // Cancels active operations and disposes this context and its callback channels.
+  rpc CloseContext(ContextRequest) returns (CloseContextResponse);
+  // Cancels pending operations before changing the signer account; omission disconnects it.
+  rpc UpdateAccount(UpdateAccountRequest) returns (UpdateAccountResponse);
+  // Attach once per context before signing. Actions may overlap; correlate both action and operation IDs.
+  rpc SignerChannel(stream SignerClientMessage) returns (stream SignerServerMessage);
+  // Attach once per context to serve application storage; keys and values remain opaque.
+  rpc StorageChannel(stream StorageClientMessage) returns (stream StorageServerMessage);
+  // Attaches one event subscriber per context; deliveries keep their sequence across reattachment.
+  rpc EventChannel(stream EventClientMessage) returns (stream EventServerMessage);
+  // Calls decryption.decryptValues, including automatic permit acquisition and credential recovery.
+  rpc DecryptValues(DecryptValuesRequest) returns (DecryptValuesResponse);
+  // Calls decryption.delegatedDecryptValues; an omitted account uses the delegator address.
+  rpc DelegatedDecryptValues(DelegatedDecryptValuesRequest) returns (DelegatedDecryptValuesResponse);
+  // Calls decryption.decryptPublicValues without requiring a signer.
+  rpc DecryptPublicValues(DecryptPublicValuesRequest) returns (DecryptPublicValuesResponse);
+  // Calls decryption.delegatedBatchDecryptValues; per-item failures remain results, fatal SDK errors fail the RPC.
+  rpc DelegatedBatchDecryptValues(DelegatedBatchDecryptValuesRequest) returns (DelegatedBatchDecryptValuesResponse);
+  // Calls offline.prepare; the caller signs and broadcasts the returned unsigned transaction.
+  rpc PrepareTransaction(PrepareTransactionRequest) returns (PrepareTransactionResponse);
+  // Calls offline.preparePermit without signing; return the opaque envelope unchanged when registering.
+  rpc PreparePermit(PreparePermitRequest) returns (PreparePermitResponse);
+  // Calls permits.registerPermit with the prepared envelope and signature.
+  rpc RegisterPermit(RegisterPermitRequest) returns (RegisterPermitResponse);
+  // Calls permits.grantPermit; any wallet signing is requested on the signer channel.
+  rpc GrantPermit(ContractsRequest) returns (GrantPermitResponse);
+  // Calls permits.grantDelegationPermit for the supplied delegator and contracts.
+  rpc GrantDelegationPermit(DelegationContractsRequest) returns (GrantDelegationPermitResponse);
+  // Calls permits.hasPermit using the SDK credential store and expiry rules.
+  rpc HasPermit(ContractsRequest) returns (HasPermitResponse);
+  // Calls permits.hasDelegationPermit for the supplied delegator and contracts.
+  rpc HasDelegationPermit(DelegationContractsRequest) returns (HasDelegationPermitResponse);
+  // Calls permits.revokePermits; omitted contracts and an empty list retain their distinct SDK meanings.
+  rpc RevokePermits(RevokePermitsRequest) returns (RevokePermitsResponse);
+  // Calls permits.clear to clear locally stored permits.
+  rpc ClearPermits(OperationRequest) returns (ClearPermitsResponse);
+  // Calls permits.warmTransportKeyPair; signing is requested only when the SDK requires it.
+  rpc WarmTransportKeyPair(OperationRequest) returns (WarmTransportKeyPairResponse);
+  // Calls permits.warmTransportKeyPairScope for a shared credential scope.
+  rpc WarmTransportKeyPairScope(ScopeRequest) returns (WarmTransportKeyPairScopeResponse);
+  // Calls permits.revokeTransportKeyPair for the supplied credential scope.
+  rpc RevokeTransportKeyPair(ScopeRequest) returns (RevokeTransportKeyPairResponse);
+  // Calls sdk.encrypt; no wallet signing is required.
+  rpc Encrypt(EncryptRequest) returns (EncryptResponse);
+  // Calls delegations.delegateDecryption; the delegator is the signer account and the write is requested on the signer channel.
+  rpc DelegateDecryption(DelegateDecryptionRequest) returns (DelegateDecryptionResponse);
+  // Calls delegations.revokeDelegation for the signer account's on-chain delegation.
+  rpc RevokeDelegation(RevokeDelegationRequest) returns (RevokeDelegationResponse);
+  // Calls delegations.isActive without requiring a signer.
+  rpc IsDelegationActive(DelegationQueryRequest) returns (IsDelegationActiveResponse);
+  // Calls delegations.getExpiry without requiring a signer.
+  rpc GetDelegationExpiry(DelegationQueryRequest) returns (GetDelegationExpiryResponse);
+  // Calls delegations.getStatus without requiring a signer.
+  rpc GetDelegationStatus(DelegationQueryRequest) returns (GetDelegationStatusResponse);
+}
+message Empty {}
+message GetInfoRequest {}
+message GetInfoResponse {
+  string sdk_version = 1;
+}
+// Addresses contain exactly 20 bytes; chain IDs must fit the SDK safe integer range.
+message WalletAccount {
+  bytes address = 1;
+  uint64 chain_id = 2;
+}
+message CreateContextRequest {
+  ContextConfig config = 1;
+  bool signer_enabled = 2;
+  WalletAccount account = 3;
+  // Omission creates isolated in-memory storage for this context.
+  StorageBinding storage = 4;
+  // Omission shares storage, including its backend identity.
+  StorageBinding permit_storage = 5;
+  // Fields 100–119 are allocated to configuration and credential protection.
+  DerivationSecret transport_key_pair_derivation_secret = 100;
+}
+// Instance input for credential protection; never persisted with credentials and never logged.
+message DerivationSecret {
+  oneof value {
+    string text = 1 [debug_redact = true];
+    bytes bytes = 2 [debug_redact = true];
+  }
+}
+message CreateContextResponse {
+  string context_id = 1;
+}
+message ContextRequest {
+  string context_id = 1;
+}
+message UpdateAccountRequest {
+  string context_id = 1;
+  WalletAccount account = 2;
+}
+// operation_id must be unique among active operations within the context.
+message Operation {
+  string context_id = 1;
+  string operation_id = 2;
+}
+message OperationRequest {
+  Operation operation = 1;
+}
+// encrypted_value contains a 32-byte handle; contract_address contains 20 bytes.
+message EncryptedInput {
+  bytes encrypted_value = 1;
+  bytes contract_address = 2;
+}
+message ClearValue {
+  oneof value {
+    // Base-10 integer string for values wider than the SDK number representation.
+    string bigint_value = 1;
+    bool bool_value = 2;
+    string string_value = 3;
+    // Explicit SDK undefined differs from an absent or malformed result.
+    Empty undefined_value = 4;
+    // SDK euint8, euint16 and euint32 clear values.
+    uint32 number_value = 5;
+  }
+}
+message ClearEntry {
+  bytes encrypted_value = 1;
+  ClearValue value = 2;
+}
+message DecryptValuesRequest {
+  Operation operation = 1;
+  repeated EncryptedInput inputs = 2;
+  // SDK relayer timeout in whole milliseconds, independent of the gRPC deadline. Omit to keep the SDK default; zero is a zero-millisecond budget, not "no timeout".
+  optional uint32 timeout_ms = 3;
+}
+message DecryptValuesResponse {
+  repeated ClearEntry values = 1;
+}
+message DelegatedDecryptValuesRequest {
+  Operation operation = 1;
+  repeated EncryptedInput inputs = 2;
+  bytes delegator_address = 3;
+  optional bytes account_address = 4;
+  optional bool wait_for_propagation = 5;
+}
+message DecryptPublicValuesRequest {
+  Operation operation = 1;
+  repeated bytes encrypted_values = 2;
+  // SDK relayer timeout in whole milliseconds, independent of the gRPC deadline. Omit to keep the SDK default; zero is a zero-millisecond budget, not "no timeout".
+  optional uint32 timeout_ms = 3;
+}
+message DecryptPublicValuesResponse {
+  repeated ClearEntry values = 1;
+  bytes abi_encoded_clear_values = 2;
+  bytes decryption_proof = 3;
+}
+message DelegatedBatchDecryptValuesRequest {
+  Operation operation = 1;
+  repeated EncryptedInput inputs = 2;
+  bytes delegator_address = 3;
+  optional bytes account_address = 4;
+  // Omission uses the SDK default; zero explicitly selects unlimited concurrency.
+  optional uint32 max_concurrency = 5;
+  optional bool wait_for_propagation = 6;
+}
+message SdkError {
+  string code = 1;
+  string message = 2;
+  bool retryable = 3;
+  // Positive whole seconds, present only for retryable errors with a valid hint.
+  optional uint32 retry_after_seconds = 4;
+}
+message BatchItem {
+  bytes encrypted_value = 1;
+  bytes contract_address = 2;
+  oneof result {
+    ClearValue value = 3;
+    SdkError error = 4;
+  }
+}
+message DelegatedBatchDecryptValuesResponse {
+  repeated BatchItem items = 1;
+}
+message PreparePermitRequest {
+  Operation operation = 1;
+  bytes signer_address = 2;
+  repeated bytes contract_addresses = 3;
+  optional bytes delegator_address = 4;
+  // Whole days; omission uses the SDK permit lifetime.
+  optional uint32 duration_days = 5;
+}
+message PreparePermitResponse {
+  // Opaque SDK envelope for RegisterPermit; callers must not inspect or modify it.
+  bytes prepared_permit = 1;
+  // EIP-712 data for application-controlled signing; dynamic types require JSON.
+  string typed_data_json = 2;
+}
+message RegisterPermitRequest {
+  Operation operation = 1;
+  bytes prepared_permit = 2;
+  bytes signature = 3;
+}
+message ContractsRequest {
+  Operation operation = 1;
+  repeated bytes contract_addresses = 2;
+}
+message DelegationContractsRequest {
+  Operation operation = 1;
+  bytes delegator_address = 2;
+  repeated bytes contract_addresses = 3;
+}
+message HasPermitResponse {
+  bool has_permit = 1;
+}
+message ContractList {
+  repeated bytes addresses = 1;
+}
+message RevokePermitsRequest {
+  Operation operation = 1;
+  ContractList contracts = 2;
+}
+message ScopeRequest {
+  Operation operation = 1;
+  string scope_id = 2;
+}
+// Exactly one result is required, even when the signature byte string is empty.
+message SignerReply {
+  string operation_id = 1;
+  string action_id = 2;
+  oneof result {
+    bytes signature = 3;
+    SdkError error = 4;
+    // 32-byte hash of the broadcast transaction; fields 140–159 are allocated to transactions.
+    bytes transaction_hash = 140;
+    ExecutionRevert execution_revert = 141;
+  }
+}
+// The node rejected the simulated write before broadcast; nothing was sent.
+message ExecutionRevert {
+  // Raw revert return data, possibly empty; the SDK decodes it against the request ABI.
+  bytes data = 1;
+  string message = 2;
+}
+message SignerClientMessage {
+  oneof message {
+    ContextRequest attach = 1;
+    SignerReply reply = 2;
+  }
+}
+message SignerAction {
+  string operation_id = 1;
+  string action_id = 2;
+  WalletAccount account = 3;
+  // typed_data_json keeps its original field number; the union prevents a mixed request.
+  oneof request {
+    string typed_data_json = 4;
+    ContractWriteRequest contract_write = 140;
+  }
+}
+// Mirrors GenericSigner.writeContract; the SDK encodes data once and native wallets broadcast it unchanged.
+message ContractWriteRequest {
+  bytes address = 1;
+  bytes data = 2;
+  string abi_json = 3;
+  string function_name = 4;
+  // Bigint arguments are base-10 strings interpreted through the ABI.
+  string args_json = 5;
+  // Base-10 wei; omission keeps the SDK/wallet default, "0" is explicit.
+  optional string value = 6;
+  // Base-10 gas limit; omission lets the wallet estimate.
+  optional string gas = 7;
+}
+message SignerReplyError {
+  string operation_id = 1;
+  string action_id = 2;
+  SdkError error = 3;
+}
+message SignerActionCancelled {
+  string operation_id = 1;
+  string action_id = 2;
+}
+message SignerServerMessage {
+  oneof message {
+    Empty attached = 1;
+    SignerAction action = 2;
+    SignerReplyError reply_error = 3;
+    SignerActionCancelled cancelled = 4;
+  }
+}
+
+message StorageBinding {
+  oneof backend {
+    Empty memory = 1;
+    string persistent = 2;
+    string application = 3;
+  }
+}
+enum StorageMethod {
+  STORAGE_METHOD_UNSPECIFIED = 0;
+  STORAGE_METHOD_GET = 1;
+  STORAGE_METHOD_SET = 2;
+  STORAGE_METHOD_DELETE = 3;
+}
+message StorageAction {
+  string request_id = 1;
+  string backend_id = 2;
+  StorageMethod method = 3;
+  string key = 4;
+  bytes value = 5;
+}
+// GET requires value or not_found; SET and DELETE require ack. Any operation may return error.
+// Empty value bytes remain distinct from not_found. Missing or mismatched results fail the operation.
+message StorageReply {
+  string request_id = 1;
+  oneof result {
+    bytes value = 2;
+    SdkError error = 3;
+    Empty not_found = 4;
+    Empty ack = 5;
+  }
+}
+message StorageClientMessage {
+  oneof message {
+    ContextRequest attach = 1;
+    StorageReply reply = 2;
+  }
+}
+message StorageReplyError {
+  string request_id = 1;
+  SdkError error = 2;
+}
+message StorageServerMessage {
+  oneof message {
+    Empty attached = 1;
+    StorageAction action = 2;
+    StorageReplyError reply_error = 3;
+  }
+}
+
+message CloseContextResponse {}
+
+message UpdateAccountResponse {}
+
+message RegisterPermitResponse {}
+
+message GrantPermitResponse {}
+
+message GrantDelegationPermitResponse {}
+
+message RevokePermitsResponse {}
+
+message ClearPermitsResponse {}
+
+message WarmTransportKeyPairResponse {}
+
+message WarmTransportKeyPairScopeResponse {}
+
+message RevokeTransportKeyPairResponse {}
+
+message DelegatedDecryptValuesResponse {
+  repeated ClearEntry values = 1;
+}
+message HasDelegationPermitResponse {
+  bool has_permit = 1;
+}
+
+// Omitted credential settings retain the SDK defaults.
+message ContextConfig {
+  repeated ChainConfig chains = 1;
+  // Omission selects the first configured chain.
+  optional uint64 chain_id = 2;
+  // Whole days.
+  optional uint32 permit_ttl = 3;
+  // Whole seconds.
+  optional uint32 transport_key_pair_ttl = 4;
+  optional string transport_key_pair_scope = 5;
+  // Whole seconds.
+  optional uint32 registry_ttl = 6;
+  // Fields 100–119 are allocated to configuration and credential protection.
+  ProcessRuntimeConfig process_runtime = 100;
+  RelayerMap relayers = 101;
+}
+// Omitted fields inherit the SDK preset for id. Custom chains supply every required field.
+// Contract addresses contain exactly 20 bytes, except explicitly cleared optional addresses.
+message ChainConfig {
+  uint64 id = 1;
+  optional string network = 2;
+  optional uint64 gateway_chain_id = 3;
+  optional string relayer_url = 4;
+  optional bytes acl_contract_address = 5;
+  optional bytes kms_contract_address = 6;
+  optional bytes input_verifier_contract_address = 7;
+  optional bytes verifying_contract_address_decryption = 8;
+  optional bytes verifying_contract_address_input_verification = 9;
+  // An explicitly empty value clears the preset's optional address.
+  optional bytes registry_address = 10;
+  optional bytes executor_address = 11;
+  ChainAuth auth = 12;
+  // Fields 100–119 are allocated to configuration and credential protection.
+  HttpProviderConfig provider = 100;
+}
+message ChainAuth {
+  oneof credential {
+    string bearer_token = 1;
+    NamedCredential api_key_header = 2;
+    NamedCredential api_key_cookie = 3;
+  }
+}
+message NamedCredential {
+  // Omission preserves the SDK's default header or cookie name.
+  optional string name = 1;
+  string value = 2;
+}
+
+// Applied once per daemon process; the first SDK configuration wins.
+message ProcessRuntimeConfig {
+  optional string wasm_asset_load_mode = 1;
+  ModuleVersions module_versions = 2;
+  optional bool single_thread = 3;
+  optional uint32 number_of_threads = 4;
+  ChainAuth auth = 5;
+}
+message ModuleVersions {
+  oneof selection {
+    Empty auto = 1;
+    PinnedModuleVersions pinned = 2;
+  }
+}
+message PinnedModuleVersions {
+  optional string tfhe = 1;
+  optional string kms = 2;
+  optional string check_compatibility = 3;
+}
+// A present empty map differs from omission: every configured chain needs a relayer.
+message RelayerMap {
+  map<uint64, RelayerConfig> entries = 1;
+}
+enum RelayerTransport {
+  RELAYER_TRANSPORT_UNSPECIFIED = 0;
+  RELAYER_TRANSPORT_NODE = 1;
+  RELAYER_TRANSPORT_CLEARTEXT = 2;
+}
+message RelayerConfig {
+  RelayerTransport transport = 1;
+  RelayerOptions options = 2;
+}
+message RelayerOptions {
+  // Whole milliseconds.
+  optional uint32 timeout = 1;
+  optional bool debug = 2;
+  optional bool batch_rpc_calls = 3;
+  ModuleVersions module_versions = 4;
+  FheEncryptionKey fhe_encryption_key = 5;
+}
+message FheEncryptionKey {
+  FhePublicKeyBytes public_key_bytes = 1;
+  FheCrsBytes crs_bytes = 2;
+  FheEncryptionKeyMetadata metadata = 3;
+}
+message FhePublicKeyBytes {
+  string id = 1;
+  bytes bytes = 2;
+}
+message FheCrsBytes {
+  string id = 1;
+  uint32 capacity = 2;
+  bytes bytes = 3;
+}
+message FheEncryptionKeyMetadata {
+  string relayer_url = 1;
+  uint64 chain_id = 2;
+}
+// Timeouts, retry delays and polling intervals are whole milliseconds.
+message HttpProviderConfig {
+  HttpHeaders headers = 1;
+  optional uint32 timeout = 2;
+  optional uint32 retry_count = 3;
+  optional uint32 retry_delay = 4;
+  ProviderBatch batch = 5;
+  optional uint32 polling_interval = 6;
+}
+message HttpHeaders {
+  map<string, string> entries = 1;
+}
+message ProviderBatch {
+  oneof selection {
+    bool enabled = 1;
+    ProviderBatchOptions options = 2;
+  }
+}
+message ProviderBatchOptions {
+  optional uint32 batch_size = 1;
+  // Whole milliseconds.
+  optional uint32 wait = 2;
+}
+message EncryptInput {
+  oneof value {
+    bool ebool = 1;
+    // Canonical signed decimal strings; the SDK validates each type's range.
+    string ebool_bigint = 2;
+    string euint8 = 3;
+    string euint16 = 4;
+    string euint32 = 5;
+    string euint64 = 6;
+    string euint128 = 7;
+    string euint256 = 8;
+    // 20 bytes.
+    bytes eaddress = 9;
+  }
+}
+message EncryptRequest {
+  Operation operation = 1;
+  repeated EncryptInput values = 2;
+  bytes contract_address = 3;
+  bytes user_address = 4;
+  // SDK relayer timeout in whole milliseconds, independent of the gRPC deadline. Omit to keep the SDK default; zero is a zero-millisecond budget, not "no timeout".
+  optional uint32 timeout_ms = 5;
+}
+message EncryptResponse {
+  repeated bytes encrypted_values = 1;
+  bytes input_proof = 2;
+}
+message PrepareTransactionRequest {
+  Operation operation = 1;
+  // Sender the SDK binds encrypted inputs to; it must match the key that signs.
+  bytes from = 2;
+  // Omission reads nonce, gas and fees from live chain state.
+  PrepareOptions options = 3;
+  oneof transaction {
+    ConfidentialTransfer confidential_transfer = 4;
+    ConfidentialTransferFrom confidential_transfer_from = 5;
+    SetOperator set_operator = 6;
+    Unwrap unwrap = 7;
+    UnwrapAll unwrap_all = 8;
+    FinalizeUnwrap finalize_unwrap = 9;
+    ApproveUnderlying approve_underlying = 10;
+    Wrap wrap = 11;
+    TransferAndCall transfer_and_call = 12;
+    DelegateDecryption delegate_decryption = 13;
+    RevokeDelegation revoke_delegation = 14;
+  }
+}
+// Each override has independent presence; amounts are canonical base-10 strings.
+message PrepareOptions {
+  optional uint64 nonce = 1;
+  optional string gas_limit = 2;
+  // The fee pair is supplied together or not at all.
+  PrepareFees fees = 3;
+}
+message PrepareFees {
+  string max_fee_per_gas = 1;
+  string max_priority_fee_per_gas = 2;
+}
+message ConfidentialTransfer {
+  bytes token = 1;
+  bytes to = 2;
+  string amount = 3;
+}
+message ConfidentialTransferFrom {
+  bytes token = 1;
+  bytes owner = 2;
+  bytes to = 3;
+  string amount = 4;
+}
+message SetOperator {
+  bytes token = 1;
+  bytes operator = 2;
+  // Required Unix timestamp in whole seconds; omission is rejected, never defaulted. A positive past value revokes.
+  optional uint64 until = 3;
+}
+message Unwrap {
+  bytes token = 1;
+  bytes to = 2;
+  string amount = 3;
+}
+message UnwrapAll {
+  bytes token = 1;
+  bytes to = 2;
+}
+message FinalizeUnwrap {
+  bytes wrapper = 1;
+  // unwrapRequestId or legacy encrypted amount from the UnwrapRequested log.
+  bytes unwrap_request_id_or_amount = 2;
+}
+message ApproveUnderlying {
+  bytes underlying = 1;
+  bytes spender = 2;
+  string amount = 3;
+}
+message Wrap {
+  bytes wrapper = 1;
+  bytes to = 2;
+  string amount = 3;
+}
+message TransferAndCall {
+  bytes underlying = 1;
+  bytes wrapper = 2;
+  string amount = 3;
+  // Omission self-shields to the sender; present empty bytes reach the SDK unchanged.
+  optional bytes recipient_data = 4;
+}
+// Shared by PrepareTransaction and DelegateDecryption; offline-only fields belong on PrepareTransactionRequest.
+message DelegateDecryption {
+  bytes contract_address = 1;
+  bytes delegate_address = 2;
+  // Unix time in whole milliseconds; omission requests a permanent delegation.
+  optional uint64 expiration_date_ms = 3;
+}
+// Shared by PrepareTransaction and RevokeDelegation; offline-only fields belong on PrepareTransactionRequest.
+message RevokeDelegation {
+  bytes contract_address = 1;
+  bytes delegate_address = 2;
+}
+enum TransactionKind {
+  TRANSACTION_KIND_UNSPECIFIED = 0;
+  TRANSACTION_KIND_CONFIDENTIAL_TRANSFER = 1;
+  TRANSACTION_KIND_CONFIDENTIAL_TRANSFER_FROM = 2;
+  TRANSACTION_KIND_SET_OPERATOR = 3;
+  TRANSACTION_KIND_UNWRAP = 4;
+  TRANSACTION_KIND_UNWRAP_ALL = 5;
+  TRANSACTION_KIND_FINALIZE_UNWRAP = 6;
+  TRANSACTION_KIND_APPROVE_UNDERLYING = 7;
+  TRANSACTION_KIND_WRAP = 8;
+  TRANSACTION_KIND_TRANSFER_AND_CALL = 9;
+  TRANSACTION_KIND_DELEGATE_DECRYPTION = 10;
+  TRANSACTION_KIND_REVOKE_DELEGATION = 11;
+}
+// SDK output unchanged: no signature is produced and nothing is broadcast.
+message PrepareTransactionResponse {
+  TransactionKind kind = 1;
+  bytes from = 2;
+  // RLP-encoded unsigned EIP-1559 transaction.
+  bytes unsigned_tx = 3;
+}
+// On-chain ACL delegation, distinct from the local delegation permits managed by the permit RPCs.
+message DelegateDecryptionRequest {
+  Operation operation = 1;
+  DelegateDecryption delegation = 2;
+}
+message RevokeDelegationRequest {
+  Operation operation = 1;
+  RevokeDelegation delegation = 2;
+}
+// The delegator is explicit because reads need no signer.
+message DelegationQueryRequest {
+  Operation operation = 1;
+  bytes contract_address = 2;
+  bytes delegator_address = 3;
+  bytes delegate_address = 4;
+}
+// Mirrors the SDK TransactionResult: the broadcast hash and the mined receipt logs.
+message TransactionResult {
+  bytes transaction_hash = 1;
+  repeated TransactionLog logs = 2;
+}
+// Log emitter address is optional because provider adapters may omit it.
+message TransactionLog {
+  optional bytes address = 1;
+  repeated bytes topics = 2;
+  bytes data = 3;
+}
+message DelegateDecryptionResponse {
+  TransactionResult transaction = 1;
+}
+message RevokeDelegationResponse {
+  TransactionResult transaction = 1;
+}
+message IsDelegationActiveResponse {
+  bool is_active = 1;
+}
+// Unix time in whole seconds as stored by the ACL: 0 means no delegation, 2^64-1 means permanent.
+message GetDelegationExpiryResponse {
+  uint64 expiry_timestamp = 1;
+}
+message GetDelegationStatusResponse {
+  bool is_active = 1;
+  // Same sentinels as GetDelegationExpiryResponse: 0 means none, 2^64-1 means permanent.
+  uint64 expiry_timestamp = 2;
+}
+
+// Preserve unknown numeric values without closing the channel.
+enum SdkEventKind {
+  SDK_EVENT_KIND_UNSPECIFIED = 0;
+  SDK_EVENT_KIND_ENCRYPT_START = 1;
+  SDK_EVENT_KIND_ENCRYPT_END = 2;
+  SDK_EVENT_KIND_ENCRYPT_ERROR = 3;
+  SDK_EVENT_KIND_DECRYPT_START = 4;
+  SDK_EVENT_KIND_DECRYPT_END = 5;
+  SDK_EVENT_KIND_DECRYPT_ERROR = 6;
+  SDK_EVENT_KIND_PERMIT_ERROR = 7;
+  SDK_EVENT_KIND_TRANSACTION_ERROR = 8;
+  SDK_EVENT_KIND_SHIELD_SUBMITTED = 9;
+  SDK_EVENT_KIND_TRANSFER_SUBMITTED = 10;
+  SDK_EVENT_KIND_TRANSFER_FROM_SUBMITTED = 11;
+  SDK_EVENT_KIND_SET_OPERATOR_SUBMITTED = 12;
+  SDK_EVENT_KIND_APPROVE_UNDERLYING_SUBMITTED = 13;
+  SDK_EVENT_KIND_WRAP_SUBMITTED = 14;
+  SDK_EVENT_KIND_UNWRAP_SUBMITTED = 15;
+  SDK_EVENT_KIND_FINALIZE_UNWRAP_SUBMITTED = 16;
+  SDK_EVENT_KIND_DELEGATION_SUBMITTED = 17;
+  SDK_EVENT_KIND_REVOKE_DELEGATION_SUBMITTED = 18;
+  SDK_EVENT_KIND_UNSHIELD_PHASE1_SUBMITTED = 19;
+  SDK_EVENT_KIND_UNSHIELD_PHASE2_STARTED = 20;
+  SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED = 21;
+}
+// Distinguishes permit failures from transaction failures, including transaction routes.
+enum EventOperation {
+  EVENT_OPERATION_UNSPECIFIED = 0;
+  EVENT_OPERATION_GRANT_PERMIT = 1;
+  EVENT_OPERATION_GRANT_DELEGATION_PERMIT = 2;
+  EVENT_OPERATION_REGISTER_PERMIT = 3;
+  EVENT_OPERATION_APPROVE_UNDERLYING = 4;
+  EVENT_OPERATION_APPROVE_UNDERLYING_RESET = 5;
+  EVENT_OPERATION_DELEGATE_DECRYPTION = 6;
+  EVENT_OPERATION_FINALIZE_UNWRAP = 7;
+  EVENT_OPERATION_REVOKE_DELEGATION = 8;
+  EVENT_OPERATION_SET_OPERATOR = 9;
+  EVENT_OPERATION_SHIELD_TRANSFER_AND_CALL = 10;
+  EVENT_OPERATION_SHIELD_APPROVE_AND_WRAP = 11;
+  EVENT_OPERATION_WRAP = 12;
+  EVENT_OPERATION_TRANSFER = 13;
+  EVENT_OPERATION_TRANSFER_AND_CALL = 14;
+  EVENT_OPERATION_TRANSFER_FROM = 15;
+  EVENT_OPERATION_TRANSFER_FROM_AND_CALL = 16;
+  EVENT_OPERATION_UNWRAP = 17;
+  EVENT_OPERATION_UNWRAP_ALL = 18;
+}
+// The SDK-selected route for a submitted shield transaction.
+enum ShieldPath {
+  SHIELD_PATH_UNSPECIFIED = 0;
+  SHIELD_PATH_TRANSFER_AND_CALL = 1;
+  SHIELD_PATH_APPROVE_AND_WRAP = 2;
+}
+// Distinguishes a zero-reset approval from the amount approval.
+enum ApprovalStep {
+  APPROVAL_STEP_UNSPECIFIED = 0;
+  APPROVAL_STEP_RESET = 1;
+  APPROVAL_STEP_APPROVE = 2;
+}
+// A lifecycle event; timestamp is Unix epoch milliseconds, and timestamp and
+// duration_ms preserve fractional milliseconds.
+message SdkEvent {
+  SdkEventKind type = 1;
+  double timestamp = 2;
+  optional bytes token_address = 3;
+  optional string sdk_operation_id = 4;
+  optional double duration_ms = 5;
+  repeated bytes encrypted_values = 6;
+  repeated ClearEntry result = 7;
+  SdkError error = 8;
+  optional EventOperation operation = 9;
+  optional bytes tx_hash = 10;
+  optional ShieldPath shield_path = 11;
+  optional ApprovalStep step = 12;
+}
+// Account transition delivered even when no SDK operation is active.
+message WalletAccountChanged {
+  WalletAccount previous = 1;
+  WalletAccount next = 2;
+}
+// SDK callback timing can differ from similarly named lifecycle events.
+enum ProgressKind {
+  PROGRESS_KIND_UNSPECIFIED = 0;
+  PROGRESS_KIND_ENCRYPT_COMPLETE = 1;
+  PROGRESS_KIND_TRANSFER_SUBMITTED = 2;
+  PROGRESS_KIND_APPROVAL_SUBMITTED = 3;
+  PROGRESS_KIND_SHIELD_SUBMITTED = 4;
+  PROGRESS_KIND_WRAP_SUBMITTED = 5;
+  PROGRESS_KIND_UNWRAP_SUBMITTED = 6;
+  PROGRESS_KIND_FINALIZING = 7;
+  PROGRESS_KIND_FINALIZE_SUBMITTED = 8;
+}
+// Submitted stages normally include a hash; clients also accept its absence.
+message OperationProgress {
+  ProgressKind kind = 1;
+  optional bytes tx_hash = 2;
+}
+// sequence is context-wide and does not reset when the channel is reattached.
+message EventDelivery {
+  string context_id = 1;
+  // Empty for lifecycle events that do not belong to a tracked RPC.
+  string operation_id = 2;
+  uint64 sequence = 3;
+  // Acknowledge and skip unknown payloads after checking context and sequence.
+  oneof payload {
+    SdkEvent event = 4;
+    WalletAccountChanged wallet_account = 5;
+    OperationProgress progress = 6;
+  }
+}
+// Handler errors do not fail the SDK operation that emitted the notification.
+message EventReply {
+  uint64 sequence = 1;
+  oneof outcome {
+    Empty acknowledged = 2;
+    SdkError error = 3;
+  }
+}
+// The first client message attaches; later messages reply to deliveries.
+message EventClientMessage {
+  oneof message {
+    ContextRequest attach = 1;
+    EventReply reply = 2;
+  }
+}
+message EventReplyError {
+  uint64 sequence = 1;
+  SdkError error = 2;
+}
+message EventServerMessage {
+  oneof message {
+    Empty attached = 1;
+    EventDelivery delivery = 2;
+    EventReplyError reply_error = 3;
+  }
+}

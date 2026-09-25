@@ -6,7 +6,7 @@ use std::{
         atomic::{AtomicUsize, Ordering},
     },
 };
-use zama_sdk_sidecar::{
+use zama_sdk::{
     Address, ApplicationStorage, B256, ClearValue, Client, EncryptedInput, MemoryStorage, Sdk,
     SdkConfig, SigningRequest, WalletAccount,
 };
@@ -20,7 +20,7 @@ async fn create(
         .await?
         .sdk(SdkConfig::new(31337, "http://fixture.invalid"))
         .storage(storage)
-        .transport_key_pair_derivation_secret(zama_sdk_sidecar::DerivationSecret::text(
+        .transport_key_pair_derivation_secret(zama_sdk::DerivationSecret::text(
             "synthetic-restart-secret-0123456789abcdef0123456789abcdef0123456789abcdef",
         ))
         .signer(
@@ -54,8 +54,8 @@ async fn decrypt(sdk: &Sdk, marker: u8) -> Result<()> {
 
 #[tokio::test(flavor = "multi_thread")]
 #[ignore = "requires parent-controlled SDK fixture server and restart handshake"]
-async fn external_storage_survives_sidecar_restart() -> Result<()> {
-    let socket = std::env::var("SIDECAR_STORAGE_TEST_SOCKET")?;
+async fn external_storage_survives_daemon_restart() -> Result<()> {
+    let socket = std::env::var("ZAMA_SDK_DAEMON_STORAGE_TEST_SOCKET")?;
     let storage = ApplicationStorage::new(MemoryStorage::default());
     let signatures = Arc::new(AtomicUsize::new(0));
     let first = create(&socket, storage.clone(), signatures.clone()).await?;

@@ -1,13 +1,15 @@
-//! Rust client for the Zama SDK sidecar over a Unix socket.
+//! Rust client for the Zama SDK daemon over a Unix socket.
+//!
+//! The daemon protocol is beta: minor releases can break the wire contract and this API.
 //!
 //! Connect with [`Client::connect`], build an [`Sdk`], and await [`Sdk::close`] when
 //! finished; dropping the last handle only attempts best-effort cleanup on a live
 //! Tokio runtime.
 //!
 //! ```no_run
-//! use zama_sdk_sidecar::{Client, SdkConfig};
+//! use zama_sdk::{Client, SdkConfig};
 //!
-//! # async fn example() -> zama_sdk_sidecar::Result<()> {
+//! # async fn example() -> zama_sdk::Result<()> {
 //! let client = Client::connect("/run/zama/sdk.sock").await?;
 //! let sdk = client
 //!     .sdk(SdkConfig::new(11155111, "https://rpc.example"))

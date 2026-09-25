@@ -1,4 +1,4 @@
-package sidecar
+package zama
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	pb "github.com/zama-ai/sdk/clients/go/internal/gen/zama/sdk/v1alpha1"
+	pb "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -43,7 +43,7 @@ func TestOfflineEveryKindWire(t *testing.T) {
 		t.Run(tt.kind.String(), func(t *testing.T) {
 			requests := make(chan *pb.PrepareTransactionRequest, 1)
 			unsigned := []byte{2, 0, 255, 128}
-			client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+			client := testClient(t, &pb.UnimplementedDaemonServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 				if wire, ok := request.(*pb.PrepareTransactionRequest); ok {
 					requests <- wire
 					return &pb.PrepareTransactionResponse{Kind: pb.TransactionKind(tt.kind), From: from.Bytes(), UnsignedTx: unsigned}, nil
@@ -100,7 +100,7 @@ func TestOfflinePresenceAndErrors(t *testing.T) {
 	if err != nil || delegate.GetDelegateDecryption().ExpirationDateMs != nil {
 		t.Fatalf("missing expiration became present: %v", err)
 	}
-	client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(ctx context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+	client := testClient(t, &pb.UnimplementedDaemonServiceServer{}, func(ctx context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 		if _, ok := request.(*pb.PrepareTransactionRequest); ok {
 			grpc.SetTrailer(ctx, metadata.Pairs("zama-error-code", "VALIDATION_ERROR", "zama-error-retryable", "false"))
 			return nil, status.Error(codes.InvalidArgument, "invalid amount")
@@ -122,7 +122,7 @@ func TestOfflinePresenceAndErrors(t *testing.T) {
 }
 
 func TestOfflineRejectsNilRequestAndMalformedSender(t *testing.T) {
-	client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+	client := testClient(t, &pb.UnimplementedDaemonServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 		if _, ok := request.(*pb.PrepareTransactionRequest); ok {
 			return &pb.PrepareTransactionResponse{From: []byte{1}}, nil
 		}
@@ -146,7 +146,7 @@ func TestOfflineRejectsUnspecifiedOrUnknownKind(t *testing.T) {
 		{pb.TransactionKind(99), "prepared transaction has an unknown kind"},
 	}
 	for _, tt := range tests {
-		client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+		client := testClient(t, &pb.UnimplementedDaemonServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 			if _, ok := request.(*pb.PrepareTransactionRequest); ok {
 				return &pb.PrepareTransactionResponse{Kind: tt.kind, From: common.Address{1}.Bytes(), UnsignedTx: []byte{2}}, nil
 			}

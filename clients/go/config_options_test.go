@@ -1,4 +1,4 @@
-package sidecar
+package zama
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	pb "github.com/zama-ai/sdk/clients/go/internal/gen/zama/sdk/v1alpha1"
+	pb "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -51,7 +51,7 @@ func TestConfigOptionsAreSentAsTypedProtobuf(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+	client := testClient(t, &pb.UnimplementedDaemonServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 		r := request.(*pb.CreateContextRequest)
 		if !proto.Equal(r.Config, expected) {
 			t.Fatalf("typed config changed in transit: got %v want %v", r.Config, expected)
@@ -112,7 +112,7 @@ func TestDerivationSecretWirePresenceAndRedaction(t *testing.T) {
 		t.Run(fmt.Sprintf("%T-%v", secret, wireDerivationSecret(secret) != nil), func(t *testing.T) {
 			config := NewSDKConfig(11155111, "http://localhost")
 			config.TransportKeyPairDerivationSecret = secret
-			client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+			client := testClient(t, &pb.UnimplementedDaemonServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 				r := request.(*pb.CreateContextRequest)
 				if !proto.Equal(r.TransportKeyPairDerivationSecret, wireDerivationSecret(secret)) {
 					t.Fatal("secret wire presence changed")
@@ -129,7 +129,7 @@ func TestDerivationSecretWirePresenceAndRedaction(t *testing.T) {
 			}
 		})
 	}
-	message := pb.File_zama_sdk_v1alpha1_sidecar_proto.Messages().ByName("DerivationSecret")
+	message := pb.File_zama_sdk_v1beta1_daemon_proto.Messages().ByName("DerivationSecret")
 	for _, name := range []string{"text", "bytes"} {
 		options, ok := message.Fields().ByName(protoreflect.Name(name)).Options().(*descriptorpb.FieldOptions)
 		if !ok || !options.GetDebugRedact() {

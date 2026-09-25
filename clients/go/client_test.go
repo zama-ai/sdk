@@ -1,4 +1,4 @@
-package sidecar
+package zama
 
 import (
 	"bytes"
@@ -14,14 +14,14 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	pb "github.com/zama-ai/sdk/clients/go/internal/gen/zama/sdk/v1alpha1"
+	pb "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
-func testClient(t *testing.T, service pb.SidecarServiceServer, interceptor grpc.UnaryServerInterceptor) *Client {
+func testClient(t *testing.T, service pb.DaemonServiceServer, interceptor grpc.UnaryServerInterceptor) *Client {
 	t.Helper()
 	// Short paths stay within macOS Unix-domain socket limits.
 	dir, err := os.MkdirTemp("/tmp", "sdk-go-")
@@ -39,7 +39,7 @@ func testClient(t *testing.T, service pb.SidecarServiceServer, interceptor grpc.
 		options = append(options, grpc.UnaryInterceptor(interceptor))
 	}
 	server := grpc.NewServer(options...)
-	pb.RegisterSidecarServiceServer(server, service)
+	pb.RegisterDaemonServiceServer(server, service)
 	go server.Serve(listener)
 	t.Cleanup(server.Stop)
 	client, err := Dial(socket)
@@ -101,7 +101,7 @@ func TestSDKContextParametersAndOptionalDefaults(t *testing.T) {
 	typedData := `{ "primaryType": "Permit", "message": {"value":"12"} }`
 	var sequence atomic.Uint64
 	requests := make(chan any, 32)
-	client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, info *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+	client := testClient(t, &pb.UnimplementedDaemonServiceServer{}, func(_ context.Context, request any, info *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 		if strings.HasSuffix(info.FullMethod, "/CreateContext") {
 			requests <- request
 			return &pb.CreateContextResponse{ContextId: fmt.Sprint(sequence.Add(1))}, nil
@@ -230,7 +230,7 @@ func TestSDKContextParametersAndOptionalDefaults(t *testing.T) {
 }
 func number(n uint32) *uint32 { return &n }
 func TestRPCErrorTrailers(t *testing.T) {
-	client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(ctx context.Context, _ any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+	client := testClient(t, &pb.UnimplementedDaemonServiceServer{}, func(ctx context.Context, _ any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 		grpc.SetTrailer(ctx, metadata.Pairs("zama-error-code", "RPC_RATE_LIMITED", "zama-error-retryable", "true", "zama-error-retry-after-seconds", "2"))
 		return nil, status.Error(codes.ResourceExhausted, "slow down")
 	})
@@ -242,7 +242,7 @@ func TestRPCErrorTrailers(t *testing.T) {
 }
 
 func TestSDKNumberRemainsDistinctFromBigIntAcrossWire(t *testing.T) {
-	client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+	client := testClient(t, &pb.UnimplementedDaemonServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 		if _, ok := request.(*pb.CreateContextRequest); ok {
 			return &pb.CreateContextResponse{ContextId: "number-context"}, nil
 		}

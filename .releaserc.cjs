@@ -102,7 +102,7 @@ module.exports = {
           "CHANGELOG.md",
           "packages/sdk/package.json",
           "packages/react-sdk/package.json",
-          "packages/sdk-sidecar/package.json",
+          "packages/sdk-daemon/package.json",
         ],
         message: "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}",
       },

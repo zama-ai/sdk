@@ -1,4 +1,4 @@
-package sidecar
+package zama
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	pb "github.com/zama-ai/sdk/clients/go/internal/gen/zama/sdk/v1alpha1"
+	pb "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1"
 	"google.golang.org/grpc"
 )
 
@@ -58,7 +58,7 @@ func TestMemoryStorageCopiesAndPreservesPresence(t *testing.T) {
 }
 func TestTypedConfigurationAndStorageChoices(t *testing.T) {
 	requests := make(chan *pb.CreateContextRequest, 3)
-	client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+	client := testClient(t, &pb.UnimplementedDaemonServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 		requests <- request.(*pb.CreateContextRequest)
 		return &pb.CreateContextResponse{ContextId: "config"}, nil
 	})
@@ -75,8 +75,8 @@ func TestTypedConfigurationAndStorageChoices(t *testing.T) {
 	if r.Config.PermitTtl == nil || *r.Config.PermitTtl != 0 || r.Config.GetChainId() != 11155111 || r.Config.Chains[0].Auth.GetApiKeyHeader().Value != "example" {
 		t.Fatal("typed SDK config changed")
 	}
-	config.Storage = PersistentStorage("credentials")
-	permitStorage := SidecarMemoryStorage()
+	config.Storage = DaemonPersistentStorage("credentials")
+	permitStorage := DaemonMemoryStorage()
 	config.PermitStorage = &permitStorage
 	if _, err := client.CreateContext(testContext(t), config, SignerConfig{}); err != nil {
 		t.Fatal(err)
@@ -94,7 +94,7 @@ type storageSession struct {
 	replies map[string]chan *pb.StorageReply
 }
 type storageServer struct {
-	pb.UnimplementedSidecarServiceServer
+	pb.UnimplementedDaemonServiceServer
 	mu       sync.Mutex
 	sessions map[string]*storageSession
 	sequence atomic.Uint64
@@ -178,7 +178,7 @@ func storeRequest(t *testing.T, server *storageServer, sdk *SDKContext, method p
 	}
 	return reply
 }
-func TestApplicationStorageOpaqueWireAndNewSidecarContext(t *testing.T) {
+func TestApplicationStorageOpaqueWireAndNewDaemonContext(t *testing.T) {
 	backend := NewMemoryStorage()
 	choice := ApplicationStorage(backend)
 	config := NewSDKConfig(11155111, "http://localhost")
@@ -214,7 +214,7 @@ func TestApplicationStorageOpaqueWireAndNewSidecarContext(t *testing.T) {
 	}
 	defer second.Close(testContext(t))
 	if value := storeRequest(t, secondServer, second, pb.StorageMethod_STORAGE_METHOD_GET, "credential", nil).GetValue(); !bytes.Equal(value, blob) {
-		t.Fatal("native data lost when sidecar context was replaced")
+		t.Fatal("native data lost when daemon context was replaced")
 	}
 	storeRequest(t, secondServer, second, pb.StorageMethod_STORAGE_METHOD_DELETE, "credential", nil)
 	if _, found, _ := backend.Get(testContext(t), "credential"); found {

@@ -8,7 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	sidecar "github.com/zama-ai/sdk/clients/go"
+	"github.com/zama-ai/sdk/clients/go/v3"
 )
 
 const (
@@ -16,19 +16,19 @@ const (
 	nextBlockWaitTimeout  = 90 * time.Second
 )
 
-func delegationStatusLine(status *sidecar.DelegationStatus) string {
+func delegationStatusLine(status *zama.DelegationStatus) string {
 	if !status.IsActive {
 		return "inactive (expiry " + strconv.FormatUint(status.ExpiryTimestamp, 10) + ")"
 	}
-	if status.ExpiryTimestamp == sidecar.PermanentDelegationExpiry {
+	if status.ExpiryTimestamp == zama.PermanentDelegationExpiry {
 		return "active (permanent)"
 	}
 	return "active (expiry " + strconv.FormatUint(status.ExpiryTimestamp, 10) + ")"
 }
 
-func manageDelegation(ctx context.Context, sdk *sidecar.SDKContext, provider *ethclient.Client, token, owner, delegate common.Address) error {
+func manageDelegation(ctx context.Context, sdk *zama.SDKContext, provider *ethclient.Client, token, owner, delegate common.Address) error {
 	fmt.Printf("Delegate: %s\n", delegate.Hex())
-	query := sidecar.DelegationQuery{ContractAddress: token, DelegatorAddress: owner, DelegateAddress: delegate}
+	query := zama.DelegationQuery{ContractAddress: token, DelegatorAddress: owner, DelegateAddress: delegate}
 	before, err := sdk.GetDelegationStatus(ctx, query)
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func manageDelegation(ctx context.Context, sdk *sidecar.SDKContext, provider *et
 	}
 	// The SDK rejects expiries under 1 hour.
 	expiration := time.Now().Add(2 * time.Hour)
-	granted, err := sdk.DelegateDecryption(ctx, sidecar.DelegateDecryptionParams{ContractAddress: token, DelegateAddress: delegate, ExpirationDate: &expiration})
+	granted, err := sdk.DelegateDecryption(ctx, zama.DelegateDecryptionParams{ContractAddress: token, DelegateAddress: delegate, ExpirationDate: &expiration})
 	if err != nil {
 		return err
 	}
@@ -54,7 +54,7 @@ func manageDelegation(ctx context.Context, sdk *sidecar.SDKContext, provider *et
 	if err := waitForNextBlock(ctx, provider); err != nil {
 		return err
 	}
-	revoked, err := sdk.RevokeDelegation(ctx, sidecar.RevokeDelegationParams{ContractAddress: token, DelegateAddress: delegate})
+	revoked, err := sdk.RevokeDelegation(ctx, zama.RevokeDelegationParams{ContractAddress: token, DelegateAddress: delegate})
 	if err != nil {
 		return err
 	}

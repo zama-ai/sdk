@@ -1,4 +1,4 @@
-package sidecar
+package zama
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
-	pb "github.com/zama-ai/sdk/clients/go/internal/gen/zama/sdk/v1alpha1"
+	pb "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -26,7 +26,7 @@ type signerSession struct {
 	replies map[string]chan *pb.SignerReply
 }
 type signingServer struct {
-	pb.UnimplementedSidecarServiceServer
+	pb.UnimplementedDaemonServiceServer
 	mu                     sync.Mutex
 	sessions               map[string]*signerSession
 	sequence               atomic.Uint64
