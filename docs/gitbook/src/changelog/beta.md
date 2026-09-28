@@ -22,3 +22,7 @@ See [Vault deposits and redemptions](../guides/vault-deposits.md) for the full f
 ## Permit signatures with a 0/1 recovery byte
 
 `parseSignedDecryptionPermit` (and `sdk.permits.registerPermit`, which uses it) now accepts 65-byte permit signatures whose recovery byte is `0`/`1` as well as `27`/`28`. The SDK normalizes the byte before the permit is verified; signatures already in `27`/`28` form and longer ERC-1271 signatures are unchanged.
+
+## New chain preset: T-Rex Zenith testnet
+
+`zenithTrexTestnet` (chain ID `936486`) joins the built-in chain presets in `@zama-fhe/sdk/chains`. It targets T-Rex's testnet instance on Zenith EVM, a Reth-based chain with Canton-mediated finality, and carries the addresses of a cleartext protocol deployment: ACL, `CleartextFHEVMExecutor`, KMS and input verifiers, and a wrapper registry with cUSDC/cUSDT mock pairs. Like `hoodi`, `ingenTestnet` and `bscTestnet` it has no hosted relayer, so pair it with the [`cleartext()` transport](../reference/sdk/RelayerCleartext.md). Its registry address is also included in the deprecated `DefaultRegistryAddresses` map. See [Chain presets](../reference/sdk/network-presets.md).
