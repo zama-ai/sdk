@@ -1,5 +1,5 @@
 use anyhow::Result;
-use zama_sdk_sidecar::{
+use zama_sdk::{
     CallbackChannel, EventContext, EventEnum, EventHandler, Notification, ProgressKind, Sdk,
     async_trait,
 };

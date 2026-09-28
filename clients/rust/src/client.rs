@@ -1,11 +1,11 @@
 use crate::{ClientError, Result, SdkBuilder, SdkConfig, generated, types::SignerConfig};
-use generated::sidecar_service_client::SidecarServiceClient;
+use generated::daemon_service_client::DaemonServiceClient;
 use hyper_util::rt::TokioIo;
 use std::{future::Future, path::Path, time::Duration};
 use tonic::transport::{Channel, Endpoint};
 use tower::service_fn;
 
-pub(crate) type Service = SidecarServiceClient<Channel>;
+pub(crate) type Service = DaemonServiceClient<Channel>;
 #[derive(Clone)]
 pub struct Client {
     inner: Service,
@@ -26,9 +26,9 @@ impl Client {
                 }
             }))
             .await
-            .map_err(|error| ClientError::transport("failed to connect to sidecar", error))?;
+            .map_err(|error| ClientError::transport("failed to connect to daemon", error))?;
         Ok(Self {
-            inner: SidecarServiceClient::new(channel)
+            inner: DaemonServiceClient::new(channel)
                 .max_decoding_message_size(4 * 1024 * 1024)
                 .max_encoding_message_size(4 * 1024 * 1024),
             timeout: None,
@@ -64,7 +64,7 @@ impl Client {
             request.set_timeout(timeout);
             tokio::time::timeout(timeout, operation(self.service(), request))
                 .await
-                .map_err(|_| ClientError::timeout("sidecar request timed out"))?
+                .map_err(|_| ClientError::timeout("daemon request timed out"))?
         } else {
             operation(self.service(), request).await
         };

@@ -14,9 +14,9 @@
     "tools/*"
   ],
   "scripts": {
-    "sidecar:generate": "buf lint && buf generate",
-    "sidecar:build": "turbo run build --filter=@zama-fhe/sdk-sidecar",
-    "sidecar:test": "pnpm --filter @zama-fhe/sdk-sidecar test",
+    "daemon:generate": "buf lint && buf generate",
+    "daemon:build": "turbo run build --filter=@zama-fhe/sdk-daemon",
+    "daemon:test": "pnpm --filter @zama-fhe/sdk-daemon test",
     "build": "turbo run build --filter='./packages/*'",
     "build:sdk": "turbo run build --filter=@zama-fhe/sdk",
     "build:react-sdk": "turbo run build --filter=@zama-fhe/react-sdk",

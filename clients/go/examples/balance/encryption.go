@@ -6,19 +6,19 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	sidecar "github.com/zama-ai/sdk/clients/go"
+	"github.com/zama-ai/sdk/clients/go/v3"
 )
 
-func encryptInputs(ctx context.Context, sdk *sidecar.SDKContext, contract, user common.Address) error {
-	result, err := sdk.Encrypt(ctx, sidecar.EncryptParams{
-		Values: []sidecar.EncryptInput{
-			sidecar.Euint64(big.NewInt(1000)),
-			sidecar.Ebool(true),
-			sidecar.Eaddress(user),
+func encryptInputs(ctx context.Context, sdk *zama.SDKContext, contract, user common.Address) error {
+	result, err := sdk.Encrypt(ctx, zama.EncryptParams{
+		Values: []zama.EncryptInput{
+			zama.Euint64(big.NewInt(1000)),
+			zama.Ebool(true),
+			zama.Eaddress(user),
 		},
 		ContractAddress: contract,
 		UserAddress:     user,
-	}, sidecar.EncryptOptions{})
+	}, zama.EncryptOptions{})
 	if err != nil {
 		return err
 	}

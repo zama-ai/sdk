@@ -1,4 +1,4 @@
-package sidecar
+package zama
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	pb "github.com/zama-ai/sdk/clients/go/internal/gen/zama/sdk/v1alpha1"
+	pb "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -33,7 +33,7 @@ func TestDelegateDecryptionWire(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			requests := make(chan *pb.DelegateDecryptionRequest, 1)
-			client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+			client := testClient(t, &pb.UnimplementedDaemonServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 				if req, ok := request.(*pb.DelegateDecryptionRequest); ok {
 					requests <- req
 					return &pb.DelegateDecryptionResponse{Transaction: &pb.TransactionResult{
@@ -84,7 +84,7 @@ func TestRevokeDelegationWire(t *testing.T) {
 	contract, delegate := common.Address{4}, common.Address{5}
 	txHash := hashBytes(0xbb)
 	requests := make(chan *pb.RevokeDelegationRequest, 1)
-	client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+	client := testClient(t, &pb.UnimplementedDaemonServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 		if req, ok := request.(*pb.RevokeDelegationRequest); ok {
 			requests <- req
 			return &pb.RevokeDelegationResponse{Transaction: &pb.TransactionResult{TransactionHash: txHash}}, nil
@@ -130,7 +130,7 @@ func TestTransactionResultRejectsMalformedShapes(t *testing.T) {
 func TestDelegationReadsWire(t *testing.T) {
 	contract, delegator, delegate := common.Address{6}, common.Address{7}, common.Address{8}
 	requests := make(chan *pb.DelegationQueryRequest, 8)
-	client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+	client := testClient(t, &pb.UnimplementedDaemonServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 		if req, ok := request.(*pb.DelegationQueryRequest); ok {
 			requests <- req
 			return &pb.IsDelegationActiveResponse{}, nil
@@ -186,7 +186,7 @@ func TestDelegationReadMethods(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+			client := testClient(t, &pb.UnimplementedDaemonServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 				if _, ok := request.(*pb.DelegationQueryRequest); ok {
 					return tt.response, nil
 				}
@@ -198,7 +198,7 @@ func TestDelegationReadMethods(t *testing.T) {
 }
 
 func TestDelegationErrorTrailersSurfaceAsRPCError(t *testing.T) {
-	client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(ctx context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+	client := testClient(t, &pb.UnimplementedDaemonServiceServer{}, func(ctx context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 		switch request.(type) {
 		case *pb.RevokeDelegationRequest, *pb.DelegationQueryRequest, *pb.DelegateDecryptionRequest:
 			grpc.SetTrailer(ctx, metadata.Pairs("zama-error-code", "DELEGATION_NOT_FOUND", "zama-error-retryable", "false"))

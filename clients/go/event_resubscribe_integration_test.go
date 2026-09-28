@@ -1,4 +1,4 @@
-package sidecar
+package zama
 
 import (
 	"context"
@@ -7,10 +7,10 @@ import (
 	"time"
 )
 
-func TestEventResubscribeAcrossRealSidecar(t *testing.T) {
-	socket := os.Getenv("SIDECAR_EVENT_RESUBSCRIBE_SOCKET")
+func TestEventResubscribeAcrossRealDaemon(t *testing.T) {
+	socket := os.Getenv("ZAMA_SDK_DAEMON_EVENT_RESUBSCRIBE_SOCKET")
 	if socket == "" {
-		t.Skip("set SIDECAR_EVENT_RESUBSCRIBE_SOCKET with the SDK fixture harness")
+		t.Skip("set ZAMA_SDK_DAEMON_EVENT_RESUBSCRIBE_SOCKET with the SDK fixture harness")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()

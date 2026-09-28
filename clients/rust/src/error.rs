@@ -14,7 +14,7 @@ pub struct ClientError {
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 #[non_exhaustive]
 pub enum ErrorKind {
-    /// The client or sidecar rejected configuration or arguments.
+    /// The client or daemon rejected configuration or arguments.
     InvalidInput,
     /// Connection or RPC failure with no more specific kind; a write may or may not have been submitted.
     Transport,
@@ -22,13 +22,13 @@ pub enum ErrorKind {
     Timeout,
     /// The RPC was cancelled before completing.
     Cancelled,
-    /// A sidecar response or callback frame could not be decoded or validated.
+    /// A daemon response or callback frame could not be decoded or validated.
     Protocol,
     /// A local callback channel closed before an expected message or reply.
     Closed,
     /// A callback channel failed to attach, or its worker task failed.
     Callback,
-    /// The SDK context no longer exists on the sidecar; rebuild it before retrying.
+    /// The SDK context no longer exists on the daemon; rebuild it before retrying.
     ContextLost,
     /// The SDK operation itself failed; details are in `sdk_error`.
     Sdk,
@@ -44,7 +44,7 @@ impl ClientError {
         self.kind
     }
 
-    /// SDK error code and retry metadata reported by the sidecar, if any.
+    /// SDK error code and retry metadata reported by the daemon, if any.
     #[must_use]
     pub fn sdk_error(&self) -> Option<&SdkError> {
         self.sdk.as_deref()
@@ -389,8 +389,8 @@ mod tests {
         assert!(!error.to_string().contains(&source));
 
         let io = std::io::Error::other("disk unplugged");
-        let error = ClientError::transport("sidecar connection failed", io);
-        assert_eq!(error.to_string(), "sidecar connection failed");
+        let error = ClientError::transport("daemon connection failed", io);
+        assert_eq!(error.to_string(), "daemon connection failed");
         assert_eq!(
             std::error::Error::source(&error).unwrap().to_string(),
             "disk unplugged"
@@ -399,7 +399,7 @@ mod tests {
 
     #[test]
     fn outcome_is_unknown_only_for_ambiguous_failures() {
-        assert!(ClientError::timeout("sidecar request timed out").is_outcome_unknown());
+        assert!(ClientError::timeout("daemon request timed out").is_outcome_unknown());
         assert!(ClientError::from(tonic::Status::unavailable("down")).is_outcome_unknown());
         assert!(
             ClientError::from(status_with_code(

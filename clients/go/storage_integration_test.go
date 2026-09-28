@@ -1,4 +1,4 @@
-package sidecar
+package zama
 
 import (
 	"bufio"
@@ -15,10 +15,10 @@ import (
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 )
 
-func TestExternalStorageAcrossSidecarRestart(t *testing.T) {
-	socket := os.Getenv("SIDECAR_STORAGE_TEST_SOCKET")
+func TestExternalStorageAcrossDaemonRestart(t *testing.T) {
+	socket := os.Getenv("ZAMA_SDK_DAEMON_STORAGE_TEST_SOCKET")
 	if socket == "" {
-		t.Skip("set SIDECAR_STORAGE_TEST_SOCKET with the SDK fixture restart harness")
+		t.Skip("set ZAMA_SDK_DAEMON_STORAGE_TEST_SOCKET with the SDK fixture restart harness")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
@@ -69,7 +69,7 @@ func TestExternalStorageAcrossSidecarRestart(t *testing.T) {
 			t.Fatal(err)
 		}
 	case <-ctx.Done():
-		t.Fatal("sidecar restart harness did not resume")
+		t.Fatal("daemon restart harness did not resume")
 	}
 	second := decryptOnce(common.BytesToHash(bytes.Repeat([]byte{0xcd}, 32)))
 	if !reflect.DeepEqual(first, second) {
