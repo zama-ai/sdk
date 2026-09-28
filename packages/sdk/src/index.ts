@@ -55,6 +55,7 @@ export {
   polygon,
   polygonAmoy,
   sepolia,
+  zenithTrexTestnet,
 } from "./chains";
 export type { FheChain, FheChainAuth } from "./chains/types";
 
