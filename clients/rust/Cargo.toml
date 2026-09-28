@@ -2,7 +2,7 @@
 name = "zama-sdk"
 version = "3.6.0"
 edition = "2024"
-rust-version = "1.94"
+rust-version = "1.94.1"
 description = "Rust client for the Zama SDK daemon: encrypts, decrypts and prepares confidential transactions over a Unix socket."
 license = "BSD-3-Clause-Clear"
 repository = "https://github.com/zama-ai/sdk"
