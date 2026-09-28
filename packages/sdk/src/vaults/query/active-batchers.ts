@@ -30,7 +30,7 @@ export function activeBatchersQueryOptions(
 
   return {
     ...filterQueryOptions(queryOpts),
-    queryKey: vaultQueryKeys.activeBatchers.group(group.id, config.direction),
+    queryKey: vaultQueryKeys.activeBatchers.group(group.vaults, config.direction),
     queryFn: async () => group.activeBatchers(config.direction),
     enabled: queryOpts.enabled !== false,
   };

@@ -93,4 +93,24 @@ describe("batcher history helpers", () => {
     const key = vaultQueryKeys.activeBatcher.history(HISTORY);
     expect(JSON.parse(JSON.stringify(key))).toStrictEqual(key);
   });
+
+  test("the group key follows the members' histories, not the group's id", () => {
+    const member = (id: string, history: BatcherHistory) => ({
+      id,
+      vault: LATEST,
+      cShare: LATEST,
+      batchers: { deposit: history, redeem: { retired: [], latest: LATEST } },
+    });
+    const key = vaultQueryKeys.activeBatchers.group([member("alpha", HISTORY)], "deposit");
+    const shifted = vaultQueryKeys.activeBatchers.group(
+      [member("alpha", { ...HISTORY, retired: [{ address: OLDEST, lastBatchId: 11n }] })],
+      "deposit",
+    );
+
+    expect(key).not.toStrictEqual(shifted);
+    expect(key).not.toStrictEqual(
+      vaultQueryKeys.activeBatchers.group([member("alpha", HISTORY)], "redeem"),
+    );
+    expect(JSON.parse(JSON.stringify(key))).toStrictEqual(key);
+  });
 });

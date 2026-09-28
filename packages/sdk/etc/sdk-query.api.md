@@ -1004,7 +1004,7 @@ export interface TransactionErrorEvent extends BaseEvent {
 export type TransactionKind = PrepareTransactionRequest["kind"];
 
 // @public
-export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll" | "vault:join" | "vault:quit" | "vault:claim" | "vault:recover" | "vault:dispatchBatch";
+export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll" | "vault:join" | "vault:quit" | "vault:claim" | "vault:recover" | "vault:dispatchBatch" | "vault:routerJoin";
 
 // @public
 export interface TransactionReceipt {

@@ -1,5 +1,9 @@
 import type { Address } from "viem";
-import { invalidateBalanceQueries, type QueryClientLike } from "../../query/invalidation";
+import {
+  invalidateAfterSetOperator,
+  invalidateBalanceQueries,
+  type QueryClientLike,
+} from "../../query/invalidation";
 import { vaultQueryKeys } from "./query-keys";
 
 /** Invalidates every cached batch read for a batcher. */
@@ -25,6 +29,20 @@ export function invalidateAfterJoin(
 ): void {
   invalidateBalanceQueries(queryClient, params.fromToken);
   invalidateBatchQueries(queryClient, params.batcherAddress);
+}
+
+/** Invalidates the caches affected by a group join: every leg token's balance and operator status, and every joined batcher's batch reads. */
+export function invalidateAfterGroupJoin(
+  queryClient: QueryClientLike,
+  params: { tokens: readonly Address[]; batchers: readonly Address[] },
+): void {
+  for (const token of params.tokens) {
+    invalidateBalanceQueries(queryClient, token);
+    invalidateAfterSetOperator(queryClient, token);
+  }
+  for (const batcher of params.batchers) {
+    invalidateBatchQueries(queryClient, batcher);
+  }
 }
 
 /** Invalidates the caches affected by a quit or recover: the input token's balance and the batcher's batch reads. */

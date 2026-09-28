@@ -5,9 +5,9 @@ import {
   type UseMutationOptions,
   type UseMutationResult,
 } from "@tanstack/react-query";
-import { invalidateBalanceQueries } from "@zama-fhe/sdk/query";
 import {
   groupDepositMutationOptions,
+  invalidateAfterGroupJoin,
   type GroupDepositParams,
   type VaultGroupConfig,
   type VaultGroupJoinResult,
@@ -22,7 +22,8 @@ export interface UseGroupDepositConfig {
 
 /**
  * Deposit into one vault of a group, joining every member's current deposit
- * batch. Invalidates the shared asset's balance cache on success.
+ * batch. On success, invalidates the shared asset's balance and operator-status
+ * caches and the batch reads of every batcher a leg joined.
  *
  * @param config - The group.
  * @param options - React Query mutation options.
@@ -42,8 +43,11 @@ export function useGroupDeposit<TContext = unknown>(
   return useMutation({
     ...groupDepositMutationOptions(group),
     ...options,
-    onSuccess: async (data, variables, onMutateResult, context) => {
-      invalidateBalanceQueries(context.client, group.asset);
+    onSuccess: (data, variables, onMutateResult, context) => {
+      invalidateAfterGroupJoin(context.client, {
+        tokens: [group.cAsset],
+        batchers: data.joins.map((join) => join.batcher),
+      });
       return options?.onSuccess?.(data, variables, onMutateResult, context);
     },
   }) as UseMutationResult<VaultGroupJoinResult, Error, GroupDepositParams, TContext>;

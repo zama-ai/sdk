@@ -50,11 +50,7 @@ export function mockJoinBalance(
   vi.spyOn(Token.prototype, "balanceOf").mockResolvedValue(params.balance ?? 1_000_000_000n);
 }
 
-/**
- * Answers `currentBatchId` per batcher. Any other read, or a batcher the table
- * does not name, throws rather than returning a default, so a test that reaches
- * further than it meant to fails loudly.
- */
+/** Answers `currentBatchId` per batcher; any other read, or an unnamed batcher, throws so an over-reaching test fails loudly. */
 export function mockCurrentBatchIds(
   provider: GenericProvider,
   batchIds: Readonly<Record<Address, bigint>>,
@@ -72,13 +68,7 @@ export function mockCurrentBatchIds(
   });
 }
 
-/**
- * One encrypt returning `count` distinct handles under a single proof, in leg
- * order — the shape a fan-out submits.
- *
- * The relayer's handle type is branded, so the cast lives here rather than at
- * every call site.
- */
+/** One encrypt returning `count` distinct handles under a single proof, in leg order. */
 export function mockEncryptedLegs(relayer: RelayerSDK, count: number): readonly EncryptedValue[] {
   const handles = Array.from(
     { length: count },

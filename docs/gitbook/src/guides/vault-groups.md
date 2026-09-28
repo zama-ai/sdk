@@ -5,36 +5,32 @@ description: Deposit into one of several vaults without revealing which one.
 
 # Vault groups
 
-A **vault group** is a set of confidential ERC-4626 vaults that all take deposits in the same confidential asset. Depositing into one member of a group joins _every_ member's batch: the vault you chose gets the amount, and the rest get an encrypted zero.
+This guide covers **integrating** the multi-vault router from the SDK. For what it does and why — one transaction joins several vault batchers, with encrypted-zero legs hiding which vault received the money — see the [Multi-Vault Router](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router) concept page and the [router interface](https://docs.zama.org/protocol/confidential-vault/reference/router-interface).
 
-That is the whole point. Because the amounts are FHE-encrypted, an observer sees the same number of indistinguishable joins whichever vault you picked, so the choice itself stays private. A single-vault deposit, by contrast, publishes which vault the depositor wanted.
+A **vault group** is the SDK's name for the leg list: a set of confidential ERC-4626 vaults that all take deposits in the same confidential asset. Depositing into one member joins _every_ member's batch: the vault you chose gets the amount, the rest get an encrypted zero.
 
 If you only have one vault, use [`Vault`](./vault-deposits.md) — a one-member group is the same thing with extra machinery.
 
-## What it costs
-
-The decoy legs are not free. Each one is real FHE compute, and a transaction has a ceiling on how much of that it may use, so a group is capped at **eight** vaults; the SDK refuses a larger one at construction rather than letting you send transactions that run out of gas.
-
 {% hint style="danger" %}
-Do not "optimize" the zero-amount legs away. Skipping them makes a submission cheaper and simultaneously publishes the depositor's choice, which is the one thing the design exists to hide.
+Follow the [rules for clients](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#rules-for-clients): send the same leg list for every user, and exit through the list you entered with. The SDK never drops a zero-amount leg, and refuses a group above the documented [leg limit](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#leg-limits) (`MAX_GROUP_VAULTS`, ten) at construction.
 {% endhint %}
 
 ## Configuring a group
 
-A group names the shared asset, its members, and the router that fans a submission out across them. Each member carries its ERC-4626 vault, its confidential share token, and a **batcher history** per direction (see [Batcher histories](#batcher-histories)).
+A group names the shared `cAsset`, its members, and the router that fans a submission out across them. Each member carries its ERC-4626 `vault`, its `cShare`, and a **batcher history** per direction (see [Batcher histories](#batcher-histories)). The names follow the [vault addresses](https://docs.zama.org/protocol/confidential-vault/reference/addresses) reference.
 
 ```ts
 import { createVaultGroup } from "@zama-fhe/sdk/vaults";
 
 const STABLE_GROUP = {
   id: "stable",
-  asset: "0xConfidentialAsset",
+  cAsset: "0xConfidentialAsset",
   router: "0xRouter",
   vaults: [
     {
       id: "alpha",
       vault: "0xAlphaVault",
-      share: "0xAlphaShares",
+      cShare: "0xAlphaShares",
       batchers: {
         deposit: { retired: [], latest: "0xAlphaDepositBatcher" },
         redeem: { retired: [], latest: "0xAlphaRedeemBatcher" },
@@ -43,7 +39,7 @@ const STABLE_GROUP = {
     {
       id: "beta",
       vault: "0xBetaVault",
-      share: "0xBetaShares",
+      cShare: "0xBetaShares",
       batchers: {
         deposit: { retired: [], latest: "0xBetaDepositBatcher" },
         redeem: { retired: [], latest: "0xBetaRedeemBatcher" },
@@ -55,13 +51,13 @@ const STABLE_GROUP = {
 const group = createVaultGroup(sdk, STABLE_GROUP);
 ```
 
-The SDK ships no group configuration; the addresses belong to your app.
+The SDK ships no group configuration; the addresses belong to your app. They are not trusted blindly: before a submission writes anything, each leg's token and vault are checked against what its batcher reports, and a mismatch throws `ConfigurationError`.
 
 {% hint style="info" %}
 The member order is the leg order, and the leg count is visible on chain. Adding or removing a member changes the shape of every later submission, so treat group membership as something depositors can observe changing.
 {% endhint %}
 
-## Depositing and withdrawing
+## Depositing and redeeming
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -72,7 +68,7 @@ const { joins } = await group.deposit("alpha", 1_000_000n);
 // One entry per member, in group order. The decoys are in here too — they
 // joined a real batch with an encrypted zero.
 const mine = joins.find((join) => join.vaultId === "alpha");
-await group.member("alpha"); // the member's vault and share addresses
+const { vault, cShare } = group.member("alpha"); // the member's addresses
 ```
 
 {% endtab %}
@@ -88,9 +84,11 @@ deposit.mutate({ vaultId: "alpha", amount: 1_000_000n });
 {% endtab %}
 {% endtabs %}
 
-Withdrawing is the mirror image — `group.requestWithdrawal("alpha", shares)` or `useGroupRequestWithdrawal` — with one difference that matters: a deposit's legs all spend the group's shared asset, while a withdrawal's legs each spend their own vault's share token.
+Redeeming is the mirror image — `group.redeem("alpha", shares)` or `useGroupRedeem` — with one difference that matters: a deposit's legs all spend the group's shared asset, while a redemption's legs each spend their own vault's share token. As with `Vault.redeem`, the amount is denominated in shares.
 
-A group deposit always credits the caller. Neither the router nor the batchers accept a third-party beneficiary on this path, so unlike `Vault.deposit` there is no `beneficiary` option.
+A group deposit always credits the caller. The router credits the account the legs came from, so unlike `Vault.deposit` there is no `beneficiary` option.
+
+Both methods check the caller's confidential balance before submitting, as `Vault` does: a short balance would join every batch with nothing and still cost the transaction. They take the same `skipBalanceCheck` and `operatorUntil` options.
 
 ### Claiming
 
@@ -114,9 +112,9 @@ The SDK reads `currentBatchId` off each retired batcher before every submission 
 
 `useActiveBatchers` exposes the same answer for display; give it a `refetchInterval` on a screen that stays open.
 
-## Batching the transfers yourself
+## Batching the joins yourself
 
-By default a group of more than one vault goes through the router: one transaction, one signature. Pass `strategy: "direct"` to get one transfer per leg instead, which is what you want if your wallet can submit them atomically (EIP-5792, smart accounts).
+By default a group of more than one vault goes through the router: one transaction, one signature. Pass `strategy: "direct"` to get one batcher `join` per leg instead, which is what you want if your wallet can submit them atomically (EIP-5792, smart accounts). Each leg then takes the two steps `Vault.deposit` takes: an operator grant to that batcher on the leg's token, and a join with an amount encrypted against it.
 
 ```ts
 await group.deposit("alpha", 1_000_000n, { strategy: "direct" });
@@ -126,6 +124,6 @@ This changes only how the legs are packaged. The legs themselves — how many, i
 
 ## Grants and registry listing
 
-On the router path for a **withdrawal**, the router pulls each leg's share token, so it needs an ERC-7984 operator grant on every one of them. The SDK makes any missing grant before submitting — note that this is a grant to the _router_, not to the batchers, the opposite of what a single-vault `Vault.requestWithdrawal` does.
+On the router path for a **redemption**, the router pulls each leg's share token, so it needs an ERC-7984 operator grant on every one of them. The SDK makes any missing grant before submitting — note that this is a grant to the _router_, not to the batchers, the opposite of what a single-vault `Vault.redeem` does. On the direct path the grants go to the batchers, one per leg, as with `Vault`.
 
 A router **deposit** needs no grant: it is a transfer you send. It does require the shared asset to be listed in the registry the router checks, so the SDK asks first and raises `UnlistedConfidentialTokenError` rather than letting you pay for a reverted transaction. Listings are governed on chain and can be revoked, so this is checked per submission rather than remembered.

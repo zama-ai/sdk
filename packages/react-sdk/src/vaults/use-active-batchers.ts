@@ -18,6 +18,15 @@ export interface UseActiveBatchersConfig {
   direction: BatcherDirection;
 }
 
+/** TanStack Query options accepted by {@link useActiveBatchers} (excluding `queryKey`/`queryFn`). */
+export interface UseActiveBatchersOptions extends Omit<
+  UseQueryOptions<Readonly<Record<string, Address>>>,
+  "queryKey" | "queryFn" | "enabled"
+> {
+  /** Set this to `false` to disable this query from automatically running. */
+  enabled?: boolean;
+}
+
 /**
  * The batcher each member of a group would currently join, keyed by member id.
  *
@@ -35,14 +44,15 @@ export interface UseActiveBatchersConfig {
  */
 export function useActiveBatchers(
   config: UseActiveBatchersConfig,
-  options?: Omit<UseQueryOptions<Readonly<Record<string, Address>>>, "queryKey" | "queryFn">,
+  options?: UseActiveBatchersOptions,
 ) {
+  const { enabled = true } = options ?? {};
   const group = useVaultGroup(config.group);
-  const baseOpts = activeBatchersQueryOptions(group, { direction: config.direction });
+  const baseOptions = activeBatchersQueryOptions(group, { direction: config.direction });
 
-  return useQuery({
-    ...baseOpts,
+  return useQuery<Readonly<Record<string, Address>>>({
+    ...baseOptions,
     ...options,
-    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
+    enabled: Boolean(baseOptions.enabled) && enabled,
   });
 }

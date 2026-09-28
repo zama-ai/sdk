@@ -2182,6 +2182,14 @@ Both packages gain a `vaults` subpath — `@zama-fhe/sdk/vaults` and `@zama-fhe/
 
 See [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-deposits.md) for the full flow.
 
+## Vault groups over the multi-vault router
+
+`VaultGroup` (`createVaultGroup`, or `useVaultGroup` in React) joins several confidential vaults that share one `cAsset` as a single leg list: `deposit` and `redeem` join _every_ member's batch, the chosen vault with the amount and the rest with an encrypted zero, so the choice of vault stays private. A group of two or more submits through the on-chain `VaultBatcherConfidentialRouter` in one transaction — pushed for a deposit, pulled for a redemption — and a `strategy: "direct"` option submits one batcher `join` per leg instead for wallets that batch atomically. Each member names a batcher _history_ rather than an address, so a retired batcher keeps receiving joins until its last batch is dispatched; `useActiveBatcher` and `useActiveBatchers` expose which batcher a join would reach right now. The React hooks are `useGroupDeposit` and `useGroupRedeem`.
+
+`VaultRouter` mirrors the router contract for callers that build their own legs. A router deposit throws the new `UnlistedConfidentialTokenError` when the router's registry does not list the asset, and router transactions surface as `VaultSubmitted` events with `vaultOperation: "routerJoin"`.
+
+See [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-groups.md).
+
 ## Permit signatures with a 0/1 recovery byte
 
 `parseSignedDecryptionPermit` (and `sdk.permits.registerPermit`, which uses it) now accepts 65-byte permit signatures whose recovery byte is `0`/`1` as well as `27`/`28`. The SDK normalizes the byte before the permit is verified; signatures already in `27`/`28` form and longer ERC-1271 signatures are unchanged.
@@ -7455,37 +7463,33 @@ recover.mutate({ batchId, account: "0xDepositor" });
 
 # Vault groups
 
-A **vault group** is a set of confidential ERC-4626 vaults that all take deposits in the same confidential asset. Depositing into one member of a group joins _every_ member's batch: the vault you chose gets the amount, and the rest get an encrypted zero.
+This guide covers **integrating** the multi-vault router from the SDK. For what it does and why — one transaction joins several vault batchers, with encrypted-zero legs hiding which vault received the money — see the [Multi-Vault Router](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router) concept page and the [router interface](https://docs.zama.org/protocol/confidential-vault/reference/router-interface).
 
-That is the whole point. Because the amounts are FHE-encrypted, an observer sees the same number of indistinguishable joins whichever vault you picked, so the choice itself stays private. A single-vault deposit, by contrast, publishes which vault the depositor wanted.
+A **vault group** is the SDK's name for the leg list: a set of confidential ERC-4626 vaults that all take deposits in the same confidential asset. Depositing into one member joins _every_ member's batch: the vault you chose gets the amount, the rest get an encrypted zero.
 
 If you only have one vault, use [`Vault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-deposits.md) — a one-member group is the same thing with extra machinery.
 
-## What it costs
-
-The decoy legs are not free. Each one is real FHE compute, and a transaction has a ceiling on how much of that it may use, so a group is capped at **eight** vaults; the SDK refuses a larger one at construction rather than letting you send transactions that run out of gas.
-
 
 > [!DANGER]
-> Do not "optimize" the zero-amount legs away. Skipping them makes a submission cheaper and simultaneously publishes the depositor's choice, which is the one thing the design exists to hide.
+> Follow the [rules for clients](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#rules-for-clients): send the same leg list for every user, and exit through the list you entered with. The SDK never drops a zero-amount leg, and refuses a group above the documented [leg limit](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#leg-limits) (`MAX_GROUP_VAULTS`, ten) at construction.
 
 
 ## Configuring a group
 
-A group names the shared asset, its members, and the router that fans a submission out across them. Each member carries its ERC-4626 vault, its confidential share token, and a **batcher history** per direction (see [Batcher histories](#batcher-histories)).
+A group names the shared `cAsset`, its members, and the router that fans a submission out across them. Each member carries its ERC-4626 `vault`, its `cShare`, and a **batcher history** per direction (see [Batcher histories](#batcher-histories)). The names follow the [vault addresses](https://docs.zama.org/protocol/confidential-vault/reference/addresses) reference.
 
 ```ts
 import { createVaultGroup } from "@zama-fhe/sdk/vaults";
 
 const STABLE_GROUP = {
   id: "stable",
-  asset: "0xConfidentialAsset",
+  cAsset: "0xConfidentialAsset",
   router: "0xRouter",
   vaults: [
     {
       id: "alpha",
       vault: "0xAlphaVault",
-      share: "0xAlphaShares",
+      cShare: "0xAlphaShares",
       batchers: {
         deposit: { retired: [], latest: "0xAlphaDepositBatcher" },
         redeem: { retired: [], latest: "0xAlphaRedeemBatcher" },
@@ -7494,7 +7498,7 @@ const STABLE_GROUP = {
     {
       id: "beta",
       vault: "0xBetaVault",
-      share: "0xBetaShares",
+      cShare: "0xBetaShares",
       batchers: {
         deposit: { retired: [], latest: "0xBetaDepositBatcher" },
         redeem: { retired: [], latest: "0xBetaRedeemBatcher" },
@@ -7506,14 +7510,14 @@ const STABLE_GROUP = {
 const group = createVaultGroup(sdk, STABLE_GROUP);
 ```
 
-The SDK ships no group configuration; the addresses belong to your app.
+The SDK ships no group configuration; the addresses belong to your app. They are not trusted blindly: before a submission writes anything, each leg's token and vault are checked against what its batcher reports, and a mismatch throws `ConfigurationError`.
 
 
 > [!INFO]
 > The member order is the leg order, and the leg count is visible on chain. Adding or removing a member changes the shape of every later submission, so treat group membership as something depositors can observe changing.
 
 
-## Depositing and withdrawing
+## Depositing and redeeming
 
 
 ### Tab: Core SDK
@@ -7524,7 +7528,7 @@ const { joins } = await group.deposit("alpha", 1_000_000n);
 // One entry per member, in group order. The decoys are in here too — they
 // joined a real batch with an encrypted zero.
 const mine = joins.find((join) => join.vaultId === "alpha");
-await group.member("alpha"); // the member's vault and share addresses
+const { vault, cShare } = group.member("alpha"); // the member's addresses
 ```
 
 ### Tab: React SDK
@@ -7537,9 +7541,11 @@ deposit.mutate({ vaultId: "alpha", amount: 1_000_000n });
 ```
 
 
-Withdrawing is the mirror image — `group.requestWithdrawal("alpha", shares)` or `useGroupRequestWithdrawal` — with one difference that matters: a deposit's legs all spend the group's shared asset, while a withdrawal's legs each spend their own vault's share token.
+Redeeming is the mirror image — `group.redeem("alpha", shares)` or `useGroupRedeem` — with one difference that matters: a deposit's legs all spend the group's shared asset, while a redemption's legs each spend their own vault's share token. As with `Vault.redeem`, the amount is denominated in shares.
 
-A group deposit always credits the caller. Neither the router nor the batchers accept a third-party beneficiary on this path, so unlike `Vault.deposit` there is no `beneficiary` option.
+A group deposit always credits the caller. The router credits the account the legs came from, so unlike `Vault.deposit` there is no `beneficiary` option.
+
+Both methods check the caller's confidential balance before submitting, as `Vault` does: a short balance would join every batch with nothing and still cost the transaction. They take the same `skipBalanceCheck` and `operatorUntil` options.
 
 ### Claiming
 
@@ -7563,9 +7569,9 @@ The SDK reads `currentBatchId` off each retired batcher before every submission 
 
 `useActiveBatchers` exposes the same answer for display; give it a `refetchInterval` on a screen that stays open.
 
-## Batching the transfers yourself
+## Batching the joins yourself
 
-By default a group of more than one vault goes through the router: one transaction, one signature. Pass `strategy: "direct"` to get one transfer per leg instead, which is what you want if your wallet can submit them atomically (EIP-5792, smart accounts).
+By default a group of more than one vault goes through the router: one transaction, one signature. Pass `strategy: "direct"` to get one batcher `join` per leg instead, which is what you want if your wallet can submit them atomically (EIP-5792, smart accounts). Each leg then takes the two steps `Vault.deposit` takes: an operator grant to that batcher on the leg's token, and a join with an amount encrypted against it.
 
 ```ts
 await group.deposit("alpha", 1_000_000n, { strategy: "direct" });
@@ -7575,7 +7581,7 @@ This changes only how the legs are packaged. The legs themselves — how many, i
 
 ## Grants and registry listing
 
-On the router path for a **withdrawal**, the router pulls each leg's share token, so it needs an ERC-7984 operator grant on every one of them. The SDK makes any missing grant before submitting — note that this is a grant to the _router_, not to the batchers, the opposite of what a single-vault `Vault.requestWithdrawal` does.
+On the router path for a **redemption**, the router pulls each leg's share token, so it needs an ERC-7984 operator grant on every one of them. The SDK makes any missing grant before submitting — note that this is a grant to the _router_, not to the batchers, the opposite of what a single-vault `Vault.redeem` does. On the direct path the grants go to the batchers, one per leg, as with `Vault`.
 
 A router **deposit** needs no grant: it is a transfer you send. It does require the shared asset to be listed in the registry the router checks, so the SDK asks first and raises `UnlistedConfidentialTokenError` rather than letting you pay for a reverted transaction. Listings are governed on chain and can be revoked, so this is checked per submission rather than remembered.
 
@@ -7600,7 +7606,7 @@ API reference for the core `@zama-fhe/sdk` package. Each page documents a single
 
 🟨 Go to [**WrappedToken**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/WrappedToken.md) for ERC-7984 ERC-20 wrapper operations — shield, unshield, allowance.
 
-🟨 Go to [**Vault**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) and [**VaultBatcher**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md) for confidential ERC-4626 vaults — batched deposits, redemptions, and claims.
+🟨 Go to [**Vault**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) and [**VaultBatcher**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md) for confidential ERC-4626 vaults — batched deposits, redemptions, and claims — and to [**VaultGroup**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md) to join several vaults at once without revealing which one you chose.
 
 🟨 Go to [**web() transport**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/RelayerWeb.md) for browser-side FHE encryption via bundled WASM.
 
@@ -9432,6 +9438,325 @@ The React hooks are built on these query and mutation option builders; they are 
 - [Errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md) — the error classes thrown above
 - [useVaultBatcher](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultBatcher.md) — React hook returning a `VaultBatcher`
 
+## VaultGroup
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/sdk/VaultGroup.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md
+- logical_path: reference/sdk/VaultGroup
+
+# VaultGroup
+
+`VaultGroup` joins several confidential ERC-4626 vaults as one. A deposit into one member joins _every_ member's current batch: the chosen vault carries the amount, the rest carry an encrypted zero, and an observer sees the same set of joins whichever vault was picked. See the [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-groups.md) guide for why.
+
+A group of more than one vault submits through a [`VaultRouter`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultRouter.md) in one transaction. A single-vault group needs no router and joins its batcher directly, the way [`Vault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) does.
+
+## Import
+
+```ts
+import { createVaultGroup, VaultGroup } from "@zama-fhe/sdk/vaults";
+```
+
+The `vaults` subpath is separate from the root entry, so apps that don't use vaults don't bundle it.
+
+## Construction
+
+Use `createVaultGroup(sdk, config)`:
+
+```ts
+import { createVaultGroup } from "@zama-fhe/sdk/vaults";
+
+const group = createVaultGroup(sdk, {
+  id: "stable",
+  cAsset: "0xConfidentialAsset",
+  router: "0xRouter",
+  vaults: [
+    {
+      id: "alpha",
+      vault: "0xAlphaVault",
+      cShare: "0xAlphaShares",
+      batchers: {
+        deposit: { retired: [], latest: "0xAlphaDepositBatcher" },
+        redeem: { retired: [], latest: "0xAlphaRedeemBatcher" },
+      },
+    },
+    // …up to MAX_GROUP_VAULTS members
+  ],
+});
+
+const { joins } = await group.deposit("alpha", 1_000_000n);
+```
+
+`createVaultGroup` is a thin factory over `new VaultGroup(sdk, config)`; both take the same arguments.
+
+The constructor throws [`ConfigurationError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#configurationerror) for a group with no members, more than `MAX_GROUP_VAULTS` (10, the [documented leg limit](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#leg-limits)) members, a duplicate member id or `cShare`, or more than one member and no `router`.
+
+### VaultGroupConfig
+
+```ts
+import { type VaultGroupConfig, type VaultMemberConfig } from "@zama-fhe/sdk/vaults";
+```
+
+| Field    | Type                           | Required       | Description                                                                                                           |
+| -------- | ------------------------------ | -------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `id`     | `string`                       | yes            | Stable identifier for the group. Used in mutation keys.                                                               |
+| `cAsset` | `Address`                      | yes            | The confidential wrapper of the asset every member takes deposits in.                                                 |
+| `vaults` | `readonly VaultMemberConfig[]` | yes            | The members, in the order their legs are submitted. That order is visible on chain, so treat it as part of the group. |
+| `router` | `Address`                      | for 2+ members | The [`VaultRouter`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultRouter.md) that fans a submission out across the members.                                    |
+
+Each `VaultMemberConfig` has:
+
+| Field      | Type                                                  | Description                                                                           |
+| ---------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `id`       | `string`                                              | The identifier callers pass to `deposit` / `redeem` to pick this vault.               |
+| `vault`    | `Address`                                             | The ERC-4626 vault contract, as both of its batchers report it.                       |
+| `cShare`   | `Address`                                             | The confidential wrapper of this vault's shares — the token its redeem batcher pulls. |
+| `batchers` | `{ deposit: BatcherHistory; redeem: BatcherHistory }` | This vault's batchers per direction. See [BatcherHistory](#batcherhistory).           |
+
+### BatcherHistory
+
+```ts
+import { type BatcherHistory, type RetiredBatcher } from "@zama-fhe/sdk/vaults";
+```
+
+A vault's batcher is replaced rather than upgraded, and a replaced batcher keeps accepting joins until its last configured batch is dispatched. So a member names a history, not an address:
+
+| Field     | Type                        | Description                                                                                                 |
+| --------- | --------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `retired` | `readonly RetiredBatcher[]` | Superseded batchers, oldest first. Each has an `address` and the `lastBatchId` it still accepts joins into. |
+| `latest`  | `Address`                   | The batcher joins reach once every retired one is exhausted.                                                |
+
+`resolveActiveBatcher(sdk, history)` is the standalone form of the lookup `activeBatchers()` runs per member.
+
+## Properties
+
+### sdk
+
+`ZamaSDK`
+
+The SDK instance this group reads and writes through.
+
+### id
+
+`string`
+
+The group's identifier, as configured.
+
+### cAsset
+
+`Address`
+
+The shared confidential asset wrapper, checksummed.
+
+### vaults
+
+`readonly VaultMemberConfig[]`
+
+The members in leg order, with every address checksummed.
+
+### router
+
+`VaultRouter | undefined`
+
+The fan-out router, or `undefined` for a single-vault group.
+
+## Reads
+
+### member
+
+`(vaultId: string) => VaultMemberConfig`
+
+One member by its id. Throws [`ConfigurationError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#configurationerror) if the group has no such member.
+
+```ts
+const { vault, cShare } = group.member("alpha");
+```
+
+### activeBatchers
+
+`(direction: "deposit" | "redeem") => Promise<Readonly<Record<string, Address>>>`
+
+The batcher each member's next join in `direction` would reach, keyed by member id: the first retired batcher whose on-chain `currentBatchId` has not passed its `lastBatchId`, else `latest`. The handover happens when someone dispatches that last batch, not at a scheduled time, so this is read before every submission rather than cached.
+
+```ts
+const batchers = await group.activeBatchers("deposit");
+// { alpha: "0xAlphaDepositBatcher", beta: "0xBetaDepositBatcher" }
+```
+
+## Writes
+
+### deposit
+
+`(vaultId: string, amount: bigint, options?: VaultGroupJoinOptions) => Promise<VaultGroupJoinResult>`
+
+Deposits `amount` of the shared asset into the member `vaultId`, joining every member's current deposit batch. `amount` is in the asset token's base units.
+
+In order, the call:
+
+1. Checks the caller's confidential balance of `cAsset` (skippable with `skipBalanceCheck`).
+2. Resolves the active deposit batcher of every member and builds one leg per member — the chosen one carrying `amount`, the rest `0`.
+3. Checks each leg's batcher reports `cAsset` as the token it pulls and the member's `vault` as its vault. Both reads are cached per batcher.
+4. On the router path, checks the asset is listed in the router's registry, encrypts the total and the allocation, and sends one `confidentialTransferAndCall` of the asset to the router. On the direct path, grants each batcher an operator approval on the asset if needed and submits one `join` per leg, each encrypted against its batcher.
+5. Reads the `Joined` event of every leg's batcher from the receipts and returns them.
+
+```ts
+const { joins, transactions } = await group.deposit("alpha", 1_000_000n);
+```
+
+Unlike `Vault.deposit` there is no `beneficiary`: the router credits the account the legs came from.
+
+**Throws:**
+
+- [`ConfigurationError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#configurationerror) — unknown `vaultId`, `strategy: "router"` on a group without one, or a batcher that reports a different token or vault than the member is configured with. Thrown before any grant or transfer.
+- [`SignerNotConfiguredError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#signernotconfigurederror) — no signer on the SDK.
+- [`InsufficientConfidentialBalanceError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#insufficientconfidentialbalanceerror) — the asset balance is less than `amount`.
+- [`BalanceCheckUnavailableError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#balancecheckunavailableerror) — the balance check needs a decryption the signer can't perform; pass `skipBalanceCheck: true`.
+- [`UnlistedConfidentialTokenError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unlistedconfidentialtokenerror) — the router's registry does not list the asset (router path only).
+
+### redeem
+
+`(vaultId: string, amount: bigint, options?: VaultGroupJoinOptions) => Promise<VaultGroupJoinResult>`
+
+Redeems `amount` shares of the member `vaultId` by joining every member's current redeem batch, each leg spending its own vault's share token. Same flow as `deposit`, except that on the router path the router pulls each share token and so is granted an operator approval on every one of them first, where none is active. `amount` is denominated in **shares**, as with `Vault.redeem`.
+
+```ts
+const { joins } = await group.redeem("alpha", 500n);
+```
+
+Throws the same errors as `deposit`, checking the balance of the chosen member's `cShare` instead of `cAsset`.
+
+### VaultGroupJoinOptions
+
+```ts
+import { type VaultGroupJoinOptions, type VaultGroupStrategy } from "@zama-fhe/sdk/vaults";
+```
+
+| Option             | Type                             | Default      | Description                                                                                                                                                                                                                 |
+| ------------------ | -------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `strategy`         | `"auto" \| "router" \| "direct"` | `"auto"`     | `"auto"` uses the router for two or more members and a direct join for one. `"direct"` submits one batcher `join` per leg, for wallets that batch atomically (EIP-5792, smart accounts). The legs are identical either way. |
+| `operatorUntil`    | `number`                         | now + 1 hour | Unix timestamp (seconds) until which an operator grant made for this submission is valid — the router's on each share token, or each batcher's on its leg's token. Only used when a grant isn't already active.             |
+| `skipBalanceCheck` | `boolean`                        | `false`      | Skip the confidential-balance pre-flight. A short balance then joins every batch with an encrypted zero rather than reverting.                                                                                              |
+
+## VaultGroupJoinResult
+
+```ts
+import { type VaultGroupJoinResult, type VaultGroupJoin } from "@zama-fhe/sdk/vaults";
+```
+
+| Field          | Type                           | Description                                                         |
+| -------------- | ------------------------------ | ------------------------------------------------------------------- |
+| `vaultId`      | `string`                       | The member the caller chose.                                        |
+| `transactions` | `readonly TransactionResult[]` | One transaction on the router path, one per leg on the direct path. |
+| `joins`        | `readonly VaultGroupJoin[]`    | One entry per leg, in group order — the decoys included.            |
+
+Each `VaultGroupJoin` has:
+
+| Field                      | Type             | Description                                                                                                                         |
+| -------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `vaultId`                  | `string`         | The member this leg belongs to.                                                                                                     |
+| `batcher`                  | `Address`        | The batcher it joined, as resolved at submission time. Claim, quit and batch state happen here: `createVaultBatcher(sdk, batcher)`. |
+| `batchId`                  | `bigint`         | The batch the join landed in.                                                                                                       |
+| `confidentialJoinedAmount` | `EncryptedValue` | The encrypted amount credited — zero for every leg but the chosen one.                                                              |
+
+## Related
+
+- [VaultRouter](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultRouter.md) — the contract a multi-vault submission goes through
+- [Vault](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) / [VaultBatcher](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md) — the single-vault API, and where claiming lives
+- [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-groups.md) — what a group hides and what it costs
+- [useVaultGroup](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultGroup.md), [useGroupDeposit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupDeposit.md), [useGroupRedeem](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupRedeem.md) — the React hooks
+
+## VaultRouter
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/sdk/VaultRouter.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultRouter.md
+- logical_path: reference/sdk/VaultRouter
+
+# VaultRouter
+
+`VaultRouter` wraps the on-chain router that fans one submission out across several batchers. It submits the legs it is given and decides nothing about them; [`VaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md) is the surface that builds the legs, and most apps should use that instead.
+
+## Import
+
+```ts
+import { VaultRouter } from "@zama-fhe/sdk/vaults";
+```
+
+## Construction
+
+```ts
+const router = new VaultRouter(sdk, "0xRouter");
+```
+
+## Properties
+
+### sdk
+
+`ZamaSDK`
+
+The SDK instance this router reads and writes through.
+
+### address
+
+`Address`
+
+Checksummed address of the router contract.
+
+## Reads
+
+### tokenWrapperRegistry
+
+`() => Promise<Address>`
+
+The registry the router checks a token against before accepting a pushed transfer. Immutable on chain, so it is resolved once and cached.
+
+### isTokenListed
+
+`(token: Address) => Promise<boolean>`
+
+Whether the router's registry lists `token`. Governance can revoke a listing, so this is read per call rather than cached.
+
+### requireTokenListed
+
+`(token: Address) => Promise<void>`
+
+Throws [`UnlistedConfidentialTokenError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unlistedconfidentialtokenerror) if the registry does not list `token`. `VaultGroup.deposit` calls this before pushing the asset to the router, so the caller does not pay for a reverted transaction.
+
+## Writes
+
+### encryptAllocation
+
+`(legs: readonly AllocationLeg[]) => Promise<EncryptedAllocation>`
+
+Encrypts a leg set as one FHE input bound to the router — the contract that verifies the proof — and returns the legs with their handles plus the single `inputProof`. `encodeAllocationData(allocation)` turns the result into the `data` payload of a `confidentialTransferAndCall` to the router, which is how a deposit funds every leg with one transfer.
+
+An `AllocationLeg` is `{ batcher, token, amount }` with a plaintext `amount`.
+
+### join
+
+`(legs: readonly AllocationLeg[], options?: VaultRouterJoinOptions) => Promise<TransactionResult>`
+
+Pulls every leg's token from the caller and joins each leg's batcher, in one transaction. Grants the router an ERC-7984 operator approval on each distinct token first, unless one is already active. This is the path a group redemption takes, since each leg spends a different share token.
+
+Options (`VaultRouterJoinOptions`):
+
+| Option          | Type     | Default      | Description                                                                                                                                  |
+| --------------- | -------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `operatorUntil` | `number` | now + 1 hour | Unix timestamp (seconds) until which the router's operator grant on each leg's token is valid. Only used where a grant isn't already active. |
+
+**Throws:**
+
+- [`ConfigurationError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#configurationerror) — an empty leg set.
+- [`SignerNotConfiguredError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#signernotconfigurederror) — no signer on the SDK.
+- [`EncryptionFailedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#encryptionfailederror) — encryption returned fewer handles than legs.
+
+FHE compute grows with the leg count, and a transaction has a ceiling on it; `MAX_GROUP_VAULTS` (10) is the [documented limit](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#leg-limits) for a pull.
+
+## Related
+
+- [VaultGroup](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md) — builds the legs and picks the path
+- [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-groups.md)
+
 ## `web()` transport
 
 - source_type: official-doc
@@ -10528,6 +10853,7 @@ import {
   DecryptionFailedError,
   TransactionRevertedError,
   UnshieldAlreadyFinalizedError,
+  UnlistedConfidentialTokenError,
   InvalidTransportKeyPairError,
   TransportKeyPairExpiredError,
   RevokedKmsContextError,
@@ -10626,6 +10952,7 @@ Exactly five error classes are retryable today: `RpcRateLimitError`, `RelayerReq
 | `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                                                                                             |
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
 | `UnshieldAlreadyFinalizedError`         | `UNSHIELD_ALREADY_FINALIZED`          | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
+| `UnlistedConfidentialTokenError`        | `UNLISTED_CONFIDENTIAL_TOKEN`         | The vault router's registry does not list the confidential token, so the router would reject a transfer of it                     |
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                                                          |
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired — user must re-sign                                                                                    |
 | `RevokedKmsContextError`                | `REVOKED_KMS_CONTEXT`                 | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                                   |
@@ -10799,6 +11126,14 @@ matchZamaError(error, {
 ```
 
 **How to handle:** Treat it as completion, not a failure: dismiss the "resume unshield" prompt and refresh balances. `useResumeUnshield` invalidates the affected queries automatically. Do not retry; nothing is left to finalize.
+
+### UnlistedConfidentialTokenError
+
+**Code:** `UNLISTED_CONFIDENTIAL_TOKEN`
+
+Thrown by `VaultRouter.requireTokenListed()` — and so by `VaultGroup.deposit()` on the router path — when the registry the router checks does not list the confidential token. The router rejects a pushed transfer of an unlisted token on chain, so the SDK refuses before the caller pays for a reverted transaction. The error carries `token` and `registry`.
+
+**How to handle:** Not retryable. Listings are governed on chain and can be added or revoked at any time, so check the group's asset against the registry the router names. `VaultRouter.isTokenListed()` gives the same answer without throwing.
 
 ### InvalidTransportKeyPairError
 
@@ -12359,7 +12694,7 @@ API reference for the `@zama-fhe/react-sdk` package. Each page documents a singl
 
 🟨 Go to [**useUnshield**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useUnshield.md) to withdraw confidential tokens back to public ERC-20.
 
-🟨 Go to [**useDeposit**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md) and [**useRedeem**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRedeem.md) to join a confidential ERC-4626 vault's deposit or redeem batch.
+🟨 Go to [**useDeposit**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md) and [**useRedeem**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRedeem.md) to join a confidential ERC-4626 vault's deposit or redeem batch, or [**useGroupDeposit**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupDeposit.md) and [**useGroupRedeem**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupRedeem.md) to join a group of vaults at once.
 
 🟨 Go to [**Query keys**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/query-keys.md) for manual cache invalidation and custom query composition.
 
@@ -21737,6 +22072,748 @@ The current status of the query. Prefer the boolean flags above for conditional 
 - [useTimeUntilDispatchable](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md) — countdown while `Pending`
 - [VaultBatcher → BatchState](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#batchstate)
 
+## useVaultGroup
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/useVaultGroup.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultGroup.md
+- logical_path: reference/react/useVaultGroup
+
+# useVaultGroup
+
+Returns a memoized [`VaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md) bound to the SDK in the current `ZamaProvider`. The instance is recreated only when the SDK or the config object changes.
+
+This is the surface to reach for when depositing into one of several vaults; [`useVault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVault.md) covers a single vault with no fan-out.
+
+## Import
+
+```ts
+import { useVaultGroup } from "@zama-fhe/react-sdk/vaults";
+```
+
+The `vaults` subpath is separate from the root entry, so apps that don't use vaults don't bundle it.
+
+## Signature
+
+```ts
+function useVaultGroup(config: VaultGroupConfig): VaultGroup;
+```
+
+### config
+
+`VaultGroupConfig`
+
+The group: its shared asset, its members with their batcher histories, and the router. See [`VaultGroup` → VaultGroupConfig](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#vaultgroupconfig). The constructor's configuration checks run here, so a malformed group throws on first render.
+
+## Example
+
+```tsx
+import { useVaultGroup } from "@zama-fhe/react-sdk/vaults";
+
+const STABLE_GROUP = {
+  id: "stable",
+  cAsset: "0xConfidentialAsset",
+  router: "0xRouter",
+  vaults: [/* … */],
+} as const;
+
+function Members() {
+  const group = useVaultGroup(STABLE_GROUP);
+  return (
+    <ul>
+      {group.vaults.map((member) => (
+        <li key={member.id}>{member.id}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+The hook memoizes on the config object's identity. Define it outside the component, or memoize it, or every render builds a new group.
+
+## Related
+
+- [`VaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md) — the underlying class
+- [`useGroupDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupDeposit.md) / [`useGroupRedeem`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupRedeem.md) — mutation hooks over `group.deposit()` / `group.redeem()`
+- [`useActiveBatchers`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useActiveBatchers.md) — the batcher each member would join right now
+- [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-groups.md)
+
+## useGroupDeposit
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/useGroupDeposit.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupDeposit.md
+- logical_path: reference/react/useGroupDeposit
+
+# useGroupDeposit
+
+Mutation hook that deposits a plaintext amount into one member of a [vault group](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-groups.md). It checks the caller's confidential balance, resolves every member's active deposit batcher, and joins all of them — the chosen vault with the amount, the rest with an encrypted zero — the same flow as [`VaultGroup.deposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#deposit).
+
+The deposit is not settled when the mutation resolves: it has joined a batch on every member. Keep the returned `joins` and follow each one with [`useBatchState`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md), then [`useClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md) once it is `Finalized`.
+
+## Import
+
+```ts
+import { useGroupDeposit } from "@zama-fhe/react-sdk/vaults";
+```
+
+## Usage
+
+
+### Tab: DepositButton.tsx
+
+```tsx
+import { useGroupDeposit } from "@zama-fhe/react-sdk/vaults";
+import { STABLE_GROUP } from "./group";
+
+function DepositButton() {
+  const { mutateAsync: deposit, isPending } = useGroupDeposit({ group: STABLE_GROUP });
+
+  async function handleDeposit() {
+    const { joins } = await deposit({ vaultId: "alpha", amount: 1_000_000n });
+    const mine = joins.find((join) => join.vaultId === "alpha");
+    console.log(`Joined batch ${mine?.batchId} on ${mine?.batcher}`);
+  }
+
+  return (
+    <button onClick={handleDeposit} disabled={isPending}>
+      {isPending ? "Depositing..." : "Deposit"}
+    </button>
+  );
+}
+```
+
+
+## Parameters
+
+```ts
+import { type UseGroupDepositConfig } from "@zama-fhe/react-sdk/vaults";
+```
+
+### group
+
+`VaultGroupConfig`
+
+The group to deposit into. Same shape as [`useVaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultGroup.md) takes; keep its identity stable across renders.
+
+---
+
+### `onSuccess`
+
+**Type:** `(data: TData, variables: TVariables, context: TContext) => void`
+
+Callback fired when the mutation completes without error. Receives the return data, the variables passed to `mutate`, and any context from `onMutate`.
+
+### `onError`
+
+**Type:** `(error: Error, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired when the mutation throws. Receives the error, the variables passed to `mutate`, and the context from `onMutate` (if it ran).
+
+### `onSettled`
+
+**Type:** `(data: TData | undefined, error: Error | null, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired after the mutation finishes, regardless of success or failure. Useful for cleanup like closing modals or resetting form state.
+
+### `onMutate`
+
+**Type:** `(variables: TVariables) => Promise<TContext> | TContext`
+
+Callback fired before the mutation function runs. Return a context value to pass through to `onSuccess`, `onError`, and `onSettled`. Commonly used for optimistic updates.
+
+
+## Mutation variables
+
+```ts
+import { type GroupDepositParams } from "@zama-fhe/sdk/vaults";
+```
+
+Passed to `mutate` / `mutateAsync` at call time.
+
+### vaultId
+
+`string`
+
+The member to deposit into — one of the group's configured ids.
+
+### amount
+
+`bigint`
+
+Amount to deposit, in the shared asset token's base units.
+
+### strategy
+
+`"auto" | "router" | "direct" | undefined`
+
+Default: `"auto"` — the router for a group of two or more, a direct join for one. `"direct"` submits one batcher `join` per leg instead, for wallets that batch atomically. See [`VaultGroup` → VaultGroupJoinOptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#vaultgroupjoinoptions).
+
+### operatorUntil
+
+`number | undefined`
+
+Default: now + 1 hour. Unix timestamp (seconds) until which an operator grant made for this submission is valid. Only used when a grant isn't already active.
+
+### skipBalanceCheck
+
+`boolean | undefined`
+
+Default: `false`. Skips the confidential-balance pre-flight, for accounts whose balance the connected signer can't decrypt (smart wallets). Without the check, a too-large deposit joins every batch with nothing.
+
+**Throws:**
+
+- `ConfigurationError` — unknown `vaultId`, `strategy: "router"` on a group without one, or a batcher that reports a different token or vault than the member is configured with
+- `InsufficientConfidentialBalanceError` — the asset balance is less than `amount`
+- `BalanceCheckUnavailableError` — the balance check needs a decryption the signer can't perform
+- `UnlistedConfidentialTokenError` — the router's registry does not list the asset
+
+## Return Type
+
+```ts
+import { type VaultGroupJoinResult } from "@zama-fhe/sdk/vaults";
+```
+
+`data` resolves to a `VaultGroupJoinResult`: `{ vaultId, transactions, joins }`, with one entry in `joins` per member. See [`VaultGroup` → VaultGroupJoinResult](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#vaultgroupjoinresult).
+
+On success the hook invalidates the asset token's balance and operator-status caches, and the batch reads (`useCurrentBatchId`, `useBatchState`, `useTimeUntilDispatchable`) of every batcher a leg joined.
+
+### `mutate`
+
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
+
+
+## Related
+
+- [useGroupRedeem](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupRedeem.md) — the redeem direction
+- [useBatchState](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md) / [useClaim](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md) — follow and settle each batch you joined
+- [VaultGroup.deposit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#deposit) — imperative equivalent on the `VaultGroup` class
+- [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-groups.md)
+
+## useGroupRedeem
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/useGroupRedeem.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupRedeem.md
+- logical_path: reference/react/useGroupRedeem
+
+# useGroupRedeem
+
+Mutation hook that redeems a plaintext amount of shares from one member of a [vault group](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-groups.md). It checks the caller's balance of that member's share token, resolves every member's active redeem batcher, and joins all of them, each leg spending its own vault's share token — the same flow as [`VaultGroup.redeem`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#redeem).
+
+On the router path the router pulls each share token, so the SDK grants it an operator approval on every one of them first, where none is active.
+
+## Import
+
+```ts
+import { useGroupRedeem } from "@zama-fhe/react-sdk/vaults";
+```
+
+## Usage
+
+
+### Tab: RedeemButton.tsx
+
+```tsx
+import { useGroupRedeem } from "@zama-fhe/react-sdk/vaults";
+import { STABLE_GROUP } from "./group";
+
+function RedeemButton() {
+  const { mutateAsync: redeem, isPending } = useGroupRedeem({ group: STABLE_GROUP });
+
+  return (
+    <button onClick={() => redeem({ vaultId: "alpha", amount: 500n })} disabled={isPending}>
+      {isPending ? "Redeeming..." : "Redeem"}
+    </button>
+  );
+}
+```
+
+
+## Parameters
+
+```ts
+import { type UseGroupRedeemConfig } from "@zama-fhe/react-sdk/vaults";
+```
+
+### group
+
+`VaultGroupConfig`
+
+The group to redeem from. Same shape as [`useVaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultGroup.md) takes; keep its identity stable across renders.
+
+---
+
+### `onSuccess`
+
+**Type:** `(data: TData, variables: TVariables, context: TContext) => void`
+
+Callback fired when the mutation completes without error. Receives the return data, the variables passed to `mutate`, and any context from `onMutate`.
+
+### `onError`
+
+**Type:** `(error: Error, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired when the mutation throws. Receives the error, the variables passed to `mutate`, and the context from `onMutate` (if it ran).
+
+### `onSettled`
+
+**Type:** `(data: TData | undefined, error: Error | null, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired after the mutation finishes, regardless of success or failure. Useful for cleanup like closing modals or resetting form state.
+
+### `onMutate`
+
+**Type:** `(variables: TVariables) => Promise<TContext> | TContext`
+
+Callback fired before the mutation function runs. Return a context value to pass through to `onSuccess`, `onError`, and `onSettled`. Commonly used for optimistic updates.
+
+
+## Mutation variables
+
+```ts
+import { type GroupRedeemParams } from "@zama-fhe/sdk/vaults";
+```
+
+### vaultId
+
+`string`
+
+The member to redeem from — one of the group's configured ids.
+
+### amount
+
+`bigint`
+
+Amount of **shares** to redeem, in that member's share token's base units. ERC-4626 `redeem`, not `withdraw`.
+
+### strategy, operatorUntil, skipBalanceCheck
+
+Same as [`useGroupDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupDeposit.md#strategy). The balance check is against the chosen member's share token.
+
+**Throws:** the same errors as `useGroupDeposit`, except `UnlistedConfidentialTokenError`, which only the deposit path raises.
+
+## Return Type
+
+`data` resolves to a `VaultGroupJoinResult` — see [`VaultGroup` → VaultGroupJoinResult](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#vaultgroupjoinresult).
+
+On success the hook invalidates every member's share balance and operator-status caches — each leg transferred its own share token, even where the amount moved was zero — and the batch reads of every batcher a leg joined.
+
+### `mutate`
+
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
+
+
+## Related
+
+- [useGroupDeposit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupDeposit.md) — the deposit direction
+- [VaultGroup.redeem](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#redeem) — imperative equivalent on the `VaultGroup` class
+- [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-groups.md)
+
+## useActiveBatcher
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/useActiveBatcher.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useActiveBatcher.md
+- logical_path: reference/react/useActiveBatcher
+
+# useActiveBatcher
+
+Reads which batcher of a [batcher history](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#batcherhistory) a new join would reach: the first retired batcher whose open batch has not passed its `lastBatchId`, else `latest`. Same lookup as `resolveActiveBatcher` in the core SDK.
+
+A submission resolves this itself, so the hook is only for showing it — for example to read the open batch of the batcher a deposit is about to join.
+
+## Import
+
+```ts
+import { useActiveBatcher } from "@zama-fhe/react-sdk/vaults";
+```
+
+## Usage
+
+
+### Tab: NextBatcher.tsx
+
+```tsx
+import { useActiveBatcher, useCurrentBatchId } from "@zama-fhe/react-sdk/vaults";
+import { STABLE_GROUP } from "./group";
+
+function NextBatcher() {
+  const { data: batcher } = useActiveBatcher(
+    { history: STABLE_GROUP.vaults[0].batchers.deposit },
+    { refetchInterval: 15_000 },
+  );
+  const { data: batchId } = useCurrentBatchId(
+    { address: batcher ?? "0x" },
+    { enabled: batcher !== undefined },
+  );
+
+  return <span>Next join lands in batch #{batchId?.toString() ?? "…"}</span>;
+}
+```
+
+
+## Parameters
+
+```ts
+import { type UseActiveBatcherConfig } from "@zama-fhe/react-sdk/vaults";
+```
+
+### history
+
+`BatcherHistory`
+
+One vault's batcher history for one direction.
+
+### `enabled`
+
+**Type:** `boolean`
+
+Set to `false` to prevent the query from running automatically. The query will only execute when `refetch` is called or when `enabled` changes to `true`.
+
+### `staleTime`
+
+**Type:** `number` (milliseconds)
+
+How long fetched data is considered fresh. While fresh, the query will not re-fetch on mount or window focus. Defaults to `0` (always stale).
+
+### `gcTime`
+
+**Type:** `number` (milliseconds)
+
+How long inactive query data stays in the cache before garbage collection. Defaults to `300000` (5 minutes).
+
+### `refetchInterval`
+
+**Type:** `number | false` (milliseconds)
+
+Poll at a fixed interval. Set to `false` or omit to disable polling.
+
+### `refetchOnWindowFocus`
+
+**Type:** `boolean`
+
+Re-fetch when the browser tab regains focus. Defaults to `true`.
+
+
+The handover from a retired batcher happens when someone dispatches its last batch, not at a scheduled time, so nothing client-side predicts when this flips. Pass a `refetchInterval` on a screen that stays open.
+
+## Return Type
+
+The `data` property is `Address | undefined` — the batcher a join would reach now.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
+
+
+## Related
+
+- [useActiveBatchers](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useActiveBatchers.md) — the same, for every member of a group
+- [useCurrentBatchId](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useCurrentBatchId.md) — the open batch on that batcher
+- [Query keys → `vaultQueryKeys`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/query-keys.md#vaultquerykeys)
+
+## useActiveBatchers
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/useActiveBatchers.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useActiveBatchers.md
+- logical_path: reference/react/useActiveBatchers
+
+# useActiveBatchers
+
+Reads the batcher each member of a [vault group](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-groups.md) would join in one direction, keyed by member id. Same read as [`VaultGroup.activeBatchers`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#activebatchers).
+
+A submission resolves this itself, so the hook is only for showing it.
+
+## Import
+
+```ts
+import { useActiveBatchers } from "@zama-fhe/react-sdk/vaults";
+```
+
+## Usage
+
+
+### Tab: GroupBatchers.tsx
+
+```tsx
+import { useActiveBatchers } from "@zama-fhe/react-sdk/vaults";
+import { STABLE_GROUP } from "./group";
+
+function GroupBatchers() {
+  const { data } = useActiveBatchers(
+    { group: STABLE_GROUP, direction: "deposit" },
+    { refetchInterval: 15_000 },
+  );
+
+  return (
+    <ul>
+      {Object.entries(data ?? {}).map(([vaultId, batcher]) => (
+        <li key={vaultId}>
+          {vaultId}: {batcher}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+
+## Parameters
+
+```ts
+import { type UseActiveBatchersConfig } from "@zama-fhe/react-sdk/vaults";
+```
+
+### group
+
+`VaultGroupConfig`
+
+The group whose members to resolve. Same shape as [`useVaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultGroup.md) takes; keep its identity stable across renders.
+
+### direction
+
+`"deposit" | "redeem"`
+
+Which side of the group to read.
+
+### `enabled`
+
+**Type:** `boolean`
+
+Set to `false` to prevent the query from running automatically. The query will only execute when `refetch` is called or when `enabled` changes to `true`.
+
+### `staleTime`
+
+**Type:** `number` (milliseconds)
+
+How long fetched data is considered fresh. While fresh, the query will not re-fetch on mount or window focus. Defaults to `0` (always stale).
+
+### `gcTime`
+
+**Type:** `number` (milliseconds)
+
+How long inactive query data stays in the cache before garbage collection. Defaults to `300000` (5 minutes).
+
+### `refetchInterval`
+
+**Type:** `number | false` (milliseconds)
+
+Poll at a fixed interval. Set to `false` or omit to disable polling.
+
+### `refetchOnWindowFocus`
+
+**Type:** `boolean`
+
+Re-fetch when the browser tab regains focus. Defaults to `true`.
+
+
+Pass a `refetchInterval` on a screen that stays open: a retired batcher hands over when its last batch is dispatched, which nothing client-side predicts.
+
+## Return Type
+
+The `data` property is `Readonly<Record<string, Address>> | undefined` — one batcher per member id.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
+
+
+## Related
+
+- [useActiveBatcher](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useActiveBatcher.md) — one history at a time
+- [useVaultGroup](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultGroup.md) — the group instance the read goes through
+- [Query keys → `vaultQueryKeys`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/query-keys.md#vaultquerykeys)
+
 ## useTimeUntilDispatchable
 
 - source_type: official-doc
@@ -22027,19 +23104,21 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 ### `vaultQueryKeys`
 
-Batch reads for confidential ERC-4626 vaults, used by [`useCurrentBatchId`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useCurrentBatchId.md), [`useBatchState`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md) and [`useTimeUntilDispatchable`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md). Lives in the `vaults` subpath, not on `zamaQueryKeys`.
+Batch reads for confidential ERC-4626 vaults, used by [`useCurrentBatchId`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useCurrentBatchId.md), [`useBatchState`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md), [`useTimeUntilDispatchable`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md), [`useActiveBatcher`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useActiveBatcher.md) and [`useActiveBatchers`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useActiveBatchers.md). Lives in the `vaults` subpath, not on `zamaQueryKeys`.
 
 ```ts
 import { vaultQueryKeys, invalidateBatchQueries } from "@zama-fhe/sdk/vaults";
 ```
 
-| Key                                             | Scope                                   |
-| ----------------------------------------------- | --------------------------------------- |
-| `.currentBatchId.batcher(batcherAddr)`          | One batcher's open batch id             |
-| `.batchState.batcher(batcherAddr)`              | All batch states for one batcher        |
-| `.batchState.batch(batcherAddr, batchId)`       | One batch's state                       |
-| `.timeUntilDispatchable.batcher(batcherAddr)`   | All dispatch countdowns for one batcher |
-| `.timeUntilDispatchable.batch(batcherAddr, id)` | One batch's dispatch countdown          |
+| Key                                             | Scope                                            |
+| ----------------------------------------------- | ------------------------------------------------ |
+| `.currentBatchId.batcher(batcherAddr)`          | One batcher's open batch id                      |
+| `.batchState.batcher(batcherAddr)`              | All batch states for one batcher                 |
+| `.batchState.batch(batcherAddr, batchId)`       | One batch's state                                |
+| `.timeUntilDispatchable.batcher(batcherAddr)`   | All dispatch countdowns for one batcher          |
+| `.timeUntilDispatchable.batch(batcherAddr, id)` | One batch's dispatch countdown                   |
+| `.activeBatcher.history(history)`               | The batcher a join through `history` reaches now |
+| `.activeBatchers.group(vaults, direction)`      | The same, for every member of a group            |
 
 A `batcher(...)` key is a prefix of every `batch(...)` key for that batcher, so invalidating it clears all of them at once. `invalidateBatchQueries(queryClient, batcherAddr)` invalidates all three namespaces for a batcher — this is what the vault mutation hooks call after a join, quit, recover or dispatch. Balances on the batcher's input and output tokens go through the regular [`invalidateBalanceQueries`](#invalidatebalancequeries).
 

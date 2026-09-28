@@ -4,13 +4,12 @@ import {
   ConfigurationError,
   EncryptionFailedError,
   SignerNotConfiguredError,
-  TransactionRevertedError,
   UnlistedConfidentialTokenError,
-  ZamaError,
 } from "../errors";
 import { Token } from "../token";
 import type { TransactionResult, WriteContractConfig } from "../types";
 import { requireAlignedWalletAccount } from "../utils/alignment";
+import { submitTransaction as submitSdkTransaction } from "../utils/submit-transaction";
 import type { ZamaSDK } from "../zama-sdk";
 import type { AllocationLeg, EncryptedAllocation } from "./allocation";
 import { routerJoinContract, tokenWrapperRegistryContract } from "./contracts";
@@ -20,9 +19,9 @@ export interface VaultRouterJoinOptions {
   /**
    * Unix timestamp until which the router's operator grant on each leg's token
    * is valid. Only used where a grant isn't already active. Defaults to
-   * `Token.setOperator`'s own default.
+   * `Token.setOperator`'s own default (now + 1 hour).
    */
-  operatorDeadline?: number;
+  operatorUntil?: number;
 }
 
 /**
@@ -109,11 +108,6 @@ export class VaultRouter {
    * distinct token first, unless one is already active.
    *
    * @param legs - One leg per vault of the group, with plaintext amounts.
-   * @param options - Optional `operatorDeadline`.
-   *
-   * @remarks
-   * FHE compute grows with the leg count, and enough legs exceed what one
-   * transaction may spend.
    */
   async join(
     legs: readonly AllocationLeg[],
@@ -125,10 +119,9 @@ export class VaultRouter {
     const account = await requireAlignedWalletAccount("join", this.sdk.signer, this.sdk.provider);
     const holder = getAddress(account.address);
 
-    await this.#ensureOperators(holder, legs, options?.operatorDeadline);
+    await this.#ensureOperators(holder, legs, options?.operatorUntil);
     const allocation = await this.#encryptAllocation(holder, legs);
     return this.#submitTransaction(
-      "join",
       routerJoinContract(this.address, allocation.legs, allocation.inputProof),
     );
   }
@@ -177,25 +170,18 @@ export class VaultRouter {
     }
   }
 
-  async #submitTransaction(
-    operation: string,
-    config: WriteContractConfig,
-  ): Promise<TransactionResult> {
+  async #submitTransaction(config: WriteContractConfig): Promise<TransactionResult> {
     const signer = this.sdk.signer;
     if (!signer) {
-      throw new SignerNotConfiguredError(operation);
+      throw new SignerNotConfiguredError("join");
     }
-    try {
-      const txHash: Hex = await signer.writeContract(config);
-      const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError(`VaultRouter transaction failed during ${operation}`, {
-        cause: error,
-      });
-    }
+    return submitSdkTransaction({
+      operation: "vault:routerJoin",
+      signer,
+      provider: this.sdk.provider,
+      config,
+      emit: (input) => this.sdk.emitEvent(input, this.address),
+      logger: this.sdk.logger,
+    });
   }
 }

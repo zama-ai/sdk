@@ -565,6 +565,30 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:reference/sdk/VaultGroup",
+      "title": "VaultGroup",
+      "source_path": "docs/gitbook/src/reference/sdk/VaultGroup.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md",
+      "source_type": "official-doc",
+      "category": "reference-sdk",
+      "logical_path": "reference/sdk/VaultGroup",
+      "description": "A set of confidential ERC-4626 vaults sharing one asset, joined together so a deposit hides which vault it went to.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:reference/sdk/VaultRouter",
+      "title": "VaultRouter",
+      "source_path": "docs/gitbook/src/reference/sdk/VaultRouter.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultRouter.md",
+      "source_type": "official-doc",
+      "category": "reference-sdk",
+      "logical_path": "reference/sdk/VaultRouter",
+      "description": "The contract that turns one submission into a join on each of several vault batchers.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:reference/sdk/RelayerWeb",
       "title": "`web()` transport",
       "source_path": "docs/gitbook/src/reference/sdk/RelayerWeb.md",
@@ -1485,6 +1509,66 @@
       "category": "reference-react",
       "logical_path": "reference/react/useBatchState",
       "description": "Query hook for a vault batch's lifecycle state, which decides what the user can do next.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:reference/react/useVaultGroup",
+      "title": "useVaultGroup",
+      "source_path": "docs/gitbook/src/reference/react/useVaultGroup.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultGroup.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/useVaultGroup",
+      "description": "React hook returning a memoized VaultGroup instance for a set of vaults sharing one confidential asset.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:reference/react/useGroupDeposit",
+      "title": "useGroupDeposit",
+      "source_path": "docs/gitbook/src/reference/react/useGroupDeposit.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupDeposit.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/useGroupDeposit",
+      "description": "Mutation hook that deposits into one vault of a group by joining every member's current deposit batch.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:reference/react/useGroupRedeem",
+      "title": "useGroupRedeem",
+      "source_path": "docs/gitbook/src/reference/react/useGroupRedeem.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupRedeem.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/useGroupRedeem",
+      "description": "Mutation hook that redeems shares of one vault of a group by joining every member's current redeem batch.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:reference/react/useActiveBatcher",
+      "title": "useActiveBatcher",
+      "source_path": "docs/gitbook/src/reference/react/useActiveBatcher.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useActiveBatcher.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/useActiveBatcher",
+      "description": "Query hook for the batcher a join through a batcher history would reach right now.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:reference/react/useActiveBatchers",
+      "title": "useActiveBatchers",
+      "source_path": "docs/gitbook/src/reference/react/useActiveBatchers.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useActiveBatchers.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/useActiveBatchers",
+      "description": "Query hook for the batcher every member of a vault group would join right now, keyed by member id.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

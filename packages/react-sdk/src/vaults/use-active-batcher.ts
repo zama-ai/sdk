@@ -12,6 +12,15 @@ export interface UseActiveBatcherConfig {
   history: BatcherHistory;
 }
 
+/** TanStack Query options accepted by {@link useActiveBatcher} (excluding `queryKey`/`queryFn`). */
+export interface UseActiveBatcherOptions extends Omit<
+  UseQueryOptions<Address>,
+  "queryKey" | "queryFn" | "enabled"
+> {
+  /** Set this to `false` to disable this query from automatically running. */
+  enabled?: boolean;
+}
+
 /**
  * The batcher a join would reach right now.
  *
@@ -29,14 +38,15 @@ export interface UseActiveBatcherConfig {
  */
 export function useActiveBatcher(
   config: UseActiveBatcherConfig,
-  options?: Omit<UseQueryOptions<Address>, "queryKey" | "queryFn">,
+  options?: UseActiveBatcherOptions,
 ) {
+  const { enabled = true } = options ?? {};
   const sdk = useZamaSDK();
-  const baseOpts = activeBatcherQueryOptions(sdk, { history: config.history });
+  const baseOptions = activeBatcherQueryOptions(sdk, { history: config.history });
 
-  return useQuery({
-    ...baseOpts,
+  return useQuery<Address>({
+    ...baseOptions,
     ...options,
-    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
+    enabled: Boolean(baseOptions.enabled) && enabled,
   });
 }

@@ -1,16 +1,9 @@
 /**
- * ABI for the confidential vault batcher router, which fans one submission out
- * across several batchers.
- *
- * Transcribed against the router deployed on mainnet and Sepolia, and limited
- * to what the SDK reaches for. `onConfidentialTransferReceived` is left out
- * because the SDK never calls it — a token does, on the SDK's behalf — and its
- * payload is encoded from `join`'s parameters, which are the same pair. The
- * errors kept are the ones a caller can actually meet; the constructor's own
- * revert is unreachable once the router is deployed.
- *
- * `pnpm abi:build` does not produce this file, unlike the other ABIs here: the
- * router's source is not part of this repo's Foundry project.
+ * ABI for the vault batcher router, which fans one submission out across
+ * several batchers. Transcribed from `IVaultBatcherConfidentialRouter` in
+ * zama-ai/confidential-defi. `onConfidentialTransferReceived` is omitted — a
+ * token calls it, not the SDK; every custom error is kept so reverts decode
+ * to a name.
  */
 export const vaultRouterAbi = [
   {
@@ -39,6 +32,7 @@ export const vaultRouterAbi = [
     outputs: [{ name: "", type: "address", internalType: "contract ITokenWrapperRegistry" }],
     stateMutability: "view",
   },
+  { type: "error", name: "InvalidTokenWrapperRegistry", inputs: [] },
   { type: "error", name: "MissingInputProof", inputs: [] },
   { type: "error", name: "ReentrancyGuardReentrantCall", inputs: [] },
   { type: "error", name: "ZamaProtocolUnsupported", inputs: [] },

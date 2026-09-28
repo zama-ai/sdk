@@ -9,7 +9,7 @@ import { useZamaSDK } from "../provider";
  * asset. This is the surface to reach for; `useVault` covers a single vault
  * with no fan-out.
  *
- * @param config - The group: its asset, members and router.
+ * @param config - The group: its `cAsset`, members and router.
  *
  * @remarks
  * Memoized on the config object's identity: hold it in a module constant or a

@@ -2,18 +2,15 @@ export { vaultQueryKeys } from "./query-keys";
 export {
   invalidateAfterClaim,
   invalidateAfterDispatchBatch,
+  invalidateAfterGroupJoin,
   invalidateAfterJoin,
   invalidateAfterQuit,
   invalidateBatchQueries,
 } from "./invalidation";
 export { activeBatcherQueryOptions, type ActiveBatcherQueryConfig } from "./active-batcher";
 export { activeBatchersQueryOptions, type ActiveBatchersQueryConfig } from "./active-batchers";
-export {
-  groupDepositMutationOptions,
-  groupRequestWithdrawalMutationOptions,
-  type GroupDepositParams,
-  type GroupRequestWithdrawalParams,
-} from "./group-deposit";
+export { groupDepositMutationOptions, type GroupDepositParams } from "./group-deposit";
+export { groupRedeemMutationOptions, type GroupRedeemParams } from "./group-redeem";
 export { currentBatchIdQueryOptions, type CurrentBatchIdQueryConfig } from "./current-batch-id";
 export { batchStateQueryOptions, type BatchStateQueryConfig } from "./batch-state";
 export {

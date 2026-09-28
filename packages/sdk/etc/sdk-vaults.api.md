@@ -8412,10 +8412,10 @@ export interface GroupDepositParams extends VaultGroupJoinOptions {
 }
 
 // @public
-export function groupRequestWithdrawalMutationOptions(group: VaultGroup): MutationFactoryOptions<readonly ["zama.vaultGroup.requestWithdrawal", string], GroupRequestWithdrawalParams, VaultGroupJoinResult>;
+export function groupRedeemMutationOptions(group: VaultGroup): MutationFactoryOptions<readonly ["zama.vaultGroup.redeem", string], GroupRedeemParams, VaultGroupJoinResult>;
 
 // @public
-export interface GroupRequestWithdrawalParams extends VaultGroupJoinOptions {
+export interface GroupRedeemParams extends VaultGroupJoinOptions {
     amount: bigint;
     vaultId: string;
 }
@@ -8429,6 +8429,12 @@ export function invalidateAfterClaim(queryClient: QueryClientLike, params: {
 
 // @public
 export function invalidateAfterDispatchBatch(queryClient: QueryClientLike, batcherAddress: Address): void;
+
+// @public
+export function invalidateAfterGroupJoin(queryClient: QueryClientLike, params: {
+    tokens: readonly Address[];
+    batchers: readonly Address[];
+}): void;
 
 // @public
 export function invalidateAfterJoin(queryClient: QueryClientLike, params: {
@@ -9109,7 +9115,7 @@ export interface JoinResult extends TransactionResult {
 }
 
 // @public
-export const MAX_GROUP_VAULTS = 8;
+export const MAX_GROUP_VAULTS = 10;
 
 // @public
 export function minBatchAgeContract(batcher: Address): {
@@ -11730,6 +11736,10 @@ export function routerJoinContract(router: Address, legs: readonly EncryptedAllo
         readonly stateMutability: "view";
     }, {
         readonly type: "error";
+        readonly name: "InvalidTokenWrapperRegistry";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
         readonly name: "MissingInputProof";
         readonly inputs: readonly [];
     }, {
@@ -11802,6 +11812,10 @@ export function tokenWrapperRegistryContract(router: Address): {
             readonly internalType: "contract ITokenWrapperRegistry";
         }];
         readonly stateMutability: "view";
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidTokenWrapperRegistry";
+        readonly inputs: readonly [];
     }, {
         readonly type: "error";
         readonly name: "MissingInputProof";
@@ -13787,11 +13801,11 @@ export function vaultContract(batcher: Address): {
 export class VaultGroup {
     constructor(sdk: ZamaSDK, config: VaultGroupConfig);
     activeBatchers(direction: BatcherDirection): Promise<Readonly<Record<string, Address>>>;
-    readonly asset: Address;
+    readonly cAsset: Address;
     deposit(vaultId: string, amount: bigint, options?: VaultGroupJoinOptions): Promise<VaultGroupJoinResult>;
     readonly id: string;
     member(vaultId: string): VaultMemberConfig;
-    requestWithdrawal(vaultId: string, amount: bigint, options?: VaultGroupJoinOptions): Promise<VaultGroupJoinResult>;
+    redeem(vaultId: string, amount: bigint, options?: VaultGroupJoinOptions): Promise<VaultGroupJoinResult>;
     readonly router: VaultRouter | undefined;
     readonly sdk: ZamaSDK;
     readonly vaults: readonly VaultMemberConfig[];
@@ -13799,7 +13813,7 @@ export class VaultGroup {
 
 // @public
 export interface VaultGroupConfig {
-    readonly asset: Address;
+    readonly cAsset: Address;
     readonly id: string;
     readonly router?: Address;
     readonly vaults: readonly VaultMemberConfig[];
@@ -13814,8 +13828,8 @@ export interface VaultGroupJoin {
 }
 
 // @public
-export interface VaultGroupJoinOptions {
-    operatorDeadline?: number;
+export interface VaultGroupJoinOptions extends JoinOptions {
+    operatorUntil?: number;
     strategy?: VaultGroupStrategy;
 }
 
@@ -13838,8 +13852,8 @@ export interface VaultJoinOptions extends JoinOptions {
 // @public
 export interface VaultMemberConfig {
     readonly batchers: Readonly<Record<BatcherDirection, BatcherHistory>>;
+    readonly cShare: Address;
     readonly id: string;
-    readonly share: Address;
     readonly vault: Address;
 }
 
@@ -13847,14 +13861,18 @@ export interface VaultMemberConfig {
 export const vaultQueryKeys: {
     activeBatcher: {
         history: (history: BatcherHistory) => readonly ["zama.vault.activeBatcher", {
-            readonly retired: string[];
-            readonly latest: `0x${string}`;
+            retired: string[];
+            latest: `0x${string}`;
         }];
     };
     activeBatchers: {
-        group: (groupId: string, direction: BatcherDirection) => readonly ["zama.vaultGroup.activeBatchers", {
-            readonly groupId: string;
+        group: (vaults: readonly VaultMemberConfig[], direction: BatcherDirection) => readonly ["zama.vaultGroup.activeBatchers", {
             readonly direction: "deposit" | "redeem";
+            readonly members: {
+                retired: string[];
+                latest: `0x${string}`;
+                id: string;
+            }[];
         }];
     };
     currentBatchId: {
@@ -13896,7 +13914,7 @@ export class VaultRouter {
 
 // @public
 export interface VaultRouterJoinOptions {
-    operatorDeadline?: number;
+    operatorUntil?: number;
 }
 
 // @public

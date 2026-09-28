@@ -19,6 +19,14 @@ Both packages gain a `vaults` subpath — `@zama-fhe/sdk/vaults` and `@zama-fhe/
 
 See [Vault deposits and redemptions](../guides/vault-deposits.md) for the full flow.
 
+## Vault groups over the multi-vault router
+
+`VaultGroup` (`createVaultGroup`, or `useVaultGroup` in React) joins several confidential vaults that share one `cAsset` as a single leg list: `deposit` and `redeem` join _every_ member's batch, the chosen vault with the amount and the rest with an encrypted zero, so the choice of vault stays private. A group of two or more submits through the on-chain `VaultBatcherConfidentialRouter` in one transaction — pushed for a deposit, pulled for a redemption — and a `strategy: "direct"` option submits one batcher `join` per leg instead for wallets that batch atomically. Each member names a batcher _history_ rather than an address, so a retired batcher keeps receiving joins until its last batch is dispatched; `useActiveBatcher` and `useActiveBatchers` expose which batcher a join would reach right now. The React hooks are `useGroupDeposit` and `useGroupRedeem`.
+
+`VaultRouter` mirrors the router contract for callers that build their own legs. A router deposit throws the new `UnlistedConfidentialTokenError` when the router's registry does not list the asset, and router transactions surface as `VaultSubmitted` events with `vaultOperation: "routerJoin"`.
+
+See [Vault groups](../guides/vault-groups.md).
+
 ## Permit signatures with a 0/1 recovery byte
 
 `parseSignedDecryptionPermit` (and `sdk.permits.registerPermit`, which uses it) now accepts 65-byte permit signatures whose recovery byte is `0`/`1` as well as `27`/`28`. The SDK normalizes the byte before the permit is verified; signatures already in `27`/`28` form and longer ERC-1271 signatures are unchanged.

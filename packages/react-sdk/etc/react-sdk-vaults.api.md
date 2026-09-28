@@ -11,7 +11,7 @@ import { BatchState } from '@zama-fhe/sdk/vaults';
 import { ClaimParams } from '@zama-fhe/sdk/vaults';
 import { DepositParams } from '@zama-fhe/sdk/vaults';
 import { GroupDepositParams } from '@zama-fhe/sdk/vaults';
-import { GroupRequestWithdrawalParams } from '@zama-fhe/sdk/vaults';
+import { GroupRedeemParams } from '@zama-fhe/sdk/vaults';
 import { JoinParams } from '@zama-fhe/sdk/vaults';
 import { JoinResult } from '@zama-fhe/sdk/vaults';
 import { QuitParams } from '@zama-fhe/sdk/vaults';
@@ -30,7 +30,7 @@ import { VaultGroupConfig } from '@zama-fhe/sdk/vaults';
 import { VaultGroupJoinResult } from '@zama-fhe/sdk/vaults';
 
 // @public
-export function useActiveBatcher(config: UseActiveBatcherConfig, options?: Omit<UseQueryOptions<Address>, "queryKey" | "queryFn">): UseQueryResult<`0x${string}`, Error>;
+export function useActiveBatcher(config: UseActiveBatcherConfig, options?: UseActiveBatcherOptions): UseQueryResult<`0x${string}`, Error>;
 
 // @public
 export interface UseActiveBatcherConfig {
@@ -38,12 +38,22 @@ export interface UseActiveBatcherConfig {
 }
 
 // @public
-export function useActiveBatchers(config: UseActiveBatchersConfig, options?: Omit<UseQueryOptions<Readonly<Record<string, Address>>>, "queryKey" | "queryFn">): UseQueryResult<Readonly<Record<string, `0x${string}`>>, Error>;
+export interface UseActiveBatcherOptions extends Omit<UseQueryOptions<Address>, "queryKey" | "queryFn" | "enabled"> {
+    enabled?: boolean;
+}
+
+// @public
+export function useActiveBatchers(config: UseActiveBatchersConfig, options?: UseActiveBatchersOptions): UseQueryResult<Readonly<Record<string, `0x${string}`>>, Error>;
 
 // @public
 export interface UseActiveBatchersConfig {
     direction: BatcherDirection;
     group: VaultGroupConfig;
+}
+
+// @public
+export interface UseActiveBatchersOptions extends Omit<UseQueryOptions<Readonly<Record<string, Address>>>, "queryKey" | "queryFn" | "enabled"> {
+    enabled?: boolean;
 }
 
 // @public
@@ -106,10 +116,10 @@ export interface UseGroupDepositConfig {
 }
 
 // @public
-export function useGroupRequestWithdrawal<TContext = unknown>(config: UseGroupRequestWithdrawalConfig, options?: UseMutationOptions<VaultGroupJoinResult, Error, GroupRequestWithdrawalParams, TContext>): UseMutationResult<VaultGroupJoinResult, Error, GroupRequestWithdrawalParams, TContext>;
+export function useGroupRedeem<TContext = unknown>(config: UseGroupRedeemConfig, options?: UseMutationOptions<VaultGroupJoinResult, Error, GroupRedeemParams, TContext>): UseMutationResult<VaultGroupJoinResult, Error, GroupRedeemParams, TContext>;
 
 // @public
-export interface UseGroupRequestWithdrawalConfig {
+export interface UseGroupRedeemConfig {
     group: VaultGroupConfig;
 }
 
