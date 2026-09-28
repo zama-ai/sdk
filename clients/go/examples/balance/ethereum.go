@@ -7,20 +7,20 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	sidecar "github.com/zama-ai/sdk/clients/go"
-	"github.com/zama-ai/sdk/clients/go/examples/balance/contracts"
+	"github.com/zama-ai/sdk/clients/go/v3"
+	"github.com/zama-ai/sdk/clients/go/v3/examples/balance/contracts"
 )
 
 const sepoliaChainID = 11155111
 
-func connectEthereum(ctx context.Context, config exampleConfig) (*ethclient.Client, sidecar.SignerConfig, error) {
+func connectEthereum(ctx context.Context, config exampleConfig) (*ethclient.Client, zama.SignerConfig, error) {
 	rpc, err := ethclient.DialContext(ctx, config.rpcURL)
 	if err != nil {
-		return nil, sidecar.SignerConfig{}, err
+		return nil, zama.SignerConfig{}, err
 	}
-	fail := func(err error) (*ethclient.Client, sidecar.SignerConfig, error) {
+	fail := func(err error) (*ethclient.Client, zama.SignerConfig, error) {
 		rpc.Close()
-		return nil, sidecar.SignerConfig{}, err
+		return nil, zama.SignerConfig{}, err
 	}
 	chain, err := rpc.ChainID(ctx)
 	if err != nil {
@@ -29,7 +29,7 @@ func connectEthereum(ctx context.Context, config exampleConfig) (*ethclient.Clie
 	if !chain.IsUint64() || chain.Uint64() != sepoliaChainID {
 		return fail(errors.New("RPC must use Sepolia"))
 	}
-	signer, err := sidecar.NewEthereumSigner(config.privateKey, sepoliaChainID, rpc)
+	signer, err := zama.NewEthereumSigner(config.privateKey, sepoliaChainID, rpc)
 	if err != nil {
 		return fail(err)
 	}

@@ -35,7 +35,7 @@ pub struct PinnedModuleVersions {
     pub check_compatibility: Option<CompatibilityCheck>,
 }
 
-/// The accepted set is decided by the sidecar SDK, so any string is allowed.
+/// `@zama-fhe/sdk` in the daemon decides the accepted set, so any string is allowed.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TfheVersion(Cow<'static, str>);
 impl TfheVersion {
@@ -57,7 +57,7 @@ impl From<&str> for TfheVersion {
     }
 }
 
-/// The accepted set is decided by the sidecar SDK, so any string is allowed.
+/// `@zama-fhe/sdk` in the daemon decides the accepted set, so any string is allowed.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KmsVersion(Cow<'static, str>);
 impl KmsVersion {
@@ -115,7 +115,7 @@ impl WasmAssetLoadMode {
     }
 }
 
-/// Applied once per sidecar process; the first SDK config wins.
+/// Applied once per daemon process; the first SDK config wins.
 #[derive(Clone, Debug, Default)]
 pub struct ProcessRuntime {
     pub wasm_asset_load_mode: Option<WasmAssetLoadMode>,

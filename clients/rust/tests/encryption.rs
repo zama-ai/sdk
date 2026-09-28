@@ -1,6 +1,6 @@
 use anyhow::Result;
 use std::time::Duration;
-use zama_sdk_sidecar::{
+use zama_sdk::{
     Address, BigInt, Client, EncryptInput, EncryptOptions, EncryptParams, ErrorKind, Sdk, SdkConfig,
 };
 
@@ -13,7 +13,7 @@ async fn context(client: &Client, scenario: &str) -> Result<Sdk> {
 #[tokio::test]
 #[ignore = "requires SDK-backed encryption fixture server"]
 async fn encryption_preserves_sdk_semantics() -> Result<()> {
-    let socket = std::env::var("SIDECAR_ENCRYPT_TEST_SOCKET")?;
+    let socket = std::env::var("ZAMA_SDK_DAEMON_ENCRYPT_TEST_SOCKET")?;
     let client = Client::connect(socket).await?;
     let contract_address: Address = "0x1111111111111111111111111111111111111111".parse()?;
     let user_address: Address = "0x2222222222222222222222222222222222222222".parse()?;

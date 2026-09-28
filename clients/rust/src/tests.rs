@@ -1,4 +1,4 @@
-//! Tests that drive the whole Sdk against the in-process mock sidecar; unit tests for a single module stay next to that module.
+//! Whole-Sdk tests against an in-process mock daemon.
 mod support;
 
 use support::*;

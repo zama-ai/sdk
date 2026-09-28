@@ -1,11 +1,11 @@
-package sidecar
+package zama
 
 import (
 	"context"
 	"errors"
 	"path/filepath"
 
-	pb "github.com/zama-ai/sdk/clients/go/internal/gen/zama/sdk/v1alpha1"
+	pb "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
@@ -13,7 +13,7 @@ import (
 
 type Client struct {
 	conn *grpc.ClientConn
-	rpc  pb.SidecarServiceClient
+	rpc  pb.DaemonServiceClient
 }
 
 type DialOptions struct{ MaxMessageBytes int }
@@ -34,7 +34,7 @@ func DialWithOptions(socket string, options DialOptions) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Client{conn: conn, rpc: pb.NewSidecarServiceClient(conn)}, nil
+	return &Client{conn: conn, rpc: pb.NewDaemonServiceClient(conn)}, nil
 }
 func (c *Client) Close() error { return c.conn.Close() }
 

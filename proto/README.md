@@ -1,6 +1,6 @@
-# Sidecar v1alpha1 contract
+# Daemon v1beta1 contract
 
-The canonical schema is [sidecar.proto](zama/sdk/v1alpha1/sidecar.proto). It exposes the TypeScript SDK's encryption, decryption, permit and offline transaction methods through unary RPCs, with a bidirectional channel for external signing and transaction broadcasting. This maintained, permanently beta sidecar is intended for external partners; its versioned protocol can evolve with its native clients. Transport adapts arguments and results; `@zama-fhe/sdk` owns cryptography, credentials, defaults, caching, delegation checks, batching and recovery.
+The canonical schema is [daemon.proto](zama/sdk/v1beta1/daemon.proto). It exposes the TypeScript SDK's encryption, decryption, permit and offline transaction methods through unary RPCs, with a bidirectional channel for external signing and transaction broadcasting. This maintained, permanently beta daemon is intended for external partners; its versioned protocol can evolve with its native clients. Transport adapts arguments and results; `@zama-fhe/sdk` owns cryptography, credentials, defaults, caching, delegation checks, batching and recovery.
 
 ## SDK contexts
 
@@ -14,11 +14,11 @@ Each chain's `auth` selects a bearer token, API-key header or API-key cookie. Om
 
 ## Runtime, relayers and providers
 
-`ContextConfig.process_runtime` forwards `wasm_asset_load_mode`, `module_versions`, `single_thread`, `number_of_threads` and fallback `auth` to the SDK runtime. The first SDK configuration in the process wins, including when its runtime options are omitted. Later explicit runtime settings are ignored with an SDK warning on sidecar stderr. Restart the sidecar to apply another runtime configuration; creating another context does not reset it. Unsupported WASM modes, module versions and compatibility policies are rejected before runtime initialization, and the error names the rejected value and the supported values.
+`ContextConfig.process_runtime` forwards `wasm_asset_load_mode`, `module_versions`, `single_thread`, `number_of_threads` and fallback `auth` to the SDK runtime. The first SDK configuration in the process wins, including when its runtime options are omitted. Later explicit runtime settings are ignored with an SDK warning on daemon stderr. Restart the daemon to apply another runtime configuration; creating another context does not reset it. Unsupported WASM modes, module versions and compatibility policies are rejected before runtime initialization, and the error names the rejected value and the supported values.
 
 `ContextConfig.relayers` maps chain IDs to typed `RelayerConfig` messages. Each entry selects its backend with the `RelayerTransport` enum, `RELAYER_TRANSPORT_NODE` or `RELAYER_TRANSPORT_CLEARTEXT`; `RELAYER_TRANSPORT_UNSPECIFIED` is rejected. Omission of the whole map selects the existing SDK `node()` factory for every configured chain. `RelayerMap` wraps the protobuf map so omission remains distinct from an explicitly empty map. An explicit map must contain each configured chain; missing entries retain the SDK configuration error. Options forward `timeout`, `debug`, `batch_rpc_calls`, `module_versions` and `fhe_encryption_key`. Encryption-key material uses raw protobuf bytes. The SDK owns cleartext executor requirements, chain compatibility and relayer validation.
 
-Each `chains` entry accepts typed HTTP `provider` settings for `headers`, `timeout`, `retry_count`, `retry_delay`, `batch` and `polling_interval`. `HttpHeaders` wraps the protobuf map so omission remains distinct from an explicitly empty header set. Timeout, retry delay, batch wait and polling interval are milliseconds. `ProviderBatch` selects either a boolean or typed batch options. These configure the sidecar's public-read viem provider, independently of the application's native Ethereum provider and the relayer backend's internal RPC client. Use an RPC URL with the required access credentials for backend RPC reads; custom JavaScript `network` providers are unsupported. Omitted options retain viem/SDK defaults; explicit zero and false are forwarded.
+Each `chains` entry accepts typed HTTP `provider` settings for `headers`, `timeout`, `retry_count`, `retry_delay`, `batch` and `polling_interval`. `HttpHeaders` wraps the protobuf map so omission remains distinct from an explicitly empty header set. Timeout, retry delay, batch wait and polling interval are milliseconds. `ProviderBatch` selects either a boolean or typed batch options. These configure the daemon's public-read viem provider, independently of the application's native Ethereum provider and the relayer backend's internal RPC client. Use an RPC URL with the required access credentials for backend RPC reads; custom JavaScript `network` providers are unsupported. Omitted options retain viem/SDK defaults; explicit zero and false are forwarded.
 
 Arbitrary JavaScript providers, relayer factory functions, fetch hooks, loggers, `onEvent` callbacks, module objects and browser/worker injection points cannot cross this protocol. Use the typed options above for native integrations and the event channel below for native event handlers. Relayer authentication can be configured per chain, with runtime auth as the SDK's process-wide fallback.
 
@@ -34,7 +34,7 @@ Secrets stay outside persisted configuration and error payloads. The SDK owns se
 
 `UpdateAccount` sets the connected wallet's address and chain, or disconnects the wallet when `account` is absent. A changed account cancels and drains existing operations in that context before changing the wallet snapshot. Repeating the current account leaves active operations running.
 
-The SDK's inherited account-change credential/cache cleanup is asynchronous and outside the sidecar coordinator; it can overlap another SDK instance sharing the same identity and store. Completion of `UpdateAccount` acknowledges the snapshot update, not completion of every SDK lifecycle listener. Do not use it as a barrier for credential cleanup.
+The SDK's inherited account-change credential/cache cleanup is asynchronous and outside the daemon coordinator; it can overlap another SDK instance sharing the same identity and store. Completion of `UpdateAccount` acknowledges the snapshot update, not completion of every SDK lifecycle listener. Do not use it as a barrier for credential cleanup.
 
 ## Supported SDK methods
 
@@ -85,7 +85,7 @@ Results contain `encrypted_values`, one ordered 32-byte handle per input, and op
 
 The transaction oneof covers every SDK kind: `ConfidentialTransfer`, `ConfidentialTransferFrom`, `SetOperator`, `Unwrap`, `UnwrapAll`, `FinalizeUnwrap`, `ApproveUnderlying`, `Wrap`, `TransferAndCall`, `DelegateDecryption` and `RevokeDelegation`. Request fields keep their SDK meaning. Each request is one transaction; native clients do not select shielding routes or reconstruct Token workflows.
 
-Amounts, gas limits and both EIP-1559 fee values are canonical base-10 strings, so arbitrary precision survives the wire. Nonce, operator expiry (seconds) and delegation expiry (milliseconds) are unsigned 64-bit integers; values above the SDK safe integer range are rejected before reaching the SDK. An omitted options message stays omitted. Nonce and gas limit have independent presence, and the fee pair is supplied together. Explicit zero reaches SDK validation unchanged. `SetOperator.until` is required on the wire; the sidecar rejects omission instead of defaulting an expiry, matching the SDK contract.
+Amounts, gas limits and both EIP-1559 fee values are canonical base-10 strings, so arbitrary precision survives the wire. Nonce, operator expiry (seconds) and delegation expiry (milliseconds) are unsigned 64-bit integers; values above the SDK safe integer range are rejected before reaching the SDK. An omitted options message stays omitted. Nonce and gas limit have independent presence, and the fee pair is supplied together. Explicit zero reaches SDK validation unchanged. `SetOperator.until` is required on the wire; the daemon rejects omission instead of defaulting an expiry, matching the SDK contract.
 
 `TransferAndCall.recipient_data` distinguishes omission from empty bytes. `DelegateDecryption.expiration_date_ms` omission keeps the SDK's permanent-delegation default; the SDK validates the minimum lead time. Go accepts `*time.Time` and rejects dates outside the millisecond range its time type can represent; Rust accepts `Option<u64>` milliseconds. Neither client chooses an expiry.
 
@@ -99,13 +99,13 @@ Preparation uses the existing operation lifecycle and error trailers. The SDK me
 
 `DelegateDecryption.expiration_date_ms` omission requests a permanent delegation, stored on-chain as `2^64 - 1`; an explicit value is milliseconds on the wire and the SDK enforces its minimum lead time before converting it to seconds for the ACL write. `GetDelegationExpiryResponse.expiry_timestamp` and `GetDelegationStatusResponse.expiry_timestamp` report that same whole-second ACL value: `0` means no delegation, `2^64 - 1` means permanent, any other value is compared against the current chain block timestamp. `TransactionResult` mirrors the SDK's own write result: a `transaction_hash` and the mined receipt's `logs`. These RPCs added no new field, type or oneof to any existing message, and used no shared-message coordination field-number range.
 
-This is distinct from the existing `GrantDelegationPermit`/`HasDelegationPermit` RPCs, which manage a local delegation permit (an SDK credential), not on-chain ACL state. See [manage on-chain delegation](../packages/sdk-sidecar/DELEGATIONS.md) for the full RPC-to-SDK mapping, error codes and native examples.
+This is distinct from the existing `GrantDelegationPermit`/`HasDelegationPermit` RPCs, which manage a local delegation permit (an SDK credential), not on-chain ACL state. See [manage on-chain delegation](../packages/sdk-daemon/DELEGATIONS.md) for the full RPC-to-SDK mapping, error codes and native examples.
 
 The ACL contract accepts one delegate or revoke per `(delegator, delegate, contract)` tuple per block; a second write to the same tuple in the same block reverts. The native examples wait for the chain to advance a block between granting and revoking.
 
 ## Storage bindings and callbacks
 
-`CreateContext.storage` selects a fresh sidecar memory store, a named persistent store, or an application backend ID. Omission selects fresh memory, matching the SDK's Node default. `permit_storage` independently selects a permit store; omission aliases the primary store.
+`CreateContext.storage` selects a fresh daemon memory store, a named persistent store, or an application backend ID. Omission selects fresh memory, matching the SDK's Node default. `permit_storage` independently selects a permit store; omission aliases the primary store.
 
 An application backend uses `StorageChannel`, a bidirectional callback channel attached to its context. The initial attachment receives an acknowledgment. Each `StorageAction` carries a request ID, backend ID, method, key and optional operation value. Replies carry a request ID and exactly one result: `value`, `not_found`, `ack` or `error`. GET returns `value` or `not_found`; present zero-length bytes remain distinct from absence. SET and DELETE return `ack` after completing the operation. A missing result or a result incompatible with the requested method is rejected.
 
@@ -113,7 +113,7 @@ Storage callbacks have no SDK operation ID: the SDK also accesses storage from l
 
 Native stores receive opaque values. The TypeScript codec prefixes serialized values with `ZAMA-KV` and a version byte (`1`), followed by V8 serialization. This preserves SDK value types, including binary values and bigints. Native applications store and return those bytes unchanged; the encoding is not a Rust/Go object format. Unsupported envelope versions fail explicitly. The format is an internal credential encoding, not a portable export API.
 
-Binding identity controls coordination within one sidecar. Reusing a native application-storage binding shares its identity across contexts; independently created bindings are isolated. Stable named bindings identify adapters accessing the same durable namespace. They do not implement locking across different sidecar processes.
+Binding identity controls coordination within one daemon. Reusing a native application-storage binding shares its identity across contexts; independently created bindings are isolated. Stable named bindings identify adapters accessing the same durable namespace. They do not implement locking across different daemon processes.
 
 ## Values and optional arguments
 
@@ -131,7 +131,7 @@ Optional scalar presence is significant. Configuration durations, timeouts, conc
 
 Lifecycle timestamps and measured durations use protobuf `double` to preserve the SDK's JavaScript numbers, including fractional milliseconds. The current SDK uses `Date.now()` for these measurements; the wire format does not round fractional values. This differs from integer configuration timeouts and retry delays.
 
-Lifecycle payloads preserve timestamps, durations, token addresses, encrypted values, clear-value results, transaction hashes, operation names, shield paths and approval steps. Errors use the existing `SdkError` conversion, including its sanitization of unclassified errors. Event kinds, operations, shield paths and approval steps use protobuf enums with an `UNSPECIFIED` zero value; the sidecar maps the SDK unions exhaustively. Native lifecycle and progress decoders preserve unknown numeric enum values so newer kinds do not terminate a subscription. Optional payload fields retain presence. Schema changes are required when the SDK adds payload fields.
+Lifecycle payloads preserve timestamps, durations, token addresses, encrypted values, clear-value results, transaction hashes, operation names, shield paths and approval steps. Errors use the existing `SdkError` conversion, including its sanitization of unclassified errors. Event kinds, operations, shield paths and approval steps use protobuf enums with an `UNSPECIFIED` zero value; the daemon maps the SDK unions exhaustively. Native lifecycle and progress decoders preserve unknown numeric enum values so newer kinds do not terminate a subscription. Optional payload fields retain presence. Schema changes are required when the SDK adds payload fields.
 
 Wallet notifications come from `sdk.onWalletAccountChange`, after SDK chain switching and account cleanup. They preserve the order the SDK actually emits, including overlapping asynchronous account transitions. The adapter neither synthesizes an initial snapshot nor turns `UpdateAccount` into a cleanup barrier. The adapter subscribes through the typed wallet helper in the SDK internal entry point.
 
@@ -139,7 +139,7 @@ Wallet notifications come from `sdk.onWalletAccountChange`, after SDK chain swit
 
 Lifecycle, wallet and progress notifications do not block SDK orchestration. Native notification handlers run in delivery order and acknowledge completion. Handler errors are acknowledged without failing the SDK operation. A unary response can arrive before its notifications finish running locally. Unlike unknown notification payloads, unknown or missing reply outcomes are rejected with `INVALID_ARGUMENT` without acknowledging the delivery: the server cannot assume an unfamiliar outcome means completion. Native clients ignore stale-reply errors (`EVENT_DELIVERY_NOT_FOUND`) and terminate the subscription on other reply errors.
 
-Progress has eight typed stages: encryption complete; transfer, approval, shield, wrap and unwrap submitted; finalizing; finalize submitted. Submitted stages normally carry transaction hashes. Clients preserve an absent optional hash, including for future progress kinds, and reject malformed hash bytes. The TypeScript [progress adapter](../packages/sdk-sidecar/src/progress-callbacks.ts) is tested with callbacks passed directly into SDK operations; native Token operations are not exposed yet. It never infers progress from lifecycle events: unshield callbacks and similarly named events have different timing.
+Progress has eight typed stages: encryption complete; transfer, approval, shield, wrap and unwrap submitted; finalizing; finalize submitted. Submitted stages normally carry transaction hashes. Clients preserve an absent optional hash, including for future progress kinds, and reject malformed hash bytes. The TypeScript [progress adapter](../packages/sdk-daemon/src/progress-callbacks.ts) is tested with callbacks passed directly into SDK operations; native Token operations are not exposed yet. It never infers progress from lifecycle events: unshield callbacks and similarly named events have different timing.
 
 Return-valued callbacks such as batch decryption fallbacks are not part of this channel yet; they arrive with Token coverage.
 
@@ -157,7 +157,7 @@ Event transport errors include `EVENT_ATTACHED` for a duplicate attachment, `EVE
 
 Subscriptions are opt-in and do not enable a logger. The native examples select event kinds and progress stages for diagnostics; they never log complete event objects. Decryption events contain plaintext results. Raw error messages, token/account addresses and arbitrary SDK logger metadata can also reveal application data.
 
-Use the typed notification handler as your SDK diagnostics sink and select only the metadata your application needs. The default sidecar writes SDK warn and error messages to stderr verbatim and never writes their structured data; info and debug messages are dropped. See the [event integration guide](../packages/sdk-sidecar/EVENTS.md).
+Use the typed notification handler as your SDK diagnostics sink and select only the metadata your application needs. The default daemon writes SDK warn and error messages to stderr verbatim and never writes their structured data; info and debug messages are dropped. See the [event integration guide](../packages/sdk-daemon/EVENTS.md).
 
 ## Signing and operation lifecycle
 
@@ -165,9 +165,9 @@ Every SDK operation has a context ID and a client-generated operation ID. Client
 
 `SignerChannel` attaches to a signer-enabled context and acknowledges attachment before delivering actions. Each action includes operation/action IDs, the wallet account and exactly one `request`: SDK EIP-712 typed data or a `contract_write`. Replies require exactly one `result`: signature bytes, a 32-byte `transaction_hash`, an `execution_revert` (field 141; fields 140-159 are allocated to transactions) or a structured error; `SIGNING_REJECTED` represents wallet rejection. `typed_data_json` kept field 4 when it joined the `request` union, so existing frames decode unchanged; a native client that sets both variants now loses one on the wire instead of producing an ambiguous action.
 
-`execution_revert` reports that the node rejected a simulated contract write before broadcast: nothing was sent. It carries the raw revert return data, which may be empty, and the adapter's own message. Native adapters never decode this data; the sidecar decodes it against the request ABI. This is a certain failure like a structured error, not an uncertain one: no hash exists to reconcile.
+`execution_revert` reports that the node rejected a simulated contract write before broadcast: nothing was sent. It carries the raw revert return data, which may be empty, and the adapter's own message. Native adapters never decode this data; the daemon decodes it against the request ABI. This is a certain failure like a structured error, not an uncertain one: no hash exists to reconcile.
 
-Contract writes carry the destination, canonical calldata, ABI/function/arguments and optional decimal value/gas. TypeScript encodes calldata; native wallets sign and broadcast it, then return the hash. The SDK owns receipt waiting and workflow continuation. Bigint arguments in JSON use decimal strings interpreted through the ABI; optional value/gas retain absence and explicit zero. See [native transaction setup and failure behavior](../packages/sdk-sidecar/TRANSACTIONS.md).
+Contract writes carry the destination, canonical calldata, ABI/function/arguments and optional decimal value/gas. TypeScript encodes calldata; native wallets sign and broadcast it, then return the hash. The SDK owns receipt waiting and workflow continuation. Bigint arguments in JSON use decimal strings interpreted through the ABI; optional value/gas retain absence and explicit zero. See [native transaction setup and failure behavior](../packages/sdk-daemon/TRANSACTIONS.md).
 
 Cancellation frames stop pending wallet callbacks. Cancellation cannot undo a broadcast. An outstanding write whose channel disappears has an uncertain outcome; the bridge reports nonretryable `TRANSACTION_OUTCOME_UNKNOWN`. A reply whose result variant does not match the requested action reports the same uncertainty for writes and a signing failure for typed data. Account changes cancel old callbacks before publishing a new snapshot. Native adapters report an uncertain submission with its hash and do not block later writes, so reconcile the account before retrying. Unknown or stale replies receive an action-scoped error and do not cancel unrelated work. Clients do not automatically replay signing requests after reconnection.
 
@@ -181,7 +181,7 @@ SDK errors retain their code, message, retryability and optional integer retry d
 
 Go exposes `RPCError` and preserves `status.Code`. Rust returns `ClientError`: `kind()` is derived from the gRPC status code, `sdk_error()` carries the `zama-error-*` trailer values, and the cause chain keeps the `tonic::Status`. Neither client retries SDK operations or signing requests automatically.
 
-The server and both clients default to 4 MiB messages. Large batches and prefetched FHE encryption keys require a higher limit at both endpoints; prefetched keys are commonly about 50 MiB. Set `SIDECAR_MAX_MESSAGE_BYTES` on the server and the matching Go `DialOptions.MaxMessageBytes` or Rust `Client::with_message_limit` above the encoded request size. Concurrent-stream, context and operation ceilings are optional deployment settings; there is no fixed 16-stream limit. Signer, storage and event channels each occupy an HTTP/2 stream. Writers honor stream backpressure rather than treating a temporarily full output buffer as failure.
+The server and both clients default to 4 MiB messages. Large batches and prefetched FHE encryption keys require a higher limit at both endpoints; prefetched keys are commonly about 50 MiB. Set `ZAMA_SDK_DAEMON_MAX_MESSAGE_BYTES` on the server and the matching Go `DialOptions.MaxMessageBytes` or Rust `Client::with_message_limit` above the encoded request size. Concurrent-stream, context and operation ceilings are optional deployment settings; there is no fixed 16-stream limit. Signer, storage and event channels each occupy an HTTP/2 stream. Writers honor stream backpressure rather than treating a temporarily full output buffer as failure.
 
 RPC deadlines are independent of SDK relayer timeouts. Storage failures do not prevent unrelated metadata or public-decryption calls.
 
@@ -193,20 +193,24 @@ The native balance examples perform Ethereum contract reads in Alloy/go-ethereum
 
 ## Equivalence verification
 
-Shared scenarios compare direct SDK calls with sidecar calls using deterministic provider and relayer fixtures and real SDK credential/decryption logic. They compare values, errors and signer interactions across signerless calls, multiple contexts/accounts, direct and delegated permits, on-chain delegation grants and revocations, omitted options, acquisition/reuse/recovery, public proofs, batch failures, cancellation and concurrent reads.
+Shared scenarios compare direct SDK calls with daemon calls using deterministic provider and relayer fixtures and real SDK credential/decryption logic. They compare values, errors and signer interactions across signerless calls, multiple contexts/accounts, direct and delegated permits, on-chain delegation grants and revocations, omitted options, acquisition/reuse/recovery, public proofs, batch failures, cancellation and concurrent reads.
 
-Go and Rust wire tests cover typed values, callback correlation, rejection and deadlines. Native recovery tests use the production context factory and retain application-owned credentials across sidecar runtime replacement. Sidecar CI runs these checks without live wallet or RPC configuration. Live examples read encrypted balances using native Ethereum libraries, invoke general decryption, prepare and locally sign an operator revocation without broadcasting, then grant and revoke an on-chain delegation with two broadcast transactions; persistent reuse and restart scenarios remain in tests. Offline equivalence tests compare every preparation kind, omitted and explicit options, malformed encodings and provider failures against the direct SDK.
+Go and Rust wire tests cover typed values, callback correlation, rejection and deadlines. Native recovery tests use the production context factory and retain application-owned credentials across daemon runtime replacement. Daemon CI runs these checks without live wallet or RPC configuration. Live examples read encrypted balances using native Ethereum libraries, invoke general decryption, prepare and locally sign an operator revocation without broadcasting, then grant and revoke an on-chain delegation with two broadcast transactions; persistent reuse and restart scenarios remain in tests. Offline equivalence tests compare every preparation kind, omitted and explicit options, malformed encodings and provider failures against the direct SDK.
 
 Encryption equivalence tests compare direct SDK calls and wire calls across input types, explicit binding addresses, timeout presence, SDK failures and cancellation. Native tests use the real SDK with a synthetic relayer that returns randomized encrypted values and a fixture proof. The relayer URL path of each test context selects its fixture scenario, and the TypeScript driver asserts the SDK-side inputs, addresses and timeout presence of every recorded call. Separate canonical backend checks exercise numeric rejection errors before network access. These fixtures do not verify live cryptographic proofs.
+
+## Compatibility check
+
+On pull requests that change the schema, CI runs `buf breaking` against the base branch. Findings are reported as a warning and in the job summary without failing the check; schema or tool errors fail it. A package move shows up only as a deleted file, so diff the moved file by hand.
 
 ## Regenerate bindings
 
 Generated bindings ship with both clients. From the repository root:
 
 ```sh
-pnpm sidecar:generate
+pnpm daemon:generate
 sh clients/go/generate.sh
-cargo run --manifest-path clients/rust/Cargo.toml -p zama-sdk-sidecar-codegen --locked
+cargo run --manifest-path clients/rust/Cargo.toml -p zama-sdk-codegen --locked
 ```
 
-Use the [sidecar setup guide](../packages/sdk-sidecar/README.md) for build, test and live example commands.
+Use the [daemon setup guide](../packages/sdk-daemon/README.md) for build, test and live example commands.

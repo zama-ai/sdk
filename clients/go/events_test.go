@@ -1,4 +1,4 @@
-package sidecar
+package zama
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	pb "github.com/zama-ai/sdk/clients/go/internal/gen/zama/sdk/v1alpha1"
+	pb "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -19,7 +19,7 @@ import (
 )
 
 type eventServer struct {
-	pb.UnimplementedSidecarServiceServer
+	pb.UnimplementedDaemonServiceServer
 	outgoing chan *pb.EventServerMessage
 	replies  chan *pb.EventReply
 	done     chan struct{}
@@ -168,7 +168,7 @@ func TestClosingEventsCancelsActiveHandler(t *testing.T) {
 }
 
 type delayedDetachEventServer struct {
-	pb.UnimplementedSidecarServiceServer
+	pb.UnimplementedDaemonServiceServer
 	mu       sync.Mutex
 	active   bool
 	release  chan struct{}
@@ -241,7 +241,7 @@ func TestImmediateEventReattachWaitsForRemoteDetach(t *testing.T) {
 }
 
 type delayedLossEventServer struct {
-	pb.UnimplementedSidecarServiceServer
+	pb.UnimplementedDaemonServiceServer
 	mu       sync.Mutex
 	active   bool
 	first    bool

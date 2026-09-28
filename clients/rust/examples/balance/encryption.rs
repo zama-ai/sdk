@@ -1,5 +1,5 @@
 use anyhow::Result;
-use zama_sdk_sidecar::{Address, EncryptInput, EncryptOptions, EncryptParams, Sdk};
+use zama_sdk::{Address, EncryptInput, EncryptOptions, EncryptParams, Sdk};
 
 pub async fn encrypt_inputs(
     sdk: &Sdk,

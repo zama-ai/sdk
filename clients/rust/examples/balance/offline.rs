@@ -4,9 +4,7 @@ use alloy_rlp::Decodable;
 use alloy_signer::Signer;
 use alloy_signer_local::PrivateKeySigner;
 use anyhow::{Result, ensure};
-use zama_sdk_sidecar::{
-    Address, PrepareTransaction, Sdk, Transaction, TransactionKind, WalletAccount,
-};
+use zama_sdk::{Address, PrepareTransaction, Sdk, Transaction, TransactionKind, WalletAccount};
 
 pub async fn prepare_and_sign(
     sdk: &Sdk,
@@ -71,7 +69,7 @@ async fn sign_prepared(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use zama_sdk_sidecar::B256;
+    use zama_sdk::B256;
 
     #[tokio::test]
     async fn signs_sdk_unsigned_rlp_and_rejects_wrong_chain() {

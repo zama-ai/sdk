@@ -1,0 +1,275 @@
+import { RemoteStorage, type StorageStream } from "./remote-storage.js";
+import { randomUUID } from "node:crypto";
+import { status } from "@grpc/grpc-js";
+import type { Address, ZamaSDK } from "@zama-fhe/sdk";
+import type {
+  CreateContextRequest,
+  Operation,
+  UpdateAccountRequest,
+} from "./generated/zama/sdk/v1beta1/daemon.js";
+import { walletAccount } from "./encoding.js";
+import { credentialLockKeys, type Coordinate } from "./coordination.js";
+import { cancelled, invalidArgument, DaemonError } from "./errors.js";
+import { operationContext, RemoteSigner, type SignerStream } from "./remote-signer.js";
+import { RemoteEvents, type EventStream } from "./remote-events.js";
+
+export type ContextSdk = Pick<
+  ZamaSDK,
+  "encrypt" | "decryption" | "permits" | "offline" | "delegations" | "dispose"
+>;
+export type ContextFactory = (
+  request: CreateContextRequest,
+  signer: RemoteSigner | undefined,
+  storage: RemoteStorage,
+  events: RemoteEvents,
+) => Promise<{ sdk: ContextSdk; credentialScope?: string; storageIdentities: string[] }>;
+type ActiveOperation = { controller: AbortController; done: Promise<unknown> };
+type Context = {
+  sdk: ContextSdk;
+  credentialScope?: string;
+  storageIdentities: string[];
+  storage: RemoteStorage;
+  events: RemoteEvents;
+  signer: RemoteSigner | undefined;
+  operations: Map<string, ActiveOperation>;
+  updating: boolean;
+};
+export class DaemonRuntime {
+  #contexts = new Map<string, Context>();
+  #creations = new Set<Promise<void>>();
+  #retirements = new Set<Promise<void>>();
+  #closing = false;
+  constructor(
+    private readonly factory: ContextFactory,
+    private readonly coordinate: Coordinate,
+    private readonly limits: { maxContexts?: number; maxOperationsPerContext?: number } = {},
+  ) {}
+  async createContext(request: CreateContextRequest): Promise<string> {
+    if (this.#closing) {
+      throw cancelled();
+    }
+    if (
+      this.limits.maxContexts !== undefined &&
+      this.#contexts.size + this.#creations.size >= this.limits.maxContexts
+    ) {
+      throw new DaemonError("CONTEXT_LIMIT", status.RESOURCE_EXHAUSTED, "Too many SDK contexts.");
+    }
+    if (request.account && !request.signerEnabled) {
+      throw invalidArgument("An account requires an enabled signer.");
+    }
+    const id = randomUUID();
+    const signer = request.signerEnabled
+      ? new RemoteSigner(walletAccount(request.account), (operationId, reason) =>
+          this.#cancelOperation(id, operationId, reason),
+        )
+      : undefined;
+    const storage = new RemoteStorage();
+    const events = new RemoteEvents(id);
+    const creation = Promise.withResolvers<void>();
+    this.#creations.add(creation.promise);
+    try {
+      const created = await this.factory(request, signer, storage, events);
+      if (this.#closing) {
+        storage.dispose();
+        events.dispose();
+        created.sdk.dispose();
+        signer?.dispose();
+        throw cancelled();
+      }
+      this.#contexts.set(id, {
+        ...created,
+        signer,
+        storage,
+        events,
+        operations: new Map(),
+        updating: false,
+      });
+      return id;
+    } catch (error) {
+      storage.dispose();
+      events.dispose();
+      signer?.dispose();
+      throw error;
+    } finally {
+      this.#creations.delete(creation.promise);
+      creation.resolve();
+    }
+  }
+  #get(id: string): Context {
+    const context = this.#contexts.get(id);
+    if (!context) {
+      throw new DaemonError("CONTEXT_NOT_FOUND", status.NOT_FOUND, "SDK context does not exist.");
+    }
+    return context;
+  }
+  #cancelOperation(id: string, operationId: string, reason: Error): void {
+    this.#contexts.get(id)?.operations.get(operationId)?.controller.abort(reason);
+  }
+  #cancelAll(context: Context): void {
+    for (const [operationId, operation] of context.operations) {
+      operation.controller.abort(this.#abortReason(context, operationId));
+    }
+  }
+  #abortReason(context: Context, operationId: string): Error {
+    return context.signer?.abortReason(operationId) ?? cancelled();
+  }
+  attachSigner(id: string, stream: SignerStream): RemoteSigner {
+    const signer = this.#get(id).signer;
+    if (!signer) {
+      throw invalidArgument("SDK context has no signer adapter.");
+    }
+    signer.attach(stream);
+    return signer;
+  }
+  attachStorage(id: string, stream: StorageStream): RemoteStorage {
+    const storage = this.#get(id).storage;
+    storage.attach(stream);
+    return storage;
+  }
+  attachEvents(id: string, stream: EventStream): RemoteEvents {
+    const events = this.#get(id).events;
+    events.attach(stream);
+    return events;
+  }
+  async updateAccount(request: UpdateAccountRequest, signal?: AbortSignal): Promise<void> {
+    if (signal?.aborted) {
+      throw cancelled();
+    }
+    const context = this.#get(request.contextId);
+    const signer = context.signer;
+    if (!signer) {
+      throw invalidArgument("SDK context has no signer adapter.");
+    }
+    if (context.updating) {
+      throw new DaemonError(
+        "ACCOUNT_CHANGING",
+        status.FAILED_PRECONDITION,
+        "Account update is already in progress.",
+      );
+    }
+    const next = walletAccount(request.account);
+    const previous = signer.walletAccount.getSnapshot();
+    if (previous?.address === next?.address && previous?.chainId === next?.chainId) {
+      signer.walletAccount.setSnapshot(next);
+      return;
+    }
+    context.updating = true;
+    try {
+      this.#cancelAll(context);
+      await Promise.allSettled([...context.operations.values()].map((operation) => operation.done));
+      if (signal?.aborted) {
+        throw cancelled();
+      }
+      this.#get(request.contextId).signer?.walletAccount.setSnapshot(next);
+    } finally {
+      context.updating = false;
+    }
+  }
+  #admit(reference: Operation): Context {
+    const context = this.#get(reference.contextId);
+    if (context.updating) {
+      throw new DaemonError(
+        "ACCOUNT_CHANGING",
+        status.FAILED_PRECONDITION,
+        "Account update is in progress.",
+      );
+    }
+    if (context.operations.has(reference.operationId)) {
+      throw new DaemonError(
+        "OPERATION_EXISTS",
+        status.ALREADY_EXISTS,
+        "Operation ID is already active.",
+      );
+    }
+    if (
+      this.limits.maxOperationsPerContext !== undefined &&
+      context.operations.size >= this.limits.maxOperationsPerContext
+    ) {
+      throw new DaemonError(
+        "OPERATION_LIMIT",
+        status.RESOURCE_EXHAUSTED,
+        "Too many active operations.",
+      );
+    }
+    return context;
+  }
+  async execute<T>(
+    reference: Operation | undefined,
+    signal: AbortSignal,
+    action: (sdk: ContextSdk, signal: AbortSignal) => Promise<T>,
+    options: { public?: boolean; credentialSigner?: Address } = {},
+  ): Promise<T> {
+    if (!reference?.operationId) {
+      throw invalidArgument("Operation ID is required.");
+    }
+    const context = this.#admit(reference);
+    if (signal.aborted) {
+      throw cancelled();
+    }
+    const controller = new AbortController();
+    const abort = () => controller.abort(this.#abortReason(context, reference.operationId));
+    signal.addEventListener("abort", abort, { once: true });
+    const credentialSigner =
+      options.credentialSigner ?? context.signer?.walletAccount.getSnapshot()?.address;
+    const storageKeys = credentialLockKeys(
+      context.storageIdentities,
+      credentialSigner,
+      context.credentialScope,
+    );
+    const execute = async () => {
+      if (controller.signal.aborted) {
+        throw controller.signal.reason;
+      }
+      return operationContext.run({ id: reference.operationId, signal: controller.signal }, () =>
+        action(context.sdk, controller.signal),
+      );
+    };
+    const done = Promise.resolve().then(() =>
+      options.public ? execute() : this.coordinate(storageKeys, controller.signal, execute),
+    );
+    context.signer?.track(reference.operationId);
+    context.operations.set(reference.operationId, { controller, done });
+    const abortResult = Promise.withResolvers<never>();
+    const rejectCancelled = () => abortResult.reject(controller.signal.reason);
+    controller.signal.addEventListener("abort", rejectCancelled, { once: true });
+    void done
+      .finally(() => {
+        context.operations.delete(reference.operationId);
+        context.signer?.release(reference.operationId);
+        signal.removeEventListener("abort", abort);
+        controller.signal.removeEventListener("abort", rejectCancelled);
+      })
+      .catch(() => {});
+    return Promise.race([done, abortResult.promise]);
+  }
+  async closeContext(id: string): Promise<void> {
+    const context = this.#get(id);
+    const retirement = Promise.withResolvers<void>();
+    this.#retirements.add(retirement.promise);
+    try {
+      this.#cancelAll(context);
+      this.#contexts.delete(id);
+      context.signer?.dispose();
+      context.storage.dispose();
+      context.events.dispose();
+      await Promise.allSettled([...context.operations.values()].map((operation) => operation.done));
+      context.sdk.dispose();
+    } finally {
+      this.#retirements.delete(retirement.promise);
+      retirement.resolve();
+    }
+  }
+  async waitUntilIdle(): Promise<void> {
+    await Promise.allSettled(
+      [...this.#contexts.values()].flatMap((context) =>
+        [...context.operations.values()].map((operation) => operation.done),
+      ),
+    );
+  }
+  async close(): Promise<void> {
+    this.#closing = true;
+    await Promise.allSettled(this.#creations);
+    await Promise.allSettled([...this.#contexts.keys()].map((id) => this.closeContext(id)));
+    await Promise.allSettled(this.#retirements);
+  }
+}

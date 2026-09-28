@@ -11,19 +11,19 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
-	sidecar "github.com/zama-ai/sdk/clients/go"
+	"github.com/zama-ai/sdk/clients/go/v3"
 )
 
-func prepareOffline(ctx context.Context, sdk *sidecar.SDKContext, token, owner common.Address, privateKey string) error {
+func prepareOffline(ctx context.Context, sdk *zama.SDKContext, token, owner common.Address, privateKey string) error {
 	// A positive expiry in the past revokes the operator; the SDK never defaults this value.
 	until := uint64(1)
-	prepared, err := sdk.PrepareTransaction(ctx, sidecar.SetOperatorRequest{
+	prepared, err := sdk.PrepareTransaction(ctx, zama.SetOperatorRequest{
 		From: owner, Token: token, Operator: common.HexToAddress("0x1111111111111111111111111111111111111111"), Until: &until,
 	}, nil)
 	if err != nil {
 		return err
 	}
-	if prepared.Kind != sidecar.TransactionSetOperator {
+	if prepared.Kind != zama.TransactionSetOperator {
 		return errors.New("expected prepared SetOperator transaction")
 	}
 	signed, err := signPreparedTransaction(prepared, privateKey)
@@ -41,7 +41,7 @@ func prepareOffline(ctx context.Context, sdk *sidecar.SDKContext, token, owner c
 	return nil
 }
 
-func signPreparedTransaction(prepared sidecar.PreparedTransaction, privateKey string) (*types.Transaction, error) {
+func signPreparedTransaction(prepared zama.PreparedTransaction, privateKey string) (*types.Transaction, error) {
 	key, err := crypto.HexToECDSA(strings.TrimPrefix(privateKey, "0x"))
 	if err != nil {
 		return nil, errors.New("invalid signing key")

@@ -1,4 +1,4 @@
-package sidecar
+package zama
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	pb "github.com/zama-ai/sdk/clients/go/internal/gen/zama/sdk/v1alpha1"
+	pb "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -19,7 +19,7 @@ import (
 func TestEncryptWire(t *testing.T) {
 	requests := make(chan *pb.EncryptRequest, 4)
 	handle := bytes.Repeat([]byte{0xab}, 32)
-	client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+	client := testClient(t, &pb.UnimplementedDaemonServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 		if req, ok := request.(*pb.EncryptRequest); ok {
 			requests <- req
 			handles := make([][]byte, len(req.Values))
@@ -74,7 +74,7 @@ func TestEncryptWire(t *testing.T) {
 
 func TestEncryptErrorsAndCancellation(t *testing.T) {
 	started, cancelled := make(chan struct{}, 1), make(chan struct{}, 1)
-	client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(ctx context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+	client := testClient(t, &pb.UnimplementedDaemonServiceServer{}, func(ctx context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 		if req, ok := request.(*pb.EncryptRequest); ok {
 			if req.TimeoutMs != nil {
 				grpc.SetTrailer(ctx, metadata.Pairs("zama-error-code", "RELAYER_REQUEST_FAILED", "zama-error-retryable", "true", "zama-error-retry-after-seconds", "7"))
@@ -115,7 +115,7 @@ func TestEncryptErrorsAndCancellation(t *testing.T) {
 }
 
 func TestEncryptRejectsMalformedHandle(t *testing.T) {
-	client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+	client := testClient(t, &pb.UnimplementedDaemonServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 		if _, ok := request.(*pb.EncryptRequest); ok {
 			return &pb.EncryptResponse{EncryptedValues: [][]byte{{1}}}, nil
 		}
@@ -128,7 +128,7 @@ func TestEncryptRejectsMalformedHandle(t *testing.T) {
 
 func TestEncryptRejectsHandleCountMismatch(t *testing.T) {
 	handle := bytes.Repeat([]byte{0xab}, 32)
-	client := testClient(t, &pb.UnimplementedSidecarServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+	client := testClient(t, &pb.UnimplementedDaemonServiceServer{}, func(_ context.Context, request any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 		if _, ok := request.(*pb.EncryptRequest); ok {
 			return &pb.EncryptResponse{EncryptedValues: [][]byte{handle}}, nil
 		}

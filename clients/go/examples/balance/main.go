@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	sidecar "github.com/zama-ai/sdk/clients/go"
+	"github.com/zama-ai/sdk/clients/go/v3"
 )
 
 func run() error {
@@ -25,7 +25,7 @@ func run() error {
 		return err
 	}
 	defer provider.Close()
-	client, err := sidecar.Dial(config.socket)
+	client, err := zama.Dial(config.socket)
 	if err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func run() error {
 	monitorCtx, stopMonitor := context.WithCancel(ctx)
 	defer stopMonitor()
 	go func() {
-		if err := sdk.WaitChannelFailure(monitorCtx, sidecar.EventChannel); err != nil && monitorCtx.Err() == nil {
+		if err := sdk.WaitChannelFailure(monitorCtx, zama.EventChannel); err != nil && monitorCtx.Err() == nil {
 			fmt.Fprintln(os.Stderr, "SDK event channel failed; event notifications may be incomplete")
 		}
 	}()

@@ -15,4 +15,4 @@ ARG RUNTIME_GID=1000
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=build /balance /usr/local/bin/balance
 USER ${RUNTIME_UID}:${RUNTIME_GID}
-ENTRYPOINT ["balance", "/run/zama/sdk.sock", "/config/.env.sidecar.local"]
+ENTRYPOINT ["balance", "/run/zama/sdk.sock", "/config/.env.daemon.local"]

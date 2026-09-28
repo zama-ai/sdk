@@ -2,7 +2,7 @@ use alloy_provider::{Provider, ProviderBuilder};
 use alloy_signer_local::PrivateKeySigner;
 use anyhow::{Result, ensure};
 use std::{collections::HashMap, env};
-use zama_sdk_sidecar::{
+use zama_sdk::{
     Address, ApplicationStorage, ChainConfig, Client, DerivationSecret, MemoryStorage,
     ProcessRuntime, ProviderOptions, RelayerAuth, RelayerConfig, RelayerOptions, RelayerTransport,
     Sdk, SdkConfig, Signer, Storage, WalletAccount, alloy::AlloySigner,
@@ -21,7 +21,7 @@ pub struct Settings {
 }
 impl Settings {
     pub fn load() -> Result<Self> {
-        let values = dotenvy::from_path_iter(".env.sidecar.local")
+        let values = dotenvy::from_path_iter(".env.daemon.local")
             .map_err(|_| anyhow::anyhow!("cannot read example config"))?
             .collect::<Result<HashMap<_, _>, _>>()
             .map_err(|_| anyhow::anyhow!("cannot parse example config"))?;
@@ -88,8 +88,8 @@ impl Settings {
             )]));
         }
         Ok(Self {
-            socket: env::var("SIDECAR_SOCKET_PATH")
-                .unwrap_or_else(|_| "/tmp/zama-sdk-sidecar.sock".into()),
+            socket: env::var("ZAMA_SDK_DAEMON_SOCKET_PATH")
+                .unwrap_or_else(|_| "/tmp/zama-sdk.sock".into()),
             account,
             token,
             delegate,
@@ -142,7 +142,7 @@ impl Settings {
 fn http_client() -> Result<reqwest::Client> {
     // Some public RPC gateways return HTTP 404 without a User-Agent.
     Ok(reqwest::Client::builder()
-        .user_agent("zama-sdk-sidecar-example")
+        .user_agent("zama-sdk-example")
         .build()?)
 }
 
@@ -153,7 +153,7 @@ fn example_storage(values: &HashMap<String, String>) -> Result<Storage> {
         .unwrap_or("application-memory")
     {
         "" | "application-memory" => Ok(ApplicationStorage::new(MemoryStorage::default()).into()),
-        "sidecar-memory" => Ok(Storage::Memory),
+        "daemon-memory" => Ok(Storage::Memory),
         "persistent" => Ok(Storage::Persistent(
             values
                 .get("CREDENTIAL_STORE_NAME")

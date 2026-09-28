@@ -1,9 +1,9 @@
-package sidecar
+package zama
 
 import (
 	"fmt"
 
-	pb "github.com/zama-ai/sdk/clients/go/internal/gen/zama/sdk/v1alpha1"
+	pb "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1"
 )
 
 type ModuleVersions interface{ wire() *pb.ModuleVersions }
@@ -58,7 +58,7 @@ func (v PinnedModuleVersions) wire() *pb.ModuleVersions {
 	}}}
 }
 
-// ProcessRuntime is applied once per sidecar process; the first SDK config wins.
+// ProcessRuntime is applied once per daemon process; the first SDK config wins.
 type ProcessRuntime struct {
 	WasmAssetLoadMode WasmAssetLoadMode
 	ModuleVersions    ModuleVersions

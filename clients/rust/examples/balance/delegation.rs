@@ -1,7 +1,7 @@
 use alloy_provider::Provider;
 use anyhow::{Context, Result};
 use std::time::{Duration, SystemTime};
-use zama_sdk_sidecar::{
+use zama_sdk::{
     Address, DelegateDecryptionParams, DelegationQuery, DelegationStatus,
     PERMANENT_DELEGATION_EXPIRY, RevokeDelegationParams, Sdk,
 };

@@ -36,7 +36,7 @@
     }
   },
   "ignorePatterns": [
-    "packages/sdk-sidecar/src/generated/**",
+    "packages/sdk-daemon/src/generated/**",
     "**/dist/**",
     "**/node_modules/**",
     "**/next-env.d.ts",

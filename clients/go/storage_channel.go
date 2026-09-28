@@ -1,11 +1,11 @@
-package sidecar
+package zama
 
 import (
 	"bytes"
 	"context"
 	"errors"
 
-	pb "github.com/zama-ai/sdk/clients/go/internal/gen/zama/sdk/v1alpha1"
+	pb "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1"
 	"google.golang.org/grpc"
 )
 
