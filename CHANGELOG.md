@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.7.0-beta.3](https://github.com/zama-ai/sdk/compare/v3.7.0-beta.2...v3.7.0-beta.3) (2026-09-28)
+
+### Features
+
+- zenith trex testnet ([#812](https://github.com/zama-ai/sdk/issues/812)) ([860acf4]())
+
 ## [3.7.0-beta.2](https://github.com/zama-ai/sdk/compare/v3.7.0-beta.1...v3.7.0-beta.2) (2026-09-24)
 
 ### Bug Fixes
