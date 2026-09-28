@@ -110,7 +110,6 @@ export const ingenTestnet = {
  * T-Rex's testnet instance on Zenith EVM (Reth execution, Canton-mediated
  * finality) — a separate chain from Zenith's shared testnet (chainId 936485).
  * It does not have full FHE infrastructure — use with `cleartext()` transport.
- * Contract addresses match the cleartext deployment.
  */
 export const zenithTrexTestnet = {
   id: 936486,
