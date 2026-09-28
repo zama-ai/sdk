@@ -1,6 +1,6 @@
 // ─── Zenith network configuration ─────────────────────────────────────────────
 // T-Rex testnet on Zenith EVM (chain 936486; Reth execution, Canton-mediated finality) —
-// cleartext FHEVM deployment from SDK-380. Development/integration setup, not intended for
+// cleartext FHEVM deployment. Development/integration setup, not intended for
 // production use. Edit these values to target a different network.
 import type { FheChain } from "@zama-fhe/sdk/chains";
 import { defineChain } from "viem";
