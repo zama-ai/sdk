@@ -4549,6 +4549,9 @@ export function createVaultBatcher(sdk: ZamaSDK, address: Address): VaultBatcher
 export function createVaultGroup(sdk: ZamaSDK, config: VaultGroupConfig): VaultGroup;
 
 // @public
+export function createVaultRouter(sdk: ZamaSDK, address: Address): VaultRouter;
+
+// @public
 export function currentBatchIdContract(batcher: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{

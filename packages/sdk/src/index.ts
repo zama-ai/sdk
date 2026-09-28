@@ -115,6 +115,7 @@ export {
   TransactionRevertedError,
   TransportKeyPairChangedError,
   TransportKeyPairExpiredError,
+  UnlistedConfidentialTokenError,
   UnshieldAlreadyFinalizedError,
   WalletAccountNotReadyError,
   WalletNotConnectedError,

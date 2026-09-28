@@ -84,7 +84,7 @@ Amount to deposit, in the shared asset token's base units.
 
 `"auto" | "router" | "direct" | undefined`
 
-Default: `"auto"` — the router for a group of two or more, a direct join for one. `"direct"` submits one batcher `join` per leg instead, for wallets that batch atomically. See [`VaultGroup` → VaultGroupJoinOptions](../sdk/VaultGroup.md#vaultgroupjoinoptions).
+Default: `"auto"` — the router for a group of two or more, a direct join for one. `"direct"` submits one batcher `join` per leg instead, as separate transactions that are not atomic. See [`VaultGroup` → VaultGroupJoinOptions](../sdk/VaultGroup.md#vaultgroupjoinoptions).
 
 ### operatorUntil
 

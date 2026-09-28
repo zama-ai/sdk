@@ -23,7 +23,7 @@ See [Vault deposits and redemptions](../guides/vault-deposits.md) for the full f
 
 `VaultGroup` (`createVaultGroup`, or `useVaultGroup` in React) joins several confidential vaults that share one `cAsset` as a single leg list: `deposit` and `redeem` join _every_ member's batch, the chosen vault with the amount and the rest with an encrypted zero, so the choice of vault stays private. A group of two or more submits through the on-chain `VaultBatcherConfidentialRouter` in one transaction — pushed for a deposit, pulled for a redemption — and a `strategy: "direct"` option submits one batcher `join` per leg instead for wallets that batch atomically. Each member names a batcher _history_ rather than an address, so a retired batcher keeps receiving joins until its last batch is dispatched; `useActiveBatcher` and `useActiveBatchers` expose which batcher a join would reach right now. The React hooks are `useGroupDeposit` and `useGroupRedeem`.
 
-`VaultRouter` mirrors the router contract for callers that build their own legs. A router deposit throws the new `UnlistedConfidentialTokenError` when the router's registry does not list the asset, and router transactions surface as `VaultSubmitted` events with `vaultOperation: "routerJoin"`.
+`VaultRouter` (`createVaultRouter`) mirrors the router contract for callers that build their own legs. A router deposit throws the new `UnlistedConfidentialTokenError` when the router's registry does not list the asset. Router-path deposits surface as `TransferSubmitted` events tagged with the asset; router-path redemptions surface as `VaultSubmitted` events with `vaultOperation: "routerJoin"`.
 
 See [Vault groups](../guides/vault-groups.md).
 

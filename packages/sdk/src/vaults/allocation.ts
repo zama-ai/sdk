@@ -2,6 +2,9 @@ import { encodeAbiParameters, getAbiItem, type Address, type Hex } from "viem";
 import type { EncryptedValue } from "../relayer/types";
 import { vaultRouterAbi } from "./abi/vault-router.abi";
 
+/** The pull legs one transaction's FHE budget fits; a group must be exitable in one submission. */
+export const MAX_GROUP_VAULTS = 10;
+
 /** One vault's share of a fan-out. */
 export interface AllocationLeg {
   /** The batcher this leg joins. */

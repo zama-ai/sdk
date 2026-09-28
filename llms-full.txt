@@ -2186,7 +2186,7 @@ See [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/s
 
 `VaultGroup` (`createVaultGroup`, or `useVaultGroup` in React) joins several confidential vaults that share one `cAsset` as a single leg list: `deposit` and `redeem` join _every_ member's batch, the chosen vault with the amount and the rest with an encrypted zero, so the choice of vault stays private. A group of two or more submits through the on-chain `VaultBatcherConfidentialRouter` in one transaction — pushed for a deposit, pulled for a redemption — and a `strategy: "direct"` option submits one batcher `join` per leg instead for wallets that batch atomically. Each member names a batcher _history_ rather than an address, so a retired batcher keeps receiving joins until its last batch is dispatched; `useActiveBatcher` and `useActiveBatchers` expose which batcher a join would reach right now. The React hooks are `useGroupDeposit` and `useGroupRedeem`.
 
-`VaultRouter` mirrors the router contract for callers that build their own legs. A router deposit throws the new `UnlistedConfidentialTokenError` when the router's registry does not list the asset, and router transactions surface as `VaultSubmitted` events with `vaultOperation: "routerJoin"`.
+`VaultRouter` (`createVaultRouter`) mirrors the router contract for callers that build their own legs. A router deposit throws the new `UnlistedConfidentialTokenError` when the router's registry does not list the asset. Router-path deposits surface as `TransferSubmitted` events tagged with the asset; router-path redemptions surface as `VaultSubmitted` events with `vaultOperation: "routerJoin"`.
 
 See [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-groups.md).
 
@@ -7571,7 +7571,9 @@ The SDK reads `currentBatchId` off each retired batcher before every submission 
 
 ## Batching the joins yourself
 
-By default a group of more than one vault goes through the router: one transaction, one signature. Pass `strategy: "direct"` to get one batcher `join` per leg instead, which is what you want if your wallet can submit them atomically (EIP-5792, smart accounts). Each leg then takes the two steps `Vault.deposit` takes: an operator grant to that batcher on the leg's token, and a join with an amount encrypted against it.
+By default a group of more than one vault goes through the router: one transaction, one signature. Pass `strategy: "direct"` to get one batcher `join` per leg instead, submitted as separate transactions in group order. Each leg then takes the two steps `Vault.deposit` takes: an operator grant to that batcher on the leg's token, and a join with an amount encrypted against it.
+
+The direct path is not atomic. If a later leg is rejected or reverts, the earlier joins stay committed on their batchers and the call throws; quit them there (`createVaultBatcher(sdk, batcher).quit(batchId)`, with the batch id read from that batcher's `currentBatchId`) or leave them as real positions of zero or the chosen amount.
 
 ```ts
 await group.deposit("alpha", 1_000_000n, { strategy: "direct" });
@@ -9631,11 +9633,11 @@ Throws the same errors as `deposit`, checking the balance of the chosen member's
 import { type VaultGroupJoinOptions, type VaultGroupStrategy } from "@zama-fhe/sdk/vaults";
 ```
 
-| Option             | Type                             | Default      | Description                                                                                                                                                                                                                 |
-| ------------------ | -------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `strategy`         | `"auto" \| "router" \| "direct"` | `"auto"`     | `"auto"` uses the router for two or more members and a direct join for one. `"direct"` submits one batcher `join` per leg, for wallets that batch atomically (EIP-5792, smart accounts). The legs are identical either way. |
-| `operatorUntil`    | `number`                         | now + 1 hour | Unix timestamp (seconds) until which an operator grant made for this submission is valid — the router's on each share token, or each batcher's on its leg's token. Only used when a grant isn't already active.             |
-| `skipBalanceCheck` | `boolean`                        | `false`      | Skip the confidential-balance pre-flight. A short balance then joins every batch with an encrypted zero rather than reverting.                                                                                              |
+| Option             | Type                             | Default      | Description                                                                                                                                                                                                                                                                                             |
+| ------------------ | -------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `strategy`         | `"auto" \| "router" \| "direct"` | `"auto"`     | `"auto"` uses the router for two or more members and a direct join for one. `"direct"` submits one batcher `join` per leg as separate transactions in group order; the legs are identical either way. A failure after the first leg leaves the earlier joins committed, to be quit from their batchers. |
+| `operatorUntil`    | `number`                         | now + 1 hour | Unix timestamp (seconds) until which an operator grant made for this submission is valid — the router's on each share token, or each batcher's on its leg's token. Only used when a grant isn't already active.                                                                                         |
+| `skipBalanceCheck` | `boolean`                        | `false`      | Skip the confidential-balance pre-flight. A short balance then joins every batch with an encrypted zero rather than reverting.                                                                                                                                                                          |
 
 ## VaultGroupJoinResult
 
@@ -9679,14 +9681,16 @@ Each `VaultGroupJoin` has:
 ## Import
 
 ```ts
-import { VaultRouter } from "@zama-fhe/sdk/vaults";
+import { createVaultRouter, VaultRouter } from "@zama-fhe/sdk/vaults";
 ```
 
 ## Construction
 
 ```ts
-const router = new VaultRouter(sdk, "0xRouter");
+const router = createVaultRouter(sdk, "0xRouter");
 ```
+
+`createVaultRouter` is a thin factory over `new VaultRouter(sdk, address)`; both take the same arguments.
 
 ## Properties
 
@@ -9746,7 +9750,7 @@ Options (`VaultRouterJoinOptions`):
 
 **Throws:**
 
-- [`ConfigurationError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#configurationerror) — an empty leg set.
+- [`ConfigurationError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#configurationerror) — an empty leg set, or more than `MAX_GROUP_VAULTS` legs. Thrown before any grant.
 - [`SignerNotConfiguredError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#signernotconfigurederror) — no signer on the SDK.
 - [`EncryptionFailedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#encryptionfailederror) — encryption returned fewer handles than legs.
 
@@ -22247,7 +22251,7 @@ Amount to deposit, in the shared asset token's base units.
 
 `"auto" | "router" | "direct" | undefined`
 
-Default: `"auto"` — the router for a group of two or more, a direct join for one. `"direct"` submits one batcher `join` per leg instead, for wallets that batch atomically. See [`VaultGroup` → VaultGroupJoinOptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#vaultgroupjoinoptions).
+Default: `"auto"` — the router for a group of two or more, a direct join for one. `"direct"` submits one batcher `join` per leg instead, as separate transactions that are not atomic. See [`VaultGroup` → VaultGroupJoinOptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#vaultgroupjoinoptions).
 
 ### operatorUntil
 

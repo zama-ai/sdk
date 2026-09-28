@@ -10,14 +10,16 @@ description: The contract that turns one submission into a join on each of sever
 ## Import
 
 ```ts
-import { VaultRouter } from "@zama-fhe/sdk/vaults";
+import { createVaultRouter, VaultRouter } from "@zama-fhe/sdk/vaults";
 ```
 
 ## Construction
 
 ```ts
-const router = new VaultRouter(sdk, "0xRouter");
+const router = createVaultRouter(sdk, "0xRouter");
 ```
+
+`createVaultRouter` is a thin factory over `new VaultRouter(sdk, address)`; both take the same arguments.
 
 ## Properties
 
@@ -77,7 +79,7 @@ Options (`VaultRouterJoinOptions`):
 
 **Throws:**
 
-- [`ConfigurationError`](errors.md#configurationerror) — an empty leg set.
+- [`ConfigurationError`](errors.md#configurationerror) — an empty leg set, or more than `MAX_GROUP_VAULTS` legs. Thrown before any grant.
 - [`SignerNotConfiguredError`](errors.md#signernotconfigurederror) — no signer on the SDK.
 - [`EncryptionFailedError`](errors.md#encryptionfailederror) — encryption returned fewer handles than legs.
 

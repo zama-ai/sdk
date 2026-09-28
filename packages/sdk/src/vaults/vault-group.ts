@@ -14,7 +14,7 @@ import { requireAlignedWalletAccount } from "../utils/alignment";
 import { assertConfidentialBalance } from "../utils/assert-balance";
 import { submitTransaction as submitSdkTransaction } from "../utils/submit-transaction";
 import type { ZamaSDK } from "../zama-sdk";
-import { encodeAllocationData, type AllocationLeg } from "./allocation";
+import { encodeAllocationData, MAX_GROUP_VAULTS, type AllocationLeg } from "./allocation";
 import {
   normalizeBatcherHistory,
   resolveActiveBatcher,
@@ -26,9 +26,6 @@ import { findJoined } from "./events";
 import type { JoinOptions } from "./types";
 import { VaultBatcher } from "./vault-batcher";
 import { VaultRouter } from "./vault-router";
-
-/** The pull legs one transaction's FHE budget fits; a group must be exitable in one submission. */
-export const MAX_GROUP_VAULTS = 10;
 
 /** One vault of a group. */
 export interface VaultMemberConfig {
@@ -69,8 +66,9 @@ export interface VaultGroupJoinOptions extends JoinOptions {
   /**
    * `"auto"` (the default) uses the router for a group of more than one vault
    * and joins the batcher directly for a group of one. `"direct"` submits one
-   * batcher `join` per leg instead, for wallets that batch atomically
-   * (EIP-5792, smart accounts); the legs are identical either way.
+   * batcher `join` per leg instead, as separate transactions in group order;
+   * the legs are identical either way. A failure after the first leg leaves
+   * the earlier joins committed on their batchers, to be quit from there.
    */
   strategy?: VaultGroupStrategy;
 }

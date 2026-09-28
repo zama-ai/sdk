@@ -114,7 +114,9 @@ The SDK reads `currentBatchId` off each retired batcher before every submission 
 
 ## Batching the joins yourself
 
-By default a group of more than one vault goes through the router: one transaction, one signature. Pass `strategy: "direct"` to get one batcher `join` per leg instead, which is what you want if your wallet can submit them atomically (EIP-5792, smart accounts). Each leg then takes the two steps `Vault.deposit` takes: an operator grant to that batcher on the leg's token, and a join with an amount encrypted against it.
+By default a group of more than one vault goes through the router: one transaction, one signature. Pass `strategy: "direct"` to get one batcher `join` per leg instead, submitted as separate transactions in group order. Each leg then takes the two steps `Vault.deposit` takes: an operator grant to that batcher on the leg's token, and a join with an amount encrypted against it.
+
+The direct path is not atomic. If a later leg is rejected or reverts, the earlier joins stay committed on their batchers and the call throws; quit them there (`createVaultBatcher(sdk, batcher).quit(batchId)`, with the batch id read from that batcher's `currentBatchId`) or leave them as real positions of zero or the chosen amount.
 
 ```ts
 await group.deposit("alpha", 1_000_000n, { strategy: "direct" });

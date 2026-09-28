@@ -5868,7 +5868,6 @@ export interface ErrorForCode {
     [ZamaErrorCode.SigningRejected]: SigningRejectedError;
     [ZamaErrorCode.TransactionReverted]: TransactionRevertedError;
     [ZamaErrorCode.TransportKeyPairChanged]: TransportKeyPairChangedError;
-    // Warning: (ae-forgotten-export) The symbol "UnlistedConfidentialTokenError" needs to be exported by the entry point index.d.ts
     [ZamaErrorCode.UnlistedConfidentialToken]: UnlistedConfidentialTokenError;
     [ZamaErrorCode.UnshieldAlreadyFinalized]: UnshieldAlreadyFinalizedError;
     [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
@@ -15998,6 +15997,16 @@ export function underlyingContract(wrapperAddress: Address): {
     readonly functionName: "underlying";
     readonly args: readonly [];
 };
+
+// @public
+export class UnlistedConfidentialTokenError extends ZamaError {
+    constructor(message: string, details: {
+        token: Address;
+        registry: Address;
+    }, options?: ErrorOptions);
+    readonly registry: Address;
+    readonly token: Address;
+}
 
 // @public
 export interface UnshieldAlreadyFinalizedDetails {

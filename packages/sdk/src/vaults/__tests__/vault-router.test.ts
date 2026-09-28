@@ -8,8 +8,8 @@ import {
 } from "../../errors";
 import { describe, expect, mockEncryptedLegs, test, VALID_INPUT_PROOF } from "../../test-fixtures";
 import type { GenericProvider } from "../../types";
-import type { AllocationLeg } from "../allocation";
-import { VaultRouter } from "../vault-router";
+import { MAX_GROUP_VAULTS, type AllocationLeg } from "../allocation";
+import { createVaultRouter, VaultRouter } from "../vault-router";
 
 const ROUTER = "0x4444444444444444444444444444444444444444" as Address;
 const REGISTRY = "0x5555555555555555555555555555555555555555" as Address;
@@ -44,6 +44,11 @@ const LEGS: readonly AllocationLeg[] = [
 ];
 
 describe("VaultRouter", () => {
+  test("createVaultRouter builds the same instance as the constructor", ({ sdk }) => {
+    expect(createVaultRouter(sdk, ROUTER)).toBeInstanceOf(VaultRouter);
+    expect(createVaultRouter(sdk, ROUTER).address).toBe(new VaultRouter(sdk, ROUTER).address);
+  });
+
   test("checksums the router address", ({ sdk }) => {
     expect(new VaultRouter(sdk, ROUTER.toLowerCase() as Address).address).toBe(ROUTER);
   });
@@ -173,6 +178,15 @@ describe("VaultRouter", () => {
 
     test("rejects an empty leg set before touching the wallet", async ({ sdk, signer }) => {
       await expect(new VaultRouter(sdk, ROUTER).join([])).rejects.toThrow(ConfigurationError);
+      expect(signer.writeContract).not.toHaveBeenCalled();
+    });
+
+    test("rejects more legs than a transaction can carry before granting anything", async ({
+      sdk,
+      signer,
+    }) => {
+      const legs = Array.from({ length: MAX_GROUP_VAULTS + 1 }, () => LEGS[0] as AllocationLeg);
+      await expect(new VaultRouter(sdk, ROUTER).join(legs)).rejects.toThrow(ConfigurationError);
       expect(signer.writeContract).not.toHaveBeenCalled();
     });
 
