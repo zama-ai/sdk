@@ -25,4 +25,17 @@ for (const path of targets) {
   writeFileSync(path, `${JSON.stringify(pkg, null, 2)}\n`, "utf8");
 }
 
-console.log(`Updated lockstep package versions to ${nextVersion}`);
+const crateTargets = [
+  ["clients/rust/Cargo.toml", /^version = ".*"$/m, `version = "${nextVersion}"`],
+  ["clients/rust/Cargo.lock", /^(name = "zama-sdk"\nversion = )".*"$/m, `$1"${nextVersion}"`],
+];
+
+for (const [path, pattern, replacement] of crateTargets) {
+  const source = readFileSync(path, "utf8");
+  if (!pattern.test(source)) {
+    throw new Error(`No zama-sdk version found in ${path}`);
+  }
+  writeFileSync(path, source.replace(pattern, replacement), "utf8");
+}
+
+console.log(`Updated lockstep package and crate versions to ${nextVersion}`);
