@@ -15,8 +15,6 @@ This is the surface to reach for when depositing into one of several vaults; [`u
 import { useVaultGroup } from "@zama-fhe/react-sdk/vaults";
 ```
 
-The `vaults` subpath is separate from the root entry, so apps that don't use vaults don't bundle it.
-
 ## Signature
 
 ```ts
