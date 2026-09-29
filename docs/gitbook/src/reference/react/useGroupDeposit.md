@@ -80,12 +80,6 @@ The member to deposit into — one of the group's configured ids.
 
 Amount to deposit, in the shared asset token's base units.
 
-### strategy
-
-`"auto" | "router" | "direct" | undefined`
-
-Default: `"auto"` — the router for a group of two or more, a direct join for one. `"direct"` submits one batcher `join` per leg instead, as separate transactions that are not atomic. See [`VaultGroup` → VaultGroupJoinOptions](../sdk/VaultGroup.md#vaultgroupjoinoptions).
-
 ### operatorUntil
 
 `number | undefined`
@@ -100,7 +94,7 @@ Default: `false`. Skips the confidential-balance pre-flight, for accounts whose 
 
 **Throws:**
 
-- `ConfigurationError` — unknown `vaultId`, `strategy: "router"` on a group without one, or a batcher that reports a different token or vault than the member is configured with
+- `ConfigurationError` — unknown `vaultId`, or a batcher that reports a different token or vault than the member is configured with
 - `InsufficientConfidentialBalanceError` — the asset balance is less than `amount`
 - `BalanceCheckUnavailableError` — the balance check needs a decryption the signer can't perform
 - `UnlistedConfidentialTokenError` — the router's registry does not list the asset

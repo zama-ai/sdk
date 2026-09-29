@@ -13,7 +13,6 @@ export {
   type VaultGroupJoin,
   type VaultGroupJoinOptions,
   type VaultGroupJoinResult,
-  type VaultGroupStrategy,
   type VaultMemberConfig,
 } from "./vault-group";
 export {

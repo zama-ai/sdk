@@ -112,20 +112,8 @@ The SDK reads `currentBatchId` off each retired batcher before every submission 
 
 `useActiveBatchers` exposes the same answer for display; give it a `refetchInterval` on a screen that stays open.
 
-## Batching the joins yourself
-
-By default a group of more than one vault goes through the router: one transaction, one signature. Pass `strategy: "direct"` to get one batcher `join` per leg instead, submitted as separate transactions in group order. Each leg then takes the two steps `Vault.deposit` takes: an operator grant to that batcher on the leg's token, and a join with an amount encrypted against it.
-
-The direct path is not atomic. If a later leg is rejected or reverts, the earlier joins stay committed on their batchers and the call throws; quit them there (`createVaultBatcher(sdk, batcher).quit(batchId)`, with the batch id read from that batcher's `currentBatchId`) or leave them as real positions of zero or the chosen amount.
-
-```ts
-await group.deposit("alpha", 1_000_000n, { strategy: "direct" });
-```
-
-This changes only how the legs are packaged. The legs themselves — how many, in what order, carrying what — are identical either way, deliberately: a leg set that varied with what the caller's wallet could do would leak the caller's wallet class.
-
 ## Grants and registry listing
 
-On the router path for a **redemption**, the router pulls each leg's share token, so it needs an ERC-7984 operator grant on every one of them. The SDK makes any missing grant before submitting — note that this is a grant to the _router_, not to the batchers, the opposite of what a single-vault `Vault.redeem` does. On the direct path the grants go to the batchers, one per leg, as with `Vault`.
+For a **redemption**, the router pulls each leg's share token, so it needs an ERC-7984 operator grant on every one of them. The SDK makes any missing grant before submitting — note that this is a grant to the _router_, not to the batchers, the opposite of what a single-vault `Vault.redeem` does.
 
-A router **deposit** needs no grant: it is a transfer you send. It does require the shared asset to be listed in the registry the router checks, so the SDK asks first and raises `UnlistedConfidentialTokenError` rather than letting you pay for a reverted transaction. Listings are governed on chain and can be revoked, so this is checked per submission rather than remembered.
+A **deposit** needs no grant: it is a transfer you send. It does require the shared asset to be listed in the registry the router checks, so the SDK asks first and raises `UnlistedConfidentialTokenError` rather than letting you pay for a reverted transaction. Listings are governed on chain and can be revoked, so this is checked per submission rather than remembered.

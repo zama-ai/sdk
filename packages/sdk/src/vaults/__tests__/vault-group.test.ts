@@ -368,39 +368,8 @@ describe("VaultGroup deposit", () => {
   });
 });
 
-describe("VaultGroup strategy", () => {
-  test('"direct" changes the packaging and nothing about the legs', async ({
-    sdk,
-    provider,
-    relayer,
-    signer,
-    userAddress,
-  }) => {
-    mockReads(provider);
-    mockEncryptedLegs(relayer, 2);
-    mockReceipts(provider, userAddress, [ALPHA.depositBatcher, BETA.depositBatcher]);
-
-    await new VaultGroup(sdk, GROUP).deposit("beta", 1_000n, { strategy: "direct" });
-
-    const joins = writesTo(signer, "join");
-    expect(joins.map(([call]) => call.address)).toStrictEqual([
-      ALPHA.depositBatcher,
-      BETA.depositBatcher,
-    ]);
-    expect(writesTo(signer, "confidentialTransferAndCall")).toHaveLength(0);
-    // Same values, same order, whichever way they were packaged — but each
-    // encrypted against the batcher that verifies it.
-    expect(
-      vi
-        .mocked(relayer.encryptValues)
-        .mock.calls.map(([call]) => [call.contractAddress, call.values[0]?.value]),
-    ).toStrictEqual([
-      [ALPHA.depositBatcher, 0n],
-      [BETA.depositBatcher, 1_000n],
-    ]);
-  });
-
-  test('"direct" grants each batcher operator on its leg\'s token where missing', async ({
+describe("VaultGroup single-vault join", () => {
+  test("grants the batcher operator on the asset where missing", async ({
     sdk,
     provider,
     relayer,
@@ -409,50 +378,14 @@ describe("VaultGroup strategy", () => {
   }) => {
     mockReads(provider, { isOperator: false });
     mockEncryptedLegs(relayer, 1);
-    mockReceipts(provider, userAddress, [ALPHA.depositBatcher, BETA.depositBatcher]);
+    mockReceipts(provider, userAddress, [ALPHA.depositBatcher]);
 
-    await new VaultGroup(sdk, GROUP).deposit("beta", 1_000n, {
-      strategy: "direct",
-      operatorUntil: 1_800_000_000,
-    });
+    await new VaultGroup(sdk, SOLO).deposit("alpha", 1_000n, { operatorUntil: 1_800_000_000 });
 
     const grants = writesTo(signer, "setOperator");
     expect(grants.map(([call]) => [call.address, call.args?.[0], call.args?.[1]])).toStrictEqual([
       [ASSET, ALPHA.depositBatcher, 1_800_000_000],
-      [ASSET, BETA.depositBatcher, 1_800_000_000],
     ]);
-  });
-
-  test('"direct" emits one vault join event per batcher', async ({
-    createSDK,
-    provider,
-    relayer,
-    userAddress,
-    events,
-  }) => {
-    const received: ZamaSDKEvent[] = [];
-    const sdk = createSDK({ onEvent: (event) => received.push(event) });
-    mockReads(provider);
-    mockEncryptedLegs(relayer, 1);
-    mockReceipts(provider, userAddress, [ALPHA.depositBatcher, BETA.depositBatcher]);
-
-    await new VaultGroup(sdk, GROUP).deposit("alpha", 1_000n, { strategy: "direct" });
-
-    const joins = received.filter((event) => event.type === events.VaultSubmitted);
-    expect(joins.map((event) => event.tokenAddress)).toStrictEqual([
-      ALPHA.depositBatcher,
-      BETA.depositBatcher,
-    ]);
-    expect(
-      joins.every((event) => "vaultOperation" in event && event.vaultOperation === "join"),
-    ).toBe(true);
-  });
-
-  test('"router" on a group that has none is refused', async ({ sdk, provider }) => {
-    mockReads(provider);
-    await expect(
-      new VaultGroup(sdk, SOLO).deposit("alpha", 1_000n, { strategy: "router" }),
-    ).rejects.toThrow(ConfigurationError);
   });
 });
 
@@ -476,23 +409,6 @@ describe("VaultGroup redeem", () => {
       expect.objectContaining({ batcher: ALPHA.redeemBatcher, token: ALPHA.share }),
       expect.objectContaining({ batcher: BETA.redeemBatcher, token: BETA.share }),
     ]);
-  });
-
-  test("encrypts once per leg on the direct path, each against its own share token", async ({
-    sdk,
-    provider,
-    relayer,
-    userAddress,
-  }) => {
-    mockReads(provider);
-    mockEncryptedLegs(relayer, 1);
-    mockReceipts(provider, userAddress, [ALPHA.redeemBatcher, BETA.redeemBatcher]);
-
-    await new VaultGroup(sdk, GROUP).redeem("alpha", 500n, { strategy: "direct" });
-
-    expect(
-      vi.mocked(relayer.encryptValues).mock.calls.map(([call]) => call.contractAddress),
-    ).toStrictEqual([ALPHA.redeemBatcher, BETA.redeemBatcher]);
   });
 
   test("checks the caller's balance of the chosen member's shares", async ({

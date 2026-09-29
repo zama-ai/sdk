@@ -72,9 +72,9 @@ The member to redeem from — one of the group's configured ids.
 
 Amount of **shares** to redeem, in that member's share token's base units. ERC-4626 `redeem`, not `withdraw`.
 
-### strategy, operatorUntil, skipBalanceCheck
+### operatorUntil, skipBalanceCheck
 
-Same as [`useGroupDeposit`](./useGroupDeposit.md#strategy). The balance check is against the chosen member's share token.
+Same as [`useGroupDeposit`](./useGroupDeposit.md#operatoruntil). The balance check is against the chosen member's share token.
 
 **Throws:** the same errors as `useGroupDeposit`, except `UnlistedConfidentialTokenError`, which only the deposit path raises.
 

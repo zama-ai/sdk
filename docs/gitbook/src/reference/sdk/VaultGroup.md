@@ -154,7 +154,7 @@ In order, the call:
 1. Checks the caller's confidential balance of `cAsset` (skippable with `skipBalanceCheck`).
 2. Resolves the active deposit batcher of every member and builds one leg per member — the chosen one carrying `amount`, the rest `0`.
 3. Checks each leg's batcher reports `cAsset` as the token it pulls and the member's `vault` as its vault. Both reads are cached per batcher.
-4. On the router path, checks the asset is listed in the router's registry, encrypts the total and the allocation, and sends one `confidentialTransferAndCall` of the asset to the router. On the direct path, grants each batcher an operator approval on the asset if needed and submits one `join` per leg, each encrypted against its batcher.
+4. Checks the asset is listed in the router's registry, encrypts the total and the allocation, and sends one `confidentialTransferAndCall` of the asset to the router. A single-vault group instead grants its batcher an operator approval on the asset if needed and submits one `join`, encrypted against that batcher.
 5. Reads the `Joined` event of every leg's batcher from the receipts and returns them.
 
 ```ts
@@ -165,17 +165,17 @@ Unlike `Vault.deposit` there is no `beneficiary`: the router credits the account
 
 **Throws:**
 
-- [`ConfigurationError`](errors.md#configurationerror) — unknown `vaultId`, `strategy: "router"` on a group without one, or a batcher that reports a different token or vault than the member is configured with. Thrown before any grant or transfer.
+- [`ConfigurationError`](errors.md#configurationerror) — unknown `vaultId`, or a batcher that reports a different token or vault than the member is configured with. Thrown before any grant or transfer.
 - [`SignerNotConfiguredError`](errors.md#signernotconfigurederror) — no signer on the SDK.
 - [`InsufficientConfidentialBalanceError`](errors.md#insufficientconfidentialbalanceerror) — the asset balance is less than `amount`.
 - [`BalanceCheckUnavailableError`](errors.md#balancecheckunavailableerror) — the balance check needs a decryption the signer can't perform; pass `skipBalanceCheck: true`.
-- [`UnlistedConfidentialTokenError`](errors.md#unlistedconfidentialtokenerror) — the router's registry does not list the asset (router path only).
+- [`UnlistedConfidentialTokenError`](errors.md#unlistedconfidentialtokenerror) — the router's registry does not list the asset.
 
 ### redeem
 
 `(vaultId: string, amount: bigint, options?: VaultGroupJoinOptions) => Promise<VaultGroupJoinResult>`
 
-Redeems `amount` shares of the member `vaultId` by joining every member's current redeem batch, each leg spending its own vault's share token. Same flow as `deposit`, except that on the router path the router pulls each share token and so is granted an operator approval on every one of them first, where none is active. `amount` is denominated in **shares**, as with `Vault.redeem`.
+Redeems `amount` shares of the member `vaultId` by joining every member's current redeem batch, each leg spending its own vault's share token. Same flow as `deposit`, except that the router pulls each share token and so is granted an operator approval on every one of them first, where none is active. `amount` is denominated in **shares**, as with `Vault.redeem`.
 
 ```ts
 const { joins } = await group.redeem("alpha", 500n);
@@ -186,14 +186,13 @@ Throws the same errors as `deposit`, checking the balance of the chosen member's
 ### VaultGroupJoinOptions
 
 ```ts
-import { type VaultGroupJoinOptions, type VaultGroupStrategy } from "@zama-fhe/sdk/vaults";
+import { type VaultGroupJoinOptions } from "@zama-fhe/sdk/vaults";
 ```
 
-| Option             | Type                             | Default      | Description                                                                                                                                                                                                                                                                                             |
-| ------------------ | -------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `strategy`         | `"auto" \| "router" \| "direct"` | `"auto"`     | `"auto"` uses the router for two or more members and a direct join for one. `"direct"` submits one batcher `join` per leg as separate transactions in group order; the legs are identical either way. A failure after the first leg leaves the earlier joins committed, to be quit from their batchers. |
-| `operatorUntil`    | `number`                         | now + 1 hour | Unix timestamp (seconds) until which an operator grant made for this submission is valid — the router's on each share token, or each batcher's on its leg's token. Only used when a grant isn't already active.                                                                                         |
-| `skipBalanceCheck` | `boolean`                        | `false`      | Skip the confidential-balance pre-flight. A short balance then joins every batch with an encrypted zero rather than reverting.                                                                                                                                                                          |
+| Option             | Type      | Default      | Description                                                                                                                                                                                                                       |
+| ------------------ | --------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `operatorUntil`    | `number`  | now + 1 hour | Unix timestamp (seconds) until which an operator grant made for this submission is valid — the router's on each share token, or the batcher's on the asset for a single-vault group. Only used when a grant isn't already active. |
+| `skipBalanceCheck` | `boolean` | `false`      | Skip the confidential-balance pre-flight. A short balance then joins every batch with an encrypted zero rather than reverting.                                                                                                    |
 
 ## VaultGroupJoinResult
 
@@ -201,11 +200,11 @@ import { type VaultGroupJoinOptions, type VaultGroupStrategy } from "@zama-fhe/s
 import { type VaultGroupJoinResult, type VaultGroupJoin } from "@zama-fhe/sdk/vaults";
 ```
 
-| Field          | Type                           | Description                                                         |
-| -------------- | ------------------------------ | ------------------------------------------------------------------- |
-| `vaultId`      | `string`                       | The member the caller chose.                                        |
-| `transactions` | `readonly TransactionResult[]` | One transaction on the router path, one per leg on the direct path. |
-| `joins`        | `readonly VaultGroupJoin[]`    | One entry per leg, in group order — the decoys included.            |
+| Field          | Type                           | Description                                                              |
+| -------------- | ------------------------------ | ------------------------------------------------------------------------ |
+| `vaultId`      | `string`                       | The member the caller chose.                                             |
+| `transactions` | `readonly TransactionResult[]` | The router transaction, or the single batcher join of a one-vault group. |
+| `joins`        | `readonly VaultGroupJoin[]`    | One entry per leg, in group order — the decoys included.                 |
 
 Each `VaultGroupJoin` has:
 

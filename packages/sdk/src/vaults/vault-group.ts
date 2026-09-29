@@ -51,9 +51,6 @@ export interface VaultGroupConfig {
   readonly router?: Address;
 }
 
-/** How a group submission is packaged. */
-export type VaultGroupStrategy = "auto" | "router" | "direct";
-
 /** Options for {@link VaultGroup.deposit} and {@link VaultGroup.redeem}. */
 export interface VaultGroupJoinOptions extends JoinOptions {
   /**
@@ -63,14 +60,6 @@ export interface VaultGroupJoinOptions extends JoinOptions {
    * own default (now + 1 hour).
    */
   operatorUntil?: number;
-  /**
-   * `"auto"` (the default) uses the router for a group of more than one vault
-   * and joins the batcher directly for a group of one. `"direct"` submits one
-   * batcher `join` per leg instead, as separate transactions in group order;
-   * the legs are identical either way. A failure after the first leg leaves
-   * the earlier joins committed on their batchers, to be quit from there.
-   */
-  strategy?: VaultGroupStrategy;
 }
 
 /** What one leg's batcher reported. */
@@ -93,7 +82,7 @@ export interface VaultGroupJoin {
 export interface VaultGroupJoinResult {
   /** The member the caller chose. */
   vaultId: string;
-  /** One transaction on the router path, one per leg on the direct path. */
+  /** One transaction through the router, or the single batcher join of a one-vault group. */
   transactions: readonly TransactionResult[];
   /** One entry per leg, in group order. */
   joins: readonly VaultGroupJoin[];
@@ -273,15 +262,15 @@ export class VaultGroup {
       );
     }
 
-    // Built before the strategy is chosen: legs that varied by strategy would leak the wallet class.
     const batchers = await this.activeBatchers(direction);
     const legs = this.#legs(direction, vaultId, amount, batchers);
     await this.#verifyLegs(legs);
 
-    const viaRouter = this.#useRouter(options?.strategy);
-    const transactions = viaRouter
-      ? [await this.#submitViaRouter(direction, holder, legs, options)]
-      : await this.#submitDirectly(holder, legs, options?.operatorUntil);
+    // A group of one has no vault choice to hide and needs no router.
+    const transactions =
+      this.vaults.length > 1
+        ? [await this.#submitViaRouter(direction, holder, legs, options)]
+        : await this.#submitDirectly(holder, legs, options?.operatorUntil);
 
     return { vaultId, transactions, joins: this.#collectJoins(holder, legs, transactions) };
   }
@@ -306,17 +295,6 @@ export class VaultGroup {
         amount: member.id === vaultId ? amount : 0n,
       };
     });
-  }
-
-  #useRouter(strategy: VaultGroupStrategy | undefined): boolean {
-    if (strategy === "direct") {
-      return false;
-    }
-    if (strategy === "router") {
-      this.#requireRouter();
-      return true;
-    }
-    return this.vaults.length > 1;
   }
 
   #requireRouter(): VaultRouter {

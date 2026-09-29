@@ -13833,7 +13833,6 @@ export interface VaultGroupJoin {
 // @public
 export interface VaultGroupJoinOptions extends JoinOptions {
     operatorUntil?: number;
-    strategy?: VaultGroupStrategy;
 }
 
 // @public
@@ -13842,9 +13841,6 @@ export interface VaultGroupJoinResult {
     transactions: readonly TransactionResult[];
     vaultId: string;
 }
-
-// @public
-export type VaultGroupStrategy = "auto" | "router" | "direct";
 
 // @public
 export interface VaultJoinOptions extends JoinOptions {
