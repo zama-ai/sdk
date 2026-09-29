@@ -2186,7 +2186,7 @@ See [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/s
 
 `VaultGroup` (`createVaultGroup`, or `useVaultGroup` in React) joins several confidential vaults that share one `cAsset` as a single leg list: `deposit` and `redeem` join _every_ member's batch, the chosen vault with the amount and the rest with an encrypted zero, so the choice of vault stays private. A group of two or more submits through the on-chain `VaultBatcherConfidentialRouter` in one transaction — pushed for a deposit, pulled for a redemption. Each member names a batcher _history_ rather than an address, so a retired batcher keeps receiving joins until its last batch is dispatched; `useActiveBatcher` and `useActiveBatchers` expose which batcher a join would reach right now. The React hooks are `useGroupDeposit` and `useGroupRedeem`.
 
-`VaultRouter` (`createVaultRouter`) mirrors the router contract for callers that build their own legs. A router deposit throws the new `UnlistedConfidentialTokenError` when the router's registry does not list the asset. Router-path deposits surface as `TransferSubmitted` events tagged with the asset; router-path redemptions surface as `VaultSubmitted` events with `vaultOperation: "routerJoin"`.
+A group deposit throws the new `UnlistedConfidentialTokenError` when the router's registry does not list the asset; `VaultGroup.isAssetListed()` gives the same answer without throwing. Router-path deposits surface as `TransferSubmitted` events tagged with the asset; router-path redemptions surface as `VaultSubmitted` events with `vaultOperation: "routerJoin"`.
 
 See [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-groups.md).
 
@@ -9437,7 +9437,7 @@ The React hooks are built on these query and mutation option builders; they are 
 
 `VaultGroup` joins several confidential ERC-4626 vaults as one. A deposit into one member joins _every_ member's current batch: the chosen vault carries the amount, the rest carry an encrypted zero, and an observer sees the same set of joins whichever vault was picked. See the [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-groups.md) guide for why.
 
-A group of more than one vault submits through a [`VaultRouter`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultRouter.md) in one transaction. A single-vault group needs no router and joins its batcher directly, the way [`Vault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) does.
+A group of more than one vault submits through the on-chain router in one transaction. A single-vault group needs no router and joins its batcher directly, the way [`Vault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) does.
 
 ## Import
 
@@ -9488,7 +9488,7 @@ import { type VaultGroupConfig, type VaultMemberConfig } from "@zama-fhe/sdk/vau
 | `id`     | `string`                       | yes            | Stable identifier for the group. Used in mutation keys.                                                               |
 | `cAsset` | `Address`                      | yes            | The confidential wrapper of the asset every member takes deposits in.                                                 |
 | `vaults` | `readonly VaultMemberConfig[]` | yes            | The members, in the order their legs are submitted. That order is visible on chain, so treat it as part of the group. |
-| `router` | `Address`                      | for 2+ members | The [`VaultRouter`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultRouter.md) that fans a submission out across the members.                                    |
+| `router` | `Address`                      | for 2+ members | The router that fans a submission out across the members.                                                             |
 
 Each `VaultMemberConfig` has:
 
@@ -9540,12 +9540,6 @@ The shared confidential asset wrapper, checksummed.
 
 The members in leg order, with every address checksummed.
 
-### router
-
-`VaultRouter | undefined`
-
-The fan-out router, or `undefined` for a single-vault group.
-
 ## Reads
 
 ### member
@@ -9557,6 +9551,12 @@ One member by its id. Throws [`ConfigurationError`](https://raw.githubuserconten
 ```ts
 const { vault, cShare } = group.member("alpha");
 ```
+
+### isAssetListed
+
+`() => Promise<boolean>`
+
+Whether the router's registry lists `cAsset`, which a deposit requires. Always `true` for a single-vault group. Listings are governed on chain and can be revoked, so this is read per call rather than cached.
 
 ### activeBatchers
 
@@ -9645,104 +9645,9 @@ Each `VaultGroupJoin` has:
 
 ## Related
 
-- [VaultRouter](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultRouter.md) — the contract a multi-vault submission goes through
 - [Vault](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) / [VaultBatcher](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md) — the single-vault API, and where claiming lives
 - [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-groups.md) — what a group hides and what it costs
 - [useVaultGroup](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultGroup.md), [useGroupDeposit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupDeposit.md), [useGroupRedeem](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupRedeem.md) — the React hooks
-
-## VaultRouter
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/reference/sdk/VaultRouter.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultRouter.md
-- logical_path: reference/sdk/VaultRouter
-
-# VaultRouter
-
-`VaultRouter` wraps the on-chain router that fans one submission out across several batchers. It submits the legs it is given and decides nothing about them; [`VaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md) is the surface that builds the legs, and most apps should use that instead.
-
-## Import
-
-```ts
-import { createVaultRouter, VaultRouter } from "@zama-fhe/sdk/vaults";
-```
-
-## Construction
-
-```ts
-const router = createVaultRouter(sdk, "0xRouter");
-```
-
-`createVaultRouter` is a thin factory over `new VaultRouter(sdk, address)`; both take the same arguments.
-
-## Properties
-
-### sdk
-
-`ZamaSDK`
-
-The SDK instance this router reads and writes through.
-
-### address
-
-`Address`
-
-Checksummed address of the router contract.
-
-## Reads
-
-### tokenWrapperRegistry
-
-`() => Promise<Address>`
-
-The registry the router checks a token against before accepting a pushed transfer. Immutable on chain, so it is resolved once and cached.
-
-### isTokenListed
-
-`(token: Address) => Promise<boolean>`
-
-Whether the router's registry lists `token`. Governance can revoke a listing, so this is read per call rather than cached.
-
-### requireTokenListed
-
-`(token: Address) => Promise<void>`
-
-Throws [`UnlistedConfidentialTokenError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unlistedconfidentialtokenerror) if the registry does not list `token`. `VaultGroup.deposit` calls this before pushing the asset to the router, so the caller does not pay for a reverted transaction.
-
-## Writes
-
-### encryptAllocation
-
-`(legs: readonly AllocationLeg[]) => Promise<EncryptedAllocation>`
-
-Encrypts a leg set as one FHE input bound to the router — the contract that verifies the proof — and returns the legs with their handles plus the single `inputProof`. `encodeAllocationData(allocation)` turns the result into the `data` payload of a `confidentialTransferAndCall` to the router, which is how a deposit funds every leg with one transfer.
-
-An `AllocationLeg` is `{ batcher, token, amount }` with a plaintext `amount`.
-
-### join
-
-`(legs: readonly AllocationLeg[], options?: VaultRouterJoinOptions) => Promise<TransactionResult>`
-
-Pulls every leg's token from the caller and joins each leg's batcher, in one transaction. Grants the router an ERC-7984 operator approval on each distinct token first, unless one is already active. This is the path a group redemption takes, since each leg spends a different share token.
-
-Options (`VaultRouterJoinOptions`):
-
-| Option          | Type     | Default      | Description                                                                                                                                  |
-| --------------- | -------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `operatorUntil` | `number` | now + 1 hour | Unix timestamp (seconds) until which the router's operator grant on each leg's token is valid. Only used where a grant isn't already active. |
-
-**Throws:**
-
-- [`ConfigurationError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#configurationerror) — an empty leg set, or more than `MAX_GROUP_VAULTS` legs. Thrown before any grant.
-- [`SignerNotConfiguredError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#signernotconfigurederror) — no signer on the SDK.
-- [`EncryptionFailedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#encryptionfailederror) — encryption returned fewer handles than legs.
-
-FHE compute grows with the leg count, and a transaction has a ceiling on it; `MAX_GROUP_VAULTS` (10) is the [documented limit](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#leg-limits) for a pull.
-
-## Related
-
-- [VaultGroup](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md) — builds the legs and picks the path
-- [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-groups.md)
 
 ## `web()` transport
 
@@ -11118,9 +11023,9 @@ matchZamaError(error, {
 
 **Code:** `UNLISTED_CONFIDENTIAL_TOKEN`
 
-Thrown by `VaultRouter.requireTokenListed()` — and so by `VaultGroup.deposit()` on the router path — when the registry the router checks does not list the confidential token. The router rejects a pushed transfer of an unlisted token on chain, so the SDK refuses before the caller pays for a reverted transaction. The error carries `token` and `registry`.
+Thrown by `VaultGroup.deposit()` on a group of more than one vault when the registry the router checks does not list the confidential token. The router rejects a pushed transfer of an unlisted token on chain, so the SDK refuses before the caller pays for a reverted transaction. The error carries `token` and `registry`.
 
-**How to handle:** Not retryable. Listings are governed on chain and can be added or revoked at any time, so check the group's asset against the registry the router names. `VaultRouter.isTokenListed()` gives the same answer without throwing.
+**How to handle:** Not retryable. Listings are governed on chain and can be added or revoked at any time, so check the group's asset against the registry the router names. `VaultGroup.isAssetListed()` gives the same answer without throwing.
 
 ### InvalidTransportKeyPairError
 

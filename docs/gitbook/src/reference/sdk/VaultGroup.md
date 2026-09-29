@@ -7,7 +7,7 @@ description: A set of confidential ERC-4626 vaults sharing one asset, joined tog
 
 `VaultGroup` joins several confidential ERC-4626 vaults as one. A deposit into one member joins _every_ member's current batch: the chosen vault carries the amount, the rest carry an encrypted zero, and an observer sees the same set of joins whichever vault was picked. See the [Vault groups](../../guides/vault-groups.md) guide for why.
 
-A group of more than one vault submits through a [`VaultRouter`](VaultRouter.md) in one transaction. A single-vault group needs no router and joins its batcher directly, the way [`Vault`](Vault.md) does.
+A group of more than one vault submits through the on-chain router in one transaction. A single-vault group needs no router and joins its batcher directly, the way [`Vault`](Vault.md) does.
 
 ## Import
 
@@ -58,7 +58,7 @@ import { type VaultGroupConfig, type VaultMemberConfig } from "@zama-fhe/sdk/vau
 | `id`     | `string`                       | yes            | Stable identifier for the group. Used in mutation keys.                                                               |
 | `cAsset` | `Address`                      | yes            | The confidential wrapper of the asset every member takes deposits in.                                                 |
 | `vaults` | `readonly VaultMemberConfig[]` | yes            | The members, in the order their legs are submitted. That order is visible on chain, so treat it as part of the group. |
-| `router` | `Address`                      | for 2+ members | The [`VaultRouter`](VaultRouter.md) that fans a submission out across the members.                                    |
+| `router` | `Address`                      | for 2+ members | The router that fans a submission out across the members.                                                             |
 
 Each `VaultMemberConfig` has:
 
@@ -110,12 +110,6 @@ The shared confidential asset wrapper, checksummed.
 
 The members in leg order, with every address checksummed.
 
-### router
-
-`VaultRouter | undefined`
-
-The fan-out router, or `undefined` for a single-vault group.
-
 ## Reads
 
 ### member
@@ -127,6 +121,12 @@ One member by its id. Throws [`ConfigurationError`](errors.md#configurationerror
 ```ts
 const { vault, cShare } = group.member("alpha");
 ```
+
+### isAssetListed
+
+`() => Promise<boolean>`
+
+Whether the router's registry lists `cAsset`, which a deposit requires. Always `true` for a single-vault group. Listings are governed on chain and can be revoked, so this is read per call rather than cached.
 
 ### activeBatchers
 
@@ -215,7 +215,6 @@ Each `VaultGroupJoin` has:
 
 ## Related
 
-- [VaultRouter](VaultRouter.md) — the contract a multi-vault submission goes through
 - [Vault](Vault.md) / [VaultBatcher](VaultBatcher.md) — the single-vault API, and where claiming lives
 - [Vault groups](../../guides/vault-groups.md) — what a group hides and what it costs
 - [useVaultGroup](../react/useVaultGroup.md), [useGroupDeposit](../react/useGroupDeposit.md), [useGroupRedeem](../react/useGroupRedeem.md) — the React hooks

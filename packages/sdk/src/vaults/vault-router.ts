@@ -24,12 +24,7 @@ export interface VaultRouterJoinOptions {
   operatorUntil?: number;
 }
 
-/**
- * The contract that turns one submission into a join on each of several
- * batchers. It submits the legs it is given and decides nothing about them.
- *
- * Most callers should reach for {@link VaultGroup}, which builds the legs.
- */
+/** The contract that turns one submission into a join on each of several batchers. */
 export class VaultRouter {
   /** The SDK instance this router reads and writes through. */
   readonly sdk: ZamaSDK;
@@ -189,9 +184,4 @@ export class VaultRouter {
       logger: this.sdk.logger,
     });
   }
-}
-
-/** Create a {@link VaultRouter} bound to `sdk` for the router contract at `address`. */
-export function createVaultRouter(sdk: ZamaSDK, address: Address): VaultRouter {
-  return new VaultRouter(sdk, address);
 }

@@ -117,11 +117,10 @@ describe("VaultGroup construction", () => {
     const group = new VaultGroup(sdk, GROUP);
     expect(group.vaults.map((entry) => entry.id)).toStrictEqual(["alpha", "beta"]);
     expect(group.cAsset).toBe(ASSET);
-    expect(group.router?.address).toBe(ROUTER);
   });
 
   test("a single-vault group needs no router", ({ sdk }) => {
-    expect(new VaultGroup(sdk, SOLO).router).toBeUndefined();
+    expect(() => new VaultGroup(sdk, SOLO)).not.toThrow();
   });
 
   test("refuses a multi-vault group with no router to reach them", ({ sdk }) => {
@@ -156,6 +155,18 @@ describe("VaultGroup construction", () => {
 
   test("member() rejects an id the group does not name", ({ sdk }) => {
     expect(() => new VaultGroup(sdk, GROUP).member("gamma")).toThrow(ConfigurationError);
+  });
+});
+
+describe("VaultGroup isAssetListed", () => {
+  test("asks the router's registry about the asset", async ({ sdk, provider }) => {
+    mockReads(provider, { isTokenListed: false });
+    await expect(new VaultGroup(sdk, GROUP).isAssetListed()).resolves.toBe(false);
+  });
+
+  test("is true for a single-vault group, which needs no listing", async ({ sdk, provider }) => {
+    mockReads(provider, { isTokenListed: false });
+    await expect(new VaultGroup(sdk, SOLO).isAssetListed()).resolves.toBe(true);
   });
 });
 

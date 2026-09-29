@@ -62,7 +62,6 @@
   - [Vault](reference/sdk/Vault.md)
   - [VaultBatcher](reference/sdk/VaultBatcher.md)
   - [VaultGroup](reference/sdk/VaultGroup.md)
-  - [VaultRouter](reference/sdk/VaultRouter.md)
   - [web() transport](reference/sdk/RelayerWeb.md)
   - [node() transport](reference/sdk/RelayerNode.md)
   - [cleartext() transport](reference/sdk/RelayerCleartext.md)

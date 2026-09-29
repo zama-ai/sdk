@@ -44,13 +44,6 @@ export interface ActiveBatchersQueryConfig {
 export function activeBatchersQueryOptions(group: VaultGroup, config: ActiveBatchersQueryConfig): QueryFactoryOptions<Readonly<Record<string, Address>>, Error, Readonly<Record<string, Address>>, ReturnType<typeof vaultQueryKeys.activeBatchers.group>>;
 
 // @public
-export interface AllocationLeg {
-    readonly amount: bigint;
-    readonly batcher: Address;
-    readonly token: Address;
-}
-
-// @public
 export function batchCallbackDeadlineContract(batcher: Address, batchId: bigint): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -4549,9 +4542,6 @@ export function createVaultBatcher(sdk: ZamaSDK, address: Address): VaultBatcher
 export function createVaultGroup(sdk: ZamaSDK, config: VaultGroupConfig): VaultGroup;
 
 // @public
-export function createVaultRouter(sdk: ZamaSDK, address: Address): VaultRouter;
-
-// @public
 export function currentBatchIdContract(batcher: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -6479,23 +6469,6 @@ export function dispatchBatchContract(batcher: Address): {
 
 // @public
 export function dispatchBatchMutationOptions(batcher: VaultBatcher): MutationFactoryOptions<readonly ["zama.vault.dispatchBatch", Address], void, TransactionResult>;
-
-// @public
-export function encodeAllocationData(allocation: EncryptedAllocation): Hex;
-
-// @public
-export interface EncryptedAllocation {
-    readonly inputProof: Hex;
-    readonly legs: readonly EncryptedAllocationLeg[];
-}
-
-// @public
-export interface EncryptedAllocationLeg {
-    // Warning: (ae-forgotten-export) The symbol "EncryptedValue" needs to be exported by the entry point index.d.ts
-    readonly amount: EncryptedValue;
-    readonly batcher: Address;
-    readonly token: Address;
-}
 
 // @public
 export function exchangeRateContract(batcher: Address, batchId: bigint): {
@@ -8454,6 +8427,8 @@ export function invalidateAfterQuit(queryClient: QueryClientLike, params: {
 // @public
 export function invalidateBatchQueries(queryClient: QueryClientLike, batcherAddress: Address): void;
 
+// Warning: (ae-forgotten-export) The symbol "EncryptedValue" needs to be exported by the entry point index.d.ts
+//
 // @public
 export function joinContract(batcher: Address, beneficiary: Address, encryptedAmount: EncryptedValue, inputProof: Hex): {
     readonly address: `0x${string}`;
@@ -11697,6 +11672,8 @@ export interface RetiredBatcher {
     readonly lastBatchId: bigint;
 }
 
+// Warning: (ae-forgotten-export) The symbol "EncryptedAllocationLeg" needs to be exported by the entry point index.d.ts
+//
 // @public
 export function routerJoinContract(router: Address, legs: readonly EncryptedAllocationLeg[], inputProof: Hex): {
     readonly address: `0x${string}`;
@@ -13807,9 +13784,9 @@ export class VaultGroup {
     readonly cAsset: Address;
     deposit(vaultId: string, amount: bigint, options?: VaultGroupJoinOptions): Promise<VaultGroupJoinResult>;
     readonly id: string;
+    isAssetListed(): Promise<boolean>;
     member(vaultId: string): VaultMemberConfig;
     redeem(vaultId: string, amount: bigint, options?: VaultGroupJoinOptions): Promise<VaultGroupJoinResult>;
-    readonly router: VaultRouter | undefined;
     readonly sdk: ZamaSDK;
     readonly vaults: readonly VaultMemberConfig[];
 }
@@ -13898,23 +13875,6 @@ export const vaultQueryKeys: {
         }];
     };
 };
-
-// @public
-export class VaultRouter {
-    constructor(sdk: ZamaSDK, address: Address);
-    readonly address: Address;
-    encryptAllocation(legs: readonly AllocationLeg[]): Promise<EncryptedAllocation>;
-    isTokenListed(token: Address): Promise<boolean>;
-    join(legs: readonly AllocationLeg[], options?: VaultRouterJoinOptions): Promise<TransactionResult>;
-    requireTokenListed(token: Address): Promise<void>;
-    readonly sdk: ZamaSDK;
-    tokenWrapperRegistry(): Promise<Address>;
-}
-
-// @public
-export interface VaultRouterJoinOptions {
-    operatorUntil?: number;
-}
 
 // @public
 export const VaultTopics: {

@@ -5,7 +5,6 @@
  */
 export { createVaultBatcher, VaultBatcher } from "./vault-batcher";
 export { createVault, Vault } from "./vault";
-export { createVaultRouter, VaultRouter, type VaultRouterJoinOptions } from "./vault-router";
 export {
   createVaultGroup,
   VaultGroup,
@@ -15,13 +14,7 @@ export {
   type VaultGroupJoinResult,
   type VaultMemberConfig,
 } from "./vault-group";
-export {
-  encodeAllocationData,
-  MAX_GROUP_VAULTS,
-  type AllocationLeg,
-  type EncryptedAllocation,
-  type EncryptedAllocationLeg,
-} from "./allocation";
+export { MAX_GROUP_VAULTS } from "./allocation";
 export { BatchState } from "./types";
 export type { JoinOptions, JoinResult, VaultAddresses, VaultJoinOptions } from "./types";
 export { decodeJoined, findJoined, VaultTopics, type JoinedEvent } from "./events";

@@ -57,7 +57,6 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Vault](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md): Confidential ERC-4626 vault interface — deposit and redeem through a pair of batchers.
 - [VaultBatcher](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md): One on-chain vault batcher — join, batch state, dispatch, claim, quit, recover.
 - [VaultGroup](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md): A set of confidential ERC-4626 vaults sharing one asset, joined together so a deposit hides which vault it went to.
-- [VaultRouter](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultRouter.md): The contract that turns one submission into a join on each of several vault batchers.
 - [`web()` transport](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/RelayerWeb.md): Browser relayer transport that runs FHE operations via bundled WASM.
 - [`node()` transport](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/RelayerNode.md): Node.js relayer transport that runs FHE operations through @fhevm/sdk on the calling thread.
 - [`cleartext()` transport](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/RelayerCleartext.md): Development relayer transport that operates in cleartext mode, without FHE, KMS, or gateway dependencies.

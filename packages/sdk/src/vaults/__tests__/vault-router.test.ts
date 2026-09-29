@@ -9,7 +9,7 @@ import {
 import { describe, expect, mockEncryptedLegs, test, VALID_INPUT_PROOF } from "../../test-fixtures";
 import type { GenericProvider } from "../../types";
 import { MAX_GROUP_VAULTS, type AllocationLeg } from "../allocation";
-import { createVaultRouter, VaultRouter } from "../vault-router";
+import { VaultRouter } from "../vault-router";
 
 const ROUTER = "0x4444444444444444444444444444444444444444" as Address;
 const REGISTRY = "0x5555555555555555555555555555555555555555" as Address;
@@ -44,11 +44,6 @@ const LEGS: readonly AllocationLeg[] = [
 ];
 
 describe("VaultRouter", () => {
-  test("createVaultRouter builds the same instance as the constructor", ({ sdk }) => {
-    expect(createVaultRouter(sdk, ROUTER)).toBeInstanceOf(VaultRouter);
-    expect(createVaultRouter(sdk, ROUTER).address).toBe(new VaultRouter(sdk, ROUTER).address);
-  });
-
   test("checksums the router address", ({ sdk }) => {
     expect(new VaultRouter(sdk, ROUTER.toLowerCase() as Address).address).toBe(ROUTER);
   });

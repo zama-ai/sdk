@@ -118,13 +118,11 @@ export class VaultGroup {
   readonly cAsset: Address;
   /** The members, in leg order. */
   readonly vaults: readonly VaultMemberConfig[];
-  /** The fan-out router, absent for a single-vault group. */
-  readonly router: VaultRouter | undefined;
-
   // One instance per token, so repeated submissions reuse its decrypted-balance cache.
   readonly #tokens = new Map<Address, Token>();
   // One instance per batcher, so the reads that check the config are made once.
   readonly #batchers = new Map<Address, VaultBatcher>();
+  readonly #router: VaultRouter | undefined;
 
   constructor(sdk: ZamaSDK, config: VaultGroupConfig) {
     if (config.vaults.length === 0) {
@@ -163,7 +161,16 @@ export class VaultGroup {
         redeem: normalizeBatcherHistory(member.batchers.redeem),
       },
     }));
-    this.router = config.router ? new VaultRouter(sdk, config.router) : undefined;
+    this.#router = config.router ? new VaultRouter(sdk, config.router) : undefined;
+  }
+
+  /**
+   * Whether the router's registry lists `cAsset`, which a multi-vault deposit
+   * requires; always `true` for a single-vault group. Governance can revoke a
+   * listing, so ask per submission rather than caching the answer.
+   */
+  async isAssetListed(): Promise<boolean> {
+    return this.#router ? this.#router.isTokenListed(this.cAsset) : true;
   }
 
   /**
@@ -298,10 +305,10 @@ export class VaultGroup {
   }
 
   #requireRouter(): VaultRouter {
-    if (!this.router) {
+    if (!this.#router) {
       throw new ConfigurationError(`Vault group "${this.id}" has no router`);
     }
-    return this.router;
+    return this.#router;
   }
 
   #batcher(address: Address): VaultBatcher {
