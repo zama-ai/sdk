@@ -15,8 +15,6 @@ A group of more than one vault submits through a [`VaultRouter`](VaultRouter.md)
 import { createVaultGroup, VaultGroup } from "@zama-fhe/sdk/vaults";
 ```
 
-The `vaults` subpath is separate from the root entry, so apps that don't use vaults don't bundle it.
-
 ## Construction
 
 Use `createVaultGroup(sdk, config)`:

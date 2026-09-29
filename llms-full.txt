@@ -8936,8 +8936,6 @@ Both methods grant the batcher an ERC-7984 operator approval if one isn't alread
 import { createVault, Vault } from "@zama-fhe/sdk/vaults";
 ```
 
-The `vaults` subpath is separate from the root entry, so apps that don't use vaults don't bundle it.
-
 ## Construction
 
 Use `createVault(sdk, addresses)`:
@@ -9446,8 +9444,6 @@ A group of more than one vault submits through a [`VaultRouter`](https://raw.git
 ```ts
 import { createVaultGroup, VaultGroup } from "@zama-fhe/sdk/vaults";
 ```
-
-The `vaults` subpath is separate from the root entry, so apps that don't use vaults don't bundle it.
 
 ## Construction
 
@@ -20418,8 +20414,6 @@ Most apps should use this — together with [`useDeposit`](https://raw.githubuse
 ```ts
 import { useVault } from "@zama-fhe/react-sdk/vaults";
 ```
-
-The `vaults` subpath is separate from the root entry, so apps that don't use vaults don't bundle it.
 
 ## Signature
 

@@ -15,8 +15,6 @@ Most apps should use this — together with [`useDeposit`](./useDeposit.md) / [`
 import { useVault } from "@zama-fhe/react-sdk/vaults";
 ```
 
-The `vaults` subpath is separate from the root entry, so apps that don't use vaults don't bundle it.
-
 ## Signature
 
 ```ts
