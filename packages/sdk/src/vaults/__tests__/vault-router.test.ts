@@ -1,14 +1,13 @@
 import type { Address } from "viem";
 import { vi } from "vitest";
 import {
-  ConfigurationError,
   EncryptionFailedError,
   SignerNotConfiguredError,
   UnlistedConfidentialTokenError,
 } from "../../errors";
 import { describe, expect, mockEncryptedLegs, test, VALID_INPUT_PROOF } from "../../test-fixtures";
 import type { GenericProvider } from "../../types";
-import { MAX_GROUP_VAULTS, type AllocationLeg } from "../allocation";
+import type { AllocationLeg } from "../allocation";
 import { VaultRouter } from "../vault-router";
 
 const ROUTER = "0x4444444444444444444444444444444444444444" as Address;
@@ -169,20 +168,6 @@ describe("VaultRouter", () => {
         address: SHARED_TOKEN,
         args: expect.arrayContaining([ROUTER]),
       });
-    });
-
-    test("rejects an empty leg set before touching the wallet", async ({ sdk, signer }) => {
-      await expect(new VaultRouter(sdk, ROUTER).join([])).rejects.toThrow(ConfigurationError);
-      expect(signer.writeContract).not.toHaveBeenCalled();
-    });
-
-    test("rejects more legs than a transaction can carry before granting anything", async ({
-      sdk,
-      signer,
-    }) => {
-      const legs = Array.from({ length: MAX_GROUP_VAULTS + 1 }, () => LEGS[0] as AllocationLeg);
-      await expect(new VaultRouter(sdk, ROUTER).join(legs)).rejects.toThrow(ConfigurationError);
-      expect(signer.writeContract).not.toHaveBeenCalled();
     });
 
     test("throws without a configured signer", async ({ createSDK }) => {

@@ -1,7 +1,6 @@
 import { getAddress, type Address, type Hex } from "viem";
 import { isConfidentialTokenValidContract } from "../contracts";
 import {
-  ConfigurationError,
   EncryptionFailedError,
   SignerNotConfiguredError,
   UnlistedConfidentialTokenError,
@@ -11,7 +10,7 @@ import type { TransactionResult, WriteContractConfig } from "../types";
 import { requireAlignedWalletAccount } from "../utils/alignment";
 import { submitTransaction as submitSdkTransaction } from "../utils/submit-transaction";
 import type { ZamaSDK } from "../zama-sdk";
-import { MAX_GROUP_VAULTS, type AllocationLeg, type EncryptedAllocation } from "./allocation";
+import type { AllocationLeg, EncryptedAllocation } from "./allocation";
 import { routerJoinContract, tokenWrapperRegistryContract } from "./contracts";
 
 /** Options for {@link VaultRouter.join}. */
@@ -108,14 +107,6 @@ export class VaultRouter {
     legs: readonly AllocationLeg[],
     options?: VaultRouterJoinOptions,
   ): Promise<TransactionResult> {
-    if (legs.length === 0) {
-      throw new ConfigurationError("A router join needs at least one leg");
-    }
-    if (legs.length > MAX_GROUP_VAULTS) {
-      throw new ConfigurationError(
-        `A router join of ${legs.length} legs is above the ${MAX_GROUP_VAULTS} a transaction can carry`,
-      );
-    }
     const account = await requireAlignedWalletAccount("join", this.sdk.signer, this.sdk.provider);
     const holder = getAddress(account.address);
 
