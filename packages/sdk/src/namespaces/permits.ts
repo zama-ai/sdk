@@ -212,8 +212,9 @@ export class Permits {
 
   /**
    * {@link registerPermit} for every `sdk.offline.batchPreparePermits` payload.
-   * Every permit is verified before any is persisted, so if one fails
-   * verification, none are stored.
+   * Every permit is verified before any is persisted, so a permit that fails
+   * verification leaves the store untouched. Persisting stays best-effort,
+   * like `registerPermit`: a failed store write is logged, not thrown.
    *
    * @throws on the first permit that fails verification, with whatever
    *   {@link registerPermit} throws for it.

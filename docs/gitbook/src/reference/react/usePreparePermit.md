@@ -54,12 +54,12 @@ function PrepareCustodyPermit({
 
 `PreparePermitRequest`
 
-| Field          | Type        | Default                                       | Meaning                                             |
-| -------------- | ----------- | --------------------------------------------- | --------------------------------------------------- |
-| `signer`       | `Address`   | required                                      | address expected to sign the returned `eip712`      |
-| `contracts`    | `Address[]` | required, max 10, no chunking                 | contract addresses to authorize                     |
-| `delegator`    | `Address`   | none — self permit; must differ from `signer` | delegator address, for a delegated permit           |
-| `durationDays` | `number`    | the SDK's configured `permitTTL`, max 365     | permit validity window in days, a V1 protocol limit |
+| Field          | Type        | Default                                         | Meaning                                             |
+| -------------- | ----------- | ----------------------------------------------- | --------------------------------------------------- |
+| `signer`       | `Address`   | required                                        | address expected to sign the returned `eip712`      |
+| `contracts`    | `Address[]` | required, max 10 (see `useBatchPreparePermits`) | contract addresses to authorize                     |
+| `delegator`    | `Address`   | none — self permit; must differ from `signer`   | delegator address, for a delegated permit           |
+| `durationDays` | `number`    | the SDK's configured `permitTTL`, max 365       | permit validity window in days, a V1 protocol limit |
 
 Signer-optional: `request.signer` is an explicit address, not a connected wallet account — building the typed data needs no configured signer, only a reachable provider (it reads the chain's KMS signers context on-chain).
 

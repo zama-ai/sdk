@@ -98,6 +98,7 @@ Returns a `PreparedPermit`. Every field is JSON-safe, so the object crosses a pr
 **Throws:**
 
 - `ConfigurationError` - `request.contracts` is empty or exceeds 10 addresses, `request.delegator` equals `request.signer` (self-delegation), or `request.durationDays` exceeds the V1 permit maximum of 365 days
+- `KeyWrappingError` - the transport key pair could not be wrapped or unwrapped
 - `TransportKeyPairChangedError` - a concurrent `permits.revokeTransportKeyPair()` rotated the transport key pair while this call was generating one
 
 See [`permits.registerPermit`](./ZamaSDK.md#permits-registerpermit) for the second phase and its typed errors, and the [Offline signing guide](../../guides/offline.md#offline-permits) for the full workflow.

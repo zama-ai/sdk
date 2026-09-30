@@ -261,8 +261,8 @@ export class CredentialService {
   /**
    * Single-permit form of {@link batchPreparePermits}.
    *
-   * @throws if `request.contracts` exceeds {@link MAX_CONTRACTS_PER_PERMIT}, plus
-   *   everything {@link batchPreparePermits} throws. {@link ConfigurationError}
+   * @throws if `request.contracts` exceeds {@link MAX_CONTRACTS_PER_PERMIT}. {@link ConfigurationError}
+   * @throws everything {@link batchPreparePermits} throws.
    */
   async preparePermit(request: PreparePermitRequest): Promise<PreparedPermit> {
     const count = normalizeAddresses(request.contracts).length;
@@ -294,6 +294,9 @@ export class CredentialService {
    * @throws if `request.contracts` is empty, `request.delegator` equals
    *   `request.signer`, or `request.durationDays` exceeds the V1 permit maximum
    *   of 365 days. {@link ConfigurationError}
+   * @throws if the transport key pair cannot be wrapped or unwrapped. {@link KeyWrappingError}
+   * @throws if a concurrent rotation replaces the transport key pair while this
+   *   call is generating one. {@link TransportKeyPairChangedError}
    */
   async batchPreparePermits(request: PreparePermitRequest): Promise<PreparedPermit[]> {
     const signerAddress = checksum(request.signer);
@@ -378,9 +381,15 @@ export class CredentialService {
   /**
    * {@link registerPermit} for several permits: every permit is verified
    * before any is persisted, so a verification failure stores nothing.
+   * Persisting stays best-effort, like `registerPermit`: a failed store write
+   * is logged, not thrown.
+   *
+   * @throws on the first permit that fails verification, with whatever
+   *   {@link registerPermit} throws for it.
    */
   async batchRegisterPermits(permits: readonly SignedPreparedPermit[]): Promise<void> {
-    // Sequential so the first failing permit emits exactly one PermitError.
+    // Sequential, not Promise.all: parallel verification would emit a
+    // PermitError per failing permit instead of just the first.
     const verified: VerifiedPermit[] = [];
     for (const { prepared, signature } of permits) {
       verified.push(await this.#verifyPermit(prepared, signature));
@@ -425,14 +434,14 @@ export class CredentialService {
         "registerPermit",
         new PreparedPermitExpiredError(
           `registerPermit: the prepared permit's validity window (starting ${startTimestamp}, ` +
-            `${durationDays}d) has already elapsed — call preparePermit again.`,
+            `${durationDays}d) has already elapsed — prepare the permit again.`,
         ),
       );
     }
 
     // No key pair to fall back on generating here: `prepared.eip712` was built
     // against a specific transport public key, so a missing (or mismatched)
-    // stored key pair can only mean it changed since preparePermit ran —
+    // stored key pair can only mean it changed after the permit was prepared —
     // generating a fresh one via getOrCreate would just be discarded by the
     // comparison below, having wastefully persisted a key nothing will use.
     //
@@ -442,8 +451,8 @@ export class CredentialService {
     const keypair = await this.#vault.readStored(signerAddress);
     if (keypair === null || keypair.publicKey !== message.publicKey) {
       throw new TransportKeyPairChangedError(
-        "registerPermit: the transport key pair changed since preparePermit ran — call " +
-          "preparePermit again to rebind the signature request to the current key pair.",
+        "registerPermit: the transport key pair changed since the permit was prepared — " +
+          "prepare it again to rebind the signature request to the current key pair.",
       );
     }
 

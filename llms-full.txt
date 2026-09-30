@@ -5618,7 +5618,9 @@ await sdk.permits.registerPermit(prepared, signature);
 
 The recovery byte may be either `0`/`1` or `27`/`28`: the SDK normalizes it before the permit is verified.
 
-One permit per call: unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks a request over 10 contracts — `contracts` maps to exactly one signature. For more than 10 contracts, `batchPreparePermits` splits the request into one permit per 10 and `batchRegisterPermits` registers the signed pairs in order:
+One permit per call: unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks a request over 10 contracts — `contracts` maps to exactly one signature.
+
+For more than 10 contracts, `batchPreparePermits` splits the request into one permit per 10 and `batchRegisterPermits` registers the signed pairs in order:
 
 ```ts
 const prepared = await sdk.offline.batchPreparePermits({
@@ -5631,7 +5633,7 @@ const signed = await Promise.all(
 await sdk.permits.batchRegisterPermits(signed);
 ```
 
-Every permit is verified before any is stored, so if one fails verification, none are registered.
+Every permit is verified before any is stored, so a permit that fails verification leaves the store untouched. Storing stays best-effort, like `registerPermit`: a failed store write is logged, not thrown.
 
 
 > [!WARNING]
@@ -7914,7 +7916,7 @@ See the [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/d
 
 `(permits: SignedPreparedPermit[]) => Promise<void>`
 
-[`registerPermit`](#permits-registerpermit) for every [`offline.batchPreparePermits`](#offline-batchpreparepermits) payload, each paired with its `signature`. Every permit is verified before any is stored, so if one fails verification, none are registered. Throws whatever `registerPermit` throws for the first failing permit.
+[`registerPermit`](#permits-registerpermit) for every [`offline.batchPreparePermits`](#offline-batchpreparepermits) payload, each paired with its `signature`. Every permit is verified before any is stored, so a permit that fails verification leaves the store untouched. Storing stays best-effort, like `registerPermit`: a failed store write is logged, not thrown. Throws whatever `registerPermit` throws for the first failing permit.
 
 ```ts
 const prepared = await sdk.offline.batchPreparePermits({
@@ -12057,6 +12059,7 @@ Returns a `PreparedPermit`. Every field is JSON-safe, so the object crosses a pr
 **Throws:**
 
 - `ConfigurationError` - `request.contracts` is empty or exceeds 10 addresses, `request.delegator` equals `request.signer` (self-delegation), or `request.durationDays` exceeds the V1 permit maximum of 365 days
+- `KeyWrappingError` - the transport key pair could not be wrapped or unwrapped
 - `TransportKeyPairChangedError` - a concurrent `permits.revokeTransportKeyPair()` rotated the transport key pair while this call was generating one
 
 See [`permits.registerPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-registerpermit) for the second phase and its typed errors, and the [Offline signing guide](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/offline.md#offline-permits) for the full workflow.
@@ -15616,12 +15619,12 @@ function PrepareCustodyPermit({
 
 `PreparePermitRequest`
 
-| Field          | Type        | Default                                       | Meaning                                             |
-| -------------- | ----------- | --------------------------------------------- | --------------------------------------------------- |
-| `signer`       | `Address`   | required                                      | address expected to sign the returned `eip712`      |
-| `contracts`    | `Address[]` | required, max 10, no chunking                 | contract addresses to authorize                     |
-| `delegator`    | `Address`   | none — self permit; must differ from `signer` | delegator address, for a delegated permit           |
-| `durationDays` | `number`    | the SDK's configured `permitTTL`, max 365     | permit validity window in days, a V1 protocol limit |
+| Field          | Type        | Default                                         | Meaning                                             |
+| -------------- | ----------- | ----------------------------------------------- | --------------------------------------------------- |
+| `signer`       | `Address`   | required                                        | address expected to sign the returned `eip712`      |
+| `contracts`    | `Address[]` | required, max 10 (see `useBatchPreparePermits`) | contract addresses to authorize                     |
+| `delegator`    | `Address`   | none — self permit; must differ from `signer`   | delegator address, for a delegated permit           |
+| `durationDays` | `number`    | the SDK's configured `permitTTL`, max 365       | permit validity window in days, a V1 protocol limit |
 
 Signer-optional: `request.signer` is an explicit address, not a connected wallet account — building the typed data needs no configured signer, only a reachable provider (it reads the chain's KMS signers context on-chain).
 
@@ -15967,7 +15970,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useBatchRegisterPermits
 
-[`useRegisterPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRegisterPermit.md) for every [`useBatchPreparePermits`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchPreparePermits.md) payload, each paired with its signature. Every permit is verified before any is stored, so if one fails verification, none are registered. Automatically invalidates [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useHasPermit.md) queries on success.
+[`useRegisterPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRegisterPermit.md) for every [`useBatchPreparePermits`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchPreparePermits.md) payload, each paired with its signature. Every permit is verified before any is stored, so a permit that fails verification leaves the store untouched. Storing stays best-effort, like `useRegisterPermit`: a failed store write is logged, not thrown. Automatically invalidates [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useHasPermit.md) queries on success.
 
 ## Import
 
