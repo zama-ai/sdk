@@ -52,7 +52,7 @@ The Zama SDK ships as `@zama-fhe/sdk` (and `@zama-fhe/react-sdk` for React) — 
 | [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/beta/llms.txt)           | the agent needs to **discover** the right guide, example, or reference, then fetch only that | a compact map of guides, concepts, SDK and React reference pages, and approved examples   |
 | [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/beta/llms-full.txt) | the agent has a **large context window** and you want the whole public corpus in one paste   | the complete docs bundle plus approved examples and README context (API reports excluded) |
 
-Start with [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/beta/llms.txt) for normal coding tasks; reach for [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/beta/llms-full.txt) only when you want everything loaded at once. The `source_path` values such as `docs/gitbook/src/...` are provenance metadata, not local paths — if you haven't cloned the repo, use the raw GitHub URLs.
+Start with [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/beta/llms.txt) for normal coding tasks; reach for [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/beta/llms-full.txt) only when you want everything loaded at once. Both files include the Go and Rust client pages. The `source_path` values such as `docs/gitbook/src/...` are provenance metadata, not local paths — if you haven't cloned the repo, use the raw GitHub URLs.
 
 ### Example prompts
 
