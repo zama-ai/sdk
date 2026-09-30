@@ -89,6 +89,9 @@ function main() {
     join(repoRoot, "README.md"),
     join(repoRoot, "packages/sdk/README.md"),
     join(repoRoot, "packages/react-sdk/README.md"),
+    join(repoRoot, "packages/sdk-daemon/README.md"),
+    join(repoRoot, "clients/go/README.md"),
+    join(repoRoot, "clients/rust/README.md"),
   ];
 
   const rel = (p) => p.replace(`${repoRoot}/`, "");

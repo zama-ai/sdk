@@ -1,6 +1,6 @@
 # Daemon v1beta1 contract
 
-The canonical schema is [daemon.proto](zama/sdk/v1beta1/daemon.proto). It exposes the TypeScript SDK's encryption, decryption, permit and offline transaction methods through unary RPCs, with a bidirectional channel for external signing and transaction broadcasting. This maintained, permanently beta daemon is intended for external partners; its versioned protocol can evolve with its native clients. Transport adapts arguments and results; `@zama-fhe/sdk` owns cryptography, credentials, defaults, caching, delegation checks, batching and recovery.
+The canonical schema is [daemon.proto](zama/sdk/v1beta1/daemon.proto). It exposes the TypeScript SDK's encryption, decryption, permit and offline transaction methods through unary RPCs, with a bidirectional channel for external signing and transaction broadcasting. The daemon and its Go and Rust clients are experimental. The wire protocol can change between minor versions, so upgrade the daemon image and the clients together. Transport adapts arguments and results; `@zama-fhe/sdk` owns cryptography, credentials, defaults, caching, delegation checks, batching and recovery.
 
 ## SDK contexts
 
@@ -63,7 +63,7 @@ The SDK's inherited account-change credential/cache cleanup is asynchronous and 
 | `GetDelegationExpiry`         | `sdk.delegations.getExpiry`                  |
 | `GetDelegationStatus`         | `sdk.delegations.getStatus`                  |
 
-Private decryption retains SDK credential acquisition, caching, zero-handle behavior and errors. Delegated calls preserve explicit delegator and optional account parameters. Public decryption returns clear values, ABI-encoded values and the decryption proof. Delegated batch results preserve input order, per-entry values or structured SDK errors, and fatal whole-call errors. Empty-input behavior, concurrency and propagation settings retain SDK semantics.
+Private decryption retains SDK credential acquisition, caching, zero-value behavior and errors. Delegated calls preserve explicit delegator and optional account parameters. Public decryption returns clear values, ABI-encoded values and the decryption proof. Delegated batch results preserve input order, per-entry values or structured SDK errors, and fatal whole-call errors. Empty-input behavior, concurrency and propagation settings retain SDK semantics.
 
 Offline permit preparation accepts an explicit signer and optional delegator, independently of a connected wallet. The SDK validates permit scope, duration, signature, chain, expiry and transport-key consistency. Preparation returns an opaque `prepared_permit` byte envelope and separate `typed_data_json` to sign. Registration takes the unchanged envelope and signature; applications do not parse the envelope or supply protocol extra-data constants.
 
@@ -77,7 +77,7 @@ Both `contract_address` and `user_address` are required 20-byte addresses. They 
 
 `timeout_ms` is an optional uint32 in whole milliseconds. Omission keeps the SDK default. Zero is a zero-millisecond budget, not "no timeout", and reaches the SDK unchanged. The RPC deadline is independent of it; the deadline and cancellation feed the SDK abort signal through the shared operation lifecycle. Encryption does not acquire credential storage locks or request wallet signatures.
 
-Results contain `encrypted_values`, one ordered 32-byte handle per input, and opaque `input_proof` bytes. Native clients reject a response whose value count does not match the input count, and preserve these bytes without numeric conversion. Ciphertexts can differ across equivalent calls; compare their semantics, order and binding instead of byte equality.
+Results contain `encrypted_values`, one ordered 32-byte encrypted value per input, and opaque `input_proof` bytes. Native clients reject a response whose value count does not match the input count, and preserve these bytes without numeric conversion. Ciphertexts can differ across equivalent calls; compare their semantics, order and binding instead of byte equality.
 
 ## Offline transaction preparation
 
@@ -99,7 +99,7 @@ Preparation uses the existing operation lifecycle and error trailers. The SDK me
 
 `DelegateDecryption.expiration_date_ms` omission requests a permanent delegation, stored on-chain as `2^64 - 1`; an explicit value is milliseconds on the wire and the SDK enforces its minimum lead time before converting it to seconds for the ACL write. `GetDelegationExpiryResponse.expiry_timestamp` and `GetDelegationStatusResponse.expiry_timestamp` report that same whole-second ACL value: `0` means no delegation, `2^64 - 1` means permanent, any other value is compared against the current chain block timestamp. `TransactionResult` mirrors the SDK's own write result: a `transaction_hash` and the mined receipt's `logs`. These RPCs added no new field, type or oneof to any existing message, and used no shared-message coordination field-number range.
 
-This is distinct from the existing `GrantDelegationPermit`/`HasDelegationPermit` RPCs, which manage a local delegation permit (an SDK credential), not on-chain ACL state. See [manage on-chain delegation](../packages/sdk-daemon/DELEGATIONS.md) for the full RPC-to-SDK mapping, error codes and native examples.
+This is distinct from the existing `GrantDelegationPermit`/`HasDelegationPermit` RPCs, which manage a local delegation permit (an SDK credential), not on-chain ACL state. See [manage on-chain delegation](../docs/gitbook/src/guides/delegated-decryption.md) for the full RPC-to-SDK mapping, error codes and native examples.
 
 The ACL contract accepts one delegate or revoke per `(delegator, delegate, contract)` tuple per block; a second write to the same tuple in the same block reverts. The native examples wait for the chain to advance a block between granting and revoking.
 
@@ -117,7 +117,7 @@ Binding identity controls coordination within one daemon. Reusing a native appli
 
 ## Values and optional arguments
 
-Addresses are 20 raw bytes; encrypted handles are 32 raw bytes. `ClearValue` preserves the SDK value type with distinct bigint, number, boolean, string and undefined variants. Bigints use canonical decimal strings and never pass through floating-point conversion. The number variant uses `uint32` for SDK euint8/euint16/euint32 results. Wider encrypted integers use the bigint variant. Undefined uses an empty message marker.
+Addresses are 20 raw bytes; encrypted values are 32 raw bytes. `ClearValue` preserves the SDK value type with distinct bigint, number, boolean, string and undefined variants. Bigints use canonical decimal strings and never pass through floating-point conversion. The number variant uses `uint32` for SDK euint8/euint16/euint32 results. Wider encrypted integers use the bigint variant. Undefined uses an empty message marker.
 
 Optional scalar presence is significant. Configuration durations, timeouts, concurrency and retry delays use unsigned integers. Timeouts are milliseconds; permit durations are days; retry delays are seconds. Omitted values retain SDK defaults, and an explicit zero timeout is a zero-millisecond budget, not "no timeout". Maximum concurrency uses positive values for a limit and zero for unlimited concurrency. Explicit false propagation settings reach the SDK unchanged. Missing delegated account uses the SDK's delegator default.
 
@@ -157,7 +157,7 @@ Event transport errors include `EVENT_ATTACHED` for a duplicate attachment, `EVE
 
 Subscriptions are opt-in and do not enable a logger. The native examples select event kinds and progress stages for diagnostics; they never log complete event objects. Decryption events contain plaintext results. Raw error messages, token/account addresses and arbitrary SDK logger metadata can also reveal application data.
 
-Use the typed notification handler as your SDK diagnostics sink and select only the metadata your application needs. The default daemon writes SDK warn and error messages to stderr verbatim and never writes their structured data; info and debug messages are dropped. See the [event integration guide](../packages/sdk-daemon/EVENTS.md).
+Use the typed notification handler as your SDK diagnostics sink and select only the metadata your application needs. The default daemon writes SDK warn and error messages to stderr verbatim and never writes their structured data; info and debug messages are dropped. See the [event integration guide](../docs/gitbook/src/native/guides/observe-events.md).
 
 ## Signing and operation lifecycle
 
@@ -167,7 +167,7 @@ Every SDK operation has a context ID and a client-generated operation ID. Client
 
 `execution_revert` reports that the node rejected a simulated contract write before broadcast: nothing was sent. It carries the raw revert return data, which may be empty, and the adapter's own message. Native adapters never decode this data; the daemon decodes it against the request ABI. This is a certain failure like a structured error, not an uncertain one: no hash exists to reconcile.
 
-Contract writes carry the destination, canonical calldata, ABI/function/arguments and optional decimal value/gas. TypeScript encodes calldata; native wallets sign and broadcast it, then return the hash. The SDK owns receipt waiting and workflow continuation. Bigint arguments in JSON use decimal strings interpreted through the ABI; optional value/gas retain absence and explicit zero. See [native transaction setup and failure behavior](../packages/sdk-daemon/TRANSACTIONS.md).
+Contract writes carry the destination, canonical calldata, ABI/function/arguments and optional decimal value/gas. TypeScript encodes calldata; native wallets sign and broadcast it, then return the hash. The SDK owns receipt waiting and workflow continuation. Bigint arguments in JSON use decimal strings interpreted through the ABI; optional value/gas retain absence and explicit zero. See [native transaction setup and failure behavior](../docs/gitbook/src/native/guides/attach-wallet.md).
 
 Cancellation frames stop pending wallet callbacks. Cancellation cannot undo a broadcast. An outstanding write whose channel disappears has an uncertain outcome; the bridge reports nonretryable `TRANSACTION_OUTCOME_UNKNOWN`. A reply whose result variant does not match the requested action reports the same uncertainty for writes and a signing failure for typed data. Account changes cancel old callbacks before publishing a new snapshot. Native adapters report an uncertain submission with its hash and do not block later writes, so reconcile the account before retrying. Unknown or stale replies receive an action-scoped error and do not cancel unrelated work. Clients do not automatically replay signing requests after reconnection.
 
@@ -189,7 +189,7 @@ RPC deadlines are independent of SDK relayer timeouts. Storage failures do not p
 
 Token/WrappedToken operations and registry access are not exposed. SDK event subscriptions use the separate event channel. Executed on-chain delegation transactions are exposed through `DelegateDecryption`/`RevokeDelegation`; `PrepareTransaction`'s `delegate_decryption`/`revoke_delegation` kinds remain available separately for offline-prepared, self-signed delegation transactions. Injection of arbitrary JavaScript providers, loggers and SDK event callbacks remains outside this wire API. Native storage implementations are supported through the storage bridge. This is partial SDK coverage; the methods above delegate their SDK behavior rather than reconstructing token flows.
 
-The native balance examples perform Ethereum contract reads in Alloy/go-ethereum and pass the resulting encrypted handle to general decryption. The shared setup now accepts runtime/provider options, storage selection and optional credential protection before the encryption and balance steps, and its wallets include transaction adapters, now exercised by a real delegation grant/revoke step. Integration with `Token.balanceOf` and other token lifecycle steps remains deferred until those public native APIs are exposed. SDK-backed tests exercise credential reuse, restart behavior and the transaction callback meanwhile.
+The native balance examples perform Ethereum contract reads in Alloy/go-ethereum and pass the resulting encrypted value to general decryption. The shared setup now accepts runtime/provider options, storage selection and optional credential protection before the encryption and balance steps, and its wallets include transaction adapters, now exercised by a real delegation grant/revoke step. Integration with `Token.balanceOf` and other token lifecycle steps remains deferred until those public native APIs are exposed. SDK-backed tests exercise credential reuse, restart behavior and the transaction callback meanwhile.
 
 ## Equivalence verification
 
@@ -213,4 +213,4 @@ sh clients/go/generate.sh
 cargo run --manifest-path clients/rust/Cargo.toml -p zama-sdk-codegen --locked
 ```
 
-Use the [daemon setup guide](../packages/sdk-daemon/README.md) for build, test and live example commands.
+Use the [daemon contributor workflow](../CONTRIBUTING.md#daemon-and-native-clients) for build, generation, and test commands.

@@ -2,6 +2,7 @@
 // each SDKContext before its Client; canceling an operation cannot undo a
 // completed transaction or storage write.
 //
-// The daemon protocol is beta: minor releases can break the wire contract and this API.
-// Upgrade this module together with the daemon image.
+// The daemon and its Go and Rust clients are experimental. The wire protocol can
+// change between minor versions, so upgrade the daemon image and the clients together.
+// Run the client and daemon at exactly matching versions.
 package zama

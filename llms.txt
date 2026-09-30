@@ -14,11 +14,13 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 
 ### Introduction
 
-- [Overview](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/overview.md): TypeScript SDK for confidential smart contracts — shield, transfer, and unshield tokens with Fully Homomorphic Encryption.
+- [Overview](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/overview.md): TypeScript SDK for confidential smart contracts, with Go and Rust clients. Shield, transfer, and unshield tokens with Fully Homomorphic Encryption.
 
 ### Getting Started
 
 - [Quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/tutorials/quick-start.md): Get from zero to a working confidential transfer in under 5 minutes.
+- [Go quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/go-quick-start.md): Encrypt a first confidential contract input from Go with the Zama SDK daemon.
+- [Rust quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/rust-quick-start.md): Encrypt a first confidential contract input from Rust with the Zama SDK daemon.
 - [Build your first confidential dApp](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/tutorials/first-confidential-dapp.md): End-to-end tutorial building a token dashboard with React, wagmi, and the Zama React SDK.
 - [Wallet & exchange integration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/tutorials/wallet-exchange-integration.md): How wallets and exchanges support ERC-7984 confidential tokens with the Zama SDK — display balances, build transfers, manage operators, and wrap/unwrap between ERC-20 and confidential form.
 - [Build with an LLM](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/tutorials/build-with-an-llm.md): Give coding agents grounded Zama SDK context — install the Zama skills, or point agents without skill support at the SDK's llms.txt files.
@@ -27,7 +29,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 ### Guides
 
 - [Migrate from v2 to v3](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/migrate-v2-to-v3.md): Step-by-step guide to upgrade an app from @zama-fhe/sdk 2.x to 3.x — config factory, relayer factories, permits, operators, encrypt/decrypt glossary.
-- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md): How to configure the SDK with createConfig — chains, relayers, provider, signer, and storage.
+- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md): How to configure the SDK in TypeScript, Go, and Rust with chains, relayers, provider, signer, and storage.
 - [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md): How to authenticate with the relayer using a backend proxy or a direct API key.
 - [Relayer API keys](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/relayer-api-keys.md): How to obtain, configure, and securely manage your Zama Relayer API key.
 - [Shield tokens](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/shield-tokens.md): How to convert public ERC-20 tokens into their confidential form.
@@ -35,16 +37,25 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/unshield-tokens.md): Convert confidential tokens back to public ERC-20 by unshielding them.
 - [Check balances](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/check-balances.md): Decrypt and read confidential token balances using the SDK and React hooks.
 - [Decrypt values from event logs](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/decrypt-from-event-logs.md): Decrypt an FHE encrypted value pulled straight off an event log — the common server-side pattern for indexers, wallet history, and bridges.
-- [Handle errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/handle-errors.md): Catch, match, and recover from SDK errors in your application.
+- [Handle errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/handle-errors.md): Catch, match, and recover from SDK errors in TypeScript, React, Go, and Rust applications.
 - [Node.js backend](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/node-js-backend.md): How to use the SDK in a Node.js server environment with per-request storage isolation.
-- [Offline signing](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/offline.md): How to build unsigned transactions that are signed and broadcast out-of-process by a custody platform, HSM, or policy engine.
+- [Offline signing](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/offline.md): How to build unsigned transactions that are signed and broadcast out-of-process by a custody platform, HSM, or policy engine, from TypeScript, Go, or Rust.
 - [Web extensions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/web-extensions.md): How to use the SDK in MV3 Chrome extensions with persistent permit storage.
-- [Local development](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/local-development.md): How to use the cleartext relayer for local Hardhat nodes and custom chain deployments without a KMS or gateway.
+- [Local development](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/local-development.md): How to use the cleartext relayer from TypeScript, Go, and Rust for local Hardhat nodes and custom chain deployments without a KMS or gateway.
 - [Next.js / SSR](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/nextjs-ssr.md): How to use the SDK with Next.js and server-side rendering frameworks.
 - [Operator approvals](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/operator-approvals.md): How to approve another address to act on your confidential tokens.
 - [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/delegated-decryption.md): Grant another address the right to decrypt confidential balances, then read those balances as a delegate.
 - [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/encrypt-decrypt.md): How to encrypt values and decrypt FHE encrypted values for custom confidential smart contracts that are not wrapped ERC-20 tokens.
 - [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-deposits.md): How to integrate confidential ERC-4626 vaults with the Zama SDK.
+
+- [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/delegated-decryption.md): Grant another address the right to decrypt confidential balances, then read those balances as a delegate, in TypeScript, React, Go, or Rust.
+- [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/encrypt-decrypt.md): How to encrypt values and decrypt FHE encrypted values in TypeScript, React, Go, or Rust for custom confidential smart contracts that are not wrapped ERC-20 tokens.
+- [Go & Rust clients](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/README.md): Integrate Go and Rust applications with the Zama SDK daemon and manage wallets, credentials, and connection lifecycles.
+- [Attach a wallet](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/attach-wallet.md): Connect signing and transaction callbacks from Go and Rust to the daemon.
+- [Store credentials](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/credential-storage.md): Keep Go and Rust decryption credentials in your own database and share them across application replicas.
+- [Observe events](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/observe-events.md): Subscribe to lifecycle, wallet, and progress notifications in Go and Rust.
+- [Recover from disconnections](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/recover-from-disconnections.md): Detect closed callback channels and restore Go and Rust SDK contexts.
+- [Resolve uncertain transaction outcomes](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/uncertain-transaction-outcomes.md): Reconcile uncertain transaction outcomes observed by Go and Rust applications.
 
 ### SDK Reference
 
@@ -140,11 +151,26 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useTimeUntilDispatchable](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md): Query hook for the seconds until a vault batch becomes eligible for dispatch.
 - [Query keys](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/query-keys.md): Reference for the zamaQueryKeys factory used for manual React Query cache control.
 
+### Go, Rust, and Daemon Reference
+
+- [Go client API](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/go-client.md): Find generated API documentation and public interfaces for the Go daemon client.
+- [Rust client API](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/rust-client.md): Find generated API documentation and public interfaces for the Rust daemon client.
+- [Daemon configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/daemon-configuration.md): Environment variables that configure the Zama SDK daemon used by Go and Rust applications.
+- [Client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md): Match Go or Rust client versions with the Zama SDK daemon image.
+
+### Go and Rust Daemon Deployment
+
+- [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md): Deploy the Zama SDK daemon next to a Go or Rust application on your infrastructure.
+- [Monitor and troubleshoot](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md): Monitor daemon-backed Go and Rust operations and diagnose daemon failures.
+- [Upgrade the daemon](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/upgrade-and-recover.md): Replace the Zama SDK daemon and its Go or Rust client without losing stored credentials.
+
 ### Concepts
 
 - [Architecture](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/concepts/architecture.md): The SDK is organized into layers, each with a clear responsibility. Higher layers depend on lower layers but never the reverse.
 - [Permit model](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/concepts/permit-model.md): How EIP-712 signed permits authorize FHE decryption for specific contracts.
 - [Security model](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/concepts/security-model.md): Threat model, trust assumptions, and security architecture of the Zama SDK.
+- [Daemon architecture](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/concepts/architecture.md): Understand how Go and Rust applications use the TypeScript SDK through a local daemon.
+- [Daemon trust model](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/concepts/trust-boundary.md): Understand signing authority and credential access in Go and Rust daemon deployments.
 
 ### Changelog
 
@@ -182,3 +208,5 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Repository README](https://raw.githubusercontent.com/zama-ai/sdk/beta/README.md): Monorepo overview, package layout, development workflow, and repository setup for the Zama SDK.
 - [@zama-fhe/sdk](https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk/README.md): Core TypeScript SDK for confidential token operations, relayers, signer adapters, and low-level contract APIs.
 - [@zama-fhe/react-sdk](https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/react-sdk/README.md): React SDK with ZamaProvider, confidential token hooks, and TanStack Query integration on top of the core SDK.
+- [Go client](https://raw.githubusercontent.com/zama-ai/sdk/beta/clients/go/README.md): Go client installation and entry points for using the Zama SDK daemon.
+- [Rust client](https://raw.githubusercontent.com/zama-ai/sdk/beta/clients/rust/README.md): Rust client installation and entry points for using the Zama SDK daemon.

@@ -146,6 +146,23 @@ await wrappedToken.unshield(500n); // withdraw back to public
 
 Ready to build? Jump to the [Quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/tutorials/quick-start.md) for a full working example with your stack.
 
+## Go and Rust
+
+Go and Rust services use the SDK through native clients. Each client talks to a local SDK daemon that runs alongside your application. Start with the [Go quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/go-quick-start.md) or the [Rust quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/rust-quick-start.md).
+
+
+> [!WARNING]
+> The daemon and its Go and Rust clients are experimental. The wire protocol can change between minor versions, so upgrade the daemon image and the clients together.
+
+
+| Task                                                                      | Core SDK | React SDK            | Go      | Rust    |
+| ------------------------------------------------------------------------- | -------- | -------------------- | ------- | ------- |
+| Encrypt inputs for confidential contract calls                            | Yes      | Yes                  | Yes     | Yes     |
+| Decrypt values your account can access, or publicly decryptable values    | Yes      | Yes                  | Yes     | Yes     |
+| Decrypt on behalf of an account that delegated access                     | Yes      | Yes                  | Yes     | Yes     |
+| Prepare unsigned transactions for external signing                        | Yes      | Through the core SDK | Yes     | Yes     |
+| Shield, transfer, unshield, read balances, and manage operators on tokens | Yes      | Yes                  | Not yet | Not yet |
+
 ## Help center
 
 Ask technical questions, discuss with the community, or report a bug.
@@ -562,6 +579,306 @@ The hooks and SDK methods handle FHE encryption, wallet signing, ERC-20 approval
 - [Chain Objects](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/network-presets.md) -- pre-configured chain definitions for Sepolia, Mainnet, and more
 - [React Hooks](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/ZamaProvider.md) -- provider setup and all available hooks
 - [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/concepts/security-model.md) -- understand the cryptography and trust assumptions
+
+## Go quick start
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/native/tutorials/go-quick-start.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/go-quick-start.md
+- logical_path: native/tutorials/go-quick-start
+
+# Go quick start
+
+
+> [!WARNING]
+> The daemon and its Go and Rust clients are experimental. The wire protocol can change between minor versions, so upgrade the daemon image and the clients together.
+
+
+We'll encrypt `1000` as an `euint64` for a confidential contract on Sepolia and print the encrypted value and the size of its input proof. You don't sign or broadcast anything.
+
+The Go client talks to a local SDK daemon over a private Unix socket. The daemon runs the Zama SDK, so your application stays in Go.
+
+You need Go 1.25 or later, a Linux host with Docker, a Sepolia RPC URL, the address of your confidential contract, and the address of the user who will submit the input. On Docker Desktop, run your application in a container that shares a socket volume with the daemon; see [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md).
+
+## Authentication
+
+The Sepolia testnet relayer needs no API key, so this quick start leaves authentication unset. The Zama-hosted mainnet relayer requires a key. When you move to mainnet, set it on the SDK configuration:
+
+```go
+config := zama.NewSDKConfig(1, rpcURL)
+config.Auth = zama.APIKeyHeader{Value: os.Getenv("RELAYER_API_KEY")}
+```
+
+See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md) and [Relayer API keys](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/relayer-api-keys.md) to get a key and keep it out of your logs.
+
+## Install
+
+Create a module and add the client:
+
+```sh
+mkdir encrypt-input
+cd encrypt-input
+go mod init example.com/encrypt-input
+go get github.com/zama-ai/sdk/clients/go/v3
+```
+
+The client and the daemon image must run the same version; see [Client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md).
+
+## Set up the SDK
+
+Start the daemon as your own UID, with a private socket directory that your application can reach:
+
+```sh
+export ZAMA_DAEMON_SOCKET_DIR="${PWD}/zama-daemon-socket"
+mkdir -p "$ZAMA_DAEMON_SOCKET_DIR"
+chmod 700 "$ZAMA_DAEMON_SOCKET_DIR"
+docker run -d --name zama-daemon \
+  --user "$(id -u):$(id -g)" \
+  --env ZAMA_SDK_DAEMON_SOCKET_PATH=/run/zama/sdk.sock \
+  --mount "type=bind,src=$ZAMA_DAEMON_SOCKET_DIR,dst=/run/zama" \
+  zamafhe/sdk-daemon
+export DAEMON_SOCKET="$ZAMA_DAEMON_SOCKET_DIR/sdk.sock"
+docker logs zama-daemon
+```
+
+Continue once the log shows `Daemon ready.`. The daemon needs outbound access to your RPC endpoint and to the Sepolia relayer.
+
+Your application connects with `zama.Dial` and creates an SDK context from a chain configuration. The context lives in the daemon until you close it.
+
+## Your first encrypted input
+
+Save this file as `main.go`:
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"math/big"
+	"os"
+	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	zama "github.com/zama-ai/sdk/clients/go/v3"
+)
+
+func run() error {
+	socket := os.Getenv("DAEMON_SOCKET")
+	rpcURL := os.Getenv("SEPOLIA_RPC_URL")
+	contract := os.Getenv("CONTRACT_ADDRESS")
+	user := os.Getenv("USER_ADDRESS")
+	if socket == "" || rpcURL == "" || !common.IsHexAddress(contract) || !common.IsHexAddress(user) {
+		return fmt.Errorf("set DAEMON_SOCKET, SEPOLIA_RPC_URL, CONTRACT_ADDRESS and USER_ADDRESS")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	client, err := zama.Dial(socket)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	sdk, err := client.CreateContext(ctx, zama.NewSDKConfig(11155111, rpcURL), zama.SignerConfig{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		cleanup, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := sdk.Close(cleanup); err != nil {
+			fmt.Fprintln(os.Stderr, "close SDK context:", err)
+		}
+	}()
+
+	result, err := sdk.Encrypt(ctx, zama.EncryptParams{
+		Values:          []zama.EncryptInput{zama.Euint64(big.NewInt(1000))},
+		ContractAddress: common.HexToAddress(contract),
+		UserAddress:     common.HexToAddress(user),
+	}, zama.EncryptOptions{})
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Encrypted value:", result.EncryptedValues[0].Hex())
+	fmt.Printf("Input proof: %d bytes\n", len(result.InputProof))
+	return nil
+}
+
+func main() {
+	if err := run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+```
+
+Set your values and run it from the same shell, so `DAEMON_SOCKET` is still set:
+
+```sh
+export SEPOLIA_RPC_URL=https://your-sepolia-rpc.example
+export CONTRACT_ADDRESS=0xYourConfidentialContract
+export USER_ADDRESS=0xYourUserAddress
+go mod tidy
+go run .
+```
+
+The program prints one encrypted value and a nonzero proof size. Pass both to your confidential contract call. They change on every run.
+
+When you're done, stop the daemon and remove the socket directory:
+
+```sh
+docker stop zama-daemon
+docker rm zama-daemon
+rmdir "$ZAMA_DAEMON_SOCKET_DIR"
+```
+
+## Next steps
+
+- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md) -- chains, relayers, provider options, storage, and the daemon connection
+- [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/encrypt-decrypt.md) -- submit encrypted inputs and decrypt contract results
+- [Attach a wallet](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/attach-wallet.md) -- signatures for private decryption and transaction writes
+- [Go client API](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/go-client.md) -- generated package reference
+- [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md) -- run the daemon on your infrastructure
+
+## Rust quick start
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/native/tutorials/rust-quick-start.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/rust-quick-start.md
+- logical_path: native/tutorials/rust-quick-start
+
+# Rust quick start
+
+
+> [!WARNING]
+> The daemon and its Go and Rust clients are experimental. The wire protocol can change between minor versions, so upgrade the daemon image and the clients together.
+
+
+We'll encrypt `1000` as an `euint64` for a confidential contract on Sepolia and print the encrypted value and the size of its input proof. You don't sign or broadcast anything.
+
+The Rust client talks to a local SDK daemon over a private Unix socket. The daemon runs the Zama SDK, so your application stays in Rust.
+
+You need Rust 1.94.1 or later, a Linux host with Docker, a Sepolia RPC URL, the address of your confidential contract, and the address of the user who will submit the input. On Docker Desktop, run your application in a container that shares a socket volume with the daemon; see [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md).
+
+## Authentication
+
+The Sepolia testnet relayer needs no API key, so this quick start leaves authentication unset. The Zama-hosted mainnet relayer requires a key. When you move to mainnet, set it on the chain configuration:
+
+```rust
+let chain = ChainConfig::new(1, rpc_url).with_auth(RelayerAuth::api_key(env::var("RELAYER_API_KEY")?));
+let config = SdkConfig::from_chains(1, vec![chain]);
+```
+
+See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md) and [Relayer API keys](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/relayer-api-keys.md) to get a key and keep it out of your logs.
+
+## Install
+
+Create a binary project and add the client with the runtime this example uses:
+
+```sh
+cargo new encrypt-input
+cd encrypt-input
+cargo add zama_sdk
+cargo add anyhow
+cargo add tokio --features macros,rt
+```
+
+The client runs on Tokio. You can use your application's existing runtime and error type instead of `#[tokio::main]` and `anyhow`.
+
+The client and the daemon image must run the same version; see [Client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md).
+
+## Set up the SDK
+
+Start the daemon as your own UID, with a private socket directory that your application can reach:
+
+```sh
+export ZAMA_DAEMON_SOCKET_DIR="${PWD}/zama-daemon-socket"
+mkdir -p "$ZAMA_DAEMON_SOCKET_DIR"
+chmod 700 "$ZAMA_DAEMON_SOCKET_DIR"
+docker run -d --name zama-daemon \
+  --user "$(id -u):$(id -g)" \
+  --env ZAMA_SDK_DAEMON_SOCKET_PATH=/run/zama/sdk.sock \
+  --mount "type=bind,src=$ZAMA_DAEMON_SOCKET_DIR,dst=/run/zama" \
+  zamafhe/sdk-daemon
+export DAEMON_SOCKET="$ZAMA_DAEMON_SOCKET_DIR/sdk.sock"
+docker logs zama-daemon
+```
+
+Continue once the log shows `Daemon ready.`. The daemon needs outbound access to your RPC endpoint and to the Sepolia relayer.
+
+Your application connects with `Client::connect` and builds an `Sdk` from a chain configuration. The SDK context lives in the daemon until you close it.
+
+## Your first encrypted input
+
+Replace `src/main.rs` with:
+
+```rust
+use anyhow::Result;
+use std::{env, time::Duration};
+use zama_sdk::{Address, Client, EncryptInput, EncryptOptions, EncryptParams, SdkConfig};
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<()> {
+    let socket = env::var("DAEMON_SOCKET")?;
+    let rpc_url = env::var("SEPOLIA_RPC_URL")?;
+    let contract_address: Address = env::var("CONTRACT_ADDRESS")?.parse()?;
+    let user_address: Address = env::var("USER_ADDRESS")?.parse()?;
+
+    let client = Client::connect(socket)
+        .await?
+        .with_timeout(Duration::from_secs(120));
+    let sdk = client.sdk(SdkConfig::new(11155111, rpc_url)).build().await?;
+
+    let inputs = [EncryptInput::Uint64(1000.into())];
+    let result = sdk
+        .encrypt(
+            EncryptParams {
+                values: &inputs,
+                contract_address,
+                user_address,
+            },
+            EncryptOptions::default(),
+        )
+        .await;
+    let closed = sdk.close().await;
+    let encrypted = result?;
+    closed?;
+
+    println!("Encrypted value: {}", encrypted.encrypted_values[0]);
+    println!("Input proof: {} bytes", encrypted.input_proof.len());
+    Ok(())
+}
+```
+
+Set your values and run it from the same shell, so `DAEMON_SOCKET` is still set:
+
+```sh
+export SEPOLIA_RPC_URL=https://your-sepolia-rpc.example
+export CONTRACT_ADDRESS=0xYourConfidentialContract
+export USER_ADDRESS=0xYourUserAddress
+cargo run
+```
+
+The program prints one encrypted value and a nonzero proof size. Pass both to your confidential contract call. They change on every run.
+
+When you're done, stop the daemon and remove the socket directory:
+
+```sh
+docker stop zama-daemon
+docker rm zama-daemon
+rmdir "$ZAMA_DAEMON_SOCKET_DIR"
+```
+
+## Next steps
+
+- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md) -- chains, relayers, provider options, storage, and the daemon connection
+- [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/encrypt-decrypt.md) -- submit encrypted inputs and decrypt contract results
+- [Attach a wallet](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/attach-wallet.md) -- signatures for private decryption and transaction writes
+- [Rust client API](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/rust-client.md) -- generated crate reference
+- [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md) -- run the daemon on your infrastructure
 
 ## Build your first confidential dApp
 
@@ -2194,6 +2511,10 @@ See [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/s
 
 `sdk.offline.batchPreparePermits` and `sdk.permits.batchRegisterPermits` handle offline permit requests of any size. A permit holds at most 10 contracts, so `batchPreparePermits` returns one `PreparedPermit` per chunk of 10, and `batchRegisterPermits` takes the matching list of `{ prepared, signature }` pairs (`SignedPreparedPermit[]`) and registers them in order. The single-permit `preparePermit` and `registerPermit` are unchanged; `preparePermit` still rejects more than 10 contracts and now points at `batchPreparePermits`. React gains `useBatchPreparePermits` and `useBatchRegisterPermits`. See [Offline permits](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/offline.md#offline-permits).
 
+## Daemon
+
+**Experimental Go and Rust clients.** Go and Rust services can now use the SDK through native clients that talk to a local SDK daemon over a private Unix socket. The clients encrypt inputs, decrypt values (including publicly decryptable and delegated values), manage permits, prepare unsigned transactions for external signing, and grant or revoke on-chain decryption delegation through your wallet. Token workflows are not available in the clients yet. Run the daemon image and the client at exactly the same version, and upgrade them together. Start with the [Go quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/go-quick-start.md) or the [Rust quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/rust-quick-start.md).
+
 ## 3.x
 
 - source_type: official-doc
@@ -3094,13 +3415,16 @@ A release-plumbing patch with no functional changes — it exists only to trigge
 
 # Configuration
 
-The SDK uses `createConfig` to wire together chains, relayers, a provider, an optional signer, and storage into a single configuration object. This guide walks through each piece.
+The SDK uses `createConfig` to wire together chains, relayers, a provider, an optional signer, and storage into a single configuration object. This guide walks through each piece. The Go and Rust tabs pass the same settings to an SDK context in the [daemon](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/concepts/architecture.md).
 
 ## Steps
 
 ### 1. Pick your chains
 
 Import pre-configured chain objects from `@zama-fhe/sdk/chains`. Each chain includes contract addresses, relayer URLs, and chain IDs.
+
+
+### Tab: Core SDK
 
 ```ts
 import { sepolia, mainnet, hoodi } from "@zama-fhe/sdk/chains";
@@ -3117,6 +3441,34 @@ import { sepolia, mainnet, hoodi } from "@zama-fhe/sdk/chains";
 | `zenithTrexTestnet` | `936486`   | T-Rex Zenith Testnet    |
 | `bscTestnet`        | `97`       | BNB Smart Chain Testnet |
 | `hardhat`           | `31337`    | Local Hardhat node      |
+
+### Tab: Go
+
+Select a preset by chain ID and supply its RPC URL:
+
+```go
+config := zama.NewSDKConfig(11155111, rpcURL) // Sepolia preset
+```
+
+### Tab: Rust
+
+Select a preset by chain ID and supply its RPC URL:
+
+```rust
+let config = SdkConfig::new(11_155_111, rpc_url); // Sepolia preset
+```
+
+
+| Chain          | Chain ID   | Description             |
+| -------------- | ---------- | ----------------------- |
+| `mainnet`      | `1`        | Ethereum Mainnet        |
+| `polygon`      | `137`      | Polygon Mainnet         |
+| `sepolia`      | `11155111` | Sepolia Testnet         |
+| `polygonAmoy`  | `80002`    | Polygon Amoy Testnet    |
+| `hoodi`        | `560048`   | Hoodi Testnet           |
+| `ingenTestnet` | `364301`   | InGen Testnet           |
+| `bscTestnet`   | `97`       | BNB Smart Chain Testnet |
+| `hardhat`      | `31337`    | Local Hardhat node      |
 
 `anvil` is also exported as an alias for `hardhat` (both target chain ID `31337`), for Foundry users.
 
@@ -3145,6 +3497,9 @@ Chain-specific data (`relayerUrl`, `network`, `executorAddress`, etc.) comes fro
 
 `web()` additionally runs encryption in a dedicated Web Worker by default, so `encryptValue()`/`encryptValues()` calls don't block the main thread. Tune or opt out of this with `offloadEncrypt`, `offloadWorker`, and `offloadTimeouts` — see [`web()`'s encryption offload options](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/RelayerWeb.md#offloadencrypt) for the full behavior and defaults. If your app sets a Content Security Policy, it needs `worker-src 'self' blob:` for the offload worker to start.
 
+
+### Tab: Core SDK
+
 ```ts
 // Browser — uses relayerUrl from the chain preset
 web();
@@ -3156,9 +3511,37 @@ node();
 cleartext();
 ```
 
+### Tab: Go
+
+Omit `Relayers` to use the node relayer for every configured chain. `web()` is browser-only.
+
+```go
+config.Relayers = map[uint64]zama.RelayerConfig{
+	11155111: {Transport: zama.RelayerNode}, // or zama.RelayerCleartext
+}
+```
+
+### Tab: Rust
+
+Leave `relayers` as `None` to use the node relayer for every configured chain. `web()` is browser-only.
+
+```rust
+config.relayers = Some(BTreeMap::from([(
+    11_155_111,
+    RelayerConfig {
+        transport: RelayerTransport::Node, // or RelayerTransport::Cleartext
+        options: None,
+    },
+)]));
+```
+
+
 The `relayers` map is keyed by chain id, one entry per chain in `chains`. A chain with no entry fails `createConfig` with a `ConfigurationError`. An entry whose chain is not in `chains` is unused and only warns through the configured logger, so a static relayer catalog can serve an environment-filtered chain list.
 
 If you need to override a chain field (e.g. proxy relayer requests through your backend), spread the preset in the `chains` array:
+
+
+### Tab: Core SDK
 
 ```ts
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
@@ -3168,6 +3551,34 @@ const mySepolia = {
   relayerUrl: "https://your-app.com/api/relayer/11155111",
 } as const satisfies FheChain;
 ```
+
+### Tab: Go
+
+Fields you omit keep their preset values. Set `Auth` on the chain for [relayer authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md).
+
+```go
+chainID := uint64(11155111)
+relayerURL := "https://your-app.com/api/relayer/11155111"
+config := zama.SDKConfig{
+	ChainID: &chainID,
+	Chains: []zama.ChainConfig{{
+		ID:         chainID,
+		Network:    &rpcURL,
+		RelayerURL: &relayerURL,
+	}},
+}
+```
+
+### Tab: Rust
+
+Fields you omit keep their preset values. Set `auth` on the chain for [relayer authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md).
+
+```rust
+let mut chain = ChainConfig::new(11_155_111, rpc_url);
+chain.relayer_url = Some("https://your-app.com/api/relayer/11155111".into());
+let config = SdkConfig::from_chains(11_155_111, vec![chain]);
+```
+
 
 ### 3. Set up chain access
 
@@ -3204,8 +3615,38 @@ const walletClient = createWalletClient({ chain: sepolia, transport: custom(wind
 // createConfig({ ..., signer: new ethers.Wallet(privateKey, provider) })
 ```
 
+### Tab: Go
 
-For full type information, see the [ViemProvider](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ViemProvider.md) / [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ViemSigner.md) and [EthersProvider](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/EthersProvider.md) / [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/EthersSigner.md) reference pages. You can also implement [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/GenericProvider.md) and [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/GenericSigner.md) for a custom integration.
+The daemon reads the chain through the configured RPC URL. Your application keeps the wallet and passes a signer when creating the SDK context:
+
+```go
+provider, err := ethclient.DialContext(ctx, rpcURL)
+if err != nil {
+	return err
+}
+defer provider.Close()
+
+signer, err := zama.NewEthereumSigner(privateKey, 11155111, provider)
+if err != nil {
+	return err
+}
+```
+
+### Tab: Rust
+
+The daemon reads the chain through the configured RPC URL. Your application keeps the wallet and passes a signer when building the SDK context:
+
+```rust
+let signer: PrivateKeySigner = private_key.parse()?;
+let account = WalletAccount {
+    address: signer.address(),
+    chain_id: 11_155_111,
+};
+let wallet = AlloySigner::new(signer); // requires the `alloy` feature
+```
+
+
+For full type information, see the [ViemProvider](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ViemProvider.md) / [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ViemSigner.md) and [EthersProvider](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/EthersProvider.md) / [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/EthersSigner.md) reference pages. You can also implement [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/GenericProvider.md) and [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/GenericSigner.md) for a custom integration. For Go and Rust transaction writes and custom wallets, see [Attach a wallet](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/attach-wallet.md).
 
 ### 4. Create the config
 
@@ -3365,12 +3806,91 @@ const sdk = new ZamaSDK(config);
 
 Your `manifest.json` must include the `"storage"` permission. See the [Web Extensions guide](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/web-extensions.md) for manifest configuration, multi-context sharing, and browser close behavior.
 
+### Tab: Go
+
+Connect to the daemon socket, then create an SDK context from the config. Close the context when done; the first context in a daemon process fixes its [runtime settings](#8-optional-tune-fhe-runtime-performance-and-behavior).
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"time"
+
+	zama "github.com/zama-ai/sdk/clients/go/v3"
+)
+
+func run() error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	client, err := zama.Dial(os.Getenv("DAEMON_SOCKET"))
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	config := zama.NewSDKConfig(11155111, os.Getenv("SEPOLIA_RPC_URL"))
+	// Pass the signer from step 3 instead of an empty SignerConfig for private decryption.
+	sdk, err := client.CreateContext(ctx, config, zama.SignerConfig{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		closeCtx, cancelClose := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancelClose()
+		if err := sdk.Close(closeCtx); err != nil {
+			fmt.Fprintln(os.Stderr, "close SDK context:", err)
+		}
+	}()
+
+	// Run SDK operations with sdk.
+	return nil
+}
+
+func main() {
+	if err := run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+```
+
+### Tab: Rust
+
+Connect to the daemon socket, then build an SDK context from the config. Close the context when done; the first context in a daemon process fixes its [runtime settings](#8-optional-tune-fhe-runtime-performance-and-behavior).
+
+```rust
+use std::{env, time::Duration};
+use zama_sdk::{Client, SdkConfig};
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> anyhow::Result<()> {
+    let client = Client::connect(env::var("DAEMON_SOCKET")?)
+        .await?
+        .with_timeout(Duration::from_secs(60));
+    let config = SdkConfig::new(11_155_111, env::var("SEPOLIA_RPC_URL")?);
+    // Add .signer(Some(account), wallet) from step 3 for private decryption.
+    let sdk = client.sdk(config).build().await?;
+
+    // Run SDK operations with sdk.
+
+    sdk.close().await?;
+    Ok(())
+}
+```
+
 
 Browser apps should proxy relayer requests through a backend to keep the API key secret. See the [Authentication guide](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md) for the full setup.
 
 ### 5. (Optional) Configure TTLs and event listener
 
 You can tune how long the transport key pair and permits remain valid, and subscribe to lifecycle events for debugging:
+
+
+### Tab: Core SDK
 
 ```ts
 const config = createConfig({
@@ -3385,6 +3905,35 @@ const config = createConfig({
 });
 ```
 
+### Tab: Go
+
+```go
+permitTTL := uint32(7)                // days
+transportKeyPairTTL := uint32(604800) // seconds
+config.PermitTTL = &permitTTL
+config.TransportKeyPairTTL = &transportKeyPairTTL
+config.Events = &zama.EventHandlers{
+	OnEvent: func(_ context.Context, _ zama.EventCorrelation, event zama.SDKEvent) error {
+		log.Printf("[zama] %s", event.Kind)
+		return nil
+	},
+}
+```
+
+See [Observe events](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/observe-events.md) for the other event handlers.
+
+### Tab: Rust
+
+```rust
+let config = SdkConfig::new(11_155_111, rpc_url)
+    .with_permit_ttl(7) // days
+    .with_transport_key_pair_ttl(604_800); // seconds
+let sdk = client.sdk(config).events(Diagnostics).build().await?;
+```
+
+`Diagnostics` implements `EventHandler`; see [Observe events](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/observe-events.md).
+
+
 When done with the SDK, call `sdk.terminate()` to unsubscribe wallet listeners and release the SDK's resources.
 
 ### 6. (Optional) Choose a storage backend
@@ -3397,15 +3946,45 @@ The transport key pair is cached so users don't get a wallet popup on every decr
 | `memoryStorage`     | Tests, scripts, throwaway sessions                        |
 | `asyncLocalStorage` | Node.js servers — isolates transport key pair per request |
 
+
+### Tab: Core SDK
+
 ```ts
 import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
 // Node.js per-request isolation:
 // import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 ```
 
-For full storage options see the [GenericStorage](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/GenericStorage.md) reference.
+### Tab: Go
+
+Daemon SQLite needs a storage volume on the daemon; see [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md).
+
+```go
+config.Storage = zama.DaemonPersistentStorage("partner") // daemon SQLite, survives restarts
+// Default: zama.DaemonMemoryStorage()
+// In your application: zama.ApplicationStorage(backend)
+```
+
+### Tab: Rust
+
+Daemon SQLite needs a storage volume on the daemon; see [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md).
+
+```rust
+let sdk = client
+    .sdk(config)
+    .storage(Storage::Persistent("partner".into())) // daemon SQLite, survives restarts
+    // Default: Storage::Memory
+    // In your application: ApplicationStorage::new(backend)
+    .build()
+    .await?;
+```
+
+
+For full storage options see the [GenericStorage](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/GenericStorage.md) reference. To keep Go or Rust credentials in your own database, see [Store credentials](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/credential-storage.md).
 
 ### 7. (Optional) Supply a logger
+
+Available in the Core SDK and React SDK.
 
 The SDK is **silent by default** — it emits no console output of its own. Operation failures always surface through the rejected promise or typed error, never as a stray `console.error`. To observe internal diagnostics, pass a `logger` to `createConfig`:
 
@@ -3435,6 +4014,9 @@ The `runtime` field configures the underlying `@fhevm/sdk` WASM runtime — how 
 
 Leaving `runtime` unset is a valid default: the SDK tries to run multi-threaded automatically, and falls back to single-threaded on its own when the environment doesn't support it (see `numberOfThreads`/`singleThread` below).
 
+
+### Tab: Core SDK
+
 ```ts
 const config = createConfig({
   chains: [sepolia],
@@ -3445,6 +4027,27 @@ const config = createConfig({
   },
 });
 ```
+
+### Tab: Go
+
+The runtime runs in the daemon. Restart the daemon to change these settings.
+
+```go
+threads := uint32(4)
+config.ProcessRuntime = &zama.ProcessRuntime{NumberOfThreads: &threads}
+```
+
+### Tab: Rust
+
+The runtime runs in the daemon. Restart the daemon to change these settings.
+
+```rust
+config.process_runtime = Some(ProcessRuntime {
+    number_of_threads: Some(4),
+    ..Default::default()
+});
+```
+
 
 Every field is optional:
 
@@ -3490,6 +4093,9 @@ Every field is optional:
 
 By default, every signer gets its own transport key pair. Wallet-as-a-Service operators managing many end-user wallets from one operator-controlled key store can opt into sharing a single key pair across signers with `transportKeyPairScope`:
 
+
+### Tab: Core SDK
+
 ```ts
 const config = createConfig({
   chains: [sepolia],
@@ -3499,6 +4105,26 @@ const config = createConfig({
   storage: myPersistentStorage, // must be shared across every signer in this scope
 });
 ```
+
+### Tab: Go
+
+```go
+scope := "tenant-123" // opaque identifier, e.g. your tenant ID
+config.TransportKeyPairScope = &scope
+config.Storage = zama.NamedApplicationStorage("tenant-123", backend) // shared by every signer in this scope
+```
+
+### Tab: Rust
+
+```rust
+let config = config.with_transport_key_pair_scope("tenant-123"); // opaque identifier, e.g. your tenant ID
+let sdk = client
+    .sdk(config)
+    .storage(backend) // shared by every signer in this scope
+    .build()
+    .await?;
+```
+
 
 Permits stay per-signer regardless of scope. See [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators) for the tradeoff this makes, and [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/concepts/permit-model.md#two-revocation-tiers-with-a-shared-scope) for how revocation splits into a signer-level tier (`revokePermits`/`clear`) and an operator-level one (`sdk.permits.revokeTransportKeyPair()`).
 
@@ -3517,6 +4143,9 @@ For the last row, two things must hold:
 
 1. **The secret arrives out of band**: from the process environment, a secrets manager, or a KMS-unwrapped blob. Never store it next to the data it protects.
 2. **Storage is persistent.** The headless default is in-memory, and a wrapped key that never reaches disk protects nothing.
+
+
+### Tab: Core SDK
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -3539,6 +4168,33 @@ const sdk = new ZamaSDK(config, {
 
 Pass `process.env.ZAMA_DERIVATION_SECRET` straight through, without asserting it with `!` first. If the value is `undefined` (an unset env var), the constructor throws `ConfigurationError` instead of silently downgrading to plaintext.
 
+### Tab: Go
+
+An unset variable produces an empty secret, which the SDK rejects. Use `zama.BytesDerivationSecret` for byte input.
+
+```go
+config.Storage = zama.DaemonPersistentStorage("partner") // required: the default is in-memory
+config.TransportKeyPairDerivationSecret = zama.TextDerivationSecret(os.Getenv("ZAMA_DERIVATION_SECRET"))
+```
+
+### Tab: Rust
+
+Use `DerivationSecret::bytes` for byte input.
+
+```rust
+let sdk = client
+    .sdk(config)
+    .storage(Storage::Persistent("partner".into())) // required: the default is in-memory
+    .transport_key_pair_derivation_secret(DerivationSecret::text(env::var(
+        "ZAMA_DERIVATION_SECRET",
+    )?))
+    .build()
+    .await?;
+```
+
+
+Keep the same secret and storage when you recreate a Go or Rust SDK context or restart the daemon.
+
 
 > [!DANGER]
 > **Never ship the secret in a bundle.** Bundlers inline env values at build time, so a bundled secret reaches every copy of the artifact and protects nothing. The constructor rejects the option when it detects a browser context, but it cannot detect every bundle: keeping the secret out of shipped code is your responsibility.
@@ -3547,6 +4203,8 @@ Pass `process.env.ZAMA_DERIVATION_SECRET` straight through, without asserting it
 The SDK never persists or exposes this value. See [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the mechanism, the entropy requirement (32 random bytes, or a 64+ character string), the anti-patterns to avoid, and rotation.
 
 ## Shared relayer options
+
+Available in the Core SDK and React SDK.
 
 When multiple chains use the same relayer, create it once and reference that single instance from each chain:
 
@@ -3835,6 +4493,11 @@ If Zama identifies that an API key has been compromised, the key holder will be 
 
 # Shield tokens
 
+
+> [!INFO]
+> Available in the Core SDK and React SDK.
+
+
 Shielding converts public ERC-20 tokens into confidential tokens. The SDK handles the ERC-20 approval and the shield transaction in a single call via `wrappedToken.shield()`. In React, use the `useShield` hook.
 
 ## Shielding paths
@@ -4040,6 +4703,11 @@ await wrap.mutateAsync({ amount: 1000n });
 - logical_path: guides/transfer-privately
 
 # Transfer privately
+
+
+> [!INFO]
+> Available in the Core SDK and React SDK.
+
 
 Confidential transfers encrypt the amount before it reaches the chain -- no one can see how much was sent. The SDK handles FHE encryption internally via `token.confidentialTransfer()`. In React, use the `useConfidentialTransfer` and `useConfidentialTransferFrom` hooks.
 
@@ -4272,6 +4940,11 @@ To deposit on behalf of an owner who has approved you as an operator, use `confi
 
 # Unshield tokens
 
+
+> [!INFO]
+> Available in the Core SDK and React SDK.
+
+
 Unshielding converts encrypted tokens back into standard ERC-20 tokens that are visible on-chain. The process involves two on-chain steps (unwrap and finalize), but the SDK handles both in a single call — `wrappedToken.unshield()` in the core SDK, or the `useUnshield` hook in React.
 
 ## Steps
@@ -4490,6 +5163,11 @@ Use `unwrapAll()` / `useUnwrapAll` in place of `unwrap` / `useUnwrap` to request
 - logical_path: guides/check-balances
 
 # Check balances
+
+
+> [!INFO]
+> Available in the Core SDK and React SDK.
+
 
 Confidential balances are stored on-chain as encrypted values. To display a human-readable number, the SDK decrypts them using FHE permits tied to the user's wallet. This guide walks through reading balances, understanding the caching layer, and working with multiple tokens.
 
@@ -4956,7 +5634,7 @@ Gate the decrypt behind a permit check so the wallet signature prompt only appea
 
 # Handle errors
 
-All errors thrown by `@zama-fhe/sdk` and `@zama-fhe/react-sdk` extend `ZamaError` and carry a `.code` string for programmatic matching. This guide covers how to catch them, route them to user-friendly messages, and troubleshoot common problems.
+All errors thrown by `@zama-fhe/sdk` and `@zama-fhe/react-sdk` extend `ZamaError` and carry a `.code` string for programmatic matching. This guide covers how to catch them, route them to user-friendly messages, and troubleshoot common problems. Go and Rust clients receive the same codes from the daemon; their tabs show how to read them.
 
 ## Steps
 
@@ -5002,6 +5680,42 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `DelegationNotPropagatedError`            | `DELEGATION_NOT_PROPAGATED`              | Delegated decrypt failed transiently (gateway not synced, or delegator ACL read stale) — retry                 |
 | `AclPausedError`                          | `ACL_PAUSED`                             | The ACL contract is paused                                                                                     |
 
+| Code                                  | TypeScript error class                  | What happened                                                                                       |
+| ------------------------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `SIGNING_REJECTED`                    | `SigningRejectedError`                  | User rejected the wallet signature                                                                  |
+| `SIGNING_FAILED`                      | `SigningFailedError`                    | Wallet signature failed (connectivity or firmware issue)                                            |
+| `ENCRYPTION_FAILED`                   | `EncryptionFailedError`                 | FHE encryption failed in the WASM runtime                                                           |
+| `DECRYPTION_FAILED`                   | `DecryptionFailedError`                 | FHE decryption failed                                                                               |
+| `TRANSACTION_REVERTED`                | `TransactionRevertedError`              | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                      |
+| `INVALID_KEYPAIR`                     | `InvalidTransportKeyPairError`          | Relayer rejected transport key pair (stale or malformed)                                            |
+| `KEYPAIR_EXPIRED`                     | `TransportKeyPairExpiredError`          | Transport key pair expired -- user needs to re-sign                                                 |
+| `REVOKED_KMS_CONTEXT`                 | `RevokedKmsContextError`                | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit     |
+| `NO_CIPHERTEXT`                       | `NoCiphertextError`                     | No encrypted balance exists for this account                                                        |
+| `RELAYER_REQUEST_FAILED`              | `RelayerRequestFailedError`             | Relayer HTTP request failed (check `.statusCode`); retryable on back-pressure (429)                 |
+| `NOT_ENTITLED`                        | `NotEntitledError`                      | Actor lacks the on-chain ACL grant to decrypt this value — terminal, don't retry                    |
+| `RPC_RATE_LIMITED`                    | `RpcRateLimitError`                     | Consumer's RPC provider rate-limited an on-chain read (retryable)                                   |
+| `CONFIGURATION`                       | `ConfigurationError`                    | Invalid SDK config or FHE runtime failed to initialize                                              |
+| `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | `InsufficientConfidentialBalanceError`  | Confidential balance too low for transfer or unshield                                               |
+| `INSUFFICIENT_ERC20_BALANCE`          | `InsufficientERC20BalanceError`         | ERC-20 balance too low for shield                                                                   |
+| `INSUFFICIENT_ALLOWANCE`              | `InsufficientAllowanceError`            | ERC-20 allowance too low for a manual `wrap` (approve first)                                        |
+| `BALANCE_CHECK_UNAVAILABLE`           | `BalanceCheckUnavailableError`          | Balance check impossible (no stored permits)                                                        |
+| `ERC20_READ_FAILED`                   | `ERC20ReadFailedError`                  | Public ERC-20 read failed (network or contract error)                                               |
+| `DELEGATION_SELF_NOT_ALLOWED`         | `DelegationSelfNotAllowedError`         | Delegation cannot target self                                                                       |
+| `DELEGATION_COOLDOWN`                 | `DelegationCooldownError`               | Only one delegate/revoke per tuple per block (retryable)                                            |
+| `DELEGATION_NOT_FOUND`                | `DelegationNotFoundError`               | No active delegation for this tuple                                                                 |
+| `SIGNER_REQUIRED`                     | `SignerRequiredError`                   | Write/sign/decrypt called without a signer                                                          |
+| `DELEGATION_EXPIRED`                  | `DelegationExpiredError`                | The delegation has expired                                                                          |
+| `SIGNER_NOT_CONFIGURED`               | `SignerNotConfiguredError`              | SDK operation needs a signer but none is configured (subclass of `SignerRequiredError`)             |
+| `WALLET_NOT_CONNECTED`                | `WalletNotConnectedError`               | Signer exists but has no connected wallet account (subclass of `SignerRequiredError`)               |
+| `WALLET_ACCOUNT_NOT_READY`            | `WalletAccountNotReadyError`            | Async signer adapter hasn't resolved its account yet (subclass of `SignerRequiredError`, retryable) |
+| `CHAIN_MISMATCH`                      | `ChainMismatchError`                    | Signer and provider are on different chains                                                         |
+| `DELEGATION_CONTRACT_IS_SELF`         | `DelegationContractIsSelfError`         | Delegation contract address equals the caller                                                       |
+| `DELEGATION_DELEGATE_EQUALS_CONTRACT` | `DelegationDelegateEqualsContractError` | Delegate equals the contract address                                                                |
+| `DELEGATION_EXPIRATION_TOO_SOON`      | `DelegationExpirationTooSoonError`      | Expiration date less than 1 hour in the future                                                      |
+| `DELEGATION_EXPIRY_UNCHANGED`         | `DelegationExpiryUnchangedError`        | New expiry matches the current value                                                                |
+| `DELEGATION_NOT_PROPAGATED`           | `DelegationNotPropagatedError`          | Delegated decrypt failed transiently (gateway not synced, or delegator ACL read stale) — retry      |
+| `ACL_PAUSED`                          | `AclPausedError`                        | The ACL contract is paused                                                                          |
+
 ### 2. Catch with instanceof
 
 Use standard `try/catch` with `instanceof` to handle specific error types:
@@ -5045,6 +5759,49 @@ if (error instanceof SigningRejectedError) {
   // Some other SDK error -- check error.code
 }
 ```
+
+### Tab: Go
+
+```go
+import (
+	"errors"
+
+	zama "github.com/zama-ai/sdk/clients/go/v3"
+)
+
+_, err := sdk.DecryptValues(ctx, inputs, zama.DecryptOptions{})
+var sdkErr *zama.SDKError
+switch {
+case err == nil:
+	// Decrypted
+case errors.As(err, &sdkErr) && sdkErr.Code == "SIGNING_REJECTED":
+	// User clicked "Reject" in their wallet
+case errors.As(err, &sdkErr) && sdkErr.Code == "DECRYPTION_FAILED":
+	// FHE decryption failed
+case errors.As(err, &sdkErr) && sdkErr.Code != "":
+	// Some other SDK error -- check sdkErr.Code
+default:
+	// Not an SDK error
+}
+```
+
+`errors.As` also reaches the code inside a transport `RPCError`. An empty code means the daemon connection or a callback failed.
+
+### Tab: Rust
+
+```rust
+match sdk.decryption().decrypt_values(&inputs, None).await {
+    Ok(_values) => {} // Decrypted
+    Err(error) => match error.sdk_error().map(|details| details.code.as_str()) {
+        Some("SIGNING_REJECTED") => {} // User clicked "Reject" in their wallet
+        Some("DECRYPTION_FAILED") => {} // FHE decryption failed
+        Some(_) => {}                  // Some other SDK error -- check the code
+        None => {}                     // Not an SDK error
+    },
+}
+```
+
+`sdk_error()` is `None` when the daemon connection or a callback failed; `error.kind()` names the category.
 
 
 
@@ -5113,6 +5870,11 @@ Here is a quick reference for the most common errors and how to respond:
 | `ChainMismatchError`                   | The wallet is on a different chain than the operation targets. Prompt the user to switch networks.                                                                                                                                                                                                                            |
 
 ### 5. Distinguish "no balance" from "zero balance"
+
+
+> [!INFO]
+> Available in the Core SDK and React SDK.
+
 
 This is a common source of confusion. They require different UI treatments:
 
@@ -5187,17 +5949,28 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 | `UnshieldAlreadyFinalizedError` on resume | Unwrap was already finalized before the resume attempt | Funds already arrived -- treat as completion, not failure. `useResumeUnshield` refreshes balances automatically; if calling `resumeUnshield()` directly, catch this error and dismiss the prompt instead of retrying. |
 | `RelayerRequestFailedError`               | Relayer URL wrong or auth missing                      | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.                                                                                                                         |
 
+| What you see                                                 | Why                                                | Fix                                                                                                                                                                     |
+| ------------------------------------------------------------ | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SigningRejectedError` (`SIGNING_REJECTED`) on every decrypt | Wallet rejected the EIP-712 signature              | Make sure the wallet supports `eth_signTypedData_v4`. Some hardware wallets need a firmware update.                                                                     |
+| Balance always `undefined`                                   | Encrypted value is zero (never shielded)           | Check if the user has shielded tokens first. Catch `NoCiphertextError`.                                                                                                 |
+| `ConfigurationError` on first operation                      | FHE runtime failed to initialize                   | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`. Check transport config.                                                                             |
+| `EncryptionFailedError`                                      | FHE encryption failed during an operation          | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`.                                                                                                     |
+| `DecryptionFailedError` after page reload                    | Unshield was interrupted                           | Use `getPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.                                                                                    |
+| `TransactionRevertedError` on finalize                       | Unwrap already finalized or tx hash invalid        | Check the unwrap tx. If it was already finalized, the unshield is complete -- stop prompting to resume.                                                                 |
+| `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`)       | Relayer URL wrong or auth missing                  | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.                                                                           |
+| Go or Rust error with no SDK code                            | The daemon connection or a callback channel failed | Follow [Monitor and troubleshoot](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md) and [Recover from disconnections](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/recover-from-disconnections.md). |
+
 ### 8. Retry transient failures
 
-Five causes are transient — the operation can simply be retried, ideally with backoff: `RpcRateLimitError`, `RelayerRequestFailedError` (only on a 429, or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, and `WalletAccountNotReadyError`. Rather than hardcoding that set of codes, use `isRetryable(error)` and `retryAfterSeconds(error)` — they stay correct as the taxonomy grows, since every `ZamaError` declares its own `.retryable`.
+Five causes are transient — the operation can simply be retried, ideally with backoff: `RpcRateLimitError` (`RPC_RATE_LIMITED`), `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`, only on a 429, or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`), `DelegationCooldownError` (`DELEGATION_COOLDOWN`), and `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`). Rather than hardcoding that set of codes, use `isRetryable(error)` and `retryAfterSeconds(error)` — they stay correct as the taxonomy grows, since every `ZamaError` declares its own `.retryable`.
 
-| Cause                          | `retryAfterSeconds`                               | Notes                                                                                                   |
-| ------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `RpcRateLimitError`            | Usually `undefined` (viem/ethers own the backoff) | Consider a higher-throughput RPC endpoint.                                                              |
-| `RelayerRequestFailedError`    | Set on a 429 with a `Retry-After` header          | Retryable on `.statusCode === 429` or an `@fhevm/sdk` relayer timeout; other statuses are terminal.     |
-| `DelegationNotPropagatedError` | `undefined`                                       | The SDK already rides out the propagation window internally; only surfaces if it's exceeded.            |
-| `DelegationCooldownError`      | `undefined`                                       | Per-block timing gate; resolves on the next block.                                                      |
-| `WalletAccountNotReadyError`   | `undefined`                                       | Async signer adapters (e.g. `EthersSigner`) refresh once internally; only surfaces if still unresolved. |
+| Cause                                                        | `retryAfterSeconds`                               | Notes                                                                                                   |
+| ------------------------------------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `RpcRateLimitError` (`RPC_RATE_LIMITED`)                     | Usually `undefined` (viem/ethers own the backoff) | Consider a higher-throughput RPC endpoint.                                                              |
+| `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`)       | Set on a 429 with a `Retry-After` header          | Retryable on `.statusCode === 429` or an `@fhevm/sdk` relayer timeout; other statuses are terminal.     |
+| `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`) | `undefined`                                       | The SDK already rides out the propagation window internally; only surfaces if it's exceeded.            |
+| `DelegationCooldownError` (`DELEGATION_COOLDOWN`)            | `undefined`                                       | Per-block timing gate; resolves on the next block.                                                      |
+| `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`)    | `undefined`                                       | Async signer adapters (e.g. `EthersSigner`) refresh once internally; only surfaces if still unresolved. |
 
 
 ### Tab: Core SDK
@@ -5236,6 +6009,75 @@ const { data } = useConfidentialBalance(
   },
 );
 ```
+
+### Tab: Go
+
+```go
+import (
+	"context"
+	"errors"
+	"math/big"
+	"time"
+
+	zama "github.com/zama-ai/sdk/clients/go/v3"
+)
+
+func decryptWithRetry(ctx context.Context, fn func(context.Context) (*big.Int, error), maxAttempts int) (*big.Int, error) {
+	for attempt := 1; ; attempt++ {
+		value, err := fn(ctx)
+		if err == nil {
+			return value, nil
+		}
+		var sdkErr *zama.SDKError
+		if !errors.As(err, &sdkErr) || !sdkErr.Retryable || attempt >= maxAttempts {
+			return nil, err // terminal, or out of attempts -- surface it
+		}
+		delay := time.Duration(attempt*2) * time.Second // backoff when the server gives no hint
+		if sdkErr.RetryAfterSeconds != nil {
+			delay = time.Duration(*sdkErr.RetryAfterSeconds) * time.Second
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(delay):
+		}
+	}
+}
+```
+
+Never repeat a write on `Retryable` alone: a `TRANSACTION_OUTCOME_UNKNOWN` code, a deadline, or an error with no SDK code means it might have been submitted. [Resolve the outcome](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/uncertain-transaction-outcomes.md) first.
+
+### Tab: Rust
+
+```rust
+use std::{future::Future, time::Duration};
+use zama_sdk::{BigInt, Result};
+
+async fn decrypt_with_retry<F, Fut>(mut fetch: F, max_attempts: u32) -> Result<BigInt>
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = Result<BigInt>>,
+{
+    let mut attempt = 1;
+    loop {
+        let error = match fetch().await {
+            Ok(value) => return Ok(value),
+            Err(error) => error,
+        };
+        let retry_after = match error.sdk_error() {
+            Some(details) if details.retryable && attempt < max_attempts => {
+                details.retry_after_seconds
+            }
+            _ => return Err(error), // terminal, or out of attempts -- surface it
+        };
+        let delay_seconds = retry_after.unwrap_or(attempt * 2); // backoff when the server gives no hint
+        tokio::time::sleep(Duration::from_secs(delay_seconds.into())).await;
+        attempt += 1;
+    }
+}
+```
+
+Never repeat a write on `retryable` alone: when `error.is_outcome_unknown()` is true, it might have been submitted. [Resolve the outcome](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/uncertain-transaction-outcomes.md) first.
 
 
 Never retry when `isRetryable(error)` is `false` -- a `NotEntitledError`, for example, means the ACL grant is missing and retrying just busy-loops.
@@ -5439,7 +6281,7 @@ The signer handles `signTypedData` and `writeContract`; the provider handles `re
 
 # Offline signing
 
-`sdk.offline.prepare` builds a fully populated unsigned transaction and hands it to you. Signing and broadcasting happen out-of-process: an institutional custody platform, an HSM ceremony, a policy engine with human approval. The preparing process never holds the wallet private key.
+`sdk.offline.prepare` builds a fully populated unsigned transaction and hands it to you. Signing and broadcasting happen out-of-process: an institutional custody platform, an HSM ceremony, a policy engine with human approval. The preparing process never holds the wallet private key. The examples include Go and Rust tabs.
 
 
 > [!INFO]
@@ -5451,6 +6293,9 @@ The signer handles `signTypedData` and `writeContract`; the provider handles `re
 ### 1. Configure the SDK without a signer
 
 The signer is optional. A provider is all `prepare` needs:
+
+
+### Tab: Core SDK
 
 ```ts
 import { createConfig, MemoryStorage, ZamaSDK } from "@zama-fhe/sdk";
@@ -5468,7 +6313,43 @@ const sdk = new ZamaSDK(
 );
 ```
 
+### Tab: Go
+
+```go
+import zama "github.com/zama-ai/sdk/clients/go/v3"
+
+client, err := zama.Dial(socketPath)
+if err != nil {
+	return err
+}
+defer client.Close()
+
+// An empty SignerConfig attaches no signer: the daemon only reads through rpcURL.
+sdk, err := client.CreateContext(ctx, zama.NewSDKConfig(11155111, rpcURL), zama.SignerConfig{})
+if err != nil {
+	return err
+}
+defer sdk.Close(ctx)
+```
+
+### Tab: Rust
+
+```rust
+use zama_sdk::{Client, SdkConfig};
+
+let client = Client::connect(socket_path).await?;
+// No .signer(...) on the builder: the daemon only reads through rpc_url.
+let sdk = client
+    .sdk(SdkConfig::new(11155111, rpc_url))
+    .build()
+    .await?;
+```
+
+
 ### 2. Prepare an unsigned transaction
+
+
+### Tab: Core SDK
 
 ```ts
 const prepared = await sdk.offline.prepare({
@@ -5481,9 +6362,54 @@ const prepared = await sdk.offline.prepare({
 // { kind: "ConfidentialTransfer", from: "0xCustodyWallet", unsignedTx: "0x02..." }
 ```
 
+### Tab: Go
+
+```go
+prepared, err := sdk.PrepareTransaction(ctx, zama.ConfidentialTransferRequest{
+	From:   custodyWallet,
+	Token:  confidentialToken,
+	To:     recipient,
+	Amount: big.NewInt(1000),
+}, nil)
+if err != nil {
+	return err
+}
+// {Kind: TransactionConfidentialTransfer, From: custodyWallet, UnsignedTx: 0x02...}
+```
+
+`UnsignedTx` holds raw bytes; encode it, for example as hex, before it crosses a process boundary.
+
+### Tab: Rust
+
+```rust
+use zama_sdk::{PrepareTransaction, Transaction};
+
+let prepared = sdk
+    .offline()
+    .prepare(
+        PrepareTransaction {
+            from: custody_wallet,
+            transaction: Transaction::ConfidentialTransfer {
+                token: confidential_token,
+                to: recipient,
+                amount: 1000.into(),
+            },
+        },
+        None,
+    )
+    .await?;
+// PreparedTransaction { kind: ConfidentialTransfer, from: custody_wallet, unsigned_tx: 0x02... }
+```
+
+`unsigned_tx` holds raw bytes; encode it, for example as hex, before it crosses a process boundary.
+
+
 For a transfer, the amount is encrypted during `prepare`, including the required relayer interactions, and the calldata is ready to sign. `from` must match the address of the key that eventually signs: encrypted inputs are bound to that sender, so a mismatch reverts on-chain. The result is JSON-safe and crosses a process boundary as-is. `unsignedTx` carries the whole EIP-1559 transaction (chain id, nonce, calldata, gas and fee caps); `from` travels alongside because an unsigned transaction has no sender field and the custodian needs it to pick the signing key.
 
 Nonce, gas, and fees are read from chain state; override them per call when you need control:
+
+
+### Tab: Core SDK
 
 ```ts
 await sdk.offline.prepare(request, {
@@ -5493,24 +6419,202 @@ await sdk.offline.prepare(request, {
 });
 ```
 
+### Tab: Go
+
+```go
+nonce := uint64(12)
+prepared, err := sdk.PrepareTransaction(ctx, request, &zama.PrepareOptions{
+	Nonce:    &nonce,
+	GasLimit: big.NewInt(1_000_000),
+	Fees: &zama.PrepareFees{
+		MaxFeePerGas:         big.NewInt(60_000_000_000),
+		MaxPriorityFeePerGas: big.NewInt(1_000_000_000),
+	},
+})
+```
+
+### Tab: Rust
+
+```rust
+use zama_sdk::{PrepareFees, PrepareOptions};
+
+let prepared = sdk
+    .offline()
+    .prepare(
+        request,
+        Some(PrepareOptions {
+            nonce: Some(12),
+            gas_limit: Some(1_000_000.into()),
+            fees: Some(PrepareFees {
+                max_fee_per_gas: 60_000_000_000u64.into(),
+                max_priority_fee_per_gas: 1_000_000_000.into(),
+            }),
+        }),
+    )
+    .await?;
+```
+
+
 ### 3. Sign and broadcast out-of-process
 
 The custody platform signs the prepared transaction after policy approval, preserving its nonce, gas limit, fees, and calldata. Custody platforms typically accept the unsigned payload directly and broadcast in the same call:
+
+
+### Tab: Core SDK
 
 ```ts
 const txHash = await custody.signAndBroadcast(prepared.unsignedTx);
 ```
 
+### Tab: Go
+
+```go
+txHash, err := custody.SignAndBroadcast(ctx, prepared.UnsignedTx)
+```
+
+### Tab: Rust
+
+```rust
+let tx_hash = custody.sign_and_broadcast(&prepared.unsigned_tx).await?;
+```
+
+
 Some platforms also support signing without broadcasting. When that API accepts serialized transactions, it returns the serialized signed transaction for you to broadcast:
+
+
+### Tab: Core SDK
 
 ```ts
 const signedTx = await custody.sign(prepared.unsignedTx);
 const txHash = await publicClient.sendRawTransaction({ serializedTransaction: signedTx });
 ```
 
+### Tab: Go
+
+```go
+import "github.com/ethereum/go-ethereum/core/types"
+
+signedTx, err := custody.Sign(ctx, prepared.UnsignedTx)
+if err != nil {
+	return err
+}
+var tx types.Transaction
+if err := tx.UnmarshalBinary(signedTx); err != nil {
+	return err
+}
+if err := ethClient.SendTransaction(ctx, &tx); err != nil {
+	return err
+}
+txHash := tx.Hash()
+```
+
+### Tab: Rust
+
+```rust
+use alloy_provider::Provider;
+
+let signed_tx = custody.sign(&prepared.unsigned_tx).await?;
+let pending = provider.send_raw_transaction(&signed_tx).await?;
+let tx_hash = *pending.tx_hash();
+```
+
+
 
 > [!WARNING]
 > **Raw-signature APIs need an extra assembly step.** A raw HSM typically signs the EIP-1559 transaction digest and returns signature components, not a serialized transaction. Use your Ethereum library to compute the signing digest and insert the signature into the transaction envelope before broadcasting; do not treat the raw signature as signed transaction bytes.
+
+
+When you hold the key yourself, decode the unsigned payload, sign its digest, and broadcast the signed envelope. The unsigned encoding omits the signature fields, so a decoder that expects a signed transaction rejects it. Check the sender, chain, destination, and calldata before signing:
+
+
+### Tab: Go
+
+```go
+import (
+	"errors"
+	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/rlp"
+)
+
+if crypto.PubkeyToAddress(key.PublicKey) != prepared.From {
+	return errors.New("prepared sender does not match the signing key")
+}
+if len(prepared.UnsignedTx) == 0 || prepared.UnsignedTx[0] != types.DynamicFeeTxType {
+	return errors.New("expected an unsigned EIP-1559 transaction")
+}
+var unsigned struct {
+	ChainID    *big.Int
+	Nonce      uint64
+	GasTipCap  *big.Int
+	GasFeeCap  *big.Int
+	Gas        uint64
+	To         *common.Address `rlp:"nil"`
+	Value      *big.Int
+	Data       []byte
+	AccessList types.AccessList
+}
+if err := rlp.DecodeBytes(prepared.UnsignedTx[1:], &unsigned); err != nil {
+	return err
+}
+tx := types.NewTx(&types.DynamicFeeTx{
+	ChainID:    unsigned.ChainID,
+	Nonce:      unsigned.Nonce,
+	GasTipCap:  unsigned.GasTipCap,
+	GasFeeCap:  unsigned.GasFeeCap,
+	Gas:        unsigned.Gas,
+	To:         unsigned.To,
+	Value:      unsigned.Value,
+	Data:       unsigned.Data,
+	AccessList: unsigned.AccessList,
+})
+signed, err := types.SignTx(tx, types.LatestSignerForChainID(unsigned.ChainID), key)
+if err != nil {
+	return err
+}
+if err := ethClient.SendTransaction(ctx, signed); err != nil {
+	return err
+}
+txHash := signed.Hash()
+```
+
+`key` is the `*ecdsa.PrivateKey` for `prepared.From`.
+
+### Tab: Rust
+
+```rust
+use alloy_consensus::{SignableTransaction, TxEip1559};
+use alloy_provider::Provider;
+use alloy_rlp::Decodable;
+use alloy_signer::Signer;
+
+anyhow::ensure!(
+    prepared.from == signer.address(),
+    "prepared sender does not match the signing key"
+);
+anyhow::ensure!(
+    prepared.unsigned_tx.first() == Some(&2),
+    "expected an unsigned EIP-1559 transaction"
+);
+let mut payload = &prepared.unsigned_tx[1..];
+let transaction = TxEip1559::decode(&mut payload)?;
+anyhow::ensure!(
+    payload.is_empty(),
+    "trailing bytes after the unsigned transaction"
+);
+let signature = signer.sign_hash(&transaction.signature_hash()).await?;
+let mut signed_tx = Vec::new();
+transaction
+    .into_signed(signature)
+    .eip2718_encode(&mut signed_tx);
+let pending = provider.send_raw_transaction(&signed_tx).await?;
+let tx_hash = *pending.tx_hash();
+```
+
+`signer` is the `PrivateKeySigner` for `prepared.from`. Decoding needs `alloy-consensus`, on the same Alloy major as `zama_sdk`, and `alloy-rlp`.
 
 
 Either way, watch the chain yourself: fetch the receipt for the transaction hash through your own provider, and wait for enough confirmations for your risk policy before acting on it. A receipt returned at first inclusion can still be invalidated by a reorganization, for example after you use it to prepare `FinalizeUnwrap`.
@@ -5530,6 +6634,11 @@ Each `prepare` call produces one transaction. The `kind` selects what it builds:
 | `DelegateDecryption` / `RevokeDelegation`           | ACL delegation            | explicit expiry, or omit for permanent                               |
 
 ## Multi-transaction flows
+
+
+> [!INFO]
+> Available in the Core SDK and React SDK.
+
 
 `WrappedToken.shield()` and `WrappedToken.unshield()` need a live signer, so offline workflows compose their underlying steps with `prepare`: `TransferAndCall` or `ApproveUnderlying` then `Wrap` for shielding, and `Unwrap` then `FinalizeUnwrap` for unshielding. Offline workflows are one of the few places where composing below the `Token` API is correct.
 
@@ -5593,6 +6702,9 @@ Policy approval can take hours or days. The cryptographic proofs tolerate that, 
 
 A decryption [permit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/concepts/permit-model.md) is not a transaction — nothing is broadcast, and registering the signature is a local operation — so it gets its own two-step flow instead of a `prepare` kind: `sdk.offline.preparePermit` builds the unsigned EIP-712 typed data, and `sdk.permits.registerPermit` verifies and persists the signature the custodian returns.
 
+
+### Tab: Core SDK
+
 ```ts
 const prepared = await sdk.offline.preparePermit({
   signer: "0xCustodyWallet",
@@ -5602,21 +6714,93 @@ const prepared = await sdk.offline.preparePermit({
 });
 ```
 
+### Tab: Go
+
+```go
+prepared, err := sdk.PreparePermit(ctx, custodyWallet, []common.Address{confidentialToken}, zama.PreparePermitOptions{
+	// Delegator: &owner,       // omit for a self permit
+	// DurationDays: &days,     // defaults to the SDK's configured permit TTL
+})
+if err != nil {
+	return err
+}
+```
+
+### Tab: Rust
+
+```rust
+use zama_sdk::PreparePermit;
+
+let prepared = sdk
+    .offline()
+    .prepare_permit(PreparePermit {
+        signer: custody_wallet,
+        contracts: &[confidential_token],
+        delegator: None,     // Some(owner) for a delegated permit
+        duration_days: None, // defaults to the SDK's configured permit TTL
+    })
+    .await?;
+```
+
+
 `preparePermit` is signer-offline, not network-offline: resolving the transport key pair and building the typed data still reads the chain's KMS signers context on-chain, so the provider must be reachable. It never touches a configured signer or connected wallet — `request.signer` is an explicit address, matching the offline `prepare` contract above.
 
-Hand `prepared.eip712` to the custodian for `eth_signTypedData_v4`, exactly as you would for the atomic `sdk.permits.grantPermit` path — nothing about the payload changes for the offline flow:
+Hand the prepared EIP-712 typed data to the custodian for `eth_signTypedData_v4`, exactly as you would for the atomic `grantPermit` path. Nothing about the payload changes for the offline flow:
+
+
+### Tab: Core SDK
 
 ```ts
 const signature = await custody.signTypedData(prepared.eip712);
 ```
 
-Then register the signature. This verifies it against `prepared.eip712` and persists the permit — no further wallet interaction:
+### Tab: Go
+
+```go
+signature, err := custody.SignTypedData(ctx, prepared.TypedDataJSON)
+if err != nil {
+	return err
+}
+```
+
+### Tab: Rust
+
+```rust
+let signature = custody.sign_typed_data(&prepared.typed_data).await?;
+```
+
+
+Then register the signature. This verifies it against the prepared typed data and persists the permit, with no further wallet interaction:
+
+
+### Tab: Core SDK
 
 ```ts
 await sdk.permits.registerPermit(prepared, signature);
 ```
 
 The recovery byte may be either `0`/`1` or `27`/`28`: the SDK normalizes it before the permit is verified.
+
+### Tab: Go
+
+```go
+if err := sdk.RegisterPermit(ctx, prepared.Envelope, signature); err != nil {
+	return err
+}
+```
+
+Pass `Envelope` unchanged; it carries the prepared permit that the signature is checked against.
+
+### Tab: Rust
+
+```rust
+sdk.permits()
+    .register_permit(&prepared.envelope, &signature)
+    .await?;
+```
+
+Pass `envelope` unchanged; it carries the prepared permit that the signature is checked against.
+
 
 One permit per call: unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks a request over 10 contracts — `contracts` maps to exactly one signature.
 
@@ -5639,10 +6823,12 @@ Every permit is verified before any is stored, so a permit that fails verificati
 > [!WARNING]
 > **Register promptly.** `prepared.eip712.message` carries the permit's validity window (`startTimestamp` + `durationDays`); if approval takes long enough that the window elapses before you call `registerPermit`, it throws `PreparedPermitExpiredError` — call `preparePermit` again for a fresh window. The same applies to `batchRegisterPermits`: all chunks share one validity window, and one expired permit fails the whole batch. Registering also checks that the chain embedded in `prepared.eip712.domain` matches the SDK's active chain (`PreparedPermitChainMismatchError`) and that the transport key pair hasn't changed since prepare (`TransportKeyPairChangedError`, e.g. after a TTL expiry) — see the [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Offline.md#preparepermit) for details.
 
+> **Register promptly.** `prepared.eip712.message` carries the permit's validity window (`startTimestamp` + `durationDays`); if approval takes long enough that the window elapses before you call `registerPermit`, it throws `PreparedPermitExpiredError` (`PREPARED_PERMIT_EXPIRED`) — call `preparePermit` again for a fresh window. Registering also checks that the chain embedded in `prepared.eip712.domain` matches the SDK's active chain (`PreparedPermitChainMismatchError`, `PREPARED_PERMIT_CHAIN_MISMATCH`) and that the transport key pair hasn't changed since prepare (`TransportKeyPairChangedError`, `TRANSPORT_KEY_PAIR_CHANGED`, e.g. after a TTL expiry) — see the [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Offline.md#preparepermit) for details.
+
 
 
 > [!INFO]
-> **KMS context rotation.** A registered permit is bound to the chain's KMS context. If that context is revoked on-chain, decrypts throw `RevokedKmsContextError` with a `SigningFailedError` as `cause`: the SDK's automatic re-grant cannot sign in a signerless session, so it keeps the scope's other permits and surfaces the error instead. Run `preparePermit` and `registerPermit` again for the affected contracts. See the [error reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#revokedkmscontexterror) for how to tell this case apart from the retryable one.
+> **KMS context rotation.** A registered permit is bound to the chain's KMS context. If that context is revoked on-chain, decrypts throw `RevokedKmsContextError` (`REVOKED_KMS_CONTEXT`) with a `SigningFailedError` (`SIGNING_FAILED`) as `cause`: the SDK's automatic re-grant cannot sign in a signerless session, so it keeps the scope's other permits and surfaces the error instead. Run `preparePermit` and `registerPermit` again for the affected contracts. See the [error reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#revokedkmscontexterror) for how to tell this case apart from the retryable one.
 
 
 ## Next steps
@@ -5766,11 +6952,33 @@ The `cleartext()` relayer factory implements the same `RelayerSDK` interface as 
 
 ### 1. Install packages
 
+
+### Tab: Core SDK
+
 ```bash
 npm install @zama-fhe/sdk viem
 ```
 
+### Tab: Go
+
+Install the client and start the daemon as in the [Go quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/go-quick-start.md).
+
+```bash
+go get github.com/zama-ai/sdk/clients/go/v3
+```
+
+### Tab: Rust
+
+Install the client and start the daemon as in the [Rust quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/rust-quick-start.md).
+
+```bash
+cargo add zama_sdk
+```
+
+
 ### 2. Use the `cleartext()` relayer with `createConfig`
+
+Available in the Core SDK and React SDK. Go and Rust select the cleartext relayer in the next step.
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -5781,6 +6989,9 @@ import { hardhat } from "@zama-fhe/sdk/chains";
 ### 3. Create the config with a Hardhat chain
 
 For a local Hardhat network, use the built-in `hardhat` chain object:
+
+
+### Tab: Core SDK
 
 ```ts
 const config = createConfig({
@@ -5794,9 +7005,48 @@ const config = createConfig({
 const sdk = new ZamaSDK(config);
 ```
 
+### Tab: Go
+
+The daemon container must reach your node: run it with `--network host` and `http://127.0.0.1:8545` on Linux, or use `http://host.docker.internal:8545` on Docker Desktop.
+
+```go
+rpcURL := "http://host.docker.internal:8545"
+executor := "0xYourExecutorAddress"
+config := zama.SDKConfig{
+	Chains: []zama.ChainConfig{{
+		ID:              31337, // Hardhat preset
+		Network:         &rpcURL,
+		ExecutorAddress: &executor,
+	}},
+	Relayers: map[uint64]zama.RelayerConfig{
+		31337: {Transport: zama.RelayerCleartext},
+	},
+}
+```
+
+### Tab: Rust
+
+The daemon container must reach your node: run it with `--network host` and `http://127.0.0.1:8545` on Linux, or use `http://host.docker.internal:8545` on Docker Desktop.
+
+```rust
+let mut chain = ChainConfig::new(31_337, "http://host.docker.internal:8545"); // Hardhat preset
+chain.executor_address = Some("0xYourExecutorAddress".into());
+let mut config = SdkConfig::from_chains(31_337, vec![chain]);
+config.relayers = Some(BTreeMap::from([(
+    31_337,
+    RelayerConfig {
+        transport: RelayerTransport::Cleartext,
+        options: None,
+    },
+)]));
+```
+
+
 The `executorAddress` is the deployed `CleartextFHEVMExecutor` contract address from your Hardhat setup. It must be set on the chain definition — `cleartext()` picks it up automatically.
 
 ### 4. Use the SDK normally
+
+Available in the Core SDK and React SDK.
 
 The wrapper API works the same as in production setups:
 
@@ -5810,6 +7060,9 @@ const balance = await wrappedToken.balanceOf(address);
 ### 5. (Optional) Create a custom config for your own chain
 
 If you deploy FHEVM contracts on a custom chain or at different addresses than the default ones, pass all required fields to the chain definition used with the `cleartext()` relayer factory:
+
+
+### Tab: Core SDK
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -5839,6 +7092,53 @@ const config = createConfig({
 
 const sdk = new ZamaSDK(config);
 ```
+
+### Tab: Go
+
+```go
+ptr := func(value string) *string { return &value }
+gatewayChainID := uint64(10901)
+config := zama.SDKConfig{
+	Chains: []zama.ChainConfig{{
+		ID:                                 12345,
+		Network:                            ptr("http://host.docker.internal:8545"),
+		GatewayChainID:                     &gatewayChainID,
+		RelayerURL:                         ptr(""),
+		ACLContractAddress:                 ptr("0x..."),
+		KMSContractAddress:                 ptr("0x..."),
+		InputVerifierContractAddress:       ptr("0x..."),
+		VerifyingContractAddressDecryption: ptr("0x..."),
+		VerifyingContractAddressInputVerification: ptr("0x..."),
+		ExecutorAddress: ptr("0x..."),
+	}},
+	Relayers: map[uint64]zama.RelayerConfig{
+		12345: {Transport: zama.RelayerCleartext},
+	},
+}
+```
+
+### Tab: Rust
+
+```rust
+let mut chain = ChainConfig::new(12_345, "http://host.docker.internal:8545");
+chain.gateway_chain_id = Some(10_901);
+chain.relayer_url = Some(String::new());
+chain.acl_contract_address = Some("0x...".into());
+chain.kms_contract_address = Some("0x...".into());
+chain.input_verifier_contract_address = Some("0x...".into());
+chain.verifying_contract_address_decryption = Some("0x...".into());
+chain.verifying_contract_address_input_verification = Some("0x...".into());
+chain.executor_address = Some("0x...".into());
+let mut config = SdkConfig::from_chains(12_345, vec![chain]);
+config.relayers = Some(BTreeMap::from([(
+    12_345,
+    RelayerConfig {
+        transport: RelayerTransport::Cleartext,
+        options: None,
+    },
+)]));
+```
+
 
 **Where to find these addresses:**
 
@@ -6046,6 +7346,11 @@ The server renders the page shell, and the `TokenBalance` client component hydra
 
 # Operator approvals
 
+
+> [!INFO]
+> Available in the Core SDK and React SDK.
+
+
 Operator approval lets another address (a DEX contract, multisig, or automated service) transfer confidential tokens on your behalf. This is the FHE equivalent of ERC-20's `approve` / `transferFrom` pattern. Use `token.setOperator()` in the core SDK, or the `useConfidentialSetOperator` hook in React.
 
 ## Steps
@@ -6221,9 +7526,14 @@ Common use cases:
 - **Portfolio dashboards** — a read-only service decrypts balances across wallets without holding keys.
 - **Auditors** — a third party verifies holdings without the token owner being online.
 
-This guide uses `sdk.delegations` and `token.decryptBalanceAs` in the core SDK, or the `useDelegateDecryption` and `useDecryptBalanceAs` hooks in React. Before starting, make sure your project is set up following the [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md) guide.
+This guide uses `sdk.delegations` and `token.decryptBalanceAs` in the core SDK, or the `useDelegateDecryption` and `useDecryptBalanceAs` hooks in React. Before starting, make sure your project is set up following the [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md) guide. The Go and Rust tabs show the equivalent client calls.
 
 ## Example
+
+
+> [!INFO]
+> Available in the Core SDK and React SDK.
+
 
 A complete delegation flow — grant, then decrypt as delegate (the SDK rides out ACL propagation for you):
 
@@ -6304,10 +7614,55 @@ await delegate({ delegateAddress: "0xDelegate" });
 await delegate({ delegateAddress: "0xDelegate", expirationDate: new Date("2027-12-31T00:00:00Z") });
 ```
 
+### Tab: Go
+
+```go
+// Permanent delegation (no expiration)
+_, err := sdk.DelegateDecryption(ctx, zama.DelegateDecryptionParams{
+	ContractAddress: token,
+	DelegateAddress: delegate,
+})
+if err != nil {
+	return err
+}
+
+// Delegation with an expiration date
+expiry := time.Date(2027, time.December, 31, 0, 0, 0, 0, time.UTC)
+_, err = sdk.DelegateDecryption(ctx, zama.DelegateDecryptionParams{
+	ContractAddress: token,
+	DelegateAddress: delegate,
+	ExpirationDate:  &expiry,
+})
+if err != nil {
+	return err
+}
+```
+
+### Tab: Rust
+
+```rust
+use std::time::{Duration, UNIX_EPOCH};
+use zama_sdk::DelegateDecryptionParams;
+
+// Permanent delegation (no expiration)
+sdk.delegations()
+    .delegate_decryption(DelegateDecryptionParams {
+        contract_address: token,
+        delegate_address: delegate,
+        expiration_date_ms: None,
+    })
+    .await?;
+
+// Delegation with an expiration date (2027-12-31T00:00:00Z)
+let expiry = UNIX_EPOCH + Duration::from_secs(1_830_211_200);
+let params = DelegateDecryptionParams::expiring_at(token, delegate, expiry)?;
+sdk.delegations().delegate_decryption(params).await?;
+```
+
 
 
 > [!WARNING]
-> The expiration date must be **at least 1 hour in the future**. Passing a closer date throws `DelegationExpirationTooSoonError` before the transaction is sent.
+> The expiration date must be **at least 1 hour in the future**. Passing a closer date throws `DelegationExpirationTooSoonError` (`DELEGATION_EXPIRATION_TOO_SOON`) before the transaction is sent.
 
 
 ### 2. ACL propagation (handled for you)
@@ -6316,7 +7671,7 @@ After the delegation transaction is mined, the Zama Gateway (on Arbitrum) syncs 
 
 
 > [!INFO]
-> `DelegationNotPropagatedError` only surfaces if propagation outlasts the retry budget (rare) — or if you opt out of the wait with `waitForPropagation: false` on `sdk.decryption.delegatedDecryptValues` to fail fast instead.
+> `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`) only surfaces if propagation outlasts the retry budget (rare) — or if you opt out of the wait with `waitForPropagation: false` on `sdk.decryption.delegatedDecryptValues` to fail fast instead.
 
 
 ### 3. Decrypt as delegate
@@ -6349,6 +7704,58 @@ await decryptAs({ delegatorAddress: "0xDelegator" });
 await decryptAs({ delegatorAddress: "0xDelegator", accountAddress: "0xBalanceHolder" });
 ```
 
+### Tab: Go
+
+Pass the encrypted balance your application read from the token contract.
+
+```go
+inputs := []zama.EncryptedInput{{EncryptedValue: encryptedBalance, ContractAddress: token}}
+balances, err := sdk.DelegatedDecryptValues(ctx, inputs, delegator, zama.DelegatedDecryptOptions{})
+if err != nil {
+	return err
+}
+balance := balances[encryptedBalance].Integer
+
+// When the balance holder differs from the delegator, pass AccountAddress explicitly:
+other, err := sdk.DelegatedDecryptValues(ctx, inputs, delegator, zama.DelegatedDecryptOptions{
+	AccountAddress: &balanceHolder,
+})
+if err != nil {
+	return err
+}
+```
+
+### Tab: Rust
+
+Pass the encrypted balance your application read from the token contract.
+
+```rust
+use zama_sdk::{ClearValue, DelegatedOptions, EncryptedInput};
+
+let inputs = [EncryptedInput {
+    encrypted_value: encrypted_balance,
+    contract_address: token,
+}];
+let balances = sdk
+    .decryption()
+    .delegated_decrypt_values(&inputs, delegator, DelegatedOptions::default())
+    .await?;
+let balance = balances.get(&encrypted_balance);
+
+// When the balance holder differs from the delegator, pass account_address explicitly:
+let other = sdk
+    .decryption()
+    .delegated_decrypt_values(
+        &inputs,
+        delegator,
+        DelegatedOptions {
+            account_address: Some(balance_holder),
+            ..Default::default()
+        },
+    )
+    .await?;
+```
+
 
 Clear values are cached in storage, keyed by `(accountAddress, token, encryptedValue)`. Every on-chain balance change produces a new encrypted value, so stale cache entries are never served.
 
@@ -6379,6 +7786,38 @@ const { data } = useDelegationStatus({
 });
 
 // data?.isActive, data?.expiryTimestamp
+```
+
+### Tab: Go
+
+```go
+status, err := sdk.GetDelegationStatus(ctx, zama.DelegationQuery{
+	ContractAddress:  token,
+	DelegatorAddress: delegator,
+	DelegateAddress:  delegate,
+})
+if err != nil {
+	return err
+}
+
+// status.IsActive, status.ExpiryTimestamp
+```
+
+### Tab: Rust
+
+```rust
+use zama_sdk::DelegationQuery;
+
+let status = sdk
+    .delegations()
+    .get_status(DelegationQuery {
+        contract_address: token,
+        delegator_address: delegator,
+        delegate_address: delegate,
+    })
+    .await?;
+
+// status.is_active, status.expiry_timestamp
 ```
 
 
@@ -6428,6 +7867,56 @@ try {
   // balances is a Map<Address, bigint>. Any single token failing rejects the whole call.
 } catch (err) {
   console.error(err);
+}
+```
+
+### Tab: Go
+
+Pass one encrypted balance per token. Each item carries its own value or error, so one failing token does not reject the batch.
+
+```go
+maxConcurrency := uint32(3)
+items, err := sdk.DelegatedBatchDecryptValues(ctx, inputs, delegator, zama.DelegatedBatchOptions{
+	MaxConcurrency: &maxConcurrency,
+})
+if err != nil {
+	return err
+}
+
+for _, item := range items {
+	if item.Error != nil {
+		fmt.Println(item.ContractAddress, item.Error)
+		continue
+	}
+	fmt.Printf("%s: %s\n", item.ContractAddress, item.Value.Integer)
+}
+```
+
+### Tab: Rust
+
+Pass one encrypted balance per token. Each item carries its own value or error, so one failing token does not reject the batch.
+
+```rust
+use zama_sdk::{ClearValue, DelegatedBatchOptions};
+
+let items = sdk
+    .decryption()
+    .delegated_batch_decrypt_values(
+        &inputs,
+        delegator,
+        DelegatedBatchOptions {
+            max_concurrency: Some(3),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+for item in items {
+    match item.result {
+        Ok(ClearValue::BigInt(balance)) => println!("{}: {balance}", item.contract_address),
+        Ok(other) => println!("{}: {other:?}", item.contract_address),
+        Err(error) => eprintln!("{}: {}", item.contract_address, error.code),
+    }
 }
 ```
 
@@ -6484,6 +7973,31 @@ import { useRevokeDelegation } from "@zama-fhe/react-sdk";
 const { mutateAsync: revoke } = useRevokeDelegation("0xConfidentialToken");
 
 await revoke({ delegateAddress: "0xDelegate" });
+```
+
+### Tab: Go
+
+```go
+_, err := sdk.RevokeDelegation(ctx, zama.RevokeDelegationParams{
+	ContractAddress: token,
+	DelegateAddress: delegate,
+})
+if err != nil {
+	return err
+}
+```
+
+### Tab: Rust
+
+```rust
+use zama_sdk::RevokeDelegationParams;
+
+sdk.delegations()
+    .revoke_delegation(RevokeDelegationParams {
+        contract_address: token,
+        delegate_address: delegate,
+    })
+    .await?;
 ```
 
 
@@ -6545,6 +8059,82 @@ if (error instanceof SigningRejectedError) {
 }
 ```
 
+### Tab: Go
+
+```go
+var sdkErr *zama.SDKError
+
+_, err := sdk.DelegateDecryption(ctx, zama.DelegateDecryptionParams{
+	ContractAddress: token,
+	DelegateAddress: delegate,
+})
+if errors.As(err, &sdkErr) {
+	switch sdkErr.Code {
+	case "DELEGATION_EXPIRATION_TOO_SOON":
+		// expiration date is less than 1 hour in the future
+	case "TRANSACTION_REVERTED":
+		// on-chain transaction failed
+	}
+}
+
+_, err = sdk.DelegatedDecryptValues(ctx, inputs, delegator, zama.DelegatedDecryptOptions{})
+if errors.As(err, &sdkErr) {
+	switch sdkErr.Code {
+	case "SIGNING_REJECTED":
+		// user cancelled the wallet prompt: do not retry automatically
+	case "DELEGATION_NOT_PROPAGATED":
+		// delegation still hadn't synced after the SDK's internal retry: rare, retry shortly
+	case "DECRYPTION_FAILED":
+		// delegated decryption failed
+	}
+}
+```
+
+### Tab: Rust
+
+```rust
+use zama_sdk::{DelegateDecryptionParams, DelegatedOptions};
+
+let granted = sdk
+    .delegations()
+    .delegate_decryption(DelegateDecryptionParams {
+        contract_address: token,
+        delegate_address: delegate,
+        expiration_date_ms: None,
+    })
+    .await;
+if let Err(error) = granted {
+    match error.sdk_error().map(|details| details.code.as_str()) {
+        Some("DELEGATION_EXPIRATION_TOO_SOON") => {
+            // expiration date is less than 1 hour in the future
+        }
+        Some("TRANSACTION_REVERTED") => {
+            // on-chain transaction failed
+        }
+        _ => {}
+    }
+}
+
+let decrypted = sdk
+    .decryption()
+    .delegated_decrypt_values(&inputs, delegator, DelegatedOptions::default())
+    .await;
+if let Err(error) = decrypted {
+    match error.sdk_error().map(|details| details.code.as_str()) {
+        Some("SIGNING_REJECTED") => {
+            // user cancelled the wallet prompt: do not retry automatically
+        }
+        Some("DELEGATION_NOT_PROPAGATED") => {
+            // delegation still hadn't synced after the SDK's internal retry: rare, retry shortly
+        }
+        Some("DECRYPTION_FAILED") => {
+            // delegated decryption failed
+        }
+        _ => {}
+    }
+}
+```
+
 
 See [Handle errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/handle-errors.md) for full error-handling patterns and [Error types](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md) for the complete list.
 
@@ -6554,6 +8144,7 @@ See [Handle errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitb
 - [useDelegateDecryption](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDelegateDecryption.md) — React hook to grant delegation
 - [useDecryptBalanceAs](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDecryptBalanceAs.md) — React hook to decrypt as a delegate
 - [useDelegationStatus](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDelegationStatus.md) — React hook to query delegation status
+- [Go client API](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/go-client.md) and [Rust client API](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/rust-client.md)
 
 ## Encrypt & decrypt
 
@@ -6569,7 +8160,7 @@ The high-level token API (`token.confidentialTransfer`, `token.balanceOf`, and t
 - **Core SDK** — `sdk.encrypt` and `sdk.decryption.decryptValues` / `sdk.decryption.decryptPublicValues`.
 - **React** — the `useEncrypt` and `useDecryptValues` / `useDecryptPublicValues` hooks.
 
-Before starting, make sure your project is set up following the [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md) guide.
+Before starting, make sure your project is set up following the [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md) guide. The Go and Rust tabs show the equivalent client calls.
 
 ## Example
 
@@ -6729,6 +8320,220 @@ function ConfidentialRoundTrip() {
 
 {% endcode %}
 
+### Tab: Go
+
+{% code title="main.go" %}
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"math/big"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	bind "github.com/ethereum/go-ethereum/accounts/abi/bind/v2"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
+	zama "github.com/zama-ai/sdk/clients/go/v3"
+)
+
+// Minimal ABI for the custom FHE contract this example reads and writes.
+const yourContractABI = `[
+	{"type":"function","name":"store","stateMutability":"nonpayable",
+	 "inputs":[{"type":"bytes32"},{"type":"bytes"}],"outputs":[]},
+	{"type":"function","name":"getHandle","stateMutability":"view",
+	 "inputs":[{"type":"address"}],"outputs":[{"type":"bytes32"}]}
+]`
+
+func run(ctx context.Context) error {
+	// DAEMON_SOCKET, SEPOLIA_RPC_URL, PRIVATE_KEY, and CONTRACT_ADDRESS come from your environment.
+	rpcURL := os.Getenv("SEPOLIA_RPC_URL")
+	privateKey := os.Getenv("PRIVATE_KEY")
+	contractAddress := common.HexToAddress(os.Getenv("CONTRACT_ADDRESS"))
+	chainID := uint64(11155111)
+
+	eth, err := ethclient.DialContext(ctx, rpcURL)
+	if err != nil {
+		return err
+	}
+	defer eth.Close()
+	signer, err := zama.NewEthereumSigner(privateKey, chainID, eth)
+	if err != nil {
+		return err
+	}
+	client, err := zama.Dial(os.Getenv("DAEMON_SOCKET"))
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+	sdk, err := client.CreateContext(ctx, zama.NewSDKConfig(chainID, rpcURL), signer)
+	if err != nil {
+		return err
+	}
+	defer sdk.Close(context.Background())
+
+	key, err := crypto.HexToECDSA(strings.TrimPrefix(privateKey, "0x"))
+	if err != nil {
+		return err
+	}
+	userAddress := crypto.PubkeyToAddress(key.PublicKey)
+	parsed, err := abi.JSON(strings.NewReader(yourContractABI))
+	if err != nil {
+		return err
+	}
+	contract := bind.NewBoundContract(contractAddress, parsed, eth, eth, eth)
+
+	// 1. Encrypt
+	encrypted, err := sdk.Encrypt(ctx, zama.EncryptParams{
+		Values:          []zama.EncryptInput{zama.Euint64(big.NewInt(42))},
+		ContractAddress: contractAddress,
+		UserAddress:     userAddress,
+	}, zama.EncryptOptions{})
+	if err != nil {
+		return err
+	}
+
+	// 2. Send to contract, then wait for inclusion before reading back.
+	auth := bind.NewKeyedTransactor(key, new(big.Int).SetUint64(chainID))
+	tx, err := contract.Transact(auth, "store", encrypted.EncryptedValues[0], encrypted.InputProof)
+	if err != nil {
+		return err
+	}
+	if _, err := bind.WaitMined(ctx, eth, tx.Hash()); err != nil {
+		return err
+	}
+
+	// 3. Read the encrypted value back
+	var out []any
+	if err := contract.Call(&bind.CallOpts{Context: ctx}, &out, "getHandle", userAddress); err != nil {
+		return err
+	}
+	encryptedValue := common.Hash(out[0].([32]byte))
+
+	// 4. Decrypt: assembles the transport key pair + EIP-712 permit, then caches
+	decrypted, err := sdk.DecryptValues(ctx, []zama.EncryptedInput{{
+		EncryptedValue:  encryptedValue,
+		ContractAddress: contractAddress,
+	}}, zama.DecryptOptions{})
+	if err != nil {
+		return err
+	}
+	fmt.Println(decrypted[encryptedValue].Integer) // 42
+	return nil
+}
+
+func main() {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	if err := run(ctx); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+```
+
+{% endcode %}
+
+### Tab: Rust
+
+Add `alloy-contract`, `alloy-provider`, `alloy-signer-local`, and `alloy-sol-types` at the Alloy version `zama_sdk` uses, and enable its `alloy` feature.
+
+{% code title="main.rs" %}
+
+```rust
+use alloy_provider::ProviderBuilder;
+use alloy_signer_local::PrivateKeySigner;
+use alloy_sol_types::sol;
+use std::env;
+use zama_sdk::{
+    Address, ClearValue, Client, EncryptInput, EncryptOptions, EncryptParams, EncryptedInput,
+    SdkConfig, WalletAccount, alloy::AlloySigner,
+};
+
+sol! {
+    // Minimal interface for the custom FHE contract this example reads and writes.
+    #[sol(rpc)]
+    contract YourContract {
+        function store(bytes32 encryptedValue, bytes inputProof) external;
+        function getHandle(address user) external view returns (bytes32);
+    }
+}
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> anyhow::Result<()> {
+    // DAEMON_SOCKET, SEPOLIA_RPC_URL, PRIVATE_KEY, and CONTRACT_ADDRESS come from your environment.
+    let rpc_url = env::var("SEPOLIA_RPC_URL")?;
+    let signer: PrivateKeySigner = env::var("PRIVATE_KEY")?.parse()?;
+    let contract_address: Address = env::var("CONTRACT_ADDRESS")?.parse()?;
+    let user_address = signer.address();
+    let chain_id = 11_155_111;
+
+    let client = Client::connect(env::var("DAEMON_SOCKET")?).await?;
+    let account = WalletAccount {
+        address: user_address,
+        chain_id,
+    };
+    let sdk = client
+        .sdk(SdkConfig::new(chain_id, rpc_url.clone()))
+        .signer(Some(account), AlloySigner::new(signer.clone()))
+        .build()
+        .await?;
+    let provider = ProviderBuilder::new()
+        .wallet(signer)
+        .connect_http(rpc_url.parse()?);
+    let contract = YourContract::new(contract_address, &provider);
+
+    // 1. Encrypt
+    let inputs = [EncryptInput::Uint64(42.into())];
+    let encrypted = sdk
+        .encrypt(
+            EncryptParams {
+                values: &inputs,
+                contract_address,
+                user_address,
+            },
+            EncryptOptions::default(),
+        )
+        .await?;
+
+    // 2. Send to contract, then wait for inclusion before reading back.
+    contract
+        .store(encrypted.encrypted_values[0], encrypted.input_proof.into())
+        .send()
+        .await?
+        .get_receipt()
+        .await?;
+
+    // 3. Read the encrypted value back
+    let encrypted_value = contract.getHandle(user_address).call().await?;
+
+    // 4. Decrypt: assembles the transport key pair + EIP-712 permit, then caches
+    let decrypted = sdk
+        .decryption()
+        .decrypt_values(
+            &[EncryptedInput {
+                encrypted_value,
+                contract_address,
+            }],
+            None,
+        )
+        .await?;
+    if let Some(ClearValue::BigInt(value)) = decrypted.get(&encrypted_value) {
+        println!("{value}"); // 42
+    }
+    sdk.close().await?;
+    Ok(())
+}
+```
+
+{% endcode %}
+
 
 
 > [!INFO]
@@ -6855,6 +8660,43 @@ function EncryptExample() {
 
 {% endcode %}
 
+### Tab: Go
+
+```go
+encrypted, err := sdk.Encrypt(ctx, zama.EncryptParams{
+	Values:          []zama.EncryptInput{zama.Euint64(big.NewInt(1000))},
+	ContractAddress: contractAddress,
+	UserAddress:     userAddress,
+}, zama.EncryptOptions{})
+if err != nil {
+	return err
+}
+
+// encrypted.EncryptedValues: one common.Hash per value (contract-ready bytes32)
+// encrypted.InputProof: proof bytes, required alongside the encrypted values in contract calls
+```
+
+### Tab: Rust
+
+```rust
+use zama_sdk::{EncryptInput, EncryptOptions, EncryptParams};
+
+let inputs = [EncryptInput::Uint64(1000.into())];
+let encrypted = sdk
+    .encrypt(
+        EncryptParams {
+            values: &inputs,
+            contract_address,
+            user_address,
+        },
+        EncryptOptions::default(),
+    )
+    .await?;
+
+// encrypted.encrypted_values: one B256 per value (contract-ready bytes32)
+// encrypted.input_proof: proof bytes, required alongside the encrypted values in contract calls
+```
+
 
 #### Encrypting multiple values
 
@@ -6897,6 +8739,55 @@ const result = await encrypt.mutateAsync({
 // result.encryptedValues[1] — encrypted true
 // result.encryptedValues[2] — encrypted 42n
 // result.inputProof — shared proof for all encrypted values
+```
+
+### Tab: Go
+
+```go
+encrypted, err := sdk.Encrypt(ctx, zama.EncryptParams{
+	Values: []zama.EncryptInput{
+		zama.Euint64(big.NewInt(500)), // amount
+		zama.Ebool(true),              // flag
+		zama.Euint32(big.NewInt(42)),  // parameter
+	},
+	ContractAddress: contractAddress,
+	UserAddress:     userAddress,
+}, zama.EncryptOptions{})
+if err != nil {
+	return err
+}
+
+// encrypted.EncryptedValues[0]: encrypted 500
+// encrypted.EncryptedValues[1]: encrypted true
+// encrypted.EncryptedValues[2]: encrypted 42
+// encrypted.InputProof: shared proof for all encrypted values
+```
+
+### Tab: Rust
+
+```rust
+use zama_sdk::{EncryptInput, EncryptOptions, EncryptParams};
+
+let inputs = [
+    EncryptInput::Uint64(500.into()), // amount
+    EncryptInput::Bool(true),         // flag
+    EncryptInput::Uint32(42.into()),  // parameter
+];
+let encrypted = sdk
+    .encrypt(
+        EncryptParams {
+            values: &inputs,
+            contract_address,
+            user_address,
+        },
+        EncryptOptions::default(),
+    )
+    .await?;
+
+// encrypted.encrypted_values[0]: encrypted 500
+// encrypted.encrypted_values[1]: encrypted true
+// encrypted.encrypted_values[2]: encrypted 42
+// encrypted.input_proof: shared proof for all encrypted values
 ```
 
 
@@ -6979,6 +8870,55 @@ function ConfidentialAction() {
 
 {% endcode %}
 
+### Tab: Go
+
+`yourContract` is a go-ethereum `*bind.BoundContract` for your ABI, and `auth` holds the sender's transaction options, as in the example above.
+
+```go
+// 1. Encrypt the value
+encrypted, err := sdk.Encrypt(ctx, zama.EncryptParams{
+	Values:          []zama.EncryptInput{zama.Euint64(big.NewInt(1000))},
+	ContractAddress: contractAddress,
+	UserAddress:     userAddress,
+}, zama.EncryptOptions{})
+if err != nil {
+	return err
+}
+
+// 2. Call your contract with the encrypted data
+_, err = yourContract.Transact(auth, "yourFunction", encrypted.EncryptedValues[0], encrypted.InputProof)
+if err != nil {
+	return err
+}
+```
+
+### Tab: Rust
+
+`your_contract` is an Alloy `sol!` binding for your contract, as in the example above.
+
+```rust
+use zama_sdk::{EncryptInput, EncryptOptions, EncryptParams};
+
+// 1. Encrypt the value
+let inputs = [EncryptInput::Uint64(1000.into())];
+let encrypted = sdk
+    .encrypt(
+        EncryptParams {
+            values: &inputs,
+            contract_address,
+            user_address,
+        },
+        EncryptOptions::default(),
+    )
+    .await?;
+
+// 2. Call your contract with the encrypted data
+your_contract
+    .yourFunction(encrypted.encrypted_values[0], encrypted.input_proof.into())
+    .send()
+    .await?;
+```
+
 
 ### 3. Decryption of the encrypted data
 
@@ -7029,6 +8969,53 @@ A good decryption UX follows three steps:
 > ```
 >
 > This causes an unexpected wallet popup, user rejection, potential Blockaid flags, and loss of trust.
+
+### Tab: Go
+
+```go
+decrypted, err := sdk.DecryptValues(ctx, []zama.EncryptedInput{
+	{EncryptedValue: value1, ContractAddress: tokenA},
+	{EncryptedValue: value2, ContractAddress: tokenA},
+	{EncryptedValue: value3, ContractAddress: tokenB},
+}, zama.DecryptOptions{})
+if err != nil {
+	return err
+}
+
+// decrypted[value1].Integer: 500, decrypted[value2].Integer: 200, decrypted[value3].Integer: 1000
+```
+
+### Tab: Rust
+
+```rust
+use zama_sdk::{ClearValue, EncryptedInput};
+
+let decrypted = sdk
+    .decryption()
+    .decrypt_values(
+        &[
+            EncryptedInput {
+                encrypted_value: value1,
+                contract_address: token_a,
+            },
+            EncryptedInput {
+                encrypted_value: value2,
+                contract_address: token_a,
+            },
+            EncryptedInput {
+                encrypted_value: value3,
+                contract_address: token_b,
+            },
+        ],
+        None,
+    )
+    .await?;
+
+// decrypted[&value1]: ClearValue::BigInt(500), [&value2]: BigInt(200), [&value3]: BigInt(1000)
+if let Some(ClearValue::BigInt(amount)) = decrypted.get(&value1) {
+    println!("{amount}");
+}
+```
 
 
 #### Gating useConfidentialBalance
@@ -7202,6 +9189,28 @@ function PublicDecryptExample() {
 
 {% endcode %}
 
+### Tab: Go
+
+```go
+result, err := sdk.DecryptPublicValues(ctx, []common.Hash{encryptedValue}, zama.DecryptOptions{})
+if err != nil {
+	return err
+}
+// result.ClearValues[encryptedValue].Integer: 1000
+// result.DecryptionProof and result.ABIEncodedClearValues support on-chain finalization
+```
+
+### Tab: Rust
+
+```rust
+let result = sdk
+    .decryption()
+    .decrypt_public_values(&[encrypted_value], None)
+    .await?;
+// result.clear_values[&encrypted_value]: ClearValue::BigInt(1000)
+// result.decryption_proof and result.abi_encoded_clear_values support on-chain finalization
+```
+
 
 ## Next steps
 
@@ -7209,6 +9218,755 @@ function PublicDecryptExample() {
 - [ZamaSDK reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md) — `encrypt`, `decryption`, and the full core API
 - [Decrypt values from event logs](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/decrypt-from-event-logs.md) — index confidential transfers and decrypt amounts off event logs
 - [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md) — chains, relayers, authentication, and permit management
+- [Go client API](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/go-client.md) and [Rust client API](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/rust-client.md)
+
+## Go & Rust clients
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/native/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/README.md
+- logical_path: native/README
+
+# Go & Rust clients
+
+Use these guides to integrate your Go or Rust application with the local daemon, your wallet, and your credential storage.
+
+
+> [!WARNING]
+> The daemon and its Go and Rust clients are experimental. The wire protocol can change between minor versions, so upgrade the daemon image and the clients together.
+
+
+Start with the [Go quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/go-quick-start.md) or [Rust quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/rust-quick-start.md). Then [configure the SDK](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md): its Go and Rust tabs cover connecting to the daemon, chains, relayers, and storage.
+
+## Integrate with your application
+
+- [Attach a wallet](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/attach-wallet.md) for signatures and transaction submission.
+- [Store credentials](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/credential-storage.md) in your own database.
+- [Observe events](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/observe-events.md) for SDK activity.
+- [Recover from disconnections](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/recover-from-disconnections.md) of the signer, storage, or event channel.
+- [Resolve uncertain transaction outcomes](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/uncertain-transaction-outcomes.md) before retrying a write.
+
+The shared SDK guides, such as [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/encrypt-decrypt.md), [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/delegated-decryption.md), and [Offline signing](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/offline.md), include Go and Rust tabs for supported operations.
+
+## Deploy the daemon
+
+The daemon is a required part of a Go or Rust integration. Read [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md) before running it on your infrastructure, and check [client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md) when upgrading.
+
+## Attach a wallet
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/native/guides/attach-wallet.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/attach-wallet.md
+- logical_path: native/guides/attach-wallet
+
+# Attach a wallet
+
+Attach a wallet when your SDK context needs private decryption, permits, or [on-chain delegation](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/delegated-decryption.md). Your application keeps the signing key; the daemon asks your wallet to sign typed data or submit a transaction.
+
+## Connect a native wallet
+
+The built-in adapters sign typed data and broadcast contract writes. Load the private key through your application's secret provisioning.
+
+
+### Tab: Go
+
+```go
+provider, err := ethclient.DialContext(ctx, rpcURL)
+if err != nil {
+	return err
+}
+defer provider.Close() // keep the provider open until the SDK context closes
+
+signer, err := zama.NewEthereumSigner(privateKey, 11155111, provider)
+if err != nil {
+	return err
+}
+sdk, err := client.CreateContext(ctx, config, signer)
+if err != nil {
+	return err
+}
+```
+
+Use `NewPrivateKeySigner` for typed-data signing only. For an external wallet, set `SignerConfig.Account`, `SignTypedData`, and `WriteContract` yourself.
+
+### Tab: Rust
+
+Enable the `alloy` feature and add the Alloy crates your application imports. Use the same Alloy major version as `zama_sdk` (2.x), or the provider types do not match.
+
+```sh
+cargo add zama_sdk --features alloy
+cargo add alloy-provider@2 --no-default-features --features reqwest,reqwest-rustls-tls
+cargo add alloy-signer-local@2 --no-default-features --features zeroize
+```
+
+```rust
+let signer: PrivateKeySigner = private_key.parse()?;
+let account = WalletAccount {
+    address: signer.address(),
+    chain_id: 11_155_111,
+};
+let provider = ProviderBuilder::new()
+    .disable_recommended_fillers()
+    .with_gas_estimation()
+    .with_blob_gas_estimation()
+    .with_simple_nonce_management()
+    .fetch_chain_id()
+    .wallet(signer.clone())
+    .connect_http(rpc_url.parse()?);
+let wallet = AlloySigner::new(signer).with_transactions(provider);
+let sdk = client
+    .sdk(config)
+    .signer(Some(account), wallet)
+    .build()
+    .await?;
+```
+
+Use `AlloySigner::new(signer)` without `with_transactions` for typed-data signing only. For an external wallet, implement `Signer` with its typed-data and contract-write methods.
+
+
+The wallet account and the provider's chain must match the configured SDK chain; the adapters check both before a write. When your wallet switches accounts, update the SDK context's account.
+
+## Submit SDK transactions
+
+Call the SDK operation, such as `DelegateDecryption` in Go or `sdk.delegations().delegate_decryption` in Rust. The daemon sends the encoded contract call to your wallet, the wallet signs and broadcasts it, and the SDK waits for the receipt. The operation returns the transaction hash and receipt logs. Nothing resubmits the transaction if the receipt lookup fails.
+
+For a custom wallet:
+
+- Check the requested account and chain.
+- Broadcast the call data unchanged, with the requested destination, value, and gas limit. Omitted gas means estimate it.
+- Use the ABI, method, and arguments only for wallet display. Integer arguments arrive as decimal strings.
+- Supply fees and nonces from your wallet.
+- Return the broadcast hash once. Never replay a wallet action or resubmit a write automatically.
+
+Wallet callbacks can run concurrently. The built-in adapters do not coordinate nonces across concurrent writes, so serialize submissions per account in your application.
+
+Report a rejection or failure as an SDK error. Report a revert detected before broadcast with Go `ExecutionRevertError` or Rust `SdkError::execution_reverted`; the operation then fails with `TRANSACTION_REVERTED`.
+
+If a write ends without a clear result, follow [Resolve uncertain transaction outcomes](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/uncertain-transaction-outcomes.md).
+
+## Store credentials
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/native/guides/credential-storage.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/credential-storage.md
+- logical_path: native/guides/credential-storage
+
+# Store credentials
+
+Keep decryption credentials in your application's database instead of daemon memory or daemon SQLite. Choose between the three backends in [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md#6-optional-choose-a-storage-backend).
+
+Your application stores opaque bytes under string keys. It never decodes the credentials. The daemon still reads and uses them, so treat the database and its backups as sensitive; see the [daemon trust model](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/concepts/trust-boundary.md).
+
+## Implement a storage backend
+
+These examples store credentials in a PostgreSQL table:
+
+```sql
+CREATE TABLE zama_credentials (key text PRIMARY KEY, value bytea NOT NULL);
+```
+
+
+### Tab: Go
+
+Implement `zama.Storage`. `Get` reports a missing key with `false` and a nil error.
+
+```go
+type PostgresStorage struct{ db *sql.DB }
+
+func (s PostgresStorage) Get(ctx context.Context, key string) ([]byte, bool, error) {
+	var value []byte
+	err := s.db.QueryRowContext(ctx, "SELECT value FROM zama_credentials WHERE key = $1", key).Scan(&value)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	return value, true, nil
+}
+
+func (s PostgresStorage) Set(ctx context.Context, key string, value []byte) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO zama_credentials (key, value) VALUES ($1, $2)
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, key, value)
+	return err
+}
+
+func (s PostgresStorage) Delete(ctx context.Context, key string) error {
+	_, err := s.db.ExecContext(ctx, "DELETE FROM zama_credentials WHERE key = $1", key)
+	return err
+}
+```
+
+### Tab: Rust
+
+Implement `NativeStorage`. `get` reports a missing key with `Ok(None)`. This example uses `sqlx` with the `postgres` feature.
+
+```rust
+use zama_sdk::{NativeStorage, async_trait};
+
+pub struct PostgresStorage {
+    pool: sqlx::PgPool,
+}
+
+#[async_trait]
+impl NativeStorage for PostgresStorage {
+    async fn get(&self, key: &str) -> anyhow::Result<Option<Vec<u8>>> {
+        Ok(
+            sqlx::query_scalar("SELECT value FROM zama_credentials WHERE key = $1")
+                .bind(key)
+                .fetch_optional(&self.pool)
+                .await?,
+        )
+    }
+
+    async fn set(&self, key: &str, value: Vec<u8>) -> anyhow::Result<()> {
+        sqlx::query(
+            "INSERT INTO zama_credentials (key, value) VALUES ($1, $2) \
+             ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+        )
+        .bind(key)
+        .bind(value)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn delete(&self, key: &str) -> anyhow::Result<()> {
+        sqlx::query("DELETE FROM zama_credentials WHERE key = $1")
+            .bind(key)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+}
+```
+
+
+The SDK can call these methods concurrently. They must be safe for concurrent use and stop when their context or future is cancelled.
+
+## Bind the backend
+
+Name the binding after the database namespace it accesses. Reuse the same binding for every SDK context that should share credentials.
+
+
+### Tab: Go
+
+```go
+config.Storage = zama.NamedApplicationStorage("credentials", PostgresStorage{db: db})
+sdk, err := client.CreateContext(ctx, config, signer)
+```
+
+Set `config.PermitStorage` to store permits in a separate backend.
+
+### Tab: Rust
+
+```rust
+let credentials = ApplicationStorage::shared("credentials", Arc::new(PostgresStorage { pool }));
+let sdk = client
+    .sdk(config)
+    .storage(credentials.clone())
+    .build()
+    .await?;
+```
+
+Call `.permit_storage(...)` on the builder to store permits in a separate backend.
+
+
+To protect the stored transport keys, also set a derivation secret; see [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md#10-optional-wrap-the-transport-key-pair-at-rest-headless-environments). Keep the same binding name and secret when you recreate a context or restart the daemon, or users sign again.
+
+## Share storage across replicas
+
+Several application-and-daemon pairs can use the same database. Each daemon coordinates credential operations only among its own SDK contexts. Two replicas working on the same user at the same time can race, which causes an extra signature request or overwrites a credential update.
+
+A shared binding name does not provide distributed locking. If extra signature requests are unacceptable, route each user to one replica.
+
+## Observe events
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/native/guides/observe-events.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/observe-events.md
+- logical_path: native/guides/observe-events
+
+# Observe events
+
+Subscribe to SDK events before starting operations on your SDK context. Log safe event metadata to correlate your application's requests with SDK activity.
+
+## Attach an event subscriber
+
+These subscribers log event kinds without printing results, decrypted values, or error payloads.
+
+
+### Tab: Go
+
+```go
+subscription, err := sdk.SubscribeEvents(ctx, zama.EventHandlers{
+	OnEvent: func(_ context.Context, correlation zama.EventCorrelation, event zama.SDKEvent) error {
+		log.Printf("SDK event %s (operation %s)", event.Kind, correlation.OperationID)
+		return nil
+	},
+	OnWalletAccountChanged: func(context.Context, zama.EventCorrelation, zama.WalletAccountChanged) error {
+		log.Print("SDK wallet account changed")
+		return nil
+	},
+	OnProgress: func(_ context.Context, _ zama.EventCorrelation, progress zama.OperationProgress) error {
+		log.Printf("SDK progress %s", progress.Kind)
+		return nil
+	},
+})
+if err != nil {
+	return err
+}
+defer subscription.Close()
+```
+
+To subscribe when the context is created, set `config.Events` before `CreateContext` instead. `correlation.OperationID` identifies the RPC operation; the event's `SDKOperationID` identifies the SDK's multi-step operation.
+
+### Tab: Rust
+
+```rust
+use zama_sdk::{EventContext, EventHandler, Notification, async_trait};
+
+pub struct Diagnostics;
+
+#[async_trait]
+impl EventHandler for Diagnostics {
+    async fn on_notification(
+        &self,
+        context: EventContext,
+        notification: Notification,
+    ) -> anyhow::Result<()> {
+        match notification {
+            Notification::Lifecycle(event) => {
+                eprintln!("SDK event {} (sequence {})", event.kind, context.sequence);
+            }
+            Notification::WalletAccountChanged { .. } => eprintln!("SDK wallet account changed"),
+            Notification::Progress(progress) => eprintln!("SDK progress {}", progress.kind),
+            _ => {}
+        }
+        Ok(())
+    }
+}
+```
+
+Pass the handler to the builder with `client.sdk(config).events(Diagnostics).build().await?`. The subscription is active when `build()` returns. Handle unknown notification variants without failing.
+
+
+## Keep delivery responsive
+
+Return promptly from event callbacks. If your log sink fails, return an error: the SDK operation continues. A Go callback panic is reported as `CALLBACK_FAILED`; a Rust callback panic ends the subscription.
+
+The daemon holds at most 256 unacknowledged events per subscription, and a subscriber that falls further behind loses its event channel. Do not use events as a durable audit log or as the only record of a transaction outcome.
+
+A replacement subscription receives future events only. Watch for a closed event channel as described in [Recover from disconnections](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/recover-from-disconnections.md).
+
+## Recover from disconnections
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/native/guides/recover-from-disconnections.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/recover-from-disconnections.md
+- logical_path: native/guides/recover-from-disconnections
+
+# Recover from disconnections
+
+An SDK context uses callback channels for your wallet, your application-owned storage, and events. If one closes, operations that need it fail until you restore it. The clients never retry an interrupted operation or wallet action for you.
+
+## Supervise callback channels
+
+Run a supervisor next to each SDK context. Stop it during normal shutdown so that an intentional close does not trigger recovery.
+
+
+### Tab: Go
+
+Wait for the channel to close, then reattach it. `SignerChannel`, `StorageChannel`, and `EventChannel` select the channel; reattach them with `AttachWallet`, `AttachStorage`, or `SubscribeEvents`.
+
+```go
+go func() {
+	for {
+		err := sdk.WaitChannelFailure(ctx, zama.SignerChannel)
+		if ctx.Err() != nil {
+			return // normal shutdown
+		}
+		log.Printf("signer channel closed: %v", err)
+		if err := sdk.AttachWallet(ctx, signer); err != nil {
+			log.Printf("reattach wallet: %v", err) // the daemon restarted: create a new context
+			return
+		}
+	}
+}()
+```
+
+### Tab: Rust
+
+The Rust client does not reattach channels. Close the SDK context and build a replacement with the same configuration, signer, event handler, and storage binding. This example also needs Tokio's `sync` feature.
+
+```rust
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use zama_sdk::{ApplicationStorage, CallbackChannel, CancellationToken, Client, Sdk, SdkConfig};
+
+// Rebuild with the same configuration, signer, event handler, and storage binding.
+async fn build_sdk(
+    client: &Client,
+    config: SdkConfig,
+    storage: ApplicationStorage,
+) -> zama_sdk::Result<Sdk> {
+    client.sdk(config).storage(storage).build().await
+}
+
+pub async fn supervise(
+    client: Client,
+    config: SdkConfig,
+    storage: ApplicationStorage,
+    current: Arc<RwLock<Sdk>>,
+    shutdown: CancellationToken,
+) {
+    tokio::spawn(async move {
+        loop {
+            let sdk = current.read().await.clone();
+            tokio::select! {
+                _ = shutdown.cancelled() => return,
+                closed = sdk.wait_channel_closed(CallbackChannel::Storage) => {
+                    eprintln!("storage channel closed: {closed:?}");
+                }
+            }
+            let _ = sdk.close().await;
+            match build_sdk(&client, config.clone(), storage.clone()).await {
+                Ok(replacement) => *current.write().await = replacement,
+                Err(error) => {
+                    eprintln!("rebuild SDK context: {error}");
+                    return;
+                }
+            }
+        }
+    });
+}
+```
+
+Clones of an `Sdk` share one SDK context, so closing any clone closes it for all of them.
+
+
+## Restore application work
+
+1. Pause the work that needs the closed channel.
+2. Reattach the channel, or create a new SDK context if the daemon restarted. SDK contexts do not survive a daemon restart.
+3. Reuse the same storage binding and derivation secret, so existing credentials stay valid.
+4. Resume the paused work.
+
+If a write was in progress, follow [Resolve uncertain transaction outcomes](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/uncertain-transaction-outcomes.md) before submitting another one. Before requesting a new wallet signature, check whether the interrupted credential operation already completed.
+
+A new event subscription receives future events only. Read missed state from the contract or your own records.
+
+## Close SDK contexts
+
+Close an SDK context when the workflow or session that owns it ends. In Go, call `sdk.Close` with a fresh, bounded context before closing the client and the Ethereum provider. In Rust, await `sdk.close()` before dropping your application's resources.
+
+Do not clear stored credentials to fix a socket or callback failure. For daemon or storage volume incidents, follow [Upgrade and recover](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/upgrade-and-recover.md).
+
+## Resolve uncertain transaction outcomes
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/native/guides/uncertain-transaction-outcomes.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/uncertain-transaction-outcomes.md
+- logical_path: native/guides/uncertain-transaction-outcomes
+
+# Resolve uncertain transaction outcomes
+
+Check your application's transaction records before repeating an SDK write that timed out, was cancelled, or lost its wallet connection.
+
+
+> [!WARNING]
+> Cancellation stops waiting; it cannot reverse a broadcast. A failed operation or a closed signer channel does not prove that no transaction was sent.
+
+
+Record every transaction hash in your wallet's write path, together with the account, chain, nonce, and operation.
+
+| Result                                                                                 | Next action                                                                  |
+| -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `SIGNING_REJECTED`                                                                     | Request another wallet action only after user approval                       |
+| `SIGNING_FAILED` or `CHAIN_MISMATCH` before broadcast                                  | Correct the wallet or provider configuration                                 |
+| `TRANSACTION_REVERTED`                                                                 | Inspect the revert and fix its cause before submitting another write         |
+| `TRANSACTION_OUTCOME_UNKNOWN`                                                          | Reconcile the recorded hash and account transactions before submitting again |
+| Transport failure or cancellation after the wallet received the write                  | Treat the outcome as uncertain, whatever the error code                      |
+| Cancellation, deadline, account change, or context close before the wallet received it | The operation fails with `CANCELLED`; nothing was sent                       |
+
+`TRANSACTION_OUTCOME_UNKNOWN` also covers a closed signer channel, an invalid wallet reply, or a cancellation after the wallet received the write, even when no hash reached the daemon.
+
+The SDK operation returns only an error code and message, not the hash. In Go, the built-in adapter exposes the hash as `BroadcastUncertainError.Hash` inside your wallet callback, so record it there.
+
+Once a built-in adapter starts sending, cancellation does not interrupt the send. A process crash can still happen before you record the outcome. Check both pending and mined transactions for the account before issuing another write; the pending nonce alone cannot tell a lost send from an accepted one.
+
+To restore a closed signer channel, see [Recover from disconnections](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/recover-from-disconnections.md). To sign outside the SDK operation entirely, use [Offline signing](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/offline.md).
+
+## Deploy in production
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/native/operations/run-in-production.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md
+- logical_path: native/operations/run-in-production
+
+# Deploy in production
+
+
+> [!WARNING]
+> The daemon and its Go and Rust clients are experimental. The wire protocol can change between minor versions, so upgrade the daemon image and the clients together.
+
+
+Deploy one daemon per Go or Rust application instance. Run both on the same host or in the same Kubernetes pod, as the same UID, sharing a private Unix socket directory.
+
+## Prerequisites
+
+- Select the daemon image tag and client version from [Client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md).
+- Reserve one trust domain for each application-and-daemon pair. Read the [daemon trust model](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/concepts/trust-boundary.md).
+- Allow the daemon outbound access to your chain RPC endpoints and relayer.
+- Choose a credential storage backend in [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md), and provision any derivation secret through your secrets manager.
+
+There is no network listener. Keep the application and its daemon on the same host or in the same pod, and don't expose the socket through a network proxy.
+
+## Prepare the socket and storage
+
+1. Create a socket directory owned by the application UID with mode `0700`. The daemon refuses to start when the directory is shared with its group or other users.
+2. For daemon SQLite storage, provision a private writable volume for this daemon and set `ZAMA_SDK_DAEMON_STORAGE_DIR` to its mount path. The daemon creates one `0700` subdirectory per named store.
+3. For application-owned storage, configure the backend in your application. The daemon needs no credential volume.
+
+
+> [!WARNING]
+> Two daemons must not share a SQLite credential volume: each named database is locked to one daemon. Replicas can share application-owned storage, but credential coordination does not span daemons, so concurrent replicas can race on the same user's credentials and cause extra signature prompts.
+
+
+## Run on a host
+
+This command starts the daemon on a Linux host for an application running under your current UID, with daemon SQLite storage enabled:
+
+```bash
+export ZAMA_DAEMON_ROOT="${PWD}/zama-daemon"
+mkdir -p "$ZAMA_DAEMON_ROOT/socket" "$ZAMA_DAEMON_ROOT/storage"
+chmod 700 "$ZAMA_DAEMON_ROOT/socket" "$ZAMA_DAEMON_ROOT/storage"
+
+docker run -d \
+  --name zama-daemon \
+  --user "$(id -u):$(id -g)" \
+  --read-only \
+  --cap-drop ALL \
+  --security-opt no-new-privileges:true \
+  --stop-timeout 150 \
+  --env ZAMA_SDK_DAEMON_SOCKET_PATH=/run/zama/sdk.sock \
+  --env ZAMA_SDK_DAEMON_STORAGE_DIR=/var/lib/zama \
+  --mount "type=bind,src=$ZAMA_DAEMON_ROOT/socket,dst=/run/zama" \
+  --mount "type=bind,src=$ZAMA_DAEMON_ROOT/storage,dst=/var/lib/zama" \
+  zamafhe/sdk-daemon:VERSION
+```
+
+Replace `VERSION` with the release that matches your client. Connect the application to `$ZAMA_DAEMON_ROOT/socket/sdk.sock`. Drop the storage mount and `ZAMA_SDK_DAEMON_STORAGE_DIR` when you use application-owned storage.
+
+For a containerized application, mount the same socket directory into its container and run it as the same UID. On Docker Desktop, share a named volume between the containers; the host can't reach a socket inside the Linux VM through a bind mount.
+
+## Run in Kubernetes
+
+Run the daemon as a second container in your application pod. This pod spec shares an `emptyDir` socket volume, runs both containers as UID `1000`, and gives the daemon a persistent volume for SQLite storage:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-app
+spec:
+  terminationGracePeriodSeconds: 150
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  initContainers:
+    - name: socket-dir
+      image: zamafhe/sdk-daemon:VERSION
+      command: ["mkdir", "-p", "-m", "0700", "/run/zama/socket"]
+      volumeMounts:
+        - { name: zama-socket, mountPath: /run/zama }
+      securityContext: &restricted
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities: { drop: [ALL] }
+  containers:
+    - name: zama-daemon
+      image: zamafhe/sdk-daemon:VERSION
+      env:
+        - { name: ZAMA_SDK_DAEMON_SOCKET_PATH, value: /run/zama/socket/sdk.sock }
+        - { name: ZAMA_SDK_DAEMON_STORAGE_DIR, value: /var/lib/zama }
+      volumeMounts:
+        - { name: zama-socket, mountPath: /run/zama }
+        - { name: zama-storage, mountPath: /var/lib/zama }
+      livenessProbe:
+        exec:
+          command: ["node", "dist/healthcheck.js"]
+        periodSeconds: 10
+        timeoutSeconds: 5
+      securityContext: *restricted
+    - name: app
+      image: your-registry/your-app:VERSION
+      env:
+        - { name: DAEMON_SOCKET, value: /run/zama/socket/sdk.sock }
+      volumeMounts:
+        - { name: zama-socket, mountPath: /run/zama }
+      securityContext: *restricted
+  volumes:
+    - name: zama-socket
+      emptyDir: {}
+    - name: zama-storage
+      persistentVolumeClaim:
+        claimName: zama-daemon-storage
+```
+
+The init container creates a private socket directory inside the shared volume; the daemon checks only that directory. The liveness probe runs the healthcheck bundled in the image and uses the socket path from the container environment.
+
+For several replicas with SQLite storage, give each pod its own `ReadWriteOnce` claim, for example through a StatefulSet `volumeClaimTemplates` entry. Never mount one claim into several pods. With application-owned storage, remove the `zama-storage` volume and variable.
+
+The liveness probe checks that the daemon answers on its socket. It doesn't check RPC or relayer reachability, so gate traffic on checks made by your application.
+
+## Back up daemon SQLite storage
+
+Treat the storage directory and every backup of it as sensitive. Each named store is a separate database in its own subdirectory.
+
+1. Stop application writers and the daemon. The daemon holds each database lock while it runs.
+2. Back up the whole storage directory with your backup tooling, preserving ownership and `0700` permissions.
+3. Keep the derivation secret, if you use one, in your secrets manager. The backup doesn't contain it.
+
+To restore, copy the backup into a private volume for one stopped daemon, check that the daemon UID owns it, then start the matching client and daemon versions. Recreate SDK contexts with the original store names and derivation secret, and confirm a decryption succeeds without a new wallet signature before returning to service.
+
+For application-owned storage, use your backend's own backup and restore procedure while its writers are stopped.
+
+## Verify the deployment
+
+1. Confirm the daemon log contains `Daemon ready.` and the container keeps running.
+2. Confirm the liveness probe or container healthcheck passes.
+3. From your application, create an SDK context with its production configuration and run an operation that reaches the RPC endpoint and relayer your workload uses.
+4. Restart the daemon, recreate the SDK context, and confirm stored credentials are reused without a new wallet signature.
+5. Confirm your application records operation latency and error codes, and detects callback-channel failures.
+
+Use [Monitor and troubleshoot](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md) for operational signals and [Upgrade the daemon](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/upgrade-and-recover.md) for replacements.
+
+## Monitor and troubleshoot
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/native/operations/monitor-and-troubleshoot.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md
+- logical_path: native/operations/monitor-and-troubleshoot
+
+# Monitor and troubleshoot
+
+Monitor daemon-backed operations from your Go or Rust application. Record elapsed time and returned error codes for each operation, and monitor daemon container liveness separately.
+
+## Available signals
+
+| Signal                                           | Meaning                                                                                                               |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| Container healthcheck                            | The daemon answers `GetInfo` on its socket. It does not check RPC or relayer reachability.                            |
+| `Daemon ready.` on stdout                        | The daemon has started its socket server.                                                                             |
+| Startup failure line on stderr and exit code `1` | Configuration or startup failed.                                                                                      |
+| SDK warning and error messages on stderr         | Plain-text SDK diagnostics, without attached data objects.                                                            |
+| Client errors                                    | SDK or daemon code, message, retryability, and a retry delay when available. Transport failures may lack an SDK code. |
+
+The daemon does not expose a metrics endpoint or structured request logs. Use application-observed operation latencies and errors as the service-level signals. Use the socket healthcheck as a liveness probe.
+
+In Go, inspect `SDKError` and `RPCError`. In Rust, inspect `ClientError::kind()` and `ClientError::sdk_error()`. Include operation names and error codes in your metrics without including plaintext values, credentials, or signing payloads.
+
+## Daemon exits at startup
+
+1. Read the startup failure line on stderr.
+2. Confirm `ZAMA_SDK_DAEMON_SOCKET_PATH` is an absolute path and its parent exists.
+3. Check that the socket directory belongs to the daemon UID and has no group or other permissions.
+4. Confirm another daemon is not listening on the configured socket.
+5. Check configured values against the [configuration reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/daemon-configuration.md), then restart.
+
+The daemon reclaims an owned stale socket only after confirming no listener is active. Do not delete a live socket to start a second daemon.
+
+## Healthcheck passes but SDK operations fail
+
+1. Inspect the client error code and operation latency.
+2. Check the SDK context's chain configuration, RPC endpoint, relayer configuration, and authentication.
+3. Verify outbound connectivity from the daemon's environment to those endpoints.
+4. Check whether your application's signer or storage callback channel has terminated.
+
+An available socket does not mean upstream services are available. Restarting a healthy daemon will not correct an upstream outage or invalid credentials.
+
+## Named persistence cannot open
+
+1. Confirm `ZAMA_SDK_DAEMON_STORAGE_DIR` points to the intended private writable volume.
+2. Verify directory and credential-file ownership and permissions under the daemon UID.
+3. Confirm no other daemon uses the same credential volume.
+4. Confirm the filesystem supports reliable local SQLite locking.
+
+A named database opens when an SDK context first selects it, so a successful startup or healthcheck doesn't prove persistent storage works.
+
+## Client reports `STORAGE_FAILED`
+
+1. Pause application operations that use the affected store.
+2. Correct the underlying filesystem problem, such as unavailable storage or exhausted space.
+3. Restart the daemon and recreate SDK contexts with the same store names and derivation secret.
+4. Run a decryption before restoring traffic.
+
+After a SQLite access failure, that store rejects every further access until the daemon restarts. Operations that don't use credentials keep working.
+
+## Signatures are requested unexpectedly
+
+Check whether the application reused the same durable store and derivation secret. Memory storage is lost when its owning process or SDK context ends.
+
+For replicas sharing application-owned storage, inspect concurrent operations on the same user. Coordination is local to each daemon, so races can produce additional signature requests or conflicting credential updates. Application backend methods must support concurrent calls.
+
+## Callback channel closes or a transaction times out
+
+Observe channel termination through the client and follow [Recover from disconnections](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/recover-from-disconnections.md). The clients never replay interrupted operations.
+
+A timeout or cancellation doesn't prove that a credential change or broadcast didn't happen. Check the outcome before retrying; for writes, follow [Resolve uncertain transaction outcomes](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/uncertain-transaction-outcomes.md).
+
+## Daemon restarted unexpectedly
+
+SDK contexts belong to the daemon process and don't survive a restart.
+
+1. Confirm the daemon is running again and its healthcheck passes.
+2. Recreate SDK contexts and callback channels with the same storage configuration and derivation secret.
+3. Check interrupted credential operations and transactions before retrying them.
+4. Run an operation that reaches your RPC endpoint and relayer, then resume traffic.
+
+Daemon memory storage is lost at restart. Application memory storage survives only while your application process keeps running. Lost credentials mean users sign again.
+
+## Upgrade the daemon
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/native/operations/upgrade-and-recover.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/upgrade-and-recover.md
+- logical_path: native/operations/upgrade-and-recover
+
+# Upgrade the daemon
+
+Upgrade the daemon and your Go or Rust application as one pair. The daemon image and the client must run the same version; see [Client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md).
+
+## Choose a rollout
+
+The rollout you can use depends on where credentials live:
+
+| Credential storage                | Rollout                                   | Why                                                                                                            |
+| --------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Application-owned storage         | Rolling or blue/green, with no downtime   | Old and new pairs read the same backend. Overlapping pairs can race on one user's credentials.                 |
+| Daemon SQLite on a per-pod volume | Stop the old pair, then start the new one | Each database is locked to one daemon. In Kubernetes, use the `Recreate` strategy with `ReadWriteOnce` claims. |
+| Daemon memory                     | Either                                    | Nothing is retained; users sign again after the upgrade.                                                       |
+
+SDK contexts and in-flight operations never move between daemons. The new pair creates its own SDK contexts.
+
+## Replace the pair
+
+1. Keep the current application and daemon images available for rollback.
+2. Stop sending new operations to the old pair and let in-flight operations finish.
+3. Close the application's SDK contexts and client connections.
+4. Send `SIGTERM` to the old daemon and wait for it to exit. It waits for SDK work that is still running; the deployment examples allow 150 seconds before a forced stop.
+5. Start the new daemon and application with the same storage configuration and derivation secret.
+6. Recreate SDK contexts, then run an operation that reaches your RPC endpoint and relayer before resuming traffic.
+
+A forced stop during a write can leave its outcome unknown. Follow [Resolve uncertain transaction outcomes](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/uncertain-transaction-outcomes.md) before repeating it.
+
+## Roll back
+
+Stop the new pair and start the previous images with the same storage and derivation secret. If the new version wrote credentials the previous version can't read, restore the storage backup taken before the upgrade; see [Back up daemon SQLite storage](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md#back-up-daemon-sqlite-storage). Never run the old and new daemons against one SQLite volume at the same time.
 
 ## Vault deposits and redemptions
 
@@ -22323,6 +25081,112 @@ invalidateWalletLifecycleQueries(queryClient);
 - [ZamaProvider](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/ZamaProvider.md) — provider setup and hook overview
 - [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useConfidentialBalance.md) — the hook whose cache these keys control
 
+## Go client API
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/native/reference/go-client.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/go-client.md
+- logical_path: native/reference/go-client
+
+# Go client API
+
+The Go package documentation describes the native public interfaces, signatures, and exported types.
+
+After installing the client, print the package reference from your application module:
+
+```sh
+go doc -all github.com/zama-ai/sdk/clients/go/v3
+```
+
+Look up a specific operation with its exported type or method:
+
+```sh
+go doc github.com/zama-ai/sdk/clients/go/v3.SDKContext.Encrypt
+```
+
+`Dial` creates a `Client`; `Client.CreateContext` creates an `SDKContext`. Configuration uses `SDKConfig`, `ChainConfig`, and `SignerConfig`.
+
+The `SDKContext` exposes encryption, decryption, permit management, delegation, and offline preparation methods directly. `Close` releases the context; `Client.Close` closes the connection.
+
+## Rust client API
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/native/reference/rust-client.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/rust-client.md
+- logical_path: native/reference/rust-client
+
+# Rust client API
+
+Rustdoc describes the native public interfaces, signatures, and exported types.
+
+After installing the Rust client in your application, generate and open its reference:
+
+```sh
+cargo doc -p zama_sdk --no-deps --open
+```
+
+`Client::connect` creates a `Client`; `Client::sdk` returns an `SdkBuilder`; `SdkBuilder::build` creates an `Sdk`. Configuration uses `SdkConfig` and `ChainConfig`, with signer and storage configuration on the builder.
+
+The `Sdk` exposes encryption directly. Its `decryption()`, `permits()`, and `offline()` accessors provide operation groups; delegation lives under `sdk.delegations()`. `Sdk::close` releases the context and callback resources.
+
+Enable the `alloy` feature on your application's `zama_sdk` dependency before generating documentation to include Alloy signing and transaction adapters.
+
+## Daemon configuration
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/native/reference/daemon-configuration.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/daemon-configuration.md
+- logical_path: native/reference/daemon-configuration
+
+# Daemon configuration
+
+The daemon reads its process configuration from environment variables at startup. Chain, relayer, and storage choices belong to each SDK context and are set by your application; see [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md).
+
+## Process environment
+
+| Variable                                     | Default              | Purpose                                                                                                                                       |
+| -------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ZAMA_SDK_DAEMON_SOCKET_PATH`                | Required; no default | Absolute path of the Unix socket the daemon listens on. Its parent directory must be private to the daemon UID.                               |
+| `ZAMA_SDK_DAEMON_STORAGE_DIR`                | Unset                | Absolute path of the directory holding daemon SQLite credential stores. Contexts that select named persistent storage fail while it is unset. |
+| `ZAMA_SDK_DAEMON_MAX_MESSAGE_BYTES`          | `4194304`            | Largest request or response message, in bytes. Set the matching limit in the client.                                                          |
+| `ZAMA_SDK_DAEMON_MAX_CONCURRENT_STREAMS`     | Unset (no limit)     | Maximum concurrent gRPC streams per connection. Each attached signer, application storage, or event channel holds one stream.                 |
+| `ZAMA_SDK_DAEMON_MAX_CONTEXTS`               | Unset (no limit)     | Maximum open SDK contexts. Creating another context fails with `RESOURCE_EXHAUSTED`.                                                          |
+| `ZAMA_SDK_DAEMON_MAX_OPERATIONS_PER_CONTEXT` | Unset (no limit)     | Maximum in-flight operations per SDK context. Another operation fails with `RESOURCE_EXHAUSTED`.                                              |
+
+Numeric limits must be positive integers. The daemon exits at startup when a path is relative or a limit is invalid.
+
+The client message limit is set with Go `DialOptions.MaxMessageBytes` or Rust `Client::with_message_limit`.
+
+## Client and daemon compatibility
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/native/reference/client-and-daemon-compatibility.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md
+- logical_path: native/reference/client-and-daemon-compatibility
+
+# Client and daemon compatibility
+
+
+> [!WARNING]
+> The daemon and its Go and Rust clients are experimental. The wire protocol can change between minor versions, so upgrade the daemon image and the clients together.
+
+
+Run the daemon image and your Go or Rust client at exactly the same version. Upgrade the image and clients together; matching only the major and minor versions is insufficient.
+
+| Artifact     | Location                               |
+| ------------ | -------------------------------------- |
+| Daemon image | `zamafhe/sdk-daemon` on Docker Hub     |
+| Rust crate   | `zama_sdk` on crates.io                |
+| Go module    | `github.com/zama-ai/sdk/clients/go/v3` |
+
+The quickstarts use unversioned installation commands, and the daemon image without a tag selects `latest`.
+
+For deployments, record the selected client version and pin the daemon image to its matching release tag. Do not rely on a moving image tag when restarting an existing deployment. Retain the Go module files or your Rust application's lockfile to reproduce the selected dependencies.
+
+The wire protocol is named `v1beta1`. This identifier does not select an SDK release channel or replace the exact-version pairing rule.
+
+Start with the [Go quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/go-quick-start.md) or [Rust quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/rust-quick-start.md). Read [Upgrade the daemon](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/upgrade-and-recover.md) before changing an existing deployment.
+
 ## Architecture
 
 - source_type: official-doc
@@ -22781,6 +25645,97 @@ The token is refreshed before each encrypt/decrypt call. Only POST, PUT, DELETE,
 ## Reporting vulnerabilities
 
 If you discover a security vulnerability in the SDK, report it to **security@zama.ai**. Do not open a public GitHub issue for security reports. See the [Security Policy](https://github.com/zama-ai/sdk/blob/main/SECURITY.md) for full details.
+
+## Daemon architecture
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/native/concepts/architecture.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/concepts/architecture.md
+- logical_path: native/concepts/architecture
+
+# Daemon architecture
+
+The Go and Rust clients run SDK operations through a local Node.js daemon. The daemon runs `@zama-fhe/sdk`, which owns encryption, decryption, credentials, and protocol configuration.
+
+```mermaid
+flowchart LR
+    App[Go or Rust application] <-->|gRPC over private Unix socket| Daemon[Node.js daemon]
+    Daemon --> SDK[TypeScript SDK]
+    SDK --> RPC[Chain RPC]
+    SDK --> Relayer[Relayer]
+    App --> Wallet[Wallet or signing service]
+    App --> Store[Optional application storage]
+```
+
+## Application and daemon responsibilities
+
+Your application creates an SDK context with a chain configuration, an optional signer, and a storage choice. An SDK context is one SDK instance running in the daemon. Close it when that configuration or signer is no longer needed.
+
+The application retains its wallet private key or connects its own signing service. The daemon requests signatures and transaction execution through the client's signer channel. Application-owned storage uses a separate callback channel. Events arrive through an event channel.
+
+The daemon needs outbound access to the configured RPC and relayer. Your application also needs access to dependencies it uses directly, such as a signing service or RPC for contract reads.
+
+## Local deployment
+
+The supported topology is one daemon per application instance, on the same host or in the same Kubernetes pod. Both processes run as the same UID and share a private Unix socket directory.
+
+There is no network listener. A single daemon cannot serve applications across hosts or pods through the provided transport. Scaling the application means deploying another application-and-daemon pair.
+
+Each pair serves one trust domain. SDK contexts separate configuration and lifecycle; they do not isolate untrusted tenants from each other. Read the [trust boundary](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/concepts/trust-boundary.md) before choosing a deployment.
+
+## Storage and replicas
+
+Daemon memory storage ends when its SDK context closes or the daemon exits. Named daemon SQLite storage survives restart. Application-owned storage has the lifetime of your chosen backend.
+
+Use a private SQLite volume for each daemon. Each named database has an exclusive daemon lock; two daemons must not share a credential volume.
+
+Application replicas can share application-owned storage. Credential coordination stays within each daemon, so two replicas can race on the same user's credentials. This can cause extra signature requests or conflicting credential updates. Your backend must support concurrent calls.
+
+Choose a storage backend in [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md), then follow [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md).
+
+## Daemon trust model
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/native/concepts/trust-boundary.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/concepts/trust-boundary.md
+- logical_path: native/concepts/trust-boundary
+
+# Daemon trust model
+
+The daemon is a trusted part of your application. It receives plaintext encryption inputs, decrypts outputs, and uses transport private keys, even when credentials live in application-owned storage.
+
+## Signing authority
+
+The wallet private key stays in your Go or Rust application, or its external signing service. The daemon sends signing requests to your application over the SDK context's signer channel. Your application applies its approval policy and returns a signature or an error.
+
+A signed decryption permit authorizes the transport public key in its payload. The SDK creates and stores the corresponding private key. Keeping the wallet private key outside the daemon does not remove the daemon's access to decryption credentials or plaintext.
+
+Delegation grant and revoke operations can broadcast transactions through your application's signer. Offline preparation returns transaction data for your application to sign and submit separately. Deleting local credentials does not invalidate previously issued signatures or revoke on-chain delegation.
+
+## Socket access
+
+
+> [!WARNING]
+> Serve one trust domain per daemon. Every process with socket access can create SDK contexts and call credential-management operations. SDK contexts are not an authorization boundary.
+
+
+The socket directory must belong to the daemon's UID and exclude group and other access. The application runs as that same UID. There is no TCP listener, application authentication, or per-context access control.
+
+Processes with the same UID, host administrators, and operators with container control are outside this isolation boundary.
+
+## Stored credentials
+
+Treat credential stores and backups as sensitive material. The daemon does not add at-rest encryption to SQLite or the credential bytes sent to application-owned storage.
+
+The SDK can protect stored transport keys using a derivation secret supplied by your application. Keep the required secret available when recreating SDK contexts. The daemon never stores the secret with the credentials. Set it up in [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md).
+
+Named SQLite stores require a local filesystem with reliable locking and a private volume per daemon. Application-owned storage can be shared across replicas, but credential coordination does not span daemons. Concurrent credential changes can race.
+
+## Logs and diagnostics
+
+The daemon emits SDK warning and error messages as plain text without their attached data objects. It does not log request payloads, signatures, keys, or balances. Your application controls its own logs; avoid logging plaintext, credentials, signing payloads, and secrets.
+
+Apply these boundaries when you [deploy the daemon in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md).
 
 ## Official Examples
 
@@ -26091,3 +29046,61 @@ If you need a wagmi-based setup or another integration pattern, start from the [
 - [React reference](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/react/README.md) documents all hooks, provider components, and query helpers.
 - [Configuration](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/configuration.md), [Authentication](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/authentication.md), [Next.js SSR](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/nextjs-ssr.md), and other guides cover focused topics such as browser extensions, balances, and transfers.
 - [Core SDK reference](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/sdk/README.md) documents lower-level SDK classes, adapters, and utilities.
+
+## Go client
+
+- source_type: package-readme
+- source_path: clients/go/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/clients/go/README.md
+- logical_path: clients/go/README
+
+# Zama SDK for Go
+
+Use the Zama SDK from Go to encrypt inputs for confidential smart contracts and decrypt the results your account is authorized to read. The client talks to a local SDK daemon that runs alongside your application over a private Unix socket.
+
+The daemon and its Go and Rust clients are experimental. The wire protocol can change between minor versions, so upgrade the daemon image and the clients together.
+
+## Installation
+
+```sh
+go get github.com/zama-ai/sdk/clients/go/v3
+```
+
+Run the `zamafhe/sdk-daemon` image at exactly the same version as the client.
+
+## Documentation
+
+Start with the Go quick start in the [Zama SDK documentation](https://docs.zama.org/protocol/sdk/beta/overview#go-and-rust). It covers installing the client, starting the daemon, configuration, wallets, and production deployment.
+
+Run `go doc -all github.com/zama-ai/sdk/clients/go/v3` for the package reference.
+
+To build or test the client, see [Contributing](https://github.com/zama-ai/sdk/blob/main/CONTRIBUTING.md#daemon-and-native-clients).
+
+## Rust client
+
+- source_type: package-readme
+- source_path: clients/rust/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/clients/rust/README.md
+- logical_path: clients/rust/README
+
+# Zama SDK for Rust
+
+Use the Zama SDK from Rust to encrypt inputs for confidential smart contracts and decrypt the results your account is authorized to read. The client talks to a local SDK daemon that runs alongside your application over a private Unix socket.
+
+The daemon and its Go and Rust clients are experimental. The wire protocol can change between minor versions, so upgrade the daemon image and the clients together.
+
+## Installation
+
+```sh
+cargo add zama_sdk
+```
+
+Run the `zamafhe/sdk-daemon` image at exactly the same version as the client. Enable the `alloy` feature for the Alloy signing and transaction adapters.
+
+## Documentation
+
+Start with the Rust quick start in the [Zama SDK documentation](https://docs.zama.org/protocol/sdk/beta/overview#go-and-rust). It covers installing the client, starting the daemon, configuration, wallets, and production deployment.
+
+The crate reference is on [docs.rs](https://docs.rs/zama_sdk).
+
+To build or test the client, see [Contributing](https://github.com/zama-ai/sdk/blob/main/CONTRIBUTING.md#daemon-and-native-clients).
