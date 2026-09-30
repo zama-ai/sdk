@@ -14,15 +14,18 @@ export interface GroupRedeemParams extends VaultGroupJoinOptions {
 export function groupRedeemMutationOptions(
   group: VaultGroup,
 ): MutationFactoryOptions<
-  readonly ["zama.vaultGroup.redeem", { cAsset: Address; vaults: readonly Address[] }],
+  readonly ["zama.vaultGroup.redeem", { cAsset: Address; batchers: readonly Address[] }],
   GroupRedeemParams,
   VaultGroupJoinResult
 > {
   return {
-    // Keyed on the vaults, not the group's id, which two groups may share.
+    // Keyed on the batchers, not the group's id, which two groups may share.
     mutationKey: [
       "zama.vaultGroup.redeem",
-      { cAsset: group.cAsset, vaults: group.vaults.map((member) => member.vault) },
+      {
+        cAsset: group.cAsset,
+        batchers: group.members.map(({ vault }) => vault.redeemBatcher.address),
+      },
     ] as const,
     mutationFn: async ({ vaultId, amount, ...rest }) => group.redeem(vaultId, amount, rest),
   };

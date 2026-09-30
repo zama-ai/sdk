@@ -2,7 +2,7 @@ import { encodeAbiParameters, getAbiItem, type Address, type Hex } from "viem";
 import type { EncryptedValue } from "../relayer/types";
 import { vaultRouterAbi } from "./abi/vault-router.abi";
 
-/** The most vaults a group may name: ten, the router's documented leg limit, so a group is always exitable in one submission. */
+/** The most vaults a group may name: the router's per-transaction leg limit on the pull path, so a group is always exitable. */
 export const MAX_GROUP_VAULTS = 10;
 
 /** One vault's share of a fan-out. */

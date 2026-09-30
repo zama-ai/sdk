@@ -8,24 +8,28 @@ const OTHER_REDEEM = "0x3333333333333333333333333333333333333333" as Address;
 
 function config(redeem: Address): VaultGroupConfig {
   return {
-    id: "solo",
+    id: "pair",
     cAsset: "0x4444444444444444444444444444444444444444",
+    router: "0x5555555555555555555555555555555555555555",
     vaults: [
       {
         id: "alpha",
-        vault: "0x6666666666666666666666666666666666666666",
-        cShare: "0x7777777777777777777777777777777777777777",
-        batchers: { deposit: "0x1111111111111111111111111111111111111111", redeem },
+        depositBatcher: "0x1111111111111111111111111111111111111111",
+        redeemBatcher: redeem,
+      },
+      {
+        id: "beta",
+        depositBatcher: "0x6666666666666666666666666666666666666666",
+        redeemBatcher: "0x7777777777777777777777777777777777777777",
       },
     ],
   };
 }
 
 describe("useVaultGroup", () => {
-  test("keeps one instance across renders with a fresh but equal config object", ({
-    renderWithProviders,
-  }) => {
-    const { result, rerender } = renderWithProviders(() => useVaultGroup(config(REDEEM)));
+  test("keeps one instance across renders with the same config", ({ renderWithProviders }) => {
+    const stable = config(REDEEM);
+    const { result, rerender } = renderWithProviders(() => useVaultGroup(stable));
     const first = result.current;
 
     rerender();
@@ -33,24 +37,15 @@ describe("useVaultGroup", () => {
     expect(result.current).toBe(first);
   });
 
-  test("rebuilds the group when the config's contents change", ({ renderWithProviders }) => {
-    let redeem = REDEEM;
-    const { result, rerender } = renderWithProviders(() => useVaultGroup(config(redeem)));
+  test("builds a new group when the config object changes", ({ renderWithProviders }) => {
+    let current = config(REDEEM);
+    const { result, rerender } = renderWithProviders(() => useVaultGroup(current));
     const first = result.current;
 
-    redeem = OTHER_REDEEM;
+    current = config(OTHER_REDEEM);
     rerender();
 
     expect(result.current).not.toBe(first);
-    expect(result.current.vaults[0]?.batchers.redeem).toBe(OTHER_REDEEM);
-  });
-
-  test("shares one instance between hooks that name the same group", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => [
-      useVaultGroup(config(REDEEM)),
-      useVaultGroup(config(REDEEM)),
-    ]);
-
-    expect(result.current[0]).toBe(result.current[1]);
+    expect(result.current.members[0]?.vault.redeemBatcher.address).toBe(OTHER_REDEEM);
   });
 });

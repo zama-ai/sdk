@@ -7,7 +7,7 @@ description: A set of confidential ERC-4626 vaults sharing one asset, joined tog
 
 `VaultGroup` joins several confidential ERC-4626 vaults as one. A deposit into one member joins _every_ member's current batch: the chosen vault carries the amount, the rest carry an encrypted zero, and an observer sees the same set of joins whichever vault was picked. See the [Vault groups](../../guides/vault-groups.md) guide for why.
 
-A group of more than one vault submits through the on-chain router in one transaction. A single-vault group uses no router, even if one is configured, and joins its batcher directly, the way [`Vault`](Vault.md) does.
+A group has at least two vaults and submits through the on-chain router in one transaction. For a single vault, use [`Vault`](Vault.md).
 
 ## Import
 
@@ -29,9 +29,13 @@ const group = createVaultGroup(sdk, {
   vaults: [
     {
       id: "alpha",
-      vault: "0xAlphaVault",
-      cShare: "0xAlphaShares",
-      batchers: { deposit: "0xAlphaDepositBatcher", redeem: "0xAlphaRedeemBatcher" },
+      depositBatcher: "0xAlphaDeposit",
+      redeemBatcher: "0xAlphaRedeem",
+    },
+    {
+      id: "beta",
+      depositBatcher: "0xBetaDeposit",
+      redeemBatcher: "0xBetaRedeem",
     },
     // …up to MAX_GROUP_VAULTS members
   ],
@@ -40,31 +44,32 @@ const group = createVaultGroup(sdk, {
 const { joins } = await group.deposit("alpha", 1_000_000n);
 ```
 
-`createVaultGroup` is a thin factory over `new VaultGroup(sdk, config)`; both take the same arguments.
-
-The constructor throws [`ConfigurationError`](errors.md#configurationerror) for a group with no members, more than `MAX_GROUP_VAULTS` (10, the [documented leg limit](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#leg-limits)) members, a member id, `vault`, `cShare` or batcher address that appears more than once, or more than one member and no `router`. Ids are matched exactly; addresses are compared after checksumming.
+The constructor throws [`ConfigurationError`](errors.md#configurationerror) for fewer than two members, more than `MAX_GROUP_VAULTS` (10, the [documented leg limit](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#leg-limits)) members, a duplicate member id, a `vault` address given for more than one member, or a batcher address that appears more than once. Ids are matched exactly; addresses are compared after checksumming.
 
 ### VaultGroupConfig
 
 ```ts
-import { type VaultGroupConfig, type VaultMemberConfig } from "@zama-fhe/sdk/vaults";
+import {
+  type VaultGroupConfig,
+  type VaultMemberConfig,
+} from "@zama-fhe/sdk/vaults";
 ```
 
-| Field    | Type                           | Required       | Description                                                                                                           |
-| -------- | ------------------------------ | -------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `id`     | `string`                       | yes            | Stable identifier for the group, used in error messages.                                                              |
-| `cAsset` | `Address`                      | yes            | The confidential wrapper of the asset every member takes deposits in.                                                 |
-| `vaults` | `readonly VaultMemberConfig[]` | yes            | The members, in the order their legs are submitted. That order is visible on chain, so treat it as part of the group. |
-| `router` | `Address`                      | for 2+ members | The router that fans a submission out across the members. Unused by a group of one, which joins its batcher directly. |
+| Field    | Type                           | Description                                                                                                                          |
+| -------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`     | `string`                       | Stable identifier for the group, used in error messages.                                                                             |
+| `cAsset` | `Address`                      | The confidential wrapper of the asset every member takes deposits in.                                                                |
+| `router` | `Address`                      | The router that fans a submission out across the members.                                                                            |
+| `vaults` | `readonly VaultMemberConfig[]` | The members, in the order their legs are submitted (at least two). That order is visible on chain, so treat it as part of the group. |
 
-Each `VaultMemberConfig` has:
+`VaultMemberConfig` extends [`VaultAddresses`](Vault.md#vaultaddresses) with the `id` callers pass to `deposit` / `redeem` to pick the vault:
 
-| Field      | Type                                    | Description                                                                           |
-| ---------- | --------------------------------------- | ------------------------------------------------------------------------------------- |
-| `id`       | `string`                                | The identifier callers pass to `deposit` / `redeem` to pick this vault.               |
-| `vault`    | `Address`                               | The ERC-4626 vault contract, as both of its batchers report it.                       |
-| `cShare`   | `Address`                               | The confidential wrapper of this vault's shares — the token its redeem batcher pulls. |
-| `batchers` | `{ deposit: Address; redeem: Address }` | This vault's deposit and redeem batchers.                                             |
+| Field            | Type      | Description                                                                                                 |
+| ---------------- | --------- | ----------------------------------------------------------------------------------------------------------- |
+| `id`             | `string`  | The identifier callers pass to `deposit` / `redeem` to pick this vault.                                     |
+| `vault`          | `Address` | Optional. The ERC-4626 vault contract; when given, both batchers must report it. Otherwise read from chain. |
+| `depositBatcher` | `Address` | This vault's deposit batcher.                                                                               |
+| `redeemBatcher`  | `Address` | This vault's redeem batcher. The share token is read from it on chain.                                      |
 
 ## Properties
 
@@ -86,29 +91,35 @@ The group's identifier, as configured.
 
 The shared confidential asset wrapper, checksummed.
 
-### vaults
+### router
 
-`readonly VaultMemberConfig[]`
+`Address`
 
-The members in leg order, with every address checksummed.
+The router every submission goes through, checksummed.
+
+### members
+
+`readonly VaultGroupMember[]`
+
+The members in leg order. `VaultGroupMember` is `{ id: string; vault: Vault }`: the id callers pass to `deposit` / `redeem`, and the [`Vault`](Vault.md) behind it.
 
 ## Reads
 
 ### member
 
-`(vaultId: string) => VaultMemberConfig`
+`(vaultId: string) => VaultGroupMember`
 
 One member by its id. Throws [`ConfigurationError`](errors.md#configurationerror) if the group has no such member.
 
 ```ts
-const { vault, cShare } = group.member("alpha");
+const redeemBatcher = group.member("alpha").vault.redeemBatcher;
 ```
 
 ### isAssetListed
 
 `() => Promise<boolean>`
 
-Whether the router's registry lists `cAsset`, which a deposit through the router requires. Always `true` for a single-vault group, which uses no router. Listings are governed on chain and can be revoked, so the answer is not cached; the registry's address, which is immutable, is read once.
+Whether the router's registry lists `cAsset`, which a deposit requires. Listings are governed on chain and can be revoked, so the answer is not cached; the registry's address, which is immutable, is read once.
 
 ## Writes
 
@@ -120,10 +131,10 @@ Deposits `amount` of the shared asset into the member `vaultId`, joining every m
 
 In order, the call:
 
-1. Checks the caller's confidential balance of `cAsset` (skippable with `skipBalanceCheck`).
-2. Resolves the active deposit batcher of every member and builds one leg per member — the chosen one carrying `amount`, the rest `0`.
-3. Checks each leg's batcher reports `cAsset` as the token it pulls and the member's `vault` as its vault, and that it is not paused. The two config reads are cached per batcher; `paused` is read every time.
-4. Checks the asset is listed in the router's registry, encrypts the total and the allocation, and sends one `confidentialTransferAndCall` of the asset to the router. A single-vault group instead grants its batcher an operator approval on the asset if needed and submits one `join`, encrypted against that batcher.
+1. Builds one leg per member from its configured deposit batcher — the chosen one carrying `amount`, the rest `0` — and verifies each member against chain: both of its batchers report the same vault (and the configured `vault`, if given), the deposit batcher pulls `cAsset`, and it is not paused.
+2. Checks the caller's confidential balance of `cAsset` (skippable with `skipBalanceCheck`).
+3. Checks the router's registry lists `cAsset`.
+4. Encrypts the total against `cAsset` and the allocation against the router, and sends one `confidentialTransferAndCall` of the asset to the router. No operator is granted.
 5. Reads the `Joined` event of every leg's batcher from the receipt and returns them.
 
 ```ts
@@ -132,11 +143,11 @@ const { txHash, joins } = await group.deposit("alpha", 1_000_000n);
 
 Unlike `Vault.deposit` there is no `beneficiary`: the router credits the account the legs came from.
 
-A submission through the router emits a [`VaultSubmitted`](ZamaSDK.md#events) event with `vaultOperation: "routerJoin"` tagged with the router's address, in either direction. A single-vault group emits `vaultOperation: "join"` tagged with the batcher, as `Vault` does.
+The submission emits a [`VaultSubmitted`](ZamaSDK.md#events) event with `vaultOperation: "routerJoin"` tagged with the router's address, in either direction.
 
 **Throws:**
 
-- [`ConfigurationError`](errors.md#configurationerror) — unknown `vaultId`, or a batcher that reports a different token or vault than the member is configured with. Thrown before any grant or transfer.
+- [`ConfigurationError`](errors.md#configurationerror) — unknown `vaultId`, or a member whose batchers disagree with its config or pull a token other than `cAsset`. Thrown before any grant or transfer.
 - [`VaultBatcherPausedError`](errors.md#vaultbatcherpausederror) — a member's batcher is paused, so the submission would revert. Names the member.
 - [`SignerNotConfiguredError`](errors.md#signernotconfigurederror) — no signer on the SDK.
 - [`InsufficientConfidentialBalanceError`](errors.md#insufficientconfidentialbalanceerror) — the asset balance is less than `amount`.
@@ -147,13 +158,21 @@ A submission through the router emits a [`VaultSubmitted`](ZamaSDK.md#events) ev
 
 `(vaultId: string, amount: bigint, options?: VaultGroupJoinOptions) => Promise<VaultGroupJoinResult>`
 
-Redeems `amount` shares of the member `vaultId` by joining every member's current redeem batch, each leg spending its own vault's share token. Same flow as `deposit`, except that the router pulls each share token and so is granted an operator approval on every member's `cShare` that lacks one before the join. Each grant is its own wallet prompt, so a first redemption from a group of N vaults can ask the user to sign up to N + 1 times. `amount` is denominated in **shares**, as with `Vault.redeem`.
+Redeems `amount` shares of the member `vaultId` by joining every member's current redeem batch, each leg spending its own vault's share token. `amount` is denominated in **shares**, as with `Vault.redeem`. In order, the call:
+
+1. Builds one leg per member from its configured redeem batcher and verifies each member as `deposit` does, except that the share token of each member is read from its redeem batcher.
+2. Checks the caller's balance of the chosen member's share token (skippable with `skipBalanceCheck`).
+3. Reads the router's registry address — the check that `router` is a router — before granting anything.
+4. Encrypts the allocation against the router.
+5. Grants the router an operator approval on each share token that lacks one. Each grant is its own wallet prompt, so a first redemption from a group of N vaults can ask the user to sign up to N + 1 times.
+6. Submits the router `join`.
+7. Reads the `Joined` events.
 
 ```ts
 const { joins } = await group.redeem("alpha", 500n);
 ```
 
-Throws the same errors as `deposit`, checking the balance of the chosen member's `cShare` instead of `cAsset`, except `UnlistedConfidentialTokenError`: only a pushed deposit is gated on the registry listing.
+Throws the same errors as `deposit`, except `UnlistedConfidentialTokenError`: redemption is not gated on the listing.
 
 ### VaultGroupJoinOptions
 
@@ -161,34 +180,38 @@ Throws the same errors as `deposit`, checking the balance of the chosen member's
 import { type VaultGroupJoinOptions } from "@zama-fhe/sdk/vaults";
 ```
 
-| Option             | Type      | Default      | Description                                                                                                                                                                                                                                              |
-| ------------------ | --------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `operatorUntil`    | `number`  | now + 1 hour | Unix timestamp (seconds) until which an operator grant made for this submission is valid: the router's on each share token for a redemption, or the batcher's on the joined token for a single-vault group. Only used when a grant isn't already active. |
-| `skipBalanceCheck` | `boolean` | `false`      | Skip the confidential-balance pre-flight. A short balance then joins every batch with an encrypted zero rather than reverting.                                                                                                                           |
+| Option             | Type      | Default      | Description                                                                                                                                                                          |
+| ------------------ | --------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `operatorUntil`    | `number`  | now + 1 hour | Unix timestamp (seconds) until which the router's operator grant on each share token is valid, for a redemption that has to make one. Unused by a deposit, which grants no operator. |
+| `skipBalanceCheck` | `boolean` | `false`      | Skip the confidential-balance pre-flight. A short balance then joins every batch with an encrypted zero rather than reverting.                                                       |
 
 ## VaultGroupJoinResult
 
 ```ts
-import { type VaultGroupJoinResult, type VaultGroupJoin } from "@zama-fhe/sdk/vaults";
+import {
+  type VaultGroupJoinResult,
+  type VaultGroupJoin,
+} from "@zama-fhe/sdk/vaults";
 ```
 
 `VaultGroupJoinResult` extends `TransactionResult`, like `JoinResult` does:
 
-| Field     | Type                        | Description                                                                               |
-| --------- | --------------------------- | ----------------------------------------------------------------------------------------- |
-| `txHash`  | `Hex`                       | The one transaction: through the router, or the single batcher join of a one-vault group. |
-| `receipt` | `TransactionReceipt`        | Its receipt.                                                                              |
-| `vaultId` | `string`                    | The member the caller chose.                                                              |
-| `joins`   | `readonly VaultGroupJoin[]` | One entry per leg, in group order — the decoys included.                                  |
+| Field     | Type                        | Description                                              |
+| --------- | --------------------------- | -------------------------------------------------------- |
+| `txHash`  | `Hex`                       | The one transaction, through the router.                 |
+| `receipt` | `TransactionReceipt`        | Its receipt.                                             |
+| `vaultId` | `string`                    | The member the caller chose.                             |
+| `joins`   | `readonly VaultGroupJoin[]` | One entry per leg, in group order — the decoys included. |
 
 Each `VaultGroupJoin` has:
 
-| Field                      | Type             | Description                                                                                                                         |
-| -------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `vaultId`                  | `string`         | The member this leg belongs to.                                                                                                     |
-| `batcher`                  | `Address`        | The batcher it joined, as resolved at submission time. Claim, quit and batch state happen here: `createVaultBatcher(sdk, batcher)`. |
-| `batchId`                  | `bigint`         | The batch the join landed in.                                                                                                       |
-| `confidentialJoinedAmount` | `EncryptedValue` | The encrypted amount credited — zero for every leg but the chosen one.                                                              |
+| Field                      | Type             | Description                                                                                                    |
+| -------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------- |
+| `vaultId`                  | `string`         | The member this leg belongs to.                                                                                |
+| `batcher`                  | `Address`        | The configured batcher it joined. Claim, quit and batch state happen here: `createVaultBatcher(sdk, batcher)`. |
+| `token`                    | `Address`        | The token the leg spent: `cAsset` for a deposit, the member's share token for a redemption.                    |
+| `batchId`                  | `bigint`         | The batch the join landed in.                                                                                  |
+| `confidentialJoinedAmount` | `EncryptedValue` | The encrypted amount credited — zero for every leg but the chosen one.                                         |
 
 ## TanStack Query helpers
 
@@ -202,8 +225,8 @@ import {
 
 The React hooks are built on these; they are exported for non-React TanStack Query consumers and for custom compositions.
 
-- `groupDepositMutationOptions(group)` / `groupRedeemMutationOptions(group)` — `group.deposit` / `group.redeem` as mutations taking `{ vaultId, amount, ...VaultGroupJoinOptions }`. Keyed on the group's `cAsset` and vault addresses rather than its `id`.
-- `invalidateAfterGroupJoin(queryClient, { tokens, batchers })` — what the group mutation hooks call on success: invalidates the balance and operator-status caches of every token a leg spent and the batch reads of every batcher a leg joined.
+- `groupDepositMutationOptions(group)` / `groupRedeemMutationOptions(group)` — `group.deposit` / `group.redeem` as mutations taking `{ vaultId, amount, ...VaultGroupJoinOptions }`. Keyed on `["zama.vaultGroup.deposit", { cAsset, batchers }]` (redeem likewise), where `batchers` are the direction's batcher addresses, rather than the group's `id`.
+- `invalidateAfterGroupJoin(queryClient, { tokens, batchers })` — what the group mutation hooks call on success: invalidates the balances of the tokens and the batch reads of the batchers. The redeem hook additionally invalidates operator status for each share token.
 
 See [Query keys → `vaultQueryKeys`](../react/query-keys.md#vaultquerykeys) for the cache keys.
 

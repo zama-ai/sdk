@@ -31,8 +31,6 @@ describe("encodeAllocationData", () => {
   });
 
   test("produces exactly the arguments of a `join` call", () => {
-    // The router's push entry point decodes its `data` into the same pair
-    // `join` takes, so the two encodings have to stay identical.
     const call = encodeFunctionData({
       abi: vaultRouterAbi,
       functionName: "join",

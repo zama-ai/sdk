@@ -302,7 +302,7 @@ matchZamaError(error, {
 
 **Code:** `UNLISTED_CONFIDENTIAL_TOKEN`
 
-Thrown by `VaultGroup.deposit()` on a group of more than one vault when the registry the router checks does not list the confidential token. The router rejects a pushed transfer of an unlisted token on chain, so the SDK refuses before the caller pays for a reverted transaction. The error carries `token` and `registry`.
+Thrown by `VaultGroup.deposit()` when the registry the router checks does not list the confidential token. The router rejects a pushed transfer of an unlisted token on chain, so the SDK refuses before the caller pays for a reverted transaction. The error carries `token` and `registry`.
 
 **How to handle:** Not retryable. Listings are governed on chain and can be added or revoked at any time, so check the group's asset against the registry the router names. `VaultGroup.isAssetListed()` gives the same answer without throwing.
 

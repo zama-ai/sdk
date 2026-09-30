@@ -1,63 +1,65 @@
 import { getAddress, type Address } from "viem";
-import { confidentialTransferAndCallContract } from "../contracts";
+import {
+  confidentialTransferAndCallContract,
+  isConfidentialTokenValidContract,
+} from "../contracts";
 import {
   ConfigurationError,
-  EncryptionFailedError,
   SignerNotConfiguredError,
   TransactionRevertedError,
   UnlistedConfidentialTokenError,
   VaultBatcherPausedError,
 } from "../errors";
-import type { TransactionOperation } from "../events/sdk-events";
 import type { EncryptedValue } from "../relayer/types";
-import { Token } from "../token";
-import type { TransactionResult, WriteContractConfig } from "../types";
-import type { RawLog } from "../types/transaction";
+import type { WrappedToken } from "../token";
+import type { GenericSigner, TransactionResult, WriteContractConfig } from "../types";
 import { requireAlignedWalletAccount } from "../utils/alignment";
 import { assertConfidentialBalance } from "../utils/assert-balance";
 import { submitTransaction as submitSdkTransaction } from "../utils/submit-transaction";
 import type { ZamaSDK } from "../zama-sdk";
-import { encodeAllocationData, MAX_GROUP_VAULTS, type AllocationLeg } from "./allocation";
-import { joinContract, routerJoinContract } from "./contracts";
-import { findJoined } from "./events";
-import type { JoinOptions } from "./types";
-import { VaultBatcher } from "./vault-batcher";
-import { encryptAllocation, isTokenListed, readTokenWrapperRegistry } from "./vault-router";
+import { encodeAllocationData, MAX_GROUP_VAULTS } from "./allocation";
+import { routerJoinContract, tokenWrapperRegistryContract } from "./contracts";
+import { encryptAllocation, encryptEuint64 } from "./encrypt";
+import { takeJoined } from "./events";
+import { ensureOperator } from "./operator";
+import type { JoinOptions, VaultAddresses } from "./types";
+import { Vault } from "./vault";
+import { memoizeAddressRead, type VaultBatcher } from "./vault-batcher";
 
-type BatcherDirection = "deposit" | "redeem";
+type Direction = "deposit" | "redeem";
 
-/** A vault in a group, with the batcher a leg to it joins in each direction. */
-export interface VaultMemberConfig {
+/** One vault of a group. */
+export interface VaultMemberConfig extends VaultAddresses {
   /** What callers pass to `deposit` and `redeem` to pick this vault. */
   readonly id: string;
-  /** The ERC-4626 vault contract, as both batchers report it. */
-  readonly vault: Address;
-  /** The confidential wrapper of this vault's shares, which its redeem batcher pulls. */
-  readonly cShare: Address;
-  /** The batcher a leg to this vault joins, per direction. */
-  readonly batchers: { readonly deposit: Address; readonly redeem: Address };
 }
 
-/** What {@link createVaultGroup} takes: the shared asset, the members in leg order, and the router that reaches them. */
+/** What {@link createVaultGroup} takes. */
 export interface VaultGroupConfig {
   /** Names the group in error messages. */
   readonly id: string;
   /** The confidential wrapper of the asset every member takes deposits in. */
   readonly cAsset: Address;
-  /** The members, in the order their legs are submitted. */
+  /** The router that fans a submission out across the members. */
+  readonly router: Address;
+  /** The members, in the order their legs are submitted. At least two: a single vault is a {@link Vault}. */
   readonly vaults: readonly VaultMemberConfig[];
-  /**
-   * The fan-out router. Required for a group of more than one vault, and
-   * unused by a group of one, which joins its batcher directly.
-   */
-  readonly router?: Address;
+}
+
+/** A member of a {@link VaultGroup}. */
+export interface VaultGroupMember {
+  /** What callers pass to `deposit` and `redeem` to pick this vault. */
+  readonly id: string;
+  /** The vault, whose batchers are where claims and quits happen. */
+  readonly vault: Vault;
 }
 
 /** Options for {@link VaultGroup.deposit} and {@link VaultGroup.redeem}. */
 export interface VaultGroupJoinOptions extends JoinOptions {
   /**
-   * Unix timestamp until which an operator grant made for this submission is
-   * valid. Only used where no grant is active. Defaults to now + 1 hour.
+   * Unix timestamp until which the router's operator grant on each share
+   * token is valid, for a redemption that has to make one. Unused by a
+   * deposit, which grants no operator. Defaults to now + 1 hour.
    */
   operatorUntil?: number;
 }
@@ -68,6 +70,8 @@ export interface VaultGroupJoin {
   vaultId: string;
   /** The batcher this leg joined, where its claim and quit happen. */
   batcher: Address;
+  /** The token this leg spent: `cAsset` for a deposit, the member's share token for a redemption. */
+  token: Address;
   /** The batch the leg landed in; what that batcher's `claim` and `quit` take. */
   batchId: bigint;
   /**
@@ -86,9 +90,24 @@ export interface VaultGroupJoinResult extends TransactionResult {
   joins: readonly VaultGroupJoin[];
 }
 
-interface GroupLeg extends AllocationLeg {
-  readonly vaultId: string;
+interface GroupLeg {
+  readonly member: VaultGroupMember;
+  readonly batcher: VaultBatcher;
+  readonly token: WrappedToken;
+  readonly amount: bigint;
 }
+
+// Which batcher a direction joins, and the token that batcher pulls.
+const SIDES = {
+  deposit: {
+    batcher: (vault: Vault) => vault.depositBatcher,
+    token: (vault: Vault) => vault.cAsset(),
+  },
+  redeem: {
+    batcher: (vault: Vault) => vault.redeemBatcher,
+    token: (vault: Vault) => vault.cShare(),
+  },
+} as const;
 
 function duplicate<T>(values: readonly T[]): T | undefined {
   const seen = new Set<T>();
@@ -102,10 +121,9 @@ function duplicate<T>(values: readonly T[]): T | undefined {
 }
 
 /**
- * A set of vaults that take deposits in the same confidential asset, joined as
- * one: a deposit into one member joins *every* member's batch, the chosen
- * vault with the amount and the rest with an encrypted zero, so callers get a
- * batch position on every member.
+ * Vaults that take deposits in the same confidential asset, joined as one
+ * through the router: a deposit into one member joins *every* member's batch,
+ * the chosen vault with the amount and the rest with an encrypted zero.
  */
 export class VaultGroup {
   /** The SDK the group reads and writes through. */
@@ -114,83 +132,63 @@ export class VaultGroup {
   readonly id: string;
   /** The shared asset wrapper, checksummed. */
   readonly cAsset: Address;
-  /** The members in leg order, every address checksummed. */
-  readonly vaults: readonly VaultMemberConfig[];
-  // Unset for a group of one, which joins its batcher directly even if a router is configured.
-  readonly #router: Address | undefined;
-  // One instance per token, so repeated submissions reuse its decrypted-balance cache.
-  readonly #tokens = new Map<Address, Token>();
-  // One instance per batcher, so the reads that check the config are made once.
-  readonly #batchers = new Map<Address, VaultBatcher>();
-  // The promise is cached, not just the value, so concurrent readers share one lookup.
-  #registry: Promise<Address> | null = null;
+  /** The router every submission goes through, checksummed. */
+  readonly router: Address;
+  /** The members in leg order. */
+  readonly members: readonly VaultGroupMember[];
+
+  readonly #registry: () => Promise<Address>;
 
   constructor(sdk: ZamaSDK, config: VaultGroupConfig) {
-    if (config.vaults.length === 0) {
-      throw new ConfigurationError(`Vault group "${config.id}" names no vaults`);
+    if (config.vaults.length < 2) {
+      throw new ConfigurationError(
+        `Vault group "${config.id}" names ${config.vaults.length} vault(s); a group needs at least two, and a single vault is a Vault`,
+      );
     }
     if (config.vaults.length > MAX_GROUP_VAULTS) {
       throw new ConfigurationError(
         `Vault group "${config.id}" names ${config.vaults.length} vaults, above the ${MAX_GROUP_VAULTS} a submission can carry`,
       );
     }
-    const vaults = config.vaults.map((member) => ({
+    const members = config.vaults.map((member) => ({
       id: member.id,
-      vault: getAddress(member.vault),
-      cShare: getAddress(member.cShare),
-      batchers: {
-        deposit: getAddress(member.batchers.deposit),
-        redeem: getAddress(member.batchers.redeem),
-      },
+      vault: new Vault(sdk, member),
     }));
-    const duplicateId = duplicate(vaults.map((member) => member.id));
+    const duplicateId = duplicate(members.map((member) => member.id));
     if (duplicateId !== undefined) {
       throw new ConfigurationError(`Vault group "${config.id}" names "${duplicateId}" twice`);
     }
-    const duplicateVault = duplicate(vaults.map((member) => member.vault));
+    const duplicateVault = duplicate(
+      config.vaults.flatMap((member) => (member.vault ? [getAddress(member.vault)] : [])),
+    );
     if (duplicateVault !== undefined) {
       throw new ConfigurationError(
         `Vault group "${config.id}" gives ${duplicateVault} as the vault of more than one member`,
       );
     }
-    const duplicateShare = duplicate(vaults.map((member) => member.cShare));
-    if (duplicateShare !== undefined) {
-      throw new ConfigurationError(
-        `Vault group "${config.id}" gives ${duplicateShare} as the cShare of more than one vault`,
-      );
-    }
     // A batcher serves one vault in one direction, so the same address anywhere twice is a mistake.
     const duplicateBatcher = duplicate(
-      vaults.flatMap((member) => [member.batchers.deposit, member.batchers.redeem]),
+      members.flatMap(({ vault }) => [vault.depositBatcher.address, vault.redeemBatcher.address]),
     );
     if (duplicateBatcher !== undefined) {
       throw new ConfigurationError(
         `Vault group "${config.id}" names batcher ${duplicateBatcher} more than once`,
       );
     }
-    if (vaults.length > 1 && config.router === undefined) {
-      throw new ConfigurationError(
-        `Vault group "${config.id}" names ${vaults.length} vaults but no router to reach them in one transaction`,
-      );
-    }
 
     this.sdk = sdk;
     this.id = config.id;
     this.cAsset = getAddress(config.cAsset);
-    this.vaults = vaults;
-    this.#router = vaults.length > 1 && config.router ? getAddress(config.router) : undefined;
+    this.router = getAddress(config.router);
+    this.members = members;
+    this.#registry = memoizeAddressRead(async () =>
+      getAddress(await sdk.provider.readContract(tokenWrapperRegistryContract(this.router))),
+    );
   }
 
-  /**
-   * Whether the router's registry lists `cAsset`, which a deposit through the
-   * router requires; always `true` for a group of one vault, which uses no
-   * router. Governance can revoke a listing, so the answer is not cached.
-   */
+  /** Whether the router's registry lists `cAsset`, which a deposit requires. Not cached: a listing can be revoked. */
   async isAssetListed(): Promise<boolean> {
-    if (!this.#router) {
-      return true;
-    }
-    return isTokenListed(this.sdk, await this.#tokenWrapperRegistry(), this.cAsset);
+    return this.#isListed(await this.#registry());
   }
 
   /**
@@ -198,8 +196,8 @@ export class VaultGroup {
    *
    * @throws if no member has id `vaultId`. {@link ConfigurationError}
    */
-  member(vaultId: string): VaultMemberConfig {
-    const member = this.vaults.find((candidate) => candidate.id === vaultId);
+  member(vaultId: string): VaultGroupMember {
+    const member = this.members.find((candidate) => candidate.id === vaultId);
     if (!member) {
       throw new ConfigurationError(`Vault group "${this.id}" has no vault "${vaultId}"`);
     }
@@ -217,8 +215,8 @@ export class VaultGroup {
    * There is no `beneficiary`: the router credits the account the legs came
    * from, so a group deposit cannot be made on someone else's behalf.
    *
-   * @throws if no member has id `vaultId`, or a member's batcher pulls a token other than `cAsset` or reports a vault other than the member's. {@link ConfigurationError}
-   * @throws if a member's batcher is paused. {@link VaultBatcherPausedError}
+   * @throws if no member has id `vaultId`, or a member's batchers disagree with its config or pull a token other than `cAsset`. {@link ConfigurationError}
+   * @throws if a member's deposit batcher is paused. {@link VaultBatcherPausedError}
    * @throws if the router's registry does not list `cAsset`. {@link UnlistedConfidentialTokenError}
    * @throws if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
    * @throws if balance validation requires decryption that is not possible. {@link BalanceCheckUnavailableError}
@@ -228,7 +226,25 @@ export class VaultGroup {
     amount: bigint,
     options?: VaultGroupJoinOptions,
   ): Promise<VaultGroupJoinResult> {
-    return this.#submit("deposit", vaultId, amount, options);
+    const { signer, holder, legs } = await this.#prepare("deposit", vaultId, amount, options);
+    await this.#requireAssetListed();
+
+    // The router splits this one transfer across the legs and sweeps any remainder back.
+    const [transfer, allocation] = await Promise.all([
+      encryptEuint64(this.sdk, amount, this.cAsset, holder),
+      this.#encryptLegs(holder, legs),
+    ]);
+    const transaction = await this.#submitTransaction(
+      signer,
+      confidentialTransferAndCallContract(
+        this.cAsset,
+        this.router,
+        transfer.encryptedAmount,
+        transfer.inputProof,
+        encodeAllocationData(allocation),
+      ),
+    );
+    return this.#result(vaultId, holder, legs, transaction);
   }
 
   /**
@@ -241,12 +257,12 @@ export class VaultGroup {
    *
    * @remarks
    * The router pulls every leg's share token, so before the join this grants
-   * it an operator approval on each member's `cShare` that lacks one. Each
+   * it an operator approval on each member's share token that lacks one. Each
    * grant is its own wallet prompt, so a first redemption from a group of N
    * vaults can ask the user to sign up to N + 1 times.
    *
-   * @throws if no member has id `vaultId`, or a member's batcher pulls a token other than its `cShare` or reports a vault other than the member's. {@link ConfigurationError}
-   * @throws if a member's batcher is paused. {@link VaultBatcherPausedError}
+   * @throws if no member has id `vaultId`, or a member's batchers disagree with its config. {@link ConfigurationError}
+   * @throws if a member's redeem batcher is paused. {@link VaultBatcherPausedError}
    * @throws if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
    * @throws if balance validation requires decryption that is not possible. {@link BalanceCheckUnavailableError}
    */
@@ -255,295 +271,171 @@ export class VaultGroup {
     amount: bigint,
     options?: VaultGroupJoinOptions,
   ): Promise<VaultGroupJoinResult> {
-    return this.#submit("redeem", vaultId, amount, options);
+    const { signer, holder, legs } = await this.#prepare("redeem", vaultId, amount, options);
+    // Nothing is granted to `router` before this read proves it is one.
+    await this.#registry();
+
+    // Encrypted before the grants, which cost the user a signature each; a proof does not expire.
+    const allocation = await this.#encryptLegs(holder, legs);
+    for (const token of new Map(legs.map((leg) => [leg.token.address, leg.token])).values()) {
+      await ensureOperator(token, holder, this.router, options?.operatorUntil);
+    }
+    const transaction = await this.#submitTransaction(
+      signer,
+      routerJoinContract(this.router, allocation.legs, allocation.inputProof),
+    );
+    return this.#result(vaultId, holder, legs, transaction);
   }
 
   // INTERNAL
 
-  async #submit(
-    direction: BatcherDirection,
+  async #prepare(
+    direction: Direction,
     vaultId: string,
     amount: bigint,
     options: VaultGroupJoinOptions | undefined,
-  ): Promise<VaultGroupJoinResult> {
+  ): Promise<{ signer: GenericSigner; holder: Address; legs: readonly GroupLeg[] }> {
     const member = this.member(vaultId);
-    const account = await requireAlignedWalletAccount(
-      direction,
-      this.sdk.signer,
-      this.sdk.provider,
-    );
+    const signer = this.sdk.signer;
+    if (!signer) {
+      throw new SignerNotConfiguredError(direction);
+    }
+    const account = await requireAlignedWalletAccount(direction, signer, this.sdk.provider);
     const holder = getAddress(account.address);
+
+    const [legs, token] = await Promise.all([
+      Promise.all(
+        this.members.map((candidate) =>
+          this.#leg(direction, candidate, candidate === member ? amount : 0n),
+        ),
+      ),
+      SIDES[direction].token(member.vault),
+    ]);
 
     // A short balance joins every batch with nothing and still costs the transaction.
     if (!options?.skipBalanceCheck) {
-      await this.#assertBalance(
-        direction,
-        direction === "deposit" ? this.cAsset : member.cShare,
+      await assertConfidentialBalance({
+        operation: direction,
+        tokenAddress: token.address,
         amount,
-      );
+        signer,
+        provider: this.sdk.provider,
+        readBalance: (owner) => token.balanceOf(owner),
+      });
     }
-
-    const legs = this.#legs(direction, vaultId, amount);
-    await this.#verifyLegs(legs);
-
-    const transaction = this.#router
-      ? direction === "deposit"
-        ? await this.#pushThroughRouter(this.#router, holder, legs)
-        : await this.#pullThroughRouter(this.#router, holder, legs, options?.operatorUntil)
-      : await this.#joinDirectly(holder, legs, options?.operatorUntil);
-
-    return {
-      ...transaction,
-      vaultId,
-      joins: this.#collectJoins(holder, legs, transaction.receipt.logs),
-    };
+    return { signer, holder, legs };
   }
 
-  #legs(direction: BatcherDirection, vaultId: string, amount: bigint): readonly GroupLeg[] {
-    return this.vaults.map((member) => {
-      return {
-        vaultId: member.id,
-        batcher: member.batchers[direction],
-        token: direction === "deposit" ? this.cAsset : member.cShare,
-        amount: member.id === vaultId ? amount : 0n,
-      };
-    });
-  }
-
-  #batcher(address: Address): VaultBatcher {
-    let batcher = this.#batchers.get(address);
-    if (!batcher) {
-      batcher = new VaultBatcher(this.sdk, address);
-      this.#batchers.set(address, batcher);
-    }
-    return batcher;
-  }
-
-  /**
-   * A wrong `cShare` would pull the wrong token, a wrong `vault` mislabel a
-   * position, and one paused batcher reverts the whole submission.
-   */
-  async #verifyLegs(legs: readonly GroupLeg[]): Promise<void> {
-    await Promise.all(
-      legs.map(async (leg) => {
-        const batcher = this.#batcher(leg.batcher);
-        const [fromToken, vault, paused] = await Promise.all([
-          batcher.fromToken(),
-          batcher.vault(),
-          batcher.paused(),
-        ]);
-        if (getAddress(fromToken) !== leg.token) {
-          throw new ConfigurationError(
-            `Batcher ${leg.batcher} pulls ${getAddress(fromToken)}, but vault "${leg.vaultId}" of group "${this.id}" is configured with ${leg.token}`,
-          );
-        }
-        const configured = this.member(leg.vaultId).vault;
-        if (getAddress(vault) !== configured) {
-          throw new ConfigurationError(
-            `Batcher ${leg.batcher} reports vault ${getAddress(vault)}, but vault "${leg.vaultId}" of group "${this.id}" is configured as ${configured}`,
-          );
-        }
-        if (paused) {
-          throw new VaultBatcherPausedError(
-            `Batcher ${leg.batcher} of vault "${leg.vaultId}" in group "${this.id}" is paused, so no member can be joined until it resumes`,
-            { batcher: leg.batcher, vaultId: leg.vaultId },
-          );
-        }
-      }),
-    );
-  }
-
-  #token(address: Address): Token {
-    let token = this.#tokens.get(address);
-    if (!token) {
-      token = new Token(this.sdk, address);
-      this.#tokens.set(address, token);
-    }
-    return token;
-  }
-
-  async #assertBalance(operation: string, token: Address, amount: bigint): Promise<void> {
-    const instance = this.#token(token);
-    return assertConfidentialBalance({
-      operation,
-      tokenAddress: token,
-      amount,
-      signer: this.sdk.signer,
-      provider: this.sdk.provider,
-      readBalance: (owner) => instance.balanceOf(owner),
-    });
-  }
-
-  async #tokenWrapperRegistry(): Promise<Address> {
-    if (!this.#router) {
-      throw new ConfigurationError(`Vault group "${this.id}" has no router`);
-    }
-    this.#registry ??= readTokenWrapperRegistry(this.sdk, this.#router).catch((error: unknown) => {
-      this.#registry = null;
-      throw error;
-    });
-    return this.#registry;
-  }
-
-  /**
-   * Fail before submitting anything if the router would reject a push of
-   * `cAsset`, which it does with a revert that costs the caller a transaction.
-   */
-  async #requireAssetListed(): Promise<void> {
-    if (await this.isAssetListed()) {
-      return;
-    }
-    throw new UnlistedConfidentialTokenError(
-      `The vault router's registry does not list ${this.cAsset}, so it would reject a transfer of it`,
-      { token: this.cAsset, registry: await this.#tokenWrapperRegistry() },
-    );
-  }
-
-  /**
-   * Whoever pulls a leg's token does so with `confidentialTransferFrom`, which
-   * ERC-7984 rejects unless the puller is already an operator of the holder.
-   */
-  async #ensureOperator(
-    holder: Address,
-    token: Address,
-    operator: Address,
-    until: number | undefined,
-  ): Promise<void> {
-    const instance = this.#token(token);
-    if (!(await instance.isOperator(holder, operator))) {
-      await instance.setOperator(operator, until);
-    }
-  }
-
-  /** A deposit pushes the asset to the router, which funds every leg out of the one transfer. */
-  async #pushThroughRouter(
-    router: Address,
-    holder: Address,
-    legs: readonly GroupLeg[],
-  ): Promise<TransactionResult> {
-    await this.#requireAssetListed();
-
-    // Summed from the legs, not the caller's amount: the router sweeps back any difference.
-    const total = legs.reduce((sum, leg) => sum + leg.amount, 0n);
-    const [transfer, allocation] = await Promise.all([
-      this.sdk.encrypt({
-        values: [{ value: total, type: "euint64" }],
-        contractAddress: this.cAsset,
-        userAddress: holder,
-      }),
-      encryptAllocation(this.sdk, router, holder, legs),
+  // One paused batcher reverts the whole submission, so every leg's is read, not just the chosen one's.
+  async #leg(direction: Direction, member: VaultGroupMember, amount: bigint): Promise<GroupLeg> {
+    const batcher = SIDES[direction].batcher(member.vault);
+    const [, token, paused] = await Promise.all([
+      member.vault.vaultAddress(),
+      SIDES[direction].token(member.vault),
+      batcher.paused(),
     ]);
-    const encryptedTotal = transfer.encryptedValues[0];
-    if (!encryptedTotal) {
-      throw new EncryptionFailedError("Encryption returned no encrypted values");
-    }
-
-    return this.#submitTransaction(
-      "vault:routerJoin",
-      router,
-      confidentialTransferAndCallContract(
-        this.cAsset,
-        router,
-        encryptedTotal,
-        transfer.inputProof,
-        encodeAllocationData(allocation),
-      ),
-    );
-  }
-
-  /** A redemption has the router pull each leg's share token, so it needs a grant on each. */
-  async #pullThroughRouter(
-    router: Address,
-    holder: Address,
-    legs: readonly GroupLeg[],
-    operatorUntil: number | undefined,
-  ): Promise<TransactionResult> {
-    for (const token of new Set(legs.map((leg) => leg.token))) {
-      await this.#ensureOperator(holder, token, router, operatorUntil);
-    }
-    const allocation = await encryptAllocation(this.sdk, router, holder, legs);
-    return this.#submitTransaction(
-      "vault:routerJoin",
-      router,
-      routerJoinContract(router, allocation.legs, allocation.inputProof),
-    );
-  }
-
-  /**
-   * A group of one joins its batcher directly, encrypting against it: a
-   * batcher only pulls (it is not an ERC-7984 receiver) and verifies only
-   * proofs bound to itself.
-   */
-  async #joinDirectly(
-    holder: Address,
-    legs: readonly GroupLeg[],
-    operatorUntil: number | undefined,
-  ): Promise<TransactionResult> {
-    const [leg] = legs;
-    if (!leg || legs.length !== 1) {
+    if (direction === "deposit" && token.address !== this.cAsset) {
       throw new ConfigurationError(
-        `Vault group "${this.id}" has ${legs.length} legs but no router to carry them`,
+        `Batcher ${batcher.address} of vault "${member.id}" pulls ${token.address}, but group "${this.id}" is configured with ${this.cAsset}`,
       );
     }
-    await this.#ensureOperator(holder, leg.token, leg.batcher, operatorUntil);
-    const { encryptedValues, inputProof } = await this.sdk.encrypt({
-      values: [{ value: leg.amount, type: "euint64" }],
-      contractAddress: leg.batcher,
-      userAddress: holder,
-    });
-    const encryptedAmount = encryptedValues[0];
-    if (!encryptedAmount) {
-      throw new EncryptionFailedError("Encryption returned no encrypted values");
+    if (paused) {
+      throw new VaultBatcherPausedError(
+        `Batcher ${batcher.address} of vault "${member.id}" in group "${this.id}" is paused, so no member can be joined until it resumes`,
+        { batcher: batcher.address, vaultId: member.id },
+      );
     }
-    return this.#submitTransaction(
-      "vault:join",
-      leg.batcher,
-      joinContract(leg.batcher, holder, encryptedAmount, inputProof),
+    return { member, batcher, token, amount };
+  }
+
+  #encryptLegs(holder: Address, legs: readonly GroupLeg[]) {
+    return encryptAllocation(
+      this.sdk,
+      this.router,
+      holder,
+      legs.map((leg) => ({
+        batcher: leg.batcher.address,
+        token: leg.token.address,
+        amount: leg.amount,
+      })),
     );
   }
 
-  #collectJoins(
+  #isListed(registry: Address): Promise<boolean> {
+    return this.sdk.provider.readContract(isConfidentialTokenValidContract(registry, this.cAsset));
+  }
+
+  // The router rejects a push of an unlisted token with a revert that costs the caller a transaction.
+  async #requireAssetListed(): Promise<void> {
+    const registry = await this.#registry();
+    if (!(await this.#isListed(registry))) {
+      throw new UnlistedConfidentialTokenError(
+        `The vault router's registry does not list ${this.cAsset}, so it would reject a transfer of it`,
+        { token: this.cAsset, registry },
+      );
+    }
+  }
+
+  #submitTransaction(
+    signer: GenericSigner,
+    config: WriteContractConfig,
+  ): Promise<TransactionResult> {
+    return submitSdkTransaction({
+      operation: "vault:routerJoin",
+      signer,
+      provider: this.sdk.provider,
+      config,
+      emit: (input) => this.sdk.emitEvent(input, this.router),
+      logger: this.sdk.logger,
+    });
+  }
+
+  #result(
+    vaultId: string,
     holder: Address,
     legs: readonly GroupLeg[],
-    logs: readonly RawLog[],
-  ): readonly VaultGroupJoin[] {
-    return legs.map((leg) => {
-      const joined = findJoined(logs, leg.batcher, holder);
+    transaction: TransactionResult,
+  ): VaultGroupJoinResult {
+    // Each log is taken once: the router joins the legs in order, so the Nth match is the Nth leg's even on an adapter that omits log addresses.
+    const logs = [...transaction.receipt.logs];
+    const joins = legs.map((leg) => {
+      const joined = takeJoined(logs, leg.batcher.address, holder);
       if (!joined) {
         throw new TransactionRevertedError(
-          `No Joined event for ${holder} from batcher ${leg.batcher} for vault "${leg.vaultId}"`,
+          `Transaction ${transaction.txHash} was mined, but its receipt has no Joined event for ${holder} from batcher ${leg.batcher.address} of vault "${leg.member.id}"`,
         );
       }
       return {
-        vaultId: leg.vaultId,
-        batcher: leg.batcher,
+        vaultId: leg.member.id,
+        batcher: leg.batcher.address,
+        token: leg.token.address,
         batchId: joined.batchId,
         confidentialJoinedAmount: joined.confidentialAmount,
       };
     });
-  }
-
-  async #submitTransaction(
-    operation: TransactionOperation,
-    contractAddress: Address,
-    config: WriteContractConfig,
-  ): Promise<TransactionResult> {
-    const signer = this.sdk.signer;
-    if (!signer) {
-      throw new SignerNotConfiguredError(operation);
-    }
-    return submitSdkTransaction({
-      operation,
-      signer,
-      provider: this.sdk.provider,
-      config,
-      emit: (input) => this.sdk.emitEvent(input, contractAddress),
-      logger: this.sdk.logger,
-    });
+    return { ...transaction, vaultId, joins };
   }
 }
 
-/** Create a {@link VaultGroup}; the same as `new VaultGroup(sdk, config)`. */
+/**
+ * Create a {@link VaultGroup} bound to `sdk`.
+ *
+ * @example
+ * ```ts
+ * import { createVaultGroup } from "@zama-fhe/sdk/vaults";
+ *
+ * const group = createVaultGroup(sdk, {
+ *   id: "stable",
+ *   cAsset: "0xConfidentialAsset",
+ *   router: "0xRouter",
+ *   vaults: [
+ *     { id: "alpha", depositBatcher: "0xAlphaDeposit", redeemBatcher: "0xAlphaRedeem" },
+ *     { id: "beta", depositBatcher: "0xBetaDeposit", redeemBatcher: "0xBetaRedeem" },
+ *   ],
+ * });
+ * const { joins } = await group.deposit("alpha", 1_000_000n);
+ * ```
+ */
 export function createVaultGroup(sdk: ZamaSDK, config: VaultGroupConfig): VaultGroup {
   return new VaultGroup(sdk, config);
 }

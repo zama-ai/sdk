@@ -14,15 +14,18 @@ export interface GroupDepositParams extends VaultGroupJoinOptions {
 export function groupDepositMutationOptions(
   group: VaultGroup,
 ): MutationFactoryOptions<
-  readonly ["zama.vaultGroup.deposit", { cAsset: Address; vaults: readonly Address[] }],
+  readonly ["zama.vaultGroup.deposit", { cAsset: Address; batchers: readonly Address[] }],
   GroupDepositParams,
   VaultGroupJoinResult
 > {
   return {
-    // Keyed on the vaults, not the group's id, which two groups may share.
+    // Keyed on the batchers, not the group's id, which two groups may share.
     mutationKey: [
       "zama.vaultGroup.deposit",
-      { cAsset: group.cAsset, vaults: group.vaults.map((member) => member.vault) },
+      {
+        cAsset: group.cAsset,
+        batchers: group.members.map(({ vault }) => vault.depositBatcher.address),
+      },
     ] as const,
     mutationFn: async ({ vaultId, amount, ...rest }) => group.deposit(vaultId, amount, rest),
   };

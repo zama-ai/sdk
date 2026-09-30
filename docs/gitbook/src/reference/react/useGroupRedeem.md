@@ -5,7 +5,7 @@ description: Mutation hook that redeems shares of one vault of a group by joinin
 
 # useGroupRedeem
 
-Mutation hook that redeems a plaintext amount of shares from one member of a [vault group](../../guides/vault-groups.md). It checks the caller's balance of that member's share token, resolves every member's active redeem batcher, and joins all of them, each leg spending its own vault's share token — the same flow as [`VaultGroup.redeem`](../sdk/VaultGroup.md#redeem).
+Mutation hook that redeems a plaintext amount of shares from one member of a [vault group](../../guides/vault-groups.md). It checks the caller's balance of that member's share token, verifies every member's configured redeem batcher, and joins all of them, each leg spending its own vault's share token — the same flow as [`VaultGroup.redeem`](../sdk/VaultGroup.md#redeem).
 
 The router pulls each share token, so the SDK grants it an operator approval on every member's share token that lacks one before the join. Each grant is its own wallet prompt: a first redemption from a group of N vaults can ask the user to sign up to N + 1 times.
 
@@ -74,7 +74,7 @@ Amount of **shares** to redeem, in that member's share token's base units. ERC-4
 
 ### operatorUntil, skipBalanceCheck
 
-Same as [`useGroupDeposit`](./useGroupDeposit.md#operatoruntil). The balance check is against the chosen member's share token.
+`operatorUntil` is the expiry of the router's grant on each share token, default now + 1 hour. `skipBalanceCheck` is as in [`useGroupDeposit`](./useGroupDeposit.md#skipbalancecheck). The balance check is against the chosen member's share token.
 
 **Throws:** the same errors as `useGroupDeposit`, including `VaultBatcherPausedError`, except `UnlistedConfidentialTokenError`, which only the deposit path raises.
 
@@ -82,7 +82,7 @@ Same as [`useGroupDeposit`](./useGroupDeposit.md#operatoruntil). The balance che
 
 `data` resolves to a `VaultGroupJoinResult` — see [`VaultGroup` → VaultGroupJoinResult](../sdk/VaultGroup.md#vaultgroupjoinresult).
 
-On success the hook invalidates every member's share balance and operator-status caches — each leg transferred its own share token, even where the amount moved was zero — and the batch reads of every batcher a leg joined.
+On success the hook invalidates every member's share balance and operator status — each leg transferred its own share token, even where the amount moved was zero — and the batch reads of every batcher a leg joined.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

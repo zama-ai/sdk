@@ -22,8 +22,8 @@ export interface UseGroupDepositConfig {
 
 /**
  * Deposit into one vault of a group, joining every member's current deposit
- * batch. On success, invalidates the shared asset's balance and operator-status
- * caches and the batch reads of every batcher a leg joined.
+ * batch. Invalidates the asset's balance and the joined batchers' batch reads
+ * on success.
  *
  * @param config - The group.
  * @param options - React Query mutation options.

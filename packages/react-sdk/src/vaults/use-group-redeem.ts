@@ -12,6 +12,7 @@ import {
   type VaultGroupConfig,
   type VaultGroupJoinResult,
 } from "@zama-fhe/sdk/vaults";
+import { invalidateAfterSetOperator } from "@zama-fhe/sdk/query";
 import { useVaultGroup } from "./use-vault-group";
 
 /** Configuration for {@link useGroupRedeem}. */
@@ -22,11 +23,10 @@ export interface UseGroupRedeemConfig {
 
 /**
  * Redeem shares of one vault of a group, joining every member's current redeem
- * batch with its own share token. The router pulls those tokens, so the first
- * redemption also grants it an operator approval on each member's share token,
- * one wallet prompt per grant, before the join itself. On success, invalidates
- * every member's share balance and operator-status caches and the batch reads
- * of every batcher a leg joined.
+ * batch with its own share token. Grants the router an operator approval on
+ * each share token first if one isn't already active, one wallet prompt per
+ * grant. Invalidates the share balances, operator-status caches and the joined
+ * batchers' batch reads on success.
  *
  * @param config - The group.
  * @param options - React Query mutation options.
@@ -47,10 +47,15 @@ export function useGroupRedeem<TContext = unknown>(
     ...groupRedeemMutationOptions(group),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
+      const tokens = [...new Set(data.joins.map((join) => join.token))];
       invalidateAfterGroupJoin(context.client, {
-        tokens: group.vaults.map((member) => member.cShare),
+        tokens,
         batchers: data.joins.map((join) => join.batcher),
       });
+      // The mutation may have granted the router an operator approval.
+      for (const token of tokens) {
+        invalidateAfterSetOperator(context.client, token);
+      }
       return options?.onSuccess?.(data, variables, onMutateResult, context);
     },
   }) as UseMutationResult<VaultGroupJoinResult, Error, GroupRedeemParams, TContext>;

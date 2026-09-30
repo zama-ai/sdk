@@ -25,18 +25,8 @@ const group: VaultGroupConfig = {
   cAsset: ASSET,
   router: ROUTER,
   vaults: [
-    {
-      id: "alpha",
-      vault: ALPHA_VAULT,
-      cShare: ALPHA_SHARE,
-      batchers: { deposit: ALPHA_DEPOSIT, redeem: ALPHA_REDEEM },
-    },
-    {
-      id: "beta",
-      vault: BETA_VAULT,
-      cShare: BETA_SHARE,
-      batchers: { deposit: BETA_DEPOSIT, redeem: BETA_REDEEM },
-    },
+    { id: "alpha", vault: ALPHA_VAULT, depositBatcher: ALPHA_DEPOSIT, redeemBatcher: ALPHA_REDEEM },
+    { id: "beta", vault: BETA_VAULT, depositBatcher: BETA_DEPOSIT, redeemBatcher: BETA_REDEEM },
   ],
 };
 
@@ -74,7 +64,7 @@ function mockGroupSubmission(provider: GenericProvider, account: Address, batche
 }
 
 describe("useGroupDeposit", () => {
-  test("invalidates the asset's balance and operator caches and every leg's batch reads", async ({
+  test("invalidates the asset's balance and every leg's batch reads", async ({
     renderWithProviders,
     provider,
     relayer,
@@ -87,17 +77,18 @@ describe("useGroupDeposit", () => {
 
     const keys = [
       zamaQueryKeys.confidentialBalance.owner(ASSET, userAddress),
-      zamaQueryKeys.confidentialIsOperator.scope(ASSET, userAddress, ALPHA_DEPOSIT),
       vaultQueryKeys.currentBatchId.batcher(ALPHA_DEPOSIT),
       vaultQueryKeys.currentBatchId.batcher(BETA_DEPOSIT),
     ];
-    for (const key of keys) {
+    const operatorKey = zamaQueryKeys.confidentialIsOperator.scope(ASSET, userAddress, ROUTER);
+    for (const key of [...keys, operatorKey]) {
       queryClient.setQueryData(key, 1n);
     }
 
     await act(() => result.current.mutateAsync({ vaultId: "alpha", amount: 1_000n }));
 
     expect(queryClient).toHaveInvalidatedQueries(keys);
+    expect(queryClient).not.toHaveInvalidatedQueries([operatorKey]);
   });
 
   test("forwards onSuccess", async ({ renderWithProviders, provider, relayer, userAddress }) => {
@@ -138,5 +129,16 @@ describe("useGroupRedeem", () => {
     await act(() => result.current.mutateAsync({ vaultId: "alpha", amount: 500n }));
 
     expect(queryClient).toHaveInvalidatedQueries(keys);
+  });
+
+  test("forwards onSuccess", async ({ renderWithProviders, provider, relayer, userAddress }) => {
+    mockGroupSubmission(provider, userAddress, [ALPHA_REDEEM, BETA_REDEEM]);
+    mockEncryptedLegs(relayer, 2);
+    const onSuccess = vi.fn();
+
+    const { result } = renderWithProviders(() => useGroupRedeem({ group }, { onSuccess }));
+    await act(() => result.current.mutateAsync({ vaultId: "alpha", amount: 500n }));
+
+    expect(onSuccess).toHaveBeenCalledOnce();
   });
 });

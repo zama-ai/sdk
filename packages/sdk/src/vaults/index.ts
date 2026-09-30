@@ -12,6 +12,7 @@ export {
   type VaultGroupJoin,
   type VaultGroupJoinOptions,
   type VaultGroupJoinResult,
+  type VaultGroupMember,
   type VaultMemberConfig,
 } from "./vault-group";
 export { MAX_GROUP_VAULTS } from "./allocation";

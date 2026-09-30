@@ -2,9 +2,8 @@
  * ABI for the vault batcher router, which fans one submission out across
  * several batchers. Transcribed from `IVaultBatcherConfidentialRouter` in
  * zama-ai/confidential-defi. `onConfidentialTransferReceived` is omitted
- * because a token calls it, not the SDK. The router's own custom errors are
- * kept so its reverts decode to a name; a revert raised by a batcher or an
- * ERC-7984 token it calls into is not in this ABI.
+ * because a token calls it, not the SDK; the router's custom errors are kept
+ * so its reverts decode to a name.
  */
 export const vaultRouterAbi = [
   {

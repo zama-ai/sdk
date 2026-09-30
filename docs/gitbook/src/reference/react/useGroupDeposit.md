@@ -5,7 +5,7 @@ description: Mutation hook that deposits into one vault of a group by joining ev
 
 # useGroupDeposit
 
-Mutation hook that deposits a plaintext amount into one member of a [vault group](../../guides/vault-groups.md). It checks the caller's confidential balance, resolves every member's active deposit batcher, and joins all of them — the chosen vault with the amount, the rest with an encrypted zero — the same flow as [`VaultGroup.deposit`](../sdk/VaultGroup.md#deposit).
+Mutation hook that deposits a plaintext amount into one member of a [vault group](../../guides/vault-groups.md). It verifies every member's configured deposit batcher, checks the caller's confidential balance, and joins all of them — the chosen vault with the amount, the rest with an encrypted zero — the same flow as [`VaultGroup.deposit`](../sdk/VaultGroup.md#deposit).
 
 The deposit is not settled when the mutation resolves: it has joined a batch on every member. Keep the returned `joins` and follow each one with [`useBatchState`](./useBatchState.md), then [`useClaim`](./useClaim.md) once it is `Finalized`.
 
@@ -84,7 +84,7 @@ Amount to deposit, in the shared asset token's base units.
 
 `number | undefined`
 
-Default: now + 1 hour. Unix timestamp (seconds) until which an operator grant made for this submission is valid. Only used when a grant isn't already active.
+Unused by a deposit, which grants no operator. Applies to a redemption; see [`useGroupRedeem`](./useGroupRedeem.md).
 
 ### skipBalanceCheck
 
@@ -94,7 +94,7 @@ Default: `false`. Skips the confidential-balance pre-flight, for accounts whose 
 
 **Throws:**
 
-- `ConfigurationError` — unknown `vaultId`, or a batcher that reports a different token or vault than the member is configured with
+- `ConfigurationError` — unknown `vaultId`, or a member whose batchers disagree with its config or pull a token other than `cAsset`
 - `InsufficientConfidentialBalanceError` — the asset balance is less than `amount`
 - `BalanceCheckUnavailableError` — the balance check needs a decryption the signer can't perform
 - `UnlistedConfidentialTokenError` — the router's registry does not list the asset
@@ -108,7 +108,7 @@ import { type VaultGroupJoinResult } from "@zama-fhe/sdk/vaults";
 
 `data` resolves to a `VaultGroupJoinResult`: the transaction's `txHash` and `receipt`, the chosen `vaultId`, and `joins` with one entry per member. See [`VaultGroup` → VaultGroupJoinResult](../sdk/VaultGroup.md#vaultgroupjoinresult).
 
-On success the hook invalidates the asset token's balance and operator-status caches, and the batch reads (`useCurrentBatchId`, `useBatchState`, `useTimeUntilDispatchable`) of every batcher a leg joined.
+On success the hook invalidates the asset token's balance, and the batch reads (`useCurrentBatchId`, `useBatchState`, `useTimeUntilDispatchable`) of every batcher a leg joined.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

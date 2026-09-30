@@ -9,7 +9,7 @@ This guide covers **integrating** the multi-vault router from the SDK. For what 
 
 A **vault group** is the SDK's name for the leg list: a set of confidential ERC-4626 vaults that all take deposits in the same confidential asset. Depositing into one member joins _every_ member's batch: the vault you chose gets the amount, the rest get an encrypted zero.
 
-If you only have one vault, use [`Vault`](./vault-deposits.md) — a one-member group is the same thing with extra machinery.
+A group has at least two vaults. For a single vault, use [`Vault`](./vault-deposits.md).
 
 {% hint style="danger" %}
 Follow the [rules for clients](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#rules-for-clients): send the same leg list for every user, and exit through the list you entered with. The SDK never drops a zero-amount leg, and refuses a group above the documented [leg limit](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#leg-limits) (`MAX_GROUP_VAULTS`, ten) at construction.
@@ -17,7 +17,7 @@ Follow the [rules for clients](https://docs.zama.org/protocol/confidential-vault
 
 ## Configuring a group
 
-A group names the shared `cAsset`, its members, and the router that fans a submission out across them. Each member carries its ERC-4626 `vault`, its `cShare`, and its deposit and redeem batchers. The names follow the [vault addresses](https://docs.zama.org/protocol/confidential-vault/reference/addresses) reference.
+A group names the shared `cAsset`, its members, and the router that fans a submission out across them. Each member carries its deposit and redeem batchers, and optionally its ERC-4626 `vault`; the share token is read from the redeem batcher. The names follow the [vault addresses](https://docs.zama.org/protocol/confidential-vault/reference/addresses) reference.
 
 ```ts
 import { createVaultGroup } from "@zama-fhe/sdk/vaults";
@@ -27,25 +27,15 @@ const STABLE_GROUP = {
   cAsset: "0xConfidentialAsset",
   router: "0xRouter",
   vaults: [
-    {
-      id: "alpha",
-      vault: "0xAlphaVault",
-      cShare: "0xAlphaShares",
-      batchers: { deposit: "0xAlphaDepositBatcher", redeem: "0xAlphaRedeemBatcher" },
-    },
-    {
-      id: "beta",
-      vault: "0xBetaVault",
-      cShare: "0xBetaShares",
-      batchers: { deposit: "0xBetaDepositBatcher", redeem: "0xBetaRedeemBatcher" },
-    },
+    { id: "alpha", depositBatcher: "0xAlphaDeposit", redeemBatcher: "0xAlphaRedeem" },
+    { id: "beta", depositBatcher: "0xBetaDeposit", redeemBatcher: "0xBetaRedeem" },
   ],
 } as const;
 
 const group = createVaultGroup(sdk, STABLE_GROUP);
 ```
 
-The SDK ships no group configuration; the addresses belong to your app. They are not trusted blindly: before a submission writes anything, each leg's token and vault are checked against what its batcher reports, and a mismatch throws `ConfigurationError`.
+The SDK ships no group configuration; the addresses belong to your app. They are not trusted blindly: before a submission writes anything, each member is checked against chain (both batchers report the same vault, the deposit batcher pulls `cAsset`), and a mismatch throws `ConfigurationError`.
 
 {% hint style="info" %}
 The member order is the leg order, and the leg count is visible on chain. Adding or removing a member changes the shape of every later submission, so treat group membership as something depositors can observe changing.
@@ -62,7 +52,7 @@ const { joins } = await group.deposit("alpha", 1_000_000n);
 // One entry per member, in group order. The decoys are in here too — they
 // joined a real batch with an encrypted zero.
 const mine = joins.find((join) => join.vaultId === "alpha");
-const { vault, cShare } = group.member("alpha"); // the member's addresses
+const { redeemBatcher } = group.member("alpha").vault; // the member's batchers
 ```
 
 {% endtab %}
@@ -82,7 +72,7 @@ Redeeming is the mirror image — `group.redeem("alpha", shares)` or `useGroupRe
 
 A group deposit always credits the caller. The router credits the account the legs came from, so unlike `Vault.deposit` there is no `beneficiary` option.
 
-Both methods check the caller's confidential balance before submitting, as `Vault` does: a short balance would join every batch with nothing and still cost the transaction. They take the same `skipBalanceCheck` and `operatorUntil` options.
+Both methods check the caller's confidential balance before submitting, as `Vault` does: a short balance would join every batch with nothing and still cost the transaction. Both take `skipBalanceCheck`; `operatorUntil` only applies to a redemption, since a deposit grants no operator.
 
 ### Claiming
 
@@ -96,8 +86,8 @@ A batcher is replaced by deploying a new one, not upgraded in place, and the old
 
 For a **redemption**, the router pulls each leg's share token, so it needs an ERC-7984 operator grant on every one of them. The SDK makes any missing grant before submitting — note that this is a grant to the _router_, not to the batchers, the opposite of what a single-vault `Vault.redeem` does. Each grant is its own wallet prompt, so the first redemption from a group of N vaults can ask the user to sign up to N + 1 times; later ones reuse the grants while they are valid.
 
-A **deposit** through the router needs no grant: it is a transfer you send. It does require the shared asset to be listed in the registry the router checks, so the SDK asks first and raises `UnlistedConfidentialTokenError` rather than letting you pay for a reverted transaction. Listings are governed on chain and can be revoked, so this is checked per submission rather than remembered. A group of one vault uses no router: it grants its batcher an operator approval on the asset, as `Vault.deposit` does, and is never gated on the listing.
+A **deposit** through the router needs no grant: it is a transfer you send. It does require the shared asset to be listed in the registry the router checks, so the SDK asks first and raises `UnlistedConfidentialTokenError` rather than letting you pay for a reverted transaction. Listings are governed on chain and can be revoked, so this is checked per submission rather than remembered.
 
 ## Paused batchers
 
-Every submission sends a leg to every member, and a paused batcher rejects joins. Rather than let one paused member revert the whole transaction, the SDK reads `paused()` on each resolved batcher first and throws `VaultBatcherPausedError` naming the member. Quitting and claiming on a paused batcher still work, so existing positions are not stuck.
+Every submission sends a leg to every member, and a paused batcher rejects joins. Rather than let one paused member revert the whole transaction, the SDK reads `paused()` on each configured batcher first and throws `VaultBatcherPausedError` naming the member. Quitting and claiming on a paused batcher still work, so existing positions are not stuck.

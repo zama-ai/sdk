@@ -8352,7 +8352,7 @@ export function fromTokenContract(batcher: Address): {
 // @public
 export function groupDepositMutationOptions(group: VaultGroup): MutationFactoryOptions<readonly ["zama.vaultGroup.deposit", {
     cAsset: Address;
-    vaults: readonly Address[];
+    batchers: readonly Address[];
 }], GroupDepositParams, VaultGroupJoinResult>;
 
 // @public
@@ -8364,7 +8364,7 @@ export interface GroupDepositParams extends VaultGroupJoinOptions {
 // @public
 export function groupRedeemMutationOptions(group: VaultGroup): MutationFactoryOptions<readonly ["zama.vaultGroup.redeem", {
     cAsset: Address;
-    vaults: readonly Address[];
+    batchers: readonly Address[];
 }], GroupRedeemParams, VaultGroupJoinResult>;
 
 // @public
@@ -13609,17 +13609,18 @@ export class VaultGroup {
     deposit(vaultId: string, amount: bigint, options?: VaultGroupJoinOptions): Promise<VaultGroupJoinResult>;
     readonly id: string;
     isAssetListed(): Promise<boolean>;
-    member(vaultId: string): VaultMemberConfig;
+    member(vaultId: string): VaultGroupMember;
+    readonly members: readonly VaultGroupMember[];
     redeem(vaultId: string, amount: bigint, options?: VaultGroupJoinOptions): Promise<VaultGroupJoinResult>;
+    readonly router: Address;
     readonly sdk: ZamaSDK;
-    readonly vaults: readonly VaultMemberConfig[];
 }
 
 // @public
 export interface VaultGroupConfig {
     readonly cAsset: Address;
     readonly id: string;
-    readonly router?: Address;
+    readonly router: Address;
     readonly vaults: readonly VaultMemberConfig[];
 }
 
@@ -13628,6 +13629,7 @@ export interface VaultGroupJoin {
     batcher: Address;
     batchId: bigint;
     confidentialJoinedAmount: EncryptedValue;
+    token: Address;
     vaultId: string;
 }
 
@@ -13643,20 +13645,20 @@ export interface VaultGroupJoinResult extends TransactionResult {
 }
 
 // @public
+export interface VaultGroupMember {
+    readonly id: string;
+    readonly vault: Vault;
+}
+
+// @public
 export interface VaultJoinOptions extends JoinOptions {
     beneficiary?: Address;
     operatorUntil?: number;
 }
 
 // @public
-export interface VaultMemberConfig {
-    readonly batchers: {
-        readonly deposit: Address;
-        readonly redeem: Address;
-    };
-    readonly cShare: Address;
+export interface VaultMemberConfig extends VaultAddresses {
     readonly id: string;
-    readonly vault: Address;
 }
 
 // @public
