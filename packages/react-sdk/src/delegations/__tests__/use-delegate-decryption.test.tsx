@@ -1,5 +1,5 @@
 import { act, waitFor } from "@testing-library/react";
-import type { Address } from "@zama-fhe/sdk";
+import { WILDCARD_CONTRACT, type Address } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useDelegateDecryption } from "../use-delegate-decryption";
@@ -58,6 +58,32 @@ describe("useDelegateDecryption", () => {
     expect(signer.writeContract).toHaveBeenCalledWith(
       expect.objectContaining({
         args: [recipientAddress, tokenAddress, BigInt(Math.floor(expirationDate.getTime() / 1000))],
+      }),
+    );
+  });
+
+  test("behavior: passes the wildcard contract address unchanged", async ({
+    renderWithProviders,
+    signer,
+    recipientAddress,
+  }) => {
+    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+
+    const { result } = renderWithProviders(() => useDelegateDecryption(WILDCARD_CONTRACT), {});
+
+    act(() => {
+      result.current.mutate({ delegateAddress: recipientAddress });
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(signer.writeContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: ACL,
+        functionName: "delegateForUserDecryption",
+        args: [recipientAddress, WILDCARD_CONTRACT, expect.any(BigInt)],
       }),
     );
   });

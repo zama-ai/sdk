@@ -46,7 +46,8 @@ export class Delegations {
    * window with a bounded internal retry, so you can decrypt right after this
    * resolves.
    *
-   * @param contractAddress - The confidential contract address to delegate on.
+   * @param contractAddress - The confidential contract address to delegate on, or
+   *   {@link WILDCARD_CONTRACT} to cover every contract with a single delegation.
    * @param delegateAddress - Address to delegate decryption rights to.
    * @param expirationDate - Optional expiration date (defaults to permanent delegation via `uint64.max`).
    * @returns The transaction hash and mined receipt.
@@ -54,6 +55,7 @@ export class Delegations {
    * @throws if signer and provider are on different chains. {@link ChainMismatchError}
    * @throws if `expirationDate` is less than 1 hour in the future. {@link DelegationExpirationTooSoonError}
    * @throws if the delegate equals the connected wallet. {@link DelegationSelfNotAllowedError}
+   * @throws if the delegate is the wildcard address. {@link DelegationDelegateCannotBeWildcardError}
    * @throws if the delegate equals the contract address. {@link DelegationDelegateEqualsContractError}
    * @throws if the new expiry equals the current one. {@link DelegationExpiryUnchangedError}
    * @throws if the delegation transaction reverts. {@link TransactionRevertedError}

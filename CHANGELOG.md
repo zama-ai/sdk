@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.7.0-beta.4](https://github.com/zama-ai/sdk/compare/v3.7.0-beta.3...v3.7.0-beta.4) (2026-09-30)
+
+### Features
+
+- expose wildcard delegation ([#703](https://github.com/zama-ai/sdk/issues/703)) ([#819](https://github.com/zama-ai/sdk/issues/819)) ([8a7cc3d]())
+
 ## [3.7.0-beta.3](https://github.com/zama-ai/sdk/compare/v3.7.0-beta.2...v3.7.0-beta.3) (2026-09-28)
 
 ### Features
