@@ -5,7 +5,7 @@ description: Mutation hook that verifies and persists the signatures an out-of-p
 
 # useBatchRegisterPermits
 
-[`useRegisterPermit`](./useRegisterPermit.md) for every [`useBatchPreparePermits`](./useBatchPreparePermits.md) payload, each paired with its signature. Permits are registered in order; if one fails, the ones before it stay registered, and because registration is idempotent you can retry with the full list. Automatically invalidates [`useHasPermit`](./useHasPermit.md) queries on success.
+[`useRegisterPermit`](./useRegisterPermit.md) for every [`useBatchPreparePermits`](./useBatchPreparePermits.md) payload, each paired with its signature. Registration is all-or-nothing: every permit is verified before any is stored, so if one fails, none are registered. Automatically invalidates [`useHasPermit`](./useHasPermit.md) queries on success.
 
 ## Import
 

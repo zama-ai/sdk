@@ -35,6 +35,7 @@ import type {
   PreparedPermit,
   PreparePermitRequest,
   SerializedTransportKeyPairWithPermissions,
+  SignedPreparedPermit,
   StoredTransportKeyPair,
 } from "./types";
 import {
@@ -44,6 +45,11 @@ import {
   SECONDS_PER_DAY,
   toJsonSafeEip712,
 } from "./utils";
+
+interface VerifiedPermit {
+  scope: PermissionScope;
+  permission: Permission;
+}
 
 export const DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS = 30 * SECONDS_PER_DAY;
 export const DEFAULT_PERMIT_DURATION_DAYS = 30;
@@ -275,7 +281,7 @@ export class CredentialService {
    * decryption permits without signing it, one permit per chunk of
    * {@link MAX_CONTRACTS_PER_PERMIT} contracts. The caller signs each returned
    * `eip712` out-of-process with `eth_signTypedData_v4` and hands the
-   * signatures to {@link registerPermit}.
+   * signatures to {@link batchRegisterPermits}.
    *
    * Signer-less: the transport key pair is resolved from `request.signer`
    * directly — no wallet account or configured signer needed. Signer-offline,
@@ -321,22 +327,23 @@ export class CredentialService {
     const keypair = await this.#vault.getOrCreate(signerAddress, { strict: true });
     const transportKeyPair = await relayer.parseTransportKeyPair(keypair);
     const startTimestamp = nowSeconds();
-    const prepared: PreparedPermit[] = [];
-    for (const chunk of chunkContracts(contracts)) {
-      const eip712 = toJsonSafeEip712(
-        Eip712Schema.parse(
-          await relayer.createUnsignedLegacyDecryptionPermitEip712({
-            transportKeyPair,
-            contractAddresses: chunk,
-            startTimestamp,
-            durationSeconds: durationDays * SECONDS_PER_DAY,
-            ...(delegatorAddress && { delegatorAddress }),
-          }),
+    return Promise.all(
+      chunkContracts(contracts).map(async (chunk) => ({
+        version: 1 as const,
+        eip712: toJsonSafeEip712(
+          Eip712Schema.parse(
+            await relayer.createUnsignedLegacyDecryptionPermitEip712({
+              transportKeyPair,
+              contractAddresses: chunk,
+              startTimestamp,
+              durationSeconds: durationDays * SECONDS_PER_DAY,
+              ...(delegatorAddress && { delegatorAddress }),
+            }),
+          ),
         ),
-      );
-      prepared.push({ version: 1, eip712, signerAddress });
-    }
-    return prepared;
+        signerAddress,
+      })),
+    );
   }
 
   /**
@@ -348,12 +355,10 @@ export class CredentialService {
    * pair (e.g. a webhook re-delivery, or a retried registration call) — the
    * second call replaces the first call's stored entry instead of duplicating it.
    *
-   * Every field used below (chain, timing, transport key, contracts, delegation)
-   * is read from `prepared.eip712` — the unsigned typed data — or, once verified,
-   * from the signature-checked `signedPermit` the relayer returns. `preparePermit`
-   * never hands back a separate "claimed" copy of any of these for this method to
-   * cross-check against: there is exactly one source of truth for each field, so
-   * there is nothing to tamper with independently of the signature itself.
+   * Every field (chain, timing, transport key, contracts, delegation) is read
+   * from `prepared.eip712` or the signature-checked permit the relayer returns.
+   * There is no separate "claimed" copy to cross-check, so nothing can be
+   * tampered with independently of the signature itself.
    *
    * @throws if `prepared` doesn't match the {@link PreparedPermit} shape (e.g. it
    *   crossed a process boundary and was corrupted). {@link ConfigurationError}
@@ -366,6 +371,33 @@ export class CredentialService {
    * @throws if the signature is invalid or malformed. {@link SigningFailedError}
    */
   async registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void> {
+    await this.#persistPermit(await this.#verifyPermit(prepared, signature));
+  }
+
+  /**
+   * All-or-nothing form of {@link registerPermit}: every permit is verified
+   * before any is persisted.
+   */
+  async batchRegisterPermits(permits: readonly SignedPreparedPermit[]): Promise<void> {
+    // Sequential so the first failing permit emits exactly one PermitError.
+    const verified: VerifiedPermit[] = [];
+    for (const { prepared, signature } of permits) {
+      verified.push(await this.#verifyPermit(prepared, signature));
+    }
+    for (const permit of verified) {
+      await this.#persistPermit(permit);
+    }
+  }
+
+  #persistPermit({ scope, permission }: VerifiedPermit): Promise<void> {
+    return swallow(
+      "replace permit",
+      () => this.#store.replace(scope, permission.serializedPermit.signature, permission),
+      this.#logger,
+    );
+  }
+
+  async #verifyPermit(prepared: PreparedPermit, signature: Hex): Promise<VerifiedPermit> {
     let parsed: PreparedPermit;
     try {
       parsed = parseSchema(PreparedPermitSchema, prepared);
@@ -373,8 +405,9 @@ export class CredentialService {
       throw this.#failPermit("registerPermit", error);
     }
 
-    // Snapshot the relayer and chain together, before the first await — see the
-    // identical guard in preparePermit.
+    // Snapshot the relayer and chain together, before the first await: a chain
+    // switch mid-flight must not verify against a different chain than the one
+    // active when this call started.
     const relayer = this.#router.relayer;
     const activeChainId = this.#router.chain.id;
 
@@ -449,11 +482,7 @@ export class CredentialService {
         chainId: activeChainId,
         delegatorAddress: checksum(signedPermit.encryptedDataOwnerAddress),
       };
-      await swallow(
-        "replace permit",
-        () => this.#store.replace(scope, serializedPermit.signature, permission),
-        this.#logger,
-      );
+      return { scope, permission };
     } catch (error) {
       throw this.#failPermit("registerPermit", error);
     }

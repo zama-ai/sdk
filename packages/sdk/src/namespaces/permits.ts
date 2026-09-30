@@ -219,15 +219,21 @@ export class Permits {
 
   /**
    * {@link registerPermit} for every `sdk.offline.batchPreparePermits` payload.
-   * Registers in order and stops at the first failure; permits registered
-   * before it stay persisted. Registration is idempotent, so retrying with the
-   * full list is safe.
+   * All-or-nothing: every permit is verified before any is persisted, so a
+   * failing permit leaves the store untouched.
    *
-   * @throws whatever {@link registerPermit} throws for the failing permit.
+   * @throws whatever {@link registerPermit} throws for the first failing permit.
    */
   async batchRegisterPermits(permits: readonly SignedPreparedPermit[]): Promise<void> {
-    for (const { prepared, signature } of permits) {
-      await this.registerPermit(prepared, signature);
+    let service: CredentialService;
+    try {
+      service = this.#requireCredentialService("registerPermit");
+    } catch (error) {
+      this.#failPermit("registerPermit", error);
+    }
+    await service.batchRegisterPermits(permits);
+    for (const signerAddress of new Set(permits.map((p) => p.prepared.signerAddress))) {
+      await this.#clearDecryptCacheForRequester(signerAddress);
     }
   }
 

@@ -41,7 +41,7 @@ describe("useBatchRegisterPermits", () => {
     expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.hasPermit.all);
   });
 
-  test("removes the hasPermit cache even when a later permit fails to register", async ({
+  test("keeps the hasPermit cache when a later permit fails to register", async ({
     renderWithProviders,
     tokenAddress,
     signer,
@@ -71,6 +71,6 @@ describe("useBatchRegisterPermits", () => {
       ),
     ).rejects.toThrow();
 
-    expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.hasPermit.all);
+    expect(queryClient.getQueryData(zamaQueryKeys.hasPermit.all)).toBe(true);
   });
 });

@@ -7,7 +7,7 @@ import { useZamaSDK } from "../provider";
 
 /**
  * {@link useRegisterPermit} for every {@link useBatchPreparePermits} payload.
- * Registers in order; permits registered before a failing one stay persisted.
+ * All-or-nothing: a failing permit leaves the store untouched.
  *
  * @example
  * ```tsx
@@ -27,8 +27,8 @@ export function useBatchRegisterPermits(
   return useMutation<void, Error, readonly SignedPreparedPermit[]>({
     ...batchRegisterPermitsMutationOptions(sdk),
     ...options,
-    onSettled: (data, error, variables, onMutateResult, context) => {
-      options?.onSettled?.(data, error, variables, onMutateResult, context);
+    onSuccess: (data, variables, onMutateResult, context) => {
+      options?.onSuccess?.(data, variables, onMutateResult, context);
       context.client.removeQueries({ queryKey: zamaQueryKeys.hasPermit.all });
     },
   });

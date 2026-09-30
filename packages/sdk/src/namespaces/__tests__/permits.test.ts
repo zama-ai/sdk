@@ -293,7 +293,7 @@ describe("Permits", () => {
       expect(await sdk.permits.hasPermit([CONTRACT_A, CONTRACT_B])).toBe(true);
     });
 
-    test("batchRegisterPermits keeps permits registered before a failing one", async ({
+    test("batchRegisterPermits persists nothing when a later permit fails", async ({
       sdk,
       signer,
     }) => {
@@ -315,7 +315,7 @@ describe("Permits", () => {
         ]),
       ).rejects.toBeInstanceOf(PreparedPermitChainMismatchError);
 
-      expect(await sdk.permits.hasPermit([CONTRACT_A])).toBe(true);
+      expect(await sdk.permits.hasPermit([CONTRACT_A])).toBe(false);
     });
   });
 

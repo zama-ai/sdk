@@ -376,7 +376,7 @@ See the [Offline reference](./Offline.md#preparepermit) for `preparePermit`'s re
 
 `(permits: SignedPreparedPermit[]) => Promise<void>`
 
-[`registerPermit`](#permits-registerpermit) for every [`offline.batchPreparePermits`](#offline-batchpreparepermits) payload, each paired with its `signature`. Permits are registered in order; if one fails, the ones before it stay registered, and because registration is idempotent you can retry with the full list. Throws whatever `registerPermit` throws for the failing permit.
+[`registerPermit`](#permits-registerpermit) for every [`offline.batchPreparePermits`](#offline-batchpreparepermits) payload, each paired with its `signature`. Registration is all-or-nothing: every permit is verified before any is stored, so if one fails, none are registered. Throws whatever `registerPermit` throws for the first failing permit.
 
 ```ts
 const prepared = await sdk.offline.batchPreparePermits({
