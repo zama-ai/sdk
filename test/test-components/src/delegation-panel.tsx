@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useDelegateDecryption, useDecryptBalanceAs, useMetadata } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/sdk";
+import { WILDCARD_CONTRACT, type Address } from "@zama-fhe/sdk";
 import { getAddress } from "viem";
 
 export function DelegationPanel({
@@ -14,7 +15,8 @@ export function DelegationPanel({
   defaultDelegator?: Address;
 }) {
   const { data: metadata } = useMetadata(tokenAddress);
-  const delegate = useDelegateDecryption(tokenAddress);
+  const [wildcard, setWildcard] = useState(false);
+  const delegate = useDelegateDecryption(wildcard ? WILDCARD_CONTRACT : tokenAddress);
   const decryptAs = useDecryptBalanceAs(tokenAddress);
 
   return (
@@ -39,6 +41,15 @@ export function DelegationPanel({
           className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
           data-testid="delegate-input"
         />
+        <label className="flex items-center gap-2 text-sm text-zama-gray">
+          <input
+            type="checkbox"
+            checked={wildcard}
+            onChange={(e) => setWildcard(e.target.checked)}
+            data-testid="delegate-wildcard-checkbox"
+          />
+          Delegate for all contracts (wildcard)
+        </label>
         <button
           type="submit"
           disabled={delegate.isPending}

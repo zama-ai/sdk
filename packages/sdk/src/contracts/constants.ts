@@ -1,9 +1,10 @@
 /** uint64 max — represents a permanent (no-expiry) delegation. */
 export const MAX_UINT64 = 2n ** 64n - 1n;
 
+// Duplicated rather than imported: @fhevm/sdk computes the same value
+// internally but doesn't export it from any public entry point.
 /**
- * uint48 max — represents a permanent (no-expiry) operator approval.
- * `setOperator`'s `until` argument is a `uint48` timestamp; this fits in a
- * JS number (< 2^53) and mirrors {@link MAX_UINT64}'s "permanent" role.
+ * `contractAddress` covering every confidential contract with a single
+ * delegation.
  */
-export const MAX_UINT48 = 2 ** 48 - 1;
+export const WILDCARD_CONTRACT = "0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF" as const;

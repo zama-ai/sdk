@@ -5684,6 +5684,11 @@ export class DelegationCooldownError extends ZamaError {
 }
 
 // @public
+export class DelegationDelegateCannotBeWildcardError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
 export class DelegationDelegateEqualsContractError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
@@ -5840,6 +5845,7 @@ export interface ErrorForCode {
     [ZamaErrorCode.DecryptionFailed]: DecryptionFailedError;
     [ZamaErrorCode.DelegationContractIsSelf]: DelegationContractIsSelfError;
     [ZamaErrorCode.DelegationCooldown]: DelegationCooldownError;
+    [ZamaErrorCode.DelegationDelegateCannotBeWildcard]: DelegationDelegateCannotBeWildcardError;
     [ZamaErrorCode.DelegationDelegateEqualsContract]: DelegationDelegateEqualsContractError;
     [ZamaErrorCode.DelegationExpirationTooSoon]: DelegationExpirationTooSoonError;
     [ZamaErrorCode.DelegationExpired]: DelegationExpiredError;
@@ -11271,6 +11277,9 @@ export const mainnet: {
 export function matchZamaError<R>(error: unknown, handlers: { [K in ZamaErrorCode]?: (error: ErrorForCode[K]) => R; } & {
     _?: (error: unknown) => R;
 }): R | undefined;
+
+// @public
+export const MAX_UINT64: bigint;
 
 // @public
 export class MemoryStorage implements GenericStorage {
@@ -19543,6 +19552,9 @@ export class WalletNotConnectedError extends SignerRequiredError {
 }
 
 // @public
+export const WILDCARD_CONTRACT: "0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF";
+
+// @public
 export function wrapContract(wrapperAddress: Address, to: Address, amount: bigint): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -20872,6 +20884,7 @@ export const ZamaErrorCode: {
     readonly ERC20ReadFailed: "ERC20_READ_FAILED";
     readonly DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED";
     readonly DelegationDelegateEqualsContract: "DELEGATION_DELEGATE_EQUALS_CONTRACT";
+    readonly DelegationDelegateCannotBeWildcard: "DELEGATION_DELEGATE_CANNOT_BE_WILDCARD";
     readonly DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF";
     readonly AclPaused: "ACL_PAUSED";
     readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON";
