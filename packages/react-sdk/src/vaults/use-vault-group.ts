@@ -1,8 +1,12 @@
 "use client";
 
+import type { ZamaSDK } from "@zama-fhe/sdk";
 import { createVaultGroup, type VaultGroup, type VaultGroupConfig } from "@zama-fhe/sdk/vaults";
-import { useMemo } from "react";
 import { useZamaSDK } from "../provider";
+
+// One group per SDK and config, shared by every hook that names the same
+// group, so its token and batcher caches are not rebuilt per hook or render.
+const groups = new WeakMap<ZamaSDK, Map<string, VaultGroup>>();
 
 /**
  * Get a {@link VaultGroup} instance for a set of vaults sharing one confidential
@@ -12,8 +16,8 @@ import { useZamaSDK } from "../provider";
  * @param config - The group: its `cAsset`, members and router.
  *
  * @remarks
- * Memoized on the config object's identity: hold it in a module constant or a
- * `useMemo`, or every render builds a new group.
+ * Keyed on the config's contents, not its identity, so an inline config
+ * object is fine. Hooks that name the same group share one instance.
  *
  * @example
  * ```tsx
@@ -22,5 +26,16 @@ import { useZamaSDK } from "../provider";
  */
 export function useVaultGroup(config: VaultGroupConfig): VaultGroup {
   const sdk = useZamaSDK();
-  return useMemo<VaultGroup>(() => createVaultGroup(sdk, config), [sdk, config]);
+  let bySdk = groups.get(sdk);
+  if (!bySdk) {
+    bySdk = new Map();
+    groups.set(sdk, bySdk);
+  }
+  const key = JSON.stringify(config);
+  let group = bySdk.get(key);
+  if (!group) {
+    group = createVaultGroup(sdk, config);
+    bySdk.set(key, group);
+  }
+  return group;
 }

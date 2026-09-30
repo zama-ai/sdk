@@ -5,8 +5,6 @@
 ```ts
 
 import { Address } from '@zama-fhe/sdk';
-import { BatcherDirection } from '@zama-fhe/sdk/vaults';
-import { BatcherHistory } from '@zama-fhe/sdk/vaults';
 import { BatchState } from '@zama-fhe/sdk/vaults';
 import { ClaimParams } from '@zama-fhe/sdk/vaults';
 import { DepositParams } from '@zama-fhe/sdk/vaults';
@@ -28,33 +26,6 @@ import { VaultBatcher } from '@zama-fhe/sdk/vaults';
 import { VaultGroup } from '@zama-fhe/sdk/vaults';
 import { VaultGroupConfig } from '@zama-fhe/sdk/vaults';
 import { VaultGroupJoinResult } from '@zama-fhe/sdk/vaults';
-
-// @public
-export function useActiveBatcher(config: UseActiveBatcherConfig, options?: UseActiveBatcherOptions): UseQueryResult<`0x${string}`, Error>;
-
-// @public
-export interface UseActiveBatcherConfig {
-    history: BatcherHistory;
-}
-
-// @public
-export interface UseActiveBatcherOptions extends Omit<UseQueryOptions<Address>, "queryKey" | "queryFn" | "enabled"> {
-    enabled?: boolean;
-}
-
-// @public
-export function useActiveBatchers(config: UseActiveBatchersConfig, options?: UseActiveBatchersOptions): UseQueryResult<Readonly<Record<string, `0x${string}`>>, Error>;
-
-// @public
-export interface UseActiveBatchersConfig {
-    direction: BatcherDirection;
-    group: VaultGroupConfig;
-}
-
-// @public
-export interface UseActiveBatchersOptions extends Omit<UseQueryOptions<Readonly<Record<string, Address>>>, "queryKey" | "queryFn" | "enabled"> {
-    enabled?: boolean;
-}
 
 // @public
 export function useBatchState(config: UseBatchStateConfig, options?: UseBatchStateOptions): UseQueryResult<BatchState, Error>;

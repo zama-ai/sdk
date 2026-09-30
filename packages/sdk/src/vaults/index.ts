@@ -18,14 +18,6 @@ export { MAX_GROUP_VAULTS } from "./allocation";
 export { BatchState } from "./types";
 export type { JoinOptions, JoinResult, VaultAddresses, VaultJoinOptions } from "./types";
 export { decodeJoined, findJoined, VaultTopics, type JoinedEvent } from "./events";
-export {
-  BATCHER_DIRECTIONS,
-  normalizeBatcherHistory,
-  resolveActiveBatcher,
-  type BatcherDirection,
-  type BatcherHistory,
-  type RetiredBatcher,
-} from "./batcher-history";
 
 export {
   batchCallbackDeadlineContract,
@@ -46,9 +38,7 @@ export {
   pausedContract,
   quitContract,
   recoverContract,
-  routerJoinContract,
   toTokenContract,
-  tokenWrapperRegistryContract,
   totalDepositsContract,
   vaultContract,
 } from "./contracts";
@@ -56,8 +46,6 @@ export {
 // Importing this barrel does not require TanStack Query to be installed: the
 // TanStack types below are type-only imports, erased at compile time.
 export {
-  activeBatcherQueryOptions,
-  activeBatchersQueryOptions,
   batchStateQueryOptions,
   claimMutationOptions,
   currentBatchIdQueryOptions,
@@ -77,8 +65,6 @@ export {
   redeemMutationOptions,
   timeUntilDispatchableQueryOptions,
   vaultQueryKeys,
-  type ActiveBatcherQueryConfig,
-  type ActiveBatchersQueryConfig,
   type BatchStateQueryConfig,
   type ClaimParams,
   type CurrentBatchIdQueryConfig,

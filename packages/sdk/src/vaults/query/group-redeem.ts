@@ -1,3 +1,4 @@
+import type { Address } from "viem";
 import type { MutationFactoryOptions } from "../../query/factory-types";
 import type { VaultGroup, VaultGroupJoinOptions, VaultGroupJoinResult } from "../vault-group";
 
@@ -13,12 +14,16 @@ export interface GroupRedeemParams extends VaultGroupJoinOptions {
 export function groupRedeemMutationOptions(
   group: VaultGroup,
 ): MutationFactoryOptions<
-  readonly ["zama.vaultGroup.redeem", string],
+  readonly ["zama.vaultGroup.redeem", { cAsset: Address; vaults: readonly Address[] }],
   GroupRedeemParams,
   VaultGroupJoinResult
 > {
   return {
-    mutationKey: ["zama.vaultGroup.redeem", group.id] as const,
+    // Keyed on the vaults, not the group's id, which two groups may share.
+    mutationKey: [
+      "zama.vaultGroup.redeem",
+      { cAsset: group.cAsset, vaults: group.vaults.map((member) => member.vault) },
+    ] as const,
     mutationFn: async ({ vaultId, amount, ...rest }) => group.redeem(vaultId, amount, rest),
   };
 }

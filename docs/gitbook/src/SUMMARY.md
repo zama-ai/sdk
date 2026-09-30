@@ -142,8 +142,6 @@
   - [useVaultGroup](reference/react/useVaultGroup.md)
   - [useGroupDeposit](reference/react/useGroupDeposit.md)
   - [useGroupRedeem](reference/react/useGroupRedeem.md)
-  - [useActiveBatcher](reference/react/useActiveBatcher.md)
-  - [useActiveBatchers](reference/react/useActiveBatchers.md)
   - [useTimeUntilDispatchable](reference/react/useTimeUntilDispatchable.md)
   - [Query keys](reference/react/query-keys.md)
 

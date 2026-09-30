@@ -46,7 +46,7 @@ import type {
 import type { SigningFailedError, SigningRejectedError } from "./signing";
 import type { TransactionRevertedError } from "./transaction";
 import type { UnshieldAlreadyFinalizedError } from "./unshield";
-import type { UnlistedConfidentialTokenError } from "./vaults";
+import type { UnlistedConfidentialTokenError, VaultBatcherPausedError } from "./vaults";
 
 /**
  * Maps each {@link ZamaErrorCode} to the error class thrown with that code, so
@@ -132,6 +132,8 @@ export interface ErrorForCode {
   [ZamaErrorCode.UnshieldAlreadyFinalized]: UnshieldAlreadyFinalizedError;
   /** Thrown for {@link ZamaErrorCode.UnlistedConfidentialToken}. */
   [ZamaErrorCode.UnlistedConfidentialToken]: UnlistedConfidentialTokenError;
+  /** Thrown for {@link ZamaErrorCode.VaultBatcherPaused}. */
+  [ZamaErrorCode.VaultBatcherPaused]: VaultBatcherPausedError;
 }
 
 /**

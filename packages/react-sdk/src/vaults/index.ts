@@ -4,16 +4,6 @@
  * @packageDocumentation
  */
 export { useVault } from "./use-vault";
-export {
-  useActiveBatcher,
-  type UseActiveBatcherConfig,
-  type UseActiveBatcherOptions,
-} from "./use-active-batcher";
-export {
-  useActiveBatchers,
-  type UseActiveBatchersConfig,
-  type UseActiveBatchersOptions,
-} from "./use-active-batchers";
 export { useVaultGroup } from "./use-vault-group";
 export { useGroupDeposit, type UseGroupDepositConfig } from "./use-group-deposit";
 export { useGroupRedeem, type UseGroupRedeemConfig } from "./use-group-redeem";

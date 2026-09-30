@@ -21,6 +21,7 @@ import {
   TransactionRevertedError,
   UnshieldAlreadyFinalizedError,
   UnlistedConfidentialTokenError,
+  VaultBatcherPausedError,
   InvalidTransportKeyPairError,
   TransportKeyPairExpiredError,
   RevokedKmsContextError,
@@ -120,6 +121,7 @@ Exactly five error classes are retryable today: `RpcRateLimitError`, `RelayerReq
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
 | `UnshieldAlreadyFinalizedError`         | `UNSHIELD_ALREADY_FINALIZED`          | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
 | `UnlistedConfidentialTokenError`        | `UNLISTED_CONFIDENTIAL_TOKEN`         | The vault router's registry does not list the confidential token, so the router would reject a transfer of it                     |
+| `VaultBatcherPausedError`               | `VAULT_BATCHER_PAUSED`                | A batcher one leg of a group submission would join is paused, so the whole submission would revert                                |
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                                                          |
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired — user must re-sign                                                                                    |
 | `RevokedKmsContextError`                | `REVOKED_KMS_CONTEXT`                 | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                                   |
@@ -301,6 +303,14 @@ matchZamaError(error, {
 Thrown by `VaultGroup.deposit()` on a group of more than one vault when the registry the router checks does not list the confidential token. The router rejects a pushed transfer of an unlisted token on chain, so the SDK refuses before the caller pays for a reverted transaction. The error carries `token` and `registry`.
 
 **How to handle:** Not retryable. Listings are governed on chain and can be added or revoked at any time, so check the group's asset against the registry the router names. `VaultGroup.isAssetListed()` gives the same answer without throwing.
+
+### VaultBatcherPausedError
+
+**Code:** `VAULT_BATCHER_PAUSED`
+
+Thrown by `VaultGroup.deposit()` and `VaultGroup.redeem()` when the batcher one member's leg would join reports `paused()`. A group submission joins every member in one transaction and a paused batcher rejects `join`, so the whole submission would revert; the SDK refuses before the caller pays for it. The error carries the paused `batcher` and the `vaultId` of the member it serves.
+
+**How to handle:** Not retryable until the batcher's owner unpauses it. Quitting and claiming on the paused batcher still work, so existing positions are not stuck; only new joins are. Show the user which member is paused rather than a generic failure.
 
 ### InvalidTransportKeyPairError
 

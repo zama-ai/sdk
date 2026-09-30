@@ -1,4 +1,4 @@
-import { getAddress, keccak256, pad, toBytes, type Address, type Hex } from "viem";
+import { keccak256, pad, toBytes, type Address, type Hex } from "viem";
 import { vi } from "vitest";
 import type { EncryptedValue, RelayerSDK } from "../relayer/types";
 import { Token } from "../token";
@@ -48,24 +48,6 @@ export function mockJoinBalance(
     config.functionName === "vault" && params.vault ? params.vault : params.fromToken,
   );
   vi.spyOn(Token.prototype, "balanceOf").mockResolvedValue(params.balance ?? 1_000_000_000n);
-}
-
-/** Answers `currentBatchId` per batcher; any other read, or an unnamed batcher, throws so an over-reaching test fails loudly. */
-export function mockCurrentBatchIds(
-  provider: GenericProvider,
-  batchIds: Readonly<Record<Address, bigint>>,
-): void {
-  vi.mocked(provider.readContract).mockImplementation(async (call: unknown) => {
-    const { address, functionName } = call as { address: Address; functionName: string };
-    if (functionName !== "currentBatchId") {
-      throw new Error(`mockCurrentBatchIds was asked for ${functionName}`);
-    }
-    const batchId = batchIds[getAddress(address)];
-    if (batchId === undefined) {
-      throw new Error(`mockCurrentBatchIds has no batch id for ${address}`);
-    }
-    return batchId;
-  });
 }
 
 /** One encrypt returning `count` distinct handles under a single proof, in leg order. */

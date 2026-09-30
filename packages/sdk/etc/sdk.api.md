@@ -5870,6 +5870,7 @@ export interface ErrorForCode {
     [ZamaErrorCode.TransportKeyPairChanged]: TransportKeyPairChangedError;
     [ZamaErrorCode.UnlistedConfidentialToken]: UnlistedConfidentialTokenError;
     [ZamaErrorCode.UnshieldAlreadyFinalized]: UnshieldAlreadyFinalizedError;
+    [ZamaErrorCode.VaultBatcherPaused]: VaultBatcherPausedError;
     [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
     [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
 }
@@ -15999,11 +16000,14 @@ export function underlyingContract(wrapperAddress: Address): {
 };
 
 // @public
+export interface UnlistedConfidentialTokenDetails {
+    readonly registry: Address;
+    readonly token: Address;
+}
+
+// @public
 export class UnlistedConfidentialTokenError extends ZamaError {
-    constructor(message: string, details: {
-        token: Address;
-        registry: Address;
-    }, options?: ErrorOptions);
+    constructor(message: string, details: UnlistedConfidentialTokenDetails, options?: ErrorOptions);
     readonly registry: Address;
     readonly token: Address;
 }
@@ -19504,6 +19508,19 @@ export interface UnwrapSubmittedEvent extends BaseEvent {
 }
 
 // @public
+export interface VaultBatcherPausedDetails {
+    readonly batcher: Address;
+    readonly vaultId: string;
+}
+
+// @public
+export class VaultBatcherPausedError extends ZamaError {
+    constructor(message: string, details: VaultBatcherPausedDetails, options?: ErrorOptions);
+    readonly batcher: Address;
+    readonly vaultId: string;
+}
+
+// @public
 export type VaultOperation = "join" | "quit" | "claim" | "recover" | "dispatchBatch" | "routerJoin";
 
 // @public
@@ -20889,6 +20906,7 @@ export const ZamaErrorCode: {
     readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
     readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
     readonly UnlistedConfidentialToken: "UNLISTED_CONFIDENTIAL_TOKEN";
+    readonly VaultBatcherPaused: "VAULT_BATCHER_PAUSED";
 };
 
 // @public

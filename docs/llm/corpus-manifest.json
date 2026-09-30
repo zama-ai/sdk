@@ -1537,30 +1537,6 @@
       "include_in_llms_full": true
     },
     {
-      "id": "doc:reference/react/useActiveBatcher",
-      "title": "useActiveBatcher",
-      "source_path": "docs/gitbook/src/reference/react/useActiveBatcher.md",
-      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useActiveBatcher.md",
-      "source_type": "official-doc",
-      "category": "reference-react",
-      "logical_path": "reference/react/useActiveBatcher",
-      "description": "Query hook for the batcher a join through a batcher history would reach right now.",
-      "include_in_llms_txt": true,
-      "include_in_llms_full": true
-    },
-    {
-      "id": "doc:reference/react/useActiveBatchers",
-      "title": "useActiveBatchers",
-      "source_path": "docs/gitbook/src/reference/react/useActiveBatchers.md",
-      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useActiveBatchers.md",
-      "source_type": "official-doc",
-      "category": "reference-react",
-      "logical_path": "reference/react/useActiveBatchers",
-      "description": "Query hook for the batcher every member of a vault group would join right now, keyed by member id.",
-      "include_in_llms_txt": true,
-      "include_in_llms_full": true
-    },
-    {
       "id": "doc:reference/react/useTimeUntilDispatchable",
       "title": "useTimeUntilDispatchable",
       "source_path": "docs/gitbook/src/reference/react/useTimeUntilDispatchable.md",

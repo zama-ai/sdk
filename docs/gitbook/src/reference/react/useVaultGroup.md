@@ -5,7 +5,7 @@ description: React hook returning a memoized VaultGroup instance for a set of va
 
 # useVaultGroup
 
-Returns a memoized [`VaultGroup`](../sdk/VaultGroup.md) bound to the SDK in the current `ZamaProvider`. The instance is recreated only when the SDK or the config object changes.
+Returns a memoized [`VaultGroup`](../sdk/VaultGroup.md) bound to the SDK in the current `ZamaProvider`. The instance is recreated only when the SDK or the config's contents change, and hooks that name the same group share it.
 
 This is the surface to reach for when depositing into one of several vaults; [`useVault`](./useVault.md) covers a single vault with no fan-out.
 
@@ -25,7 +25,7 @@ function useVaultGroup(config: VaultGroupConfig): VaultGroup;
 
 `VaultGroupConfig`
 
-The group: its shared asset, its members with their batcher histories, and the router. See [`VaultGroup` → VaultGroupConfig](../sdk/VaultGroup.md#vaultgroupconfig). The constructor's configuration checks run here, so a malformed group throws on first render.
+The group: its shared asset, its members with their batchers, and the router. See [`VaultGroup` → VaultGroupConfig](../sdk/VaultGroup.md#vaultgroupconfig). The constructor's configuration checks run here, so a malformed group throws on first render.
 
 ## Example
 
@@ -51,11 +51,10 @@ function Members() {
 }
 ```
 
-The hook memoizes on the config object's identity. Define it outside the component, or memoize it, or every render builds a new group.
+The hook memoizes on the config's contents rather than its identity, so an inline config is fine. Every hook that takes a `group` (`useGroupDeposit`, `useGroupRedeem`) goes through this one and shares the same instance, including its cached balance and batcher reads.
 
 ## Related
 
 - [`VaultGroup`](../sdk/VaultGroup.md) — the underlying class
 - [`useGroupDeposit`](./useGroupDeposit.md) / [`useGroupRedeem`](./useGroupRedeem.md) — mutation hooks over `group.deposit()` / `group.redeem()`
-- [`useActiveBatchers`](./useActiveBatchers.md) — the batcher each member would join right now
 - [Vault groups](../../guides/vault-groups.md)

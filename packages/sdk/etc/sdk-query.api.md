@@ -1370,6 +1370,7 @@ export const ZamaErrorCode: {
     readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
     readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
     readonly UnlistedConfidentialToken: "UNLISTED_CONFIDENTIAL_TOKEN";
+    readonly VaultBatcherPaused: "VAULT_BATCHER_PAUSED";
 };
 
 // @public

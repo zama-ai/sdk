@@ -94,6 +94,8 @@ export const ZamaErrorCode = {
   UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED",
   /** The vault router's registry does not list this confidential token. */
   UnlistedConfidentialToken: "UNLISTED_CONFIDENTIAL_TOKEN",
+  /** A batcher one leg of a group submission would join is paused. */
+  VaultBatcherPaused: "VAULT_BATCHER_PAUSED",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
@@ -153,6 +155,7 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.PreparedPermitExpired]: false, // caller must re-run preparePermit for a fresh validity window
   [ZamaErrorCode.UnshieldAlreadyFinalized]: false, // the funds already arrived; the stale pointer is cleared
   [ZamaErrorCode.UnlistedConfidentialToken]: false, // only a governance listing changes the answer, not a retry
+  [ZamaErrorCode.VaultBatcherPaused]: false, // only the batcher's owner unpauses it, not a retry
 };
 
 /**

@@ -17,7 +17,7 @@ Follow the [rules for clients](https://docs.zama.org/protocol/confidential-vault
 
 ## Configuring a group
 
-A group names the shared `cAsset`, its members, and the router that fans a submission out across them. Each member carries its ERC-4626 `vault`, its `cShare`, and a **batcher history** per direction (see [Batcher histories](#batcher-histories)). The names follow the [vault addresses](https://docs.zama.org/protocol/confidential-vault/reference/addresses) reference.
+A group names the shared `cAsset`, its members, and the router that fans a submission out across them. Each member carries its ERC-4626 `vault`, its `cShare`, and its deposit and redeem batchers. The names follow the [vault addresses](https://docs.zama.org/protocol/confidential-vault/reference/addresses) reference.
 
 ```ts
 import { createVaultGroup } from "@zama-fhe/sdk/vaults";
@@ -31,19 +31,13 @@ const STABLE_GROUP = {
       id: "alpha",
       vault: "0xAlphaVault",
       cShare: "0xAlphaShares",
-      batchers: {
-        deposit: { retired: [], latest: "0xAlphaDepositBatcher" },
-        redeem: { retired: [], latest: "0xAlphaRedeemBatcher" },
-      },
+      batchers: { deposit: "0xAlphaDepositBatcher", redeem: "0xAlphaRedeemBatcher" },
     },
     {
       id: "beta",
       vault: "0xBetaVault",
       cShare: "0xBetaShares",
-      batchers: {
-        deposit: { retired: [], latest: "0xBetaDepositBatcher" },
-        redeem: { retired: [], latest: "0xBetaRedeemBatcher" },
-      },
+      batchers: { deposit: "0xBetaDepositBatcher", redeem: "0xBetaRedeemBatcher" },
     },
   ],
 } as const;
@@ -94,26 +88,16 @@ Both methods check the caller's confidential balance before submitting, as `Vaul
 
 Claiming, quitting and batch state are unchanged: they happen per batcher, on the batcher a leg actually joined. Each entry in `joins` gives you that address and the batch id, so `createVaultBatcher(sdk, join.batcher).claim(join.batchId)` is the follow-up. See [Vault deposits and withdrawals](./vault-deposits.md) for the batch lifecycle.
 
-## Batcher histories
+## Replacing a batcher
 
-A vault's batcher is replaced rather than upgraded, and a replaced batcher keeps accepting joins until its last configured batch is dispatched. So a member names a _history_ rather than an address:
-
-```ts
-batchers: {
-  deposit: {
-    retired: [{ address: "0xOldDepositBatcher", lastBatchId: 47n }],
-    latest: "0xNewDepositBatcher",
-  },
-  redeem: { retired: [], latest: "0xRedeemBatcher" },
-}
-```
-
-The SDK reads `currentBatchId` off each retired batcher before every submission and joins the first one that has not passed its `lastBatchId`, falling back to `latest`. The handover happens when someone dispatches that last batch, not at a scheduled time, so it cannot be resolved once and cached. Retired batchers keep their batches claimable and quittable forever, which is why an entry is never removed.
-
-`useActiveBatchers` exposes the same answer for display; give it a `refetchInterval` on a screen that stays open.
+A batcher is replaced by deploying a new one, not upgraded in place, and the old one keeps accepting joins until its owner pauses it. Nothing on chain points from the old batcher to the new, so the cutover is a configuration change: point the member at the new pair and ship the new config to every client at once, so all users keep sending the same leg list. Positions already on the old batcher are unaffected: each entry in `joins` records the batcher it landed on, and claiming and quitting happen there.
 
 ## Grants and registry listing
 
-For a **redemption**, the router pulls each leg's share token, so it needs an ERC-7984 operator grant on every one of them. The SDK makes any missing grant before submitting — note that this is a grant to the _router_, not to the batchers, the opposite of what a single-vault `Vault.redeem` does.
+For a **redemption**, the router pulls each leg's share token, so it needs an ERC-7984 operator grant on every one of them. The SDK makes any missing grant before submitting — note that this is a grant to the _router_, not to the batchers, the opposite of what a single-vault `Vault.redeem` does. Each grant is its own wallet prompt, so the first redemption from a group of N vaults can ask the user to sign up to N + 1 times; later ones reuse the grants while they are valid.
 
-A **deposit** needs no grant: it is a transfer you send. It does require the shared asset to be listed in the registry the router checks, so the SDK asks first and raises `UnlistedConfidentialTokenError` rather than letting you pay for a reverted transaction. Listings are governed on chain and can be revoked, so this is checked per submission rather than remembered.
+A **deposit** through the router needs no grant: it is a transfer you send. It does require the shared asset to be listed in the registry the router checks, so the SDK asks first and raises `UnlistedConfidentialTokenError` rather than letting you pay for a reverted transaction. Listings are governed on chain and can be revoked, so this is checked per submission rather than remembered. A group of one vault uses no router: it grants its batcher an operator approval on the asset, as `Vault.deposit` does, and is never gated on the listing.
+
+## Paused batchers
+
+Every submission sends a leg to every member, and a paused batcher rejects joins. Rather than let one paused member revert the whole transaction, the SDK reads `paused()` on each resolved batcher first and throws `VaultBatcherPausedError` naming the member. Quitting and claiming on a paused batcher still work, so existing positions are not stuck.

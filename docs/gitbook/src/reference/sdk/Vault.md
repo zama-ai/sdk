@@ -15,6 +15,8 @@ Both methods grant the batcher an ERC-7984 operator approval if one isn't alread
 import { createVault, Vault } from "@zama-fhe/sdk/vaults";
 ```
 
+The `vaults` subpath is separate from the root entry, so apps that don't use vaults don't bundle it.
+
 ## Construction
 
 Use `createVault(sdk, addresses)`:

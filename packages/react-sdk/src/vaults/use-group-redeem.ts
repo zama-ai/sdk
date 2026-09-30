@@ -22,9 +22,11 @@ export interface UseGroupRedeemConfig {
 
 /**
  * Redeem shares of one vault of a group, joining every member's current redeem
- * batch with its own share token. On success, invalidates every member's share
- * balance and operator-status caches and the batch reads of every batcher a
- * leg joined.
+ * batch with its own share token. The router pulls those tokens, so the first
+ * redemption also grants it an operator approval on each member's share token,
+ * one wallet prompt per grant, before the join itself. On success, invalidates
+ * every member's share balance and operator-status caches and the batch reads
+ * of every batcher a leg joined.
  *
  * @param config - The group.
  * @param options - React Query mutation options.

@@ -3,9 +3,12 @@ import { describe, expect, test, vi } from "../../../test-fixtures";
 import type { TransactionResult } from "../../../types";
 import type { Vault } from "../../vault";
 import type { VaultBatcher } from "../../vault-batcher";
+import type { VaultGroup } from "../../vault-group";
 import { claimMutationOptions } from "../claim";
 import { depositMutationOptions } from "../deposit";
 import { dispatchBatchMutationOptions } from "../dispatch-batch";
+import { groupDepositMutationOptions } from "../group-deposit";
+import { groupRedeemMutationOptions } from "../group-redeem";
 import { joinMutationOptions } from "../join";
 import { quitMutationOptions } from "../quit";
 import { redeemMutationOptions } from "../redeem";
@@ -51,6 +54,45 @@ describe("deposit / redeem mutation options", () => {
     expect(options.mutationKey).toEqual(["zama.vault.redeem", REDEEM_BATCHER]);
     await options.mutationFn({ amount: 500n });
     expect(vault.redeem).toHaveBeenCalledWith(500n, {});
+  });
+});
+
+function createMockGroup(): VaultGroup {
+  return {
+    id: "stable",
+    cAsset: ACCOUNT,
+    vaults: [
+      { id: "alpha", vault: DEPOSIT_BATCHER },
+      { id: "beta", vault: REDEEM_BATCHER },
+    ],
+    deposit: vi.fn().mockResolvedValue(TX_RESULT),
+    redeem: vi.fn().mockResolvedValue(TX_RESULT),
+  } as unknown as VaultGroup;
+}
+
+describe("group mutation options", () => {
+  test("groupDepositMutationOptions keys on the vaults and delegates to group.deposit", async () => {
+    const group = createMockGroup();
+    const options = groupDepositMutationOptions(group);
+
+    expect(options.mutationKey).toEqual([
+      "zama.vaultGroup.deposit",
+      { cAsset: ACCOUNT, vaults: [DEPOSIT_BATCHER, REDEEM_BATCHER] },
+    ]);
+    await options.mutationFn({ vaultId: "alpha", amount: 1_000n, skipBalanceCheck: true });
+    expect(group.deposit).toHaveBeenCalledWith("alpha", 1_000n, { skipBalanceCheck: true });
+  });
+
+  test("groupRedeemMutationOptions keys on the vaults and delegates to group.redeem", async () => {
+    const group = createMockGroup();
+    const options = groupRedeemMutationOptions(group);
+
+    expect(options.mutationKey).toEqual([
+      "zama.vaultGroup.redeem",
+      { cAsset: ACCOUNT, vaults: [DEPOSIT_BATCHER, REDEEM_BATCHER] },
+    ]);
+    await options.mutationFn({ vaultId: "beta", amount: 500n, operatorUntil: 1_800_000_000 });
+    expect(group.redeem).toHaveBeenCalledWith("beta", 500n, { operatorUntil: 1_800_000_000 });
   });
 });
 

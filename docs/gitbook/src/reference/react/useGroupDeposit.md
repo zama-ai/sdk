@@ -54,7 +54,7 @@ import { type UseGroupDepositConfig } from "@zama-fhe/react-sdk/vaults";
 
 `VaultGroupConfig`
 
-The group to deposit into. Same shape as [`useVaultGroup`](./useVaultGroup.md) takes; keep its identity stable across renders.
+The group to deposit into. Same shape as [`useVaultGroup`](./useVaultGroup.md) takes.
 
 ---
 
@@ -98,6 +98,7 @@ Default: `false`. Skips the confidential-balance pre-flight, for accounts whose 
 - `InsufficientConfidentialBalanceError` — the asset balance is less than `amount`
 - `BalanceCheckUnavailableError` — the balance check needs a decryption the signer can't perform
 - `UnlistedConfidentialTokenError` — the router's registry does not list the asset
+- `VaultBatcherPausedError` — a member's batcher is paused, so the submission would revert
 
 ## Return Type
 
@@ -105,7 +106,7 @@ Default: `false`. Skips the confidential-balance pre-flight, for accounts whose 
 import { type VaultGroupJoinResult } from "@zama-fhe/sdk/vaults";
 ```
 
-`data` resolves to a `VaultGroupJoinResult`: `{ vaultId, transactions, joins }`, with one entry in `joins` per member. See [`VaultGroup` → VaultGroupJoinResult](../sdk/VaultGroup.md#vaultgroupjoinresult).
+`data` resolves to a `VaultGroupJoinResult`: the transaction's `txHash` and `receipt`, the chosen `vaultId`, and `joins` with one entry per member. See [`VaultGroup` → VaultGroupJoinResult](../sdk/VaultGroup.md#vaultgroupjoinresult).
 
 On success the hook invalidates the asset token's balance and operator-status caches, and the batch reads (`useCurrentBatchId`, `useBatchState`, `useTimeUntilDispatchable`) of every batcher a leg joined.
 

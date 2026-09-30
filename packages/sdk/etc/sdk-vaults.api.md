@@ -23,27 +23,6 @@ import { skipToken } from '@tanstack/query-core';
 import { TypedValue } from '@fhevm/sdk/types';
 
 // @public
-export interface ActiveBatcherQueryConfig {
-    history: BatcherHistory;
-    query?: Record<string, unknown>;
-}
-
-// Warning: (ae-forgotten-export) The symbol "ZamaSDK" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "QueryFactoryOptions" needs to be exported by the entry point index.d.ts
-//
-// @public
-export function activeBatcherQueryOptions(sdk: ZamaSDK, config: ActiveBatcherQueryConfig): QueryFactoryOptions<Address, Error, Address, ReturnType<typeof vaultQueryKeys.activeBatcher.history>>;
-
-// @public
-export interface ActiveBatchersQueryConfig {
-    direction: BatcherDirection;
-    query?: Record<string, unknown>;
-}
-
-// @public
-export function activeBatchersQueryOptions(group: VaultGroup, config: ActiveBatchersQueryConfig): QueryFactoryOptions<Readonly<Record<string, Address>>, Error, Readonly<Record<string, Address>>, ReturnType<typeof vaultQueryKeys.activeBatchers.group>>;
-
-// @public
 export function batchCallbackDeadlineContract(batcher: Address, batchId: bigint): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -1949,18 +1928,6 @@ export function batchDispatchedAtContract(batcher: Address, batchId: bigint): {
 };
 
 // @public
-export const BATCHER_DIRECTIONS: readonly ["deposit", "redeem"];
-
-// @public
-export type BatcherDirection = (typeof BATCHER_DIRECTIONS)[number];
-
-// @public
-export interface BatcherHistory {
-    readonly latest: Address;
-    readonly retired: readonly RetiredBatcher[];
-}
-
-// @public
 export function batchMinBatchAgeContract(batcher: Address, batchId: bigint): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -3247,6 +3214,8 @@ export interface BatchStateQueryConfig {
     query?: Record<string, unknown>;
 }
 
+// Warning: (ae-forgotten-export) The symbol "QueryFactoryOptions" needs to be exported by the entry point index.d.ts
+//
 // @public
 export function batchStateQueryOptions(batcher: VaultBatcher, config?: BatchStateQueryConfig): QueryFactoryOptions<BatchState, Error, BatchState, ReturnType<typeof vaultQueryKeys.batchState.batch>>;
 
@@ -4532,6 +4501,8 @@ export interface ClaimParams {
     batchId: bigint;
 }
 
+// Warning: (ae-forgotten-export) The symbol "ZamaSDK" needs to be exported by the entry point index.d.ts
+//
 // @public
 export function createVault(sdk: ZamaSDK, addresses: VaultAddresses): Vault;
 
@@ -8379,7 +8350,10 @@ export function fromTokenContract(batcher: Address): {
 };
 
 // @public
-export function groupDepositMutationOptions(group: VaultGroup): MutationFactoryOptions<readonly ["zama.vaultGroup.deposit", string], GroupDepositParams, VaultGroupJoinResult>;
+export function groupDepositMutationOptions(group: VaultGroup): MutationFactoryOptions<readonly ["zama.vaultGroup.deposit", {
+    cAsset: Address;
+    vaults: readonly Address[];
+}], GroupDepositParams, VaultGroupJoinResult>;
 
 // @public
 export interface GroupDepositParams extends VaultGroupJoinOptions {
@@ -8388,7 +8362,10 @@ export interface GroupDepositParams extends VaultGroupJoinOptions {
 }
 
 // @public
-export function groupRedeemMutationOptions(group: VaultGroup): MutationFactoryOptions<readonly ["zama.vaultGroup.redeem", string], GroupRedeemParams, VaultGroupJoinResult>;
+export function groupRedeemMutationOptions(group: VaultGroup): MutationFactoryOptions<readonly ["zama.vaultGroup.redeem", {
+    cAsset: Address;
+    vaults: readonly Address[];
+}], GroupRedeemParams, VaultGroupJoinResult>;
 
 // @public
 export interface GroupRedeemParams extends VaultGroupJoinOptions {
@@ -9729,9 +9706,6 @@ export function minBatchAgeContract(batcher: Address): {
     readonly functionName: "minBatchAge";
     readonly args: readonly [];
 };
-
-// @public
-export function normalizeBatcherHistory(history: BatcherHistory): BatcherHistory;
 
 // @public
 export function pausedContract(batcher: Address): {
@@ -11664,86 +11638,6 @@ export interface RedeemParams extends VaultJoinOptions {
 }
 
 // @public
-export function resolveActiveBatcher(sdk: ZamaSDK, history: BatcherHistory): Promise<Address>;
-
-// @public
-export interface RetiredBatcher {
-    readonly address: Address;
-    readonly lastBatchId: bigint;
-}
-
-// Warning: (ae-forgotten-export) The symbol "EncryptedAllocationLeg" needs to be exported by the entry point index.d.ts
-//
-// @public
-export function routerJoinContract(router: Address, legs: readonly EncryptedAllocationLeg[], inputProof: Hex): {
-    readonly address: `0x${string}`;
-    readonly abi: readonly [{
-        readonly type: "function";
-        readonly name: "join";
-        readonly inputs: readonly [{
-            readonly name: "legs";
-            readonly type: "tuple[]";
-            readonly internalType: "struct IVaultBatcherConfidentialRouter.Allocation[]";
-            readonly components: readonly [{
-                readonly name: "batcher";
-                readonly type: "address";
-                readonly internalType: "address";
-            }, {
-                readonly name: "token";
-                readonly type: "address";
-                readonly internalType: "address";
-            }, {
-                readonly name: "amount";
-                readonly type: "bytes32";
-                readonly internalType: "externalEuint64";
-            }];
-        }, {
-            readonly name: "inputProof";
-            readonly type: "bytes";
-            readonly internalType: "bytes";
-        }];
-        readonly outputs: readonly [];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "tokenWrapperRegistry";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "address";
-            readonly internalType: "contract ITokenWrapperRegistry";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "error";
-        readonly name: "InvalidTokenWrapperRegistry";
-        readonly inputs: readonly [];
-    }, {
-        readonly type: "error";
-        readonly name: "MissingInputProof";
-        readonly inputs: readonly [];
-    }, {
-        readonly type: "error";
-        readonly name: "ReentrancyGuardReentrantCall";
-        readonly inputs: readonly [];
-    }, {
-        readonly type: "error";
-        readonly name: "ZamaProtocolUnsupported";
-        readonly inputs: readonly [];
-    }, {
-        readonly type: "error";
-        readonly name: "UnlistedConfidentialToken";
-        readonly inputs: readonly [{
-            readonly name: "token";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-    }];
-    readonly functionName: "join";
-    readonly args: readonly [readonly EncryptedAllocationLeg[], `0x${string}`];
-};
-
-// @public
 export interface TimeUntilDispatchableQueryConfig {
     batchId?: bigint;
     query?: Record<string, unknown>;
@@ -11751,75 +11645,6 @@ export interface TimeUntilDispatchableQueryConfig {
 
 // @public
 export function timeUntilDispatchableQueryOptions(batcher: VaultBatcher, config?: TimeUntilDispatchableQueryConfig): QueryFactoryOptions<bigint | null, Error, bigint | null, ReturnType<typeof vaultQueryKeys.timeUntilDispatchable.batch>>;
-
-// @public
-export function tokenWrapperRegistryContract(router: Address): {
-    readonly address: `0x${string}`;
-    readonly abi: readonly [{
-        readonly type: "function";
-        readonly name: "join";
-        readonly inputs: readonly [{
-            readonly name: "legs";
-            readonly type: "tuple[]";
-            readonly internalType: "struct IVaultBatcherConfidentialRouter.Allocation[]";
-            readonly components: readonly [{
-                readonly name: "batcher";
-                readonly type: "address";
-                readonly internalType: "address";
-            }, {
-                readonly name: "token";
-                readonly type: "address";
-                readonly internalType: "address";
-            }, {
-                readonly name: "amount";
-                readonly type: "bytes32";
-                readonly internalType: "externalEuint64";
-            }];
-        }, {
-            readonly name: "inputProof";
-            readonly type: "bytes";
-            readonly internalType: "bytes";
-        }];
-        readonly outputs: readonly [];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "tokenWrapperRegistry";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "address";
-            readonly internalType: "contract ITokenWrapperRegistry";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "error";
-        readonly name: "InvalidTokenWrapperRegistry";
-        readonly inputs: readonly [];
-    }, {
-        readonly type: "error";
-        readonly name: "MissingInputProof";
-        readonly inputs: readonly [];
-    }, {
-        readonly type: "error";
-        readonly name: "ReentrancyGuardReentrantCall";
-        readonly inputs: readonly [];
-    }, {
-        readonly type: "error";
-        readonly name: "ZamaProtocolUnsupported";
-        readonly inputs: readonly [];
-    }, {
-        readonly type: "error";
-        readonly name: "UnlistedConfidentialToken";
-        readonly inputs: readonly [{
-            readonly name: "token";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-    }];
-    readonly functionName: "tokenWrapperRegistry";
-    readonly args: readonly [];
-};
 
 // @public
 export function totalDepositsContract(batcher: Address, batchId: bigint): {
@@ -13780,7 +13605,6 @@ export function vaultContract(batcher: Address): {
 // @public
 export class VaultGroup {
     constructor(sdk: ZamaSDK, config: VaultGroupConfig);
-    activeBatchers(direction: BatcherDirection): Promise<Readonly<Record<string, Address>>>;
     readonly cAsset: Address;
     deposit(vaultId: string, amount: bigint, options?: VaultGroupJoinOptions): Promise<VaultGroupJoinResult>;
     readonly id: string;
@@ -13813,9 +13637,8 @@ export interface VaultGroupJoinOptions extends JoinOptions {
 }
 
 // @public
-export interface VaultGroupJoinResult {
+export interface VaultGroupJoinResult extends TransactionResult {
     joins: readonly VaultGroupJoin[];
-    transactions: readonly TransactionResult[];
     vaultId: string;
 }
 
@@ -13827,7 +13650,10 @@ export interface VaultJoinOptions extends JoinOptions {
 
 // @public
 export interface VaultMemberConfig {
-    readonly batchers: Readonly<Record<BatcherDirection, BatcherHistory>>;
+    readonly batchers: {
+        readonly deposit: Address;
+        readonly redeem: Address;
+    };
     readonly cShare: Address;
     readonly id: string;
     readonly vault: Address;
@@ -13835,22 +13661,6 @@ export interface VaultMemberConfig {
 
 // @public
 export const vaultQueryKeys: {
-    activeBatcher: {
-        history: (history: BatcherHistory) => readonly ["zama.vault.activeBatcher", {
-            retired: string[];
-            latest: `0x${string}`;
-        }];
-    };
-    activeBatchers: {
-        group: (vaults: readonly VaultMemberConfig[], direction: BatcherDirection) => readonly ["zama.vaultGroup.activeBatchers", {
-            readonly direction: "deposit" | "redeem";
-            readonly members: {
-                retired: string[];
-                latest: `0x${string}`;
-                id: string;
-            }[];
-        }];
-    };
     currentBatchId: {
         batcher: (batcherAddress: Address) => readonly ["zama.vault.currentBatchId", {
             readonly batcherAddress: `0x${string}`;

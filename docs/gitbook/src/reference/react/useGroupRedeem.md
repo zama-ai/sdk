@@ -7,7 +7,7 @@ description: Mutation hook that redeems shares of one vault of a group by joinin
 
 Mutation hook that redeems a plaintext amount of shares from one member of a [vault group](../../guides/vault-groups.md). It checks the caller's balance of that member's share token, resolves every member's active redeem batcher, and joins all of them, each leg spending its own vault's share token — the same flow as [`VaultGroup.redeem`](../sdk/VaultGroup.md#redeem).
 
-On the router path the router pulls each share token, so the SDK grants it an operator approval on every one of them first, where none is active.
+The router pulls each share token, so the SDK grants it an operator approval on every member's share token that lacks one before the join. Each grant is its own wallet prompt: a first redemption from a group of N vaults can ask the user to sign up to N + 1 times.
 
 ## Import
 
@@ -48,7 +48,7 @@ import { type UseGroupRedeemConfig } from "@zama-fhe/react-sdk/vaults";
 
 `VaultGroupConfig`
 
-The group to redeem from. Same shape as [`useVaultGroup`](./useVaultGroup.md) takes; keep its identity stable across renders.
+The group to redeem from. Same shape as [`useVaultGroup`](./useVaultGroup.md) takes.
 
 ---
 
@@ -76,7 +76,7 @@ Amount of **shares** to redeem, in that member's share token's base units. ERC-4
 
 Same as [`useGroupDeposit`](./useGroupDeposit.md#operatoruntil). The balance check is against the chosen member's share token.
 
-**Throws:** the same errors as `useGroupDeposit`, except `UnlistedConfidentialTokenError`, which only the deposit path raises.
+**Throws:** the same errors as `useGroupDeposit`, including `VaultBatcherPausedError`, except `UnlistedConfidentialTokenError`, which only the deposit path raises.
 
 ## Return Type
 

@@ -140,8 +140,6 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useVaultGroup](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultGroup.md): React hook returning a memoized VaultGroup instance for a set of vaults sharing one confidential asset.
 - [useGroupDeposit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupDeposit.md): Mutation hook that deposits into one vault of a group by joining every member's current deposit batch.
 - [useGroupRedeem](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupRedeem.md): Mutation hook that redeems shares of one vault of a group by joining every member's current redeem batch.
-- [useActiveBatcher](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useActiveBatcher.md): Query hook for the batcher a join through a batcher history would reach right now.
-- [useActiveBatchers](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useActiveBatchers.md): Query hook for the batcher every member of a vault group would join right now, keyed by member id.
 - [useTimeUntilDispatchable](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md): Query hook for the seconds until a vault batch becomes eligible for dispatch.
 - [Query keys](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/query-keys.md): Reference for the zamaQueryKeys factory used for manual React Query cache control.
 

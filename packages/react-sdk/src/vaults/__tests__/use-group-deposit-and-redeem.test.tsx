@@ -29,19 +29,13 @@ const group: VaultGroupConfig = {
       id: "alpha",
       vault: ALPHA_VAULT,
       cShare: ALPHA_SHARE,
-      batchers: {
-        deposit: { retired: [], latest: ALPHA_DEPOSIT },
-        redeem: { retired: [], latest: ALPHA_REDEEM },
-      },
+      batchers: { deposit: ALPHA_DEPOSIT, redeem: ALPHA_REDEEM },
     },
     {
       id: "beta",
       vault: BETA_VAULT,
       cShare: BETA_SHARE,
-      batchers: {
-        deposit: { retired: [], latest: BETA_DEPOSIT },
-        redeem: { retired: [], latest: BETA_REDEEM },
-      },
+      batchers: { deposit: BETA_DEPOSIT, redeem: BETA_REDEEM },
     },
   ],
 };
@@ -63,6 +57,8 @@ function mockGroupSubmission(provider: GenericProvider, account: Address, batche
       case "isConfidentialTokenValid":
       case "isOperator":
         return true;
+      case "paused":
+        return false;
       case "fromToken":
         return BATCHERS[getAddress(address)]?.fromToken;
       case "vault":

@@ -2,26 +2,21 @@ import { encodeAbiParameters, getAbiItem, type Address, type Hex } from "viem";
 import type { EncryptedValue } from "../relayer/types";
 import { vaultRouterAbi } from "./abi/vault-router.abi";
 
-/** The pull legs one transaction's FHE budget fits; a group must be exitable in one submission. */
+/** The most vaults a group may name: ten, the router's documented leg limit, so a group is always exitable in one submission. */
 export const MAX_GROUP_VAULTS = 10;
 
 /** One vault's share of a fan-out. */
 export interface AllocationLeg {
-  /** The batcher this leg joins. */
   readonly batcher: Address;
   /** The confidential token this leg spends. */
   readonly token: Address;
-  /** The plaintext amount, encrypted before submission. */
   readonly amount: bigint;
 }
 
 /** An {@link AllocationLeg} whose amount has been encrypted against the router. */
 export interface EncryptedAllocationLeg {
-  /** The batcher this leg joins. */
   readonly batcher: Address;
-  /** The confidential token this leg spends. */
   readonly token: Address;
-  /** The encrypted amount, covered by the allocation's input proof. */
   readonly amount: EncryptedValue;
 }
 
@@ -29,7 +24,6 @@ export interface EncryptedAllocationLeg {
 export interface EncryptedAllocation {
   /** In the order they were submitted for encryption. */
   readonly legs: readonly EncryptedAllocationLeg[];
-  /** Covers every leg's amount in one proof. */
   readonly inputProof: Hex;
 }
 
