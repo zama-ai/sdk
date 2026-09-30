@@ -1,11 +1,11 @@
 ---
 title: Handle errors
-description: Catch, match, and recover from SDK errors in your application.
+description: Catch, match, and recover from SDK errors in TypeScript, React, Go, and Rust applications.
 ---
 
 # Handle errors
 
-All errors thrown by `@zama-fhe/sdk` and `@zama-fhe/react-sdk` extend `ZamaError` and carry a `.code` string for programmatic matching. This guide covers how to catch them, route them to user-friendly messages, and troubleshoot common problems.
+All errors thrown by `@zama-fhe/sdk` and `@zama-fhe/react-sdk` extend `ZamaError` and carry a `.code` string for programmatic matching. This guide covers how to catch them, route them to user-friendly messages, and troubleshoot common problems. Go and Rust clients receive the same codes from the daemon.
 
 ## Steps
 
@@ -13,43 +13,43 @@ All errors thrown by `@zama-fhe/sdk` and `@zama-fhe/react-sdk` extend `ZamaError
 
 Every SDK error is an instance of `ZamaError`, which extends the native `Error` class. Each subclass has a unique `.code` property:
 
-| Error                                     | Code                                     | What happened                                                                                                  |
-| ----------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `SigningRejectedError`                    | `SIGNING_REJECTED`                       | User rejected the wallet signature                                                                             |
-| `SigningFailedError`                      | `SIGNING_FAILED`                         | Wallet signature failed (connectivity or firmware issue)                                                       |
-| `EncryptionFailedError`                   | `ENCRYPTION_FAILED`                      | FHE encryption failed in the WASM runtime                                                                      |
-| `DecryptionFailedError`                   | `DECRYPTION_FAILED`                      | FHE decryption failed                                                                                          |
-| `TransactionRevertedError`                | `TRANSACTION_REVERTED`                   | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                 |
-| `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | `resumeUnshield()` called for an unwrap that was already finalized -- funds already arrived, nothing to resume |
-| `InvalidTransportKeyPairError`            | `INVALID_KEYPAIR`                        | Relayer rejected transport key pair (stale or malformed)                                                       |
-| `TransportKeyPairExpiredError`            | `KEYPAIR_EXPIRED`                        | Transport key pair expired -- user needs to re-sign                                                            |
-| `RevokedKmsContextError`                  | `REVOKED_KMS_CONTEXT`                    | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                |
-| `NoCiphertextError`                       | `NO_CIPHERTEXT`                          | No encrypted balance exists for this account                                                                   |
-| `RelayerRequestFailedError`               | `RELAYER_REQUEST_FAILED`                 | Relayer HTTP request failed (check `.statusCode`); retryable on back-pressure (429)                            |
-| `NotEntitledError`                        | `NOT_ENTITLED`                           | Actor lacks the on-chain ACL grant to decrypt this value — terminal, don't retry                               |
-| `RpcRateLimitError`                       | `RPC_RATE_LIMITED`                       | Consumer's RPC provider rate-limited an on-chain read (retryable)                                              |
-| `ConfigurationError`                      | `CONFIGURATION`                          | Invalid SDK config or FHE runtime failed to initialize                                                         |
-| `InsufficientConfidentialBalanceError`    | `INSUFFICIENT_CONFIDENTIAL_BALANCE`      | Confidential balance too low for transfer or unshield                                                          |
-| `InsufficientERC20BalanceError`           | `INSUFFICIENT_ERC20_BALANCE`             | ERC-20 balance too low for shield                                                                              |
-| `InsufficientAllowanceError`              | `INSUFFICIENT_ALLOWANCE`                 | ERC-20 allowance too low for a manual `wrap` (approve first)                                                   |
-| `BalanceCheckUnavailableError`            | `BALANCE_CHECK_UNAVAILABLE`              | Balance check impossible (no stored permits)                                                                   |
-| `ERC20ReadFailedError`                    | `ERC20_READ_FAILED`                      | Public ERC-20 read failed (network or contract error)                                                          |
-| `DelegationSelfNotAllowedError`           | `DELEGATION_SELF_NOT_ALLOWED`            | Delegation cannot target self                                                                                  |
-| `DelegationCooldownError`                 | `DELEGATION_COOLDOWN`                    | Only one delegate/revoke per tuple per block (retryable)                                                       |
-| `DelegationNotFoundError`                 | `DELEGATION_NOT_FOUND`                   | No active delegation for this tuple                                                                            |
-| `SignerRequiredError`                     | `SIGNER_REQUIRED`                        | Write/sign/decrypt called without a signer                                                                     |
-| `DelegationExpiredError`                  | `DELEGATION_EXPIRED`                     | The delegation has expired                                                                                     |
-| `SignerNotConfiguredError`                | `SIGNER_NOT_CONFIGURED`                  | SDK operation needs a signer but none is configured (subclass of `SignerRequiredError`)                        |
-| `WalletNotConnectedError`                 | `WALLET_NOT_CONNECTED`                   | Signer exists but has no connected wallet account (subclass of `SignerRequiredError`)                          |
-| `WalletAccountNotReadyError`              | `WALLET_ACCOUNT_NOT_READY`               | Async signer adapter hasn't resolved its account yet (subclass of `SignerRequiredError`, retryable)            |
-| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains                                                                    |
-| `DelegationContractIsSelfError`           | `DELEGATION_CONTRACT_IS_SELF`            | Delegation contract address equals the caller                                                                  |
-| `DelegationDelegateEqualsContractError`   | `DELEGATION_DELEGATE_EQUALS_CONTRACT`    | Delegate equals the contract address                                                                           |
-| `DelegationDelegateCannotBeWildcardError` | `DELEGATION_DELEGATE_CANNOT_BE_WILDCARD` | Delegate address is the wildcard address                                                                       |
-| `DelegationExpirationTooSoonError`        | `DELEGATION_EXPIRATION_TOO_SOON`         | Expiration date less than 1 hour in the future                                                                 |
-| `DelegationExpiryUnchangedError`          | `DELEGATION_EXPIRY_UNCHANGED`            | New expiry matches the current value                                                                           |
-| `DelegationNotPropagatedError`            | `DELEGATION_NOT_PROPAGATED`              | Delegated decrypt failed transiently (gateway not synced, or delegator ACL read stale) — retry                 |
-| `AclPausedError`                          | `ACL_PAUSED`                             | The ACL contract is paused                                                                                     |
+| Code                                     | TypeScript error class                    | What happened                                                                                                  |
+| ---------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `SIGNING_REJECTED`                       | `SigningRejectedError`                    | User rejected the wallet signature                                                                             |
+| `SIGNING_FAILED`                         | `SigningFailedError`                      | Wallet signature failed (connectivity or firmware issue)                                                       |
+| `ENCRYPTION_FAILED`                      | `EncryptionFailedError`                   | FHE encryption failed in the WASM runtime                                                                      |
+| `DECRYPTION_FAILED`                      | `DecryptionFailedError`                   | FHE decryption failed                                                                                          |
+| `TRANSACTION_REVERTED`                   | `TransactionRevertedError`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                 |
+| `UNSHIELD_ALREADY_FINALIZED`             | `UnshieldAlreadyFinalizedError`           | `resumeUnshield()` called for an unwrap that was already finalized -- funds already arrived, nothing to resume |
+| `INVALID_KEYPAIR`                        | `InvalidTransportKeyPairError`            | Relayer rejected transport key pair (stale or malformed)                                                       |
+| `KEYPAIR_EXPIRED`                        | `TransportKeyPairExpiredError`            | Transport key pair expired -- user needs to re-sign                                                            |
+| `REVOKED_KMS_CONTEXT`                    | `RevokedKmsContextError`                  | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                |
+| `NO_CIPHERTEXT`                          | `NoCiphertextError`                       | No encrypted balance exists for this account                                                                   |
+| `RELAYER_REQUEST_FAILED`                 | `RelayerRequestFailedError`               | Relayer HTTP request failed (check `.statusCode`); retryable on back-pressure (429)                            |
+| `NOT_ENTITLED`                           | `NotEntitledError`                        | Actor lacks the on-chain ACL grant to decrypt this value — terminal, don't retry                               |
+| `RPC_RATE_LIMITED`                       | `RpcRateLimitError`                       | Consumer's RPC provider rate-limited an on-chain read (retryable)                                              |
+| `CONFIGURATION`                          | `ConfigurationError`                      | Invalid SDK config or FHE runtime failed to initialize                                                         |
+| `INSUFFICIENT_CONFIDENTIAL_BALANCE`      | `InsufficientConfidentialBalanceError`    | Confidential balance too low for transfer or unshield                                                          |
+| `INSUFFICIENT_ERC20_BALANCE`             | `InsufficientERC20BalanceError`           | ERC-20 balance too low for shield                                                                              |
+| `INSUFFICIENT_ALLOWANCE`                 | `InsufficientAllowanceError`              | ERC-20 allowance too low for a manual `wrap` (approve first)                                                   |
+| `BALANCE_CHECK_UNAVAILABLE`              | `BalanceCheckUnavailableError`            | Balance check impossible (no stored permits)                                                                   |
+| `ERC20_READ_FAILED`                      | `ERC20ReadFailedError`                    | Public ERC-20 read failed (network or contract error)                                                          |
+| `DELEGATION_SELF_NOT_ALLOWED`            | `DelegationSelfNotAllowedError`           | Delegation cannot target self                                                                                  |
+| `DELEGATION_COOLDOWN`                    | `DelegationCooldownError`                 | Only one delegate/revoke per tuple per block (retryable)                                                       |
+| `DELEGATION_NOT_FOUND`                   | `DelegationNotFoundError`                 | No active delegation for this tuple                                                                            |
+| `SIGNER_REQUIRED`                        | `SignerRequiredError`                     | Write/sign/decrypt called without a signer                                                                     |
+| `DELEGATION_EXPIRED`                     | `DelegationExpiredError`                  | The delegation has expired                                                                                     |
+| `SIGNER_NOT_CONFIGURED`                  | `SignerNotConfiguredError`                | SDK operation needs a signer but none is configured (subclass of `SignerRequiredError`)                        |
+| `WALLET_NOT_CONNECTED`                   | `WalletNotConnectedError`                 | Signer exists but has no connected wallet account (subclass of `SignerRequiredError`)                          |
+| `WALLET_ACCOUNT_NOT_READY`               | `WalletAccountNotReadyError`              | Async signer adapter hasn't resolved its account yet (subclass of `SignerRequiredError`, retryable)            |
+| `CHAIN_MISMATCH`                         | `ChainMismatchError`                      | Signer and provider are on different chains                                                                    |
+| `DELEGATION_CONTRACT_IS_SELF`            | `DelegationContractIsSelfError`           | Delegation contract address equals the caller                                                                  |
+| `DELEGATION_DELEGATE_EQUALS_CONTRACT`    | `DelegationDelegateEqualsContractError`   | Delegate equals the contract address                                                                           |
+| `DELEGATION_DELEGATE_CANNOT_BE_WILDCARD` | `DelegationDelegateCannotBeWildcardError` | Delegate address is the wildcard address                                                                       |
+| `DELEGATION_EXPIRATION_TOO_SOON`         | `DelegationExpirationTooSoonError`        | Expiration date less than 1 hour in the future                                                                 |
+| `DELEGATION_EXPIRY_UNCHANGED`            | `DelegationExpiryUnchangedError`          | New expiry matches the current value                                                                           |
+| `DELEGATION_NOT_PROPAGATED`              | `DelegationNotPropagatedError`            | Delegated decrypt failed transiently (gateway not synced, or delegator ACL read stale) — retry                 |
+| `ACL_PAUSED`                             | `AclPausedError`                          | The ACL contract is paused                                                                                     |
 
 ### 2. Catch with instanceof
 
@@ -95,6 +95,51 @@ if (error instanceof SigningRejectedError) {
   // Some other SDK error -- check error.code
 }
 ```
+
+{% endtab %}
+{% tab title="Go" %}
+
+```go
+import (
+	"errors"
+
+	zama "github.com/zama-ai/sdk/clients/go/v3"
+)
+
+_, err := sdk.DecryptValues(ctx, inputs, zama.DecryptOptions{})
+var sdkErr *zama.SDKError
+switch {
+case err == nil:
+	// Decrypted
+case errors.As(err, &sdkErr) && sdkErr.Code == "SIGNING_REJECTED":
+	// User clicked "Reject" in their wallet
+case errors.As(err, &sdkErr) && sdkErr.Code == "DECRYPTION_FAILED":
+	// FHE decryption failed
+case errors.As(err, &sdkErr) && sdkErr.Code != "":
+	// Some other SDK error -- check sdkErr.Code
+default:
+	// Not an SDK error
+}
+```
+
+`errors.As` also reaches the code inside a transport `RPCError`. An empty code means the daemon connection or a callback failed.
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+match sdk.decryption().decrypt_values(&inputs, None).await {
+    Ok(_values) => {} // Decrypted
+    Err(error) => match error.sdk_error().map(|details| details.code.as_str()) {
+        Some("SIGNING_REJECTED") => {} // User clicked "Reject" in their wallet
+        Some("DECRYPTION_FAILED") => {} // FHE decryption failed
+        Some(_) => {}                  // Some other SDK error -- check the code
+        None => {}                     // Not an SDK error
+    },
+}
+```
+
+`sdk_error()` is `None` when the daemon connection or a callback failed; `error.kind()` names the category.
 
 {% endtab %}
 {% endtabs %}
@@ -165,6 +210,10 @@ Here is a quick reference for the most common errors and how to respond:
 
 ### 5. Distinguish "no balance" from "zero balance"
 
+{% hint style="info" %}
+Available in the Core SDK and React SDK.
+{% endhint %}
+
 This is a common source of confusion. They require different UI treatments:
 
 {% tabs %}
@@ -231,27 +280,28 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 
 ### 7. Common problems troubleshooting
 
-| What you see                              | Why                                                    | Fix                                                                                                                                                                                                                   |
-| ----------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SigningRejectedError` on every decrypt   | Wallet rejected the EIP-712 signature                  | Make sure the wallet supports `eth_signTypedData_v4`. Some hardware wallets need a firmware update.                                                                                                                   |
-| Balance always `undefined`                | Encrypted value is zero (never shielded)               | Check if the user has shielded tokens first. Catch `NoCiphertextError`.                                                                                                                                               |
-| `ConfigurationError` on first operation   | FHE runtime failed to initialize                       | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`. Check transport config.                                                                                                                           |
-| `EncryptionFailedError`                   | FHE encryption failed during an operation              | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`.                                                                                                                                                   |
-| `DecryptionFailedError` after page reload | Unshield was interrupted                               | Use `getPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.                                                                                                                                  |
-| `UnshieldAlreadyFinalizedError` on resume | Unwrap was already finalized before the resume attempt | Funds already arrived -- treat as completion, not failure. `useResumeUnshield` refreshes balances automatically; if calling `resumeUnshield()` directly, catch this error and dismiss the prompt instead of retrying. |
-| `RelayerRequestFailedError`               | Relayer URL wrong or auth missing                      | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.                                                                                                                         |
+| What you see                                                 | Why                                                    | Fix                                                                                                                                                                                                                   |
+| ------------------------------------------------------------ | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SigningRejectedError` (`SIGNING_REJECTED`) on every decrypt | Wallet rejected the EIP-712 signature                  | Make sure the wallet supports `eth_signTypedData_v4`. Some hardware wallets need a firmware update.                                                                                                                   |
+| Balance always `undefined`                                   | Encrypted value is zero (never shielded)               | Check if the user has shielded tokens first. Catch `NoCiphertextError`.                                                                                                                                               |
+| `ConfigurationError` on first operation                      | FHE runtime failed to initialize                       | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`. Check transport config.                                                                                                                           |
+| `EncryptionFailedError`                                      | FHE encryption failed during an operation              | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`.                                                                                                                                                   |
+| `DecryptionFailedError` after page reload                    | Unshield was interrupted                               | Use `getPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.                                                                                                                                  |
+| `UnshieldAlreadyFinalizedError` on resume                    | Unwrap was already finalized before the resume attempt | Funds already arrived -- treat as completion, not failure. `useResumeUnshield` refreshes balances automatically; if calling `resumeUnshield()` directly, catch this error and dismiss the prompt instead of retrying. |
+| `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`)       | Relayer URL wrong or auth missing                      | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.                                                                                                                         |
+| Go or Rust error with no SDK code                            | The daemon connection or a callback channel failed     | Follow [Monitor and troubleshoot](../native/operations/monitor-and-troubleshoot.md) and [Recover from disconnections](../native/guides/recover-from-disconnections.md).                                               |
 
 ### 8. Retry transient failures
 
-Five causes are transient — the operation can simply be retried, ideally with backoff: `RpcRateLimitError`, `RelayerRequestFailedError` (only on a 429, or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, and `WalletAccountNotReadyError`. Rather than hardcoding that set of codes, use `isRetryable(error)` and `retryAfterSeconds(error)` — they stay correct as the taxonomy grows, since every `ZamaError` declares its own `.retryable`.
+Five causes are transient — the operation can simply be retried, ideally with backoff: `RpcRateLimitError` (`RPC_RATE_LIMITED`), `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`, only on a 429, or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`), `DelegationCooldownError` (`DELEGATION_COOLDOWN`), and `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`). Rather than hardcoding that set of codes, use `isRetryable(error)` and `retryAfterSeconds(error)` — they stay correct as the taxonomy grows, since every `ZamaError` declares its own `.retryable`.
 
-| Cause                          | `retryAfterSeconds`                               | Notes                                                                                                   |
-| ------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `RpcRateLimitError`            | Usually `undefined` (viem/ethers own the backoff) | Consider a higher-throughput RPC endpoint.                                                              |
-| `RelayerRequestFailedError`    | Set on a 429 with a `Retry-After` header          | Retryable on `.statusCode === 429` or an `@fhevm/sdk` relayer timeout; other statuses are terminal.     |
-| `DelegationNotPropagatedError` | `undefined`                                       | The SDK already rides out the propagation window internally; only surfaces if it's exceeded.            |
-| `DelegationCooldownError`      | `undefined`                                       | Per-block timing gate; resolves on the next block.                                                      |
-| `WalletAccountNotReadyError`   | `undefined`                                       | Async signer adapters (e.g. `EthersSigner`) refresh once internally; only surfaces if still unresolved. |
+| Cause                                                        | `retryAfterSeconds`                               | Notes                                                                                                   |
+| ------------------------------------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `RpcRateLimitError` (`RPC_RATE_LIMITED`)                     | Usually `undefined` (viem/ethers own the backoff) | Consider a higher-throughput RPC endpoint.                                                              |
+| `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`)       | Set on a 429 with a `Retry-After` header          | Retryable on `.statusCode === 429` or an `@fhevm/sdk` relayer timeout; other statuses are terminal.     |
+| `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`) | `undefined`                                       | The SDK already rides out the propagation window internally; only surfaces if it's exceeded.            |
+| `DelegationCooldownError` (`DELEGATION_COOLDOWN`)            | `undefined`                                       | Per-block timing gate; resolves on the next block.                                                      |
+| `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`)    | `undefined`                                       | Async signer adapters (e.g. `EthersSigner`) refresh once internally; only surfaces if still unresolved. |
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -291,6 +341,77 @@ const { data } = useConfidentialBalance(
   },
 );
 ```
+
+{% endtab %}
+{% tab title="Go" %}
+
+```go
+import (
+	"context"
+	"errors"
+	"math/big"
+	"time"
+
+	zama "github.com/zama-ai/sdk/clients/go/v3"
+)
+
+func decryptWithRetry(ctx context.Context, fn func(context.Context) (*big.Int, error), maxAttempts int) (*big.Int, error) {
+	for attempt := 1; ; attempt++ {
+		value, err := fn(ctx)
+		if err == nil {
+			return value, nil
+		}
+		var sdkErr *zama.SDKError
+		if !errors.As(err, &sdkErr) || !sdkErr.Retryable || attempt >= maxAttempts {
+			return nil, err // terminal, or out of attempts -- surface it
+		}
+		delay := time.Duration(attempt*2) * time.Second // backoff when the server gives no hint
+		if sdkErr.RetryAfterSeconds != nil {
+			delay = time.Duration(*sdkErr.RetryAfterSeconds) * time.Second
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(delay):
+		}
+	}
+}
+```
+
+Never repeat a write on `Retryable` alone: a `TRANSACTION_OUTCOME_UNKNOWN` code, a deadline, or an error with no SDK code means it might have been submitted. [Resolve the outcome](../native/guides/uncertain-transaction-outcomes.md) first.
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+use std::{future::Future, time::Duration};
+use zama_sdk::{BigInt, Result};
+
+async fn decrypt_with_retry<F, Fut>(mut fetch: F, max_attempts: u32) -> Result<BigInt>
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = Result<BigInt>>,
+{
+    let mut attempt = 1;
+    loop {
+        let error = match fetch().await {
+            Ok(value) => return Ok(value),
+            Err(error) => error,
+        };
+        let retry_after = match error.sdk_error() {
+            Some(details) if details.retryable && attempt < max_attempts => {
+                details.retry_after_seconds
+            }
+            _ => return Err(error), // terminal, or out of attempts -- surface it
+        };
+        let delay_seconds = retry_after.unwrap_or(attempt * 2); // backoff when the server gives no hint
+        tokio::time::sleep(Duration::from_secs(delay_seconds.into())).await;
+        attempt += 1;
+    }
+}
+```
+
+Never repeat a write on `retryable` alone: when `error.is_outcome_unknown()` is true, it might have been submitted. [Resolve the outcome](../native/guides/uncertain-transaction-outcomes.md) first.
 
 {% endtab %}
 {% endtabs %}
