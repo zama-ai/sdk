@@ -7,6 +7,7 @@ export { createVaultBatcher, VaultBatcher } from "./vault-batcher";
 export { createVault, Vault } from "./vault";
 export {
   createVaultGroup,
+  MAX_GROUP_VAULTS,
   VaultGroup,
   type VaultGroupConfig,
   type VaultGroupJoin,
@@ -15,7 +16,6 @@ export {
   type VaultGroupMember,
   type VaultMemberConfig,
 } from "./vault-group";
-export { MAX_GROUP_VAULTS } from "./allocation";
 export { BatchState } from "./types";
 export type { JoinOptions, JoinResult, VaultAddresses, VaultJoinOptions } from "./types";
 export { decodeJoined, findJoined, VaultTopics, type JoinedEvent } from "./events";

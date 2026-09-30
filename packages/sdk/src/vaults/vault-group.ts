@@ -1,4 +1,4 @@
-import { getAddress, type Address } from "viem";
+import { getAddress, type Address, type Hex } from "viem";
 import {
   confidentialTransferAndCallContract,
   isConfidentialTokenValidContract,
@@ -6,6 +6,7 @@ import {
 import {
   BalanceCheckUnavailableError,
   ConfigurationError,
+  EncryptionFailedError,
   SignerNotConfiguredError,
   TransactionRevertedError,
   UnlistedConfidentialTokenError,
@@ -19,15 +20,21 @@ import { assertConfidentialBalance } from "../utils/assert-balance";
 import { memoizeAddressRead } from "../utils/memoize-address-read";
 import { submitTransaction as submitSdkTransaction } from "../utils/submit-transaction";
 import type { ZamaSDK } from "../zama-sdk";
-import { encodeAllocationData, MAX_GROUP_VAULTS, type EncryptedAllocation } from "./allocation";
-import { routerJoinContract, tokenWrapperRegistryContract } from "./contracts";
-import { encryptEuint64s } from "./encrypt";
+import {
+  encodeAllocationData,
+  routerJoinContract,
+  tokenWrapperRegistryContract,
+  type EncryptedAllocationLeg,
+} from "./contracts";
 import { takeJoined } from "./events";
 import type { JoinOptions, VaultAddresses } from "./types";
 import { Vault } from "./vault";
 import type { VaultBatcher } from "./vault-batcher";
 
 type Direction = "deposit" | "redeem";
+
+/** The most vaults a group may name: the router's per-transaction leg limit on the pull path, so a group is always exitable. */
+export const MAX_GROUP_VAULTS = 10;
 
 /** One vault of a group. */
 export interface VaultMemberConfig extends VaultAddresses {
@@ -244,21 +251,25 @@ export class VaultGroup {
 
     // One encryption per verifying contract: the asset checks the transfer's proof, the router the allocation's.
     const [transfer, allocation] = await Promise.all([
-      encryptEuint64s(this.sdk, {
-        values: [amount],
+      this.sdk.encrypt({
+        values: [{ value: amount, type: "euint64" }],
         contractAddress: this.cAsset,
         userAddress: holder,
       }),
       this.#encryptLegs(holder, legs),
     ]);
+    const [encryptedAmount] = transfer.encryptedValues;
+    if (!encryptedAmount) {
+      throw new EncryptionFailedError("Encryption returned no encrypted values");
+    }
     const transaction = await this.#submitTransaction(
       signer,
       confidentialTransferAndCallContract(
         this.cAsset,
         this.router,
-        transfer.encryptedValues[0],
+        encryptedAmount,
         transfer.inputProof,
-        encodeAllocationData(allocation),
+        encodeAllocationData(allocation.legs, allocation.inputProof),
       ),
     );
     return this.#result(vaultId, holder, legs, transaction);
@@ -410,12 +421,20 @@ export class VaultGroup {
   }
 
   // Bound to the router rather than the batchers or the tokens: the router is the contract that verifies the proof.
-  async #encryptLegs(holder: Address, legs: readonly GroupLeg[]): Promise<EncryptedAllocation> {
-    const { encryptedValues, inputProof } = await encryptEuint64s(this.sdk, {
-      values: legs.map((leg) => leg.amount),
+  async #encryptLegs(
+    holder: Address,
+    legs: readonly GroupLeg[],
+  ): Promise<{ legs: readonly EncryptedAllocationLeg[]; inputProof: Hex }> {
+    const { encryptedValues, inputProof } = await this.sdk.encrypt({
+      values: legs.map((leg) => ({ value: leg.amount, type: "euint64" as const })),
       contractAddress: this.router,
       userAddress: holder,
     });
+    if (encryptedValues.length !== legs.length) {
+      throw new EncryptionFailedError(
+        `Encryption returned ${encryptedValues.length} values for ${legs.length} legs`,
+      );
+    }
     return {
       legs: legs.map((leg, index) => ({
         batcher: leg.batcher.address,

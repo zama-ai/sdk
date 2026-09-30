@@ -2,7 +2,6 @@ import { getAddress, type Address } from "viem";
 import { ConfigurationError, SignerNotConfiguredError } from "../errors";
 import { WrappedToken } from "../token";
 import type { ZamaSDK } from "../zama-sdk";
-import { ensureOperator } from "./operator";
 import type { JoinResult, VaultAddresses, VaultJoinOptions } from "./types";
 import { VaultBatcher } from "./vault-batcher";
 
@@ -160,7 +159,10 @@ export class Vault {
       throw new SignerNotConfiguredError(operation);
     }
     const account = this.sdk.signer.requireWalletAccount(operation);
-    await ensureOperator(token, account.address, operator, until);
+    const alreadyApproved = await token.isOperator(account.address, operator);
+    if (!alreadyApproved) {
+      await token.setOperator(operator, until);
+    }
   }
 }
 

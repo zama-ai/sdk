@@ -145,7 +145,7 @@ describe("VaultBatcher", () => {
         inputProof,
       } as unknown as EncryptValuesReturnType);
       const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
-      await expect(batcher.join(1_000n)).rejects.toThrow("Encryption returned 0 values for 1");
+      await expect(batcher.join(1_000n)).rejects.toThrow("Encryption returned no encrypted values");
     });
 
     test("refuses to join more than the confidential balance on fromToken", async ({

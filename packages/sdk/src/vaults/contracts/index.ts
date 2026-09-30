@@ -22,4 +22,9 @@ export {
   vaultContract,
 } from "./vault-batcher";
 
-export { routerJoinContract, tokenWrapperRegistryContract } from "./vault-router";
+export {
+  encodeAllocationData,
+  routerJoinContract,
+  tokenWrapperRegistryContract,
+  type EncryptedAllocationLeg,
+} from "./vault-router";

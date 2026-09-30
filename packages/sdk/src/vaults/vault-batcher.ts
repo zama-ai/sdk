@@ -1,6 +1,7 @@
 import { getAddress, type Address } from "viem";
 import {
   DecryptionFailedError,
+  EncryptionFailedError,
   SignerNotConfiguredError,
   TransactionRevertedError,
 } from "../errors";
@@ -38,7 +39,6 @@ import {
   totalDepositsContract,
   vaultContract,
 } from "./contracts";
-import { encryptEuint64s } from "./encrypt";
 import { findJoined } from "./events";
 import { BatchState, type JoinOptions, type JoinResult } from "./types";
 
@@ -270,14 +270,16 @@ export class VaultBatcher {
       await this.#assertJoinableBalance(amount);
     }
 
-    const {
-      encryptedValues: [encryptedAmount],
-      inputProof,
-    } = await encryptEuint64s(this.sdk, {
-      values: [amount],
+    const { encryptedValues, inputProof } = await this.sdk.encrypt({
+      values: [{ value: amount, type: "euint64" }],
       contractAddress: this.address,
       userAddress,
     });
+
+    const encryptedAmount = encryptedValues[0];
+    if (!encryptedAmount) {
+      throw new EncryptionFailedError("Encryption returned no encrypted values");
+    }
 
     const result = await this.#submitTransaction(
       "vault:join",
