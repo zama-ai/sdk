@@ -100,7 +100,7 @@ export interface SerializedTransportKeyPairWithPermissions {
 }
 
 /**
- * Offline `preparePermit` request — `grantPermit`'s parameters split around
+ * Offline `preparePermit` / `batchPreparePermits` request — `grantPermit`'s parameters split around
  * the wallet signature. `signer` and `delegator` are explicit addresses, not
  * read from a connected wallet: preparing works without a configured signer,
  * which is the point of the offline flow.
@@ -108,10 +108,7 @@ export interface SerializedTransportKeyPairWithPermissions {
 export interface PreparePermitRequest {
   /** Address that will sign the returned EIP-712 typed data. */
   signer: Address;
-  /**
-   * Contract addresses to authorize. `preparePermit` accepts at most
-   * {@link MAX_CONTRACTS_PER_PERMIT}; `batchPreparePermits` splits any number.
-   */
+  /** Contract addresses to authorize. */
   contracts: readonly Address[];
   /** Delegator address, for a delegated permit. Omit for a self permit. */
   delegator?: Address;

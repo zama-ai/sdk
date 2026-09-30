@@ -46,9 +46,10 @@ describe("useBatchRegisterPermits", () => {
     tokenAddress,
     signer,
   }) => {
+    const onSuccess = vi.fn();
     const { result, queryClient } = renderWithProviders(() => ({
       prepare: useBatchPreparePermits(),
-      register: useBatchRegisterPermits(),
+      register: useBatchRegisterPermits({ onSuccess }),
     }));
     queryClient.setQueryData(zamaQueryKeys.hasPermit.all, true);
 
@@ -71,6 +72,7 @@ describe("useBatchRegisterPermits", () => {
       ),
     ).rejects.toThrow();
 
+    expect(onSuccess).not.toHaveBeenCalled();
     expect(queryClient.getQueryData(zamaQueryKeys.hasPermit.all)).toBe(true);
   });
 });

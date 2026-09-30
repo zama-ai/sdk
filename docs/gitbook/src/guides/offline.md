@@ -38,12 +38,12 @@ const sdk = new ZamaSDK(
 ```ts
 const prepared = await sdk.offline.prepare({
   kind: "ConfidentialTransfer",
-  from: "0xSigner",
+  from: "0xCustodyWallet",
   token: "0xConfidentialToken",
   to: "0xRecipient",
   amount: 1000n,
 });
-// { kind: "ConfidentialTransfer", from: "0xSigner", unsignedTx: "0x02..." }
+// { kind: "ConfidentialTransfer", from: "0xCustodyWallet", unsignedTx: "0x02..." }
 ```
 
 For a transfer, the amount is encrypted during `prepare`, including the required relayer interactions, and the calldata is ready to sign. `from` must match the address of the key that eventually signs: encrypted inputs are bound to that sender, so a mismatch reverts on-chain. The result is JSON-safe and crosses a process boundary as-is. `unsignedTx` carries the whole EIP-1559 transaction (chain id, nonce, calldata, gas and fee caps); `from` travels alongside because an unsigned transaction has no sender field and the custodian needs it to pick the signing key.
@@ -158,7 +158,7 @@ A decryption [permit](../concepts/permit-model.md) is not a transaction — noth
 
 ```ts
 const prepared = await sdk.offline.preparePermit({
-  signer: "0xSigner",
+  signer: "0xCustodyWallet",
   contracts: ["0xConfidentialToken"],
   // delegator: "0xOwner",      // omit for a self permit
   // durationDays: 30,          // defaults to the SDK's configured permitTTL
@@ -185,7 +185,7 @@ One permit per call: unlike `grantPermit`, `preparePermit` never widens an exist
 
 ```ts
 const prepared = await sdk.offline.batchPreparePermits({
-  signer: "0xSigner",
+  signer: "0xCustodyWallet",
   contracts: tokenAddresses, // any length; same fields as preparePermit otherwise
 });
 const signed = await Promise.all(
@@ -194,10 +194,10 @@ const signed = await Promise.all(
 await sdk.permits.batchRegisterPermits(signed);
 ```
 
-Registration is all-or-nothing: every permit is verified before any is stored, so if one fails, none are registered.
+Every permit is verified before any is stored, so if one fails verification, none are registered.
 
 {% hint style="warning" %}
-**Register promptly.** `prepared.eip712.message` carries the permit's validity window (`startTimestamp` + `durationDays`); if approval takes long enough that the window elapses before you call `registerPermit`, it throws `PreparedPermitExpiredError` — call `preparePermit` again for a fresh window. Registering also checks that the chain embedded in `prepared.eip712.domain` matches the SDK's active chain (`PreparedPermitChainMismatchError`) and that the transport key pair hasn't changed since prepare (`TransportKeyPairChangedError`, e.g. after a TTL expiry) — see the [Offline reference](../reference/sdk/Offline.md#preparepermit) for details.
+**Register promptly.** `prepared.eip712.message` carries the permit's validity window (`startTimestamp` + `durationDays`); if approval takes long enough that the window elapses before you call `registerPermit`, it throws `PreparedPermitExpiredError` — call `preparePermit` again for a fresh window. The same applies to `batchRegisterPermits`: all chunks share one validity window, and one expired permit fails the whole batch. Registering also checks that the chain embedded in `prepared.eip712.domain` matches the SDK's active chain (`PreparedPermitChainMismatchError`) and that the transport key pair hasn't changed since prepare (`TransportKeyPairChangedError`, e.g. after a TTL expiry) — see the [Offline reference](../reference/sdk/Offline.md#preparepermit) for details.
 {% endhint %}
 
 {% hint style="info" %}

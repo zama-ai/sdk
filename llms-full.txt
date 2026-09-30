@@ -5473,12 +5473,12 @@ const sdk = new ZamaSDK(
 ```ts
 const prepared = await sdk.offline.prepare({
   kind: "ConfidentialTransfer",
-  from: "0xSigner",
+  from: "0xCustodyWallet",
   token: "0xConfidentialToken",
   to: "0xRecipient",
   amount: 1000n,
 });
-// { kind: "ConfidentialTransfer", from: "0xSigner", unsignedTx: "0x02..." }
+// { kind: "ConfidentialTransfer", from: "0xCustodyWallet", unsignedTx: "0x02..." }
 ```
 
 For a transfer, the amount is encrypted during `prepare`, including the required relayer interactions, and the calldata is ready to sign. `from` must match the address of the key that eventually signs: encrypted inputs are bound to that sender, so a mismatch reverts on-chain. The result is JSON-safe and crosses a process boundary as-is. `unsignedTx` carries the whole EIP-1559 transaction (chain id, nonce, calldata, gas and fee caps); `from` travels alongside because an unsigned transaction has no sender field and the custodian needs it to pick the signing key.
@@ -5595,7 +5595,7 @@ A decryption [permit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gi
 
 ```ts
 const prepared = await sdk.offline.preparePermit({
-  signer: "0xSigner",
+  signer: "0xCustodyWallet",
   contracts: ["0xConfidentialToken"],
   // delegator: "0xOwner",      // omit for a self permit
   // durationDays: 30,          // defaults to the SDK's configured permitTTL
@@ -5622,7 +5622,7 @@ One permit per call: unlike `grantPermit`, `preparePermit` never widens an exist
 
 ```ts
 const prepared = await sdk.offline.batchPreparePermits({
-  signer: "0xSigner",
+  signer: "0xCustodyWallet",
   contracts: tokenAddresses, // any length; same fields as preparePermit otherwise
 });
 const signed = await Promise.all(
@@ -5631,11 +5631,11 @@ const signed = await Promise.all(
 await sdk.permits.batchRegisterPermits(signed);
 ```
 
-Registration is all-or-nothing: every permit is verified before any is stored, so if one fails, none are registered.
+Every permit is verified before any is stored, so if one fails verification, none are registered.
 
 
 > [!WARNING]
-> **Register promptly.** `prepared.eip712.message` carries the permit's validity window (`startTimestamp` + `durationDays`); if approval takes long enough that the window elapses before you call `registerPermit`, it throws `PreparedPermitExpiredError` — call `preparePermit` again for a fresh window. Registering also checks that the chain embedded in `prepared.eip712.domain` matches the SDK's active chain (`PreparedPermitChainMismatchError`) and that the transport key pair hasn't changed since prepare (`TransportKeyPairChangedError`, e.g. after a TTL expiry) — see the [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Offline.md#preparepermit) for details.
+> **Register promptly.** `prepared.eip712.message` carries the permit's validity window (`startTimestamp` + `durationDays`); if approval takes long enough that the window elapses before you call `registerPermit`, it throws `PreparedPermitExpiredError` — call `preparePermit` again for a fresh window. The same applies to `batchRegisterPermits`: all chunks share one validity window, and one expired permit fails the whole batch. Registering also checks that the chain embedded in `prepared.eip712.domain` matches the SDK's active chain (`PreparedPermitChainMismatchError`) and that the transport key pair hasn't changed since prepare (`TransportKeyPairChangedError`, e.g. after a TTL expiry) — see the [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Offline.md#preparepermit) for details.
 
 
 
@@ -7895,7 +7895,7 @@ const ready = await sdk.permits.hasDelegationPermit(delegator, [cUSDT]);
 Verify and persist the signature an out-of-process signer produced for an [`offline.preparePermit`](#offline-preparepermit) payload — the second phase of the offline permit flow. No wallet account required: the permit is scoped by `prepared.signerAddress` and, for a delegated permit, the delegator address embedded in the signature-verified `eip712` — not a connected signer. Idempotent: registering the same `(prepared, signature)` pair more than once (e.g. a retried webhook delivery) replaces the stored entry instead of duplicating it.
 
 ```ts
-const prepared = await sdk.offline.preparePermit({ signer: signerAddress, contracts: [cUSDT] });
+const prepared = await sdk.offline.preparePermit({ signer: custodyAddress, contracts: [cUSDT] });
 const signature = await custody.signTypedData(prepared.eip712);
 await sdk.permits.registerPermit(prepared, signature);
 ```
@@ -7914,11 +7914,11 @@ See the [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/d
 
 `(permits: SignedPreparedPermit[]) => Promise<void>`
 
-[`registerPermit`](#permits-registerpermit) for every [`offline.batchPreparePermits`](#offline-batchpreparepermits) payload, each paired with its `signature`. Registration is all-or-nothing: every permit is verified before any is stored, so if one fails, none are registered. Throws whatever `registerPermit` throws for the first failing permit.
+[`registerPermit`](#permits-registerpermit) for every [`offline.batchPreparePermits`](#offline-batchpreparepermits) payload, each paired with its `signature`. Every permit is verified before any is stored, so if one fails verification, none are registered. Throws whatever `registerPermit` throws for the first failing permit.
 
 ```ts
 const prepared = await sdk.offline.batchPreparePermits({
-  signer: signerAddress,
+  signer: custodyAddress,
   contracts: tokenAddresses,
 });
 const signed = await Promise.all(
@@ -11995,7 +11995,7 @@ Builds the unsigned transaction for `request` without signing or broadcasting. T
 ```ts
 const prepared = await sdk.offline.prepare({
   kind: "ConfidentialTransfer",
-  from: "0xSigner",
+  from: "0xCustodyWallet",
   token: "0xConfidentialToken",
   to: "0xRecipient",
   amount: 1000n,
@@ -12030,7 +12030,7 @@ A permit is not a transaction: nothing is broadcast, and registering the signatu
 
 ```ts
 const prepared = await sdk.offline.preparePermit({
-  signer: "0xSigner",
+  signer: "0xCustodyWallet",
   contracts: ["0xConfidentialToken"],
 });
 ```
@@ -12071,7 +12071,7 @@ batchPreparePermits(request: PreparePermitRequest): Promise<PreparedPermit[]>
 
 ```ts
 const prepared = await sdk.offline.batchPreparePermits({
-  signer: "0xSigner",
+  signer: "0xCustodyWallet",
   contracts: tokenAddresses, // any length
 });
 ```
@@ -15583,16 +15583,16 @@ import { usePreparePermit } from "@zama-fhe/react-sdk";
 import { usePreparePermit } from "@zama-fhe/react-sdk";
 
 function PrepareCustodyPermit({
-  signerAddress,
+  custodyAddress,
   tokenAddress,
 }: {
-  signerAddress: `0x${string}`;
+  custodyAddress: `0x${string}`;
   tokenAddress: `0x${string}`;
 }) {
   const { mutateAsync: preparePermit, isPending } = usePreparePermit();
 
   const handlePrepare = async () => {
-    const prepared = await preparePermit({ signer: signerAddress, contracts: [tokenAddress] });
+    const prepared = await preparePermit({ signer: custodyAddress, contracts: [tokenAddress] });
     // Hand prepared.eip712 to the custody API for eth_signTypedData_v4,
     // then pass the returned signature to useRegisterPermit.
     return prepared;
@@ -15627,7 +15627,7 @@ Signer-optional: `request.signer` is an explicit address, not a connected wallet
 
 ```tsx
 const prepared = await preparePermit({
-  signer: signerAddress,
+  signer: custodyAddress,
   contracts: [tokenAddress],
   // delegator: ownerAddress,   // omit for a self permit
   // durationDays: 30,          // defaults to the SDK's configured permitTTL
@@ -15723,17 +15723,17 @@ import { useBatchPreparePermits } from "@zama-fhe/react-sdk";
 import { useBatchPreparePermits } from "@zama-fhe/react-sdk";
 
 function PrepareCustodyPermits({
-  signerAddress,
+  custodyAddress,
   tokenAddresses,
 }: {
-  signerAddress: `0x${string}`;
+  custodyAddress: `0x${string}`;
   tokenAddresses: `0x${string}`[];
 }) {
   const { mutateAsync: batchPreparePermits, isPending } = useBatchPreparePermits();
 
   const handlePrepare = async () => {
     const prepared = await batchPreparePermits({
-      signer: signerAddress,
+      signer: custodyAddress,
       contracts: tokenAddresses,
     });
     // Hand each prepared[i].eip712 to the custody API for eth_signTypedData_v4,
@@ -15847,17 +15847,17 @@ import { useRegisterPermit } from "@zama-fhe/react-sdk";
 import { usePreparePermit, useRegisterPermit } from "@zama-fhe/react-sdk";
 
 function CustodyPermitFlow({
-  signerAddress,
+  custodyAddress,
   tokenAddress,
 }: {
-  signerAddress: `0x${string}`;
+  custodyAddress: `0x${string}`;
   tokenAddress: `0x${string}`;
 }) {
   const { mutateAsync: preparePermit } = usePreparePermit();
   const { mutateAsync: registerPermit, isPending } = useRegisterPermit();
 
   const handleAuthorize = async () => {
-    const prepared = await preparePermit({ signer: signerAddress, contracts: [tokenAddress] });
+    const prepared = await preparePermit({ signer: custodyAddress, contracts: [tokenAddress] });
     const signature = await custodyApi.signTypedData(prepared.eip712);
     await registerPermit({ prepared, signature });
   };
@@ -15967,7 +15967,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useBatchRegisterPermits
 
-[`useRegisterPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRegisterPermit.md) for every [`useBatchPreparePermits`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchPreparePermits.md) payload, each paired with its signature. Registration is all-or-nothing: every permit is verified before any is stored, so if one fails, none are registered. Automatically invalidates [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useHasPermit.md) queries on success.
+[`useRegisterPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRegisterPermit.md) for every [`useBatchPreparePermits`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchPreparePermits.md) payload, each paired with its signature. Every permit is verified before any is stored, so if one fails verification, none are registered. Automatically invalidates [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useHasPermit.md) queries on success.
 
 ## Import
 
@@ -15981,10 +15981,10 @@ import { useBatchRegisterPermits } from "@zama-fhe/react-sdk";
 import { useBatchPreparePermits, useBatchRegisterPermits } from "@zama-fhe/react-sdk";
 
 function CustodyPermitsFlow({
-  signerAddress,
+  custodyAddress,
   tokenAddresses,
 }: {
-  signerAddress: `0x${string}`;
+  custodyAddress: `0x${string}`;
   tokenAddresses: `0x${string}`[];
 }) {
   const { mutateAsync: batchPreparePermits } = useBatchPreparePermits();
@@ -15992,7 +15992,7 @@ function CustodyPermitsFlow({
 
   const handleAuthorize = async () => {
     const prepared = await batchPreparePermits({
-      signer: signerAddress,
+      signer: custodyAddress,
       contracts: tokenAddresses,
     });
     const signed = await Promise.all(

@@ -19,17 +19,17 @@ import { useRegisterPermit } from "@zama-fhe/react-sdk";
 import { usePreparePermit, useRegisterPermit } from "@zama-fhe/react-sdk";
 
 function CustodyPermitFlow({
-  signerAddress,
+  custodyAddress,
   tokenAddress,
 }: {
-  signerAddress: `0x${string}`;
+  custodyAddress: `0x${string}`;
   tokenAddress: `0x${string}`;
 }) {
   const { mutateAsync: preparePermit } = usePreparePermit();
   const { mutateAsync: registerPermit, isPending } = useRegisterPermit();
 
   const handleAuthorize = async () => {
-    const prepared = await preparePermit({ signer: signerAddress, contracts: [tokenAddress] });
+    const prepared = await preparePermit({ signer: custodyAddress, contracts: [tokenAddress] });
     const signature = await custodyApi.signTypedData(prepared.eip712);
     await registerPermit({ prepared, signature });
   };

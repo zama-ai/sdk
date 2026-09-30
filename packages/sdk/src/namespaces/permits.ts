@@ -206,23 +206,17 @@ export class Permits {
    * @throws if the transport key pair changed since prepare. {@link TransportKeyPairChangedError}
    * @throws if the signature is invalid or malformed. {@link SigningFailedError}
    */
-  async registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void> {
-    let service: CredentialService;
-    try {
-      service = this.#requireCredentialService("registerPermit");
-    } catch (error) {
-      this.#failPermit("registerPermit", error);
-    }
-    await service.registerPermit(prepared, signature);
-    await this.#clearDecryptCacheForRequester(prepared.signerAddress);
+  registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void> {
+    return this.batchRegisterPermits([{ prepared, signature }]);
   }
 
   /**
    * {@link registerPermit} for every `sdk.offline.batchPreparePermits` payload.
-   * All-or-nothing: every permit is verified before any is persisted, so a
-   * failing permit leaves the store untouched.
+   * Every permit is verified before any is persisted, so if one fails
+   * verification, none are stored.
    *
-   * @throws whatever {@link registerPermit} throws for the first failing permit.
+   * @throws on the first permit that fails verification, with whatever
+   *   {@link registerPermit} throws for it.
    */
   async batchRegisterPermits(permits: readonly SignedPreparedPermit[]): Promise<void> {
     let service: CredentialService;
@@ -232,9 +226,11 @@ export class Permits {
       this.#failPermit("registerPermit", error);
     }
     await service.batchRegisterPermits(permits);
-    for (const signerAddress of new Set(permits.map((p) => p.prepared.signerAddress))) {
-      await this.#clearDecryptCacheForRequester(signerAddress);
-    }
+    await Promise.all(
+      [...new Set(permits.map((p) => p.prepared.signerAddress))].map((signerAddress) =>
+        this.#clearDecryptCacheForRequester(signerAddress),
+      ),
+    );
   }
 
   /**

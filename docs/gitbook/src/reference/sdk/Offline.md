@@ -36,7 +36,7 @@ Builds the unsigned transaction for `request` without signing or broadcasting. T
 ```ts
 const prepared = await sdk.offline.prepare({
   kind: "ConfidentialTransfer",
-  from: "0xSigner",
+  from: "0xCustodyWallet",
   token: "0xConfidentialToken",
   to: "0xRecipient",
   amount: 1000n,
@@ -71,7 +71,7 @@ A permit is not a transaction: nothing is broadcast, and registering the signatu
 
 ```ts
 const prepared = await sdk.offline.preparePermit({
-  signer: "0xSigner",
+  signer: "0xCustodyWallet",
   contracts: ["0xConfidentialToken"],
 });
 ```
@@ -112,7 +112,7 @@ batchPreparePermits(request: PreparePermitRequest): Promise<PreparedPermit[]>
 
 ```ts
 const prepared = await sdk.offline.batchPreparePermits({
-  signer: "0xSigner",
+  signer: "0xCustodyWallet",
   contracts: tokenAddresses, // any length
 });
 ```

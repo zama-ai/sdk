@@ -357,7 +357,7 @@ const ready = await sdk.permits.hasDelegationPermit(delegator, [cUSDT]);
 Verify and persist the signature an out-of-process signer produced for an [`offline.preparePermit`](#offline-preparepermit) payload — the second phase of the offline permit flow. No wallet account required: the permit is scoped by `prepared.signerAddress` and, for a delegated permit, the delegator address embedded in the signature-verified `eip712` — not a connected signer. Idempotent: registering the same `(prepared, signature)` pair more than once (e.g. a retried webhook delivery) replaces the stored entry instead of duplicating it.
 
 ```ts
-const prepared = await sdk.offline.preparePermit({ signer: signerAddress, contracts: [cUSDT] });
+const prepared = await sdk.offline.preparePermit({ signer: custodyAddress, contracts: [cUSDT] });
 const signature = await custody.signTypedData(prepared.eip712);
 await sdk.permits.registerPermit(prepared, signature);
 ```
@@ -376,11 +376,11 @@ See the [Offline reference](./Offline.md#preparepermit) for `preparePermit`'s re
 
 `(permits: SignedPreparedPermit[]) => Promise<void>`
 
-[`registerPermit`](#permits-registerpermit) for every [`offline.batchPreparePermits`](#offline-batchpreparepermits) payload, each paired with its `signature`. Registration is all-or-nothing: every permit is verified before any is stored, so if one fails, none are registered. Throws whatever `registerPermit` throws for the first failing permit.
+[`registerPermit`](#permits-registerpermit) for every [`offline.batchPreparePermits`](#offline-batchpreparepermits) payload, each paired with its `signature`. Every permit is verified before any is stored, so if one fails verification, none are registered. Throws whatever `registerPermit` throws for the first failing permit.
 
 ```ts
 const prepared = await sdk.offline.batchPreparePermits({
-  signer: signerAddress,
+  signer: custodyAddress,
   contracts: tokenAddresses,
 });
 const signed = await Promise.all(

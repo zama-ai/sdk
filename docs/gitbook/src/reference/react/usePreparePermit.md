@@ -21,16 +21,16 @@ import { usePreparePermit } from "@zama-fhe/react-sdk";
 import { usePreparePermit } from "@zama-fhe/react-sdk";
 
 function PrepareCustodyPermit({
-  signerAddress,
+  custodyAddress,
   tokenAddress,
 }: {
-  signerAddress: `0x${string}`;
+  custodyAddress: `0x${string}`;
   tokenAddress: `0x${string}`;
 }) {
   const { mutateAsync: preparePermit, isPending } = usePreparePermit();
 
   const handlePrepare = async () => {
-    const prepared = await preparePermit({ signer: signerAddress, contracts: [tokenAddress] });
+    const prepared = await preparePermit({ signer: custodyAddress, contracts: [tokenAddress] });
     // Hand prepared.eip712 to the custody API for eth_signTypedData_v4,
     // then pass the returned signature to useRegisterPermit.
     return prepared;
@@ -65,7 +65,7 @@ Signer-optional: `request.signer` is an explicit address, not a connected wallet
 
 ```tsx
 const prepared = await preparePermit({
-  signer: signerAddress,
+  signer: custodyAddress,
   contracts: [tokenAddress],
   // delegator: ownerAddress,   // omit for a self permit
   // durationDays: 30,          // defaults to the SDK's configured permitTTL

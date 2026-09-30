@@ -71,12 +71,14 @@ describe("CredentialService.preparePermit", () => {
     ).rejects.toBeInstanceOf(ConfigurationError);
   });
 
-  test("rejects more than MAX_CONTRACTS_PER_PERMIT addresses — no chunking", async ({
+  test("rejects MAX_CONTRACTS_PER_PERMIT + 1 addresses — no chunking", async ({
     credentialService,
   }) => {
-    expect(ADDRS.length).toBeGreaterThan(MAX_CONTRACTS_PER_PERMIT);
     await expect(
-      credentialService.preparePermit({ signer: USER, contracts: ADDRS }),
+      credentialService.preparePermit({
+        signer: USER,
+        contracts: ADDRS.slice(0, MAX_CONTRACTS_PER_PERMIT + 1),
+      }),
     ).rejects.toBeInstanceOf(ConfigurationError);
   });
 
@@ -218,10 +220,54 @@ describe("CredentialService.batchPreparePermits", () => {
     expect(prepared).toHaveLength(1);
   });
 
+  test("splits MAX_CONTRACTS_PER_PERMIT + 1 addresses into a full permit and a single-address one", async ({
+    credentialService,
+  }) => {
+    const prepared = await credentialService.batchPreparePermits({
+      signer: USER,
+      contracts: ADDRS.slice(0, MAX_CONTRACTS_PER_PERMIT + 1),
+    });
+    const chunks = prepared.map((p) => p.eip712.message.contractAddresses as Address[]);
+    expect(chunks.map((c) => c.length)).toEqual([MAX_CONTRACTS_PER_PERMIT, 1]);
+  });
+
   test("rejects an empty contracts list", async ({ credentialService }) => {
     await expect(
       credentialService.batchPreparePermits({ signer: USER, contracts: [] }),
     ).rejects.toBeInstanceOf(ConfigurationError);
+  });
+});
+
+describe("CredentialService.batchRegisterPermits", () => {
+  test("persists best-effort like registerPermit: a storage failure on one permit neither rejects nor undoes the others", async ({
+    credentialService,
+    signer,
+    storage,
+  }) => {
+    const prepared = await credentialService.batchPreparePermits({
+      signer: USER,
+      contracts: ADDRS.slice(0, MAX_CONTRACTS_PER_PERMIT + 1),
+    });
+    const permits = await Promise.all(
+      prepared.map(async (p) => ({
+        prepared: p,
+        signature: (await signer.signTypedData(p.eip712)) as Hex,
+      })),
+    );
+    const originalSet = storage.set.bind(storage);
+    let permitWrites = 0;
+    vi.spyOn(storage, "set").mockImplementation(async (key: string, value: unknown) => {
+      if (key.startsWith("permits:") && ++permitWrites === 2) {
+        throw new Error("quota exceeded");
+      }
+      return originalSet(key, value);
+    });
+
+    await expect(credentialService.batchRegisterPermits(permits)).resolves.toBeUndefined();
+
+    const [first, second] = prepared.map((p) => p.eip712.message.contractAddresses as Address[]);
+    expect(await credentialService.hasPermit(first!)).toBe(true);
+    expect(await credentialService.hasPermit(second!)).toBe(false);
   });
 });
 

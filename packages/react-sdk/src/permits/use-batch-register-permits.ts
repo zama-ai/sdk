@@ -7,7 +7,8 @@ import { useZamaSDK } from "../provider";
 
 /**
  * {@link useRegisterPermit} for every {@link useBatchPreparePermits} payload.
- * All-or-nothing: a failing permit leaves the store untouched.
+ * Every permit is verified before any is stored, so if one fails
+ * verification, none are registered.
  *
  * @example
  * ```tsx

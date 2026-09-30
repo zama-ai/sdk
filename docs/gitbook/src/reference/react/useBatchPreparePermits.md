@@ -19,17 +19,17 @@ import { useBatchPreparePermits } from "@zama-fhe/react-sdk";
 import { useBatchPreparePermits } from "@zama-fhe/react-sdk";
 
 function PrepareCustodyPermits({
-  signerAddress,
+  custodyAddress,
   tokenAddresses,
 }: {
-  signerAddress: `0x${string}`;
+  custodyAddress: `0x${string}`;
   tokenAddresses: `0x${string}`[];
 }) {
   const { mutateAsync: batchPreparePermits, isPending } = useBatchPreparePermits();
 
   const handlePrepare = async () => {
     const prepared = await batchPreparePermits({
-      signer: signerAddress,
+      signer: custodyAddress,
       contracts: tokenAddresses,
     });
     // Hand each prepared[i].eip712 to the custody API for eth_signTypedData_v4,

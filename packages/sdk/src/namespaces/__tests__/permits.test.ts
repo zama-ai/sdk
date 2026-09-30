@@ -13,6 +13,7 @@ import type { ZamaSDKEvent } from "../../events/sdk-events";
 const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const CONTRACT_B = "0x3C3c3C3c3C3C3c3c3c3C3c3C3C3c3c3C3c3c3C3C" as Address;
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
+const OTHER_SIGNER = "0x4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d" as Address;
 
 describe("Permits", () => {
   describe("guards (no signer configured)", () => {
@@ -112,6 +113,10 @@ describe("Permits", () => {
     }) => {
       await sdk.permits.grantDelegationPermit(DELEGATOR, []);
       expect(signer.signTypedData).not.toHaveBeenCalled();
+    });
+
+    test("batchRegisterPermits([]) resolves as a no-op", async ({ sdk }) => {
+      await expect(sdk.permits.batchRegisterPermits([])).resolves.toBeUndefined();
     });
   });
 
@@ -316,6 +321,38 @@ describe("Permits", () => {
       ).rejects.toBeInstanceOf(PreparedPermitChainMismatchError);
 
       expect(await sdk.permits.hasPermit([CONTRACT_A])).toBe(false);
+    });
+
+    test("batchRegisterPermits clears the decrypt cache for every signer in the batch", async ({
+      sdk,
+      createSDK,
+      signer,
+      relayer,
+      handle,
+    }) => {
+      const handles = [{ encryptedValue: handle, contractAddress: CONTRACT_A }];
+      const otherSdk = createSDK({ signer: createMockSigner(OTHER_SIGNER) });
+      await sdk.decryption.decryptValues(handles);
+      await otherSdk.decryption.decryptValues(handles);
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
+
+      const signerAddress = signer.walletAccount.getSnapshot()!.address;
+      const prepared = await Promise.all(
+        [signerAddress, OTHER_SIGNER].map((s) =>
+          sdk.offline.preparePermit({ signer: s, contracts: [CONTRACT_B] }),
+        ),
+      );
+      const permits = await Promise.all(
+        prepared.map(async (p) => ({
+          prepared: p,
+          signature: await signer.signTypedData(p.eip712),
+        })),
+      );
+      await sdk.permits.batchRegisterPermits(permits);
+
+      await sdk.decryption.decryptValues(handles);
+      await otherSdk.decryption.decryptValues(handles);
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(4);
     });
   });
 

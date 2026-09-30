@@ -261,7 +261,8 @@ export class CredentialService {
   /**
    * Single-permit form of {@link batchPreparePermits}.
    *
-   * @throws if `request.contracts` exceeds {@link MAX_CONTRACTS_PER_PERMIT}. {@link ConfigurationError}
+   * @throws if `request.contracts` exceeds {@link MAX_CONTRACTS_PER_PERMIT}, plus
+   *   everything {@link batchPreparePermits} throws. {@link ConfigurationError}
    */
   async preparePermit(request: PreparePermitRequest): Promise<PreparedPermit> {
     const count = normalizeAddresses(request.contracts).length;
@@ -370,13 +371,13 @@ export class CredentialService {
    *   expiry or eviction in between). {@link TransportKeyPairChangedError}
    * @throws if the signature is invalid or malformed. {@link SigningFailedError}
    */
-  async registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void> {
-    await this.#persistPermit(await this.#verifyPermit(prepared, signature));
+  registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void> {
+    return this.batchRegisterPermits([{ prepared, signature }]);
   }
 
   /**
-   * All-or-nothing form of {@link registerPermit}: every permit is verified
-   * before any is persisted.
+   * {@link registerPermit} for several permits: every permit is verified
+   * before any is persisted, so a verification failure stores nothing.
    */
   async batchRegisterPermits(permits: readonly SignedPreparedPermit[]): Promise<void> {
     // Sequential so the first failing permit emits exactly one PermitError.
@@ -384,17 +385,15 @@ export class CredentialService {
     for (const { prepared, signature } of permits) {
       verified.push(await this.#verifyPermit(prepared, signature));
     }
-    for (const permit of verified) {
-      await this.#persistPermit(permit);
+    // Sequential: replace rewrites the scope's whole permit list, so concurrent
+    // writes to one scope would drop entries.
+    for (const { scope, permission } of verified) {
+      await swallow(
+        "replace permit",
+        () => this.#store.replace(scope, permission.serializedPermit.signature, permission),
+        this.#logger,
+      );
     }
-  }
-
-  #persistPermit({ scope, permission }: VerifiedPermit): Promise<void> {
-    return swallow(
-      "replace permit",
-      () => this.#store.replace(scope, permission.serializedPermit.signature, permission),
-      this.#logger,
-    );
   }
 
   async #verifyPermit(prepared: PreparedPermit, signature: Hex): Promise<VerifiedPermit> {

@@ -12,18 +12,21 @@ describe("useBatchPreparePermits", () => {
 
   test("returns one unsigned permit per chunk without prompting the connected signer", async ({
     renderWithProviders,
-    tokenAddress,
     signer,
   }) => {
+    const contracts = Array.from(
+      { length: 11 },
+      (_, i) => `0x${(i + 1).toString(16).padStart(40, "0")}` as const,
+    );
     const { result } = renderWithProviders(() => useBatchPreparePermits());
     const signerAddress = signer!.walletAccount.getSnapshot()!.address;
 
     const prepared = await act(() =>
-      result.current.mutateAsync({ signer: signerAddress, contracts: [tokenAddress] }),
+      result.current.mutateAsync({ signer: signerAddress, contracts }),
     );
 
     expect(signer!.signTypedData).not.toHaveBeenCalled();
-    expect(prepared).toHaveLength(1);
-    expect(prepared[0]!.eip712.message.contractAddresses).toEqual([tokenAddress]);
+    const chunks = prepared.map((p) => p.eip712.message.contractAddresses as string[]);
+    expect(chunks.map((c) => c.length)).toEqual([10, 1]);
   });
 });

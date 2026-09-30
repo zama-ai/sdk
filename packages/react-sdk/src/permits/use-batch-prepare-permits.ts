@@ -13,7 +13,7 @@ import { useZamaSDK } from "../provider";
  * @example
  * ```tsx
  * const { mutateAsync: batchPreparePermits } = useBatchPreparePermits();
- * const prepared = await batchPreparePermits({ signer: signerAddress, contracts: tokenAddresses });
+ * const prepared = await batchPreparePermits({ signer: custodyAddress, contracts: tokenAddresses });
  * // hand each prepared[i].eip712 to the custodian for eth_signTypedData_v4
  * ```
  */

@@ -5,7 +5,7 @@ description: Mutation hook that verifies and persists the signatures an out-of-p
 
 # useBatchRegisterPermits
 
-[`useRegisterPermit`](./useRegisterPermit.md) for every [`useBatchPreparePermits`](./useBatchPreparePermits.md) payload, each paired with its signature. Registration is all-or-nothing: every permit is verified before any is stored, so if one fails, none are registered. Automatically invalidates [`useHasPermit`](./useHasPermit.md) queries on success.
+[`useRegisterPermit`](./useRegisterPermit.md) for every [`useBatchPreparePermits`](./useBatchPreparePermits.md) payload, each paired with its signature. Every permit is verified before any is stored, so if one fails verification, none are registered. Automatically invalidates [`useHasPermit`](./useHasPermit.md) queries on success.
 
 ## Import
 
@@ -19,10 +19,10 @@ import { useBatchRegisterPermits } from "@zama-fhe/react-sdk";
 import { useBatchPreparePermits, useBatchRegisterPermits } from "@zama-fhe/react-sdk";
 
 function CustodyPermitsFlow({
-  signerAddress,
+  custodyAddress,
   tokenAddresses,
 }: {
-  signerAddress: `0x${string}`;
+  custodyAddress: `0x${string}`;
   tokenAddresses: `0x${string}`[];
 }) {
   const { mutateAsync: batchPreparePermits } = useBatchPreparePermits();
@@ -30,7 +30,7 @@ function CustodyPermitsFlow({
 
   const handleAuthorize = async () => {
     const prepared = await batchPreparePermits({
-      signer: signerAddress,
+      signer: custodyAddress,
       contracts: tokenAddresses,
     });
     const signed = await Promise.all(

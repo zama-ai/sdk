@@ -84,7 +84,10 @@ export class Offline {
    * 10 contracts (the protocol's per-permit cap), each needing its own
    * signature. Pass the signed pairs to `sdk.permits.batchRegisterPermits`.
    *
-   * @throws as {@link preparePermit}, minus the 10-contract limit.
+   * @throws if `request.contracts` is empty, `request.delegator` equals `request.signer`,
+   *   or `request.durationDays` exceeds the V1 permit maximum of 365 days. {@link ConfigurationError}
+   * @throws if a concurrent `permits.revokeTransportKeyPair()` rotates the transport key
+   *   pair while this call is generating one. {@link TransportKeyPairChangedError}
    */
   batchPreparePermits(request: PreparePermitRequest): Promise<PreparedPermit[]> {
     return this.#credentialService.batchPreparePermits(request);
