@@ -27,13 +27,13 @@ for (const path of targets) {
 
 const crateTargets = [
   ["clients/rust/Cargo.toml", /^version = ".*"$/m, `version = "${nextVersion}"`],
-  ["clients/rust/Cargo.lock", /^(name = "zama-sdk"\nversion = )".*"$/m, `$1"${nextVersion}"`],
+  ["clients/rust/Cargo.lock", /^(name = "zama_sdk"\nversion = )".*"$/m, `$1"${nextVersion}"`],
 ];
 
 for (const [path, pattern, replacement] of crateTargets) {
   const source = readFileSync(path, "utf8");
   if (!pattern.test(source)) {
-    throw new Error(`No zama-sdk version found in ${path}`);
+    throw new Error(`No zama_sdk version found in ${path}`);
   }
   writeFileSync(path, source.replace(pattern, replacement), "utf8");
 }

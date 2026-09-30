@@ -88,7 +88,7 @@ jobs:
       - name: Lint
         run: cargo clippy --manifest-path clients/rust/Cargo.toml --all-features --all-targets --locked -- -D warnings
       - name: Validate crate for publication
-        run: cargo publish --dry-run --locked --all-features -p zama-sdk --manifest-path clients/rust/Cargo.toml
+        run: cargo publish --dry-run --locked --all-features -p zama_sdk --manifest-path clients/rust/Cargo.toml
       - name: Regenerate protobuf bindings
         run: |
           cargo run --manifest-path clients/rust/Cargo.toml -p zama-sdk-codegen --locked
