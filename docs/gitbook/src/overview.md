@@ -1,6 +1,6 @@
 ---
 title: Overview
-description: TypeScript SDK for confidential smart contracts — shield, transfer, and unshield tokens with Fully Homomorphic Encryption.
+description: TypeScript SDK for confidential smart contracts, with Go and Rust clients. Shield, transfer, and unshield tokens with Fully Homomorphic Encryption.
 ---
 
 # Overview
@@ -126,6 +126,22 @@ await wrappedToken.unshield(500n); // withdraw back to public
 ```
 
 Ready to build? Jump to the [Quick start](./tutorials/quick-start.md) for a full working example with your stack.
+
+## Go and Rust
+
+Go and Rust services use the SDK through native clients. Each client talks to a local SDK daemon that runs alongside your application. Start with the [Go quick start](./native/tutorials/go-quick-start.md) or the [Rust quick start](./native/tutorials/rust-quick-start.md).
+
+{% hint style="warning" %}
+The daemon and its Go and Rust clients are experimental. The wire protocol can change between minor versions, so upgrade the daemon image and the clients together.
+{% endhint %}
+
+| Task                                                                      | Core SDK | React SDK            | Go      | Rust    |
+| ------------------------------------------------------------------------- | -------- | -------------------- | ------- | ------- |
+| Encrypt inputs for confidential contract calls                            | Yes      | Yes                  | Yes     | Yes     |
+| Decrypt values your account can access, or publicly decryptable values    | Yes      | Yes                  | Yes     | Yes     |
+| Decrypt on behalf of an account that delegated access                     | Yes      | Yes                  | Yes     | Yes     |
+| Prepare unsigned transactions for external signing                        | Yes      | Through the core SDK | Yes     | Yes     |
+| Shield, transfer, unshield, read balances, and manage operators on tokens | Yes      | Yes                  | Not yet | Not yet |
 
 ## Help center
 

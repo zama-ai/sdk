@@ -34,3 +34,7 @@ See [Vault deposits and redemptions](../guides/vault-deposits.md) for the full f
 ## SDK usage telemetry headers
 
 Relayer requests now carry four `x-zama-sdk-*` headers: the SDK version, the package driving it (`core` or `react`), the transport (`web` or `node`), and the public SDK method the request belongs to (`confidential-transfer`, `unshield`, `balance-of`, …). They label traffic the relayer already receives so the SDK team can see version adoption and per-operation error rates; no end-user data is ever included, and a self-hosted relayer simply ignores them. Telemetry is on by default and `createConfig({ telemetry: false })` turns it off; on Node.js, `ZAMA_SDK_TELEMETRY=0` does the same for a whole process. See [SDK usage telemetry](../guides/telemetry.md).
+
+## Daemon
+
+**Experimental Go and Rust clients.** Go and Rust services can now use the SDK through native clients that talk to a local SDK daemon over a private Unix socket. The clients encrypt inputs, decrypt values (including publicly decryptable and delegated values), manage permits, prepare unsigned transactions for external signing, and grant or revoke on-chain decryption delegation through your wallet. Token workflows are not available in the clients yet. Run the daemon image and the client at exactly the same version, and upgrade them together. Start with the [Go quick start](../native/tutorials/go-quick-start.md) or the [Rust quick start](../native/tutorials/rust-quick-start.md).

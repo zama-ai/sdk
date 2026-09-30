@@ -14,7 +14,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 
 ### Introduction
 
-- [Overview](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/overview.md): TypeScript SDK for confidential smart contracts — shield, transfer, and unshield tokens with Fully Homomorphic Encryption.
+- [Overview](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/overview.md): TypeScript SDK for confidential smart contracts, with Go and Rust clients. Shield, transfer, and unshield tokens with Fully Homomorphic Encryption.
 
 ### Getting Started
 
