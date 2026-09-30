@@ -48,6 +48,8 @@ function formatGroupedDocsSection(entries) {
     { title: "Guides", categories: ["guides"] },
     { title: "SDK Reference", categories: ["reference-sdk"] },
     { title: "React Reference", categories: ["reference-react"] },
+    { title: "Go, Rust, and Daemon Reference", categories: ["reference-native"] },
+    { title: "Go and Rust Daemon Deployment", categories: ["daemon-operations"] },
     { title: "Concepts", categories: ["concepts"] },
     { title: "Changelog", categories: ["changelog"] },
   ];
