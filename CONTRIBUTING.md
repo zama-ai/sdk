@@ -137,6 +137,91 @@ pnpm test:coverage
 pnpm e2e:test
 ```
 
+### Daemon and native clients
+
+Run the following commands from the repository root. Use the Go toolchain in `clients/go/go.mod`, the Rust toolchain in `rust-toolchain.toml`, and the Node/pnpm versions required by the root `package.json`.
+
+Build the TypeScript SDK and daemon:
+
+```sh
+pnpm daemon:build
+```
+
+After changing `proto/`, regenerate all language bindings. The root install provides Buf; the Go script installs its generators into `clients/go/.tools/bin`.
+
+```sh
+pnpm daemon:generate
+sh clients/go/generate.sh
+cargo run --manifest-path clients/rust/Cargo.toml -p zama-sdk-codegen --locked
+```
+
+Run daemon tests and native client checks:
+
+```sh
+pnpm daemon:test
+```
+
+From `clients/go`, run:
+
+```sh
+go test -race ./...
+go vet ./...
+```
+
+The Go balance example is a separate module. From `clients/go/examples/balance`, run:
+
+```sh
+go test -race ./...
+go vet ./...
+go generate ./contracts
+```
+
+From the repository root, check Rust:
+
+```sh
+cargo test --manifest-path clients/rust/Cargo.toml --locked
+cargo test --manifest-path clients/rust/Cargo.toml --all-features --all-targets --locked
+cargo clippy --manifest-path clients/rust/Cargo.toml --all-features --all-targets --locked -- -D warnings
+cargo fmt --manifest-path clients/rust/Cargo.toml --check
+```
+
+Enable the daemon's native integration tests to exercise encryption, credential reuse across runtime replacement, and the complete examples against synthetic RPC and SDK fixtures:
+
+```sh
+ZAMA_SDK_DAEMON_NATIVE_TESTS=1 pnpm daemon:test
+```
+
+These tests use no live wallet or RPC. They verify native callback behavior and SDK equivalence; live cryptographic verification requires a configured network.
+
+Run the Go and Rust balance examples against Sepolia with the repository Compose file. Copy the example configuration and fill in your RPC URL, a test wallet, and a confidential token address:
+
+```sh
+cp -n .env.daemon.example .env.daemon.local
+chmod 600 .env.daemon.local
+export ZAMA_SDK_DAEMON_UID="$(id -u)"
+export ZAMA_SDK_DAEMON_GID="$(id -g)"
+dc() { docker compose --env-file .env.daemon.local -f packages/sdk-daemon/compose.yaml "$@"; }
+dc --profile examples build
+dc up --wait daemon
+dc run --rm go
+dc run --rm rust
+```
+
+The Compose build uses these variables for the UID and GID of the daemon and example containers:
+
+| Variable              | Default |
+| --------------------- | ------- |
+| `ZAMA_SDK_DAEMON_UID` | `1000`  |
+| `ZAMA_SDK_DAEMON_GID` | `1000`  |
+
+Generate API reference locally:
+
+```sh
+cargo doc --manifest-path clients/rust/Cargo.toml --all-features --no-deps
+```
+
+From `clients/go`, use `go doc -all .` for the exported Go API. Partner-facing installation, integration, and operations pages live in [`docs/gitbook/src/native/`](docs/gitbook/src/native/README.md) and in the shared guides.
+
 ### Code Style
 
 - **ESM-only** — all packages use `"type": "module"`
