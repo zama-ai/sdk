@@ -1,6 +1,6 @@
 import { getAddress, type Address, type Hex } from "viem";
 import type { CredentialService } from "../credentials/credential-service";
-import type { PreparedPermit } from "../credentials/types";
+import type { PreparedPermit, SignedPreparedPermit } from "../credentials/types";
 import { requireConfigured } from "../errors";
 import type { PermitOperation, ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
@@ -215,6 +215,20 @@ export class Permits {
     }
     await service.registerPermit(prepared, signature);
     await this.#clearDecryptCacheForRequester(prepared.signerAddress);
+  }
+
+  /**
+   * {@link registerPermit} for every `sdk.offline.batchPreparePermits` payload.
+   * Registers in order and stops at the first failure; permits registered
+   * before it stay persisted. Registration is idempotent, so retrying with the
+   * full list is safe.
+   *
+   * @throws whatever {@link registerPermit} throws for the failing permit.
+   */
+  async batchRegisterPermits(permits: readonly SignedPreparedPermit[]): Promise<void> {
+    for (const { prepared, signature } of permits) {
+      await this.registerPermit(prepared, signature);
+    }
   }
 
   /**

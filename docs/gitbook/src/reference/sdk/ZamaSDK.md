@@ -357,7 +357,7 @@ const ready = await sdk.permits.hasDelegationPermit(delegator, [cUSDT]);
 Verify and persist the signature an out-of-process signer produced for an [`offline.preparePermit`](#offline-preparepermit) payload — the second phase of the offline permit flow. No wallet account required: the permit is scoped by `prepared.signerAddress` and, for a delegated permit, the delegator address embedded in the signature-verified `eip712` — not a connected signer. Idempotent: registering the same `(prepared, signature)` pair more than once (e.g. a retried webhook delivery) replaces the stored entry instead of duplicating it.
 
 ```ts
-const prepared = await sdk.offline.preparePermit({ signer: custodyAddress, contracts: [cUSDT] });
+const prepared = await sdk.offline.preparePermit({ signer: signerAddress, contracts: [cUSDT] });
 const signature = await custody.signTypedData(prepared.eip712);
 await sdk.permits.registerPermit(prepared, signature);
 ```
@@ -371,6 +371,23 @@ await sdk.permits.registerPermit(prepared, signature);
 - `SigningFailedError` - the signature is invalid or malformed
 
 See the [Offline reference](./Offline.md#preparepermit) for `preparePermit`'s request/response shape and the [Offline signing guide](../../guides/offline.md#offline-permits) for the full workflow.
+
+### permits.batchRegisterPermits
+
+`(permits: SignedPreparedPermit[]) => Promise<void>`
+
+[`registerPermit`](#permits-registerpermit) for every [`offline.batchPreparePermits`](#offline-batchpreparepermits) payload, each paired with its `signature`. Permits are registered in order; if one fails, the ones before it stay registered, and because registration is idempotent you can retry with the full list. Throws whatever `registerPermit` throws for the failing permit.
+
+```ts
+const prepared = await sdk.offline.batchPreparePermits({
+  signer: signerAddress,
+  contracts: tokenAddresses,
+});
+const signed = await Promise.all(
+  prepared.map(async (p) => ({ prepared: p, signature: await custody.signTypedData(p.eip712) })),
+);
+await sdk.permits.batchRegisterPermits(signed);
+```
 
 ### decryption.decryptValues
 
@@ -584,6 +601,12 @@ See the [Offline reference](./Offline.md) for the request kinds and options, and
 Builds the unsigned EIP-712 typed data for a decryption permit, without signing it — the offline counterpart to [`permits.grantPermit`](#permits-grantpermit). Hand the result to an out-of-process signer, then pass the returned signature to [`permits.registerPermit`](#permits-registerpermit). Works without a configured signer.
 
 See the [Offline reference](./Offline.md#preparepermit) for the request/response shape and typed errors, and the [Offline signing guide](../../guides/offline.md#offline-permits) for the workflow.
+
+### offline.batchPreparePermits
+
+`sdk.offline.batchPreparePermits(request)`
+
+[`preparePermit`](#offline-preparepermit) for any number of contracts: returns one `PreparedPermit` per 10 contracts, each needing its own signature. Pass the signed pairs to [`permits.batchRegisterPermits`](#permits-batchregisterpermits). See the [Offline reference](./Offline.md#batchpreparepermits).
 
 ### dispose
 

@@ -15,6 +15,7 @@ import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
 import type { GenericLogger, GenericSigner, GenericStorage } from "../types";
+import { assertNonNullable } from "../utils/assertions";
 import { isInvalidTransportKeyPairMessage } from "../utils/error";
 import { swallow } from "../utils/swallow";
 import { parseSchema } from "../validation";
@@ -252,40 +253,51 @@ export class CredentialService {
   }
 
   /**
-   * Offline permit flow, phase 1: build the unsigned EIP-712 typed data for a
-   * decryption permit without signing it. The caller (an HSM, custody API, or
-   * any out-of-process signer) signs the returned `eip712` with
-   * `eth_signTypedData_v4` and hands the signature to {@link registerPermit}.
+   * Single-permit form of {@link batchPreparePermits}.
+   *
+   * @throws if `request.contracts` exceeds {@link MAX_CONTRACTS_PER_PERMIT}. {@link ConfigurationError}
+   */
+  async preparePermit(request: PreparePermitRequest): Promise<PreparedPermit> {
+    const count = normalizeAddresses(request.contracts).length;
+    if (count > MAX_CONTRACTS_PER_PERMIT) {
+      throw new ConfigurationError(
+        `preparePermit: request.contracts must not exceed ${MAX_CONTRACTS_PER_PERMIT} addresses ` +
+          `(got ${count}) — use batchPreparePermits to split them across permits.`,
+      );
+    }
+    const [prepared] = await this.batchPreparePermits(request);
+    assertNonNullable(prepared, "batchPreparePermits result");
+    return prepared;
+  }
+
+  /**
+   * Offline permit flow, phase 1: build the unsigned EIP-712 typed data for
+   * decryption permits without signing it, one permit per chunk of
+   * {@link MAX_CONTRACTS_PER_PERMIT} contracts. The caller signs each returned
+   * `eip712` out-of-process with `eth_signTypedData_v4` and hands the
+   * signatures to {@link registerPermit}.
    *
    * Signer-less: the transport key pair is resolved from `request.signer`
    * directly — no wallet account or configured signer needed. Signer-offline,
    * not network-offline: building the typed data still reads the chain's KMS
    * signers context on-chain.
    *
-   * One permit per call — no widening or chunking against existing permits,
-   * unlike {@link grantPermit}. Prefer `grantPermit` unless signing must
-   * happen out-of-process.
+   * Unlike {@link grantPermit}, existing permits are never consulted or widened.
    *
-   * @throws if `request.contracts` is empty or exceeds {@link MAX_CONTRACTS_PER_PERMIT},
-   *   `request.delegator` equals `request.signer`, or `request.durationDays` exceeds
-   *   the V1 permit maximum of 365 days (enforced by `PermitTTLSchema`). {@link ConfigurationError}
+   * @throws if `request.contracts` is empty, `request.delegator` equals
+   *   `request.signer`, or `request.durationDays` exceeds the V1 permit maximum
+   *   of 365 days. {@link ConfigurationError}
    */
-  async preparePermit(request: PreparePermitRequest): Promise<PreparedPermit> {
+  async batchPreparePermits(request: PreparePermitRequest): Promise<PreparedPermit[]> {
     const signerAddress = checksum(request.signer);
     const contracts = normalizeAddresses(request.contracts);
     if (contracts.length === 0) {
-      throw new ConfigurationError("preparePermit: request.contracts must not be empty.");
-    }
-    if (contracts.length > MAX_CONTRACTS_PER_PERMIT) {
-      throw new ConfigurationError(
-        `preparePermit: request.contracts must not exceed ${MAX_CONTRACTS_PER_PERMIT} addresses per call ` +
-          `(got ${contracts.length}) — grantPermit chunks automatically, preparePermit does not.`,
-      );
+      throw new ConfigurationError("request.contracts must not be empty.");
     }
     const delegatorAddress = request.delegator ? checksum(request.delegator) : undefined;
     if (delegatorAddress !== undefined && delegatorAddress === signerAddress) {
       throw new ConfigurationError(
-        "preparePermit: request.delegator must differ from request.signer — self-delegation is not allowed.",
+        "request.delegator must differ from request.signer — self-delegation is not allowed.",
       );
     }
     // PermitTTLSchema caps at MAX_V1_PERMIT_DURATION_DAYS, so an explicit
@@ -309,19 +321,22 @@ export class CredentialService {
     const keypair = await this.#vault.getOrCreate(signerAddress, { strict: true });
     const transportKeyPair = await relayer.parseTransportKeyPair(keypair);
     const startTimestamp = nowSeconds();
-    const eip712 = toJsonSafeEip712(
-      Eip712Schema.parse(
-        await relayer.createUnsignedLegacyDecryptionPermitEip712({
-          transportKeyPair,
-          contractAddresses: contracts,
-          startTimestamp,
-          durationSeconds: durationDays * SECONDS_PER_DAY,
-          ...(delegatorAddress && { delegatorAddress }),
-        }),
-      ),
-    );
-
-    return { version: 1, eip712, signerAddress };
+    const prepared: PreparedPermit[] = [];
+    for (const chunk of chunkContracts(contracts)) {
+      const eip712 = toJsonSafeEip712(
+        Eip712Schema.parse(
+          await relayer.createUnsignedLegacyDecryptionPermitEip712({
+            transportKeyPair,
+            contractAddresses: chunk,
+            startTimestamp,
+            durationSeconds: durationDays * SECONDS_PER_DAY,
+            ...(delegatorAddress && { delegatorAddress }),
+          }),
+        ),
+      );
+      prepared.push({ version: 1, eip712, signerAddress });
+    }
+    return prepared;
   }
 
   /**

@@ -21,16 +21,16 @@ import { usePreparePermit } from "@zama-fhe/react-sdk";
 import { usePreparePermit } from "@zama-fhe/react-sdk";
 
 function PrepareCustodyPermit({
-  custodyAddress,
+  signerAddress,
   tokenAddress,
 }: {
-  custodyAddress: `0x${string}`;
+  signerAddress: `0x${string}`;
   tokenAddress: `0x${string}`;
 }) {
   const { mutateAsync: preparePermit, isPending } = usePreparePermit();
 
   const handlePrepare = async () => {
-    const prepared = await preparePermit({ signer: custodyAddress, contracts: [tokenAddress] });
+    const prepared = await preparePermit({ signer: signerAddress, contracts: [tokenAddress] });
     // Hand prepared.eip712 to the custody API for eth_signTypedData_v4,
     // then pass the returned signature to useRegisterPermit.
     return prepared;
@@ -65,7 +65,7 @@ Signer-optional: `request.signer` is an explicit address, not a connected wallet
 
 ```tsx
 const prepared = await preparePermit({
-  signer: custodyAddress,
+  signer: signerAddress,
   contracts: [tokenAddress],
   // delegator: ownerAddress,   // omit for a self permit
   // durationDays: 30,          // defaults to the SDK's configured permitTTL
@@ -86,6 +86,7 @@ Returns a standard TanStack Query `UseMutationResult<PreparedPermit, Error, Prep
 ## Related
 
 - [`useRegisterPermit`](./useRegisterPermit.md) -- verify and persist the signature returned for a prepared permit
+- [`useBatchPreparePermits`](./useBatchPreparePermits.md) -- the same, for more than 10 contracts (one permit per 10)
 - [`useGrantPermit`](./useGrantPermit.md) -- the atomic, wallet-connected counterpart
 - [Offline signing guide](../../guides/offline.md#offline-permits) -- the full offline permit workflow
 - [Offline reference](../sdk/Offline.md#preparepermit) -- `sdk.offline.preparePermit`'s full signature and typed errors

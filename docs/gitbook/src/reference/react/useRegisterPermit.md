@@ -19,17 +19,17 @@ import { useRegisterPermit } from "@zama-fhe/react-sdk";
 import { usePreparePermit, useRegisterPermit } from "@zama-fhe/react-sdk";
 
 function CustodyPermitFlow({
-  custodyAddress,
+  signerAddress,
   tokenAddress,
 }: {
-  custodyAddress: `0x${string}`;
+  signerAddress: `0x${string}`;
   tokenAddress: `0x${string}`;
 }) {
   const { mutateAsync: preparePermit } = usePreparePermit();
   const { mutateAsync: registerPermit, isPending } = useRegisterPermit();
 
   const handleAuthorize = async () => {
-    const prepared = await preparePermit({ signer: custodyAddress, contracts: [tokenAddress] });
+    const prepared = await preparePermit({ signer: signerAddress, contracts: [tokenAddress] });
     const signature = await custodyApi.signTypedData(prepared.eip712);
     await registerPermit({ prepared, signature });
   };
@@ -78,6 +78,7 @@ Returns a standard TanStack Query `UseMutationResult<void, Error, RegisterPermit
 ## Related
 
 - [`usePreparePermit`](./usePreparePermit.md) -- build the unsigned typed data this hook registers a signature for
+- [`useBatchRegisterPermits`](./useBatchRegisterPermits.md) -- the same, for a list of signed permits
 - [`useGrantPermit`](./useGrantPermit.md) -- the atomic, wallet-connected counterpart
 - [Offline signing guide](../../guides/offline.md#offline-permits) -- the full offline permit workflow
 - [ZamaSDK reference](../sdk/ZamaSDK.md#permits-registerpermit) -- `sdk.permits.registerPermit`'s full signature and typed errors

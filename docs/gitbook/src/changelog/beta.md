@@ -26,3 +26,7 @@ See [Vault deposits and redemptions](../guides/vault-deposits.md) for the full f
 ## New chain preset: T-Rex Zenith testnet
 
 `zenithTrexTestnet` (chain ID `936486`) joins the built-in chain presets in `@zama-fhe/sdk/chains`. It targets T-Rex's testnet instance on Zenith EVM, a Reth-based chain with Canton-mediated finality, and carries the addresses of a cleartext protocol deployment: ACL, `CleartextFHEVMExecutor`, KMS and input verifiers, and a wrapper registry with cUSDC/cUSDT mock pairs. Like `hoodi`, `ingenTestnet` and `bscTestnet` it has no hosted relayer, so pair it with the [`cleartext()` transport](../reference/sdk/RelayerCleartext.md). Its registry address is also included in the deprecated `DefaultRegistryAddresses` map. See [Chain presets](../reference/sdk/network-presets.md).
+
+## Offline permits for more than 10 contracts
+
+`sdk.offline.batchPreparePermits` and `sdk.permits.batchRegisterPermits` handle offline permit requests of any size. A permit holds at most 10 contracts, so `batchPreparePermits` returns one `PreparedPermit` per chunk of 10, and `batchRegisterPermits` takes the matching list of `{ prepared, signature }` pairs (`SignedPreparedPermit[]`) and registers them in order. The single-permit `preparePermit` and `registerPermit` are unchanged; `preparePermit` still rejects more than 10 contracts and now points at `batchPreparePermits`. React gains `useBatchPreparePermits` and `useBatchRegisterPermits`. See [Offline permits](../guides/offline.md#offline-permits).

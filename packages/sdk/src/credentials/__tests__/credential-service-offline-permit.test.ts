@@ -13,7 +13,7 @@ import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { GenericSigner } from "../../types";
 import { assertNonNullable } from "../../utils/assertions";
 import type { CredentialService } from "../credential-service";
-import { MAX_CONTRACTS_PER_PERMIT, SECONDS_PER_DAY } from "../utils";
+import { MAX_CONTRACTS_PER_PERMIT, normalizeAddresses, SECONDS_PER_DAY } from "../utils";
 
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
@@ -78,6 +78,14 @@ describe("CredentialService.preparePermit", () => {
     await expect(
       credentialService.preparePermit({ signer: USER, contracts: ADDRS }),
     ).rejects.toBeInstanceOf(ConfigurationError);
+  });
+
+  test("accepts exactly MAX_CONTRACTS_PER_PERMIT addresses", async ({ credentialService }) => {
+    const prepared = await credentialService.preparePermit({
+      signer: USER,
+      contracts: ADDRS.slice(0, MAX_CONTRACTS_PER_PERMIT),
+    });
+    expect(prepared.eip712.message.contractAddresses).toHaveLength(MAX_CONTRACTS_PER_PERMIT);
   });
 
   test("rejects self-delegation (delegator === signer)", async ({ credentialService }) => {
@@ -177,6 +185,43 @@ describe("CredentialService.preparePermit", () => {
     expect(prepared.eip712.domain.chainId).toBe(String(1));
     expect(relayerA.createUnsignedLegacyDecryptionPermitEip712).toHaveBeenCalledOnce();
     expect(relayerB.createUnsignedLegacyDecryptionPermitEip712).not.toHaveBeenCalled();
+  });
+});
+
+describe("CredentialService.batchPreparePermits", () => {
+  test("splits the request into one permit per MAX_CONTRACTS_PER_PERMIT addresses", async ({
+    credentialService,
+    signer,
+  }) => {
+    expect(ADDRS.length).toBe(23);
+    const prepared = await credentialService.batchPreparePermits({
+      signer: USER,
+      contracts: ADDRS,
+      delegator: DELEGATOR,
+    });
+
+    expect(signer.signTypedData).not.toHaveBeenCalled();
+    const chunks = prepared.map((p) => p.eip712.message.contractAddresses as Address[]);
+    expect(chunks.map((c) => c.length)).toEqual([10, 10, 3]);
+    expect(chunks.flat()).toEqual(normalizeAddresses(ADDRS));
+    for (const p of prepared) {
+      expect(p.signerAddress).toBe(USER);
+      expect(p.eip712.message.delegatorAddress).toBe(DELEGATOR);
+      expect(p.eip712.message.startTimestamp).toBe(prepared[0]!.eip712.message.startTimestamp);
+    }
+  });
+
+  test("returns a single permit for MAX_CONTRACTS_PER_PERMIT or fewer addresses", async ({
+    credentialService,
+  }) => {
+    const prepared = await credentialService.batchPreparePermits({ signer: USER, contracts: [A] });
+    expect(prepared).toHaveLength(1);
+  });
+
+  test("rejects an empty contracts list", async ({ credentialService }) => {
+    await expect(
+      credentialService.batchPreparePermits({ signer: USER, contracts: [] }),
+    ).rejects.toBeInstanceOf(ConfigurationError);
   });
 });
 

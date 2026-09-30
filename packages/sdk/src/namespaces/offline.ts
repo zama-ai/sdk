@@ -67,7 +67,7 @@ export class Offline {
    *
    * One permit per call: unlike `sdk.permits.grantPermit`, this never widens
    * an existing permit or chunks over 10 contracts — `request.contracts` maps
-   * to exactly one signature.
+   * to exactly one signature. Use {@link batchPreparePermits} for more.
    *
    * @throws if `request.contracts` is empty or exceeds 10 addresses, `request.delegator`
    *   equals `request.signer`, or `request.durationDays` exceeds the V1 permit maximum
@@ -77,5 +77,16 @@ export class Offline {
    */
   preparePermit(request: PreparePermitRequest): Promise<PreparedPermit> {
     return this.#credentialService.preparePermit(request);
+  }
+
+  /**
+   * {@link preparePermit} for any number of contracts: returns one permit per
+   * 10 contracts (the protocol's per-permit cap), each needing its own
+   * signature. Pass the signed pairs to `sdk.permits.batchRegisterPermits`.
+   *
+   * @throws as {@link preparePermit}, minus the 10-contract limit.
+   */
+  batchPreparePermits(request: PreparePermitRequest): Promise<PreparedPermit[]> {
+    return this.#credentialService.batchPreparePermits(request);
   }
 }

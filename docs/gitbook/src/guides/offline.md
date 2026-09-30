@@ -38,12 +38,12 @@ const sdk = new ZamaSDK(
 ```ts
 const prepared = await sdk.offline.prepare({
   kind: "ConfidentialTransfer",
-  from: "0xCustodyWallet",
+  from: "0xSigner",
   token: "0xConfidentialToken",
   to: "0xRecipient",
   amount: 1000n,
 });
-// { kind: "ConfidentialTransfer", from: "0xCustodyWallet", unsignedTx: "0x02..." }
+// { kind: "ConfidentialTransfer", from: "0xSigner", unsignedTx: "0x02..." }
 ```
 
 For a transfer, the amount is encrypted during `prepare`, including the required relayer interactions, and the calldata is ready to sign. `from` must match the address of the key that eventually signs: encrypted inputs are bound to that sender, so a mismatch reverts on-chain. The result is JSON-safe and crosses a process boundary as-is. `unsignedTx` carries the whole EIP-1559 transaction (chain id, nonce, calldata, gas and fee caps); `from` travels alongside because an unsigned transaction has no sender field and the custodian needs it to pick the signing key.
@@ -158,7 +158,7 @@ A decryption [permit](../concepts/permit-model.md) is not a transaction — noth
 
 ```ts
 const prepared = await sdk.offline.preparePermit({
-  signer: "0xCustodyWallet",
+  signer: "0xSigner",
   contracts: ["0xConfidentialToken"],
   // delegator: "0xOwner",      // omit for a self permit
   // durationDays: 30,          // defaults to the SDK's configured permitTTL
@@ -181,7 +181,20 @@ await sdk.permits.registerPermit(prepared, signature);
 
 The recovery byte may be either `0`/`1` or `27`/`28`: the SDK normalizes it before the permit is verified.
 
-One permit per call: unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks a request over 10 contracts — `contracts` maps to exactly one signature.
+One permit per call: unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks a request over 10 contracts — `contracts` maps to exactly one signature. For more than 10 contracts, `batchPreparePermits` splits the request into one permit per 10 and `batchRegisterPermits` registers the signed pairs in order:
+
+```ts
+const prepared = await sdk.offline.batchPreparePermits({
+  signer: "0xSigner",
+  contracts: tokenAddresses, // any length; same fields as preparePermit otherwise
+});
+const signed = await Promise.all(
+  prepared.map(async (p) => ({ prepared: p, signature: await custody.signTypedData(p.eip712) })),
+);
+await sdk.permits.batchRegisterPermits(signed);
+```
+
+If one permit fails to register, the ones before it stay registered; registration is idempotent, so retrying with the full list is safe.
 
 {% hint style="warning" %}
 **Register promptly.** `prepared.eip712.message` carries the permit's validity window (`startTimestamp` + `durationDays`); if approval takes long enough that the window elapses before you call `registerPermit`, it throws `PreparedPermitExpiredError` — call `preparePermit` again for a fresh window. Registering also checks that the chain embedded in `prepared.eip712.domain` matches the SDK's active chain (`PreparedPermitChainMismatchError`) and that the transport key pair hasn't changed since prepare (`TransportKeyPairChangedError`, e.g. after a TTL expiry) — see the [Offline reference](../reference/sdk/Offline.md#preparepermit) for details.
