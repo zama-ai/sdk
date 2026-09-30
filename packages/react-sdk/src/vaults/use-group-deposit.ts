@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-query";
 import {
   groupDepositMutationOptions,
-  invalidateAfterGroupJoin,
+  invalidateAfterJoin,
   type GroupDepositParams,
   type VaultGroupConfig,
   type VaultGroupJoinResult,
@@ -25,7 +25,8 @@ export interface UseGroupDepositConfig {
  * batch. Invalidates the asset's balance and the joined batchers' batch reads
  * on success.
  *
- * @param config - The group.
+ * @param config - The group. Pass a stable object: a fresh one each render
+ *   rebuilds the group and its cached reads (see {@link useVaultGroup}).
  * @param options - React Query mutation options.
  *
  * @example
@@ -44,10 +45,9 @@ export function useGroupDeposit<TContext = unknown>(
     ...groupDepositMutationOptions(group),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
-      invalidateAfterGroupJoin(context.client, {
-        tokens: [group.cAsset],
-        batchers: data.joins.map((join) => join.batcher),
-      });
+      for (const { batcher, token } of data.joins) {
+        invalidateAfterJoin(context.client, { batcherAddress: batcher, fromToken: token });
+      }
       return options?.onSuccess?.(data, variables, onMutateResult, context);
     },
   }) as UseMutationResult<VaultGroupJoinResult, Error, GroupDepositParams, TContext>;

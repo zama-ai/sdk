@@ -54,7 +54,7 @@ import { type UseGroupDepositConfig } from "@zama-fhe/react-sdk/vaults";
 
 `VaultGroupConfig`
 
-The group to deposit into. Same shape as [`useVaultGroup`](./useVaultGroup.md) takes.
+The group to deposit into. Same shape as [`useVaultGroup`](./useVaultGroup.md) takes. Pass a stable object (a module constant or a memoized value): a fresh object each render rebuilds the group and its cached reads.
 
 ---
 
@@ -80,12 +80,6 @@ The member to deposit into — one of the group's configured ids.
 
 Amount to deposit, in the shared asset token's base units.
 
-### operatorUntil
-
-`number | undefined`
-
-Unused by a deposit, which grants no operator. Applies to a redemption; see [`useGroupRedeem`](./useGroupRedeem.md).
-
 ### skipBalanceCheck
 
 `boolean | undefined`
@@ -94,7 +88,7 @@ Default: `false`. Skips the confidential-balance pre-flight, for accounts whose 
 
 **Throws:**
 
-- `ConfigurationError` — unknown `vaultId`, or a member whose batchers disagree with its config or pull a token other than `cAsset`
+- `ConfigurationError` — unknown `vaultId`, a member whose batchers disagree with its config or are not paired with `cAsset`, or two members whose batchers report the same vault
 - `InsufficientConfidentialBalanceError` — the asset balance is less than `amount`
 - `BalanceCheckUnavailableError` — the balance check needs a decryption the signer can't perform
 - `UnlistedConfidentialTokenError` — the router's registry does not list the asset

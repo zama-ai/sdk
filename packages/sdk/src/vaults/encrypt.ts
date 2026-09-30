@@ -2,55 +2,40 @@ import type { Address, Hex } from "viem";
 import { EncryptionFailedError } from "../errors";
 import type { EncryptedValue } from "../relayer/types";
 import type { ZamaSDK } from "../zama-sdk";
-import type { AllocationLeg, EncryptedAllocation } from "./allocation";
 
-/** One euint64 encrypted for `contractAddress`, with the proof that binds it to `userAddress`. */
-export async function encryptEuint64(
-  sdk: ZamaSDK,
-  value: bigint,
-  contractAddress: Address,
-  userAddress: Address,
-): Promise<{ encryptedAmount: EncryptedValue; inputProof: Hex }> {
-  const { encryptedValues, inputProof } = await sdk.encrypt({
-    values: [{ value, type: "euint64" }],
-    contractAddress,
-    userAddress,
-  });
-  const [encryptedAmount] = encryptedValues;
-  if (!encryptedAmount) {
-    throw new EncryptionFailedError("Encryption returned no encrypted values");
-  }
-  return { encryptedAmount, inputProof };
+export interface EncryptEuint64sParams {
+  readonly values: readonly bigint[];
+  readonly contractAddress: Address;
+  readonly userAddress: Address;
 }
 
 /**
- * One FHE input per leg, bound to the router rather than the batchers or the
- * tokens: the router is the contract that verifies the proof.
+ * Encrypts `values` as euint64s, in order, under one input proof that only
+ * `contractAddress` can verify and only for `userAddress`.
  *
- * @throws if encryption returns a different number of values than legs. {@link EncryptionFailedError}
+ * @throws if encryption returns a different number of values. {@link EncryptionFailedError}
  */
-export async function encryptAllocation(
+export function encryptEuint64s(
   sdk: ZamaSDK,
-  router: Address,
-  holder: Address,
-  legs: readonly AllocationLeg[],
-): Promise<EncryptedAllocation> {
+  params: EncryptEuint64sParams & { readonly values: readonly [bigint] },
+): Promise<{ encryptedValues: readonly [EncryptedValue]; inputProof: Hex }>;
+export function encryptEuint64s(
+  sdk: ZamaSDK,
+  params: EncryptEuint64sParams,
+): Promise<{ encryptedValues: readonly EncryptedValue[]; inputProof: Hex }>;
+export async function encryptEuint64s(
+  sdk: ZamaSDK,
+  params: EncryptEuint64sParams,
+): Promise<{ encryptedValues: readonly EncryptedValue[]; inputProof: Hex }> {
   const { encryptedValues, inputProof } = await sdk.encrypt({
-    values: legs.map((leg) => ({ value: leg.amount, type: "euint64" as const })),
-    contractAddress: router,
-    userAddress: holder,
+    values: params.values.map((value) => ({ value, type: "euint64" as const })),
+    contractAddress: params.contractAddress,
+    userAddress: params.userAddress,
   });
-  if (encryptedValues.length !== legs.length) {
+  if (encryptedValues.length !== params.values.length) {
     throw new EncryptionFailedError(
-      `Encryption returned ${encryptedValues.length} values for ${legs.length} legs`,
+      `Encryption returned ${encryptedValues.length} values for ${params.values.length}`,
     );
   }
-  return {
-    legs: legs.map((leg, index) => ({
-      batcher: leg.batcher,
-      token: leg.token,
-      amount: encryptedValues[index] as EncryptedValue,
-    })),
-    inputProof,
-  };
+  return { encryptedValues, inputProof };
 }

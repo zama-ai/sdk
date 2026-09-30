@@ -27,19 +27,6 @@ export function invalidateAfterJoin(
   invalidateBatchQueries(queryClient, params.batcherAddress);
 }
 
-/** Invalidates the caches affected by a group join: every leg token's balance, and every joined batcher's batch reads. */
-export function invalidateAfterGroupJoin(
-  queryClient: QueryClientLike,
-  params: { tokens: readonly Address[]; batchers: readonly Address[] },
-): void {
-  for (const token of params.tokens) {
-    invalidateBalanceQueries(queryClient, token);
-  }
-  for (const batcher of params.batchers) {
-    invalidateBatchQueries(queryClient, batcher);
-  }
-}
-
 /** Invalidates the caches affected by a quit or recover: the input token's balance and the batcher's batch reads. */
 export function invalidateAfterQuit(
   queryClient: QueryClientLike,

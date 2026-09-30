@@ -5,7 +5,7 @@ description: Mutation hook that redeems shares of one vault of a group by joinin
 
 # useGroupRedeem
 
-Mutation hook that redeems a plaintext amount of shares from one member of a [vault group](../../guides/vault-groups.md). It checks the caller's balance of that member's share token, verifies every member's configured redeem batcher, and joins all of them, each leg spending its own vault's share token — the same flow as [`VaultGroup.redeem`](../sdk/VaultGroup.md#redeem).
+Mutation hook that redeems a plaintext amount of shares from one member of a [vault group](../../guides/vault-groups.md). It checks the caller's balance of that member's share token — decrypting every member's, so the relayer cannot tell which was chosen — verifies every member's configured redeem batcher, and joins all of them, each leg spending its own vault's share token — the same flow as [`VaultGroup.redeem`](../sdk/VaultGroup.md#redeem).
 
 The router pulls each share token, so the SDK grants it an operator approval on every member's share token that lacks one before the join. Each grant is its own wallet prompt: a first redemption from a group of N vaults can ask the user to sign up to N + 1 times.
 
@@ -48,7 +48,7 @@ import { type UseGroupRedeemConfig } from "@zama-fhe/react-sdk/vaults";
 
 `VaultGroupConfig`
 
-The group to redeem from. Same shape as [`useVaultGroup`](./useVaultGroup.md) takes.
+The group to redeem from. Same shape as [`useVaultGroup`](./useVaultGroup.md) takes. Pass a stable object (a module constant or a memoized value): a fresh object each render rebuilds the group and its cached reads.
 
 ---
 
@@ -72,9 +72,17 @@ The member to redeem from — one of the group's configured ids.
 
 Amount of **shares** to redeem, in that member's share token's base units. ERC-4626 `redeem`, not `withdraw`.
 
-### operatorUntil, skipBalanceCheck
+### operatorUntil
 
-`operatorUntil` is the expiry of the router's grant on each share token, default now + 1 hour. `skipBalanceCheck` is as in [`useGroupDeposit`](./useGroupDeposit.md#skipbalancecheck). The balance check is against the chosen member's share token.
+`number | undefined`
+
+Default: now + 1 hour. Unix timestamp (seconds) until which the router's operator grant on each share token is valid, for a grant the redemption has to make.
+
+### skipBalanceCheck
+
+`boolean | undefined`
+
+Default: `false`. As in [`useGroupDeposit`](./useGroupDeposit.md#skipbalancecheck). The check decrypts every member's share balance and compares the chosen member's.
 
 **Throws:** the same errors as `useGroupDeposit`, including `VaultBatcherPausedError`, except `UnlistedConfidentialTokenError`, which only the deposit path raises.
 

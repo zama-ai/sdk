@@ -8356,7 +8356,7 @@ export function groupDepositMutationOptions(group: VaultGroup): MutationFactoryO
 }], GroupDepositParams, VaultGroupJoinResult>;
 
 // @public
-export interface GroupDepositParams extends VaultGroupJoinOptions {
+export interface GroupDepositParams extends JoinOptions {
     amount: bigint;
     vaultId: string;
 }
@@ -8368,7 +8368,7 @@ export function groupRedeemMutationOptions(group: VaultGroup): MutationFactoryOp
 }], GroupRedeemParams, VaultGroupJoinResult>;
 
 // @public
-export interface GroupRedeemParams extends VaultGroupJoinOptions {
+export interface GroupRedeemParams extends VaultGroupRedeemOptions {
     amount: bigint;
     vaultId: string;
 }
@@ -8382,12 +8382,6 @@ export function invalidateAfterClaim(queryClient: QueryClientLike, params: {
 
 // @public
 export function invalidateAfterDispatchBatch(queryClient: QueryClientLike, batcherAddress: Address): void;
-
-// @public
-export function invalidateAfterGroupJoin(queryClient: QueryClientLike, params: {
-    tokens: readonly Address[];
-    batchers: readonly Address[];
-}): void;
 
 // @public
 export function invalidateAfterJoin(queryClient: QueryClientLike, params: {
@@ -13606,12 +13600,12 @@ export function vaultContract(batcher: Address): {
 export class VaultGroup {
     constructor(sdk: ZamaSDK, config: VaultGroupConfig);
     readonly cAsset: Address;
-    deposit(vaultId: string, amount: bigint, options?: VaultGroupJoinOptions): Promise<VaultGroupJoinResult>;
+    deposit(vaultId: string, amount: bigint, options?: JoinOptions): Promise<VaultGroupJoinResult>;
     readonly id: string;
     isAssetListed(): Promise<boolean>;
     member(vaultId: string): VaultGroupMember;
     readonly members: readonly VaultGroupMember[];
-    redeem(vaultId: string, amount: bigint, options?: VaultGroupJoinOptions): Promise<VaultGroupJoinResult>;
+    redeem(vaultId: string, amount: bigint, options?: VaultGroupRedeemOptions): Promise<VaultGroupJoinResult>;
     readonly router: Address;
     readonly sdk: ZamaSDK;
 }
@@ -13634,11 +13628,6 @@ export interface VaultGroupJoin {
 }
 
 // @public
-export interface VaultGroupJoinOptions extends JoinOptions {
-    operatorUntil?: number;
-}
-
-// @public
 export interface VaultGroupJoinResult extends TransactionResult {
     joins: readonly VaultGroupJoin[];
     vaultId: string;
@@ -13648,6 +13637,11 @@ export interface VaultGroupJoinResult extends TransactionResult {
 export interface VaultGroupMember {
     readonly id: string;
     readonly vault: Vault;
+}
+
+// @public
+export interface VaultGroupRedeemOptions extends JoinOptions {
+    operatorUntil?: number;
 }
 
 // @public

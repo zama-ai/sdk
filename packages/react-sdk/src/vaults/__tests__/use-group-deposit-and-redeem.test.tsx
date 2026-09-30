@@ -30,11 +30,13 @@ const group: VaultGroupConfig = {
   ],
 };
 
-const BATCHERS: Readonly<Record<Address, { fromToken: Address; vault: Address }>> = {
-  [getAddress(ALPHA_DEPOSIT)]: { fromToken: ASSET, vault: ALPHA_VAULT },
-  [getAddress(BETA_DEPOSIT)]: { fromToken: ASSET, vault: BETA_VAULT },
-  [getAddress(ALPHA_REDEEM)]: { fromToken: ALPHA_SHARE, vault: ALPHA_VAULT },
-  [getAddress(BETA_REDEEM)]: { fromToken: BETA_SHARE, vault: BETA_VAULT },
+const BATCHERS: Readonly<
+  Record<Address, { fromToken: Address; toToken: Address; vault: Address }>
+> = {
+  [getAddress(ALPHA_DEPOSIT)]: { fromToken: ASSET, toToken: ALPHA_SHARE, vault: ALPHA_VAULT },
+  [getAddress(BETA_DEPOSIT)]: { fromToken: ASSET, toToken: BETA_SHARE, vault: BETA_VAULT },
+  [getAddress(ALPHA_REDEEM)]: { fromToken: ALPHA_SHARE, toToken: ASSET, vault: ALPHA_VAULT },
+  [getAddress(BETA_REDEEM)]: { fromToken: BETA_SHARE, toToken: ASSET, vault: BETA_VAULT },
 };
 
 /** Every read a router submission makes, plus the receipt it reads its batch ids from. */
@@ -51,13 +53,18 @@ function mockGroupSubmission(provider: GenericProvider, account: Address, batche
         return false;
       case "fromToken":
         return BATCHERS[getAddress(address)]?.fromToken;
+      case "toToken":
+        return BATCHERS[getAddress(address)]?.toToken;
       case "vault":
         return BATCHERS[getAddress(address)]?.vault;
       default:
         throw new Error(`Unexpected read of ${functionName}`);
     }
   });
-  vi.spyOn(Token.prototype, "balanceOf").mockResolvedValue(1_000_000n);
+  vi.spyOn(Token, "batchBalancesOf").mockImplementation(async (tokens) => ({
+    results: new Map(tokens.map((token) => [token.address, 1_000_000n])),
+    errors: new Map(),
+  }));
   vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
     logs: batchers.map((batcher) => joinedLog({ batcher, account, batchId: 7n })),
   });

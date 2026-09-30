@@ -35,11 +35,7 @@ const STABLE_GROUP = {
 const group = createVaultGroup(sdk, STABLE_GROUP);
 ```
 
-The SDK ships no group configuration; the addresses belong to your app. They are not trusted blindly: before a submission writes anything, each member is checked against chain (both batchers report the same vault, the deposit batcher pulls `cAsset`), and a mismatch throws `ConfigurationError`.
-
-{% hint style="info" %}
-The member order is the leg order, and the leg count is visible on chain. Adding or removing a member changes the shape of every later submission, so treat group membership as something depositors can observe changing.
-{% endhint %}
+The SDK ships no group configuration; the addresses belong to your app. Each member is checked against chain before a submission writes anything, and a mismatch throws `ConfigurationError`.
 
 ## Depositing and redeeming
 
@@ -72,22 +68,16 @@ Redeeming is the mirror image — `group.redeem("alpha", shares)` or `useGroupRe
 
 A group deposit always credits the caller. The router credits the account the legs came from, so unlike `Vault.deposit` there is no `beneficiary` option.
 
-Both methods check the caller's confidential balance before submitting, as `Vault` does: a short balance would join every batch with nothing and still cost the transaction. Both take `skipBalanceCheck`; `operatorUntil` only applies to a redemption, since a deposit grants no operator.
+Both methods check the caller's confidential balance before submitting, as `Vault` does; a redemption decrypts every member's share balance, so the relayer cannot tell which was chosen. Both take `skipBalanceCheck`; `redeem` also takes `operatorUntil`.
 
 ### Claiming
 
 Claiming, quitting and batch state are unchanged: they happen per batcher, on the batcher a leg actually joined. Each entry in `joins` gives you that address and the batch id, so `createVaultBatcher(sdk, join.batcher).claim(join.batchId)` is the follow-up. See [Vault deposits and withdrawals](./vault-deposits.md) for the batch lifecycle.
 
-## Replacing a batcher
-
-A batcher is replaced by deploying a new one, not upgraded in place, and the old one keeps accepting joins until its owner pauses it. Nothing on chain points from the old batcher to the new, so the cutover is a configuration change: point the member at the new pair and ship the new config to every client at once, so all users keep sending the same leg list. Positions already on the old batcher are unaffected: each entry in `joins` records the batcher it landed on, and claiming and quitting happen there.
-
 ## Grants and registry listing
 
-For a **redemption**, the router pulls each leg's share token, so it needs an ERC-7984 operator grant on every one of them. The SDK makes any missing grant before submitting — note that this is a grant to the _router_, not to the batchers, the opposite of what a single-vault `Vault.redeem` does. Each grant is its own wallet prompt, so the first redemption from a group of N vaults can ask the user to sign up to N + 1 times; later ones reuse the grants while they are valid.
-
-A **deposit** through the router needs no grant: it is a transfer you send. It does require the shared asset to be listed in the registry the router checks, so the SDK asks first and raises `UnlistedConfidentialTokenError` rather than letting you pay for a reverted transaction. Listings are governed on chain and can be revoked, so this is checked per submission rather than remembered.
+For a **redemption**, the router pulls each leg's share token, so the SDK grants it an operator approval on every share token that lacks one, one wallet prompt each — a grant to the _router_, not to the batchers as with `Vault.redeem`. A **deposit** needs no grant, but the asset must be listed in the router's registry; the SDK checks and throws `UnlistedConfidentialTokenError` rather than paying for a revert.
 
 ## Paused batchers
 
-Every submission sends a leg to every member, and a paused batcher rejects joins. Rather than let one paused member revert the whole transaction, the SDK reads `paused()` on each configured batcher first and throws `VaultBatcherPausedError` naming the member. Quitting and claiming on a paused batcher still work, so existing positions are not stuck.
+Every submission sends a leg to every member, so the SDK reads `paused()` on each batcher first and throws `VaultBatcherPausedError` naming the member, instead of letting one paused member revert the transaction.

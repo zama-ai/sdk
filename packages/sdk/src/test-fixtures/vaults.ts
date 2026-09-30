@@ -50,16 +50,19 @@ export function mockJoinBalance(
   vi.spyOn(Token.prototype, "balanceOf").mockResolvedValue(params.balance ?? 1_000_000_000n);
 }
 
-/** One encrypt returning `count` distinct handles under a single proof, in leg order. */
+/** `count` distinct handles under one proof, in leg order; each encrypt receives as many as it asks for. */
 export function mockEncryptedLegs(relayer: RelayerSDK, count: number): readonly EncryptedValue[] {
   const handles = Array.from(
     { length: count },
     (_unused, index) =>
       `0x${(index + 1).toString(16).padStart(2, "0").repeat(32)}` as EncryptedValue,
   );
-  vi.mocked(relayer.encryptValues).mockResolvedValue({
-    encryptedValues: handles,
-    inputProof: VALID_INPUT_PROOF,
-  } as unknown as Awaited<ReturnType<RelayerSDK["encryptValues"]>>);
+  vi.mocked(relayer.encryptValues).mockImplementation(
+    async (params: unknown) =>
+      ({
+        encryptedValues: handles.slice(0, (params as { values: unknown[] }).values.length),
+        inputProof: VALID_INPUT_PROOF,
+      }) as unknown as Awaited<ReturnType<RelayerSDK["encryptValues"]>>,
+  );
   return handles;
 }

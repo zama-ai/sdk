@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-query";
 import {
   groupRedeemMutationOptions,
-  invalidateAfterGroupJoin,
+  invalidateAfterJoin,
   type GroupRedeemParams,
   type VaultGroupConfig,
   type VaultGroupJoinResult,
@@ -28,7 +28,8 @@ export interface UseGroupRedeemConfig {
  * grant. Invalidates the share balances, operator-status caches and the joined
  * batchers' batch reads on success.
  *
- * @param config - The group.
+ * @param config - The group. Pass a stable object: a fresh one each render
+ *   rebuilds the group and its cached reads (see {@link useVaultGroup}).
  * @param options - React Query mutation options.
  *
  * @example
@@ -47,13 +48,9 @@ export function useGroupRedeem<TContext = unknown>(
     ...groupRedeemMutationOptions(group),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
-      const tokens = [...new Set(data.joins.map((join) => join.token))];
-      invalidateAfterGroupJoin(context.client, {
-        tokens,
-        batchers: data.joins.map((join) => join.batcher),
-      });
-      // The mutation may have granted the router an operator approval.
-      for (const token of tokens) {
+      for (const { batcher, token } of data.joins) {
+        invalidateAfterJoin(context.client, { batcherAddress: batcher, fromToken: token });
+        // The mutation may have granted the router an operator approval.
         invalidateAfterSetOperator(context.client, token);
       }
       return options?.onSuccess?.(data, variables, onMutateResult, context);

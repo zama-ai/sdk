@@ -61,11 +61,13 @@ const GROUP: VaultGroupConfig = {
 };
 
 /** What each batcher reports on chain, which a submission checks the config against. */
-const BATCHERS: Readonly<Record<Address, { fromToken: Address; vault: Address }>> = {
-  [ALPHA.depositBatcher]: { fromToken: ASSET, vault: ALPHA.vault },
-  [ALPHA.redeemBatcher]: { fromToken: ALPHA.share, vault: ALPHA.vault },
-  [BETA.depositBatcher]: { fromToken: ASSET, vault: BETA.vault },
-  [BETA.redeemBatcher]: { fromToken: BETA.share, vault: BETA.vault },
+const BATCHERS: Readonly<
+  Record<Address, { fromToken: Address; toToken: Address; vault: Address }>
+> = {
+  [ALPHA.depositBatcher]: { fromToken: ASSET, toToken: ALPHA.share, vault: ALPHA.vault },
+  [ALPHA.redeemBatcher]: { fromToken: ALPHA.share, toToken: ASSET, vault: ALPHA.vault },
+  [BETA.depositBatcher]: { fromToken: ASSET, toToken: BETA.share, vault: BETA.vault },
+  [BETA.redeemBatcher]: { fromToken: BETA.share, toToken: ASSET, vault: BETA.vault },
 };
 
 /** Every chain read a group submission makes, and the balance it pre-flights. */
@@ -76,6 +78,8 @@ function mockReads(
     /** Per token: whether the operator the read asks about is already granted. Defaults to `true`. */
     operators?: Readonly<Record<Address, boolean>>;
     paused?: readonly Address[];
+    /** Per token; `balance` is the default for the rest. */
+    balances?: Readonly<Record<Address, bigint>>;
     balance?: bigint;
     batchers?: typeof BATCHERS;
   } = {},
@@ -94,13 +98,23 @@ function mockReads(
         return answers.paused?.includes(getAddress(address)) ?? false;
       case "fromToken":
         return batchers[getAddress(address)]?.fromToken;
+      case "toToken":
+        return batchers[getAddress(address)]?.toToken;
       case "vault":
         return batchers[getAddress(address)]?.vault;
       default:
         throw new Error(`Unexpected read of ${functionName}`);
     }
   });
-  vi.spyOn(Token.prototype, "balanceOf").mockResolvedValue(answers.balance ?? 1_000_000n);
+  vi.spyOn(Token, "batchBalancesOf").mockImplementation(async (tokens) => ({
+    results: new Map(
+      tokens.map((token) => [
+        token.address,
+        answers.balances?.[token.address] ?? answers.balance ?? 1_000_000n,
+      ]),
+    ),
+    errors: new Map(),
+  }));
 }
 
 /** Every batcher reports a join, so a submission can read its batch ids back. */
@@ -443,6 +457,27 @@ describe("VaultGroup deposit", () => {
     expect(signer.writeContract).not.toHaveBeenCalled();
   });
 
+  test("refuses to write when two members' batchers report the same vault", async ({
+    sdk,
+    provider,
+    signer,
+  }) => {
+    // Without configured vault addresses, only the batchers' reports can catch this.
+    const unpinned = { ...GROUP, vaults: GROUP.vaults.map(({ vault: _vault, ...rest }) => rest) };
+    mockReads(provider, {
+      batchers: {
+        ...BATCHERS,
+        [BETA.depositBatcher]: { fromToken: ASSET, toToken: BETA.share, vault: ALPHA.vault },
+        [BETA.redeemBatcher]: { fromToken: BETA.share, toToken: ASSET, vault: ALPHA.vault },
+      },
+    });
+
+    await expect(new VaultGroup(sdk, unpinned).deposit("alpha", 1_000n)).rejects.toThrow(
+      /report the same vault/,
+    );
+    expect(signer.writeContract).not.toHaveBeenCalled();
+  });
+
   test("refuses to write when a member's batchers report different vaults", async ({
     sdk,
     provider,
@@ -486,7 +521,7 @@ describe("VaultGroup deposit", () => {
 
     await new VaultGroup(sdk, GROUP).deposit("alpha", 1_000n, { skipBalanceCheck: true });
 
-    expect(Token.prototype.balanceOf).not.toHaveBeenCalled();
+    expect(Token.batchBalancesOf).not.toHaveBeenCalled();
   });
 
   test("throws without a configured signer", async ({ createSDK }) => {
@@ -609,18 +644,36 @@ describe("VaultGroup redeem", () => {
     expect(writesTo(signer, "join")).toHaveLength(0);
   });
 
-  test("checks the caller's balance of the chosen member's shares", async ({
+  test("decrypts every member's share balance and checks the chosen one's", async ({
     sdk,
     provider,
     signer,
   }) => {
-    mockReads(provider, { balance: 499n });
-    const balanceOf = vi.spyOn(Token.prototype, "balanceOf").mockResolvedValue(499n);
+    mockReads(provider, { balances: { [ALPHA.share]: 499n, [BETA.share]: 500n } });
 
-    await expect(new VaultGroup(sdk, GROUP).redeem("beta", 500n)).rejects.toThrow(
+    await expect(new VaultGroup(sdk, GROUP).redeem("alpha", 500n)).rejects.toThrow(
       InsufficientConfidentialBalanceError,
     );
-    expect(balanceOf.mock.instances[0]).toMatchObject({ address: BETA.share });
+    expect(signer.writeContract).not.toHaveBeenCalled();
+    const [tokens] = vi.mocked(Token.batchBalancesOf).mock.calls[0] ?? [];
+    expect(tokens?.map((token) => token.address)).toStrictEqual([ALPHA.share, BETA.share]);
+  });
+
+  test("refuses to write when a redeem batcher pays out a token other than the asset", async ({
+    sdk,
+    provider,
+    signer,
+  }) => {
+    mockReads(provider, {
+      batchers: {
+        ...BATCHERS,
+        [BETA.redeemBatcher]: { fromToken: BETA.share, toToken: BETA.share, vault: BETA.vault },
+      },
+    });
+
+    await expect(new VaultGroup(sdk, GROUP).redeem("alpha", 500n)).rejects.toThrow(
+      /is paired with/,
+    );
     expect(signer.writeContract).not.toHaveBeenCalled();
   });
 
@@ -685,6 +738,56 @@ describe("VaultGroup redeem", () => {
       }),
     );
   });
+});
+
+describe("VaultGroup privacy", () => {
+  /** Everything a relayer or RPC could observe about a submission, in order, minus the plaintext amounts. */
+  function observe(provider: GenericProvider, relayer: RelayerSDK, signer: GenericSigner) {
+    return {
+      reads: vi
+        .mocked(provider.readContract)
+        .mock.calls.map(([call]) => [call.functionName, getAddress(call.address)]),
+      decrypts: vi
+        .mocked(Token.batchBalancesOf)
+        .mock.calls.map(([tokens]) => tokens.map((token) => token.address)),
+      encryptions: vi
+        .mocked(relayer.encryptValues)
+        .mock.calls.map(([{ contractAddress, values }]) => [
+          getAddress(contractAddress),
+          values.length,
+        ]),
+      writes: vi
+        .mocked(signer.writeContract)
+        .mock.calls.map(([call]) => [call.functionName, getAddress(call.address)]),
+    };
+  }
+
+  for (const direction of ["deposit", "redeem"] as const) {
+    test(`a ${direction} makes the same calls whichever member is chosen`, async ({
+      sdk,
+      provider,
+      relayer,
+      signer,
+      userAddress,
+    }) => {
+      const batchers = GROUP.vaults.map((entry) =>
+        direction === "deposit" ? entry.depositBatcher : entry.redeemBatcher,
+      );
+      const observed = [];
+      for (const vaultId of ["alpha", "beta"]) {
+        vi.clearAllMocks();
+        mockReads(provider);
+        mockEncryptedLegs(relayer, 2);
+        mockReceipts(provider, userAddress, batchers);
+
+        await new VaultGroup(sdk, GROUP)[direction](vaultId, 1_000n);
+
+        observed.push(observe(provider, relayer, signer));
+      }
+
+      expect(observed[0]).toStrictEqual(observed[1]);
+    });
+  }
 });
 
 describe("takeJoined", () => {

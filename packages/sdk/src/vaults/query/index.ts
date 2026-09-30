@@ -2,7 +2,6 @@ export { vaultQueryKeys } from "./query-keys";
 export {
   invalidateAfterClaim,
   invalidateAfterDispatchBatch,
-  invalidateAfterGroupJoin,
   invalidateAfterJoin,
   invalidateAfterQuit,
   invalidateBatchQueries,

@@ -157,8 +157,8 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.PreparedPermitChainMismatch]: false, // caller must register against the chain the permit was prepared for
   [ZamaErrorCode.PreparedPermitExpired]: false, // caller must re-run preparePermit for a fresh validity window
   [ZamaErrorCode.UnshieldAlreadyFinalized]: false, // the funds already arrived; the stale pointer is cleared
-  [ZamaErrorCode.UnlistedConfidentialToken]: false, // only a governance listing changes the answer, not a retry
-  [ZamaErrorCode.VaultBatcherPaused]: false, // only the batcher's owner unpauses it, not a retry
+  [ZamaErrorCode.UnlistedConfidentialToken]: false, // only a registry listing changes the answer, not a retry
+  [ZamaErrorCode.VaultBatcherPaused]: false, // stays paused until the batcher is unpaused, not on retry
 };
 
 /**

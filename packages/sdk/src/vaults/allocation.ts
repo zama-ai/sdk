@@ -5,17 +5,10 @@ import { vaultRouterAbi } from "./abi/vault-router.abi";
 /** The most vaults a group may name: the router's per-transaction leg limit on the pull path, so a group is always exitable. */
 export const MAX_GROUP_VAULTS = 10;
 
-/** One vault's share of a fan-out. */
-export interface AllocationLeg {
-  readonly batcher: Address;
-  /** The confidential token this leg spends. */
-  readonly token: Address;
-  readonly amount: bigint;
-}
-
-/** An {@link AllocationLeg} whose amount has been encrypted against the router. */
+/** One vault's share of a fan-out, its amount encrypted against the router. */
 export interface EncryptedAllocationLeg {
   readonly batcher: Address;
+  /** The confidential token this leg spends. */
   readonly token: Address;
   readonly amount: EncryptedValue;
 }

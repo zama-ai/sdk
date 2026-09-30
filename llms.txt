@@ -137,10 +137,10 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useDispatchBatch](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDispatchBatch.md): Mutation hook that dispatches a vault batcher's current batch once it is old enough.
 - [useCurrentBatchId](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useCurrentBatchId.md): Query hook for the id of a vault batcher's currently open batch.
 - [useBatchState](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md): Query hook for a vault batch's lifecycle state, which decides what the user can do next.
+- [useTimeUntilDispatchable](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md): Query hook for the seconds until a vault batch becomes eligible for dispatch.
 - [useVaultGroup](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultGroup.md): React hook returning a memoized VaultGroup instance for a set of vaults sharing one confidential asset.
 - [useGroupDeposit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupDeposit.md): Mutation hook that deposits into one vault of a group by joining every member's current deposit batch.
 - [useGroupRedeem](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupRedeem.md): Mutation hook that redeems shares of one vault of a group by joining every member's current redeem batch.
-- [useTimeUntilDispatchable](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md): Query hook for the seconds until a vault batch becomes eligible for dispatch.
 - [Query keys](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/query-keys.md): Reference for the zamaQueryKeys factory used for manual React Query cache control.
 
 ### Concepts

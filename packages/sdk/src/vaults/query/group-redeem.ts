@@ -1,9 +1,9 @@
 import type { Address } from "viem";
 import type { MutationFactoryOptions } from "../../query/factory-types";
-import type { VaultGroup, VaultGroupJoinOptions, VaultGroupJoinResult } from "../vault-group";
+import type { VaultGroup, VaultGroupRedeemOptions, VaultGroupJoinResult } from "../vault-group";
 
 /** Variables for {@link groupRedeemMutationOptions}. */
-export interface GroupRedeemParams extends VaultGroupJoinOptions {
+export interface GroupRedeemParams extends VaultGroupRedeemOptions {
   /** The member of the group to redeem from. */
   vaultId: string;
   /** Plaintext amount of shares to redeem. */

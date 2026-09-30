@@ -66,14 +66,7 @@ export function findJoined(
   batcher: Address,
   account?: Address,
 ): JoinedEvent | null {
-  const normalizedAccount = account ? getAddress(account) : undefined;
-  for (const log of logs) {
-    const event = matchJoined(log, batcher, normalizedAccount);
-    if (event) {
-      return event;
-    }
-  }
-  return null;
+  return takeJoined([...logs], batcher, account);
 }
 
 /**

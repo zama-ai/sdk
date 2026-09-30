@@ -139,10 +139,10 @@
   - [useDispatchBatch](reference/react/useDispatchBatch.md)
   - [useCurrentBatchId](reference/react/useCurrentBatchId.md)
   - [useBatchState](reference/react/useBatchState.md)
+  - [useTimeUntilDispatchable](reference/react/useTimeUntilDispatchable.md)
   - [useVaultGroup](reference/react/useVaultGroup.md)
   - [useGroupDeposit](reference/react/useGroupDeposit.md)
   - [useGroupRedeem](reference/react/useGroupRedeem.md)
-  - [useTimeUntilDispatchable](reference/react/useTimeUntilDispatchable.md)
   - [Query keys](reference/react/query-keys.md)
 
 ## Concepts

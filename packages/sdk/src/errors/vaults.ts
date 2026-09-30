@@ -37,8 +37,8 @@ export interface VaultBatcherPausedDetails {
 
 /**
  * A batcher one leg of a group submission would join is paused, so the whole
- * submission would revert. Only `join` is paused; quitting and claiming on it
- * still work.
+ * submission would revert. Pausing gates `join` and `dispatchBatch`; quitting
+ * and claiming on it still work.
  */
 export class VaultBatcherPausedError extends ZamaError {
   /** The batcher that reported `paused()`. */
