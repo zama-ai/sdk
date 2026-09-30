@@ -1248,6 +1248,11 @@ Open the app in your browser, connect your wallet, and try the full flow: shield
 
 # Wallet & exchange integration
 
+
+> [!INFO]
+> Available in the Core SDK and React SDK.
+
+
 This guide is for wallet developers, dApp developers, and exchanges who want to support confidential tokens on the Zama Protocol. It covers ERC-7984 wallet flows (showing decrypted balances, sending transfers with encrypted inputs), the Confidential Token Wrappers Registry, and wrapping/unwrapping between ERC-20 and ERC-7984.
 
 By the end of this guide, you will be able to:
@@ -1635,7 +1640,7 @@ The Zama SDK ships as `@zama-fhe/sdk` (and `@zama-fhe/react-sdk` for React) — 
 | [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/beta/llms.txt)           | the agent needs to **discover** the right guide, example, or reference, then fetch only that | a compact map of guides, concepts, SDK and React reference pages, and approved examples   |
 | [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/beta/llms-full.txt) | the agent has a **large context window** and you want the whole public corpus in one paste   | the complete docs bundle plus approved examples and README context (API reports excluded) |
 
-Start with [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/beta/llms.txt) for normal coding tasks; reach for [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/beta/llms-full.txt) only when you want everything loaded at once. The `source_path` values such as `docs/gitbook/src/...` are provenance metadata, not local paths — if you haven't cloned the repo, use the raw GitHub URLs.
+Start with [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/beta/llms.txt) for normal coding tasks; reach for [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/beta/llms-full.txt) only when you want everything loaded at once. Both files include the Go and Rust client pages. The `source_path` values such as `docs/gitbook/src/...` are provenance metadata, not local paths — if you haven't cloned the repo, use the raw GitHub URLs.
 
 ### Example prompts
 
@@ -1693,6 +1698,16 @@ Every page in these docs has a **Copy ▾** menu (top-right) with built-in agent
 | Firefox            | 115             |
 | Samsung Internet   | 20              |
 | Node.js            | 22              |
+
+## Go and Rust
+
+| Environment | Minimum version or requirement                                                        |
+| ----------- | ------------------------------------------------------------------------------------- |
+| Go          | 1.25                                                                                  |
+| Rust        | 1.94.1                                                                                |
+| Daemon host | Linux with a container runtime, sharing a Unix socket directory with your application |
+
+On Docker Desktop, run the application and the daemon as containers sharing a named socket volume. See [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md).
 
 ## Next steps
 
@@ -3415,7 +3430,7 @@ A release-plumbing patch with no functional changes — it exists only to trigge
 
 # Configuration
 
-The SDK uses `createConfig` to wire together chains, relayers, a provider, an optional signer, and storage into a single configuration object. This guide walks through each piece. The Go and Rust tabs pass the same settings to an SDK context in the [daemon](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/concepts/architecture.md).
+The SDK uses `createConfig` to wire together chains, relayers, a provider, an optional signer, and storage into a single configuration object. This guide walks through each piece. In Go and Rust, the same settings configure an SDK context in the [daemon](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/concepts/architecture.md).
 
 ## Steps
 
@@ -4353,6 +4368,9 @@ No `auth` field is needed on the client side — the proxy handles authenticatio
 
 When the SDK runs in a trusted environment (Node.js script, backend service), you can pass the API key directly on the chain definition:
 
+
+### Tab: Core SDK
+
 ```ts
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
@@ -4364,6 +4382,26 @@ const mySepolia = {
 ```
 
 Then pass `mySepolia` to `createConfig` — the `auth` field is picked up automatically by the relayer. See the [Node.js backend guide](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/node-js-backend.md) for a complete example.
+
+### Tab: Go
+
+```go
+config := zama.NewSDKConfig(11155111, "https://sepolia.infura.io/v3/YOUR_KEY")
+config.Auth = zama.APIKeyHeader{Value: os.Getenv("RELAYER_API_KEY")}
+```
+
+Pass `config` to `client.CreateContext`; see [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md#4-create-the-config).
+
+### Tab: Rust
+
+```rust
+let chain = ChainConfig::new(11_155_111, "https://sepolia.infura.io/v3/YOUR_KEY")
+    .with_auth(RelayerAuth::api_key(env::var("RELAYER_API_KEY")?));
+let config = SdkConfig::from_chains(11_155_111, vec![chain]);
+```
+
+Pass `config` to `client.sdk(config)`; see [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md#4-create-the-config).
+
 
 The `auth` field supports multiple methods depending on how your relayer is configured.
 
@@ -4382,6 +4420,9 @@ The `auth` field accepts three formats. **Which one to use depends on where your
 > Against the **Zama-hosted relayer**, only `ApiKeyHeader` works — requests without the `x-api-key` header are rejected. `BearerToken` and `ApiKeyCookie` are for self-hosted relayers or proxied setups where you control the auth layer.
 
 
+
+### Tab: Core SDK
+
 ```ts
 // Zama-hosted relayer — API key in the x-api-key header (required)
 auth: { __type: "ApiKeyHeader", value: "your-api-key" }
@@ -4392,6 +4433,33 @@ auth: { __type: "ApiKeyCookie", value: "your-api-key" }
 // Self-hosted relayer — only if your auth layer expects a bearer token
 auth: { __type: "BearerToken", token: "your-token" }
 ```
+
+### Tab: Go
+
+```go
+// Zama-hosted relayer -- API key in the x-api-key header (required)
+config.Auth = zama.APIKeyHeader{Value: "your-api-key"}
+
+// Behind your own proxy -- credential carried as a cookie to your proxy
+config.Auth = zama.APIKeyCookie{Value: "your-api-key"}
+
+// Self-hosted relayer -- only if your auth layer expects a bearer token
+config.Auth = zama.BearerToken{Token: "your-token"}
+```
+
+### Tab: Rust
+
+```rust
+// Zama-hosted relayer -- API key in the x-api-key header (required)
+let auth = RelayerAuth::api_key("your-api-key");
+
+// Behind your own proxy -- credential carried as a cookie to your proxy
+let auth = RelayerAuth::ApiKeyCookie { value: "your-api-key".into(), cookie: None };
+
+// Self-hosted relayer -- only if your auth layer expects a bearer token
+let auth = RelayerAuth::BearerToken { token: "your-token".into() };
+```
+
 
 When a browser relayer is routed through your own proxy, enforce CSRF protection
 at the proxy/application boundary (for example, with same-site cookies and your
@@ -4442,7 +4510,7 @@ Start by submitting the form below, the Zama team will review your request and c
 Once you receive your API key, wire it into the SDK using one of the two strategies covered in the [Authentication guide](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md):
 
 - **Backend proxy** (recommended for browser apps) — the proxy injects the `x-api-key` header so the key never reaches the client.
-- **Direct API key** (server-side apps only) — pass the key in the relayer transport's `auth` field as `{ __type: "ApiKeyHeader", value: ... }`.
+- **Direct API key** (server-side apps only) — pass the key in the relayer transport's `auth` field as `{ __type: "ApiKeyHeader", value: ... }`. In Go and Rust, set the chain's auth to `zama.APIKeyHeader{Value: ...}` or `RelayerAuth::api_key(...)`.
 
 For the Zama-hosted relayer, `ApiKeyHeader` is the supported `auth` method — the hosted endpoint accepts the key only in the `x-api-key` header. (`BearerToken` and `ApiKeyCookie` apply to self-hosted relayers or proxied setups.)
 
@@ -5479,11 +5547,14 @@ const cleartext = await sdk.decryption.decryptValues([
 
 This guide shows the full loop — fetch logs, decode them, decrypt the amounts — and explains the one real-world constraint that catches indexers: **who is allowed to decrypt a given encrypted value.**
 
-Before starting, set up a Node.js backend following the [Node.js backend](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/node-js-backend.md) guide. This guide reuses that `sdk` and `publicClient`.
+Before starting, set up a Node.js backend following the [Node.js backend](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/node-js-backend.md) guide. This guide reuses that `sdk` and `publicClient`. For Go or Rust, set up the SDK following [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md) and [attach a wallet](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/attach-wallet.md); log queries use your go-ethereum or Alloy provider.
 
 ## Example
 
 A minimal indexer: fetch every confidential transfer for a token, decode each log, and decrypt the amounts in one batch.
+
+
+### Tab: Core SDK
 
 {% code title="indexer.ts" %}
 
@@ -5526,11 +5597,128 @@ for (const transfer of transfers) {
 
 {% endcode %}
 
+### Tab: Go
+
+Decode the logs with go-ethereum. The three `ConfidentialTransfer` fields are indexed topics.
+
+```go
+import (
+	"context"
+	"fmt"
+	"math/big"
+
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
+	zama "github.com/zama-ai/sdk/clients/go/v3"
+)
+
+var confidentialTransfer = crypto.Keccak256Hash([]byte("ConfidentialTransfer(address,address,bytes32)"))
+
+func indexTransfers(ctx context.Context, sdk *zama.SDKContext, eth *ethclient.Client) error {
+	tokenAddress := common.HexToAddress("0xYourConfidentialToken")
+	// The token's deployment block. Providers cap getLogs block ranges, so large
+	// backfills page forward from here instead of fetching everything in one call.
+	startBlock := big.NewInt(0)
+
+	// 1. Fetch the ConfidentialTransfer logs. `from`, `to`, and the encrypted
+	//    amount are all indexed, so each log carries them as topics 1 to 3.
+	logs, err := eth.FilterLogs(ctx, ethereum.FilterQuery{
+		Addresses: []common.Address{tokenAddress},
+		Topics:    [][]common.Hash{{confidentialTransfer}},
+		FromBlock: startBlock,
+	})
+	if err != nil {
+		return err
+	}
+
+	// 2. Pair each encrypted amount with the contract that emitted it.
+	inputs := make([]zama.EncryptedInput, 0, len(logs))
+	for _, log := range logs {
+		inputs = append(inputs, zama.EncryptedInput{EncryptedValue: log.Topics[3], ContractAddress: tokenAddress})
+	}
+
+	// 3. Decrypt every amount in a single call. The result is keyed by the
+	//    encrypted value.
+	cleartext, err := sdk.DecryptValues(ctx, inputs, zama.DecryptOptions{})
+	if err != nil {
+		return err
+	}
+
+	for _, log := range logs {
+		from := common.BytesToAddress(log.Topics[1].Bytes())
+		to := common.BytesToAddress(log.Topics[2].Bytes())
+		fmt.Printf("%s → %s: %s\n", from, to, cleartext[log.Topics[3]].Integer)
+	}
+	return nil
+}
+```
+
+### Tab: Rust
+
+Add `alloy-rpc-types-eth` and `alloy-sol-types` alongside `alloy-provider`, using the same Alloy major as `zama_sdk`.
+
+```rust
+use alloy_provider::Provider;
+use alloy_rpc_types_eth::Filter;
+use alloy_sol_types::{SolEvent, sol};
+use zama_sdk::{Address, ClearValue, EncryptedInput, Sdk};
+
+sol! {
+    event ConfidentialTransfer(address indexed from, address indexed to, bytes32 indexed amount);
+}
+
+pub async fn index_transfers(sdk: &Sdk, provider: &impl Provider) -> anyhow::Result<()> {
+    let token_address: Address = "0xYourConfidentialToken".parse()?;
+    // The token's deployment block. Providers cap getLogs block ranges, so large
+    // backfills page forward from here instead of fetching everything in one call.
+    let start_block = 0;
+
+    // 1. Fetch and decode the ConfidentialTransfer logs. Each carries the
+    //    encrypted amount as `amount`.
+    let filter = Filter::new()
+        .address(token_address)
+        .event_signature(ConfidentialTransfer::SIGNATURE_HASH)
+        .from_block(start_block);
+    let transfers = provider
+        .get_logs(&filter)
+        .await?
+        .iter()
+        .map(|log| ConfidentialTransfer::decode_log(&log.inner).map(|event| event.data))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    // 2. Pair each encrypted amount with the contract that emitted it.
+    let inputs: Vec<_> = transfers
+        .iter()
+        .map(|transfer| EncryptedInput {
+            encrypted_value: transfer.amount,
+            contract_address: token_address,
+        })
+        .collect();
+
+    // 3. Decrypt every amount in a single call. The result is keyed by the
+    //    encrypted value.
+    let cleartext = sdk.decryption().decrypt_values(&inputs, None).await?;
+
+    for transfer in &transfers {
+        if let Some(ClearValue::BigInt(amount)) = cleartext.get(&transfer.amount) {
+            println!("{} → {}: {amount}", transfer.from, transfer.to);
+        }
+    }
+    Ok(())
+}
+```
+
+
 That is the entire pattern. The rest of this guide breaks it into steps and covers the access-control caveat.
 
 ## Steps
 
 ### 1. Fetch and decode the logs
+
+
+### Tab: Core SDK
 
 Use the [event decoders](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/event-decoders.md) to turn raw `eth_getLogs` entries into typed events. `TOKEN_TOPICS` fetches every supported token event in one RPC call; `decodeOnChainEvents` decodes them and skips anything unrecognized.
 
@@ -5558,9 +5746,52 @@ Each decoded event exposes its encrypted value under a typed field:
 
 To decode a single log instead of a batch, use the individual decoders (`decodeConfidentialTransfer(log)`, `decodeWrap(log)`, …), each of which returns `null` for a non-matching log. See the [event decoders reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/event-decoders.md) for the full list and field types.
 
+### Tab: Go
+
+Fetch the `ConfidentialTransfer` logs with go-ethereum. The event fields are all indexed, so no ABI decoding is needed.
+
+```go
+confidentialTransfer := crypto.Keccak256Hash([]byte("ConfidentialTransfer(address,address,bytes32)"))
+
+logs, err := eth.FilterLogs(ctx, ethereum.FilterQuery{
+	Addresses: []common.Address{tokenAddress},
+	Topics:    [][]common.Hash{{confidentialTransfer}},
+	FromBlock: startBlock,
+})
+if err != nil {
+	return err
+}
+// Topics 1 to 3 hold `from`, `to`, and the encrypted amount.
+```
+
+### Tab: Rust
+
+Fetch and decode the `ConfidentialTransfer` logs with Alloy.
+
+```rust
+sol! {
+    event ConfidentialTransfer(address indexed from, address indexed to, bytes32 indexed amount);
+}
+
+let filter = Filter::new()
+    .address(token_address)
+    .event_signature(ConfidentialTransfer::SIGNATURE_HASH)
+    .from_block(start_block);
+let transfers = provider
+    .get_logs(&filter)
+    .await?
+    .iter()
+    .map(|log| ConfidentialTransfer::decode_log(&log.inner).map(|event| event.data))
+    .collect::<Result<Vec<_>, _>>()?;
+```
+
+
 ### 2. Decrypt the encrypted values
 
 Pass the decoded encrypted values to `sdk.decryption.decryptValues`. Each input pairs the encrypted value with the contract that emitted it. The result is a record mapping each encrypted value back to its clear-text value.
+
+
+### Tab: Core SDK
 
 ```ts
 // Narrow the decoded `events` to the type you want. Each event exposes its
@@ -5580,6 +5811,41 @@ const cleartext = await sdk.decryption.decryptValues(
 // { "0xencryptedValue…": 500n }
 const amount = cleartext[transfers[0].encryptedAmount]; // 500n
 ```
+
+### Tab: Go
+
+```go
+inputs := make([]zama.EncryptedInput, 0, len(logs))
+for _, log := range logs {
+	inputs = append(inputs, zama.EncryptedInput{EncryptedValue: log.Topics[3], ContractAddress: tokenAddress})
+}
+
+cleartext, err := sdk.DecryptValues(ctx, inputs, zama.DecryptOptions{})
+if err != nil {
+	return err
+}
+
+// cleartext maps each encrypted value back to its clear-text amount.
+amount := cleartext[logs[0].Topics[3]].Integer // 500
+```
+
+### Tab: Rust
+
+```rust
+let inputs: Vec<_> = transfers
+    .iter()
+    .map(|transfer| EncryptedInput {
+        encrypted_value: transfer.amount,
+        contract_address: token_address,
+    })
+    .collect();
+
+let cleartext = sdk.decryption().decrypt_values(&inputs, None).await?;
+
+// cleartext maps each encrypted value back to its clear-text amount.
+let amount = cleartext.get(&transfers[0].amount); // Some(ClearValue::BigInt(500))
+```
+
 
 `decryptValues` accepts many inputs at once and groups them by contract address — so decrypting a page of transfers costs one round-trip per token, not one per transfer. A group only splits into more than one relayer request if its values would otherwise exceed the relayer's per-request size budget (see [Automatic chunking for large decrypt batches](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-4.md#automatic-chunking-for-large-decrypt-batches)). Results are cached per signer and contract, so re-decrypting an encrypted value you have already seen returns instantly without hitting the relayer.
 
@@ -5634,7 +5900,7 @@ Gate the decrypt behind a permit check so the wallet signature prompt only appea
 
 # Handle errors
 
-All errors thrown by `@zama-fhe/sdk` and `@zama-fhe/react-sdk` extend `ZamaError` and carry a `.code` string for programmatic matching. This guide covers how to catch them, route them to user-friendly messages, and troubleshoot common problems. Go and Rust clients receive the same codes from the daemon; their tabs show how to read them.
+All errors thrown by `@zama-fhe/sdk` and `@zama-fhe/react-sdk` extend `ZamaError` and carry a `.code` string for programmatic matching. This guide covers how to catch them, route them to user-friendly messages, and troubleshoot common problems. Go and Rust clients receive the same codes from the daemon.
 
 ## Steps
 
@@ -6281,7 +6547,7 @@ The signer handles `signTypedData` and `writeContract`; the provider handles `re
 
 # Offline signing
 
-`sdk.offline.prepare` builds a fully populated unsigned transaction and hands it to you. Signing and broadcasting happen out-of-process: an institutional custody platform, an HSM ceremony, a policy engine with human approval. The preparing process never holds the wallet private key. The examples include Go and Rust tabs.
+`sdk.offline.prepare` builds a fully populated unsigned transaction and hands it to you. Signing and broadcasting happen out-of-process: an institutional custody platform, an HSM ceremony, a policy engine with human approval. The preparing process never holds the wallet private key.
 
 
 > [!INFO]
@@ -7526,7 +7792,7 @@ Common use cases:
 - **Portfolio dashboards** — a read-only service decrypts balances across wallets without holding keys.
 - **Auditors** — a third party verifies holdings without the token owner being online.
 
-This guide uses `sdk.delegations` and `token.decryptBalanceAs` in the core SDK, or the `useDelegateDecryption` and `useDecryptBalanceAs` hooks in React. Before starting, make sure your project is set up following the [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md) guide. The Go and Rust tabs show the equivalent client calls.
+This guide uses `sdk.delegations` and `token.decryptBalanceAs` in the core SDK, or the `useDelegateDecryption` and `useDecryptBalanceAs` hooks in React. Before starting, make sure your project is set up following the [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md) guide.
 
 ## Example
 
@@ -8160,7 +8426,7 @@ The high-level token API (`token.confidentialTransfer`, `token.balanceOf`, and t
 - **Core SDK** — `sdk.encrypt` and `sdk.decryption.decryptValues` / `sdk.decryption.decryptPublicValues`.
 - **React** — the `useEncrypt` and `useDecryptValues` / `useDecryptPublicValues` hooks.
 
-Before starting, make sure your project is set up following the [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md) guide. The Go and Rust tabs show the equivalent client calls.
+Before starting, make sure your project is set up following the [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md) guide.
 
 ## Example
 

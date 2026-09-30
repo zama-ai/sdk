@@ -104,7 +104,7 @@
       "source_type": "official-doc",
       "category": "tutorials",
       "logical_path": "tutorials/supported-environments",
-      "description": "Minimum browser and Node.js versions for the SDK.",
+      "description": "Minimum browser, Node.js, Go, and Rust versions for the SDK.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -296,7 +296,7 @@
       "source_type": "official-doc",
       "category": "guides",
       "logical_path": "guides/authentication",
-      "description": "How to authenticate with the relayer using a backend proxy or a direct API key.",
+      "description": "How to authenticate with the relayer using a backend proxy or a direct API key, from TypeScript, Go, or Rust.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
