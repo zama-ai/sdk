@@ -111,13 +111,7 @@ async fn writes_correlate_reject_cancel_and_never_replay() {
             }
         },
     );
-    let mut callbacks = Callbacks {
-        sign: Arc::new(signer),
-        sender,
-        operations,
-        tasks: JoinSet::new(),
-        pending: HashMap::new(),
-    };
+    let mut callbacks = Callbacks::new(Arc::new(signer), sender, operations);
     callbacks.start(write_action(id, "slow")).unwrap();
     assert_eq!(starts.recv().await.unwrap(), "slow");
     callbacks.start(write_action(id, "fast")).unwrap();
@@ -204,13 +198,7 @@ async fn a_pre_broadcast_revert_replies_with_execution_revert_and_a_plain_error_
             }
         },
     );
-    let mut callbacks = Callbacks {
-        sign: Arc::new(signer),
-        sender,
-        operations,
-        tasks: JoinSet::new(),
-        pending: HashMap::new(),
-    };
+    let mut callbacks = Callbacks::new(Arc::new(signer), sender, operations);
     callbacks.start(write_action(id, "revert")).unwrap();
     let revert = reply(replies.recv().await.unwrap());
     let Some(Reply::ExecutionRevert(revert)) = revert.result else {
@@ -253,13 +241,7 @@ async fn a_typed_data_error_with_revert_data_stays_an_error_reply() {
     let operation = operations.start("context");
     let id = &operation.message.operation_id;
     let (sender, mut replies) = mpsc::channel(16);
-    let mut callbacks = Callbacks {
-        sign: Arc::new(RevertingTypedDataWallet),
-        sender,
-        operations,
-        tasks: JoinSet::new(),
-        pending: HashMap::new(),
-    };
+    let mut callbacks = Callbacks::new(Arc::new(RevertingTypedDataWallet), sender, operations);
     callbacks
         .start(generated::SignerAction {
             request: Some(Request::TypedDataJson("{}".into())),
@@ -297,13 +279,7 @@ async fn channel_teardown_never_kills_an_in_flight_broadcast() {
             }
         },
     );
-    let mut callbacks = Callbacks {
-        sign: Arc::new(signer),
-        sender,
-        operations,
-        tasks: JoinSet::new(),
-        pending: HashMap::new(),
-    };
+    let mut callbacks = Callbacks::new(Arc::new(signer), sender, operations);
     callbacks.start(write_action(id, "write")).unwrap();
     starts.recv().await.unwrap();
     // The channel loop and its reply sink go away while the write is held in the broadcast.
@@ -311,4 +287,35 @@ async fn channel_teardown_never_kills_an_in_flight_broadcast() {
     drop(replies);
     release.notify_one();
     assert_eq!(submissions.recv().await.unwrap(), B256::repeat_byte(3));
+}
+
+#[tokio::test]
+async fn channel_teardown_cancels_a_write_that_has_not_broadcast() {
+    let operations = Arc::new(crate::operations::Operations::new());
+    let operation = operations.start("context");
+    let id = &operation.message.operation_id;
+    let (sender, _replies) = mpsc::channel(16);
+    let (started, mut starts) = mpsc::unbounded_channel();
+    let (stopped, mut stops) = mpsc::unbounded_channel();
+    let signer = TestWallet(
+        move |_request: ContractWriteRequest, cancel: CancellationToken| {
+            let started = started.clone();
+            let stopped = stopped.clone();
+            async move {
+                started.send(()).unwrap();
+                cancel.cancelled().await;
+                stopped.send(()).unwrap();
+                Err(SdkError::signing_failed("cancelled before broadcast"))
+            }
+        },
+    );
+    let mut callbacks = Callbacks::new(Arc::new(signer), sender, operations);
+    callbacks.start(write_action(id, "write")).unwrap();
+    starts.recv().await.unwrap();
+    drop(callbacks);
+    drop(operation);
+    tokio::time::timeout(std::time::Duration::from_secs(2), stops.recv())
+        .await
+        .unwrap()
+        .unwrap();
 }

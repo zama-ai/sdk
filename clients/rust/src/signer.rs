@@ -24,6 +24,9 @@ pub trait Signer: Send + Sync {
     ///
     /// Returning [`SdkError::execution_reverted`] forwards a pre-broadcast revert: the node
     /// rejected the simulated write, so nothing was sent.
+    ///
+    /// `cancel` fires when the operation is cancelled or ends, or the signer channel is torn
+    /// down; once the transaction is broadcast, implementations must ignore it.
     async fn write_contract(
         &self,
         _request: ContractWriteRequest,
@@ -82,13 +85,7 @@ pub(crate) async fn attach_signer(
     .await?;
     let mut cancelled = operations.cancelled.subscribe();
     Ok(crate::channel::Connection::spawn(async move {
-        let mut callbacks = Callbacks {
-            sign,
-            sender,
-            operations,
-            tasks: JoinSet::new(),
-            pending: HashMap::new(),
-        };
+        let mut callbacks = Callbacks::new(sign, sender, operations);
         loop {
             tokio::select! {
                 frame = stream.message() => {
@@ -187,8 +184,28 @@ struct Callbacks {
     tasks: JoinSet<crate::Result<ActionKey>>,
     // Settled actions remain a replay guard until their owning operation ends.
     pending: HashMap<ActionKey, Pending>,
+    teardown: CancellationToken,
+}
+impl Drop for Callbacks {
+    fn drop(&mut self) {
+        self.teardown.cancel();
+    }
 }
 impl Callbacks {
+    fn new(
+        sign: Arc<dyn Signer>,
+        sender: mpsc::Sender<generated::SignerClientMessage>,
+        operations: Arc<crate::operations::Operations>,
+    ) -> Self {
+        Self {
+            sign,
+            sender,
+            operations,
+            tasks: JoinSet::new(),
+            pending: HashMap::new(),
+            teardown: CancellationToken::new(),
+        }
+    }
     fn handle_frame(&mut self, frame: generated::SignerServerMessage) -> crate::Result<()> {
         use generated::signer_server_message::Message;
         match frame.message {
@@ -217,7 +234,7 @@ impl Callbacks {
         if self.pending.contains_key(&key) {
             return Ok(());
         }
-        let cancel = CancellationToken::new();
+        let cancel = self.teardown.child_token();
         let pending = match CallbackRequest::decode(action) {
             // A write outlives the channel: teardown cannot recall a broadcast, so its task is
             // detached rather than held by the set that teardown aborts.

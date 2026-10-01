@@ -25,11 +25,13 @@ type WalletAccount struct {
 type SignTypedDataFunc func(context.Context, WalletAccount, apitypes.TypedData) ([]byte, error)
 
 type operationState struct {
-	ctx         context.Context
-	cancel      context.CancelFunc
-	failure     error
-	actions     map[string]context.CancelFunc
-	seenActions map[string]struct{}
+	ctx     context.Context
+	cancel  context.CancelFunc
+	failure error
+	// Contract writes dispatched to the callback and not reported as reverted.
+	pendingWrites int
+	actions       map[string]context.CancelFunc
+	seenActions   map[string]struct{}
 }
 type SDKContext struct {
 	client     *Client
@@ -108,11 +110,24 @@ func call[T any](ctx context.Context, s *SDKContext, invoke func(context.Context
 	defer func() { s.mu.Lock(); delete(s.operations, id); s.mu.Unlock(); cancel() }()
 	var trailers metadata.MD
 	result, err := invoke(opctx, &pb.Operation{ContextId: s.id, OperationId: id}, grpc.Trailer(&trailers))
-	s.mu.Lock()
-	failure := state.failure
-	s.mu.Unlock()
-	if failure != nil {
-		return result, failure
+	if err == nil {
+		return result, nil
 	}
-	return result, rpcError(err, trailers)
+	settled := newRPCError(err, trailers)
+	if settled.Code != "" {
+		return result, settled
+	}
+	s.mu.Lock()
+	failure, pendingWrites := state.failure, state.pendingWrites
+	s.mu.Unlock()
+	switch {
+	case pendingWrites > 0:
+		// Without a daemon verdict a dispatched write may still have been broadcast.
+		settled.Code, settled.Retryable, settled.RetryAfterSeconds = "TRANSACTION_OUTCOME_UNKNOWN", false, nil
+		return result, settled
+	case failure != nil:
+		return result, failure
+	default:
+		return result, settled
+	}
 }
