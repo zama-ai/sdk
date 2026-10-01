@@ -6,6 +6,7 @@ import { createContextFactory } from "./sdk.js";
 import { createCoordinator } from "./coordination.js";
 import { DaemonRuntime } from "./runtime.js";
 import { startServer } from "./server.js";
+import { shutdownDaemon } from "./shutdown.js";
 
 async function main(): Promise<void> {
   process.umask(0o077);
@@ -27,13 +28,9 @@ async function main(): Promise<void> {
         return;
       }
       stopping = true;
-      void runtime
-        .close()
-        .then(stop)
-        .then(() => storage.close())
-        .catch(() => {
-          process.exitCode = 1;
-        });
+      void shutdownDaemon(runtime, stop, storage, config.shutdownTimeoutMs).catch(() =>
+        process.exit(1),
+      );
     };
     process.once("SIGTERM", shutdown);
     process.once("SIGINT", shutdown);
