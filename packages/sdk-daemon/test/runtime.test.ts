@@ -118,6 +118,31 @@ test("shutdown waits for context creation and disposes the late SDK before retur
   expect(dispose).toHaveBeenCalledOnce();
 });
 
+test("shutdown answers active operations while a context creation is still pending", async () => {
+  const creating = Promise.withResolvers<void>();
+  let calls = 0;
+  const runtime = new DaemonRuntime(async () => {
+    if (calls++ > 0) {
+      await creating.promise;
+    }
+    return { storageIdentities: [], sdk: { dispose: () => {} } as unknown as ContextSdk };
+  }, createCoordinator());
+  const contextId = await runtime.createContext(request);
+  const work = runtime
+    .execute(
+      { contextId, operationId: "active" },
+      new AbortController().signal,
+      () => new Promise(() => {}),
+    )
+    .catch((error: unknown) => error);
+  const pendingContext = runtime.createContext(request).catch((error: unknown) => error);
+  const closing = runtime.close();
+  expect(await work).toMatchObject({ code: "CANCELLED" });
+  creating.resolve();
+  await closing;
+  expect(await pendingContext).toMatchObject({ code: "CANCELLED" });
+});
+
 test("repeated wallet snapshots leave current operations running", async () => {
   const { runtime } = setup();
   const account = { address: Buffer.alloc(20, 1), chainId: 11155111n };
