@@ -206,13 +206,13 @@ impl From<RelayerAuth> for generated::ChainAuth {
 impl TryFrom<ChainConfig> for generated::ChainConfig {
     type Error = ClientError;
     fn try_from(chain: ChainConfig) -> Result<Self> {
-        fn address(value: Option<String>) -> Result<Option<Vec<u8>>> {
+        fn address(field: &str, value: Option<String>) -> Result<Option<Vec<u8>>> {
             value
                 .map(|value| {
                     let address = value.parse::<Address>().map_err(|error| {
                         ClientError::with_source(
                             ErrorKind::InvalidInput,
-                            "invalid contract address",
+                            format!("invalid {field}"),
                             error,
                         )
                     })?;
@@ -220,11 +220,10 @@ impl TryFrom<ChainConfig> for generated::ChainConfig {
                 })
                 .transpose()
         }
-        fn optional_address(value: Option<String>) -> Result<Option<Vec<u8>>> {
+        fn optional_address(field: &str, value: Option<String>) -> Result<Option<Vec<u8>>> {
             match value {
                 Some(value) if value.is_empty() => Ok(Some(Vec::new())),
-                Some(value) => address(Some(value)),
-                None => Ok(None),
+                value => address(field, value),
             }
         }
         Ok(Self {
@@ -233,17 +232,22 @@ impl TryFrom<ChainConfig> for generated::ChainConfig {
             auth: chain.auth.map(Into::into),
             gateway_chain_id: chain.gateway_chain_id,
             relayer_url: chain.relayer_url,
-            acl_contract_address: address(chain.acl_contract_address)?,
-            kms_contract_address: address(chain.kms_contract_address)?,
-            input_verifier_contract_address: address(chain.input_verifier_contract_address)?,
+            acl_contract_address: address("acl_contract_address", chain.acl_contract_address)?,
+            kms_contract_address: address("kms_contract_address", chain.kms_contract_address)?,
+            input_verifier_contract_address: address(
+                "input_verifier_contract_address",
+                chain.input_verifier_contract_address,
+            )?,
             verifying_contract_address_decryption: address(
+                "verifying_contract_address_decryption",
                 chain.verifying_contract_address_decryption,
             )?,
             verifying_contract_address_input_verification: address(
+                "verifying_contract_address_input_verification",
                 chain.verifying_contract_address_input_verification,
             )?,
-            registry_address: optional_address(chain.registry_address)?,
-            executor_address: optional_address(chain.executor_address)?,
+            registry_address: optional_address("registry_address", chain.registry_address)?,
+            executor_address: optional_address("executor_address", chain.executor_address)?,
             provider: chain.provider.map(crate::ProviderOptions::wire),
         })
     }
