@@ -706,6 +706,7 @@ enum SdkEventKind {
   SDK_EVENT_KIND_UNSHIELD_PHASE1_SUBMITTED = 19;
   SDK_EVENT_KIND_UNSHIELD_PHASE2_STARTED = 20;
   SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED = 21;
+  SDK_EVENT_KIND_VAULT_SUBMITTED = 22;
 }
 // Distinguishes permit failures from transaction failures, including transaction routes.
 enum EventOperation {
@@ -728,6 +729,11 @@ enum EventOperation {
   EVENT_OPERATION_TRANSFER_FROM_AND_CALL = 16;
   EVENT_OPERATION_UNWRAP = 17;
   EVENT_OPERATION_UNWRAP_ALL = 18;
+  EVENT_OPERATION_VAULT_JOIN = 19;
+  EVENT_OPERATION_VAULT_QUIT = 20;
+  EVENT_OPERATION_VAULT_CLAIM = 21;
+  EVENT_OPERATION_VAULT_RECOVER = 22;
+  EVENT_OPERATION_VAULT_DISPATCH_BATCH = 23;
 }
 // The SDK-selected route for a submitted shield transaction.
 enum ShieldPath {
@@ -740,6 +746,15 @@ enum ApprovalStep {
   APPROVAL_STEP_UNSPECIFIED = 0;
   APPROVAL_STEP_RESET = 1;
   APPROVAL_STEP_APPROVE = 2;
+}
+// The batcher write a submitted vault transaction performs.
+enum VaultOperation {
+  VAULT_OPERATION_UNSPECIFIED = 0;
+  VAULT_OPERATION_JOIN = 1;
+  VAULT_OPERATION_QUIT = 2;
+  VAULT_OPERATION_CLAIM = 3;
+  VAULT_OPERATION_RECOVER = 4;
+  VAULT_OPERATION_DISPATCH_BATCH = 5;
 }
 // A lifecycle event; timestamp is Unix epoch milliseconds, and timestamp and
 // duration_ms preserve fractional milliseconds.
@@ -756,6 +771,7 @@ message SdkEvent {
   optional bytes tx_hash = 10;
   optional ShieldPath shield_path = 11;
   optional ApprovalStep step = 12;
+  optional VaultOperation vault_operation = 13;
 }
 // Account transition delivered even when no SDK operation is active.
 message WalletAccountChanged {

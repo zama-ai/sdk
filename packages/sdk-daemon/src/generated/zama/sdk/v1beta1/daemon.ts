@@ -224,6 +224,7 @@ export enum SdkEventKind {
   SDK_EVENT_KIND_UNSHIELD_PHASE1_SUBMITTED = 19,
   SDK_EVENT_KIND_UNSHIELD_PHASE2_STARTED = 20,
   SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED = 21,
+  SDK_EVENT_KIND_VAULT_SUBMITTED = 22,
   UNRECOGNIZED = -1,
 }
 
@@ -295,6 +296,9 @@ export function sdkEventKindFromJSON(object: any): SdkEventKind {
     case 21:
     case "SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED":
       return SdkEventKind.SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED;
+    case 22:
+    case "SDK_EVENT_KIND_VAULT_SUBMITTED":
+      return SdkEventKind.SDK_EVENT_KIND_VAULT_SUBMITTED;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -348,6 +352,8 @@ export function sdkEventKindToJSON(object: SdkEventKind): string {
       return "SDK_EVENT_KIND_UNSHIELD_PHASE2_STARTED";
     case SdkEventKind.SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED:
       return "SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED";
+    case SdkEventKind.SDK_EVENT_KIND_VAULT_SUBMITTED:
+      return "SDK_EVENT_KIND_VAULT_SUBMITTED";
     case SdkEventKind.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -375,6 +381,11 @@ export enum EventOperation {
   EVENT_OPERATION_TRANSFER_FROM_AND_CALL = 16,
   EVENT_OPERATION_UNWRAP = 17,
   EVENT_OPERATION_UNWRAP_ALL = 18,
+  EVENT_OPERATION_VAULT_JOIN = 19,
+  EVENT_OPERATION_VAULT_QUIT = 20,
+  EVENT_OPERATION_VAULT_CLAIM = 21,
+  EVENT_OPERATION_VAULT_RECOVER = 22,
+  EVENT_OPERATION_VAULT_DISPATCH_BATCH = 23,
   UNRECOGNIZED = -1,
 }
 
@@ -437,6 +448,21 @@ export function eventOperationFromJSON(object: any): EventOperation {
     case 18:
     case "EVENT_OPERATION_UNWRAP_ALL":
       return EventOperation.EVENT_OPERATION_UNWRAP_ALL;
+    case 19:
+    case "EVENT_OPERATION_VAULT_JOIN":
+      return EventOperation.EVENT_OPERATION_VAULT_JOIN;
+    case 20:
+    case "EVENT_OPERATION_VAULT_QUIT":
+      return EventOperation.EVENT_OPERATION_VAULT_QUIT;
+    case 21:
+    case "EVENT_OPERATION_VAULT_CLAIM":
+      return EventOperation.EVENT_OPERATION_VAULT_CLAIM;
+    case 22:
+    case "EVENT_OPERATION_VAULT_RECOVER":
+      return EventOperation.EVENT_OPERATION_VAULT_RECOVER;
+    case 23:
+    case "EVENT_OPERATION_VAULT_DISPATCH_BATCH":
+      return EventOperation.EVENT_OPERATION_VAULT_DISPATCH_BATCH;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -484,6 +510,16 @@ export function eventOperationToJSON(object: EventOperation): string {
       return "EVENT_OPERATION_UNWRAP";
     case EventOperation.EVENT_OPERATION_UNWRAP_ALL:
       return "EVENT_OPERATION_UNWRAP_ALL";
+    case EventOperation.EVENT_OPERATION_VAULT_JOIN:
+      return "EVENT_OPERATION_VAULT_JOIN";
+    case EventOperation.EVENT_OPERATION_VAULT_QUIT:
+      return "EVENT_OPERATION_VAULT_QUIT";
+    case EventOperation.EVENT_OPERATION_VAULT_CLAIM:
+      return "EVENT_OPERATION_VAULT_CLAIM";
+    case EventOperation.EVENT_OPERATION_VAULT_RECOVER:
+      return "EVENT_OPERATION_VAULT_RECOVER";
+    case EventOperation.EVENT_OPERATION_VAULT_DISPATCH_BATCH:
+      return "EVENT_OPERATION_VAULT_DISPATCH_BATCH";
     case EventOperation.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -565,6 +601,64 @@ export function approvalStepToJSON(object: ApprovalStep): string {
     case ApprovalStep.APPROVAL_STEP_APPROVE:
       return "APPROVAL_STEP_APPROVE";
     case ApprovalStep.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
+/** The batcher write a submitted vault transaction performs. */
+export enum VaultOperation {
+  VAULT_OPERATION_UNSPECIFIED = 0,
+  VAULT_OPERATION_JOIN = 1,
+  VAULT_OPERATION_QUIT = 2,
+  VAULT_OPERATION_CLAIM = 3,
+  VAULT_OPERATION_RECOVER = 4,
+  VAULT_OPERATION_DISPATCH_BATCH = 5,
+  UNRECOGNIZED = -1,
+}
+
+export function vaultOperationFromJSON(object: any): VaultOperation {
+  switch (object) {
+    case 0:
+    case "VAULT_OPERATION_UNSPECIFIED":
+      return VaultOperation.VAULT_OPERATION_UNSPECIFIED;
+    case 1:
+    case "VAULT_OPERATION_JOIN":
+      return VaultOperation.VAULT_OPERATION_JOIN;
+    case 2:
+    case "VAULT_OPERATION_QUIT":
+      return VaultOperation.VAULT_OPERATION_QUIT;
+    case 3:
+    case "VAULT_OPERATION_CLAIM":
+      return VaultOperation.VAULT_OPERATION_CLAIM;
+    case 4:
+    case "VAULT_OPERATION_RECOVER":
+      return VaultOperation.VAULT_OPERATION_RECOVER;
+    case 5:
+    case "VAULT_OPERATION_DISPATCH_BATCH":
+      return VaultOperation.VAULT_OPERATION_DISPATCH_BATCH;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return VaultOperation.UNRECOGNIZED;
+  }
+}
+
+export function vaultOperationToJSON(object: VaultOperation): string {
+  switch (object) {
+    case VaultOperation.VAULT_OPERATION_UNSPECIFIED:
+      return "VAULT_OPERATION_UNSPECIFIED";
+    case VaultOperation.VAULT_OPERATION_JOIN:
+      return "VAULT_OPERATION_JOIN";
+    case VaultOperation.VAULT_OPERATION_QUIT:
+      return "VAULT_OPERATION_QUIT";
+    case VaultOperation.VAULT_OPERATION_CLAIM:
+      return "VAULT_OPERATION_CLAIM";
+    case VaultOperation.VAULT_OPERATION_RECOVER:
+      return "VAULT_OPERATION_RECOVER";
+    case VaultOperation.VAULT_OPERATION_DISPATCH_BATCH:
+      return "VAULT_OPERATION_DISPATCH_BATCH";
+    case VaultOperation.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
   }
@@ -1389,6 +1483,7 @@ export interface SdkEvent {
   txHash?: Buffer | undefined;
   shieldPath?: ShieldPath | undefined;
   step?: ApprovalStep | undefined;
+  vaultOperation?: VaultOperation | undefined;
 }
 
 /** Account transition delivered even when no SDK operation is active. */
@@ -11968,6 +12063,7 @@ function createBaseSdkEvent(): SdkEvent {
     txHash: undefined,
     shieldPath: undefined,
     step: undefined,
+    vaultOperation: undefined,
   };
 }
 
@@ -12008,6 +12104,9 @@ export const SdkEvent: MessageFns<SdkEvent> = {
     }
     if (message.step !== undefined) {
       writer.uint32(96).int32(message.step);
+    }
+    if (message.vaultOperation !== undefined) {
+      writer.uint32(104).int32(message.vaultOperation);
     }
     return writer;
   },
@@ -12115,6 +12214,14 @@ export const SdkEvent: MessageFns<SdkEvent> = {
           message.step = reader.int32() as any;
           continue;
         }
+        case 13: {
+          if (tag !== 104) {
+            break;
+          }
+
+          message.vaultOperation = reader.int32() as any;
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -12164,6 +12271,11 @@ export const SdkEvent: MessageFns<SdkEvent> = {
         ? shieldPathFromJSON(object.shield_path)
         : undefined,
       step: isSet(object.step) ? approvalStepFromJSON(object.step) : undefined,
+      vaultOperation: isSet(object.vaultOperation)
+        ? vaultOperationFromJSON(object.vaultOperation)
+        : isSet(object.vault_operation)
+        ? vaultOperationFromJSON(object.vault_operation)
+        : undefined,
     };
   },
 
@@ -12205,6 +12317,9 @@ export const SdkEvent: MessageFns<SdkEvent> = {
     if (message.step !== undefined) {
       obj.step = approvalStepToJSON(message.step);
     }
+    if (message.vaultOperation !== undefined) {
+      obj.vaultOperation = vaultOperationToJSON(message.vaultOperation);
+    }
     return obj;
   },
 
@@ -12227,6 +12342,7 @@ export const SdkEvent: MessageFns<SdkEvent> = {
     message.txHash = object.txHash ?? undefined;
     message.shieldPath = object.shieldPath ?? undefined;
     message.step = object.step ?? undefined;
+    message.vaultOperation = object.vaultOperation ?? undefined;
     return message;
   },
 };

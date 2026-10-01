@@ -8,6 +8,7 @@ import {
   SdkEvent,
   SdkEventKind,
   ShieldPath,
+  VaultOperation,
 } from "../src/generated/zama/sdk/v1beta1/daemon.js";
 import { decode } from "./support/harness.js";
 
@@ -43,6 +44,7 @@ const events: ZamaSDKEvent[] = [
   { ...base, type: "unshield:phase1_submitted", txHash: hash },
   { ...base, type: "unshield:phase2_started" },
   { ...base, type: "unshield:phase2_submitted", txHash: hash },
+  { ...base, type: "vault:submitted", txHash: hash, vaultOperation: "claim" },
 ];
 const expectedKinds = [
   SdkEventKind.SDK_EVENT_KIND_ENCRYPT_START,
@@ -66,6 +68,7 @@ const expectedKinds = [
   SdkEventKind.SDK_EVENT_KIND_UNSHIELD_PHASE1_SUBMITTED,
   SdkEventKind.SDK_EVENT_KIND_UNSHIELD_PHASE2_STARTED,
   SdkEventKind.SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED,
+  SdkEventKind.SDK_EVENT_KIND_VAULT_SUBMITTED,
 ];
 
 test("every SDK lifecycle variant and field is represented by the wire adapter", () => {
@@ -82,7 +85,8 @@ test("every SDK lifecycle variant and field is represented by the wire adapter",
     | "operation"
     | "txHash"
     | "shieldPath"
-    | "step";
+    | "step"
+    | "vaultOperation";
   expectTypeOf<Exclude<Fields<ZamaSDKEvent>, MappedFields>>().toEqualTypeOf<never>();
   expect(events.map((event) => event.type).sort()).toEqual(Object.values(ZamaSDKEvents).sort());
   for (const [index, event] of events.entries()) {
@@ -111,6 +115,9 @@ test("every SDK lifecycle variant and field is represented by the wire adapter",
       "shieldPath" in event ? ShieldPath.SHIELD_PATH_APPROVE_AND_WRAP : undefined,
     );
     expect(value.step).toBe("step" in event ? ApprovalStep.APPROVAL_STEP_RESET : undefined);
+    expect(value.vaultOperation).toBe(
+      "vaultOperation" in event ? VaultOperation.VAULT_OPERATION_CLAIM : undefined,
+    );
   }
 });
 
@@ -145,6 +152,11 @@ test.each([
   ["transferFromAndCall", EventOperation.EVENT_OPERATION_TRANSFER_FROM_AND_CALL],
   ["unwrap", EventOperation.EVENT_OPERATION_UNWRAP],
   ["unwrapAll", EventOperation.EVENT_OPERATION_UNWRAP_ALL],
+  ["vault:join", EventOperation.EVENT_OPERATION_VAULT_JOIN],
+  ["vault:quit", EventOperation.EVENT_OPERATION_VAULT_QUIT],
+  ["vault:claim", EventOperation.EVENT_OPERATION_VAULT_CLAIM],
+  ["vault:recover", EventOperation.EVENT_OPERATION_VAULT_RECOVER],
+  ["vault:dispatchBatch", EventOperation.EVENT_OPERATION_VAULT_DISPATCH_BATCH],
 ] as const)("transaction operation %s survives the wire round-trip", (operation, expected) => {
   const event: ZamaSDKEvent = { ...base, type: "transaction:error", operation, error };
   expect(SdkEvent.decode(SdkEvent.encode(sdkEvent(event)).finish()).operation).toBe(expected);
@@ -164,4 +176,15 @@ test.each([
 ] as const)("approval step %s survives the wire round-trip", (step, expected) => {
   const event: ZamaSDKEvent = { ...base, type: "approveUnderlying:submitted", step, txHash: hash };
   expect(SdkEvent.decode(SdkEvent.encode(sdkEvent(event)).finish()).step).toBe(expected);
+});
+
+test.each([
+  ["join", VaultOperation.VAULT_OPERATION_JOIN],
+  ["quit", VaultOperation.VAULT_OPERATION_QUIT],
+  ["claim", VaultOperation.VAULT_OPERATION_CLAIM],
+  ["recover", VaultOperation.VAULT_OPERATION_RECOVER],
+  ["dispatchBatch", VaultOperation.VAULT_OPERATION_DISPATCH_BATCH],
+] as const)("vault operation %s survives the wire round-trip", (vaultOperation, expected) => {
+  const event: ZamaSDKEvent = { ...base, type: "vault:submitted", vaultOperation, txHash: hash };
+  expect(SdkEvent.decode(SdkEvent.encode(sdkEvent(event)).finish()).vaultOperation).toBe(expected);
 });

@@ -1103,6 +1103,8 @@ pub struct SdkEvent {
     pub shield_path: ::core::option::Option<i32>,
     #[prost(enumeration = "ApprovalStep", optional, tag = "12")]
     pub step: ::core::option::Option<i32>,
+    #[prost(enumeration = "VaultOperation", optional, tag = "13")]
+    pub vault_operation: ::core::option::Option<i32>,
 }
 /// Account transition delivered even when no SDK operation is active.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -1352,6 +1354,7 @@ pub enum SdkEventKind {
     UnshieldPhase1Submitted = 19,
     UnshieldPhase2Started = 20,
     UnshieldPhase2Submitted = 21,
+    VaultSubmitted = 22,
 }
 impl SdkEventKind {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -1386,6 +1389,7 @@ impl SdkEventKind {
             Self::UnshieldPhase1Submitted => "SDK_EVENT_KIND_UNSHIELD_PHASE1_SUBMITTED",
             Self::UnshieldPhase2Started => "SDK_EVENT_KIND_UNSHIELD_PHASE2_STARTED",
             Self::UnshieldPhase2Submitted => "SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED",
+            Self::VaultSubmitted => "SDK_EVENT_KIND_VAULT_SUBMITTED",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -1423,6 +1427,7 @@ impl SdkEventKind {
             "SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED" => {
                 Some(Self::UnshieldPhase2Submitted)
             }
+            "SDK_EVENT_KIND_VAULT_SUBMITTED" => Some(Self::VaultSubmitted),
             _ => None,
         }
     }
@@ -1450,6 +1455,11 @@ pub enum EventOperation {
     TransferFromAndCall = 16,
     Unwrap = 17,
     UnwrapAll = 18,
+    VaultJoin = 19,
+    VaultQuit = 20,
+    VaultClaim = 21,
+    VaultRecover = 22,
+    VaultDispatchBatch = 23,
 }
 impl EventOperation {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -1477,6 +1487,11 @@ impl EventOperation {
             Self::TransferFromAndCall => "EVENT_OPERATION_TRANSFER_FROM_AND_CALL",
             Self::Unwrap => "EVENT_OPERATION_UNWRAP",
             Self::UnwrapAll => "EVENT_OPERATION_UNWRAP_ALL",
+            Self::VaultJoin => "EVENT_OPERATION_VAULT_JOIN",
+            Self::VaultQuit => "EVENT_OPERATION_VAULT_QUIT",
+            Self::VaultClaim => "EVENT_OPERATION_VAULT_CLAIM",
+            Self::VaultRecover => "EVENT_OPERATION_VAULT_RECOVER",
+            Self::VaultDispatchBatch => "EVENT_OPERATION_VAULT_DISPATCH_BATCH",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -1507,6 +1522,11 @@ impl EventOperation {
             "EVENT_OPERATION_TRANSFER_FROM_AND_CALL" => Some(Self::TransferFromAndCall),
             "EVENT_OPERATION_UNWRAP" => Some(Self::Unwrap),
             "EVENT_OPERATION_UNWRAP_ALL" => Some(Self::UnwrapAll),
+            "EVENT_OPERATION_VAULT_JOIN" => Some(Self::VaultJoin),
+            "EVENT_OPERATION_VAULT_QUIT" => Some(Self::VaultQuit),
+            "EVENT_OPERATION_VAULT_CLAIM" => Some(Self::VaultClaim),
+            "EVENT_OPERATION_VAULT_RECOVER" => Some(Self::VaultRecover),
+            "EVENT_OPERATION_VAULT_DISPATCH_BATCH" => Some(Self::VaultDispatchBatch),
             _ => None,
         }
     }
@@ -1567,6 +1587,45 @@ impl ApprovalStep {
             "APPROVAL_STEP_UNSPECIFIED" => Some(Self::Unspecified),
             "APPROVAL_STEP_RESET" => Some(Self::Reset),
             "APPROVAL_STEP_APPROVE" => Some(Self::Approve),
+            _ => None,
+        }
+    }
+}
+/// The batcher write a submitted vault transaction performs.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum VaultOperation {
+    Unspecified = 0,
+    Join = 1,
+    Quit = 2,
+    Claim = 3,
+    Recover = 4,
+    DispatchBatch = 5,
+}
+impl VaultOperation {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "VAULT_OPERATION_UNSPECIFIED",
+            Self::Join => "VAULT_OPERATION_JOIN",
+            Self::Quit => "VAULT_OPERATION_QUIT",
+            Self::Claim => "VAULT_OPERATION_CLAIM",
+            Self::Recover => "VAULT_OPERATION_RECOVER",
+            Self::DispatchBatch => "VAULT_OPERATION_DISPATCH_BATCH",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "VAULT_OPERATION_UNSPECIFIED" => Some(Self::Unspecified),
+            "VAULT_OPERATION_JOIN" => Some(Self::Join),
+            "VAULT_OPERATION_QUIT" => Some(Self::Quit),
+            "VAULT_OPERATION_CLAIM" => Some(Self::Claim),
+            "VAULT_OPERATION_RECOVER" => Some(Self::Recover),
+            "VAULT_OPERATION_DISPATCH_BATCH" => Some(Self::DispatchBatch),
             _ => None,
         }
     }

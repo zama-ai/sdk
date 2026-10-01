@@ -70,7 +70,7 @@ pub use encryption::{EncryptInput, EncryptOptions, EncryptParams, EncryptResult}
 pub use error::{ClientError, ErrorKind, Result, SdkError};
 pub use events::{
     ApprovalStep, EventContext, EventEnum, EventHandler, EventKind, EventOperation, Notification,
-    OperationProgress, ProgressKind, SdkEvent, SdkEventKind, ShieldPath,
+    OperationProgress, ProgressKind, SdkEvent, SdkEventKind, ShieldPath, VaultOperation,
 };
 pub use num_bigint::BigInt;
 pub use offline::{
