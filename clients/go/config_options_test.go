@@ -167,6 +167,23 @@ func assertNoRelayerCredential(t *testing.T, format string, formatted string) {
 	}
 }
 
+func TestRPCURLAndAuthRequireChainID(t *testing.T) {
+	url := "http://localhost"
+	for name, config := range map[string]SDKConfig{
+		"rpc-url": {RPCURL: &url},
+		"auth":    {Auth: BearerToken{Token: "bearer-secret"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := config.wire(); err == nil {
+				t.Fatal("chain settings without ChainID were accepted")
+			}
+		})
+	}
+	if _, err := (SDKConfig{}).wire(); err != nil {
+		t.Fatalf("empty config rejected: %v", err)
+	}
+}
+
 func TestRelayerMapOmittedAndExplicitEmpty(t *testing.T) {
 	config := NewSDKConfig(11155111, "http://localhost")
 	wire, err := config.wire()

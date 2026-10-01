@@ -1,6 +1,7 @@
 package zama
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -81,11 +82,15 @@ func NewSDKConfig(chainID uint64, rpcURL string) SDKConfig {
 
 func (c SDKConfig) wire() (*pb.ContextConfig, error) {
 	chains := c.Chains
-	if chains != nil && (len(chains) == 0 || c.RPCURL != nil || c.Auth != nil) {
-		return nil, fmt.Errorf("chains must be nonempty and cannot be combined with RPCURL or Auth")
-	}
-	if chains == nil && c.ChainID != nil {
+	switch {
+	case chains != nil:
+		if len(chains) == 0 || c.RPCURL != nil || c.Auth != nil {
+			return nil, errors.New("chains must be nonempty and cannot be combined with RPCURL or Auth")
+		}
+	case c.ChainID != nil:
 		chains = []ChainConfig{{ID: *c.ChainID, Network: c.RPCURL, Auth: c.Auth}}
+	case c.RPCURL != nil || c.Auth != nil:
+		return nil, errors.New("RPCURL and Auth require ChainID")
 	}
 	result := &pb.ContextConfig{
 		ChainId:               c.ChainID,
