@@ -158,6 +158,21 @@ func TestRelayerAuthFormattingRedactsCredentials(t *testing.T) {
 	}
 }
 
+func TestProviderHeadersFormattingRedactsValues(t *testing.T) {
+	options := ProviderOptions{Headers: ProviderHeaders{"Authorization": "Bearer header-marker-secret", "X-Trace": "trace-marker-secret"}}
+	for _, value := range []any{options, &options} {
+		for _, format := range []string{"%v", "%+v", "%#v", "%s"} {
+			formatted := fmt.Sprintf(format, value)
+			if strings.Contains(formatted, "marker-secret") || !strings.Contains(formatted, "Authorization:[REDACTED] X-Trace:[REDACTED]") {
+				t.Fatalf("provider headers formatted with %s as %s", format, formatted)
+			}
+		}
+	}
+	if wire := options.wire(); wire.Headers.Entries["Authorization"] != "Bearer header-marker-secret" {
+		t.Fatal("header value lost on the wire")
+	}
+}
+
 func assertNoRelayerCredential(t *testing.T, format string, formatted string) {
 	t.Helper()
 	for _, secret := range []string{"bearer-secret", "header-secret", "cookie-secret"} {
@@ -200,5 +215,41 @@ func TestRelayerMapOmittedAndExplicitEmpty(t *testing.T) {
 	}
 	if wire.Relayers == nil || len(wire.Relayers.Entries) != 0 {
 		t.Fatal("explicit empty relayers lost")
+	}
+}
+
+func TestFHEEncryptionKeyMetadataFormattingKeepsOrigin(t *testing.T) {
+	metadata := FHEEncryptionKeyMetadata{RelayerURL: "https://user:userinfo-marker-secret@relayer.invalid:8443/v1/path-marker-secret?key=query-marker-secret", ChainID: 11155111}
+	key := FHEEncryptionKey{Metadata: metadata}
+	for _, value := range []any{metadata, &metadata, key, &key} {
+		for _, format := range []string{"%v", "%+v", "%#v", "%s"} {
+			formatted := fmt.Sprintf(format, value)
+			if strings.Contains(formatted, "marker-secret") || !strings.Contains(formatted, "RelayerURL:https://relayer.invalid:8443 ChainID:11155111") {
+				t.Fatalf("metadata formatted with %s as %s", format, formatted)
+			}
+		}
+	}
+	if wire := key.wire(); wire.Metadata.RelayerUrl != metadata.RelayerURL {
+		t.Fatal("relayer URL lost on the wire")
+	}
+}
+
+func TestURLOriginKeepsSchemeHostAndPortOnly(t *testing.T) {
+	for raw, expected := range map[string]string{
+		"https://relayer.invalid/v1/key":       "https://relayer.invalid",
+		"http://localhost:8545":                "http://localhost:8545",
+		"wss://user:key@relayer.invalid?k=key": "wss://relayer.invalid",
+		"http://[::1]:8545/key":                "http://[::1]:8545",
+		"https://relayer.invalid#key":          "https://relayer.invalid",
+		"https://relayer.invalid:/key":         "https://relayer.invalid",
+		"relayer.invalid/key":                  "[REDACTED]",
+		"https://key@":                         "[REDACTED]",
+		"https://user:key":                     "[REDACTED]",
+		"mailto:key@relayer.invalid":           "[REDACTED]",
+		"":                                     "[REDACTED]",
+	} {
+		if actual := urlOrigin(raw); actual != expected {
+			t.Errorf("urlOrigin(%q) = %q, want %q", raw, actual, expected)
+		}
 	}
 }

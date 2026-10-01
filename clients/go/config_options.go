@@ -2,6 +2,10 @@ package zama
 
 import (
 	"fmt"
+	"maps"
+	"net/url"
+	"slices"
+	"strings"
 
 	pb "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1"
 )
@@ -102,8 +106,19 @@ func (options ProviderBatchOptions) wire() *pb.ProviderBatch {
 	}}}
 }
 
+// ProviderHeaders formats with every value redacted since headers often carry credentials.
+type ProviderHeaders map[string]string
+
+func (h ProviderHeaders) Format(state fmt.State, verb rune) {
+	entries := make([]string, 0, len(h))
+	for _, key := range slices.Sorted(maps.Keys(h)) {
+		entries = append(entries, key+":[REDACTED]")
+	}
+	_, _ = state.Write([]byte("map[" + strings.Join(entries, " ") + "]"))
+}
+
 type ProviderOptions struct {
-	Headers         map[string]string
+	Headers         ProviderHeaders
 	Timeout         *uint32
 	RetryCount      *uint32
 	RetryDelay      *uint32
@@ -187,6 +202,19 @@ type FHECRSBytes struct {
 type FHEEncryptionKeyMetadata struct {
 	RelayerURL string
 	ChainID    uint64
+}
+
+// Format prints only the relayer URL origin since paths, queries and userinfo can carry API keys.
+func (metadata FHEEncryptionKeyMetadata) Format(state fmt.State, verb rune) {
+	_, _ = fmt.Fprintf(state, "{RelayerURL:%s ChainID:%d}", urlOrigin(metadata.RelayerURL), metadata.ChainID)
+}
+
+func urlOrigin(raw string) string {
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Scheme == "" || parsed.Hostname() == "" {
+		return "[REDACTED]"
+	}
+	return parsed.Scheme + "://" + strings.TrimSuffix(parsed.Host, ":")
 }
 
 type FHEEncryptionKey struct {

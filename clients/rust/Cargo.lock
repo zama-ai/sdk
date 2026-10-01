@@ -4871,6 +4871,7 @@ dependencies = [
  "async-trait",
  "dotenvy",
  "futures-util",
+ "http",
  "http-body-util",
  "hyper",
  "hyper-util",
