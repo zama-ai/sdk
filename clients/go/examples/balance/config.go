@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"strconv"
 
 	"github.com/zama-ai/sdk/clients/go/v3"
@@ -28,7 +29,12 @@ func loadConfig(args []string) (exampleConfig, error) {
 	}
 	config, err := godotenv.Read(args[1])
 	if err != nil {
-		return exampleConfig{}, errors.New("cannot read example config")
+		var pathErr *fs.PathError
+		if errors.As(err, &pathErr) {
+			return exampleConfig{}, fmt.Errorf("cannot read example config: %w", err)
+		}
+		// Parse errors quote file contents, which include the private key.
+		return exampleConfig{}, fmt.Errorf("cannot parse example config %s", args[1])
 	}
 	for _, field := range []string{"OWNER_ADDRESS", "CONFIDENTIAL_TOKEN_ADDRESS"} {
 		if !common.IsHexAddress(config[field]) {
@@ -57,7 +63,7 @@ func (config exampleConfig) sdkConfig() (zama.SDKConfig, error) {
 	if value := config.values["SDK_RPC_TIMEOUT_MS"]; value != "" {
 		timeout, err := strconv.ParseUint(value, 10, 32)
 		if err != nil {
-			return zama.SDKConfig{}, errors.New("invalid SDK_RPC_TIMEOUT_MS")
+			return zama.SDKConfig{}, fmt.Errorf("invalid SDK_RPC_TIMEOUT_MS: %w", err)
 		}
 		timeoutValue := uint32(timeout)
 		chain.Provider = &zama.ProviderOptions{Timeout: &timeoutValue}
@@ -83,14 +89,14 @@ func (config exampleConfig) sdkConfig() (zama.SDKConfig, error) {
 	if value := config.values["SDK_SINGLE_THREAD"]; value != "" {
 		enabled, err := strconv.ParseBool(value)
 		if err != nil {
-			return zama.SDKConfig{}, errors.New("invalid SDK_SINGLE_THREAD")
+			return zama.SDKConfig{}, fmt.Errorf("invalid SDK_SINGLE_THREAD: %w", err)
 		}
 		sdkConfig.ProcessRuntime = &zama.ProcessRuntime{SingleThread: &enabled}
 	}
 	if value := config.values["SDK_BATCH_RPC_CALLS"]; value != "" {
 		enabled, err := strconv.ParseBool(value)
 		if err != nil {
-			return zama.SDKConfig{}, errors.New("invalid SDK_BATCH_RPC_CALLS")
+			return zama.SDKConfig{}, fmt.Errorf("invalid SDK_BATCH_RPC_CALLS: %w", err)
 		}
 		sdkConfig.Relayers = map[uint64]zama.RelayerConfig{
 			sepoliaChainID: {Transport: zama.RelayerNode, Options: &zama.RelayerOptions{BatchRPCCalls: &enabled}},
