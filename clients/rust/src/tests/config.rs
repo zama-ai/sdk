@@ -72,6 +72,78 @@ fn preset_chain_omits_network_and_explicit_chain_sends_it() {
 }
 
 #[test]
+fn chain_and_provider_debug_redact_url_secrets_and_header_values() {
+    const MARKER: &str = "marker-secret";
+    let mut chain = crate::ChainConfig::new(
+        11_155_111,
+        format!(
+            "https://user:{MARKER}@eth-sepolia.g.alchemy.com:8443/v2/{MARKER}?key={MARKER}#{MARKER}"
+        ),
+    );
+    chain.relayer_url = Some(format!("https://relayer.invalid/v3/{MARKER}"));
+    chain.provider = Some(ProviderOptions {
+        headers: Some(BTreeMap::from([(
+            "Authorization".into(),
+            format!("Bearer {MARKER}"),
+        )])),
+        timeout: Some(5),
+        ..Default::default()
+    });
+    let mut config = SdkConfig::from_chains(11_155_111, vec![chain.clone()]);
+    config
+        .chains
+        .push(crate::ChainConfig::new(1, format!("{MARKER}-not-a-url")));
+    config.chains.push(crate::ChainConfig::preset(2));
+    let metadata = crate::FheEncryptionKeyMetadata {
+        relayer_url: format!("https://relayer.invalid/v3/{MARKER}?key={MARKER}"),
+        chain_id: 11_155_111,
+    };
+    let chain_debug = format!("{chain:?}");
+    let config_debug = format!("{config:#?}");
+    let metadata_debug = format!("{metadata:?}");
+    for debug in [&chain_debug, &config_debug, &metadata_debug] {
+        assert!(!debug.contains(MARKER), "{debug}");
+    }
+    assert_eq!(
+        metadata_debug,
+        "FheEncryptionKeyMetadata { relayer_url: \"https://relayer.invalid\", chain_id: 11155111 }"
+    );
+    assert!(chain_debug.contains("\"https://eth-sepolia.g.alchemy.com:8443\""));
+    assert!(chain_debug.contains("\"https://relayer.invalid\""));
+    assert!(chain_debug.contains("\"Authorization\": [REDACTED]"));
+    assert!(chain_debug.contains("timeout: Some(5)"));
+    assert!(config_debug.contains("\"[REDACTED]\""));
+    assert!(config_debug.contains("network: None"));
+}
+
+#[test]
+fn url_origin_keeps_scheme_host_and_port_only() {
+    use crate::config::url_origin;
+    for (url, expected) in [
+        (
+            "https://eth-mainnet.g.alchemy.com/v2/key",
+            "https://eth-mainnet.g.alchemy.com",
+        ),
+        (
+            "https://mainnet.infura.io/v3/key",
+            "https://mainnet.infura.io",
+        ),
+        ("http://localhost:8545", "http://localhost:8545"),
+        ("wss://user:key@rpc.invalid?apikey=key", "wss://rpc.invalid"),
+        ("http://[::1]:8545/key", "http://[::1]:8545"),
+        ("https://rpc.invalid#key", "https://rpc.invalid"),
+        ("rpc.invalid/key", "[REDACTED]"),
+        ("https://key@", "[REDACTED]"),
+        ("https://user:key", "https://user"),
+        ("https://rpc.invalid:/key", "https://rpc.invalid"),
+        ("1https://rpc.invalid", "1https://rpc.invalid"),
+        ("", "[REDACTED]"),
+    ] {
+        assert_eq!(url_origin(url), expected, "{url}");
+    }
+}
+
+#[test]
 fn optional_preset_addresses_preserve_omission_clearing_and_values() {
     for (address, expected) in [
         (None, None),

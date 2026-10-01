@@ -165,7 +165,7 @@ pub struct ProviderBatchOptions {
     pub wait: Option<u32>,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct ProviderOptions {
     pub headers: Option<BTreeMap<String, String>>,
     pub timeout: Option<u32>,
@@ -173,6 +173,32 @@ pub struct ProviderOptions {
     pub retry_delay: Option<u32>,
     pub batch: Option<ProviderBatch>,
     pub polling_interval: Option<u32>,
+}
+impl std::fmt::Debug for ProviderOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self {
+            headers,
+            timeout,
+            retry_count,
+            retry_delay,
+            batch,
+            polling_interval,
+        } = self;
+        let headers = headers.as_ref().map(|headers| {
+            headers
+                .keys()
+                .map(|name| (name, crate::config::Redacted))
+                .collect::<BTreeMap<_, _>>()
+        });
+        f.debug_struct("ProviderOptions")
+            .field("headers", &headers)
+            .field("timeout", timeout)
+            .field("retry_count", retry_count)
+            .field("retry_delay", retry_delay)
+            .field("batch", batch)
+            .field("polling_interval", polling_interval)
+            .finish()
+    }
 }
 impl ProviderOptions {
     pub(crate) fn wire(self) -> crate::generated::HttpProviderConfig {
@@ -246,10 +272,22 @@ pub struct FheCrsBytes {
     pub bytes: Vec<u8>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct FheEncryptionKeyMetadata {
     pub relayer_url: String,
     pub chain_id: u64,
+}
+impl std::fmt::Debug for FheEncryptionKeyMetadata {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self {
+            relayer_url,
+            chain_id,
+        } = self;
+        f.debug_struct("FheEncryptionKeyMetadata")
+            .field("relayer_url", &crate::config::url_origin(relayer_url))
+            .field("chain_id", chain_id)
+            .finish()
+    }
 }
 
 #[derive(Clone, Debug)]

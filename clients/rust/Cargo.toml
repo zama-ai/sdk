@@ -31,6 +31,7 @@ alloy-dyn-abi = { version = "1.7.2", features = ["eip712"], optional = true }
 alloy-primitives = { version = "1.7.2", default-features = false, features = ["std"] }
 anyhow = "1"
 futures-util = "0.3"
+http = "1"
 num-bigint = "0.4"
 tokio-stream = "0.1"
 hyper-util = { version = "0.1", features = ["tokio"] }

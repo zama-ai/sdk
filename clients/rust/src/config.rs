@@ -28,7 +28,7 @@ impl RelayerAuth {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ChainConfig {
     pub provider: Option<crate::ProviderOptions>,
     pub id: u64,
@@ -45,6 +45,69 @@ pub struct ChainConfig {
     pub registry_address: Option<String>,
     pub executor_address: Option<String>,
 }
+impl std::fmt::Debug for ChainConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self {
+            provider,
+            id,
+            network,
+            auth,
+            gateway_chain_id,
+            relayer_url,
+            acl_contract_address,
+            kms_contract_address,
+            input_verifier_contract_address,
+            verifying_contract_address_decryption,
+            verifying_contract_address_input_verification,
+            registry_address,
+            executor_address,
+        } = self;
+        f.debug_struct("ChainConfig")
+            .field("provider", provider)
+            .field("id", id)
+            .field("network", &network.as_deref().map(url_origin))
+            .field("auth", auth)
+            .field("gateway_chain_id", gateway_chain_id)
+            .field("relayer_url", &relayer_url.as_deref().map(url_origin))
+            .field("acl_contract_address", acl_contract_address)
+            .field("kms_contract_address", kms_contract_address)
+            .field(
+                "input_verifier_contract_address",
+                input_verifier_contract_address,
+            )
+            .field(
+                "verifying_contract_address_decryption",
+                verifying_contract_address_decryption,
+            )
+            .field(
+                "verifying_contract_address_input_verification",
+                verifying_contract_address_input_verification,
+            )
+            .field("registry_address", registry_address)
+            .field("executor_address", executor_address)
+            .finish()
+    }
+}
+
+pub(crate) struct Redacted;
+impl std::fmt::Debug for Redacted {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("[REDACTED]")
+    }
+}
+
+/// Keeps only `scheme://host[:port]`: provider URLs carry API keys in paths, queries and userinfo.
+pub(crate) fn url_origin(url: &str) -> String {
+    let Ok(uri) = url.parse::<http::Uri>() else {
+        return "[REDACTED]".into();
+    };
+    match (uri.scheme_str(), uri.host(), uri.port_u16()) {
+        (Some(scheme), Some(host), Some(port)) => format!("{scheme}://{host}:{port}"),
+        (Some(scheme), Some(host), None) if !host.is_empty() => format!("{scheme}://{host}"),
+        _ => "[REDACTED]".into(),
+    }
+}
+
 impl ChainConfig {
     pub fn new(id: u64, rpc_url: impl Into<String>) -> Self {
         Self {
