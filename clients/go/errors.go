@@ -54,6 +54,9 @@ func rpcError(err error, trailers metadata.MD) error {
 	if err == nil {
 		return nil
 	}
+	return newRPCError(err, trailers)
+}
+func newRPCError(err error, trailers metadata.MD) *RPCError {
 	result := &RPCError{SDKError: SDKError{Message: status.Convert(err).Message()}, cause: err}
 	if v := trailers.Get("zama-error-code"); len(v) == 1 {
 		result.Code = v[0]

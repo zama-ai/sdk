@@ -72,7 +72,10 @@ func (s *SDKContext) channelFailed(channel *callbackChannel, kind ChannelKind, e
 		if op.failure == nil {
 			op.failure = err
 		}
-		op.cancel()
+		// The RPC keeps running so the daemon's settled error reaches the caller.
+		for _, cancel := range op.actions {
+			cancel()
+		}
 	}
 }
 

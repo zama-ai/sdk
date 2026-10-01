@@ -70,14 +70,26 @@ func (s *SDKContext) dispatchSignerAction(action *pb.SignerAction, signer Signer
 		defer cancel()
 		defer func() { s.mu.Lock(); delete(op.actions, action.ActionId); s.mu.Unlock() }()
 		reply := &pb.SignerReply{OperationId: action.OperationId, ActionId: action.ActionId}
-		err := invokeSigner(ctx, action, signer, reply)
+		handed := false
+		err := invokeSigner(ctx, action, signer, reply, func() {
+			handed = true
+			s.mu.Lock()
+			op.pendingWrites++
+			s.mu.Unlock()
+		})
+		var revert *ExecutionRevertError
+		// A revert reply only ever means the contract write itself was rejected pre-broadcast.
+		reverted := handed && errors.As(err, &revert)
+		if reverted {
+			s.mu.Lock()
+			op.pendingWrites--
+			s.mu.Unlock()
+		}
 		if ctx.Err() != nil {
 			return
 		}
 		if err != nil {
-			var revert *ExecutionRevertError
-			// A revert reply only ever means the contract write itself was rejected pre-broadcast.
-			if action.GetContractWrite() != nil && errors.As(err, &revert) {
+			if reverted {
 				reply.Result = &pb.SignerReply_ExecutionRevert{ExecutionRevert: &pb.ExecutionRevert{Data: revert.Data, Message: revert.Error()}}
 			} else {
 				reply.Result = &pb.SignerReply_Error{Error: signingError(err)}
@@ -88,7 +100,8 @@ func (s *SDKContext) dispatchSignerAction(action *pb.SignerAction, signer Signer
 }
 
 // Decoding failures stay scoped to this action; the channel keeps serving others.
-func invokeSigner(ctx context.Context, action *pb.SignerAction, signer SignerConfig, reply *pb.SignerReply) error {
+// writeDispatched runs just before a decoded contract write reaches the wallet adapter.
+func invokeSigner(ctx context.Context, action *pb.SignerAction, signer SignerConfig, reply *pb.SignerReply, writeDispatched func()) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -108,6 +121,9 @@ func invokeSigner(ctx context.Context, action *pb.SignerAction, signer SignerCon
 		write, err := contractWriteRequest(action.OperationId, action.ActionId, account, request.ContractWrite)
 		if err != nil {
 			return err
+		}
+		if writeDispatched != nil {
+			writeDispatched()
 		}
 		hash, err := signer.WriteContract(ctx, write)
 		if err == nil {

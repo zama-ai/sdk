@@ -37,7 +37,12 @@ type signingServer struct {
 	contractWrite          *pb.ContractWriteRequest
 	duplicateActions       bool
 	capturedRevert         *pb.ExecutionRevert
+	holdLostWrite          chan struct{}
+	holdAfterRevert        chan struct{}
+	holdAfterError         chan struct{}
 }
+
+const lostWriteMessage = "Signer channel closed before the transaction outcome was received."
 
 func newSigningServer() *signingServer {
 	return &signingServer{sessions: make(map[string]*signerSession), steps: 1}
@@ -124,9 +129,25 @@ func (s *signingServer) DecryptValues(ctx context.Context, r *pb.DecryptValuesRe
 			session.out <- &pb.SignerServerMessage{Message: &pb.SignerServerMessage_Cancelled{Cancelled: &pb.SignerActionCancelled{OperationId: r.Operation.OperationId, ActionId: id}}}
 			return nil, status.FromContextError(ctx.Err()).Err()
 		case <-session.done:
-			return nil, status.Error(codes.Unavailable, "signer disconnected")
+			if s.contractWrite == nil {
+				return nil, status.Error(codes.Unavailable, "signer disconnected")
+			}
+			if s.holdLostWrite != nil {
+				select {
+				case <-s.holdLostWrite:
+				case <-ctx.Done():
+					return nil, status.FromContextError(ctx.Err()).Err()
+				}
+			}
+			grpc.SetTrailer(ctx, metadata.Pairs("zama-error-code", "TRANSACTION_OUTCOME_UNKNOWN", "zama-error-retryable", "false"))
+			return nil, status.Error(codes.FailedPrecondition, lostWriteMessage)
 		case result := <-reply:
 			if result.GetError() != nil {
+				if s.holdAfterError != nil {
+					close(s.holdAfterError)
+					<-ctx.Done()
+					return nil, status.FromContextError(ctx.Err()).Err()
+				}
 				grpc.SetTrailer(ctx, metadata.Pairs("zama-error-code", result.GetError().Code))
 				return nil, status.Error(codes.FailedPrecondition, result.GetError().Message)
 			}
@@ -134,6 +155,11 @@ func (s *signingServer) DecryptValues(ctx context.Context, r *pb.DecryptValuesRe
 				s.mu.Lock()
 				s.capturedRevert = revert
 				s.mu.Unlock()
+				if s.holdAfterRevert != nil {
+					close(s.holdAfterRevert)
+					<-ctx.Done()
+					return nil, status.FromContextError(ctx.Err()).Err()
+				}
 				return nil, status.Error(codes.FailedPrecondition, revert.Message)
 			}
 			signature = result.GetSignature()
@@ -284,8 +310,9 @@ func TestSignerRejectionAndDisconnect(t *testing.T) {
 			server.disconnect(sdk.id)
 			select {
 			case err := <-done:
-				if err == nil {
-					t.Fatal("disconnected operation succeeded")
+				var rpc *RPCError
+				if !errors.As(err, &rpc) || rpc.Code != "" || status.Code(err) != codes.Unavailable {
+					t.Fatalf("disconnect misreported: %v", err)
 				}
 			case <-time.After(time.Second):
 				t.Fatal("disconnect hung")
@@ -298,8 +325,8 @@ func TestSignerRejectionAndDisconnect(t *testing.T) {
 			if _, err := sdk.DecryptPublicValues(testContext(t), nil, DecryptOptions{}); err != nil {
 				t.Fatalf("signer loss disabled public decryption: %v", err)
 			}
-			if err := sdk.WaitChannelFailure(testContext(t), SignerChannel); err == nil {
-				t.Fatal("expected callback failure")
+			if err := sdk.WaitChannelFailure(testContext(t), SignerChannel); status.Code(err) != codes.Unavailable {
+				t.Fatalf("expected callback failure: %v", err)
 			}
 			server.mu.Lock()
 			previous := server.sessions[sdk.id]

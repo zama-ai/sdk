@@ -10,7 +10,10 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	pb "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func transactionWire() *pb.ContractWriteRequest {
@@ -31,7 +34,7 @@ func TestContractWritePreservesPresenceAndRejectsMalformedPayload(t *testing.T) 
 		return common.Hash{9}, nil
 	}}
 	reply := new(pb.SignerReply)
-	if err := invokeSigner(t.Context(), action, config, reply); err != nil || common.BytesToHash(reply.GetTransactionHash()) != (common.Hash{9}) {
+	if err := invokeSigner(t.Context(), action, config, reply, nil); err != nil || common.BytesToHash(reply.GetTransactionHash()) != (common.Hash{9}) {
 		t.Fatalf("transaction failed: %v", err)
 	}
 	wire.Value, wire.Gas = nil, nil
@@ -41,15 +44,15 @@ func TestContractWritePreservesPresenceAndRejectsMalformedPayload(t *testing.T) 
 	}
 	bad := "01"
 	wire.Gas = &bad
-	if invokeSigner(t.Context(), action, config, new(pb.SignerReply)) == nil || calls != 1 {
+	if invokeSigner(t.Context(), action, config, new(pb.SignerReply), nil) == nil || calls != 1 {
 		t.Fatal("malformed amount reached wallet")
 	}
 	wire.Gas = nil
-	if invokeSigner(t.Context(), action, SignerConfig{SignTypedData: config.SignTypedData}, new(pb.SignerReply)) == nil || calls != 1 {
+	if invokeSigner(t.Context(), action, SignerConfig{SignTypedData: config.SignTypedData}, new(pb.SignerReply), nil) == nil || calls != 1 {
 		t.Fatal("write reached a typed-data-only signer")
 	}
 	action.Request = nil
-	if invokeSigner(t.Context(), action, config, new(pb.SignerReply)) == nil || calls != 1 {
+	if invokeSigner(t.Context(), action, config, new(pb.SignerReply), nil) == nil || calls != 1 {
 		t.Fatal("empty action reached wallet")
 	}
 }
@@ -136,6 +139,106 @@ func TestTransactionChannelCancellationAndLossAfterSubmission(t *testing.T) {
 	}
 }
 
+func TestSignerLossKeepsDaemonOutcome(t *testing.T) {
+	server := newSigningServer()
+	server.contractWrite = transactionWire()
+	server.holdLostWrite = make(chan struct{})
+	client := testClient(t, server, nil)
+	started := make(chan struct{})
+	sdk, err := client.CreateContext(testContext(t), SDKConfig{}, SignerConfig{Account: &WalletAccount{Address: common.Address{1}, ChainID: 1}, WriteContract: func(ctx context.Context, _ ContractWriteRequest) (common.Hash, error) {
+		close(started)
+		<-ctx.Done()
+		return common.Hash{}, ctx.Err()
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sdk.Close(testContext(t))
+	done := make(chan error, 1)
+	go func() { _, err := decrypt(sdk, testContext(t)); done <- err }()
+	select {
+	case <-started:
+	case <-time.After(time.Second):
+		t.Fatal("write not started")
+	}
+	server.disconnect(sdk.id)
+	if err := sdk.WaitChannelFailure(testContext(t), SignerChannel); err == nil {
+		t.Fatal("expected callback failure")
+	}
+	close(server.holdLostWrite)
+	select {
+	case err := <-done:
+		var rpc *RPCError
+		if !errors.As(err, &rpc) || rpc.Code != "TRANSACTION_OUTCOME_UNKNOWN" || rpc.Retryable || rpc.Message != lostWriteMessage {
+			t.Fatalf("daemon outcome lost: %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("operation hung")
+	}
+}
+
+func TestConnectionLossAfterWriteReportsOutcomeUnknown(t *testing.T) {
+	server := newSigningServer()
+	server.contractWrite = transactionWire()
+	client, daemon := testClientServer(t, server, nil)
+	started := make(chan struct{})
+	sdk, err := client.CreateContext(testContext(t), SDKConfig{}, SignerConfig{Account: &WalletAccount{Address: common.Address{1}, ChainID: 1}, WriteContract: func(ctx context.Context, _ ContractWriteRequest) (common.Hash, error) {
+		close(started)
+		<-ctx.Done()
+		return common.Hash{}, ctx.Err()
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() { _, err := decrypt(sdk, testContext(t)); done <- err }()
+	select {
+	case <-started:
+	case <-time.After(time.Second):
+		t.Fatal("write not started")
+	}
+	daemon.Stop()
+	select {
+	case err := <-done:
+		var rpc *RPCError
+		if !errors.As(err, &rpc) || rpc.Code != "TRANSACTION_OUTCOME_UNKNOWN" || rpc.Retryable || status.Code(err) != codes.Unavailable {
+			t.Fatalf("lost write misreported: %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("operation hung")
+	}
+}
+
+func TestConnectionLossBeforeWriteReportsNoOutcome(t *testing.T) {
+	client, daemon := testClientServer(t, newSigningServer(), nil)
+	started := make(chan struct{})
+	sdk, err := client.CreateContext(testContext(t), SDKConfig{}, SignerConfig{Account: &WalletAccount{Address: common.Address{1}, ChainID: 1}, SignTypedData: func(ctx context.Context, _ WalletAccount, _ apitypes.TypedData) ([]byte, error) {
+		close(started)
+		<-ctx.Done()
+		return nil, ctx.Err()
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() { _, err := decrypt(sdk, testContext(t)); done <- err }()
+	select {
+	case <-started:
+	case <-time.After(time.Second):
+		t.Fatal("signing not started")
+	}
+	daemon.Stop()
+	select {
+	case err := <-done:
+		var rpc *RPCError
+		if err == nil || (errors.As(err, &rpc) && rpc.Code != "") {
+			t.Fatalf("connection loss misreported: %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("operation hung")
+	}
+}
+
 func TestConcurrentTransactionCallbacksRemainCorrelated(t *testing.T) {
 	server := newSigningServer()
 	server.contractWrite = transactionWire()
@@ -182,6 +285,70 @@ func TestConcurrentTransactionCallbacksRemainCorrelated(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("first transaction did not finish")
+	}
+}
+
+func TestConnectionLossAfterRevertReportsNoOutcome(t *testing.T) {
+	server := newSigningServer()
+	server.contractWrite = transactionWire()
+	server.holdAfterRevert = make(chan struct{})
+	client, daemon := testClientServer(t, server, nil)
+	sdk, err := client.CreateContext(testContext(t), SDKConfig{}, SignerConfig{Account: &WalletAccount{Address: common.Address{1}, ChainID: 1}, WriteContract: func(context.Context, ContractWriteRequest) (common.Hash, error) {
+		return common.Hash{}, &ExecutionRevertError{Cause: errors.New("execution reverted")}
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() { _, err := decrypt(sdk, testContext(t)); done <- err }()
+	select {
+	case <-server.holdAfterRevert:
+	case <-time.After(time.Second):
+		t.Fatal("revert not received")
+	}
+	daemon.Stop()
+	select {
+	case err := <-done:
+		var rpc *RPCError
+		if err == nil || (errors.As(err, &rpc) && rpc.Code == "TRANSACTION_OUTCOME_UNKNOWN") {
+			t.Fatalf("reverted write misreported: %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("operation hung")
+	}
+}
+
+func TestConnectionLossAfterMalformedWriteReportsNoOutcome(t *testing.T) {
+	server := newSigningServer()
+	server.contractWrite = transactionWire()
+	malformed := "01"
+	server.contractWrite.Gas = &malformed
+	server.holdAfterError = make(chan struct{})
+	client, daemon := testClientServer(t, server, nil)
+	var calls atomic.Int32
+	sdk, err := client.CreateContext(testContext(t), SDKConfig{}, SignerConfig{Account: &WalletAccount{Address: common.Address{1}, ChainID: 1}, WriteContract: func(context.Context, ContractWriteRequest) (common.Hash, error) {
+		calls.Add(1)
+		return common.Hash{42}, nil
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() { _, err := decrypt(sdk, testContext(t)); done <- err }()
+	select {
+	case <-server.holdAfterError:
+	case <-time.After(time.Second):
+		t.Fatal("decode failure not received")
+	}
+	daemon.Stop()
+	select {
+	case err := <-done:
+		var rpc *RPCError
+		if err == nil || (errors.As(err, &rpc) && rpc.Code == "TRANSACTION_OUTCOME_UNKNOWN") || calls.Load() != 0 {
+			t.Fatalf("undecodable write misreported: %v calls=%d", err, calls.Load())
+		}
+	case <-time.After(time.Second):
+		t.Fatal("operation hung")
 	}
 }
 

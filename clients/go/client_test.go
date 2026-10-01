@@ -23,6 +23,11 @@ import (
 
 func testClient(t *testing.T, service pb.DaemonServiceServer, interceptor grpc.UnaryServerInterceptor) *Client {
 	t.Helper()
+	client, _ := testClientServer(t, service, interceptor)
+	return client
+}
+func testClientServer(t *testing.T, service pb.DaemonServiceServer, interceptor grpc.UnaryServerInterceptor) (*Client, *grpc.Server) {
+	t.Helper()
 	// Short paths stay within macOS Unix-domain socket limits.
 	dir, err := os.MkdirTemp("/tmp", "sdk-go-")
 	if err != nil {
@@ -47,7 +52,7 @@ func testClient(t *testing.T, service pb.DaemonServiceServer, interceptor grpc.U
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { client.Close() })
-	return client
+	return client, server
 }
 func testContext(t *testing.T) context.Context {
 	t.Helper()
