@@ -332,14 +332,15 @@ func TestEventPayload(t *testing.T) {
 	operation := pb.EventOperation_EVENT_OPERATION_GRANT_PERMIT
 	path := pb.ShieldPath_SHIELD_PATH_TRANSFER_AND_CALL
 	step := pb.ApprovalStep_APPROVAL_STEP_RESET
-	decoded, err := sdkEvent(&pb.SdkEvent{Type: pb.SdkEventKind_SDK_EVENT_KIND_DECRYPT_END, Timestamp: 123.5, SdkOperationId: &sdkID, DurationMs: &duration, Operation: &operation, ShieldPath: &path, Step: &step, EncryptedValues: [][]byte{hash.Bytes()}, Result: []*pb.ClearEntry{{EncryptedValue: hash.Bytes(), Value: &pb.ClearValue{Value: &pb.ClearValue_BigintValue{BigintValue: large.String()}}}}})
+	vaultOperation := pb.VaultOperation_VAULT_OPERATION_DISPATCH_BATCH
+	decoded, err := sdkEvent(&pb.SdkEvent{Type: pb.SdkEventKind_SDK_EVENT_KIND_DECRYPT_END, Timestamp: 123.5, SdkOperationId: &sdkID, DurationMs: &duration, Operation: &operation, ShieldPath: &path, Step: &step, VaultOperation: &vaultOperation, EncryptedValues: [][]byte{hash.Bytes()}, Result: []*pb.ClearEntry{{EncryptedValue: hash.Bytes(), Value: &pb.ClearValue{Value: &pb.ClearValue_BigintValue{BigintValue: large.String()}}}}})
 	if err != nil || decoded.Result[hash].Integer.Cmp(large) != 0 || decoded.SDKOperationID == nil || decoded.Timestamp != 123.5 || decoded.DurationMS == nil || *decoded.DurationMS != duration {
 		t.Fatalf("lost event payload: %+v %v", decoded, err)
 	}
-	if decoded.Operation == nil || *decoded.Operation != EventOperationGrantPermit || decoded.ShieldPath == nil || *decoded.ShieldPath != ShieldPathTransferAndCall || decoded.Step == nil || *decoded.Step != ApprovalStepReset {
+	if decoded.Operation == nil || *decoded.Operation != EventOperationGrantPermit || decoded.ShieldPath == nil || *decoded.ShieldPath != ShieldPathTransferAndCall || decoded.Step == nil || *decoded.Step != ApprovalStepReset || decoded.VaultOperation == nil || *decoded.VaultOperation != VaultOperationDispatchBatch {
 		t.Fatalf("lost event enum payload: %+v", decoded)
 	}
-	if decoded.Kind.String() != pb.SdkEventKind_SDK_EVENT_KIND_DECRYPT_END.String() || decoded.Operation.String() != operation.String() || decoded.ShieldPath.String() != path.String() || decoded.Step.String() != step.String() || ProgressShieldSubmitted.String() != pb.ProgressKind_PROGRESS_KIND_SHIELD_SUBMITTED.String() {
+	if decoded.Kind.String() != pb.SdkEventKind_SDK_EVENT_KIND_DECRYPT_END.String() || decoded.Operation.String() != operation.String() || decoded.ShieldPath.String() != path.String() || decoded.Step.String() != step.String() || decoded.VaultOperation.String() != vaultOperation.String() || ProgressShieldSubmitted.String() != pb.ProgressKind_PROGRESS_KIND_SHIELD_SUBMITTED.String() {
 		t.Fatal("native enum strings differ from protobuf")
 	}
 }
@@ -507,13 +508,14 @@ func TestUnknownEventEnumsReachHandlerWithoutClosingChannel(t *testing.T) {
 	operation := pb.EventOperation(97)
 	path := pb.ShieldPath(98)
 	step := pb.ApprovalStep(99)
+	vaultOperation := pb.VaultOperation(95)
 	server.outgoing <- &pb.EventServerMessage{Message: &pb.EventServerMessage_Delivery{Delivery: &pb.EventDelivery{
 		ContextId: "events", Sequence: 1,
-		Payload: &pb.EventDelivery_Event{Event: &pb.SdkEvent{Type: pb.SdkEventKind(96), Operation: &operation, ShieldPath: &path, Step: &step}},
+		Payload: &pb.EventDelivery_Event{Event: &pb.SdkEvent{Type: pb.SdkEventKind(96), Operation: &operation, ShieldPath: &path, Step: &step, VaultOperation: &vaultOperation}},
 	}}}
 	select {
 	case event := <-received:
-		if event.Kind != 96 || event.Operation == nil || *event.Operation != EventOperation(operation) || event.ShieldPath == nil || *event.ShieldPath != ShieldPath(path) || event.Step == nil || *event.Step != ApprovalStep(step) {
+		if event.Kind != 96 || event.Operation == nil || *event.Operation != EventOperation(operation) || event.ShieldPath == nil || *event.ShieldPath != ShieldPath(path) || event.Step == nil || *event.Step != ApprovalStep(step) || event.VaultOperation == nil || *event.VaultOperation != VaultOperation(vaultOperation) {
 			t.Fatalf("unknown enum values were lost: %+v", event)
 		}
 	case <-testContext(t).Done():

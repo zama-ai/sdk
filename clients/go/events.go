@@ -12,11 +12,13 @@ type SDKEventKind int32
 type EventOperation int32
 type ShieldPath int32
 type ApprovalStep int32
+type VaultOperation int32
 
-func (kind SDKEventKind) String() string   { return pb.SdkEventKind(kind).String() }
-func (kind EventOperation) String() string { return pb.EventOperation(kind).String() }
-func (path ShieldPath) String() string     { return pb.ShieldPath(path).String() }
-func (step ApprovalStep) String() string   { return pb.ApprovalStep(step).String() }
+func (kind SDKEventKind) String() string        { return pb.SdkEventKind(kind).String() }
+func (kind EventOperation) String() string      { return pb.EventOperation(kind).String() }
+func (path ShieldPath) String() string          { return pb.ShieldPath(path).String() }
+func (step ApprovalStep) String() string        { return pb.ApprovalStep(step).String() }
+func (operation VaultOperation) String() string { return pb.VaultOperation(operation).String() }
 
 const (
 	EventOperationUnspecified            = EventOperation(pb.EventOperation_EVENT_OPERATION_UNSPECIFIED)
@@ -38,12 +40,23 @@ const (
 	EventOperationTransferFromAndCall    = EventOperation(pb.EventOperation_EVENT_OPERATION_TRANSFER_FROM_AND_CALL)
 	EventOperationUnwrap                 = EventOperation(pb.EventOperation_EVENT_OPERATION_UNWRAP)
 	EventOperationUnwrapAll              = EventOperation(pb.EventOperation_EVENT_OPERATION_UNWRAP_ALL)
+	EventOperationVaultJoin              = EventOperation(pb.EventOperation_EVENT_OPERATION_VAULT_JOIN)
+	EventOperationVaultQuit              = EventOperation(pb.EventOperation_EVENT_OPERATION_VAULT_QUIT)
+	EventOperationVaultClaim             = EventOperation(pb.EventOperation_EVENT_OPERATION_VAULT_CLAIM)
+	EventOperationVaultRecover           = EventOperation(pb.EventOperation_EVENT_OPERATION_VAULT_RECOVER)
+	EventOperationVaultDispatchBatch     = EventOperation(pb.EventOperation_EVENT_OPERATION_VAULT_DISPATCH_BATCH)
 	ShieldPathUnspecified                = ShieldPath(pb.ShieldPath_SHIELD_PATH_UNSPECIFIED)
 	ShieldPathTransferAndCall            = ShieldPath(pb.ShieldPath_SHIELD_PATH_TRANSFER_AND_CALL)
 	ShieldPathApproveAndWrap             = ShieldPath(pb.ShieldPath_SHIELD_PATH_APPROVE_AND_WRAP)
 	ApprovalStepUnspecified              = ApprovalStep(pb.ApprovalStep_APPROVAL_STEP_UNSPECIFIED)
 	ApprovalStepReset                    = ApprovalStep(pb.ApprovalStep_APPROVAL_STEP_RESET)
 	ApprovalStepApprove                  = ApprovalStep(pb.ApprovalStep_APPROVAL_STEP_APPROVE)
+	VaultOperationUnspecified            = VaultOperation(pb.VaultOperation_VAULT_OPERATION_UNSPECIFIED)
+	VaultOperationJoin                   = VaultOperation(pb.VaultOperation_VAULT_OPERATION_JOIN)
+	VaultOperationQuit                   = VaultOperation(pb.VaultOperation_VAULT_OPERATION_QUIT)
+	VaultOperationClaim                  = VaultOperation(pb.VaultOperation_VAULT_OPERATION_CLAIM)
+	VaultOperationRecover                = VaultOperation(pb.VaultOperation_VAULT_OPERATION_RECOVER)
+	VaultOperationDispatchBatch          = VaultOperation(pb.VaultOperation_VAULT_OPERATION_DISPATCH_BATCH)
 )
 
 const (
@@ -69,6 +82,7 @@ const (
 	SDKEventUnshieldPhase1Submitted    = SDKEventKind(pb.SdkEventKind_SDK_EVENT_KIND_UNSHIELD_PHASE1_SUBMITTED)
 	SDKEventUnshieldPhase2Started      = SDKEventKind(pb.SdkEventKind_SDK_EVENT_KIND_UNSHIELD_PHASE2_STARTED)
 	SDKEventUnshieldPhase2Submitted    = SDKEventKind(pb.SdkEventKind_SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED)
+	SDKEventVaultSubmitted             = SDKEventKind(pb.SdkEventKind_SDK_EVENT_KIND_VAULT_SUBMITTED)
 )
 
 type SDKEvent struct {
@@ -84,6 +98,7 @@ type SDKEvent struct {
 	TxHash          *common.Hash
 	ShieldPath      *ShieldPath
 	Step            *ApprovalStep
+	VaultOperation  *VaultOperation
 }
 type EventCorrelation struct {
 	ContextID   string
@@ -169,6 +184,10 @@ func sdkEvent(value *pb.SdkEvent) (SDKEvent, error) {
 	if value.Step != nil {
 		step := ApprovalStep(*value.Step)
 		result.Step = &step
+	}
+	if value.VaultOperation != nil {
+		operation := VaultOperation(*value.VaultOperation)
+		result.VaultOperation = &operation
 	}
 	var err error
 	result.TokenAddress, err = eventAddress(value.TokenAddress)

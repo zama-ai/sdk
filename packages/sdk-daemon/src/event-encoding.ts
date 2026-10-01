@@ -11,6 +11,7 @@ import {
   EventOperation,
   SdkEventKind,
   ShieldPath,
+  VaultOperation,
 } from "./generated/zama/sdk/v1beta1/daemon.js";
 import { bytes, entries } from "./encoding.js";
 import { errorDetails } from "./errors.js";
@@ -37,6 +38,7 @@ const eventKinds = {
   "unshield:phase1_submitted": SdkEventKind.SDK_EVENT_KIND_UNSHIELD_PHASE1_SUBMITTED,
   "unshield:phase2_started": SdkEventKind.SDK_EVENT_KIND_UNSHIELD_PHASE2_STARTED,
   "unshield:phase2_submitted": SdkEventKind.SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED,
+  "vault:submitted": SdkEventKind.SDK_EVENT_KIND_VAULT_SUBMITTED,
 } satisfies Record<ZamaSDKEvent["type"], SdkEventKind>;
 
 const operations = {
@@ -58,6 +60,11 @@ const operations = {
   transferFromAndCall: EventOperation.EVENT_OPERATION_TRANSFER_FROM_AND_CALL,
   unwrap: EventOperation.EVENT_OPERATION_UNWRAP,
   unwrapAll: EventOperation.EVENT_OPERATION_UNWRAP_ALL,
+  "vault:join": EventOperation.EVENT_OPERATION_VAULT_JOIN,
+  "vault:quit": EventOperation.EVENT_OPERATION_VAULT_QUIT,
+  "vault:claim": EventOperation.EVENT_OPERATION_VAULT_CLAIM,
+  "vault:recover": EventOperation.EVENT_OPERATION_VAULT_RECOVER,
+  "vault:dispatchBatch": EventOperation.EVENT_OPERATION_VAULT_DISPATCH_BATCH,
 } satisfies Record<PermitOperation | TransactionOperation, EventOperation>;
 
 const shieldPaths = {
@@ -71,6 +78,17 @@ const approvalSteps = {
 } satisfies Record<
   Extract<ZamaSDKEvent, { type: "approveUnderlying:submitted" }>["step"],
   ApprovalStep
+>;
+
+const vaultOperations = {
+  join: VaultOperation.VAULT_OPERATION_JOIN,
+  quit: VaultOperation.VAULT_OPERATION_QUIT,
+  claim: VaultOperation.VAULT_OPERATION_CLAIM,
+  recover: VaultOperation.VAULT_OPERATION_RECOVER,
+  dispatchBatch: VaultOperation.VAULT_OPERATION_DISPATCH_BATCH,
+} satisfies Record<
+  Extract<ZamaSDKEvent, { type: "vault:submitted" }>["vaultOperation"],
+  VaultOperation
 >;
 
 export function sdkEvent(event: ZamaSDKEvent): rpc.SdkEvent {
@@ -87,6 +105,7 @@ export function sdkEvent(event: ZamaSDKEvent): rpc.SdkEvent {
     txHash: "txHash" in event ? bytes(event.txHash) : undefined,
     shieldPath: "shieldPath" in event ? shieldPaths[event.shieldPath] : undefined,
     step: "step" in event ? approvalSteps[event.step] : undefined,
+    vaultOperation: "vaultOperation" in event ? vaultOperations[event.vaultOperation] : undefined,
   };
 }
 

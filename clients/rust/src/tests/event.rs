@@ -291,6 +291,7 @@ fn lifecycle_payload_preserves_clear_values_and_errors() {
         operation: Some(generated::EventOperation::GrantPermit as i32),
         shield_path: Some(generated::ShieldPath::TransferAndCall as i32),
         step: Some(generated::ApprovalStep::Reset as i32),
+        vault_operation: Some(generated::VaultOperation::DispatchBatch as i32),
         ..Default::default()
     };
     let event = crate::SdkEvent::try_from(wire).unwrap();
@@ -318,6 +319,16 @@ fn lifecycle_payload_preserves_clear_values_and_errors() {
     assert_eq!(
         event.step,
         Some(crate::EventEnum::Known(crate::ApprovalStep::Reset))
+    );
+    assert_eq!(
+        event.vault_operation,
+        Some(crate::EventEnum::Known(
+            crate::VaultOperation::DispatchBatch
+        ))
+    );
+    assert_eq!(
+        event.vault_operation.unwrap().to_string(),
+        "VAULT_OPERATION_DISPATCH_BATCH"
     );
     let progress = crate::OperationProgress::try_from(generated::OperationProgress {
         kind: generated::ProgressKind::TransferSubmitted as i32,
@@ -350,6 +361,7 @@ fn lifecycle_payload_preserves_clear_values_and_errors() {
         operation: Some(101),
         shield_path: Some(102),
         step: Some(103),
+        vault_operation: Some(104),
         ..Default::default()
     })
     .unwrap();
@@ -359,6 +371,10 @@ fn lifecycle_payload_preserves_clear_values_and_errors() {
     assert_eq!(unknown.operation.unwrap().to_string(), "Unknown(101)");
     assert_eq!(unknown.shield_path, Some(crate::EventEnum::Unknown(102)));
     assert_eq!(unknown.step, Some(crate::EventEnum::Unknown(103)));
+    assert_eq!(
+        unknown.vault_operation,
+        Some(crate::EventEnum::Unknown(104))
+    );
 }
 
 #[tokio::test]

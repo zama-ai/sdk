@@ -65,6 +65,7 @@ native_event_enum!(SdkEventKind {
     UnshieldPhase1Submitted,
     UnshieldPhase2Started,
     UnshieldPhase2Submitted,
+    VaultSubmitted,
 });
 native_event_enum!(EventOperation {
     Unspecified,
@@ -86,6 +87,11 @@ native_event_enum!(EventOperation {
     TransferFromAndCall,
     Unwrap,
     UnwrapAll,
+    VaultJoin,
+    VaultQuit,
+    VaultClaim,
+    VaultRecover,
+    VaultDispatchBatch,
 });
 native_event_enum!(ShieldPath {
     Unspecified,
@@ -96,6 +102,14 @@ native_event_enum!(ApprovalStep {
     Unspecified,
     Reset,
     Approve
+});
+native_event_enum!(VaultOperation {
+    Unspecified,
+    Join,
+    Quit,
+    Claim,
+    Recover,
+    DispatchBatch
 });
 native_event_enum!(ProgressKind {
     Unspecified,
@@ -126,6 +140,7 @@ pub struct SdkEvent {
     pub tx_hash: Option<B256>,
     pub shield_path: Option<EventEnum<ShieldPath>>,
     pub step: Option<EventEnum<ApprovalStep>>,
+    pub vault_operation: Option<EventEnum<VaultOperation>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -187,6 +202,7 @@ impl TryFrom<generated::SdkEvent> for SdkEvent {
                 .transpose()?,
             shield_path: event.shield_path.map(EventEnum::from_raw),
             step: event.step.map(EventEnum::from_raw),
+            vault_operation: event.vault_operation.map(EventEnum::from_raw),
         })
     }
 }
