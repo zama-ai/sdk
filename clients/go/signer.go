@@ -71,7 +71,7 @@ func (s *SDKContext) dispatchSignerAction(action *pb.SignerAction, signer Signer
 		defer func() { s.mu.Lock(); delete(op.actions, action.ActionId); s.mu.Unlock() }()
 		reply := &pb.SignerReply{OperationId: action.OperationId, ActionId: action.ActionId}
 		handed := false
-		err := invokeSigner(ctx, action, signer, reply, func() {
+		err := invokeSignerRecovering(ctx, action, signer, reply, func() {
 			handed = true
 			s.mu.Lock()
 			op.pendingWrites++
@@ -97,6 +97,23 @@ func (s *SDKContext) dispatchSignerAction(action *pb.SignerAction, signer Signer
 		}
 		send(reply)
 	}()
+}
+
+// A panicking wallet adapter fails only its own action; the panic value never reaches the reply.
+func invokeSignerRecovering(ctx context.Context, action *pb.SignerAction, signer SignerConfig, reply *pb.SignerReply, writeDispatched func()) (err error) {
+	defer func() {
+		if recover() == nil {
+			return
+		}
+		reply.Result = nil
+		if action.GetContractWrite() != nil {
+			// The write may have been broadcast before the panic.
+			err = &SDKError{Code: "TRANSACTION_OUTCOME_UNKNOWN", Message: "wallet adapter panicked during contract write"}
+		} else {
+			err = &SDKError{Code: "SIGNING_FAILED", Message: "wallet adapter panicked during signing"}
+		}
+	}()
+	return invokeSigner(ctx, action, signer, reply, writeDispatched)
 }
 
 // Decoding failures stay scoped to this action; the channel keeps serving others.

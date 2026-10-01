@@ -686,7 +686,7 @@ func TestWalletAndProgressPayloads(t *testing.T) {
 func TestEventHandlerPanicBecomesReplyError(t *testing.T) {
 	dispatcher := &eventDispatcher{handlers: EventHandlers{OnEvent: func(context.Context, EventCorrelation, SDKEvent) error { panic("handler failed") }}}
 	reply := decodedEventReply(t, dispatcher, deliverEvent(1).GetDelivery())
-	if reply.GetError() == nil || reply.GetError().Code != "CALLBACK_FAILED" {
+	if reply.GetError().GetCode() != "CALLBACK_FAILED" || reply.GetError().GetMessage() != "event handler panicked" {
 		t.Fatal(reply)
 	}
 }

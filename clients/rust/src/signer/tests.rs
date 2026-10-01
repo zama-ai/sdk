@@ -319,3 +319,123 @@ async fn channel_teardown_cancels_a_write_that_has_not_broadcast() {
         .unwrap()
         .unwrap();
 }
+
+#[tokio::test]
+async fn a_cancelled_write_that_panics_sends_no_reply() {
+    let operations = Arc::new(crate::operations::Operations::new());
+    let operation = operations.start("context");
+    let id = &operation.message.operation_id;
+    let (sender, mut replies) = mpsc::channel(16);
+    let (started, mut starts) = mpsc::unbounded_channel();
+    let signer = TestWallet(
+        move |_request: ContractWriteRequest, cancel: CancellationToken| {
+            let started = started.clone();
+            async move {
+                started.send(()).unwrap();
+                cancel.cancelled().await;
+                panic!("secret wallet state");
+            }
+        },
+    );
+    let mut callbacks = Callbacks::new(Arc::new(signer), sender, operations);
+    callbacks.start(write_action(id, "panic")).unwrap();
+    starts.recv().await.unwrap();
+    callbacks
+        .handle_frame(generated::SignerServerMessage {
+            message: Some(signer_server_message::Message::Cancelled(
+                generated::SignerActionCancelled {
+                    operation_id: id.clone(),
+                    action_id: "panic".into(),
+                },
+            )),
+        })
+        .unwrap();
+    // The channel closes only once the write task has finished without replying.
+    drop(callbacks);
+    let closed = tokio::time::timeout(std::time::Duration::from_secs(2), replies.recv())
+        .await
+        .unwrap();
+    assert!(closed.is_none());
+}
+
+#[tokio::test]
+async fn a_panicking_write_fails_only_its_action_with_an_unknown_outcome() {
+    let operations = Arc::new(crate::operations::Operations::new());
+    let operation = operations.start("context");
+    let id = &operation.message.operation_id;
+    let (sender, mut replies) = mpsc::channel(16);
+    let signer = TestWallet(
+        move |request: ContractWriteRequest, _cancel: CancellationToken| async move {
+            if request.action_id == "panic" {
+                panic!("secret wallet state");
+            }
+            Ok(B256::repeat_byte(3))
+        },
+    );
+    let mut callbacks = Callbacks::new(Arc::new(signer), sender, operations);
+    callbacks.start(write_action(id, "panic")).unwrap();
+    let panicked = reply(
+        tokio::time::timeout(std::time::Duration::from_secs(2), replies.recv())
+            .await
+            .unwrap()
+            .unwrap(),
+    );
+    assert_eq!(panicked.action_id, "panic");
+    let Some(Reply::Error(error)) = panicked.result else {
+        panic!()
+    };
+    assert_eq!(error.code, "TRANSACTION_OUTCOME_UNKNOWN");
+    assert!(!error.retryable);
+    assert_eq!(
+        error.message,
+        "wallet adapter panicked during contract write"
+    );
+    callbacks.start(write_action(id, "next")).unwrap();
+    let next = reply(replies.recv().await.unwrap());
+    assert_eq!(next.action_id, "next");
+    assert_eq!(next.result, Some(Reply::TransactionHash(vec![3; 32])));
+}
+
+struct PanickingTypedDataWallet;
+#[async_trait::async_trait]
+impl Signer for PanickingTypedDataWallet {
+    async fn sign_typed_data(&self, request: SigningRequest) -> Result<Vec<u8>, SdkError> {
+        if request.action_id == "panic" {
+            panic!("secret wallet state");
+        }
+        Ok(vec![7])
+    }
+}
+#[tokio::test]
+async fn a_panicking_signature_fails_only_its_action() {
+    let operations = Arc::new(crate::operations::Operations::new());
+    let operation = operations.start("context");
+    let id = &operation.message.operation_id;
+    let (sender, mut replies) = mpsc::channel(16);
+    let mut callbacks = Callbacks::new(Arc::new(PanickingTypedDataWallet), sender, operations);
+    let typed = |action: &str| generated::SignerAction {
+        request: Some(Request::TypedDataJson("{}".into())),
+        ..write_action(id, action)
+    };
+    callbacks.start(typed("panic")).unwrap();
+    while let Some(result) = callbacks.tasks.join_next().await {
+        callbacks.settle(result).unwrap();
+    }
+    let panicked = reply(replies.recv().await.unwrap());
+    assert_eq!(panicked.action_id, "panic");
+    let Some(Reply::Error(error)) = panicked.result else {
+        panic!()
+    };
+    assert_eq!(error.code, "SIGNING_FAILED");
+    assert_eq!(error.message, "wallet adapter panicked during signing");
+    // The action stays a replay guard.
+    callbacks.start(typed("panic")).unwrap();
+    assert!(callbacks.tasks.is_empty());
+    callbacks.start(typed("next")).unwrap();
+    while let Some(result) = callbacks.tasks.join_next().await {
+        callbacks.settle(result).unwrap();
+    }
+    let next = reply(replies.recv().await.unwrap());
+    assert_eq!(next.action_id, "next");
+    assert_eq!(next.result, Some(Reply::Signature(vec![7])));
+}

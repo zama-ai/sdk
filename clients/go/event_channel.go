@@ -174,8 +174,8 @@ type eventCallback func(context.Context) error
 func eventReply(ctx context.Context, sequence uint64, callback eventCallback) (reply *pb.EventReply) {
 	reply = &pb.EventReply{Sequence: sequence, Outcome: &pb.EventReply_Acknowledged{Acknowledged: &pb.Empty{}}}
 	defer func() {
-		if recovered := recover(); recovered != nil {
-			reply.Outcome = &pb.EventReply_Error{Error: callbackError(fmt.Errorf("event handler panic: %v", recovered), "CALLBACK_FAILED")}
+		if recover() != nil {
+			reply.Outcome = &pb.EventReply_Error{Error: &pb.SdkError{Code: "CALLBACK_FAILED", Message: "event handler panicked"}}
 		}
 	}()
 	if err := callback(ctx); err != nil {
