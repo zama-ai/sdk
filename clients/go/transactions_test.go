@@ -416,3 +416,77 @@ func TestContractWriteRejectsNonCanonicalAmounts(t *testing.T) {
 		})
 	}
 }
+
+func TestPanickingContractWriteReportsUnknownOutcome(t *testing.T) {
+	server := newSigningServer()
+	server.contractWrite = transactionWire()
+	client := testClient(t, server, nil)
+	var calls atomic.Int32
+	sdk, err := client.CreateContext(testContext(t), SDKConfig{}, SignerConfig{Account: &WalletAccount{Address: common.Address{1}, ChainID: 1}, WriteContract: func(context.Context, ContractWriteRequest) (common.Hash, error) {
+		if calls.Add(1) == 1 {
+			panic("panic-marker-secret")
+		}
+		return common.Hash{42}, nil
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sdk.Close(testContext(t))
+	_, err = decrypt(sdk, testContext(t))
+	var details *RPCError
+	if !errors.As(err, &details) || details.Code != "TRANSACTION_OUTCOME_UNKNOWN" || details.Message != "wallet adapter panicked during contract write" {
+		t.Fatalf("write panic misreported: %v", err)
+	}
+	result, err := decrypt(sdk, testContext(t))
+	if err != nil || result[common.Hash{}].Integer.Int64() != 42 {
+		t.Fatalf("signer channel did not survive the panic: %v", err)
+	}
+}
+
+func TestPanickingContractWriteStaysPending(t *testing.T) {
+	op := &operationState{ctx: t.Context(), cancel: func() {}, actions: make(map[string]context.CancelFunc), seenActions: make(map[string]struct{})}
+	sdk := &SDKContext{operations: map[string]*operationState{"operation": op}}
+	action := &pb.SignerAction{OperationId: "operation", ActionId: "action", Account: &pb.WalletAccount{Address: common.Address{1}.Bytes(), ChainId: 1}, Request: &pb.SignerAction_ContractWrite{ContractWrite: transactionWire()}}
+	replies := make(chan *pb.SignerReply, 1)
+	sdk.dispatchSignerAction(action, SignerConfig{WriteContract: func(context.Context, ContractWriteRequest) (common.Hash, error) {
+		panic("panic-marker-secret")
+	}}, func(reply *pb.SignerReply) { replies <- reply })
+	select {
+	case reply := <-replies:
+		if reply.GetError().GetCode() != "TRANSACTION_OUTCOME_UNKNOWN" || reply.GetError().GetRetryable() || reply.GetError().GetMessage() != "wallet adapter panicked during contract write" {
+			t.Fatalf("write panic misreported: %v", reply)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("no reply to the panicked write")
+	}
+	sdk.mu.Lock()
+	defer sdk.mu.Unlock()
+	if op.pendingWrites != 1 {
+		t.Fatalf("panicked write no longer counted as possibly broadcast: %d", op.pendingWrites)
+	}
+}
+
+func TestCancelledPanickingWriteSendsNoReply(t *testing.T) {
+	opctx, cancelOp := context.WithCancel(t.Context())
+	op := &operationState{ctx: opctx, cancel: cancelOp, actions: make(map[string]context.CancelFunc), seenActions: make(map[string]struct{})}
+	sdk := &SDKContext{operations: map[string]*operationState{"operation": op}}
+	action := &pb.SignerAction{OperationId: "operation", ActionId: "action", Account: &pb.WalletAccount{Address: common.Address{1}.Bytes(), ChainId: 1}, Request: &pb.SignerAction_ContractWrite{ContractWrite: transactionWire()}}
+	replies := make(chan *pb.SignerReply, 1)
+	finished := make(chan struct{})
+	sdk.dispatchSignerAction(action, SignerConfig{WriteContract: func(ctx context.Context, _ ContractWriteRequest) (common.Hash, error) {
+		defer close(finished)
+		cancelOp()
+		<-ctx.Done()
+		panic("panic-marker-secret")
+	}}, func(reply *pb.SignerReply) { replies <- reply })
+	select {
+	case <-finished:
+	case <-time.After(time.Second):
+		t.Fatal("write not cancelled")
+	}
+	select {
+	case reply := <-replies:
+		t.Fatalf("cancelled write replied: %v", reply)
+	case <-time.After(50 * time.Millisecond):
+	}
+}

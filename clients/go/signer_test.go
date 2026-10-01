@@ -398,3 +398,24 @@ func TestCompletedSignerActionDoesNotCancelRemainingSDKWork(t *testing.T) {
 		t.Fatal("SDK work did not finish")
 	}
 }
+
+func TestPanickingSignerFailsOnlyItsAction(t *testing.T) {
+	server := newSigningServer()
+	client := testClient(t, server, nil)
+	var calls atomic.Int32
+	sdk := signedSDK(t, client, common.Address{7}, func(context.Context, WalletAccount, apitypes.TypedData) ([]byte, error) {
+		if calls.Add(1) == 1 {
+			panic("panic-marker-secret")
+		}
+		return []byte{7}, nil
+	})
+	_, err := decrypt(sdk, testContext(t))
+	var details *RPCError
+	if !errors.As(err, &details) || details.Code != "SIGNING_FAILED" || details.Message != "wallet adapter panicked during signing" {
+		t.Fatalf("signer panic misreported: %v", err)
+	}
+	values, err := decrypt(sdk, testContext(t))
+	if err != nil || values[common.Hash{}].Integer.Int64() != 7 {
+		t.Fatalf("signer channel did not survive the panic: %v", err)
+	}
+}

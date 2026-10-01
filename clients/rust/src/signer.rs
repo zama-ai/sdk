@@ -1,6 +1,7 @@
 use crate::{
     B256, ClientError, ContractWriteRequest, ErrorKind, SdkError, WalletAccount, generated,
 };
+use futures_util::FutureExt;
 use std::{collections::HashMap, future::Future, sync::Arc};
 use tokio::{
     sync::mpsc,
@@ -150,13 +151,29 @@ impl CallbackRequest {
         cancel: CancellationToken,
     ) -> Result<generated::signer_reply::Result, SdkError> {
         use generated::signer_reply::Result as Reply;
-        match self {
-            Self::TypedData(request) => sign.sign_typed_data(request).await.map(Reply::Signature),
-            Self::ContractWrite(request) => sign
-                .write_contract(request, cancel)
-                .await
-                .map(|hash| Reply::TransactionHash(hash.to_vec())),
-        }
+        let panicked = match &self {
+            Self::TypedData(_) => {
+                SdkError::signing_failed("wallet adapter panicked during signing")
+            }
+            // The panic may have struck after the broadcast.
+            Self::ContractWrite(_) => SdkError::transaction_outcome_unknown(
+                "wallet adapter panicked during contract write",
+            ),
+        };
+        std::panic::AssertUnwindSafe(async move {
+            match self {
+                Self::TypedData(request) => {
+                    sign.sign_typed_data(request).await.map(Reply::Signature)
+                }
+                Self::ContractWrite(request) => sign
+                    .write_contract(request, cancel)
+                    .await
+                    .map(|hash| Reply::TransactionHash(hash.to_vec())),
+            }
+        })
+        .catch_unwind()
+        .await
+        .unwrap_or(Err(panicked))
     }
 }
 
@@ -239,11 +256,7 @@ impl Callbacks {
             // A write outlives the channel: teardown cannot recall a broadcast, so its task is
             // detached rather than held by the set that teardown aborts.
             Ok(request @ CallbackRequest::ContractWrite(_)) => {
-                let task = self.run(Ok(request), key.clone(), cancel.clone());
-                tokio::spawn(async move {
-                    // A reply nobody is left to receive is not a failure of the write.
-                    let _ = task.await;
-                });
+                tokio::spawn(self.run(Ok(request), key.clone(), cancel.clone()));
                 Pending::Writing(cancel)
             }
             request => {
