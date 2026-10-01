@@ -71,7 +71,7 @@ Returns a standard TanStack Query `UseMutationResult<void, Error, SignedPrepared
 
 {% include ".gitbook/includes/mutation-result.md" %}
 
-**Throws:** whatever [`useRegisterPermit`](./useRegisterPermit.md) throws for the failing permit.
+**Throws:** `ConfigurationError` for an empty list; otherwise whatever [`useRegisterPermit`](./useRegisterPermit.md) throws for the failing permit.
 
 ## Related
 

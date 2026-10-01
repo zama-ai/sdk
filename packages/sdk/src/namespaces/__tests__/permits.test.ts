@@ -114,10 +114,6 @@ describe("Permits", () => {
       await sdk.permits.grantDelegationPermit(DELEGATOR, []);
       expect(signer.signTypedData).not.toHaveBeenCalled();
     });
-
-    test("batchRegisterPermits([]) resolves as a no-op", async ({ sdk }) => {
-      await expect(sdk.permits.batchRegisterPermits([])).resolves.toBeUndefined();
-    });
   });
 
   describe("chain alignment", () => {
@@ -278,6 +274,10 @@ describe("Permits", () => {
 
       await sdk.decryption.decryptValues(handles);
       expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
+    });
+
+    test("batchRegisterPermits([]) throws ConfigurationError", async ({ sdk }) => {
+      await expect(sdk.permits.batchRegisterPermits([])).rejects.toBeInstanceOf(ConfigurationError);
     });
 
     test("batchRegisterPermits registers every permit in the list", async ({ sdk, signer }) => {

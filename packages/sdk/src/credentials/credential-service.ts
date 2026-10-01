@@ -1,5 +1,6 @@
 import type { Address, Hex } from "viem";
 import type { ChainRouter } from "../chains/router";
+import type { RelayerSDK } from "../relayer/types";
 import { ZamaError } from "../errors/base";
 import {
   KeyWrappingError,
@@ -49,6 +50,31 @@ import {
 interface VerifiedPermit {
   scope: PermissionScope;
   permission: Permission;
+}
+
+type TransportKeyPair = Awaited<ReturnType<RelayerSDK["parseTransportKeyPair"]>>;
+
+/** State shared by every permit of one {@link CredentialService.batchRegisterPermits} call. */
+interface RegisterBatch {
+  relayer: RelayerSDK;
+  activeChainId: number;
+  /** Per signer, so permits from one signer share a single vault read and parse. */
+  storedKeyPairs: Map<ChecksummedAddress, StoredTransportKeyPair | null>;
+  transportKeyPairs: Map<ChecksummedAddress, TransportKeyPair>;
+}
+
+async function memoized<K, V extends {} | null>(
+  cache: Map<K, V>,
+  key: K,
+  compute: () => Promise<V>,
+): Promise<V> {
+  const hit = cache.get(key);
+  if (hit !== undefined) {
+    return hit;
+  }
+  const value = await compute();
+  cache.set(key, value);
+  return value;
 }
 
 export const DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS = 30 * SECONDS_PER_DAY;
@@ -276,7 +302,7 @@ export class CredentialService {
     if (count > MAX_CONTRACTS_PER_PERMIT) {
       throw new ConfigurationError(
         `preparePermit: request.contracts must not exceed ${MAX_CONTRACTS_PER_PERMIT} addresses ` +
-          `(got ${count}) — use batchPreparePermits to split them across permits.`,
+          `(got ${count}). Use batchPreparePermits to split them across permits.`,
       );
     }
     const [prepared] = await this.batchPreparePermits(request);
@@ -314,7 +340,7 @@ export class CredentialService {
     const delegatorAddress = request.delegator ? checksum(request.delegator) : undefined;
     if (delegatorAddress !== undefined && delegatorAddress === signerAddress) {
       throw new ConfigurationError(
-        "request.delegator must differ from request.signer — self-delegation is not allowed.",
+        "request.delegator must differ from request.signer: self-delegation is not allowed.",
       );
     }
     // PermitTTLSchema caps at MAX_V1_PERMIT_DURATION_DAYS, so an explicit
@@ -377,8 +403,8 @@ export class CredentialService {
    * permit, the error message is prefixed with that permit's position
    * (`permits[i]: …`).
    *
-   * @throws if `prepared` doesn't match the {@link PreparedPermit} shape (e.g. it
-   *   crossed a process boundary and was corrupted). {@link ConfigurationError}
+   * @throws if `permits` is empty, or a `prepared` doesn't match the {@link PreparedPermit}
+   *   shape (e.g. it crossed a process boundary and was corrupted). {@link ConfigurationError}
    * @throws if the chain embedded in `prepared.eip712` doesn't match the currently
    *   active chain. {@link PreparedPermitChainMismatchError}
    * @throws if the permit's validity window has already elapsed. {@link PreparedPermitExpiredError}
@@ -388,12 +414,24 @@ export class CredentialService {
    * @throws if the signature is invalid or malformed. {@link SigningFailedError}
    */
   async batchRegisterPermits(permits: readonly SignedPreparedPermit[]): Promise<void> {
+    if (permits.length === 0) {
+      throw new ConfigurationError("permits must not be empty.");
+    }
+    // Snapshot the relayer and chain together, before the first await: a chain
+    // switch mid-batch must not verify a later permit against a different chain
+    // than the one active when this call started.
+    const batch: RegisterBatch = {
+      relayer: this.#router.relayer,
+      activeChainId: this.#router.chain.id,
+      storedKeyPairs: new Map(),
+      transportKeyPairs: new Map(),
+    };
     // Sequential, not Promise.all: parallel verification would emit a
     // PermitError per failing permit instead of just the first.
     const verified: VerifiedPermit[] = [];
     for (const [index, { prepared, signature }] of permits.entries()) {
       const prefix = permits.length > 1 ? `permits[${index}]: ` : "";
-      verified.push(await this.#verifyPermit(prepared, signature, prefix));
+      verified.push(await this.#verifyPermit(prepared, signature, batch, prefix));
     }
     // Sequential: replace rewrites the scope's whole permit list, so concurrent
     // writes to one scope would drop entries.
@@ -409,6 +447,7 @@ export class CredentialService {
   async #verifyPermit(
     prepared: PreparedPermit,
     signature: Hex,
+    { relayer, activeChainId, storedKeyPairs, transportKeyPairs }: RegisterBatch,
     prefix: string,
   ): Promise<VerifiedPermit> {
     let parsed: PreparedPermit;
@@ -417,12 +456,6 @@ export class CredentialService {
     } catch (error) {
       throw this.#failPermit("registerPermit", error, prefix);
     }
-
-    // Snapshot the relayer and chain together, before the first await: a chain
-    // switch mid-flight must not verify against a different chain than the one
-    // active when this call started.
-    const relayer = this.#router.relayer;
-    const activeChainId = this.#router.chain.id;
 
     const { domain, message } = parsed.eip712;
     const preparedChainId = Number(domain.chainId);
@@ -440,7 +473,7 @@ export class CredentialService {
         "registerPermit",
         new PreparedPermitExpiredError(
           `registerPermit: the prepared permit's validity window (starting ${startTimestamp}, ` +
-            `${durationDays}d) has already elapsed — prepare the permit again.`,
+            `${durationDays}d) has already elapsed. Prepare the permit again.`,
         ),
         prefix,
       );
@@ -455,16 +488,20 @@ export class CredentialService {
     // Credential/vault resolution is deliberately not wrapped; those
     // failures must never reach onEvent.
     const signerAddress = parsed.signerAddress;
-    const keypair = await this.#vault.readStored(signerAddress);
+    const keypair = await memoized(storedKeyPairs, signerAddress, () =>
+      this.#vault.readStored(signerAddress),
+    );
     if (keypair === null || keypair.publicKey !== message.publicKey) {
       throw new TransportKeyPairChangedError(
-        `${prefix}registerPermit: the transport key pair changed since the permit was prepared — ` +
-          "prepare it again to rebind the signature request to the current key pair.",
+        `${prefix}registerPermit: the transport key pair changed since the permit was prepared. ` +
+          "Prepare it again to rebind the signature request to the current key pair.",
       );
     }
 
     try {
-      const transportKeyPair = await relayer.parseTransportKeyPair(keypair);
+      const transportKeyPair = await memoized(transportKeyPairs, signerAddress, () =>
+        relayer.parseTransportKeyPair(keypair),
+      );
       const signedPermit = await relayer.parseSignedDecryptionPermit({
         serializedPermit: {
           version: parsed.version,

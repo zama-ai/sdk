@@ -7916,7 +7916,7 @@ See the [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/d
 
 `(permits: SignedPreparedPermit[]) => Promise<void>`
 
-[`registerPermit`](#permits-registerpermit) for every [`offline.batchPreparePermits`](#offline-batchpreparepermits) payload, each paired with its `signature`. Every permit is verified before any is stored, so a permit that fails verification leaves the store untouched. Storing stays best-effort, like `registerPermit`: a failed store write is logged, not thrown. Throws whatever `registerPermit` throws for the first failing permit; with more than one permit, the error message is prefixed with that permit's position (`permits[i]: …`).
+[`registerPermit`](#permits-registerpermit) for every [`offline.batchPreparePermits`](#offline-batchpreparepermits) payload, each paired with its `signature`. Every permit is verified before any is stored, so a permit that fails verification leaves the store untouched. Storing stays best-effort, like `registerPermit`: a failed store write is logged, not thrown. Throws `ConfigurationError` for an empty list, and otherwise whatever `registerPermit` throws for the first failing permit; with more than one permit, the error message is prefixed with that permit's position (`permits[i]: …`).
 
 ```ts
 const prepared = await sdk.offline.batchPreparePermits({
@@ -16083,7 +16083,7 @@ The return value from the mutation function after a successful call.
 Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
 
 
-**Throws:** whatever [`useRegisterPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRegisterPermit.md) throws for the failing permit.
+**Throws:** `ConfigurationError` for an empty list; otherwise whatever [`useRegisterPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRegisterPermit.md) throws for the failing permit.
 
 ## Related
 

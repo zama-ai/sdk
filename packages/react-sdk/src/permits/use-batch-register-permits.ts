@@ -4,6 +4,7 @@ import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import type { SignedPreparedPermit } from "@zama-fhe/sdk";
 import { batchRegisterPermitsMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
+import { removeQueriesOnSuccess } from "../utils/query";
 
 /**
  * {@link useRegisterPermit} for every {@link useBatchPreparePermits} payload.
@@ -29,9 +30,6 @@ export function useBatchRegisterPermits(
   return useMutation<void, Error, readonly SignedPreparedPermit[]>({
     ...batchRegisterPermitsMutationOptions(sdk),
     ...options,
-    onSuccess: (data, variables, onMutateResult, context) => {
-      options?.onSuccess?.(data, variables, onMutateResult, context);
-      context.client.removeQueries({ queryKey: zamaQueryKeys.hasPermit.all });
-    },
+    onSuccess: removeQueriesOnSuccess(options, zamaQueryKeys.hasPermit.all),
   });
 }

@@ -71,7 +71,7 @@ describe("CredentialService.preparePermit", () => {
     ).rejects.toBeInstanceOf(ConfigurationError);
   });
 
-  test("rejects MAX_CONTRACTS_PER_PERMIT + 1 addresses — no chunking", async ({
+  test("rejects MAX_CONTRACTS_PER_PERMIT + 1 addresses, pointing at batchPreparePermits", async ({
     credentialService,
   }) => {
     await expect(
@@ -210,6 +210,7 @@ describe("CredentialService.batchPreparePermits", () => {
       expect(p.signerAddress).toBe(USER);
       expect(p.eip712.message.delegatorAddress).toBe(DELEGATOR);
       expect(p.eip712.message.startTimestamp).toBe(prepared[0]!.eip712.message.startTimestamp);
+      expect(p.eip712.message.publicKey).toBe(prepared[0]!.eip712.message.publicKey);
     }
   });
 
@@ -282,6 +283,53 @@ describe("CredentialService.batchRegisterPermits", () => {
     const [first, second] = prepared.map((p) => p.eip712.message.contractAddresses as Address[]);
     expect(await credentialService.hasPermit(first!)).toBe(true);
     expect(await credentialService.hasPermit(second!)).toBe(false);
+  });
+
+  test("rejects an empty permit list", async ({ credentialService }) => {
+    await expect(credentialService.batchRegisterPermits([])).rejects.toBeInstanceOf(
+      ConfigurationError,
+    );
+  });
+
+  test("registers every chunk of a multi-permit batch", async ({ credentialService, signer }) => {
+    const prepared = await credentialService.batchPreparePermits({
+      signer: USER,
+      contracts: ADDRS,
+    });
+    expect(prepared).toHaveLength(3);
+    const permits = await Promise.all(
+      prepared.map(async (p) => ({
+        prepared: p,
+        signature: (await signer.signTypedData(p.eip712)) as Hex,
+      })),
+    );
+
+    await credentialService.batchRegisterPermits(permits);
+
+    expect(await credentialService.hasPermit(ADDRS)).toBe(true);
+  });
+
+  test("emits a single PermitError event when several permits would fail", async ({
+    createCredentialService,
+    signer,
+  }) => {
+    const emitEvent = vi.fn();
+    const credentialService = createCredentialService({ emitEvent });
+    const prepared = await credentialService.preparePermit({ signer: USER, contracts: [A] });
+    const signature = (await signer.signTypedData(prepared.eip712)) as Hex;
+    const wrongChain = {
+      ...prepared,
+      eip712: { ...prepared.eip712, domain: { ...prepared.eip712.domain, chainId: "999999" } },
+    };
+
+    await expect(
+      credentialService.batchRegisterPermits([
+        { prepared: wrongChain, signature },
+        { prepared: wrongChain, signature },
+      ]),
+    ).rejects.toBeInstanceOf(PreparedPermitChainMismatchError);
+
+    expect(emitEvent).toHaveBeenCalledOnce();
   });
 
   test("prefixes the error with the failing permit's position", async ({
