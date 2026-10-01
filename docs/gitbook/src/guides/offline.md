@@ -196,7 +196,7 @@ const signed = await Promise.all(
 await sdk.permits.batchRegisterPermits(signed);
 ```
 
-Every permit is verified before any is stored, so a permit that fails verification leaves the store untouched. Storing stays best-effort, like `registerPermit`: a failed store write is logged, not thrown.
+Every permit is verified before any is stored, so a permit that fails verification leaves the store untouched; the error message is prefixed with that permit's position (`permits[i]: …`). Storing stays best-effort, like `registerPermit`: a failed store write is logged, not thrown.
 
 {% hint style="warning" %}
 **Register promptly.** `prepared.eip712.message` carries the permit's validity window (`startTimestamp` + `durationDays`); if approval takes long enough that the window elapses before you call `registerPermit`, it throws `PreparedPermitExpiredError` — call `preparePermit` again for a fresh window. The same applies to `batchRegisterPermits`: all chunks share one validity window, and one expired permit fails the whole batch. Registering also checks that the chain embedded in `prepared.eip712.domain` matches the SDK's active chain (`PreparedPermitChainMismatchError`) and that the transport key pair hasn't changed since prepare (`TransportKeyPairChangedError`, e.g. after a TTL expiry) — see the [Offline reference](../reference/sdk/Offline.md#preparepermit) for details.

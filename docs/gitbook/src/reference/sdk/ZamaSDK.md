@@ -376,7 +376,7 @@ See the [Offline reference](./Offline.md#preparepermit) for `preparePermit`'s re
 
 `(permits: SignedPreparedPermit[]) => Promise<void>`
 
-[`registerPermit`](#permits-registerpermit) for every [`offline.batchPreparePermits`](#offline-batchpreparepermits) payload, each paired with its `signature`. Every permit is verified before any is stored, so a permit that fails verification leaves the store untouched. Storing stays best-effort, like `registerPermit`: a failed store write is logged, not thrown. Throws whatever `registerPermit` throws for the first failing permit.
+[`registerPermit`](#permits-registerpermit) for every [`offline.batchPreparePermits`](#offline-batchpreparepermits) payload, each paired with its `signature`. Every permit is verified before any is stored, so a permit that fails verification leaves the store untouched. Storing stays best-effort, like `registerPermit`: a failed store write is logged, not thrown. Throws whatever `registerPermit` throws for the first failing permit; with more than one permit, the error message is prefixed with that permit's position (`permits[i]: …`).
 
 ```ts
 const prepared = await sdk.offline.batchPreparePermits({

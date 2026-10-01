@@ -191,33 +191,38 @@ export class Permits {
   }
 
   /**
-   * Offline permit flow, phase 2: verify and persist the signature an
-   * out-of-process signer produced for a `sdk.offline.preparePermit` payload.
-   *
-   * No wallet account required: the permit is scoped by `prepared.signerAddress`
-   * (and `prepared.delegatorAddress`, if present), not a connected signer.
+   * Single-permit form of {@link batchRegisterPermits}.
    *
    * @param prepared - The payload `sdk.offline.preparePermit` returned.
    * @param signature - The 65-byte `eth_signTypedData_v4` signature over `prepared.eip712`.
-   * @throws if `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a
-   *   process boundary and was corrupted). {@link ConfigurationError}
-   * @throws if the chain embedded in `prepared.eip712` doesn't match the active chain. {@link PreparedPermitChainMismatchError}
-   * @throws if the permit's validity window has already elapsed. {@link PreparedPermitExpiredError}
-   * @throws if the transport key pair changed since prepare. {@link TransportKeyPairChangedError}
-   * @throws if the signature is invalid or malformed. {@link SigningFailedError}
+   * @throws everything {@link batchRegisterPermits} throws, for this one permit.
    */
   registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void> {
     return this.batchRegisterPermits([{ prepared, signature }]);
   }
 
   /**
-   * {@link registerPermit} for every `sdk.offline.batchPreparePermits` payload.
-   * Every permit is verified before any is persisted, so a permit that fails
-   * verification leaves the store untouched. Persisting stays best-effort,
-   * like `registerPermit`: a failed store write is logged, not thrown.
+   * Offline permit flow, phase 2: verify and persist the signatures an
+   * out-of-process signer produced for `sdk.offline.batchPreparePermits`
+   * payloads. Every permit is verified before any is persisted, so a permit
+   * that fails verification leaves the store untouched. Persisting is
+   * best-effort: a failed store write is logged, not thrown.
    *
-   * @throws on the first permit that fails verification, with whatever
-   *   {@link registerPermit} throws for it.
+   * No wallet account required: each permit is scoped by `prepared.signerAddress`
+   * (and `prepared.delegatorAddress`, if present), not a connected signer.
+   *
+   * Stops at the first permit that fails verification. With more than one
+   * permit, the error message is prefixed with that permit's position
+   * (`permits[i]: …`).
+   *
+   * @param permits - Each `sdk.offline.batchPreparePermits` payload paired with the
+   *   65-byte `eth_signTypedData_v4` signature over its `eip712`.
+   * @throws if `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a
+   *   process boundary and was corrupted). {@link ConfigurationError}
+   * @throws if the chain embedded in `prepared.eip712` doesn't match the active chain. {@link PreparedPermitChainMismatchError}
+   * @throws if the permit's validity window has already elapsed. {@link PreparedPermitExpiredError}
+   * @throws if the transport key pair changed since prepare. {@link TransportKeyPairChangedError}
+   * @throws if the signature is invalid or malformed. {@link SigningFailedError}
    */
   async batchRegisterPermits(permits: readonly SignedPreparedPermit[]): Promise<void> {
     let service: CredentialService;

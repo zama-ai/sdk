@@ -174,8 +174,11 @@ export class CredentialService {
    * adjacent to `transportKeyPairDerivationSecret` internals and must never
    * reach the public `onEvent` stream.
    */
-  #failPermit(operation: PermitOperation, error: unknown): ZamaError {
+  #failPermit(operation: PermitOperation, error: unknown, prefix = ""): ZamaError {
     const failure = wrapSigningError(error, { operation });
+    if (prefix) {
+      failure.message = prefix + failure.message;
+    }
     this.#emitEvent({ type: ZamaSDKEvents.PermitError, operation, error: failure });
     return failure;
   }
@@ -261,8 +264,12 @@ export class CredentialService {
   /**
    * Single-permit form of {@link batchPreparePermits}.
    *
-   * @throws if `request.contracts` exceeds {@link MAX_CONTRACTS_PER_PERMIT}. {@link ConfigurationError}
-   * @throws everything {@link batchPreparePermits} throws.
+   * @throws if `request.contracts` exceeds {@link MAX_CONTRACTS_PER_PERMIT}, is empty,
+   *   `request.delegator` equals `request.signer`, or `request.durationDays` exceeds
+   *   the V1 permit maximum of 365 days. {@link ConfigurationError}
+   * @throws if the transport key pair cannot be wrapped or unwrapped. {@link KeyWrappingError}
+   * @throws if a concurrent rotation replaces the transport key pair while this
+   *   call is generating one. {@link TransportKeyPairChangedError}
    */
   async preparePermit(request: PreparePermitRequest): Promise<PreparedPermit> {
     const count = normalizeAddresses(request.contracts).length;
@@ -352,8 +359,10 @@ export class CredentialService {
 
   /**
    * Offline permit flow, phase 2: verify the signature an out-of-process
-   * signer produced for a {@link preparePermit} payload, then persist it as a
-   * usable permit.
+   * signer produced for each {@link batchPreparePermits} payload, then persist
+   * them as usable permits. Every permit is verified before any is persisted,
+   * so a verification failure stores nothing. Persisting is best-effort: a
+   * failed store write is logged, not thrown.
    *
    * Idempotent: safe to call more than once for the same `(prepared, signature)`
    * pair (e.g. a webhook re-delivery, or a retried registration call) — the
@@ -363,6 +372,10 @@ export class CredentialService {
    * from `prepared.eip712` or the signature-checked permit the relayer returns.
    * There is no separate "claimed" copy to cross-check, so nothing can be
    * tampered with independently of the signature itself.
+   *
+   * Stops at the first permit that fails verification. With more than one
+   * permit, the error message is prefixed with that permit's position
+   * (`permits[i]: …`).
    *
    * @throws if `prepared` doesn't match the {@link PreparedPermit} shape (e.g. it
    *   crossed a process boundary and was corrupted). {@link ConfigurationError}
@@ -374,25 +387,13 @@ export class CredentialService {
    *   expiry or eviction in between). {@link TransportKeyPairChangedError}
    * @throws if the signature is invalid or malformed. {@link SigningFailedError}
    */
-  registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void> {
-    return this.batchRegisterPermits([{ prepared, signature }]);
-  }
-
-  /**
-   * {@link registerPermit} for several permits: every permit is verified
-   * before any is persisted, so a verification failure stores nothing.
-   * Persisting stays best-effort, like `registerPermit`: a failed store write
-   * is logged, not thrown.
-   *
-   * @throws on the first permit that fails verification, with whatever
-   *   {@link registerPermit} throws for it.
-   */
   async batchRegisterPermits(permits: readonly SignedPreparedPermit[]): Promise<void> {
     // Sequential, not Promise.all: parallel verification would emit a
     // PermitError per failing permit instead of just the first.
     const verified: VerifiedPermit[] = [];
-    for (const { prepared, signature } of permits) {
-      verified.push(await this.#verifyPermit(prepared, signature));
+    for (const [index, { prepared, signature }] of permits.entries()) {
+      const prefix = permits.length > 1 ? `permits[${index}]: ` : "";
+      verified.push(await this.#verifyPermit(prepared, signature, prefix));
     }
     // Sequential: replace rewrites the scope's whole permit list, so concurrent
     // writes to one scope would drop entries.
@@ -405,12 +406,16 @@ export class CredentialService {
     }
   }
 
-  async #verifyPermit(prepared: PreparedPermit, signature: Hex): Promise<VerifiedPermit> {
+  async #verifyPermit(
+    prepared: PreparedPermit,
+    signature: Hex,
+    prefix: string,
+  ): Promise<VerifiedPermit> {
     let parsed: PreparedPermit;
     try {
       parsed = parseSchema(PreparedPermitSchema, prepared);
     } catch (error) {
-      throw this.#failPermit("registerPermit", error);
+      throw this.#failPermit("registerPermit", error, prefix);
     }
 
     // Snapshot the relayer and chain together, before the first await: a chain
@@ -425,6 +430,7 @@ export class CredentialService {
       throw this.#failPermit(
         "registerPermit",
         new PreparedPermitChainMismatchError({ preparedChainId, activeChainId }),
+        prefix,
       );
     }
     const startTimestamp = Number(message.startTimestamp);
@@ -436,6 +442,7 @@ export class CredentialService {
           `registerPermit: the prepared permit's validity window (starting ${startTimestamp}, ` +
             `${durationDays}d) has already elapsed — prepare the permit again.`,
         ),
+        prefix,
       );
     }
 
@@ -451,7 +458,7 @@ export class CredentialService {
     const keypair = await this.#vault.readStored(signerAddress);
     if (keypair === null || keypair.publicKey !== message.publicKey) {
       throw new TransportKeyPairChangedError(
-        "registerPermit: the transport key pair changed since the permit was prepared — " +
+        `${prefix}registerPermit: the transport key pair changed since the permit was prepared — ` +
           "prepare it again to rebind the signature request to the current key pair.",
       );
     }
@@ -492,7 +499,7 @@ export class CredentialService {
       };
       return { scope, permission };
     } catch (error) {
-      throw this.#failPermit("registerPermit", error);
+      throw this.#failPermit("registerPermit", error, prefix);
     }
   }
 
