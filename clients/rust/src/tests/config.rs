@@ -163,6 +163,34 @@ fn optional_preset_addresses_preserve_omission_clearing_and_values() {
 }
 
 #[test]
+fn invalid_address_errors_name_the_field_but_not_the_value() {
+    type Field = fn(&mut crate::ChainConfig) -> &mut Option<String>;
+    let fields: [(&str, Field); 7] = [
+        ("acl_contract_address", |c| &mut c.acl_contract_address),
+        ("kms_contract_address", |c| &mut c.kms_contract_address),
+        ("input_verifier_contract_address", |c| {
+            &mut c.input_verifier_contract_address
+        }),
+        ("verifying_contract_address_decryption", |c| {
+            &mut c.verifying_contract_address_decryption
+        }),
+        ("verifying_contract_address_input_verification", |c| {
+            &mut c.verifying_contract_address_input_verification
+        }),
+        ("registry_address", |c| &mut c.registry_address),
+        ("executor_address", |c| &mut c.executor_address),
+    ];
+    for (name, field) in fields {
+        let mut chain = crate::ChainConfig::new(11_155_111, "https://rpc.invalid");
+        *field(&mut chain) = Some("0xmarker".into());
+        let error = generated::ChainConfig::try_from(chain).unwrap_err();
+        assert_eq!(error.to_string(), format!("invalid {name}"));
+        assert_eq!(error.kind(), crate::ErrorKind::InvalidInput);
+        assert!(std::error::Error::source(&error).is_some());
+    }
+}
+
+#[test]
 fn config_preserves_presence_and_raw_key_bytes() {
     let config = ProcessRuntime {
         single_thread: Some(false),
