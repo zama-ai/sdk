@@ -13,3 +13,7 @@ export const diagnosticsLogger: GenericLogger = {
   info: noop,
   debug: noop,
 };
+
+export function reportCode(code: string): void {
+  process.stderr.write(`[zama-daemon] ${code} (details omitted)\n`);
+}

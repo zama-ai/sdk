@@ -1,7 +1,9 @@
-import { mkdtemp, readdir, stat, rm } from "node:fs/promises";
+import { chmod, mkdtemp, readdir, stat, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { afterEach, expect, test } from "vitest";
+import { status } from "@grpc/grpc-js";
+import { afterEach, expect, test, vi } from "vitest";
+import { serviceError } from "../src/errors.js";
 import { CredentialStorage } from "../src/storage.js";
 
 const directories: string[] = [];
@@ -39,4 +41,35 @@ test("refuses a second process and retains failures even when callers catch them
   await expect(storage.set("key", () => {})).rejects.toMatchObject({ code: "STORAGE_FAILED" });
   expect(() => storage.assertHealthy()).toThrow("Credential storage failed");
   await storage.close();
+});
+
+async function openFailure(path: string) {
+  const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  try {
+    const error = await CredentialStorage.open(path).catch((error: unknown) => error);
+    return { error: serviceError(error), stderr: stderr.mock.calls.map(([line]) => line) };
+  } finally {
+    stderr.mockRestore();
+  }
+}
+
+test.each([
+  [
+    "a shared storage directory",
+    (path: string) => chmod(path, 0o755),
+    "Storage directory must be private to its owner.",
+  ],
+  [
+    "a shared credential file",
+    (path: string) => writeFile(join(path, "credentials.sqlite"), "", { mode: 0o644 }),
+    "Credential file must be private to its owner.",
+  ],
+])("rejects %s as a failed precondition", async (_, prepare, message) => {
+  const path = await directory();
+  await prepare(path);
+  const { error, stderr } = await openFailure(path);
+  expect(error.code).toBe(status.FAILED_PRECONDITION);
+  expect(error.details).toBe(message);
+  expect(error.metadata.get("zama-error-code")).toEqual(["STORAGE_NOT_PRIVATE"]);
+  expect(stderr).toEqual(["[zama-daemon] STORAGE_NOT_PRIVATE (details omitted)\n"]);
 });
