@@ -18,6 +18,16 @@ async function directory(): Promise<string> {
   return path;
 }
 
+async function openFailure(path: string) {
+  const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  try {
+    const error = await CredentialStorage.open(path).catch((error: unknown) => error);
+    return { error: serviceError(error), stderr: stderr.mock.calls.map(([line]) => line) };
+  } finally {
+    stderr.mockRestore();
+  }
+}
+
 test("persists typed credentials across reopen with private files", async () => {
   const path = await directory();
   const storage = await CredentialStorage.open(path);
@@ -37,21 +47,15 @@ test("persists typed credentials across reopen with private files", async () => 
 test("refuses a second process and retains failures even when callers catch them", async () => {
   const path = await directory();
   const storage = await CredentialStorage.open(path);
-  await expect(CredentialStorage.open(path)).rejects.toThrow("database is locked");
+  const { error, stderr } = await openFailure(path);
+  expect(error.code).toBe(status.FAILED_PRECONDITION);
+  expect(error.details).toBe("Credential storage could not be opened.");
+  expect(error.metadata.get("zama-error-code")).toEqual(["STORAGE_OPEN_FAILED"]);
+  expect(stderr).toEqual(["[zama-daemon] STORAGE_OPEN_FAILED (details omitted)\n"]);
   await expect(storage.set("key", () => {})).rejects.toMatchObject({ code: "STORAGE_FAILED" });
   expect(() => storage.assertHealthy()).toThrow("Credential storage failed");
   await storage.close();
 });
-
-async function openFailure(path: string) {
-  const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-  try {
-    const error = await CredentialStorage.open(path).catch((error: unknown) => error);
-    return { error: serviceError(error), stderr: stderr.mock.calls.map(([line]) => line) };
-  } finally {
-    stderr.mockRestore();
-  }
-}
 
 test.each([
   [
@@ -73,3 +77,19 @@ test.each([
   expect(error.metadata.get("zama-error-code")).toEqual(["STORAGE_NOT_PRIVATE"]);
   expect(stderr).toEqual(["[zama-daemon] STORAGE_NOT_PRIVATE (details omitted)\n"]);
 });
+
+test.skipIf(process.getuid?.() === 0)(
+  "reports an unwritable storage parent as an open failure without details",
+  async () => {
+    const parent = await directory();
+    await chmod(parent, 0o500);
+    try {
+      const { error, stderr } = await openFailure(join(parent, "store"));
+      expect(error.code).toBe(status.FAILED_PRECONDITION);
+      expect(error.metadata.get("zama-error-code")).toEqual(["STORAGE_OPEN_FAILED"]);
+      expect(stderr).toEqual(["[zama-daemon] STORAGE_OPEN_FAILED (details omitted)\n"]);
+    } finally {
+      await chmod(parent, 0o700);
+    }
+  },
+);
