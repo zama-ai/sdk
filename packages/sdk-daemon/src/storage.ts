@@ -13,6 +13,23 @@ export class CredentialStorage implements GenericStorage {
   private constructor(private readonly database: DatabaseSync) {}
 
   static async open(directory: string): Promise<CredentialStorage> {
+    try {
+      return await CredentialStorage.#open(directory);
+    } catch (error) {
+      const failure =
+        error instanceof DaemonError
+          ? error
+          : new DaemonError(
+              "STORAGE_OPEN_FAILED",
+              status.FAILED_PRECONDITION,
+              "Credential storage could not be opened.",
+            );
+      reportCode(failure.code);
+      throw failure;
+    }
+  }
+
+  static async #open(directory: string): Promise<CredentialStorage> {
     await mkdir(directory, { recursive: true, mode: 0o700 });
     const info = await lstat(directory);
     if (!info.isDirectory() || info.isSymbolicLink() || !ownerOnly(info)) {
@@ -106,6 +123,5 @@ function ownerOnly(stats: Stats): boolean {
 }
 
 function notPrivate(message: string): DaemonError {
-  reportCode("STORAGE_NOT_PRIVATE");
   return new DaemonError("STORAGE_NOT_PRIVATE", status.FAILED_PRECONDITION, message);
 }

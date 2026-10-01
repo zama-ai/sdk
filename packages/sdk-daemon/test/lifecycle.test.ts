@@ -3,11 +3,15 @@ import { once } from "node:events";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { CredentialStorage } from "../src/storage.js";
 import { createCoordinator } from "../src/coordination.js";
 import { DaemonRuntime } from "../src/runtime.js";
 import { startServer } from "../src/server.js";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 async function startChild(script: string, args: string[]) {
   const child = spawn(process.execPath, ["--input-type=module", "-e", script, ...args], {
@@ -23,10 +27,13 @@ async function startChild(script: string, args: string[]) {
 }
 
 test("retains the database lock across commits and releases it after SIGKILL", async () => {
+  vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   const directory = await mkdtemp(join(tmpdir(), "daemon-crash-"));
   const initial = await CredentialStorage.open(directory);
   await initial.set("permit", { signature: "test" });
-  await expect(CredentialStorage.open(directory)).rejects.toThrow("database is locked");
+  await expect(CredentialStorage.open(directory)).rejects.toMatchObject({
+    code: "STORAGE_OPEN_FAILED",
+  });
   const competing = spawnSync(process.execPath, [
     "--input-type=module",
     "-e",
@@ -50,7 +57,9 @@ test("retains the database lock across commits and releases it after SIGKILL", a
     [join(directory, "credentials.sqlite")],
   );
   try {
-    await expect(CredentialStorage.open(directory)).rejects.toThrow("database is locked");
+    await expect(CredentialStorage.open(directory)).rejects.toMatchObject({
+      code: "STORAGE_OPEN_FAILED",
+    });
     const exited = once(child, "exit");
     child.kill("SIGKILL");
     await exited;
