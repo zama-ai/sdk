@@ -1,6 +1,7 @@
 package zama
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"math"
@@ -13,6 +14,9 @@ import (
 
 // PermanentDelegationExpiry is the on-chain sentinel for a delegation that never expires.
 const PermanentDelegationExpiry uint64 = math.MaxUint64
+
+// WildcardContract is the delegation contract address that covers every confidential contract.
+var WildcardContract = common.BytesToAddress(bytes.Repeat([]byte{0xff}, common.AddressLength))
 
 type DelegateDecryptionParams struct {
 	ContractAddress common.Address
