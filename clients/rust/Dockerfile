@@ -1,5 +1,5 @@
 # checkov:skip=CKV_DOCKER_2:This example runs one operation and reports success through its exit status.
-FROM rust:1.98.0-bookworm AS build
+FROM rust:1.98.1-bookworm AS build
 WORKDIR /src
 COPY rust-toolchain.toml ./
 COPY clients/rust/ ./
