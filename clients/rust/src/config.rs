@@ -32,7 +32,8 @@ impl RelayerAuth {
 pub struct ChainConfig {
     pub provider: Option<crate::ProviderOptions>,
     pub id: u64,
-    pub network: String,
+    /// RPC URL; `None` keeps the daemon's preset network for this chain.
+    pub network: Option<String>,
     pub auth: Option<RelayerAuth>,
     pub gateway_chain_id: Option<u64>,
     pub relayer_url: Option<String>,
@@ -47,8 +48,15 @@ pub struct ChainConfig {
 impl ChainConfig {
     pub fn new(id: u64, rpc_url: impl Into<String>) -> Self {
         Self {
+            network: Some(rpc_url.into()),
+            ..Self::preset(id)
+        }
+    }
+    /// Leaves every field unset so the daemon fills them from its preset for `id`.
+    pub fn preset(id: u64) -> Self {
+        Self {
             id,
-            network: rpc_url.into(),
+            network: None,
             provider: None,
             auth: None,
             gateway_chain_id: None,
@@ -158,7 +166,7 @@ impl TryFrom<ChainConfig> for generated::ChainConfig {
         }
         Ok(Self {
             id: chain.id,
-            network: Some(chain.network),
+            network: chain.network,
             auth: chain.auth.map(Into::into),
             gateway_chain_id: chain.gateway_chain_id,
             relayer_url: chain.relayer_url,

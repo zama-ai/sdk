@@ -60,6 +60,18 @@ fn auth_debug_redacts_credentials() {
 }
 
 #[test]
+fn preset_chain_omits_network_and_explicit_chain_sends_it() {
+    let wire = generated::ChainConfig::try_from(crate::ChainConfig::preset(11_155_111)).unwrap();
+    assert_eq!(wire.id, 11_155_111);
+    assert_eq!(wire.network, None);
+    assert_eq!(wire.relayer_url, None);
+    assert_eq!(wire.acl_contract_address, None);
+    let wire = generated::ChainConfig::try_from(crate::ChainConfig::new(1, "https://rpc.invalid"))
+        .unwrap();
+    assert_eq!(wire.network.as_deref(), Some("https://rpc.invalid"));
+}
+
+#[test]
 fn optional_preset_addresses_preserve_omission_clearing_and_values() {
     for (address, expected) in [
         (None, None),
