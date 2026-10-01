@@ -1,9 +1,11 @@
+import type { Stats } from "node:fs";
 import { mkdir, open, lstat } from "node:fs/promises";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { serialize, deserialize } from "node:v8";
 import type { GenericStorage } from "@zama-fhe/sdk";
 import { status } from "@grpc/grpc-js";
+import { reportCode } from "./diagnostics.js";
 import { DaemonError } from "./errors.js";
 
 export class CredentialStorage implements GenericStorage {
@@ -13,13 +15,8 @@ export class CredentialStorage implements GenericStorage {
   static async open(directory: string): Promise<CredentialStorage> {
     await mkdir(directory, { recursive: true, mode: 0o700 });
     const info = await lstat(directory);
-    if (
-      !info.isDirectory() ||
-      info.isSymbolicLink() ||
-      (info.mode & 0o077) !== 0 ||
-      info.uid !== process.getuid?.()
-    ) {
-      throw new Error("Storage directory must be private to its owner.");
+    if (!info.isDirectory() || info.isSymbolicLink() || !ownerOnly(info)) {
+      throw notPrivate("Storage directory must be private to its owner.");
     }
     const path = join(directory, "credentials.sqlite");
     try {
@@ -31,13 +28,8 @@ export class CredentialStorage implements GenericStorage {
       }
     }
     const file = await lstat(path);
-    if (
-      !file.isFile() ||
-      file.nlink !== 1 ||
-      (file.mode & 0o077) !== 0 ||
-      file.uid !== process.getuid?.()
-    ) {
-      throw new Error("Credential file must be private to its owner.");
+    if (!file.isFile() || file.nlink !== 1 || !ownerOnly(file)) {
+      throw notPrivate("Credential file must be private to its owner.");
     }
     const database = new DatabaseSync(path);
     try {
@@ -107,4 +99,13 @@ export class CredentialStorage implements GenericStorage {
   async close(): Promise<void> {
     this.database.close();
   }
+}
+
+function ownerOnly(stats: Stats): boolean {
+  return (stats.mode & 0o077) === 0 && stats.uid === process.getuid?.();
+}
+
+function notPrivate(message: string): DaemonError {
+  reportCode("STORAGE_NOT_PRIVATE");
+  return new DaemonError("STORAGE_NOT_PRIVATE", status.FAILED_PRECONDITION, message);
 }

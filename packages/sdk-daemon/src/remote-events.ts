@@ -2,6 +2,7 @@ import { status, type ServerDuplexStream } from "@grpc/grpc-js";
 import type { ZamaSDK, ZamaSDKEvent } from "@zama-fhe/sdk";
 import { subscribeWalletAccountChanges } from "@zama-fhe/sdk/internal";
 import { CallbackConnection } from "./callback-connection.js";
+import { reportCode } from "./diagnostics.js";
 import { sdkEvent, walletChange } from "./event-encoding.js";
 import { errorDetails, invalidArgument, DaemonError } from "./errors.js";
 import type * as rpc from "./generated/zama/sdk/v1beta1/daemon.js";
@@ -50,7 +51,7 @@ export class RemoteEvents {
           "SDK notification could not be encoded.",
         ),
       );
-      process.stderr.write("[zama-daemon] EVENT_ENCODING_FAILED (details omitted)\n");
+      reportCode("EVENT_ENCODING_FAILED");
     }
   }
 
