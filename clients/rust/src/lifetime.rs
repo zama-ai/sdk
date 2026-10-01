@@ -36,17 +36,15 @@ impl Resources {
         if self.closed.load(Ordering::Acquire) {
             return Ok(());
         }
-        let result = client
+        client
             .unary(
                 generated::ContextRequest {
                     context_id: self.context_id.clone(),
                 },
                 |mut client, request| async move { client.close_context(request).await },
             )
-            .await;
-        if result.is_ok() {
-            self.closed.store(true, Ordering::Release);
-        }
+            .await?;
+        self.closed.store(true, Ordering::Release);
         for connection in self
             .signer
             .iter()
@@ -55,7 +53,6 @@ impl Resources {
         {
             connection.abort();
         }
-        result?;
         Ok(())
     }
 }
