@@ -268,8 +268,10 @@ export class DaemonRuntime {
   }
   async close(): Promise<void> {
     this.#closing = true;
-    await Promise.allSettled(this.#creations);
-    await Promise.allSettled([...this.#contexts.keys()].map((id) => this.closeContext(id)));
+    await Promise.allSettled([
+      ...this.#creations,
+      ...[...this.#contexts.keys()].map((id) => this.closeContext(id)),
+    ]);
     await Promise.allSettled(this.#retirements);
   }
 }
