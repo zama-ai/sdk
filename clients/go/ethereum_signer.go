@@ -81,17 +81,14 @@ func (w *ethereumWriter) writeContract(ctx context.Context, request ContractWrit
 	if request.Account.ChainID != w.account.ChainID {
 		return common.Hash{}, &SDKError{Code: "CHAIN_MISMATCH", Message: "Transaction chain does not match the wallet chain."}
 	}
-	if request.Value != nil && request.Value.BitLen() > 256 {
+	if request.Value != nil && (request.Value.Sign() < 0 || request.Value.BitLen() > 256) {
 		return common.Hash{}, &SDKError{Code: "SIGNING_FAILED", Message: "Transaction value must fit uint256."}
 	}
 	// Copy the shared authorization so per-write fields never race.
 	opts := *w.auth
 	opts.Context, opts.NoSend, opts.Value = ctx, true, request.Value
 	if request.Gas != nil {
-		if !request.Gas.IsUint64() {
-			return common.Hash{}, errors.New("transaction gas must fit uint64")
-		}
-		opts.GasLimit = request.Gas.Uint64()
+		opts.GasLimit = *request.Gas
 	}
 	contract := bind.NewBoundContract(request.Address, abi.ABI{}, nil, w.backend, nil)
 	signed, err := contract.RawTransact(&opts, request.Data)

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"math"
 	"math/big"
 	"sync/atomic"
 	"testing"
@@ -28,7 +29,7 @@ func TestContractWritePreservesPresenceAndRejectsMalformedPayload(t *testing.T) 
 	calls := 0
 	config := SignerConfig{WriteContract: func(_ context.Context, r ContractWriteRequest) (common.Hash, error) {
 		calls++
-		if r.OperationID != "operation" || r.ActionID != "action" || r.Account.ChainID != 1 || r.Value.String() != large || r.Gas.Cmp(big.NewInt(0)) != 0 || string(r.Args) != `["9007199254740993"]` {
+		if r.OperationID != "operation" || r.ActionID != "action" || r.Account.ChainID != 1 || r.Value.String() != large || r.Gas == nil || *r.Gas != 0 || string(r.Args) != `["9007199254740993"]` {
 			t.Fatal("transaction payload changed")
 		}
 		return common.Hash{9}, nil
@@ -406,14 +407,40 @@ func TestTransactionChannelStillReportsSigningFailedForPlainErrors(t *testing.T)
 }
 
 func TestContractWriteRejectsNonCanonicalAmounts(t *testing.T) {
-	for _, encoded := range []string{"-1", "-0", "01", "", " 1", "+1", "1.0", "0x1"} {
+	for _, encoded := range []string{"-1", "-0", "01", "00", "", " 1", "1 ", "+1", "1.0", "0x1"} {
 		t.Run(encoded, func(t *testing.T) {
-			wire := transactionWire()
-			wire.Value = &encoded
-			if _, err := contractWriteRequest("operation", "action", WalletAccount{}, wire); err == nil {
-				t.Fatal("malformed amount decoded")
+			for field, wire := range map[string]*pb.ContractWriteRequest{"value": transactionWire(), "gas": transactionWire()} {
+				if field == "value" {
+					wire.Value = &encoded
+				} else {
+					wire.Gas = &encoded
+				}
+				if _, err := contractWriteRequest("operation", "action", WalletAccount{}, wire); err == nil || err.Error() != "invalid canonical transaction "+field {
+					t.Fatalf("malformed %s decoded or misreported: %v", field, err)
+				}
 			}
 		})
+	}
+}
+
+func TestContractWriteQuantityBounds(t *testing.T) {
+	maxValue := new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(1)).String()
+	maxGas := "18446744073709551615"
+	wire := transactionWire()
+	wire.Value, wire.Gas = &maxValue, &maxGas
+	request, err := contractWriteRequest("operation", "action", WalletAccount{}, wire)
+	if err != nil || request.Value.String() != maxValue || request.Gas == nil || *request.Gas != math.MaxUint64 {
+		t.Fatalf("max quantities changed: %v", err)
+	}
+	overValue := new(big.Int).Lsh(big.NewInt(1), 256).String()
+	wire.Value, wire.Gas = &overValue, nil
+	if _, err := contractWriteRequest("operation", "action", WalletAccount{}, wire); err == nil || err.Error() != "transaction value must fit uint256" {
+		t.Fatalf("value overflow accepted or misreported: %v", err)
+	}
+	overGas := "18446744073709551616"
+	wire.Value, wire.Gas = nil, &overGas
+	if _, err := contractWriteRequest("operation", "action", WalletAccount{}, wire); err == nil || err.Error() != "transaction gas must fit uint64" {
+		t.Fatalf("gas overflow accepted or misreported: %v", err)
 	}
 }
 

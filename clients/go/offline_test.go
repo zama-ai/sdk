@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"math"
 	"math/big"
 	"testing"
 	"time"
@@ -50,7 +51,7 @@ func TestOfflineEveryKindWire(t *testing.T) {
 				}
 				return &pb.CreateContextResponse{ContextId: "offline"}, nil
 			})
-			prepared, err := unsignedSDK(t, client).PrepareTransaction(testContext(t), tt.request, &PrepareOptions{Nonce: nonce(0), GasLimit: big.NewInt(0), Fees: &PrepareFees{MaxFeePerGas: large, MaxPriorityFeePerGas: big.NewInt(0)}})
+			prepared, err := unsignedSDK(t, client).PrepareTransaction(testContext(t), tt.request, &PrepareOptions{Nonce: nonce(0), GasLimit: nonce(0), Fees: &PrepareFees{MaxFeePerGas: large, MaxPriorityFeePerGas: big.NewInt(0)}})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -108,7 +109,7 @@ func TestOfflinePresenceAndErrors(t *testing.T) {
 		return &pb.CreateContextResponse{ContextId: "offline"}, nil
 	})
 	sdk := unsignedSDK(t, client)
-	_, err = sdk.PrepareTransaction(testContext(t), ConfidentialTransferRequest{Amount: big.NewInt(-1)}, nil)
+	_, err = sdk.PrepareTransaction(testContext(t), ConfidentialTransferRequest{Amount: big.NewInt(1)}, nil)
 	var details *RPCError
 	if !errors.As(err, &details) || details.Code != "VALIDATION_ERROR" || status.Code(err) != codes.InvalidArgument {
 		t.Fatalf("lost SDK error: %v", err)
@@ -176,3 +177,30 @@ func TestOfflineExpiryMillisecondsAndRange(t *testing.T) {
 }
 
 func nonce(value uint64) *uint64 { return &value }
+
+func TestOfflineQuantityBounds(t *testing.T) {
+	maxU256 := new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(1))
+	wire, err := prepareOptionsWire(&PrepareOptions{GasLimit: nonce(math.MaxUint64), Fees: &PrepareFees{MaxFeePerGas: maxU256, MaxPriorityFeePerGas: maxU256}})
+	if err != nil || wire.GetGasLimit() != "18446744073709551615" || wire.Fees.MaxFeePerGas != maxU256.String() || wire.Fees.MaxPriorityFeePerGas != maxU256.String() {
+		t.Fatalf("max quantities changed: %v %v", wire, err)
+	}
+	amount, err := (WrapRequest{Amount: maxU256}).prepareWire()
+	if err != nil || amount.GetWrap().Amount != maxU256.String() {
+		t.Fatalf("max amount changed: %v", err)
+	}
+	for name, value := range map[string]*big.Int{"negative": big.NewInt(-1), "overflow": new(big.Int).Lsh(big.NewInt(1), 256)} {
+		t.Run(name, func(t *testing.T) {
+			for field, options := range map[string]*PrepareOptions{
+				"max fee per gas":          {Fees: &PrepareFees{MaxFeePerGas: value, MaxPriorityFeePerGas: big.NewInt(0)}},
+				"max priority fee per gas": {Fees: &PrepareFees{MaxFeePerGas: big.NewInt(0), MaxPriorityFeePerGas: value}},
+			} {
+				if _, err := prepareOptionsWire(options); err == nil || err.Error() != field+" must fit uint256" {
+					t.Fatalf("%s accepted or misreported: %v", field, err)
+				}
+			}
+			if _, err := (ConfidentialTransferRequest{Amount: value}).prepareWire(); err == nil || err.Error() != "amount must fit uint256" {
+				t.Fatalf("amount accepted or misreported: %v", err)
+			}
+		})
+	}
+}

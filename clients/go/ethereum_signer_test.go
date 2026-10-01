@@ -145,7 +145,8 @@ func TestEthereumSignerForwardsExplicitGasAndValue(t *testing.T) {
 	backend := newTransactionBackend()
 	signer := transactionSigner(t, backend)
 	request := transactionRequest(signer)
-	request.Gas, request.Value = big.NewInt(21000), new(big.Int).Lsh(big.NewInt(1), 70)
+	gas := uint64(21000)
+	request.Gas, request.Value = &gas, new(big.Int).Lsh(big.NewInt(1), 70)
 	if _, err := signer.WriteContract(t.Context(), request); err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +160,8 @@ func TestEthereumSignerTreatsZeroGasAsEstimate(t *testing.T) {
 	backend := newTransactionBackend()
 	signer := transactionSigner(t, backend)
 	request := transactionRequest(signer)
-	request.Gas = big.NewInt(0)
+	gas := uint64(0)
+	request.Gas = &gas
 	if _, err := signer.WriteContract(t.Context(), request); err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +186,7 @@ func TestEthereumSignerEstimatesAbsentGasAndSendsZeroValue(t *testing.T) {
 }
 
 func TestEthereumSignerRejectsWithoutRPC(t *testing.T) {
-	for _, scenario := range []string{"account", "chain", "gas-overflow", "value-overflow", "cancel"} {
+	for _, scenario := range []string{"account", "chain", "negative-value", "value-overflow", "cancel"} {
 		t.Run(scenario, func(t *testing.T) {
 			backend := newTransactionBackend()
 			signer := transactionSigner(t, backend)
@@ -197,8 +199,8 @@ func TestEthereumSignerRejectsWithoutRPC(t *testing.T) {
 				request.Account.Address, code = common.Address{9}, "SIGNING_FAILED"
 			case "chain":
 				request.Account.ChainID, code = 2, "CHAIN_MISMATCH"
-			case "gas-overflow":
-				request.Gas = new(big.Int).Lsh(big.NewInt(1), 64)
+			case "negative-value":
+				request.Value, code = big.NewInt(-1), "SIGNING_FAILED"
 			case "value-overflow":
 				request.Value, code = new(big.Int).Lsh(big.NewInt(1), 256), "SIGNING_FAILED"
 			case "cancel":

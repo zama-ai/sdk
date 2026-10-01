@@ -1,5 +1,5 @@
 use super::*;
-use crate::{Address, BigInt};
+use crate::{Address, U256};
 use generated::{
     signer_action::Request, signer_client_message::Message, signer_reply::Result as Reply,
     signer_server_message,
@@ -47,7 +47,7 @@ fn write_payload_preserves_presence_and_reports_malformed_payloads() {
     else {
         panic!()
     };
-    assert_eq!(request.value, Some(BigInt::from(0)));
+    assert_eq!(request.value, Some(U256::ZERO));
     assert_eq!(request.gas, None);
     assert_eq!(request.args[0], "9007199254740993");
     let mut malformed = action.clone();

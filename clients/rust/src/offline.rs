@@ -1,5 +1,5 @@
 use crate::{
-    Address, BigInt, ClientError, ErrorKind, Result, Sdk,
+    Address, ClientError, ErrorKind, Result, Sdk, U256,
     delegations::{delegate_decryption_wire, revoke_delegation_wire},
     generated,
     permits::addresses,
@@ -18,13 +18,13 @@ pub enum Transaction {
     ConfidentialTransfer {
         token: Address,
         to: Address,
-        amount: BigInt,
+        amount: U256,
     },
     ConfidentialTransferFrom {
         token: Address,
         owner: Address,
         to: Address,
-        amount: BigInt,
+        amount: U256,
     },
     SetOperator {
         token: Address,
@@ -35,7 +35,7 @@ pub enum Transaction {
     Unwrap {
         token: Address,
         to: Address,
-        amount: BigInt,
+        amount: U256,
     },
     UnwrapAll {
         token: Address,
@@ -48,17 +48,17 @@ pub enum Transaction {
     ApproveUnderlying {
         underlying: Address,
         spender: Address,
-        amount: BigInt,
+        amount: U256,
     },
     Wrap {
         wrapper: Address,
         to: Address,
-        amount: BigInt,
+        amount: U256,
     },
     TransferAndCall {
         underlying: Address,
         wrapper: Address,
-        amount: BigInt,
+        amount: U256,
         recipient_data: Option<Vec<u8>>,
     },
     DelegateDecryption {
@@ -76,14 +76,14 @@ pub enum Transaction {
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct PrepareOptions {
     pub nonce: Option<u64>,
-    pub gas_limit: Option<BigInt>,
+    pub gas_limit: Option<u64>,
     pub fees: Option<PrepareFees>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PrepareFees {
-    pub max_fee_per_gas: BigInt,
-    pub max_priority_fee_per_gas: BigInt,
+    pub max_fee_per_gas: U256,
+    pub max_priority_fee_per_gas: U256,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

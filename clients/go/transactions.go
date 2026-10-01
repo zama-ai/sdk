@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -83,7 +84,7 @@ type ContractWriteRequest struct {
 	// Args carries SDK bigint arguments as canonical decimal strings.
 	Args  json.RawMessage
 	Value *big.Int
-	Gas   *big.Int
+	Gas   *uint64
 }
 
 // WriteContractFunc signs and broadcasts once; cancellation cannot undo submission.
@@ -113,13 +114,18 @@ func contractWriteRequest(operationID, actionID string, account WalletAccount, w
 	if err != nil {
 		return ContractWriteRequest{}, err
 	}
-	value, err := optionalTransactionInteger(wire.Value)
+	value, err := optionalTransactionInteger("value", wire.Value, 256)
 	if err != nil {
 		return ContractWriteRequest{}, err
 	}
-	gas, err := optionalTransactionInteger(wire.Gas)
+	gasLimit, err := optionalTransactionInteger("gas", wire.Gas, 64)
 	if err != nil {
 		return ContractWriteRequest{}, err
+	}
+	var gas *uint64
+	if gasLimit != nil {
+		limit := gasLimit.Uint64()
+		gas = &limit
 	}
 	return ContractWriteRequest{
 		OperationID: operationID, ActionID: actionID, Account: account,
@@ -129,13 +135,16 @@ func contractWriteRequest(operationID, actionID string, account WalletAccount, w
 	}, nil
 }
 
-func optionalTransactionInteger(encoded *string) (*big.Int, error) {
+func optionalTransactionInteger(name string, encoded *string, bits int) (*big.Int, error) {
 	if encoded == nil {
 		return nil, nil
 	}
 	value, ok := new(big.Int).SetString(*encoded, 10)
 	if !ok || value.Sign() < 0 || value.String() != *encoded {
-		return nil, errors.New("invalid canonical transaction integer")
+		return nil, errors.New("invalid canonical transaction " + name)
+	}
+	if value.BitLen() > bits {
+		return nil, fmt.Errorf("transaction %s must fit uint%d", name, bits)
 	}
 	return value, nil
 }
