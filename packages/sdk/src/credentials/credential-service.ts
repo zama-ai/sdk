@@ -1,4 +1,5 @@
 import type { Address, Hex } from "viem";
+import type { ParseTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
 import type { ChainRouter } from "../chains/router";
 import type { RelayerSDK } from "../relayer/types";
 import { ZamaError } from "../errors/base";
@@ -52,15 +53,13 @@ interface VerifiedPermit {
   permission: Permission;
 }
 
-type TransportKeyPair = Awaited<ReturnType<RelayerSDK["parseTransportKeyPair"]>>;
-
 /** State shared by every permit of one {@link CredentialService.batchRegisterPermits} call. */
 interface RegisterBatch {
   relayer: RelayerSDK;
   activeChainId: number;
   /** Per signer, so permits from one signer share a single vault read and parse. */
   storedKeyPairs: Map<ChecksummedAddress, StoredTransportKeyPair | null>;
-  transportKeyPairs: Map<ChecksummedAddress, TransportKeyPair>;
+  transportKeyPairs: Map<ChecksummedAddress, ParseTransportKeyPairReturnType>;
 }
 
 async function memoized<K, V extends {} | null>(

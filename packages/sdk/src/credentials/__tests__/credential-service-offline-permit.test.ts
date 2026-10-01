@@ -359,7 +359,7 @@ describe("CredentialService.batchRegisterPermits", () => {
   test("verifies and persists a valid signature", async ({ credentialService, signer }) => {
     const { prepared, signature } = await prepareAndSign(credentialService, signer);
 
-    await credentialService.batchRegisterPermits([{ prepared: prepared, signature: signature }]);
+    await credentialService.batchRegisterPermits([{ prepared, signature }]);
 
     expect(await credentialService.hasPermit([A])).toBe(true);
   });
@@ -372,7 +372,7 @@ describe("CredentialService.batchRegisterPermits", () => {
       delegator: DELEGATOR,
     });
 
-    await credentialService.batchRegisterPermits([{ prepared: prepared, signature: signature }]);
+    await credentialService.batchRegisterPermits([{ prepared, signature }]);
 
     expect(await credentialService.hasPermit([A])).toBe(false);
     expect(await credentialService.hasPermit([A], DELEGATOR)).toBe(true);
@@ -385,7 +385,7 @@ describe("CredentialService.batchRegisterPermits", () => {
     const { prepared, signature } = await prepareAndSign(credentialService, signer);
 
     const rehydrated = JSON.parse(JSON.stringify(prepared));
-    await credentialService.batchRegisterPermits([{ prepared: rehydrated, signature: signature }]);
+    await credentialService.batchRegisterPermits([{ prepared: rehydrated, signature }]);
 
     expect(await credentialService.hasPermit([A])).toBe(true);
   });
@@ -396,8 +396,8 @@ describe("CredentialService.batchRegisterPermits", () => {
   }) => {
     const { prepared, signature } = await prepareAndSign(credentialService, signer);
 
-    await credentialService.batchRegisterPermits([{ prepared: prepared, signature: signature }]);
-    await credentialService.batchRegisterPermits([{ prepared: prepared, signature: signature }]);
+    await credentialService.batchRegisterPermits([{ prepared, signature }]);
+    await credentialService.batchRegisterPermits([{ prepared, signature }]);
 
     const { permissions } = await credentialService.grantPermit([A]);
     expect(permissions).toHaveLength(1);
@@ -412,7 +412,7 @@ describe("CredentialService.batchRegisterPermits", () => {
 
     await expect(
       credentialService.batchRegisterPermits([
-        { prepared: malformed as unknown as typeof prepared, signature: signature },
+        { prepared: malformed as unknown as typeof prepared, signature },
       ]),
     ).rejects.toBeInstanceOf(ConfigurationError);
   });
@@ -441,7 +441,7 @@ describe("CredentialService.batchRegisterPermits", () => {
       return originalGet(key);
     });
 
-    await credentialService.batchRegisterPermits([{ prepared: prepared, signature: signature }]);
+    await credentialService.batchRegisterPermits([{ prepared, signature }]);
 
     expect(relayerA.parseSignedDecryptionPermit).toHaveBeenCalledOnce();
     expect(relayerB.parseSignedDecryptionPermit).not.toHaveBeenCalled();
@@ -458,7 +458,7 @@ describe("CredentialService.batchRegisterPermits", () => {
     };
 
     await expect(
-      credentialService.batchRegisterPermits([{ prepared: mismatched, signature: signature }]),
+      credentialService.batchRegisterPermits([{ prepared: mismatched, signature }]),
     ).rejects.toBeInstanceOf(PreparedPermitChainMismatchError);
   });
 
@@ -482,7 +482,7 @@ describe("CredentialService.batchRegisterPermits", () => {
     };
 
     await expect(
-      credentialService.batchRegisterPermits([{ prepared: expired, signature: signature }]),
+      credentialService.batchRegisterPermits([{ prepared: expired, signature }]),
     ).rejects.toBeInstanceOf(PreparedPermitExpiredError);
   });
 
@@ -496,7 +496,7 @@ describe("CredentialService.batchRegisterPermits", () => {
     await credentialService.clearCredentials();
 
     await expect(
-      credentialService.batchRegisterPermits([{ prepared: prepared, signature: signature }]),
+      credentialService.batchRegisterPermits([{ prepared, signature }]),
     ).rejects.toBeInstanceOf(TransportKeyPairChangedError);
   });
 
@@ -513,7 +513,7 @@ describe("CredentialService.batchRegisterPermits", () => {
     };
 
     await expect(
-      credentialService.batchRegisterPermits([{ prepared: mismatched, signature: signature }]),
+      credentialService.batchRegisterPermits([{ prepared: mismatched, signature }]),
     ).rejects.toBeInstanceOf(PreparedPermitChainMismatchError);
 
     expect(emitEvent).toHaveBeenCalledWith(
@@ -547,7 +547,7 @@ describe("CredentialService.batchRegisterPermits", () => {
     };
 
     await expect(
-      credentialService.batchRegisterPermits([{ prepared: expired, signature: signature }]),
+      credentialService.batchRegisterPermits([{ prepared: expired, signature }]),
     ).rejects.toBeInstanceOf(PreparedPermitExpiredError);
 
     expect(emitEvent).toHaveBeenCalledWith(
@@ -569,7 +569,7 @@ describe("CredentialService.batchRegisterPermits", () => {
     await credentialService.clearCredentials();
 
     await expect(
-      credentialService.batchRegisterPermits([{ prepared: prepared, signature: signature }]),
+      credentialService.batchRegisterPermits([{ prepared, signature }]),
     ).rejects.toBeInstanceOf(TransportKeyPairChangedError);
 
     expect(emitEvent).not.toHaveBeenCalled();
@@ -593,7 +593,7 @@ describe("CredentialService.batchRegisterPermits", () => {
     vi.mocked(relayer.generateTransportKeyPair).mockClear();
 
     await expect(
-      credentialService.batchRegisterPermits([{ prepared: staleKeyPair, signature: signature }]),
+      credentialService.batchRegisterPermits([{ prepared: staleKeyPair, signature }]),
     ).rejects.toBeInstanceOf(TransportKeyPairChangedError);
     expect(relayer.generateTransportKeyPair).not.toHaveBeenCalled();
   });
@@ -609,7 +609,7 @@ describe("CredentialService.batchRegisterPermits", () => {
     );
 
     await expect(
-      credentialService.batchRegisterPermits([{ prepared: prepared, signature: "0xbad" as Hex }]),
+      credentialService.batchRegisterPermits([{ prepared, signature: "0xbad" as Hex }]),
     ).rejects.toBeInstanceOf(SigningFailedError);
   });
 
@@ -626,7 +626,7 @@ describe("CredentialService.batchRegisterPermits", () => {
     );
 
     await expect(
-      credentialService.batchRegisterPermits([{ prepared: prepared, signature: "0xbad" as Hex }]),
+      credentialService.batchRegisterPermits([{ prepared, signature: "0xbad" as Hex }]),
     ).rejects.toBeInstanceOf(SigningFailedError);
 
     expect(emitEvent).toHaveBeenCalledWith(
