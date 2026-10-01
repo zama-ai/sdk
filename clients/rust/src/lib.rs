@@ -48,7 +48,7 @@ mod storage_channel;
 mod transactions;
 mod types;
 
-pub use alloy_primitives::{Address, B256};
+pub use alloy_primitives::{Address, B256, U256};
 pub use async_trait::async_trait;
 pub use builder::SdkBuilder;
 pub use client::Client;

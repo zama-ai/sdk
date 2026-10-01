@@ -1,5 +1,5 @@
 use super::*;
-use crate::{Address, WalletAccount};
+use crate::{Address, U256, WalletAccount};
 use alloy_consensus::{Transaction, transaction::SignerRecoverable};
 use alloy_eips::eip2718::Decodable2718;
 use alloy_provider::{
@@ -41,7 +41,7 @@ fn test_signer() -> PrivateKeySigner {
 #[test]
 fn preserves_calldata_account_chain_and_zero_overrides() {
     let mut request = request(Address::repeat_byte(1));
-    let omitted = transaction(&request).unwrap();
+    let omitted = transaction(&request);
     assert_eq!(omitted.gas, None);
     assert_eq!(omitted.value, None);
     assert_eq!(omitted.from, Some(request.account.address));
@@ -51,16 +51,11 @@ fn preserves_calldata_account_chain_and_zero_overrides() {
         omitted.input.input.unwrap().as_ref(),
         request.data.as_slice()
     );
-    request.value = Some(0.into());
-    request.gas = Some(0.into());
-    let zero = transaction(&request).unwrap();
+    request.value = Some(U256::ZERO);
+    request.gas = Some(0);
+    let zero = transaction(&request);
     assert_eq!(zero.value, Some(U256::ZERO));
     assert_eq!(zero.gas, Some(0));
-    request.gas = Some((-1).into());
-    assert_eq!(transaction(&request).unwrap_err().code, "SIGNING_FAILED");
-    request.gas = Some(0.into());
-    request.value = Some((-1).into());
-    assert_eq!(transaction(&request).unwrap_err().code, "SIGNING_FAILED");
 }
 #[tokio::test]
 async fn account_and_chain_mismatch_are_refused_without_any_rpc() {
@@ -259,8 +254,8 @@ async fn broadcasts_the_signed_transaction_and_returns_its_hash() {
     let network = TestNetwork::default();
     let wallet = network.wallet();
     let mut request = request(test_signer().address());
-    request.value = Some(7.into());
-    request.gas = Some(21_000.into());
+    request.value = Some(U256::from(7));
+    request.gas = Some(21_000);
     let hash = wallet
         .write_contract(request.clone(), CancellationToken::new())
         .await

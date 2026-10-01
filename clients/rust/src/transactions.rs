@@ -1,4 +1,4 @@
-use crate::{Address, B256, BigInt, ClientError, SdkError, WalletAccount, generated, types::word};
+use crate::{Address, B256, ClientError, SdkError, U256, WalletAccount, generated, types::word};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TransactionResult {
@@ -59,8 +59,8 @@ pub struct ContractWriteRequest {
     pub function_name: String,
     /// SDK bigint arguments are encoded as canonical decimal strings.
     pub args: serde_json::Value,
-    pub value: Option<BigInt>,
-    pub gas: Option<BigInt>,
+    pub value: Option<U256>,
+    pub gas: Option<u64>,
 }
 impl ContractWriteRequest {
     pub(crate) fn from_wire(
@@ -90,19 +90,27 @@ impl ContractWriteRequest {
             abi,
             function_name: write.function_name,
             args,
-            value: decimal(write.value).map_err(invalid)?,
-            gas: decimal(write.gas).map_err(invalid)?,
+            value: decimal(write.value, "transaction value must fit uint256").map_err(invalid)?,
+            gas: decimal(write.gas, "transaction gas must fit uint64").map_err(invalid)?,
         })
     }
 }
-fn decimal(value: Option<String>) -> Result<Option<BigInt>, &'static str> {
+fn decimal<T: std::str::FromStr>(
+    value: Option<String>,
+    overflow: &'static str,
+) -> Result<Option<T>, &'static str> {
     value
         .map(|value| {
-            let integer: BigInt = value.parse().map_err(|_| "invalid transaction integer")?;
-            if integer.to_string() != value {
+            if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+                return Err("invalid transaction integer");
+            }
+            if value.len() > 1 && value.starts_with('0') {
                 return Err("noncanonical transaction integer");
             }
-            Ok(integer)
+            value.parse().map_err(|_| overflow)
         })
         .transpose()
 }
+
+#[cfg(test)]
+mod tests;

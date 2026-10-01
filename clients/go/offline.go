@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math/big"
+	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -18,7 +19,7 @@ type TransactionRequest interface {
 
 type PrepareOptions struct {
 	Nonce    *uint64
-	GasLimit *big.Int
+	GasLimit *uint64
 	Fees     *PrepareFees
 }
 type PrepareFees struct {
@@ -66,6 +67,9 @@ func decimal(name string, value *big.Int) (string, error) {
 	if value == nil {
 		return "", errors.New(name + " is required")
 	}
+	if value.Sign() < 0 || value.BitLen() > 256 {
+		return "", errors.New(name + " must fit uint256")
+	}
 	return value.String(), nil
 }
 func prepareOptionsWire(options *PrepareOptions) (*pb.PrepareOptions, error) {
@@ -74,7 +78,7 @@ func prepareOptionsWire(options *PrepareOptions) (*pb.PrepareOptions, error) {
 	}
 	result := &pb.PrepareOptions{Nonce: options.Nonce}
 	if options.GasLimit != nil {
-		value := options.GasLimit.String()
+		value := strconv.FormatUint(*options.GasLimit, 10)
 		result.GasLimit = &value
 	}
 	if options.Fees != nil {

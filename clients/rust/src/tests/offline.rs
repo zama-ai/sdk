@@ -1,5 +1,9 @@
 use super::*;
-use crate::{PrepareFees, PrepareOptions, PrepareTransaction, Transaction, TransactionKind};
+use crate::{PrepareFees, PrepareOptions, PrepareTransaction, Transaction, TransactionKind, U256};
+
+const U256_MAX_DECIMAL: &str =
+    "115792089237316195423570985008687907853269984665640564039457584007913129639935";
+const U64_MAX_DECIMAL: &str = "18446744073709551615";
 
 fn capturing_server(captured: Arc<Mutex<Vec<PrepareTransactionRequest>>>) -> Handler {
     Arc::new(move |path, bytes| {
@@ -33,19 +37,19 @@ async fn prepares_every_kind_with_exact_wire_fields() {
     let token = Address::repeat_byte(1);
     let peer = Address::repeat_byte(2);
     let sender = Address::repeat_byte(3);
-    let amount: BigInt = "340282366920938463463374607431768211457".parse().unwrap();
+    let amount = U256::MAX;
     use generated::prepare_transaction_request::Transaction as Wire;
     let table = vec![
         (
             Transaction::ConfidentialTransfer {
                 token,
                 to: peer,
-                amount: amount.clone(),
+                amount,
             },
             Wire::ConfidentialTransfer(ConfidentialTransfer {
                 token: token.to_vec(),
                 to: peer.to_vec(),
-                amount: amount.to_string(),
+                amount: U256_MAX_DECIMAL.into(),
             }),
         ),
         (
@@ -53,13 +57,13 @@ async fn prepares_every_kind_with_exact_wire_fields() {
                 token,
                 owner: peer,
                 to: sender,
-                amount: amount.clone(),
+                amount,
             },
             Wire::ConfidentialTransferFrom(ConfidentialTransferFrom {
                 token: token.to_vec(),
                 owner: peer.to_vec(),
                 to: sender.to_vec(),
-                amount: amount.to_string(),
+                amount: U256_MAX_DECIMAL.into(),
             }),
         ),
         (
@@ -78,12 +82,12 @@ async fn prepares_every_kind_with_exact_wire_fields() {
             Transaction::Unwrap {
                 token,
                 to: peer,
-                amount: amount.clone(),
+                amount,
             },
             Wire::Unwrap(Unwrap {
                 token: token.to_vec(),
                 to: peer.to_vec(),
-                amount: amount.to_string(),
+                amount: U256_MAX_DECIMAL.into(),
             }),
         ),
         (
@@ -107,37 +111,37 @@ async fn prepares_every_kind_with_exact_wire_fields() {
             Transaction::ApproveUnderlying {
                 underlying: token,
                 spender: peer,
-                amount: amount.clone(),
+                amount,
             },
             Wire::ApproveUnderlying(ApproveUnderlying {
                 underlying: token.to_vec(),
                 spender: peer.to_vec(),
-                amount: amount.to_string(),
+                amount: U256_MAX_DECIMAL.into(),
             }),
         ),
         (
             Transaction::Wrap {
                 wrapper: token,
                 to: peer,
-                amount: amount.clone(),
+                amount,
             },
             Wire::Wrap(Wrap {
                 wrapper: token.to_vec(),
                 to: peer.to_vec(),
-                amount: amount.to_string(),
+                amount: U256_MAX_DECIMAL.into(),
             }),
         ),
         (
             Transaction::TransferAndCall {
                 underlying: token,
                 wrapper: peer,
-                amount: amount.clone(),
+                amount,
                 recipient_data: None,
             },
             Wire::TransferAndCall(TransferAndCall {
                 underlying: token.to_vec(),
                 wrapper: peer.to_vec(),
-                amount: amount.to_string(),
+                amount: U256_MAX_DECIMAL.into(),
                 recipient_data: None,
             }),
         ),
@@ -167,13 +171,13 @@ async fn prepares_every_kind_with_exact_wire_fields() {
             Transaction::TransferAndCall {
                 underlying: token,
                 wrapper: peer,
-                amount: (-1).into(),
+                amount: U256::ZERO,
                 recipient_data: Some(vec![]),
             },
             Wire::TransferAndCall(TransferAndCall {
                 underlying: token.to_vec(),
                 wrapper: peer.to_vec(),
-                amount: "-1".into(),
+                amount: "0".into(),
                 recipient_data: Some(vec![]),
             }),
         ),
@@ -228,13 +232,13 @@ async fn sends_prepare_options_only_when_provided() {
         .build()
         .await
         .unwrap();
-    let amount: BigInt = "340282366920938463463374607431768211457".parse().unwrap();
+    let amount = U256::MAX;
     let options = PrepareOptions {
         nonce: Some(0),
-        gas_limit: Some(0.into()),
+        gas_limit: Some(u64::MAX),
         fees: Some(PrepareFees {
-            max_fee_per_gas: amount.clone(),
-            max_priority_fee_per_gas: 0.into(),
+            max_fee_per_gas: amount,
+            max_priority_fee_per_gas: U256::ZERO,
         }),
     };
     for options in [Some(options), None] {
@@ -256,9 +260,9 @@ async fn sends_prepare_options_only_when_provided() {
     let requests = captured.lock().unwrap();
     let sent = requests[0].options.as_ref().unwrap();
     assert_eq!(sent.nonce, Some(0));
-    assert_eq!(sent.gas_limit.as_deref(), Some("0"));
+    assert_eq!(sent.gas_limit.as_deref(), Some(U64_MAX_DECIMAL));
     let fees = sent.fees.as_ref().unwrap();
-    assert_eq!(fees.max_fee_per_gas, amount.to_string());
+    assert_eq!(fees.max_fee_per_gas, U256_MAX_DECIMAL);
     assert_eq!(fees.max_priority_fee_per_gas, "0");
     assert!(requests[1].options.is_none());
 }
@@ -294,7 +298,7 @@ async fn preserves_sdk_validation_errors_and_empty_options() {
                 transaction: Transaction::TransferAndCall {
                     underlying: Address::repeat_byte(1),
                     wrapper: Address::repeat_byte(2),
-                    amount: 1.into(),
+                    amount: U256::from(1),
                     recipient_data: Some(vec![1, 2, 3]),
                 },
             },

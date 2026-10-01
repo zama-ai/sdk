@@ -1,5 +1,5 @@
 use crate::{B256, ContractWriteRequest, SdkError, Signer, SigningRequest, alloy::AlloySigner};
-use alloy_primitives::{TxKind, U256};
+use alloy_primitives::TxKind;
 use alloy_provider::transport::TransportError;
 use alloy_provider::{
     Provider, SendableTx, WalletProvider,
@@ -73,7 +73,7 @@ where
             self.provider.default_signer_address(),
             "Wallet does not control the requested account.",
         )?;
-        let transaction = transaction(&request)?;
+        let transaction = transaction(&request);
         // Filling and signing happen before broadcast, so their failures are certain.
         let envelope = match self.provider.fill(transaction).await {
             Ok(SendableTx::Envelope(envelope)) => envelope,
@@ -135,34 +135,16 @@ fn revert_data(error: &TransportError) -> Option<Vec<u8>> {
         .starts_with("execution reverted");
     (payload.code == 3 || is_revert_message).then(|| data.unwrap_or_default())
 }
-fn transaction(request: &ContractWriteRequest) -> Result<TransactionRequest, SdkError> {
-    let value = request
-        .value
-        .as_ref()
-        .map(|value| {
-            value
-                .to_biguint()
-                .and_then(|value| U256::try_from_be_slice(&value.to_bytes_be()))
-                .ok_or_else(|| SdkError::signing_failed("Transaction value must fit uint256."))
-        })
-        .transpose()?;
-    let gas = request
-        .gas
-        .as_ref()
-        .map(|gas| {
-            u64::try_from(gas)
-                .map_err(|_| SdkError::signing_failed("Transaction gas must fit uint64."))
-        })
-        .transpose()?;
-    Ok(TransactionRequest {
+fn transaction(request: &ContractWriteRequest) -> TransactionRequest {
+    TransactionRequest {
         from: Some(request.account.address),
         to: Some(TxKind::Call(request.address)),
         chain_id: Some(request.account.chain_id),
         input: request.data.clone().into(),
-        value,
-        gas,
+        value: request.value,
+        gas: request.gas,
         ..Default::default()
-    })
+    }
 }
 
 #[cfg(test)]
