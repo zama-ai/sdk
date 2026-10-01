@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.7.0-beta.5](https://github.com/zama-ai/sdk/compare/v3.7.0-beta.4...v3.7.0-beta.5) (2026-10-01)
+
+### Features
+
+- offline permit chunking ([#820](https://github.com/zama-ai/sdk/issues/820)) ([957a58e]())
+
 ## [3.7.0-beta.4](https://github.com/zama-ai/sdk/compare/v3.7.0-beta.3...v3.7.0-beta.4) (2026-09-30)
 
 ### Features
