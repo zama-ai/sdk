@@ -1,7 +1,7 @@
 use alloy_provider::{Provider, ProviderBuilder};
 use alloy_signer_local::PrivateKeySigner;
 use anyhow::{Result, ensure};
-use std::{collections::HashMap, env};
+use std::{collections::HashMap, env, path::Path};
 use zama_sdk::{
     Address, ApplicationStorage, ChainConfig, Client, DerivationSecret, MemoryStorage,
     ProcessRuntime, ProviderOptions, RelayerAuth, RelayerConfig, RelayerOptions, RelayerTransport,
@@ -21,10 +21,7 @@ pub struct Settings {
 }
 impl Settings {
     pub fn load() -> Result<Self> {
-        let values = dotenvy::from_path_iter(".env.daemon.local")
-            .map_err(|_| anyhow::anyhow!("cannot read example config"))?
-            .collect::<Result<HashMap<_, _>, _>>()
-            .map_err(|_| anyhow::anyhow!("cannot parse example config"))?;
+        let values = read_config(Path::new(CONFIG_FILE))?;
         let required = |key: &str| {
             values
                 .get(key)
@@ -139,6 +136,33 @@ impl Settings {
     }
 }
 
+const CONFIG_FILE: &str = ".env.daemon.local";
+
+fn read_config(path: &Path) -> Result<HashMap<String, String>> {
+    let entries = dotenvy::from_path_iter(path).map_err(|error| config_error(path, error, None))?;
+    let mut values = HashMap::new();
+    for (index, entry) in entries.enumerate() {
+        let (key, value) = entry.map_err(|error| config_error(path, error, Some(index + 1)))?;
+        values.insert(key, value);
+    }
+    Ok(values)
+}
+
+// dotenvy renders the offending line or variable value, which can hold TEST_WALLET_PRIVATE_KEY.
+fn config_error(path: &Path, error: dotenvy::Error, entry: Option<usize>) -> anyhow::Error {
+    let file = path.display();
+    let entry = entry.map(|n| format!(" entry {n}")).unwrap_or_default();
+    match error {
+        dotenvy::Error::Io(error) => {
+            anyhow::Error::new(error).context(format!("cannot read {file}"))
+        }
+        dotenvy::Error::LineParse(_, index) => {
+            anyhow::anyhow!("cannot parse {file}{entry}: syntax error at character {index}")
+        }
+        _ => anyhow::anyhow!("cannot parse {file}{entry}: invalid variable substitution"),
+    }
+}
+
 fn http_client() -> Result<reqwest::Client> {
     // Some public RPC gateways return HTTP 404 without a User-Agent.
     Ok(reqwest::Client::builder()
@@ -171,7 +195,9 @@ fn optional_bool(values: &HashMap<String, String>, key: &str) -> Result<Option<b
         .map(|value| match value.to_ascii_lowercase().as_str() {
             "true" | "1" => Ok(true),
             "false" | "0" => Ok(false),
-            _ => Err(anyhow::anyhow!("invalid {key}")),
+            _ => Err(anyhow::anyhow!(
+                "invalid {key}: got {value:?}, expected true/false/1/0"
+            )),
         })
         .transpose()
 }
@@ -182,4 +208,53 @@ fn optional_number(values: &HashMap<String, String>, key: &str) -> Result<Option
         .filter(|value| !value.is_empty())
         .map(|value| value.parse().map_err(|_| anyhow::anyhow!("invalid {key}")))
         .transpose()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn config_errors_name_the_file_without_echoing_line_content() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(CONFIG_FILE);
+        std::fs::write(
+            &path,
+            "OWNER_ADDRESS=0x1\nTEST_WALLET_PRIVATE_KEY='marker-secret\n",
+        )
+        .unwrap();
+        let error = format!("{:#}", read_config(&path).unwrap_err());
+        assert!(!error.contains("marker-secret"), "{error}");
+        assert!(
+            error.starts_with(&format!("cannot parse {} entry 2: ", path.display())),
+            "{error}"
+        );
+
+        let missing = read_config(&dir.path().join("missing")).unwrap_err();
+        assert!(missing.to_string().starts_with("cannot read "));
+        assert!(missing.source().is_some());
+
+        let substitution = config_error(
+            &path,
+            dotenvy::Error::EnvVar(env::VarError::NotUnicode("marker-secret".into())),
+            Some(1),
+        );
+        assert!(!format!("{substitution:#}").contains("marker-secret"));
+    }
+
+    #[test]
+    fn invalid_bool_reports_value_and_accepted_forms() {
+        let values = HashMap::from([("SDK_SINGLE_THREAD".to_string(), "yes".to_string())]);
+        assert_eq!(
+            optional_bool(&values, "SDK_SINGLE_THREAD")
+                .unwrap_err()
+                .to_string(),
+            "invalid SDK_SINGLE_THREAD: got \"yes\", expected true/false/1/0"
+        );
+        let values = HashMap::from([("SDK_SINGLE_THREAD".to_string(), "TRUE".to_string())]);
+        assert_eq!(
+            optional_bool(&values, "SDK_SINGLE_THREAD").unwrap(),
+            Some(true)
+        );
+    }
 }
