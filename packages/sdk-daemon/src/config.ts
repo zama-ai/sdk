@@ -6,6 +6,7 @@ export interface DaemonConfig {
   readonly socketPath: string;
   readonly grpc: { maxMessageBytes: number; maxConcurrentStreams?: number };
   readonly runtimeLimits: { maxContexts?: number; maxOperationsPerContext?: number };
+  readonly shutdownTimeoutMs: number;
 }
 
 function positiveInteger(env: NodeJS.ProcessEnv, name: string): number | undefined {
@@ -40,5 +41,6 @@ export function readConfig(env: NodeJS.ProcessEnv): DaemonConfig {
       maxContexts: positiveInteger(env, "ZAMA_SDK_DAEMON_MAX_CONTEXTS"),
       maxOperationsPerContext: positiveInteger(env, "ZAMA_SDK_DAEMON_MAX_OPERATIONS_PER_CONTEXT"),
     },
+    shutdownTimeoutMs: positiveInteger(env, "ZAMA_SDK_DAEMON_SHUTDOWN_TIMEOUT_MS") ?? 120_000,
   };
 }

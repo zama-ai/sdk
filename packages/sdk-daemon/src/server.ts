@@ -10,7 +10,7 @@ export async function startServer(
   socketPath: string,
   sdkVersion: string,
   options: { maxMessageBytes?: number; maxConcurrentStreams?: number } = {},
-): Promise<() => Promise<void>> {
+): Promise<(deadline?: AbortSignal) => Promise<void>> {
   await prepareSocket(socketPath);
   const server = new Server({
     "grpc.max_receive_message_length": options.maxMessageBytes ?? 4 * 1024 * 1024,
@@ -36,17 +36,21 @@ export async function startServer(
     }
     throw error;
   }
-  return async () => {
+  return async (deadline?: AbortSignal) => {
     await new Promise<void>((resolve) => {
-      const timer = setTimeout(() => {
+      const force = () => {
         server.forceShutdown();
         resolve();
-      }, 65_000);
-      timer.unref();
+      };
       server.tryShutdown(() => {
-        clearTimeout(timer);
+        deadline?.removeEventListener("abort", force);
         resolve();
       });
+      if (deadline?.aborted) {
+        force();
+      } else {
+        deadline?.addEventListener("abort", force, { once: true });
+      }
     });
     await unlink(socketPath).catch((error: unknown) => {
       if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) {

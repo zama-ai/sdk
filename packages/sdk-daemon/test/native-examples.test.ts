@@ -174,7 +174,7 @@ test.skipIf(process.env.ZAMA_SDK_DAEMON_NATIVE_TESTS !== "1")(
     const manager = new StorageManager();
     const runtime = new DaemonRuntime(createContextFactory(manager), createCoordinator());
     const attached = vi.spyOn(runtime, "attachEvents");
-    let stop: (() => Promise<void>) | undefined;
+    let stop: Awaited<ReturnType<typeof startServer>> | undefined;
     try {
       await new Promise<void>((resolve, reject) => {
         rpc.once("error", reject);
