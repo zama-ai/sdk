@@ -29,6 +29,52 @@ async fn concurrent_close_is_idempotent_and_drop_does_not_retry_success() {
 }
 
 #[tokio::test]
+async fn a_failed_close_keeps_channels_attached_for_a_later_close() {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let observed = calls.clone();
+    let server = Server::start(Arc::new(move |path, bytes| {
+        if path.ends_with("/CloseContext") && observed.fetch_add(1, Ordering::SeqCst) == 0 {
+            return Response::builder()
+                .header("content-type", "application/grpc")
+                .header("grpc-status", "14")
+                .header("grpc-message", "busy")
+                .body(Full::new(Bytes::new()).boxed())
+                .unwrap();
+        }
+        default_handler(path, bytes)
+    }))
+    .await;
+    server
+        .storage_actions
+        .send(StorageServerMessage {
+            message: Some(storage_server_message::Message::Attached(Empty {})),
+        })
+        .unwrap();
+    let sdk = Client::connect(&server.socket)
+        .await
+        .unwrap()
+        .sdk(SdkConfig::new(11155111, "https://rpc.invalid"))
+        .storage(ApplicationStorage::new(MemoryStorage::default()))
+        .build()
+        .await
+        .unwrap();
+    assert_eq!(
+        sdk.close().await.unwrap_err().kind(),
+        crate::ErrorKind::Transport
+    );
+    assert!(
+        tokio::time::timeout(
+            Duration::from_millis(30),
+            sdk.wait_channel_closed(CallbackChannel::Storage)
+        )
+        .await
+        .is_err()
+    );
+    sdk.close().await.unwrap();
+    assert_eq!(calls.load(Ordering::SeqCst), 2);
+}
+
+#[tokio::test]
 async fn cancelling_build_during_attachment_closes_remote_context() {
     let closed = Arc::new(tokio::sync::Semaphore::new(0));
     let observed = closed.clone();
