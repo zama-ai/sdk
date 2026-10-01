@@ -91,6 +91,12 @@ export interface BatchDecryptResult {
 }
 
 // @public
+export function batchPreparePermitsMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.batchPreparePermits"], PreparePermitRequest, PreparedPermit[]>;
+
+// @public
+export function batchRegisterPermitsMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.batchRegisterPermits"], readonly SignedPreparedPermit[], void>;
+
+// @public
 export type ChecksummedAddress = Address & {
     readonly [checksummedTag]: true;
 };
@@ -630,6 +636,7 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
 
 // @public
 export class Offline {
+    batchPreparePermits(request: PreparePermitRequest): Promise<PreparedPermit[]>;
     prepare<K extends TransactionKind>(request: Extract<PrepareTransactionRequest, {
         kind: K;
     }>, options?: PrepareOptions): Promise<PreparedFor<K>>;
@@ -667,6 +674,7 @@ export type PermitOperation = "grantPermit" | "grantDelegationPermit" | "registe
 
 // @public
 export class Permits {
+    batchRegisterPermits(permits: readonly SignedPreparedPermit[]): Promise<void>;
     clear(): Promise<void>;
     grantDelegationPermit(delegator: Address, contracts: Address[]): Promise<void>;
     grantPermit(contracts: Address[]): Promise<void>;
@@ -775,10 +783,7 @@ export type ReadFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractF
 export function registerPermitMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.registerPermit"], RegisterPermitParams, void>;
 
 // @public
-export interface RegisterPermitParams {
-    prepared: PreparedPermit;
-    signature: Hex;
-}
+export type RegisterPermitParams = SignedPreparedPermit;
 
 // @public
 export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
@@ -881,6 +886,12 @@ export interface ShieldSubmittedEvent extends BaseEvent {
     shieldPath: ShieldPath;
     txHash: Hex;
     type: typeof ZamaSDKEvents.ShieldSubmitted;
+}
+
+// @public
+export interface SignedPreparedPermit {
+    prepared: PreparedPermit;
+    signature: Hex;
 }
 
 // @public

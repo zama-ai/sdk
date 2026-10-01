@@ -2,6 +2,8 @@ import {
   type DefaultError,
   type QueriesOptions,
   type QueriesResults,
+  type QueryKey,
+  type UseMutationOptions,
   useQueries as tanstack_useQueries,
   useQuery as tanstack_useQuery,
   useSuspenseQuery as tanstack_useSuspenseQuery,
@@ -68,4 +70,20 @@ export function useQueries<
     ...options,
     queries: queries.map((q) => ({ ...q, queryKeyHashFn: hashFn })) as [...QueriesOptions<T>],
   });
+}
+
+/**
+ * Builds a mutation `onSuccess` that runs the caller's own `onSuccess` first,
+ * then drops every query under `queryKeys` so the next render refetches.
+ */
+export function removeQueriesOnSuccess<TData, TError, TVariables, TOnMutateResult>(
+  options: UseMutationOptions<TData, TError, TVariables, TOnMutateResult> | undefined,
+  ...queryKeys: QueryKey[]
+): UseMutationOptions<TData, TError, TVariables, TOnMutateResult>["onSuccess"] {
+  return (data, variables, onMutateResult, context) => {
+    options?.onSuccess?.(data, variables, onMutateResult, context);
+    for (const queryKey of queryKeys) {
+      context.client.removeQueries({ queryKey });
+    }
+  };
 }

@@ -3,6 +3,7 @@
 import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import { clearCredentialsMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
+import { removeQueriesOnSuccess } from "../utils/query";
 
 /**
  * Wipe the keypair for the current signer and cascade-delete every permit
@@ -21,10 +22,10 @@ export function useClearCredentials(options?: UseMutationOptions<void>) {
   return useMutation<void>({
     ...clearCredentialsMutationOptions(sdk),
     ...options,
-    onSuccess: (data, variables, onMutateResult, context) => {
-      options?.onSuccess?.(data, variables, onMutateResult, context);
-      context.client.removeQueries({ queryKey: zamaQueryKeys.hasPermit.all });
-      context.client.removeQueries({ queryKey: zamaQueryKeys.decryption.all });
-    },
+    onSuccess: removeQueriesOnSuccess(
+      options,
+      zamaQueryKeys.hasPermit.all,
+      zamaQueryKeys.decryption.all,
+    ),
   });
 }

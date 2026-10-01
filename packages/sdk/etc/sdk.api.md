@@ -11461,6 +11461,7 @@ export class NotEntitledError extends ZamaError {
 
 // @public
 export class Offline {
+    batchPreparePermits(request: PreparePermitRequest): Promise<PreparedPermit[]>;
     prepare<K extends TransactionKind>(request: Extract<PrepareTransactionRequest, {
         kind: K;
     }>, options?: PrepareOptions): Promise<PreparedFor<K>>;
@@ -11499,6 +11500,7 @@ export type PermitOperation = "grantPermit" | "grantDelegationPermit" | "registe
 
 // @public
 export class Permits {
+    batchRegisterPermits(permits: readonly SignedPreparedPermit[]): Promise<void>;
     clear(): Promise<void>;
     grantDelegationPermit(delegator: Address, contracts: Address[]): Promise<void>;
     grantPermit(contracts: Address[]): Promise<void>;
@@ -14247,6 +14249,12 @@ export interface ShieldSubmittedEvent extends BaseEvent {
     shieldPath: ShieldPath;
     txHash: Hex;
     type: typeof ZamaSDKEvents.ShieldSubmitted;
+}
+
+// @public
+export interface SignedPreparedPermit {
+    prepared: PreparedPermit;
+    signature: Hex;
 }
 
 // @public

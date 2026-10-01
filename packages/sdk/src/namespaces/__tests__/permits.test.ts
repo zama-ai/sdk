@@ -1,13 +1,19 @@
 import type { Address } from "viem";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { createMockSigner } from "../../test-fixtures/signer";
-import { ChainMismatchError, ConfigurationError, SignerNotConfiguredError } from "../../errors";
+import {
+  ChainMismatchError,
+  ConfigurationError,
+  PreparedPermitChainMismatchError,
+  SignerNotConfiguredError,
+} from "../../errors";
 import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { ZamaSDKEvent } from "../../events/sdk-events";
 
 const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const CONTRACT_B = "0x3C3c3C3c3C3C3c3c3c3C3c3C3C3c3c3C3c3c3C3C" as Address;
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
+const OTHER_SIGNER = "0x4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d" as Address;
 
 describe("Permits", () => {
   describe("guards (no signer configured)", () => {
@@ -268,6 +274,85 @@ describe("Permits", () => {
 
       await sdk.decryption.decryptValues(handles);
       expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
+    });
+
+    test("batchRegisterPermits([]) throws ConfigurationError", async ({ sdk }) => {
+      await expect(sdk.permits.batchRegisterPermits([])).rejects.toBeInstanceOf(ConfigurationError);
+    });
+
+    test("batchRegisterPermits registers every permit in the list", async ({ sdk, signer }) => {
+      const signerAddress = signer.walletAccount.getSnapshot()!.address;
+      const prepared = await sdk.offline.batchPreparePermits({
+        signer: signerAddress,
+        contracts: [CONTRACT_A, CONTRACT_B],
+      });
+      const permits = await Promise.all(
+        prepared.map(async (p) => ({
+          prepared: p,
+          signature: await signer.signTypedData(p.eip712),
+        })),
+      );
+
+      await sdk.permits.batchRegisterPermits(permits);
+
+      expect(await sdk.permits.hasPermit([CONTRACT_A, CONTRACT_B])).toBe(true);
+    });
+
+    test("batchRegisterPermits persists nothing when a later permit fails", async ({
+      sdk,
+      signer,
+    }) => {
+      const signerAddress = signer.walletAccount.getSnapshot()!.address;
+      const prepared = await sdk.offline.preparePermit({
+        signer: signerAddress,
+        contracts: [CONTRACT_A],
+      });
+      const signature = await signer.signTypedData(prepared.eip712);
+      const wrongChain = {
+        ...prepared,
+        eip712: { ...prepared.eip712, domain: { ...prepared.eip712.domain, chainId: "999999" } },
+      };
+
+      await expect(
+        sdk.permits.batchRegisterPermits([
+          { prepared, signature },
+          { prepared: wrongChain, signature },
+        ]),
+      ).rejects.toBeInstanceOf(PreparedPermitChainMismatchError);
+
+      expect(await sdk.permits.hasPermit([CONTRACT_A])).toBe(false);
+    });
+
+    test("batchRegisterPermits clears the decrypt cache for every signer in the batch", async ({
+      sdk,
+      createSDK,
+      signer,
+      relayer,
+      handle,
+    }) => {
+      const handles = [{ encryptedValue: handle, contractAddress: CONTRACT_A }];
+      const otherSdk = createSDK({ signer: createMockSigner(OTHER_SIGNER) });
+      await sdk.decryption.decryptValues(handles);
+      await otherSdk.decryption.decryptValues(handles);
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
+
+      const signerAddress = signer.walletAccount.getSnapshot()!.address;
+      const prepared = await Promise.all(
+        [signerAddress, OTHER_SIGNER].map((s) =>
+          sdk.offline.preparePermit({ signer: s, contracts: [CONTRACT_B] }),
+        ),
+      );
+      const permits = await Promise.all(
+        prepared.map(async (p) => ({
+          prepared: p,
+          signature: await signer.signTypedData(p.eip712),
+        })),
+      );
+      await sdk.permits.batchRegisterPermits(permits);
+
+      await sdk.decryption.decryptValues(handles);
+      await otherSdk.decryption.decryptValues(handles);
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(4);
     });
   });
 

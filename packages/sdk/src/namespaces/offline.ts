@@ -67,15 +67,33 @@ export class Offline {
    *
    * One permit per call: unlike `sdk.permits.grantPermit`, this never widens
    * an existing permit or chunks over 10 contracts — `request.contracts` maps
-   * to exactly one signature.
+   * to exactly one signature. Use {@link batchPreparePermits} for more.
+   *
+   * Prefer `sdk.permits.grantPermit` unless signing must happen out-of-process.
    *
    * @throws if `request.contracts` is empty or exceeds 10 addresses, `request.delegator`
    *   equals `request.signer`, or `request.durationDays` exceeds the V1 permit maximum
    *   of 365 days. {@link ConfigurationError}
+   * @throws if the transport key pair cannot be wrapped or unwrapped. {@link KeyWrappingError}
    * @throws if a concurrent `permits.revokeTransportKeyPair()` rotates the transport key
    *   pair while this call is generating one. {@link TransportKeyPairChangedError}
    */
   preparePermit(request: PreparePermitRequest): Promise<PreparedPermit> {
     return this.#credentialService.preparePermit(request);
+  }
+
+  /**
+   * {@link preparePermit} for any number of contracts: returns one permit per
+   * 10 contracts (the protocol's per-permit cap), each needing its own
+   * signature. Pass the signed pairs to `sdk.permits.batchRegisterPermits`.
+   *
+   * @throws if `request.contracts` is empty, `request.delegator` equals `request.signer`,
+   *   or `request.durationDays` exceeds the V1 permit maximum of 365 days. {@link ConfigurationError}
+   * @throws if the transport key pair cannot be wrapped or unwrapped. {@link KeyWrappingError}
+   * @throws if a concurrent `permits.revokeTransportKeyPair()` rotates the transport key
+   *   pair while this call is generating one. {@link TransportKeyPairChangedError}
+   */
+  batchPreparePermits(request: PreparePermitRequest): Promise<PreparedPermit[]> {
+    return this.#credentialService.batchPreparePermits(request);
   }
 }

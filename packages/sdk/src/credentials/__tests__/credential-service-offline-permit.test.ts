@@ -13,7 +13,7 @@ import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { GenericSigner } from "../../types";
 import { assertNonNullable } from "../../utils/assertions";
 import type { CredentialService } from "../credential-service";
-import { MAX_CONTRACTS_PER_PERMIT, SECONDS_PER_DAY } from "../utils";
+import { MAX_CONTRACTS_PER_PERMIT, normalizeAddresses, SECONDS_PER_DAY } from "../utils";
 
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
@@ -71,13 +71,23 @@ describe("CredentialService.preparePermit", () => {
     ).rejects.toBeInstanceOf(ConfigurationError);
   });
 
-  test("rejects more than MAX_CONTRACTS_PER_PERMIT addresses — no chunking", async ({
+  test("rejects MAX_CONTRACTS_PER_PERMIT + 1 addresses, pointing at batchPreparePermits", async ({
     credentialService,
   }) => {
-    expect(ADDRS.length).toBeGreaterThan(MAX_CONTRACTS_PER_PERMIT);
     await expect(
-      credentialService.preparePermit({ signer: USER, contracts: ADDRS }),
+      credentialService.preparePermit({
+        signer: USER,
+        contracts: ADDRS.slice(0, MAX_CONTRACTS_PER_PERMIT + 1),
+      }),
     ).rejects.toBeInstanceOf(ConfigurationError);
+  });
+
+  test("accepts exactly MAX_CONTRACTS_PER_PERMIT addresses", async ({ credentialService }) => {
+    const prepared = await credentialService.preparePermit({
+      signer: USER,
+      contracts: ADDRS.slice(0, MAX_CONTRACTS_PER_PERMIT),
+    });
+    expect(prepared.eip712.message.contractAddresses).toHaveLength(MAX_CONTRACTS_PER_PERMIT);
   });
 
   test("rejects self-delegation (delegator === signer)", async ({ credentialService }) => {
@@ -180,7 +190,56 @@ describe("CredentialService.preparePermit", () => {
   });
 });
 
-describe("CredentialService.registerPermit", () => {
+describe("CredentialService.batchPreparePermits", () => {
+  test("splits the request into one permit per MAX_CONTRACTS_PER_PERMIT addresses", async ({
+    credentialService,
+    signer,
+  }) => {
+    expect(ADDRS.length).toBe(23);
+    const prepared = await credentialService.batchPreparePermits({
+      signer: USER,
+      contracts: ADDRS,
+      delegator: DELEGATOR,
+    });
+
+    expect(signer.signTypedData).not.toHaveBeenCalled();
+    const chunks = prepared.map((p) => p.eip712.message.contractAddresses as Address[]);
+    expect(chunks.map((c) => c.length)).toEqual([10, 10, 3]);
+    expect(chunks.flat()).toEqual(normalizeAddresses(ADDRS));
+    for (const p of prepared) {
+      expect(p.signerAddress).toBe(USER);
+      expect(p.eip712.message.delegatorAddress).toBe(DELEGATOR);
+      expect(p.eip712.message.startTimestamp).toBe(prepared[0]!.eip712.message.startTimestamp);
+      expect(p.eip712.message.publicKey).toBe(prepared[0]!.eip712.message.publicKey);
+    }
+  });
+
+  test("returns a single permit for MAX_CONTRACTS_PER_PERMIT or fewer addresses", async ({
+    credentialService,
+  }) => {
+    const prepared = await credentialService.batchPreparePermits({ signer: USER, contracts: [A] });
+    expect(prepared).toHaveLength(1);
+  });
+
+  test("splits MAX_CONTRACTS_PER_PERMIT + 1 addresses into a full permit and a single-address one", async ({
+    credentialService,
+  }) => {
+    const prepared = await credentialService.batchPreparePermits({
+      signer: USER,
+      contracts: ADDRS.slice(0, MAX_CONTRACTS_PER_PERMIT + 1),
+    });
+    const chunks = prepared.map((p) => p.eip712.message.contractAddresses as Address[]);
+    expect(chunks.map((c) => c.length)).toEqual([MAX_CONTRACTS_PER_PERMIT, 1]);
+  });
+
+  test("rejects an empty contracts list", async ({ credentialService }) => {
+    await expect(
+      credentialService.batchPreparePermits({ signer: USER, contracts: [] }),
+    ).rejects.toBeInstanceOf(ConfigurationError);
+  });
+});
+
+describe("CredentialService.batchRegisterPermits", () => {
   async function prepareAndSign(
     credentialService: CredentialService,
     signer: GenericSigner,
@@ -195,10 +254,112 @@ describe("CredentialService.registerPermit", () => {
     return { prepared, signature };
   }
 
+  test("persists best-effort: a storage failure on one permit neither rejects nor undoes the others", async ({
+    credentialService,
+    signer,
+    storage,
+  }) => {
+    const prepared = await credentialService.batchPreparePermits({
+      signer: USER,
+      contracts: ADDRS.slice(0, MAX_CONTRACTS_PER_PERMIT + 1),
+    });
+    const permits = await Promise.all(
+      prepared.map(async (p) => ({
+        prepared: p,
+        signature: (await signer.signTypedData(p.eip712)) as Hex,
+      })),
+    );
+    const originalSet = storage.set.bind(storage);
+    let permitWrites = 0;
+    vi.spyOn(storage, "set").mockImplementation(async (key: string, value: unknown) => {
+      if (key.startsWith("permits:") && ++permitWrites === 2) {
+        throw new Error("quota exceeded");
+      }
+      return originalSet(key, value);
+    });
+
+    await expect(credentialService.batchRegisterPermits(permits)).resolves.toBeUndefined();
+
+    const [first, second] = prepared.map((p) => p.eip712.message.contractAddresses as Address[]);
+    expect(await credentialService.hasPermit(first!)).toBe(true);
+    expect(await credentialService.hasPermit(second!)).toBe(false);
+  });
+
+  test("rejects an empty permit list", async ({ credentialService }) => {
+    await expect(credentialService.batchRegisterPermits([])).rejects.toBeInstanceOf(
+      ConfigurationError,
+    );
+  });
+
+  test("registers every chunk of a multi-permit batch", async ({ credentialService, signer }) => {
+    const prepared = await credentialService.batchPreparePermits({
+      signer: USER,
+      contracts: ADDRS,
+    });
+    expect(prepared).toHaveLength(3);
+    const permits = await Promise.all(
+      prepared.map(async (p) => ({
+        prepared: p,
+        signature: (await signer.signTypedData(p.eip712)) as Hex,
+      })),
+    );
+
+    await credentialService.batchRegisterPermits(permits);
+
+    expect(await credentialService.hasPermit(ADDRS)).toBe(true);
+  });
+
+  test("emits a single PermitError event when several permits would fail", async ({
+    createCredentialService,
+    signer,
+  }) => {
+    const emitEvent = vi.fn();
+    const credentialService = createCredentialService({ emitEvent });
+    const prepared = await credentialService.preparePermit({ signer: USER, contracts: [A] });
+    const signature = (await signer.signTypedData(prepared.eip712)) as Hex;
+    const wrongChain = {
+      ...prepared,
+      eip712: { ...prepared.eip712, domain: { ...prepared.eip712.domain, chainId: "999999" } },
+    };
+
+    await expect(
+      credentialService.batchRegisterPermits([
+        { prepared: wrongChain, signature },
+        { prepared: wrongChain, signature },
+      ]),
+    ).rejects.toBeInstanceOf(PreparedPermitChainMismatchError);
+
+    expect(emitEvent).toHaveBeenCalledOnce();
+  });
+
+  test("prefixes the error with the failing permit's position", async ({
+    credentialService,
+    signer,
+  }) => {
+    const [first, second] = await credentialService.batchPreparePermits({
+      signer: USER,
+      contracts: ADDRS.slice(0, MAX_CONTRACTS_PER_PERMIT + 1),
+    });
+    assertNonNullable(first, "first");
+    assertNonNullable(second, "second");
+    const signature = (await signer.signTypedData(first.eip712)) as Hex;
+    const wrongChain = {
+      ...second,
+      eip712: { ...second.eip712, domain: { ...second.eip712.domain, chainId: "999999" } },
+    };
+
+    await expect(
+      credentialService.batchRegisterPermits([
+        { prepared: first, signature },
+        { prepared: wrongChain, signature },
+      ]),
+    ).rejects.toThrow(/^permits\[1\]: /);
+  });
+
   test("verifies and persists a valid signature", async ({ credentialService, signer }) => {
     const { prepared, signature } = await prepareAndSign(credentialService, signer);
 
-    await credentialService.registerPermit(prepared, signature);
+    await credentialService.batchRegisterPermits([{ prepared, signature }]);
 
     expect(await credentialService.hasPermit([A])).toBe(true);
   });
@@ -211,7 +372,7 @@ describe("CredentialService.registerPermit", () => {
       delegator: DELEGATOR,
     });
 
-    await credentialService.registerPermit(prepared, signature);
+    await credentialService.batchRegisterPermits([{ prepared, signature }]);
 
     expect(await credentialService.hasPermit([A])).toBe(false);
     expect(await credentialService.hasPermit([A], DELEGATOR)).toBe(true);
@@ -224,7 +385,7 @@ describe("CredentialService.registerPermit", () => {
     const { prepared, signature } = await prepareAndSign(credentialService, signer);
 
     const rehydrated = JSON.parse(JSON.stringify(prepared));
-    await credentialService.registerPermit(rehydrated, signature);
+    await credentialService.batchRegisterPermits([{ prepared: rehydrated, signature }]);
 
     expect(await credentialService.hasPermit([A])).toBe(true);
   });
@@ -235,8 +396,8 @@ describe("CredentialService.registerPermit", () => {
   }) => {
     const { prepared, signature } = await prepareAndSign(credentialService, signer);
 
-    await credentialService.registerPermit(prepared, signature);
-    await credentialService.registerPermit(prepared, signature);
+    await credentialService.batchRegisterPermits([{ prepared, signature }]);
+    await credentialService.batchRegisterPermits([{ prepared, signature }]);
 
     const { permissions } = await credentialService.grantPermit([A]);
     expect(permissions).toHaveLength(1);
@@ -250,7 +411,9 @@ describe("CredentialService.registerPermit", () => {
     const malformed = { ...prepared, eip712: "not-an-object" };
 
     await expect(
-      credentialService.registerPermit(malformed as unknown as typeof prepared, signature),
+      credentialService.batchRegisterPermits([
+        { prepared: malformed as unknown as typeof prepared, signature },
+      ]),
     ).rejects.toBeInstanceOf(ConfigurationError);
   });
 
@@ -278,7 +441,7 @@ describe("CredentialService.registerPermit", () => {
       return originalGet(key);
     });
 
-    await credentialService.registerPermit(prepared, signature);
+    await credentialService.batchRegisterPermits([{ prepared, signature }]);
 
     expect(relayerA.parseSignedDecryptionPermit).toHaveBeenCalledOnce();
     expect(relayerB.parseSignedDecryptionPermit).not.toHaveBeenCalled();
@@ -294,9 +457,9 @@ describe("CredentialService.registerPermit", () => {
       eip712: { ...prepared.eip712, domain: { ...prepared.eip712.domain, chainId: "999999" } },
     };
 
-    await expect(credentialService.registerPermit(mismatched, signature)).rejects.toBeInstanceOf(
-      PreparedPermitChainMismatchError,
-    );
+    await expect(
+      credentialService.batchRegisterPermits([{ prepared: mismatched, signature }]),
+    ).rejects.toBeInstanceOf(PreparedPermitChainMismatchError);
   });
 
   test("throws PreparedPermitExpiredError once the permit's validity window has elapsed", async ({
@@ -318,9 +481,9 @@ describe("CredentialService.registerPermit", () => {
       },
     };
 
-    await expect(credentialService.registerPermit(expired, signature)).rejects.toBeInstanceOf(
-      PreparedPermitExpiredError,
-    );
+    await expect(
+      credentialService.batchRegisterPermits([{ prepared: expired, signature }]),
+    ).rejects.toBeInstanceOf(PreparedPermitExpiredError);
   });
 
   test("throws TransportKeyPairChangedError when no transport key pair is stored for the signer", async ({
@@ -332,9 +495,9 @@ describe("CredentialService.registerPermit", () => {
     // key pair evicted: no prior preparePermit call means nothing stored.
     await credentialService.clearCredentials();
 
-    await expect(credentialService.registerPermit(prepared, signature)).rejects.toBeInstanceOf(
-      TransportKeyPairChangedError,
-    );
+    await expect(
+      credentialService.batchRegisterPermits([{ prepared, signature }]),
+    ).rejects.toBeInstanceOf(TransportKeyPairChangedError);
   });
 
   test("emits a PermitError event on chain mismatch, before any signing/verification happens", async ({
@@ -349,9 +512,9 @@ describe("CredentialService.registerPermit", () => {
       eip712: { ...prepared.eip712, domain: { ...prepared.eip712.domain, chainId: "999999" } },
     };
 
-    await expect(credentialService.registerPermit(mismatched, signature)).rejects.toBeInstanceOf(
-      PreparedPermitChainMismatchError,
-    );
+    await expect(
+      credentialService.batchRegisterPermits([{ prepared: mismatched, signature }]),
+    ).rejects.toBeInstanceOf(PreparedPermitChainMismatchError);
 
     expect(emitEvent).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -383,9 +546,9 @@ describe("CredentialService.registerPermit", () => {
       },
     };
 
-    await expect(credentialService.registerPermit(expired, signature)).rejects.toBeInstanceOf(
-      PreparedPermitExpiredError,
-    );
+    await expect(
+      credentialService.batchRegisterPermits([{ prepared: expired, signature }]),
+    ).rejects.toBeInstanceOf(PreparedPermitExpiredError);
 
     expect(emitEvent).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -405,9 +568,9 @@ describe("CredentialService.registerPermit", () => {
     const { prepared, signature } = await prepareAndSign(credentialService, signer);
     await credentialService.clearCredentials();
 
-    await expect(credentialService.registerPermit(prepared, signature)).rejects.toBeInstanceOf(
-      TransportKeyPairChangedError,
-    );
+    await expect(
+      credentialService.batchRegisterPermits([{ prepared, signature }]),
+    ).rejects.toBeInstanceOf(TransportKeyPairChangedError);
 
     expect(emitEvent).not.toHaveBeenCalled();
   });
@@ -429,9 +592,9 @@ describe("CredentialService.registerPermit", () => {
     // calls made during registerPermit itself are under test here.
     vi.mocked(relayer.generateTransportKeyPair).mockClear();
 
-    await expect(credentialService.registerPermit(staleKeyPair, signature)).rejects.toBeInstanceOf(
-      TransportKeyPairChangedError,
-    );
+    await expect(
+      credentialService.batchRegisterPermits([{ prepared: staleKeyPair, signature }]),
+    ).rejects.toBeInstanceOf(TransportKeyPairChangedError);
     expect(relayer.generateTransportKeyPair).not.toHaveBeenCalled();
   });
 
@@ -445,9 +608,9 @@ describe("CredentialService.registerPermit", () => {
       new Error("bad signature"),
     );
 
-    await expect(credentialService.registerPermit(prepared, "0xbad" as Hex)).rejects.toBeInstanceOf(
-      SigningFailedError,
-    );
+    await expect(
+      credentialService.batchRegisterPermits([{ prepared, signature: "0xbad" as Hex }]),
+    ).rejects.toBeInstanceOf(SigningFailedError);
   });
 
   test("emits a PermitError event with operation=registerPermit on verification failure", async ({
@@ -462,9 +625,9 @@ describe("CredentialService.registerPermit", () => {
       new Error("bad signature"),
     );
 
-    await expect(credentialService.registerPermit(prepared, "0xbad" as Hex)).rejects.toBeInstanceOf(
-      SigningFailedError,
-    );
+    await expect(
+      credentialService.batchRegisterPermits([{ prepared, signature: "0xbad" as Hex }]),
+    ).rejects.toBeInstanceOf(SigningFailedError);
 
     expect(emitEvent).toHaveBeenCalledWith(
       expect.objectContaining({

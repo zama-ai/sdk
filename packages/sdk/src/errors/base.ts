@@ -149,9 +149,9 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.WalletNotConnected]: false,
   [ZamaErrorCode.WalletAccountNotReady]: true, // async wallet-account discovery still resolving
   [ZamaErrorCode.KeyWrappingFailed]: false, // a transportKeyPairDerivationSecret mismatch or environment capability issue, not transient
-  [ZamaErrorCode.TransportKeyPairChanged]: false, // caller must re-run preparePermit against the current key pair
+  [ZamaErrorCode.TransportKeyPairChanged]: false, // caller must prepare the permit again against the current key pair
   [ZamaErrorCode.PreparedPermitChainMismatch]: false, // caller must register against the chain the permit was prepared for
-  [ZamaErrorCode.PreparedPermitExpired]: false, // caller must re-run preparePermit for a fresh validity window
+  [ZamaErrorCode.PreparedPermitExpired]: false, // caller must prepare the permit again for a fresh validity window
   [ZamaErrorCode.UnshieldAlreadyFinalized]: false, // the funds already arrived; the stale pointer is cleared
 };
 
