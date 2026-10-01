@@ -481,6 +481,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:guides/vault-deposits",
+      "title": "Vault deposits and redemptions",
+      "source_path": "docs/gitbook/src/guides/vault-deposits.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-deposits.md",
+      "source_type": "official-doc",
+      "category": "guides",
+      "logical_path": "guides/vault-deposits",
+      "description": "How to integrate confidential ERC-4626 vaults with the Zama SDK.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:native/README",
       "title": "Go & Rust clients",
       "source_path": "docs/gitbook/src/native/README.md",
@@ -585,18 +597,6 @@
       "category": "daemon-operations",
       "logical_path": "native/operations/upgrade-and-recover",
       "description": "Replace the Zama SDK daemon and its Go or Rust client without losing stored credentials.",
-      "include_in_llms_txt": true,
-      "include_in_llms_full": true
-    },
-    {
-      "id": "doc:guides/vault-deposits",
-      "title": "Vault deposits and redemptions",
-      "source_path": "docs/gitbook/src/guides/vault-deposits.md",
-      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-deposits.md",
-      "source_type": "official-doc",
-      "category": "guides",
-      "logical_path": "guides/vault-deposits",
-      "description": "How to integrate confidential ERC-4626 vaults with the Zama SDK.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

@@ -3445,18 +3445,6 @@ Import pre-configured chain objects from `@zama-fhe/sdk/chains`. Each chain incl
 import { sepolia, mainnet, hoodi } from "@zama-fhe/sdk/chains";
 ```
 
-| Chain               | Chain ID   | Description             |
-| ------------------- | ---------- | ----------------------- |
-| `mainnet`           | `1`        | Ethereum Mainnet        |
-| `polygon`           | `137`      | Polygon Mainnet         |
-| `sepolia`           | `11155111` | Sepolia Testnet         |
-| `polygonAmoy`       | `80002`    | Polygon Amoy Testnet    |
-| `hoodi`             | `560048`   | Hoodi Testnet           |
-| `ingenTestnet`      | `364301`   | InGen Testnet           |
-| `zenithTrexTestnet` | `936486`   | T-Rex Zenith Testnet    |
-| `bscTestnet`        | `97`       | BNB Smart Chain Testnet |
-| `hardhat`           | `31337`    | Local Hardhat node      |
-
 ### Tab: Go
 
 Select a preset by chain ID and supply its RPC URL:
@@ -3474,16 +3462,17 @@ let config = SdkConfig::new(11_155_111, rpc_url); // Sepolia preset
 ```
 
 
-| Chain          | Chain ID   | Description             |
-| -------------- | ---------- | ----------------------- |
-| `mainnet`      | `1`        | Ethereum Mainnet        |
-| `polygon`      | `137`      | Polygon Mainnet         |
-| `sepolia`      | `11155111` | Sepolia Testnet         |
-| `polygonAmoy`  | `80002`    | Polygon Amoy Testnet    |
-| `hoodi`        | `560048`   | Hoodi Testnet           |
-| `ingenTestnet` | `364301`   | InGen Testnet           |
-| `bscTestnet`   | `97`       | BNB Smart Chain Testnet |
-| `hardhat`      | `31337`    | Local Hardhat node      |
+| Chain               | Chain ID   | Description             |
+| ------------------- | ---------- | ----------------------- |
+| `mainnet`           | `1`        | Ethereum Mainnet        |
+| `polygon`           | `137`      | Polygon Mainnet         |
+| `sepolia`           | `11155111` | Sepolia Testnet         |
+| `polygonAmoy`       | `80002`    | Polygon Amoy Testnet    |
+| `hoodi`             | `560048`   | Hoodi Testnet           |
+| `ingenTestnet`      | `364301`   | InGen Testnet           |
+| `zenithTrexTestnet` | `936486`   | T-Rex Zenith Testnet    |
+| `bscTestnet`        | `97`       | BNB Smart Chain Testnet |
+| `hardhat`           | `31337`    | Local Hardhat node      |
 
 `anvil` is also exported as an alias for `hardhat` (both target chain ID `31337`), for Foundry users.
 
@@ -5908,79 +5897,43 @@ All errors thrown by `@zama-fhe/sdk` and `@zama-fhe/react-sdk` extend `ZamaError
 
 Every SDK error is an instance of `ZamaError`, which extends the native `Error` class. Each subclass has a unique `.code` property:
 
-| Error                                     | Code                                     | What happened                                                                                                  |
-| ----------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `SigningRejectedError`                    | `SIGNING_REJECTED`                       | User rejected the wallet signature                                                                             |
-| `SigningFailedError`                      | `SIGNING_FAILED`                         | Wallet signature failed (connectivity or firmware issue)                                                       |
-| `EncryptionFailedError`                   | `ENCRYPTION_FAILED`                      | FHE encryption failed in the WASM runtime                                                                      |
-| `DecryptionFailedError`                   | `DECRYPTION_FAILED`                      | FHE decryption failed                                                                                          |
-| `TransactionRevertedError`                | `TRANSACTION_REVERTED`                   | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                 |
-| `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | `resumeUnshield()` called for an unwrap that was already finalized -- funds already arrived, nothing to resume |
-| `InvalidTransportKeyPairError`            | `INVALID_KEYPAIR`                        | Relayer rejected transport key pair (stale or malformed)                                                       |
-| `TransportKeyPairExpiredError`            | `KEYPAIR_EXPIRED`                        | Transport key pair expired -- user needs to re-sign                                                            |
-| `RevokedKmsContextError`                  | `REVOKED_KMS_CONTEXT`                    | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                |
-| `NoCiphertextError`                       | `NO_CIPHERTEXT`                          | No encrypted balance exists for this account                                                                   |
-| `RelayerRequestFailedError`               | `RELAYER_REQUEST_FAILED`                 | Relayer HTTP request failed (check `.statusCode`); retryable on back-pressure (429)                            |
-| `NotEntitledError`                        | `NOT_ENTITLED`                           | Actor lacks the on-chain ACL grant to decrypt this value — terminal, don't retry                               |
-| `RpcRateLimitError`                       | `RPC_RATE_LIMITED`                       | Consumer's RPC provider rate-limited an on-chain read (retryable)                                              |
-| `ConfigurationError`                      | `CONFIGURATION`                          | Invalid SDK config or FHE runtime failed to initialize                                                         |
-| `InsufficientConfidentialBalanceError`    | `INSUFFICIENT_CONFIDENTIAL_BALANCE`      | Confidential balance too low for transfer or unshield                                                          |
-| `InsufficientERC20BalanceError`           | `INSUFFICIENT_ERC20_BALANCE`             | ERC-20 balance too low for shield                                                                              |
-| `InsufficientAllowanceError`              | `INSUFFICIENT_ALLOWANCE`                 | ERC-20 allowance too low for a manual `wrap` (approve first)                                                   |
-| `BalanceCheckUnavailableError`            | `BALANCE_CHECK_UNAVAILABLE`              | Balance check impossible (no stored permits)                                                                   |
-| `ERC20ReadFailedError`                    | `ERC20_READ_FAILED`                      | Public ERC-20 read failed (network or contract error)                                                          |
-| `DelegationSelfNotAllowedError`           | `DELEGATION_SELF_NOT_ALLOWED`            | Delegation cannot target self                                                                                  |
-| `DelegationCooldownError`                 | `DELEGATION_COOLDOWN`                    | Only one delegate/revoke per tuple per block (retryable)                                                       |
-| `DelegationNotFoundError`                 | `DELEGATION_NOT_FOUND`                   | No active delegation for this tuple                                                                            |
-| `SignerRequiredError`                     | `SIGNER_REQUIRED`                        | Write/sign/decrypt called without a signer                                                                     |
-| `DelegationExpiredError`                  | `DELEGATION_EXPIRED`                     | The delegation has expired                                                                                     |
-| `SignerNotConfiguredError`                | `SIGNER_NOT_CONFIGURED`                  | SDK operation needs a signer but none is configured (subclass of `SignerRequiredError`)                        |
-| `WalletNotConnectedError`                 | `WALLET_NOT_CONNECTED`                   | Signer exists but has no connected wallet account (subclass of `SignerRequiredError`)                          |
-| `WalletAccountNotReadyError`              | `WALLET_ACCOUNT_NOT_READY`               | Async signer adapter hasn't resolved its account yet (subclass of `SignerRequiredError`, retryable)            |
-| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains                                                                    |
-| `DelegationContractIsSelfError`           | `DELEGATION_CONTRACT_IS_SELF`            | Delegation contract address equals the caller                                                                  |
-| `DelegationDelegateEqualsContractError`   | `DELEGATION_DELEGATE_EQUALS_CONTRACT`    | Delegate equals the contract address                                                                           |
-| `DelegationDelegateCannotBeWildcardError` | `DELEGATION_DELEGATE_CANNOT_BE_WILDCARD` | Delegate address is the wildcard address                                                                       |
-| `DelegationExpirationTooSoonError`        | `DELEGATION_EXPIRATION_TOO_SOON`         | Expiration date less than 1 hour in the future                                                                 |
-| `DelegationExpiryUnchangedError`          | `DELEGATION_EXPIRY_UNCHANGED`            | New expiry matches the current value                                                                           |
-| `DelegationNotPropagatedError`            | `DELEGATION_NOT_PROPAGATED`              | Delegated decrypt failed transiently (gateway not synced, or delegator ACL read stale) — retry                 |
-| `AclPausedError`                          | `ACL_PAUSED`                             | The ACL contract is paused                                                                                     |
-
-| Code                                  | TypeScript error class                  | What happened                                                                                       |
-| ------------------------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `SIGNING_REJECTED`                    | `SigningRejectedError`                  | User rejected the wallet signature                                                                  |
-| `SIGNING_FAILED`                      | `SigningFailedError`                    | Wallet signature failed (connectivity or firmware issue)                                            |
-| `ENCRYPTION_FAILED`                   | `EncryptionFailedError`                 | FHE encryption failed in the WASM runtime                                                           |
-| `DECRYPTION_FAILED`                   | `DecryptionFailedError`                 | FHE decryption failed                                                                               |
-| `TRANSACTION_REVERTED`                | `TransactionRevertedError`              | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                      |
-| `INVALID_KEYPAIR`                     | `InvalidTransportKeyPairError`          | Relayer rejected transport key pair (stale or malformed)                                            |
-| `KEYPAIR_EXPIRED`                     | `TransportKeyPairExpiredError`          | Transport key pair expired -- user needs to re-sign                                                 |
-| `REVOKED_KMS_CONTEXT`                 | `RevokedKmsContextError`                | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit     |
-| `NO_CIPHERTEXT`                       | `NoCiphertextError`                     | No encrypted balance exists for this account                                                        |
-| `RELAYER_REQUEST_FAILED`              | `RelayerRequestFailedError`             | Relayer HTTP request failed (check `.statusCode`); retryable on back-pressure (429)                 |
-| `NOT_ENTITLED`                        | `NotEntitledError`                      | Actor lacks the on-chain ACL grant to decrypt this value — terminal, don't retry                    |
-| `RPC_RATE_LIMITED`                    | `RpcRateLimitError`                     | Consumer's RPC provider rate-limited an on-chain read (retryable)                                   |
-| `CONFIGURATION`                       | `ConfigurationError`                    | Invalid SDK config or FHE runtime failed to initialize                                              |
-| `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | `InsufficientConfidentialBalanceError`  | Confidential balance too low for transfer or unshield                                               |
-| `INSUFFICIENT_ERC20_BALANCE`          | `InsufficientERC20BalanceError`         | ERC-20 balance too low for shield                                                                   |
-| `INSUFFICIENT_ALLOWANCE`              | `InsufficientAllowanceError`            | ERC-20 allowance too low for a manual `wrap` (approve first)                                        |
-| `BALANCE_CHECK_UNAVAILABLE`           | `BalanceCheckUnavailableError`          | Balance check impossible (no stored permits)                                                        |
-| `ERC20_READ_FAILED`                   | `ERC20ReadFailedError`                  | Public ERC-20 read failed (network or contract error)                                               |
-| `DELEGATION_SELF_NOT_ALLOWED`         | `DelegationSelfNotAllowedError`         | Delegation cannot target self                                                                       |
-| `DELEGATION_COOLDOWN`                 | `DelegationCooldownError`               | Only one delegate/revoke per tuple per block (retryable)                                            |
-| `DELEGATION_NOT_FOUND`                | `DelegationNotFoundError`               | No active delegation for this tuple                                                                 |
-| `SIGNER_REQUIRED`                     | `SignerRequiredError`                   | Write/sign/decrypt called without a signer                                                          |
-| `DELEGATION_EXPIRED`                  | `DelegationExpiredError`                | The delegation has expired                                                                          |
-| `SIGNER_NOT_CONFIGURED`               | `SignerNotConfiguredError`              | SDK operation needs a signer but none is configured (subclass of `SignerRequiredError`)             |
-| `WALLET_NOT_CONNECTED`                | `WalletNotConnectedError`               | Signer exists but has no connected wallet account (subclass of `SignerRequiredError`)               |
-| `WALLET_ACCOUNT_NOT_READY`            | `WalletAccountNotReadyError`            | Async signer adapter hasn't resolved its account yet (subclass of `SignerRequiredError`, retryable) |
-| `CHAIN_MISMATCH`                      | `ChainMismatchError`                    | Signer and provider are on different chains                                                         |
-| `DELEGATION_CONTRACT_IS_SELF`         | `DelegationContractIsSelfError`         | Delegation contract address equals the caller                                                       |
-| `DELEGATION_DELEGATE_EQUALS_CONTRACT` | `DelegationDelegateEqualsContractError` | Delegate equals the contract address                                                                |
-| `DELEGATION_EXPIRATION_TOO_SOON`      | `DelegationExpirationTooSoonError`      | Expiration date less than 1 hour in the future                                                      |
-| `DELEGATION_EXPIRY_UNCHANGED`         | `DelegationExpiryUnchangedError`        | New expiry matches the current value                                                                |
-| `DELEGATION_NOT_PROPAGATED`           | `DelegationNotPropagatedError`          | Delegated decrypt failed transiently (gateway not synced, or delegator ACL read stale) — retry      |
-| `ACL_PAUSED`                          | `AclPausedError`                        | The ACL contract is paused                                                                          |
+| Code                                     | TypeScript error class                    | What happened                                                                                                  |
+| ---------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `SIGNING_REJECTED`                       | `SigningRejectedError`                    | User rejected the wallet signature                                                                             |
+| `SIGNING_FAILED`                         | `SigningFailedError`                      | Wallet signature failed (connectivity or firmware issue)                                                       |
+| `ENCRYPTION_FAILED`                      | `EncryptionFailedError`                   | FHE encryption failed in the WASM runtime                                                                      |
+| `DECRYPTION_FAILED`                      | `DecryptionFailedError`                   | FHE decryption failed                                                                                          |
+| `TRANSACTION_REVERTED`                   | `TransactionRevertedError`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                 |
+| `UNSHIELD_ALREADY_FINALIZED`             | `UnshieldAlreadyFinalizedError`           | `resumeUnshield()` called for an unwrap that was already finalized -- funds already arrived, nothing to resume |
+| `INVALID_KEYPAIR`                        | `InvalidTransportKeyPairError`            | Relayer rejected transport key pair (stale or malformed)                                                       |
+| `KEYPAIR_EXPIRED`                        | `TransportKeyPairExpiredError`            | Transport key pair expired -- user needs to re-sign                                                            |
+| `REVOKED_KMS_CONTEXT`                    | `RevokedKmsContextError`                  | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                |
+| `NO_CIPHERTEXT`                          | `NoCiphertextError`                       | No encrypted balance exists for this account                                                                   |
+| `RELAYER_REQUEST_FAILED`                 | `RelayerRequestFailedError`               | Relayer HTTP request failed (check `.statusCode`); retryable on back-pressure (429)                            |
+| `NOT_ENTITLED`                           | `NotEntitledError`                        | Actor lacks the on-chain ACL grant to decrypt this value — terminal, don't retry                               |
+| `RPC_RATE_LIMITED`                       | `RpcRateLimitError`                       | Consumer's RPC provider rate-limited an on-chain read (retryable)                                              |
+| `CONFIGURATION`                          | `ConfigurationError`                      | Invalid SDK config or FHE runtime failed to initialize                                                         |
+| `INSUFFICIENT_CONFIDENTIAL_BALANCE`      | `InsufficientConfidentialBalanceError`    | Confidential balance too low for transfer or unshield                                                          |
+| `INSUFFICIENT_ERC20_BALANCE`             | `InsufficientERC20BalanceError`           | ERC-20 balance too low for shield                                                                              |
+| `INSUFFICIENT_ALLOWANCE`                 | `InsufficientAllowanceError`              | ERC-20 allowance too low for a manual `wrap` (approve first)                                                   |
+| `BALANCE_CHECK_UNAVAILABLE`              | `BalanceCheckUnavailableError`            | Balance check impossible (no stored permits)                                                                   |
+| `ERC20_READ_FAILED`                      | `ERC20ReadFailedError`                    | Public ERC-20 read failed (network or contract error)                                                          |
+| `DELEGATION_SELF_NOT_ALLOWED`            | `DelegationSelfNotAllowedError`           | Delegation cannot target self                                                                                  |
+| `DELEGATION_COOLDOWN`                    | `DelegationCooldownError`                 | Only one delegate/revoke per tuple per block (retryable)                                                       |
+| `DELEGATION_NOT_FOUND`                   | `DelegationNotFoundError`                 | No active delegation for this tuple                                                                            |
+| `SIGNER_REQUIRED`                        | `SignerRequiredError`                     | Write/sign/decrypt called without a signer                                                                     |
+| `DELEGATION_EXPIRED`                     | `DelegationExpiredError`                  | The delegation has expired                                                                                     |
+| `SIGNER_NOT_CONFIGURED`                  | `SignerNotConfiguredError`                | SDK operation needs a signer but none is configured (subclass of `SignerRequiredError`)                        |
+| `WALLET_NOT_CONNECTED`                   | `WalletNotConnectedError`                 | Signer exists but has no connected wallet account (subclass of `SignerRequiredError`)                          |
+| `WALLET_ACCOUNT_NOT_READY`               | `WalletAccountNotReadyError`              | Async signer adapter hasn't resolved its account yet (subclass of `SignerRequiredError`, retryable)            |
+| `CHAIN_MISMATCH`                         | `ChainMismatchError`                      | Signer and provider are on different chains                                                                    |
+| `DELEGATION_CONTRACT_IS_SELF`            | `DelegationContractIsSelfError`           | Delegation contract address equals the caller                                                                  |
+| `DELEGATION_DELEGATE_EQUALS_CONTRACT`    | `DelegationDelegateEqualsContractError`   | Delegate equals the contract address                                                                           |
+| `DELEGATION_DELEGATE_CANNOT_BE_WILDCARD` | `DelegationDelegateCannotBeWildcardError` | Delegate address is the wildcard address                                                                       |
+| `DELEGATION_EXPIRATION_TOO_SOON`         | `DelegationExpirationTooSoonError`        | Expiration date less than 1 hour in the future                                                                 |
+| `DELEGATION_EXPIRY_UNCHANGED`            | `DelegationExpiryUnchangedError`          | New expiry matches the current value                                                                           |
+| `DELEGATION_NOT_PROPAGATED`              | `DelegationNotPropagatedError`            | Delegated decrypt failed transiently (gateway not synced, or delegator ACL read stale) — retry                 |
+| `ACL_PAUSED`                             | `AclPausedError`                          | The ACL contract is paused                                                                                     |
 
 ### 2. Catch with instanceof
 
@@ -6205,26 +6158,16 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 
 ### 7. Common problems troubleshooting
 
-| What you see                              | Why                                                    | Fix                                                                                                                                                                                                                   |
-| ----------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SigningRejectedError` on every decrypt   | Wallet rejected the EIP-712 signature                  | Make sure the wallet supports `eth_signTypedData_v4`. Some hardware wallets need a firmware update.                                                                                                                   |
-| Balance always `undefined`                | Encrypted value is zero (never shielded)               | Check if the user has shielded tokens first. Catch `NoCiphertextError`.                                                                                                                                               |
-| `ConfigurationError` on first operation   | FHE runtime failed to initialize                       | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`. Check transport config.                                                                                                                           |
-| `EncryptionFailedError`                   | FHE encryption failed during an operation              | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`.                                                                                                                                                   |
-| `DecryptionFailedError` after page reload | Unshield was interrupted                               | Use `getPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.                                                                                                                                  |
-| `UnshieldAlreadyFinalizedError` on resume | Unwrap was already finalized before the resume attempt | Funds already arrived -- treat as completion, not failure. `useResumeUnshield` refreshes balances automatically; if calling `resumeUnshield()` directly, catch this error and dismiss the prompt instead of retrying. |
-| `RelayerRequestFailedError`               | Relayer URL wrong or auth missing                      | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.                                                                                                                         |
-
-| What you see                                                 | Why                                                | Fix                                                                                                                                                                     |
-| ------------------------------------------------------------ | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SigningRejectedError` (`SIGNING_REJECTED`) on every decrypt | Wallet rejected the EIP-712 signature              | Make sure the wallet supports `eth_signTypedData_v4`. Some hardware wallets need a firmware update.                                                                     |
-| Balance always `undefined`                                   | Encrypted value is zero (never shielded)           | Check if the user has shielded tokens first. Catch `NoCiphertextError`.                                                                                                 |
-| `ConfigurationError` on first operation                      | FHE runtime failed to initialize                   | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`. Check transport config.                                                                             |
-| `EncryptionFailedError`                                      | FHE encryption failed during an operation          | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`.                                                                                                     |
-| `DecryptionFailedError` after page reload                    | Unshield was interrupted                           | Use `getPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.                                                                                    |
-| `TransactionRevertedError` on finalize                       | Unwrap already finalized or tx hash invalid        | Check the unwrap tx. If it was already finalized, the unshield is complete -- stop prompting to resume.                                                                 |
-| `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`)       | Relayer URL wrong or auth missing                  | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.                                                                           |
-| Go or Rust error with no SDK code                            | The daemon connection or a callback channel failed | Follow [Monitor and troubleshoot](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md) and [Recover from disconnections](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/recover-from-disconnections.md). |
+| What you see                                                 | Why                                                    | Fix                                                                                                                                                                                                                   |
+| ------------------------------------------------------------ | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SigningRejectedError` (`SIGNING_REJECTED`) on every decrypt | Wallet rejected the EIP-712 signature                  | Make sure the wallet supports `eth_signTypedData_v4`. Some hardware wallets need a firmware update.                                                                                                                   |
+| Balance always `undefined`                                   | Encrypted value is zero (never shielded)               | Check if the user has shielded tokens first. Catch `NoCiphertextError`.                                                                                                                                               |
+| `ConfigurationError` on first operation                      | FHE runtime failed to initialize                       | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`. Check transport config.                                                                                                                           |
+| `EncryptionFailedError`                                      | FHE encryption failed during an operation              | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`.                                                                                                                                                   |
+| `DecryptionFailedError` after page reload                    | Unshield was interrupted                               | Use `getPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.                                                                                                                                  |
+| `UnshieldAlreadyFinalizedError` on resume                    | Unwrap was already finalized before the resume attempt | Funds already arrived -- treat as completion, not failure. `useResumeUnshield` refreshes balances automatically; if calling `resumeUnshield()` directly, catch this error and dismiss the prompt instead of retrying. |
+| `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`)       | Relayer URL wrong or auth missing                      | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.                                                                                                                         |
+| Go or Rust error with no SDK code                            | The daemon connection or a callback channel failed     | Follow [Monitor and troubleshoot](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md) and [Recover from disconnections](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/recover-from-disconnections.md).                                               |
 
 ### 8. Retry transient failures
 
@@ -7045,8 +6988,6 @@ Then register the signature. This verifies it against the prepared typed data an
 await sdk.permits.registerPermit(prepared, signature);
 ```
 
-The recovery byte may be either `0`/`1` or `27`/`28`: the SDK normalizes it before the permit is verified.
-
 ### Tab: Go
 
 ```go
@@ -7068,6 +7009,8 @@ sdk.permits()
 Pass `envelope` unchanged; it carries the prepared permit that the signature is checked against.
 
 
+The recovery byte may be either `0`/`1` or `27`/`28`: the SDK normalizes it before the permit is verified.
+
 One permit per call: unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks a request over 10 contracts — `contracts` maps to exactly one signature.
 
 For more than 10 contracts, `batchPreparePermits` splits the request into one permit per 10 and `batchRegisterPermits` registers the signed pairs in order:
@@ -7087,9 +7030,7 @@ Every permit is verified before any is stored, so a permit that fails verificati
 
 
 > [!WARNING]
-> **Register promptly.** `prepared.eip712.message` carries the permit's validity window (`startTimestamp` + `durationDays`); if approval takes long enough that the window elapses before you call `registerPermit`, it throws `PreparedPermitExpiredError` — call `preparePermit` again for a fresh window. The same applies to `batchRegisterPermits`: all chunks share one validity window, and one expired permit fails the whole batch. Registering also checks that the chain embedded in `prepared.eip712.domain` matches the SDK's active chain (`PreparedPermitChainMismatchError`) and that the transport key pair hasn't changed since prepare (`TransportKeyPairChangedError`, e.g. after a TTL expiry) — see the [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Offline.md#preparepermit) for details.
-
-> **Register promptly.** `prepared.eip712.message` carries the permit's validity window (`startTimestamp` + `durationDays`); if approval takes long enough that the window elapses before you call `registerPermit`, it throws `PreparedPermitExpiredError` (`PREPARED_PERMIT_EXPIRED`) — call `preparePermit` again for a fresh window. Registering also checks that the chain embedded in `prepared.eip712.domain` matches the SDK's active chain (`PreparedPermitChainMismatchError`, `PREPARED_PERMIT_CHAIN_MISMATCH`) and that the transport key pair hasn't changed since prepare (`TransportKeyPairChangedError`, `TRANSPORT_KEY_PAIR_CHANGED`, e.g. after a TTL expiry) — see the [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Offline.md#preparepermit) for details.
+> **Register promptly.** `prepared.eip712.message` carries the permit's validity window (`startTimestamp` + `durationDays`); if approval takes long enough that the window elapses before you call `registerPermit`, it throws `PreparedPermitExpiredError` (`PREPARED_PERMIT_EXPIRED`) — call `preparePermit` again for a fresh window. The same applies to `batchRegisterPermits`: all chunks share one validity window, and one expired permit fails the whole batch. Registering also checks that the chain embedded in `prepared.eip712.domain` matches the SDK's active chain (`PreparedPermitChainMismatchError`, `PREPARED_PERMIT_CHAIN_MISMATCH`) and that the transport key pair hasn't changed since prepare (`TransportKeyPairChangedError`, `TRANSPORT_KEY_PAIR_CHANGED`, e.g. after a TTL expiry) — see the [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Offline.md#preparepermit) for details.
 
 
 
@@ -9486,6 +9427,294 @@ let result = sdk
 - [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md) — chains, relayers, authentication, and permit management
 - [Go client API](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/go-client.md) and [Rust client API](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/rust-client.md)
 
+## Vault deposits and redemptions
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/guides/vault-deposits.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-deposits.md
+- logical_path: guides/vault-deposits
+
+# Vault deposits and redemptions
+
+This guide covers **integrating** a confidential vault from the SDK. For what a confidential vault is, how batching and settlement work on-chain, and the contracts themselves, see the [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault) — in particular its [deposit guide](https://docs.zama.org/protocol/confidential-vault/guides/deposit).
+
+Core SDK usage imports from `@zama-fhe/sdk/vaults`; React hooks import from `@zama-fhe/react-sdk/vaults`. Both are separate subpaths, so this module is only bundled for apps that actually use it.
+
+## The two layers
+
+- **`VaultBatcher`** mirrors one on-chain batcher contract directly, the way `Token` mirrors an ERC-7984 confidential token. A vault has two directions — deposit and redeem — each behind its own batcher contract.
+- **`Vault`** pairs a deposit batcher and a redeem batcher into one object with ERC-4626-style methods (`deposit`, `redeem`, …), the way `WrappedToken` builds on `Token`. It also automates a step you'd otherwise have to do by hand: granting the batcher an operator approval before it can pull the joined amount — see [Operator approvals](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/operator-approvals.md).
+
+Most apps should use `Vault` (`useVault` / `useDeposit` / `useRedeem` in React). Reach for `VaultBatcher` (`createVaultBatcher`, or `useVaultBatcher` / `useJoin` / `useClaim` / … in React) directly only if you need a single direction, or want to control the operator grant yourself.
+
+## Steps
+
+### 1. Create a vault instance
+
+`createVault` (or `useVault`) takes the SDK instance and the vault's two batcher addresses.
+
+
+### Tab: Core SDK
+
+```ts
+import { createVault } from "@zama-fhe/sdk/vaults";
+
+const addresses = {
+  depositBatcher: "0xDepositBatcher",
+  redeemBatcher: "0xRedeemBatcher",
+  vault: "0xVault", // optional — verified against what the batchers report, not trusted
+};
+const vault = createVault(sdk, addresses);
+
+const vaultAddress = await vault.vaultAddress();
+```
+
+### Tab: React SDK
+
+```tsx
+import { useVault } from "@zama-fhe/react-sdk/vaults";
+
+const addresses = {
+  depositBatcher: "0xDepositBatcher",
+  redeemBatcher: "0xRedeemBatcher",
+  vault: "0xVault", // optional — verified against what the batchers report, not trusted
+};
+const vault = useVault(addresses);
+```
+
+
+You don't have to supply the underlying ERC-4626 vault address: both batchers report it on-chain, and `vaultAddress()` reads it once and caches it. Pass `vault` anyway if you want it checked, as above — a pair of batchers that report different vaults, or a configured address the batchers disagree with, throws instead of silently settling against the wrong contract.
+
+The snippets below reuse `sdk`, `addresses` and `vault` from this step, and `address` is the connected wallet.
+
+### 2. Deposit
+
+Depositing grants the deposit batcher an operator approval on the underlying token if one isn't already active, checks the caller's confidential balance, encrypts the amount, and joins the currently open batch:
+
+
+### Tab: Core SDK
+
+```ts
+const { txHash, batchId } = await vault.deposit(1_000_000n);
+```
+
+### Tab: React SDK
+
+```tsx
+import { useDeposit } from "@zama-fhe/react-sdk/vaults";
+
+const deposit = useDeposit({ addresses });
+deposit.mutate({ amount: 1_000_000n });
+```
+
+
+The amount is denominated in the confidential asset token's base units — the token `vault.cAsset()` returns, with its `decimals()` — so `1_000_000n` is one unit of a 6-decimal asset.
+
+`deposit` returns the `batchId` it joined, read back from the batcher's `Joined` event — keep it, since every later call (`batchState`, `claim`, `quit`) needs it.
+
+Pass `beneficiary` to credit a different account, and `operatorUntil` to control how long the operator grant lasts (defaults to 1 hour, same as `Token.setOperator`). The React hook invalidates the deposit token's balance cache on success.
+
+
+> [!WARNING]
+> The beneficiary owns the position, not the caller: only they can `quit` it, and `claim` always pays out to them.
+
+
+The SDK checks your confidential balance before submitting, exactly as `Token.confidentialTransfer` does — an ERC-7984 transfer moves zero instead of reverting, so without that check a too-large deposit would succeed on-chain and join nothing. Pass `skipBalanceCheck: true` for accounts whose balance the connected signer can't decrypt (smart wallets). The returned `confidentialJoinedAmount` is still the authoritative record of what landed: decrypt it, or call `depositBatcher.depositOf(batchId, account)`, to confirm.
+
+### 3. Track the batch
+
+`deposit` already gave you the batch id. Read its state from the deposit batcher:
+
+
+### Tab: Core SDK
+
+```ts
+const state = await vault.depositBatcher.batchState(batchId);
+```
+
+### Tab: React SDK
+
+```tsx
+import { useBatchState, useCurrentBatchId } from "@zama-fhe/react-sdk/vaults";
+
+const batchId = deposit.data?.batchId;
+const { data: state } = useBatchState({ address: vault.depositBatcher.address, batchId });
+
+const { data: openBatchId } = useCurrentBatchId({ address: vault.depositBatcher.address });
+```
+
+
+`useCurrentBatchId` reads whichever batch is open right now — for a "next batch" display, not for following a deposit you already made, since the open id moves on at every dispatch.
+
+`batchState` decides which action is legal, so read it before offering the user a button:
+
+| `BatchState` | What the user can do                            |
+| ------------ | ----------------------------------------------- |
+| `Pending`    | `deposit` / `redeem`, or `quit`                 |
+| `Dispatched` | Nothing — wait                                  |
+| `Finalized`  | `claim`                                         |
+| `Canceled`   | `quit` (or `recover`), to take the deposit back |
+
+
+> [!WARNING]
+> Claiming a canceled batch reverts — a canceled batch never executed, so there is nothing to claim, only a deposit to take back with `quit` or `recover`.
+
+
+To show a countdown, or decide when to poll again, use `timeUntilDispatchable`:
+
+
+### Tab: Core SDK
+
+```ts
+const secondsLeft = await vault.depositBatcher.timeUntilDispatchable(batchId);
+```
+
+### Tab: React SDK
+
+```tsx
+import { useTimeUntilDispatchable } from "@zama-fhe/react-sdk/vaults";
+
+const { data: secondsLeft } = useTimeUntilDispatchable(
+  { address: vault.depositBatcher.address, batchId },
+  { refetchInterval: 5_000 },
+);
+```
+
+
+It returns `0` once the batch is old enough — the earliest moment dispatch is possible, not a guarantee anyone will dispatch then. It returns `null` once the batch has left `Pending` and can no longer be dispatched at all, so `0` never has to stand in for "already dispatched".
+
+### 4. Dispatch the batch
+
+Once `timeUntilDispatchable` reads `0`, anyone can dispatch the batch — this is a permissionless call, not something only participants can trigger:
+
+
+### Tab: Core SDK
+
+```ts
+await vault.depositBatcher.dispatchBatch();
+```
+
+### Tab: React SDK
+
+```tsx
+import { useDispatchBatch } from "@zama-fhe/react-sdk/vaults";
+
+const dispatchBatch = useDispatchBatch({ address: vault.depositBatcher.address });
+dispatchBatch.mutate();
+```
+
+
+Use the per-batch reads (`batchMinBatchAge`, `batchCallbackDeadline`) rather than the batcher-wide `minBatchAge()` / `callbackDeadline()`: each batch pins the policy in force when it opened, so the batcher-wide values describe future batches, not this one. `batchDispatchedAt(batchId) + batchCallbackDeadline(batchId)` gives the timestamp finalization must land by; past it, the batch is canceled.
+
+### 5. Claim
+
+Dispatch only starts the decryption; finalization lands later. Wait for `batchState` to reach `Finalized`, then claim. Claiming is permissionless — anyone can call it on another account's behalf, but the output always goes to that account, never to the caller:
+
+
+### Tab: Core SDK
+
+```ts
+await vault.depositBatcher.claim(batchId);
+
+const cShare = await vault.cShare();
+const balance = await cShare.balanceOf(address);
+```
+
+### Tab: React SDK
+
+```tsx
+import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useClaim } from "@zama-fhe/react-sdk/vaults";
+
+const claim = useClaim({ address: vault.depositBatcher.address });
+claim.mutate({ batchId });
+
+const cShareAddress = "0xCShare";
+const { data: balance } = useConfidentialBalance({ address: cShareAddress, account: address });
+```
+
+
+The share token is an ordinary confidential token, so `useConfidentialBalance` reads it directly — there is no vault-specific balance hook, and none that resolves the share token's address. Configure `cShareAddress` alongside the batcher addresses, as above, or read it once with `(await vault.cShare()).address` — in a `useEffect`, or a `useQuery` keyed on the vault — and keep it in state. The address is fixed at deploy time, so one read is enough.
+
+## Redemptions
+
+Redemptions mirror deposits exactly, using the redeem batcher instead. The amount is
+denominated in shares, not assets — ERC-4626 `redeem`, not `withdraw`:
+
+
+### Tab: Core SDK
+
+```ts
+const { batchId } = await vault.redeem(500n);
+
+await vault.redeemBatcher.dispatchBatch(); // once timeUntilDispatchable(batchId) is 0
+// …then wait for batchState(batchId) to reach BatchState.Finalized:
+await vault.redeemBatcher.claim(batchId);
+
+const cAsset = await vault.cAsset();
+const balance = await cAsset.balanceOf(address);
+```
+
+### Tab: React SDK
+
+```tsx
+import { useRedeem } from "@zama-fhe/react-sdk/vaults";
+
+const redeem = useRedeem({ addresses });
+redeem.mutate({ amount: 500n });
+```
+
+
+From here, steps 3 to 5 apply unchanged with `vault.redeemBatcher.address` in place of `vault.depositBatcher.address`; the claimed assets land on `vault.cAsset()`.
+
+## Getting a deposit back
+
+`quit` refunds the caller's own deposit. It works both before the batch is dispatched (undoing a join) and after a batch was canceled:
+
+
+### Tab: Core SDK
+
+```ts
+await vault.depositBatcher.quit(batchId);
+```
+
+### Tab: React SDK
+
+```tsx
+import { useQuit } from "@zama-fhe/react-sdk/vaults";
+
+const quit = useQuit({ address: vault.depositBatcher.address });
+quit.mutate({ batchId });
+```
+
+
+`recover` does the same for someone else. It is permissionless and only legal on a **canceled** batch, and the refund always goes to the depositor, never to the caller — so a keeper, or the app itself, can clean up a canceled batch on behalf of users who joined for a `beneficiary` and would otherwise have to come back and quit themselves:
+
+
+### Tab: Core SDK
+
+```ts
+await vault.depositBatcher.recover(batchId, "0xDepositor");
+```
+
+### Tab: React SDK
+
+```tsx
+import { useRecover } from "@zama-fhe/react-sdk/vaults";
+
+const recover = useRecover({ address: vault.depositBatcher.address });
+recover.mutate({ batchId, account: "0xDepositor" });
+```
+
+
+## Next steps
+
+- [`Vault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) and [`VaultBatcher`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md) — full API reference, including the per-batch reads
+- [`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md), [`useRedeem`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRedeem.md), [`useBatchState`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md), [`useClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md) — the React hooks used above
+- [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault) — the protocol side: how batching, dispatch and settlement work
+- [Operator approvals](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/operator-approvals.md) — the approval model `vault.deposit()` / `vault.redeem()` automate
+- [Check balances](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/check-balances.md) — reading confidential balances on `cAsset()` / `cShare()`
+
 ## Go & Rust clients
 
 - source_type: official-doc
@@ -10235,294 +10464,6 @@ A forced stop during a write can leave its outcome unknown. Follow [Resolve unce
 ## Roll back
 
 Stop the new pair and start the previous images with the same storage and derivation secret. If the new version wrote credentials the previous version can't read, restore the storage backup taken before the upgrade; see [Back up daemon SQLite storage](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md#back-up-daemon-sqlite-storage). Never run the old and new daemons against one SQLite volume at the same time.
-
-## Vault deposits and redemptions
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/guides/vault-deposits.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-deposits.md
-- logical_path: guides/vault-deposits
-
-# Vault deposits and redemptions
-
-This guide covers **integrating** a confidential vault from the SDK. For what a confidential vault is, how batching and settlement work on-chain, and the contracts themselves, see the [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault) — in particular its [deposit guide](https://docs.zama.org/protocol/confidential-vault/guides/deposit).
-
-Core SDK usage imports from `@zama-fhe/sdk/vaults`; React hooks import from `@zama-fhe/react-sdk/vaults`. Both are separate subpaths, so this module is only bundled for apps that actually use it.
-
-## The two layers
-
-- **`VaultBatcher`** mirrors one on-chain batcher contract directly, the way `Token` mirrors an ERC-7984 confidential token. A vault has two directions — deposit and redeem — each behind its own batcher contract.
-- **`Vault`** pairs a deposit batcher and a redeem batcher into one object with ERC-4626-style methods (`deposit`, `redeem`, …), the way `WrappedToken` builds on `Token`. It also automates a step you'd otherwise have to do by hand: granting the batcher an operator approval before it can pull the joined amount — see [Operator approvals](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/operator-approvals.md).
-
-Most apps should use `Vault` (`useVault` / `useDeposit` / `useRedeem` in React). Reach for `VaultBatcher` (`createVaultBatcher`, or `useVaultBatcher` / `useJoin` / `useClaim` / … in React) directly only if you need a single direction, or want to control the operator grant yourself.
-
-## Steps
-
-### 1. Create a vault instance
-
-`createVault` (or `useVault`) takes the SDK instance and the vault's two batcher addresses.
-
-
-### Tab: Core SDK
-
-```ts
-import { createVault } from "@zama-fhe/sdk/vaults";
-
-const addresses = {
-  depositBatcher: "0xDepositBatcher",
-  redeemBatcher: "0xRedeemBatcher",
-  vault: "0xVault", // optional — verified against what the batchers report, not trusted
-};
-const vault = createVault(sdk, addresses);
-
-const vaultAddress = await vault.vaultAddress();
-```
-
-### Tab: React SDK
-
-```tsx
-import { useVault } from "@zama-fhe/react-sdk/vaults";
-
-const addresses = {
-  depositBatcher: "0xDepositBatcher",
-  redeemBatcher: "0xRedeemBatcher",
-  vault: "0xVault", // optional — verified against what the batchers report, not trusted
-};
-const vault = useVault(addresses);
-```
-
-
-You don't have to supply the underlying ERC-4626 vault address: both batchers report it on-chain, and `vaultAddress()` reads it once and caches it. Pass `vault` anyway if you want it checked, as above — a pair of batchers that report different vaults, or a configured address the batchers disagree with, throws instead of silently settling against the wrong contract.
-
-The snippets below reuse `sdk`, `addresses` and `vault` from this step, and `address` is the connected wallet.
-
-### 2. Deposit
-
-Depositing grants the deposit batcher an operator approval on the underlying token if one isn't already active, checks the caller's confidential balance, encrypts the amount, and joins the currently open batch:
-
-
-### Tab: Core SDK
-
-```ts
-const { txHash, batchId } = await vault.deposit(1_000_000n);
-```
-
-### Tab: React SDK
-
-```tsx
-import { useDeposit } from "@zama-fhe/react-sdk/vaults";
-
-const deposit = useDeposit({ addresses });
-deposit.mutate({ amount: 1_000_000n });
-```
-
-
-The amount is denominated in the confidential asset token's base units — the token `vault.cAsset()` returns, with its `decimals()` — so `1_000_000n` is one unit of a 6-decimal asset.
-
-`deposit` returns the `batchId` it joined, read back from the batcher's `Joined` event — keep it, since every later call (`batchState`, `claim`, `quit`) needs it.
-
-Pass `beneficiary` to credit a different account, and `operatorUntil` to control how long the operator grant lasts (defaults to 1 hour, same as `Token.setOperator`). The React hook invalidates the deposit token's balance cache on success.
-
-
-> [!WARNING]
-> The beneficiary owns the position, not the caller: only they can `quit` it, and `claim` always pays out to them.
-
-
-The SDK checks your confidential balance before submitting, exactly as `Token.confidentialTransfer` does — an ERC-7984 transfer moves zero instead of reverting, so without that check a too-large deposit would succeed on-chain and join nothing. Pass `skipBalanceCheck: true` for accounts whose balance the connected signer can't decrypt (smart wallets). The returned `confidentialJoinedAmount` is still the authoritative record of what landed: decrypt it, or call `depositBatcher.depositOf(batchId, account)`, to confirm.
-
-### 3. Track the batch
-
-`deposit` already gave you the batch id. Read its state from the deposit batcher:
-
-
-### Tab: Core SDK
-
-```ts
-const state = await vault.depositBatcher.batchState(batchId);
-```
-
-### Tab: React SDK
-
-```tsx
-import { useBatchState, useCurrentBatchId } from "@zama-fhe/react-sdk/vaults";
-
-const batchId = deposit.data?.batchId;
-const { data: state } = useBatchState({ address: vault.depositBatcher.address, batchId });
-
-const { data: openBatchId } = useCurrentBatchId({ address: vault.depositBatcher.address });
-```
-
-
-`useCurrentBatchId` reads whichever batch is open right now — for a "next batch" display, not for following a deposit you already made, since the open id moves on at every dispatch.
-
-`batchState` decides which action is legal, so read it before offering the user a button:
-
-| `BatchState` | What the user can do                            |
-| ------------ | ----------------------------------------------- |
-| `Pending`    | `deposit` / `redeem`, or `quit`                 |
-| `Dispatched` | Nothing — wait                                  |
-| `Finalized`  | `claim`                                         |
-| `Canceled`   | `quit` (or `recover`), to take the deposit back |
-
-
-> [!WARNING]
-> Claiming a canceled batch reverts — a canceled batch never executed, so there is nothing to claim, only a deposit to take back with `quit` or `recover`.
-
-
-To show a countdown, or decide when to poll again, use `timeUntilDispatchable`:
-
-
-### Tab: Core SDK
-
-```ts
-const secondsLeft = await vault.depositBatcher.timeUntilDispatchable(batchId);
-```
-
-### Tab: React SDK
-
-```tsx
-import { useTimeUntilDispatchable } from "@zama-fhe/react-sdk/vaults";
-
-const { data: secondsLeft } = useTimeUntilDispatchable(
-  { address: vault.depositBatcher.address, batchId },
-  { refetchInterval: 5_000 },
-);
-```
-
-
-It returns `0` once the batch is old enough — the earliest moment dispatch is possible, not a guarantee anyone will dispatch then. It returns `null` once the batch has left `Pending` and can no longer be dispatched at all, so `0` never has to stand in for "already dispatched".
-
-### 4. Dispatch the batch
-
-Once `timeUntilDispatchable` reads `0`, anyone can dispatch the batch — this is a permissionless call, not something only participants can trigger:
-
-
-### Tab: Core SDK
-
-```ts
-await vault.depositBatcher.dispatchBatch();
-```
-
-### Tab: React SDK
-
-```tsx
-import { useDispatchBatch } from "@zama-fhe/react-sdk/vaults";
-
-const dispatchBatch = useDispatchBatch({ address: vault.depositBatcher.address });
-dispatchBatch.mutate();
-```
-
-
-Use the per-batch reads (`batchMinBatchAge`, `batchCallbackDeadline`) rather than the batcher-wide `minBatchAge()` / `callbackDeadline()`: each batch pins the policy in force when it opened, so the batcher-wide values describe future batches, not this one. `batchDispatchedAt(batchId) + batchCallbackDeadline(batchId)` gives the timestamp finalization must land by; past it, the batch is canceled.
-
-### 5. Claim
-
-Dispatch only starts the decryption; finalization lands later. Wait for `batchState` to reach `Finalized`, then claim. Claiming is permissionless — anyone can call it on another account's behalf, but the output always goes to that account, never to the caller:
-
-
-### Tab: Core SDK
-
-```ts
-await vault.depositBatcher.claim(batchId);
-
-const cShare = await vault.cShare();
-const balance = await cShare.balanceOf(address);
-```
-
-### Tab: React SDK
-
-```tsx
-import { useConfidentialBalance } from "@zama-fhe/react-sdk";
-import { useClaim } from "@zama-fhe/react-sdk/vaults";
-
-const claim = useClaim({ address: vault.depositBatcher.address });
-claim.mutate({ batchId });
-
-const cShareAddress = "0xCShare";
-const { data: balance } = useConfidentialBalance({ address: cShareAddress, account: address });
-```
-
-
-The share token is an ordinary confidential token, so `useConfidentialBalance` reads it directly — there is no vault-specific balance hook, and none that resolves the share token's address. Configure `cShareAddress` alongside the batcher addresses, as above, or read it once with `(await vault.cShare()).address` — in a `useEffect`, or a `useQuery` keyed on the vault — and keep it in state. The address is fixed at deploy time, so one read is enough.
-
-## Redemptions
-
-Redemptions mirror deposits exactly, using the redeem batcher instead. The amount is
-denominated in shares, not assets — ERC-4626 `redeem`, not `withdraw`:
-
-
-### Tab: Core SDK
-
-```ts
-const { batchId } = await vault.redeem(500n);
-
-await vault.redeemBatcher.dispatchBatch(); // once timeUntilDispatchable(batchId) is 0
-// …then wait for batchState(batchId) to reach BatchState.Finalized:
-await vault.redeemBatcher.claim(batchId);
-
-const cAsset = await vault.cAsset();
-const balance = await cAsset.balanceOf(address);
-```
-
-### Tab: React SDK
-
-```tsx
-import { useRedeem } from "@zama-fhe/react-sdk/vaults";
-
-const redeem = useRedeem({ addresses });
-redeem.mutate({ amount: 500n });
-```
-
-
-From here, steps 3 to 5 apply unchanged with `vault.redeemBatcher.address` in place of `vault.depositBatcher.address`; the claimed assets land on `vault.cAsset()`.
-
-## Getting a deposit back
-
-`quit` refunds the caller's own deposit. It works both before the batch is dispatched (undoing a join) and after a batch was canceled:
-
-
-### Tab: Core SDK
-
-```ts
-await vault.depositBatcher.quit(batchId);
-```
-
-### Tab: React SDK
-
-```tsx
-import { useQuit } from "@zama-fhe/react-sdk/vaults";
-
-const quit = useQuit({ address: vault.depositBatcher.address });
-quit.mutate({ batchId });
-```
-
-
-`recover` does the same for someone else. It is permissionless and only legal on a **canceled** batch, and the refund always goes to the depositor, never to the caller — so a keeper, or the app itself, can clean up a canceled batch on behalf of users who joined for a `beneficiary` and would otherwise have to come back and quit themselves:
-
-
-### Tab: Core SDK
-
-```ts
-await vault.depositBatcher.recover(batchId, "0xDepositor");
-```
-
-### Tab: React SDK
-
-```tsx
-import { useRecover } from "@zama-fhe/react-sdk/vaults";
-
-const recover = useRecover({ address: vault.depositBatcher.address });
-recover.mutate({ batchId, account: "0xDepositor" });
-```
-
-
-## Next steps
-
-- [`Vault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) and [`VaultBatcher`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md) — full API reference, including the per-batch reads
-- [`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md), [`useRedeem`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRedeem.md), [`useBatchState`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md), [`useClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md) — the React hooks used above
-- [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault) — the protocol side: how batching, dispatch and settlement work
-- [Operator approvals](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/operator-approvals.md) — the approval model `vault.deposit()` / `vault.redeem()` automate
-- [Check balances](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/check-balances.md) — reading confidential balances on `cAsset()` / `cShare()`
 
 ## Overview
 
