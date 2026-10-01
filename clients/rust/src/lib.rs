@@ -64,7 +64,7 @@ pub use decryption::{
 };
 pub use delegations::{
     DelegateDecryptionParams, DelegationQuery, DelegationStatus, Delegations,
-    PERMANENT_DELEGATION_EXPIRY, RevokeDelegationParams,
+    PERMANENT_DELEGATION_EXPIRY, RevokeDelegationParams, WILDCARD_CONTRACT,
 };
 pub use encryption::{EncryptInput, EncryptOptions, EncryptParams, EncryptResult};
 pub use error::{ClientError, ErrorKind, Result, SdkError};

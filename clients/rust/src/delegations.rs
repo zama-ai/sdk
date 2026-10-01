@@ -67,6 +67,9 @@ pub struct DelegationStatus {
 
 pub const PERMANENT_DELEGATION_EXPIRY: u64 = u64::MAX;
 
+/// `contract_address` that covers every confidential contract with a single delegation.
+pub const WILDCARD_CONTRACT: Address = Address::repeat_byte(0xff);
+
 /// Builds the wire message from fields directly, so callers that only have the fields
 /// (such as offline preparation) never need to construct the online params type.
 pub(crate) fn delegate_decryption_wire(
