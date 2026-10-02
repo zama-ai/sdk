@@ -1,6 +1,6 @@
 ---
 title: Supported environments
-description: Minimum browser and Node.js versions for the SDK.
+description: Minimum browser, Node.js, Go, and Rust versions for the SDK.
 ---
 
 # Supported environments
@@ -16,6 +16,16 @@ description: Minimum browser and Node.js versions for the SDK.
 | Firefox            | 115             |
 | Samsung Internet   | 20              |
 | Node.js            | 22              |
+
+## Go and Rust
+
+| Environment | Minimum version or requirement                                                        |
+| ----------- | ------------------------------------------------------------------------------------- |
+| Go          | 1.25                                                                                  |
+| Rust        | 1.94.1                                                                                |
+| Daemon host | Linux with a container runtime, sharing a Unix socket directory with your application |
+
+On Docker Desktop, run the application and the daemon as containers sharing a named socket volume. See [Deploy in production](../native/operations/run-in-production.md).
 
 ## Next steps
 

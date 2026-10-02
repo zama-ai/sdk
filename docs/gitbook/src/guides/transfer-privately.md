@@ -5,6 +5,10 @@ description: How to send confidential tokens so the amount stays hidden on-chain
 
 # Transfer privately
 
+{% hint style="info" %}
+Available in the Core SDK and React SDK.
+{% endhint %}
+
 Confidential transfers encrypt the amount before it reaches the chain -- no one can see how much was sent. The SDK handles FHE encryption internally via `token.confidentialTransfer()`. In React, use the `useConfidentialTransfer` and `useConfidentialTransferFrom` hooks.
 
 ## Steps

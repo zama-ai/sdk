@@ -1,7 +1,8 @@
 //! Rust client for the Zama SDK daemon over a Unix socket.
 //!
-//! The daemon protocol is beta: minor releases can break the wire contract and this API.
-#![doc = concat!("Pin an exact version (`zama-sdk = \"=", env!("CARGO_PKG_VERSION"), "\"`) and upgrade it together with the daemon image.")]
+//! The daemon and its Go and Rust clients are experimental. The wire protocol can
+//! change between minor versions, so upgrade the daemon image and the clients together.
+//! Run the client and daemon at exactly matching versions.
 //!
 //! Connect with [`Client::connect`], build an [`Sdk`], and await [`Sdk::close`] when
 //! finished; dropping the last handle only attempts best-effort cleanup on a live

@@ -447,6 +447,21 @@ export function normalizeGitbookMarkdown(sourcePath, content) {
 }
 
 export function categoryFromLogicalPath(logicalPath) {
+  if (logicalPath.startsWith("native/tutorials/")) {
+    return "tutorials";
+  }
+  if (logicalPath.startsWith("native/guides/") || logicalPath === "native/README") {
+    return "guides";
+  }
+  if (logicalPath.startsWith("native/concepts/")) {
+    return "concepts";
+  }
+  if (logicalPath.startsWith("native/operations/")) {
+    return "daemon-operations";
+  }
+  if (logicalPath.startsWith("native/reference/")) {
+    return "reference-native";
+  }
   if (logicalPath.startsWith("tutorials/")) {
     return "tutorials";
   }
