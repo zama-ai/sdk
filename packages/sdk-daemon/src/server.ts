@@ -4,12 +4,20 @@ import { DaemonServiceService } from "./generated/zama/sdk/v1beta1/daemon.js";
 import { prepareSocket } from "./socket.js";
 import type { DaemonRuntime } from "./runtime.js";
 import { createHandlers } from "./handlers.js";
+import { reportCode } from "./diagnostics.js";
+
+// Settled operations only need their final frames flushed; a graceful close that lasts longer is stuck.
+const SHUTDOWN_GRACE_MS = 5_000;
 
 export async function startServer(
   runtime: DaemonRuntime,
   socketPath: string,
   sdkVersion: string,
-  options: { maxMessageBytes?: number; maxConcurrentStreams?: number } = {},
+  options: {
+    maxMessageBytes?: number;
+    maxConcurrentStreams?: number;
+    shutdownGraceMs?: number;
+  } = {},
 ): Promise<(deadline?: AbortSignal) => Promise<void>> {
   await prepareSocket(socketPath);
   const server = new Server({
@@ -38,14 +46,20 @@ export async function startServer(
   }
   return async (deadline?: AbortSignal) => {
     await new Promise<void>((resolve) => {
-      const force = () => {
-        server.forceShutdown();
-        resolve();
-      };
-      server.tryShutdown(() => {
+      const done = () => {
+        clearTimeout(grace);
         deadline?.removeEventListener("abort", force);
         resolve();
-      });
+      };
+      const force = () => {
+        server.forceShutdown();
+        done();
+      };
+      const grace = setTimeout(() => {
+        reportCode("SHUTDOWN_GRACE_EXCEEDED");
+        force();
+      }, options.shutdownGraceMs ?? SHUTDOWN_GRACE_MS);
+      server.tryShutdown(done);
       if (deadline?.aborted) {
         force();
       } else {
