@@ -439,3 +439,119 @@ async fn a_panicking_signature_fails_only_its_action() {
     assert_eq!(next.action_id, "next");
     assert_eq!(next.result, Some(Reply::Signature(vec![7])));
 }
+
+fn connection_lost() -> crate::Result<()> {
+    Err(ClientError::from(tonic::Status::unavailable(
+        "connection lost",
+    )))
+}
+fn daemon_error(code: &str) -> crate::Result<()> {
+    let mut status = tonic::Status::failed_precondition("failure");
+    status
+        .metadata_mut()
+        .insert("zama-error-code", code.parse().unwrap());
+    Err(ClientError::from(status))
+}
+
+#[tokio::test]
+async fn a_failure_without_a_daemon_verdict_is_outcome_unknown_only_after_a_live_write() {
+    let operations = Arc::new(crate::operations::Operations::new());
+    let operation = operations.start("context");
+    let id = &operation.message.operation_id;
+    let (sender, mut replies) = mpsc::channel(16);
+    let (started, mut starts) = mpsc::unbounded_channel();
+    let signer = TestWallet(
+        move |request: ContractWriteRequest, cancel: CancellationToken| {
+            let started = started.clone();
+            async move {
+                match request.action_id.as_str() {
+                    "revert" => Err(SdkError::execution_reverted("reverted", vec![1])),
+                    "fail" => Err(SdkError::signing_failed("node unreachable")),
+                    _ => {
+                        started.send(()).unwrap();
+                        cancel.cancelled().await;
+                        Err(SdkError::signing_failed("cancelled"))
+                    }
+                }
+            }
+        },
+    );
+    let mut callbacks = Callbacks::new(Arc::new(signer), sender, operations.clone());
+    assert!(
+        !operation
+            .settle(connection_lost())
+            .unwrap_err()
+            .is_outcome_unknown()
+    );
+    callbacks
+        .start(generated::SignerAction {
+            request: Some(Request::TypedDataJson("{}".into())),
+            ..write_action(id, "typed")
+        })
+        .unwrap();
+    reply(replies.recv().await.unwrap());
+    assert!(
+        !operation
+            .settle(connection_lost())
+            .unwrap_err()
+            .is_outcome_unknown()
+    );
+
+    callbacks.start(write_action(id, "revert")).unwrap();
+    reply(replies.recv().await.unwrap());
+    assert!(
+        !operation
+            .settle(connection_lost())
+            .unwrap_err()
+            .is_outcome_unknown()
+    );
+
+    let hung = operations.start("context");
+    callbacks
+        .start(write_action(&hung.message.operation_id, "hang"))
+        .unwrap();
+    starts.recv().await.unwrap();
+    let error = hung.settle(connection_lost()).unwrap_err();
+    assert!(error.is_outcome_unknown());
+    assert_eq!(error.kind(), ErrorKind::Transport);
+    assert!(
+        std::error::Error::source(&error)
+            .unwrap()
+            .downcast_ref::<tonic::Status>()
+            .is_some()
+    );
+    assert!(
+        !operation
+            .settle(connection_lost())
+            .unwrap_err()
+            .is_outcome_unknown()
+    );
+
+    // A write error other than a revert may have been raised after the broadcast.
+    callbacks.start(write_action(id, "fail")).unwrap();
+    reply(replies.recv().await.unwrap());
+    assert!(
+        operation
+            .settle(connection_lost())
+            .unwrap_err()
+            .is_outcome_unknown()
+    );
+    let timeout = Err(ClientError::timeout("daemon request timed out"));
+    assert!(
+        operation
+            .settle::<()>(timeout)
+            .unwrap_err()
+            .is_outcome_unknown()
+    );
+
+    // The daemon's verdict wins either way.
+    let settled = operation
+        .settle(daemon_error("RELAYER_FAILED"))
+        .unwrap_err();
+    assert!(!settled.is_outcome_unknown());
+    let fresh = operations.start("context");
+    let lost = fresh
+        .settle(daemon_error("TRANSACTION_OUTCOME_UNKNOWN"))
+        .unwrap_err();
+    assert!(lost.is_outcome_unknown());
+}

@@ -16,9 +16,9 @@ pub struct ClientError {
 pub enum ErrorKind {
     /// The client or daemon rejected configuration or arguments.
     InvalidInput,
-    /// Connection or RPC failure with no more specific kind; a write may or may not have been submitted.
+    /// Connection or RPC failure with no more specific kind.
     Transport,
-    /// A client or RPC deadline expired; write outcome may be unknown.
+    /// A client or RPC deadline expired.
     Timeout,
     /// The RPC was cancelled before completing.
     Cancelled,
@@ -50,15 +50,20 @@ impl ClientError {
         self.sdk.as_deref()
     }
 
-    /// Whether a contract write may have been submitted despite the failure.
+    /// Whether a contract write may have been broadcast: the daemon said so, or the RPC failed after one was dispatched.
     pub fn is_outcome_unknown(&self) -> bool {
-        match self.kind {
-            ErrorKind::Timeout | ErrorKind::Transport => true,
-            ErrorKind::Sdk => self
-                .sdk
-                .as_ref()
-                .is_some_and(|sdk| sdk.code == "TRANSACTION_OUTCOME_UNKNOWN"),
-            _ => false,
+        self.sdk
+            .as_ref()
+            .is_some_and(|sdk| sdk.code == "TRANSACTION_OUTCOME_UNKNOWN")
+    }
+
+    /// Keeps the kind and source, adding the code the daemon would have reported.
+    pub(crate) fn with_unknown_outcome(self) -> Self {
+        let sdk = SdkError::transaction_outcome_unknown(self.message.clone());
+        Self {
+            message: format!("{}: {}", sdk.code, self.message),
+            sdk: Some(Box::new(sdk)),
+            ..self
         }
     }
 
@@ -399,8 +404,26 @@ mod tests {
 
     #[test]
     fn outcome_is_unknown_only_for_ambiguous_failures() {
-        assert!(ClientError::timeout("daemon request timed out").is_outcome_unknown());
-        assert!(ClientError::from(tonic::Status::unavailable("down")).is_outcome_unknown());
+        assert!(!ClientError::timeout("daemon request timed out").is_outcome_unknown());
+        assert!(!ClientError::from(tonic::Status::unavailable("down")).is_outcome_unknown());
+        assert!(
+            ClientError::from(status_with_code(
+                tonic::Code::Unavailable,
+                "TRANSACTION_OUTCOME_UNKNOWN",
+            ))
+            .is_outcome_unknown()
+        );
+        let unknown = ClientError::from(tonic::Status::unavailable("down")).with_unknown_outcome();
+        assert_eq!(unknown.kind(), ErrorKind::Transport);
+        assert!(unknown.is_outcome_unknown());
+        assert!(!unknown.sdk_error().unwrap().retryable);
+        assert_eq!(unknown.to_string(), "TRANSACTION_OUTCOME_UNKNOWN: down");
+        assert!(
+            std::error::Error::source(&unknown)
+                .unwrap()
+                .downcast_ref::<tonic::Status>()
+                .is_some()
+        );
         assert!(
             ClientError::from(status_with_code(
                 tonic::Code::FailedPrecondition,

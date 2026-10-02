@@ -396,3 +396,117 @@ async fn signer_channel_routes_concurrent_callbacks_rejection_and_cancellation()
         .unwrap();
     sdk.close().await.unwrap();
 }
+
+struct HangingWallet(mpsc::UnboundedSender<String>);
+#[async_trait::async_trait]
+impl crate::Signer for HangingWallet {
+    async fn sign_typed_data(
+        &self,
+        request: SigningRequest,
+    ) -> std::result::Result<Vec<u8>, crate::SdkError> {
+        self.0.send(request.action_id).unwrap();
+        std::future::pending().await
+    }
+    async fn write_contract(
+        &self,
+        request: crate::ContractWriteRequest,
+        _cancel: tokio_util::sync::CancellationToken,
+    ) -> std::result::Result<B256, crate::SdkError> {
+        self.0.send(request.action_id).unwrap();
+        std::future::pending().await
+    }
+}
+
+/// Drops the daemon while the operation's only signer action is held by the wallet.
+async fn connection_loss_during(request: generated::signer_action::Request) -> ClientError {
+    let server = Server::start(Arc::new(|path: &str, bytes: &[u8]| {
+        if path.ends_with("/HasPermit") {
+            return Response::builder()
+                .header("content-type", "application/grpc")
+                .body(
+                    StreamBody::new(futures_util::stream::pending::<
+                        std::result::Result<Frame<Bytes>, Infallible>,
+                    >())
+                    .boxed(),
+                )
+                .unwrap();
+        }
+        default_handler(path, bytes)
+    }))
+    .await;
+    let sdk = Client::connect(&server.socket)
+        .await
+        .unwrap()
+        .create_context(
+            SdkConfig::new(11155111, "https://rpc.invalid"),
+            SignerConfig::Enabled(None),
+        )
+        .await
+        .unwrap();
+    server
+        .actions
+        .send(SignerServerMessage {
+            message: Some(signer_server_message::Message::Attached(Empty {})),
+        })
+        .unwrap();
+    let (started, mut starts) = mpsc::unbounded_channel();
+    let _connection = crate::signer::attach_signer(
+        sdk.client.service(),
+        &sdk.context_id,
+        sdk.operations.clone(),
+        Arc::new(HangingWallet(started)),
+    )
+    .await
+    .unwrap();
+    let call = tokio::spawn({
+        let sdk = sdk.clone();
+        async move { sdk.permits().has_permit(&[]).await }
+    });
+    let Some(signer_server_message::Message::Action(mut payload)) = action("1", "held").message
+    else {
+        unreachable!()
+    };
+    payload.request = Some(request);
+    server
+        .actions
+        .send(SignerServerMessage {
+            message: Some(signer_server_message::Message::Action(payload)),
+        })
+        .unwrap();
+    assert_eq!(starts.recv().await.unwrap(), "held");
+    drop(server);
+    tokio::time::timeout(Duration::from_secs(2), call)
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap_err()
+}
+
+#[tokio::test]
+async fn connection_loss_after_a_dispatched_write_reports_an_unknown_outcome() {
+    let error = connection_loss_during(generated::signer_action::Request::ContractWrite(
+        generated::ContractWriteRequest {
+            address: vec![2; 20],
+            data: vec![1, 2, 3, 4],
+            abi_json: "[]".into(),
+            function_name: "transfer".into(),
+            args_json: "[]".into(),
+            value: None,
+            gas: None,
+        },
+    ))
+    .await;
+    assert!(error.is_outcome_unknown(), "{error:?}");
+    assert_ne!(error.kind(), crate::ErrorKind::Sdk);
+    assert!(std::error::Error::source(&error).is_some());
+}
+
+#[tokio::test]
+async fn connection_loss_before_any_write_reports_no_outcome() {
+    let error = connection_loss_during(generated::signer_action::Request::TypedDataJson(
+        "{}".into(),
+    ))
+    .await;
+    assert!(!error.is_outcome_unknown(), "{error:?}");
+    assert!(error.sdk_error().is_none());
+}

@@ -11,8 +11,7 @@ macro_rules! rpc {
                 .client
                 .unary(request, |mut client, request| async move { client.$method(request).await })
                 .await;
-            drop(operation);
-            result
+            operation.settle(result)
         }
     };
 }

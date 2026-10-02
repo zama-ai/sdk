@@ -256,6 +256,7 @@ impl Callbacks {
             // A write outlives the channel: teardown cannot recall a broadcast, so its task is
             // detached rather than held by the set that teardown aborts.
             Ok(request @ CallbackRequest::ContractWrite(_)) => {
+                self.operations.write_dispatched(&key.0);
                 tokio::spawn(self.run(Ok(request), key.clone(), cancel.clone()));
                 Pending::Writing(cancel)
             }
@@ -276,6 +277,7 @@ impl Callbacks {
     ) -> impl Future<Output = crate::Result<ActionKey>> + Send + 'static {
         let sign = self.sign.clone();
         let sender = self.sender.clone();
+        let operations = self.operations.clone();
         // Only a contract write can be rejected pre-broadcast; a typed-data action always stays an error reply.
         let is_contract_write = matches!(request, Ok(CallbackRequest::ContractWrite(_)));
         async move {
@@ -283,6 +285,9 @@ impl Callbacks {
                 Ok(request) => request.run(sign.as_ref(), cancel.clone()).await,
                 Err(error) => Err(error),
             };
+            if is_contract_write && matches!(&result, Err(error) if error.revert_data.is_some()) {
+                operations.write_reverted(&key.0);
+            }
             // A cancelled action has no reply to give.
             if cancel.is_cancelled() {
                 return Ok(key);
