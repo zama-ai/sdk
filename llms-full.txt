@@ -10495,6 +10495,8 @@ An available socket does not mean upstream services are available. Restarting a 
 
 ## Named persistence cannot open
 
+The client reports `STORAGE_NOT_PRIVATE` when the storage directory or a credential file isn't private to the daemon UID, and `STORAGE_OPEN_FAILED` for any other open failure. The daemon also writes the code to stderr.
+
 1. Confirm `ZAMA_SDK_DAEMON_STORAGE_DIR` points to the intended private writable volume.
 2. Verify directory and credential-file ownership and permissions under the daemon UID.
 3. Confirm no other daemon uses the same credential volume.
@@ -10562,7 +10564,7 @@ SDK contexts and in-flight operations never move between daemons. The new pair c
 1. Keep the current application and daemon images available for rollback.
 2. Stop sending new operations to the old pair and let in-flight operations finish.
 3. Close the application's SDK contexts and client connections.
-4. Send `SIGTERM` to the old daemon and wait for it to exit. It waits for SDK work that is still running; the deployment examples allow 150 seconds before a forced stop.
+4. Send `SIGTERM` to the old daemon and wait for it to exit. It waits up to `ZAMA_SDK_DAEMON_SHUTDOWN_TIMEOUT_MS` (120 seconds by default) for SDK work that is still running, then logs `SHUTDOWN_DEADLINE_EXCEEDED` and exits with status 1. Set your platform's stop grace period above this timeout so the daemon exits before it is killed; the deployment examples use 150 seconds.
 5. Start the new daemon and application with the same storage configuration and derivation secret.
 6. Recreate SDK contexts, then run an operation that reaches your RPC endpoint and relayer before resuming traffic.
 
@@ -25476,14 +25478,15 @@ The daemon reads its process configuration from environment variables at startup
 
 ## Process environment
 
-| Variable                                     | Default              | Purpose                                                                                                                                       |
-| -------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ZAMA_SDK_DAEMON_SOCKET_PATH`                | Required; no default | Absolute path of the Unix socket the daemon listens on. Its parent directory must be private to the daemon UID.                               |
-| `ZAMA_SDK_DAEMON_STORAGE_DIR`                | Unset                | Absolute path of the directory holding daemon SQLite credential stores. Contexts that select named persistent storage fail while it is unset. |
-| `ZAMA_SDK_DAEMON_MAX_MESSAGE_BYTES`          | `4194304`            | Largest request or response message, in bytes. Set the matching limit in the client.                                                          |
-| `ZAMA_SDK_DAEMON_MAX_CONCURRENT_STREAMS`     | Unset (no limit)     | Maximum concurrent gRPC streams per connection. Each attached signer, application storage, or event channel holds one stream.                 |
-| `ZAMA_SDK_DAEMON_MAX_CONTEXTS`               | Unset (no limit)     | Maximum open SDK contexts. Creating another context fails with `RESOURCE_EXHAUSTED`.                                                          |
-| `ZAMA_SDK_DAEMON_MAX_OPERATIONS_PER_CONTEXT` | Unset (no limit)     | Maximum in-flight operations per SDK context. Another operation fails with `RESOURCE_EXHAUSTED`.                                              |
+| Variable                                     | Default              | Purpose                                                                                                                                          |
+| -------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ZAMA_SDK_DAEMON_SOCKET_PATH`                | Required; no default | Absolute path of the Unix socket the daemon listens on. Its parent directory must be private to the daemon UID.                                  |
+| `ZAMA_SDK_DAEMON_STORAGE_DIR`                | Unset                | Absolute path of the directory holding daemon SQLite credential stores. Contexts that select named persistent storage fail while it is unset.    |
+| `ZAMA_SDK_DAEMON_MAX_MESSAGE_BYTES`          | `4194304`            | Largest request or response message, in bytes. Set the matching limit in the client.                                                             |
+| `ZAMA_SDK_DAEMON_MAX_CONCURRENT_STREAMS`     | Unset (no limit)     | Maximum concurrent gRPC streams per connection. Each attached signer, application storage, or event channel holds one stream.                    |
+| `ZAMA_SDK_DAEMON_MAX_CONTEXTS`               | Unset (no limit)     | Maximum open SDK contexts. Creating another context fails with `RESOURCE_EXHAUSTED`.                                                             |
+| `ZAMA_SDK_DAEMON_MAX_OPERATIONS_PER_CONTEXT` | Unset (no limit)     | Maximum in-flight operations per SDK context. Another operation fails with `RESOURCE_EXHAUSTED`.                                                 |
+| `ZAMA_SDK_DAEMON_SHUTDOWN_TIMEOUT_MS`        | `120000`             | Longest wait, in milliseconds, for running SDK work after `SIGTERM` or `SIGINT`. Past it, the daemon removes its socket and exits with status 1. |
 
 Numeric limits must be positive integers. The daemon exits at startup when a path is relative or a limit is invalid.
 

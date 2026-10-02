@@ -41,6 +41,8 @@ An available socket does not mean upstream services are available. Restarting a 
 
 ## Named persistence cannot open
 
+The client reports `STORAGE_NOT_PRIVATE` when the storage directory or a credential file isn't private to the daemon UID, and `STORAGE_OPEN_FAILED` for any other open failure. The daemon also writes the code to stderr.
+
 1. Confirm `ZAMA_SDK_DAEMON_STORAGE_DIR` points to the intended private writable volume.
 2. Verify directory and credential-file ownership and permissions under the daemon UID.
 3. Confirm no other daemon uses the same credential volume.
