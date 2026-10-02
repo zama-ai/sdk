@@ -68,6 +68,11 @@ where
         if cancel.is_cancelled() {
             return Err(cancelled());
         }
+        if self.signer.0.address() != self.provider.default_signer_address() {
+            return Err(SdkError::signing_failed(
+                "The EIP-712 signer and the wallet provider hold different keys.",
+            ));
+        }
         self.signer.ensure_account(
             &request.account,
             self.provider.default_signer_address(),

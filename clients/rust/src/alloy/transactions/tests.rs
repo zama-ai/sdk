@@ -87,6 +87,26 @@ async fn account_and_chain_mismatch_are_refused_without_any_rpc() {
     );
     assert!(rpc.read_q().is_empty());
 }
+#[tokio::test]
+async fn mismatched_signer_and_provider_keys_are_refused_without_any_rpc() {
+    let signer = test_signer();
+    let rpc = Asserter::new();
+    let provider = ProviderBuilder::new()
+        .disable_recommended_fillers()
+        .wallet(PrivateKeySigner::from_bytes(&B256::repeat_byte(2)).unwrap())
+        .connect_mocked_client(rpc.clone());
+    let wallet = AlloySigner::new(signer.clone()).with_transactions(provider);
+    let error = wallet
+        .write_contract(request(signer.address()), CancellationToken::new())
+        .await
+        .unwrap_err();
+    assert_eq!(error.code, "SIGNING_FAILED");
+    assert_eq!(
+        error.message,
+        "The EIP-712 signer and the wallet provider hold different keys."
+    );
+    assert!(rpc.read_q().is_empty());
+}
 
 /// A revert message and optional raw revert data, for a queued eth_estimateGas error response.
 type RevertGas = (&'static str, Option<&'static str>);
