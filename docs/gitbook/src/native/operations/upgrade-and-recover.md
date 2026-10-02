@@ -23,7 +23,7 @@ SDK contexts and in-flight operations never move between daemons. The new pair c
 1. Keep the current application and daemon images available for rollback.
 2. Stop sending new operations to the old pair and let in-flight operations finish.
 3. Close the application's SDK contexts and client connections.
-4. Send `SIGTERM` to the old daemon and wait for it to exit. It waits for SDK work that is still running; the deployment examples allow 150 seconds before a forced stop.
+4. Send `SIGTERM` to the old daemon and wait for it to exit. It waits up to `ZAMA_SDK_DAEMON_SHUTDOWN_TIMEOUT_MS` (120 seconds by default) for SDK work that is still running, then logs `SHUTDOWN_DEADLINE_EXCEEDED` and exits with status 1. Set your platform's stop grace period above this timeout so the daemon exits before it is killed; the deployment examples use 150 seconds.
 5. Start the new daemon and application with the same storage configuration and derivation secret.
 6. Recreate SDK contexts, then run an operation that reaches your RPC endpoint and relayer before resuming traffic.
 
