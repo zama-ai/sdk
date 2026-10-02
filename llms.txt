@@ -45,6 +45,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/delegated-decryption.md): Grant another address the right to decrypt confidential balances, then read those balances as a delegate.
 - [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/encrypt-decrypt.md): How to encrypt values and decrypt FHE encrypted values for custom confidential smart contracts that are not wrapped ERC-20 tokens.
 - [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-deposits.md): How to integrate confidential ERC-4626 vaults with the Zama SDK.
+- [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-groups.md): Deposit into one of several vaults without revealing which one.
 
 ### SDK Reference
 
@@ -55,6 +56,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/WrappersRegistry.md): Query the on-chain token wrappers registry — list pairs, look up tokens, and validate confidential tokens.
 - [Vault](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md): Confidential ERC-4626 vault interface — deposit and redeem through a pair of batchers.
 - [VaultBatcher](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md): One on-chain vault batcher — join, batch state, dispatch, claim, quit, recover.
+- [VaultGroup](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md): A set of confidential ERC-4626 vaults sharing one asset, joined together so a deposit hides which vault it went to.
 - [`web()` transport](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/RelayerWeb.md): Browser relayer transport that runs FHE operations via bundled WASM.
 - [`node()` transport](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/RelayerNode.md): Node.js relayer transport that runs FHE operations through @fhevm/sdk on the calling thread.
 - [`cleartext()` transport](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/RelayerCleartext.md): Development relayer transport that operates in cleartext mode, without FHE, KMS, or gateway dependencies.
@@ -138,6 +140,9 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useCurrentBatchId](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useCurrentBatchId.md): Query hook for the id of a vault batcher's currently open batch.
 - [useBatchState](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md): Query hook for a vault batch's lifecycle state, which decides what the user can do next.
 - [useTimeUntilDispatchable](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md): Query hook for the seconds until a vault batch becomes eligible for dispatch.
+- [useVaultGroup](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultGroup.md): React hook returning a memoized VaultGroup instance for a set of vaults sharing one confidential asset.
+- [useGroupDeposit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupDeposit.md): Mutation hook that deposits into one vault of a group by joining every member's current deposit batch.
+- [useGroupRedeem](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupRedeem.md): Mutation hook that redeems shares of one vault of a group by joining every member's current redeem batch.
 - [Query keys](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/query-keys.md): Reference for the zamaQueryKeys factory used for manual React Query cache control.
 
 ### Concepts

@@ -8,6 +8,8 @@ import { Address } from '@zama-fhe/sdk';
 import { BatchState } from '@zama-fhe/sdk/vaults';
 import { ClaimParams } from '@zama-fhe/sdk/vaults';
 import { DepositParams } from '@zama-fhe/sdk/vaults';
+import { GroupDepositParams } from '@zama-fhe/sdk/vaults';
+import { GroupRedeemParams } from '@zama-fhe/sdk/vaults';
 import { JoinParams } from '@zama-fhe/sdk/vaults';
 import { JoinResult } from '@zama-fhe/sdk/vaults';
 import { QuitParams } from '@zama-fhe/sdk/vaults';
@@ -21,6 +23,9 @@ import { UseQueryResult } from '@tanstack/react-query';
 import { Vault } from '@zama-fhe/sdk/vaults';
 import { VaultAddresses } from '@zama-fhe/sdk/vaults';
 import { VaultBatcher } from '@zama-fhe/sdk/vaults';
+import { VaultGroup } from '@zama-fhe/sdk/vaults';
+import { VaultGroupConfig } from '@zama-fhe/sdk/vaults';
+import { VaultGroupJoinResult } from '@zama-fhe/sdk/vaults';
 
 // @public
 export function useBatchState(config: UseBatchStateConfig, options?: UseBatchStateOptions): UseQueryResult<BatchState, Error>;
@@ -74,6 +79,22 @@ export interface UseDispatchBatchConfig {
 }
 
 // @public
+export function useGroupDeposit<TContext = unknown>(config: UseGroupDepositConfig, options?: UseMutationOptions<VaultGroupJoinResult, Error, GroupDepositParams, TContext>): UseMutationResult<VaultGroupJoinResult, Error, GroupDepositParams, TContext>;
+
+// @public
+export interface UseGroupDepositConfig {
+    group: VaultGroupConfig;
+}
+
+// @public
+export function useGroupRedeem<TContext = unknown>(config: UseGroupRedeemConfig, options?: UseMutationOptions<VaultGroupJoinResult, Error, GroupRedeemParams, TContext>): UseMutationResult<VaultGroupJoinResult, Error, GroupRedeemParams, TContext>;
+
+// @public
+export interface UseGroupRedeemConfig {
+    group: VaultGroupConfig;
+}
+
+// @public
 export function useJoin<TContext = unknown>(config: UseJoinConfig, options?: UseMutationOptions<JoinResult, Error, JoinParams, TContext>): UseMutationResult<JoinResult, Error, JoinParams, TContext>;
 
 // @public
@@ -124,6 +145,9 @@ export function useVault(addresses: VaultAddresses): Vault;
 
 // @public
 export function useVaultBatcher(address: Address): VaultBatcher;
+
+// @public
+export function useVaultGroup(config: VaultGroupConfig): VaultGroup;
 
 // (No @packageDocumentation comment for this package)
 

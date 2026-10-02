@@ -120,7 +120,9 @@ export {
   TransactionRevertedError,
   TransportKeyPairChangedError,
   TransportKeyPairExpiredError,
+  UnlistedConfidentialTokenError,
   UnshieldAlreadyFinalizedError,
+  VaultBatcherPausedError,
   WalletAccountNotReadyError,
   WalletNotConnectedError,
   ZamaError,
@@ -128,7 +130,9 @@ export {
   type BalanceErrorDetails,
   type ErrorForCode,
   type SigningErrorMetadata,
+  type UnlistedConfidentialTokenDetails,
   type UnshieldAlreadyFinalizedDetails,
+  type VaultBatcherPausedDetails,
 } from "./errors";
 export { ZamaSDKEvents } from "./events";
 export type {

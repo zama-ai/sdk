@@ -21,3 +21,10 @@ export {
   totalDepositsContract,
   vaultContract,
 } from "./vault-batcher";
+
+export {
+  encodeAllocationData,
+  routerJoinContract,
+  tokenWrapperRegistryContract,
+  type EncryptedAllocationLeg,
+} from "./vault-router";

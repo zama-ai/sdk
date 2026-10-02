@@ -4510,6 +4510,9 @@ export function createVault(sdk: ZamaSDK, addresses: VaultAddresses): Vault;
 export function createVaultBatcher(sdk: ZamaSDK, address: Address): VaultBatcher;
 
 // @public
+export function createVaultGroup(sdk: ZamaSDK, config: VaultGroupConfig): VaultGroup;
+
+// @public
 export function currentBatchIdContract(batcher: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -8346,6 +8349,30 @@ export function fromTokenContract(batcher: Address): {
     readonly args: readonly [];
 };
 
+// @public
+export function groupDepositMutationOptions(group: VaultGroup): MutationFactoryOptions<readonly ["zama.vaultGroup.deposit", {
+    cAsset: Address;
+    batchers: readonly Address[];
+}], GroupDepositParams, VaultGroupJoinResult>;
+
+// @public
+export interface GroupDepositParams extends JoinOptions {
+    amount: bigint;
+    vaultId: string;
+}
+
+// @public
+export function groupRedeemMutationOptions(group: VaultGroup): MutationFactoryOptions<readonly ["zama.vaultGroup.redeem", {
+    cAsset: Address;
+    batchers: readonly Address[];
+}], GroupRedeemParams, VaultGroupJoinResult>;
+
+// @public
+export interface GroupRedeemParams extends VaultGroupRedeemOptions {
+    amount: bigint;
+    vaultId: string;
+}
+
 // Warning: (ae-forgotten-export) The symbol "QueryClientLike" needs to be exported by the entry point index.d.ts
 //
 // @public
@@ -9035,6 +9062,9 @@ export interface JoinResult extends TransactionResult {
     beneficiary: Address;
     confidentialJoinedAmount: EncryptedValue;
 }
+
+// @public
+export const MAX_GROUP_VAULTS = 10;
 
 // @public
 export function minBatchAgeContract(batcher: Address): {
@@ -13567,9 +13597,62 @@ export function vaultContract(batcher: Address): {
 };
 
 // @public
+export class VaultGroup {
+    constructor(sdk: ZamaSDK, config: VaultGroupConfig);
+    readonly cAsset: Address;
+    deposit(vaultId: string, amount: bigint, options?: JoinOptions): Promise<VaultGroupJoinResult>;
+    readonly id: string;
+    isAssetListed(): Promise<boolean>;
+    member(vaultId: string): VaultGroupMember;
+    readonly members: readonly VaultGroupMember[];
+    redeem(vaultId: string, amount: bigint, options?: VaultGroupRedeemOptions): Promise<VaultGroupJoinResult>;
+    readonly router: Address;
+    readonly sdk: ZamaSDK;
+}
+
+// @public
+export interface VaultGroupConfig {
+    readonly cAsset: Address;
+    readonly id: string;
+    readonly router: Address;
+    readonly vaults: readonly VaultMemberConfig[];
+}
+
+// @public
+export interface VaultGroupJoin {
+    batcher: Address;
+    batchId: bigint;
+    confidentialJoinedAmount: EncryptedValue;
+    token: Address;
+    vaultId: string;
+}
+
+// @public
+export interface VaultGroupJoinResult extends TransactionResult {
+    joins: readonly VaultGroupJoin[];
+    vaultId: string;
+}
+
+// @public
+export interface VaultGroupMember {
+    readonly id: string;
+    readonly vault: Vault;
+}
+
+// @public
+export interface VaultGroupRedeemOptions extends JoinOptions {
+    operatorUntil?: number;
+}
+
+// @public
 export interface VaultJoinOptions extends JoinOptions {
     beneficiary?: Address;
     operatorUntil?: number;
+}
+
+// @public
+export interface VaultMemberConfig extends VaultAddresses {
+    readonly id: string;
 }
 
 // @public

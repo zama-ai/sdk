@@ -178,16 +178,19 @@ export interface SetOperatorSubmittedEvent extends BaseEvent {
   txHash: Hex;
 }
 
-/** Which vault batcher write a {@link VaultSubmittedEvent} describes. */
-export type VaultOperation = "join" | "quit" | "claim" | "recover" | "dispatchBatch";
+/**
+ * Which vault write a {@link VaultSubmittedEvent} describes: a batcher write,
+ * or `routerJoin` for a fan-out submitted through the vault router.
+ */
+export type VaultOperation = "join" | "quit" | "claim" | "recover" | "dispatchBatch" | "routerJoin";
 
-/** Emitted when a vault batcher transaction has been submitted to the network. */
+/** Emitted when a vault batcher or router transaction has been submitted to the network. */
 export interface VaultSubmittedEvent extends BaseEvent {
   /** Event type discriminant. */
   type: typeof ZamaSDKEvents.VaultSubmitted;
-  /** Hash of the submitted batcher transaction. */
+  /** Hash of the submitted transaction. */
   txHash: Hex;
-  /** The batcher write this transaction performs. */
+  /** The vault write this transaction performs. */
   vaultOperation: VaultOperation;
 }
 
@@ -340,7 +343,8 @@ export type TransactionOperation =
   | "vault:quit"
   | "vault:claim"
   | "vault:recover"
-  | "vault:dispatchBatch";
+  | "vault:dispatchBatch"
+  | "vault:routerJoin";
 
 /**
  * Single source of truth for each transaction operation's submitted-event payload.
@@ -441,6 +445,13 @@ export const transactionOperationMetadata = {
       type: ZamaSDKEvents.VaultSubmitted,
       txHash,
       vaultOperation: "dispatchBatch" as const,
+    }),
+  },
+  "vault:routerJoin": {
+    submittedEvent: (txHash: Hex) => ({
+      type: ZamaSDKEvents.VaultSubmitted,
+      txHash,
+      vaultOperation: "routerJoin" as const,
     }),
   },
 } satisfies Record<TransactionOperation, { submittedEvent: (txHash: Hex) => ZamaSDKEventInput }>;

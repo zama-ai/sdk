@@ -1,7 +1,9 @@
 import { keccak256, pad, toBytes, type Address, type Hex } from "viem";
 import { vi } from "vitest";
+import type { EncryptedValue, RelayerSDK } from "../relayer/types";
 import { Token } from "../token";
 import type { GenericProvider } from "../types";
+import { VALID_INPUT_PROOF } from "./constants";
 import type { RawLog } from "../types/transaction";
 
 const JOINED_TOPIC = keccak256(toBytes("Joined(uint256,address,bytes32)"));
@@ -46,4 +48,21 @@ export function mockJoinBalance(
     config.functionName === "vault" && params.vault ? params.vault : params.fromToken,
   );
   vi.spyOn(Token.prototype, "balanceOf").mockResolvedValue(params.balance ?? 1_000_000_000n);
+}
+
+/** `count` distinct handles under one proof, in leg order; each encrypt receives as many as it asks for. */
+export function mockEncryptedLegs(relayer: RelayerSDK, count: number): readonly EncryptedValue[] {
+  const handles = Array.from(
+    { length: count },
+    (_unused, index) =>
+      `0x${(index + 1).toString(16).padStart(2, "0").repeat(32)}` as EncryptedValue,
+  );
+  vi.mocked(relayer.encryptValues).mockImplementation(
+    async (params: unknown) =>
+      ({
+        encryptedValues: handles.slice(0, (params as { values: unknown[] }).values.length),
+        inputProof: VALID_INPUT_PROOF,
+      }) as unknown as Awaited<ReturnType<RelayerSDK["encryptValues"]>>,
+  );
+  return handles;
 }

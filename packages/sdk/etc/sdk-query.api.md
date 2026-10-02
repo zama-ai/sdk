@@ -1015,7 +1015,7 @@ export interface TransactionErrorEvent extends BaseEvent {
 export type TransactionKind = PrepareTransactionRequest["kind"];
 
 // @public
-export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll" | "vault:join" | "vault:quit" | "vault:claim" | "vault:recover" | "vault:dispatchBatch";
+export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll" | "vault:join" | "vault:quit" | "vault:claim" | "vault:recover" | "vault:dispatchBatch" | "vault:routerJoin";
 
 // @public
 export interface TransactionReceipt {
@@ -1381,6 +1381,8 @@ export const ZamaErrorCode: {
     readonly PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH";
     readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
     readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
+    readonly UnlistedConfidentialToken: "UNLISTED_CONFIDENTIAL_TOKEN";
+    readonly VaultBatcherPaused: "VAULT_BATCHER_PAUSED";
 };
 
 // @public
