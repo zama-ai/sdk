@@ -4,6 +4,7 @@ import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import { revokePermitsMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
+import { removeQueriesOnSuccess } from "../utils/query";
 
 /**
  * Revoke FHE permits for the current signer.
@@ -28,10 +29,10 @@ export function useRevokePermits(options?: UseMutationOptions<void, Error, Addre
   return useMutation<void, Error, Address[] | void>({
     ...revokePermitsMutationOptions(sdk),
     ...options,
-    onSuccess: (data, variables, onMutateResult, context) => {
-      options?.onSuccess?.(data, variables, onMutateResult, context);
-      context.client.removeQueries({ queryKey: zamaQueryKeys.hasPermit.all });
-      context.client.removeQueries({ queryKey: zamaQueryKeys.decryption.all });
-    },
+    onSuccess: removeQueriesOnSuccess(
+      options,
+      zamaQueryKeys.hasPermit.all,
+      zamaQueryKeys.decryption.all,
+    ),
   });
 }

@@ -77,6 +77,7 @@ export type {
   PreparePermitRequest,
   SerializedPermit,
   SerializedPermitEip712,
+  SignedPreparedPermit,
 } from "./credentials/types";
 export {
   AclPausedError,

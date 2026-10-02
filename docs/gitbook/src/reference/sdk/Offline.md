@@ -81,7 +81,7 @@ const prepared = await sdk.offline.preparePermit({
 | Field          | Type        | Default                                       | Meaning                                             |
 | -------------- | ----------- | --------------------------------------------- | --------------------------------------------------- |
 | `signer`       | `Address`   | required                                      | address expected to sign the returned `eip712`      |
-| `contracts`    | `Address[]` | required, max 10, no chunking                 | contract addresses to authorize                     |
+| `contracts`    | `Address[]` | required, max 10 (see `batchPreparePermits`)  | contract addresses to authorize                     |
 | `delegator`    | `Address`   | none — self permit; must differ from `signer` | delegator address, for a delegated permit           |
 | `durationDays` | `number`    | the SDK's configured `permitTTL`, max 365     | permit validity window in days, a V1 protocol limit |
 
@@ -98,9 +98,25 @@ Returns a `PreparedPermit`. Every field is JSON-safe, so the object crosses a pr
 **Throws:**
 
 - `ConfigurationError` - `request.contracts` is empty or exceeds 10 addresses, `request.delegator` equals `request.signer` (self-delegation), or `request.durationDays` exceeds the V1 permit maximum of 365 days
+- `KeyWrappingError` - the transport key pair could not be wrapped or unwrapped
 - `TransportKeyPairChangedError` - a concurrent `permits.revokeTransportKeyPair()` rotated the transport key pair while this call was generating one
 
 See [`permits.registerPermit`](./ZamaSDK.md#permits-registerpermit) for the second phase and its typed errors, and the [Offline signing guide](../../guides/offline.md#offline-permits) for the full workflow.
+
+### batchPreparePermits
+
+```ts
+batchPreparePermits(request: PreparePermitRequest): Promise<PreparedPermit[]>
+```
+
+[`preparePermit`](#preparepermit) for any number of contracts. A permit holds at most 10, so the result has one `PreparedPermit` per chunk of 10 (a single element for 10 or fewer). Every element needs its own `eth_signTypedData_v4` signature; pass the `{ prepared, signature }` pairs to [`permits.batchRegisterPermits`](./ZamaSDK.md#permits-batchregisterpermits). Same `request` fields, guarantees, and errors as `preparePermit`, minus the 10-address limit.
+
+```ts
+const prepared = await sdk.offline.batchPreparePermits({
+  signer: "0xCustodyWallet",
+  contracts: tokenAddresses, // any length
+});
+```
 
 ## Request kinds
 

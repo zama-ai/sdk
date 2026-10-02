@@ -78,6 +78,7 @@ Returns a standard TanStack Query `UseMutationResult<void, Error, RegisterPermit
 ## Related
 
 - [`usePreparePermit`](./usePreparePermit.md) -- build the unsigned typed data this hook registers a signature for
+- [`useBatchRegisterPermits`](./useBatchRegisterPermits.md) -- the same, for a list of signed permits
 - [`useGrantPermit`](./useGrantPermit.md) -- the atomic, wallet-connected counterpart
 - [Offline signing guide](../../guides/offline.md#offline-permits) -- the full offline permit workflow
 - [ZamaSDK reference](../sdk/ZamaSDK.md#permits-registerpermit) -- `sdk.permits.registerPermit`'s full signature and typed errors
