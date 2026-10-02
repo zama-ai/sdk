@@ -12079,6 +12079,18 @@ const prepared = await sdk.offline.batchPreparePermits({
 });
 ```
 
+## Parse a prepared permit
+
+```ts
+import { parsePreparedPermit } from "@zama-fhe/sdk";
+
+const prepared = parsePreparedPermit(JSON.parse(serializedPermit));
+```
+
+`parsePreparedPermit(value: unknown): PreparedPermit` validates a decoded payload against the SDK's prepared-permit schema and normalizes its signer address. It throws `ConfigurationError` for an invalid shape.
+
+This validates the payload's structure. Signature verification, expiration, chain matching, and transport-key checks happen during [`permits.registerPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-registerpermit).
+
 ## Request kinds
 
 Each request is a discriminated union member on `kind`. `from` is always the transaction sender.
