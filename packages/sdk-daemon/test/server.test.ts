@@ -214,3 +214,32 @@ test("closing contexts with both callback channels permits prompt server shutdow
     await rm(directory, { recursive: true, force: true });
   }
 }, 5000);
+
+test("a graceful close that outlives the grace period is forced", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "daemon-shutdown-grace-"));
+  const socket = join(directory, "sdk.sock");
+  const runtime = new DaemonRuntime(
+    async () => ({ storageIdentities: [], sdk: { dispose: () => {} } as unknown as ContextSdk }),
+    createCoordinator(),
+  );
+  const stop = await startServer(runtime, socket, "test", { shutdownGraceMs: 50 });
+  const client = new DaemonServiceClient(`unix:${socket}`, credentials.createInsecure());
+  const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  try {
+    const channel = client.signerChannel();
+    const cut = new Promise<void>((resolve) => channel.on("error", () => resolve()));
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    const started = Date.now();
+    await stop();
+    expect(Date.now() - started).toBeLessThan(1000);
+    expect(stderr).toHaveBeenCalledWith(
+      "[zama-daemon] SHUTDOWN_GRACE_EXCEEDED (details omitted)\n",
+    );
+    await cut;
+  } finally {
+    stderr.mockRestore();
+    client.close();
+    await runtime.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
