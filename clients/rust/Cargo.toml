@@ -67,7 +67,7 @@ http-body-util = "0.1"
 hyper = { version = "1", features = ["server", "http2"] }
 alloy-signer-local = { version = "2.5", default-features = false, features = ["zeroize"] }
 dotenvy = "0.15"
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "test-util"] }
 
 [[example]]
 name = "balance"

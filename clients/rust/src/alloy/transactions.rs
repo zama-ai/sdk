@@ -14,6 +14,10 @@ pub const DEFAULT_BROADCAST_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// EIP-712 signing plus contract writes through one Alloy wallet provider: the EIP-712 signer and
 /// the provider's wallet must hold the same key.
+///
+/// Sends one write at a time per instance. Build the provider with `disable_recommended_fillers()`,
+/// then gas estimation, `with_simple_nonce_management()` and `fetch_chain_id()`: the default cached
+/// nonce manager stalls after a write that is filled but not sent.
 pub struct AlloyWallet<S, F, P>
 where
     F: TxFiller,
@@ -22,6 +26,7 @@ where
     signer: AlloySigner<S>,
     provider: FillProvider<F, P>,
     broadcast_timeout: Duration,
+    writes: tokio::sync::Mutex<()>,
 }
 impl<S> AlloySigner<S> {
     pub fn with_transactions<F, P>(self, provider: FillProvider<F, P>) -> AlloyWallet<S, F, P>
@@ -33,6 +38,7 @@ impl<S> AlloySigner<S> {
             signer: self,
             provider,
             broadcast_timeout: DEFAULT_BROADCAST_TIMEOUT,
+            writes: tokio::sync::Mutex::new(()),
         }
     }
 }
@@ -78,9 +84,17 @@ where
             self.provider.default_signer_address(),
             "Wallet does not control the requested account.",
         )?;
-        let transaction = transaction(&request);
+        // Concurrent fills would read the same pending nonce.
+        let (_write, filled) = tokio::select! {
+            biased;
+            () = cancel.cancelled() => return Err(cancelled()),
+            locked = async {
+                let write = self.writes.lock().await;
+                (write, self.provider.fill(transaction(&request)).await)
+            } => locked,
+        };
         // Filling and signing happen before broadcast, so their failures are certain.
-        let envelope = match self.provider.fill(transaction).await {
+        let envelope = match filled {
             Ok(SendableTx::Envelope(envelope)) => envelope,
             Ok(SendableTx::Builder(_)) => {
                 return Err(SdkError::signing_failed(

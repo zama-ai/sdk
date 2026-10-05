@@ -42,9 +42,12 @@ type ethereumWriter struct {
 	auth             *bind.TransactOpts
 	backend          bind.ContractTransactor
 	broadcastTimeout time.Duration
+	// Held from the pending-nonce read until the send returns, so overlapping writes never sign the same nonce.
+	writing chan struct{}
 }
 
 // NewEthereumSigner forwards SDK contract writes to backend; nonces and fees come from the node.
+// Writes go out one at a time, so a stalled broadcast delays the next write by up to the broadcast timeout.
 func NewEthereumSigner(privateKey string, chainID uint64, backend bind.ContractTransactor, options ...EthereumSignerOptions) (SignerConfig, error) {
 	if backend == nil {
 		return SignerConfig{}, errors.New("transaction backend required")
@@ -66,6 +69,7 @@ func NewEthereumSigner(privateKey string, chainID uint64, backend bind.ContractT
 		auth:             bind.NewKeyedTransactor(key, new(big.Int).SetUint64(chainID)),
 		backend:          backend,
 		broadcastTimeout: timeout,
+		writing:          make(chan struct{}, 1),
 	}
 	config.WriteContract = WriteContractFunc(writer.writeContract)
 	return config, nil
@@ -84,6 +88,12 @@ func (w *ethereumWriter) writeContract(ctx context.Context, request ContractWrit
 	if request.Value != nil && (request.Value.Sign() < 0 || request.Value.BitLen() > 256) {
 		return common.Hash{}, &SDKError{Code: CodeSigningFailed, Message: "Transaction value must fit uint256."}
 	}
+	select {
+	case w.writing <- struct{}{}:
+	case <-ctx.Done():
+		return common.Hash{}, ctx.Err()
+	}
+	defer func() { <-w.writing }()
 	// Copy the shared authorization so per-write fields never race.
 	opts := *w.auth
 	opts.Context, opts.NoSend, opts.Value = ctx, true, request.Value

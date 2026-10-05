@@ -65,6 +65,7 @@ async fn account_and_chain_mismatch_are_refused_without_any_rpc() {
         .disable_recommended_fillers()
         .wallet(signer.clone())
         .connect_mocked_client(rpc.clone());
+    rpc.push_failure_msg("unexpected RPC");
     let wallet = AlloySigner::new(alloy_signer::Signer::with_chain_id(signer.clone(), Some(2)))
         .with_transactions(provider);
     let mut wrong_account = request(signer.address());
@@ -85,7 +86,7 @@ async fn account_and_chain_mismatch_are_refused_without_any_rpc() {
             .code,
         "CHAIN_MISMATCH"
     );
-    assert!(rpc.read_q().is_empty());
+    assert_eq!(rpc.read_q().len(), 1);
 }
 #[tokio::test]
 async fn mismatched_signer_and_provider_keys_are_refused_without_any_rpc() {
@@ -95,6 +96,7 @@ async fn mismatched_signer_and_provider_keys_are_refused_without_any_rpc() {
         .disable_recommended_fillers()
         .wallet(PrivateKeySigner::from_bytes(&B256::repeat_byte(2)).unwrap())
         .connect_mocked_client(rpc.clone());
+    rpc.push_failure_msg("unexpected RPC");
     let wallet = AlloySigner::new(signer.clone()).with_transactions(provider);
     let error = wallet
         .write_contract(request(signer.address()), CancellationToken::new())
@@ -105,7 +107,7 @@ async fn mismatched_signer_and_provider_keys_are_refused_without_any_rpc() {
         error.message,
         "The EIP-712 signer and the wallet provider hold different keys."
     );
-    assert!(rpc.read_q().is_empty());
+    assert_eq!(rpc.read_q().len(), 1);
 }
 
 /// A revert message and optional raw revert data, for a queued eth_estimateGas error response.
@@ -121,11 +123,13 @@ struct TestNetwork {
     fail_gas_once: Arc<SyncMutex<bool>>,
     /// When set, eth_estimateGas answers with this JSON-RPC error instead of a gas value.
     revert_gas: Arc<SyncMutex<Option<RevertGas>>>,
-    /// Advances the answered nonce per request; otherwise every fill reads the same one.
-    advance_nonce: Option<Arc<AtomicU64>>,
+    /// Pending-nonce counter advanced by each accepted broadcast; a reused nonce is rejected.
+    accepted: Option<Arc<AtomicU64>>,
     /// Cancels while the write is still filling, so it holds an unsent transaction.
     cancel_on_nonce: Option<CancellationToken>,
     nonce_served: Arc<watch::Sender<bool>>,
+    /// eth_estimateGas never answers.
+    hang_gas: bool,
 }
 impl Default for TestNetwork {
     fn default() -> Self {
@@ -135,9 +139,10 @@ impl Default for TestNetwork {
             fail_next_broadcast: Arc::default(),
             fail_gas_once: Arc::default(),
             revert_gas: Arc::default(),
-            advance_nonce: None,
+            accepted: None,
             cancel_on_nonce: None,
             nonce_served: Arc::new(watch::channel(false).0),
+            hang_gas: false,
         }
     }
 }
@@ -159,10 +164,14 @@ impl TestNetwork {
                             if let Some(cancel) = &network.cancel_on_nonce {
                                 cancel.cancel();
                             }
-                            let nonce = match &network.advance_nonce {
-                                Some(next) => 5 + next.fetch_add(1, Ordering::SeqCst),
-                                None => 5,
-                            };
+                            let nonce = 5 + network
+                                .accepted
+                                .as_ref()
+                                .map_or(0, |accepted| accepted.load(Ordering::SeqCst));
+                            if network.accepted.is_some() {
+                                // Lets a concurrent fill read the nonce before this one is sent.
+                                tokio::time::sleep(Duration::from_millis(20)).await;
+                            }
                             serde_json::json!(format!("0x{nonce:x}"))
                         }
                         "eth_feeHistory" => serde_json::json!({
@@ -172,6 +181,9 @@ impl TestNetwork {
                             "reward": [["0x1"]],
                         }),
                         "eth_estimateGas" => {
+                            if network.hang_gas {
+                                std::future::pending::<()>().await;
+                            }
                             if let Some((message, data)) = network.revert_gas.lock().unwrap().take()
                             {
                                 let error = match data {
@@ -212,6 +224,20 @@ impl TestNetwork {
                             .unwrap();
                             let tx = TxEnvelope::decode_2718(&mut raw.as_slice()).unwrap();
                             let hash = *tx.tx_hash();
+                            if let Some(accepted) = &network.accepted
+                                && accepted
+                                    .compare_exchange(
+                                        tx.nonce() - 5,
+                                        tx.nonce() - 4,
+                                        Ordering::SeqCst,
+                                        Ordering::SeqCst,
+                                    )
+                                    .is_err()
+                            {
+                                return Err(alloy_transport::TransportErrorKind::custom_str(
+                                    "nonce too low",
+                                ));
+                            }
                             network.sent.lock().unwrap().push(tx);
                             if let Some(hold) = &network.hold {
                                 hold.acquire().await.unwrap().forget();
@@ -405,9 +431,9 @@ async fn a_fill_failure_stays_certain_and_reports_its_cause() {
     assert!(network.sent.lock().unwrap().is_empty());
 }
 #[tokio::test]
-async fn concurrent_writes_both_reach_the_network_with_provider_nonces() {
+async fn concurrent_writes_through_one_wallet_take_distinct_nonces() {
     let network = TestNetwork {
-        advance_nonce: Some(Arc::default()),
+        accepted: Some(Arc::default()),
         ..TestNetwork::default()
     };
     let wallet = network.wallet();
@@ -495,4 +521,73 @@ fn code_three_with_empty_string_data_is_a_revert_with_empty_bytes() {
 fn non_string_data_on_an_unrelated_code_is_not_a_revert() {
     let error = error_resp(-32000, "header not found", Some(serde_json::json!(1234)));
     assert_eq!(revert_data(&error), None);
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_write_queued_behind_another_returns_cancelled_without_any_rpc() {
+    let network = TestNetwork {
+        hang_gas: true,
+        ..TestNetwork::default()
+    };
+    let wallet = Arc::new(network.wallet());
+    let first = tokio::spawn({
+        let wallet = wallet.clone();
+        async move {
+            wallet
+                .write_contract(request(test_signer().address()), CancellationToken::new())
+                .await
+        }
+    });
+    let mut served = network.nonce_served.subscribe();
+    while !*served.borrow_and_update() {
+        served.changed().await.unwrap();
+    }
+    network.nonce_served.send_replace(false);
+    let cancel = CancellationToken::new();
+    let queued = tokio::spawn({
+        let wallet = wallet.clone();
+        let cancel = cancel.clone();
+        async move {
+            wallet
+                .write_contract(request(test_signer().address()), cancel)
+                .await
+        }
+    });
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    assert!(!queued.is_finished());
+    cancel.cancel();
+    assert_eq!(queued.await.unwrap().unwrap_err(), cancelled());
+    assert!(!*network.nonce_served.borrow());
+    assert!(network.sent.lock().unwrap().is_empty());
+    first.abort();
+}
+
+#[tokio::test]
+async fn cancellation_during_a_hung_fill_returns_promptly_and_never_broadcasts() {
+    let network = TestNetwork {
+        hang_gas: true,
+        ..TestNetwork::default()
+    };
+    let cancel = CancellationToken::new();
+    let write = tokio::spawn({
+        let wallet = network.wallet();
+        let cancel = cancel.clone();
+        async move {
+            wallet
+                .write_contract(request(test_signer().address()), cancel)
+                .await
+        }
+    });
+    let mut served = network.nonce_served.subscribe();
+    while !*served.borrow_and_update() {
+        served.changed().await.unwrap();
+    }
+    cancel.cancel();
+    let error = tokio::time::timeout(Duration::from_secs(2), write)
+        .await
+        .expect("write must return once cancelled")
+        .unwrap()
+        .unwrap_err();
+    assert_eq!(error, cancelled());
+    assert!(network.sent.lock().unwrap().is_empty());
 }

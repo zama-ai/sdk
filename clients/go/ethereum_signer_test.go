@@ -6,6 +6,7 @@ import (
 	"errors"
 	"math/big"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -68,10 +69,13 @@ func (b *transactionBackend) PendingCodeAt(context.Context, common.Address) ([]b
 }
 func (b *transactionBackend) PendingNonceAt(context.Context, common.Address) (uint64, error) {
 	b.record("PendingNonceAt")
+	b.mu.Lock()
+	nonce := b.nonce + uint64(len(b.sent))
+	b.mu.Unlock()
 	if b.onNonce != nil {
 		b.onNonce()
 	}
-	return b.nonce, nil
+	return nonce, nil
 }
 func (b *transactionBackend) SuggestGasPrice(context.Context) (*big.Int, error) {
 	b.record("SuggestGasPrice")
@@ -99,6 +103,12 @@ func (b *transactionBackend) TransactionByHash(context.Context, common.Hash) (*t
 func (b *transactionBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
 	b.record("SendTransaction")
 	b.mu.Lock()
+	for _, sent := range b.sent {
+		if sent.Nonce() == tx.Nonce() {
+			b.mu.Unlock()
+			return errors.New("nonce too low")
+		}
+	}
 	b.sent = append(b.sent, tx)
 	b.mu.Unlock()
 	if b.beforeSend != nil {
@@ -290,34 +300,77 @@ func TestEthereumSignerBroadcastTimeoutStaysUncertain(t *testing.T) {
 	}
 }
 
-func TestEthereumSignerConcurrentWritesAreNotSerialized(t *testing.T) {
-	backend := newTransactionBackend()
-	inSend := make(chan struct{}, 2)
-	release := make(chan struct{})
-	// Both sends must be in flight at once for the release to unblock them.
-	backend.beforeSend = func(context.Context) { inSend <- struct{}{}; <-release }
+func TestEthereumSignerSerializesConcurrentWrites(t *testing.T) {
+	backend, holding, release, later := blockedFirstNonceBackend()
 	signer := transactionSigner(t, backend)
 	request := transactionRequest(signer)
 	var group sync.WaitGroup
-	for range 2 {
-		group.Go(func() {
-			if _, err := signer.WriteContract(t.Context(), request); err != nil {
-				t.Error(err)
-			}
-		})
-	}
-	for range 2 {
-		select {
-		case <-inSend:
-		case <-time.After(5 * time.Second):
-			t.Fatal("writes were serialized")
+	write := func() {
+		if _, err := signer.WriteContract(t.Context(), request); err != nil {
+			t.Error(err)
 		}
+	}
+	group.Go(write)
+	<-holding
+	group.Go(write)
+	// The second write either waits for the first or reads the same pending nonce.
+	select {
+	case <-later:
+	case <-time.After(100 * time.Millisecond):
 	}
 	close(release)
 	group.Wait()
-	if len(backend.sent) != 2 || backend.count("PendingNonceAt") != 2 {
-		t.Fatalf("both writes must query the node: %v", backend.calls)
+	if len(backend.sent) != 2 || backend.sent[0].Nonce() == backend.sent[1].Nonce() || backend.count("PendingNonceAt") != 2 {
+		t.Fatalf("writes reused a nonce: %v", backend.calls)
 	}
+}
+
+func TestEthereumSignerWriteCancelledWhileWaitingSkipsNode(t *testing.T) {
+	backend, holding, release, later := blockedFirstNonceBackend()
+	signer := transactionSigner(t, backend)
+	request := transactionRequest(signer)
+	first := make(chan error, 1)
+	go func() {
+		_, err := signer.WriteContract(t.Context(), request)
+		first <- err
+	}()
+	<-holding
+	ctx, cancel := context.WithCancel(t.Context())
+	second := make(chan error, 1)
+	go func() {
+		_, err := signer.WriteContract(ctx, request)
+		second <- err
+	}()
+	select {
+	case <-later:
+	case <-time.After(100 * time.Millisecond):
+	}
+	cancel()
+	if err := <-second; !errors.Is(err, context.Canceled) {
+		t.Fatalf("cancelled waiting write: %v", err)
+	}
+	close(release)
+	if err := <-first; err != nil {
+		t.Fatal(err)
+	}
+	if backend.count("PendingNonceAt") != 1 || len(backend.sent) != 1 {
+		t.Fatalf("cancelled write reached the node: %v", backend.calls)
+	}
+}
+
+func blockedFirstNonceBackend() (backend *transactionBackend, holding chan struct{}, release chan struct{}, later chan struct{}) {
+	backend = newTransactionBackend()
+	holding, release, later = make(chan struct{}, 1), make(chan struct{}), make(chan struct{}, 2)
+	var reads atomic.Int32
+	backend.onNonce = func() {
+		if reads.Add(1) == 1 {
+			holding <- struct{}{}
+			<-release
+			return
+		}
+		later <- struct{}{}
+	}
+	return backend, holding, release, later
 }
 
 func TestEthereumSignerReportsExecutionRevertWithData(t *testing.T) {
