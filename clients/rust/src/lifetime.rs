@@ -1,4 +1,4 @@
-use crate::{Client, Result, channel::Connection, generated};
+use crate::{Client, ErrorKind, Result, channel::Connection, generated};
 use std::{
     sync::atomic::{AtomicBool, Ordering},
     time::Duration,
@@ -36,14 +36,21 @@ impl Resources {
         if self.closed.load(Ordering::Acquire) {
             return Ok(());
         }
-        client
+        let result = client
             .unary(
                 generated::ContextRequest {
                     context_id: self.context_id.clone(),
                 },
                 |mut client, request| async move { client.close_context(request).await },
             )
-            .await?;
+            .await
+            .map(|_| ());
+        // A lost context is already gone from the daemon, so no retry needs its channels.
+        if let Err(error) = &result
+            && error.kind() != ErrorKind::ContextLost
+        {
+            return result;
+        }
         self.closed.store(true, Ordering::Release);
         for connection in self
             .signer
@@ -53,7 +60,7 @@ impl Resources {
         {
             connection.abort();
         }
-        Ok(())
+        result
     }
 }
 impl Drop for Resources {

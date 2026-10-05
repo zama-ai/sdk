@@ -28,18 +28,23 @@ async fn concurrent_close_is_idempotent_and_drop_does_not_retry_success() {
     assert_eq!(calls.load(Ordering::SeqCst), 1);
 }
 
-#[tokio::test]
-async fn a_failed_close_keeps_channels_attached_for_a_later_close() {
+async fn failing_first_close(
+    status: &'static str,
+    message: &'static str,
+    code: Option<&'static str>,
+) -> (Server, Sdk, Arc<AtomicUsize>) {
     let calls = Arc::new(AtomicUsize::new(0));
     let observed = calls.clone();
     let server = Server::start(Arc::new(move |path, bytes| {
         if path.ends_with("/CloseContext") && observed.fetch_add(1, Ordering::SeqCst) == 0 {
-            return Response::builder()
+            let mut response = Response::builder()
                 .header("content-type", "application/grpc")
-                .header("grpc-status", "14")
-                .header("grpc-message", "busy")
-                .body(Full::new(Bytes::new()).boxed())
-                .unwrap();
+                .header("grpc-status", status)
+                .header("grpc-message", message);
+            if let Some(code) = code {
+                response = response.header("zama-error-code", code);
+            }
+            return response.body(Full::new(Bytes::new()).boxed()).unwrap();
         }
         default_handler(path, bytes)
     }))
@@ -58,6 +63,12 @@ async fn a_failed_close_keeps_channels_attached_for_a_later_close() {
         .build()
         .await
         .unwrap();
+    (server, sdk, calls)
+}
+
+#[tokio::test]
+async fn a_failed_close_keeps_channels_attached_for_a_later_close() {
+    let (_server, sdk, calls) = failing_first_close("14", "busy", None).await;
     assert_eq!(
         sdk.close().await.unwrap_err().kind(),
         crate::ErrorKind::Transport
@@ -72,6 +83,27 @@ async fn a_failed_close_keeps_channels_attached_for_a_later_close() {
     );
     sdk.close().await.unwrap();
     assert_eq!(calls.load(Ordering::SeqCst), 2);
+}
+
+#[tokio::test]
+async fn closing_a_lost_context_tears_down_its_channels() {
+    let (_server, sdk, calls) =
+        failing_first_close("5", "context not found", Some("CONTEXT_NOT_FOUND")).await;
+    assert_eq!(
+        sdk.close().await.unwrap_err().kind(),
+        crate::ErrorKind::ContextLost
+    );
+    tokio::time::timeout(
+        Duration::from_secs(2),
+        sdk.wait_channel_closed(CallbackChannel::Storage),
+    )
+    .await
+    .expect("storage channel must close")
+    .ok();
+    sdk.close().await.unwrap();
+    drop(sdk);
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
 }
 
 #[tokio::test]
