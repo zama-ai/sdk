@@ -24,7 +24,6 @@ alloy = ["dep:alloy-signer", "dep:alloy-dyn-abi", "dep:alloy-provider", "dep:all
 
 [dependencies]
 async-trait = "0.1"
-serde = { version = "1", features = ["derive"] }
 uuid = { version = "1", features = ["v4"] }
 alloy-signer = { version = "2.5", optional = true }
 alloy-dyn-abi = { version = "1.7.2", features = ["eip712"], optional = true }

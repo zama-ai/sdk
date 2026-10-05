@@ -4878,7 +4878,6 @@ dependencies = [
  "num-bigint",
  "prost",
  "reqwest",
- "serde",
  "serde_json",
  "tempfile",
  "tokio",
