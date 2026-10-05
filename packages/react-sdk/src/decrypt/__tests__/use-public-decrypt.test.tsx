@@ -24,6 +24,7 @@ describe("useDecryptPublicValues", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
       encryptedValues: ["0xhandle1"],
+      options: { operation: "public-decrypt" },
     });
 
     expect(queryClient.getQueryData(zamaQueryKeys.decryption.encryptedValue("0xhandle1"))).toBe(

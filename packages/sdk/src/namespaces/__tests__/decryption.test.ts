@@ -36,7 +36,7 @@ describe("Decryption", () => {
       });
 
       expect(relayer.decryptValues).toHaveBeenCalledWith(
-        expect.objectContaining({ options: { timeout: 1234, signal } }),
+        expect.objectContaining({ options: { timeout: 1234, signal, operation: "user-decrypt" } }),
       );
     });
   });
@@ -60,6 +60,7 @@ describe("Decryption", () => {
 
       expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
         encryptedValues: [handle],
+        options: { operation: "public-decrypt" },
       });
       expect(result.clearValues[handle]).toBe(500n);
     });
@@ -76,7 +77,7 @@ describe("Decryption", () => {
 
       expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
         encryptedValues: [handle],
-        options: { timeout: 1234, signal },
+        options: { timeout: 1234, signal, operation: "public-decrypt" },
       });
     });
 

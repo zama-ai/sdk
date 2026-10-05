@@ -2194,6 +2194,10 @@ See [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/s
 
 `sdk.offline.batchPreparePermits` and `sdk.permits.batchRegisterPermits` handle offline permit requests of any size. A permit holds at most 10 contracts, so `batchPreparePermits` returns one `PreparedPermit` per chunk of 10, and `batchRegisterPermits` takes the matching list of `{ prepared, signature }` pairs (`SignedPreparedPermit[]`) and registers them in order. The single-permit `preparePermit` and `registerPermit` are unchanged; `preparePermit` still rejects more than 10 contracts and now points at `batchPreparePermits`. React gains `useBatchPreparePermits` and `useBatchRegisterPermits`. See [Offline permits](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/offline.md#offline-permits).
 
+## SDK usage telemetry headers
+
+Relayer requests now carry four `x-zama-sdk-*` headers: the SDK version, the package driving it (`core` or `react`), the runtime (`browser` or `node`), and the high-level operation the request belongs to (`confidential-transfer`, `unshield`, `decrypt-balance`, …). They label traffic the relayer already receives so the SDK team can see version adoption and per-operation error rates; no end-user data is ever included, and a self-hosted relayer simply ignores them. Telemetry is on by default and `createConfig({ telemetry: false })` turns it off; on Node.js, `ZAMA_SDK_TELEMETRY=0` does the same for a whole process. See [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md).
+
 ## 3.x
 
 - source_type: official-doc
@@ -3571,6 +3575,7 @@ Chains that reference the _same_ relayer object — the result of a single `web(
 ## Next steps
 
 - [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md) — set up a backend proxy or use a direct API key
+- [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md) — what the SDK reports to the Zama-hosted relayer and how to opt out
 - [Shield Tokens](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/shield-tokens.md) — convert public ERC-20 tokens into confidential form
 - [Chain Objects](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/network-presets.md) — pre-configured chain definitions for Sepolia, Mainnet, and more
 - [GenericStorage reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/GenericStorage.md) — custom storage implementations
@@ -3634,9 +3639,21 @@ app.use("/api/relayer/:chainId", async (req, res) => {
   const url = new URL(req.url, config.relayerUrl);
   const body = ["GET", "HEAD"].includes(req.method) ? undefined : JSON.stringify(req.body);
 
+  // Forward the SDK's x-zama-sdk-* usage headers.
+  const telemetryHeaders = Object.fromEntries(
+    Object.entries(req.headers).filter(
+      (entry): entry is [string, string] =>
+        entry[0].startsWith("x-zama-sdk-") && typeof entry[1] === "string",
+    ),
+  );
+
   const response = await fetch(url, {
     method: req.method,
-    headers: { "content-type": "application/json", "x-api-key": process.env.RELAYER_API_KEY! },
+    headers: {
+      ...telemetryHeaders,
+      "content-type": "application/json",
+      "x-api-key": process.env.RELAYER_API_KEY!,
+    },
     body,
     // @ts-expect-error: required by the relayer
     duplex: "half",
@@ -3654,6 +3671,7 @@ You can adapt this pattern to any server framework (Fastify, Hono, Next.js API r
 
 - Forward the HTTP method, path, and body to the upstream relayer URL
 - Inject the `x-api-key` header before forwarding
+- Forward the `x-zama-sdk-*` request headers so [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md) still reaches the relayer
 - Return the upstream response status and body to the client
 
 ### 3. Configure the SDK to use your proxy
@@ -3809,7 +3827,7 @@ The recommended approach depends on your application architecture:
 
 ### Backend proxy pattern
 
-The proxy must add the `x-api-key` header to every forwarded request, so the key stays server-side and your frontend never sees it. See the [Authentication guide](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md) for a working Express proxy and the matching client-side `relayerUrl` configuration — the patterns there apply unchanged when the upstream is the Zama-hosted Relayer.
+The proxy must add the `x-api-key` header to every forwarded request, so the key stays server-side and your frontend never sees it, and should forward the `x-zama-sdk-*` request headers so [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md) still reaches the relayer. See the [Authentication guide](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md) for a working Express proxy and the matching client-side `relayerUrl` configuration — the patterns there apply unchanged when the upstream is the Zama-hosted Relayer.
 
 ## Compromised keys
 
@@ -3825,6 +3843,81 @@ If Zama identifies that an API key has been compromised, the key holder will be 
 
 - [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md) — wire your API key into the SDK via a backend proxy or direct `auth` field
 - [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md) — full relayer, signer, and storage setup
+
+## SDK usage telemetry
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/guides/telemetry.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md
+- logical_path: guides/telemetry
+
+# SDK usage telemetry
+
+The SDK attaches a small, fixed set of `x-zama-sdk-*` HTTP headers to the relayer requests it already makes. On the **Zama-hosted relayer** they tell Zama which SDK version and which high-level operations are in use, so the SDK team can see adoption and per-operation error rates. Nothing is sent to any third party, and no header ever carries end-user data.
+
+Telemetry is on by default. You can turn it off with one config flag.
+
+## What is sent
+
+| Header                 | Example value           | Meaning                                                                                        |
+| ---------------------- | ----------------------- | ---------------------------------------------------------------------------------------------- |
+| `x-zama-sdk-version`   | `3.7.0`                 | The `@zama-fhe/sdk` version (`@zama-fhe/react-sdk` ships the same version).                    |
+| `x-zama-sdk-layer`     | `core` / `react`        | `react` when the SDK is driven by `ZamaProvider`, `core` otherwise.                            |
+| `x-zama-sdk-runtime`   | `browser` / `node`      | `browser` for the `web()` transport, `node` for `node()`.                                      |
+| `x-zama-sdk-operation` | `confidential-transfer` | The high-level SDK operation the request belongs to (see below). Omitted on the FHE key fetch. |
+
+The headers ride on the requests the SDK makes anyway: input-proof generation (`encrypt`), user and public decryption, and the FHE key fetch. They add no extra requests.
+
+**Never sent:** wallet addresses, encrypted values or handles, amounts, transaction hashes, or any user or session identifier. The relayer already sees the request itself; the headers only label it.
+
+### Operation values
+
+| `x-zama-sdk-operation`   | Sent by                                                                              |
+| ------------------------ | ------------------------------------------------------------------------------------ |
+| `confidential-transfer`  | `Token.confidentialTransfer` and its `From` / `AndCall` variants                     |
+| `unshield`               | `WrappedToken.unshield`, `unshieldAll`, `resumeUnshield`, `unwrap`, `finalizeUnwrap` |
+| `decrypt-balance`        | `Token.balanceOf`, `decryptBalanceAs`, `batchBalancesOf`, `batchDecryptBalancesAs`   |
+| `vault-deposit`          | `Vault.deposit`                                                                      |
+| `vault-redeem`           | `Vault.redeem`                                                                       |
+| `vault-join`             | `VaultBatcher.join`                                                                  |
+| `vault-balance`          | `VaultBatcher.depositOf`                                                             |
+| `encrypt`                | `sdk.encrypt` / `useEncrypt`                                                         |
+| `user-decrypt`           | `sdk.decryption.decryptValues` / `useDecryptValues`                                  |
+| `delegated-user-decrypt` | `sdk.decryption.delegatedDecryptValues` / `delegatedBatchDecryptValues`              |
+| `public-decrypt`         | `sdk.decryption.decryptPublicValues` / `useDecryptPublicValues`                      |
+| `offline-prepare`        | `sdk.offline.prepare`                                                                |
+
+Calls made directly on `sdk.relayer` carry the version, layer and runtime headers but no operation.
+
+Shielding (`WrappedToken.shield`) never calls the relayer, so it produces no telemetry at all.
+
+## Where it is sent
+
+The headers go to whatever `relayerUrl` the chain configures. The SDK does not inspect the host, so a self-hosted relayer receives them too and simply ignores them, and nothing is logged there unless you capture it yourself. The `cleartext()` transport makes no relayer requests.
+
+If browser traffic reaches the relayer through [your own backend proxy](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md), the headers arrive at the proxy. Forward them to the upstream relayer, as the proxy example in that guide does; a proxy that rebuilds the request with its own header set drops them.
+
+## Turning it off
+
+Set `telemetry: false` in `createConfig`:
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  relayers: { [sepolia.id]: web() },
+  publicClient,
+  walletClient,
+  telemetry: false,
+});
+```
+
+On Node.js, the `node()` transport also honours the `ZAMA_SDK_TELEMETRY` environment variable. Set it to `0` (or `false`) to turn telemetry off for the whole process, for example in CI:
+
+```bash
+ZAMA_SDK_TELEMETRY=0 node server.js
+```
+
+Either switch removes every `x-zama-sdk-*` header from every request.
 
 ## Shield tokens
 
@@ -7743,6 +7836,22 @@ const config = createConfig({
 ```
 
 `TransactionError.operation` is one of the write operations (`transfer`, `wrap`, `unwrap`, `finalizeUnwrap`, `delegateDecryption`, and others); `PermitError.operation` is `grantPermit`, `grantDelegationPermit`, or `registerPermit`. See [`SigningRejectedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#signingrejectederror) and [`SigningFailedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#signingfailederror) for the shapes `PermitError.error` most commonly carries.
+
+### telemetry
+
+`boolean | undefined`
+
+Whether to attach the `x-zama-sdk-*` usage headers (SDK version, package layer, runtime, and high-level operation) to every relayer request. Default: `true`. The headers carry no end-user data; a self-hosted relayer simply ignores them. See [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md) for exactly what is sent.
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
+  telemetry: false,
+});
+```
 
 ### runtime
 

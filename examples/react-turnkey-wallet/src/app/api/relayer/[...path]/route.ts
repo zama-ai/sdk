@@ -24,6 +24,9 @@ async function proxy(request: NextRequest, path: string[]): Promise<Response> {
   const headers: Record<string, string> = {
     "Content-Type": request.headers.get("Content-Type") ?? "application/json",
   };
+  for (const [key, value] of request.headers) {
+    if (key.startsWith("x-zama-sdk-")) headers[key] = value;
+  }
 
   if (process.env.ZAMA_RELAYER_API_KEY) {
     headers["Authorization"] = `Bearer ${process.env.ZAMA_RELAYER_API_KEY}`;

@@ -6,7 +6,7 @@ import type {
   ClearValue,
   DecryptPublicValuesResult,
   EncryptedValue,
-  FhevmRelayerOptions,
+  RelayerRequestOptions,
 } from "../relayer/types";
 import type {
   BatchDecryptResult,
@@ -87,7 +87,7 @@ export class Decryption {
    */
   async decryptValues(
     encryptedInput: EncryptedInput[],
-    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
+    options?: RelayerRequestOptions,
   ): Promise<Record<EncryptedValue, ClearValue>> {
     const service = this.#requireDecryptionService("decryptValues");
     const account = await requireAlignedWalletAccount(
@@ -95,7 +95,10 @@ export class Decryption {
       this.#signer,
       this.#provider,
     );
-    return service.decryptValues(encryptedInput, account.address, options);
+    return service.decryptValues(encryptedInput, account.address, {
+      ...options,
+      operation: options?.operation ?? "user-decrypt",
+    });
   }
 
   /**
@@ -142,7 +145,7 @@ export class Decryption {
       delegatorAddress,
       account.address,
       accountAddress,
-      options,
+      { ...options, operation: options?.operation ?? "delegated-user-decrypt" },
     );
   }
 
@@ -165,16 +168,20 @@ export class Decryption {
    */
   async decryptPublicValues(
     encryptedValues: EncryptedValue[],
-    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
+    options?: RelayerRequestOptions,
   ): Promise<DecryptPublicValuesResult> {
     if (encryptedValues.length === 0) {
       return { clearValues: {}, decryptionProof: "0x", abiEncodedClearValues: "0x" };
     }
 
+    const requestOptions: RelayerRequestOptions = {
+      ...options,
+      operation: options?.operation ?? "public-decrypt",
+    };
     try {
       const result = await this.#router.relayer.decryptPublicValuesWithSignatures({
         encryptedValues,
-        options,
+        options: requestOptions,
       });
       const clearValues: Record<EncryptedValue, ClearValue> = {};
       result.checkSignaturesArgs.handlesList.forEach((handle, i) => {
@@ -234,6 +241,7 @@ export class Decryption {
     accountAddress = delegatorAddress,
     maxConcurrency,
     waitForPropagation,
+    operation,
   }: {
     encryptedInputs: EncryptedInput[];
     delegatorAddress: Address;
@@ -253,6 +261,7 @@ export class Decryption {
       accountAddress,
       maxConcurrency,
       waitForPropagation,
+      operation: operation ?? "delegated-user-decrypt",
     });
   }
 }

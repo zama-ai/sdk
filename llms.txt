@@ -30,6 +30,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md): How to configure the SDK with createConfig — chains, relayers, provider, signer, and storage.
 - [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md): How to authenticate with the relayer using a backend proxy or a direct API key.
 - [Relayer API keys](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/relayer-api-keys.md): How to obtain, configure, and securely manage your Zama Relayer API key.
+- [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md): What the SDK reports to the Zama-hosted relayer, when, and how to turn it off.
 - [Shield tokens](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/shield-tokens.md): How to convert public ERC-20 tokens into their confidential form.
 - [Transfer privately](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/transfer-privately.md): How to send confidential tokens so the amount stays hidden on-chain.
 - [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/unshield-tokens.md): Convert confidential tokens back to public ERC-20 by unshielding them.

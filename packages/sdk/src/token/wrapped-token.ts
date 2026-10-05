@@ -526,11 +526,10 @@ export class WrappedToken extends Token {
     const account = await requireAlignedWalletAccount("unwrap", this.sdk.signer, this.sdk.provider);
     const userAddress = getAddress(account.address);
 
-    const { encryptedValues, inputProof } = await this.sdk.encrypt({
-      values: [{ value: amount, type: "euint64" }],
-      contractAddress: this.address,
-      userAddress,
-    });
+    const { encryptedValues, inputProof } = await this.sdk.encrypt(
+      { values: [{ value: amount, type: "euint64" }], contractAddress: this.address, userAddress },
+      { operation: "unshield" },
+    );
 
     const [encryptedAmount] = encryptedValues;
     if (!encryptedAmount) {
@@ -600,7 +599,9 @@ export class WrappedToken extends Token {
   async finalizeUnwrap(unwrapRequestId: EncryptedValue): Promise<TransactionResult> {
     this.#requireSigner("finalizeUnwrap");
     await requireChainAlignment("finalizeUnwrap", this.sdk.signer, this.sdk.provider);
-    const result = await this.sdk.decryption.decryptPublicValues([unwrapRequestId]);
+    const result = await this.sdk.decryption.decryptPublicValues([unwrapRequestId], {
+      operation: "unshield",
+    });
     const clearValue = result.clearValues[unwrapRequestId];
     assertBigint(clearValue, "finalizeUnwrap: clearValue");
     return this.submitTransaction({

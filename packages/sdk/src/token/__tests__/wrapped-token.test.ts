@@ -306,6 +306,7 @@ describe("WrappedToken", () => {
         values: [{ value: 50n, type: "euint64" }],
         contractAddress: wrapperAddress,
         userAddress,
+        options: { operation: "unshield" },
       });
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "unwrap" }),
@@ -393,6 +394,7 @@ describe("WrappedToken", () => {
 
       expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
         encryptedValues: [unwrapRequestId],
+        options: { operation: "unshield" },
       });
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
@@ -454,6 +456,7 @@ describe("WrappedToken", () => {
       expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xtxhash");
       expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
         encryptedValues: [BURN_HANDLE],
+        options: { operation: "unshield" },
       });
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
@@ -486,6 +489,7 @@ describe("WrappedToken", () => {
 
       expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
         encryptedValues: [BURN_HANDLE],
+        options: { operation: "unshield" },
       });
       expect(result.txHash).toBe("0xtxhash");
     });
@@ -525,6 +529,7 @@ describe("WrappedToken", () => {
       expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xprevioustx");
       expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
         encryptedValues: [BURN_HANDLE],
+        options: { operation: "unshield" },
       });
       expect(result.txHash).toBe("0xtxhash");
     });

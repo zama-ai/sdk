@@ -3,6 +3,7 @@ import type { ZamaSDKEventListener } from "../events";
 import type { ChainRouter } from "../chains/router";
 import type { FhevmRuntimeConfig, RelayerSDK } from "../relayer/types";
 import type { LoggerService } from "../services/logger-service";
+import type { TelemetryState } from "../telemetry";
 import type { GenericLogger, GenericProvider, GenericSigner, GenericStorage } from "../types";
 
 export type { AtLeastOneChain };
@@ -20,7 +21,11 @@ export interface RelayerConfig {
    * Create a single-chain relayer.
    * @internal
    */
-  readonly createRelayer: (chain: FheChain, logger: LoggerService) => RelayerSDK;
+  readonly createRelayer: (
+    chain: FheChain,
+    logger: LoggerService,
+    telemetry?: TelemetryState,
+  ) => RelayerSDK;
 }
 
 /** Web relayer config — drives the FHE backend directly. */
@@ -62,6 +67,8 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   registryTTL?: number;
   /** SDK lifecycle event listener. */
   onEvent?: ZamaSDKEventListener;
+  /** Attach `x-zama-sdk-*` usage headers (SDK version, layer, runtime, operation) to every relayer request. Default: `true`. */
+  telemetry?: boolean;
   /**
    * Global `@fhevm/sdk` runtime config — WASM load mode, threads, logger, auth,
    * module versions. `runtime.auth` is the process-wide fallback; each chain's
@@ -111,6 +118,8 @@ export type ZamaConfig = {
   readonly transportKeyPairScope: string | undefined;
   readonly registryTTL: number;
   readonly onEvent: ZamaSDKEventListener | undefined;
+  /** @internal */
+  readonly telemetry: TelemetryState | undefined;
   /**
    * The SDK-wide logger, always present. Wraps the optional consumer-supplied
    * {@link GenericLogger}; silent when none was configured.

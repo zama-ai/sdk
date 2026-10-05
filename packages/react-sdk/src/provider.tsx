@@ -26,7 +26,7 @@ const ZamaSDKContext = createContext<ZamaSDK | null>(null);
 export function ZamaProvider({ children, config }: ZamaProviderProps) {
   const queryClient = useQueryClient();
 
-  const sdk = useMemo(() => new ZamaSDK(config), [config]);
+  const sdk = useMemo(() => new ZamaSDK(config, { layer: "react" }), [config]);
 
   // Transport-key-pair warming touches @fhevm/sdk's browser-only runtime (WASM,
   // and worker threads it may spawn internally), which is undefined during SSR.

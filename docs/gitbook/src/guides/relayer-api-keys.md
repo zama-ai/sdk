@@ -57,7 +57,7 @@ The recommended approach depends on your application architecture:
 
 ### Backend proxy pattern
 
-The proxy must add the `x-api-key` header to every forwarded request, so the key stays server-side and your frontend never sees it. See the [Authentication guide](authentication.md) for a working Express proxy and the matching client-side `relayerUrl` configuration — the patterns there apply unchanged when the upstream is the Zama-hosted Relayer.
+The proxy must add the `x-api-key` header to every forwarded request, so the key stays server-side and your frontend never sees it, and should forward the `x-zama-sdk-*` request headers so [SDK usage telemetry](telemetry.md) still reaches the relayer. See the [Authentication guide](authentication.md) for a working Express proxy and the matching client-side `relayerUrl` configuration — the patterns there apply unchanged when the upstream is the Zama-hosted Relayer.
 
 ## Compromised keys
 

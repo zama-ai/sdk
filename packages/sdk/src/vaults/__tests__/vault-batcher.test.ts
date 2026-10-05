@@ -46,6 +46,7 @@ describe("VaultBatcher", () => {
         values: [{ value: 1_000n, type: "euint64" }],
         contractAddress: BATCHER_ADDRESS,
         userAddress,
+        options: { operation: "vault-join" },
       });
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "join", args: [userAddress, handle, inputProof] }),

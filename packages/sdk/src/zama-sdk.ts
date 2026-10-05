@@ -10,7 +10,12 @@ import { Decryption } from "./namespaces/decryption";
 import { Delegations } from "./namespaces/delegations";
 import { Offline } from "./namespaces/offline";
 import { Permits } from "./namespaces/permits";
-import type { EncryptParams, FhevmRelayerOptions, RelayerSDK } from "./relayer/types";
+import type {
+  EncryptParams,
+  EncryptResult,
+  RelayerRequestOptions,
+  RelayerSDK,
+} from "./relayer/types";
 import { CachingService } from "./services/caching-service";
 import { DecryptionService } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
@@ -28,6 +33,7 @@ import type {
 } from "./types";
 import { parseSchema } from "./validation";
 import { WrappersRegistry } from "./wrappers-registry";
+import type { TelemetryLayer } from "./telemetry";
 
 /** Instance-level options that are deliberately not part of the shareable config object. */
 export interface ZamaSDKOptions {
@@ -41,6 +47,8 @@ export interface ZamaSDKOptions {
    * plaintext at rest, security delegated to the storage backend.
    */
   transportKeyPairDerivationSecret?: string | Uint8Array;
+  /** @internal */
+  layer?: TelemetryLayer;
 }
 
 /**
@@ -143,6 +151,10 @@ export class ZamaSDK {
     const derivationSecret = derivationSecretHolder(options.transportKeyPairDerivationSecret);
 
     this.#router = config.router;
+    // Sticky: other SDKs built on this config keep reporting react.
+    if (options.layer === "react" && config.telemetry) {
+      config.telemetry.layer = "react";
+    }
     this.provider = config.provider;
     this.signer = config.signer;
     this.storage = config.storage;
@@ -328,8 +340,11 @@ export class ZamaSDK {
    * });
    * ```
    */
-  async encrypt(params: EncryptParams, options?: Pick<FhevmRelayerOptions, "signal" | "timeout">) {
-    return this.#encryptionService.encryptValues(params, options);
+  async encrypt(params: EncryptParams, options?: RelayerRequestOptions): Promise<EncryptResult> {
+    return this.#encryptionService.encryptValues(params, {
+      ...options,
+      operation: options?.operation ?? "encrypt",
+    });
   }
 
   /**

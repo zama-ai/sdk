@@ -17,15 +17,16 @@ const HOP_BY_HOP = new Set([
   "upgrade",
 ]);
 
-// Allowlist for request headers forwarded to the relayer. The browser relayer worker only sends
-// content-type and accept. Using an allowlist instead of a denylist prevents browser cookies,
-// Authorization, and other session credentials from leaking to the upstream relayer.
+// Allowlist for request headers forwarded to the relayer, plus the SDK's x-zama-sdk-* usage
+// headers. Using an allowlist instead of a denylist prevents browser cookies, Authorization, and
+// other session credentials from leaking to the upstream relayer.
 const REQUEST_ALLOW = new Set(["content-type", "accept", "content-length"]);
 
 function forwardHeaders(incoming: Headers): Headers {
   const out = new Headers();
   for (const [key, value] of incoming) {
-    if (REQUEST_ALLOW.has(key.toLowerCase())) {
+    const name = key.toLowerCase();
+    if (REQUEST_ALLOW.has(name) || name.startsWith("x-zama-sdk-")) {
       out.set(key, value);
     }
   }

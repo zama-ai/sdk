@@ -158,9 +158,10 @@ export class Token {
   async balanceOf(owner: Address): Promise<bigint> {
     const ownerAddress = getAddress(owner);
     const encryptedValue = await this.readConfidentialBalanceOf(ownerAddress);
-    const result = await this.sdk.decryption.decryptValues([
-      { encryptedValue, contractAddress: this.address },
-    ]);
+    const result = await this.sdk.decryption.decryptValues(
+      [{ encryptedValue, contractAddress: this.address }],
+      { operation: "decrypt-balance" },
+    );
     const value = result[encryptedValue];
     if (value === undefined) {
       throw new DecryptionFailedError(`Decryption returned no value for ${encryptedValue}`);
@@ -229,6 +230,7 @@ export class Token {
       [{ encryptedValue, contractAddress: this.address }],
       normalizedDelegator,
       normalizedAccount,
+      { operation: "decrypt-balance" },
     );
 
     const value = result[encryptedValue];
@@ -412,6 +414,7 @@ export class Token {
         delegatorAddress: options.delegatorAddress,
         accountAddress: options.accountAddress,
         maxConcurrency,
+        operation: "decrypt-balance",
       });
 
       for (const [index, item] of decrypted.items.entries()) {
@@ -573,11 +576,14 @@ export class Token {
       await this.assertConfidentialBalance(amount);
     }
 
-    const { encryptedValues, inputProof } = await this.sdk.encrypt({
-      values: [{ value: amount, type: "euint64" }],
-      contractAddress: this.address,
-      userAddress: getAddress(account.address),
-    });
+    const { encryptedValues, inputProof } = await this.sdk.encrypt(
+      {
+        values: [{ value: amount, type: "euint64" }],
+        contractAddress: this.address,
+        userAddress: getAddress(account.address),
+      },
+      { operation: "confidential-transfer" },
+    );
     void swallow("transfer: onEncryptComplete", () => onEncryptComplete?.(), this.sdk.logger);
 
     if (encryptedValues.length === 0) {
@@ -626,11 +632,14 @@ export class Token {
     const normalizedTo = getAddress(to);
 
     // The input proof is verified against msg.sender, so it binds to the caller, not `from`.
-    const { encryptedValues, inputProof } = await this.sdk.encrypt({
-      values: [{ value: amount, type: "euint64" }],
-      contractAddress: this.address,
-      userAddress: getAddress(account.address),
-    });
+    const { encryptedValues, inputProof } = await this.sdk.encrypt(
+      {
+        values: [{ value: amount, type: "euint64" }],
+        contractAddress: this.address,
+        userAddress: getAddress(account.address),
+      },
+      { operation: "confidential-transfer" },
+    );
     void swallow(
       "transferFrom: onEncryptComplete",
       () => callbacks?.onEncryptComplete?.(),
@@ -703,11 +712,14 @@ export class Token {
       await this.assertConfidentialBalance(amount);
     }
 
-    const { encryptedValues, inputProof } = await this.sdk.encrypt({
-      values: [{ value: amount, type: "euint64" }],
-      contractAddress: this.address,
-      userAddress: getAddress(account.address),
-    });
+    const { encryptedValues, inputProof } = await this.sdk.encrypt(
+      {
+        values: [{ value: amount, type: "euint64" }],
+        contractAddress: this.address,
+        userAddress: getAddress(account.address),
+      },
+      { operation: "confidential-transfer" },
+    );
     void swallow(
       "transferAndCall: onEncryptComplete",
       () => onEncryptComplete?.(),
@@ -771,11 +783,14 @@ export class Token {
     const normalizedTo = getAddress(to);
 
     // The input proof is verified against msg.sender, so it binds to the caller, not `from`.
-    const { encryptedValues, inputProof } = await this.sdk.encrypt({
-      values: [{ value: amount, type: "euint64" }],
-      contractAddress: this.address,
-      userAddress: getAddress(account.address),
-    });
+    const { encryptedValues, inputProof } = await this.sdk.encrypt(
+      {
+        values: [{ value: amount, type: "euint64" }],
+        contractAddress: this.address,
+        userAddress: getAddress(account.address),
+      },
+      { operation: "confidential-transfer" },
+    );
     void swallow(
       "transferFromAndCall: onEncryptComplete",
       () => callbacks?.onEncryptComplete?.(),

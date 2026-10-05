@@ -238,6 +238,7 @@ describe("OfflineService — other transaction kinds", () => {
     });
     expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
       encryptedValues: [handle],
+      options: { operation: "offline-prepare" },
     });
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import type * as ZamaSdkModule from "@zama-fhe/sdk";
-import type { ZamaConfig, ZamaSDKEventListener } from "@zama-fhe/sdk";
+import type { ZamaConfig, ZamaSDKEventListener, ZamaSDKOptions } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { vi } from "vitest";
 import { useZamaSDK } from "../provider";
@@ -8,14 +8,16 @@ import { describe, expect, test } from "../test-fixtures";
 
 // Spy on ZamaSDK constructor by wrapping the real class
 const tokenSDKConstructorArgs: ZamaConfig[] = [];
+const tokenSDKConstructorOptions: Array<ZamaSDKOptions | undefined> = [];
 vi.mock(import("@zama-fhe/sdk"), async (importOriginal: () => Promise<typeof ZamaSdkModule>) => {
   const actual = await importOriginal();
   return {
     ...actual,
     ZamaSDK: class MockZamaSDK extends actual.ZamaSDK {
-      constructor(config: ZamaConfig) {
-        super(config);
+      constructor(config: ZamaConfig, options?: ZamaSDKOptions) {
+        super(config, options);
         tokenSDKConstructorArgs.push(config);
+        tokenSDKConstructorOptions.push(options);
       }
     },
   };
@@ -34,6 +36,13 @@ describe("ZamaProvider & useZamaSDK", () => {
     expect(result.current).toBeDefined();
     expect(result.current.signer).toBeDefined();
     expect(result.current.relayer).toBeDefined();
+  });
+
+  test("constructs the SDK as the react telemetry layer", ({ renderWithProviders }) => {
+    renderWithProviders(() => useZamaSDK());
+
+    expect(tokenSDKConstructorOptions.at(-1)).toEqual({ layer: "react" });
+    expect(tokenSDKConstructorArgs.at(-1)?.telemetry?.layer).toBe("react");
   });
 
   test("does not terminate relayer on unmount (caller owns the relayer)", ({

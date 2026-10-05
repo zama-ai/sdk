@@ -255,9 +255,10 @@ export class VaultBatcher {
     if (isEncryptedValueZero(encryptedValue)) {
       return 0n;
     }
-    const result = await this.sdk.decryption.decryptValues([
-      { encryptedValue, contractAddress: this.address },
-    ]);
+    const result = await this.sdk.decryption.decryptValues(
+      [{ encryptedValue, contractAddress: this.address }],
+      { operation: "vault-balance" },
+    );
     const value = result[encryptedValue];
     if (value === undefined) {
       throw new DecryptionFailedError(`Decryption returned no value for ${encryptedValue}`);
@@ -287,6 +288,7 @@ export class VaultBatcher {
    * @throws if balance validation requires decryption that is not possible. {@link BalanceCheckUnavailableError}
    */
   async join(amount: bigint, beneficiary?: Address, options?: JoinOptions): Promise<JoinResult> {
+    const operation = options?.operation ?? "vault-join";
     this.#requireSigner("join");
     const account = await requireAlignedWalletAccount("join", this.sdk.signer, this.sdk.provider);
     const userAddress = getAddress(account.address);
@@ -296,11 +298,10 @@ export class VaultBatcher {
       await this.#assertJoinableBalance(amount);
     }
 
-    const { encryptedValues, inputProof } = await this.sdk.encrypt({
-      values: [{ value: amount, type: "euint64" }],
-      contractAddress: this.address,
-      userAddress,
-    });
+    const { encryptedValues, inputProof } = await this.sdk.encrypt(
+      { values: [{ value: amount, type: "euint64" }], contractAddress: this.address, userAddress },
+      { operation },
+    );
 
     const encryptedAmount = encryptedValues[0];
     if (!encryptedAmount) {

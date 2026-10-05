@@ -140,6 +140,7 @@ describe("Token", () => {
         values: [{ value: 100n, type: "euint64" }],
         contractAddress: tokenAddress,
         userAddress,
+        options: { operation: "confidential-transfer" },
       });
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "confidentialTransfer" }),
@@ -209,6 +210,7 @@ describe("Token", () => {
         values: [{ value: 200n, type: "euint64" }],
         contractAddress: tokenAddress,
         userAddress,
+        options: { operation: "confidential-transfer" },
       });
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "confidentialTransferFrom" }),
@@ -253,6 +255,7 @@ describe("Token", () => {
         values: [{ value: 100n, type: "euint64" }],
         contractAddress: tokenAddress,
         userAddress,
+        options: { operation: "confidential-transfer" },
       });
       // Pin the full ordered args so a wrong-order regression fails here, not only in contracts.test.ts.
       expect(signer.writeContract).toHaveBeenCalledWith(
@@ -331,6 +334,7 @@ describe("Token", () => {
         values: [{ value: 200n, type: "euint64" }],
         contractAddress: tokenAddress,
         userAddress,
+        options: { operation: "confidential-transfer" },
       });
       // Pin the full ordered args so a wrong-order regression fails here, not only in contracts.test.ts.
       expect(signer.writeContract).toHaveBeenCalledWith(

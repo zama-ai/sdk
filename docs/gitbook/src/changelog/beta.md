@@ -30,3 +30,7 @@ See [Vault deposits and redemptions](../guides/vault-deposits.md) for the full f
 ## Offline permits for more than 10 contracts
 
 `sdk.offline.batchPreparePermits` and `sdk.permits.batchRegisterPermits` handle offline permit requests of any size. A permit holds at most 10 contracts, so `batchPreparePermits` returns one `PreparedPermit` per chunk of 10, and `batchRegisterPermits` takes the matching list of `{ prepared, signature }` pairs (`SignedPreparedPermit[]`) and registers them in order. The single-permit `preparePermit` and `registerPermit` are unchanged; `preparePermit` still rejects more than 10 contracts and now points at `batchPreparePermits`. React gains `useBatchPreparePermits` and `useBatchRegisterPermits`. See [Offline permits](../guides/offline.md#offline-permits).
+
+## SDK usage telemetry headers
+
+Relayer requests now carry four `x-zama-sdk-*` headers: the SDK version, the package driving it (`core` or `react`), the runtime (`browser` or `node`), and the high-level operation the request belongs to (`confidential-transfer`, `unshield`, `decrypt-balance`, …). They label traffic the relayer already receives so the SDK team can see version adoption and per-operation error rates; no end-user data is ever included, and a self-hosted relayer simply ignores them. Telemetry is on by default and `createConfig({ telemetry: false })` turns it off; on Node.js, `ZAMA_SDK_TELEMETRY=0` does the same for a whole process. See [SDK usage telemetry](../guides/telemetry.md).
