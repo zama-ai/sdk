@@ -269,3 +269,28 @@ func TestSDKNumberRemainsDistinctFromBigIntAcrossWire(t *testing.T) {
 		t.Fatalf("SDK bigint type or value changed: %#v", integer)
 	}
 }
+
+func TestDelegatedBatchDecryptNamesInvalidField(t *testing.T) {
+	valid := func() *pb.BatchItem {
+		return &pb.BatchItem{EncryptedValue: make([]byte, 32), ContractAddress: make([]byte, 20), Result: &pb.BatchItem_Value{Value: &pb.ClearValue{Value: &pb.ClearValue_BoolValue{BoolValue: true}}}}
+	}
+	shortValue, shortAddress := valid(), valid()
+	shortValue.EncryptedValue = make([]byte, 31)
+	shortAddress.ContractAddress = make([]byte, 19)
+	for _, test := range []struct {
+		name string
+		item *pb.BatchItem
+		want string
+	}{
+		{"nil item", nil, "invalid batch response item"},
+		{"short encrypted value", shortValue, "invalid batch response encrypted value"},
+		{"short contract address", shortAddress, "invalid batch response contract address"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := batchItems([]*pb.BatchItem{valid(), test.item})
+			if err == nil || err.Error() != test.want {
+				t.Fatalf("error = %v, want %q", err, test.want)
+			}
+		})
+	}
+}

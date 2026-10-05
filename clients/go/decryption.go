@@ -154,16 +154,19 @@ func (s *SDKContext) DelegatedBatchDecryptValues(ctx context.Context, inputs []E
 	if err != nil {
 		return nil, err
 	}
-	items := make([]BatchItem, len(response.Items))
-	for i, item := range response.Items {
+	return batchItems(response.Items)
+}
+func batchItems(wire []*pb.BatchItem) ([]BatchItem, error) {
+	items := make([]BatchItem, len(wire))
+	for i, item := range wire {
 		if item == nil {
-			return nil, errors.New("invalid batch response address")
+			return nil, errors.New("invalid batch response item")
 		}
-		encryptedValue, err := hashFromWire(item.EncryptedValue, "invalid batch response address")
+		encryptedValue, err := hashFromWire(item.EncryptedValue, "invalid batch response encrypted value")
 		if err != nil {
 			return nil, err
 		}
-		contractAddress, err := addressFromWire(item.ContractAddress, "invalid batch response address")
+		contractAddress, err := addressFromWire(item.ContractAddress, "invalid batch response contract address")
 		if err != nil {
 			return nil, err
 		}
