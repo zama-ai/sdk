@@ -80,7 +80,9 @@ export class CredentialStorage implements GenericStorage {
       return operation();
     } catch {
       this.#failed = true;
-      throw this.#failure();
+      const failure = this.#failure();
+      reportCode(failure.code);
+      throw failure;
     }
   }
 

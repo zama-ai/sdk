@@ -52,9 +52,24 @@ test("refuses a second process and retains failures even when callers catch them
   expect(error.details).toBe("Credential storage could not be opened.");
   expect(error.metadata.get("zama-error-code")).toEqual(["STORAGE_OPEN_FAILED"]);
   expect(stderr).toEqual(["[zama-daemon] STORAGE_OPEN_FAILED (details omitted)\n"]);
+  const quiet = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   await expect(storage.set("key", () => {})).rejects.toMatchObject({ code: "STORAGE_FAILED" });
+  quiet.mockRestore();
   expect(() => storage.assertHealthy()).toThrow("Credential storage failed");
   await storage.close();
+});
+
+test("reports a store failure to stderr once", async () => {
+  const storage = await CredentialStorage.open(await directory());
+  const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  try {
+    await expect(storage.set("key", () => {})).rejects.toMatchObject({ code: "STORAGE_FAILED" });
+    await expect(storage.get("key")).rejects.toMatchObject({ code: "STORAGE_FAILED" });
+    expect(stderr.mock.calls).toEqual([["[zama-daemon] STORAGE_FAILED (details omitted)\n"]]);
+  } finally {
+    stderr.mockRestore();
+    await storage.close();
+  }
 });
 
 test.each([
