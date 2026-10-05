@@ -265,6 +265,18 @@ impl SdkError {
     }
 }
 
+/// The panic payload may carry application data, so it never reaches the daemon.
+pub(crate) async fn recover_panic<T>(
+    future: impl std::future::Future<Output = std::result::Result<T, SdkError>>,
+    on_panic: SdkError,
+) -> std::result::Result<T, SdkError> {
+    use futures_util::FutureExt;
+    std::panic::AssertUnwindSafe(future)
+        .catch_unwind()
+        .await
+        .unwrap_or(Err(on_panic))
+}
+
 impl fmt::Display for SdkError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}: {}", self.code, self.message)

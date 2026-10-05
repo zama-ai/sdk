@@ -194,3 +194,79 @@ async fn storage_callbacks_run_concurrently_and_stop_on_close() {
         .unwrap()
         .forget();
 }
+
+#[tokio::test]
+async fn storage_panic_fails_only_its_request() {
+    struct PanickingStorage;
+    #[async_trait]
+    impl NativeStorage for PanickingStorage {
+        async fn get(&self, _: &str) -> anyhow::Result<Option<Vec<u8>>> {
+            panic!("secret payload")
+        }
+        async fn set(&self, _: &str, _: Vec<u8>) -> anyhow::Result<()> {
+            Ok(())
+        }
+        async fn delete(&self, _: &str) -> anyhow::Result<()> {
+            Ok(())
+        }
+    }
+    let storage = ApplicationStorage::new(PanickingStorage);
+    let id = storage.id.clone();
+    let mut server = Server::start(Arc::new(default_handler)).await;
+    server
+        .storage_actions
+        .send(StorageServerMessage {
+            message: Some(storage_server_message::Message::Attached(Empty {})),
+        })
+        .unwrap();
+    let sdk = Client::connect(&server.socket)
+        .await
+        .unwrap()
+        .sdk(SdkConfig::new(11155111, "https://rpc.invalid"))
+        .storage(storage)
+        .build()
+        .await
+        .unwrap();
+    server.storage_replies.recv().await.unwrap();
+    let panicked = storage_reply::Result::Error(
+        crate::SdkError {
+            code: "STORAGE_FAILED".into(),
+            message: "application storage panicked".into(),
+            retryable: false,
+            retry_after_seconds: None,
+            revert_data: None,
+        }
+        .into(),
+    );
+    for (request_id, method, expected) in [
+        ("get", StorageMethod::Get, panicked),
+        (
+            "set",
+            StorageMethod::Set,
+            storage_reply::Result::Ack(Empty {}),
+        ),
+    ] {
+        server
+            .storage_actions
+            .send(StorageServerMessage {
+                message: Some(storage_server_message::Message::Action(StorageAction {
+                    request_id: request_id.into(),
+                    backend_id: id.clone(),
+                    method: method as i32,
+                    key: "key".into(),
+                    value: vec![1],
+                })),
+            })
+            .unwrap();
+        let reply = tokio::time::timeout(Duration::from_secs(2), server.storage_replies.recv())
+            .await
+            .unwrap()
+            .unwrap();
+        let Some(storage_client_message::Message::Reply(reply)) = reply.message else {
+            panic!("expected reply")
+        };
+        assert_eq!(reply.request_id, request_id);
+        assert_eq!(reply.result, Some(expected));
+    }
+    sdk.close().await.unwrap();
+}

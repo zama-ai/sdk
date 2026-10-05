@@ -337,6 +337,37 @@ func TestStorageCallbackErrorMetadataAcrossWire(t *testing.T) {
 	}
 }
 
+type panickingStorage struct {
+	Storage
+}
+
+func (panickingStorage) Get(context.Context, string) ([]byte, bool, error) {
+	panic("secret-key-material")
+}
+func TestStoragePanicFailsOnlyItsRequest(t *testing.T) {
+	server := newStorageServer()
+	client := testClient(t, server, nil)
+	sdk, err := client.CreateContext(testContext(t), SDKConfig{Storage: ApplicationStorage(panickingStorage{Storage: NewMemoryStorage()})}, SignerConfig{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sdk.Close(testContext(t))
+	reply, err := server.request(testContext(t), sdk.id, pb.StorageMethod_STORAGE_METHOD_GET, "key", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reply.GetError().GetCode() != CodeStorageFailed || reply.GetError().GetMessage() != "application storage panicked" {
+		t.Fatalf("panic reply changed: %v", reply.GetError())
+	}
+	reply, err = server.request(testContext(t), sdk.id, pb.StorageMethod_STORAGE_METHOD_SET, "key", []byte{1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reply.GetAck() == nil {
+		t.Fatalf("channel stopped serving after a panic: %v", reply)
+	}
+}
+
 func TestChainOverridesPreservePresence(t *testing.T) {
 	empty := ""
 	address := "0x0000000000000000000000000000000000000001"

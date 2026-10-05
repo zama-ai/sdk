@@ -40,8 +40,15 @@ func (s *SDKContext) AttachStorage(ctx context.Context) error {
 		})
 	return err
 }
-func (s *SDKContext) storageReply(ctx context.Context, action *pb.StorageAction) *pb.StorageReply {
-	reply := &pb.StorageReply{RequestId: action.RequestId}
+
+// A panicking store fails only its own request; the panic value never reaches the reply.
+func (s *SDKContext) storageReply(ctx context.Context, action *pb.StorageAction) (reply *pb.StorageReply) {
+	reply = &pb.StorageReply{RequestId: action.RequestId}
+	defer func() {
+		if recover() != nil {
+			reply.Result = &pb.StorageReply_Error{Error: &pb.SdkError{Code: CodeStorageFailed, Message: "application storage panicked"}}
+		}
+	}()
 	store, ok := s.stores[action.BackendId]
 	var err error
 	if !ok {

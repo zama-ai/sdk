@@ -1,7 +1,6 @@
 use crate::{
     B256, ClientError, ContractWriteRequest, ErrorKind, SdkError, WalletAccount, generated,
 };
-use futures_util::FutureExt;
 use std::{collections::HashMap, future::Future, sync::Arc};
 use tokio::{
     sync::mpsc,
@@ -160,20 +159,21 @@ impl CallbackRequest {
                 "wallet adapter panicked during contract write",
             ),
         };
-        std::panic::AssertUnwindSafe(async move {
-            match self {
-                Self::TypedData(request) => {
-                    sign.sign_typed_data(request).await.map(Reply::Signature)
+        crate::error::recover_panic(
+            async move {
+                match self {
+                    Self::TypedData(request) => {
+                        sign.sign_typed_data(request).await.map(Reply::Signature)
+                    }
+                    Self::ContractWrite(request) => sign
+                        .write_contract(request, cancel)
+                        .await
+                        .map(|hash| Reply::TransactionHash(hash.to_vec())),
                 }
-                Self::ContractWrite(request) => sign
-                    .write_contract(request, cancel)
-                    .await
-                    .map(|hash| Reply::TransactionHash(hash.to_vec())),
-            }
-        })
-        .catch_unwind()
+            },
+            panicked,
+        )
         .await
-        .unwrap_or(Err(panicked))
     }
 }
 

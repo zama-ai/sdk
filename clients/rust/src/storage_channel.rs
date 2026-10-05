@@ -1,4 +1,4 @@
-use crate::error::sdk_error_in_chain;
+use crate::error::{recover_panic, sdk_error_in_chain};
 use crate::{ClientError, ErrorKind, NativeStorage, Result, SdkError, generated};
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{sync::mpsc, task::JoinSet};
@@ -61,9 +61,12 @@ impl Callbacks {
                 let backend = self.backends.get(&action.backend_id).cloned();
                 let sender = self.sender.clone();
                 self.tasks.spawn(async move {
-                    let result = execute(backend, &action).await.unwrap_or_else(|error| {
-                        generated::storage_reply::Result::Error(error.into())
-                    });
+                    let result = recover_panic(
+                        execute(backend, &action),
+                        invalid("application storage panicked"),
+                    )
+                    .await
+                    .unwrap_or_else(|error| generated::storage_reply::Result::Error(error.into()));
                     let reply = generated::StorageReply {
                         request_id: action.request_id,
                         result: Some(result),
