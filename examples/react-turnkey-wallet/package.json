@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.103.1",
-    "@turnkey/react-wallet-kit": "^2.4.0",
+    "@turnkey/react-wallet-kit": "^2.5.1",
     "@turnkey/viem": "^0.14.31",
     "@zama-fhe/react-sdk": "^3.6.0",
     "@zama-fhe/sdk": "^3.6.0",
