@@ -73,7 +73,7 @@ func (s *SDKContext) SubscribeEvents(ctx context.Context, handlers EventHandlers
 					if rejected.Error == nil {
 						return errors.New("missing event reply error")
 					}
-					if rejected.Error.Code != "EVENT_DELIVERY_NOT_FOUND" {
+					if rejected.Error.Code != codeEventDeliveryNotFound {
 						return sdkError(rejected.Error)
 					}
 					return nil
@@ -105,7 +105,7 @@ func (s *SDKContext) SubscribeEvents(ctx context.Context, handlers EventHandlers
 	for attempt := 0; ; attempt++ {
 		channel, err = attach()
 		var rpc *RPCError
-		if err == nil || !replacingFailed || !errors.As(err, &rpc) || rpc.Code != "EVENT_ATTACHED" || attempt >= 39 {
+		if err == nil || !replacingFailed || !errors.As(err, &rpc) || rpc.Code != codeEventAttached || attempt >= 39 {
 			break
 		}
 		timer := time.NewTimer(25 * time.Millisecond)
@@ -175,11 +175,11 @@ func eventReply(ctx context.Context, sequence uint64, callback eventCallback) (r
 	reply = &pb.EventReply{Sequence: sequence, Outcome: &pb.EventReply_Acknowledged{Acknowledged: &pb.Empty{}}}
 	defer func() {
 		if recover() != nil {
-			reply.Outcome = &pb.EventReply_Error{Error: &pb.SdkError{Code: "CALLBACK_FAILED", Message: "event handler panicked"}}
+			reply.Outcome = &pb.EventReply_Error{Error: &pb.SdkError{Code: codeCallbackFailed, Message: "event handler panicked"}}
 		}
 	}()
 	if err := callback(ctx); err != nil {
-		reply.Outcome = &pb.EventReply_Error{Error: callbackError(err, "CALLBACK_FAILED")}
+		reply.Outcome = &pb.EventReply_Error{Error: callbackError(err, codeCallbackFailed)}
 	}
 	return reply
 }

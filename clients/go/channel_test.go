@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	pb "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -76,6 +77,27 @@ func TestRPCErrorPreservesCallbackMetadata(t *testing.T) {
 	}
 	if status.Code(err) != codes.ResourceExhausted {
 		t.Fatal("lost gRPC status")
+	}
+}
+
+func TestIsOutcomeUnknown(t *testing.T) {
+	cause := status.Error(codes.Unavailable, "connection lost")
+	for name, test := range map[string]struct {
+		err  error
+		want bool
+	}{
+		"daemon trailer":      {rpcError(cause, metadata.Pairs("zama-error-code", "TRANSACTION_OUTCOME_UNKNOWN")), true},
+		"broadcast uncertain": {newBroadcastUncertainError(common.Hash{1}, errors.New("timeout")), true},
+		"wrapped":             {fmt.Errorf("transfer: %w", newBroadcastUncertainError(common.Hash{1}, errors.New("timeout"))), true},
+		"nil":                 {nil, false},
+		"plain":               {errors.New("TRANSACTION_OUTCOME_UNKNOWN"), false},
+		"signing failed":      {&SDKError{Code: CodeSigningFailed, Message: "denied"}, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := IsOutcomeUnknown(test.err); got != test.want {
+				t.Fatalf("IsOutcomeUnknown = %v, want %v", got, test.want)
+			}
+		})
 	}
 }
 

@@ -31,7 +31,7 @@ func (s *SDKContext) AttachWallet(ctx context.Context, signer SignerConfig) erro
 					send(&pb.SignerClientMessage{Message: &pb.SignerClientMessage_Reply{Reply: reply}})
 				})
 			}
-			if rejected := message.GetReplyError(); rejected != nil && (rejected.Error == nil || rejected.Error.Code != "SIGNER_ACTION_NOT_FOUND") {
+			if rejected := message.GetReplyError(); rejected != nil && (rejected.Error == nil || rejected.Error.Code != codeSignerActionNotFound) {
 				if rejected.Error == nil {
 					s.failOperation(rejected.OperationId, errors.New("missing signer reply error"))
 				} else {
@@ -108,9 +108,9 @@ func invokeSignerRecovering(ctx context.Context, action *pb.SignerAction, signer
 		reply.Result = nil
 		if action.GetContractWrite() != nil {
 			// The write may have been broadcast before the panic.
-			err = &SDKError{Code: "TRANSACTION_OUTCOME_UNKNOWN", Message: "wallet adapter panicked during contract write"}
+			err = &SDKError{Code: CodeTransactionOutcomeUnknown, Message: "wallet adapter panicked during contract write"}
 		} else {
-			err = &SDKError{Code: "SIGNING_FAILED", Message: "wallet adapter panicked during signing"}
+			err = &SDKError{Code: CodeSigningFailed, Message: "wallet adapter panicked during signing"}
 		}
 	}()
 	return invokeSigner(ctx, action, signer, reply, writeDispatched)
@@ -133,7 +133,7 @@ func invokeSigner(ctx context.Context, action *pb.SignerAction, signer SignerCon
 	switch request := action.Request.(type) {
 	case *pb.SignerAction_ContractWrite:
 		if signer.WriteContract == nil {
-			return &SDKError{Code: "SIGNER_NOT_CONFIGURED", Message: "contract write callback required"}
+			return &SDKError{Code: CodeSignerNotConfigured, Message: "contract write callback required"}
 		}
 		write, err := contractWriteRequest(action.OperationId, action.ActionId, account, request.ContractWrite)
 		if err != nil {
@@ -149,7 +149,7 @@ func invokeSigner(ctx context.Context, action *pb.SignerAction, signer SignerCon
 		return err
 	case *pb.SignerAction_TypedDataJson:
 		if signer.SignTypedData == nil {
-			return &SDKError{Code: "SIGNER_NOT_CONFIGURED", Message: "typed data signer callback required"}
+			return &SDKError{Code: CodeSignerNotConfigured, Message: "typed data signer callback required"}
 		}
 		var typed apitypes.TypedData
 		if err := json.Unmarshal([]byte(request.TypedDataJson), &typed); err != nil {

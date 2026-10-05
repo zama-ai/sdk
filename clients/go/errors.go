@@ -9,6 +9,24 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// Codes this client produces itself; daemon codes arrive verbatim in SDKError.Code.
+const (
+	CodeTransactionOutcomeUnknown = "TRANSACTION_OUTCOME_UNKNOWN"
+	CodeSigningFailed             = "SIGNING_FAILED"
+	CodeSigningRejected           = "SIGNING_REJECTED"
+	CodeChainMismatch             = "CHAIN_MISMATCH"
+	CodeSignerNotConfigured       = "SIGNER_NOT_CONFIGURED"
+	CodeStorageFailed             = "STORAGE_FAILED"
+)
+
+const (
+	codeStorageRequestNotFound = "STORAGE_REQUEST_NOT_FOUND"
+	codeSignerActionNotFound   = "SIGNER_ACTION_NOT_FOUND"
+	codeEventDeliveryNotFound  = "EVENT_DELIVERY_NOT_FOUND"
+	codeEventAttached          = "EVENT_ATTACHED"
+	codeCallbackFailed         = "CALLBACK_FAILED"
+)
+
 type SDKError struct {
 	Code              string
 	Message           string
@@ -79,6 +97,12 @@ func sdkError(err *pb.SdkError) *SDKError {
 	return &SDKError{Code: err.Code, Message: err.Message, Retryable: err.Retryable, RetryAfterSeconds: err.RetryAfterSeconds}
 }
 
+// IsOutcomeUnknown reports whether a contract write may have been broadcast; reconcile on-chain before retrying it.
+func IsOutcomeUnknown(err error) bool {
+	var details *SDKError
+	return errors.As(err, &details) && details.Code == CodeTransactionOutcomeUnknown
+}
+
 var ErrSigningRejected = errors.New("signing rejected")
 
 func callbackError(err error, fallbackCode string) *pb.SdkError {
@@ -89,9 +113,9 @@ func callbackError(err error, fallbackCode string) *pb.SdkError {
 	return &pb.SdkError{Code: fallbackCode, Message: err.Error()}
 }
 func signingError(err error) *pb.SdkError {
-	code := "SIGNING_FAILED"
+	code := CodeSigningFailed
 	if errors.Is(err, ErrSigningRejected) {
-		code = "SIGNING_REJECTED"
+		code = CodeSigningRejected
 	}
 	return callbackError(err, code)
 }

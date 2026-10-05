@@ -123,7 +123,7 @@ func call[T any](ctx context.Context, s *SDKContext, invoke func(context.Context
 	switch {
 	case pendingWrites > 0:
 		// Without a daemon verdict a dispatched write may still have been broadcast.
-		settled.Code, settled.Retryable, settled.RetryAfterSeconds = "TRANSACTION_OUTCOME_UNKNOWN", false, nil
+		settled.Code, settled.Retryable, settled.RetryAfterSeconds = CodeTransactionOutcomeUnknown, false, nil
 		return result, settled
 	case failure != nil:
 		return result, failure

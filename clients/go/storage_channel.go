@@ -24,7 +24,7 @@ func (s *SDKContext) AttachStorage(ctx context.Context) error {
 				if rejected.Error == nil {
 					return errors.New("missing storage reply error")
 				}
-				if rejected.Error.Code != "STORAGE_REQUEST_NOT_FOUND" {
+				if rejected.Error.Code != codeStorageRequestNotFound {
 					return sdkError(rejected.Error)
 				}
 			}
@@ -66,7 +66,7 @@ func (s *SDKContext) storageReply(ctx context.Context, action *pb.StorageAction)
 		}
 	}
 	if err != nil {
-		reply.Result = &pb.StorageReply_Error{Error: callbackError(err, "STORAGE_FAILED")}
+		reply.Result = &pb.StorageReply_Error{Error: callbackError(err, CodeStorageFailed)}
 	} else if reply.Result == nil {
 		reply.Result = &pb.StorageReply_Ack{Ack: &pb.Empty{}}
 	}

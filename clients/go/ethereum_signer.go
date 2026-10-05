@@ -32,7 +32,7 @@ type BroadcastUncertainError struct {
 
 func newBroadcastUncertainError(hash common.Hash, cause error) *BroadcastUncertainError {
 	message := fmt.Sprintf("transaction %s submission uncertain: %v", hash.Hex(), cause)
-	return &BroadcastUncertainError{SDKError: SDKError{Code: "TRANSACTION_OUTCOME_UNKNOWN", Message: message}, Hash: hash, Cause: cause}
+	return &BroadcastUncertainError{SDKError: SDKError{Code: CodeTransactionOutcomeUnknown, Message: message}, Hash: hash, Cause: cause}
 }
 func (e *BroadcastUncertainError) Error() string { return e.Message }
 func (e *BroadcastUncertainError) Unwrap() error { return e.Cause }
@@ -76,13 +76,13 @@ func (w *ethereumWriter) writeContract(ctx context.Context, request ContractWrit
 		return common.Hash{}, err
 	}
 	if request.Account.Address != w.account.Address {
-		return common.Hash{}, &SDKError{Code: "SIGNING_FAILED", Message: "Wallet does not control the requested account."}
+		return common.Hash{}, &SDKError{Code: CodeSigningFailed, Message: "Wallet does not control the requested account."}
 	}
 	if request.Account.ChainID != w.account.ChainID {
-		return common.Hash{}, &SDKError{Code: "CHAIN_MISMATCH", Message: "Transaction chain does not match the wallet chain."}
+		return common.Hash{}, &SDKError{Code: CodeChainMismatch, Message: "Transaction chain does not match the wallet chain."}
 	}
 	if request.Value != nil && (request.Value.Sign() < 0 || request.Value.BitLen() > 256) {
-		return common.Hash{}, &SDKError{Code: "SIGNING_FAILED", Message: "Transaction value must fit uint256."}
+		return common.Hash{}, &SDKError{Code: CodeSigningFailed, Message: "Transaction value must fit uint256."}
 	}
 	// Copy the shared authorization so per-write fields never race.
 	opts := *w.auth

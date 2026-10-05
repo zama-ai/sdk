@@ -170,7 +170,7 @@ func TestSignerLossKeepsDaemonOutcome(t *testing.T) {
 	select {
 	case err := <-done:
 		var rpc *RPCError
-		if !errors.As(err, &rpc) || rpc.Code != "TRANSACTION_OUTCOME_UNKNOWN" || rpc.Retryable || rpc.Message != lostWriteMessage {
+		if !IsOutcomeUnknown(err) || !errors.As(err, &rpc) || rpc.Retryable || rpc.Message != lostWriteMessage {
 			t.Fatalf("daemon outcome lost: %v", err)
 		}
 	case <-time.After(time.Second):
@@ -202,7 +202,7 @@ func TestConnectionLossAfterWriteReportsOutcomeUnknown(t *testing.T) {
 	select {
 	case err := <-done:
 		var rpc *RPCError
-		if !errors.As(err, &rpc) || rpc.Code != "TRANSACTION_OUTCOME_UNKNOWN" || rpc.Retryable || status.Code(err) != codes.Unavailable {
+		if !IsOutcomeUnknown(err) || !errors.As(err, &rpc) || rpc.Retryable || status.Code(err) != codes.Unavailable {
 			t.Fatalf("lost write misreported: %v", err)
 		}
 	case <-time.After(time.Second):
