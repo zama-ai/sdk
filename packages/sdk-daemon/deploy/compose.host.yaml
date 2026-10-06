@@ -1,0 +1,35 @@
+# For an application running directly on this Linux host. Create ./socket and ./storage with mode 0700,
+# owned by your application's user, then start with: docker compose up -d --wait
+name: zama-sdk-daemon
+
+services:
+  daemon:
+    image: zamafhe/sdk-daemon:${ZAMA_SDK_VERSION:?Set ZAMA_SDK_VERSION to the release that matches your Go or Rust client}
+    # Your application's user: the daemon only accepts directories it owns, and only this user can open the socket.
+    user: "${ZAMA_SDK_DAEMON_UID:?Set ZAMA_SDK_DAEMON_UID to your application's user ID}:${ZAMA_SDK_DAEMON_GID:?Set ZAMA_SDK_DAEMON_GID to your application's group ID}"
+    environment:
+      ZAMA_SDK_DAEMON_SOCKET_PATH: /run/zama/sdk.sock
+      ZAMA_SDK_DAEMON_STORAGE_DIR: /var/lib/zama
+    volumes:
+      # Host directories next to this file; a missing one is an error instead of a root-owned directory.
+      - type: bind
+        source: ./socket
+        target: /run/zama
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./storage
+        target: /var/lib/zama
+        bind:
+          create_host_path: false
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "node", "dist/healthcheck.js"]
+      interval: 10s
+      timeout: 3s
+      start_period: 10s
+    # Longer than the daemon's 120-second shutdown timeout, so it exits before Docker kills it.
+    stop_grace_period: 150s
+    restart: unless-stopped

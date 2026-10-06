@@ -4,16 +4,13 @@ name: zama-sdk-daemon
 services:
   daemon:
     image: zamafhe/sdk-daemon:${ZAMA_SDK_VERSION:?Set ZAMA_SDK_VERSION to the release that matches your Go or Rust client}
-    # Defaults to the image's user; set both to your UID when the socket and storage are host directories.
-    user: "${ZAMA_SDK_DAEMON_UID:-1000}:${ZAMA_SDK_DAEMON_GID:-1000}"
     environment:
       ZAMA_SDK_DAEMON_SOCKET_PATH: /run/zama/sdk.sock
       ZAMA_SDK_DAEMON_STORAGE_DIR: /var/lib/zama
     volumes:
-      # Named volumes by default: a new one copies the image's private directories (UID 1000, mode 0700).
-      # Set these to host directory paths to reach the socket from an application on a Linux host.
-      - ${ZAMA_SDK_SOCKET_VOLUME:-socket}:/run/zama
-      - ${ZAMA_SDK_STORAGE_VOLUME:-storage}:/var/lib/zama
+      # A new named volume copies the image's private directory (UID 1000, mode 0700).
+      - socket:/run/zama
+      - storage:/var/lib/zama
     read_only: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]

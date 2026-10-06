@@ -10467,18 +10467,18 @@ Set `ZAMA_SDK_VERSION` to the version of your Go module or Rust crate. `--wait` 
 
 ### Application on a Linux host
 
-A process on the host can't reach a socket inside a named volume. On a Linux host, point the same file at host directories and run the daemon as your application's UID. Create both directories first: the daemon rejects directories that aren't private to its UID, and Docker would otherwise create them as root.
+When your application runs directly on a Linux host rather than in a container, use the [host Compose file](https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.host.yaml). It mounts `socket` and `storage` directories next to the file and runs the daemon as your application's user, so the application can open the socket. Docker Desktop can't share a socket with a host process, so this applies to Linux only.
+
+From the directory that will hold the daemon's files, replace `myapp` with the user your application runs as:
 
 ```bash
 export ZAMA_SDK_VERSION=3.7.0-beta.5
-curl -fsSL -o zama-sdk-daemon.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.yaml"
-mkdir -p -m 700 zama-daemon/socket zama-daemon/storage
-export ZAMA_SDK_SOCKET_VOLUME=./zama-daemon/socket ZAMA_SDK_STORAGE_VOLUME=./zama-daemon/storage
-export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"
-docker compose -f zama-sdk-daemon.yaml up -d --wait
+curl -fsSL -o compose.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.host.yaml"
+sudo install -d -m 700 -o myapp -g myapp socket storage
+ZAMA_SDK_DAEMON_UID="$(id -u myapp)" ZAMA_SDK_DAEMON_GID="$(id -g myapp)" docker compose up -d --wait
 ```
 
-Connect the application to `zama-daemon/socket/sdk.sock`. This doesn't work on Docker Desktop, where host directory ownership doesn't carry into the container.
+The daemon rejects directories that aren't private to its user, so create them before starting. Point the application at `socket/sdk.sock` in that directory.
 
 ## Back up daemon SQLite storage
 

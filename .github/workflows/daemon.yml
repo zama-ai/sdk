@@ -148,3 +148,13 @@ jobs:
         run: |
           trap 'docker compose -f packages/sdk-daemon/deploy/compose.yaml down -v' EXIT
           docker compose -f packages/sdk-daemon/deploy/compose.yaml up -d --wait --wait-timeout 120
+      - name: Start the daemon with the host Compose file
+        working-directory: packages/sdk-daemon/deploy
+        env:
+          ZAMA_SDK_VERSION: ci
+        run: |
+          install -d -m 700 socket storage
+          export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"
+          trap 'docker compose -f compose.host.yaml down' EXIT
+          docker compose -f compose.host.yaml up -d --wait --wait-timeout 120
+          test -S socket/sdk.sock
