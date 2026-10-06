@@ -14,6 +14,16 @@ export interface ZamaProviderProps extends PropsWithChildren {
 const ZamaSDKContext = createContext<ZamaSDK | null>(null);
 
 /**
+ * Sticky: the relayers were created once in `createConfig` and are shared, so
+ * every SDK built on this config reports `react` from here on.
+ */
+function markReactLayer(config: ZamaConfig): void {
+  if (config.telemetry) {
+    config.telemetry.layer = "react";
+  }
+}
+
+/**
  * Provides a {@link ZamaSDK} instance to all descendant hooks.
  *
  * @example
@@ -26,7 +36,10 @@ const ZamaSDKContext = createContext<ZamaSDK | null>(null);
 export function ZamaProvider({ children, config }: ZamaProviderProps) {
   const queryClient = useQueryClient();
 
-  const sdk = useMemo(() => new ZamaSDK(config, { layer: "react" }), [config]);
+  const sdk = useMemo(() => {
+    markReactLayer(config);
+    return new ZamaSDK(config);
+  }, [config]);
 
   // Transport-key-pair warming touches @fhevm/sdk's browser-only runtime (WASM,
   // and worker threads it may spawn internally), which is undefined during SSR.

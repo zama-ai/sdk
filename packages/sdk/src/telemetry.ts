@@ -38,7 +38,7 @@ export type TelemetryOperation =
 
 /**
  * Shared by every relayer of a config. `layer` flips to `react` once
- * `ZamaProvider` builds an SDK on the config, after the relayers exist.
+ * `ZamaProvider` marks the config, after the relayers exist.
  *
  * @internal
  */

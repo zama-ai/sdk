@@ -38,10 +38,10 @@ describe("ZamaProvider & useZamaSDK", () => {
     expect(result.current.relayer).toBeDefined();
   });
 
-  test("constructs the SDK as the react telemetry layer", ({ renderWithProviders }) => {
+  test("marks the config as the react telemetry layer", ({ renderWithProviders }) => {
     renderWithProviders(() => useZamaSDK());
 
-    expect(tokenSDKConstructorOptions.at(-1)).toEqual({ layer: "react" });
+    expect(tokenSDKConstructorOptions.at(-1)).toBeUndefined();
     expect(tokenSDKConstructorArgs.at(-1)?.telemetry?.layer).toBe("react");
   });
 

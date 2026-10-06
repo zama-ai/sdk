@@ -33,7 +33,7 @@ import type {
 } from "./types";
 import { parseSchema } from "./validation";
 import { WrappersRegistry } from "./wrappers-registry";
-import { type TelemetryLayer, withOperation } from "./telemetry";
+import { withOperation } from "./telemetry";
 
 /** Instance-level options that are deliberately not part of the shareable config object. */
 export interface ZamaSDKOptions {
@@ -47,8 +47,6 @@ export interface ZamaSDKOptions {
    * plaintext at rest, security delegated to the storage backend.
    */
   transportKeyPairDerivationSecret?: string | Uint8Array;
-  /** @internal */
-  layer?: TelemetryLayer;
 }
 
 /**
@@ -151,10 +149,6 @@ export class ZamaSDK {
     const derivationSecret = derivationSecretHolder(options.transportKeyPairDerivationSecret);
 
     this.#router = config.router;
-    // Sticky: other SDKs built on this config keep reporting react.
-    if (options.layer === "react" && config.telemetry) {
-      config.telemetry.layer = "react";
-    }
     this.provider = config.provider;
     this.signer = config.signer;
     this.storage = config.storage;

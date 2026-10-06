@@ -167,7 +167,7 @@ export class DecryptionService {
             }),
           errorMessage: "Failed to decrypt delegated encrypted values",
         },
-        opts?.operation === undefined ? undefined : { operation: opts.operation },
+        { operation: opts?.operation },
         recovery,
       ),
     );
