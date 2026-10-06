@@ -42,6 +42,7 @@ import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 import { assertBigint, assertNonNullable } from "../utils/assertions";
 import { isEncryptedValueZero } from "../utils/handles";
+import type { TelemetryOperation } from "../telemetry";
 import { swallow } from "../utils/swallow";
 import {
   clearPendingUnshield,
@@ -377,23 +378,24 @@ export class WrappedToken extends Token {
     } = options ?? {};
 
     if (!skipBalanceCheck) {
-      await this.assertConfidentialBalance(amount);
+      await this.assertConfidentialBalance(amount, "unshield");
     }
 
     const callbacks: UnshieldCallbacks = { onFinalizing, onFinalizeSubmitted };
     const operationId = crypto.randomUUID();
-    const unwrapResult = await this.unwrap(amount);
+    const unwrapResult = await this.#unwrap(amount, "unshield");
     void swallow(
       "unshield: onUnwrapSubmitted",
       () => onUnwrapSubmitted?.(unwrapResult.txHash),
       this.sdk.logger,
     );
-    // Reuse the id `unwrap()` already decoded — no second receipt fetch or decode.
+    // Reuse the id the unwrap already decoded — no second receipt fetch or decode.
     return this.#finalizeUnshield(
       unwrapResult.unwrapRequestId,
       unwrapResult.txHash,
       operationId,
       callbacks,
+      "unshield",
     );
   }
 
@@ -424,6 +426,7 @@ export class WrappedToken extends Token {
       unwrapResult.txHash,
       operationId,
       callbacks,
+      "unshield-all",
     );
   }
 
@@ -466,7 +469,13 @@ export class WrappedToken extends Token {
         { unwrapTxHash, unwrapRequestId },
       );
     }
-    return this.#finalizeUnshield(unwrapRequestId, unwrapTxHash, crypto.randomUUID(), callbacks);
+    return this.#finalizeUnshield(
+      unwrapRequestId,
+      unwrapTxHash,
+      crypto.randomUUID(),
+      callbacks,
+      "resume-unshield",
+    );
   }
 
   /**
@@ -522,15 +531,18 @@ export class WrappedToken extends Token {
    * ```
    */
   async unwrap(amount: bigint): Promise<UnwrapResult> {
+    return this.#unwrap(amount, "unwrap");
+  }
+
+  async #unwrap(amount: bigint, telemetryOperation: TelemetryOperation): Promise<UnwrapResult> {
     this.#requireSigner("unwrap");
     const account = await requireAlignedWalletAccount("unwrap", this.sdk.signer, this.sdk.provider);
     const userAddress = getAddress(account.address);
 
-    const { encryptedValues, inputProof } = await this.sdk.encrypt({
-      values: [{ value: amount, type: "euint64" }],
-      contractAddress: this.address,
-      userAddress,
-    });
+    const { encryptedValues, inputProof } = await this.sdk.encrypt(
+      { values: [{ value: amount, type: "euint64" }], contractAddress: this.address, userAddress },
+      { operation: telemetryOperation },
+    );
 
     const [encryptedAmount] = encryptedValues;
     if (!encryptedAmount) {
@@ -598,9 +610,18 @@ export class WrappedToken extends Token {
    * ```
    */
   async finalizeUnwrap(unwrapRequestId: EncryptedValue): Promise<TransactionResult> {
+    return this.#finalizeUnwrap(unwrapRequestId, "finalize-unwrap");
+  }
+
+  async #finalizeUnwrap(
+    unwrapRequestId: EncryptedValue,
+    telemetryOperation: TelemetryOperation,
+  ): Promise<TransactionResult> {
     this.#requireSigner("finalizeUnwrap");
     await requireChainAlignment("finalizeUnwrap", this.sdk.signer, this.sdk.provider);
-    const result = await this.sdk.decryption.decryptPublicValues([unwrapRequestId]);
+    const result = await this.sdk.decryption.decryptPublicValues([unwrapRequestId], {
+      operation: telemetryOperation,
+    });
     const clearValue = result.clearValues[unwrapRequestId];
     assertBigint(clearValue, "finalizeUnwrap: clearValue");
     return this.submitTransaction({
@@ -710,6 +731,7 @@ export class WrappedToken extends Token {
     unwrapTxHash: Hex,
     operationId: string,
     callbacks: UnshieldCallbacks | undefined,
+    telemetryOperation: TelemetryOperation,
   ): Promise<TransactionResult> {
     this.emit({ type: ZamaSDKEvents.UnshieldPhase1Submitted, txHash: unwrapTxHash, operationId });
     await swallow(
@@ -721,7 +743,7 @@ export class WrappedToken extends Token {
     void swallow("unshield: onFinalizing", () => callbacks?.onFinalizing?.(), this.sdk.logger);
     let finalizeResult: TransactionResult;
     try {
-      finalizeResult = await this.finalizeUnwrap(unwrapRequestId);
+      finalizeResult = await this.#finalizeUnwrap(unwrapRequestId, telemetryOperation);
     } catch (error) {
       // The id comes from this wrapper's own UnwrapRequested event and the only
       // transition to "gone" is a successful finalize, so this revert means a

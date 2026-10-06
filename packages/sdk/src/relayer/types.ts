@@ -12,6 +12,7 @@ import type {
 } from "@fhevm/sdk/viem";
 import type { Address, Hex } from "viem";
 import type { FheChain } from "../chains/types";
+import type { TelemetryOperation } from "../telemetry";
 
 // ============================================================================
 // Application Types
@@ -236,6 +237,13 @@ export interface FhevmRelayerOptions {
    */
   readonly timeout?: number;
 }
+
+/** Per-call options for relayer requests. */
+export interface RelayerRequestOptions extends Pick<FhevmRelayerOptions, "signal" | "timeout"> {
+  /** @internal */
+  readonly operation?: TelemetryOperation;
+}
+
 /**
  * Single-chain FHE backend contract. Implemented by `FhevmRelayer` (drives
  * `@fhevm/sdk`); translates between the domain shapes above and the engine's API.

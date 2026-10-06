@@ -205,6 +205,22 @@ const config = createConfig({
 
 `TransactionError.operation` is one of the write operations (`transfer`, `wrap`, `unwrap`, `finalizeUnwrap`, `delegateDecryption`, and others); `PermitError.operation` is `grantPermit`, `grantDelegationPermit`, or `registerPermit`. See [`SigningRejectedError`](./errors.md#signingrejectederror) and [`SigningFailedError`](./errors.md#signingfailederror) for the shapes `PermitError.error` most commonly carries.
 
+### telemetry
+
+`boolean | undefined`
+
+Whether to attach the `x-zama-sdk-*` usage headers (SDK version, package layer, runtime, and high-level operation) to every relayer request. Default: `true`. The headers carry no end-user data; a self-hosted relayer simply ignores them. See [SDK usage telemetry](../../guides/telemetry.md) for exactly what is sent.
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
+  telemetry: false,
+});
+```
+
 ### runtime
 
 `FhevmRuntimeConfig | undefined`

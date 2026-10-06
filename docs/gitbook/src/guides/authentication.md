@@ -54,9 +54,21 @@ app.use("/api/relayer/:chainId", async (req, res) => {
   const url = new URL(req.url, config.relayerUrl);
   const body = ["GET", "HEAD"].includes(req.method) ? undefined : JSON.stringify(req.body);
 
+  // Forward the SDK's x-zama-sdk-* usage headers.
+  const telemetryHeaders = Object.fromEntries(
+    Object.entries(req.headers).filter(
+      (entry): entry is [string, string] =>
+        entry[0].startsWith("x-zama-sdk-") && typeof entry[1] === "string",
+    ),
+  );
+
   const response = await fetch(url, {
     method: req.method,
-    headers: { "content-type": "application/json", "x-api-key": process.env.RELAYER_API_KEY! },
+    headers: {
+      ...telemetryHeaders,
+      "content-type": "application/json",
+      "x-api-key": process.env.RELAYER_API_KEY!,
+    },
     body,
     // @ts-expect-error: required by the relayer
     duplex: "half",
@@ -74,6 +86,7 @@ You can adapt this pattern to any server framework (Fastify, Hono, Next.js API r
 
 - Forward the HTTP method, path, and body to the upstream relayer URL
 - Inject the `x-api-key` header before forwarding
+- Forward the `x-zama-sdk-*` request headers so [SDK usage telemetry](./telemetry.md) still reaches the relayer
 - Return the upstream response status and body to the client
 
 ### 3. Configure the SDK to use your proxy

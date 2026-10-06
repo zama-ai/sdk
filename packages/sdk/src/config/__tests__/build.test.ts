@@ -86,3 +86,22 @@ describe("buildZamaConfig FHEVM runtime configuration", () => {
     expect(fhevmRuntime.setFhevmRuntimeConfig).toHaveBeenCalledOnce();
   });
 });
+
+describe("buildZamaConfig telemetry", () => {
+  test("is on by default and hands the context to every relayer", () => {
+    const config = buildZamaConfig(undefined, {} as never, params());
+
+    expect(config.telemetry).toEqual({ layer: "core" });
+    expect(relayerConfig.createRelayer).toHaveBeenLastCalledWith(
+      hardhat,
+      expect.anything(),
+      config.telemetry,
+    );
+  });
+
+  test("telemetry: false turns it off", () => {
+    const config = buildZamaConfig(undefined, {} as never, { ...params(), telemetry: false });
+
+    expect(config.telemetry).toBeUndefined();
+  });
+});

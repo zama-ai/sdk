@@ -27,6 +27,7 @@ import type { EncryptedValue } from "../relayer/types";
 import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 import { assertConfidentialBalance } from "../utils/assert-balance";
+import type { TelemetryOperation } from "../telemetry";
 import { assertBigint } from "../utils/assertions";
 import { pLimit } from "../utils/concurrency";
 import { isEncryptedValueZero } from "../utils/handles";
@@ -156,11 +157,21 @@ export class Token {
    * ```
    */
   async balanceOf(owner: Address): Promise<bigint> {
+    return this.decryptBalance(owner, "balance-of");
+  }
+
+  /**
+   * {@link balanceOf} with the telemetry label of the public method that needs the balance.
+   *
+   * @internal
+   */
+  async decryptBalance(owner: Address, telemetryOperation: TelemetryOperation): Promise<bigint> {
     const ownerAddress = getAddress(owner);
     const encryptedValue = await this.readConfidentialBalanceOf(ownerAddress);
-    const result = await this.sdk.decryption.decryptValues([
-      { encryptedValue, contractAddress: this.address },
-    ]);
+    const result = await this.sdk.decryption.decryptValues(
+      [{ encryptedValue, contractAddress: this.address }],
+      { operation: telemetryOperation },
+    );
     const value = result[encryptedValue];
     if (value === undefined) {
       throw new DecryptionFailedError(`Decryption returned no value for ${encryptedValue}`);
@@ -229,6 +240,7 @@ export class Token {
       [{ encryptedValue, contractAddress: this.address }],
       normalizedDelegator,
       normalizedAccount,
+      { operation: "decrypt-balance-as" },
     );
 
     const value = result[encryptedValue];
@@ -289,7 +301,10 @@ export class Token {
           return { status: "aborted" as const };
         }
         try {
-          return { status: "fulfilled" as const, value: await t.balanceOf(owner) };
+          return {
+            status: "fulfilled" as const,
+            value: await t.decryptBalance(owner, "batch-balances-of"),
+          };
         } catch (reason) {
           // A fatal error (rejected signature, revoked KMS context, rate
           // limit) would fail every token: stop the batch.
@@ -412,6 +427,7 @@ export class Token {
         delegatorAddress: options.delegatorAddress,
         accountAddress: options.accountAddress,
         maxConcurrency,
+        operation: "batch-decrypt-balances-as",
       });
 
       for (const [index, item] of decrypted.items.entries()) {
@@ -570,14 +586,17 @@ export class Token {
     const normalizedTo = getAddress(to);
 
     if (!skipBalanceCheck) {
-      await this.assertConfidentialBalance(amount);
+      await this.assertConfidentialBalance(amount, "confidential-transfer");
     }
 
-    const { encryptedValues, inputProof } = await this.sdk.encrypt({
-      values: [{ value: amount, type: "euint64" }],
-      contractAddress: this.address,
-      userAddress: getAddress(account.address),
-    });
+    const { encryptedValues, inputProof } = await this.sdk.encrypt(
+      {
+        values: [{ value: amount, type: "euint64" }],
+        contractAddress: this.address,
+        userAddress: getAddress(account.address),
+      },
+      { operation: "confidential-transfer" },
+    );
     void swallow("transfer: onEncryptComplete", () => onEncryptComplete?.(), this.sdk.logger);
 
     if (encryptedValues.length === 0) {
@@ -626,11 +645,14 @@ export class Token {
     const normalizedTo = getAddress(to);
 
     // The input proof is verified against msg.sender, so it binds to the caller, not `from`.
-    const { encryptedValues, inputProof } = await this.sdk.encrypt({
-      values: [{ value: amount, type: "euint64" }],
-      contractAddress: this.address,
-      userAddress: getAddress(account.address),
-    });
+    const { encryptedValues, inputProof } = await this.sdk.encrypt(
+      {
+        values: [{ value: amount, type: "euint64" }],
+        contractAddress: this.address,
+        userAddress: getAddress(account.address),
+      },
+      { operation: "confidential-transfer-from" },
+    );
     void swallow(
       "transferFrom: onEncryptComplete",
       () => callbacks?.onEncryptComplete?.(),
@@ -700,14 +722,17 @@ export class Token {
     const normalizedTo = getAddress(to);
 
     if (!skipBalanceCheck) {
-      await this.assertConfidentialBalance(amount);
+      await this.assertConfidentialBalance(amount, "confidential-transfer-and-call");
     }
 
-    const { encryptedValues, inputProof } = await this.sdk.encrypt({
-      values: [{ value: amount, type: "euint64" }],
-      contractAddress: this.address,
-      userAddress: getAddress(account.address),
-    });
+    const { encryptedValues, inputProof } = await this.sdk.encrypt(
+      {
+        values: [{ value: amount, type: "euint64" }],
+        contractAddress: this.address,
+        userAddress: getAddress(account.address),
+      },
+      { operation: "confidential-transfer-and-call" },
+    );
     void swallow(
       "transferAndCall: onEncryptComplete",
       () => onEncryptComplete?.(),
@@ -771,11 +796,14 @@ export class Token {
     const normalizedTo = getAddress(to);
 
     // The input proof is verified against msg.sender, so it binds to the caller, not `from`.
-    const { encryptedValues, inputProof } = await this.sdk.encrypt({
-      values: [{ value: amount, type: "euint64" }],
-      contractAddress: this.address,
-      userAddress: getAddress(account.address),
-    });
+    const { encryptedValues, inputProof } = await this.sdk.encrypt(
+      {
+        values: [{ value: amount, type: "euint64" }],
+        contractAddress: this.address,
+        userAddress: getAddress(account.address),
+      },
+      { operation: "confidential-transfer-from-and-call" },
+    );
     void swallow(
       "transferFromAndCall: onEncryptComplete",
       () => callbacks?.onEncryptComplete?.(),
@@ -862,14 +890,17 @@ export class Token {
    *
    * @internal
    */
-  protected async assertConfidentialBalance(amount: bigint): Promise<void> {
+  protected async assertConfidentialBalance(
+    amount: bigint,
+    telemetryOperation: TelemetryOperation,
+  ): Promise<void> {
     return assertConfidentialBalance({
       operation: "assertConfidentialBalance",
       tokenAddress: this.address,
       amount,
       signer: this.sdk.signer,
       provider: this.sdk.provider,
-      readBalance: (owner) => this.balanceOf(owner),
+      readBalance: (owner) => this.decryptBalance(owner, telemetryOperation),
     });
   }
 

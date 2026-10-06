@@ -489,6 +489,7 @@ Chains that reference the _same_ relayer object — the result of a single `web(
 ## Next steps
 
 - [Authentication](./authentication.md) — set up a backend proxy or use a direct API key
+- [SDK usage telemetry](./telemetry.md) — what the SDK reports to the Zama-hosted relayer and how to opt out
 - [Shield Tokens](./shield-tokens.md) — convert public ERC-20 tokens into confidential form
 - [Chain Objects](../reference/sdk/network-presets.md) — pre-configured chain definitions for Sepolia, Mainnet, and more
 - [GenericStorage reference](../reference/sdk/GenericStorage.md) — custom storage implementations

@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 import { ConfigurationError, SignerNotConfiguredError } from "../../errors";
-import { WrappedToken } from "../../token";
+import { Token, WrappedToken } from "../../token";
 import {
   beforeEach,
   describe,
@@ -137,11 +137,13 @@ describe("Vault", () => {
       const result = await vault.deposit(1_000n);
 
       expect(setOperator).toHaveBeenCalledWith(DEPOSIT_BATCHER, undefined);
+      expect(Token.prototype.decryptBalance).toHaveBeenCalledWith(userAddress, "vault-deposit");
       expect(relayer.encryptValues).toHaveBeenCalledWith(
         expect.objectContaining({
           values: [{ value: 1_000n, type: "euint64" }],
           contractAddress: DEPOSIT_BATCHER,
           userAddress,
+          options: { operation: "vault-deposit" },
         }),
       );
       expect(signer.writeContract).toHaveBeenCalledWith(
@@ -232,8 +234,13 @@ describe("Vault", () => {
     const vault = createVault(sdk, addresses());
     await vault.redeem(500n);
 
+    expect(Token.prototype.decryptBalance).toHaveBeenCalledWith(userAddress, "vault-redeem");
+
     expect(relayer.encryptValues).toHaveBeenCalledWith(
-      expect.objectContaining({ contractAddress: REDEEM_BATCHER }),
+      expect.objectContaining({
+        contractAddress: REDEEM_BATCHER,
+        options: { operation: "vault-redeem" },
+      }),
     );
     expect(signer.writeContract).toHaveBeenCalledWith(
       expect.objectContaining({ address: REDEEM_BATCHER, functionName: "join" }),

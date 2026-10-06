@@ -4,6 +4,7 @@ import type { RelayerConfig } from "../config/types";
 import { ConfigurationError } from "../errors";
 import type { RelayerSDK } from "../relayer/types";
 import type { LoggerService } from "../services/logger-service";
+import type { TelemetryState } from "../telemetry";
 
 /**
  * Multichain router. Owns chain management (chains / chain / switchChain) and
@@ -22,6 +23,7 @@ export class ChainRouter {
     chains: readonly [FheChain, ...FheChain[]],
     configs: Readonly<Record<number, RelayerConfig>>,
     logger: LoggerService,
+    telemetry?: TelemetryState,
   ) {
     if (chains.length === 0) {
       throw new ConfigurationError("At least one chain is required.");
@@ -37,7 +39,7 @@ export class ChainRouter {
       configs,
       logger,
     )) {
-      relayers.set(chainId, relayerConfig.createRelayer(chain, logger));
+      relayers.set(chainId, relayerConfig.createRelayer(chain, logger, telemetry));
     }
     this.#relayers = relayers;
   }

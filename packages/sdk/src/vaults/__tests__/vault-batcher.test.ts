@@ -11,6 +11,7 @@ import {
   test,
   vi,
 } from "../../test-fixtures";
+import { Token } from "../../token";
 import { BatchState } from "../types";
 import { createVaultBatcher, VaultBatcher } from "../vault-batcher";
 
@@ -46,7 +47,9 @@ describe("VaultBatcher", () => {
         values: [{ value: 1_000n, type: "euint64" }],
         contractAddress: BATCHER_ADDRESS,
         userAddress,
+        options: { operation: "vault-join" },
       });
+      expect(Token.prototype.decryptBalance).toHaveBeenCalledWith(userAddress, "vault-join");
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "join", args: [userAddress, handle, inputProof] }),
       );
@@ -337,7 +340,9 @@ describe("VaultBatcher", () => {
       const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
       const value = await batcher.depositOf(1n, userAddress);
       expect(value).toBe(1000n);
-      expect(relayer.decryptValues).toHaveBeenCalled();
+      expect(relayer.decryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({ options: { operation: "vault-deposit-of" } }),
+      );
     });
   });
 });
