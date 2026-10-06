@@ -100,12 +100,15 @@ export class CredentialStorage implements GenericStorage {
   }
 
   async set<T>(key: string, value: T): Promise<void> {
+    this.assertHealthy();
+    // A value that cannot be cloned is the caller's fault, so it must not latch the store.
+    const encoded = serialize(value);
     this.#guard(() => {
       this.database
         .prepare(
           "INSERT INTO credentials (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
         )
-        .run(key, serialize(value));
+        .run(key, encoded);
     });
   }
 
