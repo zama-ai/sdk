@@ -151,8 +151,8 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 
 ### Go, Rust, and Daemon Reference
 
-- [Go client API](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/go-client.md): Find generated API documentation and public interfaces for the Go daemon client.
-- [Rust client API](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/rust-client.md): Find generated API documentation and public interfaces for the Rust daemon client.
+- [Go client API](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/go-client.md): Find the Go client's API reference and the Go method for each TypeScript SDK operation.
+- [Rust client API](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/rust-client.md): Find the Rust client's API reference and the Rust method for each TypeScript SDK operation.
 - [Daemon configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/daemon-configuration.md): Environment variables that configure the Zama SDK daemon used by Go and Rust applications.
 - [Daemon error codes](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/error-codes.md): Error codes the Zama SDK daemon returns to Go and Rust applications, with what each one means and how to respond.
 - [Client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md): Match Go or Rust client versions with the Zama SDK daemon image.

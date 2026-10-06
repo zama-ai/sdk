@@ -25663,23 +25663,56 @@ invalidateWalletLifecycleQueries(queryClient);
 
 # Go client API
 
-The Go package documentation describes the native public interfaces, signatures, and exported types.
+The package reference on [pkg.go.dev](https://pkg.go.dev/github.com/zama-ai/sdk/clients/go/v3) lists every exported type, function, and method with its signature.
 
-After installing the client, print the package reference from your application module:
+`Dial` creates a `Client`; `Client.CreateContext` creates an `SDKContext`. Configuration uses `SDKConfig`, `ChainConfig`, and `SignerConfig`. `SDKContext.Close` releases the context, and `Client.Close` closes the connection.
 
-```sh
-go doc -all github.com/zama-ai/sdk/clients/go/v3
-```
+## Operations
 
-Look up a specific operation with its exported type or method:
+Each daemon operation runs the matching TypeScript SDK method. Every Go method takes a `context.Context` first.
 
-```sh
-go doc github.com/zama-ai/sdk/clients/go/v3.SDKContext.Encrypt
-```
+| TypeScript SDK                                                                                              | Go                                       |
+| ----------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `new ZamaSDK(config)`                                                                                       | `Client.CreateContext`                   |
+| [`sdk.terminate`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#terminate)                                                 | `SDKContext.Close`                       |
+| Signer [`walletAccount`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/GenericSigner.md#walletaccount) change                         | `SDKContext.UpdateAccount`               |
+| `sdk.encrypt`                                                                                               | `SDKContext.Encrypt`                     |
+| [`sdk.decryption.decryptValues`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#decryption-decryptvalues)                   | `SDKContext.DecryptValues`               |
+| `sdk.decryption.decryptPublicValues`                                                                        | `SDKContext.DecryptPublicValues`         |
+| `sdk.decryption.delegatedDecryptValues`                                                                     | `SDKContext.DelegatedDecryptValues`      |
+| `sdk.decryption.delegatedBatchDecryptValues`                                                                | `SDKContext.DelegatedBatchDecryptValues` |
+| [`sdk.permits.grantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-grantpermit)                             | `SDKContext.GrantPermit`                 |
+| [`sdk.permits.hasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-haspermit)                                 | `SDKContext.HasPermit`                   |
+| [`sdk.permits.grantDelegationPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-grantdelegationpermit)         | `SDKContext.GrantDelegationPermit`       |
+| [`sdk.permits.hasDelegationPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-hasdelegationpermit)             | `SDKContext.HasDelegationPermit`         |
+| [`sdk.permits.registerPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-registerpermit)                       | `SDKContext.RegisterPermit`              |
+| [`sdk.permits.revokePermits`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-revokepermits)                         | `SDKContext.RevokePermits`               |
+| [`sdk.permits.clear`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-clear)                                         | `SDKContext.ClearPermits`                |
+| [`sdk.permits.warmTransportKeyPair`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-warmtransportkeypair)           | `SDKContext.WarmTransportKeyPair`        |
+| [`sdk.permits.warmTransportKeyPairScope`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-warmtransportkeypairscope) | `SDKContext.WarmTransportKeyPairScope`   |
+| [`sdk.permits.revokeTransportKeyPair`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-revoketransportkeypair)       | `SDKContext.RevokeTransportKeyPair`      |
+| [`sdk.offline.prepare`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Offline.md#prepare)                                             | `SDKContext.PrepareTransaction`          |
+| [`sdk.offline.preparePermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Offline.md#preparepermit)                                 | `SDKContext.PreparePermit`               |
+| [`sdk.delegations.delegateDecryption`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/delegation.md#delegatedecryption)                | `SDKContext.DelegateDecryption`          |
+| [`sdk.delegations.revokeDelegation`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/delegation.md#revokedelegation)                    | `SDKContext.RevokeDelegation`            |
+| [`sdk.delegations.isActive`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/delegation.md#isactive)                                    | `SDKContext.IsDelegationActive`          |
+| [`sdk.delegations.getExpiry`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/delegation.md#getexpiry)                                  | `SDKContext.GetDelegationExpiry`         |
+| [`sdk.delegations.getStatus`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/delegation.md#getstatus)                                  | `SDKContext.GetDelegationStatus`         |
 
-`Dial` creates a `Client`; `Client.CreateContext` creates an `SDKContext`. Configuration uses `SDKConfig`, `ChainConfig`, and `SignerConfig`.
+`RevokePermits(ctx, nil)` revokes every permit for the current signer; an empty slice revokes nothing. `Client.Info` returns the daemon's bundled SDK version.
 
-The `SDKContext` exposes encryption, decryption, permit management, delegation, and offline preparation methods directly. `Close` releases the context; `Client.Close` closes the connection.
+`batchPreparePermits`, `batchRegisterPermits`, and the `Token` and `WrappedToken` APIs have no Go equivalent yet.
+
+## Callback channels
+
+These methods have no TypeScript equivalent. They connect your application's wallet, storage, and event handlers to the daemon:
+
+- `SDKContext.AttachWallet` and `SDKContext.AttachSigner` attach or reattach the signer.
+- `SDKContext.AttachStorage` reattaches application-owned storage.
+- `SDKContext.SubscribeEvents` and `SDKContext.StopEvents` manage the event subscription.
+- `SDKContext.WaitChannelFailure` reports when a channel closes.
+
+See [Recover from disconnections](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/recover-from-disconnections.md) for how to use them.
 
 ## Rust client API
 
@@ -25690,19 +25723,54 @@ The `SDKContext` exposes encryption, decryption, permit management, delegation, 
 
 # Rust client API
 
-Rustdoc describes the native public interfaces, signatures, and exported types.
+The crate reference on [docs.rs](https://docs.rs/zama_sdk) lists every public type, function, and method with its signature, including the Alloy signing and transaction adapters behind the `alloy` feature.
 
-After installing the Rust client in your application, generate and open its reference:
+`Client::connect` creates a `Client`; `Client::sdk` returns an `SdkBuilder`; `SdkBuilder::build` creates an `Sdk`. Configuration uses `SdkConfig` and `ChainConfig`, with signer and storage configuration on the builder. `Sdk::close` releases the SDK context and its callback channels.
 
-```sh
-cargo doc -p zama_sdk --no-deps --open
-```
+## Operations
 
-`Client::connect` creates a `Client`; `Client::sdk` returns an `SdkBuilder`; `SdkBuilder::build` creates an `Sdk`. Configuration uses `SdkConfig` and `ChainConfig`, with signer and storage configuration on the builder.
+Each daemon operation runs the matching TypeScript SDK method. The `Sdk` exposes encryption and account updates directly, and groups the other operations behind `decryption()`, `permits()`, `offline()`, and `delegations()`.
 
-The `Sdk` exposes encryption directly. Its `decryption()`, `permits()`, and `offline()` accessors provide operation groups; delegation lives under `sdk.delegations()`. `Sdk::close` releases the context and callback resources.
+| TypeScript SDK                                                                                              | Rust                                              |
+| ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `new ZamaSDK(config)`                                                                                       | `client.sdk(config).build()`                      |
+| [`sdk.terminate`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#terminate)                                                 | `sdk.close()`                                     |
+| Signer [`walletAccount`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/GenericSigner.md#walletaccount) change                         | `sdk.update_account`                              |
+| `sdk.encrypt`                                                                                               | `sdk.encrypt`                                     |
+| [`sdk.decryption.decryptValues`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#decryption-decryptvalues)                   | `sdk.decryption().decrypt_values`                 |
+| `sdk.decryption.decryptPublicValues`                                                                        | `sdk.decryption().decrypt_public_values`          |
+| `sdk.decryption.delegatedDecryptValues`                                                                     | `sdk.decryption().delegated_decrypt_values`       |
+| `sdk.decryption.delegatedBatchDecryptValues`                                                                | `sdk.decryption().delegated_batch_decrypt_values` |
+| [`sdk.permits.grantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-grantpermit)                             | `sdk.permits().grant_permit`                      |
+| [`sdk.permits.hasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-haspermit)                                 | `sdk.permits().has_permit`                        |
+| [`sdk.permits.grantDelegationPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-grantdelegationpermit)         | `sdk.permits().grant_delegation_permit`           |
+| [`sdk.permits.hasDelegationPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-hasdelegationpermit)             | `sdk.permits().has_delegation_permit`             |
+| [`sdk.permits.registerPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-registerpermit)                       | `sdk.permits().register_permit`                   |
+| [`sdk.permits.revokePermits`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-revokepermits)                         | `sdk.permits().revoke_permits`                    |
+| [`sdk.permits.clear`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-clear)                                         | `sdk.permits().clear`                             |
+| [`sdk.permits.warmTransportKeyPair`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-warmtransportkeypair)           | `sdk.permits().warm_transport_key_pair`           |
+| [`sdk.permits.warmTransportKeyPairScope`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-warmtransportkeypairscope) | `sdk.permits().warm_transport_key_pair_scope`     |
+| [`sdk.permits.revokeTransportKeyPair`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-revoketransportkeypair)       | `sdk.permits().revoke_transport_key_pair`         |
+| [`sdk.offline.prepare`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Offline.md#prepare)                                             | `sdk.offline().prepare`                           |
+| [`sdk.offline.preparePermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Offline.md#preparepermit)                                 | `sdk.offline().prepare_permit`                    |
+| [`sdk.delegations.delegateDecryption`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/delegation.md#delegatedecryption)                | `sdk.delegations().delegate_decryption`           |
+| [`sdk.delegations.revokeDelegation`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/delegation.md#revokedelegation)                    | `sdk.delegations().revoke_delegation`             |
+| [`sdk.delegations.isActive`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/delegation.md#isactive)                                    | `sdk.delegations().is_active`                     |
+| [`sdk.delegations.getExpiry`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/delegation.md#getexpiry)                                  | `sdk.delegations().get_expiry`                    |
+| [`sdk.delegations.getStatus`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/delegation.md#getstatus)                                  | `sdk.delegations().get_status`                    |
 
-Enable the `alloy` feature on your application's `zama_sdk` dependency before generating documentation to include Alloy signing and transaction adapters.
+`revoke_permits(None)` revokes every permit for the current signer; an empty slice revokes nothing. `Client::sdk_version` returns the daemon's bundled SDK version.
+
+`batchPreparePermits`, `batchRegisterPermits`, and the `Token` and `WrappedToken` APIs have no Rust equivalent yet.
+
+## Callback channels
+
+These have no TypeScript equivalent. They connect your application's wallet, storage, and event handlers to the daemon:
+
+- `SdkBuilder::signer`, `SdkBuilder::storage`, and `SdkBuilder::events` attach them when you build the `Sdk`.
+- `Sdk::wait_channel_closed` reports when a channel closes.
+
+The Rust client does not reattach a closed channel. See [Recover from disconnections](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/recover-from-disconnections.md) for how to rebuild the SDK context.
 
 ## Daemon configuration
 
@@ -25980,6 +26048,38 @@ For a complete "log out" that also removes the transport key pair, use `sdk.perm
 Both `revokePermits()` and `clear()` are **signer-level**: they only ever act on the calling signer's own permits (and, for `clear()`, that signer's own key-pair slot). This holds even when `transportKeyPairScope` is configured — an end-user disconnecting never invalidates other signers sharing the scope's key pair, because the shared key pair was never stored under any individual signer's slot to begin with.
 
 Invalidating the _shared_ key pair is a separate, operator-level operation: `sdk.permits.revokeTransportKeyPair(scopeId)`. It deletes the scope's key pair — no permit needs to be touched directly, and no wallet needs to be connected. `hasPermit`/`grantPermit` then treat every permit in the scope as stale on next access, though not via one single mechanism: immediately after the revoke, `hasPermit()` returns `false` because there's no stored key pair left to compare against; once some later caller regenerates a key for the scope, it's the newly-mismatched embedded public key that `pruneUnusable` then filters existing permits on. Same end-user-visible outcome either way. Unlike other credential-store writes, this call is not best-effort: a storage failure rejects rather than being logged and swallowed, since a resolved promise here is expected to mean the key pair is actually gone — the primitive an operator reaches for on suspected compromise. This only stops the SDK from reissuing or reusing the key going forward; it does not revoke any permit already issued under it, which stays independently valid until its own `permitTTL` expiry — see [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators) for the full explanation and when a shared scope makes sense.
+
+Each client exposes the same four calls:
+
+
+### Tab: Core SDK
+
+```ts
+await sdk.permits.revokePermits(["0xTokenA"]); // selective
+await sdk.permits.revokePermits(); // full wipe
+await sdk.permits.clear(); // log out
+await sdk.permits.revokeTransportKeyPair("tenant-123"); // shared scope
+```
+
+### Tab: Go
+
+```go
+err := sdk.RevokePermits(ctx, []common.Address{tokenA}) // selective
+err = sdk.RevokePermits(ctx, nil)                       // full wipe
+err = sdk.ClearPermits(ctx)                             // log out
+err = sdk.RevokeTransportKeyPair(ctx, "tenant-123")     // shared scope
+```
+
+### Tab: Rust
+
+```rust
+let permits = sdk.permits();
+permits.revoke_permits(Some(&[token_a])).await?; // selective
+permits.revoke_permits(None).await?; // full wipe
+permits.clear().await?; // log out
+permits.revoke_transport_key_pair("tenant-123").await?; // shared scope
+```
+
 
 ## Wallet account changes
 

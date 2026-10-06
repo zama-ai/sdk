@@ -1676,7 +1676,7 @@
       "source_type": "official-doc",
       "category": "reference-native",
       "logical_path": "native/reference/go-client",
-      "description": "Find generated API documentation and public interfaces for the Go daemon client.",
+      "description": "Find the Go client's API reference and the Go method for each TypeScript SDK operation.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -1688,7 +1688,7 @@
       "source_type": "official-doc",
       "category": "reference-native",
       "logical_path": "native/reference/rust-client",
-      "description": "Find generated API documentation and public interfaces for the Rust daemon client.",
+      "description": "Find the Rust client's API reference and the Rust method for each TypeScript SDK operation.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
