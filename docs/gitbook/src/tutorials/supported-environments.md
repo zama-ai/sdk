@@ -19,13 +19,13 @@ description: Minimum browser, Node.js, Go, and Rust versions for the SDK.
 
 ## Go and Rust
 
-| Environment | Minimum version or requirement                                                        |
-| ----------- | ------------------------------------------------------------------------------------- |
-| Go          | 1.25                                                                                  |
-| Rust        | 1.94.1                                                                                |
-| Daemon host | Linux with a container runtime, sharing a Unix socket directory with your application |
+| Environment | Minimum version or requirement                           |
+| ----------- | -------------------------------------------------------- |
+| Go          | 1.25                                                     |
+| Rust        | 1.94.1                                                   |
+| Daemon host | Docker Compose on Linux or Docker Desktop, or Kubernetes |
 
-On Docker Desktop, run the application and the daemon as containers sharing a named socket volume. See [Deploy in production](../native/operations/run-in-production.md).
+On Docker Desktop, run the application in a container next to the daemon. See [Deploy in production](../native/operations/run-in-production.md).
 
 ## Next steps
 

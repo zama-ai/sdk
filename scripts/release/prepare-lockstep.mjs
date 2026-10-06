@@ -61,7 +61,11 @@ const docTargets = [
     `$1${nextVersion}`,
   ],
   ["clients/rust/README.md", /(cargo add zama_sdk@=)\S+/g, `$1${nextVersion}`],
-  ["packages/sdk-daemon/README.md", /(zamafhe\/sdk-daemon:)\d\S*/g, `$1${nextVersion}`],
+  [
+    "packages/sdk-daemon/README.md",
+    /^export ZAMA_SDK_VERSION=\S+$/gm,
+    `export ZAMA_SDK_VERSION=${nextVersion}`,
+  ],
 ];
 
 for (const [path, pattern, replacement] of docTargets) {

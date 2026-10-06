@@ -21,7 +21,7 @@ There is no network listener. Keep the application and its daemon on the same ho
 
 ## Prepare the socket and storage
 
-1. Create a socket directory owned by the application UID with mode `0700`. The daemon refuses to start when the directory is shared with its group or other users.
+1. Give the daemon a socket directory owned by its UID with mode `0700`, and run the application as the same UID. The daemon refuses to start when the directory is shared with its group or other users. The Compose file and the Kubernetes manifest below set this up.
 2. For daemon SQLite storage, provision a private writable volume for this daemon and set `ZAMA_SDK_DAEMON_STORAGE_DIR` to its mount path. The daemon creates one `0700` subdirectory per named store.
 3. For application-owned storage, configure the backend in your application. The daemon needs no credential volume.
 
@@ -31,34 +31,27 @@ Two daemons must not share a SQLite credential volume: each named database is lo
 
 ## Run with Docker Compose
 
-The [Compose file](https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml) runs the daemon on a Linux host for an application running on the same host. It applies the hardened container settings, mounts the socket and SQLite storage directories, and restarts the daemon unless you stop it:
+The [Compose file](https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml) runs the daemon with hardened container settings and keeps its socket and SQLite storage in named volumes. A new named volume copies the image's private directories, so the daemon starts without host directory setup. The image runs the daemon as UID `1000`.
 
 {% code title="packages/sdk-daemon/deploy/compose.yaml" %}
 
 ```yaml
-# Start with: docker compose up -d --wait
+# Include this file from your own compose.yaml, or start it alone with: docker compose up -d --wait
 name: zama-sdk-daemon
 
 services:
   daemon:
     image: zamafhe/sdk-daemon:${ZAMA_SDK_VERSION:?Set ZAMA_SDK_VERSION to the release that matches your Go or Rust client}
-    # Must be the UID and GID of the application that connects to the socket.
+    # Defaults to the image's user; set both to your UID when the socket and storage are host directories.
     user: "${ZAMA_SDK_DAEMON_UID:-1000}:${ZAMA_SDK_DAEMON_GID:-1000}"
     environment:
       ZAMA_SDK_DAEMON_SOCKET_PATH: /run/zama/sdk.sock
       ZAMA_SDK_DAEMON_STORAGE_DIR: /var/lib/zama
     volumes:
-      # Create both host directories with mode 0700 before starting; the daemon rejects directories it does not own privately.
-      - type: bind
-        source: ${ZAMA_SDK_DAEMON_DIR:-./zama-daemon}/socket
-        target: /run/zama
-        bind:
-          create_host_path: false
-      - type: bind
-        source: ${ZAMA_SDK_DAEMON_DIR:-./zama-daemon}/storage
-        target: /var/lib/zama
-        bind:
-          create_host_path: false
+      # Named volumes by default: a new one copies the image's private directories (UID 1000, mode 0700).
+      # Set these to host directory paths to reach the socket from an application on a Linux host.
+      - ${ZAMA_SDK_SOCKET_VOLUME:-socket}:/run/zama
+      - ${ZAMA_SDK_STORAGE_VOLUME:-storage}:/var/lib/zama
     read_only: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
@@ -70,23 +63,57 @@ services:
     # Longer than the daemon's 120-second shutdown timeout, so it exits before Docker kills it.
     stop_grace_period: 150s
     restart: unless-stopped
+
+volumes:
+  socket:
+  storage:
 ```
 
 {% endcode %}
 
-From the directory where you keep the file, run the daemon as your application's UID:
+Include it from your application's `compose.yaml`. Run your application as UID `1000` and mount the socket volume where it connects:
+
+```yaml
+include:
+  - zama-sdk-daemon.yaml
+
+services:
+  app:
+    image: your-registry/your-app:APP_VERSION
+    user: "1000:1000"
+    environment:
+      DAEMON_SOCKET: /run/zama/sdk.sock
+    volumes:
+      - socket:/run/zama:ro
+    depends_on:
+      daemon:
+        condition: service_healthy
+```
+
+Download the daemon file next to it, then start both:
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml
-mkdir -p -m 700 zama-daemon/socket zama-daemon/storage
 export ZAMA_SDK_VERSION=3.7.0-beta.5
-export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"
+curl -fsSL -o zama-sdk-daemon.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.yaml"
 docker compose up -d --wait
 ```
 
-Set `ZAMA_SDK_VERSION` to the version of your Go module or Rust crate. `--wait` returns once the healthcheck passes. Connect the application to `zama-daemon/socket/sdk.sock`. Set `ZAMA_SDK_DAEMON_DIR` to keep the two directories elsewhere. With application-owned storage, the storage directory stays empty.
+Set `ZAMA_SDK_VERSION` to the version of your Go module or Rust crate. `--wait` returns once the daemon's healthcheck passes. This works on Linux and on Docker Desktop.
 
-To run a containerized application, add it as a service in the same file, with the same `user` and the socket directory mounted at the path it connects to. On Docker Desktop, replace the socket bind mount with a named volume shared by both services; the host can't reach a socket inside the Linux VM through a bind mount.
+### Application on a Linux host
+
+A process on the host can't reach a socket inside a named volume. On a Linux host, point the same file at host directories and run the daemon as your application's UID. Create both directories first: the daemon rejects directories that aren't private to its UID, and Docker would otherwise create them as root.
+
+```bash
+export ZAMA_SDK_VERSION=3.7.0-beta.5
+curl -fsSL -o zama-sdk-daemon.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.yaml"
+mkdir -p -m 700 zama-daemon/socket zama-daemon/storage
+export ZAMA_SDK_SOCKET_VOLUME=./zama-daemon/socket ZAMA_SDK_STORAGE_VOLUME=./zama-daemon/storage
+export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"
+docker compose -f zama-sdk-daemon.yaml up -d --wait
+```
+
+Connect the application to `zama-daemon/socket/sdk.sock`. This doesn't work on Docker Desktop, where host directory ownership doesn't carry into the container.
 
 ## Run in Kubernetes
 
@@ -180,6 +207,7 @@ Treat the storage directory and every backup of it as sensitive. Each named stor
 
 1. Stop application writers and the daemon. The daemon holds each database lock while it runs.
 2. Back up the whole storage directory with your backup tooling, preserving ownership and `0700` permissions.
+   With the Compose file, the storage is the `storage` named volume, prefixed with your Compose project name. For example: `docker run --rm -v myapp_storage:/data:ro -v "$PWD":/backup alpine tar czf /backup/zama-storage.tgz -C /data .`
 3. Keep the derivation secret, if you use one, in your secrets manager. The backup doesn't contain it.
 
 To restore, copy the backup into a private volume for one stopped daemon, check that the daemon UID owns it, then start the matching client and daemon versions. Recreate SDK contexts with the original store names and derivation secret, and confirm a decryption succeeds without a new wallet signature before returning to service.

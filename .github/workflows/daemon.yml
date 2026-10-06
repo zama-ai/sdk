@@ -138,8 +138,16 @@ jobs:
           context: .
           file: packages/sdk-daemon/Dockerfile
           platforms: linux/amd64
+          load: true
+          tags: zamafhe/sdk-daemon:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Start the daemon with the deployment Compose file
+        env:
+          ZAMA_SDK_VERSION: ci
+        run: |
+          trap 'docker compose -f packages/sdk-daemon/deploy/compose.yaml down -v' EXIT
+          docker compose -f packages/sdk-daemon/deploy/compose.yaml up -d --wait --wait-timeout 120
 
   deployment-files:
     runs-on: ubuntu-latest

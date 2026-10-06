@@ -12,7 +12,7 @@ We'll encrypt `1000` as an `euint64` for a confidential contract on Sepolia and 
 
 The Rust client talks to a local SDK daemon over a private Unix socket. The daemon runs the Zama SDK, so your application stays in Rust.
 
-You need Rust 1.94.1 or later, a Linux host with Docker Compose, a Sepolia RPC URL, the address of your confidential contract, and the address of the user who will submit the input. On Docker Desktop, run your application in a container that shares a socket volume with the daemon; see [Deploy in production](../operations/run-in-production.md).
+You need Rust 1.94.1 or later, Docker Compose on Linux or Docker Desktop, a Sepolia RPC URL, the address of your confidential contract, and the address of the user who will submit the input.
 
 ## Authentication
 
@@ -40,23 +40,44 @@ cargo add tokio --features macros,rt
 
 The client runs on Tokio. You can use your application's existing runtime and error type instead of `#[tokio::main]` and `anyhow`.
 
-`ZAMA_SDK_VERSION` pins the client here and the daemon image in the next step: both must run the same version. See [Client and daemon compatibility](../reference/client-and-daemon-compatibility.md).
+`ZAMA_SDK_VERSION` pins the client here and the daemon image that Compose starts later: both must run the same version. See [Client and daemon compatibility](../reference/client-and-daemon-compatibility.md).
 
 ## Set up the SDK
 
-Download the daemon's [Compose file](../operations/run-in-production.md#run-with-docker-compose), create its private socket and storage directories, and start it as your own UID:
+Download the daemon's [Compose file](../operations/run-in-production.md#run-with-docker-compose):
 
 ```sh
-curl -fsSLO https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml
-mkdir -p -m 700 zama-daemon/socket zama-daemon/storage
-export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"
-docker compose up -d --wait
-export DAEMON_SOCKET="$PWD/zama-daemon/socket/sdk.sock"
+curl -fsSL -o zama-sdk-daemon.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.yaml"
 ```
 
-The command returns once the daemon's healthcheck passes. The daemon needs outbound access to your RPC endpoint and to the Sepolia relayer.
+Save this as `compose.yaml`. It runs your program in a Rust container next to the daemon. Both run as UID 1000, the daemon image's user, and share the daemon's socket volume:
 
-Your application connects with `Client::connect` and builds an `Sdk` from a chain configuration. The SDK context lives in the daemon until you close it.
+```yaml
+include:
+  - zama-sdk-daemon.yaml
+
+services:
+  app:
+    image: rust:1.94.1
+    user: "1000:1000"
+    working_dir: /src
+    environment:
+      - DAEMON_SOCKET=/run/zama/sdk.sock
+      - CARGO_HOME=/tmp/cargo
+      - CARGO_TARGET_DIR=/tmp/target
+      - SEPOLIA_RPC_URL
+      - CONTRACT_ADDRESS
+      - USER_ADDRESS
+    volumes:
+      - .:/src:ro
+      - socket:/run/zama:ro
+    depends_on:
+      daemon:
+        condition: service_healthy
+    command: ["cargo", "run", "--locked"]
+```
+
+The daemon needs outbound access to your RPC endpoint and to the Sepolia relayer. Your application connects with `Client::connect` and builds an `Sdk` from a chain configuration. The SDK context lives in the daemon until you close it.
 
 ## Your first encrypted input
 
@@ -100,22 +121,22 @@ async fn main() -> Result<()> {
 }
 ```
 
-Set your values and run it from the same shell, so `DAEMON_SOCKET` is still set:
+Set your values and run it:
 
 ```sh
 export SEPOLIA_RPC_URL=https://your-sepolia-rpc.example
 export CONTRACT_ADDRESS=0xYourConfidentialContract
 export USER_ADDRESS=0xYourUserAddress
-cargo run
+cargo generate-lockfile
+docker compose run --rm app
 ```
 
-The program prints one encrypted value and a nonzero proof size. Pass both to your confidential contract call. They change on every run.
+`docker compose run` starts the daemon, waits for its healthcheck, then runs the program. Each run builds the program in a fresh container, so it takes a few minutes. It prints one encrypted value and a nonzero proof size. Pass both to your confidential contract call. They change on every run.
 
-When you're done, stop the daemon and remove its directories:
+When you're done, stop the daemon. Add `-v` to also delete its volumes, including stored credentials:
 
 ```sh
 docker compose down
-rm -r zama-daemon
 ```
 
 ## Next steps
