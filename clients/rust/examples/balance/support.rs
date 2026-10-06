@@ -193,10 +193,10 @@ fn optional_bool(values: &HashMap<String, String>, key: &str) -> Result<Option<b
         .get(key)
         .filter(|value| !value.is_empty())
         .map(|value| match value.to_ascii_lowercase().as_str() {
-            "true" | "1" => Ok(true),
-            "false" | "0" => Ok(false),
+            "true" | "t" | "1" => Ok(true),
+            "false" | "f" | "0" => Ok(false),
             _ => Err(anyhow::anyhow!(
-                "invalid {key}: got {value:?}, expected true/false/1/0"
+                "invalid {key}: got {value:?}, expected true/false/t/f/1/0"
             )),
         })
         .transpose()
@@ -249,12 +249,24 @@ mod tests {
             optional_bool(&values, "SDK_SINGLE_THREAD")
                 .unwrap_err()
                 .to_string(),
-            "invalid SDK_SINGLE_THREAD: got \"yes\", expected true/false/1/0"
+            "invalid SDK_SINGLE_THREAD: got \"yes\", expected true/false/t/f/1/0"
         );
-        let values = HashMap::from([("SDK_SINGLE_THREAD".to_string(), "TRUE".to_string())]);
-        assert_eq!(
-            optional_bool(&values, "SDK_SINGLE_THREAD").unwrap(),
-            Some(true)
-        );
+        for (value, expected) in [
+            ("TRUE", true),
+            ("t", true),
+            ("T", true),
+            ("1", true),
+            ("false", false),
+            ("f", false),
+            ("F", false),
+            ("0", false),
+        ] {
+            let values = HashMap::from([("SDK_SINGLE_THREAD".to_string(), value.to_string())]);
+            assert_eq!(
+                optional_bool(&values, "SDK_SINGLE_THREAD").unwrap(),
+                Some(expected),
+                "{value}"
+            );
+        }
     }
 }
