@@ -61,7 +61,6 @@
     "docs:changelog": "node scripts/docs/changelog.mjs",
     "docs:retarget": "node scripts/docs/retarget.mjs",
     "docs:check-target": "node scripts/docs/check-target.mjs",
-    "docs:check-embedded": "node scripts/docs/check-embedded-files.mjs",
     "api-report": "turbo run api-report --filter='./packages/*'",
     "api-report:sdk": "turbo run api-report --filter=@zama-fhe/sdk",
     "api-report:react-sdk": "turbo run api-report --filter=@zama-fhe/react-sdk",

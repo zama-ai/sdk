@@ -31,45 +31,7 @@ Two daemons must not share a SQLite credential volume: each named database is lo
 
 ## Run with Docker Compose
 
-The [Compose file](https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml) runs the daemon with hardened container settings and keeps its socket and SQLite storage in named volumes. A new named volume copies the image's private directories, so the daemon starts without host directory setup. The image runs the daemon as UID `1000`.
-
-{% code title="packages/sdk-daemon/deploy/compose.yaml" %}
-
-```yaml
-# Include this file from your own compose.yaml, or start it alone with: docker compose up -d --wait
-name: zama-sdk-daemon
-
-services:
-  daemon:
-    image: zamafhe/sdk-daemon:${ZAMA_SDK_VERSION:?Set ZAMA_SDK_VERSION to the release that matches your Go or Rust client}
-    # Defaults to the image's user; set both to your UID when the socket and storage are host directories.
-    user: "${ZAMA_SDK_DAEMON_UID:-1000}:${ZAMA_SDK_DAEMON_GID:-1000}"
-    environment:
-      ZAMA_SDK_DAEMON_SOCKET_PATH: /run/zama/sdk.sock
-      ZAMA_SDK_DAEMON_STORAGE_DIR: /var/lib/zama
-    volumes:
-      # Named volumes by default: a new one copies the image's private directories (UID 1000, mode 0700).
-      # Set these to host directory paths to reach the socket from an application on a Linux host.
-      - ${ZAMA_SDK_SOCKET_VOLUME:-socket}:/run/zama
-      - ${ZAMA_SDK_STORAGE_VOLUME:-storage}:/var/lib/zama
-    read_only: true
-    cap_drop: [ALL]
-    security_opt: [no-new-privileges:true]
-    healthcheck:
-      test: ["CMD", "node", "dist/healthcheck.js"]
-      interval: 10s
-      timeout: 3s
-      start_period: 10s
-    # Longer than the daemon's 120-second shutdown timeout, so it exits before Docker kills it.
-    stop_grace_period: 150s
-    restart: unless-stopped
-
-volumes:
-  socket:
-  storage:
-```
-
-{% endcode %}
+The [Compose file](https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml) runs the daemon with a read-only root filesystem, no Linux capabilities, a healthcheck and a stop grace period above its shutdown timeout, and keeps its socket and SQLite storage in named volumes. A new named volume copies the image's private directories, so the daemon starts without host directory setup. The image runs the daemon as UID `1000`.
 
 Include it from your application's `compose.yaml`. Run your application as UID `1000` and mount the socket volume where it connects:
 

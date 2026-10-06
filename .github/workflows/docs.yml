@@ -10,7 +10,6 @@ on:
       - "README.md"
       - "packages/*/README.md"
       - "packages/*/etc/**"
-      - "packages/sdk-daemon/deploy/**"
       - "scripts/llm/**"
       - "scripts/docs/**"
       - "llms.txt"
@@ -63,9 +62,6 @@ jobs:
 
       - name: Check internal doc links
         run: pnpm exec turbo run docs:check-links
-
-      - name: Check embedded repository files
-        run: pnpm docs:check-embedded
 
       - name: Verify LLM corpus artifacts are up to date
         run: pnpm exec turbo run llm:check
