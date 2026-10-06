@@ -12,7 +12,7 @@ We'll encrypt `1000` as an `euint64` for a confidential contract on Sepolia and 
 
 The Go client talks to a local SDK daemon over a private Unix socket. The daemon runs the Zama SDK, so your application stays in Go.
 
-You need Go 1.25 or later, a Linux host with Docker, a Sepolia RPC URL, the address of your confidential contract, and the address of the user who will submit the input. On Docker Desktop, run your application in a container that shares a socket volume with the daemon; see [Deploy in production](../operations/run-in-production.md).
+You need Go 1.25 or later, a Linux host with Docker Compose, a Sepolia RPC URL, the address of your confidential contract, and the address of the user who will submit the input. On Docker Desktop, run your application in a container that shares a socket volume with the daemon; see [Deploy in production](../operations/run-in-production.md).
 
 ## Authentication
 
@@ -40,22 +40,18 @@ The client and the daemon image must run the same version; see [Client and daemo
 
 ## Set up the SDK
 
-Start the daemon as your own UID, with a private socket directory that your application can reach:
+Download the daemon's [Compose file](../operations/run-in-production.md#run-with-docker-compose), create its private socket and storage directories, and start it as your own UID:
 
 ```sh
-export ZAMA_DAEMON_SOCKET_DIR="${PWD}/zama-daemon-socket"
-mkdir -p "$ZAMA_DAEMON_SOCKET_DIR"
-chmod 700 "$ZAMA_DAEMON_SOCKET_DIR"
-docker run -d --name zama-daemon \
-  --user "$(id -u):$(id -g)" \
-  --env ZAMA_SDK_DAEMON_SOCKET_PATH=/run/zama/sdk.sock \
-  --mount "type=bind,src=$ZAMA_DAEMON_SOCKET_DIR,dst=/run/zama" \
-  zamafhe/sdk-daemon
-export DAEMON_SOCKET="$ZAMA_DAEMON_SOCKET_DIR/sdk.sock"
-docker logs zama-daemon
+curl -fsSLO https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml
+mkdir -p -m 700 zama-daemon/socket zama-daemon/storage
+export ZAMA_SDK_VERSION=VERSION
+export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"
+docker compose up -d --wait
+export DAEMON_SOCKET="$PWD/zama-daemon/socket/sdk.sock"
 ```
 
-Continue once the log shows `Daemon ready.`. The daemon needs outbound access to your RPC endpoint and to the Sepolia relayer.
+Replace `VERSION` with the release in [Client and daemon compatibility](../reference/client-and-daemon-compatibility.md) that matches your client. The command returns once the daemon's healthcheck passes. The daemon needs outbound access to your RPC endpoint and to the Sepolia relayer.
 
 Your application connects with `zama.Dial` and creates an SDK context from a chain configuration. The context lives in the daemon until you close it.
 
@@ -141,12 +137,11 @@ go run .
 
 The program prints one encrypted value and a nonzero proof size. Pass both to your confidential contract call. They change on every run.
 
-When you're done, stop the daemon and remove the socket directory:
+When you're done, stop the daemon and remove its directories:
 
 ```sh
-docker stop zama-daemon
-docker rm zama-daemon
-rmdir "$ZAMA_DAEMON_SOCKET_DIR"
+docker compose down
+rm -r zama-daemon
 ```
 
 ## Next steps

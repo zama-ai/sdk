@@ -29,43 +29,90 @@ There is no network listener. Keep the application and its daemon on the same ho
 Two daemons must not share a SQLite credential volume: each named database is locked to one daemon. Replicas can share application-owned storage, but credential coordination does not span daemons, so concurrent replicas can race on the same user's credentials and cause extra signature prompts.
 {% endhint %}
 
-## Run on a host
+## Run with Docker Compose
 
-This command starts the daemon on a Linux host for an application running under your current UID, with daemon SQLite storage enabled:
+The [Compose file](https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml) runs the daemon on a Linux host for an application running on the same host. It applies the hardened container settings, mounts the socket and SQLite storage directories, and restarts the daemon unless you stop it:
 
-```bash
-export ZAMA_DAEMON_ROOT="${PWD}/zama-daemon"
-mkdir -p "$ZAMA_DAEMON_ROOT/socket" "$ZAMA_DAEMON_ROOT/storage"
-chmod 700 "$ZAMA_DAEMON_ROOT/socket" "$ZAMA_DAEMON_ROOT/storage"
+{% code title="packages/sdk-daemon/deploy/compose.yaml" %}
 
-docker run -d \
-  --name zama-daemon \
-  --user "$(id -u):$(id -g)" \
-  --read-only \
-  --cap-drop ALL \
-  --security-opt no-new-privileges:true \
-  --stop-timeout 150 \
-  --env ZAMA_SDK_DAEMON_SOCKET_PATH=/run/zama/sdk.sock \
-  --env ZAMA_SDK_DAEMON_STORAGE_DIR=/var/lib/zama \
-  --mount "type=bind,src=$ZAMA_DAEMON_ROOT/socket,dst=/run/zama" \
-  --mount "type=bind,src=$ZAMA_DAEMON_ROOT/storage,dst=/var/lib/zama" \
-  zamafhe/sdk-daemon:VERSION
+```yaml
+# Start with: docker compose up -d --wait
+name: zama-sdk-daemon
+
+services:
+  daemon:
+    image: zamafhe/sdk-daemon:${ZAMA_SDK_VERSION:?Set ZAMA_SDK_VERSION to the release that matches your Go or Rust client}
+    # Must be the UID and GID of the application that connects to the socket.
+    user: "${ZAMA_SDK_DAEMON_UID:-1000}:${ZAMA_SDK_DAEMON_GID:-1000}"
+    environment:
+      ZAMA_SDK_DAEMON_SOCKET_PATH: /run/zama/sdk.sock
+      ZAMA_SDK_DAEMON_STORAGE_DIR: /var/lib/zama
+    volumes:
+      # Create both host directories with mode 0700 before starting; the daemon rejects directories it does not own privately.
+      - type: bind
+        source: ${ZAMA_SDK_DAEMON_DIR:-./zama-daemon}/socket
+        target: /run/zama
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${ZAMA_SDK_DAEMON_DIR:-./zama-daemon}/storage
+        target: /var/lib/zama
+        bind:
+          create_host_path: false
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "node", "dist/healthcheck.js"]
+      interval: 10s
+      timeout: 3s
+      start_period: 10s
+    # Longer than the daemon's 120-second shutdown timeout, so it exits before Docker kills it.
+    stop_grace_period: 150s
+    restart: unless-stopped
 ```
 
-Replace `VERSION` with the release that matches your client. Connect the application to `$ZAMA_DAEMON_ROOT/socket/sdk.sock`. Drop the storage mount and `ZAMA_SDK_DAEMON_STORAGE_DIR` when you use application-owned storage.
+{% endcode %}
 
-For a containerized application, mount the same socket directory into its container and run it as the same UID. On Docker Desktop, share a named volume between the containers; the host can't reach a socket inside the Linux VM through a bind mount.
+From the directory where you keep the file, run the daemon as your application's UID:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml
+mkdir -p -m 700 zama-daemon/socket zama-daemon/storage
+export ZAMA_SDK_VERSION=VERSION
+export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"
+docker compose up -d --wait
+```
+
+Replace `VERSION` with the release that matches your client. `--wait` returns once the healthcheck passes. Connect the application to `zama-daemon/socket/sdk.sock`. Set `ZAMA_SDK_DAEMON_DIR` to keep the two directories elsewhere. With application-owned storage, the storage directory stays empty.
+
+To run a containerized application, add it as a service in the same file, with the same `user` and the socket directory mounted at the path it connects to. On Docker Desktop, replace the socket bind mount with a named volume shared by both services; the host can't reach a socket inside the Linux VM through a bind mount.
 
 ## Run in Kubernetes
 
-Run the daemon as a second container in your application pod. This pod spec shares an `emptyDir` socket volume, runs both containers as UID `1000`, and gives the daemon a persistent volume for SQLite storage:
+Run the daemon as a second container in your application pod. The [Kubernetes manifest](https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/kubernetes.yaml) shares an `emptyDir` socket volume, runs both containers as UID `1000`, and gives the daemon a `ReadWriteOnce` claim for SQLite storage. Replace `your-registry/your-app:APP_VERSION` with your application image, then apply it with the daemon release that matches your client:
+
+{% code title="packages/sdk-daemon/deploy/kubernetes.yaml" %}
 
 ```yaml
+# Apply with: envsubst '$ZAMA_SDK_VERSION' < kubernetes.yaml | kubectl apply -f -
+# Replace the app image with your own; it must run as the same UID as the daemon.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: zama-daemon-storage
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
 apiVersion: v1
 kind: Pod
 metadata:
   name: my-app
 spec:
+  # Longer than the daemon's 120-second shutdown timeout, so it exits before the kubelet kills it.
   terminationGracePeriodSeconds: 150
   securityContext:
     runAsNonRoot: true
@@ -73,8 +120,9 @@ spec:
     runAsGroup: 1000
     fsGroup: 1000
   initContainers:
+    # The daemon only accepts a socket directory private to its UID, which an emptyDir root is not.
     - name: socket-dir
-      image: zamafhe/sdk-daemon:VERSION
+      image: zamafhe/sdk-daemon:${ZAMA_SDK_VERSION}
       command: ["mkdir", "-p", "-m", "0700", "/run/zama/socket"]
       volumeMounts:
         - { name: zama-socket, mountPath: /run/zama }
@@ -84,7 +132,7 @@ spec:
         capabilities: { drop: [ALL] }
   containers:
     - name: zama-daemon
-      image: zamafhe/sdk-daemon:VERSION
+      image: zamafhe/sdk-daemon:${ZAMA_SDK_VERSION}
       env:
         - { name: ZAMA_SDK_DAEMON_SOCKET_PATH, value: /run/zama/socket/sdk.sock }
         - { name: ZAMA_SDK_DAEMON_STORAGE_DIR, value: /var/lib/zama }
@@ -98,7 +146,7 @@ spec:
         timeoutSeconds: 5
       securityContext: *restricted
     - name: app
-      image: your-registry/your-app:VERSION
+      image: your-registry/your-app:APP_VERSION
       env:
         - { name: DAEMON_SOCKET, value: /run/zama/socket/sdk.sock }
       volumeMounts:
@@ -112,9 +160,17 @@ spec:
         claimName: zama-daemon-storage
 ```
 
+{% endcode %}
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/kubernetes.yaml
+export ZAMA_SDK_VERSION=VERSION
+envsubst '$ZAMA_SDK_VERSION' < kubernetes.yaml | kubectl apply -f -
+```
+
 The init container creates a private socket directory inside the shared volume; the daemon checks only that directory. The liveness probe runs the healthcheck bundled in the image and uses the socket path from the container environment.
 
-For several replicas with SQLite storage, give each pod its own `ReadWriteOnce` claim, for example through a StatefulSet `volumeClaimTemplates` entry. Never mount one claim into several pods. With application-owned storage, remove the `zama-storage` volume and variable.
+For several replicas with SQLite storage, give each pod its own `ReadWriteOnce` claim, for example through a StatefulSet `volumeClaimTemplates` entry. Never mount one claim into several pods. With application-owned storage, remove the `zama-storage` volume, the claim, and `ZAMA_SDK_DAEMON_STORAGE_DIR`.
 
 The liveness probe checks that the daemon answers on its socket. It doesn't check RPC or relayer reachability, so gate traffic on checks made by your application.
 

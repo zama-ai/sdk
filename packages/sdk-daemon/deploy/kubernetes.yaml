@@ -1,0 +1,63 @@
+# Apply with: envsubst '$ZAMA_SDK_VERSION' < kubernetes.yaml | kubectl apply -f -
+# Replace the app image with your own; it must run as the same UID as the daemon.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: zama-daemon-storage
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-app
+spec:
+  # Longer than the daemon's 120-second shutdown timeout, so it exits before the kubelet kills it.
+  terminationGracePeriodSeconds: 150
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  initContainers:
+    # The daemon only accepts a socket directory private to its UID, which an emptyDir root is not.
+    - name: socket-dir
+      image: zamafhe/sdk-daemon:${ZAMA_SDK_VERSION}
+      command: ["mkdir", "-p", "-m", "0700", "/run/zama/socket"]
+      volumeMounts:
+        - { name: zama-socket, mountPath: /run/zama }
+      securityContext: &restricted
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities: { drop: [ALL] }
+  containers:
+    - name: zama-daemon
+      image: zamafhe/sdk-daemon:${ZAMA_SDK_VERSION}
+      env:
+        - { name: ZAMA_SDK_DAEMON_SOCKET_PATH, value: /run/zama/socket/sdk.sock }
+        - { name: ZAMA_SDK_DAEMON_STORAGE_DIR, value: /var/lib/zama }
+      volumeMounts:
+        - { name: zama-socket, mountPath: /run/zama }
+        - { name: zama-storage, mountPath: /var/lib/zama }
+      livenessProbe:
+        exec:
+          command: ["node", "dist/healthcheck.js"]
+        periodSeconds: 10
+        timeoutSeconds: 5
+      securityContext: *restricted
+    - name: app
+      image: your-registry/your-app:APP_VERSION
+      env:
+        - { name: DAEMON_SOCKET, value: /run/zama/socket/sdk.sock }
+      volumeMounts:
+        - { name: zama-socket, mountPath: /run/zama }
+      securityContext: *restricted
+  volumes:
+    - name: zama-socket
+      emptyDir: {}
+    - name: zama-storage
+      persistentVolumeClaim:
+        claimName: zama-daemon-storage
