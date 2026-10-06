@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.7.0-beta.6](https://github.com/zama-ai/sdk/compare/v3.7.0-beta.5...v3.7.0-beta.6) (2026-10-06)
+
+### Features
+
+- telemetry ([#826](https://github.com/zama-ai/sdk/issues/826)) ([a65488b]())
+
 ## [3.7.0-beta.5](https://github.com/zama-ai/sdk/compare/v3.7.0-beta.4...v3.7.0-beta.5) (2026-10-01)
 
 ### Features
