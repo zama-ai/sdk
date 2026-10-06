@@ -47,7 +47,11 @@ cargo add zama_sdk
 
 ### 2. Use the `cleartext()` relayer with `createConfig`
 
-Available in the Core SDK and React SDK. Go and Rust select the cleartext relayer in the next step.
+{% hint style="info" %}
+Available in the Core SDK and React SDK.
+{% endhint %}
+
+Go and Rust select the cleartext relayer in the next step.
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -119,7 +123,9 @@ The `executorAddress` is the deployed `CleartextFHEVMExecutor` contract address 
 
 ### 4. Use the SDK normally
 
+{% hint style="info" %}
 Available in the Core SDK and React SDK.
+{% endhint %}
 
 The wrapper API works the same as in production setups:
 

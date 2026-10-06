@@ -152,6 +152,10 @@ Always check the most specific types first and fall back to `ZamaError` last.
 
 ### 3. Use matchZamaError for cleaner code
 
+{% hint style="info" %}
+Available in the Core SDK and React SDK.
+{% endhint %}
+
 Instead of `instanceof` chains, use `matchZamaError` to route errors by code. This helper is framework-neutral — it works the same on a caught error in the core SDK and on a hook's `.error` in React (see the reusable React component in step 6):
 
 ```ts

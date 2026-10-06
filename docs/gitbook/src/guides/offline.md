@@ -267,102 +267,6 @@ let tx_hash = *pending.tx_hash();
 **Raw-signature APIs need an extra assembly step.** A raw HSM typically signs the EIP-1559 transaction digest and returns signature components, not a serialized transaction. Use your Ethereum library to compute the signing digest and insert the signature into the transaction envelope before broadcasting; do not treat the raw signature as signed transaction bytes.
 {% endhint %}
 
-When you hold the key yourself, decode the unsigned payload, sign its digest, and broadcast the signed envelope. The unsigned encoding omits the signature fields, so a decoder that expects a signed transaction rejects it. Check the sender, chain, destination, and calldata before signing:
-
-{% tabs %}
-{% tab title="Go" %}
-
-```go
-import (
-	"errors"
-	"math/big"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/rlp"
-)
-
-if crypto.PubkeyToAddress(key.PublicKey) != prepared.From {
-	return errors.New("prepared sender does not match the signing key")
-}
-if len(prepared.UnsignedTx) == 0 || prepared.UnsignedTx[0] != types.DynamicFeeTxType {
-	return errors.New("expected an unsigned EIP-1559 transaction")
-}
-var unsigned struct {
-	ChainID    *big.Int
-	Nonce      uint64
-	GasTipCap  *big.Int
-	GasFeeCap  *big.Int
-	Gas        uint64
-	To         *common.Address `rlp:"nil"`
-	Value      *big.Int
-	Data       []byte
-	AccessList types.AccessList
-}
-if err := rlp.DecodeBytes(prepared.UnsignedTx[1:], &unsigned); err != nil {
-	return err
-}
-tx := types.NewTx(&types.DynamicFeeTx{
-	ChainID:    unsigned.ChainID,
-	Nonce:      unsigned.Nonce,
-	GasTipCap:  unsigned.GasTipCap,
-	GasFeeCap:  unsigned.GasFeeCap,
-	Gas:        unsigned.Gas,
-	To:         unsigned.To,
-	Value:      unsigned.Value,
-	Data:       unsigned.Data,
-	AccessList: unsigned.AccessList,
-})
-signed, err := types.SignTx(tx, types.LatestSignerForChainID(unsigned.ChainID), key)
-if err != nil {
-	return err
-}
-if err := ethClient.SendTransaction(ctx, signed); err != nil {
-	return err
-}
-txHash := signed.Hash()
-```
-
-`key` is the `*ecdsa.PrivateKey` for `prepared.From`.
-
-{% endtab %}
-{% tab title="Rust" %}
-
-```rust
-use alloy_consensus::{SignableTransaction, TxEip1559};
-use alloy_provider::Provider;
-use alloy_rlp::Decodable;
-use alloy_signer::Signer;
-
-anyhow::ensure!(
-    prepared.from == signer.address(),
-    "prepared sender does not match the signing key"
-);
-anyhow::ensure!(
-    prepared.unsigned_tx.first() == Some(&2),
-    "expected an unsigned EIP-1559 transaction"
-);
-let mut payload = &prepared.unsigned_tx[1..];
-let transaction = TxEip1559::decode(&mut payload)?;
-anyhow::ensure!(
-    payload.is_empty(),
-    "trailing bytes after the unsigned transaction"
-);
-let signature = signer.sign_hash(&transaction.signature_hash()).await?;
-let mut signed_tx = Vec::new();
-transaction
-    .into_signed(signature)
-    .eip2718_encode(&mut signed_tx);
-let pending = provider.send_raw_transaction(&signed_tx).await?;
-let tx_hash = *pending.tx_hash();
-```
-
-`signer` is the `PrivateKeySigner` for `prepared.from`. Decoding needs `alloy-consensus`, on the same Alloy major as `zama_sdk`, and `alloy-rlp`.
-
-{% endtab %}
-{% endtabs %}
-
 Either way, watch the chain yourself: fetch the receipt for the transaction hash through your own provider, and wait for enough confirmations for your risk policy before acting on it. A receipt returned at first inclusion can still be invalidated by a reorganization, for example after you use it to prepare `FinalizeUnwrap`.
 
 ## Request kinds
@@ -559,6 +463,10 @@ Pass `envelope` unchanged; it carries the prepared permit that the signature is 
 The recovery byte may be either `0`/`1` or `27`/`28`: the SDK normalizes it before the permit is verified.
 
 One permit per call: unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks a request over 10 contracts — `contracts` maps to exactly one signature.
+
+{% hint style="info" %}
+Available in the Core SDK and React SDK.
+{% endhint %}
 
 For more than 10 contracts, `batchPreparePermits` splits the request into one permit per 10 and `batchRegisterPermits` registers the signed pairs in order:
 

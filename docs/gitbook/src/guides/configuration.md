@@ -597,7 +597,9 @@ For full storage options see the [GenericStorage](../reference/sdk/GenericStorag
 
 ### 7. (Optional) Supply a logger
 
+{% hint style="info" %}
 Available in the Core SDK and React SDK.
+{% endhint %}
 
 The SDK is **silent by default** — it emits no console output of its own. Operation failures always surface through the rejected promise or typed error, never as a stray `console.error`. To observe internal diagnostics, pass a `logger` to `createConfig`:
 
@@ -826,7 +828,9 @@ The SDK never persists or exposes this value. See [Security Model](../concepts/s
 
 ## Shared relayer options
 
+{% hint style="info" %}
 Available in the Core SDK and React SDK.
+{% endhint %}
 
 When multiple chains use the same relayer, create it once and reference that single instance from each chain:
 

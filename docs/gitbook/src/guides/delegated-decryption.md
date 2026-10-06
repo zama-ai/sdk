@@ -455,6 +455,34 @@ await delegate({ delegateAddress: "0xDelegate" });
 ```
 
 {% endtab %}
+{% tab title="Go" %}
+
+```go
+_, err := sdk.DelegateDecryption(ctx, zama.DelegateDecryptionParams{
+	ContractAddress: zama.WildcardContract,
+	DelegateAddress: delegate,
+})
+if err != nil {
+	return err
+}
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+use zama_sdk::{DelegateDecryptionParams, WILDCARD_CONTRACT};
+
+sdk.delegations()
+    .delegate_decryption(DelegateDecryptionParams {
+        contract_address: WILDCARD_CONTRACT,
+        delegate_address: delegate,
+        expiration_date_ms: None,
+    })
+    .await?;
+```
+
+{% endtab %}
 {% endtabs %}
 
 {% hint style="info" %}
