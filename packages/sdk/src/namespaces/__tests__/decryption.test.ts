@@ -1,4 +1,5 @@
 import type { Address } from "viem";
+import { MAX_UINT64 } from "../../contracts";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { DecryptionFailedError, SignerNotConfiguredError } from "../../errors";
 
@@ -50,6 +51,24 @@ describe("Decryption", () => {
           DELEGATOR,
         ),
       ).rejects.toBeInstanceOf(SignerNotConfiguredError);
+    });
+
+    test("labels the relayer call as a delegated user decrypt", async ({
+      sdk,
+      provider,
+      relayer,
+      handle,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+
+      await sdk.decryption.delegatedDecryptValues(
+        [{ encryptedValue: handle, contractAddress: TOKEN }],
+        DELEGATOR,
+      );
+
+      expect(relayer.decryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({ options: { operation: "delegated-user-decrypt" } }),
+      );
     });
   });
 

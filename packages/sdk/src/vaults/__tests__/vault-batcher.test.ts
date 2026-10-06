@@ -338,7 +338,9 @@ describe("VaultBatcher", () => {
       const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
       const value = await batcher.depositOf(1n, userAddress);
       expect(value).toBe(1000n);
-      expect(relayer.decryptValues).toHaveBeenCalled();
+      expect(relayer.decryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({ options: { operation: "vault-balance" } }),
+      );
     });
   });
 });

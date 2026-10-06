@@ -719,6 +719,20 @@ describe("FhevmRelayer usage telemetry", () => {
     });
   });
 
+  test("stamps the headers on encryptions offloaded to the worker", async () => {
+    const relayer = makeRelayer({
+      chain: hostedChain,
+      offloadEncrypt: true,
+      telemetry: telemetry(),
+    });
+    await relayer.encryptValues({ ...encryptArgs, options: { operation: "encrypt" } } as never);
+
+    expect(worker.instance.encryptValues).toHaveBeenCalledWith({
+      ...encryptArgs,
+      options: { headers: { ...staticHeaders, "x-zama-sdk-operation": "encrypt" } },
+    });
+  });
+
   test("sends the static headers without an operation on the key fetch", async () => {
     const relayer = makeRelayer({ chain: hostedChain, telemetry: telemetry() });
     await relayer.fetchFheEncryptionKeyBytes();

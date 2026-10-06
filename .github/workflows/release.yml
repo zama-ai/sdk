@@ -283,6 +283,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.SDK_RELEASER_TOKEN }}
 
+      # The bundles inline `package.json#version` (`SDK_VERSION`), which the
+      # build above saw before the bump; rebuild so npm ships the released one.
+      - name: Rebuild packages with the released version
+        if: steps.release.outputs.released == 'true'
+        run: pnpm build
+
       - name: Publish to npm
         if: steps.release.outputs.released == 'true'
         run: |

@@ -3827,7 +3827,7 @@ The recommended approach depends on your application architecture:
 
 ### Backend proxy pattern
 
-The proxy must add the `x-api-key` header to every forwarded request, so the key stays server-side and your frontend never sees it, and should forward the `x-zama-sdk-*` request headers so [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md) still reaches the relayer. See the [Authentication guide](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md) for a working Express proxy and the matching client-side `relayerUrl` configuration — the patterns there apply unchanged when the upstream is the Zama-hosted Relayer.
+The proxy must add the `x-api-key` header to every forwarded request, so the key stays server-side and your frontend never sees it. It should also pass through the `x-zama-sdk-*` headers the SDK sets, so [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md) still reaches the relayer. See the [Authentication guide](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md) for a working Express proxy and the matching client-side `relayerUrl` configuration — the patterns there apply unchanged when the upstream is the Zama-hosted Relayer.
 
 ## Compromised keys
 
@@ -3885,9 +3885,11 @@ The headers ride on the requests the SDK makes anyway: input-proof generation (`
 | `user-decrypt`           | `sdk.decryption.decryptValues` / `useDecryptValues`                                  |
 | `delegated-user-decrypt` | `sdk.decryption.delegatedDecryptValues` / `delegatedBatchDecryptValues`              |
 | `public-decrypt`         | `sdk.decryption.decryptPublicValues` / `useDecryptPublicValues`                      |
-| `offline-prepare`        | `sdk.offline.prepare`                                                                |
+| `offline-prepare`        | `sdk.offline.prepare` (only kinds that encrypt or decrypt)                           |
 
 Calls made directly on `sdk.relayer` carry the version, layer and runtime headers but no operation.
+
+Of the `prepare` kinds, only `ConfidentialTransfer`, `ConfidentialTransferFrom`, `Unwrap` and `FinalizeUnwrap` reach the relayer. The other kinds, and `sdk.offline.preparePermit` / `batchPreparePermits`, never call it, so they produce no telemetry.
 
 Shielding (`WrappedToken.shield`) never calls the relayer, so it produces no telemetry at all.
 

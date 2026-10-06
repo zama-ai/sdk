@@ -142,6 +142,7 @@ describe("Vault", () => {
           values: [{ value: 1_000n, type: "euint64" }],
           contractAddress: DEPOSIT_BATCHER,
           userAddress,
+          options: { operation: "vault-deposit" },
         }),
       );
       expect(signer.writeContract).toHaveBeenCalledWith(
@@ -233,7 +234,10 @@ describe("Vault", () => {
     await vault.redeem(500n);
 
     expect(relayer.encryptValues).toHaveBeenCalledWith(
-      expect.objectContaining({ contractAddress: REDEEM_BATCHER }),
+      expect.objectContaining({
+        contractAddress: REDEEM_BATCHER,
+        options: { operation: "vault-redeem" },
+      }),
     );
     expect(signer.writeContract).toHaveBeenCalledWith(
       expect.objectContaining({ address: REDEEM_BATCHER, functionName: "join" }),

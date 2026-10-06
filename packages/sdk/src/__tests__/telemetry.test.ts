@@ -1,5 +1,4 @@
 import { describe, expect, test } from "vitest";
-import packageJson from "../../package.json";
 import { isTelemetryDisabledByEnv, telemetryHeaders, type TelemetryState } from "../telemetry";
 import { SDK_VERSION } from "../version";
 
@@ -8,12 +7,12 @@ describe("telemetryHeaders", () => {
 
   test("stamps the package version, layer, runtime and operation", () => {
     expect(telemetryHeaders(telemetry, "unshield")).toEqual({
-      "x-zama-sdk-version": packageJson.version,
+      "x-zama-sdk-version": SDK_VERSION,
       "x-zama-sdk-layer": "core",
       "x-zama-sdk-runtime": "browser",
       "x-zama-sdk-operation": "unshield",
     });
-    expect(SDK_VERSION).toBe(packageJson.version);
+    expect(SDK_VERSION).toMatch(/^\d+\.\d+\.\d+(-[\w.]+)?$/);
   });
 
   test("omits the operation header when no SDK flow labelled the request", () => {

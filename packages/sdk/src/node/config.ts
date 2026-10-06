@@ -40,7 +40,7 @@ export function node(options?: RelayerOptions): NodeRelayerConfig {
         options,
         logger,
         telemetry:
-          telemetry && !isTelemetryDisabledByEnv(process.env)
+          telemetry && !isTelemetryDisabledByEnv(globalThis.process?.env ?? {})
             ? { state: telemetry, runtime: "node" }
             : undefined,
       }),

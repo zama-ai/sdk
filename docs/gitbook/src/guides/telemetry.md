@@ -37,9 +37,11 @@ The headers ride on the requests the SDK makes anyway: input-proof generation (`
 | `user-decrypt`           | `sdk.decryption.decryptValues` / `useDecryptValues`                                  |
 | `delegated-user-decrypt` | `sdk.decryption.delegatedDecryptValues` / `delegatedBatchDecryptValues`              |
 | `public-decrypt`         | `sdk.decryption.decryptPublicValues` / `useDecryptPublicValues`                      |
-| `offline-prepare`        | `sdk.offline.prepare`                                                                |
+| `offline-prepare`        | `sdk.offline.prepare` (only kinds that encrypt or decrypt)                           |
 
 Calls made directly on `sdk.relayer` carry the version, layer and runtime headers but no operation.
+
+Of the `prepare` kinds, only `ConfidentialTransfer`, `ConfidentialTransferFrom`, `Unwrap` and `FinalizeUnwrap` reach the relayer. The other kinds, and `sdk.offline.preparePermit` / `batchPreparePermits`, never call it, so they produce no telemetry.
 
 Shielding (`WrappedToken.shield`) never calls the relayer, so it produces no telemetry at all.
 
