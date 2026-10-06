@@ -38,4 +38,38 @@ for (const [path, pattern, replacement] of crateTargets) {
   writeFileSync(path, source.replace(pattern, replacement), "utf8");
 }
 
-console.log(`Updated lockstep package and crate versions to ${nextVersion}`);
+// Install commands in the Go and Rust docs pin the release they ship with.
+const docTargets = [
+  [
+    "docs/gitbook/src/native/tutorials/go-quick-start.md",
+    /^export ZAMA_SDK_VERSION=\S+$/gm,
+    `export ZAMA_SDK_VERSION=${nextVersion}`,
+  ],
+  [
+    "docs/gitbook/src/native/tutorials/rust-quick-start.md",
+    /^export ZAMA_SDK_VERSION=\S+$/gm,
+    `export ZAMA_SDK_VERSION=${nextVersion}`,
+  ],
+  [
+    "docs/gitbook/src/native/operations/run-in-production.md",
+    /^export ZAMA_SDK_VERSION=\S+$/gm,
+    `export ZAMA_SDK_VERSION=${nextVersion}`,
+  ],
+  [
+    "clients/go/README.md",
+    /(go get github\.com\/zama-ai\/sdk\/clients\/go\/v3@v)\S+/g,
+    `$1${nextVersion}`,
+  ],
+  ["clients/rust/README.md", /(cargo add zama_sdk@=)\S+/g, `$1${nextVersion}`],
+  ["packages/sdk-daemon/README.md", /(zamafhe\/sdk-daemon:)\d\S*/g, `$1${nextVersion}`],
+];
+
+for (const [path, pattern, replacement] of docTargets) {
+  const source = readFileSync(path, "utf8");
+  if (!source.match(pattern)) {
+    throw new Error(`No pinned SDK version found in ${path}`);
+  }
+  writeFileSync(path, source.replace(pattern, replacement), "utf8");
+}
+
+console.log(`Updated lockstep package, crate and docs versions to ${nextVersion}`);

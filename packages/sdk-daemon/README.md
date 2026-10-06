@@ -11,7 +11,7 @@ docker run -d --name zama-daemon \
   --user "$(id -u):$(id -g)" \
   --env ZAMA_SDK_DAEMON_SOCKET_PATH=/run/zama/sdk.sock \
   --mount "type=bind,src=$PWD/zama-daemon-socket,dst=/run/zama" \
-  zamafhe/sdk-daemon
+  zamafhe/sdk-daemon:3.7.0-beta.5
 ```
 
 The socket directory must exist, belong to your UID, and have mode `0700`.

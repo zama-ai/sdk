@@ -30,13 +30,14 @@ See [Authentication](../../guides/authentication.md) and [Relayer API keys](../.
 Create a module and add the client:
 
 ```sh
+export ZAMA_SDK_VERSION=3.7.0-beta.5
 mkdir encrypt-input
 cd encrypt-input
 go mod init example.com/encrypt-input
-go get github.com/zama-ai/sdk/clients/go/v3
+go get github.com/zama-ai/sdk/clients/go/v3@v$ZAMA_SDK_VERSION
 ```
 
-The client and the daemon image must run the same version; see [Client and daemon compatibility](../reference/client-and-daemon-compatibility.md).
+`ZAMA_SDK_VERSION` pins the client here and the daemon image in the next step: both must run the same version. See [Client and daemon compatibility](../reference/client-and-daemon-compatibility.md).
 
 ## Set up the SDK
 
@@ -45,13 +46,12 @@ Download the daemon's [Compose file](../operations/run-in-production.md#run-with
 ```sh
 curl -fsSLO https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml
 mkdir -p -m 700 zama-daemon/socket zama-daemon/storage
-export ZAMA_SDK_VERSION=VERSION
 export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"
 docker compose up -d --wait
 export DAEMON_SOCKET="$PWD/zama-daemon/socket/sdk.sock"
 ```
 
-Replace `VERSION` with the release in [Client and daemon compatibility](../reference/client-and-daemon-compatibility.md) that matches your client. The command returns once the daemon's healthcheck passes. The daemon needs outbound access to your RPC endpoint and to the Sepolia relayer.
+The command returns once the daemon's healthcheck passes. The daemon needs outbound access to your RPC endpoint and to the Sepolia relayer.
 
 Your application connects with `zama.Dial` and creates an SDK context from a chain configuration. The context lives in the daemon until you close it.
 

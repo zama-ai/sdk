@@ -30,16 +30,17 @@ See [Authentication](../../guides/authentication.md) and [Relayer API keys](../.
 Create a binary project and add the client with the runtime this example uses:
 
 ```sh
+export ZAMA_SDK_VERSION=3.7.0-beta.5
 cargo new encrypt-input
 cd encrypt-input
-cargo add zama_sdk
+cargo add zama_sdk@=$ZAMA_SDK_VERSION
 cargo add anyhow
 cargo add tokio --features macros,rt
 ```
 
 The client runs on Tokio. You can use your application's existing runtime and error type instead of `#[tokio::main]` and `anyhow`.
 
-The client and the daemon image must run the same version; see [Client and daemon compatibility](../reference/client-and-daemon-compatibility.md).
+`ZAMA_SDK_VERSION` pins the client here and the daemon image in the next step: both must run the same version. See [Client and daemon compatibility](../reference/client-and-daemon-compatibility.md).
 
 ## Set up the SDK
 
@@ -48,13 +49,12 @@ Download the daemon's [Compose file](../operations/run-in-production.md#run-with
 ```sh
 curl -fsSLO https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml
 mkdir -p -m 700 zama-daemon/socket zama-daemon/storage
-export ZAMA_SDK_VERSION=VERSION
 export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"
 docker compose up -d --wait
 export DAEMON_SOCKET="$PWD/zama-daemon/socket/sdk.sock"
 ```
 
-Replace `VERSION` with the release in [Client and daemon compatibility](../reference/client-and-daemon-compatibility.md) that matches your client. The command returns once the daemon's healthcheck passes. The daemon needs outbound access to your RPC endpoint and to the Sepolia relayer.
+The command returns once the daemon's healthcheck passes. The daemon needs outbound access to your RPC endpoint and to the Sepolia relayer.
 
 Your application connects with `Client::connect` and builds an `Sdk` from a chain configuration. The SDK context lives in the daemon until you close it.
 

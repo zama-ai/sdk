@@ -16,7 +16,7 @@ Run the daemon image and your Go or Rust client at exactly the same version. Upg
 | Rust crate   | `zama_sdk` on crates.io                |
 | Go module    | `github.com/zama-ai/sdk/clients/go/v3` |
 
-The quickstarts use unversioned installation commands, and the daemon image without a tag selects `latest`.
+The quickstarts and the deployment page set one `ZAMA_SDK_VERSION` variable for the image tag and the client version, and each release updates it to that release.
 
 For deployments, record the selected client version and pin the daemon image to its matching release tag. Do not rely on a moving image tag when restarting an existing deployment. Retain the Go module files or your Rust application's lockfile to reproduce the selected dependencies.
 

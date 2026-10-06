@@ -79,12 +79,12 @@ From the directory where you keep the file, run the daemon as your application's
 ```bash
 curl -fsSLO https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml
 mkdir -p -m 700 zama-daemon/socket zama-daemon/storage
-export ZAMA_SDK_VERSION=VERSION
+export ZAMA_SDK_VERSION=3.7.0-beta.5
 export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"
 docker compose up -d --wait
 ```
 
-Replace `VERSION` with the release that matches your client. `--wait` returns once the healthcheck passes. Connect the application to `zama-daemon/socket/sdk.sock`. Set `ZAMA_SDK_DAEMON_DIR` to keep the two directories elsewhere. With application-owned storage, the storage directory stays empty.
+Set `ZAMA_SDK_VERSION` to the version of your Go module or Rust crate. `--wait` returns once the healthcheck passes. Connect the application to `zama-daemon/socket/sdk.sock`. Set `ZAMA_SDK_DAEMON_DIR` to keep the two directories elsewhere. With application-owned storage, the storage directory stays empty.
 
 To run a containerized application, add it as a service in the same file, with the same `user` and the socket directory mounted at the path it connects to. On Docker Desktop, replace the socket bind mount with a named volume shared by both services; the host can't reach a socket inside the Linux VM through a bind mount.
 
@@ -164,7 +164,7 @@ spec:
 
 ```bash
 curl -fsSLO https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/kubernetes.yaml
-export ZAMA_SDK_VERSION=VERSION
+export ZAMA_SDK_VERSION=3.7.0-beta.5
 envsubst '$ZAMA_SDK_VERSION' < kubernetes.yaml | kubectl apply -f -
 ```
 

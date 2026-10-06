@@ -616,13 +616,14 @@ See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/git
 Create a module and add the client:
 
 ```sh
+export ZAMA_SDK_VERSION=3.7.0-beta.5
 mkdir encrypt-input
 cd encrypt-input
 go mod init example.com/encrypt-input
-go get github.com/zama-ai/sdk/clients/go/v3
+go get github.com/zama-ai/sdk/clients/go/v3@v$ZAMA_SDK_VERSION
 ```
 
-The client and the daemon image must run the same version; see [Client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md).
+`ZAMA_SDK_VERSION` pins the client here and the daemon image in the next step: both must run the same version. See [Client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md).
 
 ## Set up the SDK
 
@@ -631,13 +632,12 @@ Download the daemon's [Compose file](https://raw.githubusercontent.com/zama-ai/s
 ```sh
 curl -fsSLO https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml
 mkdir -p -m 700 zama-daemon/socket zama-daemon/storage
-export ZAMA_SDK_VERSION=VERSION
 export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"
 docker compose up -d --wait
 export DAEMON_SOCKET="$PWD/zama-daemon/socket/sdk.sock"
 ```
 
-Replace `VERSION` with the release in [Client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md) that matches your client. The command returns once the daemon's healthcheck passes. The daemon needs outbound access to your RPC endpoint and to the Sepolia relayer.
+The command returns once the daemon's healthcheck passes. The daemon needs outbound access to your RPC endpoint and to the Sepolia relayer.
 
 Your application connects with `zama.Dial` and creates an SDK context from a chain configuration. The context lives in the daemon until you close it.
 
@@ -774,16 +774,17 @@ See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/git
 Create a binary project and add the client with the runtime this example uses:
 
 ```sh
+export ZAMA_SDK_VERSION=3.7.0-beta.5
 cargo new encrypt-input
 cd encrypt-input
-cargo add zama_sdk
+cargo add zama_sdk@=$ZAMA_SDK_VERSION
 cargo add anyhow
 cargo add tokio --features macros,rt
 ```
 
 The client runs on Tokio. You can use your application's existing runtime and error type instead of `#[tokio::main]` and `anyhow`.
 
-The client and the daemon image must run the same version; see [Client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md).
+`ZAMA_SDK_VERSION` pins the client here and the daemon image in the next step: both must run the same version. See [Client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md).
 
 ## Set up the SDK
 
@@ -792,13 +793,12 @@ Download the daemon's [Compose file](https://raw.githubusercontent.com/zama-ai/s
 ```sh
 curl -fsSLO https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml
 mkdir -p -m 700 zama-daemon/socket zama-daemon/storage
-export ZAMA_SDK_VERSION=VERSION
 export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"
 docker compose up -d --wait
 export DAEMON_SOCKET="$PWD/zama-daemon/socket/sdk.sock"
 ```
 
-Replace `VERSION` with the release in [Client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md) that matches your client. The command returns once the daemon's healthcheck passes. The daemon needs outbound access to your RPC endpoint and to the Sepolia relayer.
+The command returns once the daemon's healthcheck passes. The daemon needs outbound access to your RPC endpoint and to the Sepolia relayer.
 
 Your application connects with `Client::connect` and builds an `Sdk` from a chain configuration. The SDK context lives in the daemon until you close it.
 
@@ -10617,12 +10617,12 @@ From the directory where you keep the file, run the daemon as your application's
 ```bash
 curl -fsSLO https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml
 mkdir -p -m 700 zama-daemon/socket zama-daemon/storage
-export ZAMA_SDK_VERSION=VERSION
+export ZAMA_SDK_VERSION=3.7.0-beta.5
 export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"
 docker compose up -d --wait
 ```
 
-Replace `VERSION` with the release that matches your client. `--wait` returns once the healthcheck passes. Connect the application to `zama-daemon/socket/sdk.sock`. Set `ZAMA_SDK_DAEMON_DIR` to keep the two directories elsewhere. With application-owned storage, the storage directory stays empty.
+Set `ZAMA_SDK_VERSION` to the version of your Go module or Rust crate. `--wait` returns once the healthcheck passes. Connect the application to `zama-daemon/socket/sdk.sock`. Set `ZAMA_SDK_DAEMON_DIR` to keep the two directories elsewhere. With application-owned storage, the storage directory stays empty.
 
 To run a containerized application, add it as a service in the same file, with the same `user` and the socket directory mounted at the path it connects to. On Docker Desktop, replace the socket bind mount with a named volume shared by both services; the host can't reach a socket inside the Linux VM through a bind mount.
 
@@ -10702,7 +10702,7 @@ spec:
 
 ```bash
 curl -fsSLO https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/kubernetes.yaml
-export ZAMA_SDK_VERSION=VERSION
+export ZAMA_SDK_VERSION=3.7.0-beta.5
 envsubst '$ZAMA_SDK_VERSION' < kubernetes.yaml | kubectl apply -f -
 ```
 
@@ -25927,7 +25927,7 @@ Run the daemon image and your Go or Rust client at exactly the same version. Upg
 | Rust crate   | `zama_sdk` on crates.io                |
 | Go module    | `github.com/zama-ai/sdk/clients/go/v3` |
 
-The quickstarts use unversioned installation commands, and the daemon image without a tag selects `latest`.
+The quickstarts and the deployment page set one `ZAMA_SDK_VERSION` variable for the image tag and the client version, and each release updates it to that release.
 
 For deployments, record the selected client version and pin the daemon image to its matching release tag. Do not rely on a moving image tag when restarting an existing deployment. Retain the Go module files or your Rust application's lockfile to reproduce the selected dependencies.
 
@@ -29850,7 +29850,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 ## Installation
 
 ```sh
-go get github.com/zama-ai/sdk/clients/go/v3
+go get github.com/zama-ai/sdk/clients/go/v3@v3.7.0-beta.5
 ```
 
 Run the `zamafhe/sdk-daemon` image at exactly the same version as the client.
@@ -29879,7 +29879,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 ## Installation
 
 ```sh
-cargo add zama_sdk
+cargo add zama_sdk@=3.7.0-beta.5
 ```
 
 Run the `zamafhe/sdk-daemon` image at exactly the same version as the client. Enable the `alloy` feature for the Alloy signing and transaction adapters.
