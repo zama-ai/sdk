@@ -11,7 +11,9 @@ import (
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	pb "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 const cleanupTimeout = 5 * time.Second
@@ -34,9 +36,11 @@ type operationState struct {
 	seenActions   map[string]struct{}
 }
 type SDKContext struct {
-	client     *Client
-	id         string
-	mu         sync.Mutex
+	client *Client
+	id     string
+	mu     sync.Mutex
+	// Serializes Close so concurrent callers send the close request once.
+	closing    sync.Mutex
 	sequence   uint64
 	operations map[string]*operationState
 	terminal   error
@@ -53,8 +57,20 @@ func accountWire(account *WalletAccount) *pb.WalletAccount {
 	return &pb.WalletAccount{Address: account.Address.Bytes(), ChainId: account.ChainID}
 }
 func (s *SDKContext) Close(ctx context.Context) error {
+	s.closing.Lock()
+	defer s.closing.Unlock()
+	s.mu.Lock()
+	closed := s.terminal != nil
+	s.mu.Unlock()
+	if closed {
+		return nil
+	}
 	var trailers metadata.MD
 	_, err := s.client.rpc.CloseContext(ctx, &pb.ContextRequest{ContextId: s.id}, grpc.Trailer(&trailers))
+	// A context the daemon no longer knows can never be closed later, so tear down locally.
+	if err != nil && status.Code(err) != codes.NotFound {
+		return rpcError(err, trailers)
+	}
 	s.stop(errors.New("SDK context closed"))
 	s.mu.Lock()
 	for _, channel := range []*callbackChannel{s.signer, s.storage, s.events} {
