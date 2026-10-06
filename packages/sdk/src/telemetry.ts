@@ -5,7 +5,7 @@ import { SDK_VERSION } from "./version";
 
 export type TelemetryLayer = "core" | "react";
 
-export type TelemetryRuntime = "browser" | "node";
+export type TelemetryRuntime = "web" | "node";
 
 /** Values are frozen once shipped, so that dashboards keyed on them survive method renames. */
 export type TelemetryOperation =

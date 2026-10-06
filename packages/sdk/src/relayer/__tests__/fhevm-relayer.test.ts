@@ -698,12 +698,9 @@ describe("FhevmRelayer usage telemetry", () => {
   const staticHeaders = {
     "x-zama-sdk-version": SDK_VERSION,
     "x-zama-sdk-layer": "core",
-    "x-zama-sdk-runtime": "browser",
+    "x-zama-sdk-runtime": "web",
   };
-  const telemetry = () => ({
-    state: { layer: "core" } as TelemetryState,
-    runtime: "browser" as const,
-  });
+  const telemetry = () => ({ state: { layer: "core" } as TelemetryState, runtime: "web" as const });
 
   test("stamps the x-zama-sdk-* headers and consumes the operation label", async () => {
     const relayer = makeRelayer({ chain: hostedChain, telemetry: telemetry() });
@@ -749,7 +746,7 @@ describe("FhevmRelayer usage telemetry", () => {
 
   test("reports the layer the SDK was constructed under", async () => {
     const state: TelemetryState = { layer: "core" };
-    const relayer = makeRelayer({ chain: hostedChain, telemetry: { state, runtime: "browser" } });
+    const relayer = makeRelayer({ chain: hostedChain, telemetry: { state, runtime: "web" } });
     state.layer = "react";
     await relayer.fetchFheEncryptionKeyBytes();
 
@@ -758,7 +755,7 @@ describe("FhevmRelayer usage telemetry", () => {
     });
   });
 
-  test("web() tags the relayer as the browser runtime", async () => {
+  test("web() tags the relayer as the web runtime", async () => {
     const relayer = web({ offloadEncrypt: false }).createRelayer(hostedChain, new LoggerService(), {
       layer: "core",
     });

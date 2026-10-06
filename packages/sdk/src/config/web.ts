@@ -106,7 +106,7 @@ export function web(options?: WebRelayerOptions): WebRelayerConfig {
       new FhevmRelayer({
         chain,
         options: relayerOptions,
-        telemetry: telemetry && { state: telemetry, runtime: "browser" },
+        telemetry: telemetry && { state: telemetry, runtime: "web" },
         offloadEncrypt: parsed.offloadEncrypt,
         offloadTimeouts: parsed.offloadTimeouts,
         offloadWorker: parsed.offloadWorker,

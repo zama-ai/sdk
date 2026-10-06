@@ -9,13 +9,13 @@ import {
 import { SDK_VERSION } from "../version";
 
 describe("telemetryHeaders", () => {
-  const telemetry = { state: { layer: "core" } as TelemetryState, runtime: "browser" as const };
+  const telemetry = { state: { layer: "core" } as TelemetryState, runtime: "web" as const };
 
   test("stamps the package version, layer, runtime and operation", () => {
     expect(telemetryHeaders(telemetry, "unshield")).toEqual({
       "x-zama-sdk-version": SDK_VERSION,
       "x-zama-sdk-layer": "core",
-      "x-zama-sdk-runtime": "browser",
+      "x-zama-sdk-runtime": "web",
       "x-zama-sdk-operation": "unshield",
     });
     expect(SDK_VERSION).toMatch(/^\d+\.\d+\.\d+(-[\w.]+)?$/);

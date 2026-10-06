@@ -15,7 +15,7 @@ Telemetry is on by default. You can turn it off with one config flag.
 | ---------------------- | ----------------------- | --------------------------------------------------------------------------------------- |
 | `x-zama-sdk-version`   | `3.7.0`                 | The `@zama-fhe/sdk` version (`@zama-fhe/react-sdk` ships the same version).             |
 | `x-zama-sdk-layer`     | `core` / `react`        | `react` when the SDK is driven by `ZamaProvider`, `core` otherwise.                     |
-| `x-zama-sdk-runtime`   | `browser` / `node`      | `browser` for the `web()` transport, `node` for `node()`.                               |
+| `x-zama-sdk-runtime`   | `web` / `node`          | `web` for the `web()` transport, `node` for `node()`.                                   |
 | `x-zama-sdk-operation` | `confidential-transfer` | The public SDK method the request belongs to (see below). Omitted on the FHE key fetch. |
 
 The headers ride on the requests the SDK makes anyway: input-proof generation (`encrypt`), user and public decryption, and the FHE key fetch. They add no extra requests.
