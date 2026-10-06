@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@zama-fhe/sdk": "^3.6.0",
-    "viem": "^2.56.0"
+    "viem": "^2.57.2"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
