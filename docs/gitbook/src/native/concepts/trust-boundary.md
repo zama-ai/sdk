@@ -13,7 +13,7 @@ The wallet private key stays in your Go or Rust application, or its external sig
 {% hint style="danger" %}
 **Your application must validate every typed-data request before signing it.** Check the domain name and version, `chainId`, `verifyingContract`, the expected signer, and `primaryType` against your own configuration. With that check in place, a compromised daemon cannot obtain a signature your application did not approve. Without it, your wallet signs whatever the daemon sends.
 
-The built-in adapters (Go `NewEthereumSigner` and `NewPrivateKeySigner`, Rust `AlloySigner`) do not validate typed data. They check only the requested account and chain. Apply the same rule to contract writes: allow only the destinations and functions the SDK calls. [Validate signing requests](../guides/attach-wallet.md#validate-signing-requests) lists the expected values and shows a validating wrapper.
+The built-in adapters (Go `NewEthereumSigner` and `NewPrivateKeySigner`, Rust `AlloySigner`) do not validate typed data. They check only the requested account and chain. Apply the same rule to contract writes: allow only the destinations and functions the SDK calls. [Validate signing requests](../guides/attach-wallet.md#validate-signing-requests) lists the values to check.
 {% endhint %}
 
 A signed decryption permit authorizes the transport public key in its payload. The SDK creates and stores the corresponding private key. Keeping the wallet private key outside the daemon does not remove the daemon's access to decryption credentials or plaintext.
