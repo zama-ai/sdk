@@ -7,20 +7,34 @@ export type TelemetryLayer = "core" | "react";
 
 export type TelemetryRuntime = "browser" | "node";
 
-/** Decoupled from method names so that dashboards keyed on these values survive renames. */
+/** Values are frozen once shipped, so that dashboards keyed on them survive method renames. */
 export type TelemetryOperation =
-  | "unshield"
+  | "balance-of"
+  | "decrypt-balance-as"
+  | "batch-balances-of"
+  | "batch-decrypt-balances-as"
   | "confidential-transfer"
-  | "decrypt-balance"
+  | "confidential-transfer-from"
+  | "confidential-transfer-and-call"
+  | "confidential-transfer-from-and-call"
+  | "unshield"
+  | "unshield-all"
+  | "resume-unshield"
+  | "unwrap"
+  | "finalize-unwrap"
   | "vault-deposit"
   | "vault-redeem"
   | "vault-join"
-  | "vault-balance"
+  | "vault-deposit-of"
   | "encrypt"
-  | "user-decrypt"
-  | "delegated-user-decrypt"
-  | "public-decrypt"
-  | "offline-prepare";
+  | "decrypt-values"
+  | "delegated-decrypt-values"
+  | "delegated-batch-decrypt-values"
+  | "decrypt-public-values"
+  | "offline-confidential-transfer"
+  | "offline-confidential-transfer-from"
+  | "offline-unwrap"
+  | "offline-finalize-unwrap";
 
 /**
  * Shared by every relayer of a config. `layer` flips to `react` once
@@ -47,6 +61,14 @@ export function telemetryHeaders(
     "x-zama-sdk-runtime": telemetry.runtime,
     ...(operation !== undefined && { "x-zama-sdk-operation": operation }),
   };
+}
+
+/** `options` labelled with `operation`, unless the caller already labelled it. */
+export function withOperation<T extends { readonly operation?: TelemetryOperation }>(
+  options: T | undefined,
+  operation: TelemetryOperation,
+): Partial<T> & { readonly operation: TelemetryOperation } {
+  return Object.assign({}, options, { operation: options?.operation ?? operation });
 }
 
 export function isTelemetryDisabledByEnv(env: Record<string, string | undefined>): boolean {

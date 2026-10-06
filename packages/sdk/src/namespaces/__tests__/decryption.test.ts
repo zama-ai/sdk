@@ -37,7 +37,9 @@ describe("Decryption", () => {
       });
 
       expect(relayer.decryptValues).toHaveBeenCalledWith(
-        expect.objectContaining({ options: { timeout: 1234, signal, operation: "user-decrypt" } }),
+        expect.objectContaining({
+          options: { timeout: 1234, signal, operation: "decrypt-values" },
+        }),
       );
     });
   });
@@ -67,7 +69,20 @@ describe("Decryption", () => {
       );
 
       expect(relayer.decryptValues).toHaveBeenCalledWith(
-        expect.objectContaining({ options: { operation: "delegated-user-decrypt" } }),
+        expect.objectContaining({ options: { operation: "delegated-decrypt-values" } }),
+      );
+    });
+
+    test("labels the batch variant separately", async ({ sdk, provider, relayer, handle }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+
+      await sdk.decryption.delegatedBatchDecryptValues({
+        encryptedInputs: [{ encryptedValue: handle, contractAddress: TOKEN }],
+        delegatorAddress: DELEGATOR,
+      });
+
+      expect(relayer.decryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({ options: { operation: "delegated-batch-decrypt-values" } }),
       );
     });
   });
@@ -79,7 +94,7 @@ describe("Decryption", () => {
 
       expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
         encryptedValues: [handle],
-        options: { operation: "public-decrypt" },
+        options: { operation: "decrypt-public-values" },
       });
       expect(result.clearValues[handle]).toBe(500n);
     });
@@ -96,7 +111,7 @@ describe("Decryption", () => {
 
       expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
         encryptedValues: [handle],
-        options: { timeout: 1234, signal, operation: "public-decrypt" },
+        options: { timeout: 1234, signal, operation: "decrypt-public-values" },
       });
     });
 

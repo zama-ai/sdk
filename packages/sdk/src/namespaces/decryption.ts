@@ -16,6 +16,7 @@ import type {
 import type { GenericProvider, GenericSigner } from "../types";
 import { requireAlignedWalletAccount } from "../utils/alignment";
 import { assertNonNullable } from "../utils";
+import { withOperation } from "../telemetry";
 
 /**
  * Public namespace for FHE decryption — the canonical way to decrypt.
@@ -95,10 +96,11 @@ export class Decryption {
       this.#signer,
       this.#provider,
     );
-    return service.decryptValues(encryptedInput, account.address, {
-      ...options,
-      operation: options?.operation ?? "user-decrypt",
-    });
+    return service.decryptValues(
+      encryptedInput,
+      account.address,
+      withOperation(options, "decrypt-values"),
+    );
   }
 
   /**
@@ -145,7 +147,7 @@ export class Decryption {
       delegatorAddress,
       account.address,
       accountAddress,
-      { ...options, operation: options?.operation ?? "delegated-user-decrypt" },
+      withOperation(options, "delegated-decrypt-values"),
     );
   }
 
@@ -174,10 +176,7 @@ export class Decryption {
       return { clearValues: {}, decryptionProof: "0x", abiEncodedClearValues: "0x" };
     }
 
-    const requestOptions: RelayerRequestOptions = {
-      ...options,
-      operation: options?.operation ?? "public-decrypt",
-    };
+    const requestOptions: RelayerRequestOptions = withOperation(options, "decrypt-public-values");
     try {
       const result = await this.#router.relayer.decryptPublicValuesWithSignatures({
         encryptedValues,
@@ -261,7 +260,7 @@ export class Decryption {
       accountAddress,
       maxConcurrency,
       waitForPropagation,
-      operation: operation ?? "delegated-user-decrypt",
+      operation: operation ?? "delegated-batch-decrypt-values",
     });
   }
 }

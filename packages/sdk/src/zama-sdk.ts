@@ -33,7 +33,7 @@ import type {
 } from "./types";
 import { parseSchema } from "./validation";
 import { WrappersRegistry } from "./wrappers-registry";
-import type { TelemetryLayer } from "./telemetry";
+import { type TelemetryLayer, withOperation } from "./telemetry";
 
 /** Instance-level options that are deliberately not part of the shareable config object. */
 export interface ZamaSDKOptions {
@@ -341,10 +341,7 @@ export class ZamaSDK {
    * ```
    */
   async encrypt(params: EncryptParams, options?: RelayerRequestOptions): Promise<EncryptResult> {
-    return this.#encryptionService.encryptValues(params, {
-      ...options,
-      operation: options?.operation ?? "encrypt",
-    });
+    return this.#encryptionService.encryptValues(params, withOperation(options, "encrypt"));
   }
 
   /**

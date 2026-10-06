@@ -41,7 +41,9 @@ describe("Token", () => {
       expect(balance).toBe(1000n);
       expect(relayer.generateTransportKeyPair).toHaveBeenCalled();
       expect(signer.signTypedData).toHaveBeenCalled();
-      expect(relayer.decryptValues).toHaveBeenCalled();
+      expect(relayer.decryptValues).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ options: { operation: "balance-of" } }),
+      );
     });
 
     test("passes the caller-supplied owner address to the contract read", async ({
@@ -210,7 +212,7 @@ describe("Token", () => {
         values: [{ value: 200n, type: "euint64" }],
         contractAddress: tokenAddress,
         userAddress,
-        options: { operation: "confidential-transfer" },
+        options: { operation: "confidential-transfer-from" },
       });
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "confidentialTransferFrom" }),
@@ -255,7 +257,7 @@ describe("Token", () => {
         values: [{ value: 100n, type: "euint64" }],
         contractAddress: tokenAddress,
         userAddress,
-        options: { operation: "confidential-transfer" },
+        options: { operation: "confidential-transfer-and-call" },
       });
       // Pin the full ordered args so a wrong-order regression fails here, not only in contracts.test.ts.
       expect(signer.writeContract).toHaveBeenCalledWith(
@@ -334,7 +336,7 @@ describe("Token", () => {
         values: [{ value: 200n, type: "euint64" }],
         contractAddress: tokenAddress,
         userAddress,
-        options: { operation: "confidential-transfer" },
+        options: { operation: "confidential-transfer-from-and-call" },
       });
       // Pin the full ordered args so a wrong-order regression fails here, not only in contracts.test.ts.
       expect(signer.writeContract).toHaveBeenCalledWith(
@@ -515,8 +517,25 @@ describe("Token", () => {
       });
     });
 
-    test("wraps non-ZamaError from balanceOf as BALANCE_CHECK_UNAVAILABLE", async ({ token }) => {
-      vi.spyOn(token, "balanceOf").mockRejectedValueOnce(new Error("unexpected crash"));
+    test("labels the balance pre-flight with the transfer operation", async ({
+      relayer,
+      token,
+      handle,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
+
+      await token.confidentialTransfer(RECIPIENT, 100n);
+
+      expect(relayer.decryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({ options: { operation: "confidential-transfer" } }),
+      );
+    });
+
+    test("wraps a non-ZamaError from the balance read as BALANCE_CHECK_UNAVAILABLE", async ({
+      token,
+    }) => {
+      vi.spyOn(token, "decryptBalance").mockRejectedValueOnce(new Error("unexpected crash"));
 
       await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
         code: ZamaErrorCode.BalanceCheckUnavailable,
@@ -595,7 +614,9 @@ describe("Token", () => {
       const balance = await token.decryptBalanceAs({ delegatorAddress: DELEGATOR });
 
       expect(balance).toBe(1234n);
-      expect(relayer.decryptValues).toHaveBeenCalledOnce();
+      expect(relayer.decryptValues).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ options: { operation: "decrypt-balance-as" } }),
+      );
     });
 
     test("throws DecryptionFailedError when relayer returns no value for handle", async ({

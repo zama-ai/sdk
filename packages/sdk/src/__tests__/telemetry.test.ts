@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { isTelemetryDisabledByEnv, telemetryHeaders, type TelemetryState } from "../telemetry";
+import type { RelayerRequestOptions } from "../relayer/types";
+import {
+  isTelemetryDisabledByEnv,
+  telemetryHeaders,
+  type TelemetryState,
+  withOperation,
+} from "../telemetry";
 import { SDK_VERSION } from "../version";
 
 describe("telemetryHeaders", () => {
@@ -31,4 +37,21 @@ describe("isTelemetryDisabledByEnv", () => {
       expect(isTelemetryDisabledByEnv({ ZAMA_SDK_TELEMETRY: value })).toBe(false);
     },
   );
+});
+
+describe("withOperation", () => {
+  test("applies the default label and keeps the other options", () => {
+    const options: RelayerRequestOptions = { timeout: 5 };
+    expect(withOperation(options, "decrypt-values")).toEqual({
+      timeout: 5,
+      operation: "decrypt-values",
+    });
+    expect(withOperation(undefined, "decrypt-values")).toEqual({ operation: "decrypt-values" });
+  });
+
+  test("keeps a label the caller already set", () => {
+    expect(withOperation({ operation: "balance-of" }, "decrypt-values")).toEqual({
+      operation: "balance-of",
+    });
+  });
 });

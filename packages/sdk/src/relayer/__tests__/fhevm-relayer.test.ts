@@ -707,15 +707,10 @@ describe("FhevmRelayer usage telemetry", () => {
 
   test("stamps the x-zama-sdk-* headers and consumes the operation label", async () => {
     const relayer = makeRelayer({ chain: hostedChain, telemetry: telemetry() });
-    await relayer.decryptValues({
-      options: { timeout: 42, operation: "decrypt-balance" },
-    } as never);
+    await relayer.decryptValues({ options: { timeout: 42, operation: "balance-of" } } as never);
 
     expect(clients.decryptClient.decryptValues).toHaveBeenCalledWith({
-      options: {
-        timeout: 42,
-        headers: { ...staticHeaders, "x-zama-sdk-operation": "decrypt-balance" },
-      },
+      options: { timeout: 42, headers: { ...staticHeaders, "x-zama-sdk-operation": "balance-of" } },
     });
   });
 
@@ -785,9 +780,7 @@ describe("FhevmRelayer usage telemetry", () => {
 
   test("sends no headers and drops the label when telemetry is off", async () => {
     const relayer = makeRelayer({ chain: hostedChain });
-    await relayer.decryptValues({
-      options: { timeout: 42, operation: "decrypt-balance" },
-    } as never);
+    await relayer.decryptValues({ options: { timeout: 42, operation: "balance-of" } } as never);
 
     expect(clients.decryptClient.decryptValues).toHaveBeenCalledWith({ options: { timeout: 42 } });
   });

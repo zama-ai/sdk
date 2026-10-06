@@ -91,11 +91,14 @@ describe("ZamaSDK", () => {
       userAddress: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address,
     };
 
-    test("returns encrypted values", async ({ sdk, handle, inputProof }) => {
+    test("returns encrypted values", async ({ sdk, relayer, handle, inputProof }) => {
       const result = await sdk.encrypt(ENCRYPT_PARAMS);
 
       expect(result.encryptedValues).toEqual([handle]);
       expect(result.inputProof).toBe(inputProof);
+      expect(relayer.encryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({ options: { operation: "encrypt" } }),
+      );
     });
 
     test("works without a signer", async ({ createSDK, handle, inputProof }) => {

@@ -1,4 +1,5 @@
 import type { Address } from "viem";
+import type { RelayerRequestOptions } from "../relayer/types";
 import type { ChainRouter } from "../chains/router";
 import {
   approveContract,
@@ -60,9 +61,6 @@ import type {
 import { assertBigint } from "../utils/assertions";
 import { parseSchema } from "../validation";
 import type { EncryptionService } from "./encryption-service";
-import type { RelayerRequestOptions } from "../relayer/types";
-
-const OFFLINE_PREPARE: RelayerRequestOptions = { operation: "offline-prepare" };
 
 /**
  * Configuration for {@link OfflineService}.
@@ -201,7 +199,7 @@ export class OfflineService {
         contractAddress: request.token,
         userAddress: request.from,
       },
-      OFFLINE_PREPARE,
+      { operation: "offline-confidential-transfer" },
     );
     const handle = encryptedValues[0];
     if (!handle) {
@@ -223,7 +221,7 @@ export class OfflineService {
         contractAddress: request.token,
         userAddress: request.from,
       },
-      OFFLINE_PREPARE,
+      { operation: "offline-confidential-transfer-from" },
     );
     const handle = encryptedValues[0];
     if (!handle) {
@@ -253,7 +251,7 @@ export class OfflineService {
         contractAddress: request.token,
         userAddress: request.from,
       },
-      OFFLINE_PREPARE,
+      { operation: "offline-unwrap" },
     );
     const handle = encryptedValues[0];
     if (!handle) {
@@ -276,10 +274,11 @@ export class OfflineService {
     request: FinalizeUnwrapRequest,
   ): Promise<ReturnType<typeof finalizeUnwrapContract>> {
     request = parseSchema(finalizeUnwrapRequest, request);
+    const options: RelayerRequestOptions = { operation: "offline-finalize-unwrap" };
     const decrypted = await this.#router.relayer
       .decryptPublicValuesWithSignatures({
         encryptedValues: [request.unwrapRequestIdOrAmount],
-        options: OFFLINE_PREPARE,
+        options,
       })
       .catch((error: unknown) => {
         throw wrapDecryptError(error, "Public decryption failed during FinalizeUnwrap");

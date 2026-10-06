@@ -2196,7 +2196,7 @@ See [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/s
 
 ## SDK usage telemetry headers
 
-Relayer requests now carry four `x-zama-sdk-*` headers: the SDK version, the package driving it (`core` or `react`), the runtime (`browser` or `node`), and the high-level operation the request belongs to (`confidential-transfer`, `unshield`, `decrypt-balance`, …). They label traffic the relayer already receives so the SDK team can see version adoption and per-operation error rates; no end-user data is ever included, and a self-hosted relayer simply ignores them. Telemetry is on by default and `createConfig({ telemetry: false })` turns it off; on Node.js, `ZAMA_SDK_TELEMETRY=0` does the same for a whole process. See [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md).
+Relayer requests now carry four `x-zama-sdk-*` headers: the SDK version, the package driving it (`core` or `react`), the runtime (`browser` or `node`), and the public SDK method the request belongs to (`confidential-transfer`, `unshield`, `balance-of`, …). They label traffic the relayer already receives so the SDK team can see version adoption and per-operation error rates; no end-user data is ever included, and a self-hosted relayer simply ignores them. Telemetry is on by default and `createConfig({ telemetry: false })` turns it off; on Node.js, `ZAMA_SDK_TELEMETRY=0` does the same for a whole process. See [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md).
 
 ## 3.x
 
@@ -3859,12 +3859,12 @@ Telemetry is on by default. You can turn it off with one config flag.
 
 ## What is sent
 
-| Header                 | Example value           | Meaning                                                                                        |
-| ---------------------- | ----------------------- | ---------------------------------------------------------------------------------------------- |
-| `x-zama-sdk-version`   | `3.7.0`                 | The `@zama-fhe/sdk` version (`@zama-fhe/react-sdk` ships the same version).                    |
-| `x-zama-sdk-layer`     | `core` / `react`        | `react` when the SDK is driven by `ZamaProvider`, `core` otherwise.                            |
-| `x-zama-sdk-runtime`   | `browser` / `node`      | `browser` for the `web()` transport, `node` for `node()`.                                      |
-| `x-zama-sdk-operation` | `confidential-transfer` | The high-level SDK operation the request belongs to (see below). Omitted on the FHE key fetch. |
+| Header                 | Example value           | Meaning                                                                                 |
+| ---------------------- | ----------------------- | --------------------------------------------------------------------------------------- |
+| `x-zama-sdk-version`   | `3.7.0`                 | The `@zama-fhe/sdk` version (`@zama-fhe/react-sdk` ships the same version).             |
+| `x-zama-sdk-layer`     | `core` / `react`        | `react` when the SDK is driven by `ZamaProvider`, `core` otherwise.                     |
+| `x-zama-sdk-runtime`   | `browser` / `node`      | `browser` for the `web()` transport, `node` for `node()`.                               |
+| `x-zama-sdk-operation` | `confidential-transfer` | The public SDK method the request belongs to (see below). Omitted on the FHE key fetch. |
 
 The headers ride on the requests the SDK makes anyway: input-proof generation (`encrypt`), user and public decryption, and the FHE key fetch. They add no extra requests.
 
@@ -3872,24 +3872,40 @@ The headers ride on the requests the SDK makes anyway: input-proof generation (`
 
 ### Operation values
 
-| `x-zama-sdk-operation`   | Sent by                                                                              |
-| ------------------------ | ------------------------------------------------------------------------------------ |
-| `confidential-transfer`  | `Token.confidentialTransfer` and its `From` / `AndCall` variants                     |
-| `unshield`               | `WrappedToken.unshield`, `unshieldAll`, `resumeUnshield`, `unwrap`, `finalizeUnwrap` |
-| `decrypt-balance`        | `Token.balanceOf`, `decryptBalanceAs`, `batchBalancesOf`, `batchDecryptBalancesAs`   |
-| `vault-deposit`          | `Vault.deposit`                                                                      |
-| `vault-redeem`           | `Vault.redeem`                                                                       |
-| `vault-join`             | `VaultBatcher.join`                                                                  |
-| `vault-balance`          | `VaultBatcher.depositOf`                                                             |
-| `encrypt`                | `sdk.encrypt` / `useEncrypt`                                                         |
-| `user-decrypt`           | `sdk.decryption.decryptValues` / `useDecryptValues`                                  |
-| `delegated-user-decrypt` | `sdk.decryption.delegatedDecryptValues` / `delegatedBatchDecryptValues`              |
-| `public-decrypt`         | `sdk.decryption.decryptPublicValues` / `useDecryptPublicValues`                      |
-| `offline-prepare`        | `sdk.offline.prepare` (only kinds that encrypt or decrypt)                           |
+Each public method that reaches the relayer sends its own value. When a method makes several relayer requests, such as the balance check, encryption and decryption of an unshield, all of them carry that method's value. React hooks send the value of the method they call.
+
+| `x-zama-sdk-operation`                | Sent by                                                    |
+| ------------------------------------- | ---------------------------------------------------------- |
+| `balance-of`                          | `Token.balanceOf`                                          |
+| `decrypt-balance-as`                  | `Token.decryptBalanceAs`                                   |
+| `batch-balances-of`                   | `Token.batchBalancesOf`                                    |
+| `batch-decrypt-balances-as`           | `Token.batchDecryptBalancesAs`                             |
+| `confidential-transfer`               | `Token.confidentialTransfer`                               |
+| `confidential-transfer-from`          | `Token.confidentialTransferFrom`                           |
+| `confidential-transfer-and-call`      | `Token.confidentialTransferAndCall`                        |
+| `confidential-transfer-from-and-call` | `Token.confidentialTransferFromAndCall`                    |
+| `unshield`                            | `WrappedToken.unshield`                                    |
+| `unshield-all`                        | `WrappedToken.unshieldAll`                                 |
+| `resume-unshield`                     | `WrappedToken.resumeUnshield`                              |
+| `unwrap`                              | `WrappedToken.unwrap`                                      |
+| `finalize-unwrap`                     | `WrappedToken.finalizeUnwrap`                              |
+| `vault-deposit`                       | `Vault.deposit`                                            |
+| `vault-redeem`                        | `Vault.redeem`                                             |
+| `vault-join`                          | `VaultBatcher.join`                                        |
+| `vault-deposit-of`                    | `VaultBatcher.depositOf`                                   |
+| `encrypt`                             | `sdk.encrypt`                                              |
+| `decrypt-values`                      | `sdk.decryption.decryptValues`                             |
+| `delegated-decrypt-values`            | `sdk.decryption.delegatedDecryptValues`                    |
+| `delegated-batch-decrypt-values`      | `sdk.decryption.delegatedBatchDecryptValues`               |
+| `decrypt-public-values`               | `sdk.decryption.decryptPublicValues`                       |
+| `offline-confidential-transfer`       | `sdk.offline.prepare` with kind `ConfidentialTransfer`     |
+| `offline-confidential-transfer-from`  | `sdk.offline.prepare` with kind `ConfidentialTransferFrom` |
+| `offline-unwrap`                      | `sdk.offline.prepare` with kind `Unwrap`                   |
+| `offline-finalize-unwrap`             | `sdk.offline.prepare` with kind `FinalizeUnwrap`           |
+
+The other `prepare` kinds, `sdk.offline.preparePermit` and `batchPreparePermits` never call the relayer, so they produce no telemetry. Neither does `WrappedToken.unwrapAll`.
 
 Calls made directly on `sdk.relayer` carry the version, layer and runtime headers but no operation.
-
-Of the `prepare` kinds, only `ConfidentialTransfer`, `ConfidentialTransferFrom`, `Unwrap` and `FinalizeUnwrap` reach the relayer. The other kinds, and `sdk.offline.preparePermit` / `batchPreparePermits`, never call it, so they produce no telemetry.
 
 Shielding (`WrappedToken.shield`) never calls the relayer, so it produces no telemetry at all.
 
