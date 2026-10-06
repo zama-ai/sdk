@@ -13,22 +13,33 @@ Run a supervisor next to each SDK context. Stop it during normal shutdown so tha
 {% tabs %}
 {% tab title="Go" %}
 
-Wait for the channel to close, then reattach it. `SignerChannel`, `StorageChannel`, and `EventChannel` select the channel; reattach them with `AttachWallet`, `AttachStorage`, or `SubscribeEvents`.
+Supervise each channel you attached and reattach only that channel with `AttachWallet`, `AttachStorage`, or `SubscribeEvents`.
 
 ```go
-go func() {
-	for {
-		err := sdk.WaitChannelFailure(ctx, zama.SignerChannel)
-		if ctx.Err() != nil {
-			return // normal shutdown
+// Watch only the channels you attached: waiting on any other returns an error at once.
+reattach := map[zama.ChannelKind]func(context.Context) error{
+	zama.SignerChannel:  func(ctx context.Context) error { return sdk.AttachWallet(ctx, signer) },
+	zama.StorageChannel: sdk.AttachStorage,
+	zama.EventChannel: func(ctx context.Context) error {
+		_, err := sdk.SubscribeEvents(ctx, handlers)
+		return err
+	},
+}
+for kind, attach := range reattach {
+	go func() {
+		for {
+			err := sdk.WaitChannelFailure(ctx, kind)
+			if ctx.Err() != nil {
+				return // normal shutdown
+			}
+			log.Printf("%s channel closed: %v", kind, err)
+			if err := attach(ctx); err != nil {
+				log.Printf("reattach %s channel: %v", kind, err) // the daemon restarted: create a new context
+				return
+			}
 		}
-		log.Printf("signer channel closed: %v", err)
-		if err := sdk.AttachWallet(ctx, signer); err != nil {
-			log.Printf("reattach wallet: %v", err) // the daemon restarted: create a new context
-			return
-		}
-	}
-}()
+	}()
+}
 ```
 
 {% endtab %}
@@ -39,20 +50,35 @@ The Rust client does not reattach channels. Close the SDK context and build a re
 ```rust
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use zama_sdk::{ApplicationStorage, CallbackChannel, CancellationToken, Client, Sdk, SdkConfig};
+use zama_sdk::{
+    ApplicationStorage, CallbackChannel, CancellationToken, Client, EventHandler, Sdk, SdkConfig,
+    Signer, WalletAccount,
+};
 
 // Rebuild with the same configuration, signer, event handler, and storage binding.
-async fn build_sdk(
+async fn build_sdk<H: EventHandler + Clone + 'static>(
     client: &Client,
     config: SdkConfig,
+    account: WalletAccount,
+    signer: Arc<dyn Signer>,
+    events: H,
     storage: ApplicationStorage,
 ) -> zama_sdk::Result<Sdk> {
-    client.sdk(config).storage(storage).build().await
+    client
+        .sdk(config)
+        .signer(Some(account), signer)
+        .events(events)
+        .storage(storage)
+        .build()
+        .await
 }
 
-pub async fn supervise(
+pub async fn supervise<H: EventHandler + Clone + 'static>(
     client: Client,
     config: SdkConfig,
+    account: WalletAccount,
+    signer: Arc<dyn Signer>,
+    events: H,
     storage: ApplicationStorage,
     current: Arc<RwLock<Sdk>>,
     shutdown: CancellationToken,
@@ -60,14 +86,25 @@ pub async fn supervise(
     tokio::spawn(async move {
         loop {
             let sdk = current.read().await.clone();
-            tokio::select! {
+            // Watch only the channels you attach: waiting on any other returns an error at once.
+            let (channel, closed) = tokio::select! {
                 _ = shutdown.cancelled() => return,
-                closed = sdk.wait_channel_closed(CallbackChannel::Storage) => {
-                    eprintln!("storage channel closed: {closed:?}");
-                }
-            }
+                closed = sdk.wait_channel_closed(CallbackChannel::Signer) => ("signer", closed),
+                closed = sdk.wait_channel_closed(CallbackChannel::Storage) => ("storage", closed),
+                closed = sdk.wait_channel_closed(CallbackChannel::Events) => ("events", closed),
+            };
+            eprintln!("{channel} channel closed: {closed:?}");
             let _ = sdk.close().await;
-            match build_sdk(&client, config.clone(), storage.clone()).await {
+            let replacement = build_sdk(
+                &client,
+                config.clone(),
+                account,
+                signer.clone(),
+                events.clone(),
+                storage.clone(),
+            )
+            .await;
+            match replacement {
                 Ok(replacement) => *current.write().await = replacement,
                 Err(error) => {
                     eprintln!("rebuild SDK context: {error}");

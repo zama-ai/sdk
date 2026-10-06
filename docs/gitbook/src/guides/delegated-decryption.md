@@ -595,7 +595,7 @@ if errors.As(err, &sdkErr) {
 _, err = sdk.DelegatedDecryptValues(ctx, inputs, delegator, zama.DelegatedDecryptOptions{})
 if errors.As(err, &sdkErr) {
 	switch sdkErr.Code {
-	case "SIGNING_REJECTED":
+	case zama.CodeSigningRejected:
 		// user cancelled the wallet prompt: do not retry automatically
 	case "DELEGATION_NOT_PROPAGATED":
 		// delegation still hadn't synced after the SDK's internal retry: rare, retry shortly

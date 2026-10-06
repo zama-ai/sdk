@@ -111,7 +111,7 @@ var sdkErr *zama.SDKError
 switch {
 case err == nil:
 	// Decrypted
-case errors.As(err, &sdkErr) && sdkErr.Code == "SIGNING_REJECTED":
+case errors.As(err, &sdkErr) && sdkErr.Code == zama.CodeSigningRejected:
 	// User clicked "Reject" in their wallet
 case errors.As(err, &sdkErr) && sdkErr.Code == "DECRYPTION_FAILED":
 	// FHE decryption failed
@@ -378,7 +378,7 @@ func decryptWithRetry(ctx context.Context, fn func(context.Context) (*big.Int, e
 }
 ```
 
-Never repeat a write on `Retryable` alone: a `TRANSACTION_OUTCOME_UNKNOWN` code, a deadline, or an error with no SDK code means it might have been submitted. [Resolve the outcome](../native/guides/uncertain-transaction-outcomes.md) first.
+Never repeat a write on `Retryable` alone: when `zama.IsOutcomeUnknown(err)` is true, it might have been submitted. [Resolve the outcome](../native/guides/uncertain-transaction-outcomes.md) first.
 
 {% endtab %}
 {% tab title="Rust" %}

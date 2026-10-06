@@ -111,7 +111,7 @@ if err != nil {
 {% tab title="Rust" %}
 
 ```rust
-use zama_sdk::{PrepareTransaction, Transaction};
+use zama_sdk::{PrepareTransaction, Transaction, U256};
 
 let prepared = sdk
     .offline()
@@ -121,7 +121,7 @@ let prepared = sdk
             transaction: Transaction::ConfidentialTransfer {
                 token: confidential_token,
                 to: recipient,
-                amount: 1000.into(),
+                amount: U256::from(1000),
             },
         },
         None,
@@ -155,9 +155,10 @@ await sdk.offline.prepare(request, {
 
 ```go
 nonce := uint64(12)
+gasLimit := uint64(1_000_000)
 prepared, err := sdk.PrepareTransaction(ctx, request, &zama.PrepareOptions{
 	Nonce:    &nonce,
-	GasLimit: big.NewInt(1_000_000),
+	GasLimit: &gasLimit,
 	Fees: &zama.PrepareFees{
 		MaxFeePerGas:         big.NewInt(60_000_000_000),
 		MaxPriorityFeePerGas: big.NewInt(1_000_000_000),
@@ -169,7 +170,7 @@ prepared, err := sdk.PrepareTransaction(ctx, request, &zama.PrepareOptions{
 {% tab title="Rust" %}
 
 ```rust
-use zama_sdk::{PrepareFees, PrepareOptions};
+use zama_sdk::{PrepareFees, PrepareOptions, U256};
 
 let prepared = sdk
     .offline()
@@ -177,10 +178,10 @@ let prepared = sdk
         request,
         Some(PrepareOptions {
             nonce: Some(12),
-            gas_limit: Some(1_000_000.into()),
+            gas_limit: Some(1_000_000),
             fees: Some(PrepareFees {
-                max_fee_per_gas: 60_000_000_000u64.into(),
-                max_priority_fee_per_gas: 1_000_000_000.into(),
+                max_fee_per_gas: U256::from(60_000_000_000u64),
+                max_priority_fee_per_gas: U256::from(1_000_000_000u64),
             }),
         }),
     )
