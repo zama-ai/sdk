@@ -73,6 +73,6 @@ Pass the handler to the builder with `client.sdk(config).events(Diagnostics).bui
 
 Return promptly from event callbacks. If your log sink fails, return an error: the SDK operation continues. A Go callback panic is reported as `CALLBACK_FAILED`; a Rust callback panic ends the subscription.
 
-The daemon holds at most 256 unacknowledged events per subscription, and a subscriber that falls further behind loses its event channel. Do not use events as a durable audit log or as the only record of a transaction outcome.
+The daemon holds at most 256 unacknowledged events per subscription. A subscriber that falls further behind loses its event channel with `EVENT_BACKPRESSURE`. Do not use events as a durable audit log or as the only record of a transaction outcome.
 
 A replacement subscription receives future events only. Watch for a closed event channel as described in [Recover from disconnections](recover-from-disconnections.md).

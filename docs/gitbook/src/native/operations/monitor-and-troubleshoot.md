@@ -18,7 +18,7 @@ Monitor daemon-backed operations from your Go or Rust application. Record elapse
 
 The daemon does not expose a metrics endpoint or structured request logs. Use application-observed operation latencies and errors as the service-level signals. Use the socket healthcheck as a liveness probe.
 
-In Go, inspect `SDKError` and `RPCError`. In Rust, inspect `ClientError::kind()` and `ClientError::sdk_error()`. Include operation names and error codes in your metrics without including plaintext values, credentials, or signing payloads.
+In Go, inspect `SDKError` and `RPCError`. In Rust, inspect `ClientError::kind()` and `ClientError::sdk_error()`. [Daemon error codes](../reference/error-codes.md) lists the codes the daemon adds to the SDK codes. Include operation names and error codes in your metrics without including plaintext values, credentials, or signing payloads.
 
 ## Daemon exits at startup
 

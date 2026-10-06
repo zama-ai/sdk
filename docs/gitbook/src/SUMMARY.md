@@ -161,6 +161,7 @@
 - [Go client](native/reference/go-client.md)
 - [Rust client](native/reference/rust-client.md)
 - [Daemon configuration](native/reference/daemon-configuration.md)
+- [Daemon error codes](native/reference/error-codes.md)
 - [Client and daemon compatibility](native/reference/client-and-daemon-compatibility.md)
 
 ## Concepts

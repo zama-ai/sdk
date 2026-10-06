@@ -1705,6 +1705,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:native/reference/error-codes",
+      "title": "Daemon error codes",
+      "source_path": "docs/gitbook/src/native/reference/error-codes.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/error-codes.md",
+      "source_type": "official-doc",
+      "category": "reference-native",
+      "logical_path": "native/reference/error-codes",
+      "description": "Error codes the Zama SDK daemon returns to Go and Rust applications, with what each one means and how to respond.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:native/reference/client-and-daemon-compatibility",
       "title": "Client and daemon compatibility",
       "source_path": "docs/gitbook/src/native/reference/client-and-daemon-compatibility.md",
