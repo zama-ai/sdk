@@ -4,9 +4,10 @@
 
 - Daemon-only pages (quickstarts, wallet and storage callbacks, events, recovery, operations, references, concepts) live in `docs/gitbook/src/native/`.
 - Shared tasks live in `docs/gitbook/src/guides/` with Go and Rust tabs next to Core SDK and React SDK. The Configuration guide carries Go and Rust tabs, including the daemon connection.
-- Follow `zama-developer:sdk-documentation` and [conventions](conventions.md), except the TypeScript reference template: the Go and Rust reference comes from godoc and rustdoc.
+- Follow `zama-developer:sdk-documentation` and [conventions](conventions.md), except the TypeScript reference template: the Go and Rust reference comes from godoc and rustdoc. The skill is internal (`zama-ai/zama-marketplace`, installed by `pnpm setup:claude`); without it, `conventions.md` and this file are the rules.
 - Contributor build, code generation, and test instructions belong in `CONTRIBUTING.md`.
-- Daemon release notes follow the [changelog conventions](changelog.md) (`## Daemon` on the Beta page).
+- Daemon release notes are a `Daemon` topic on the Beta page; see [changelog conventions](changelog.md).
+- `proto/README.md` is for contributors and client implementers, so the partner-facing rules below don't apply to it.
 
 ## Availability rules
 
@@ -16,6 +17,7 @@
 - Keep shared prose language-neutral. Pair a TypeScript error class with its code, for example `DelegationExpirationTooSoonError` (`DELEGATION_EXPIRATION_TOO_SOON`).
 - A tab contains code and at most one line on a language-specific difference. Use the same inputs and produce the same result as the Core SDK tab.
 - When `Token` or `WrappedToken` ships in the clients, add tabs to the existing token guides instead of creating native token pages.
+- When the clients gain a new contract write, add its destination and selector to the allowlist in `native/guides/attach-wallet.md`, and new typed-data requests to its validation table.
 
 ## Product facts
 
@@ -27,7 +29,5 @@
 
 ## Banned in partner-facing pages
 
-- Build-log narration and test commands.
 - "Handle" for an encrypted value, except in exact interface identifiers.
-- Hedging disclaimers such as "not exercised on your infrastructure".
 - Wire internals such as "the bridge" or omitted-versus-empty map semantics.

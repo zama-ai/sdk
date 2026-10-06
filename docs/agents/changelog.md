@@ -16,8 +16,6 @@ The repo has **two** changelog surfaces — keep them distinct:
 - **Release datelines are real dates by design.** The no-calendar-dates rule is about forward-looking promises, not the historical record of when a version shipped.
 - **`changelog/README.md` is static, not scaffolded.** It's the section's landing page — explains the three release channels (stable/beta/alpha) and what's covered here — and sits outside the `docs:changelog`/`sdk-changelog` machinery entirely. Edit it by hand; it's never touched by promotion or scaffolding.
 
-Group daemon release notes under `### Daemon` within each SDK version section. The Beta page uses `## Daemon` because it has no version heading; release promotion places that topic under the new version heading and changes it to `### Daemon`.
-
 ## Automation
 
 - **`pnpm docs:changelog`** does the mechanical half — scaffolds missing `## {version}` stubs, new `{minor}.x` pages and their nav entries, and the Beta "raw material" list. Deterministic, idempotent, no-op-safe; it writes stubs, never prose.
