@@ -444,6 +444,40 @@ func TestContractWriteQuantityBounds(t *testing.T) {
 	}
 }
 
+func TestContractWriteRejectsMalformedFields(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		mutate  func(*pb.ContractWriteRequest)
+		message string
+	}{
+		{"short address", func(w *pb.ContractWriteRequest) { w.Address = w.Address[:19] }, "invalid contract write address"},
+		{"short data", func(w *pb.ContractWriteRequest) { w.Data = []byte{1, 2, 3} }, "invalid contract write data"},
+		{"empty function name", func(w *pb.ContractWriteRequest) { w.FunctionName = "" }, "invalid contract write function name"},
+		{"malformed ABI", func(w *pb.ContractWriteRequest) { w.AbiJson = `[{"type"` }, "invalid contract write ABI"},
+		{"object ABI", func(w *pb.ContractWriteRequest) { w.AbiJson = `{"type":"function"}` }, "invalid contract write ABI"},
+		{"null ABI", func(w *pb.ContractWriteRequest) { w.AbiJson = `null` }, "invalid contract write ABI"},
+		{"malformed args", func(w *pb.ContractWriteRequest) { w.ArgsJson = `["1"` }, "invalid contract write args"},
+		{"scalar args", func(w *pb.ContractWriteRequest) { w.ArgsJson = `"1"` }, "invalid contract write args"},
+		{"empty args", func(w *pb.ContractWriteRequest) { w.ArgsJson = `` }, "invalid contract write args"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			wire := transactionWire()
+			test.mutate(wire)
+			if _, err := contractWriteRequest("operation", "action", WalletAccount{}, wire); err == nil || err.Error() != test.message {
+				t.Fatalf("got %v, want %q", err, test.message)
+			}
+		})
+	}
+	if _, err := contractWriteRequest("operation", "action", WalletAccount{}, nil); err == nil || err.Error() != "invalid contract write payload" {
+		t.Fatalf("nil payload misreported: %v", err)
+	}
+	wire := transactionWire()
+	wire.ArgsJson = `[]`
+	if _, err := contractWriteRequest("operation", "action", WalletAccount{}, wire); err != nil {
+		t.Fatalf("empty argument list rejected: %v", err)
+	}
+}
+
 func TestPanickingContractWriteReportsUnknownOutcome(t *testing.T) {
 	server := newSigningServer()
 	server.contractWrite = transactionWire()

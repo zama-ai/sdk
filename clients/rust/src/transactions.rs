@@ -69,18 +69,19 @@ impl ContractWriteRequest {
         account: WalletAccount,
         write: generated::ContractWriteRequest,
     ) -> Result<Self, SdkError> {
-        let invalid = |detail: &str| {
-            SdkError::signing_failed(format!("Invalid contract write request: {detail}"))
-        };
-        let address = crate::types::address(&write.address, "address must contain 20 bytes")
-            .map_err(|error| invalid(&error.to_string()))?;
-        let abi: serde_json::Value =
-            serde_json::from_str(&write.abi_json).map_err(|error| invalid(&error.to_string()))?;
-        let args: serde_json::Value =
-            serde_json::from_str(&write.args_json).map_err(|error| invalid(&error.to_string()))?;
-        if !abi.is_array() || !args.is_array() {
-            return Err(invalid("ABI and args must be arrays"));
+        let invalid = |detail: &str| SdkError::signing_failed(detail);
+        let address = crate::types::address(&write.address, "invalid contract write address")
+            .map_err(|_| invalid("invalid contract write address"))?;
+        if write.data.len() < 4 {
+            return Err(invalid("invalid contract write data"));
         }
+        if write.function_name.is_empty() {
+            return Err(invalid("invalid contract write function name"));
+        }
+        let abi =
+            json_array(&write.abi_json).ok_or_else(|| invalid("invalid contract write ABI"))?;
+        let args =
+            json_array(&write.args_json).ok_or_else(|| invalid("invalid contract write args"))?;
         Ok(Self {
             operation_id,
             action_id,
@@ -90,22 +91,36 @@ impl ContractWriteRequest {
             abi,
             function_name: write.function_name,
             args,
-            value: decimal(write.value, "transaction value must fit uint256").map_err(invalid)?,
-            gas: decimal(write.gas, "transaction gas must fit uint64").map_err(invalid)?,
+            value: decimal(
+                write.value,
+                "invalid canonical transaction value",
+                "transaction value must fit uint256",
+            )
+            .map_err(invalid)?,
+            gas: decimal(
+                write.gas,
+                "invalid canonical transaction gas",
+                "transaction gas must fit uint64",
+            )
+            .map_err(invalid)?,
         })
     }
 }
+fn json_array(json: &str) -> Option<serde_json::Value> {
+    serde_json::from_str::<serde_json::Value>(json)
+        .ok()
+        .filter(serde_json::Value::is_array)
+}
 fn decimal<T: std::str::FromStr>(
     value: Option<String>,
+    noncanonical: &'static str,
     overflow: &'static str,
 ) -> Result<Option<T>, &'static str> {
     value
         .map(|value| {
-            if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
-                return Err("invalid transaction integer");
-            }
-            if value.len() > 1 && value.starts_with('0') {
-                return Err("noncanonical transaction integer");
+            let digits = !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit());
+            if !digits || (value.len() > 1 && value.starts_with('0')) {
+                return Err(noncanonical);
             }
             value.parse().map_err(|_| overflow)
         })

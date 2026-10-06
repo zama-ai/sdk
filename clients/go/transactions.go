@@ -107,12 +107,22 @@ func (e *ExecutionRevertError) Error() string {
 func (e *ExecutionRevertError) Unwrap() error { return e.Cause }
 
 func contractWriteRequest(operationID, actionID string, account WalletAccount, wire *pb.ContractWriteRequest) (ContractWriteRequest, error) {
-	if wire == nil || len(wire.Data) < 4 || wire.FunctionName == "" || !json.Valid([]byte(wire.AbiJson)) || !json.Valid([]byte(wire.ArgsJson)) {
+	if wire == nil {
 		return ContractWriteRequest{}, errors.New("invalid contract write payload")
 	}
-	address, err := addressFromWire(wire.Address, "invalid contract write payload")
+	address, err := addressFromWire(wire.Address, "invalid contract write address")
 	if err != nil {
 		return ContractWriteRequest{}, err
+	}
+	switch {
+	case len(wire.Data) < 4:
+		return ContractWriteRequest{}, errors.New("invalid contract write data")
+	case wire.FunctionName == "":
+		return ContractWriteRequest{}, errors.New("invalid contract write function name")
+	case !isJSONArray(wire.AbiJson):
+		return ContractWriteRequest{}, errors.New("invalid contract write ABI")
+	case !isJSONArray(wire.ArgsJson):
+		return ContractWriteRequest{}, errors.New("invalid contract write args")
 	}
 	value, err := optionalTransactionInteger("value", wire.Value, 256)
 	if err != nil {
@@ -133,6 +143,11 @@ func contractWriteRequest(operationID, actionID string, account WalletAccount, w
 		ABI: json.RawMessage(wire.AbiJson), FunctionName: wire.FunctionName, Args: json.RawMessage(wire.ArgsJson),
 		Value: value, Gas: gas,
 	}, nil
+}
+
+func isJSONArray(encoded string) bool {
+	var values []json.RawMessage
+	return json.Unmarshal([]byte(encoded), &values) == nil && values != nil
 }
 
 func optionalTransactionInteger(name string, encoded *string, bits int) (*big.Int, error) {
