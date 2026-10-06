@@ -10139,7 +10139,9 @@ If a write ends without a clear result, follow [Resolve uncertain transaction ou
 
 # Store credentials
 
-Keep decryption credentials in your application's database instead of daemon memory or daemon SQLite. Choose between the three backends in [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md#6-optional-choose-a-storage-backend).
+Most single-instance deployments keep credentials in daemon SQLite on a persistent volume: select it in [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md#6-optional-choose-a-storage-backend) and mount the volume as shown in [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md). Implement your own backend when application replicas must share credentials, or when you want them in an existing database.
+
+This page shows how to keep decryption credentials in your application's database.
 
 Your application stores opaque bytes under string keys. It never decodes the credentials. The daemon still reads and uses them, so treat the database and its backups as sensitive; see the [daemon trust model](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/concepts/trust-boundary.md).
 
@@ -26455,7 +26457,7 @@ Each pair serves one trust domain. SDK contexts separate configuration and lifec
 
 ## Storage and replicas
 
-Daemon memory storage ends when its SDK context closes or the daemon exits. Named daemon SQLite storage survives restart. Application-owned storage has the lifetime of your chosen backend.
+Daemon memory storage lives inside the daemon process, so it ends when its SDK context closes or the daemon exits; a volume cannot keep it. Named daemon SQLite storage is a file in the daemon's storage directory, so it survives restart when that directory is a persistent volume. Application-owned storage has the lifetime of your chosen backend.
 
 Use a private SQLite volume for each daemon. Each named database has an exclusive daemon lock; two daemons must not share a credential volume.
 

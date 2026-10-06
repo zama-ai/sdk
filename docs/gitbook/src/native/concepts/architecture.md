@@ -34,7 +34,7 @@ Each pair serves one trust domain. SDK contexts separate configuration and lifec
 
 ## Storage and replicas
 
-Daemon memory storage ends when its SDK context closes or the daemon exits. Named daemon SQLite storage survives restart. Application-owned storage has the lifetime of your chosen backend.
+Daemon memory storage lives inside the daemon process, so it ends when its SDK context closes or the daemon exits; a volume cannot keep it. Named daemon SQLite storage is a file in the daemon's storage directory, so it survives restart when that directory is a persistent volume. Application-owned storage has the lifetime of your chosen backend.
 
 Use a private SQLite volume for each daemon. Each named database has an exclusive daemon lock; two daemons must not share a credential volume.
 

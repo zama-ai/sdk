@@ -4,7 +4,9 @@ description: Keep Go and Rust decryption credentials in your own database and sh
 
 # Store credentials
 
-Keep decryption credentials in your application's database instead of daemon memory or daemon SQLite. Choose between the three backends in [Configuration](../../guides/configuration.md#6-optional-choose-a-storage-backend).
+Most single-instance deployments keep credentials in daemon SQLite on a persistent volume: select it in [Configuration](../../guides/configuration.md#6-optional-choose-a-storage-backend) and mount the volume as shown in [Deploy in production](../operations/run-in-production.md). Implement your own backend when application replicas must share credentials, or when you want them in an existing database.
+
+This page shows how to keep decryption credentials in your application's database.
 
 Your application stores opaque bytes under string keys. It never decodes the credentials. The daemon still reads and uses them, so treat the database and its backups as sensitive; see the [daemon trust model](../concepts/trust-boundary.md).
 

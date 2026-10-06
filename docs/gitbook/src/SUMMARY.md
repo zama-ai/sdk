@@ -54,12 +54,14 @@
 - [Encrypt & decrypt](guides/encrypt-decrypt.md)
 - [Vault deposits and redemptions](guides/vault-deposits.md)
 
-- [Go & Rust clients](native/README.md)
-  - [Attach a wallet](native/guides/attach-wallet.md)
-  - [Store credentials](native/guides/credential-storage.md)
-  - [Observe events](native/guides/observe-events.md)
-  - [Recover from disconnections](native/guides/recover-from-disconnections.md)
-  - [Resolve uncertain transaction outcomes](native/guides/uncertain-transaction-outcomes.md)
+## Go & Rust clients
+
+- [Go & Rust overview](native/README.md)
+- [Attach a wallet](native/guides/attach-wallet.md)
+- [Store credentials](native/guides/credential-storage.md)
+- [Observe events](native/guides/observe-events.md)
+- [Recover from disconnections](native/guides/recover-from-disconnections.md)
+- [Resolve uncertain transaction outcomes](native/guides/uncertain-transaction-outcomes.md)
 
 ## Go & Rust daemon deployment
 
