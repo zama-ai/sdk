@@ -3898,12 +3898,10 @@ Each public method that reaches the relayer sends its own value. When a method m
 | `delegated-decrypt-values`            | `sdk.decryption.delegatedDecryptValues`                    |
 | `delegated-batch-decrypt-values`      | `sdk.decryption.delegatedBatchDecryptValues`               |
 | `decrypt-public-values`               | `sdk.decryption.decryptPublicValues`                       |
-| `offline-confidential-transfer`       | `sdk.offline.prepare` with kind `ConfidentialTransfer`     |
-| `offline-confidential-transfer-from`  | `sdk.offline.prepare` with kind `ConfidentialTransferFrom` |
-| `offline-unwrap`                      | `sdk.offline.prepare` with kind `Unwrap`                   |
-| `offline-finalize-unwrap`             | `sdk.offline.prepare` with kind `FinalizeUnwrap`           |
-
-The other `prepare` kinds, `sdk.offline.preparePermit` and `batchPreparePermits` never call the relayer, so they produce no telemetry. Neither does `WrappedToken.unwrapAll`.
+| `offline-confidential-transfer`       | `sdk.offline.prepare`, `ConfidentialTransfer`              |
+| `offline-confidential-transfer-from`  | `sdk.offline.prepare`, `ConfidentialTransferFrom`          |
+| `offline-unwrap`                      | `sdk.offline.prepare`, `Unwrap`                            |
+| `offline-finalize-unwrap`             | `sdk.offline.prepare`, `FinalizeUnwrap`                    |
 
 Calls made directly on `sdk.relayer` carry the version, layer and runtime headers but no operation.
 
