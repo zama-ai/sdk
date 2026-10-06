@@ -8,7 +8,13 @@ The daemon is a trusted part of your application. It receives plaintext encrypti
 
 ## Signing authority
 
-The wallet private key stays in your Go or Rust application, or its external signing service. The daemon sends signing requests to your application over the SDK context's signer channel. Your application applies its approval policy and returns a signature or an error.
+The wallet private key stays in your Go or Rust application, or its external signing service. The daemon sends signing requests to your application over the SDK context's signer channel. Your application decides whether to sign and returns a signature or an error.
+
+{% hint style="danger" %}
+**Your application must validate every typed-data request before signing it.** Check the domain name and version, `chainId`, `verifyingContract`, the expected signer, and `primaryType` against your own configuration. With that check in place, a compromised daemon cannot obtain a signature your application did not approve. Without it, your wallet signs whatever the daemon sends.
+
+The built-in adapters (Go `NewEthereumSigner` and `NewPrivateKeySigner`, Rust `AlloySigner`) do not validate typed data. They check only the requested account and chain. Apply the same rule to contract writes: allow only the destinations and functions the SDK calls. [Validate signing requests](../guides/attach-wallet.md#validate-signing-requests) lists the expected values and shows a validating wrapper.
+{% endhint %}
 
 A signed decryption permit authorizes the transport public key in its payload. The SDK creates and stores the corresponding private key. Keeping the wallet private key outside the daemon does not remove the daemon's access to decryption credentials or plaintext.
 
@@ -28,7 +34,7 @@ Processes with the same UID, host administrators, and operators with container c
 
 Treat credential stores and backups as sensitive material. The daemon does not add at-rest encryption to SQLite or the credential bytes sent to application-owned storage.
 
-The SDK can protect stored transport keys using a derivation secret supplied by your application. Keep the required secret available when recreating SDK contexts. The daemon never stores the secret with the credentials. Set it up in [Configuration](../../guides/configuration.md).
+The SDK can protect stored transport keys using a derivation secret supplied by your application. Keep the required secret available when recreating SDK contexts. The daemon never stores the secret with the credentials, but it holds the secret in process memory while the SDK context is open. Set it up in [Configuration](../../guides/configuration.md).
 
 Named SQLite stores require a local filesystem with reliable locking and a private volume per daemon. Application-owned storage can be shared across replicas, but credential coordination does not span daemons. Concurrent credential changes can race.
 
