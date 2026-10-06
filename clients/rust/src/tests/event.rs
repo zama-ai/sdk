@@ -40,15 +40,21 @@ impl EventHandler for HandlerEvents {
         .into())
     }
 }
-struct PanickingEvents;
+struct PanickingEvents {
+    seen: mpsc::UnboundedSender<u64>,
+}
 #[async_trait]
 impl EventHandler for PanickingEvents {
     async fn on_notification(
         &self,
-        _context: EventContext,
+        context: EventContext,
         _notification: Notification,
     ) -> anyhow::Result<()> {
-        panic!("event handler failed")
+        if context.sequence == 1 {
+            panic!("event handler failed")
+        }
+        self.seen.send(context.sequence)?;
+        Ok(())
     }
 }
 fn delivery(sequence: u64, payload: event_delivery::Payload) -> EventServerMessage {
@@ -594,7 +600,7 @@ async fn sdk_close_drops_active_notification() {
 }
 
 #[tokio::test]
-async fn panicking_event_handler_terminates_subscription() {
+async fn panicking_event_handler_replies_error_and_keeps_subscription() {
     let mut server = Server::start(Arc::new(default_handler)).await;
     server
         .event_actions
@@ -602,34 +608,41 @@ async fn panicking_event_handler_terminates_subscription() {
             message: Some(event_server_message::Message::Attached(Empty {})),
         })
         .unwrap();
+    let (seen, mut observed) = mpsc::unbounded_channel();
     let sdk = Client::connect(&server.socket)
         .await
         .unwrap()
         .sdk(SdkConfig::new(11155111, "https://rpc.invalid"))
-        .events(PanickingEvents)
+        .events(PanickingEvents { seen })
         .build()
         .await
         .unwrap();
     server.event_replies.recv().await.unwrap();
-    server
-        .event_actions
-        .send(delivery(
-            1,
-            event_delivery::Payload::Progress(generated::OperationProgress {
-                kind: generated::ProgressKind::EncryptComplete as i32,
-                tx_hash: None,
-            }),
-        ))
-        .unwrap();
-    let error = tokio::time::timeout(
-        Duration::from_secs(2),
-        sdk.wait_channel_closed(CallbackChannel::Events),
-    )
-    .await
-    .unwrap()
-    .unwrap_err();
-    assert_eq!(error.kind(), crate::ErrorKind::Callback);
-    assert!(error.to_string().contains("notification worker failed"));
-    assert!(server.event_replies.try_recv().is_err());
+    for sequence in 1..=2 {
+        server
+            .event_actions
+            .send(delivery(
+                sequence,
+                event_delivery::Payload::Progress(generated::OperationProgress {
+                    kind: generated::ProgressKind::EncryptComplete as i32,
+                    tx_hash: None,
+                }),
+            ))
+            .unwrap();
+    }
+    let failed = next_reply(&mut server).await;
+    assert_eq!(failed.sequence, 1);
+    assert!(matches!(
+        failed.outcome,
+        Some(event_reply::Outcome::Error(error))
+            if error.code == "CALLBACK_FAILED" && error.message == "event handler panicked"
+    ));
+    let acknowledged = next_reply(&mut server).await;
+    assert_eq!(acknowledged.sequence, 2);
+    assert!(matches!(
+        acknowledged.outcome,
+        Some(event_reply::Outcome::Acknowledged(_))
+    ));
+    assert_eq!(observed.recv().await, Some(2));
     sdk.close().await.unwrap();
 }

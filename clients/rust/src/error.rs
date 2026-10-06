@@ -263,6 +263,15 @@ impl SdkError {
             revert_data: Some(data),
         }
     }
+    pub(crate) fn callback_failed(message: impl Into<String>) -> Self {
+        Self {
+            code: "CALLBACK_FAILED".into(),
+            message: message.into(),
+            retryable: false,
+            retry_after_seconds: None,
+            revert_data: None,
+        }
+    }
 }
 
 /// The panic payload may carry application data, so it never reaches the daemon.

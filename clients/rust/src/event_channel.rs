@@ -1,4 +1,4 @@
-use crate::error::sdk_error_in_chain;
+use crate::error::{recover_panic, sdk_error_in_chain};
 use crate::{
     ClientError, ErrorKind, EventContext, EventHandler, Notification, Result, SdkError,
     WalletAccount, generated,
@@ -133,9 +133,19 @@ async fn process_notifications(
     while let Some((context, notification)) = receiver.recv().await {
         let sequence = context.sequence;
         let outcome = match notification {
-            Some(notification) => match handler.on_notification(context, notification).await {
+            Some(notification) => match recover_panic(
+                async {
+                    handler
+                        .on_notification(context, notification)
+                        .await
+                        .map_err(callback_error)
+                },
+                SdkError::callback_failed("event handler panicked"),
+            )
+            .await
+            {
                 Ok(()) => Outcome::Acknowledged(generated::Empty {}),
-                Err(error) => Outcome::Error(callback_error(error).into()),
+                Err(error) => Outcome::Error(error.into()),
             },
             None => Outcome::Acknowledged(generated::Empty {}),
         };
@@ -156,13 +166,7 @@ async fn reply(sender: &Sender, sequence: u64, outcome: Outcome) -> Result<()> {
     Ok(())
 }
 fn callback_error(error: anyhow::Error) -> SdkError {
-    sdk_error_in_chain(&error).unwrap_or_else(|| SdkError {
-        code: "CALLBACK_FAILED".into(),
-        message: error.to_string(),
-        retryable: false,
-        retry_after_seconds: None,
-        revert_data: None,
-    })
+    sdk_error_in_chain(&error).unwrap_or_else(|| SdkError::callback_failed(error.to_string()))
 }
 
 #[cfg(test)]
