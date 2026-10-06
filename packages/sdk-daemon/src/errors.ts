@@ -1,6 +1,7 @@
 import { ZamaError, retryAfterSeconds as sdkRetryAfterSeconds } from "@zama-fhe/sdk";
 import { Metadata, status, type ServiceError } from "@grpc/grpc-js";
 import type { SdkError } from "./generated/zama/sdk/v1beta1/daemon.js";
+import { reportCode } from "./diagnostics.js";
 
 export class DaemonError extends Error {
   constructor(
@@ -56,12 +57,16 @@ export function serviceError(error: unknown): ServiceError {
   if (details.retryAfterSeconds !== undefined) {
     metadata.set("zama-error-retry-after-seconds", String(details.retryAfterSeconds));
   }
-  const code =
-    error instanceof DaemonError
-      ? error.grpcStatus
-      : error instanceof ZamaError
-        ? status.FAILED_PRECONDITION
-        : status.INTERNAL;
+  let code: status;
+  if (error instanceof DaemonError) {
+    code = error.grpcStatus;
+  } else if (error instanceof ZamaError) {
+    code = status.FAILED_PRECONDITION;
+  } else {
+    // The class name tells an operator what failed without exposing the message.
+    reportCode("INTERNAL", error instanceof Error ? error.constructor.name : typeof error);
+    code = status.INTERNAL;
+  }
   return Object.assign(new Error(details.message), { code, details: details.message, metadata });
 }
 

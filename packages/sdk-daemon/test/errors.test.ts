@@ -1,6 +1,6 @@
 import { status } from "@grpc/grpc-js";
 import { SigningFailedError, TransportKeyPairChangedError } from "@zama-fhe/sdk";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import { DaemonError, serviceError } from "../src/errors.js";
 
 test("retains canonical SDK codes and messages without reclassifying signing failures", () => {
@@ -16,9 +16,24 @@ test("retains canonical SDK codes and messages without reclassifying signing fai
     cause: new DaemonError("TRANSPORT_FAILURE", status.UNAVAILABLE, "Disconnected"),
   });
   expect(serviceError(wrapped).metadata.get("zama-error-code")).toEqual(["SIGNING_FAILED"]);
-  expect(serviceError(new Error("private implementation detail")).details).toBe(
-    "Operation failed.",
-  );
+});
+
+test("reports unclassified errors by class name only", () => {
+  const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  try {
+    expect(serviceError(new TypeError("private implementation detail")).details).toBe(
+      "Operation failed.",
+    );
+    serviceError(new DaemonError("CANCELLED", status.CANCELLED, "Operation cancelled."));
+    serviceError(new SigningFailedError("Wallet unavailable"));
+    serviceError("raw string");
+    expect(stderr.mock.calls).toEqual([
+      ["[zama-daemon] INTERNAL TypeError (details omitted)\n"],
+      ["[zama-daemon] INTERNAL string (details omitted)\n"],
+    ]);
+  } finally {
+    stderr.mockRestore();
+  }
 });
 
 test("restores batch-fatal callback classes without overriding SDK retryability", async () => {

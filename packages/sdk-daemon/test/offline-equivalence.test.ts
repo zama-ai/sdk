@@ -372,9 +372,15 @@ test("offline prepare preserves provider failures and chain validation", async (
     vi.mocked(direct.provider.prepareTransaction).mockRejectedValue(failure);
     vi.mocked(remote.fixtures[0]!.provider.prepareTransaction).mockRejectedValue(failure);
     await expect(direct.sdk.offline.prepare(item.request)).rejects.toThrow("provider failed");
-    await expect(prepare(remote, item.transaction)).rejects.toMatchObject({
-      code: expect.anything(),
-    });
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      await expect(prepare(remote, item.transaction)).rejects.toMatchObject({
+        code: expect.anything(),
+      });
+      expect(stderr.mock.calls).toEqual([["[zama-daemon] INTERNAL Error (details omitted)\n"]]);
+    } finally {
+      stderr.mockRestore();
+    }
 
     vi.mocked(direct.provider.prepareTransaction).mockResolvedValue("0xdeadbeef" as Hex);
     vi.mocked(remote.fixtures[0]!.provider.prepareTransaction).mockResolvedValue(
