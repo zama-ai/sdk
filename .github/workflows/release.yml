@@ -13,6 +13,12 @@ on:
         description: "npm dist-tag override (auto-detected from version if left empty)"
         required: false
         type: string
+      publish:
+        description: "With publish-tag: publish npm, the daemon image, or both"
+        required: false
+        type: choice
+        options: [npm, image, both]
+        default: npm
       dry-run:
         description: "Dry run (log what would be published without actually publishing)"
         required: false
@@ -53,8 +59,15 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    # Read by the image jobs when `publish` includes the daemon image.
+    outputs:
+      version: ${{ steps.npm-tag.outputs.version }}
+      channel: ${{ steps.npm-tag.outputs.channel }}
+      revision: ${{ steps.checkout.outputs.commit }}
+      image: ${{ inputs.publish != 'npm' && !inputs.dry-run }}
     steps:
       - name: Checkout tag
+        id: checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # Fully-qualified refs/tags/ — fails if it's a branch, no ambiguity
@@ -90,15 +103,18 @@ jobs:
           exit 1
 
       - name: Setup pnpm
+        if: inputs.publish != 'image'
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: Setup Node.js
+        if: inputs.publish != 'image'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: pnpm
 
       - name: Ensure npm >=11
+        if: inputs.publish != 'image'
         run: |
           npm_v="$(npm --version)"
           if [[ "${npm_v%%.*}" -lt 11 ]]; then
@@ -111,6 +127,7 @@ jobs:
           [[ "$(npm --version | cut -d. -f1)" -ge 11 ]]
 
       - name: Install Aikido Safe Chain
+        if: inputs.publish != 'image'
         run: |
           # Resolve the installer asset URL + its GitHub-published SHA-256, download it,
           # verify the hash, then execute — no piping a remote script into a shell.
@@ -124,9 +141,11 @@ jobs:
           bash ./install-safe-chain.sh --ci
 
       - name: Install dependencies
+        if: inputs.publish != 'image'
         run: pnpm ci --ignore-scripts
 
       - name: Build packages
+        if: inputs.publish != 'image'
         run: pnpm build
 
       - name: Resolve version and npm tag
@@ -141,19 +160,19 @@ jobs:
             echo "::error::package.json version (${version}) does not match git tag (${INPUT_TAG}). Aborting."
             exit 1
           fi
-          echo "version=${version}" >> "$GITHUB_OUTPUT"
-
-          if [[ -n "${INPUT_NPM_TAG}" ]]; then
-            echo "tag=${INPUT_NPM_TAG}" >> "$GITHUB_OUTPUT"
-          elif [[ "$version" == *-* ]]; then
-            npm_tag="${version#*-}"   # e.g. "alpha.10" from "1.0.0-alpha.10"
-            npm_tag="${npm_tag%%.*}"   # e.g. "alpha"
-            echo "tag=${npm_tag}" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          channel="latest"
+          if [[ "$version" == *-* ]]; then
+            channel="${version#*-}"   # e.g. "alpha.10" from "1.0.0-alpha.10"
+            channel="${channel%%.*}"  # e.g. "alpha"
           fi
+          {
+            echo "version=${version}"
+            echo "channel=${channel}"
+            echo "tag=${INPUT_NPM_TAG:-${channel}}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Publish to npm
+        if: inputs.publish != 'image'
         env:
           NPM_CONFIG_PROVENANCE: true
           VERSION: ${{ steps.npm-tag.outputs.version }}
@@ -174,7 +193,7 @@ jobs:
           npm publish "${flags[@]}"
 
       - name: Summary
-        if: success()
+        if: success() && inputs.publish != 'image'
         env:
           VERSION: ${{ steps.npm-tag.outputs.version }}
           NPM_TAG: ${{ steps.npm-tag.outputs.tag }}
@@ -315,8 +334,13 @@ jobs:
 
   # Runs even if npm publish failed: the tag exists and a re-run of the release job cannot republish it.
   publish-image:
-    needs: [release]
-    if: ${{ !cancelled() && needs.release.outputs.released == 'true' }}
+    needs: [release, publish-from-tag]
+    if: ${{ !cancelled() && (needs.release.outputs.released == 'true' || needs.publish-from-tag.outputs.image == 'true') }}
+    # From the release run, or from publish-from-tag when recovering an existing tag.
+    env:
+      VERSION: ${{ needs.release.outputs.version || needs.publish-from-tag.outputs.version }}
+      CHANNEL: ${{ needs.release.outputs.channel || needs.publish-from-tag.outputs.channel }}
+      REVISION: ${{ needs.release.outputs.revision || needs.publish-from-tag.outputs.revision }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     permissions:
@@ -337,7 +361,7 @@ jobs:
       - name: Checkout release commit
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ needs.release.outputs.revision }}
+          ref: ${{ env.REVISION }}
           persist-credentials: false
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
@@ -377,8 +401,8 @@ jobs:
           platforms: ${{ matrix.platform }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ needs.release.outputs.revision }}
-            org.opencontainers.image.version=${{ needs.release.outputs.version }}
+            org.opencontainers.image.revision=${{ env.REVISION }}
+            org.opencontainers.image.version=${{ env.VERSION }}
             org.opencontainers.image.title=${{ env.DAEMON_IMAGE_TITLE }}
             org.opencontainers.image.description=${{ env.DAEMON_IMAGE_DESCRIPTION }}
           outputs: type=image,name=${{ env.DAEMON_IMAGE }},push-by-digest=true,name-canonical=true,push=true
@@ -402,10 +426,15 @@ jobs:
           retention-days: 30
 
   publish-image-manifest:
-    needs: [release, publish-image]
+    needs: [release, publish-from-tag, publish-image]
     if: ${{ !cancelled() && needs.publish-image.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # From the release run, or from publish-from-tag when recovering an existing tag.
+    env:
+      VERSION: ${{ needs.release.outputs.version || needs.publish-from-tag.outputs.version }}
+      CHANNEL: ${{ needs.release.outputs.channel || needs.publish-from-tag.outputs.channel }}
+      REVISION: ${{ needs.release.outputs.revision || needs.publish-from-tag.outputs.revision }}
     permissions:
       contents: read
     steps:
@@ -433,18 +462,31 @@ jobs:
       - name: Create manifest list
         working-directory: ${{ runner.temp }}/digests
         env:
-          VERSION: ${{ needs.release.outputs.version }}
-          CHANNEL: ${{ needs.release.outputs.channel }}
-          REVISION: ${{ needs.release.outputs.revision }}
           SOURCE: ${{ github.server_url }}/${{ github.repository }}
         run: |
           sources=()
           for digest in *; do
             sources+=("${DAEMON_IMAGE}@sha256:${digest}")
           done
+          # Move the channel tag only forward, so re-running an older run or recovering an older tag keeps it.
+          # Versions on one channel share a prerelease suffix, so sort -V orders them.
+          tags=(--tag "${DAEMON_IMAGE}:${VERSION}")
+          if current="$(docker buildx imagetools inspect "${DAEMON_IMAGE}:${CHANNEL}" \
+            --format '{{ index .Manifest.Annotations "org.opencontainers.image.version" }}' 2> inspect.err)"; then
+            :
+          elif grep -q "not found" inspect.err; then
+            current=""
+          else
+            cat inspect.err
+            exit 1
+          fi
+          if [[ "$(printf '%s\n%s\n' "${current}" "${VERSION}" | sort -V | tail -n 1)" == "${VERSION}" ]]; then
+            tags+=(--tag "${DAEMON_IMAGE}:${CHANNEL}")
+          else
+            echo "::notice::${DAEMON_IMAGE}:${CHANNEL} stays on ${current}, newer than ${VERSION}."
+          fi
           docker buildx imagetools create \
-            --tag "${DAEMON_IMAGE}:${VERSION}" \
-            --tag "${DAEMON_IMAGE}:${CHANNEL}" \
+            "${tags[@]}" \
             --annotation "index:org.opencontainers.image.source=${SOURCE}" \
             --annotation "index:org.opencontainers.image.revision=${REVISION}" \
             --annotation "index:org.opencontainers.image.version=${VERSION}" \

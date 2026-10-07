@@ -205,8 +205,8 @@ Release behavior:
 Release workflows:
 
 - `Release` (`.github/workflows/release.yml`): automatic publish on push to `main`, `beta`, and `alpha`, gated by `Vitest`, `Playwright`, `Docs`, and `Daemon CI`.
-- Manual publish (`workflow_dispatch`): without `publish-tag`, same gates as above. With `publish-tag`, republish an existing tag when npm publish failed after semantic-release tagged it (`dry-run` input available) — skips CI, but requires the tag be reachable from `main`, `beta`, or `alpha`. It republishes npm only.
-- Daemon image retry: re-run the failed `publish-image` or `publish-image-manifest` jobs in the original run, within 30 days. Re-running an older run moves the channel tag back to its version. If `release` itself failed, "Re-run failed jobs" skips the image.
+- Manual publish (`workflow_dispatch`): without `publish-tag`, same gates as above. With `publish-tag`, republish an existing tag when npm publish failed after semantic-release tagged it (`dry-run` input available) — skips CI, but requires the tag be reachable from `main`, `beta`, or `alpha`. `publish` selects npm, the daemon image, or both.
+- Daemon image retry: re-run the failed `publish-image` or `publish-image-manifest` jobs in the original run, or use `publish-tag` with `publish: image`. Channel tags only move forward. If `release` itself failed, "Re-run failed jobs" skips the image.
 - `Release Preview` (`.github/workflows/release-preview.yml`): manual dry-run restricted to `main`, `beta`, and `alpha` (`pnpm release:dry-run`), no publish side effects.
 
 Install channels:
