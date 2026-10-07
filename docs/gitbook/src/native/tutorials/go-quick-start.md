@@ -47,7 +47,7 @@ Download the daemon's [Compose file](../operations/run-in-production.md#run-with
 curl -fsSL -o zama-sdk-daemon.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.yaml"
 ```
 
-Save this as `compose.yaml`. It runs your program in a Go container next to the daemon. Both run as UID 1000, the daemon image's user, and share the daemon's socket volume:
+Save this as `compose.yaml`. It runs your program in a Go container next to the daemon. Both run as UID 10000 and GID 10001, the daemon image's user, and share the daemon's socket volume:
 
 ```yaml
 include:
@@ -56,7 +56,7 @@ include:
 services:
   app:
     image: golang:1.25
-    user: "1000:1000"
+    user: "10000:10001"
     working_dir: /src
     environment:
       - DAEMON_SOCKET=/run/zama/sdk.sock

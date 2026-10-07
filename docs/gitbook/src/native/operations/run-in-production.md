@@ -31,9 +31,9 @@ Two daemons must not share a SQLite credential volume: each named database is lo
 
 ## Run with Docker Compose
 
-The [Compose file](https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml) runs the daemon with a read-only root filesystem, no Linux capabilities, a healthcheck and a stop grace period above its shutdown timeout, and keeps its socket and SQLite storage in named volumes. A new named volume copies the image's private directories, so the daemon starts without host directory setup. The image runs the daemon as UID `1000`.
+The [Compose file](https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml) runs the daemon with a read-only root filesystem, no Linux capabilities, a healthcheck and a stop grace period above its shutdown timeout, and keeps its socket and SQLite storage in named volumes. A new named volume copies the image's private directories, so the daemon starts without host directory setup. The image runs the daemon as UID `10000` and GID `10001`.
 
-Include it from your application's `compose.yaml`. Run your application as UID `1000` and mount the socket volume where it connects:
+Include it from your application's `compose.yaml`. Run your application as the same UID and GID and mount the socket volume where it connects:
 
 ```yaml
 include:
@@ -42,7 +42,7 @@ include:
 services:
   app:
     image: your-registry/your-app:APP_VERSION
-    user: "1000:1000"
+    user: "10000:10001"
     environment:
       DAEMON_SOCKET: /run/zama/sdk.sock
     volumes:

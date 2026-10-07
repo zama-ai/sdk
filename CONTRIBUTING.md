@@ -163,7 +163,7 @@ cargo fmt --manifest-path clients/rust/Cargo.toml --check
 To run the Go and Rust balance examples against Sepolia, fill `.env.daemon.local` (copied from `.env.daemon.example`) with an RPC URL, a test wallet and a confidential token address, then:
 
 ```sh
-export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"   # both default to 1000
+export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"   # default to 10000 and 10001
 dc() { docker compose --env-file .env.daemon.local -f packages/sdk-daemon/compose.yaml "$@"; }
 dc --profile examples build && dc up --wait daemon
 dc run --rm go

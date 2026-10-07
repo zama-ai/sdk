@@ -8,7 +8,7 @@ services:
       ZAMA_SDK_DAEMON_SOCKET_PATH: /run/zama/sdk.sock
       ZAMA_SDK_DAEMON_STORAGE_DIR: /var/lib/zama
     volumes:
-      # A new named volume copies the image's private directory (UID 1000, mode 0700).
+      # A new named volume copies the image's private directory (UID 10000, mode 0700).
       - socket:/run/zama
       - storage:/var/lib/zama
     read_only: true
