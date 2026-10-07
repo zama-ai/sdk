@@ -129,6 +129,17 @@ jobs:
           ZAMA_SDK_DAEMON_NATIVE_TESTS: "1"
         run: pnpm daemon:test
 
+  dockerfiles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
+        with:
+          recursive: true
+
   image:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30

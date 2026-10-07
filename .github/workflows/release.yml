@@ -348,7 +348,26 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # No build cache, so nothing from an earlier run can reach a published image.
+      # Test before push: boot this build, then push it from the same builder's cache. The build reads, never
+      # writes, the layer cache the Daemon CI gate wrote earlier in this run; a release on a protected branch can
+      # only restore caches written on that branch or main, which only trusted pushes write.
+      - name: Build for the boot test
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0 # zizmor: ignore[cache-poisoning]
+        with:
+          context: .
+          file: packages/sdk-daemon/Dockerfile
+          platforms: ${{ matrix.platform }}
+          load: true
+          tags: ${{ env.DAEMON_IMAGE }}:release-check
+          cache-from: type=gha,scope=daemon-image-${{ matrix.arch }}
+
+      - name: Start the daemon with the deployment Compose file
+        env:
+          ZAMA_SDK_VERSION: release-check
+        run: |
+          trap 'docker compose -f packages/sdk-daemon/deploy/compose.yaml down -v' EXIT
+          docker compose -f packages/sdk-daemon/deploy/compose.yaml up -d --wait --wait-timeout 120
+
       - name: Build and push by digest
         id: build
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -379,7 +398,8 @@ jobs:
           name: daemon-digest-${{ matrix.arch }}
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
-          retention-days: 1
+          # Matches the 30-day re-run window, so re-running one failed platform still finds the other's digest.
+          retention-days: 30
 
   publish-image-manifest:
     needs: [release, publish-image]
@@ -389,12 +409,18 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Download digests
+      # One step per platform: a missing digest fails the job instead of publishing a single-platform image.
+      - name: Download the amd64 digest
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
+          name: daemon-digest-amd64
           path: ${{ runner.temp }}/digests
-          pattern: daemon-digest-*
-          merge-multiple: true
+
+      - name: Download the arm64 digest
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: daemon-digest-arm64
+          path: ${{ runner.temp }}/digests
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 

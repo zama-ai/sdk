@@ -51,6 +51,20 @@ updates:
         update-types:
           - version-update:semver-patch
 
+  # Daemon image bases, pinned by digest. Majors are ignored: the Node.js line follows the daemon's engines field.
+  # The client example images are left out on purpose: their toolchains track go.mod and rust-toolchain.toml.
+  - package-ecosystem: docker
+    target-branch: beta
+    directory: /packages/sdk-daemon
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
+
   - package-ecosystem: github-actions
     target-branch: beta
     directory: /
