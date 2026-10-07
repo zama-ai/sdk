@@ -1,5 +1,5 @@
 # checkov:skip=CKV_DOCKER_2:This example runs one operation and reports success through its exit status.
-FROM golang:1.27.1-bookworm AS build
+FROM golang:1.27.1-trixie AS build
 WORKDIR /src
 COPY clients/go/go.mod clients/go/go.sum ./
 RUN go mod download
