@@ -200,12 +200,14 @@ Release behavior:
 4. `@zama-fhe/sdk` and `@zama-fhe/react-sdk` are versioned and published together in lockstep.
 5. `main` publishes stable versions to npm `latest`, `beta` publishes prerelease versions to npm `beta`, and `alpha` publishes prerelease versions to npm `alpha`.
 6. GitHub release notes and tags are generated automatically.
+7. Each release also pushes the `zamafhe/sdk-daemon` image (`linux/amd64`, `linux/arm64`) to Docker Hub from the release commit, tagged with the exact version and the channel (`latest`, `beta`, or `alpha`). The `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets hold a Docker Hub access token with Read & Write access to `zamafhe/sdk-daemon`.
 
 Release workflows:
 
-- `Release` (`.github/workflows/release.yml`): automatic publish on push to `main`, `beta`, and `alpha`, gated by `Vitest`, `Playwright`, and `Docs`.
-- Manual publish (`workflow_dispatch`): without `publish-tag`, same gates as above. With `publish-tag`, republish an existing tag when npm publish failed after semantic-release tagged it (`dry-run` input available) — skips CI, but requires the tag be reachable from `main`, `beta`, or `alpha`.
-- `Release Preview` (`.github/workflows/release-preview.yml`): manual dry-run restricted to `main`, `beta`, and `alpha` (`pnpm release:dry-run`), no publish side effects.
+- `Release` (`.github/workflows/release.yml`): automatic publish on push to `main`, `beta`, and `alpha`, gated by `Vitest`, `Playwright`, `Docs`, and `Daemon CI`.
+- Manual publish (`workflow_dispatch`): without `publish-tag`, same gates as above. With `publish-tag`, republish an existing tag when npm publish failed after semantic-release tagged it (`dry-run` input available); skips CI, but requires the tag be reachable from `main`, `beta`, or `alpha`. It does not touch the daemon image, which publishes even when npm fails.
+- Daemon image retry: in the original `Release` run, use "Re-run this job" on each failed `publish-image` job (the manifest job re-runs with them), or on `publish-image-manifest` alone if only it failed. Do not use "Re-run failed jobs" when the `release` job failed: semantic-release finds nothing new to release, so the image jobs are skipped.
+- `Release Preview` (`.github/workflows/release-preview.yml`): manual dry-run restricted to `main`, `beta`, and `alpha` (`pnpm release:dry-run`), no publish side effects. Its summary lists the planned daemon image tags.
 
 Install channels:
 

@@ -40,6 +40,9 @@ env:
   SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@fhevm/sdk,@zama-fhe/sdk,@zama-fhe/react-sdk"
   # Pinned safe-chain release used by the verified installer below; bump as newer versions are vetted.
   SAFE_CHAIN_VERSION: "1.5.15"
+  DAEMON_IMAGE: zamafhe/sdk-daemon
+  DAEMON_IMAGE_TITLE: Zama SDK daemon
+  DAEMON_IMAGE_DESCRIPTION: Runs the Zama SDK for Go and Rust applications over a private Unix socket.
 
 jobs:
   # ── Publish from tag (manual recovery) ──────────────────────────────
@@ -217,11 +220,21 @@ jobs:
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     uses: ./.github/workflows/docs.yml
 
+  daemon:
+    needs: [validate-branch]
+    if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
+    uses: ./.github/workflows/daemon.yml
+
   release:
-    needs: [ci, playwright, docs]
+    needs: [ci, playwright, docs, daemon]
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      released: ${{ steps.release.outputs.released }}
+      version: ${{ steps.release.outputs.version }}
+      channel: ${{ steps.release.outputs.channel }}
+      revision: ${{ steps.release.outputs.revision }}
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -269,43 +282,147 @@ jobs:
       - name: Build packages
         run: pnpm build
 
+      # Outputs are written by the @semantic-release/exec commands in .releaserc.cjs.
       - name: Semantic release
         id: release
-        run: |
-          set +e
-          pnpm release:ci 2>&1 | tee /tmp/release-output.txt
-          exit_code=${PIPESTATUS[0]}
-          set -e
-          if grep -q "Published release" /tmp/release-output.txt; then
-            echo "released=true" >> "$GITHUB_OUTPUT"
-          fi
-          exit "$exit_code"
+        run: pnpm release:ci
         env:
           GITHUB_TOKEN: ${{ secrets.SDK_RELEASER_TOKEN }}
 
       - name: Publish to npm
         if: steps.release.outputs.released == 'true'
         run: |
-          version=$(node -p "require('./packages/sdk/package.json').version")
-          if [[ "$version" == *-* ]]; then
-            npm_tag="${version#*-}"   # e.g. "alpha.10" from "1.0.0-alpha.10"
-            npm_tag="${npm_tag%%.*}"   # e.g. "alpha"
-          else
-            npm_tag="latest"
-          fi
-          echo "Publishing v${version} with tag '${npm_tag}'"
+          echo "Publishing v${VERSION} with tag '${CHANNEL}'"
           cd packages/sdk
-          npm publish --access public --tag "${npm_tag}"
+          npm publish --access public --tag "${CHANNEL}"
           cd ../react-sdk
-          npm publish --access public --tag "${npm_tag}"
+          npm publish --access public --tag "${CHANNEL}"
         env:
           NPM_CONFIG_PROVENANCE: true
+          VERSION: ${{ steps.release.outputs.version }}
+          CHANNEL: ${{ steps.release.outputs.channel }}
 
       - name: Verify release was published
         if: github.event_name == 'workflow_dispatch'
+        env:
+          RELEASED: ${{ steps.release.outputs.released }}
         run: |
-          if ! grep -q "Published release" /tmp/release-output.txt; then
+          if [[ "${RELEASED}" != "true" ]]; then
             echo "::error::semantic-release completed but no release was published."
             echo "Common causes: no releasable commits, branch not configured, or authentication issue."
             exit 1
           fi
+
+  # Runs even if npm publish failed: the tag exists and a re-run of the release job cannot republish it.
+  publish-image:
+    needs: [release]
+    if: ${{ !cancelled() && needs.release.outputs.released == 'true' }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      # A failed platform must not cancel the other, so re-running only the failed job completes the matrix.
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            arch: amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      # The release commit, not the tag: the commit is what the revision label names, and the tag can still move.
+      - name: Checkout release commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.release.outputs.revision }}
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # No build cache, so nothing from an earlier run can reach a published image.
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: packages/sdk-daemon/Dockerfile
+          platforms: ${{ matrix.platform }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ needs.release.outputs.revision }}
+            org.opencontainers.image.version=${{ needs.release.outputs.version }}
+            org.opencontainers.image.title=${{ env.DAEMON_IMAGE_TITLE }}
+            org.opencontainers.image.description=${{ env.DAEMON_IMAGE_DESCRIPTION }}
+          outputs: type=image,name=${{ env.DAEMON_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          provenance: mode=max
+          sbom: true
+
+      - name: Export digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p "${RUNNER_TEMP}/digests"
+          touch "${RUNNER_TEMP}/digests/${DIGEST#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: daemon-digest-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  publish-image-manifest:
+    needs: [release, publish-image]
+    if: ${{ !cancelled() && needs.publish-image.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: daemon-digest-*
+          merge-multiple: true
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create manifest list
+        working-directory: ${{ runner.temp }}/digests
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+          CHANNEL: ${{ needs.release.outputs.channel }}
+          REVISION: ${{ needs.release.outputs.revision }}
+          SOURCE: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          sources=()
+          for digest in *; do
+            sources+=("${DAEMON_IMAGE}@sha256:${digest}")
+          done
+          docker buildx imagetools create \
+            --tag "${DAEMON_IMAGE}:${VERSION}" \
+            --tag "${DAEMON_IMAGE}:${CHANNEL}" \
+            --annotation "index:org.opencontainers.image.source=${SOURCE}" \
+            --annotation "index:org.opencontainers.image.revision=${REVISION}" \
+            --annotation "index:org.opencontainers.image.version=${VERSION}" \
+            --annotation "index:org.opencontainers.image.title=${DAEMON_IMAGE_TITLE}" \
+            --annotation "index:org.opencontainers.image.description=${DAEMON_IMAGE_DESCRIPTION}" \
+            "${sources[@]}"
+          docker buildx imagetools inspect "${DAEMON_IMAGE}:${VERSION}"
