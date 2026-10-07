@@ -22,9 +22,11 @@ on:
       - ".github/actions/install-deps/**"
       - ".github/workflows/daemon.yml"
   workflow_dispatch:
+  workflow_call:
 
+# Namespaced by workflow so a standalone run and a calling workflow on the same ref do not cancel each other.
 concurrency:
-  group: daemon-ci-${{ github.ref }}
+  group: daemon-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
