@@ -30,7 +30,7 @@ See [Authentication](../../guides/authentication.md) and [Relayer API keys](../.
 Create a binary project and add the client with the runtime this example uses:
 
 ```sh
-export ZAMA_SDK_VERSION=3.7.0-beta.5
+export ZAMA_SDK_VERSION=3.7.0-beta.6
 cargo new encrypt-input
 cd encrypt-input
 cargo add zama_sdk@=$ZAMA_SDK_VERSION

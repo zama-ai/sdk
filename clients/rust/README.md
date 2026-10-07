@@ -7,7 +7,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 ## Installation
 
 ```sh
-cargo add zama_sdk@=3.7.0-beta.5
+cargo add zama_sdk@=3.7.0-beta.6
 ```
 
 Run the `zamafhe/sdk-daemon` image at exactly the same version as the client. Enable the `alloy` feature for the Alloy signing and transaction adapters.
