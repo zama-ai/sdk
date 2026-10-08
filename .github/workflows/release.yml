@@ -378,9 +378,8 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Test before push: boot this build, then push it from the same builder's cache. The build reads, never
-      # writes, the layer cache the Daemon CI gate wrote earlier in this run; a release on a protected branch can
-      # only restore caches written on that branch or main, which only trusted pushes write.
+      # Boots this build before the push below reuses its layers. Reads, never writes, the gate's layer cache:
+      # a release can only restore caches from its own branch or the default branch, which only merges write.
       - name: Build for the boot test
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0 # zizmor: ignore[cache-poisoning]
         with:
