@@ -3,7 +3,7 @@ name: zama-sdk-daemon
 
 services:
   daemon:
-    image: zamafhe/sdk-daemon:${ZAMA_SDK_VERSION:?Set ZAMA_SDK_VERSION to the release that matches your Go or Rust client}
+    image: ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION:?Set ZAMA_SDK_VERSION to the release that matches your Go or Rust client}
     environment:
       ZAMA_SDK_DAEMON_SOCKET_PATH: /run/zama/sdk.sock
       ZAMA_SDK_DAEMON_STORAGE_DIR: /var/lib/zama

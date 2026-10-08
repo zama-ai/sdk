@@ -46,7 +46,7 @@ env:
   SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@fhevm/sdk,@zama-fhe/sdk,@zama-fhe/react-sdk"
   # Pinned safe-chain release used by the verified installer below; bump as newer versions are vetted.
   SAFE_CHAIN_VERSION: "1.5.15"
-  DAEMON_IMAGE: zamafhe/sdk-daemon
+  DAEMON_IMAGE: ghcr.io/zama-ai/sdk-daemon
   DAEMON_IMAGE_TITLE: Zama SDK daemon
   DAEMON_IMAGE_DESCRIPTION: Runs the Zama SDK for Go and Rust applications over a private Unix socket.
 
@@ -351,6 +351,7 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
+      packages: write
     strategy:
       # A failed platform must not cancel the other, so re-running only the failed job completes the matrix.
       fail-fast: false
@@ -372,11 +373,12 @@ jobs:
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      - name: Log in to Docker Hub
+      - name: Log in to GHCR
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       # Boots this build before the push below reuses its layers. Reads, never writes, the gate's layer cache:
       # a release can only restore caches from its own branch or the default branch, which only merges write.
@@ -442,6 +444,7 @@ jobs:
       REVISION: ${{ needs.release.outputs.revision || needs.verify-tag.outputs.revision }}
     permissions:
       contents: read
+      packages: write
     steps:
       # One step per platform: a missing digest fails the job instead of publishing a single-platform image.
       - name: Download the amd64 digest
@@ -458,11 +461,12 @@ jobs:
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      - name: Log in to Docker Hub
+      - name: Log in to GHCR
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create manifest list
         working-directory: ${{ runner.temp }}/digests

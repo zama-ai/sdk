@@ -160,7 +160,7 @@ jobs:
           context: .
           file: packages/sdk-daemon/Dockerfile
           load: true
-          tags: zamafhe/sdk-daemon:ci
+          tags: ghcr.io/zama-ai/sdk-daemon:ci
           # Scoped per architecture so the two builds don't overwrite each other's cache.
           cache-from: type=gha,scope=daemon-image-${{ matrix.arch }}
           cache-to: type=gha,scope=daemon-image-${{ matrix.arch }},mode=max

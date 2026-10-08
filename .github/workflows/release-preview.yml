@@ -21,7 +21,7 @@ env:
   SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@fhevm/sdk,@zama-fhe/sdk,@zama-fhe/react-sdk"
   # Pinned safe-chain release used by the verified installer below; bump as newer versions are vetted.
   SAFE_CHAIN_VERSION: "1.5.15"
-  DAEMON_IMAGE: zamafhe/sdk-daemon
+  DAEMON_IMAGE: ghcr.io/zama-ai/sdk-daemon
 
 jobs:
   validate-branch:
