@@ -1808,7 +1808,7 @@
       "source_type": "api-report",
       "category": "api-reports",
       "logical_path": "packages/sdk/etc/sdk-viem.api",
-      "description": "import { Abi } from 'viem'; import { Address } from 'viem'; import { ContractFunctionArgs } from 'viem'; import { ContractFunctionName } from 'viem'; import { ContractFunctionReturnType } from 'viem'; import { EIP1193Provider } from 'viem'; import { Eip712Like } from '@fhevm/sdk/types'; import { Hex } from 'viem'; import { PublicClient } from 'viem'; import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem'; import { TypedValue } from '@fhevm/sdk/types'; import { WalletClient } from 'viem';",
+      "description": "import { Abi } from 'viem'; import { Address } from 'viem'; import { ContractFunctionArgs } from 'viem'; import { ContractFunctionName } from 'viem'; import { ContractFunctionReturnType } from 'viem'; import { EIP1193Provider } from 'viem'; import { Eip712Like } from '@fhevm/sdk/types'; import { Hex } from 'viem'; import { PublicClient } from 'viem'; import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem'; import { TypedDataDefinition } from 'viem'; import { TypedValue } from '@fhevm/sdk/types'; import { WalletClient } from 'viem';",
       "include_in_llms_txt": false,
       "include_in_llms_full": false
     },
