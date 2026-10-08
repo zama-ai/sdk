@@ -202,7 +202,7 @@ Release behavior:
 6. GitHub release notes and tags are generated automatically.
 7. Each release also pushes the `ghcr.io/zama-ai/sdk-daemon` image (`linux/amd64`, `linux/arm64`) with the workflow `GITHUB_TOKEN`, tagged with the version and the channel.
 8. Each release also publishes the `zama_sdk` crate to crates.io through Trusted Publishing.
-9. Each release also publishes the Go module by tagging `clients/go/v<version>` on the release commit. The tag is never moved. Before a major bump, set the module path in `clients/go/go.mod` to `/v<major>`, or the release fails before tagging.
+9. Each release also tags `clients/go/v<version>` for the Go module. Before a major bump, change the module path in `clients/go/go.mod` to `/v<major>`.
 
 Release workflows:
 
