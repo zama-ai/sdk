@@ -1,4 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
+import { goModulePath } from "./go-module.mjs";
+
+const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const nextVersion = process.argv[2];
 
@@ -57,7 +60,7 @@ const docTargets = [
   ],
   [
     "clients/go/README.md",
-    /(go get github\.com\/zama-ai\/sdk\/clients\/go\/v3@v)\S+/g,
+    new RegExp(`(go get ${escapeRegExp(goModulePath(nextVersion))}@v)\\S+`, "g"),
     `$1${nextVersion}`,
   ],
   ["clients/rust/README.md", /(cargo add zama_sdk@=)\S+/g, `$1${nextVersion}`],
