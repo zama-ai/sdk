@@ -6,6 +6,8 @@ export {
   invalidateAfterQuit,
   invalidateBatchQueries,
 } from "./invalidation";
+export { groupDepositMutationOptions, type GroupDepositParams } from "./group-deposit";
+export { groupRedeemMutationOptions, type GroupRedeemParams } from "./group-redeem";
 export { currentBatchIdQueryOptions, type CurrentBatchIdQueryConfig } from "./current-batch-id";
 export { batchStateQueryOptions, type BatchStateQueryConfig } from "./batch-state";
 export {

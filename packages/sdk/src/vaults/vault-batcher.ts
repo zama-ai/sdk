@@ -14,6 +14,7 @@ import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/ali
 import { assertConfidentialBalance } from "../utils/assert-balance";
 import { assertBigint } from "../utils/assertions";
 import { isEncryptedValueZero } from "../utils/handles";
+import { memoizeAddressRead } from "../utils/memoize-address-read";
 import { submitTransaction as submitSdkTransaction } from "../utils/submit-transaction";
 import type { ZamaSDK } from "../zama-sdk";
 import {
@@ -41,33 +42,6 @@ import {
 } from "./contracts";
 import { findJoined } from "./events";
 import { BatchState, type JoinOptions, type JoinResult } from "./types";
-
-/**
- * Safe to cache forever: the addresses a batcher reports are set at deploy
- * time and never change.
- */
-function memoizeAddressRead(read: () => Promise<Address>): () => Promise<Address> {
-  let cached: Address | undefined;
-  let pending: Promise<Address> | null = null;
-  return () => {
-    if (cached !== undefined) {
-      return Promise.resolve(cached);
-    }
-    if (!pending) {
-      pending = read()
-        .then((value) => {
-          cached = value;
-          pending = null;
-          return value;
-        })
-        .catch((error) => {
-          pending = null;
-          throw error;
-        });
-    }
-    return pending;
-  };
-}
 
 /**
  * One on-chain batcher contract: it pools participants' encrypted amounts,

@@ -40,6 +40,21 @@ export function decodeJoined(log: RawLog): JoinedEvent | null {
   };
 }
 
+function matchJoined(
+  log: RawLog,
+  batcher: Address,
+  account: Address | undefined,
+): JoinedEvent | null {
+  if (log.address !== undefined && getAddress(log.address) !== batcher) {
+    return null;
+  }
+  const event = decodeJoined(log);
+  if (!event || (account !== undefined && event.account !== account)) {
+    return null;
+  }
+  return event;
+}
+
 /**
  * Filters on `batcher`, and on `account` when given, rather than taking the
  * first match: one transaction can join several batchers and credit several
@@ -51,19 +66,26 @@ export function findJoined(
   batcher: Address,
   account?: Address,
 ): JoinedEvent | null {
+  return takeJoined([...logs], batcher, account);
+}
+
+/**
+ * {@link findJoined} for a receipt with several `Joined` logs to the same
+ * account: removes the match from `logs`, so walking the legs in order pairs
+ * each with its own log even when the adapter omits emitter addresses.
+ */
+export function takeJoined(
+  logs: RawLog[],
+  batcher: Address,
+  account?: Address,
+): JoinedEvent | null {
   const normalizedAccount = account ? getAddress(account) : undefined;
-  for (const log of logs) {
-    if (log.address !== undefined && getAddress(log.address) !== batcher) {
-      continue;
+  for (const [index, log] of logs.entries()) {
+    const event = matchJoined(log, batcher, normalizedAccount);
+    if (event) {
+      logs.splice(index, 1);
+      return event;
     }
-    const event = decodeJoined(log);
-    if (!event) {
-      continue;
-    }
-    if (normalizedAccount !== undefined && event.account !== normalizedAccount) {
-      continue;
-    }
-    return event;
   }
   return null;
 }

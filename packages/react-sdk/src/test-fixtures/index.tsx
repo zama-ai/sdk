@@ -24,6 +24,7 @@ export { expect };
 export {
   joinedLog,
   makeLogger,
+  mockEncryptedLegs,
   mockJoinBalance,
   mockJoinReceipt,
 } from "../../../sdk/src/test-fixtures";

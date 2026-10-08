@@ -51,6 +51,7 @@
 - [Delegated decryption](guides/delegated-decryption.md)
 - [Encrypt & decrypt](guides/encrypt-decrypt.md)
 - [Vault deposits and redemptions](guides/vault-deposits.md)
+- [Vault groups](guides/vault-groups.md)
 
 ## API References
 
@@ -61,6 +62,7 @@
   - [WrappersRegistry](reference/sdk/WrappersRegistry.md)
   - [Vault](reference/sdk/Vault.md)
   - [VaultBatcher](reference/sdk/VaultBatcher.md)
+  - [VaultGroup](reference/sdk/VaultGroup.md)
   - [web() transport](reference/sdk/RelayerWeb.md)
   - [node() transport](reference/sdk/RelayerNode.md)
   - [cleartext() transport](reference/sdk/RelayerCleartext.md)
@@ -141,6 +143,9 @@
   - [useCurrentBatchId](reference/react/useCurrentBatchId.md)
   - [useBatchState](reference/react/useBatchState.md)
   - [useTimeUntilDispatchable](reference/react/useTimeUntilDispatchable.md)
+  - [useVaultGroup](reference/react/useVaultGroup.md)
+  - [useGroupDeposit](reference/react/useGroupDeposit.md)
+  - [useGroupRedeem](reference/react/useGroupRedeem.md)
   - [Query keys](reference/react/query-keys.md)
 
 ## Concepts
