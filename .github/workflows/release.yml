@@ -14,10 +14,10 @@ on:
         required: false
         type: string
       publish:
-        description: "With publish-tag: publish npm, the daemon image, or both"
+        description: "With publish-tag: publish npm, the daemon image, the Rust crate, or all"
         required: false
         type: choice
-        options: [npm, image, both]
+        options: [npm, image, rust, all]
         default: npm
       dry-run:
         description: "Dry run (log what would be published without actually publishing)"
@@ -50,6 +50,7 @@ env:
   DAEMON_IMAGE_TITLE: Zama SDK daemon
   DAEMON_IMAGE_DESCRIPTION: Runs the Zama SDK for Go and Rust applications over a private Unix socket.
   DAEMON_IMAGE_LICENSES: BSD-3-Clause-Clear
+  CRATE: zama_sdk
 
 jobs:
   # ── Publish from tag (manual recovery) ──────────────────────────────
@@ -123,7 +124,7 @@ jobs:
 
   publish-from-tag:
     needs: [verify-tag]
-    if: inputs.publish != 'image'
+    if: inputs.publish == 'npm' || inputs.publish == 'all'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -342,7 +343,7 @@ jobs:
     needs: [release, verify-tag]
     if: >-
       ${{ !cancelled() && (needs.release.outputs.released == 'true'
-      || (needs.verify-tag.result == 'success' && inputs.publish != 'npm' && !inputs.dry-run)) }}
+      || (needs.verify-tag.result == 'success' && (inputs.publish == 'image' || inputs.publish == 'all') && !inputs.dry-run)) }}
     # From the release run, or from verify-tag when recovering an existing tag.
     env:
       VERSION: ${{ needs.release.outputs.version || needs.verify-tag.outputs.version }}
@@ -506,3 +507,57 @@ jobs:
             --annotation "index:org.opencontainers.image.licenses=${DAEMON_IMAGE_LICENSES}" \
             "${sources[@]}"
           docker buildx imagetools inspect "${DAEMON_IMAGE}:${VERSION}"
+
+  # Runs even if npm publish failed: the tag exists and a re-run of the release job cannot republish it.
+  publish-crate:
+    needs: [release, verify-tag]
+    if: >-
+      ${{ !cancelled() && (needs.release.outputs.released == 'true'
+      || (needs.verify-tag.result == 'success' && (inputs.publish == 'rust' || inputs.publish == 'all') && !inputs.dry-run)) }}
+    # From the release run, or from verify-tag when recovering an existing tag.
+    env:
+      VERSION: ${{ needs.release.outputs.version || needs.verify-tag.outputs.version }}
+      REVISION: ${{ needs.release.outputs.revision || needs.verify-tag.outputs.revision }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write # crates.io Trusted Publishing
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.REVISION }}
+          persist-credentials: false
+
+      - name: Install repository toolchain
+        run: rustup show
+
+      # Without --registry, cargo info inside the workspace reports the local package.
+      - name: Check whether the version is already published
+        id: published
+        run: |
+          if output="$(cargo info --registry crates-io "${CRATE}@${VERSION}" 2>&1)"; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::${CRATE}@${VERSION} is already on crates.io; skipping publish."
+            echo "\`${CRATE}@${VERSION}\` was already on crates.io." >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "${output}" == *"could not find \`${CRATE}@${VERSION}\`"* ]]; then
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Could not query crates.io for ${CRATE}@${VERSION}."
+            echo "${output}"
+            exit 1
+          fi
+
+      - name: Authenticate to crates.io
+        id: auth
+        if: steps.published.outputs.published == 'false'
+        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+
+      - name: Publish to crates.io
+        if: steps.published.outputs.published == 'false'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        run: |
+          cargo publish --locked --all-features -p "${CRATE}" --manifest-path clients/rust/Cargo.toml
+          echo "Published \`${CRATE}@${VERSION}\` to crates.io." >> "$GITHUB_STEP_SUMMARY"

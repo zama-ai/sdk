@@ -22,6 +22,7 @@ env:
   # Pinned safe-chain release used by the verified installer below; bump as newer versions are vetted.
   SAFE_CHAIN_VERSION: "1.5.15"
   DAEMON_IMAGE: ghcr.io/zama-ai/sdk-daemon
+  CRATE: zama_sdk
 
 jobs:
   validate-branch:
@@ -112,6 +113,8 @@ jobs:
               echo "A release **would** be published: \`${VERSION}\` on the \`${CHANNEL}\` channel."
               echo ""
               echo "Daemon image tags: \`${DAEMON_IMAGE}:${VERSION}\`, \`${DAEMON_IMAGE}:${CHANNEL}\`"
+              echo ""
+              echo "Crate: \`${CRATE}@${VERSION}\`"
             else
               echo "No release would be published from this branch."
             fi

@@ -4850,6 +4850,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "zama-sdk-codegen"
+version = "0.1.0"
+dependencies = [
+ "prost-build",
+ "protoc-bin-vendored",
+ "tonic-prost-build",
+]
+
+[[package]]
 name = "zama_sdk"
 version = "3.6.0"
 dependencies = [
@@ -4887,15 +4896,6 @@ dependencies = [
  "tonic-prost",
  "tower",
  "uuid",
-]
-
-[[package]]
-name = "zama-sdk-codegen"
-version = "0.1.0"
-dependencies = [
- "prost-build",
- "protoc-bin-vendored",
- "tonic-prost-build",
 ]
 
 [[package]]
