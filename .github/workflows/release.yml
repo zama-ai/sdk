@@ -52,22 +52,19 @@ env:
 
 jobs:
   # ── Publish from tag (manual recovery) ──────────────────────────────
-  publish-from-tag:
+  # Outputs are set only once the tag is verified, so the npm and image recovery jobs never see an unverified commit.
+  verify-tag:
     if: inputs.publish-tag != ''
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 5
     permissions:
       contents: read
-      id-token: write
-    # Read by the image jobs when `publish` includes the daemon image.
     outputs:
-      version: ${{ steps.npm-tag.outputs.version }}
-      channel: ${{ steps.npm-tag.outputs.channel }}
-      revision: ${{ steps.checkout.outputs.commit }}
-      image: ${{ inputs.publish != 'npm' && !inputs.dry-run }}
+      version: ${{ steps.resolve.outputs.version }}
+      channel: ${{ steps.resolve.outputs.channel }}
+      revision: ${{ steps.resolve.outputs.revision }}
     steps:
       - name: Checkout tag
-        id: checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # Fully-qualified refs/tags/ — fails if it's a branch, no ambiguity
@@ -102,19 +99,53 @@ jobs:
           echo "::error::Commit ${head_sha} (tag '${INPUT_TAG}') is not reachable from any of: ${protected_branches}. Refusing to publish from an unreviewed ref."
           exit 1
 
+      - name: Resolve version and channel
+        id: resolve
+        env:
+          INPUT_TAG: ${{ inputs.publish-tag }}
+        run: |
+          version="$(jq -r .version packages/sdk/package.json)"
+          if [[ "${version}" != "${INPUT_TAG#v}" ]]; then
+            echo "::error::package.json version (${version}) does not match git tag (${INPUT_TAG}). Aborting."
+            exit 1
+          fi
+          channel="latest"
+          if [[ "${version}" == *-* ]]; then
+            channel="${version#*-}"   # e.g. "alpha.10" from "1.0.0-alpha.10"
+            channel="${channel%%.*}"  # e.g. "alpha"
+          fi
+          {
+            echo "version=${version}"
+            echo "channel=${channel}"
+            echo "revision=$(git rev-parse HEAD)"
+          } >> "$GITHUB_OUTPUT"
+
+  publish-from-tag:
+    needs: [verify-tag]
+    if: inputs.publish != 'image'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      # The verified commit, not the tag, which can still move.
+      - name: Checkout release commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.verify-tag.outputs.revision }}
+          persist-credentials: false
+
       - name: Setup pnpm
-        if: inputs.publish != 'image'
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: Setup Node.js
-        if: inputs.publish != 'image'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: pnpm
 
       - name: Ensure npm >=11
-        if: inputs.publish != 'image'
         run: |
           npm_v="$(npm --version)"
           if [[ "${npm_v%%.*}" -lt 11 ]]; then
@@ -127,7 +158,6 @@ jobs:
           [[ "$(npm --version | cut -d. -f1)" -ge 11 ]]
 
       - name: Install Aikido Safe Chain
-        if: inputs.publish != 'image'
         run: |
           # Resolve the installer asset URL + its GitHub-published SHA-256, download it,
           # verify the hash, then execute — no piping a remote script into a shell.
@@ -141,42 +171,16 @@ jobs:
           bash ./install-safe-chain.sh --ci
 
       - name: Install dependencies
-        if: inputs.publish != 'image'
         run: pnpm ci --ignore-scripts
 
       - name: Build packages
-        if: inputs.publish != 'image'
         run: pnpm build
 
-      - name: Resolve version and npm tag
-        id: npm-tag
-        env:
-          INPUT_TAG: ${{ inputs.publish-tag }}
-          INPUT_NPM_TAG: ${{ inputs.npm-tag }}
-        run: |
-          version=$(node -p "require('./packages/sdk/package.json').version")
-          expected="${INPUT_TAG#v}"  # strip leading v
-          if [[ "$version" != "$expected" ]]; then
-            echo "::error::package.json version (${version}) does not match git tag (${INPUT_TAG}). Aborting."
-            exit 1
-          fi
-          channel="latest"
-          if [[ "$version" == *-* ]]; then
-            channel="${version#*-}"   # e.g. "alpha.10" from "1.0.0-alpha.10"
-            channel="${channel%%.*}"  # e.g. "alpha"
-          fi
-          {
-            echo "version=${version}"
-            echo "channel=${channel}"
-            echo "tag=${INPUT_NPM_TAG:-${channel}}"
-          } >> "$GITHUB_OUTPUT"
-
       - name: Publish to npm
-        if: inputs.publish != 'image'
         env:
           NPM_CONFIG_PROVENANCE: true
-          VERSION: ${{ steps.npm-tag.outputs.version }}
-          NPM_TAG: ${{ steps.npm-tag.outputs.tag }}
+          VERSION: ${{ needs.verify-tag.outputs.version }}
+          NPM_TAG: ${{ inputs.npm-tag || needs.verify-tag.outputs.channel }}
           DRY_RUN: ${{ inputs.dry-run }}
         run: |
           echo "Publishing v${VERSION} with tag '${NPM_TAG}'"
@@ -193,10 +197,10 @@ jobs:
           npm publish "${flags[@]}"
 
       - name: Summary
-        if: success() && inputs.publish != 'image'
+        if: success()
         env:
-          VERSION: ${{ steps.npm-tag.outputs.version }}
-          NPM_TAG: ${{ steps.npm-tag.outputs.tag }}
+          VERSION: ${{ needs.verify-tag.outputs.version }}
+          NPM_TAG: ${{ inputs.npm-tag || needs.verify-tag.outputs.channel }}
           DRY_RUN: ${{ inputs.dry-run }}
         run: |
           if [[ "${DRY_RUN}" == "true" ]]; then
@@ -334,13 +338,15 @@ jobs:
 
   # Runs even if npm publish failed: the tag exists and a re-run of the release job cannot republish it.
   publish-image:
-    needs: [release, publish-from-tag]
-    if: ${{ !cancelled() && (needs.release.outputs.released == 'true' || needs.publish-from-tag.outputs.image == 'true') }}
-    # From the release run, or from publish-from-tag when recovering an existing tag.
+    needs: [release, verify-tag]
+    if: >-
+      ${{ !cancelled() && (needs.release.outputs.released == 'true'
+      || (needs.verify-tag.result == 'success' && inputs.publish != 'npm' && !inputs.dry-run)) }}
+    # From the release run, or from verify-tag when recovering an existing tag.
     env:
-      VERSION: ${{ needs.release.outputs.version || needs.publish-from-tag.outputs.version }}
-      CHANNEL: ${{ needs.release.outputs.channel || needs.publish-from-tag.outputs.channel }}
-      REVISION: ${{ needs.release.outputs.revision || needs.publish-from-tag.outputs.revision }}
+      VERSION: ${{ needs.release.outputs.version || needs.verify-tag.outputs.version }}
+      CHANNEL: ${{ needs.release.outputs.channel || needs.verify-tag.outputs.channel }}
+      REVISION: ${{ needs.release.outputs.revision || needs.verify-tag.outputs.revision }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     permissions:
@@ -426,15 +432,15 @@ jobs:
           retention-days: 30
 
   publish-image-manifest:
-    needs: [release, publish-from-tag, publish-image]
+    needs: [release, verify-tag, publish-image]
     if: ${{ !cancelled() && needs.publish-image.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # From the release run, or from publish-from-tag when recovering an existing tag.
+    # From the release run, or from verify-tag when recovering an existing tag.
     env:
-      VERSION: ${{ needs.release.outputs.version || needs.publish-from-tag.outputs.version }}
-      CHANNEL: ${{ needs.release.outputs.channel || needs.publish-from-tag.outputs.channel }}
-      REVISION: ${{ needs.release.outputs.revision || needs.publish-from-tag.outputs.revision }}
+      VERSION: ${{ needs.release.outputs.version || needs.verify-tag.outputs.version }}
+      CHANNEL: ${{ needs.release.outputs.channel || needs.verify-tag.outputs.channel }}
+      REVISION: ${{ needs.release.outputs.revision || needs.verify-tag.outputs.revision }}
     permissions:
       contents: read
     steps:
