@@ -49,6 +49,7 @@ env:
   DAEMON_IMAGE: ghcr.io/zama-ai/sdk-daemon
   DAEMON_IMAGE_TITLE: Zama SDK daemon
   DAEMON_IMAGE_DESCRIPTION: Runs the Zama SDK for Go and Rust applications over a private Unix socket.
+  DAEMON_IMAGE_LICENSES: BSD-3-Clause-Clear
 
 jobs:
   # ── Publish from tag (manual recovery) ──────────────────────────────
@@ -412,6 +413,7 @@ jobs:
             org.opencontainers.image.version=${{ env.VERSION }}
             org.opencontainers.image.title=${{ env.DAEMON_IMAGE_TITLE }}
             org.opencontainers.image.description=${{ env.DAEMON_IMAGE_DESCRIPTION }}
+            org.opencontainers.image.licenses=${{ env.DAEMON_IMAGE_LICENSES }}
           outputs: type=image,name=${{ env.DAEMON_IMAGE }},push-by-digest=true,name-canonical=true,push=true
           provenance: mode=max
           sbom: true
@@ -501,5 +503,6 @@ jobs:
             --annotation "index:org.opencontainers.image.version=${VERSION}" \
             --annotation "index:org.opencontainers.image.title=${DAEMON_IMAGE_TITLE}" \
             --annotation "index:org.opencontainers.image.description=${DAEMON_IMAGE_DESCRIPTION}" \
+            --annotation "index:org.opencontainers.image.licenses=${DAEMON_IMAGE_LICENSES}" \
             "${sources[@]}"
           docker buildx imagetools inspect "${DAEMON_IMAGE}:${VERSION}"

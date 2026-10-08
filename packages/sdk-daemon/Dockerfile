@@ -19,7 +19,7 @@ RUN pnpm install --frozen-lockfile --offline \
   && pnpm install --dir /pruned/full --prod --frozen-lockfile --offline --ignore-scripts \
   && rm -rf /pruned/full/node_modules/.pnpm/typescript@* /pruned/full/node_modules/.pnpm/@typescript+* /pruned/full/node_modules/.pnpm/@types+* \
   && find /pruned/full/node_modules /pruned/full/packages -xtype l -delete \
-  && find /pruned/full/packages/sdk /pruned/full/packages/sdk-daemon -mindepth 1 -maxdepth 1 ! -name dist ! -name package.json ! -name node_modules -exec rm -rf {} + \
+  && find /pruned/full/packages/sdk /pruned/full/packages/sdk-daemon -mindepth 1 -maxdepth 1 ! -name dist ! -name package.json ! -name node_modules ! -name LICENSE -exec rm -rf {} + \
   && install -d -m 0700 /rootfs/run/zama /rootfs/var/lib/zama
 
 # Node.js only: no shell or package manager.
@@ -30,6 +30,7 @@ ENV NODE_ENV=production PATH=/nodejs/bin:$PATH
 WORKDIR /app/packages/sdk-daemon
 # Root-owned, so the daemon user cannot modify its own code.
 COPY --from=build /pruned/full /app
+COPY LICENSE /app/LICENSE
 COPY --from=build --chown=${RUNTIME_UID}:${RUNTIME_GID} /rootfs/run/ /run/
 COPY --from=build --chown=${RUNTIME_UID}:${RUNTIME_GID} /rootfs/var/lib/ /var/lib/
 USER ${RUNTIME_UID}:${RUNTIME_GID}
