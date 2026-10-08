@@ -536,7 +536,7 @@
       "source_type": "official-doc",
       "category": "guides",
       "logical_path": "native/guides/credential-storage",
-      "description": "Keep Go and Rust decryption credentials in your own database and share them across application replicas.",
+      "description": "Choose where the daemon keeps Go and Rust decryption credentials, or keep them in your own database.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

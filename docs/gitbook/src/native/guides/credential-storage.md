@@ -1,16 +1,49 @@
 ---
-description: Keep Go and Rust decryption credentials in your own database and share them across application replicas.
+description: Choose where the daemon keeps Go and Rust decryption credentials, or keep them in your own database.
 ---
 
 # Store credentials
 
-Most single-instance deployments keep credentials in daemon SQLite on a persistent volume: select it in [Configuration](../../guides/configuration.md#6-optional-choose-a-storage-backend) and mount the volume as shown in [Deploy in production](../operations/run-in-production.md). Implement your own backend when application replicas must share credentials, or when you want them in an existing database.
+Decryption credentials are the permits and transport key pairs that let a user decrypt without signing again. Choose where they live:
 
-This page shows how to keep decryption credentials in your application's database.
+| Backend                              | Survives a restart                                                   | Use it for                                                               |
+| ------------------------------------ | -------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Daemon memory (default)              | No: it ends with the SDK context or the daemon, and users sign again | Tests and short-lived scripts                                            |
+| Daemon SQLite on a persistent volume | Yes                                                                  | Most deployments with one daemon per application instance                |
+| Application storage                  | Yes, as long as your database keeps it                               | Replicas that share credentials, or keeping them in an existing database |
 
-Your application stores opaque bytes under string keys. It never decodes the credentials. The daemon still reads and uses them, so treat the database and its backups as sensitive; see the [daemon trust model](../concepts/trust-boundary.md).
+Treat the credential store and its backups as sensitive, whichever backend you choose; see the [daemon trust model](../concepts/trust-boundary.md).
 
-## Implement a storage backend
+## Use daemon SQLite
+
+Select a named SQLite store when you create the SDK context:
+
+{% tabs %}
+{% tab title="Go" %}
+
+```go
+config.Storage = zama.DaemonPersistentStorage("credentials")
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+let sdk = client
+    .sdk(config)
+    .storage(Storage::Persistent("credentials".into()))
+    .build()
+    .await?;
+```
+
+{% endtab %}
+{% endtabs %}
+
+Then give the daemon a persistent volume and set `ZAMA_SDK_DAEMON_STORAGE_DIR` to its mount path. The [deployment Compose file](../operations/run-in-production.md#run-with-docker-compose) already mounts one. Give each daemon its own volume, and back it up as described in [Deploy in production](../operations/run-in-production.md).
+
+## Implement an application storage backend
+
+Use your own database when several application replicas must share credentials. Your application stores opaque bytes under string keys and never decodes them.
 
 These examples store credentials in a PostgreSQL table:
 
