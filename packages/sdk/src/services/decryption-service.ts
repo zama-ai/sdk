@@ -19,7 +19,8 @@ import {
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { EncryptedInput } from "../query/user-decrypt";
-import type { ClearValue, EncryptedValue, FhevmRelayerOptions } from "../relayer/types";
+import type { ClearValue, EncryptedValue, RelayerRequestOptions } from "../relayer/types";
+import type { TelemetryOperation } from "../telemetry";
 import { pLimit } from "../utils/concurrency";
 import { chunkHandlesByBitBudget, isEncryptedValueZero } from "../utils/handles";
 import {
@@ -52,6 +53,8 @@ export interface DelegatedDecryptOptions {
    * to `true`. Pass `false` to fail fast on the first not-propagated response.
    */
   waitForPropagation?: boolean;
+  /** @internal */
+  readonly operation?: TelemetryOperation;
 }
 
 interface DecryptionStrategy {
@@ -127,7 +130,7 @@ export class DecryptionService {
   async decryptValues(
     handles: EncryptedInput[],
     signerAddress: Address,
-    opts?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
+    opts?: RelayerRequestOptions,
   ): Promise<Record<EncryptedValue, ClearValue>> {
     const normalizedSigner = getAddress(signerAddress);
     return this.#decrypt(
@@ -164,7 +167,7 @@ export class DecryptionService {
             }),
           errorMessage: "Failed to decrypt delegated encrypted values",
         },
-        undefined,
+        { operation: opts?.operation },
         recovery,
       ),
     );
@@ -214,6 +217,7 @@ export class DecryptionService {
     accountAddress,
     maxConcurrency = 5,
     waitForPropagation = true,
+    operation,
   }: {
     encryptedInputs: EncryptedInput[];
     delegatorAddress: Address;
@@ -221,6 +225,7 @@ export class DecryptionService {
     accountAddress: Address;
     maxConcurrency?: number;
     waitForPropagation?: boolean;
+    operation?: TelemetryOperation;
   }): Promise<BatchDecryptResult> {
     const items: BatchDecryptItem[] = encryptedInputs.map((h) => ({
       encryptedValue: h.encryptedValue,
@@ -237,7 +242,7 @@ export class DecryptionService {
         delegatorAddress,
         delegateAddress,
         normalizedAccount,
-        { waitForPropagation },
+        { waitForPropagation, operation },
       );
       for (const item of items) {
         this.#setHandleResult(item, decrypted);
@@ -277,7 +282,7 @@ export class DecryptionService {
             delegatorAddress,
             delegateAddress,
             normalizedAccount,
-            { waitForPropagation: false },
+            { waitForPropagation: false, operation },
           );
           this.#setHandleResult(item, decrypted);
         } catch (error) {
@@ -313,7 +318,7 @@ export class DecryptionService {
     credentials: SerializedTransportKeyPairWithPermissions,
     contractAddress: Address,
     encryptedValues: EncryptedValue[],
-    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
+    options?: RelayerRequestOptions,
   ): Promise<DecryptValuesReturnType> {
     const permit = resolvePermit(credentials, contractAddress);
     let transportKeyPair: ParseTransportKeyPairReturnType;
@@ -348,7 +353,7 @@ export class DecryptionService {
   async #decrypt(
     handles: EncryptedInput[],
     strategy: DecryptionStrategy,
-    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
+    options?: RelayerRequestOptions,
     recovery: RecoveryBudget = { spent: false },
   ): Promise<Record<EncryptedValue, ClearValue>> {
     if (handles.length === 0) {
@@ -532,7 +537,7 @@ export class DecryptionService {
     credentials: SerializedTransportKeyPairWithPermissions,
     requests: DecryptRequest[],
     result: Record<EncryptedValue, ClearValue>,
-    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
+    options?: RelayerRequestOptions,
   ): Promise<void> {
     const outcomes = await pLimit(
       requests.map(({ contractAddress, encryptedValues }) => async (): Promise<unknown> => {
@@ -565,7 +570,7 @@ export class DecryptionService {
     contractAddress: Address,
     encryptedValues: EncryptedValue[],
     result: Record<EncryptedValue, ClearValue>,
-    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
+    options?: RelayerRequestOptions,
   ): Promise<void> {
     // Classify per contract so a not-entitled / relayer failure carries the
     // exact contract + ACL actor. Already-typed errors pass straight through.

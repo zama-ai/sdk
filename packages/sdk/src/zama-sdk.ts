@@ -10,7 +10,12 @@ import { Decryption } from "./namespaces/decryption";
 import { Delegations } from "./namespaces/delegations";
 import { Offline } from "./namespaces/offline";
 import { Permits } from "./namespaces/permits";
-import type { EncryptParams, FhevmRelayerOptions, RelayerSDK } from "./relayer/types";
+import type {
+  EncryptParams,
+  EncryptResult,
+  RelayerRequestOptions,
+  RelayerSDK,
+} from "./relayer/types";
 import { CachingService } from "./services/caching-service";
 import { DecryptionService } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
@@ -28,6 +33,7 @@ import type {
 } from "./types";
 import { parseSchema } from "./validation";
 import { WrappersRegistry } from "./wrappers-registry";
+import { withOperation } from "./telemetry";
 
 /** Instance-level options that are deliberately not part of the shareable config object. */
 export interface ZamaSDKOptions {
@@ -328,8 +334,8 @@ export class ZamaSDK {
    * });
    * ```
    */
-  async encrypt(params: EncryptParams, options?: Pick<FhevmRelayerOptions, "signal" | "timeout">) {
-    return this.#encryptionService.encryptValues(params, options);
+  async encrypt(params: EncryptParams, options?: RelayerRequestOptions): Promise<EncryptResult> {
+    return this.#encryptionService.encryptValues(params, withOperation(options, "encrypt"));
   }
 
   /**

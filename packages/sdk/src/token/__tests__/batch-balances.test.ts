@@ -30,14 +30,14 @@ function makeTokens(sdk: ZamaSDK, count = TOKEN_COUNT): Token[] {
   return Array.from({ length: count }, (_, i) => new Token(sdk, tokenAddressAt(i)));
 }
 
-/** Stubs every token's `balanceOf`, recording which tokens were called before the batch stopped. */
+/** Stubs every token's balance read, recording which tokens were called before the batch stopped. */
 function stubBalances(
   tokens: Token[],
   outcome: (index: number) => Promise<bigint>,
 ): { attempts: number[] } {
   const attempts: number[] = [];
   for (const [index, token] of tokens.entries()) {
-    vi.spyOn(token, "balanceOf").mockImplementation(async () => {
+    vi.spyOn(token, "decryptBalance").mockImplementation(async () => {
       attempts.push(index);
       return outcome(index);
     });
@@ -110,6 +110,7 @@ describe("Token.batchBalancesOf", () => {
     expect(attempts.length).toBe(TOKEN_COUNT);
     expect(results.size).toBe(TOKEN_COUNT - 1);
     expect(errors.get(tokens[0]!.address)).toBe(perTokenError);
+    expect(tokens[1]!.decryptBalance).toHaveBeenCalledWith(OWNER, "batch-balances-of");
   });
 
   test("wraps a non-ZamaError per-token failure as DecryptionFailedError", async ({ sdk }) => {

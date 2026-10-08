@@ -1,6 +1,6 @@
 {
   "name": "@zama-fhe/sdk",
-  "version": "3.7.0-beta.5",
+  "version": "3.7.0-beta.6",
   "description": "TypeScript SDK for Zama fhEVM confidential smart contracts",
   "keywords": [
     "blockchain",
@@ -188,7 +188,7 @@
   "devDependencies": {
     "@dfns/sdk": "^0.8.20",
     "@dfns/sdk-keysigner": "^0.8.20",
-    "@tanstack/query-core": "^5.103.1",
+    "@tanstack/query-core": "^5.104.1",
     "comlink": "^4.4.2"
   },
   "peerDependencies": {

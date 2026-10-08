@@ -289,6 +289,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:guides/telemetry",
+      "title": "SDK usage telemetry",
+      "source_path": "docs/gitbook/src/guides/telemetry.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md",
+      "source_type": "official-doc",
+      "category": "guides",
+      "logical_path": "guides/telemetry",
+      "description": "What the SDK reports to the Zama-hosted relayer, when, and how to turn it off.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:guides/shield-tokens",
       "title": "Shield tokens",
       "source_path": "docs/gitbook/src/guides/shield-tokens.md",

@@ -32,6 +32,7 @@ export type {
   FhevmClient,
   FhevmClientOptions,
   FhevmRelayerOptions,
+  RelayerRequestOptions,
   FhevmRuntimeConfig,
   RelayerOptions,
   RelayerSDK,

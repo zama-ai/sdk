@@ -76,6 +76,9 @@ describe("Token.batchDecryptBalancesAs", () => {
 
     expect(balances.get(TOKEN_A)).toBe(100n);
     expect(balances.get(TOKEN_B)).toBe(200n);
+    expect(relayer.decryptValues).toHaveBeenCalledWith(
+      expect.objectContaining({ options: { operation: "batch-decrypt-balances-as" } }),
+    );
   });
 
   test("returns empty map for empty token list", async () => {

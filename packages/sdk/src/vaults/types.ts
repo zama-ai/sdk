@@ -1,5 +1,6 @@
 import type { Address } from "viem";
 import type { EncryptedValue } from "../relayer/types";
+import type { TelemetryOperation } from "../telemetry";
 import type { TransactionResult } from "../types";
 
 /**
@@ -41,6 +42,8 @@ export interface JoinOptions {
    * whose balance the connected signer cannot decrypt, such as smart wallets.
    */
   skipBalanceCheck?: boolean;
+  /** @internal */
+  readonly operation?: TelemetryOperation;
 }
 
 /** Options for {@link Vault.deposit} and {@link Vault.redeem}. */

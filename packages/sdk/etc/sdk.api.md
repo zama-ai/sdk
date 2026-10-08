@@ -5401,8 +5401,8 @@ export interface DecryptInput {
 
 // @public
 export class Decryption {
-    decryptPublicValues(encryptedValues: EncryptedValue[], options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<DecryptPublicValuesResult>;
-    decryptValues(encryptedInput: DecryptInput[], options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<Record<EncryptedValue, ClearValue>>;
+    decryptPublicValues(encryptedValues: EncryptedValue[], options?: RelayerRequestOptions): Promise<DecryptPublicValuesResult>;
+    decryptValues(encryptedInput: DecryptInput[], options?: RelayerRequestOptions): Promise<Record<EncryptedValue, ClearValue>>;
     delegatedBatchDecryptValues(input: {
         encryptedInputs: DecryptInput[];
         delegatorAddress: Address;
@@ -12782,6 +12782,9 @@ export class RelayerRequestFailedError extends ZamaError {
     readonly retryAfter: number | undefined;
     readonly statusCode: number | undefined;
 }
+
+// @public
+export interface RelayerRequestOptions extends Pick<FhevmRelayerOptions, "signal" | "timeout"> {}
 
 // @public
 export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
@@ -20844,6 +20847,7 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
     relayers: { [K in TChains[number]["id"]]: RelayerConfig; };
     runtime?: FhevmRuntimeConfig;
     storage?: GenericStorage;
+    telemetry?: boolean;
     transportKeyPairScope?: string;
     transportKeyPairTTL?: number;
 }
@@ -20943,7 +20947,7 @@ export class ZamaSDK {
     readonly decryption: Decryption;
     readonly delegations: Delegations;
     dispose(): void;
-    encrypt(params: EncryptParams, options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<EncryptResult>;
+    encrypt(params: EncryptParams, options?: RelayerRequestOptions): Promise<EncryptResult>;
     readonly offline: Offline;
     readonly permits: Permits;
     readonly provider: GenericProvider;

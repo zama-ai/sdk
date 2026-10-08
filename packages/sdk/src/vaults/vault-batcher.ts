@@ -7,6 +7,7 @@ import {
 } from "../errors";
 import type { TransactionOperation } from "../events/sdk-events";
 import type { EncryptedValue } from "../relayer/types";
+import { type TelemetryOperation, withOperation } from "../telemetry";
 import { Token } from "../token";
 import type { GenericSigner, TransactionResult, WriteContractConfig } from "../types";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
@@ -229,9 +230,10 @@ export class VaultBatcher {
     if (isEncryptedValueZero(encryptedValue)) {
       return 0n;
     }
-    const result = await this.sdk.decryption.decryptValues([
-      { encryptedValue, contractAddress: this.address },
-    ]);
+    const result = await this.sdk.decryption.decryptValues(
+      [{ encryptedValue, contractAddress: this.address }],
+      { operation: "vault-deposit-of" },
+    );
     const value = result[encryptedValue];
     if (value === undefined) {
       throw new DecryptionFailedError(`Decryption returned no value for ${encryptedValue}`);
@@ -261,20 +263,20 @@ export class VaultBatcher {
    * @throws if balance validation requires decryption that is not possible. {@link BalanceCheckUnavailableError}
    */
   async join(amount: bigint, beneficiary?: Address, options?: JoinOptions): Promise<JoinResult> {
+    const { operation } = withOperation(options, "vault-join");
     this.#requireSigner("join");
     const account = await requireAlignedWalletAccount("join", this.sdk.signer, this.sdk.provider);
     const userAddress = getAddress(account.address);
     const resolvedBeneficiary = beneficiary ? getAddress(beneficiary) : userAddress;
 
     if (!options?.skipBalanceCheck) {
-      await this.#assertJoinableBalance(amount);
+      await this.#assertJoinableBalance(amount, operation);
     }
 
-    const { encryptedValues, inputProof } = await this.sdk.encrypt({
-      values: [{ value: amount, type: "euint64" }],
-      contractAddress: this.address,
-      userAddress,
-    });
+    const { encryptedValues, inputProof } = await this.sdk.encrypt(
+      { values: [{ value: amount, type: "euint64" }], contractAddress: this.address, userAddress },
+      { operation },
+    );
 
     const encryptedAmount = encryptedValues[0];
     if (!encryptedAmount) {
@@ -379,7 +381,10 @@ export class VaultBatcher {
     return this.#fromTokenInstance;
   }
 
-  async #assertJoinableBalance(amount: bigint): Promise<void> {
+  async #assertJoinableBalance(
+    amount: bigint,
+    telemetryOperation: TelemetryOperation,
+  ): Promise<void> {
     const token = await this.#inputToken();
     return assertConfidentialBalance({
       operation: "join",
@@ -387,7 +392,7 @@ export class VaultBatcher {
       amount,
       signer: this.sdk.signer,
       provider: this.sdk.provider,
-      readBalance: (owner) => token.balanceOf(owner),
+      readBalance: (owner) => token.decryptBalance(owner, telemetryOperation),
     });
   }
 

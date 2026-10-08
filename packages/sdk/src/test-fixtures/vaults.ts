@@ -47,7 +47,7 @@ export function mockJoinBalance(
   vi.mocked(provider.readContract).mockImplementation(async (config) =>
     config.functionName === "vault" && params.vault ? params.vault : params.fromToken,
   );
-  vi.spyOn(Token.prototype, "balanceOf").mockResolvedValue(params.balance ?? 1_000_000_000n);
+  vi.spyOn(Token.prototype, "decryptBalance").mockResolvedValue(params.balance ?? 1_000_000_000n);
 }
 
 /** `count` distinct handles under one proof, in leg order; each encrypt receives as many as it asks for. */
