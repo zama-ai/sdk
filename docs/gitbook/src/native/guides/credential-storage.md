@@ -16,30 +16,7 @@ Treat the credential store and its backups as sensitive, whichever backend you c
 
 ## Use daemon SQLite
 
-Select a named SQLite store when you create the SDK context:
-
-{% tabs %}
-{% tab title="Go" %}
-
-```go
-config.Storage = zama.DaemonPersistentStorage("credentials")
-```
-
-{% endtab %}
-{% tab title="Rust" %}
-
-```rust
-let sdk = client
-    .sdk(config)
-    .storage(Storage::Persistent("credentials".into()))
-    .build()
-    .await?;
-```
-
-{% endtab %}
-{% endtabs %}
-
-Then give the daemon a persistent volume and set `ZAMA_SDK_DAEMON_STORAGE_DIR` to its mount path. The [deployment Compose file](../operations/run-in-production.md#run-with-docker-compose) already mounts one. Give each daemon its own volume, and back it up as described in [Deploy in production](../operations/run-in-production.md).
+Select a named SQLite store in [Configuration](../../guides/configuration.md#6-optional-choose-a-storage-backend). Then give the daemon a persistent volume and set `ZAMA_SDK_DAEMON_STORAGE_DIR` to its mount path. The [deployment Compose file](../operations/run-in-production.md#run-with-docker-compose) already mounts one. Give each daemon its own volume, and [back it up](../operations/run-in-production.md#back-up-daemon-sqlite-storage).
 
 ## Implement an application storage backend
 
