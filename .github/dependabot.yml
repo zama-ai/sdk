@@ -66,6 +66,43 @@ updates:
         update-types:
           - version-update:semver-major
 
+  # Go and Rust clients
+  - package-ecosystem: gomod
+    target-branch: beta
+    directories:
+      - /clients/go
+      - /clients/go/examples/balance
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    groups:
+      go-client:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-patch
+
+  - package-ecosystem: cargo
+    target-branch: beta
+    directory: /clients/rust
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    groups:
+      rust-client:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-patch
+
   - package-ecosystem: github-actions
     target-branch: beta
     directory: /
