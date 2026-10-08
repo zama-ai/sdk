@@ -106,7 +106,14 @@ module.exports = {
     [
       "@semantic-release/git",
       {
-        assets: ["CHANGELOG.md", "packages/sdk/package.json", "packages/react-sdk/package.json"],
+        assets: [
+          "CHANGELOG.md",
+          "packages/sdk/package.json",
+          "packages/react-sdk/package.json",
+          "packages/sdk-daemon/package.json",
+          "clients/rust/Cargo.toml",
+          "clients/rust/Cargo.lock",
+        ],
         message: "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}",
       },
     ],
