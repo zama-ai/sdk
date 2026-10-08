@@ -202,12 +202,13 @@ Release behavior:
 6. GitHub release notes and tags are generated automatically.
 7. Each release also pushes the `ghcr.io/zama-ai/sdk-daemon` image (`linux/amd64`, `linux/arm64`) with the workflow `GITHUB_TOKEN`, tagged with the version and the channel.
 8. Each release also publishes the `zama_sdk` crate to crates.io through Trusted Publishing.
+9. Each release also tags `clients/go/v<version>` for the Go module. Before a major bump, change the module path in `clients/go/go.mod` to `/v<major>`.
 
 Release workflows:
 
 - `Release` (`.github/workflows/release.yml`): automatic publish on push to `main`, `beta`, and `alpha`, gated by `Vitest`, `Playwright`, `Docs`, and `Daemon CI`.
-- Manual publish (`workflow_dispatch`): without `publish-tag`, same gates as above. With `publish-tag`, republish an existing tag when a publish failed after semantic-release tagged it (`dry-run` input available); skips CI, but requires the tag be reachable from `main`, `beta`, or `alpha`. `publish` selects npm, the daemon image, the Rust crate, or all.
-- Image and crate retry: re-run the failed jobs in the original run, or use `publish-tag` with `publish: image` or `publish: rust`. If `release` itself failed, "Re-run failed jobs" skips them.
+- Manual publish (`workflow_dispatch`): without `publish-tag`, same gates as above. With `publish-tag`, republish an existing tag when a publish failed after semantic-release tagged it (`dry-run` input available); skips CI, but requires the tag be reachable from `main`, `beta`, or `alpha`. `publish` selects npm, the daemon image, the Rust crate, the Go module, or all.
+- Image, crate, and Go retry: re-run the failed jobs in the original run, or use `publish-tag` with `publish: image`, `publish: rust`, or `publish: go`. If `release` itself failed, "Re-run failed jobs" skips them.
 - `Release Preview` (`.github/workflows/release-preview.yml`): manual dry-run restricted to `main`, `beta`, and `alpha` (`pnpm release:dry-run`), no publish side effects.
 
 Install channels:

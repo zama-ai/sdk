@@ -27,7 +27,7 @@ const commitPartial = extract("commitPartial").replace(/^\*/, "-");
 
 // Shell command appending `key=value` lines to the GitHub Actions step output; a no-op outside Actions.
 const githubOutput = (...pairs) =>
-  `[ -z "$GITHUB_OUTPUT" ] || printf '%s\\n' ${pairs.map((pair) => `'${pair}'`).join(" ")} >> "$GITHUB_OUTPUT"`;
+  `if [ -n "$GITHUB_OUTPUT" ]; then printf '%s\\n' ${pairs.map((pair) => `'${pair}'`).join(" ")} >> "$GITHUB_OUTPUT"; fi`;
 const releaseOutputs = [
   "version=${nextRelease.version}",
   'channel=${nextRelease.channel || "latest"}',
@@ -110,9 +110,13 @@ module.exports = {
           "pnpm build",
           "pnpm llm:build",
         ].join(" && "),
-        // verifyRelease runs in dry-run, for the preview. success also runs when adding a channel, which skips
-        // verifyRelease, so it writes every output itself; gitHead is then the release commit.
-        verifyReleaseCmd: githubOutput(...releaseOutputs),
+        // Runs in dry-run and before tagging, so the preview and the release both reject a mismatched Go module path.
+        verifyReleaseCmd: [
+          "node scripts/release/go-module.mjs ${nextRelease.version}",
+          githubOutput(...releaseOutputs),
+        ].join(" && "),
+        // Also runs when adding a channel, which skips verifyRelease, so it writes every output itself; gitHead is
+        // then the release commit.
         successCmd: githubOutput(
           "released=true",
           "revision=${nextRelease.gitHead}",

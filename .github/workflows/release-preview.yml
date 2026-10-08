@@ -115,6 +115,8 @@ jobs:
               echo "Daemon image tags: \`${DAEMON_IMAGE}:${VERSION}\`, \`${DAEMON_IMAGE}:${CHANNEL}\`"
               echo ""
               echo "Crate: \`${CRATE}@${VERSION}\`"
+              echo ""
+              echo "Go module tag: \`clients/go/v${VERSION}\`"
             else
               echo "No release would be published from this branch."
             fi

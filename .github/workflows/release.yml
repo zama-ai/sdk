@@ -14,10 +14,10 @@ on:
         required: false
         type: string
       publish:
-        description: "With publish-tag: publish npm, the daemon image, the Rust crate, or all"
+        description: "With publish-tag: publish npm, the daemon image, the Rust crate, the Go module, or all"
         required: false
         type: choice
-        options: [npm, image, rust, all]
+        options: [npm, image, rust, go, all]
         default: npm
       dry-run:
         description: "Dry run (log what would be published without actually publishing)"
@@ -561,3 +561,62 @@ jobs:
         run: |
           cargo publish --locked --all-features -p "${CRATE}" --manifest-path clients/rust/Cargo.toml
           echo "Published \`${CRATE}@${VERSION}\` to crates.io." >> "$GITHUB_STEP_SUMMARY"
+
+  # Runs even if npm publish failed: the tag exists and a re-run of the release job cannot republish it.
+  publish-go:
+    needs: [release, verify-tag]
+    if: >-
+      ${{ !cancelled() && (needs.release.outputs.released == 'true'
+      || (needs.verify-tag.result == 'success' && (inputs.publish == 'go' || inputs.publish == 'all') && !inputs.dry-run)) }}
+    # From the release run, or from verify-tag when recovering an existing tag.
+    env:
+      VERSION: ${{ needs.release.outputs.version || needs.verify-tag.outputs.version }}
+      REVISION: ${{ needs.release.outputs.revision || needs.verify-tag.outputs.revision }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.REVISION }}
+          persist-credentials: false
+
+      # publish-tag recovery skips semantic-release and its module path check.
+      - name: Resolve the module path
+        id: module
+        run: |
+          path="$(node scripts/release/go-module.mjs "${VERSION}")"
+          echo "path=${path}" >> "$GITHUB_OUTPUT"
+
+      # Never move an existing tag: the checksum database pins the first content it served.
+      # matching-refs is a prefix match, so select the exact ref.
+      - name: Tag the Go module
+        env:
+          GH_TOKEN: ${{ secrets.SDK_RELEASER_TOKEN }}
+        run: |
+          tag="clients/go/v${VERSION}"
+          existing="$(gh api "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/${tag}" \
+            --jq ".[] | select(.ref == \"refs/tags/${tag}\") | \"\(.object.type) \(.object.sha)\"")"
+          if [[ "${existing}" == "commit ${REVISION}" ]]; then
+            echo "::notice::${tag} already exists on ${REVISION}; skipping."
+            echo "\`${tag}\` already existed." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          elif [[ -n "${existing}" ]]; then
+            echo "::error::${tag} already exists (${existing}), not on ${REVISION}."
+            exit 1
+          fi
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+            -f ref="refs/tags/${tag}" -f sha="${REVISION}" > /dev/null
+          echo "Tagged \`${tag}\` at \`${REVISION}\`." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Warm the Go module proxy
+        working-directory: ${{ runner.temp }}
+        env:
+          MODULE: ${{ steps.module.outputs.path }}
+          # No direct fallback, so a proxy failure fails the step.
+          GOPROXY: https://proxy.golang.org
+        run: |
+          go list -m "${MODULE}@v${VERSION}"
+          echo "Go proxy serves \`${MODULE}@v${VERSION}\`." >> "$GITHUB_STEP_SUMMARY"
