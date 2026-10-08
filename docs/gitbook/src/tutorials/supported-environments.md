@@ -21,7 +21,7 @@ description: Minimum browser, Node.js, Go, and Rust versions for the SDK.
 
 | Environment | Minimum version or requirement                           |
 | ----------- | -------------------------------------------------------- |
-| Go          | 1.25                                                     |
+| Go          | 1.26                                                     |
 | Rust        | 1.94.1                                                   |
 | Daemon host | Docker Compose on Linux or Docker Desktop, or Kubernetes |
 

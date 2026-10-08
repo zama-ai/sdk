@@ -12,7 +12,7 @@ We'll encrypt `1000` as an `euint64` for a confidential contract on Sepolia and 
 
 The Go client talks to a local SDK daemon over a private Unix socket. The daemon runs the Zama SDK, so your application stays in Go.
 
-You need Go 1.25 or later, Docker Compose on Linux or Docker Desktop, a Sepolia RPC URL, the address of your confidential contract, and the address of the user who will submit the input.
+You need Go 1.26 or later, Docker Compose on Linux or Docker Desktop, a Sepolia RPC URL, the address of your confidential contract, and the address of the user who will submit the input.
 
 ## Authentication
 
@@ -55,7 +55,7 @@ include:
 
 services:
   app:
-    image: golang:1.25
+    image: golang:1.26
     user: "10000:10001"
     working_dir: /src
     environment:
