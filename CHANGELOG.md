@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.7.0-beta.7](https://github.com/zama-ai/sdk/compare/v3.7.0-beta.6...v3.7.0-beta.7) (2026-10-08)
+
+### Features
+
+- **daemon:** add the SDK daemon with Rust and Go clients ([#813](https://github.com/zama-ai/sdk/issues/813)) ([a52315f]())
+
 ## [3.7.0-beta.6](https://github.com/zama-ai/sdk/compare/v3.7.0-beta.5...v3.7.0-beta.6) (2026-10-06)
 
 ### Features

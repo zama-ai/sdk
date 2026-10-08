@@ -616,7 +616,7 @@ See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/git
 Create a module and add the client:
 
 ```sh
-export ZAMA_SDK_VERSION=3.7.0-beta.6
+export ZAMA_SDK_VERSION=3.7.0-beta.7
 mkdir encrypt-input
 cd encrypt-input
 go mod init example.com/encrypt-input
@@ -794,7 +794,7 @@ See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/git
 Create a binary project and add the client with the runtime this example uses:
 
 ```sh
-export ZAMA_SDK_VERSION=3.7.0-beta.6
+export ZAMA_SDK_VERSION=3.7.0-beta.7
 cargo new encrypt-input
 cd encrypt-input
 cargo add zama_sdk@=$ZAMA_SDK_VERSION
@@ -10602,7 +10602,7 @@ services:
 Download the daemon file next to it, then start both:
 
 ```bash
-export ZAMA_SDK_VERSION=3.7.0-beta.6
+export ZAMA_SDK_VERSION=3.7.0-beta.7
 curl -fsSL -o zama-sdk-daemon.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.yaml"
 docker compose up -d --wait
 ```
@@ -10616,7 +10616,7 @@ When your application runs directly on a Linux host rather than in a container, 
 From the directory that will hold the daemon's files, replace `myapp` with the user your application runs as:
 
 ```bash
-export ZAMA_SDK_VERSION=3.7.0-beta.6
+export ZAMA_SDK_VERSION=3.7.0-beta.7
 curl -fsSL -o compose.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.host.yaml"
 sudo install -d -m 700 -o myapp -g myapp socket storage
 ZAMA_SDK_DAEMON_UID="$(id -u myapp)" ZAMA_SDK_DAEMON_GID="$(id -g myapp)" docker compose up -d --wait
@@ -29765,7 +29765,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 ## Installation
 
 ```sh
-go get github.com/zama-ai/sdk/clients/go/v3@v3.7.0-beta.6
+go get github.com/zama-ai/sdk/clients/go/v3@v3.7.0-beta.7
 ```
 
 Run the `ghcr.io/zama-ai/sdk-daemon` image at exactly the same version as the client.
@@ -29794,7 +29794,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 ## Installation
 
 ```sh
-cargo add zama_sdk@=3.7.0-beta.6
+cargo add zama_sdk@=3.7.0-beta.7
 ```
 
 Run the `ghcr.io/zama-ai/sdk-daemon` image at exactly the same version as the client. Enable the `alloy` feature for the Alloy signing and transaction adapters.

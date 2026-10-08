@@ -9,7 +9,7 @@ Run one daemon per application instance, on the same host or in the same Kuberne
 Start it with the Compose file from the release that matches your client, and include that file from your application's `compose.yaml`:
 
 ```sh
-export ZAMA_SDK_VERSION=3.7.0-beta.6
+export ZAMA_SDK_VERSION=3.7.0-beta.7
 curl -fsSL -o zama-sdk-daemon.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.yaml"
 docker compose -f zama-sdk-daemon.yaml up -d --wait
 ```

@@ -1,6 +1,6 @@
 [package]
 name = "zama_sdk"
-version = "3.6.0"
+version = "3.7.0-beta.7"
 edition = "2024"
 rust-version = "1.94.1"
 description = "Rust client for the Zama SDK daemon: encrypts, decrypts and prepares confidential transactions over a Unix socket."
