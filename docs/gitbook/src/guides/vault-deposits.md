@@ -5,6 +5,10 @@ description: How to integrate confidential ERC-4626 vaults with the Zama SDK.
 
 # Vault deposits and redemptions
 
+{% hint style="info" %}
+Available in the Core SDK and React SDK.
+{% endhint %}
+
 This guide covers **integrating** a confidential vault from the SDK. For what a confidential vault is, how batching and settlement work on-chain, and the contracts themselves, see the [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault) — in particular its [deposit guide](https://docs.zama.org/protocol/confidential-vault/guides/deposit).
 
 Core SDK usage imports from `@zama-fhe/sdk/vaults`; React hooks import from `@zama-fhe/react-sdk/vaults`. Both are separate subpaths, so this module is only bundled for apps that actually use it.

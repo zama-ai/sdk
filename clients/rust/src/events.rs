@@ -165,7 +165,8 @@ pub enum Notification {
     },
     Progress(OperationProgress),
 }
-/// Notifications run sequentially. Errors are reported to the daemon; a panic closes the subscription.
+/// Notifications run sequentially. An error is reported to the daemon with the code of an `SdkError` in its
+/// chain, or `CALLBACK_FAILED`; a panic is reported as `CALLBACK_FAILED`. The subscription keeps delivering.
 #[async_trait]
 pub trait EventHandler: Send + Sync {
     async fn on_notification(

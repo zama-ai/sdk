@@ -137,6 +137,41 @@ pnpm test:coverage
 pnpm e2e:test
 ```
 
+### Daemon and native clients
+
+The daemon is in `packages/sdk-daemon`, the clients in `clients/go` and `clients/rust`, and the wire contract in `proto/`. Toolchains: Go from `clients/go/go.mod`, Rust from `rust-toolchain.toml`. Run commands from the repository root unless noted.
+
+```sh
+pnpm daemon:build                                   # build the SDK and the daemon
+pnpm daemon:test                                    # daemon tests
+ZAMA_SDK_DAEMON_NATIVE_TESTS=1 pnpm daemon:test     # plus Go and Rust integration tests (synthetic fixtures)
+
+# After changing proto/: regenerate all bindings
+pnpm daemon:generate
+sh clients/go/generate.sh
+cargo run --manifest-path clients/rust/Cargo.toml -p zama-sdk-codegen --locked
+
+# Go: run in clients/go and in clients/go/examples/balance (a separate module)
+go test -race ./... && go vet ./...
+
+# Rust
+cargo test --manifest-path clients/rust/Cargo.toml --all-features --all-targets --locked
+cargo clippy --manifest-path clients/rust/Cargo.toml --all-features --all-targets --locked -- -D warnings
+cargo fmt --manifest-path clients/rust/Cargo.toml --check
+```
+
+To run the Go and Rust balance examples against Sepolia, fill `.env.daemon.local` (copied from `.env.daemon.example`) with an RPC URL, a test wallet and a confidential token address, then:
+
+```sh
+export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"   # both default to 1000
+dc() { docker compose --env-file .env.daemon.local -f packages/sdk-daemon/compose.yaml "$@"; }
+dc --profile examples build && dc up --wait daemon
+dc run --rm go
+dc run --rm rust
+```
+
+Partner-facing pages live in [`docs/gitbook/src/native/`](docs/gitbook/src/native/README.md) and the shared guides; follow [`docs/agents/daemon.md`](docs/agents/daemon.md) when editing them.
+
 ### Code Style
 
 - **ESM-only** — all packages use `"type": "module"`
