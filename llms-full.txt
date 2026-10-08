@@ -2565,7 +2565,7 @@ Relayer requests now carry four `x-zama-sdk-*` headers: the SDK version, the pac
 
 **Experimental Go and Rust clients.** Go and Rust services can use the SDK through native clients that talk to a local SDK daemon over a private Unix socket. The clients encrypt inputs, decrypt values (including public and delegated decryption), manage permits, prepare unsigned transactions for external signing, and grant or revoke on-chain decryption delegation through your wallet. Token workflows are not available in the clients yet.
 
-- **Artifacts:** the `zamafhe/sdk-daemon` Docker image, the Go module `github.com/zama-ai/sdk/clients/go/v3`, and the Rust crate `zama_sdk`. Run the image and the client at exactly the same version; see [client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md).
+- **Artifacts:** the `ghcr.io/zama-ai/sdk-daemon` Docker image, the Go module `github.com/zama-ai/sdk/clients/go/v3`, and the Rust crate `zama_sdk`. Run the image and the client at exactly the same version; see [client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md).
 - **Guides:** Go and Rust tabs in [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md), [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/encrypt-decrypt.md), [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/delegated-decryption.md), [Offline signing](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/offline.md), [Handle errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/handle-errors.md), [Local development](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/local-development.md), [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md), and [Decrypt values from event logs](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/decrypt-from-event-logs.md).
 - **Deployment:** [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md), [Monitor and troubleshoot](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md), and [Upgrade the daemon](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/upgrade-and-recover.md).
 
@@ -25834,11 +25834,11 @@ The clients handle these codes, or the daemon only writes them to stderr:
 
 Run the daemon image and your Go or Rust client at exactly the same version. Upgrade the image and clients together; matching only the major and minor versions is insufficient.
 
-| Artifact     | Location                               |
-| ------------ | -------------------------------------- |
-| Daemon image | `zamafhe/sdk-daemon` on Docker Hub     |
-| Rust crate   | `zama_sdk` on crates.io                |
-| Go module    | `github.com/zama-ai/sdk/clients/go/v3` |
+| Artifact     | Location                                                  |
+| ------------ | --------------------------------------------------------- |
+| Daemon image | `ghcr.io/zama-ai/sdk-daemon` on GitHub Container Registry |
+| Rust crate   | `zama_sdk` on crates.io                                   |
+| Go module    | `github.com/zama-ai/sdk/clients/go/v3`                    |
 
 Each release publishes the image for `linux/amd64` and `linux/arm64`, tagged with its exact version and with a moving channel tag: `latest`, `beta`, or `alpha`.
 
@@ -29768,7 +29768,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 go get github.com/zama-ai/sdk/clients/go/v3@v3.7.0-beta.6
 ```
 
-Run the `zamafhe/sdk-daemon` image at exactly the same version as the client.
+Run the `ghcr.io/zama-ai/sdk-daemon` image at exactly the same version as the client.
 
 ## Documentation
 
@@ -29797,7 +29797,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 cargo add zama_sdk@=3.7.0-beta.6
 ```
 
-Run the `zamafhe/sdk-daemon` image at exactly the same version as the client. Enable the `alloy` feature for the Alloy signing and transaction adapters.
+Run the `ghcr.io/zama-ai/sdk-daemon` image at exactly the same version as the client. Enable the `alloy` feature for the Alloy signing and transaction adapters.
 
 ## Documentation
 
