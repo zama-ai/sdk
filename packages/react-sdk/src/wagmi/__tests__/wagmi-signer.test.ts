@@ -16,7 +16,6 @@ vi.mock(import("wagmi/actions"), () => ({
   writeContract: vi.fn(),
 }));
 
-// Imported after the hoisted mocks so the module picks up the stubbed actions.
 import { WagmiSigner } from "../wagmi-signer";
 
 const TYPED_DATA: EIP712TypedData = {

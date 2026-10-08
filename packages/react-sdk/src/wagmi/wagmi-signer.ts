@@ -11,10 +11,7 @@ import {
 import { toViemTypedData } from "@zama-fhe/sdk/viem";
 import { getAddress } from "viem";
 import type { Config } from "wagmi";
-import {
-  signTypedData as wagmiSignTypedData,
-  writeContract as wagmiWriteContract,
-} from "wagmi/actions";
+import { signTypedData, writeContract } from "wagmi/actions";
 import { getConnection, watchConnection } from "./compat";
 
 type WagmiConnection = ReturnType<typeof getConnection>;
@@ -55,7 +52,7 @@ export class WagmiSigner extends BaseSigner {
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
-    return wagmiSignTypedData(this.#config, toViemTypedData(typedData));
+    return signTypedData(this.#config, toViemTypedData(typedData));
   }
 
   async writeContract<
@@ -63,7 +60,7 @@ export class WagmiSigner extends BaseSigner {
     TFunctionName extends WriteFunctionName<TAbi>,
     const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
   >(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex> {
-    return wagmiWriteContract(this.#config, config as Parameters<typeof wagmiWriteContract>[1]);
+    return writeContract(this.#config, config as Parameters<typeof writeContract>[1]);
   }
 
   protected override onDispose(): void {

@@ -21,7 +21,7 @@ See [Vault deposits and redemptions](../guides/vault-deposits.md) for the full f
 
 ## Permit signing with browser extensions that patch `BigInt`
 
-`ViemSigner` and `WagmiSigner` now convert the typed-data domain `chainId` to a number and every `bigint` value in the message to a decimal string before calling viem. Browser extensions that patch how `bigint` is JSON-serialized made viem send the permit's `chainId` as `"1n"`, and the wallet rejected the signature with `chainId should be same as current chainId`; with no `bigint` left in the request, such a patch has nothing to act on. Signatures are unchanged, and `EthersSigner` was never affected.
+`ViemSigner` and `WagmiSigner` now convert the typed-data domain `chainId` to a number and every `bigint` value in the message to a decimal string before calling viem. Browser extensions that patch how `bigint` is JSON-serialized made viem send the permit's `chainId` as `"1n"`, and the wallet rejected the signature with `chainId should be same as current chainId`; with no `bigint` left in the request, such a patch has nothing to act on. Signatures are unchanged, and `EthersSigner` was never affected. Custom viem-based signers can use the new `toViemTypedData` from `@zama-fhe/sdk/viem` to get the same payload.
 
 ## Permit signatures with a 0/1 recovery byte
 
