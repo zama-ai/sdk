@@ -200,12 +200,12 @@ Release behavior:
 4. `@zama-fhe/sdk` and `@zama-fhe/react-sdk` are versioned and published together in lockstep.
 5. `main` publishes stable versions to npm `latest`, `beta` publishes prerelease versions to npm `beta`, and `alpha` publishes prerelease versions to npm `alpha`.
 6. GitHub release notes and tags are generated automatically.
-7. Each release also pushes the `zamafhe/sdk-daemon` image (`linux/amd64`, `linux/arm64`) to Docker Hub, tagged with the version and the channel. It uses the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets.
+7. Each release also pushes the `zamafhe/sdk-daemon` image (`linux/amd64`, `linux/arm64`) to Docker Hub, tagged with the version and the channel. It uses the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets, a token with Read & Write access to `zamafhe/sdk-daemon`.
 
 Release workflows:
 
 - `Release` (`.github/workflows/release.yml`): automatic publish on push to `main`, `beta`, and `alpha`, gated by `Vitest`, `Playwright`, `Docs`, and `Daemon CI`.
-- Manual publish (`workflow_dispatch`): without `publish-tag`, same gates as above. With `publish-tag`, republish an existing tag when npm publish failed after semantic-release tagged it (`dry-run` input available) — skips CI, but requires the tag be reachable from `main`, `beta`, or `alpha`. `publish` selects npm, the daemon image, or both.
+- Manual publish (`workflow_dispatch`): without `publish-tag`, same gates as above. With `publish-tag`, republish an existing tag when npm publish failed after semantic-release tagged it (`dry-run` input available); skips CI, but requires the tag be reachable from `main`, `beta`, or `alpha`. `publish` selects npm, the daemon image, or both.
 - Daemon image retry: re-run the failed `publish-image` or `publish-image-manifest` jobs in the original run, or use `publish-tag` with `publish: image`. Channel tags only move forward. If `release` itself failed, "Re-run failed jobs" skips the image.
 - `Release Preview` (`.github/workflows/release-preview.yml`): manual dry-run restricted to `main`, `beta`, and `alpha` (`pnpm release:dry-run`), no publish side effects.
 
