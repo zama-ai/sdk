@@ -163,7 +163,7 @@ cargo fmt --manifest-path clients/rust/Cargo.toml --check
 To run the Go and Rust balance examples against Sepolia, fill `.env.daemon.local` (copied from `.env.daemon.example`) with an RPC URL, a test wallet and a confidential token address, then:
 
 ```sh
-export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"   # both default to 1000
+export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"   # default to 10000 and 10001
 dc() { docker compose --env-file .env.daemon.local -f packages/sdk-daemon/compose.yaml "$@"; }
 dc --profile examples build && dc up --wait daemon
 dc run --rm go
@@ -200,11 +200,13 @@ Release behavior:
 4. `@zama-fhe/sdk` and `@zama-fhe/react-sdk` are versioned and published together in lockstep.
 5. `main` publishes stable versions to npm `latest`, `beta` publishes prerelease versions to npm `beta`, and `alpha` publishes prerelease versions to npm `alpha`.
 6. GitHub release notes and tags are generated automatically.
+7. Each release also pushes the `ghcr.io/zama-ai/sdk-daemon` image (`linux/amd64`, `linux/arm64`) with the workflow `GITHUB_TOKEN`, tagged with the version and the channel.
 
 Release workflows:
 
-- `Release` (`.github/workflows/release.yml`): automatic publish on push to `main`, `beta`, and `alpha`, gated by `Vitest`, `Playwright`, and `Docs`.
-- Manual publish (`workflow_dispatch`): without `publish-tag`, same gates as above. With `publish-tag`, republish an existing tag when npm publish failed after semantic-release tagged it (`dry-run` input available) — skips CI, but requires the tag be reachable from `main`, `beta`, or `alpha`.
+- `Release` (`.github/workflows/release.yml`): automatic publish on push to `main`, `beta`, and `alpha`, gated by `Vitest`, `Playwright`, `Docs`, and `Daemon CI`.
+- Manual publish (`workflow_dispatch`): without `publish-tag`, same gates as above. With `publish-tag`, republish an existing tag when npm publish failed after semantic-release tagged it (`dry-run` input available); skips CI, but requires the tag be reachable from `main`, `beta`, or `alpha`. `publish` selects npm, the daemon image, or both.
+- Image retry: re-run the failed jobs in the original run, or use `publish-tag` with `publish: image`. If `release` itself failed, "Re-run failed jobs" skips them.
 - `Release Preview` (`.github/workflows/release-preview.yml`): manual dry-run restricted to `main`, `beta`, and `alpha` (`pnpm release:dry-run`), no publish side effects.
 
 Install channels:

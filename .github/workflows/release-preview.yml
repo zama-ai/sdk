@@ -21,6 +21,7 @@ env:
   SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@fhevm/sdk,@zama-fhe/sdk,@zama-fhe/react-sdk"
   # Pinned safe-chain release used by the verified installer below; bump as newer versions are vetted.
   SAFE_CHAIN_VERSION: "1.5.15"
+  DAEMON_IMAGE: ghcr.io/zama-ai/sdk-daemon
 
 jobs:
   validate-branch:
@@ -38,11 +39,15 @@ jobs:
     needs: [validate-branch]
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # semantic-release checks push access even in dry-run mode (git push --dry-run); nothing is pushed.
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -84,20 +89,30 @@ jobs:
       - name: Build packages
         run: pnpm build
 
+      # Outputs are written by the @semantic-release/exec commands in .releaserc.cjs.
       - name: Semantic release (dry-run)
-        run: pnpm release:dry-run 2>&1 | tee /tmp/dry-run-output.txt
+        id: release
+        run: pnpm release:dry-run
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Write preview summary
         if: always()
+        env:
+          DRY_RUN_OUTCOME: ${{ steps.release.outcome }}
+          VERSION: ${{ steps.release.outputs.version }}
+          CHANNEL: ${{ steps.release.outputs.channel }}
         run: |
-          echo "## Release Preview" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          if grep -q "next release version" /tmp/dry-run-output.txt; then
-            echo "A release **would** be published:" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            grep "next release version" /tmp/dry-run-output.txt >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "No release would be published from this branch." >> "$GITHUB_STEP_SUMMARY"
-          fi
+          {
+            echo "## Release Preview"
+            echo ""
+            if [[ "${DRY_RUN_OUTCOME}" != "success" ]]; then
+              echo "The dry run failed; see the job log."
+            elif [[ -n "${VERSION}" ]]; then
+              echo "A release **would** be published: \`${VERSION}\` on the \`${CHANNEL}\` channel."
+              echo ""
+              echo "Daemon image tags: \`${DAEMON_IMAGE}:${VERSION}\`, \`${DAEMON_IMAGE}:${CHANNEL}\`"
+            else
+              echo "No release would be published from this branch."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

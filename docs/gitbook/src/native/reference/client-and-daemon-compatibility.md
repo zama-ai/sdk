@@ -10,11 +10,13 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 
 Run the daemon image and your Go or Rust client at exactly the same version. Upgrade the image and clients together; matching only the major and minor versions is insufficient.
 
-| Artifact     | Location                               |
-| ------------ | -------------------------------------- |
-| Daemon image | `zamafhe/sdk-daemon` on Docker Hub     |
-| Rust crate   | `zama_sdk` on crates.io                |
-| Go module    | `github.com/zama-ai/sdk/clients/go/v3` |
+| Artifact     | Location                                                  |
+| ------------ | --------------------------------------------------------- |
+| Daemon image | `ghcr.io/zama-ai/sdk-daemon` on GitHub Container Registry |
+| Rust crate   | `zama_sdk` on crates.io                                   |
+| Go module    | `github.com/zama-ai/sdk/clients/go/v3`                    |
+
+Each release publishes the image for `linux/amd64` and `linux/arm64`, tagged with its exact version and with a moving channel tag: `latest`, `beta`, or `alpha`.
 
 The quickstarts and the deployment page set one `ZAMA_SDK_VERSION` variable for the image tag and the client version, and each release updates it to that release.
 

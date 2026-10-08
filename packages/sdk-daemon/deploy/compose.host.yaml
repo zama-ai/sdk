@@ -4,7 +4,7 @@ name: zama-sdk-daemon
 
 services:
   daemon:
-    image: zamafhe/sdk-daemon:${ZAMA_SDK_VERSION:?Set ZAMA_SDK_VERSION to the release that matches your Go or Rust client}
+    image: ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION:?Set ZAMA_SDK_VERSION to the release that matches your Go or Rust client}
     # Your application's user: the daemon only accepts directories it owns, and only this user can open the socket.
     user: "${ZAMA_SDK_DAEMON_UID:?Set ZAMA_SDK_DAEMON_UID to your application's user ID}:${ZAMA_SDK_DAEMON_GID:?Set ZAMA_SDK_DAEMON_GID to your application's group ID}"
     environment:

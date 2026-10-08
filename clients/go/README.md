@@ -10,7 +10,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 go get github.com/zama-ai/sdk/clients/go/v3@v3.7.0-beta.6
 ```
 
-Run the `zamafhe/sdk-daemon` image at exactly the same version as the client.
+Run the `ghcr.io/zama-ai/sdk-daemon` image at exactly the same version as the client.
 
 ## Documentation
 

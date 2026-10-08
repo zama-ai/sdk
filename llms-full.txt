@@ -633,7 +633,7 @@ Download the daemon's [Compose file](https://raw.githubusercontent.com/zama-ai/s
 curl -fsSL -o zama-sdk-daemon.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.yaml"
 ```
 
-Save this as `compose.yaml`. It runs your program in a Go container next to the daemon. Both run as UID 1000, the daemon image's user, and share the daemon's socket volume:
+Save this as `compose.yaml`. It runs your program in a Go container next to the daemon. Both run as UID 10000 and GID 10001, the daemon image's user, and share the daemon's socket volume:
 
 ```yaml
 include:
@@ -642,7 +642,7 @@ include:
 services:
   app:
     image: golang:1.25
-    user: "1000:1000"
+    user: "10000:10001"
     working_dir: /src
     environment:
       - DAEMON_SOCKET=/run/zama/sdk.sock
@@ -814,7 +814,7 @@ Download the daemon's [Compose file](https://raw.githubusercontent.com/zama-ai/s
 curl -fsSL -o zama-sdk-daemon.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.yaml"
 ```
 
-Save this as `compose.yaml`. It runs your program in a Rust container next to the daemon. Both run as UID 1000, the daemon image's user, and share the daemon's socket volume:
+Save this as `compose.yaml`. It runs your program in a Rust container next to the daemon. Both run as UID 10000 and GID 10001, the daemon image's user, and share the daemon's socket volume:
 
 ```yaml
 include:
@@ -823,7 +823,7 @@ include:
 services:
   app:
     image: rust:1.94.1
-    user: "1000:1000"
+    user: "10000:10001"
     working_dir: /src
     environment:
       - DAEMON_SOCKET=/run/zama/sdk.sock
@@ -2565,7 +2565,7 @@ Relayer requests now carry four `x-zama-sdk-*` headers: the SDK version, the pac
 
 **Experimental Go and Rust clients.** Go and Rust services can use the SDK through native clients that talk to a local SDK daemon over a private Unix socket. The clients encrypt inputs, decrypt values (including public and delegated decryption), manage permits, prepare unsigned transactions for external signing, and grant or revoke on-chain decryption delegation through your wallet. Token workflows are not available in the clients yet.
 
-- **Artifacts:** the `zamafhe/sdk-daemon` Docker image, the Go module `github.com/zama-ai/sdk/clients/go/v3`, and the Rust crate `zama_sdk`. Run the image and the client at exactly the same version; see [client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md).
+- **Artifacts:** the `ghcr.io/zama-ai/sdk-daemon` Docker image, the Go module `github.com/zama-ai/sdk/clients/go/v3`, and the Rust crate `zama_sdk`. Run the image and the client at exactly the same version; see [client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md).
 - **Guides:** Go and Rust tabs in [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md), [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/encrypt-decrypt.md), [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/delegated-decryption.md), [Offline signing](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/offline.md), [Handle errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/handle-errors.md), [Local development](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/local-development.md), [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md), and [Decrypt values from event logs](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/decrypt-from-event-logs.md).
 - **Deployment:** [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md), [Monitor and troubleshoot](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md), and [Upgrade the daemon](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/upgrade-and-recover.md).
 
@@ -6551,7 +6551,7 @@ For servers handling multiple users concurrently, use `asyncLocalStorage` instea
 
 ### 4. Isolate per-request state with `asyncLocalStorage`
 
-On a server where each HTTP request belongs to a different user, you need per-request transport key pair isolation. `asyncLocalStorage` wraps Node.js [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html) to scope storage to the current async context.
+On a server where each HTTP request belongs to a different user, you need per-request transport key pair isolation. `asyncLocalStorage` wraps Node.js [`AsyncLocalStorage`](https://nodejs.org/docs/latest-v24.x/api/async_context.html#class-asynclocalstorage) to scope storage to the current async context.
 
 ```ts
 import { asyncLocalStorage } from "@zama-fhe/sdk/node";
@@ -10578,9 +10578,9 @@ There is no network listener. Keep the application and its daemon on the same ho
 
 ## Run with Docker Compose
 
-The [Compose file](https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml) runs the daemon with a read-only root filesystem, no Linux capabilities, a healthcheck and a stop grace period above its shutdown timeout, and keeps its socket and SQLite storage in named volumes. A new named volume copies the image's private directories, so the daemon starts without host directory setup. The image runs the daemon as UID `1000`.
+The [Compose file](https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml) runs the daemon with a read-only root filesystem, no Linux capabilities, a healthcheck and a stop grace period above its shutdown timeout, and keeps its socket and SQLite storage in named volumes. A new named volume copies the image's private directories, so the daemon starts without host directory setup. The image runs the daemon as UID `10000` and GID `10001`.
 
-Include it from your application's `compose.yaml`. Run your application as UID `1000` and mount the socket volume where it connects:
+Include it from your application's `compose.yaml`. Run your application as the same UID and GID and mount the socket volume where it connects:
 
 ```yaml
 include:
@@ -10589,7 +10589,7 @@ include:
 services:
   app:
     image: your-registry/your-app:APP_VERSION
-    user: "1000:1000"
+    user: "10000:10001"
     environment:
       DAEMON_SOCKET: /run/zama/sdk.sock
     volumes:
@@ -13690,7 +13690,7 @@ const sdk = new ZamaSDK(config); // config from createConfig()
 import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 ```
 
-Node.js per-request storage using [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html). Isolates transport key pairs across concurrent requests on a server.
+Node.js per-request storage using [`AsyncLocalStorage`](https://nodejs.org/docs/latest-v24.x/api/async_context.html#class-asynclocalstorage). Isolates transport key pairs across concurrent requests on a server.
 
 ```ts
 import { asyncLocalStorage } from "@zama-fhe/sdk/node";
@@ -25834,11 +25834,13 @@ The clients handle these codes, or the daemon only writes them to stderr:
 
 Run the daemon image and your Go or Rust client at exactly the same version. Upgrade the image and clients together; matching only the major and minor versions is insufficient.
 
-| Artifact     | Location                               |
-| ------------ | -------------------------------------- |
-| Daemon image | `zamafhe/sdk-daemon` on Docker Hub     |
-| Rust crate   | `zama_sdk` on crates.io                |
-| Go module    | `github.com/zama-ai/sdk/clients/go/v3` |
+| Artifact     | Location                                                  |
+| ------------ | --------------------------------------------------------- |
+| Daemon image | `ghcr.io/zama-ai/sdk-daemon` on GitHub Container Registry |
+| Rust crate   | `zama_sdk` on crates.io                                   |
+| Go module    | `github.com/zama-ai/sdk/clients/go/v3`                    |
+
+Each release publishes the image for `linux/amd64` and `linux/arm64`, tagged with its exact version and with a moving channel tag: `latest`, `beta`, or `alpha`.
 
 The quickstarts and the deployment page set one `ZAMA_SDK_VERSION` variable for the image tag and the client version, and each release updates it to that release.
 
@@ -29766,7 +29768,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 go get github.com/zama-ai/sdk/clients/go/v3@v3.7.0-beta.6
 ```
 
-Run the `zamafhe/sdk-daemon` image at exactly the same version as the client.
+Run the `ghcr.io/zama-ai/sdk-daemon` image at exactly the same version as the client.
 
 ## Documentation
 
@@ -29795,7 +29797,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 cargo add zama_sdk@=3.7.0-beta.6
 ```
 
-Run the `zamafhe/sdk-daemon` image at exactly the same version as the client. Enable the `alloy` feature for the Alloy signing and transaction adapters.
+Run the `ghcr.io/zama-ai/sdk-daemon` image at exactly the same version as the client. Enable the `alloy` feature for the Alloy signing and transaction adapters.
 
 ## Documentation
 

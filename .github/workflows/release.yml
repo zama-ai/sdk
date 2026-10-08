@@ -13,6 +13,12 @@ on:
         description: "npm dist-tag override (auto-detected from version if left empty)"
         required: false
         type: string
+      publish:
+        description: "With publish-tag: publish npm, the daemon image, or both"
+        required: false
+        type: choice
+        options: [npm, image, both]
+        default: npm
       dry-run:
         description: "Dry run (log what would be published without actually publishing)"
         required: false
@@ -40,16 +46,24 @@ env:
   SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@fhevm/sdk,@zama-fhe/sdk,@zama-fhe/react-sdk"
   # Pinned safe-chain release used by the verified installer below; bump as newer versions are vetted.
   SAFE_CHAIN_VERSION: "1.5.15"
+  DAEMON_IMAGE: ghcr.io/zama-ai/sdk-daemon
+  DAEMON_IMAGE_TITLE: Zama SDK daemon
+  DAEMON_IMAGE_DESCRIPTION: Runs the Zama SDK for Go and Rust applications over a private Unix socket.
+  DAEMON_IMAGE_LICENSES: BSD-3-Clause-Clear
 
 jobs:
   # ── Publish from tag (manual recovery) ──────────────────────────────
-  publish-from-tag:
+  # Outputs are set only once the tag is verified, so the npm and image recovery jobs never see an unverified commit.
+  verify-tag:
     if: inputs.publish-tag != ''
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 5
     permissions:
       contents: read
-      id-token: write
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      channel: ${{ steps.resolve.outputs.channel }}
+      revision: ${{ steps.resolve.outputs.revision }}
     steps:
       - name: Checkout tag
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -85,6 +99,43 @@ jobs:
 
           echo "::error::Commit ${head_sha} (tag '${INPUT_TAG}') is not reachable from any of: ${protected_branches}. Refusing to publish from an unreviewed ref."
           exit 1
+
+      - name: Resolve version and channel
+        id: resolve
+        env:
+          INPUT_TAG: ${{ inputs.publish-tag }}
+        run: |
+          version="$(jq -r .version packages/sdk/package.json)"
+          if [[ "${version}" != "${INPUT_TAG#v}" ]]; then
+            echo "::error::package.json version (${version}) does not match git tag (${INPUT_TAG}). Aborting."
+            exit 1
+          fi
+          channel="latest"
+          if [[ "${version}" == *-* ]]; then
+            channel="${version#*-}"   # e.g. "alpha.10" from "1.0.0-alpha.10"
+            channel="${channel%%.*}"  # e.g. "alpha"
+          fi
+          {
+            echo "version=${version}"
+            echo "channel=${channel}"
+            echo "revision=$(git rev-parse HEAD)"
+          } >> "$GITHUB_OUTPUT"
+
+  publish-from-tag:
+    needs: [verify-tag]
+    if: inputs.publish != 'image'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      # The verified commit, not the tag, which can still move.
+      - name: Checkout release commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.verify-tag.outputs.revision }}
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -126,35 +177,11 @@ jobs:
       - name: Build packages
         run: pnpm build
 
-      - name: Resolve version and npm tag
-        id: npm-tag
-        env:
-          INPUT_TAG: ${{ inputs.publish-tag }}
-          INPUT_NPM_TAG: ${{ inputs.npm-tag }}
-        run: |
-          version=$(node -p "require('./packages/sdk/package.json').version")
-          expected="${INPUT_TAG#v}"  # strip leading v
-          if [[ "$version" != "$expected" ]]; then
-            echo "::error::package.json version (${version}) does not match git tag (${INPUT_TAG}). Aborting."
-            exit 1
-          fi
-          echo "version=${version}" >> "$GITHUB_OUTPUT"
-
-          if [[ -n "${INPUT_NPM_TAG}" ]]; then
-            echo "tag=${INPUT_NPM_TAG}" >> "$GITHUB_OUTPUT"
-          elif [[ "$version" == *-* ]]; then
-            npm_tag="${version#*-}"   # e.g. "alpha.10" from "1.0.0-alpha.10"
-            npm_tag="${npm_tag%%.*}"   # e.g. "alpha"
-            echo "tag=${npm_tag}" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=latest" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Publish to npm
         env:
           NPM_CONFIG_PROVENANCE: true
-          VERSION: ${{ steps.npm-tag.outputs.version }}
-          NPM_TAG: ${{ steps.npm-tag.outputs.tag }}
+          VERSION: ${{ needs.verify-tag.outputs.version }}
+          NPM_TAG: ${{ inputs.npm-tag || needs.verify-tag.outputs.channel }}
           DRY_RUN: ${{ inputs.dry-run }}
         run: |
           echo "Publishing v${VERSION} with tag '${NPM_TAG}'"
@@ -173,8 +200,8 @@ jobs:
       - name: Summary
         if: success()
         env:
-          VERSION: ${{ steps.npm-tag.outputs.version }}
-          NPM_TAG: ${{ steps.npm-tag.outputs.tag }}
+          VERSION: ${{ needs.verify-tag.outputs.version }}
+          NPM_TAG: ${{ inputs.npm-tag || needs.verify-tag.outputs.channel }}
           DRY_RUN: ${{ inputs.dry-run }}
         run: |
           if [[ "${DRY_RUN}" == "true" ]]; then
@@ -217,11 +244,21 @@ jobs:
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     uses: ./.github/workflows/docs.yml
 
+  daemon:
+    needs: [validate-branch]
+    if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
+    uses: ./.github/workflows/daemon.yml
+
   release:
-    needs: [ci, playwright, docs]
+    needs: [ci, playwright, docs, daemon]
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      released: ${{ steps.release.outputs.released }}
+      version: ${{ steps.release.outputs.version }}
+      channel: ${{ steps.release.outputs.channel }}
+      revision: ${{ steps.release.outputs.revision }}
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -269,43 +306,203 @@ jobs:
       - name: Build packages
         run: pnpm build
 
+      # Outputs are written by the @semantic-release/exec commands in .releaserc.cjs.
       - name: Semantic release
         id: release
-        run: |
-          set +e
-          pnpm release:ci 2>&1 | tee /tmp/release-output.txt
-          exit_code=${PIPESTATUS[0]}
-          set -e
-          if grep -q "Published release" /tmp/release-output.txt; then
-            echo "released=true" >> "$GITHUB_OUTPUT"
-          fi
-          exit "$exit_code"
+        run: pnpm release:ci
         env:
           GITHUB_TOKEN: ${{ secrets.SDK_RELEASER_TOKEN }}
 
       - name: Publish to npm
         if: steps.release.outputs.released == 'true'
         run: |
-          version=$(node -p "require('./packages/sdk/package.json').version")
-          if [[ "$version" == *-* ]]; then
-            npm_tag="${version#*-}"   # e.g. "alpha.10" from "1.0.0-alpha.10"
-            npm_tag="${npm_tag%%.*}"   # e.g. "alpha"
-          else
-            npm_tag="latest"
-          fi
-          echo "Publishing v${version} with tag '${npm_tag}'"
+          echo "Publishing v${VERSION} with tag '${CHANNEL}'"
           cd packages/sdk
-          npm publish --access public --tag "${npm_tag}"
+          npm publish --access public --tag "${CHANNEL}"
           cd ../react-sdk
-          npm publish --access public --tag "${npm_tag}"
+          npm publish --access public --tag "${CHANNEL}"
         env:
           NPM_CONFIG_PROVENANCE: true
+          VERSION: ${{ steps.release.outputs.version }}
+          CHANNEL: ${{ steps.release.outputs.channel }}
 
       - name: Verify release was published
         if: github.event_name == 'workflow_dispatch'
+        env:
+          RELEASED: ${{ steps.release.outputs.released }}
         run: |
-          if ! grep -q "Published release" /tmp/release-output.txt; then
+          if [[ "${RELEASED}" != "true" ]]; then
             echo "::error::semantic-release completed but no release was published."
             echo "Common causes: no releasable commits, branch not configured, or authentication issue."
             exit 1
           fi
+
+  # Runs even if npm publish failed: the tag exists and a re-run of the release job cannot republish it.
+  publish-image:
+    needs: [release, verify-tag]
+    if: >-
+      ${{ !cancelled() && (needs.release.outputs.released == 'true'
+      || (needs.verify-tag.result == 'success' && inputs.publish != 'npm' && !inputs.dry-run)) }}
+    # From the release run, or from verify-tag when recovering an existing tag.
+    env:
+      VERSION: ${{ needs.release.outputs.version || needs.verify-tag.outputs.version }}
+      CHANNEL: ${{ needs.release.outputs.channel || needs.verify-tag.outputs.channel }}
+      REVISION: ${{ needs.release.outputs.revision || needs.verify-tag.outputs.revision }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      # A failed platform must not cancel the other, so re-running only the failed job completes the matrix.
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            arch: amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      # The release commit, not the tag: the commit is what the revision label names, and the tag can still move.
+      - name: Checkout release commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.REVISION }}
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Boots this build before the push below reuses its layers. Reads, never writes, the gate's layer cache:
+      # a release can only restore caches from its own branch or the default branch, which only merges write.
+      - name: Build for the boot test
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0 # zizmor: ignore[cache-poisoning]
+        with:
+          context: .
+          file: packages/sdk-daemon/Dockerfile
+          platforms: ${{ matrix.platform }}
+          load: true
+          tags: ${{ env.DAEMON_IMAGE }}:release-check
+          cache-from: type=gha,scope=daemon-image-${{ matrix.arch }}
+
+      - name: Start the daemon with the deployment Compose file
+        env:
+          ZAMA_SDK_VERSION: release-check
+        run: |
+          trap 'docker compose -f packages/sdk-daemon/deploy/compose.yaml down -v' EXIT
+          docker compose -f packages/sdk-daemon/deploy/compose.yaml up -d --wait --wait-timeout 120
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: packages/sdk-daemon/Dockerfile
+          platforms: ${{ matrix.platform }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ env.REVISION }}
+            org.opencontainers.image.version=${{ env.VERSION }}
+            org.opencontainers.image.title=${{ env.DAEMON_IMAGE_TITLE }}
+            org.opencontainers.image.description=${{ env.DAEMON_IMAGE_DESCRIPTION }}
+            org.opencontainers.image.licenses=${{ env.DAEMON_IMAGE_LICENSES }}
+          outputs: type=image,name=${{ env.DAEMON_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          provenance: mode=max
+          sbom: true
+
+      - name: Export digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p "${RUNNER_TEMP}/digests"
+          touch "${RUNNER_TEMP}/digests/${DIGEST#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: daemon-digest-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          # Matches the 30-day re-run window, so re-running one failed platform still finds the other's digest.
+          retention-days: 30
+
+  publish-image-manifest:
+    needs: [release, verify-tag, publish-image]
+    if: ${{ !cancelled() && needs.publish-image.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # From the release run, or from verify-tag when recovering an existing tag.
+    env:
+      VERSION: ${{ needs.release.outputs.version || needs.verify-tag.outputs.version }}
+      CHANNEL: ${{ needs.release.outputs.channel || needs.verify-tag.outputs.channel }}
+      REVISION: ${{ needs.release.outputs.revision || needs.verify-tag.outputs.revision }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      # One step per platform: a missing digest fails the job instead of publishing a single-platform image.
+      - name: Download the amd64 digest
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: daemon-digest-amd64
+          path: ${{ runner.temp }}/digests
+
+      - name: Download the arm64 digest
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: daemon-digest-arm64
+          path: ${{ runner.temp }}/digests
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create manifest list
+        working-directory: ${{ runner.temp }}/digests
+        env:
+          SOURCE: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          sources=()
+          for digest in *; do
+            sources+=("${DAEMON_IMAGE}@sha256:${digest}")
+          done
+          # Move the channel tag only forward, so re-running an older run or recovering an older tag keeps it.
+          # Versions on one channel share a prerelease suffix, so sort -V orders them.
+          tags=(--tag "${DAEMON_IMAGE}:${VERSION}")
+          if current="$(docker buildx imagetools inspect "${DAEMON_IMAGE}:${CHANNEL}" \
+            --format '{{ index .Manifest.Annotations "org.opencontainers.image.version" }}' 2> inspect.err)"; then
+            :
+          elif grep -q "not found" inspect.err; then
+            current=""
+          else
+            cat inspect.err
+            exit 1
+          fi
+          if [[ "$(printf '%s\n%s\n' "${current}" "${VERSION}" | sort -V | tail -n 1)" == "${VERSION}" ]]; then
+            tags+=(--tag "${DAEMON_IMAGE}:${CHANNEL}")
+          else
+            echo "::notice::${DAEMON_IMAGE}:${CHANNEL} stays on ${current}, newer than ${VERSION}."
+          fi
+          docker buildx imagetools create \
+            "${tags[@]}" \
+            --annotation "index:org.opencontainers.image.source=${SOURCE}" \
+            --annotation "index:org.opencontainers.image.revision=${REVISION}" \
+            --annotation "index:org.opencontainers.image.version=${VERSION}" \
+            --annotation "index:org.opencontainers.image.title=${DAEMON_IMAGE_TITLE}" \
+            --annotation "index:org.opencontainers.image.description=${DAEMON_IMAGE_DESCRIPTION}" \
+            --annotation "index:org.opencontainers.image.licenses=${DAEMON_IMAGE_LICENSES}" \
+            "${sources[@]}"
+          docker buildx imagetools inspect "${DAEMON_IMAGE}:${VERSION}"

@@ -25,6 +25,14 @@ const extract = (name) => {
 const mainTemplate = extract("mainTemplate").replace(/^\* /gm, "- ");
 const commitPartial = extract("commitPartial").replace(/^\*/, "-");
 
+// Shell command appending `key=value` lines to the GitHub Actions step output; a no-op outside Actions.
+const githubOutput = (...pairs) =>
+  `[ -z "$GITHUB_OUTPUT" ] || printf '%s\\n' ${pairs.map((pair) => `'${pair}'`).join(" ")} >> "$GITHUB_OUTPUT"`;
+const releaseOutputs = [
+  "version=${nextRelease.version}",
+  'channel=${nextRelease.channel || "latest"}',
+];
+
 module.exports = {
   branches: [
     "main",
@@ -102,6 +110,14 @@ module.exports = {
           "pnpm build",
           "pnpm llm:build",
         ].join(" && "),
+        // verifyRelease runs in dry-run, for the preview. success also runs when adding a channel, which skips
+        // verifyRelease, so it writes every output itself; gitHead is then the release commit.
+        verifyReleaseCmd: githubOutput(...releaseOutputs),
+        successCmd: githubOutput(
+          "released=true",
+          "revision=${nextRelease.gitHead}",
+          ...releaseOutputs,
+        ),
       },
     ],
     [
