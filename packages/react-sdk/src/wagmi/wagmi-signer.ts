@@ -8,6 +8,7 @@ import {
   type WriteContractConfig,
   type WriteFunctionName,
 } from "@zama-fhe/sdk";
+import { toViemTypedData } from "@zama-fhe/sdk/viem";
 import { getAddress } from "viem";
 import type { Config } from "wagmi";
 import { signTypedData, writeContract } from "wagmi/actions";
@@ -23,20 +24,6 @@ function walletAccountFromConnection(connection: WagmiConnection): WalletAccount
     return undefined;
   }
   return { address: getAddress(connection.address), chainId: connection.chainId };
-}
-
-// viem requires uint values as bigints, but the KMS permit message carries them
-// as decimal strings. Convert by declared field type rather than by name so every
-// permit version is covered (V1 `durationDays`, V2 `durationSeconds`, ...).
-function messageWithBigIntUints(typedData: EIP712TypedData): Record<string, unknown> {
-  const fields = (typedData.primaryType ? typedData.types[typedData.primaryType] : undefined) ?? [];
-  const message: Record<string, unknown> = { ...typedData.message };
-  for (const { name, type } of fields) {
-    if (/^uint\d*$/.test(type)) {
-      message[name] = BigInt(message[name] as string | number | bigint);
-    }
-  }
-  return message;
 }
 
 /** Configuration for {@link WagmiSigner}. */
@@ -65,14 +52,7 @@ export class WagmiSigner extends BaseSigner {
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
-    const { EIP712Domain: _, ...sigTypes } = typedData.types;
-    return signTypedData(this.#config, {
-      primaryType: typedData.primaryType,
-      types: sigTypes,
-      domain: typedData.domain,
-      message: messageWithBigIntUints(typedData),
-      // Cast: EIP712TypedData is structural (`Eip712Like`), so viem cannot correlate primaryType/types/message and the inferred `message` collapses to `never`.
-    } as Parameters<typeof signTypedData>[1]);
+    return signTypedData(this.#config, toViemTypedData(typedData));
   }
 
   async writeContract<

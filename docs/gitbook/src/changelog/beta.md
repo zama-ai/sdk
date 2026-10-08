@@ -19,6 +19,10 @@ Both packages gain a `vaults` subpath — `@zama-fhe/sdk/vaults` and `@zama-fhe/
 
 See [Vault deposits and redemptions](../guides/vault-deposits.md) for the full flow.
 
+## Permit signing with browser extensions that patch `BigInt`
+
+`ViemSigner` and `WagmiSigner` now convert the typed-data domain `chainId` to a number and every `bigint` value in the message to a decimal string before calling viem. Browser extensions that patch how `bigint` is JSON-serialized made viem send the permit's `chainId` as `"1n"`, and the wallet rejected the signature with `chainId should be same as current chainId`; with no `bigint` left in the request, such a patch has nothing to act on. Signatures are unchanged, and `EthersSigner` was never affected. Custom viem-based signers can use the new `toViemTypedData` from `@zama-fhe/sdk/viem` to get the same payload.
+
 ## Permit signatures with a 0/1 recovery byte
 
 `parseSignedDecryptionPermit` (and `sdk.permits.registerPermit`, which uses it) now accepts 65-byte permit signatures whose recovery byte is `0`/`1` as well as `27`/`28`. The SDK normalizes the byte before the permit is verified; signatures already in `27`/`28` form and longer ERC-1271 signatures are unchanged.

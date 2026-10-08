@@ -14,6 +14,7 @@ import type { EIP712TypedData } from "../relayer/types";
 import { BaseSigner } from "../signer/base-signer";
 import { eip1193Subscribe } from "../signer/eip1193-subscribe";
 import type { WalletAccount, WriteContractConfig } from "../types";
+import { toViemTypedData } from "./typed-data";
 
 /**
  * Configuration for {@link ViemSigner}.
@@ -32,20 +33,6 @@ export interface ViemSignerConfig {
   walletClient: WalletClient;
   /** Raw EIP-1193 provider enabling wallet lifecycle events; omit for a no-op `subscribe()`. */
   ethereum?: EIP1193Provider;
-}
-
-// viem requires uint values as bigints, but the KMS permit message carries them
-// as decimal strings. Convert by declared field type rather than by name so every
-// permit version is covered (V1 `durationDays`, V2 `durationSeconds`, ...).
-function messageWithBigIntUints(typedData: EIP712TypedData): Record<string, unknown> {
-  const fields = (typedData.primaryType ? typedData.types[typedData.primaryType] : undefined) ?? [];
-  const message: Record<string, unknown> = { ...typedData.message };
-  for (const { name, type } of fields) {
-    if (/^uint\d*$/.test(type)) {
-      message[name] = BigInt(message[name] as string | number | bigint);
-    }
-  }
-  return message;
 }
 
 function walletAccountFromWalletClient(walletClient: WalletClient): WalletAccount | undefined {
@@ -83,15 +70,7 @@ export class ViemSigner extends BaseSigner {
   /** Sign EIP-712 typed data (used for decrypt authorization). */
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
     const { walletClient, account } = this.#requireAccount("signTypedData");
-    const { EIP712Domain: _, ...sigTypes } = typedData.types;
-    return walletClient.signTypedData({
-      account,
-      primaryType: typedData.primaryType,
-      types: sigTypes,
-      domain: typedData.domain,
-      message: messageWithBigIntUints(typedData),
-      // Cast: EIP712TypedData is structural (`Eip712Like`), so viem cannot correlate primaryType/types/message and the inferred `message` collapses to `never`.
-    } as Parameters<typeof walletClient.signTypedData>[0]);
+    return walletClient.signTypedData({ account, ...toViemTypedData(typedData) });
   }
 
   /** Send a write transaction and return the tx hash. */

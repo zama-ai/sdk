@@ -14,6 +14,7 @@ import { Eip712Like } from '@fhevm/sdk/types';
 import { Hex } from 'viem';
 import { PublicClient } from 'viem';
 import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
+import { TypedDataDefinition } from 'viem';
 import { TypedValue } from '@fhevm/sdk/types';
 import { WalletClient } from 'viem';
 
@@ -302,6 +303,9 @@ export interface ShieldSubmittedEvent extends BaseEvent {
     txHash: Hex;
     type: typeof ZamaSDKEvents.ShieldSubmitted;
 }
+
+// @public
+export function toViemTypedData(typedData: EIP712TypedData): TypedDataDefinition;
 
 // @public
 export interface TransactionErrorEvent extends BaseEvent {
