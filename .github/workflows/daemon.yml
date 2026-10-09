@@ -164,6 +164,16 @@ jobs:
           # Scoped per architecture so the two builds don't overwrite each other's cache.
           cache-from: type=gha,scope=daemon-image-${{ matrix.arch }}
           cache-to: type=gha,scope=daemon-image-${{ matrix.arch }},mode=max
+      # From zama-ai/ci-templates security/trivy.yml. Only fixable HIGH or CRITICAL findings fail: Debian
+      # advisories without a fix yet can't be addressed in the image.
+      - name: Scan the image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ghcr.io/zama-ai/sdk-daemon:ci
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
       - name: Start the daemon with the deployment Compose file
         env:
           ZAMA_SDK_VERSION: ci
