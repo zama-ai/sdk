@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.7.0-beta.8](https://github.com/zama-ai/sdk/compare/v3.7.0-beta.7...v3.7.0-beta.8) (2026-10-09)
+
+### Build System
+
+- **daemon:** scan the daemon image with Trivy and bump dependencies ([#835](https://github.com/zama-ai/sdk/issues/835)) ([7fb932b]())
+
 ## [3.7.0-beta.7](https://github.com/zama-ai/sdk/compare/v3.7.0-beta.6...v3.7.0-beta.7) (2026-10-08)
 
 ### Features
