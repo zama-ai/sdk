@@ -22,3 +22,7 @@ Start with the [Go quick start](../native/tutorials/go-quick-start.md) or the [R
 ## Permit signing with browser extensions that patch `BigInt`
 
 `ViemSigner` and `WagmiSigner` now convert the typed-data domain `chainId` to a number and every `bigint` value in the message to a decimal string before calling viem. Browser extensions that patch how `bigint` is JSON-serialized made viem send the permit's `chainId` as `"1n"`, and the wallet rejected the signature with `chainId should be same as current chainId`; with no `bigint` left in the request, such a patch has nothing to act on. Signatures are unchanged, and `EthersSigner` was never affected. Custom viem-based signers can use the new `toViemTypedData` from `@zama-fhe/sdk/viem` to get the same payload.
+
+## InGen testnet removed
+
+The SDK no longer supports the T-Rex InGen testnet (chain ID `364301`). The `ingenTestnet` preset is removed from `@zama-fhe/sdk/chains`, from the built-in `chains` map and from the deprecated `DefaultRegistryAddresses`, and the `example-ingen` app is removed. Use `zenithTrexTestnet`, `hoodi` or `bscTestnet` for a cleartext testnet.
