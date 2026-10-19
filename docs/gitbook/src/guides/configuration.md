@@ -48,7 +48,6 @@ let config = SdkConfig::new(11_155_111, rpc_url); // Sepolia preset
 | `sepolia`           | `11155111` | Sepolia Testnet         |
 | `polygonAmoy`       | `80002`    | Polygon Amoy Testnet    |
 | `hoodi`             | `560048`   | Hoodi Testnet           |
-| `ingenTestnet`      | `364301`   | InGen Testnet           |
 | `zenithTrexTestnet` | `936486`   | T-Rex Zenith Testnet    |
 | `bscTestnet`        | `97`       | BNB Smart Chain Testnet |
 | `hardhat`           | `31337`    | Local Hardhat node      |

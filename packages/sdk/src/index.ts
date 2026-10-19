@@ -51,7 +51,6 @@ export {
   chains,
   hardhat,
   hoodi,
-  ingenTestnet,
   mainnet,
   polygon,
   polygonAmoy,

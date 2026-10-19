@@ -82,7 +82,7 @@ migration.
 | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
 | `ZamaSDKConfig`                                                                           | `ZamaConfig` (+ `ZamaConfigViem`/`ZamaConfigEthers`/`ZamaConfigWagmi`)                                                                               | [1 · Config][s1]          |
 | `new ZamaSDK({ relayer, signer, storage })`                                               | `new ZamaSDK(createConfig({ chains, …client, relayers, storage }))`                                                                                  | [1 · Config][s1]          |
-| `SepoliaConfig` / `MainnetConfig` / `HardhatConfig` (from `@zama-fhe/sdk`)                | `sepolia` / `mainnet` / `hardhat` (+ `polygonAmoy`, `hoodi`, `anvil`, `ingenTestnet`, `zenithTrexTestnet`, `bscTestnet`) from `@zama-fhe/sdk/chains` | [1 · Config][s1]          |
+| `SepoliaConfig` / `MainnetConfig` / `HardhatConfig` (from `@zama-fhe/sdk`)                | `sepolia` / `mainnet` / `hardhat` (+ `polygonAmoy`, `hoodi`, `anvil`, `zenithTrexTestnet`, `bscTestnet`) from `@zama-fhe/sdk/chains` | [1 · Config][s1]          |
 | `<chainConfig>.chainId`                                                                   | `<chain>.id`                                                                                                                                         | [1 · Config][s1]          |
 | `ViemSigner` / `EthersSigner` (constructed)                                               | pass `publicClient`/`walletClient` (or ethers `provider`/`signer`) to `createConfig`                                                                 | [1 · Config][s1]          |
 | `keypairTTL` (config option)                                                              | `transportKeyPairTTL`                                                                                                                                | [1 · Config][s1]          |
@@ -331,7 +331,7 @@ Relayers are no longer classes you instantiate; they are factories placed in a
 
 `cleartext()` is **new in v3** — the relayer for cleartext-mode chains (no FHE,
 KMS, or gateway): local dev (`hardhat`) and the cleartext testnets (`hoodi`,
-`ingenTestnet`, `zenithTrexTestnet`, `bscTestnet`).
+`zenithTrexTestnet`, `bscTestnet`).
 
 ```ts
 // Before

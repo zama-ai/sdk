@@ -21,7 +21,6 @@ import {
   sepolia,
   polygonAmoy,
   hoodi,
-  ingenTestnet,
   zenithTrexTestnet,
   bscTestnet,
 } from "./chains";
@@ -42,7 +41,6 @@ export const DefaultRegistryAddresses: Record<number, Address> = {
   [sepolia.id]: sepolia.registryAddress,
   [polygonAmoy.id]: polygonAmoy.registryAddress,
   [hoodi.id]: hoodi.registryAddress,
-  [ingenTestnet.id]: ingenTestnet.registryAddress,
   [zenithTrexTestnet.id]: zenithTrexTestnet.registryAddress,
   [bscTestnet.id]: bscTestnet.registryAddress,
 };
