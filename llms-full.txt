@@ -2535,32 +2535,6 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 > **Unreleased.** The changes on this page are on the prerelease (`beta`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
 
 
-## Confidential ERC-4626 vault support
-
-Both packages gain a `vaults` subpath — `@zama-fhe/sdk/vaults` and `@zama-fhe/react-sdk/vaults` — for depositing into and redeeming from confidential ERC-4626 vaults. Vault operations are batched on-chain: a deposit or redemption joins the currently open batch, anyone can dispatch the batch once it is old enough, and participants claim their shares or assets after finalization. The subpath is opt-in, so apps that don't use vaults don't bundle it.
-
-`Vault` (`createVault`, or `useVault` in React) pairs a vault's deposit and redeem batchers behind ERC-4626-style `deposit` and `redeem` methods. Both grant the batcher an operator approval when one isn't already active, check the caller's confidential balance the way `Token.confidentialTransfer` does, encrypt the amount, and return the `batchId` they joined. The React hooks are `useDeposit` and `useRedeem`.
-
-`VaultBatcher` (`createVaultBatcher` / `useVaultBatcher`) mirrors one batcher contract directly for the rest of the lifecycle: `batchState`, `timeUntilDispatchable`, `dispatchBatch`, `claim`, `quit` and `recover`, with matching `useBatchState`, `useTimeUntilDispatchable`, `useCurrentBatchId`, `useDispatchBatch`, `useClaim`, `useQuit` and `useRecover` hooks. `Vault` exposes its two batchers as `depositBatcher` and `redeemBatcher`, and resolves the underlying vault, asset and share tokens from them on first use.
-
-See [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-deposits.md) for the full flow.
-
-## Permit signatures with a 0/1 recovery byte
-
-`parseSignedDecryptionPermit` (and `sdk.permits.registerPermit`, which uses it) now accepts 65-byte permit signatures whose recovery byte is `0`/`1` as well as `27`/`28`. The SDK normalizes the byte before the permit is verified; signatures already in `27`/`28` form and longer ERC-1271 signatures are unchanged.
-
-## New chain preset: T-Rex Zenith testnet
-
-`zenithTrexTestnet` (chain ID `936486`) joins the built-in chain presets in `@zama-fhe/sdk/chains`. It targets T-Rex's testnet instance on Zenith EVM, a Reth-based chain with Canton-mediated finality, and carries the addresses of a cleartext protocol deployment: ACL, `CleartextFHEVMExecutor`, KMS and input verifiers, and a wrapper registry with cUSDC/cUSDT mock pairs. Like `hoodi`, `ingenTestnet` and `bscTestnet` it has no hosted relayer, so pair it with the [`cleartext()` transport](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/RelayerCleartext.md). Its registry address is also included in the deprecated `DefaultRegistryAddresses` map. See [Chain presets](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/network-presets.md).
-
-## Offline permits for more than 10 contracts
-
-`sdk.offline.batchPreparePermits` and `sdk.permits.batchRegisterPermits` handle offline permit requests of any size. A permit holds at most 10 contracts, so `batchPreparePermits` returns one `PreparedPermit` per chunk of 10, and `batchRegisterPermits` takes the matching list of `{ prepared, signature }` pairs (`SignedPreparedPermit[]`) and registers them in order. The single-permit `preparePermit` and `registerPermit` are unchanged; `preparePermit` still rejects more than 10 contracts and now points at `batchPreparePermits`. React gains `useBatchPreparePermits` and `useBatchRegisterPermits`. See [Offline permits](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/offline.md#offline-permits).
-
-## SDK usage telemetry headers
-
-Relayer requests now carry four `x-zama-sdk-*` headers: the SDK version, the package driving it (`core` or `react`), the transport (`web` or `node`), and the public SDK method the request belongs to (`confidential-transfer`, `unshield`, `balance-of`, …). They label traffic the relayer already receives so the SDK team can see version adoption and per-operation error rates; no end-user data is ever included, and a self-hosted relayer simply ignores them. Telemetry is on by default and `createConfig({ telemetry: false })` turns it off; on Node.js, `ZAMA_SDK_TELEMETRY=0` does the same for a whole process. See [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md).
-
 ## Daemon
 
 **Experimental Go and Rust clients.** Go and Rust services can use the SDK through native clients that talk to a local SDK daemon over a private Unix socket. The clients encrypt inputs, decrypt values (including public and delegated decryption), manage permits, prepare unsigned transactions for external signing, and grant or revoke on-chain decryption delegation through your wallet. Token workflows are not available in the clients yet.
@@ -2584,6 +2558,7 @@ Plain-language release notes for the `3.x` line — the current, actively-mainta
 
 ## Versions
 
+- [**3.7.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-7.md) — Confidential ERC-4626 vaults, wildcard delegation, offline permits for more than 10 contracts, SDK usage telemetry headers, a T-Rex Zenith testnet preset, and permit signatures with a 0/1 recovery byte.
 - [**3.6.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-6.md) — Web Worker encryption offload, structured wallet-signing/permit-failure events, an interrupted-unshield resume fix, and orphaned relayer entries that warn instead of throwing.
 - [**3.5.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-5.md) — Polygon presets, offline signing and decryption permits, at-rest transport-key encryption, and automatic KMS-context recovery.
 - [**3.4.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-4.md) — An internal FHE backend migration to `@fhevm/sdk` (no API changes for `Token`/hooks apps), FHE runtime and client tuning knobs, shared transport key pairs for B2B2C, automatic decrypt-batch chunking, and a two-signature shield via `wrap()`.
@@ -2591,6 +2566,53 @@ Plain-language release notes for the `3.x` line — the current, actively-mainta
 - [**3.2.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-2.md) — configurable, silent-by-default logging; upgrade codemods; and a `Wrap` event decoding fix.
 - [**3.1.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-1.md) — `createConfig`, transport factories, the provider/signer split, the `Token` / `WrappedToken` hierarchy, and top-level FHE primitives.
 - [**3.0.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-0.md) — the first stable v3 line: the high-level clear-text-in, clear-text-out SDK, plus upgraded wrapper and registry contract support.
+
+## 3.7.x
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/v3-7.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-7.md
+- logical_path: changelog/v3-7
+
+# 3.7.x
+
+This page covers the `3.7.x` line.
+
+## 3.7.0
+
+_Released 2026-10-19._
+
+### Confidential ERC-4626 vault support
+
+Both packages gain a `vaults` subpath — `@zama-fhe/sdk/vaults` and `@zama-fhe/react-sdk/vaults` — for depositing into and redeeming from confidential ERC-4626 vaults. Vault operations are batched on-chain: a deposit or redemption joins the currently open batch, anyone can dispatch the batch once it is old enough, and participants claim their shares or assets after finalization. The subpath is opt-in, so apps that don't use vaults don't bundle it.
+
+`Vault` (`createVault`, or `useVault` in React) pairs a vault's deposit and redeem batchers behind ERC-4626-style `deposit` and `redeem` methods. Both grant the batcher an operator approval when one isn't already active, check the caller's confidential balance the way `Token.confidentialTransfer` does, encrypt the amount, and return the `batchId` they joined. The React hooks are `useDeposit` and `useRedeem`.
+
+`VaultBatcher` (`createVaultBatcher` / `useVaultBatcher`) mirrors one batcher contract directly for the rest of the lifecycle: `batchState`, `timeUntilDispatchable`, `dispatchBatch`, `claim`, `quit` and `recover`, with matching `useBatchState`, `useTimeUntilDispatchable`, `useCurrentBatchId`, `useDispatchBatch`, `useClaim`, `useQuit` and `useRecover` hooks. `Vault` exposes its two batchers as `depositBatcher` and `redeemBatcher`, and resolves the underlying vault, asset and share tokens from them on first use.
+
+See [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-deposits.md) for the full flow.
+
+### Permit signatures with a 0/1 recovery byte
+
+`parseSignedDecryptionPermit` (and `sdk.permits.registerPermit`, which uses it) now accepts 65-byte permit signatures whose recovery byte is `0`/`1` as well as `27`/`28`. The SDK normalizes the byte before the permit is verified; signatures already in `27`/`28` form and longer ERC-1271 signatures are unchanged.
+
+### New chain preset: T-Rex Zenith testnet
+
+`zenithTrexTestnet` (chain ID `936486`) joins the built-in chain presets in `@zama-fhe/sdk/chains`. It targets T-Rex's testnet instance on Zenith EVM, a Reth-based chain with Canton-mediated finality, and carries the addresses of a cleartext protocol deployment: ACL, `CleartextFHEVMExecutor`, KMS and input verifiers, and a wrapper registry with cUSDC/cUSDT mock pairs. Like `hoodi`, `ingenTestnet` and `bscTestnet` it has no hosted relayer, so pair it with the [`cleartext()` transport](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/RelayerCleartext.md). Its registry address is also included in the deprecated `DefaultRegistryAddresses` map. See [Chain presets](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/network-presets.md).
+
+### Wildcard delegation
+
+`delegateDecryption` (and `useDelegateDecryption`) now accepts the new `WILDCARD_CONTRACT` export as `contractAddress`. One grant then covers every confidential contract, including ones deployed later, instead of one delegation per contract. It doesn't widen access: the delegate can only read what the delegator can already read on each contract.
+
+For a specific contract, `isActive`, `getStatus` and `useDelegationStatus` also report a wildcard-only grant as active, so existing status checks keep working; `getExpiry` still returns the raw per-contract expiry. Wildcard and per-contract grants to the same delegate can coexist, and a per-contract grant that an active wildcard grant already covers logs a warning but is still submitted. Passing the wildcard address as the delegate throws the new `DelegationDelegateCannotBeWildcardError` (`DELEGATION_DELEGATE_CANNOT_BE_WILDCARD`) before any transaction is sent. `MAX_UINT64`, the permanent-expiry value, is now exported too. See [Delegate for all contracts with the wildcard address](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/delegated-decryption.md#6-delegate-for-all-contracts-with-the-wildcard-address-optional).
+
+### Offline permits for more than 10 contracts
+
+`sdk.offline.batchPreparePermits` and `sdk.permits.batchRegisterPermits` handle offline permit requests of any size. A permit holds at most 10 contracts, so `batchPreparePermits` returns one `PreparedPermit` per chunk of 10, and `batchRegisterPermits` takes the matching list of `{ prepared, signature }` pairs (`SignedPreparedPermit[]`) and registers them in order. The single-permit `preparePermit` and `registerPermit` are unchanged; `preparePermit` still rejects more than 10 contracts and now points at `batchPreparePermits`. React gains `useBatchPreparePermits` and `useBatchRegisterPermits`. See [Offline permits](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/offline.md#offline-permits).
+
+### SDK usage telemetry headers
+
+Relayer requests now carry four `x-zama-sdk-*` headers: the SDK version, the package driving it (`core` or `react`), the transport (`web` or `node`), and the public SDK method the request belongs to (`confidential-transfer`, `unshield`, `balance-of`, …). They label traffic the relayer already receives so the SDK team can see version adoption and per-operation error rates; no end-user data is ever included, and a self-hosted relayer simply ignores them. Telemetry is on by default and `createConfig({ telemetry: false })` turns it off; on Node.js, `ZAMA_SDK_TELEMETRY=0` does the same for a whole process. See [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md).
 
 ## 3.6.x
 
@@ -8371,7 +8393,7 @@ for item in items {
 
 ### 6. Delegate for all contracts with the wildcard address (optional)
 
-Instead of granting delegation one contract at a time, pass `WILDCARD_CONTRACT` as `contractAddress`. The delegation then applies to any confidential contract, including ones deployed later. It does not widen access: the delegate can only read what the delegator can already read on each contract. `WILDCARD_CONTRACT` is only valid as `contractAddress`. `getStatus` and `getExpiry` for a specific contract also reflect a wildcard-only grant, so existing status checks keep working.
+Instead of granting delegation one contract at a time, pass `WILDCARD_CONTRACT` as `contractAddress`. The delegation then applies to any confidential contract, including ones deployed later. It does not widen access: the delegate can only read what the delegator can already read on each contract. `WILDCARD_CONTRACT` is only valid as `contractAddress`. `isActive` and `getStatus` (and `useDelegationStatus`) for a specific contract also reflect a wildcard-only grant, so existing status checks keep working. `getExpiry` returns only the raw per-contract expiry; query it with `WILDCARD_CONTRACT` to read the wildcard grant's expiry.
 
 
 ### Tab: Core SDK
@@ -10990,6 +11012,7 @@ Every event extends a common shape (an optional `tokenAddress`, a `timestamp`, a
 | `PermitError`                                                                                                                                                                        | `grantPermit`, `grantDelegationPermit`, or `registerPermit` fails — but not every failure of these methods: transport-key-pair issues (`TransportKeyPairChangedError`, `KeyWrappingError`) are deliberately excluded from this event.                                                                                                                   |
 | `TransactionError`                                                                                                                                                                   | `submitTransaction` itself rejects — before broadcast (estimation/validation) or while waiting for the receipt. It does **not** fire for a transaction that broadcasts successfully but reverts on execution: the SDK doesn't currently inspect `receipt.status`, so a mined-but-reverted transaction resolves as a success with no error and no event. |
 | `ShieldSubmitted`, `TransferSubmitted`, `TransferFromSubmitted`, `SetOperatorSubmitted`, `ApproveUnderlyingSubmitted`, `WrapSubmitted`, `UnwrapSubmitted`, `FinalizeUnwrapSubmitted` | The corresponding write transaction is submitted — each carries the transaction's `txHash`.                                                                                                                                                                                                                                                             |
+| `VaultSubmitted`                                                                                                                                                                     | A vault batcher write is submitted — carries the `txHash`, the batcher address as `tokenAddress`, and `vaultOperation` (`join`, `quit`, `claim`, `recover`, or `dispatchBatch`). See [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-deposits.md).                                                                                                  |
 | `DelegationSubmitted` / `RevokeDelegationSubmitted`                                                                                                                                  | A delegation grant or revoke transaction is submitted — see [Delegation events](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/delegation.md#events).                                                                                                                                                                                                                                                |
 | `UnshieldPhase1Submitted` / `UnshieldPhase2Started` / `UnshieldPhase2Submitted`                                                                                                      | The two-phase unshield flow's request and finalize steps progress.                                                                                                                                                                                                                                                                                      |
 
@@ -15048,7 +15071,18 @@ Returns `{ txHash: Hex; receipt: TransactionReceipt }`.
 > `expirationDate` must be at least 1 hour in the future. The SDK validates this before sending the transaction.
 
 
-When no `expirationDate` is provided, the SDK uses `2^64 - 1` (effectively permanent). The SDK accepts a standard JavaScript `Date` and converts it to a UTC Unix timestamp internally — timezone normalization is handled automatically.
+To delegate for every confidential contract at once, including ones deployed later, pass `WILDCARD_CONTRACT` as `contractAddress`. It doesn't widen access: the delegate can only read what the delegator can already read on each contract. See [Delegate for all contracts with the wildcard address](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/delegated-decryption.md#6-delegate-for-all-contracts-with-the-wildcard-address-optional).
+
+```ts
+import { WILDCARD_CONTRACT } from "@zama-fhe/sdk";
+
+await sdk.delegations.delegateDecryption({
+  contractAddress: WILDCARD_CONTRACT,
+  delegateAddress: "0xDelegate",
+});
+```
+
+When no `expirationDate` is provided, the SDK uses `MAX_UINT64` (`2^64 - 1`, effectively permanent), which is also exported from `@zama-fhe/sdk`. The SDK accepts a standard JavaScript `Date` and converts it to a UTC Unix timestamp internally — timezone normalization is handled automatically.
 
 **Throws:**
 
@@ -15111,7 +15145,7 @@ const active = await sdk.delegations.isActive({
 
 `(params: { contractAddress: Address; delegatorAddress: Address; delegateAddress: Address }) => Promise<bigint>`
 
-Returns the expiration timestamp of a delegation as a Unix timestamp in seconds.
+Returns the expiration timestamp of a delegation as a Unix timestamp in seconds. This is the raw on-chain expiry for exactly the given `contractAddress`: it doesn't fall back to a wildcard grant the way `isActive` and `getStatus` do. Pass `WILDCARD_CONTRACT` to read the wildcard grant's expiry.
 
 Signer-independent — works without a configured signer.
 
@@ -15126,17 +15160,17 @@ const expiry = await sdk.delegations.getExpiry({
 const expiryDate = new Date(Number(expiry) * 1000);
 ```
 
-| Return value | Meaning                              |
-| ------------ | ------------------------------------ |
-| `0n`         | No delegation (never set or revoked) |
-| `2^64 - 1`   | Permanent                            |
-| Other        | UTC Unix timestamp in seconds        |
+| Return value              | Meaning                              |
+| ------------------------- | ------------------------------------ |
+| `0n`                      | No delegation (never set or revoked) |
+| `MAX_UINT64` (`2^64 - 1`) | Permanent                            |
+| Other                     | UTC Unix timestamp in seconds        |
 
 ### getStatus
 
 `(params: { contractAddress: Address; delegatorAddress: Address; delegateAddress: Address }) => Promise<DelegationStatus>`
 
-Returns activity and expiry together (`{ isActive: boolean; expiryTimestamp: bigint }`) from a single on-chain read, instead of calling `isActive()` and `getExpiry()` separately.
+Returns activity and expiry together (`{ isActive: boolean; expiryTimestamp: bigint }`), instead of calling `isActive()` and `getExpiry()` separately. For a specific contract it also checks the delegate's `WILDCARD_CONTRACT` grant, so an active wildcard-only delegation reports `isActive: true` with the wildcard grant's expiry.
 
 Signer-independent — works without a configured signer.
 
