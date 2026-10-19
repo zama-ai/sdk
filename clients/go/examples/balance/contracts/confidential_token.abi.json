@@ -1,0 +1,16 @@
+[
+  {
+    "type": "function",
+    "name": "name",
+    "inputs": [],
+    "outputs": [{ "type": "string" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "confidentialBalanceOf",
+    "inputs": [{ "name": "account", "type": "address" }],
+    "outputs": [{ "type": "bytes32" }],
+    "stateMutability": "view"
+  }
+]

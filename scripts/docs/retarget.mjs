@@ -164,6 +164,9 @@ function main() {
     join(root, "README.md"),
     join(root, "packages/sdk/README.md"),
     join(root, "packages/react-sdk/README.md"),
+    join(root, "packages/sdk-daemon/README.md"),
+    join(root, "clients/go/README.md"),
+    join(root, "clients/rust/README.md"),
   ];
 
   // Absolute paths of every file to oxfmt before the rebuild. Seed with the promoted

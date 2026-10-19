@@ -5,6 +5,10 @@ description: How to approve another address to act on your confidential tokens.
 
 # Operator approvals
 
+{% hint style="info" %}
+Available in the Core SDK and React SDK.
+{% endhint %}
+
 Operator approval lets another address (a DEX contract, multisig, or automated service) transfer confidential tokens on your behalf. This is the FHE equivalent of ERC-20's `approve` / `transferFrom` pattern. Use `token.setOperator()` in the core SDK, or the `useConfidentialSetOperator` hook in React.
 
 ## Steps

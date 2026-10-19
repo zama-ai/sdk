@@ -1,0 +1,81 @@
+package zama
+
+import (
+	"bytes"
+	"context"
+	"errors"
+
+	pb "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1"
+	"google.golang.org/grpc"
+)
+
+func (s *SDKContext) AttachStorage(ctx context.Context) error {
+	if len(s.stores) == 0 {
+		return errors.New("no application storage configured")
+	}
+	_, err := attachChannel(ctx, s, StorageChannel, &s.storage,
+		func(ctx context.Context) (grpc.BidiStreamingClient[pb.StorageClientMessage, pb.StorageServerMessage], error) {
+			return s.client.rpc.StorageChannel(ctx)
+		},
+		&pb.StorageClientMessage{Message: &pb.StorageClientMessage_Attach{Attach: &pb.ContextRequest{ContextId: s.id}}},
+		func(message *pb.StorageServerMessage) bool { return message.GetAttached() != nil },
+		func(ctx context.Context, message *pb.StorageServerMessage, send func(*pb.StorageClientMessage)) error {
+			if rejected := message.GetReplyError(); rejected != nil {
+				if rejected.Error == nil {
+					return errors.New("missing storage reply error")
+				}
+				if rejected.Error.Code != codeStorageRequestNotFound {
+					return sdkError(rejected.Error)
+				}
+			}
+			if action := message.GetAction(); action != nil {
+				go func() {
+					reply := s.storageReply(ctx, action)
+					if ctx.Err() == nil {
+						send(&pb.StorageClientMessage{Message: &pb.StorageClientMessage_Reply{Reply: reply}})
+					}
+				}()
+			}
+			return nil
+		})
+	return err
+}
+
+// A panicking store fails only its own request; the panic value never reaches the reply.
+func (s *SDKContext) storageReply(ctx context.Context, action *pb.StorageAction) (reply *pb.StorageReply) {
+	reply = &pb.StorageReply{RequestId: action.RequestId}
+	defer func() {
+		if recover() != nil {
+			reply.Result = &pb.StorageReply_Error{Error: &pb.SdkError{Code: CodeStorageFailed, Message: "application storage panicked"}}
+		}
+	}()
+	store, ok := s.stores[action.BackendId]
+	var err error
+	if !ok {
+		err = errors.New("unknown application storage backend")
+	} else {
+		switch action.Method {
+		case pb.StorageMethod_STORAGE_METHOD_GET:
+			var value []byte
+			var found bool
+			value, found, err = store.Get(ctx, action.Key)
+			if err == nil && found {
+				reply.Result = &pb.StorageReply_Value{Value: bytes.Clone(value)}
+			} else if err == nil {
+				reply.Result = &pb.StorageReply_NotFound{NotFound: &pb.Empty{}}
+			}
+		case pb.StorageMethod_STORAGE_METHOD_SET:
+			err = store.Set(ctx, action.Key, bytes.Clone(action.Value))
+		case pb.StorageMethod_STORAGE_METHOD_DELETE:
+			err = store.Delete(ctx, action.Key)
+		default:
+			err = errors.New("unknown storage operation")
+		}
+	}
+	if err != nil {
+		reply.Result = &pb.StorageReply_Error{Error: callbackError(err, CodeStorageFailed)}
+	} else if reply.Result == nil {
+		reply.Result = &pb.StorageReply_Ack{Ack: &pb.Empty{}}
+	}
+	return reply
+}

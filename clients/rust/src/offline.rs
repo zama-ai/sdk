@@ -1,0 +1,299 @@
+use crate::{
+    Address, ClientError, ErrorKind, Result, Sdk, U256,
+    delegations::{delegate_decryption_wire, revoke_delegation_wire},
+    generated,
+    permits::addresses,
+};
+
+pub struct Offline(pub(crate) Sdk);
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PrepareTransaction {
+    pub from: Address,
+    pub transaction: Transaction,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Transaction {
+    ConfidentialTransfer {
+        token: Address,
+        to: Address,
+        amount: U256,
+    },
+    ConfidentialTransferFrom {
+        token: Address,
+        owner: Address,
+        to: Address,
+        amount: U256,
+    },
+    SetOperator {
+        token: Address,
+        operator: Address,
+        /// Unix timestamp in whole seconds; a positive past value revokes the operator.
+        until: u64,
+    },
+    Unwrap {
+        token: Address,
+        to: Address,
+        amount: U256,
+    },
+    UnwrapAll {
+        token: Address,
+        to: Address,
+    },
+    FinalizeUnwrap {
+        wrapper: Address,
+        unwrap_request_id_or_amount: Vec<u8>,
+    },
+    ApproveUnderlying {
+        underlying: Address,
+        spender: Address,
+        amount: U256,
+    },
+    Wrap {
+        wrapper: Address,
+        to: Address,
+        amount: U256,
+    },
+    TransferAndCall {
+        underlying: Address,
+        wrapper: Address,
+        amount: U256,
+        recipient_data: Option<Vec<u8>>,
+    },
+    DelegateDecryption {
+        contract_address: Address,
+        delegate_address: Address,
+        /// Unix time in whole milliseconds; omission grants permanent delegation.
+        expiration_date_ms: Option<u64>,
+    },
+    RevokeDelegation {
+        contract_address: Address,
+        delegate_address: Address,
+    },
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct PrepareOptions {
+    pub nonce: Option<u64>,
+    pub gas_limit: Option<u64>,
+    pub fees: Option<PrepareFees>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PrepareFees {
+    pub max_fee_per_gas: U256,
+    pub max_priority_fee_per_gas: U256,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TransactionKind {
+    ConfidentialTransfer,
+    ConfidentialTransferFrom,
+    SetOperator,
+    Unwrap,
+    UnwrapAll,
+    FinalizeUnwrap,
+    ApproveUnderlying,
+    Wrap,
+    TransferAndCall,
+    DelegateDecryption,
+    RevokeDelegation,
+}
+
+impl TryFrom<i32> for TransactionKind {
+    type Error = ClientError;
+
+    fn try_from(value: i32) -> crate::Result<Self> {
+        let Ok(kind) = generated::TransactionKind::try_from(value) else {
+            return Err(ClientError::protocol("unknown prepared transaction kind"));
+        };
+        Ok(match kind {
+            generated::TransactionKind::Unspecified => {
+                return Err(ClientError::protocol(
+                    "unspecified prepared transaction kind",
+                ));
+            }
+            generated::TransactionKind::ConfidentialTransfer => Self::ConfidentialTransfer,
+            generated::TransactionKind::ConfidentialTransferFrom => Self::ConfidentialTransferFrom,
+            generated::TransactionKind::SetOperator => Self::SetOperator,
+            generated::TransactionKind::Unwrap => Self::Unwrap,
+            generated::TransactionKind::UnwrapAll => Self::UnwrapAll,
+            generated::TransactionKind::FinalizeUnwrap => Self::FinalizeUnwrap,
+            generated::TransactionKind::ApproveUnderlying => Self::ApproveUnderlying,
+            generated::TransactionKind::Wrap => Self::Wrap,
+            generated::TransactionKind::TransferAndCall => Self::TransferAndCall,
+            generated::TransactionKind::DelegateDecryption => Self::DelegateDecryption,
+            generated::TransactionKind::RevokeDelegation => Self::RevokeDelegation,
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PreparedTransaction {
+    pub kind: TransactionKind,
+    pub from: Address,
+    pub unsigned_tx: Vec<u8>,
+}
+
+pub struct PreparePermit<'a> {
+    pub signer: Address,
+    pub contracts: &'a [Address],
+    pub delegator: Option<Address>,
+    pub duration_days: Option<u32>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PreparedPermit {
+    pub envelope: Vec<u8>,
+    pub typed_data: serde_json::Value,
+}
+
+impl Offline {
+    /// Prepares through the SDK; the caller owns signing and broadcasting the returned bytes.
+    pub async fn prepare(
+        &self,
+        request: PrepareTransaction,
+        options: Option<PrepareOptions>,
+    ) -> crate::Result<PreparedTransaction> {
+        let result = rpc!(
+            &self.0,
+            prepare_transaction,
+            PrepareTransactionRequest {
+                from: request.from.to_vec(),
+                transaction: Some(request.transaction.into()),
+                options: options.map(Into::into),
+            }
+        )
+        .await?;
+        Ok(PreparedTransaction {
+            kind: TransactionKind::try_from(result.kind)?,
+            from: crate::types::address(&result.from, "invalid prepared sender address")?,
+            unsigned_tx: result.unsigned_tx,
+        })
+    }
+    pub async fn prepare_permit(&self, request: PreparePermit<'_>) -> Result<PreparedPermit> {
+        let response = rpc!(
+            &self.0,
+            prepare_permit,
+            PreparePermitRequest {
+                signer_address: request.signer.to_vec(),
+                contract_addresses: addresses(request.contracts),
+                delegator_address: request.delegator.map(|a| a.to_vec()),
+                duration_days: request.duration_days,
+            }
+        )
+        .await?;
+        Ok(PreparedPermit {
+            envelope: response.prepared_permit,
+            typed_data: serde_json::from_str(&response.typed_data_json).map_err(|error| {
+                ClientError::with_source(ErrorKind::Protocol, "invalid permit typed data", error)
+            })?,
+        })
+    }
+}
+
+impl From<PrepareOptions> for generated::PrepareOptions {
+    fn from(value: PrepareOptions) -> Self {
+        Self {
+            nonce: value.nonce,
+            gas_limit: value.gas_limit.map(|n| n.to_string()),
+            fees: value.fees.map(|fees| generated::PrepareFees {
+                max_fee_per_gas: fees.max_fee_per_gas.to_string(),
+                max_priority_fee_per_gas: fees.max_priority_fee_per_gas.to_string(),
+            }),
+        }
+    }
+}
+
+impl From<Transaction> for generated::prepare_transaction_request::Transaction {
+    fn from(value: Transaction) -> Self {
+        match value {
+            Transaction::ConfidentialTransfer { token, to, amount } => {
+                Self::ConfidentialTransfer(generated::ConfidentialTransfer {
+                    token: token.to_vec(),
+                    to: to.to_vec(),
+                    amount: amount.to_string(),
+                })
+            }
+            Transaction::ConfidentialTransferFrom {
+                token,
+                owner,
+                to,
+                amount,
+            } => Self::ConfidentialTransferFrom(generated::ConfidentialTransferFrom {
+                token: token.to_vec(),
+                owner: owner.to_vec(),
+                to: to.to_vec(),
+                amount: amount.to_string(),
+            }),
+            Transaction::SetOperator {
+                token,
+                operator,
+                until,
+            } => Self::SetOperator(generated::SetOperator {
+                token: token.to_vec(),
+                operator: operator.to_vec(),
+                until: Some(until),
+            }),
+            Transaction::Unwrap { token, to, amount } => Self::Unwrap(generated::Unwrap {
+                token: token.to_vec(),
+                to: to.to_vec(),
+                amount: amount.to_string(),
+            }),
+            Transaction::UnwrapAll { token, to } => Self::UnwrapAll(generated::UnwrapAll {
+                token: token.to_vec(),
+                to: to.to_vec(),
+            }),
+            Transaction::FinalizeUnwrap {
+                wrapper,
+                unwrap_request_id_or_amount,
+            } => Self::FinalizeUnwrap(generated::FinalizeUnwrap {
+                wrapper: wrapper.to_vec(),
+                unwrap_request_id_or_amount,
+            }),
+            Transaction::ApproveUnderlying {
+                underlying,
+                spender,
+                amount,
+            } => Self::ApproveUnderlying(generated::ApproveUnderlying {
+                underlying: underlying.to_vec(),
+                spender: spender.to_vec(),
+                amount: amount.to_string(),
+            }),
+            Transaction::Wrap {
+                wrapper,
+                to,
+                amount,
+            } => Self::Wrap(generated::Wrap {
+                wrapper: wrapper.to_vec(),
+                to: to.to_vec(),
+                amount: amount.to_string(),
+            }),
+            Transaction::TransferAndCall {
+                underlying,
+                wrapper,
+                amount,
+                recipient_data,
+            } => Self::TransferAndCall(generated::TransferAndCall {
+                underlying: underlying.to_vec(),
+                wrapper: wrapper.to_vec(),
+                amount: amount.to_string(),
+                recipient_data,
+            }),
+            Transaction::DelegateDecryption {
+                contract_address,
+                delegate_address,
+                expiration_date_ms,
+            } => Self::DelegateDecryption(delegate_decryption_wire(
+                contract_address,
+                delegate_address,
+                expiration_date_ms,
+            )),
+            Transaction::RevokeDelegation {
+                contract_address,
+                delegate_address,
+            } => Self::RevokeDelegation(revoke_delegation_wire(contract_address, delegate_address)),
+        }
+    }
+}

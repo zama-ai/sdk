@@ -1,11 +1,11 @@
 ---
 title: Configuration
-description: How to configure the SDK with createConfig — chains, relayers, provider, signer, and storage.
+description: How to configure the SDK in TypeScript, Go, and Rust with chains, relayers, provider, signer, and storage.
 ---
 
 # Configuration
 
-The SDK uses `createConfig` to wire together chains, relayers, a provider, an optional signer, and storage into a single configuration object. This guide walks through each piece.
+The SDK uses `createConfig` to wire together chains, relayers, a provider, an optional signer, and storage into a single configuration object. This guide walks through each piece. In Go and Rust, the same settings configure an SDK context in the [daemon](../native/concepts/architecture.md).
 
 ## Steps
 
@@ -13,9 +13,33 @@ The SDK uses `createConfig` to wire together chains, relayers, a provider, an op
 
 Import pre-configured chain objects from `@zama-fhe/sdk/chains`. Each chain includes contract addresses, relayer URLs, and chain IDs.
 
+{% tabs %}
+{% tab title="Core SDK" %}
+
 ```ts
 import { sepolia, mainnet, hoodi } from "@zama-fhe/sdk/chains";
 ```
+
+{% endtab %}
+{% tab title="Go" %}
+
+Select a preset by chain ID and supply its RPC URL:
+
+```go
+config := zama.NewSDKConfig(11155111, rpcURL) // Sepolia preset
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+Select a preset by chain ID and supply its RPC URL:
+
+```rust
+let config = SdkConfig::new(11_155_111, rpc_url); // Sepolia preset
+```
+
+{% endtab %}
+{% endtabs %}
 
 | Chain               | Chain ID   | Description             |
 | ------------------- | ---------- | ----------------------- |
@@ -55,6 +79,9 @@ Chain-specific data (`relayerUrl`, `network`, `executorAddress`, etc.) comes fro
 
 `web()` additionally runs encryption in a dedicated Web Worker by default, so `encryptValue()`/`encryptValues()` calls don't block the main thread. Tune or opt out of this with `offloadEncrypt`, `offloadWorker`, and `offloadTimeouts` — see [`web()`'s encryption offload options](../reference/sdk/RelayerWeb.md#offloadencrypt) for the full behavior and defaults. If your app sets a Content Security Policy, it needs `worker-src 'self' blob:` for the offload worker to start.
 
+{% tabs %}
+{% tab title="Core SDK" %}
+
 ```ts
 // Browser — uses relayerUrl from the chain preset
 web();
@@ -66,9 +93,41 @@ node();
 cleartext();
 ```
 
+{% endtab %}
+{% tab title="Go" %}
+
+Omit `Relayers` to use the node relayer for every configured chain. `web()` is browser-only.
+
+```go
+config.Relayers = map[uint64]zama.RelayerConfig{
+	11155111: {Transport: zama.RelayerNode}, // or zama.RelayerCleartext
+}
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+Leave `relayers` as `None` to use the node relayer for every configured chain. `web()` is browser-only.
+
+```rust
+config.relayers = Some(BTreeMap::from([(
+    11_155_111,
+    RelayerConfig {
+        transport: RelayerTransport::Node, // or RelayerTransport::Cleartext
+        options: None,
+    },
+)]));
+```
+
+{% endtab %}
+{% endtabs %}
+
 The `relayers` map is keyed by chain id, one entry per chain in `chains`. A chain with no entry fails `createConfig` with a `ConfigurationError`. An entry whose chain is not in `chains` is unused and only warns through the configured logger, so a static relayer catalog can serve an environment-filtered chain list.
 
 If you need to override a chain field (e.g. proxy relayer requests through your backend), spread the preset in the `chains` array:
+
+{% tabs %}
+{% tab title="Core SDK" %}
 
 ```ts
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
@@ -78,6 +137,38 @@ const mySepolia = {
   relayerUrl: "https://your-app.com/api/relayer/11155111",
 } as const satisfies FheChain;
 ```
+
+{% endtab %}
+{% tab title="Go" %}
+
+Fields you omit keep their preset values. Set `Auth` on the chain for [relayer authentication](authentication.md).
+
+```go
+chainID := uint64(11155111)
+relayerURL := "https://your-app.com/api/relayer/11155111"
+config := zama.SDKConfig{
+	ChainID: &chainID,
+	Chains: []zama.ChainConfig{{
+		ID:         chainID,
+		Network:    &rpcURL,
+		RelayerURL: &relayerURL,
+	}},
+}
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+Fields you omit keep their preset values. Set `auth` on the chain for [relayer authentication](authentication.md).
+
+```rust
+let mut chain = ChainConfig::new(11_155_111, rpc_url);
+chain.relayer_url = Some("https://your-app.com/api/relayer/11155111".into());
+let config = SdkConfig::from_chains(11_155_111, vec![chain]);
+```
+
+{% endtab %}
+{% endtabs %}
 
 ### 3. Set up chain access
 
@@ -117,9 +208,41 @@ const walletClient = createWalletClient({ chain: sepolia, transport: custom(wind
 ```
 
 {% endtab %}
+{% tab title="Go" %}
+
+The daemon reads the chain through the configured RPC URL. Your application keeps the wallet and passes a signer when creating the SDK context:
+
+```go
+provider, err := ethclient.DialContext(ctx, rpcURL)
+if err != nil {
+	return err
+}
+defer provider.Close()
+
+signer, err := zama.NewEthereumSigner(privateKey, 11155111, provider)
+if err != nil {
+	return err
+}
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+The daemon reads the chain through the configured RPC URL. Your application keeps the wallet and passes a signer when building the SDK context:
+
+```rust
+let signer: PrivateKeySigner = private_key.parse()?;
+let account = WalletAccount {
+    address: signer.address(),
+    chain_id: 11_155_111,
+};
+let wallet = AlloySigner::new(signer); // requires the `alloy` feature
+```
+
+{% endtab %}
 {% endtabs %}
 
-For full type information, see the [ViemProvider](../reference/sdk/ViemProvider.md) / [ViemSigner](../reference/sdk/ViemSigner.md) and [EthersProvider](../reference/sdk/EthersProvider.md) / [EthersSigner](../reference/sdk/EthersSigner.md) reference pages. You can also implement [GenericProvider](../reference/sdk/GenericProvider.md) and [GenericSigner](../reference/sdk/GenericSigner.md) for a custom integration.
+For full type information, see the [ViemProvider](../reference/sdk/ViemProvider.md) / [ViemSigner](../reference/sdk/ViemSigner.md) and [EthersProvider](../reference/sdk/EthersProvider.md) / [EthersSigner](../reference/sdk/EthersSigner.md) reference pages. You can also implement [GenericProvider](../reference/sdk/GenericProvider.md) and [GenericSigner](../reference/sdk/GenericSigner.md) for a custom integration. For Go and Rust transaction writes and custom wallets, see [Attach a wallet](../native/guides/attach-wallet.md).
 
 ### 4. Create the config
 
@@ -285,6 +408,84 @@ const sdk = new ZamaSDK(config);
 Your `manifest.json` must include the `"storage"` permission. See the [Web Extensions guide](./web-extensions.md) for manifest configuration, multi-context sharing, and browser close behavior.
 
 {% endtab %}
+{% tab title="Go" %}
+
+Connect to the daemon socket, then create an SDK context from the config. Close the context when done; the first context in a daemon process fixes its [runtime settings](#8-optional-tune-fhe-runtime-performance-and-behavior).
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"time"
+
+	zama "github.com/zama-ai/sdk/clients/go/v3"
+)
+
+func run() error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	client, err := zama.Dial(os.Getenv("DAEMON_SOCKET"))
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	config := zama.NewSDKConfig(11155111, os.Getenv("SEPOLIA_RPC_URL"))
+	// Pass the signer from step 3 instead of an empty SignerConfig for private decryption.
+	sdk, err := client.CreateContext(ctx, config, zama.SignerConfig{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		closeCtx, cancelClose := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancelClose()
+		if err := sdk.Close(closeCtx); err != nil {
+			fmt.Fprintln(os.Stderr, "close SDK context:", err)
+		}
+	}()
+
+	// Run SDK operations with sdk.
+	return nil
+}
+
+func main() {
+	if err := run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+Connect to the daemon socket, then build an SDK context from the config. Close the context when done; the first context in a daemon process fixes its [runtime settings](#8-optional-tune-fhe-runtime-performance-and-behavior).
+
+```rust
+use std::{env, time::Duration};
+use zama_sdk::{Client, SdkConfig};
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> anyhow::Result<()> {
+    let client = Client::connect(env::var("DAEMON_SOCKET")?)
+        .await?
+        .with_timeout(Duration::from_secs(60));
+    let config = SdkConfig::new(11_155_111, env::var("SEPOLIA_RPC_URL")?);
+    // Add .signer(Some(account), wallet) from step 3 for private decryption.
+    let sdk = client.sdk(config).build().await?;
+
+    // Run SDK operations with sdk.
+
+    sdk.close().await?;
+    Ok(())
+}
+```
+
+{% endtab %}
 {% endtabs %}
 
 Browser apps should proxy relayer requests through a backend to keep the API key secret. See the [Authentication guide](./authentication.md) for the full setup.
@@ -292,6 +493,9 @@ Browser apps should proxy relayer requests through a backend to keep the API key
 ### 5. (Optional) Configure TTLs and event listener
 
 You can tune how long the transport key pair and permits remain valid, and subscribe to lifecycle events for debugging:
+
+{% tabs %}
+{% tab title="Core SDK" %}
 
 ```ts
 const config = createConfig({
@@ -306,6 +510,39 @@ const config = createConfig({
 });
 ```
 
+{% endtab %}
+{% tab title="Go" %}
+
+```go
+permitTTL := uint32(7)                // days
+transportKeyPairTTL := uint32(604800) // seconds
+config.PermitTTL = &permitTTL
+config.TransportKeyPairTTL = &transportKeyPairTTL
+config.Events = &zama.EventHandlers{
+	OnEvent: func(_ context.Context, _ zama.EventCorrelation, event zama.SDKEvent) error {
+		log.Printf("[zama] %s", event.Kind)
+		return nil
+	},
+}
+```
+
+See [Observe events](../native/guides/observe-events.md) for the other event handlers.
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+let config = SdkConfig::new(11_155_111, rpc_url)
+    .with_permit_ttl(7) // days
+    .with_transport_key_pair_ttl(604_800); // seconds
+let sdk = client.sdk(config).events(Diagnostics).build().await?;
+```
+
+`Diagnostics` implements `EventHandler`; see [Observe events](../native/guides/observe-events.md).
+
+{% endtab %}
+{% endtabs %}
+
 When done with the SDK, call `sdk.terminate()` to unsubscribe wallet listeners and release the SDK's resources.
 
 ### 6. (Optional) Choose a storage backend
@@ -318,15 +555,51 @@ The transport key pair is cached so users don't get a wallet popup on every decr
 | `memoryStorage`     | Tests, scripts, throwaway sessions                        |
 | `asyncLocalStorage` | Node.js servers — isolates transport key pair per request |
 
+{% tabs %}
+{% tab title="Core SDK" %}
+
 ```ts
 import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
 // Node.js per-request isolation:
 // import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 ```
 
-For full storage options see the [GenericStorage](../reference/sdk/GenericStorage.md) reference.
+{% endtab %}
+{% tab title="Go" %}
+
+Daemon SQLite needs a storage volume on the daemon; see [Deploy in production](../native/operations/run-in-production.md).
+
+```go
+config.Storage = zama.DaemonPersistentStorage("partner") // daemon SQLite, survives restarts
+// Default: zama.DaemonMemoryStorage()
+// In your application: zama.ApplicationStorage(backend)
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+Daemon SQLite needs a storage volume on the daemon; see [Deploy in production](../native/operations/run-in-production.md).
+
+```rust
+let sdk = client
+    .sdk(config)
+    .storage(Storage::Persistent("partner".into())) // daemon SQLite, survives restarts
+    // Default: Storage::Memory
+    // In your application: ApplicationStorage::new(backend)
+    .build()
+    .await?;
+```
+
+{% endtab %}
+{% endtabs %}
+
+For full storage options see the [GenericStorage](../reference/sdk/GenericStorage.md) reference. To keep Go or Rust credentials in your own database, see [Store credentials](../native/guides/credential-storage.md).
 
 ### 7. (Optional) Supply a logger
+
+{% hint style="info" %}
+Available in the Core SDK and React SDK.
+{% endhint %}
 
 The SDK is **silent by default** — it emits no console output of its own. Operation failures always surface through the rejected promise or typed error, never as a stray `console.error`. To observe internal diagnostics, pass a `logger` to `createConfig`:
 
@@ -356,6 +629,9 @@ The `runtime` field configures the underlying `@fhevm/sdk` WASM runtime — how 
 
 Leaving `runtime` unset is a valid default: the SDK tries to run multi-threaded automatically, and falls back to single-threaded on its own when the environment doesn't support it (see `numberOfThreads`/`singleThread` below).
 
+{% tabs %}
+{% tab title="Core SDK" %}
+
 ```ts
 const config = createConfig({
   chains: [sepolia],
@@ -366,6 +642,31 @@ const config = createConfig({
   },
 });
 ```
+
+{% endtab %}
+{% tab title="Go" %}
+
+The runtime runs in the daemon. Restart the daemon to change these settings.
+
+```go
+threads := uint32(4)
+config.ProcessRuntime = &zama.ProcessRuntime{NumberOfThreads: &threads}
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+The runtime runs in the daemon. Restart the daemon to change these settings.
+
+```rust
+config.process_runtime = Some(ProcessRuntime {
+    number_of_threads: Some(4),
+    ..Default::default()
+});
+```
+
+{% endtab %}
+{% endtabs %}
 
 Every field is optional:
 
@@ -409,6 +710,9 @@ If you can't set those headers (some static hosts and embedded contexts), pass `
 
 By default, every signer gets its own transport key pair. Wallet-as-a-Service operators managing many end-user wallets from one operator-controlled key store can opt into sharing a single key pair across signers with `transportKeyPairScope`:
 
+{% tabs %}
+{% tab title="Core SDK" %}
+
 ```ts
 const config = createConfig({
   chains: [sepolia],
@@ -418,6 +722,30 @@ const config = createConfig({
   storage: myPersistentStorage, // must be shared across every signer in this scope
 });
 ```
+
+{% endtab %}
+{% tab title="Go" %}
+
+```go
+scope := "tenant-123" // opaque identifier, e.g. your tenant ID
+config.TransportKeyPairScope = &scope
+config.Storage = zama.NamedApplicationStorage("tenant-123", backend) // shared by every signer in this scope
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+let config = config.with_transport_key_pair_scope("tenant-123"); // opaque identifier, e.g. your tenant ID
+let sdk = client
+    .sdk(config)
+    .storage(backend) // shared by every signer in this scope
+    .build()
+    .await?;
+```
+
+{% endtab %}
+{% endtabs %}
 
 Permits stay per-signer regardless of scope. See [Security Model](../concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators) for the tradeoff this makes, and [Permit Model](../concepts/permit-model.md#two-revocation-tiers-with-a-shared-scope) for how revocation splits into a signer-level tier (`revokePermits`/`clear`) and an operator-level one (`sdk.permits.revokeTransportKeyPair()`).
 
@@ -436,6 +764,9 @@ For the last row, two things must hold:
 
 1. **The secret arrives out of band**: from the process environment, a secrets manager, or a KMS-unwrapped blob. Never store it next to the data it protects.
 2. **Storage is persistent.** The headless default is in-memory, and a wrapped key that never reaches disk protects nothing.
+
+{% tabs %}
+{% tab title="Core SDK" %}
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -458,6 +789,37 @@ const sdk = new ZamaSDK(config, {
 
 Pass `process.env.ZAMA_DERIVATION_SECRET` straight through, without asserting it with `!` first. If the value is `undefined` (an unset env var), the constructor throws `ConfigurationError` instead of silently downgrading to plaintext.
 
+{% endtab %}
+{% tab title="Go" %}
+
+An unset variable produces an empty secret, which the SDK rejects. Use `zama.BytesDerivationSecret` for byte input.
+
+```go
+config.Storage = zama.DaemonPersistentStorage("partner") // required: the default is in-memory
+config.TransportKeyPairDerivationSecret = zama.TextDerivationSecret(os.Getenv("ZAMA_DERIVATION_SECRET"))
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+Use `DerivationSecret::bytes` for byte input.
+
+```rust
+let sdk = client
+    .sdk(config)
+    .storage(Storage::Persistent("partner".into())) // required: the default is in-memory
+    .transport_key_pair_derivation_secret(DerivationSecret::text(env::var(
+        "ZAMA_DERIVATION_SECRET",
+    )?))
+    .build()
+    .await?;
+```
+
+{% endtab %}
+{% endtabs %}
+
+Keep the same secret and storage when you recreate a Go or Rust SDK context or restart the daemon.
+
 {% hint style="danger" %}
 **Never ship the secret in a bundle.** Bundlers inline env values at build time, so a bundled secret reaches every copy of the artifact and protects nothing. The constructor rejects the option when it detects a browser context, but it cannot detect every bundle: keeping the secret out of shipped code is your responsibility.
 {% endhint %}
@@ -465,6 +827,10 @@ Pass `process.env.ZAMA_DERIVATION_SECRET` straight through, without asserting it
 The SDK never persists or exposes this value. See [Security Model](../concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the mechanism, the entropy requirement (32 random bytes, or a 64+ character string), the anti-patterns to avoid, and rotation.
 
 ## Shared relayer options
+
+{% hint style="info" %}
+Available in the Core SDK and React SDK.
+{% endhint %}
 
 When multiple chains use the same relayer, create it once and reference that single instance from each chain:
 

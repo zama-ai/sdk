@@ -94,6 +94,42 @@ Both `revokePermits()` and `clear()` are **signer-level**: they only ever act on
 
 Invalidating the _shared_ key pair is a separate, operator-level operation: `sdk.permits.revokeTransportKeyPair(scopeId)`. It deletes the scope's key pair — no permit needs to be touched directly, and no wallet needs to be connected. `hasPermit`/`grantPermit` then treat every permit in the scope as stale on next access, though not via one single mechanism: immediately after the revoke, `hasPermit()` returns `false` because there's no stored key pair left to compare against; once some later caller regenerates a key for the scope, it's the newly-mismatched embedded public key that `pruneUnusable` then filters existing permits on. Same end-user-visible outcome either way. Unlike other credential-store writes, this call is not best-effort: a storage failure rejects rather than being logged and swallowed, since a resolved promise here is expected to mean the key pair is actually gone — the primitive an operator reaches for on suspected compromise. This only stops the SDK from reissuing or reusing the key going forward; it does not revoke any permit already issued under it, which stays independently valid until its own `permitTTL` expiry — see [Security Model](./security-model.md#shared-tenant-scope-b2b2c-waas-operators) for the full explanation and when a shared scope makes sense.
 
+Each client exposes the same four calls:
+
+{% tabs %}
+{% tab title="Core SDK" %}
+
+```ts
+await sdk.permits.revokePermits(["0xTokenA"]); // selective
+await sdk.permits.revokePermits(); // full wipe
+await sdk.permits.clear(); // log out
+await sdk.permits.revokeTransportKeyPair("tenant-123"); // shared scope
+```
+
+{% endtab %}
+{% tab title="Go" %}
+
+```go
+err := sdk.RevokePermits(ctx, []common.Address{tokenA}) // selective
+err = sdk.RevokePermits(ctx, nil)                       // full wipe
+err = sdk.ClearPermits(ctx)                             // log out
+err = sdk.RevokeTransportKeyPair(ctx, "tenant-123")     // shared scope
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+let permits = sdk.permits();
+permits.revoke_permits(Some(&[token_a])).await?; // selective
+permits.revoke_permits(None).await?; // full wipe
+permits.clear().await?; // log out
+permits.revoke_transport_key_pair("tenant-123").await?; // shared scope
+```
+
+{% endtab %}
+{% endtabs %}
+
 ## Wallet account changes
 
 The SDK automatically manages permits when the wallet state changes:
