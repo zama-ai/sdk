@@ -72,7 +72,6 @@ export { BaseSigner } from "../signer/base-signer";
 export { createConfig } from "./config";
 
 export { ViemSigner, type ViemSignerConfig } from "./viem-signer";
-export { toViemTypedData } from "./typed-data";
 export { ViemProvider, type ViemProviderConfig } from "./viem-provider";
 export {
   readConfidentialBalanceOfContract,

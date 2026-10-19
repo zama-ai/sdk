@@ -8,7 +8,7 @@ import {
   type WriteContractConfig,
   type WriteFunctionName,
 } from "@zama-fhe/sdk";
-import { toViemTypedData } from "@zama-fhe/sdk/viem";
+import { toViemTypedData } from "@zama-fhe/sdk/internal";
 import { getAddress } from "viem";
 import type { Config } from "wagmi";
 import { signTypedData, writeContract } from "wagmi/actions";
