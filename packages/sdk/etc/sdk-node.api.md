@@ -282,6 +282,21 @@ export const sepolia: {
     readonly registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
 };
 
+// @public
+export const zenithTrexTestnet: {
+    readonly id: 936486;
+    readonly gatewayChainId: 10901;
+    readonly relayerUrl: "";
+    readonly network: "https://rpc.testnet.t-rex.zenith.network";
+    readonly aclContractAddress: "0x061AAc7aAACc98d8e30459d4D858DaB9b6F3bd23";
+    readonly kmsContractAddress: "0x85fBA21840059cB7E2E5BB7Fa2c5b2A324Ea7a7D";
+    readonly inputVerifierContractAddress: "0xE90965601D10D42D3d88486b47b0Caf12C5C9fDe";
+    readonly verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64";
+    readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
+    readonly registryAddress: "0xde2e3948d35ef9C406A7317eAF332F3c2786a566";
+    readonly executorAddress: "0x6C5036A4ad55DBA8007ae82c4e9C123F143e53ab";
+};
+
 // (No @packageDocumentation comment for this package)
 
 ```

@@ -1,34 +1,12 @@
 version: 2
 updates:
-  # SDK core packages and workspace tooling
+  # SDK core, workspace tooling, and test apps -- one pnpm workspace, "/" must stay in scope for the shared lockfile.
   - package-ecosystem: npm
     target-branch: beta
     directories:
       - /
       - /packages/sdk
       - /packages/react-sdk
-    schedule:
-      interval: weekly
-    cooldown:
-      default-days: 3
-      exclude:
-        - "@zama-fhe/relayer-sdk"
-    groups:
-      sdk:
-        update-types:
-          - minor
-          - patch
-    ignore:
-      - dependency-name: "*"
-        update-types:
-          - version-update:semver-patch
-      # Protocol-version-tied; bumped via alpha, not routine Dependabot.
-      - dependency-name: "@fhevm/sdk"
-
-  # Test apps
-  - package-ecosystem: npm
-    target-branch: beta
-    directories:
       - /test/test-nextjs
       - /test/test-vite
     schedule:
@@ -40,7 +18,7 @@ updates:
         - "@zama-fhe/react-sdk"
         - "@zama-fhe/test-components"
     groups:
-      test-apps:
+      sdk:
         update-types:
           - minor
           - patch
@@ -48,6 +26,8 @@ updates:
       - dependency-name: "*"
         update-types:
           - version-update:semver-patch
+      # Protocol-version-tied; bumped via alpha, not routine Dependabot.
+      - dependency-name: "@fhevm/sdk"
 
   # Example apps
   - package-ecosystem: npm

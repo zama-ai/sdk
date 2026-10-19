@@ -20,13 +20,14 @@ const HOP_BY_HOP = new Set([
 // Allowlist of request headers to forward to the upstream relayer.
 // Using an allowlist (rather than stripping hop-by-hop headers) prevents accidentally
 // forwarding browser cookies, Authorization headers, or other sensitive credentials.
-// The browser relayer only sends content-type, accept, and content-length — no other headers needed.
+// The web() relayer sends content-type, accept, content-length and its x-zama-sdk-* usage headers.
 const REQUEST_ALLOW = new Set(["content-type", "accept", "content-length"]);
 
 function forwardHeaders(incoming: Headers): Headers {
   const out = new Headers();
   for (const [key, value] of incoming) {
-    if (REQUEST_ALLOW.has(key.toLowerCase())) {
+    const name = key.toLowerCase();
+    if (REQUEST_ALLOW.has(name) || name.startsWith("x-zama-sdk-")) {
       out.set(key, value);
     }
   }

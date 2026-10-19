@@ -20,7 +20,9 @@ export { useDelegatedDecryptValues } from "./decrypt/use-delegated-decrypt";
 // Authorization hooks (generic — any contract with encrypted state)
 export { useGrantPermit } from "./permits/use-grant-permit";
 export { usePreparePermit } from "./permits/use-prepare-permit";
+export { useBatchPreparePermits } from "./permits/use-batch-prepare-permits";
 export { useRegisterPermit } from "./permits/use-register-permit";
+export { useBatchRegisterPermits } from "./permits/use-batch-register-permits";
 export { useHasPermit, type UseHasPermitConfig } from "./permits/use-has-permit";
 export { useRevokePermits } from "./permits/use-revoke-permits";
 export { useClearCredentials } from "./permits/use-clear-credentials";

@@ -1,4 +1,5 @@
 import type { Address } from "viem";
+import { MAX_UINT64 } from "../../contracts";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { DecryptionFailedError, SignerNotConfiguredError } from "../../errors";
 
@@ -36,7 +37,9 @@ describe("Decryption", () => {
       });
 
       expect(relayer.decryptValues).toHaveBeenCalledWith(
-        expect.objectContaining({ options: { timeout: 1234, signal } }),
+        expect.objectContaining({
+          options: { timeout: 1234, signal, operation: "decrypt-values" },
+        }),
       );
     });
   });
@@ -51,6 +54,37 @@ describe("Decryption", () => {
         ),
       ).rejects.toBeInstanceOf(SignerNotConfiguredError);
     });
+
+    test("labels the relayer call as a delegated user decrypt", async ({
+      sdk,
+      provider,
+      relayer,
+      handle,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+
+      await sdk.decryption.delegatedDecryptValues(
+        [{ encryptedValue: handle, contractAddress: TOKEN }],
+        DELEGATOR,
+      );
+
+      expect(relayer.decryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({ options: { operation: "delegated-decrypt-values" } }),
+      );
+    });
+
+    test("labels the batch variant separately", async ({ sdk, provider, relayer, handle }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+
+      await sdk.decryption.delegatedBatchDecryptValues({
+        encryptedInputs: [{ encryptedValue: handle, contractAddress: TOKEN }],
+        delegatorAddress: DELEGATOR,
+      });
+
+      expect(relayer.decryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({ options: { operation: "delegated-batch-decrypt-values" } }),
+      );
+    });
   });
 
   describe("public (signer-independent)", () => {
@@ -60,6 +94,7 @@ describe("Decryption", () => {
 
       expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
         encryptedValues: [handle],
+        options: { operation: "decrypt-public-values" },
       });
       expect(result.clearValues[handle]).toBe(500n);
     });
@@ -76,7 +111,7 @@ describe("Decryption", () => {
 
       expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
         encryptedValues: [handle],
-        options: { timeout: 1234, signal },
+        options: { timeout: 1234, signal, operation: "decrypt-public-values" },
       });
     });
 

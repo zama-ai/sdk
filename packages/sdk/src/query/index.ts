@@ -106,11 +106,14 @@ export {
 export { decryptPublicValuesMutationOptions } from "./public-decrypt";
 export { grantPermitMutationOptions } from "./grant-permit";
 export { preparePermitMutationOptions } from "./prepare-permit";
+export { batchPreparePermitsMutationOptions } from "./batch-prepare-permits";
 export { registerPermitMutationOptions, type RegisterPermitParams } from "./register-permit";
+export { batchRegisterPermitsMutationOptions } from "./batch-register-permits";
 export type {
   PreparedPermit,
   PreparePermitRequest,
   SerializedPermitEip712,
+  SignedPreparedPermit,
 } from "../credentials/types";
 export type { ChecksummedAddress } from "../schemas/primitives";
 export { hasPermitQueryOptions, type HasPermitQueryConfig } from "./has-permit";
@@ -181,7 +184,11 @@ export type {
   UnwrapResult,
 } from "../types";
 export type { FheChain, FheChainAuth } from "../chains/types";
-export type { FhevmRelayerOptions, FhevmRuntimeConfig } from "../relayer/types";
+export type {
+  FhevmRelayerOptions,
+  FhevmRuntimeConfig,
+  RelayerRequestOptions,
+} from "../relayer/types";
 export type { FhevmClient, RelayerSDK } from "../relayer/types";
 export type {
   ReadFunctionName,

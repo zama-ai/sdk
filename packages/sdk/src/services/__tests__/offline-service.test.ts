@@ -32,6 +32,7 @@ describe("OfflineService — ConfidentialTransfer prepare", () => {
         values: [{ value: 1_000n, type: "euint64" }],
         contractAddress: TOKEN,
         userAddress,
+        options: { operation: "offline-confidential-transfer" },
       }),
     );
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
@@ -69,7 +70,11 @@ describe("OfflineService — other transaction kinds", () => {
       amount: 5n,
     });
     expect(relayer.encryptValues).toHaveBeenCalledWith(
-      expect.objectContaining({ userAddress: getAddress(userAddress), contractAddress: TOKEN }),
+      expect.objectContaining({
+        userAddress: getAddress(userAddress),
+        contractAddress: TOKEN,
+        options: { operation: "offline-confidential-transfer-from" },
+      }),
     );
     // and NOT under the owner
     expect(relayer.encryptValues).not.toHaveBeenCalledWith(
@@ -184,7 +189,9 @@ describe("OfflineService — other transaction kinds", () => {
       to: RECIPIENT,
       amount: 7n,
     });
-    expect(relayer.encryptValues).toHaveBeenCalledOnce();
+    expect(relayer.encryptValues).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ options: { operation: "offline-unwrap" } }),
+    );
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({ calldata: expect.objectContaining({ functionName: "unwrap" }) }),
     );
@@ -238,6 +245,7 @@ describe("OfflineService — other transaction kinds", () => {
     });
     expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
       encryptedValues: [handle],
+      options: { operation: "offline-finalize-unwrap" },
     });
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({

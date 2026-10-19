@@ -17,16 +17,17 @@ Import pre-configured chain objects from `@zama-fhe/sdk/chains`. Each chain incl
 import { sepolia, mainnet, hoodi } from "@zama-fhe/sdk/chains";
 ```
 
-| Chain          | Chain ID   | Description             |
-| -------------- | ---------- | ----------------------- |
-| `mainnet`      | `1`        | Ethereum Mainnet        |
-| `polygon`      | `137`      | Polygon Mainnet         |
-| `sepolia`      | `11155111` | Sepolia Testnet         |
-| `polygonAmoy`  | `80002`    | Polygon Amoy Testnet    |
-| `hoodi`        | `560048`   | Hoodi Testnet           |
-| `ingenTestnet` | `364301`   | InGen Testnet           |
-| `bscTestnet`   | `97`       | BNB Smart Chain Testnet |
-| `hardhat`      | `31337`    | Local Hardhat node      |
+| Chain               | Chain ID   | Description             |
+| ------------------- | ---------- | ----------------------- |
+| `mainnet`           | `1`        | Ethereum Mainnet        |
+| `polygon`           | `137`      | Polygon Mainnet         |
+| `sepolia`           | `11155111` | Sepolia Testnet         |
+| `polygonAmoy`       | `80002`    | Polygon Amoy Testnet    |
+| `hoodi`             | `560048`   | Hoodi Testnet           |
+| `ingenTestnet`      | `364301`   | InGen Testnet           |
+| `zenithTrexTestnet` | `936486`   | T-Rex Zenith Testnet    |
+| `bscTestnet`        | `97`       | BNB Smart Chain Testnet |
+| `hardhat`           | `31337`    | Local Hardhat node      |
 
 `anvil` is also exported as an alias for `hardhat` (both target chain ID `31337`), for Foundry users.
 
@@ -488,6 +489,7 @@ Chains that reference the _same_ relayer object — the result of a single `web(
 ## Next steps
 
 - [Authentication](./authentication.md) — set up a backend proxy or use a direct API key
+- [SDK usage telemetry](./telemetry.md) — what the SDK reports to the Zama-hosted relayer and how to opt out
 - [Shield Tokens](./shield-tokens.md) — convert public ERC-20 tokens into confidential form
 - [Chain Objects](../reference/sdk/network-presets.md) — pre-configured chain definitions for Sepolia, Mainnet, and more
 - [GenericStorage reference](../reference/sdk/GenericStorage.md) — custom storage implementations

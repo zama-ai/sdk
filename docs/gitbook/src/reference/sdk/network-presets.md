@@ -15,16 +15,17 @@ import { sepolia, mainnet, polygon, polygonAmoy, hoodi, hardhat } from "@zama-fh
 
 ### Available chains
 
-| Chain          | Chain ID   | Network                 |
-| -------------- | ---------- | ----------------------- |
-| `mainnet`      | `1`        | Ethereum Mainnet        |
-| `polygon`      | `137`      | Polygon Mainnet         |
-| `sepolia`      | `11155111` | Sepolia Testnet         |
-| `polygonAmoy`  | `80002`    | Polygon Amoy Testnet    |
-| `hoodi`        | `560048`   | Hoodi Testnet           |
-| `ingenTestnet` | `364301`   | InGen Testnet           |
-| `bscTestnet`   | `97`       | BNB Smart Chain Testnet |
-| `hardhat`      | `31337`    | Local Hardhat node      |
+| Chain               | Chain ID   | Network                 |
+| ------------------- | ---------- | ----------------------- |
+| `mainnet`           | `1`        | Ethereum Mainnet        |
+| `polygon`           | `137`      | Polygon Mainnet         |
+| `sepolia`           | `11155111` | Sepolia Testnet         |
+| `polygonAmoy`       | `80002`    | Polygon Amoy Testnet    |
+| `hoodi`             | `560048`   | Hoodi Testnet           |
+| `ingenTestnet`      | `364301`   | InGen Testnet           |
+| `zenithTrexTestnet` | `936486`   | T-Rex Zenith Testnet    |
+| `bscTestnet`        | `97`       | BNB Smart Chain Testnet |
+| `hardhat`           | `31337`    | Local Hardhat node      |
 
 ### What each chain includes
 
@@ -148,7 +149,7 @@ import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 **Deprecated.** Read `registryAddress` from the chain presets instead (e.g. `sepolia.registryAddress`). This export will be removed in the next major version.
 {% endhint %}
 
-A convenience export of built-in registry addresses for every built-in chain with a deployed registry (Mainnet, Polygon, Sepolia, Polygon Amoy, Hoodi, InGen Testnet, BNB Smart Chain Testnet) as a `Record<number, Address>` map. Used internally by the [WrappersRegistry](./WrappersRegistry.md) class.
+A convenience export of built-in registry addresses for every built-in chain with a deployed registry (Mainnet, Polygon, Sepolia, Polygon Amoy, Hoodi, InGen Testnet, T-Rex Zenith Testnet, BNB Smart Chain Testnet) as a `Record<number, Address>` map. Used internally by the [WrappersRegistry](./WrappersRegistry.md) class.
 
 ```ts
 // Deprecated

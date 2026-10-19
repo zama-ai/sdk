@@ -66,6 +66,8 @@ export const ZamaErrorCode = {
   DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED",
   /** Delegate address cannot be the contract address. */
   DelegationDelegateEqualsContract: "DELEGATION_DELEGATE_EQUALS_CONTRACT",
+  /** Delegate address cannot be the wildcard address — it's only valid as `contractAddress`. */
+  DelegationDelegateCannotBeWildcard: "DELEGATION_DELEGATE_CANNOT_BE_WILDCARD",
   /** Contract address cannot be the sender address. */
   DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF",
   /** The ACL contract is paused. */
@@ -137,6 +139,7 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.ERC20ReadFailed]: false, // conservative: conflates network (transient) and contract (terminal) faults, see class doc
   [ZamaErrorCode.DelegationExpiryUnchanged]: false,
   [ZamaErrorCode.DelegationDelegateEqualsContract]: false,
+  [ZamaErrorCode.DelegationDelegateCannotBeWildcard]: false,
   [ZamaErrorCode.DelegationContractIsSelf]: false,
   [ZamaErrorCode.AclPaused]: false,
   [ZamaErrorCode.DelegationExpirationTooSoon]: false,
@@ -146,9 +149,9 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.WalletNotConnected]: false,
   [ZamaErrorCode.WalletAccountNotReady]: true, // async wallet-account discovery still resolving
   [ZamaErrorCode.KeyWrappingFailed]: false, // a transportKeyPairDerivationSecret mismatch or environment capability issue, not transient
-  [ZamaErrorCode.TransportKeyPairChanged]: false, // caller must re-run preparePermit against the current key pair
+  [ZamaErrorCode.TransportKeyPairChanged]: false, // caller must prepare the permit again against the current key pair
   [ZamaErrorCode.PreparedPermitChainMismatch]: false, // caller must register against the chain the permit was prepared for
-  [ZamaErrorCode.PreparedPermitExpired]: false, // caller must re-run preparePermit for a fresh validity window
+  [ZamaErrorCode.PreparedPermitExpired]: false, // caller must prepare the permit again for a fresh validity window
   [ZamaErrorCode.UnshieldAlreadyFinalized]: false, // the funds already arrived; the stale pointer is cleared
 };
 

@@ -16,6 +16,7 @@ import type {
   DelegationContractIsSelfError,
   DelegationCooldownError,
   DelegationDelegateEqualsContractError,
+  DelegationDelegateCannotBeWildcardError,
   DelegationExpirationTooSoonError,
   DelegationExpiredError,
   DelegationExpiryUnchangedError,
@@ -103,6 +104,8 @@ export interface ErrorForCode {
   [ZamaErrorCode.DelegationExpiryUnchanged]: DelegationExpiryUnchangedError;
   /** Thrown for {@link ZamaErrorCode.DelegationDelegateEqualsContract}. */
   [ZamaErrorCode.DelegationDelegateEqualsContract]: DelegationDelegateEqualsContractError;
+  /** Thrown for {@link ZamaErrorCode.DelegationDelegateCannotBeWildcard}. */
+  [ZamaErrorCode.DelegationDelegateCannotBeWildcard]: DelegationDelegateCannotBeWildcardError;
   /** Thrown for {@link ZamaErrorCode.DelegationContractIsSelf}. */
   [ZamaErrorCode.DelegationContractIsSelf]: DelegationContractIsSelfError;
   /** Thrown for {@link ZamaErrorCode.AclPaused}. */

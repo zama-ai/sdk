@@ -1,5 +1,41 @@
 # Changelog
 
+## [3.7.0-beta.6](https://github.com/zama-ai/sdk/compare/v3.7.0-beta.5...v3.7.0-beta.6) (2026-10-06)
+
+### Features
+
+- telemetry ([#826](https://github.com/zama-ai/sdk/issues/826)) ([a65488b]())
+
+## [3.7.0-beta.5](https://github.com/zama-ai/sdk/compare/v3.7.0-beta.4...v3.7.0-beta.5) (2026-10-01)
+
+### Features
+
+- offline permit chunking ([#820](https://github.com/zama-ai/sdk/issues/820)) ([957a58e]())
+
+## [3.7.0-beta.4](https://github.com/zama-ai/sdk/compare/v3.7.0-beta.3...v3.7.0-beta.4) (2026-09-30)
+
+### Features
+
+- expose wildcard delegation ([#703](https://github.com/zama-ai/sdk/issues/703)) ([#819](https://github.com/zama-ai/sdk/issues/819)) ([8a7cc3d]())
+
+## [3.7.0-beta.3](https://github.com/zama-ai/sdk/compare/v3.7.0-beta.2...v3.7.0-beta.3) (2026-09-28)
+
+### Features
+
+- zenith trex testnet ([#812](https://github.com/zama-ai/sdk/issues/812)) ([860acf4]())
+
+## [3.7.0-beta.2](https://github.com/zama-ai/sdk/compare/v3.7.0-beta.1...v3.7.0-beta.2) (2026-09-24)
+
+### Bug Fixes
+
+- **sdk:** normalize permit signature recovery byte to 27/28 ([#806](https://github.com/zama-ai/sdk/issues/806)) ([9de6352]())
+
+## [3.7.0-beta.1](https://github.com/zama-ai/sdk/compare/v3.6.0...v3.7.0-beta.1) (2026-09-23)
+
+### Features
+
+- add confidential ERC-4626 vault support (batched deposits/withdrawals) ([#748](https://github.com/zama-ai/sdk/issues/748)) ([426198a]())
+
 ## [3.6.0](https://github.com/zama-ai/sdk/compare/v3.5.1...v3.6.0) (2026-09-11)
 
 ### Features

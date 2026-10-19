@@ -117,6 +117,24 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 | `.encryptedValue(encryptedValue, contractAddress?)`   | Single clear value by encrypted value          |
 | `.encryptedInputs(encryptedInputs[], walletAccount?)` | Multiple clear values by encrypted-input array |
 
+### `vaultQueryKeys`
+
+Batch reads for confidential ERC-4626 vaults, used by [`useCurrentBatchId`](./useCurrentBatchId.md), [`useBatchState`](./useBatchState.md) and [`useTimeUntilDispatchable`](./useTimeUntilDispatchable.md). Lives in the `vaults` subpath, not on `zamaQueryKeys`.
+
+```ts
+import { vaultQueryKeys, invalidateBatchQueries } from "@zama-fhe/sdk/vaults";
+```
+
+| Key                                             | Scope                                   |
+| ----------------------------------------------- | --------------------------------------- |
+| `.currentBatchId.batcher(batcherAddr)`          | One batcher's open batch id             |
+| `.batchState.batcher(batcherAddr)`              | All batch states for one batcher        |
+| `.batchState.batch(batcherAddr, batchId)`       | One batch's state                       |
+| `.timeUntilDispatchable.batcher(batcherAddr)`   | All dispatch countdowns for one batcher |
+| `.timeUntilDispatchable.batch(batcherAddr, id)` | One batch's dispatch countdown          |
+
+A `batcher(...)` key is a prefix of every `batch(...)` key for that batcher, so invalidating it clears all of them at once. `invalidateBatchQueries(queryClient, batcherAddr)` invalidates all three namespaces for a batcher — this is what the vault mutation hooks call after a join, quit, recover or dispatch. Balances on the batcher's input and output tokens go through the regular [`invalidateBalanceQueries`](#invalidatebalancequeries).
+
 ## Common patterns
 
 ### Invalidate after an external transaction

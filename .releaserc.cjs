@@ -93,7 +93,15 @@ module.exports = {
     ],
     [
       "@semantic-release/exec",
-      { prepareCmd: "node scripts/release/prepare-lockstep.mjs ${nextRelease.version}" },
+      {
+        // The bundles inline package.json's version, so rebuild after the bump; the bump
+        // trips `verifyDepsBeforeRun`, hence the frozen install from the unchanged lockfile.
+        prepareCmd: [
+          "node scripts/release/prepare-lockstep.mjs ${nextRelease.version}",
+          "pnpm install --frozen-lockfile --ignore-scripts --offline",
+          "pnpm build",
+        ].join(" && "),
+      },
     ],
     [
       "@semantic-release/git",

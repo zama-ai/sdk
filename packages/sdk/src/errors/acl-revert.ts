@@ -4,6 +4,7 @@ import {
   AclPausedError,
   DelegationContractIsSelfError,
   DelegationCooldownError,
+  DelegationDelegateCannotBeWildcardError,
   DelegationDelegateEqualsContractError,
   DelegationExpirationTooSoonError,
   DelegationExpiryUnchangedError,
@@ -34,6 +35,11 @@ const ACL_ERROR_MAP = {
   DelegateCannotBeContractAddress: (cause) =>
     new DelegationDelegateEqualsContractError(
       "Delegate address cannot be the same as the contract address.",
+      { cause },
+    ),
+  DelegateCannotBeWildcard: (cause) =>
+    new DelegationDelegateCannotBeWildcardError(
+      "Delegate address cannot be the wildcard address; it can only be used as the contract address.",
       { cause },
     ),
   ExpirationDateBeforeOneHour: (cause) =>

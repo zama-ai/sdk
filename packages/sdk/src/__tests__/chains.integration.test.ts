@@ -23,7 +23,7 @@
  * multi-chain instance: reads are bound to a single RPC (`ViemProvider` wraps
  * one `PublicClient`) and the relayer transport differs per chain. Mainnet,
  * Polygon, Sepolia and Polygon Amoy have full FHE infrastructure and use the `node()`
- * relayer; the cleartext testnets (hoodi / bsc / ingen) have no hosted relayer
+ * relayer; the cleartext testnets (hoodi / bsc / ingen / zenith) have no hosted relayer
  * and drive the
  * FHE backend through `cleartext()`. `hardhat` needs a local node and is out of
  * scope.
@@ -54,6 +54,7 @@ import {
   polygon,
   polygonAmoy,
   sepolia,
+  zenithTrexTestnet,
 } from "@zama-fhe/sdk/chains";
 import { node } from "@zama-fhe/sdk/node";
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -122,6 +123,12 @@ const entries: readonly ChainEntry[] = [
     relayer: cleartext(),
     confidentialTokenAddress: "0x604fFb6b71bfEe1B155B4093bdCF19a7c7029Efd",
     underlyingTokenAddress: "0x7CC6EB5E82f5ae84BC08cC58734E6aD2c2510068",
+  },
+  {
+    chain: zenithTrexTestnet,
+    relayer: cleartext(),
+    confidentialTokenAddress: "0x6225bc9CaE9758AB35f240D38E1Ff237A765a88E",
+    underlyingTokenAddress: "0x326335F977D51d5cD877eF9e05A34395C453F29E",
   },
 ];
 

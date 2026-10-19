@@ -92,6 +92,8 @@ import { web } from "../../config/web";
 import { LoggerService } from "../../services/logger-service";
 import { recordAppliedRuntimeConfig, resetAppliedRuntimeConfig } from "../applied-runtime";
 import { FhevmRelayer, type FhevmRelayerConfig } from "../fhevm-relayer";
+import type { TelemetryState } from "../../telemetry";
+import { SDK_VERSION } from "../../version";
 import type { FhevmRuntimeConfig } from "../types";
 
 /** {@link FhevmRelayer} with the required logger filled in; tests that assert on it pass their own. */
@@ -545,7 +547,8 @@ describe("FhevmRelayer capability initialization", () => {
     {
       label: "signed permit parsing",
       capability: "base" as const,
-      invoke: (relayer: FhevmRelayer) => relayer.parseSignedDecryptionPermit({} as never),
+      invoke: (relayer: FhevmRelayer) =>
+        relayer.parseSignedDecryptionPermit({ serializedPermit: { signature: "0x" } } as never),
       delegatedAction: clients.baseClient.parseSignedDecryptionPermit,
     },
     {
@@ -567,6 +570,46 @@ describe("FhevmRelayer capability initialization", () => {
       expect(clients.encryptClient.init).toHaveBeenCalledTimes(capability === "encrypt" ? 1 : 0);
     },
   );
+});
+
+describe("FhevmRelayer permit signature normalization", () => {
+  const r = "11".repeat(32);
+  const s = "22".repeat(32);
+  const sig = (v: string) => `0x${r}${s}${v}`;
+  const permitWith = (signature: string) => ({
+    version: 1,
+    eip712: {} as never,
+    signature,
+    signerAddress: "0x0000000000000000000000000000000000000001",
+  });
+
+  test.each([
+    { label: "v=0 becomes 27", input: sig("00"), expected: sig("1b") },
+    { label: "v=1 becomes 28", input: sig("01"), expected: sig("1c") },
+    { label: "v=27 is unchanged", input: sig("1b"), expected: sig("1b") },
+    { label: "v=28 is unchanged", input: sig("1c"), expected: sig("1c") },
+    { label: "an unknown v is unchanged", input: sig("05"), expected: sig("05") },
+    { label: "a non-65-byte signature is unchanged", input: `0x${r}${s}`, expected: `0x${r}${s}` },
+  ])("$label before delegating", async ({ input, expected }) => {
+    const relayer = makeRelayer({ chain: anvil });
+    const serializedPermit = permitWith(input);
+
+    await relayer.parseSignedDecryptionPermit({ serializedPermit, transportKeyPair: {} } as never);
+
+    expect(clients.baseClient.parseSignedDecryptionPermit).toHaveBeenCalledWith({
+      serializedPermit: { ...serializedPermit, signature: expected },
+      transportKeyPair: {},
+    });
+  });
+
+  test("does not mutate the caller's serialized permit", async () => {
+    const relayer = makeRelayer({ chain: anvil });
+    const serializedPermit = permitWith(sig("00"));
+
+    await relayer.parseSignedDecryptionPermit({ serializedPermit, transportKeyPair: {} } as never);
+
+    expect(serializedPermit.signature).toBe(sig("00"));
+  });
 });
 
 describe("FhevmRelayer request options", () => {
@@ -646,5 +689,96 @@ describe("FhevmRelayer client construction", () => {
   test("exposes the configured chain", () => {
     const relayer = makeRelayer({ chain: anvil });
     expect(relayer.chain).toBe(anvil);
+  });
+});
+
+describe("FhevmRelayer usage telemetry", () => {
+  const hostedChain: FheChain = { ...anvil, relayerUrl: "https://relayer.testnet.zama.org" };
+  const proxiedChain: FheChain = { ...anvil, relayerUrl: "/api/relayer/31337" };
+  const staticHeaders = {
+    "x-zama-sdk-version": SDK_VERSION,
+    "x-zama-sdk-layer": "core",
+    "x-zama-sdk-runtime": "web",
+  };
+  const telemetry = () => ({ state: { layer: "core" } as TelemetryState, runtime: "web" as const });
+
+  test("stamps the x-zama-sdk-* headers and consumes the operation label", async () => {
+    const relayer = makeRelayer({ chain: hostedChain, telemetry: telemetry() });
+    await relayer.decryptValues({ options: { timeout: 42, operation: "balance-of" } } as never);
+
+    expect(clients.decryptClient.decryptValues).toHaveBeenCalledWith({
+      options: { timeout: 42, headers: { ...staticHeaders, "x-zama-sdk-operation": "balance-of" } },
+    });
+  });
+
+  test("stamps the headers on encryptions offloaded to the worker", async () => {
+    const relayer = makeRelayer({
+      chain: hostedChain,
+      offloadEncrypt: true,
+      telemetry: telemetry(),
+    });
+    await relayer.encryptValues({ ...encryptArgs, options: { operation: "encrypt" } } as never);
+
+    expect(worker.instance.encryptValues).toHaveBeenCalledWith({
+      ...encryptArgs,
+      options: { headers: { ...staticHeaders, "x-zama-sdk-operation": "encrypt" } },
+    });
+  });
+
+  test("sends the static headers without an operation on the key fetch", async () => {
+    const relayer = makeRelayer({ chain: hostedChain, telemetry: telemetry() });
+    await relayer.fetchFheEncryptionKeyBytes();
+
+    expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
+      options: { headers: staticHeaders },
+    });
+  });
+
+  test("keeps the caller's own headers", async () => {
+    const relayer = makeRelayer({ chain: hostedChain, telemetry: telemetry() });
+    await relayer.encryptValues({ ...encryptArgs, options: { headers: { "x-custom": "1" } } });
+
+    expect(clients.encryptClient.encryptValues).toHaveBeenCalledWith({
+      ...encryptArgs,
+      options: { headers: { "x-custom": "1", ...staticHeaders } },
+    });
+  });
+
+  test("reports the layer the SDK was constructed under", async () => {
+    const state: TelemetryState = { layer: "core" };
+    const relayer = makeRelayer({ chain: hostedChain, telemetry: { state, runtime: "web" } });
+    state.layer = "react";
+    await relayer.fetchFheEncryptionKeyBytes();
+
+    expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
+      options: { headers: { ...staticHeaders, "x-zama-sdk-layer": "react" } },
+    });
+  });
+
+  test("web() tags the relayer as the web runtime", async () => {
+    const relayer = web({ offloadEncrypt: false }).createRelayer(hostedChain, new LoggerService(), {
+      layer: "core",
+    });
+    await relayer.fetchFheEncryptionKeyBytes();
+
+    expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
+      options: { headers: staticHeaders },
+    });
+  });
+
+  test("sends the headers to a proxied or self-hosted relayer too", async () => {
+    const relayer = makeRelayer({ chain: proxiedChain, telemetry: telemetry() });
+    await relayer.fetchFheEncryptionKeyBytes();
+
+    expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
+      options: { headers: staticHeaders },
+    });
+  });
+
+  test("sends no headers and drops the label when telemetry is off", async () => {
+    const relayer = makeRelayer({ chain: hostedChain });
+    await relayer.decryptValues({ options: { timeout: 42, operation: "balance-of" } } as never);
+
+    expect(clients.decryptClient.decryptValues).toHaveBeenCalledWith({ options: { timeout: 42 } });
   });
 });

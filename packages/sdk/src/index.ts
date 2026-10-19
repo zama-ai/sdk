@@ -32,6 +32,7 @@ export type {
   FhevmClient,
   FhevmClientOptions,
   FhevmRelayerOptions,
+  RelayerRequestOptions,
   FhevmRuntimeConfig,
   RelayerOptions,
   RelayerSDK,
@@ -55,6 +56,7 @@ export {
   polygon,
   polygonAmoy,
   sepolia,
+  zenithTrexTestnet,
 } from "./chains";
 export type { FheChain, FheChainAuth } from "./chains/types";
 
@@ -65,6 +67,9 @@ export {
   ERC7984_WRAPPER_INTERFACE_ID,
 } from "./contracts";
 
+// Delegation/ACL wildcard values
+export { MAX_UINT64, WILDCARD_CONTRACT } from "./contracts";
+
 // Token abstraction layer
 export type { Address, Hex } from "viem";
 export type { ChecksummedAddress, Permission, SerializedTransportKeyPair } from "./credentials";
@@ -73,6 +78,7 @@ export type {
   PreparePermitRequest,
   SerializedPermit,
   SerializedPermitEip712,
+  SignedPreparedPermit,
 } from "./credentials/types";
 export {
   AclPausedError,
@@ -82,6 +88,7 @@ export {
   DecryptionFailedError,
   DelegationContractIsSelfError,
   DelegationCooldownError,
+  DelegationDelegateCannotBeWildcardError,
   DelegationDelegateEqualsContractError,
   DelegationExpirationTooSoonError,
   DelegationExpiredError,
@@ -149,6 +156,8 @@ export type {
   UnshieldPhase2StartedEvent,
   UnshieldPhase2SubmittedEvent,
   UnwrapSubmittedEvent,
+  VaultOperation,
+  VaultSubmittedEvent,
   WrapSubmittedEvent,
   ZamaSDKEvent,
   ZamaSDKEventListener,

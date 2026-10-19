@@ -11,8 +11,8 @@ export type FheChainAuth =
  * per-chain FHE contract addresses and network settings.
  *
  * All built-in presets (`mainnet`, `polygon`, `sepolia`, `polygonAmoy`, `hoodi`,
- * `ingenTestnet`, `bscTestnet`, `hardhat`) are `FheChain` objects exported from
- * `@zama-fhe/sdk/chains`.
+ * `ingenTestnet`, `zenithTrexTestnet`, `bscTestnet`, `hardhat`) are `FheChain`
+ * objects exported from `@zama-fhe/sdk/chains`.
  */
 export interface FheChain<TId extends number = number> {
   /** EVM chain ID of the host chain. */

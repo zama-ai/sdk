@@ -60,7 +60,9 @@ describe("Token.batchDecryptBalancesAs", () => {
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf(tokenA)
       .mockResolvedValueOnce(HANDLE_B) // confidentialBalanceOf(tokenB)
       .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry(tokenA) → permanent
-      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry(tokenB) → permanent
+      .mockResolvedValueOnce(0n) // getDelegationExpiry(tokenA, wildcard) → unused, tokenA already active
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry(tokenB) → permanent
+      .mockResolvedValueOnce(0n); // getDelegationExpiry(tokenB, wildcard) → unused, tokenB already active
     vi.mocked(relayer.decryptValues)
       .mockResolvedValueOnce([{ type: "uint64", value: 100n } as TypedValue])
       .mockResolvedValueOnce([{ type: "uint64", value: 200n } as TypedValue]);
@@ -74,6 +76,9 @@ describe("Token.batchDecryptBalancesAs", () => {
 
     expect(balances.get(TOKEN_A)).toBe(100n);
     expect(balances.get(TOKEN_B)).toBe(200n);
+    expect(relayer.decryptValues).toHaveBeenCalledWith(
+      expect.objectContaining({ options: { operation: "batch-decrypt-balances-as" } }),
+    );
   });
 
   test("returns empty map for empty token list", async () => {
@@ -120,7 +125,8 @@ describe("Token.batchDecryptBalancesAs", () => {
 
     vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf
-      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(0n); // getDelegationExpiry (wildcard) → unused, already active
 
     const token = new Token(delegateSdk, TOKEN_A);
 
@@ -128,7 +134,7 @@ describe("Token.batchDecryptBalancesAs", () => {
 
     // Delegation check now fires even when the cache resolves everything, so
     // revoked delegations can't leak stale cached values.
-    expect(delegateProvider.readContract).toHaveBeenCalledTimes(2);
+    expect(delegateProvider.readContract).toHaveBeenCalledTimes(3);
     expect(relayer.decryptValues).not.toHaveBeenCalled();
     expect(balances.get(TOKEN_A)).toBe(42n);
   });
@@ -147,7 +153,8 @@ describe("Token.batchDecryptBalancesAs", () => {
 
     vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf
-      .mockResolvedValueOnce(0n); // getDelegationExpiry → revoked
+      .mockResolvedValueOnce(0n) // getDelegationExpiry → revoked
+      .mockResolvedValueOnce(0n); // getDelegationExpiry (wildcard) → also not delegated
 
     const token = new Token(delegateSdk, TOKEN_A);
 
@@ -199,7 +206,8 @@ describe("Token.batchDecryptBalancesAs", () => {
 
     vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf → non-zero, goes to uncached
-      .mockResolvedValueOnce(0n); // getDelegationExpiry → no delegation
+      .mockResolvedValueOnce(0n) // getDelegationExpiry → no delegation
+      .mockResolvedValueOnce(0n); // getDelegationExpiry (wildcard) → also not delegated
 
     const token = new Token(delegateSdk, TOKEN_A);
 
@@ -225,7 +233,8 @@ describe("Token.batchDecryptBalancesAs", () => {
 
     vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A)
-      .mockResolvedValueOnce(1000n); // past timestamp
+      .mockResolvedValueOnce(1000n) // past timestamp
+      .mockResolvedValueOnce(0n); // getDelegationExpiry (wildcard) → also not delegated
     vi.mocked(delegateProvider.getBlockTimestamp).mockResolvedValue(2000n);
 
     const token = new Token(delegateSdk, TOKEN_A);
