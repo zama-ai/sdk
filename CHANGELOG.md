@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.8.0-beta.1](https://github.com/zama-ai/sdk/compare/v3.7.0...v3.8.0-beta.1) (2026-10-19)
+
+### Features
+
+- **daemon:** add the SDK daemon with Rust and Go clients ([#813](https://github.com/zama-ai/sdk/issues/813)) ([a52315f]())
+
+### Build System
+
+- **daemon:** scan the daemon image with Trivy and bump dependencies ([#835](https://github.com/zama-ai/sdk/issues/835)) ([7fb932b]())
+
 ## [3.7.0](https://github.com/zama-ai/sdk/compare/v3.6.0...v3.7.0) (2026-10-19)
 
 ### Features
