@@ -238,7 +238,7 @@ try {
 
 ### 6. Delegate for all contracts with the wildcard address (optional)
 
-Instead of granting delegation one contract at a time, pass `WILDCARD_CONTRACT` as `contractAddress`. The delegation then applies to any confidential contract, including ones deployed later. It does not widen access: the delegate can only read what the delegator can already read on each contract. `WILDCARD_CONTRACT` is only valid as `contractAddress`. `getStatus` and `getExpiry` for a specific contract also reflect a wildcard-only grant, so existing status checks keep working.
+Instead of granting delegation one contract at a time, pass `WILDCARD_CONTRACT` as `contractAddress`. The delegation then applies to any confidential contract, including ones deployed later. It does not widen access: the delegate can only read what the delegator can already read on each contract. `WILDCARD_CONTRACT` is only valid as `contractAddress`. `isActive` and `getStatus` (and `useDelegationStatus`) for a specific contract also reflect a wildcard-only grant, so existing status checks keep working. `getExpiry` returns only the raw per-contract expiry; query it with `WILDCARD_CONTRACT` to read the wildcard grant's expiry.
 
 {% tabs %}
 {% tab title="Core SDK" %}
