@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.8.0-beta.2](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.1...v3.8.0-beta.2) (2026-10-19)
+
+### Bug Fixes
+
+- remove the InGen testnet preset and example ([#854](https://github.com/zama-ai/sdk/issues/854)) ([4136b52]())
+
 ## [3.8.0-beta.1](https://github.com/zama-ai/sdk/compare/v3.7.0...v3.8.0-beta.1) (2026-10-19)
 
 ### Features
