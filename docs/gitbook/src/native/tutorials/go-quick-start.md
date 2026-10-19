@@ -30,7 +30,7 @@ See [Authentication](../../guides/authentication.md) and [Relayer API keys](../.
 Create a module and add the client:
 
 ```sh
-export ZAMA_SDK_VERSION=3.8.0-beta.1
+export ZAMA_SDK_VERSION=3.8.0-beta.2
 mkdir encrypt-input
 cd encrypt-input
 go mod init example.com/encrypt-input
