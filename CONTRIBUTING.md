@@ -137,6 +137,41 @@ pnpm test:coverage
 pnpm e2e:test
 ```
 
+### Daemon and native clients
+
+The daemon is in `packages/sdk-daemon`, the clients in `clients/go` and `clients/rust`, and the wire contract in `proto/`. Toolchains: Go from `clients/go/go.mod`, Rust from `rust-toolchain.toml`. Run commands from the repository root unless noted.
+
+```sh
+pnpm daemon:build                                   # build the SDK and the daemon
+pnpm daemon:test                                    # daemon tests
+ZAMA_SDK_DAEMON_NATIVE_TESTS=1 pnpm daemon:test     # plus Go and Rust integration tests (synthetic fixtures)
+
+# After changing proto/: regenerate all bindings
+pnpm daemon:generate
+sh clients/go/generate.sh
+cargo run --manifest-path clients/rust/Cargo.toml -p zama-sdk-codegen --locked
+
+# Go: run in clients/go and in clients/go/examples/balance (a separate module)
+go test -race ./... && go vet ./...
+
+# Rust
+cargo test --manifest-path clients/rust/Cargo.toml --all-features --all-targets --locked
+cargo clippy --manifest-path clients/rust/Cargo.toml --all-features --all-targets --locked -- -D warnings
+cargo fmt --manifest-path clients/rust/Cargo.toml --check
+```
+
+To run the Go and Rust balance examples against Sepolia, fill `.env.daemon.local` (copied from `.env.daemon.example`) with an RPC URL, a test wallet and a confidential token address, then:
+
+```sh
+export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"   # default to 10000 and 10001
+dc() { docker compose --env-file .env.daemon.local -f packages/sdk-daemon/compose.yaml "$@"; }
+dc --profile examples build && dc up --wait daemon
+dc run --rm go
+dc run --rm rust
+```
+
+Partner-facing pages live in [`docs/gitbook/src/native/`](docs/gitbook/src/native/README.md) and the shared guides; follow [`docs/agents/daemon.md`](docs/agents/daemon.md) when editing them.
+
 ### Code Style
 
 - **ESM-only** — all packages use `"type": "module"`
@@ -165,11 +200,15 @@ Release behavior:
 4. `@zama-fhe/sdk` and `@zama-fhe/react-sdk` are versioned and published together in lockstep.
 5. `main` publishes stable versions to npm `latest`, `beta` publishes prerelease versions to npm `beta`, and `alpha` publishes prerelease versions to npm `alpha`.
 6. GitHub release notes and tags are generated automatically.
+7. Each release also pushes the `ghcr.io/zama-ai/sdk-daemon` image (`linux/amd64`, `linux/arm64`) with the workflow `GITHUB_TOKEN`, tagged with the version and the channel.
+8. Each release also publishes the `zama_sdk` crate to crates.io through Trusted Publishing.
+9. Each release also tags `clients/go/v<version>` for the Go module. Before a major bump, change the module path in `clients/go/go.mod` to `/v<major>`.
 
 Release workflows:
 
-- `Release` (`.github/workflows/release.yml`): automatic publish on push to `main`, `beta`, and `alpha`, gated by `Vitest`, `Playwright`, and `Docs`.
-- Manual publish (`workflow_dispatch`): without `publish-tag`, same gates as above. With `publish-tag`, republish an existing tag when npm publish failed after semantic-release tagged it (`dry-run` input available) — skips CI, but requires the tag be reachable from `main`, `beta`, or `alpha`.
+- `Release` (`.github/workflows/release.yml`): automatic publish on push to `main`, `beta`, and `alpha`, gated by `Vitest`, `Playwright`, `Docs`, and `Daemon CI`.
+- Manual publish (`workflow_dispatch`): without `publish-tag`, same gates as above. With `publish-tag`, republish an existing tag when a publish failed after semantic-release tagged it (`dry-run` input available); skips CI, but requires the tag be reachable from `main`, `beta`, or `alpha`. `publish` selects npm, the daemon image, the Rust crate, the Go module, or all.
+- Image, crate, and Go retry: re-run the failed jobs in the original run, or use `publish-tag` with `publish: image`, `publish: rust`, or `publish: go`. If `release` itself failed, "Re-run failed jobs" skips them.
 - `Release Preview` (`.github/workflows/release-preview.yml`): manual dry-run restricted to `main`, `beta`, and `alpha` (`pnpm release:dry-run`), no publish side effects.
 
 Install channels:

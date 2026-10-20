@@ -109,7 +109,7 @@ const sdk = new ZamaSDK(config); // config from createConfig()
 import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 ```
 
-Node.js per-request storage using [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html). Isolates transport key pairs across concurrent requests on a server.
+Node.js per-request storage using [`AsyncLocalStorage`](https://nodejs.org/docs/latest-v24.x/api/async_context.html#class-asynclocalstorage). Isolates transport key pairs across concurrent requests on a server.
 
 ```ts
 import { asyncLocalStorage } from "@zama-fhe/sdk/node";

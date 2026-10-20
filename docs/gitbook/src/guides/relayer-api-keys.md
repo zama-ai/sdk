@@ -34,6 +34,38 @@ Once you receive your API key, wire it into the SDK using one of the two strateg
 - **Backend proxy** (recommended for browser apps) — the proxy injects the `x-api-key` header so the key never reaches the client.
 - **Direct API key** (server-side apps only) — pass the key in the relayer transport's `auth` field as `{ __type: "ApiKeyHeader", value: ... }`.
 
+A direct API key reads the key from the environment and sets it on the chain:
+
+{% tabs %}
+{% tab title="Core SDK" %}
+
+```ts
+const mySepolia = {
+  ...sepolia,
+  network: "https://sepolia.infura.io/v3/YOUR_KEY",
+  auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
+} as const satisfies FheChain;
+```
+
+{% endtab %}
+{% tab title="Go" %}
+
+```go
+config := zama.NewSDKConfig(11155111, "https://sepolia.infura.io/v3/YOUR_KEY")
+config.Auth = zama.APIKeyHeader{Value: os.Getenv("RELAYER_API_KEY")}
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+let chain = ChainConfig::new(11_155_111, "https://sepolia.infura.io/v3/YOUR_KEY")
+    .with_auth(RelayerAuth::api_key(env::var("RELAYER_API_KEY")?));
+```
+
+{% endtab %}
+{% endtabs %}
+
 For the Zama-hosted relayer, `ApiKeyHeader` is the supported `auth` method — the hosted endpoint accepts the key only in the `x-api-key` header. (`BearerToken` and `ApiKeyCookie` apply to self-hosted relayers or proxied setups.)
 
 The Authentication guide includes copy-paste examples for both, an Express proxy reference implementation, and the full table of supported `auth` methods.

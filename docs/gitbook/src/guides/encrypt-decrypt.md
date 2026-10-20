@@ -1,6 +1,6 @@
 ---
 title: Encrypt & decrypt
-description: How to encrypt values and decrypt FHE encrypted values for custom confidential smart contracts that are not wrapped ERC-20 tokens.
+description: How to encrypt values and decrypt FHE encrypted values in TypeScript, React, Go, or Rust for custom confidential smart contracts that are not wrapped ERC-20 tokens.
 ---
 
 # Encrypt & decrypt
@@ -172,6 +172,222 @@ function ConfidentialRoundTrip() {
 {% endcode %}
 
 {% endtab %}
+{% tab title="Go" %}
+
+{% code title="main.go" %}
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"math/big"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	bind "github.com/ethereum/go-ethereum/accounts/abi/bind/v2"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
+	zama "github.com/zama-ai/sdk/clients/go/v3"
+)
+
+// Minimal ABI for the custom FHE contract this example reads and writes.
+const yourContractABI = `[
+	{"type":"function","name":"store","stateMutability":"nonpayable",
+	 "inputs":[{"type":"bytes32"},{"type":"bytes"}],"outputs":[]},
+	{"type":"function","name":"getHandle","stateMutability":"view",
+	 "inputs":[{"type":"address"}],"outputs":[{"type":"bytes32"}]}
+]`
+
+func run(ctx context.Context) error {
+	// DAEMON_SOCKET, SEPOLIA_RPC_URL, PRIVATE_KEY, and CONTRACT_ADDRESS come from your environment.
+	rpcURL := os.Getenv("SEPOLIA_RPC_URL")
+	privateKey := os.Getenv("PRIVATE_KEY")
+	contractAddress := common.HexToAddress(os.Getenv("CONTRACT_ADDRESS"))
+	chainID := uint64(11155111)
+
+	eth, err := ethclient.DialContext(ctx, rpcURL)
+	if err != nil {
+		return err
+	}
+	defer eth.Close()
+	signer, err := zama.NewEthereumSigner(privateKey, chainID, eth)
+	if err != nil {
+		return err
+	}
+	client, err := zama.Dial(os.Getenv("DAEMON_SOCKET"))
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+	sdk, err := client.CreateContext(ctx, zama.NewSDKConfig(chainID, rpcURL), signer)
+	if err != nil {
+		return err
+	}
+	defer sdk.Close(context.Background())
+
+	key, err := crypto.HexToECDSA(strings.TrimPrefix(privateKey, "0x"))
+	if err != nil {
+		return err
+	}
+	userAddress := crypto.PubkeyToAddress(key.PublicKey)
+	parsed, err := abi.JSON(strings.NewReader(yourContractABI))
+	if err != nil {
+		return err
+	}
+	contract := bind.NewBoundContract(contractAddress, parsed, eth, eth, eth)
+
+	// 1. Encrypt
+	encrypted, err := sdk.Encrypt(ctx, zama.EncryptParams{
+		Values:          []zama.EncryptInput{zama.Euint64(big.NewInt(42))},
+		ContractAddress: contractAddress,
+		UserAddress:     userAddress,
+	}, zama.EncryptOptions{})
+	if err != nil {
+		return err
+	}
+
+	// 2. Send to contract, then wait for inclusion before reading back.
+	auth := bind.NewKeyedTransactor(key, new(big.Int).SetUint64(chainID))
+	tx, err := contract.Transact(auth, "store", encrypted.EncryptedValues[0], encrypted.InputProof)
+	if err != nil {
+		return err
+	}
+	if _, err := bind.WaitMined(ctx, eth, tx.Hash()); err != nil {
+		return err
+	}
+
+	// 3. Read the encrypted value back
+	var out []any
+	if err := contract.Call(&bind.CallOpts{Context: ctx}, &out, "getHandle", userAddress); err != nil {
+		return err
+	}
+	encryptedValue := common.Hash(out[0].([32]byte))
+
+	// 4. Decrypt: assembles the transport key pair + EIP-712 permit, then caches
+	decrypted, err := sdk.DecryptValues(ctx, []zama.EncryptedInput{{
+		EncryptedValue:  encryptedValue,
+		ContractAddress: contractAddress,
+	}}, zama.DecryptOptions{})
+	if err != nil {
+		return err
+	}
+	fmt.Println(decrypted[encryptedValue].Integer) // 42
+	return nil
+}
+
+func main() {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	if err := run(ctx); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+```
+
+{% endcode %}
+
+{% endtab %}
+{% tab title="Rust" %}
+
+Add `alloy-contract`, `alloy-provider`, `alloy-signer-local`, and `alloy-sol-types` at the Alloy version `zama_sdk` uses, and enable its `alloy` feature.
+
+{% code title="main.rs" %}
+
+```rust
+use alloy_provider::ProviderBuilder;
+use alloy_signer_local::PrivateKeySigner;
+use alloy_sol_types::sol;
+use std::env;
+use zama_sdk::{
+    Address, ClearValue, Client, EncryptInput, EncryptOptions, EncryptParams, EncryptedInput,
+    SdkConfig, WalletAccount, alloy::AlloySigner,
+};
+
+sol! {
+    // Minimal interface for the custom FHE contract this example reads and writes.
+    #[sol(rpc)]
+    contract YourContract {
+        function store(bytes32 encryptedValue, bytes inputProof) external;
+        function getHandle(address user) external view returns (bytes32);
+    }
+}
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> anyhow::Result<()> {
+    // DAEMON_SOCKET, SEPOLIA_RPC_URL, PRIVATE_KEY, and CONTRACT_ADDRESS come from your environment.
+    let rpc_url = env::var("SEPOLIA_RPC_URL")?;
+    let signer: PrivateKeySigner = env::var("PRIVATE_KEY")?.parse()?;
+    let contract_address: Address = env::var("CONTRACT_ADDRESS")?.parse()?;
+    let user_address = signer.address();
+    let chain_id = 11_155_111;
+
+    let client = Client::connect(env::var("DAEMON_SOCKET")?).await?;
+    let account = WalletAccount {
+        address: user_address,
+        chain_id,
+    };
+    let sdk = client
+        .sdk(SdkConfig::new(chain_id, rpc_url.clone()))
+        .signer(Some(account), AlloySigner::new(signer.clone()))
+        .build()
+        .await?;
+    let provider = ProviderBuilder::new()
+        .wallet(signer)
+        .connect_http(rpc_url.parse()?);
+    let contract = YourContract::new(contract_address, &provider);
+
+    // 1. Encrypt
+    let inputs = [EncryptInput::Uint64(42.into())];
+    let encrypted = sdk
+        .encrypt(
+            EncryptParams {
+                values: &inputs,
+                contract_address,
+                user_address,
+            },
+            EncryptOptions::default(),
+        )
+        .await?;
+
+    // 2. Send to contract, then wait for inclusion before reading back.
+    contract
+        .store(encrypted.encrypted_values[0], encrypted.input_proof.into())
+        .send()
+        .await?
+        .get_receipt()
+        .await?;
+
+    // 3. Read the encrypted value back
+    let encrypted_value = contract.getHandle(user_address).call().await?;
+
+    // 4. Decrypt: assembles the transport key pair + EIP-712 permit, then caches
+    let decrypted = sdk
+        .decryption()
+        .decrypt_values(
+            &[EncryptedInput {
+                encrypted_value,
+                contract_address,
+            }],
+            None,
+        )
+        .await?;
+    if let Some(ClearValue::BigInt(value)) = decrypted.get(&encrypted_value) {
+        println!("{value}"); // 42
+    }
+    sdk.close().await?;
+    Ok(())
+}
+```
+
+{% endcode %}
+
+{% endtab %}
 {% endtabs %}
 
 {% hint style="info" %}
@@ -296,6 +512,45 @@ function EncryptExample() {
 {% endcode %}
 
 {% endtab %}
+{% tab title="Go" %}
+
+```go
+encrypted, err := sdk.Encrypt(ctx, zama.EncryptParams{
+	Values:          []zama.EncryptInput{zama.Euint64(big.NewInt(1000))},
+	ContractAddress: contractAddress,
+	UserAddress:     userAddress,
+}, zama.EncryptOptions{})
+if err != nil {
+	return err
+}
+
+// encrypted.EncryptedValues: one common.Hash per value (contract-ready bytes32)
+// encrypted.InputProof: proof bytes, required alongside the encrypted values in contract calls
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+use zama_sdk::{EncryptInput, EncryptOptions, EncryptParams};
+
+let inputs = [EncryptInput::Uint64(1000.into())];
+let encrypted = sdk
+    .encrypt(
+        EncryptParams {
+            values: &inputs,
+            contract_address,
+            user_address,
+        },
+        EncryptOptions::default(),
+    )
+    .await?;
+
+// encrypted.encrypted_values: one B256 per value (contract-ready bytes32)
+// encrypted.input_proof: proof bytes, required alongside the encrypted values in contract calls
+```
+
+{% endtab %}
 {% endtabs %}
 
 #### Encrypting multiple values
@@ -340,6 +595,57 @@ const result = await encrypt.mutateAsync({
 // result.encryptedValues[1] — encrypted true
 // result.encryptedValues[2] — encrypted 42n
 // result.inputProof — shared proof for all encrypted values
+```
+
+{% endtab %}
+{% tab title="Go" %}
+
+```go
+encrypted, err := sdk.Encrypt(ctx, zama.EncryptParams{
+	Values: []zama.EncryptInput{
+		zama.Euint64(big.NewInt(500)), // amount
+		zama.Ebool(true),              // flag
+		zama.Euint32(big.NewInt(42)),  // parameter
+	},
+	ContractAddress: contractAddress,
+	UserAddress:     userAddress,
+}, zama.EncryptOptions{})
+if err != nil {
+	return err
+}
+
+// encrypted.EncryptedValues[0]: encrypted 500
+// encrypted.EncryptedValues[1]: encrypted true
+// encrypted.EncryptedValues[2]: encrypted 42
+// encrypted.InputProof: shared proof for all encrypted values
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+use zama_sdk::{EncryptInput, EncryptOptions, EncryptParams};
+
+let inputs = [
+    EncryptInput::Uint64(500.into()), // amount
+    EncryptInput::Bool(true),         // flag
+    EncryptInput::Uint32(42.into()),  // parameter
+];
+let encrypted = sdk
+    .encrypt(
+        EncryptParams {
+            values: &inputs,
+            contract_address,
+            user_address,
+        },
+        EncryptOptions::default(),
+    )
+    .await?;
+
+// encrypted.encrypted_values[0]: encrypted 500
+// encrypted.encrypted_values[1]: encrypted true
+// encrypted.encrypted_values[2]: encrypted 42
+// encrypted.input_proof: shared proof for all encrypted values
 ```
 
 {% endtab %}
@@ -426,6 +732,57 @@ function ConfidentialAction() {
 {% endcode %}
 
 {% endtab %}
+{% tab title="Go" %}
+
+`yourContract` is a go-ethereum `*bind.BoundContract` for your ABI, and `auth` holds the sender's transaction options, as in the example above.
+
+```go
+// 1. Encrypt the value
+encrypted, err := sdk.Encrypt(ctx, zama.EncryptParams{
+	Values:          []zama.EncryptInput{zama.Euint64(big.NewInt(1000))},
+	ContractAddress: contractAddress,
+	UserAddress:     userAddress,
+}, zama.EncryptOptions{})
+if err != nil {
+	return err
+}
+
+// 2. Call your contract with the encrypted data
+_, err = yourContract.Transact(auth, "yourFunction", encrypted.EncryptedValues[0], encrypted.InputProof)
+if err != nil {
+	return err
+}
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+`your_contract` is an Alloy `sol!` binding for your contract, as in the example above.
+
+```rust
+use zama_sdk::{EncryptInput, EncryptOptions, EncryptParams};
+
+// 1. Encrypt the value
+let inputs = [EncryptInput::Uint64(1000.into())];
+let encrypted = sdk
+    .encrypt(
+        EncryptParams {
+            values: &inputs,
+            contract_address,
+            user_address,
+        },
+        EncryptOptions::default(),
+    )
+    .await?;
+
+// 2. Call your contract with the encrypted data
+your_contract
+    .yourFunction(encrypted.encrypted_values[0], encrypted.input_proof.into())
+    .send()
+    .await?;
+```
+
+{% endtab %}
 {% endtabs %}
 
 ### 3. Decryption of the encrypted data
@@ -477,6 +834,55 @@ function BadExample({ tokenAddress }: { tokenAddress: Address }) {
 
 This causes an unexpected wallet popup, user rejection, potential Blockaid flags, and loss of trust.
 {% endhint %}
+
+{% endtab %}
+{% tab title="Go" %}
+
+```go
+decrypted, err := sdk.DecryptValues(ctx, []zama.EncryptedInput{
+	{EncryptedValue: value1, ContractAddress: tokenA},
+	{EncryptedValue: value2, ContractAddress: tokenA},
+	{EncryptedValue: value3, ContractAddress: tokenB},
+}, zama.DecryptOptions{})
+if err != nil {
+	return err
+}
+
+// decrypted[value1].Integer: 500, decrypted[value2].Integer: 200, decrypted[value3].Integer: 1000
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+use zama_sdk::{ClearValue, EncryptedInput};
+
+let decrypted = sdk
+    .decryption()
+    .decrypt_values(
+        &[
+            EncryptedInput {
+                encrypted_value: value1,
+                contract_address: token_a,
+            },
+            EncryptedInput {
+                encrypted_value: value2,
+                contract_address: token_a,
+            },
+            EncryptedInput {
+                encrypted_value: value3,
+                contract_address: token_b,
+            },
+        ],
+        None,
+    )
+    .await?;
+
+// decrypted[&value1]: ClearValue::BigInt(500), [&value2]: BigInt(200), [&value3]: BigInt(1000)
+if let Some(ClearValue::BigInt(amount)) = decrypted.get(&value1) {
+    println!("{amount}");
+}
+```
 
 {% endtab %}
 {% endtabs %}
@@ -657,6 +1063,30 @@ function PublicDecryptExample() {
 {% endcode %}
 
 {% endtab %}
+{% tab title="Go" %}
+
+```go
+result, err := sdk.DecryptPublicValues(ctx, []common.Hash{encryptedValue}, zama.DecryptOptions{})
+if err != nil {
+	return err
+}
+// result.ClearValues[encryptedValue].Integer: 1000
+// result.DecryptionProof and result.ABIEncodedClearValues support on-chain finalization
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+let result = sdk
+    .decryption()
+    .decrypt_public_values(&[encrypted_value], None)
+    .await?;
+// result.clear_values[&encrypted_value]: ClearValue::BigInt(1000)
+// result.decryption_proof and result.abi_encoded_clear_values support on-chain finalization
+```
+
+{% endtab %}
 {% endtabs %}
 
 ## Next steps
@@ -665,3 +1095,4 @@ function PublicDecryptExample() {
 - [ZamaSDK reference](../reference/sdk/ZamaSDK.md) — `encrypt`, `decryption`, and the full core API
 - [Decrypt values from event logs](./decrypt-from-event-logs.md) — index confidential transfers and decrypt amounts off event logs
 - [Configuration](./configuration.md) — chains, relayers, authentication, and permit management
+- [Go client API](../native/reference/go-client.md) and [Rust client API](../native/reference/rust-client.md)

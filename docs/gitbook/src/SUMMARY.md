@@ -4,7 +4,9 @@
 
 ## Getting Started
 
-- [Quick start](tutorials/quick-start.md)
+- [TypeScript quick start](tutorials/quick-start.md)
+- [Go quick start](native/tutorials/go-quick-start.md)
+- [Rust quick start](native/tutorials/rust-quick-start.md)
 - [First confidential dApp](tutorials/first-confidential-dapp.md)
 - [Wallet & exchange integration](tutorials/wallet-exchange-integration.md)
 - [Build with an LLM](tutorials/build-with-an-llm.md)
@@ -19,6 +21,7 @@
 - [Release channels](changelog/README.md)
 - [Beta (unreleased)](changelog/beta.md)
 - [3.x (current)](changelog/v3.md)
+  - [3.7.x](changelog/v3-7.md)
   - [3.6.x](changelog/v3-6.md)
   - [3.5.x](changelog/v3-5.md)
   - [3.4.x](changelog/v3-4.md)
@@ -52,6 +55,21 @@
 - [Encrypt & decrypt](guides/encrypt-decrypt.md)
 - [Vault deposits and redemptions](guides/vault-deposits.md)
 - [Vault groups](guides/vault-groups.md)
+
+## Go & Rust clients
+
+- [Go & Rust overview](native/README.md)
+- [Attach a wallet](native/guides/attach-wallet.md)
+- [Store credentials](native/guides/credential-storage.md)
+- [Observe events](native/guides/observe-events.md)
+- [Recover from disconnections](native/guides/recover-from-disconnections.md)
+- [Resolve uncertain transaction outcomes](native/guides/uncertain-transaction-outcomes.md)
+
+## Go & Rust daemon deployment
+
+- [Deploy in production](native/operations/run-in-production.md)
+- [Monitor and troubleshoot](native/operations/monitor-and-troubleshoot.md)
+- [Upgrade the daemon](native/operations/upgrade-and-recover.md)
 
 ## API References
 
@@ -148,8 +166,16 @@
   - [useGroupRedeem](reference/react/useGroupRedeem.md)
   - [Query keys](reference/react/query-keys.md)
 
+- [Go client](native/reference/go-client.md)
+- [Rust client](native/reference/rust-client.md)
+- [Daemon configuration](native/reference/daemon-configuration.md)
+- [Daemon error codes](native/reference/error-codes.md)
+- [Client and daemon compatibility](native/reference/client-and-daemon-compatibility.md)
+
 ## Concepts
 
 - [Architecture](concepts/architecture.md)
 - [Permit model](concepts/permit-model.md)
 - [Security model](concepts/security-model.md)
+- [Daemon architecture](native/concepts/architecture.md)
+- [Daemon trust model](native/concepts/trust-boundary.md)

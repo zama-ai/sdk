@@ -1,0 +1,39 @@
+name: Protobuf Compatibility
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "proto/**"
+      - "buf*.yaml"
+      - "scripts/daemon/**"
+      - ".github/workflows/proto-compatibility.yml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+
+concurrency:
+  group: proto-compatibility-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_HOURS: "72"
+  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@fhevm/sdk,@zama-fhe/sdk,@zama-fhe/react-sdk"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: ./.github/actions/install-deps
+      - name: Fetch pull request base
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: git fetch --no-tags --depth=1 origin "$BASE_SHA"
+      - name: Check protobuf compatibility
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: pnpm exec node scripts/daemon/check-proto-compatibility.mjs "$BASE_SHA"

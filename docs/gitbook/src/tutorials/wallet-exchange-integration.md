@@ -5,6 +5,10 @@ description: How wallets and exchanges support ERC-7984 confidential tokens with
 
 # Wallet & exchange integration
 
+{% hint style="info" %}
+Available in the Core SDK and React SDK.
+{% endhint %}
+
 This guide is for wallet developers, dApp developers, and exchanges who want to support confidential tokens on the Zama Protocol. It covers ERC-7984 wallet flows (showing decrypted balances, sending transfers with encrypted inputs), the Confidential Token Wrappers Registry, and wrapping/unwrapping between ERC-20 and ERC-7984.
 
 By the end of this guide, you will be able to:

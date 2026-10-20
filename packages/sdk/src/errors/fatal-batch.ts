@@ -1,32 +1,19 @@
+import { ZamaErrorCode, type ZamaError } from "./base";
 import { KeyWrappingError, RevokedKmsContextError } from "./credential";
 import { ConfigurationError } from "./relayer";
 import { RpcRateLimitError } from "./rpc";
 import { SigningRejectedError, SigningFailedError } from "./signing";
 
-/**
- * Returns `true` for errors that should abort an entire batch operation
- * rather than be recorded per-item — wallet signature rejected, signing
- * infrastructure broken, SDK misconfigured, the RPC provider throttling, or
- * transport key pair wrapping unusable for the whole session (wrong or missing
- * `transportKeyPairDerivationSecret`, `crypto.subtle` unavailable).
- * These are systemic failures that won't recover within the same call; for a
- * rate-limit in particular, the per-item retry loop would only amplify the
- * throttle by re-hitting the already-rate-limited endpoint. A revoked KMS
- * context is likewise batch-wide: every item's permit shares the dead context,
- * and the per-item loop would trigger one evict-and-regrant wallet prompt per
- * item instead of the one the batch attempt already spent.
- *
- * Callers iterating over a batch (e.g. per-token decrypt) should rethrow when
- * this predicate is true so the whole batch aborts, and record the error
- * per-item otherwise.
- */
+export const fatalBatchErrors = {
+  [ZamaErrorCode.SigningRejected]: SigningRejectedError,
+  [ZamaErrorCode.SigningFailed]: SigningFailedError,
+  [ZamaErrorCode.Configuration]: ConfigurationError,
+  [ZamaErrorCode.RpcRateLimited]: RpcRateLimitError,
+  [ZamaErrorCode.KeyWrappingFailed]: KeyWrappingError,
+  [ZamaErrorCode.RevokedKmsContext]: RevokedKmsContextError,
+} satisfies Partial<Record<ZamaErrorCode, new (message: string) => ZamaError>>;
+
+/** Systemic failures abort a batch because retrying each item would repeat the same failure. */
 export function isFatalBatchError(error: unknown): boolean {
-  return (
-    error instanceof SigningRejectedError ||
-    error instanceof SigningFailedError ||
-    error instanceof ConfigurationError ||
-    error instanceof RpcRateLimitError ||
-    error instanceof KeyWrappingError ||
-    error instanceof RevokedKmsContextError
-  );
+  return Object.values(fatalBatchErrors).some((Constructor) => error instanceof Constructor);
 }
