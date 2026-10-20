@@ -153,5 +153,5 @@ The lifecycle above assumes a connected wallet signs `grantPermit`'s EIP-712 mes
 ## Related
 
 - [Security Model](./security-model.md) — transport key pair storage, threat model, and trust assumptions
-- [Configuration](../guides/configuration.md#5-optional-configure-ttls-and-event-listener) — `transportKeyPairTTL` and `permitTTL` settings
+- [Configuration](../guides/configuration.md#5-optional-configure-ttls-credential-cleanup-and-event-listener) — `transportKeyPairTTL` and `permitTTL` settings
 - [ZamaSDK](../reference/sdk/ZamaSDK.md) — `permits.grantPermit()`, `permits.revokePermits()`, `permits.clear()` API

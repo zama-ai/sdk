@@ -26133,7 +26133,7 @@ The lifecycle above assumes a connected wallet signs `grantPermit`'s EIP-712 mes
 ## Related
 
 - [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/concepts/security-model.md) — transport key pair storage, threat model, and trust assumptions
-- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md#5-optional-configure-ttls-and-event-listener) — `transportKeyPairTTL` and `permitTTL` settings
+- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md#5-optional-configure-ttls-credential-cleanup-and-event-listener) — `transportKeyPairTTL` and `permitTTL` settings
 - [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md) — `permits.grantPermit()`, `permits.revokePermits()`, `permits.clear()` API
 
 ## Security model
