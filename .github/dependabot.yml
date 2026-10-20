@@ -1,4 +1,13 @@
 version: 2
+# Docker Hardened Images need a Docker Hub login to pull. These are Dependabot secrets, separate from the
+# Actions secrets of the same name.
+registries:
+  dhi:
+    type: docker-registry
+    url: https://dhi.io
+    username: ${{ secrets.DH_USERNAME }}
+    password: ${{ secrets.DH_TOKEN }}
+
 updates:
   # SDK core, workspace tooling, and test apps -- one pnpm workspace, "/" must stay in scope for the shared lockfile.
   - package-ecosystem: npm
@@ -57,6 +66,8 @@ updates:
   - package-ecosystem: docker
     target-branch: beta
     directory: /packages/sdk-daemon
+    registries:
+      - dhi
     schedule:
       interval: weekly
     cooldown:

@@ -21,8 +21,14 @@ on:
       - "tools/**"
       - ".github/actions/install-deps/**"
       - ".github/workflows/daemon.yml"
+      - ".trivyignore"
   workflow_dispatch:
   workflow_call:
+    secrets:
+      DH_USERNAME:
+        required: true
+      DH_TOKEN:
+        required: true
 
 # Namespaced by workflow so a standalone run and a calling workflow on the same ref do not cancel each other.
 concurrency:
@@ -155,6 +161,14 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      # The base images are Docker Hardened Images, which need a Docker Hub login to pull. Fork pull requests
+      # don't receive the secrets, so their image job fails at this step.
+      - name: Log in to Docker Hardened Images
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: dhi.io
+          username: ${{ secrets.DH_USERNAME }}
+          password: ${{ secrets.DH_TOKEN }}
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
@@ -164,16 +178,17 @@ jobs:
           # Scoped per architecture so the two builds don't overwrite each other's cache.
           cache-from: type=gha,scope=daemon-image-${{ matrix.arch }}
           cache-to: type=gha,scope=daemon-image-${{ matrix.arch }},mode=max
-      # From zama-ai/ci-templates security/trivy.yml. Only fixable HIGH or CRITICAL findings fail: Debian
-      # advisories without a fix yet can't be addressed in the image.
+      # From zama-ai/ci-templates security/trivy.yml. Every CRITICAL or HIGH finding fails, fixed or not:
+      # a finding without a fix is either risk-accepted in .trivyignore (Security team review via CODEOWNERS)
+      # or it blocks the image. The release workflow scans each pushed digest with the same settings.
       - name: Scan the image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ghcr.io/zama-ai/sdk-daemon:ci
           exit-code: "1"
-          ignore-unfixed: true
           vuln-type: os,library
           severity: CRITICAL,HIGH
+          trivyignores: .trivyignore
       - name: Start the daemon with the deployment Compose file
         env:
           ZAMA_SDK_VERSION: ci

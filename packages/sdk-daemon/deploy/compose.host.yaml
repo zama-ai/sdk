@@ -4,7 +4,8 @@ name: zama-sdk-daemon
 
 services:
   daemon:
-    image: ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION:?Set ZAMA_SDK_VERSION to the release that matches your Go or Rust client}
+    # Set ZAMA_SDK_DAEMON_DIGEST to the verified sha256 of the release to pin the image by digest.
+    image: ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION:?Set ZAMA_SDK_VERSION to the release that matches your Go or Rust client}${ZAMA_SDK_DAEMON_DIGEST:+@${ZAMA_SDK_DAEMON_DIGEST}}
     # Your application's user: the daemon only accepts directories it owns, and only this user can open the socket.
     user: "${ZAMA_SDK_DAEMON_UID:?Set ZAMA_SDK_DAEMON_UID to your application's user ID}:${ZAMA_SDK_DAEMON_GID:?Set ZAMA_SDK_DAEMON_GID to your application's group ID}"
     environment:

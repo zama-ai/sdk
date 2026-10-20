@@ -2542,6 +2542,7 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 - **Artifacts:** the `ghcr.io/zama-ai/sdk-daemon` Docker image, the Go module `github.com/zama-ai/sdk/clients/go/v3`, and the Rust crate `zama_sdk`. Run the image and the client at exactly the same version; see [client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md).
 - **Guides:** Go and Rust tabs in [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md), [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/encrypt-decrypt.md), [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/delegated-decryption.md), [Offline signing](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/offline.md), [Handle errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/handle-errors.md), [Local development](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/local-development.md), [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md), and [Decrypt values from event logs](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/decrypt-from-event-logs.md).
 - **Deployment:** [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md), [Monitor and troubleshoot](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md), and [Upgrade the daemon](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/upgrade-and-recover.md).
+- **Signed, scanned image:** the daemon image is built on Docker Hardened Images, every release digest is scanned with Trivy before it is tagged, and the image carries signed build provenance and an SBOM. Verify a release with `gh attestation verify` or cosign and pin it by digest with `ZAMA_SDK_DAEMON_DIGEST`; see [Verify and pin the image](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md#verify-and-pin-the-image). Published images are re-scanned daily.
 
 Start with the [Go quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/go-quick-start.md) or the [Rust quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/rust-quick-start.md).
 
@@ -10605,6 +10606,42 @@ There is no network listener. Keep the application and its daemon on the same ho
 > Two daemons must not share a SQLite credential volume: each named database is locked to one daemon. Replicas can share application-owned storage, but credential coordination does not span daemons, so concurrent replicas can race on the same user's credentials and cause extra signature prompts.
 
 
+## Verify and pin the image
+
+Each release signs the image in the release workflow and stores the signature, build provenance, and an SBOM next to it on GitHub Container Registry. Before the first deployment of a version, and before every upgrade, verify the image and pin it by digest. A tag can be moved; a digest cannot.
+
+Verify the release tag with the [GitHub CLI](https://cli.github.com/):
+
+```bash
+export ZAMA_SDK_VERSION=3.8.0-beta.3
+gh attestation verify "oci://ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION}" --repo zama-ai/sdk \
+  --signer-workflow zama-ai/sdk/.github/workflows/release.yml
+```
+
+The command checks that the image was built by the release workflow of the `zama-ai/sdk` repository, and prints the digest it verified. With [cosign](https://github.com/sigstore/cosign) instead:
+
+```bash
+cosign verify-attestation "ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION}" --new-bundle-format \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  --certificate-identity-regexp '^https://github.com/zama-ai/sdk/\.github/workflows/release\.yml@refs/heads/(main|beta|alpha)$' \
+  --type https://slsa.dev/provenance/v1
+```
+
+Record the verified digest and pass it as `ZAMA_SDK_DAEMON_DIGEST`. The Compose files below then pull `ghcr.io/zama-ai/sdk-daemon:<version>@sha256:…`, and Docker refuses any content that doesn't match:
+
+```bash
+export ZAMA_SDK_DAEMON_DIGEST="$(docker buildx imagetools inspect "ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION}" --format '{{ .Manifest.Digest }}')"
+```
+
+To read the SBOM of the image your platform runs, verify one platform digest with `--predicate-type https://spdx.dev/Document` and `--format json`:
+
+```bash
+gh attestation verify "oci://ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION}" --repo zama-ai/sdk \
+  --predicate-type https://spdx.dev/Document --format json
+```
+
+Published images are re-scanned daily. A critical or high CVE in a published image is tracked in a GitHub issue on the repository and fixed with a patched release, so subscribe to releases and plan to [upgrade](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/upgrade-and-recover.md) when one ships.
+
 ## Run with Docker Compose
 
 The [Compose file](https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml) runs the daemon with a read-only root filesystem, no Linux capabilities, a healthcheck and a stop grace period above its shutdown timeout, and keeps its socket and SQLite storage in named volumes. A new named volume copies the image's private directories, so the daemon starts without host directory setup. The image runs the daemon as UID `10000` and GID `10001`.
@@ -10636,7 +10673,7 @@ curl -fsSL -o zama-sdk-daemon.yaml "https://raw.githubusercontent.com/zama-ai/sd
 docker compose up -d --wait
 ```
 
-Set `ZAMA_SDK_VERSION` to the version of your Go module or Rust crate. `--wait` returns once the daemon's healthcheck passes. This works on Linux and on Docker Desktop.
+Set `ZAMA_SDK_VERSION` to the version of your Go module or Rust crate, and `ZAMA_SDK_DAEMON_DIGEST` to the digest you verified above. `--wait` returns once the daemon's healthcheck passes. This works on Linux and on Docker Desktop.
 
 ### Application on a Linux host
 
@@ -10651,7 +10688,7 @@ sudo install -d -m 700 -o myapp -g myapp socket storage
 ZAMA_SDK_DAEMON_UID="$(id -u myapp)" ZAMA_SDK_DAEMON_GID="$(id -g myapp)" docker compose up -d --wait
 ```
 
-The daemon rejects directories that aren't private to its user, so create them before starting. Point the application at `socket/sdk.sock` in that directory.
+The daemon rejects directories that aren't private to its user, so create them before starting. Point the application at `socket/sdk.sock` in that directory. This file reads `ZAMA_SDK_DAEMON_DIGEST` too.
 
 ## Back up daemon SQLite storage
 
@@ -25884,7 +25921,7 @@ Each release publishes the image for `linux/amd64` and `linux/arm64`, tagged wit
 
 The quickstarts and the deployment page set one `ZAMA_SDK_VERSION` variable for the image tag and the client version, and each release updates it to that release.
 
-For deployments, record the selected client version and pin the daemon image to its matching release tag. Do not rely on a moving image tag when restarting an existing deployment. Retain the Go module files or your Rust application's lockfile to reproduce the selected dependencies.
+For deployments, record the selected client version and pin the daemon image to the digest of its matching release. Do not rely on a moving image tag when restarting an existing deployment. Each release signs the image and attaches build provenance and an SBOM; [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md#verify-and-pin-the-image) shows how to verify them and obtain the digest. Retain the Go module files or your Rust application's lockfile to reproduce the selected dependencies.
 
 The wire protocol is named `v1beta1`. This identifier does not select an SDK release channel or replace the exact-version pairing rule.
 

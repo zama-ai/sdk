@@ -162,6 +162,8 @@ cargo fmt --manifest-path clients/rust/Cargo.toml --check
 
 To run the Go and Rust balance examples against Sepolia, fill `.env.daemon.local` (copied from `.env.daemon.example`) with an RPC URL, a test wallet and a confidential token address, then:
 
+The daemon image is built on [Docker Hardened Images](https://dhi.io), which need a Docker Hub login to pull: run `docker login dhi.io` once with your Docker Hub account (a free one works) before building. CI logs in with the `DH_USERNAME` and `DH_TOKEN` secrets (a Docker Hub organization access token with the "Read public repositories" scope); Dependabot has its own copy of the two secrets to bump the pinned base image digests.
+
 ```sh
 export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"   # default to 10000 and 10001
 dc() { docker compose --env-file .env.daemon.local -f packages/sdk-daemon/compose.yaml "$@"; }
@@ -200,7 +202,7 @@ Release behavior:
 4. `@zama-fhe/sdk` and `@zama-fhe/react-sdk` are versioned and published together in lockstep.
 5. `main` publishes stable versions to npm `latest`, `beta` publishes prerelease versions to npm `beta`, and `alpha` publishes prerelease versions to npm `alpha`.
 6. GitHub release notes and tags are generated automatically.
-7. Each release also pushes the `ghcr.io/zama-ai/sdk-daemon` image (`linux/amd64`, `linux/arm64`) with the workflow `GITHUB_TOKEN`, tagged with the version and the channel.
+7. Each release also pushes the `ghcr.io/zama-ai/sdk-daemon` image (`linux/amd64`, `linux/arm64`) with the workflow `GITHUB_TOKEN`, tagged with the version and the channel. Each platform digest is pushed untagged first, scanned with Trivy (any CRITICAL or HIGH finding blocks the tags unless the Security team risk-accepted it in `.trivyignore`, which `CODEOWNERS` assigns to them), then signed with GitHub artifact attestations (build provenance and an SPDX SBOM). The manifest list gets a provenance attestation too, so `gh attestation verify oci://ghcr.io/zama-ai/sdk-daemon:<version> --repo zama-ai/sdk` works on the tag. The job summary prints the digest to pin.
 8. Each release also publishes the `zama_sdk` crate to crates.io through Trusted Publishing.
 9. Each release also tags `clients/go/v<version>` for the Go module. Before a major bump, change the module path in `clients/go/go.mod` to `/v<major>`.
 
@@ -210,6 +212,7 @@ Release workflows:
 - Manual publish (`workflow_dispatch`): without `publish-tag`, same gates as above. With `publish-tag`, republish an existing tag when a publish failed after semantic-release tagged it (`dry-run` input available); skips CI, but requires the tag be reachable from `main`, `beta`, or `alpha`. `publish` selects npm, the daemon image, the Rust crate, the Go module, or all.
 - Image, crate, and Go retry: re-run the failed jobs in the original run, or use `publish-tag` with `publish: image`, `publish: rust`, or `publish: go`. If `release` itself failed, "Re-run failed jobs" skips them.
 - `Release Preview` (`.github/workflows/release-preview.yml`): manual dry-run restricted to `main`, `beta`, and `alpha` (`pnpm release:dry-run`), no publish side effects.
+- `Daemon image scan` (`.github/workflows/daemon-image-scan.yml`): daily Trivy re-scan of the published `latest`, `beta`, and `alpha` daemon images on both platforms. A CRITICAL or HIGH finding fails the run and opens (or comments on) a tracking issue; the fix is a patched release, or a Security-reviewed `.trivyignore` entry. Schedules run from the default branch only.
 
 Install channels:
 

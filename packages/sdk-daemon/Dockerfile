@@ -1,5 +1,9 @@
-# Debian 13, the same release as the distroless runtime stage.
-FROM node:24-trixie-slim@sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66 AS build
+# Docker Hardened Images (dhi.io) for both stages, pinned by digest. Pulling them needs `docker login dhi.io`
+# with a Docker Hub account; CI logs in with DH_USERNAME and DH_TOKEN. The build stage is Debian 13, the
+# same release as the runtime stage, so the pruned node_modules link against the same glibc.
+FROM dhi.io/node:24-debian13-dev@sha256:63f14705bd247a343712a0b1484224e82c7c693a9ee8a8317fd53e655e0583a1 AS build
+# The dev image ships bash; don't depend on /bin/sh being present.
+SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 RUN npm install --global pnpm@11.1.2
 WORKDIR /workspace
 ENV CI=1
@@ -22,18 +26,18 @@ RUN pnpm install --frozen-lockfile --offline \
   && find /pruned/full/packages/sdk /pruned/full/packages/sdk-daemon -mindepth 1 -maxdepth 1 ! -name dist ! -name package.json ! -name node_modules ! -name LICENSE -exec rm -rf {} + \
   && install -d -m 0700 /rootfs/run/zama /rootfs/var/lib/zama
 
-# Node.js only: no shell or package manager.
-FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:9eeb7f5887d0e239e78264b06f7f11d2e14be534050481803a9e4728fcdd278e
+# Node.js only: no shell or package manager. The image has no entrypoint, so CMD names node explicitly.
+FROM dhi.io/node:24-debian13@sha256:0e6bbf45c6befccdfb0f20d8c2e9e9b3621533f7f5a749eee3d4618e701f3448
 ARG RUNTIME_UID=10000
 ARG RUNTIME_GID=10001
-ENV NODE_ENV=production PATH=/nodejs/bin:$PATH
+ENV NODE_ENV=production
 WORKDIR /app/packages/sdk-daemon
 # Root-owned, so the daemon user cannot modify its own code.
 COPY --from=build /pruned/full /app
 COPY LICENSE /app/LICENSE
 COPY --from=build --chown=${RUNTIME_UID}:${RUNTIME_GID} /rootfs/run/ /run/
 COPY --from=build --chown=${RUNTIME_UID}:${RUNTIME_GID} /rootfs/var/lib/ /var/lib/
+# The base image's own user is node (1000); the daemon runs as a dedicated high UID instead.
 USER ${RUNTIME_UID}:${RUNTIME_GID}
 HEALTHCHECK --interval=3s --timeout=3s --start-period=10s CMD ["node", "dist/healthcheck.js"]
-# The base image's entrypoint is node.
-CMD ["dist/main.js"]
+CMD ["node", "dist/main.js"]

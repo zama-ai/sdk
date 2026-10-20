@@ -1,0 +1,7 @@
+# Risk-accepted CVEs for the daemon image (ghcr.io/zama-ai/sdk-daemon).
+#
+# Trivy fails the image gate on any CRITICAL or HIGH finding, fixed or not, unless it is listed here.
+# This file is owned by the Security team through .github/CODEOWNERS: every entry needs their review.
+#
+# One CVE per line, with the reason and a review date. Trivy's `exp:` field expires an entry automatically:
+#   CVE-2025-00000 exp:2026-12-31  # glibc: no Debian fix yet; the daemon never reaches the affected code path.
