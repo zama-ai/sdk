@@ -121,7 +121,7 @@ async function harness() {
   };
 }
 
-test("multiple SDK contexts isolate signer identity and preserve account-change credential cleanup", async () => {
+test("multiple SDK contexts isolate signer identity and keep credentials across account changes", async () => {
   const backing = storage();
   const signerA = new Signer(A);
   const signerB = new Signer(B);
@@ -146,8 +146,9 @@ test("multiple SDK contexts isolate signer identity and preserve account-change 
 
     signerA.walletAccount.setSnapshot({ address: C, chainId: anvil.id });
     await remoteA.update(C);
-    await expect.poll(() => observer.sdk.permits.hasPermit([TOKEN])).toBe(false);
-    await expect.poll(() => remoteObserver.hasPermit()).toBe(false);
+    // A's permit stays in storage: an account change no longer clears the previous account.
+    expect(await remoteObserver.hasPermit()).toBe(await observer.sdk.permits.hasPermit([TOKEN]));
+    expect(await remoteObserver.hasPermit()).toBe(true);
     expect(await remoteA.decrypt()).toEqual(await directA.sdk.decryption.decryptValues(inputs));
     expect(await remoteB.decrypt()).toEqual(await directB.sdk.decryption.decryptValues(inputs));
     expect(remoteA.signatures).toEqual(signerA.signatures);
