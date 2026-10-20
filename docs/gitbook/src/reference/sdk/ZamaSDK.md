@@ -127,14 +127,14 @@ Permit lifetime in days. Default: `30`. Controls how long each signed EIP-712 pe
 
 `boolean | undefined`
 
-Wipe the previous account's transport key pair, permits, and decrypt cache whenever the connected account changes or disconnects (account switch, empty account list, disconnect). Default: `false`. Credentials are stored per signer address, so by default a user switching A → B → A reuses A's permits and cached decrypts without signing again. Permits expire after `permitTTL` and transport key pairs after `transportKeyPairTTL`; cached decrypts stay until [`permits.clear`](#permits-clear) or [`permits.revokePermits`](#permits-revokepermits) runs. Enable this for shared-device apps where a signed-out account must leave nothing behind. For an explicit sign-out in either mode, call [`permits.clear`](#permits-clear) while the wallet is still connected.
+Wipe the previous account's transport key pair, permits, and decrypt cache whenever the connected account changes or disconnects (account switch, empty account list, disconnect). Default: `true`. Set to `false` to keep them: credentials are stored per signer address, so a user switching A → B → A then reuses A's permits and cached decrypts without signing again. Permits expire after `permitTTL` and transport key pairs after `transportKeyPairTTL`; cached decrypts stay until [`permits.clear`](#permits-clear) or [`permits.revokePermits`](#permits-revokepermits) runs. With the option off, call [`permits.clear`](#permits-clear) in your sign-out flow while the wallet is still connected.
 
 ```ts
 const config = createConfig({
   chains: [sepolia],
   walletClient,
   relayers: { [sepolia.id]: web() },
-  clearCredentialsOnWalletChange: true, // shared device
+  clearCredentialsOnWalletChange: false, // keep permits across account switches
 });
 ```
 

@@ -47,7 +47,7 @@ const signer = new ViemSigner({ walletClient });
 
 `EIP1193Provider | undefined`
 
-Raw EIP-1193 provider for wallet lifecycle event subscriptions. When provided, the signer emits wallet account transitions on disconnect, account change, and chain change, which the SDK uses to switch the relayer chain and to refresh React queries. Credentials are not cleared on these events unless `clearCredentialsOnWalletChange` is enabled. Omit if you handle lifecycle events manually.
+Raw EIP-1193 provider for wallet lifecycle event subscriptions. When provided, the signer emits wallet account transitions on disconnect, account change, and chain change, which the SDK uses to switch the relayer chain, clear the previous account's credentials (unless `clearCredentialsOnWalletChange` is `false`), and refresh React queries. Omit if you handle lifecycle events manually.
 
 ```ts
 const signer = new ViemSigner({ walletClient, ethereum: window.ethereum });
@@ -65,7 +65,7 @@ All methods are inherited from [GenericSigner](./GenericSigner.md).
 | `writeContract()`        | Via wallet client     |
 
 {% hint style="info" %}
-Wallet account transitions are only emitted when you pass the `ethereum` option. Without it, the SDK still works, but it never observes an account change, so it cannot switch the relayer chain or refresh React queries for you, and the `clearCredentialsOnWalletChange` option has no effect.
+Wallet account transitions are only emitted when you pass the `ethereum` option. Without it, the SDK still works, but it never observes an account change, so it cannot switch the relayer chain, clear credentials, or refresh React queries for you, and the `clearCredentialsOnWalletChange` option has no effect.
 {% endhint %}
 
 ## Related

@@ -1020,7 +1020,7 @@ const { data } = useDecryptValues([
 
 Decrypted values are stored through the SDK's internal CachingService, scoped by signer and contract address. Cached values survive page reloads — `decryptValues` returns them instantly without hitting the relayer.
 
-The cache is cleared on `permits.revokePermits()` and `permits.clear()`. Wallet account changes do not clear it: entries are keyed per signer, so switching back to an account serves its cached values again. Set `clearCredentialsOnWalletChange: true` on `createConfig` to clear the previous account's entries on every wallet account change.
+The cache is cleared on `permits.revokePermits()`, `permits.clear()`, and, by default, on wallet account changes and disconnects. Set `clearCredentialsOnWalletChange: false` on `createConfig` to keep it across account changes: entries are keyed per signer, so switching back to an account serves its cached values again.
 
 {% hint style="info" %}
 **Decryption fails with an invalid or expired transport key pair?** The transport key pair has a TTL (default: 30 days). If the key pair was generated more than `transportKeyPairTTL` seconds ago, the relayer rejects it. Grant a fresh permit again (`sdk.permits.grantPermit` / `useGrantPermit`) to generate a new transport key pair and permits.

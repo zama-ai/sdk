@@ -19,8 +19,11 @@ export type LifecycleServiceOptions = {
 };
 
 /**
- * Owns signer-lifecycle wiring for {@link ZamaSDK}: reacts to wallet-account
- * changes and fans them out to listeners. Unsubscribes on {@link dispose}.
+ * Owns signer-lifecycle wiring for {@link ZamaSDK}: subscribes to the signer's
+ * wallet-account store on construction, runs the SDK-side handling on every
+ * change (relayer chain switch, then credential rotation and decrypt-cache
+ * invalidation unless `clearCredentialsOnWalletChange` is `false`), then fans
+ * out to external listeners. Unsubscribes on {@link dispose}.
  *
  * @internal — consumed by ZamaSDK; not part of the public surface.
  */
@@ -39,7 +42,7 @@ export class LifecycleService {
     this.#router = opts.router;
     this.#cachingService = opts.cachingService;
     this.#credentialService = opts.credentialService;
-    this.#clearCredentialsOnWalletChange = opts.clearCredentialsOnWalletChange ?? false;
+    this.#clearCredentialsOnWalletChange = opts.clearCredentialsOnWalletChange ?? true;
     this.#logger = opts.logger;
     if (this.#signer) {
       this.#unsubscribeSigner = this.#signer.walletAccount.subscribe((change) => {
@@ -77,8 +80,9 @@ export class LifecycleService {
         this.#logger,
       );
     }
-    // Off by default: permits, key pairs, and cached decrypts are keyed by account
-    // address, so keeping them never exposes one account's entries to another.
+    // Apps opt out with clearCredentialsOnWalletChange: false. Permits, key pairs,
+    // and cached decrypts are keyed by account address, so keeping them never
+    // exposes one account's entries to another.
     if (this.#clearCredentialsOnWalletChange) {
       await this.#clearPreviousAccount(prev, next);
     }

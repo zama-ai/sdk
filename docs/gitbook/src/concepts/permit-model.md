@@ -132,17 +132,17 @@ permits.revoke_transport_key_pair("tenant-123").await?; // shared scope
 
 ## Wallet account changes
 
-Wallet events never clear credentials by default. Permits and transport key pairs are stored per signer address, so one account can never read another's entries, and a permit is an EIP-712 signature the relayer only accepts from the address that signed it. Keeping them lets a multi-wallet user switch accounts without re-signing:
+By default, the SDK clears the previous account's credentials when the wallet state changes:
 
-| Event                  | Effect on permits                                                                                                       |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| **Account switch**     | Nothing is cleared. The new account uses its own stored permits, if any; switching back reuses the previous ones.       |
-| **Empty account list** | Nothing is cleared. Wallets emit this both for a user disconnect and for an auto-lock, so the SDK treats it as neither. |
-| **Chain switch**       | Nothing is cleared. Permits are chain-scoped, so each chain keeps its own.                                              |
+| Event                 | Effect on permits                                                                                           |
+| --------------------- | ----------------------------------------------------------------------------------------------------------- |
+| **Disconnect / lock** | All permits, the transport key pair, and the decrypt cache are cleared for the previous account             |
+| **Account switch**    | Previous account's permits, transport key pair, and decrypt cache are cleared; the new account starts fresh |
+| **Chain switch**      | Nothing is cleared. Permits are chain-scoped, so each chain keeps its own.                                  |
 
-Permits expire on their own after `permitTTL` and transport key pairs after `transportKeyPairTTL`. For an explicit sign-out, call `sdk.permits.clear()` (or [`useClearCredentials`](../reference/react/useClearCredentials.md) in React): it removes the connected signer's transport key pair, permits, and decrypt cache. It needs a connected wallet account, so call it before the wallet disconnects. Once the wallet is gone, the SDK can no longer tell which account to clear.
+Set `clearCredentialsOnWalletChange: false` on `createConfig` to keep them instead. Permits and transport key pairs are stored per signer address, so one account can never read another's entries, and a permit is an EIP-712 signature the relayer only accepts from the address that signed it. Keeping them lets a multi-wallet user switch A → B → A without signing a new permit, and stops wallets that emit an empty account list on auto-lock (Rabby, Brave) from wiping credentials on every lock. Permits still expire on their own after `permitTTL` and transport key pairs after `transportKeyPairTTL`.
 
-Shared-device apps that need a signed-out account to leave nothing behind can set `clearCredentialsOnWalletChange: true` on `createConfig`. The SDK then wipes the previous account's transport key pair, permits, and decrypt cache whenever the connected account changes, including an empty account list.
+With the option off, handle sign-out yourself: call `sdk.permits.clear()` (or [`useClearCredentials`](../reference/react/useClearCredentials.md) in React) to remove the connected signer's transport key pair, permits, and decrypt cache. It needs a connected wallet account, so call it before the wallet disconnects. Once the wallet is gone, the SDK can no longer tell which account to clear.
 
 See [ZamaSDK.onWalletAccountChange](../reference/sdk/ZamaSDK.md#onwalletaccountchange) for programmatic access to these transitions.
 

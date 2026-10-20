@@ -56,9 +56,9 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   permitTTL?: number;
   /**
    * Wipe the previous account's transport key pair, permits, and decrypt cache
-   * whenever the connected account changes or disconnects. Default: `false`,
-   * which keeps them until permits expire or `sdk.permits.clear()` runs. Enable for shared-device apps where a
-   * signed-out account must leave nothing behind.
+   * whenever the connected account changes or disconnects. Default: `true`.
+   * Set to `false` to keep them until permits expire or `sdk.permits.clear()`
+   * runs, so a user switching A → B → A does not sign a new permit each time.
    */
   clearCredentialsOnWalletChange?: boolean;
   /**

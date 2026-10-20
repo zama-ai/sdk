@@ -19,13 +19,12 @@ description: Unreleased changes on the prerelease (beta) line — not yet in a s
 
 Start with the [Go quick start](../native/tutorials/go-quick-start.md) or the [Rust quick start](../native/tutorials/rust-quick-start.md).
 
-## Wallet account changes no longer clear credentials
+## Opt out of clearing credentials on wallet account changes
 
-Switching wallet accounts, locking the wallet, or disconnecting no longer wipes the previous account's transport key pair, permits, or decrypt cache. Storage is keyed per signer address and a permit is only accepted from the address that signed it, so the wipe bought no isolation; it only forced multi-wallet users to sign a new permit and re-decrypt on every switch. Switching A → B → A now reuses A's permits and cached decrypts. Permits still expire after `permitTTL` and transport key pairs after `transportKeyPairTTL`; cached decrypts stay until the app clears them.
+New `clearCredentialsOnWalletChange` option on `createConfig`. By default (`true`) the SDK keeps its existing behavior: switching wallet accounts, locking the wallet, or disconnecting wipes the previous account's transport key pair, permits, and decrypt cache. Set it to `false` to keep them. Storage is keyed per signer address and a permit is only accepted from the address that signed it, so one account can never use another's entries; keeping them lets a multi-wallet user switch A → B → A without signing a new permit or re-decrypting, and stops wallets that emit an empty account list on auto-lock (Rabby, Brave) from wiping credentials on every lock.
 
-- **Sign-out:** call `sdk.permits.clear()` or `useClearCredentials` in your app's sign-out flow, before disconnecting the wallet. These still remove the connected signer's key pair, permits, and decrypt cache, and they need a connected wallet account to know which signer to clear.
-- **Opt back in:** shared-device apps can set `clearCredentialsOnWalletChange: true` on `createConfig` to restore the previous behavior and wipe whenever the connected account changes or disconnects.
-- **Go and Rust clients:** `UpdateAccount` / `update_account` do not clear the previous account's credentials. The opt-in flag is not exposed to native clients yet; call `ClearPermits` / `permits().clear()` before switching accounts if you need the wipe.
+- **With `clearCredentialsOnWalletChange: false`:** permits still expire after `permitTTL` and transport key pairs after `transportKeyPairTTL`; cached decrypts stay until the app clears them. For an explicit sign-out, call `sdk.permits.clear()` or `useClearCredentials` before disconnecting the wallet. They need a connected wallet account to know which signer to clear.
+- **Go and Rust clients:** unchanged. `UpdateAccount` / `update_account` still clear the previous account's credentials; the option is not exposed to native clients yet.
 
 See [Wallet account changes](../concepts/permit-model.md#wallet-account-changes) in the Permit Model.
 

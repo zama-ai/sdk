@@ -61,7 +61,7 @@ clearCredentials();
 - After clearing, any decrypt operation will generate a fresh transport key pair and prompt for new permits.
 
 {% hint style="info" %}
-Wallet account changes and disconnects do not clear credentials: permits are stored per address and expire on their own after `permitTTL`, so switching back to an account reuses its permits without a new signature. Call this hook from your app's sign-out handler when a user should leave nothing behind, before you disconnect the wallet: it needs a connected wallet account. To clear automatically on every wallet account change instead (shared-device apps), set `clearCredentialsOnWalletChange: true` on `createConfig`.
+By default, the SDK clears credentials on wallet disconnect or account change when the signer adapter implements `walletAccount.subscribe()`, so you do not need to call this hook for that case. If you set `clearCredentialsOnWalletChange: false` on `createConfig` (permits are stored per address and expire after `permitTTL`, so switching back to an account reuses its permits without a new signature), call this hook from your app's sign-out handler instead, before you disconnect the wallet: it needs a connected wallet account.
 {% endhint %}
 
 ## Related

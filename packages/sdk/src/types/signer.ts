@@ -31,8 +31,9 @@ export type WalletAccountListener = (change: WalletAccountChange) => void;
  *
  * Direct subscriptions observe raw signer adapter transitions. For SDK-
  * coordinated handling and React query invalidation, subscribe through
- * {@link ZamaSDK.onWalletAccountChange} so the relayer chain switch (and any
- * configured credential cleanup) runs first.
+ * {@link ZamaSDK.onWalletAccountChange} so the relayer chain switch and the
+ * credential cleanup (unless `clearCredentialsOnWalletChange` is `false`) run
+ * first.
  */
 export interface WalletAccountStore {
   /** Synchronous, non-prompting snapshot of the currently connected wallet account. */

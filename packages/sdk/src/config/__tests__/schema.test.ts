@@ -30,7 +30,7 @@ describe("createConfig validation", () => {
     expect(config.registryTTL).toBe(60);
   });
 
-  test("clearCredentialsOnWalletChange defaults to false and passes through when set", ({
+  test("clearCredentialsOnWalletChange defaults to true and passes through when set to false", ({
     relayer,
     provider,
   }) => {
@@ -40,11 +40,11 @@ describe("createConfig validation", () => {
       provider,
     };
 
-    expect(createConfig(base).clearCredentialsOnWalletChange).toBe(false);
+    expect(createConfig(base).clearCredentialsOnWalletChange).toBe(true);
     expect(
-      createConfig({ ...base, clearCredentialsOnWalletChange: true })
+      createConfig({ ...base, clearCredentialsOnWalletChange: false })
         .clearCredentialsOnWalletChange,
-    ).toBe(true);
+    ).toBe(false);
   });
 
   test("rejects invalid TTLs at createConfig", ({ relayer, provider }) => {

@@ -208,12 +208,54 @@ describe("ZamaSDK credentials lifecycle", () => {
       return { sdk, signer, switchTo };
     }
 
-    test("A → B → A keeps A's permit and cached decrypts by default", async ({
+    test("A → B wipes A's permit and cached decrypts by default", async ({
       createMockSigner,
       createSDK,
       relayer,
     }) => {
       const { sdk, signer, switchTo } = buildSwitchableSDK(createMockSigner, createSDK);
+
+      await sdk.permits.grantPermit([CONTRACT_A]);
+      await sdk.decryption.decryptValues([{ encryptedValue: HANDLE, contractAddress: CONTRACT_A }]);
+      expect(signer.signTypedData).toHaveBeenCalledOnce();
+
+      await switchTo(ACCOUNT_B);
+      await switchTo(ACCOUNT_A);
+
+      expect(await sdk.permits.hasPermit([CONTRACT_A])).toBe(false);
+      await sdk.permits.grantPermit([CONTRACT_A]);
+      expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+      await sdk.decryption.decryptValues([{ encryptedValue: HANDLE, contractAddress: CONTRACT_A }]);
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
+    });
+
+    test("an empty account list (wallet lock or disconnect) wipes credentials by default", async ({
+      createMockSigner,
+      createSDK,
+      relayer,
+    }) => {
+      const { sdk, signer, switchTo } = buildSwitchableSDK(createMockSigner, createSDK);
+
+      await sdk.permits.grantPermit([CONTRACT_A]);
+      await sdk.decryption.decryptValues([{ encryptedValue: HANDLE, contractAddress: CONTRACT_A }]);
+      expect(signer.signTypedData).toHaveBeenCalledOnce();
+
+      await switchTo(undefined);
+      await switchTo(ACCOUNT_A);
+
+      expect(await sdk.permits.hasPermit([CONTRACT_A])).toBe(false);
+      await sdk.permits.grantPermit([CONTRACT_A]);
+      expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+      await sdk.decryption.decryptValues([{ encryptedValue: HANDLE, contractAddress: CONTRACT_A }]);
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
+    });
+
+    test("with clearCredentialsOnWalletChange: false, A → B → A keeps A's permit and cached decrypts", async ({
+      createMockSigner,
+      createSDK,
+      relayer,
+    }) => {
+      const { sdk, signer, switchTo } = buildSwitchableSDK(createMockSigner, createSDK, false);
 
       await sdk.permits.grantPermit([CONTRACT_A]);
       await sdk.decryption.decryptValues([{ encryptedValue: HANDLE, contractAddress: CONTRACT_A }]);
@@ -231,11 +273,11 @@ describe("ZamaSDK credentials lifecycle", () => {
       expect(relayer.decryptValues).toHaveBeenCalledOnce();
     });
 
-    test("an empty account list (wallet lock or disconnect) keeps credentials by default", async ({
+    test("with clearCredentialsOnWalletChange: false, an empty account list (wallet lock or disconnect) keeps credentials", async ({
       createMockSigner,
       createSDK,
     }) => {
-      const { sdk, signer, switchTo } = buildSwitchableSDK(createMockSigner, createSDK);
+      const { sdk, signer, switchTo } = buildSwitchableSDK(createMockSigner, createSDK, false);
 
       await sdk.permits.grantPermit([CONTRACT_A]);
       expect(signer.signTypedData).toHaveBeenCalledOnce();
@@ -248,12 +290,12 @@ describe("ZamaSDK credentials lifecycle", () => {
       expect(signer.signTypedData).toHaveBeenCalledOnce();
     });
 
-    test("permits.clear() still removes the signer's key pair, permits, and cache", async ({
+    test("with clearCredentialsOnWalletChange: false, permits.clear() still removes the signer's key pair, permits, and cache", async ({
       createMockSigner,
       createSDK,
       relayer,
     }) => {
-      const { sdk, signer } = buildSwitchableSDK(createMockSigner, createSDK);
+      const { sdk, signer } = buildSwitchableSDK(createMockSigner, createSDK, false);
 
       await sdk.permits.grantPermit([CONTRACT_A]);
       await sdk.decryption.decryptValues([{ encryptedValue: HANDLE, contractAddress: CONTRACT_A }]);
@@ -264,27 +306,6 @@ describe("ZamaSDK credentials lifecycle", () => {
       await sdk.permits.grantPermit([CONTRACT_A]);
       expect(signer.signTypedData).toHaveBeenCalledTimes(2);
       expect(relayer.generateTransportKeyPair).toHaveBeenCalledTimes(2);
-      await sdk.decryption.decryptValues([{ encryptedValue: HANDLE, contractAddress: CONTRACT_A }]);
-      expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
-    });
-
-    test("with clearCredentialsOnWalletChange, A → B wipes A's permit and cached decrypts", async ({
-      createMockSigner,
-      createSDK,
-      relayer,
-    }) => {
-      const { sdk, signer, switchTo } = buildSwitchableSDK(createMockSigner, createSDK, true);
-
-      await sdk.permits.grantPermit([CONTRACT_A]);
-      await sdk.decryption.decryptValues([{ encryptedValue: HANDLE, contractAddress: CONTRACT_A }]);
-      expect(signer.signTypedData).toHaveBeenCalledOnce();
-
-      await switchTo(ACCOUNT_B);
-      await switchTo(ACCOUNT_A);
-
-      expect(await sdk.permits.hasPermit([CONTRACT_A])).toBe(false);
-      await sdk.permits.grantPermit([CONTRACT_A]);
-      expect(signer.signTypedData).toHaveBeenCalledTimes(2);
       await sdk.decryption.decryptValues([{ encryptedValue: HANDLE, contractAddress: CONTRACT_A }]);
       expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
     });

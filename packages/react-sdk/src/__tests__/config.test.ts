@@ -181,13 +181,13 @@ describe("createConfig", () => {
         relayers: { [11155111]: web() },
         transportKeyPairTTL: 86400,
         permitTTL: 7,
-        clearCredentialsOnWalletChange: true,
+        clearCredentialsOnWalletChange: false,
         registryTTL: 3600,
         onEvent,
       });
       expect(config.transportKeyPairTTL).toBe(86400);
       expect(config.permitTTL).toBe(7);
-      expect(config.clearCredentialsOnWalletChange).toBe(true);
+      expect(config.clearCredentialsOnWalletChange).toBe(false);
       expect(config.registryTTL).toBe(3600);
       expect(config.onEvent).toBe(onEvent);
     });
