@@ -27,17 +27,29 @@ afterEach(() => {
 
 describe("node() telemetry", () => {
   test("tags the relayer as the node runtime", () => {
-    const telemetry: TelemetryState = { layer: "core" };
+    const telemetry: TelemetryState = { layer: "core", mode: "header" };
     node().createRelayer(anvil, new LoggerService(), telemetry);
 
-    expect(relayerConfig().telemetry).toEqual({ state: telemetry, runtime: "node" });
+    expect(relayerConfig().telemetry).toEqual({
+      state: telemetry,
+      runtime: "node",
+      mode: "header",
+    });
   });
 
-  test("ZAMA_SDK_TELEMETRY=0 turns telemetry off for the process", () => {
-    vi.stubEnv("ZAMA_SDK_TELEMETRY", "0");
-    node().createRelayer(anvil, new LoggerService(), { layer: "core" });
+  test.each(["0", "off"])("ZAMA_SDK_TELEMETRY=%s turns telemetry off for the process", (value) => {
+    vi.stubEnv("ZAMA_SDK_TELEMETRY", value);
+    node().createRelayer(anvil, new LoggerService(), { layer: "core", mode: "header" });
 
     expect(relayerConfig().telemetry).toBeUndefined();
+  });
+
+  test("ZAMA_SDK_TELEMETRY=query overrides the config's mode for the process", () => {
+    vi.stubEnv("ZAMA_SDK_TELEMETRY", "query");
+    const telemetry: TelemetryState = { layer: "core", mode: "header" };
+    node().createRelayer(anvil, new LoggerService(), telemetry);
+
+    expect(relayerConfig().telemetry).toEqual({ state: telemetry, runtime: "node", mode: "query" });
   });
 
   test("sends no telemetry without a config-wide context", () => {

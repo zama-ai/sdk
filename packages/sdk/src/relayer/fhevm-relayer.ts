@@ -213,7 +213,7 @@ export class FhevmRelayer implements RelayerSDK {
     return this.#chain;
   }
 
-  // `operation` becomes a header and query parameter here and must never reach `@fhevm/sdk`.
+  // `operation` is the SDK's own label and must never reach `@fhevm/sdk`.
   #requestOptions<T extends Partial<FhevmRelayerOptions> | undefined>(
     options: T,
   ): Omit<Partial<FhevmRelayerOptions> & NonNullable<T>, "operation"> {
@@ -227,8 +227,8 @@ export class FhevmRelayer implements RelayerSDK {
     const { headers, query } = telemetryRequestOptions(this.#telemetry, operation);
     return {
       ...merged,
-      headers: { ...merged.headers, ...headers },
-      query: { ...merged.query, ...query },
+      ...(headers && { headers: { ...merged.headers, ...headers } }),
+      ...(query && { query: { ...merged.query, ...query } }),
     };
   }
 

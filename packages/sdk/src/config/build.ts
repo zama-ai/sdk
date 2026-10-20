@@ -60,7 +60,9 @@ export function buildZamaConfig(
   const { storage, permitStorage } = resolveStorage(params.storage, params.permitStorage);
 
   const telemetry: TelemetryState | undefined =
-    params.telemetry === false ? undefined : { layer: "core" };
+    params.telemetry === false || params.telemetry === "off"
+      ? undefined
+      : { layer: "core", mode: params.telemetry === "query" ? "query" : "header" };
   const router = new ChainRouter(params.chains, params.relayers, logger, telemetry);
 
   return {

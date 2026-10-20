@@ -1,24 +1,34 @@
 import { describe, expect, test } from "vitest";
 import type { RelayerRequestOptions } from "../relayer/types";
 import {
-  isTelemetryDisabledByEnv,
+  telemetryModeFromEnv,
   telemetryRequestOptions,
-  type TelemetryState,
+  type TelemetryMode,
   withOperation,
 } from "../telemetry";
 import { SDK_VERSION } from "../version";
 
 describe("telemetryRequestOptions", () => {
-  const telemetry = { state: { layer: "core" } as TelemetryState, runtime: "web" as const };
+  const telemetry = (mode: Exclude<TelemetryMode, "off">) => ({
+    state: { layer: "core" as const, mode },
+    runtime: "web" as const,
+    mode,
+  });
 
-  test("stamps the package version, layer, runtime and operation as headers and query parameters", () => {
-    expect(telemetryRequestOptions(telemetry, "unshield")).toEqual({
+  test("stamps the package version, layer, runtime and operation as headers", () => {
+    expect(telemetryRequestOptions(telemetry("header"), "unshield")).toEqual({
       headers: {
         "x-zama-sdk-version": SDK_VERSION,
         "x-zama-sdk-layer": "core",
         "x-zama-sdk-runtime": "web",
         "x-zama-sdk-operation": "unshield",
       },
+    });
+    expect(SDK_VERSION).toMatch(/^\d+\.\d+\.\d+(-[\w.]+)?$/);
+  });
+
+  test("stamps the same fields as query parameters in query mode", () => {
+    expect(telemetryRequestOptions(telemetry("query"), "unshield")).toEqual({
       query: {
         zama_sdk_version: SDK_VERSION,
         zama_sdk_layer: "core",
@@ -26,25 +36,34 @@ describe("telemetryRequestOptions", () => {
         zama_sdk_operation: "unshield",
       },
     });
-    expect(SDK_VERSION).toMatch(/^\d+\.\d+\.\d+(-[\w.]+)?$/);
   });
 
   test("omits the operation when no SDK flow labelled the request", () => {
-    const { headers, query } = telemetryRequestOptions(telemetry, undefined);
-    expect(headers).not.toHaveProperty("x-zama-sdk-operation");
-    expect(query).not.toHaveProperty("zama_sdk_operation");
+    expect(telemetryRequestOptions(telemetry("header"), undefined).headers).not.toHaveProperty(
+      "x-zama-sdk-operation",
+    );
+    expect(telemetryRequestOptions(telemetry("query"), undefined).query).not.toHaveProperty(
+      "zama_sdk_operation",
+    );
   });
 });
 
-describe("isTelemetryDisabledByEnv", () => {
-  test.each(["0", "false", " FALSE "])("treats ZAMA_SDK_TELEMETRY=%j as an opt-out", (value) => {
-    expect(isTelemetryDisabledByEnv({ ZAMA_SDK_TELEMETRY: value })).toBe(true);
+describe("telemetryModeFromEnv", () => {
+  test.each(["0", "false", " FALSE ", "off"])("treats ZAMA_SDK_TELEMETRY=%j as off", (value) => {
+    expect(telemetryModeFromEnv({ ZAMA_SDK_TELEMETRY: value })).toBe("off");
   });
 
-  test.each(["1", "true", "", undefined])(
-    "keeps telemetry on for ZAMA_SDK_TELEMETRY=%j",
+  test.each([
+    ["header", "header"],
+    [" Query ", "query"],
+  ])("reads ZAMA_SDK_TELEMETRY=%j as the %s mode", (value, mode) => {
+    expect(telemetryModeFromEnv({ ZAMA_SDK_TELEMETRY: value })).toBe(mode);
+  });
+
+  test.each(["1", "true", "", "yes", undefined])(
+    "leaves the config's choice for ZAMA_SDK_TELEMETRY=%j",
     (value) => {
-      expect(isTelemetryDisabledByEnv({ ZAMA_SDK_TELEMETRY: value })).toBe(false);
+      expect(telemetryModeFromEnv({ ZAMA_SDK_TELEMETRY: value })).toBeUndefined();
     },
   );
 });

@@ -91,7 +91,7 @@ describe("buildZamaConfig telemetry", () => {
   test("is on by default and hands the context to every relayer", () => {
     const config = buildZamaConfig(undefined, {} as never, params());
 
-    expect(config.telemetry).toEqual({ layer: "core" });
+    expect(config.telemetry).toEqual({ layer: "core", mode: "header" });
     expect(relayerConfig.createRelayer).toHaveBeenLastCalledWith(
       hardhat,
       expect.anything(),
@@ -99,8 +99,14 @@ describe("buildZamaConfig telemetry", () => {
     );
   });
 
-  test("telemetry: false turns it off", () => {
-    const config = buildZamaConfig(undefined, {} as never, { ...params(), telemetry: false });
+  test('telemetry: "query" switches the labels to query parameters', () => {
+    const config = buildZamaConfig(undefined, {} as never, { ...params(), telemetry: "query" });
+
+    expect(config.telemetry).toEqual({ layer: "core", mode: "query" });
+  });
+
+  test.each(["off", false] as const)("telemetry: %j turns it off", (telemetry) => {
+    const config = buildZamaConfig(undefined, {} as never, { ...params(), telemetry });
 
     expect(config.telemetry).toBeUndefined();
   });

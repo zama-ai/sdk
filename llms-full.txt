@@ -2549,6 +2549,10 @@ Start with the [Go quick start](https://raw.githubusercontent.com/zama-ai/sdk/be
 
 `ViemSigner` and `WagmiSigner` now convert the typed-data domain `chainId` to a number and every `bigint` value in the message to a decimal string before calling viem. Browser extensions that patch how `bigint` is JSON-serialized made viem send the permit's `chainId` as `"1n"`, and the wallet rejected the signature with `chainId should be same as current chainId`; with no `bigint` left in the request, such a patch has nothing to act on. Signatures are unchanged, and `EthersSigner` was never affected.
 
+## Telemetry as query parameters
+
+`createConfig` now takes `telemetry: "header" | "query" | "off"`. The default, `"header"`, keeps sending the `x-zama-sdk-*` usage headers. `"query"` sends the same four fields as `zama_sdk_*` query parameters instead, for backend proxies and edges that rebuild or strip request headers. `"off"` sends nothing; `true` and `false` still work as `"header"` and `"off"`. On Node.js, `ZAMA_SDK_TELEMETRY` takes the same three values and overrides the config for the whole process. See [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md).
+
 ## InGen testnet removed
 
 The SDK no longer supports the T-Rex InGen testnet (chain ID `364301`). The `ingenTestnet` preset is removed from `@zama-fhe/sdk/chains`, from the built-in `chains` map and from the deprecated `DefaultRegistryAddresses`, and the `example-ingen` app is removed. Use `zenithTrexTestnet`, `hoodi` or `bscTestnet` for a cleartext testnet.
@@ -4405,7 +4409,7 @@ You can adapt this pattern to any server framework (Fastify, Hono, Next.js API r
 
 - Forward the HTTP method, path, and body to the upstream relayer URL
 - Inject the `x-api-key` header before forwarding
-- Forward the request URL's query string and the `x-zama-sdk-*` request headers so [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md) still reaches the relayer
+- Forward the `x-zama-sdk-*` request headers so [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md) still reaches the relayer. If your proxy cannot pass custom headers through, set `telemetry: "query"` in the SDK config and forward the request URL's query string instead
 - Return the upstream response status and body to the client
 
 ### 3. Configure the SDK to use your proxy
@@ -4642,7 +4646,7 @@ The recommended approach depends on your application architecture:
 
 ### Backend proxy pattern
 
-The proxy must add the `x-api-key` header to every forwarded request, so the key stays server-side and your frontend never sees it. It should also pass through the request URL's query string and the `x-zama-sdk-*` headers the SDK sets, so [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md) still reaches the relayer. See the [Authentication guide](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md) for a working Express proxy and the matching client-side `relayerUrl` configuration — the patterns there apply unchanged when the upstream is the Zama-hosted Relayer.
+The proxy must add the `x-api-key` header to every forwarded request, so the key stays server-side and your frontend never sees it. It should also pass through the `x-zama-sdk-*` headers the SDK sets, so [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md) still reaches the relayer; a proxy that cannot forward custom headers can forward the request URL's query string instead, with `telemetry: "query"` in the SDK config. See the [Authentication guide](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md) for a working Express proxy and the matching client-side `relayerUrl` configuration — the patterns there apply unchanged when the upstream is the Zama-hosted Relayer.
 
 ## Compromised keys
 
@@ -4668,9 +4672,9 @@ If Zama identifies that an API key has been compromised, the key holder will be 
 
 # SDK usage telemetry
 
-The SDK attaches a small, fixed set of labels to the relayer requests it already makes, as `x-zama-sdk-*` HTTP headers and as matching `zama_sdk_*` query parameters. On the **Zama-hosted relayer** they tell Zama which SDK version and which high-level operations are in use, so the SDK team can see adoption and per-operation error rates. Nothing is sent to any third party, and no label ever carries end-user data.
+The SDK attaches a small, fixed set of `x-zama-sdk-*` HTTP headers to the relayer requests it already makes. On the **Zama-hosted relayer** they tell Zama which SDK version and which high-level operations are in use, so the SDK team can see adoption and per-operation error rates. Nothing is sent to any third party, and no header ever carries end-user data.
 
-Telemetry is on by default. You can turn it off with one config flag.
+Telemetry is on by default. One config option switches it to query parameters, for proxies that drop custom headers, or turns it off.
 
 ## What is sent
 
@@ -4681,11 +4685,11 @@ Telemetry is on by default. You can turn it off with one config flag.
 | `x-zama-sdk-runtime`   | `web` / `node`          | `web` for the `web()` transport, `node` for `node()`.                                   |
 | `x-zama-sdk-operation` | `confidential-transfer` | The public SDK method the request belongs to (see below). Omitted on the FHE key fetch. |
 
-Each header has a query-string twin with the same value: `x-zama-sdk-version` is also sent as `zama_sdk_version`, and so on. Zama's relayer edge reads the header first and falls back to the query parameter, so the duplicate is harmless.
+The headers ride on the requests the SDK makes anyway: input-proof generation (`encrypt`), user and public decryption, and the FHE key fetch. They add no extra requests.
 
-The labels ride on the requests the SDK makes anyway: input-proof generation (`encrypt`), user and public decryption, and the FHE key fetch. They add no extra requests.
+With `telemetry: "query"` (see [below](#sending-query-parameters-instead-of-headers)) the same four fields travel as `zama_sdk_*` query parameters instead: `x-zama-sdk-version` becomes `zama_sdk_version`, and so on, with identical values. The relayer accepts either form.
 
-**Never sent:** wallet addresses, encrypted values or handles, amounts, transaction hashes, or any user or session identifier. The relayer already sees the request itself; the labels only describe it.
+**Never sent:** wallet addresses, encrypted values or handles, amounts, transaction hashes, or any user or session identifier. The relayer already sees the request itself; the headers only label it.
 
 ### Operation values
 
@@ -4720,19 +4724,19 @@ Each public method that reaches the relayer sends its own value. When a method m
 | `offline-unwrap`                      | `sdk.offline.prepare`, `Unwrap`                   |
 | `offline-finalize-unwrap`             | `sdk.offline.prepare`, `FinalizeUnwrap`           |
 
-Calls made directly on `sdk.relayer` carry the version, layer and runtime labels but no operation.
+Calls made directly on `sdk.relayer` carry the version, layer and runtime headers but no operation.
 
 Shielding (`WrappedToken.shield`) never calls the relayer, so it produces no telemetry at all.
 
 ## Where it is sent
 
-The labels go to whatever `relayerUrl` the chain configures. The SDK does not inspect the host, so a self-hosted relayer receives them too and simply ignores them, and nothing is logged there unless you capture it yourself. The `cleartext()` transport makes no relayer requests.
+The headers go to whatever `relayerUrl` the chain configures. The SDK does not inspect the host, so a self-hosted relayer receives them too and simply ignores them, and nothing is logged there unless you capture it yourself. The `cleartext()` transport makes no relayer requests.
 
-If browser traffic reaches the relayer through [your own backend proxy](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md), both forms arrive at the proxy. A proxy that forwards the request URL unchanged, as the example in that guide does, passes the query parameters on without extra work. Forward the `x-zama-sdk-*` headers too where you can; a proxy that rebuilds the request with its own header set drops them, and the query parameters then carry the telemetry alone.
+If browser traffic reaches the relayer through [your own backend proxy](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md), the headers arrive at the proxy. Forward them to the upstream relayer, as the proxy example in that guide does; a proxy that rebuilds the request with its own header set drops them. When you cannot change what the proxy forwards, switch to query parameters instead.
 
-## Turning it off
+## Sending query parameters instead of headers
 
-Set `telemetry: false` in `createConfig`:
+Some proxies and edges rebuild the request with their own header set, or strip headers they do not know, while they forward the request URL unchanged. For those deployments, set `telemetry: "query"` in `createConfig`. The SDK then sends the same four fields as `zama_sdk_*` query parameters and no `x-zama-sdk-*` headers:
 
 ```ts
 const config = createConfig({
@@ -4740,14 +4744,30 @@ const config = createConfig({
   relayers: { [sepolia.id]: web() },
   publicClient,
   walletClient,
-  telemetry: false,
+  telemetry: "query",
 });
 ```
 
-On Node.js, the `node()` transport also honours the `ZAMA_SDK_TELEMETRY` environment variable. Set it to `0` (or `false`) to turn telemetry off for the whole process, for example in CI:
+The parameters are appended to every relayer request URL, so they show up in network tabs and request logs where headers would not. Keep the default `"header"` mode unless your proxy needs the query form.
+
+## Turning it off
+
+Set `telemetry: "off"` in `createConfig` (`false` still works and means the same):
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  relayers: { [sepolia.id]: web() },
+  publicClient,
+  walletClient,
+  telemetry: "off",
+});
+```
+
+On Node.js, the `node()` transport also honours the `ZAMA_SDK_TELEMETRY` environment variable, which overrides the config for the whole process. It takes the same values as `telemetry`: `header`, `query` or `off` (`0` and `false` also mean `off`). For example, in CI:
 
 ```bash
-ZAMA_SDK_TELEMETRY=0 node server.js
+ZAMA_SDK_TELEMETRY=off node server.js
 ```
 
 Either switch removes every `x-zama-sdk-*` header and `zama_sdk_*` query parameter from every request.
@@ -11052,9 +11072,9 @@ const config = createConfig({
 
 ### telemetry
 
-`boolean | undefined`
+`"header" | "query" | "off" | boolean | undefined`
 
-Whether to attach the `x-zama-sdk-*` usage headers and `zama_sdk_*` query parameters (SDK version, package layer, runtime, and high-level operation) to every relayer request. Default: `true`. They carry no end-user data; a self-hosted relayer simply ignores them. See [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md) for exactly what is sent.
+How the SDK usage labels (SDK version, package layer, runtime, and high-level operation) travel on relayer requests. `"header"` (default) sends them as `x-zama-sdk-*` headers. `"query"` sends them as `zama_sdk_*` query parameters instead, for proxies that rebuild the request headers. `"off"` sends nothing. `true` and `false` are still accepted and mean `"header"` and `"off"`. The labels carry no end-user data; a self-hosted relayer simply ignores them. See [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md) for exactly what is sent.
 
 ```ts
 const config = createConfig({
@@ -11062,7 +11082,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   relayers: { [sepolia.id]: web() },
-  telemetry: false,
+  telemetry: "query",
 });
 ```
 

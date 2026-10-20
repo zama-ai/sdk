@@ -705,18 +705,27 @@ describe("FhevmRelayer usage telemetry", () => {
     zama_sdk_layer: "core",
     zama_sdk_runtime: "web",
   };
-  const telemetry = () => ({ state: { layer: "core" } as TelemetryState, runtime: "web" as const });
+  const telemetry = (mode: TelemetryState["mode"] = "header") => ({
+    state: { layer: "core", mode } as TelemetryState,
+    runtime: "web" as const,
+    mode,
+  });
 
-  test("stamps the x-zama-sdk-* headers and zama_sdk_* query parameters and consumes the operation label", async () => {
+  test("stamps the x-zama-sdk-* headers and consumes the operation label", async () => {
     const relayer = makeRelayer({ chain: hostedChain, telemetry: telemetry() });
     await relayer.decryptValues({ options: { timeout: 42, operation: "balance-of" } } as never);
 
     expect(clients.decryptClient.decryptValues).toHaveBeenCalledWith({
-      options: {
-        timeout: 42,
-        headers: { ...staticHeaders, "x-zama-sdk-operation": "balance-of" },
-        query: { ...staticQuery, zama_sdk_operation: "balance-of" },
-      },
+      options: { timeout: 42, headers: { ...staticHeaders, "x-zama-sdk-operation": "balance-of" } },
+    });
+  });
+
+  test("stamps zama_sdk_* query parameters instead of headers in query mode", async () => {
+    const relayer = makeRelayer({ chain: hostedChain, telemetry: telemetry("query") });
+    await relayer.decryptValues({ options: { timeout: 42, operation: "balance-of" } } as never);
+
+    expect(clients.decryptClient.decryptValues).toHaveBeenCalledWith({
+      options: { timeout: 42, query: { ...staticQuery, zama_sdk_operation: "balance-of" } },
     });
   });
 
@@ -730,10 +739,7 @@ describe("FhevmRelayer usage telemetry", () => {
 
     expect(worker.instance.encryptValues).toHaveBeenCalledWith({
       ...encryptArgs,
-      options: {
-        headers: { ...staticHeaders, "x-zama-sdk-operation": "encrypt" },
-        query: { ...staticQuery, zama_sdk_operation: "encrypt" },
-      },
+      options: { headers: { ...staticHeaders, "x-zama-sdk-operation": "encrypt" } },
     });
   });
 
@@ -742,48 +748,53 @@ describe("FhevmRelayer usage telemetry", () => {
     await relayer.fetchFheEncryptionKeyBytes();
 
     expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
-      options: { headers: staticHeaders, query: staticQuery },
+      options: { headers: staticHeaders },
     });
   });
 
-  test("keeps the caller's own headers and query parameters", async () => {
+  test("keeps the caller's own headers", async () => {
     const relayer = makeRelayer({ chain: hostedChain, telemetry: telemetry() });
-    await relayer.encryptValues({
-      ...encryptArgs,
-      options: { headers: { "x-custom": "1" }, query: { custom: "1" } },
-    } as never);
+    await relayer.encryptValues({ ...encryptArgs, options: { headers: { "x-custom": "1" } } });
 
     expect(clients.encryptClient.encryptValues).toHaveBeenCalledWith({
       ...encryptArgs,
-      options: {
-        headers: { "x-custom": "1", ...staticHeaders },
-        query: { custom: "1", ...staticQuery },
-      },
+      options: { headers: { "x-custom": "1", ...staticHeaders } },
+    });
+  });
+
+  test("keeps the caller's own query parameters in query mode", async () => {
+    const relayer = makeRelayer({ chain: hostedChain, telemetry: telemetry("query") });
+    await relayer.encryptValues({ ...encryptArgs, options: { query: { custom: "1" } } } as never);
+
+    expect(clients.encryptClient.encryptValues).toHaveBeenCalledWith({
+      ...encryptArgs,
+      options: { query: { custom: "1", ...staticQuery } },
     });
   });
 
   test("reports the layer the SDK was constructed under", async () => {
-    const state: TelemetryState = { layer: "core" };
-    const relayer = makeRelayer({ chain: hostedChain, telemetry: { state, runtime: "web" } });
+    const state: TelemetryState = { layer: "core", mode: "header" };
+    const relayer = makeRelayer({
+      chain: hostedChain,
+      telemetry: { state, runtime: "web", mode: "header" },
+    });
     state.layer = "react";
     await relayer.fetchFheEncryptionKeyBytes();
 
     expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
-      options: {
-        headers: { ...staticHeaders, "x-zama-sdk-layer": "react" },
-        query: { ...staticQuery, zama_sdk_layer: "react" },
-      },
+      options: { headers: { ...staticHeaders, "x-zama-sdk-layer": "react" } },
     });
   });
 
   test("web() tags the relayer as the web runtime", async () => {
     const relayer = web({ offloadEncrypt: false }).createRelayer(hostedChain, new LoggerService(), {
       layer: "core",
+      mode: "header",
     });
     await relayer.fetchFheEncryptionKeyBytes();
 
     expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
-      options: { headers: staticHeaders, query: staticQuery },
+      options: { headers: staticHeaders },
     });
   });
 
@@ -792,11 +803,11 @@ describe("FhevmRelayer usage telemetry", () => {
     await relayer.fetchFheEncryptionKeyBytes();
 
     expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
-      options: { headers: staticHeaders, query: staticQuery },
+      options: { headers: staticHeaders },
     });
   });
 
-  test("sends no headers or query parameters and drops the label when telemetry is off", async () => {
+  test("sends no labels and drops the operation when telemetry is off", async () => {
     const relayer = makeRelayer({ chain: hostedChain });
     await relayer.decryptValues({ options: { timeout: 42, operation: "balance-of" } } as never);
 

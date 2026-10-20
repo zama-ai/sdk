@@ -208,9 +208,9 @@ const config = createConfig({
 
 ### telemetry
 
-`boolean | undefined`
+`"header" | "query" | "off" | boolean | undefined`
 
-Whether to attach the `x-zama-sdk-*` usage headers and `zama_sdk_*` query parameters (SDK version, package layer, runtime, and high-level operation) to every relayer request. Default: `true`. They carry no end-user data; a self-hosted relayer simply ignores them. See [SDK usage telemetry](../../guides/telemetry.md) for exactly what is sent.
+How the SDK usage labels (SDK version, package layer, runtime, and high-level operation) travel on relayer requests. `"header"` (default) sends them as `x-zama-sdk-*` headers. `"query"` sends them as `zama_sdk_*` query parameters instead, for proxies that rebuild the request headers. `"off"` sends nothing. `true` and `false` are still accepted and mean `"header"` and `"off"`. The labels carry no end-user data; a self-hosted relayer simply ignores them. See [SDK usage telemetry](../../guides/telemetry.md) for exactly what is sent.
 
 ```ts
 const config = createConfig({
@@ -218,7 +218,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   relayers: { [sepolia.id]: web() },
-  telemetry: false,
+  telemetry: "query",
 });
 ```
 

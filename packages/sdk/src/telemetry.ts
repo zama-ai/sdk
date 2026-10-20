@@ -1,12 +1,12 @@
 import { SDK_VERSION } from "./version";
 
-// Usage telemetry: `x-zama-sdk-*` headers and `zama_sdk_*` query parameters on the
-// relayer calls the SDK already makes. No field may carry a wallet address, encrypted
-// value, amount or identifier.
+// No telemetry field may carry a wallet address, encrypted value, amount or identifier.
 
 export type TelemetryLayer = "core" | "react";
 
 export type TelemetryRuntime = "web" | "node";
+
+export type TelemetryMode = "header" | "query" | "off";
 
 /** Values are frozen once shipped, so that dashboards keyed on them survive method renames. */
 export type TelemetryOperation =
@@ -45,31 +45,31 @@ export type TelemetryOperation =
  */
 export interface TelemetryState {
   layer: TelemetryLayer;
+  readonly mode: Exclude<TelemetryMode, "off">;
 }
 
 export interface RelayerTelemetry {
   readonly state: TelemetryState;
   readonly runtime: TelemetryRuntime;
+  /** The config's `mode`, unless `ZAMA_SDK_TELEMETRY` overrode it on Node. */
+  readonly mode: Exclude<TelemetryMode, "off">;
 }
 
-/**
- * The `x-zama-sdk-*` headers and their `zama_sdk_*` query-string twins. Both
- * are sent: a proxy that rebuilds the request headers still forwards the URL.
- */
 export function telemetryRequestOptions(
   telemetry: RelayerTelemetry,
   operation: TelemetryOperation | undefined,
-): { headers: Record<string, string>; query: Record<string, string> } {
+): { headers?: Record<string, string>; query?: Record<string, string> } {
   const fields = Object.entries({
     version: SDK_VERSION,
     layer: telemetry.state.layer,
     runtime: telemetry.runtime,
     ...(operation !== undefined && { operation }),
   });
-  return {
-    headers: Object.fromEntries(fields.map(([name, value]) => [`x-zama-sdk-${name}`, value])),
-    query: Object.fromEntries(fields.map(([name, value]) => [`zama_sdk_${name}`, value])),
-  };
+  const prefixed = (prefix: string) =>
+    Object.fromEntries(fields.map(([name, value]) => [`${prefix}${name}`, value]));
+  return telemetry.mode === "query"
+    ? { query: prefixed("zama_sdk_") }
+    : { headers: prefixed("x-zama-sdk-") };
 }
 
 /** `options` labelled with `operation`, unless the caller already labelled it. */
@@ -80,7 +80,13 @@ export function withOperation<T extends { readonly operation?: TelemetryOperatio
   return Object.assign({}, options, { operation: options?.operation ?? operation });
 }
 
-export function isTelemetryDisabledByEnv(env: Record<string, string | undefined>): boolean {
+export function telemetryModeFromEnv(
+  env: Record<string, string | undefined>,
+): TelemetryMode | undefined {
   const value = env.ZAMA_SDK_TELEMETRY?.trim().toLowerCase();
-  return value === "0" || value === "false";
+  // `0` and `false` predate the named modes and still mean off.
+  if (value === "0" || value === "false") {
+    return "off";
+  }
+  return value === "header" || value === "query" || value === "off" ? value : undefined;
 }
