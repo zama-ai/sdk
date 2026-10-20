@@ -67,7 +67,7 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   registryTTL?: number;
   /** SDK lifecycle event listener. */
   onEvent?: ZamaSDKEventListener;
-  /** Attach `x-zama-sdk-*` usage headers (SDK version, layer, runtime, operation) to every relayer request. Default: `true`. */
+  /** Attach `x-zama-sdk-*` usage headers and `zama_sdk_*` query parameters (SDK version, layer, runtime, operation) to every relayer request. Default: `true`. */
   telemetry?: boolean;
   /**
    * Global `@fhevm/sdk` runtime config — WASM load mode, threads, logger, auth,

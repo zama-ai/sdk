@@ -210,7 +210,7 @@ const config = createConfig({
 
 `boolean | undefined`
 
-Whether to attach the `x-zama-sdk-*` usage headers (SDK version, package layer, runtime, and high-level operation) to every relayer request. Default: `true`. The headers carry no end-user data; a self-hosted relayer simply ignores them. See [SDK usage telemetry](../../guides/telemetry.md) for exactly what is sent.
+Whether to attach the `x-zama-sdk-*` usage headers and `zama_sdk_*` query parameters (SDK version, package layer, runtime, and high-level operation) to every relayer request. Default: `true`. They carry no end-user data; a self-hosted relayer simply ignores them. See [SDK usage telemetry](../../guides/telemetry.md) for exactly what is sent.
 
 ```ts
 const config = createConfig({

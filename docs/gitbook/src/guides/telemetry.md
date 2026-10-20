@@ -5,7 +5,7 @@ description: What the SDK reports to the Zama-hosted relayer, when, and how to t
 
 # SDK usage telemetry
 
-The SDK attaches a small, fixed set of `x-zama-sdk-*` HTTP headers to the relayer requests it already makes. On the **Zama-hosted relayer** they tell Zama which SDK version and which high-level operations are in use, so the SDK team can see adoption and per-operation error rates. Nothing is sent to any third party, and no header ever carries end-user data.
+The SDK attaches a small, fixed set of labels to the relayer requests it already makes, as `x-zama-sdk-*` HTTP headers and as matching `zama_sdk_*` query parameters. On the **Zama-hosted relayer** they tell Zama which SDK version and which high-level operations are in use, so the SDK team can see adoption and per-operation error rates. Nothing is sent to any third party, and no label ever carries end-user data.
 
 Telemetry is on by default. You can turn it off with one config flag.
 
@@ -18,9 +18,11 @@ Telemetry is on by default. You can turn it off with one config flag.
 | `x-zama-sdk-runtime`   | `web` / `node`          | `web` for the `web()` transport, `node` for `node()`.                                   |
 | `x-zama-sdk-operation` | `confidential-transfer` | The public SDK method the request belongs to (see below). Omitted on the FHE key fetch. |
 
-The headers ride on the requests the SDK makes anyway: input-proof generation (`encrypt`), user and public decryption, and the FHE key fetch. They add no extra requests.
+Each header has a query-string twin with the same value: `x-zama-sdk-version` is also sent as `zama_sdk_version`, and so on. Zama's relayer edge reads the header first and falls back to the query parameter, so the duplicate is harmless.
 
-**Never sent:** wallet addresses, encrypted values or handles, amounts, transaction hashes, or any user or session identifier. The relayer already sees the request itself; the headers only label it.
+The labels ride on the requests the SDK makes anyway: input-proof generation (`encrypt`), user and public decryption, and the FHE key fetch. They add no extra requests.
+
+**Never sent:** wallet addresses, encrypted values or handles, amounts, transaction hashes, or any user or session identifier. The relayer already sees the request itself; the labels only describe it.
 
 ### Operation values
 
@@ -55,15 +57,15 @@ Each public method that reaches the relayer sends its own value. When a method m
 | `offline-unwrap`                      | `sdk.offline.prepare`, `Unwrap`                   |
 | `offline-finalize-unwrap`             | `sdk.offline.prepare`, `FinalizeUnwrap`           |
 
-Calls made directly on `sdk.relayer` carry the version, layer and runtime headers but no operation.
+Calls made directly on `sdk.relayer` carry the version, layer and runtime labels but no operation.
 
 Shielding (`WrappedToken.shield`) never calls the relayer, so it produces no telemetry at all.
 
 ## Where it is sent
 
-The headers go to whatever `relayerUrl` the chain configures. The SDK does not inspect the host, so a self-hosted relayer receives them too and simply ignores them, and nothing is logged there unless you capture it yourself. The `cleartext()` transport makes no relayer requests.
+The labels go to whatever `relayerUrl` the chain configures. The SDK does not inspect the host, so a self-hosted relayer receives them too and simply ignores them, and nothing is logged there unless you capture it yourself. The `cleartext()` transport makes no relayer requests.
 
-If browser traffic reaches the relayer through [your own backend proxy](./authentication.md), the headers arrive at the proxy. Forward them to the upstream relayer, as the proxy example in that guide does; a proxy that rebuilds the request with its own header set drops them.
+If browser traffic reaches the relayer through [your own backend proxy](./authentication.md), both forms arrive at the proxy. A proxy that forwards the request URL unchanged, as the example in that guide does, passes the query parameters on without extra work. Forward the `x-zama-sdk-*` headers too where you can; a proxy that rebuilds the request with its own header set drops them, and the query parameters then carry the telemetry alone.
 
 ## Turning it off
 
@@ -85,4 +87,4 @@ On Node.js, the `node()` transport also honours the `ZAMA_SDK_TELEMETRY` environ
 ZAMA_SDK_TELEMETRY=0 node server.js
 ```
 
-Either switch removes every `x-zama-sdk-*` header from every request.
+Either switch removes every `x-zama-sdk-*` header and `zama_sdk_*` query parameter from every request.

@@ -86,7 +86,7 @@ You can adapt this pattern to any server framework (Fastify, Hono, Next.js API r
 
 - Forward the HTTP method, path, and body to the upstream relayer URL
 - Inject the `x-api-key` header before forwarding
-- Forward the `x-zama-sdk-*` request headers so [SDK usage telemetry](./telemetry.md) still reaches the relayer
+- Forward the request URL's query string and the `x-zama-sdk-*` request headers so [SDK usage telemetry](./telemetry.md) still reaches the relayer
 - Return the upstream response status and body to the client
 
 ### 3. Configure the SDK to use your proxy

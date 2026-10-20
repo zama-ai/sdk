@@ -700,14 +700,23 @@ describe("FhevmRelayer usage telemetry", () => {
     "x-zama-sdk-layer": "core",
     "x-zama-sdk-runtime": "web",
   };
+  const staticQuery = {
+    zama_sdk_version: SDK_VERSION,
+    zama_sdk_layer: "core",
+    zama_sdk_runtime: "web",
+  };
   const telemetry = () => ({ state: { layer: "core" } as TelemetryState, runtime: "web" as const });
 
-  test("stamps the x-zama-sdk-* headers and consumes the operation label", async () => {
+  test("stamps the x-zama-sdk-* headers and zama_sdk_* query parameters and consumes the operation label", async () => {
     const relayer = makeRelayer({ chain: hostedChain, telemetry: telemetry() });
     await relayer.decryptValues({ options: { timeout: 42, operation: "balance-of" } } as never);
 
     expect(clients.decryptClient.decryptValues).toHaveBeenCalledWith({
-      options: { timeout: 42, headers: { ...staticHeaders, "x-zama-sdk-operation": "balance-of" } },
+      options: {
+        timeout: 42,
+        headers: { ...staticHeaders, "x-zama-sdk-operation": "balance-of" },
+        query: { ...staticQuery, zama_sdk_operation: "balance-of" },
+      },
     });
   });
 
@@ -721,7 +730,10 @@ describe("FhevmRelayer usage telemetry", () => {
 
     expect(worker.instance.encryptValues).toHaveBeenCalledWith({
       ...encryptArgs,
-      options: { headers: { ...staticHeaders, "x-zama-sdk-operation": "encrypt" } },
+      options: {
+        headers: { ...staticHeaders, "x-zama-sdk-operation": "encrypt" },
+        query: { ...staticQuery, zama_sdk_operation: "encrypt" },
+      },
     });
   });
 
@@ -730,17 +742,23 @@ describe("FhevmRelayer usage telemetry", () => {
     await relayer.fetchFheEncryptionKeyBytes();
 
     expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
-      options: { headers: staticHeaders },
+      options: { headers: staticHeaders, query: staticQuery },
     });
   });
 
-  test("keeps the caller's own headers", async () => {
+  test("keeps the caller's own headers and query parameters", async () => {
     const relayer = makeRelayer({ chain: hostedChain, telemetry: telemetry() });
-    await relayer.encryptValues({ ...encryptArgs, options: { headers: { "x-custom": "1" } } });
+    await relayer.encryptValues({
+      ...encryptArgs,
+      options: { headers: { "x-custom": "1" }, query: { custom: "1" } },
+    } as never);
 
     expect(clients.encryptClient.encryptValues).toHaveBeenCalledWith({
       ...encryptArgs,
-      options: { headers: { "x-custom": "1", ...staticHeaders } },
+      options: {
+        headers: { "x-custom": "1", ...staticHeaders },
+        query: { custom: "1", ...staticQuery },
+      },
     });
   });
 
@@ -751,7 +769,10 @@ describe("FhevmRelayer usage telemetry", () => {
     await relayer.fetchFheEncryptionKeyBytes();
 
     expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
-      options: { headers: { ...staticHeaders, "x-zama-sdk-layer": "react" } },
+      options: {
+        headers: { ...staticHeaders, "x-zama-sdk-layer": "react" },
+        query: { ...staticQuery, zama_sdk_layer: "react" },
+      },
     });
   });
 
@@ -762,7 +783,7 @@ describe("FhevmRelayer usage telemetry", () => {
     await relayer.fetchFheEncryptionKeyBytes();
 
     expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
-      options: { headers: staticHeaders },
+      options: { headers: staticHeaders, query: staticQuery },
     });
   });
 
@@ -771,11 +792,11 @@ describe("FhevmRelayer usage telemetry", () => {
     await relayer.fetchFheEncryptionKeyBytes();
 
     expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
-      options: { headers: staticHeaders },
+      options: { headers: staticHeaders, query: staticQuery },
     });
   });
 
-  test("sends no headers and drops the label when telemetry is off", async () => {
+  test("sends no headers or query parameters and drops the label when telemetry is off", async () => {
     const relayer = makeRelayer({ chain: hostedChain });
     await relayer.decryptValues({ options: { timeout: 42, operation: "balance-of" } } as never);
 

@@ -1,7 +1,8 @@
 import { SDK_VERSION } from "./version";
 
-// Usage telemetry: `x-zama-sdk-*` headers on the relayer calls the SDK already
-// makes. No header may carry a wallet address, encrypted value, amount or identifier.
+// Usage telemetry: `x-zama-sdk-*` headers and `zama_sdk_*` query parameters on the
+// relayer calls the SDK already makes. No field may carry a wallet address, encrypted
+// value, amount or identifier.
 
 export type TelemetryLayer = "core" | "react";
 
@@ -51,15 +52,23 @@ export interface RelayerTelemetry {
   readonly runtime: TelemetryRuntime;
 }
 
-export function telemetryHeaders(
+/**
+ * The `x-zama-sdk-*` headers and their `zama_sdk_*` query-string twins. Both
+ * are sent: a proxy that rebuilds the request headers still forwards the URL.
+ */
+export function telemetryRequestOptions(
   telemetry: RelayerTelemetry,
   operation: TelemetryOperation | undefined,
-): Record<string, string> {
+): { headers: Record<string, string>; query: Record<string, string> } {
+  const fields = Object.entries({
+    version: SDK_VERSION,
+    layer: telemetry.state.layer,
+    runtime: telemetry.runtime,
+    ...(operation !== undefined && { operation }),
+  });
   return {
-    "x-zama-sdk-version": SDK_VERSION,
-    "x-zama-sdk-layer": telemetry.state.layer,
-    "x-zama-sdk-runtime": telemetry.runtime,
-    ...(operation !== undefined && { "x-zama-sdk-operation": operation }),
+    headers: Object.fromEntries(fields.map(([name, value]) => [`x-zama-sdk-${name}`, value])),
+    query: Object.fromEntries(fields.map(([name, value]) => [`zama_sdk_${name}`, value])),
   };
 }
 

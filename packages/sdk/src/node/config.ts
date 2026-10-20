@@ -20,7 +20,7 @@ export interface NodeRelayerConfig extends RelayerConfig {
 /**
  * Node.js transport — drives `@fhevm/sdk` via {@link FhevmRelayer} on the calling thread.
  *
- * `ZAMA_SDK_TELEMETRY=0` turns off the `x-zama-sdk-*` usage headers, like
+ * `ZAMA_SDK_TELEMETRY=0` turns off the `x-zama-sdk-*` usage telemetry, like
  * `createConfig({ telemetry: false })`.
  *
  * @example
