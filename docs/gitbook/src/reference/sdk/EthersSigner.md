@@ -52,7 +52,7 @@ Pass exactly one of the two parameters below.
 
 `EIP1193Provider`
 
-Raw EIP-1193 provider from the browser wallet (e.g. `window.ethereum`). Enables automatic credential cleanup on disconnect and account change.
+Raw EIP-1193 provider from the browser wallet (e.g. `window.ethereum`). The signer subscribes to its `accountsChanged`, `chainChanged`, and `disconnect` events and emits wallet account transitions, which the SDK uses to switch the relayer chain and to refresh React queries. Credentials are not cleared on these events unless `clearCredentialsOnWalletChange` is enabled.
 
 ```ts
 const signer = new EthersSigner({ ethereum: window.ethereum! });
@@ -85,7 +85,7 @@ All methods are inherited from [GenericSigner](./GenericSigner.md).
 | `writeContract()`        | Works   | Works   |
 
 {% hint style="info" %}
-Only the browser mode (passing `ethereum`) emits wallet account transitions. In Node.js mode, credentials are not automatically cleared on wallet changes.
+Only the browser mode (passing `ethereum`) emits wallet account transitions. In Node.js mode, the SDK never observes an account change, so it cannot switch the relayer chain or refresh React queries for you, and the `clearCredentialsOnWalletChange` option has no effect.
 {% endhint %}
 
 ## Related

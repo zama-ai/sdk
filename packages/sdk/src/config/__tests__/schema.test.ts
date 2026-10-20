@@ -30,6 +30,23 @@ describe("createConfig validation", () => {
     expect(config.registryTTL).toBe(60);
   });
 
+  test("clearCredentialsOnWalletChange defaults to false and passes through when set", ({
+    relayer,
+    provider,
+  }) => {
+    const base = {
+      chains: [hardhat] as const,
+      relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+      provider,
+    };
+
+    expect(createConfig(base).clearCredentialsOnWalletChange).toBe(false);
+    expect(
+      createConfig({ ...base, clearCredentialsOnWalletChange: true })
+        .clearCredentialsOnWalletChange,
+    ).toBe(true);
+  });
+
   test("rejects invalid TTLs at createConfig", ({ relayer, provider }) => {
     expect(() =>
       createConfig({

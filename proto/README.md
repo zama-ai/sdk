@@ -34,7 +34,7 @@ Secrets stay outside persisted configuration and error payloads. The SDK owns se
 
 `UpdateAccount` sets the connected wallet's address and chain, or disconnects the wallet when `account` is absent. A changed account cancels and drains existing operations in that context before changing the wallet snapshot. Repeating the current account leaves active operations running.
 
-The SDK's inherited account-change credential/cache cleanup is asynchronous and outside the daemon coordinator; it can overlap another SDK instance sharing the same identity and store. Completion of `UpdateAccount` acknowledges the snapshot update, not completion of every SDK lifecycle listener. Do not use it as a barrier for credential cleanup.
+An account change does not clear the previous account's credentials or decrypt cache: they stay in storage, keyed per address. Permits and transport key pairs expire after their TTL; cached decrypts stay until the client calls `ClearPermits`. Completion of `UpdateAccount` acknowledges the snapshot update, not completion of every SDK lifecycle listener.
 
 ## Supported SDK methods
 
@@ -133,7 +133,7 @@ Lifecycle timestamps and measured durations use protobuf `double` to preserve th
 
 Lifecycle payloads preserve timestamps, durations, token addresses, encrypted values, clear-value results, transaction hashes, operation names, shield paths, approval steps and vault operations. Errors use the existing `SdkError` conversion, including its sanitization of unclassified errors. Event kinds, operations, shield paths, approval steps and vault operations use protobuf enums with an `UNSPECIFIED` zero value; the daemon maps the SDK unions exhaustively. Native lifecycle and progress decoders preserve unknown numeric enum values so newer kinds do not terminate a subscription. Optional payload fields retain presence. Schema changes are required when the SDK adds payload fields.
 
-Wallet notifications come from `sdk.onWalletAccountChange`, after SDK chain switching and account cleanup. They preserve the order the SDK actually emits, including overlapping asynchronous account transitions. The adapter neither synthesizes an initial snapshot nor turns `UpdateAccount` into a cleanup barrier. The adapter subscribes through the typed wallet helper in the SDK internal entry point.
+Wallet notifications come from `sdk.onWalletAccountChange`, after SDK chain switching. They preserve the order the SDK actually emits, including overlapping asynchronous account transitions. The adapter does not synthesize an initial snapshot. The adapter subscribes through the typed wallet helper in the SDK internal entry point.
 
 ### Notifications and return values
 

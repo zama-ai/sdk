@@ -55,6 +55,13 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   /** Permit lifetime in days. Default: 30. Clamped to `transportKeyPairTTL / 86400`. */
   permitTTL?: number;
   /**
+   * Wipe the previous account's transport key pair, permits, and decrypt cache
+   * whenever the connected account changes or disconnects. Default: `false`,
+   * which keeps them until permits expire or `sdk.permits.clear()` runs. Enable for shared-device apps where a
+   * signed-out account must leave nothing behind.
+   */
+  clearCredentialsOnWalletChange?: boolean;
+  /**
    * Opt-in shared-tenant scope (B2B2C/WaaS operators) — an opaque identifier such
    * as a tenant ID. Every signer configured with the same scope shares one
    * transport key pair instead of one per signer address. Permits stay per-signer
@@ -115,6 +122,7 @@ export type ZamaConfig = {
   readonly permitStorage: GenericStorage;
   readonly transportKeyPairTTL: number;
   readonly permitTTL: number;
+  readonly clearCredentialsOnWalletChange: boolean;
   readonly transportKeyPairScope: string | undefined;
   readonly registryTTL: number;
   readonly onEvent: ZamaSDKEventListener | undefined;

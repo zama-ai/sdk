@@ -626,8 +626,8 @@ says **who** reads — `decryptValues` (you, via your permit) vs `decryptPublicV
 {% hint style="warning" %}
 **Cache ownership changed.** `DecryptCache` and `applyDecryptedValues` were public
 in 2.x; in 3.x the cache is internal and invalidates automatically (on
-`permits.revokePermits()`, `permits.clear()`, wallet account/chain change, and
-disconnect). There is **no** public API to populate or evict it — remove any 2.x
+`permits.revokePermits()` and `permits.clear()`, and on every wallet account
+change when `clearCredentialsOnWalletChange` is enabled). There is **no** public API to populate or evict it — remove any 2.x
 logic that did, as there's no compile-time signal for its loss.
 {% endhint %}
 

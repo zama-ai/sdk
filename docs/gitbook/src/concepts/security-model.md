@@ -222,7 +222,7 @@ The EIP-712 typed data includes the wallet address. A permit signed by address A
 
 ### Revocation
 
-Permits can be revoked programmatically via `sdk.permits.revokePermits()` or automatically via wallet lifecycle events (disconnect, account switch). Revocation removes permits from storage immediately.
+Permits are revoked programmatically via `sdk.permits.revokePermits()`. Revocation removes permits from storage immediately. Wallet lifecycle events (account switch, empty account list, disconnect) do not revoke anything by default: storage is keyed per signer address, and a permit is only accepted from the address that signed it, so a switch exposes nothing that the store did not already hold. Apps that want every account change to wipe the previous account's credentials and decrypt cache can opt in with `clearCredentialsOnWalletChange: true` on `createConfig`.
 
 After revoking permits, the transport key pair remains in storage. Use `sdk.permits.clear()` to also wipe the key pair.
 

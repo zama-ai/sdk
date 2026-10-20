@@ -542,6 +542,8 @@ let sdk = client.sdk(config).events(Diagnostics).build().await?;
 {% endtab %}
 {% endtabs %}
 
+Wallet account changes do not clear stored permits or the transport key pair: both are keyed per signer address and expire on their own, so a user switching between accounts does not sign a new permit each time. For an explicit sign-out, call `sdk.permits.clear()` before disconnecting the wallet; it needs a connected wallet account. Shared-device apps can set `clearCredentialsOnWalletChange: true` to wipe the previous account's credentials and decrypt cache on every wallet account change; see the [Permit Model](../concepts/permit-model.md#wallet-account-changes).
+
 When done with the SDK, call `sdk.terminate()` to unsubscribe wallet listeners and release the SDK's resources.
 
 ### 6. (Optional) Choose a storage backend

@@ -101,7 +101,7 @@ walletAccount: WalletAccountStore;
 
 Synchronous observable store for wallet account readiness. React integrations use this store to avoid SSR and hydration races.
 
-Direct store subscriptions observe raw signer transitions. For SDK-coordinated cleanup and query invalidation, subscribe through the SDK lifecycle instead so credential and CachingService cleanup runs first.
+Direct store subscriptions observe raw signer transitions. For SDK-coordinated handling and query invalidation, subscribe through `sdk.onWalletAccountChange` instead, so the relayer chain switch, and the credential cleanup when `clearCredentialsOnWalletChange` is enabled, run first.
 
 ### requireWalletAccount
 

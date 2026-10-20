@@ -209,6 +209,7 @@ export class ZamaSDK {
       router: config.router,
       cachingService: this.#cachingService,
       credentialService: this.#credentialService,
+      clearCredentialsOnWalletChange: config.clearCredentialsOnWalletChange,
       logger: this.#logger,
     });
     this.#offlineService = new OfflineService({

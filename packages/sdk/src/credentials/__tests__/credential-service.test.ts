@@ -503,7 +503,7 @@ describe("CredentialService.clearCredentials", () => {
   });
 });
 
-describe("CredentialService.handleWalletAccountChange", () => {
+describe("CredentialService.handleWalletAccountChange (opt-in via clearCredentialsOnWalletChange)", () => {
   test("address change cascade-clears previous signer credentials", async ({
     credentialService,
   }) => {

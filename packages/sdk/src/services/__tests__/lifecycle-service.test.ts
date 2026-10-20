@@ -59,7 +59,55 @@ describe("LifecycleService", () => {
   });
 
   describe("change dispatch", () => {
-    test("switches relayer before cleanup and listeners", async ({
+    test("by default switches relayer and notifies listeners without clearing credentials or decrypt cache", async ({
+      createLifecycleService,
+      createMockSigner,
+      createMockRouter,
+    }) => {
+      const handleWalletAccountChange = vi.fn();
+      const credentialService = { handleWalletAccountChange } as unknown as CredentialService;
+      const clearForRequester = vi.fn();
+      const cache = { clearForRequester } as unknown as CachingService;
+      const switchChain = vi.fn();
+      const router = createMockRouter({ switchChain });
+      let dispatch: ((change: WalletAccountChange) => void) | undefined;
+      const signer = createMockSigner(undefined, {
+        walletAccount: {
+          getSnapshot: vi.fn(),
+          subscribe: vi.fn((listener: (change: WalletAccountChange) => void) => {
+            dispatch = listener;
+            return () => {};
+          }),
+          isReady: vi.fn().mockReturnValue(true),
+        },
+      });
+      const service = createLifecycleService({
+        signer,
+        cachingService: cache,
+        router,
+        credentialService,
+      });
+      const listener = vi.fn();
+      service.onWalletAccountChange(listener);
+
+      const prev = {
+        address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        chainId: 31337,
+      } as const;
+      const next = { address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", chainId: 1 } as const;
+      dispatch!({ previous: prev, next });
+      await vi.waitFor(() => expect(listener).toHaveBeenCalledWith({ previous: prev, next }));
+
+      // Wallet lock / disconnect arrives as an empty account list; it must not wipe either.
+      dispatch!({ previous: next, next: undefined });
+      await vi.waitFor(() => expect(listener).toHaveBeenCalledTimes(2));
+
+      expect(switchChain).toHaveBeenCalledWith(1);
+      expect(handleWalletAccountChange).not.toHaveBeenCalled();
+      expect(clearForRequester).not.toHaveBeenCalled();
+    });
+
+    test("with clearCredentialsOnWalletChange, switches relayer before cleanup and listeners", async ({
       createLifecycleService,
       createMockSigner,
       createMockRouter,
@@ -94,6 +142,7 @@ describe("LifecycleService", () => {
         cachingService: cache,
         router,
         credentialService,
+        clearCredentialsOnWalletChange: true,
       });
       service.onWalletAccountChange(() => {
         calls.push("listener");
@@ -114,7 +163,7 @@ describe("LifecycleService", () => {
       expect(switchChain).toHaveBeenCalledWith(1);
     });
 
-    test("synchronous re-emit at construct time switches chain before credential cleanup", async ({
+    test("with clearCredentialsOnWalletChange, synchronous re-emit at construct time switches chain before credential cleanup", async ({
       createLifecycleService,
       createMockSigner,
       createMockRouter,
@@ -148,7 +197,12 @@ describe("LifecycleService", () => {
         },
       });
 
-      createLifecycleService({ signer, router, credentialService });
+      createLifecycleService({
+        signer,
+        router,
+        credentialService,
+        clearCredentialsOnWalletChange: true,
+      });
 
       await vi.waitFor(() => {
         expect(calls).toEqual(["relayer", "credential"]);
@@ -156,7 +210,7 @@ describe("LifecycleService", () => {
       expect(switchChain).toHaveBeenCalledWith(7);
     });
 
-    test("skips cache clear when previous account is undefined", async ({
+    test("with clearCredentialsOnWalletChange, skips cache clear when previous account is undefined", async ({
       createLifecycleService,
       createMockSigner,
     }) => {
@@ -173,7 +227,11 @@ describe("LifecycleService", () => {
           isReady: vi.fn().mockReturnValue(true),
         },
       });
-      const service = createLifecycleService({ signer, cachingService });
+      const service = createLifecycleService({
+        signer,
+        cachingService,
+        clearCredentialsOnWalletChange: true,
+      });
       const listener = vi.fn();
       service.onWalletAccountChange(listener);
 
@@ -217,7 +275,7 @@ describe("LifecycleService", () => {
       expect(switchChain).not.toHaveBeenCalled();
     });
 
-    test("errors in cleanup steps are swallowed and listeners still run", async ({
+    test("with clearCredentialsOnWalletChange, errors in cleanup steps are swallowed and listeners still run", async ({
       createLifecycleService,
       createMockSigner,
       createMockRouter,
@@ -249,6 +307,7 @@ describe("LifecycleService", () => {
         cachingService: cache,
         router,
         credentialService,
+        clearCredentialsOnWalletChange: true,
       });
       const listener = vi.fn();
       service.onWalletAccountChange(listener);
@@ -259,6 +318,8 @@ describe("LifecycleService", () => {
       });
 
       await vi.waitFor(() => expect(listener).toHaveBeenCalledOnce());
+      expect(credentialService.handleWalletAccountChange).toHaveBeenCalledOnce();
+      expect(cache.clearForRequester).toHaveBeenCalledOnce();
     });
 
     test("a throwing listener does not prevent others from running", async ({
