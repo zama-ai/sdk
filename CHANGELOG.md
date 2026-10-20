@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.8.0-beta.3](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.2...v3.8.0-beta.3) (2026-10-20)
+
+### Bug Fixes
+
+- bigint free permit signing ([#834](https://github.com/zama-ai/sdk/issues/834)) ([825f6bc]()), closes [#701]()
+
 ## [3.8.0-beta.2](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.1...v3.8.0-beta.2) (2026-10-19)
 
 ### Bug Fixes
