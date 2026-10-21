@@ -1,5 +1,28 @@
 # Changelog
 
+## [4.0.0-alpha.2](https://github.com/zama-ai/sdk/compare/v4.0.0-alpha.1...v4.0.0-alpha.2) (2026-10-21)
+
+### Features
+
+- add confidential ERC-4626 vault support (batched deposits/withdrawals) ([#748](https://github.com/zama-ai/sdk/issues/748)) ([426198a]())
+- **daemon:** add the SDK daemon with Rust and Go clients ([#813](https://github.com/zama-ai/sdk/issues/813)) ([a52315f]())
+- expose wildcard delegation ([#703](https://github.com/zama-ai/sdk/issues/703)) ([#819](https://github.com/zama-ai/sdk/issues/819)) ([8a7cc3d]())
+- offline permit chunking ([#820](https://github.com/zama-ai/sdk/issues/820)) ([957a58e]())
+- stop-auto-clearing-credentials-and-decrypt-cache-on-wallet ([#859](https://github.com/zama-ai/sdk/issues/859)) ([17db9c5]())
+- telemetry ([#826](https://github.com/zama-ai/sdk/issues/826)) ([a65488b]())
+- zenith trex testnet ([#812](https://github.com/zama-ai/sdk/issues/812)) ([860acf4]())
+
+### Bug Fixes
+
+- bigint free permit signing ([#834](https://github.com/zama-ai/sdk/issues/834)) ([825f6bc]()), closes [#701]()
+- **go:** bump the Go module path to v4 ([#863](https://github.com/zama-ai/sdk/issues/863)) ([b522872]())
+- remove the InGen testnet preset and example ([#854](https://github.com/zama-ai/sdk/issues/854)) ([4136b52]())
+- **sdk:** normalize permit signature recovery byte to 27/28 ([#806](https://github.com/zama-ai/sdk/issues/806)) ([9de6352]())
+
+### Build System
+
+- **daemon:** scan the daemon image with Trivy and bump dependencies ([#835](https://github.com/zama-ai/sdk/issues/835)) ([7fb932b]())
+
 ## [4.0.0-alpha.1](https://github.com/zama-ai/sdk/compare/v3.7.0-alpha.2...v4.0.0-alpha.1) (2026-09-24)
 
 ### ⚠ BREAKING CHANGES
