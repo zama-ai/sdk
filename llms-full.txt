@@ -26114,11 +26114,11 @@ permits.revoke_transport_key_pair("tenant-123").await?; // shared scope
 
 By default, the SDK clears the previous account's credentials when the wallet state changes:
 
-| Event                 | Effect on permits                                                                                           |
-| --------------------- | ----------------------------------------------------------------------------------------------------------- |
-| **Disconnect / lock** | All permits, the transport key pair, and the decrypt cache are cleared for the previous account             |
-| **Account switch**    | Previous account's permits, transport key pair, and decrypt cache are cleared; the new account starts fresh |
-| **Chain switch**      | Nothing is cleared. Permits are chain-scoped, so each chain keeps its own.                                  |
+| Event                 | Effect on permits                                                                                                                          |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Disconnect / lock** | All permits, the transport key pair, and the decrypt cache are cleared for the previous account                                            |
+| **Account switch**    | Previous account's permits, transport key pair, and decrypt cache are cleared; the new account starts fresh                                |
+| **Chain switch**      | Permits and the transport key pair are kept; permits are chain-scoped, so each chain keeps its own. The account's decrypt cache is cleared |
 
 Set `clearCredentialsOnWalletChange: false` on `createConfig` to keep them instead. Permits and transport key pairs are stored per signer address, so one account can never read another's entries, and a permit is an EIP-712 signature the relayer only accepts from the address that signed it. Keeping them lets a multi-wallet user switch A → B → A without signing a new permit, and stops wallets that emit an empty account list on auto-lock (Rabby, Brave) from wiping credentials on every lock. Permits still expire on their own after `permitTTL` and transport key pairs after `transportKeyPairTTL`.
 

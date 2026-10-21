@@ -14,7 +14,7 @@ export type LifecycleServiceOptions = {
   router: ChainRouter;
   cachingService: CachingService;
   credentialService?: CredentialService;
-  clearCredentialsOnWalletChange?: boolean;
+  clearCredentialsOnWalletChange: boolean;
   logger: GenericLogger;
 };
 
@@ -42,7 +42,7 @@ export class LifecycleService {
     this.#router = opts.router;
     this.#cachingService = opts.cachingService;
     this.#credentialService = opts.credentialService;
-    this.#clearCredentialsOnWalletChange = opts.clearCredentialsOnWalletChange ?? true;
+    this.#clearCredentialsOnWalletChange = opts.clearCredentialsOnWalletChange;
     this.#logger = opts.logger;
     if (this.#signer) {
       this.#unsubscribeSigner = this.#signer.walletAccount.subscribe((change) => {

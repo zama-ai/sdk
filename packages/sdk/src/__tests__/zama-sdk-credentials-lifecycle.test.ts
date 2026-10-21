@@ -171,7 +171,7 @@ describe("ZamaSDK credentials lifecycle", () => {
     function buildSwitchableSDK(
       createMockSigner: CreateMockSignerFn,
       createSDK: CreateSDKFn,
-      clearCredentialsOnWalletChange?: boolean,
+      clearCredentialsOnWalletChange = true,
     ) {
       let current: WalletAccount | undefined = ACCOUNT_A;
       let emit: ((change: WalletAccountChange) => void) | undefined;
