@@ -10,7 +10,7 @@ import {
   TransportKeyPairTTLSchema,
 } from "../credentials/schemas";
 import { LoggerService } from "../services/logger-service";
-import type { TelemetryState } from "../telemetry";
+import { parseTelemetryMode, type TelemetryState } from "../telemetry";
 import type { GenericProvider, GenericSigner } from "../types";
 import { parseSchema } from "../validation";
 import { DEFAULT_REGISTRY_TTL_SECONDS, RegistryTTLSchema } from "../wrappers-registry";
@@ -59,8 +59,9 @@ export function buildZamaConfig(
 
   const { storage, permitStorage } = resolveStorage(params.storage, params.permitStorage);
 
+  const mode = parseTelemetryMode(params.telemetry) ?? "header";
   const telemetry: TelemetryState | undefined =
-    params.telemetry === false ? undefined : { layer: "core" };
+    mode === "off" ? undefined : { layer: "core", mode };
   const router = new ChainRouter(params.chains, params.relayers, logger, telemetry);
 
   return {

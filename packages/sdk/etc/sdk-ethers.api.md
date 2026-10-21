@@ -517,7 +517,7 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
     relayers: { [K in TChains[number]["id"]]: RelayerConfig; };
     runtime?: FhevmRuntimeConfig;
     storage?: GenericStorage;
-    telemetry?: boolean;
+    telemetry?: "header" | "query" | "off" | boolean;
     transportKeyPairScope?: string;
     transportKeyPairTTL?: number;
 }

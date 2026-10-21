@@ -5922,6 +5922,7 @@ export interface FhevmRelayerOptions {
     readonly fetchRetries?: number;
     readonly fetchRetryDelayInMilliseconds?: number;
     readonly headers?: Record<string, string>;
+    readonly query?: Record<string, string>;
     readonly signal?: AbortSignal;
     readonly timeout?: number;
 }
@@ -20809,7 +20810,7 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
     relayers: { [K in TChains[number]["id"]]: RelayerConfig; };
     runtime?: FhevmRuntimeConfig;
     storage?: GenericStorage;
-    telemetry?: boolean;
+    telemetry?: "header" | "query" | "off" | boolean;
     transportKeyPairScope?: string;
     transportKeyPairTTL?: number;
 }
