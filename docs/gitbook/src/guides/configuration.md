@@ -420,7 +420,7 @@ import (
 	"os"
 	"time"
 
-	zama "github.com/zama-ai/sdk/clients/go/v3"
+	zama "github.com/zama-ai/sdk/clients/go/v4"
 )
 
 func run() error {

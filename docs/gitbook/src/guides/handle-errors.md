@@ -103,7 +103,7 @@ if (error instanceof SigningRejectedError) {
 import (
 	"errors"
 
-	zama "github.com/zama-ai/sdk/clients/go/v3"
+	zama "github.com/zama-ai/sdk/clients/go/v4"
 )
 
 _, err := sdk.DecryptValues(ctx, inputs, zama.DecryptOptions{})
@@ -357,7 +357,7 @@ import (
 	"math/big"
 	"time"
 
-	zama "github.com/zama-ai/sdk/clients/go/v3"
+	zama "github.com/zama-ai/sdk/clients/go/v4"
 )
 
 func decryptWithRetry(ctx context.Context, fn func(context.Context) (*big.Int, error), maxAttempts int) (*big.Int, error) {

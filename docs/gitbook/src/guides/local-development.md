@@ -30,7 +30,7 @@ npm install @zama-fhe/sdk viem
 Install the client and start the daemon as in the [Go quick start](../native/tutorials/go-quick-start.md).
 
 ```bash
-go get github.com/zama-ai/sdk/clients/go/v3
+go get github.com/zama-ai/sdk/clients/go/v4
 ```
 
 {% endtab %}

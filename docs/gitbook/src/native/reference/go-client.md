@@ -4,7 +4,7 @@ description: Find the Go client's API reference and the Go method for each TypeS
 
 # Go client API
 
-The package reference on [pkg.go.dev](https://pkg.go.dev/github.com/zama-ai/sdk/clients/go/v3) lists every exported type, function, and method with its signature.
+The package reference on [pkg.go.dev](https://pkg.go.dev/github.com/zama-ai/sdk/clients/go/v4) lists every exported type, function, and method with its signature.
 
 `Dial` creates a `Client`; `Client.CreateContext` creates an `SDKContext`. Configuration uses `SDKConfig`, `ChainConfig`, and `SignerConfig`. `SDKContext.Close` releases the context, and `Client.Close` closes the connection.
 

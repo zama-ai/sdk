@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/zama-ai/sdk/clients/go/v3"
+	"github.com/zama-ai/sdk/clients/go/v4"
 )
 
 func run() error {

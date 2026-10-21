@@ -7,8 +7,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/zama-ai/sdk/clients/go/v3"
-	"github.com/zama-ai/sdk/clients/go/v3/examples/balance/contracts"
+	"github.com/zama-ai/sdk/clients/go/v4"
+	"github.com/zama-ai/sdk/clients/go/v4/examples/balance/contracts"
 )
 
 const sepoliaChainID = 11155111

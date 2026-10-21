@@ -8,7 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/zama-ai/sdk/clients/go/v3"
+	"github.com/zama-ai/sdk/clients/go/v4"
 )
 
 func showBalance(ctx context.Context, provider *ethclient.Client, sdk *zama.SDKContext, token, owner common.Address, output io.Writer) error {

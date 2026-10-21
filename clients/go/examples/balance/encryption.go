@@ -6,7 +6,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/zama-ai/sdk/clients/go/v3"
+	"github.com/zama-ai/sdk/clients/go/v4"
 )
 
 func encryptInputs(ctx context.Context, sdk *zama.SDKContext, contract, user common.Address) error {

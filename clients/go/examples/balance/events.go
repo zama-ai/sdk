@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/zama-ai/sdk/clients/go/v3"
+	"github.com/zama-ai/sdk/clients/go/v4"
 )
 
 func subscribeEvents(ctx context.Context, sdk *zama.SDKContext, output io.Writer) (*zama.EventSubscription, error) {

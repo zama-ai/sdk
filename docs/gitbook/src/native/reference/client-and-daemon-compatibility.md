@@ -14,7 +14,7 @@ Run the daemon image and your Go or Rust client at exactly the same version. Upg
 | ------------ | --------------------------------------------------------- |
 | Daemon image | `ghcr.io/zama-ai/sdk-daemon` on GitHub Container Registry |
 | Rust crate   | `zama_sdk` on crates.io                                   |
-| Go module    | `github.com/zama-ai/sdk/clients/go/v3`                    |
+| Go module    | `github.com/zama-ai/sdk/clients/go/v4`                    |
 
 Each release publishes the image for `linux/amd64` and `linux/arm64`, tagged with its exact version and with a moving channel tag: `latest`, `beta`, or `alpha`.
 

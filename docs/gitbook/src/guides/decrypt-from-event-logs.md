@@ -82,7 +82,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	zama "github.com/zama-ai/sdk/clients/go/v3"
+	zama "github.com/zama-ai/sdk/clients/go/v4"
 )
 
 var confidentialTransfer = crypto.Keccak256Hash([]byte("ConfidentialTransfer(address,address,bytes32)"))
