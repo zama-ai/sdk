@@ -6,7 +6,7 @@ import (
 	"errors"
 
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
-	pb "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1"
+	pb "github.com/zama-ai/sdk/clients/go/v4/internal/gen/zama/sdk/v1beta1"
 	"google.golang.org/grpc"
 )
 

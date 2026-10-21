@@ -30,11 +30,11 @@ See [Authentication](../../guides/authentication.md) and [Relayer API keys](../.
 Create a module and add the client:
 
 ```sh
-export ZAMA_SDK_VERSION=3.8.0-beta.4
+export ZAMA_SDK_VERSION=4.0.0-alpha.1
 mkdir encrypt-input
 cd encrypt-input
 go mod init example.com/encrypt-input
-go get github.com/zama-ai/sdk/clients/go/v3@v$ZAMA_SDK_VERSION
+go get github.com/zama-ai/sdk/clients/go/v4@v$ZAMA_SDK_VERSION
 ```
 
 `ZAMA_SDK_VERSION` pins the client here and the daemon image that Compose starts later: both must run the same version. See [Client and daemon compatibility](../reference/client-and-daemon-compatibility.md).
@@ -91,7 +91,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	zama "github.com/zama-ai/sdk/clients/go/v3"
+	zama "github.com/zama-ai/sdk/clients/go/v4"
 )
 
 func run() error {

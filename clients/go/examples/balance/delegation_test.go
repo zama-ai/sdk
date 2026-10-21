@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/zama-ai/sdk/clients/go/v3"
+	"github.com/zama-ai/sdk/clients/go/v4"
 )
 
 func TestDelegationStatusLine(t *testing.T) {

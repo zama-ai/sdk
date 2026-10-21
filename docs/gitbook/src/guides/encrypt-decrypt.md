@@ -192,7 +192,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	zama "github.com/zama-ai/sdk/clients/go/v3"
+	zama "github.com/zama-ai/sdk/clients/go/v4"
 )
 
 // Minimal ABI for the custom FHE contract this example reads and writes.

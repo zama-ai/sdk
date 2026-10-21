@@ -1,4 +1,4 @@
-module github.com/zama-ai/sdk/clients/go/v3
+module github.com/zama-ai/sdk/clients/go/v4
 
 go 1.26.0
 

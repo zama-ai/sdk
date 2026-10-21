@@ -1,4 +1,4 @@
-module github.com/zama-ai/sdk/clients/go/v3/examples/balance
+module github.com/zama-ai/sdk/clients/go/v4/examples/balance
 
 go 1.26.0
 
@@ -7,7 +7,7 @@ toolchain go1.27.1
 require (
 	github.com/ethereum/go-ethereum v1.17.5
 	github.com/joho/godotenv v1.5.1
-	github.com/zama-ai/sdk/clients/go/v3 v3.0.0
+	github.com/zama-ai/sdk/clients/go/v4 v4.0.0
 )
 
 require (
@@ -47,4 +47,4 @@ require (
 	google.golang.org/protobuf v1.36.12 // indirect
 )
 
-replace github.com/zama-ai/sdk/clients/go/v3 => ../..
+replace github.com/zama-ai/sdk/clients/go/v4 => ../..

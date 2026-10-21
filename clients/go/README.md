@@ -7,7 +7,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 ## Installation
 
 ```sh
-go get github.com/zama-ai/sdk/clients/go/v3@v3.8.0-beta.4
+go get github.com/zama-ai/sdk/clients/go/v4@v4.0.0-alpha.1
 ```
 
 Run the `ghcr.io/zama-ai/sdk-daemon` image at exactly the same version as the client.
@@ -16,6 +16,6 @@ Run the `ghcr.io/zama-ai/sdk-daemon` image at exactly the same version as the cl
 
 Start with the Go quick start in the [Zama SDK documentation](https://docs.zama.org/protocol/sdk/beta/overview#go-and-rust). It covers installing the client, starting the daemon, configuration, wallets, and production deployment.
 
-Run `go doc -all github.com/zama-ai/sdk/clients/go/v3` for the package reference.
+Run `go doc -all github.com/zama-ai/sdk/clients/go/v4` for the package reference.
 
 To build or test the client, see [Contributing](https://github.com/zama-ai/sdk/blob/main/CONTRIBUTING.md#daemon-and-native-clients).

@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	pb "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1"
+	pb "github.com/zama-ai/sdk/clients/go/v4/internal/gen/zama/sdk/v1beta1"
 )
 
 type ModuleVersions interface{ wire() *pb.ModuleVersions }

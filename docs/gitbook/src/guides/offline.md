@@ -40,7 +40,7 @@ const sdk = new ZamaSDK(
 {% tab title="Go" %}
 
 ```go
-import zama "github.com/zama-ai/sdk/clients/go/v3"
+import zama "github.com/zama-ai/sdk/clients/go/v4"
 
 client, err := zama.Dial(socketPath)
 if err != nil {

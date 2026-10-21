@@ -6,7 +6,7 @@ import (
 	"io/fs"
 	"strconv"
 
-	"github.com/zama-ai/sdk/clients/go/v3"
+	"github.com/zama-ai/sdk/clients/go/v4"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/joho/godotenv"

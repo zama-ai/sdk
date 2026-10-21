@@ -8854,7 +8854,7 @@ const file_zama_sdk_v1beta1_daemon_proto_rawDesc = "" +
 	"\x10RevokeDelegation\x12).zama.sdk.v1beta1.RevokeDelegationRequest\x1a*.zama.sdk.v1beta1.RevokeDelegationResponse\x12l\n" +
 	"\x12IsDelegationActive\x12(.zama.sdk.v1beta1.DelegationQueryRequest\x1a,.zama.sdk.v1beta1.IsDelegationActiveResponse\x12n\n" +
 	"\x13GetDelegationExpiry\x12(.zama.sdk.v1beta1.DelegationQueryRequest\x1a-.zama.sdk.v1beta1.GetDelegationExpiryResponse\x12n\n" +
-	"\x13GetDelegationStatus\x12(.zama.sdk.v1beta1.DelegationQueryRequest\x1a-.zama.sdk.v1beta1.GetDelegationStatusResponseBOZMgithub.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1;sdkv1beta1b\x06proto3"
+	"\x13GetDelegationStatus\x12(.zama.sdk.v1beta1.DelegationQueryRequest\x1a-.zama.sdk.v1beta1.GetDelegationStatusResponseBOZMgithub.com/zama-ai/sdk/clients/go/v4/internal/gen/zama/sdk/v1beta1;sdkv1beta1b\x06proto3"
 
 var (
 	file_zama_sdk_v1beta1_daemon_proto_rawDescOnce sync.Once
