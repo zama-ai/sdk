@@ -23,6 +23,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
 
 describe("node() telemetry", () => {
@@ -61,6 +62,14 @@ describe("node() telemetry", () => {
       expect(relayerConfig().telemetry).toEqual({ state: telemetry, runtime: "node", mode });
     },
   );
+
+  test("keeps the config's mode when `process` has no env, as some bundler shims define it", () => {
+    vi.stubGlobal("process", { ...process, env: undefined });
+    const telemetry: TelemetryState = { layer: "core", mode: "query" };
+
+    expect(() => node().createRelayer(anvil, new LoggerService(), telemetry)).not.toThrow();
+    expect(relayerConfig().telemetry).toEqual({ state: telemetry, runtime: "node", mode: "query" });
+  });
 
   test.each([undefined, "query"])(
     "sends no telemetry without a config-wide context, even with ZAMA_SDK_TELEMETRY=%j",

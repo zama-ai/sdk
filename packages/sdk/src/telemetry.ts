@@ -84,7 +84,8 @@ export function parseTelemetryMode(value: string | boolean | undefined): Telemet
   if (typeof value === "boolean") {
     return value ? "header" : "off";
   }
-  const mode = value?.trim().toLowerCase();
+  // JavaScript callers can pass anything; only a string can name a mode.
+  const mode = typeof value === "string" ? value.trim().toLowerCase() : undefined;
   // `0` and `false` predate the named modes and still mean off.
   if (mode === "0" || mode === "false") {
     return "off";

@@ -37,7 +37,7 @@ export function node(options?: RelayerOptions): NodeRelayerConfig {
     type: "node",
     createRelayer: (chain, logger, telemetry) => {
       const mode =
-        parseTelemetryMode(globalThis.process?.env.ZAMA_SDK_TELEMETRY) ?? telemetry?.mode;
+        parseTelemetryMode(globalThis.process?.env?.ZAMA_SDK_TELEMETRY) ?? telemetry?.mode;
       return new FhevmRelayer({
         chain,
         options,

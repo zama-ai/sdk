@@ -64,6 +64,11 @@ describe("parseTelemetryMode", () => {
   test.each(["1", "true", "", "yes", undefined])("leaves %j to the caller", (value) => {
     expect(parseTelemetryMode(value)).toBeUndefined();
   });
+
+  // TypeScript rejects these values; JavaScript callers can still pass them.
+  test.each([0, 1, null, {}])("leaves the non-string %j to the caller", (value) => {
+    expect(parseTelemetryMode(value as never)).toBeUndefined();
+  });
 });
 
 describe("withOperation", () => {
