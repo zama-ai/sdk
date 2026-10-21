@@ -75,6 +75,7 @@ export function buildZamaConfig(
       params.transportKeyPairTTL ?? DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS,
     ),
     permitTTL: parseSchema(PermitTTLSchema, params.permitTTL ?? DEFAULT_PERMIT_DURATION_DAYS),
+    clearCredentialsOnWalletChange: params.clearCredentialsOnWalletChange ?? true,
     transportKeyPairScope:
       params.transportKeyPairScope === undefined
         ? undefined

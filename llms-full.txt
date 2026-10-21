@@ -2367,9 +2367,10 @@ says **who** reads — `decryptValues` (you, via your permit) vs `decryptPublicV
 > [!WARNING]
 > **Cache ownership changed.** `DecryptCache` and `applyDecryptedValues` were public
 > in 2.x; in 3.x the cache is internal and invalidates automatically (on
-> `permits.revokePermits()`, `permits.clear()`, wallet account/chain change, and
-> disconnect). There is **no** public API to populate or evict it — remove any 2.x
-> logic that did, as there's no compile-time signal for its loss.
+> `permits.revokePermits()`, `permits.clear()`, and on wallet account change
+> and disconnect unless `clearCredentialsOnWalletChange` is `false`). There is
+> **no** public API to populate or evict it — remove any 2.x logic that did, as
+> there's no compile-time signal for its loss.
 
 
 ### Key glossary: transport key pair & FHE encryption key
@@ -2544,6 +2545,15 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 - **Deployment:** [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md), [Monitor and troubleshoot](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md), and [Upgrade the daemon](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/upgrade-and-recover.md).
 
 Start with the [Go quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/go-quick-start.md) or the [Rust quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/rust-quick-start.md).
+
+## Opt out of clearing credentials on wallet account changes
+
+New `clearCredentialsOnWalletChange` option on `createConfig`. By default (`true`) the SDK keeps its existing behavior: switching wallet accounts, locking the wallet, or disconnecting wipes the previous account's transport key pair, permits, and decrypt cache. Set it to `false` to keep them. Storage is keyed per signer address and a permit is only accepted from the address that signed it, so one account can never use another's entries; keeping them lets a multi-wallet user switch A → B → A without signing a new permit or re-decrypting, and stops wallets that emit an empty account list on auto-lock (Rabby, Brave) from wiping credentials on every lock.
+
+- **With `clearCredentialsOnWalletChange: false`:** permits still expire after `permitTTL` and transport key pairs after `transportKeyPairTTL`; cached decrypts stay until the app clears them. For an explicit sign-out, call `sdk.permits.clear()` or `useClearCredentials` before disconnecting the wallet. They need a connected wallet account to know which signer to clear.
+- **Go and Rust clients:** unchanged. `UpdateAccount` / `update_account` still clear the previous account's credentials; the option is not exposed to native clients yet.
+
+See [Wallet account changes](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/concepts/permit-model.md#wallet-account-changes) in the Permit Model.
 
 ## Permit signing with browser extensions that patch `BigInt`
 
@@ -3959,9 +3969,9 @@ async fn main() -> anyhow::Result<()> {
 
 Browser apps should proxy relayer requests through a backend to keep the API key secret. See the [Authentication guide](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md) for the full setup.
 
-### 5. (Optional) Configure TTLs and event listener
+### 5. (Optional) Configure TTLs, credential cleanup, and event listener
 
-You can tune how long the transport key pair and permits remain valid, and subscribe to lifecycle events for debugging:
+You can tune how long the transport key pair and permits remain valid, choose whether a wallet account change clears the previous account's credentials, and subscribe to lifecycle events for debugging:
 
 
 ### Tab: Core SDK
@@ -3973,6 +3983,7 @@ const config = createConfig({
   relayers: { [sepolia.id]: web() },
   transportKeyPairTTL: 604800, // 7 days in seconds (default: 2592000 = 30 days)
   permitTTL: 7, // 7 days (default: 30 days)
+  clearCredentialsOnWalletChange: false, // keep permits across account switches (default: true)
   onEvent: ({ type, tokenAddress, ...rest }) => {
     console.debug(`[zama] ${type}`, rest);
   },
@@ -4007,6 +4018,8 @@ let sdk = client.sdk(config).events(Diagnostics).build().await?;
 
 `Diagnostics` implements `EventHandler`; see [Observe events](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/observe-events.md).
 
+
+By default, a wallet account change, lock, or disconnect clears the previous account's permits, transport key pair, and decrypt cache. Set `clearCredentialsOnWalletChange: false` to keep them: both are keyed per signer address and expire on their own, so a user switching between accounts does not sign a new permit each time. With the option off, call `sdk.permits.clear()` in your sign-out flow before disconnecting the wallet; it needs a connected wallet account. The Go and Rust clients always clear on `UpdateAccount` / `update_account`; the option is not exposed to them yet. See the [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/concepts/permit-model.md#wallet-account-changes).
 
 When done with the SDK, call `sdk.terminate()` to unsubscribe wallet listeners and release the SDK's resources.
 
@@ -9650,7 +9663,7 @@ const { data } = useDecryptValues([
 
 Decrypted values are stored through the SDK's internal CachingService, scoped by signer and contract address. Cached values survive page reloads — `decryptValues` returns them instantly without hitting the relayer.
 
-The cache is cleared on `permits.revokePermits()`, `permits.clear()`, or wallet lifecycle events (disconnect, account/chain change).
+The cache is cleared on `permits.revokePermits()`, `permits.clear()`, and, by default, on wallet account changes and disconnects. Set `clearCredentialsOnWalletChange: false` on `createConfig` to keep it across account changes: entries are keyed per signer, so switching back to an account serves its cached values again.
 
 
 > [!INFO]
@@ -10964,6 +10977,21 @@ Transport key pair validity duration in seconds. Default: `2592000` (30 days). M
 `number | undefined`
 
 Permit lifetime in days. Default: `30`. Controls how long each signed EIP-712 permit remains valid.
+
+### clearCredentialsOnWalletChange
+
+`boolean | undefined`
+
+Wipe the previous account's transport key pair, permits, and decrypt cache whenever the connected account changes or disconnects (account switch, empty account list, disconnect). Default: `true`. Set to `false` to keep them: credentials are stored per signer address, so a user switching A → B → A then reuses A's permits and cached decrypts without signing again. Permits expire after `permitTTL` and transport key pairs after `transportKeyPairTTL`; cached decrypts stay until [`permits.clear`](#permits-clear) or [`permits.revokePermits`](#permits-revokepermits) runs. With the option off, call [`permits.clear`](#permits-clear) in your sign-out flow while the wallet is still connected.
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  walletClient,
+  relayers: { [sepolia.id]: web() },
+  clearCredentialsOnWalletChange: false, // keep permits across account switches
+});
+```
 
 ### transportKeyPairScope
 
@@ -13223,7 +13251,7 @@ walletAccount: WalletAccountStore;
 
 Synchronous observable store for wallet account readiness. React integrations use this store to avoid SSR and hydration races.
 
-Direct store subscriptions observe raw signer transitions. For SDK-coordinated cleanup and query invalidation, subscribe through the SDK lifecycle instead so credential and CachingService cleanup runs first.
+Direct store subscriptions observe raw signer transitions. For SDK-coordinated handling and query invalidation, subscribe through `sdk.onWalletAccountChange` instead, so the relayer chain switch and the credential cleanup (unless `clearCredentialsOnWalletChange` is `false`) run first.
 
 ### requireWalletAccount
 
@@ -13278,7 +13306,7 @@ The SDK calls `walletAccount.subscribe()` during initialization. The listener re
 - `previous` -- the previous `{ address, chainId }` identity, when one was known.
 - `next` -- the next `{ address, chainId }` identity, when the wallet is connected.
 
-When `previous` is present, the SDK clears that previous account's transport key pair, permits, and decrypt cache.
+When `previous` is present, the SDK clears that previous account's transport key pair, permits, and decrypt cache, unless `clearCredentialsOnWalletChange` is `false`.
 
 ## Related
 
@@ -13399,7 +13427,7 @@ const signer = new ViemSigner({ walletClient });
 
 `EIP1193Provider | undefined`
 
-Raw EIP-1193 provider for wallet lifecycle event subscriptions. When provided, the signer emits wallet account transitions on disconnect, account change, and chain change. Omit if you handle lifecycle events manually.
+Raw EIP-1193 provider for wallet lifecycle event subscriptions. When provided, the signer emits wallet account transitions on disconnect, account change, and chain change, which the SDK uses to switch the relayer chain, clear the previous account's credentials (unless `clearCredentialsOnWalletChange` is `false`), and refresh React queries. Omit if you handle lifecycle events manually.
 
 ```ts
 const signer = new ViemSigner({ walletClient, ethereum: window.ethereum });
@@ -13418,7 +13446,7 @@ All methods are inherited from [GenericSigner](https://raw.githubusercontent.com
 
 
 > [!INFO]
-> Wallet account transitions are only emitted when you pass the `ethereum` option. Without it, the SDK still works but credentials are not automatically cleared when users switch accounts.
+> Wallet account transitions are only emitted when you pass the `ethereum` option. Without it, the SDK still works, but it never observes an account change, so it cannot switch the relayer chain, clear credentials, or refresh React queries for you, and the `clearCredentialsOnWalletChange` option has no effect.
 
 
 ## Related
@@ -13563,7 +13591,7 @@ Pass exactly one of the two parameters below.
 
 `EIP1193Provider`
 
-Raw EIP-1193 provider from the browser wallet (e.g. `window.ethereum`). Enables automatic credential cleanup on disconnect and account change.
+Raw EIP-1193 provider from the browser wallet (e.g. `window.ethereum`). The signer subscribes to its `accountsChanged`, `chainChanged`, and `disconnect` events and emits wallet account transitions, which the SDK uses to switch the relayer chain, clear the previous account's credentials (unless `clearCredentialsOnWalletChange` is `false`), and refresh React queries.
 
 ```ts
 const signer = new EthersSigner({ ethereum: window.ethereum! });
@@ -13597,7 +13625,7 @@ All methods are inherited from [GenericSigner](https://raw.githubusercontent.com
 
 
 > [!INFO]
-> Only the browser mode (passing `ethereum`) emits wallet account transitions. In Node.js mode, credentials are not automatically cleared on wallet changes.
+> Only the browser mode (passing `ethereum`) emits wallet account transitions. In Node.js mode, the SDK never observes an account change, so it cannot switch the relayer chain, clear credentials, or refresh React queries for you, and the `clearCredentialsOnWalletChange` option has no effect.
 
 
 ## Related
@@ -19850,7 +19878,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 
 > [!INFO]
-> The SDK auto-clears credentials on wallet disconnect or account change when the signer adapter implements `walletAccount.subscribe()`. You do not need to call this hook manually for that case.
+> By default, the SDK clears credentials on wallet disconnect or account change when the signer adapter implements `walletAccount.subscribe()`, so you do not need to call this hook for that case. If you set `clearCredentialsOnWalletChange: false` on `createConfig` (permits are stored per address and expire after `permitTTL`, so switching back to an account reuses its permits without a new signature), call this hook from your app's sign-out handler instead, before you disconnect the wallet: it needs a connected wallet account.
 
 
 ## Related
@@ -22308,7 +22336,7 @@ Pass `{ enabled: false }` as the second argument to disable the query.
 
 Returns a standard `useQuery` result. `data` resolves to `Record<EncryptedValue, ClearValue>` — a map from each encrypted value to its decrypted plaintext value (`bigint`, `boolean`, or `string`).
 
-When all requested inputs are already cached, `data` contains the cached values immediately (no relayer call). Freshly decrypted results are written through the SDK's internal CachingService — scoped by `(signer, contract, encryptedValue)` — so that subsequent renders return instantly, even after a page reload. The cache is cleared automatically on `permits.revokePermits()`, `permits.clear()`, or wallet lifecycle events (disconnect, account change, chain change).
+When all requested inputs are already cached, `data` contains the cached values immediately (no relayer call). Freshly decrypted results are written through the SDK's internal CachingService — scoped by `(signer, contract, encryptedValue)` — so that subsequent renders return instantly, even after a page reload. The cache is cleared on `permits.revokePermits()`, `permits.clear()`, and, by default, on wallet account changes and disconnects. Set `clearCredentialsOnWalletChange: false` on `createConfig` to keep it across account changes: entries are keyed per signer, so switching back to an account serves its cached values again.
 
 ### `data`
 
@@ -26084,13 +26112,17 @@ permits.revoke_transport_key_pair("tenant-123").await?; // shared scope
 
 ## Wallet account changes
 
-The SDK automatically manages permits when the wallet state changes:
+By default, the SDK clears the previous account's credentials when the wallet state changes:
 
-| Event                 | Effect on permits                                                                 |
-| --------------------- | --------------------------------------------------------------------------------- |
-| **Disconnect / lock** | All permits and transport key pair cleared for the previous account               |
-| **Account switch**    | Previous account's permits cleared; new account starts fresh                      |
-| **Chain switch**      | Permits are chain-scoped, so existing permits on the previous chain remain intact |
+| Event                 | Effect on permits                                                                                                                          |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Disconnect / lock** | All permits, the transport key pair, and the decrypt cache are cleared for the previous account                                            |
+| **Account switch**    | Previous account's permits, transport key pair, and decrypt cache are cleared; the new account starts fresh                                |
+| **Chain switch**      | Permits and the transport key pair are kept; permits are chain-scoped, so each chain keeps its own. The account's decrypt cache is cleared |
+
+Set `clearCredentialsOnWalletChange: false` on `createConfig` to keep them instead. Permits and transport key pairs are stored per signer address, so one account can never read another's entries, and a permit is an EIP-712 signature the relayer only accepts from the address that signed it. Keeping them lets a multi-wallet user switch A → B → A without signing a new permit, and stops wallets that emit an empty account list on auto-lock (Rabby, Brave) from wiping credentials on every lock. Permits still expire on their own after `permitTTL` and transport key pairs after `transportKeyPairTTL`.
+
+With the option off, handle sign-out yourself: call `sdk.permits.clear()` (or [`useClearCredentials`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClearCredentials.md) in React) to remove the connected signer's transport key pair, permits, and decrypt cache. It needs a connected wallet account, so call it before the wallet disconnects. Once the wallet is gone, the SDK can no longer tell which account to clear.
 
 See [ZamaSDK.onWalletAccountChange](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#onwalletaccountchange) for programmatic access to these transitions.
 
@@ -26101,7 +26133,7 @@ The lifecycle above assumes a connected wallet signs `grantPermit`'s EIP-712 mes
 ## Related
 
 - [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/concepts/security-model.md) — transport key pair storage, threat model, and trust assumptions
-- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md#5-optional-configure-ttls-and-event-listener) — `transportKeyPairTTL` and `permitTTL` settings
+- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md#5-optional-configure-ttls-credential-cleanup-and-event-listener) — `transportKeyPairTTL` and `permitTTL` settings
 - [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md) — `permits.grantPermit()`, `permits.revokePermits()`, `permits.clear()` API
 
 ## Security model
@@ -26337,7 +26369,7 @@ The EIP-712 typed data includes the wallet address. A permit signed by address A
 
 ### Revocation
 
-Permits can be revoked programmatically via `sdk.permits.revokePermits()` or automatically via wallet lifecycle events (disconnect, account switch). Revocation removes permits from storage immediately.
+Permits can be revoked programmatically via `sdk.permits.revokePermits()` or automatically via wallet lifecycle events (disconnect, account switch). Revocation removes permits from storage immediately. The automatic revocation can be turned off with `clearCredentialsOnWalletChange: false` on `createConfig`: storage is keyed per signer address, and a permit is only accepted from the address that signed it, so a switch exposes nothing that the store did not already hold.
 
 After revoking permits, the transport key pair remains in storage. Use `sdk.permits.clear()` to also wipe the key pair.
 
