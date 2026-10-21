@@ -162,7 +162,7 @@ cargo fmt --manifest-path clients/rust/Cargo.toml --check
 
 To run the Go and Rust balance examples against Sepolia, fill `.env.daemon.local` (copied from `.env.daemon.example`) with an RPC URL, a test wallet and a confidential token address, then:
 
-The daemon image is built on [Docker Hardened Images](https://dhi.io), which need a Docker Hub login to pull: run `docker login dhi.io` once with your Docker Hub account (a free one works) before building. CI logs in with the `DH_USERNAME` and `DH_TOKEN` secrets (a Docker Hub organization access token with the "Read public repositories" scope); Dependabot has its own copy of the two secrets to bump the pinned base image digests.
+The daemon image is built on [Docker Hardened Images](https://dhi.io), which need a Docker Hub login to pull: run `docker login dhi.io` once with your Docker Hub account (a free one works) before building. CI logs in through the Docker Hub OIDC connection of the `release-dockerhub` GitHub environment (the `DOCKERHUB_OIDC_CONNECTIONID` secret and the `DOCKERHUB_OIDC_USER` variable, no stored password), so the image jobs only run on the refs that environment allows: `main`, `beta`, `alpha`, and pull request merge refs. Dependabot cannot use OIDC: it bumps the pinned base image digests with the `DOCKERHUB_USER` and `DOCKERHUB_TOKEN` Dependabot secrets, a read-only Docker Hub organization access token.
 
 ```sh
 export ZAMA_SDK_DAEMON_UID="$(id -u)" ZAMA_SDK_DAEMON_GID="$(id -g)"   # default to 10000 and 10001
@@ -209,7 +209,7 @@ Release behavior:
 Release workflows:
 
 - `Release` (`.github/workflows/release.yml`): automatic publish on push to `main`, `beta`, and `alpha`, gated by `Vitest`, `Playwright`, `Docs`, and `Daemon CI`.
-- Manual publish (`workflow_dispatch`): without `publish-tag`, same gates as above. With `publish-tag`, republish an existing tag when a publish failed after semantic-release tagged it (`dry-run` input available); skips CI, but requires the tag be reachable from `main`, `beta`, or `alpha`. `publish` selects npm, the daemon image, the Rust crate, the Go module, or all.
+- Manual publish (`workflow_dispatch`): without `publish-tag`, same gates as above. With `publish-tag`, republish an existing tag when a publish failed after semantic-release tagged it (`dry-run` input available); skips CI, but requires the tag be reachable from `main`, `beta`, or `alpha`, and the run to be dispatched from one of those branches (the image job's environment allows no other ref). `publish` selects npm, the daemon image, the Rust crate, the Go module, or all.
 - Image, crate, and Go retry: re-run the failed jobs in the original run, or use `publish-tag` with `publish: image`, `publish: rust`, or `publish: go`. If `release` itself failed, "Re-run failed jobs" skips them.
 - `Release Preview` (`.github/workflows/release-preview.yml`): manual dry-run restricted to `main`, `beta`, and `alpha` (`pnpm release:dry-run`), no publish side effects.
 - `Daemon image scan` (`.github/workflows/daemon-image-scan.yml`): daily Trivy re-scan of the published `latest`, `beta`, and `alpha` daemon images on both platforms. A CRITICAL or HIGH finding fails the run and opens (or comments on) a tracking issue; the fix is a patched release, or a Security-reviewed `.trivyignore` entry. Schedules run from the default branch only.

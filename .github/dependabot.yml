@@ -1,12 +1,12 @@
 version: 2
-# Docker Hardened Images need a Docker Hub login to pull. These are Dependabot secrets, separate from the
-# Actions secrets of the same name.
+# Dependabot cannot use OIDC: a read-only Docker Hub organization access token, stored as Dependabot secrets
+# (not Actions secrets).
 registries:
   dhi:
     type: docker-registry
     url: https://dhi.io
-    username: ${{ secrets.DH_USERNAME }}
-    password: ${{ secrets.DH_TOKEN }}
+    username: ${{ secrets.DOCKERHUB_USER }}
+    password: ${{ secrets.DOCKERHUB_TOKEN }}
 
 updates:
   # SDK core, workspace tooling, and test apps -- one pnpm workspace, "/" must stay in scope for the shared lockfile.

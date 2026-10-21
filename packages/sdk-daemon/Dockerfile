@@ -1,6 +1,5 @@
-# Docker Hardened Images (dhi.io) for both stages, pinned by digest. Pulling them needs `docker login dhi.io`
-# with a Docker Hub account; CI logs in with DH_USERNAME and DH_TOKEN. The build stage is Debian 13, the
-# same release as the runtime stage, so the pruned node_modules link against the same glibc.
+# Pulling from dhi.io needs `docker login dhi.io` with a Docker Hub account. The build stage is the same Debian
+# release as the runtime stage, so the pruned node_modules link against the same glibc.
 FROM dhi.io/node:24-debian13-dev@sha256:63f14705bd247a343712a0b1484224e82c7c693a9ee8a8317fd53e655e0583a1 AS build
 # The dev image ships bash; don't depend on /bin/sh being present.
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
