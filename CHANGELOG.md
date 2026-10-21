@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.8.0-beta.4](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.3...v3.8.0-beta.4) (2026-10-21)
+
+### Features
+
+- stop-auto-clearing-credentials-and-decrypt-cache-on-wallet ([#859](https://github.com/zama-ai/sdk/issues/859)) ([17db9c5]())
+
 ## [3.8.0-beta.3](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.2...v3.8.0-beta.3) (2026-10-20)
 
 ### Bug Fixes
