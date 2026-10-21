@@ -122,8 +122,7 @@ export interface CredentialServiceConfig {
 /**
  * Single facade coordinating the keypair vault and the permission store.
  *
- * `CredentialService` is the only credentials object held by {@link ZamaSDK}. It accepts identity
- * transitions via `handleWalletAccountChange`.
+ * `CredentialService` is the only credentials object held by {@link ZamaSDK}.
  *
  * Two distinct revocation tiers exist and must not be conflated: {@link clearCredentials}
  * (signer-level, e.g. an end-user "disconnect") only ever removes that signer's own
@@ -717,11 +716,8 @@ export class CredentialService {
   }
 
   /**
-   * Apply a wallet account transition.
-   *
-   * Address change clears persisted credentials for the previous account.
-   * Chain-only changes keep credentials intact because permits are chain-scoped
-   * already and stale decrypt plaintext is cleared by {@link ZamaSDK}.
+   * Wipe the previous account's persisted credentials on a wallet account change.
+   * Chain-only changes keep credentials, since permits are already chain-scoped.
    */
   async handleWalletAccountChange(
     prev?: { address: Address },

@@ -34,7 +34,7 @@ Secrets stay outside persisted configuration and error payloads. The SDK owns se
 
 `UpdateAccount` sets the connected wallet's address and chain, or disconnects the wallet when `account` is absent. A changed account cancels and drains existing operations in that context before changing the wallet snapshot. Repeating the current account leaves active operations running.
 
-The SDK's inherited account-change credential/cache cleanup is asynchronous and outside the daemon coordinator; it can overlap another SDK instance sharing the same identity and store. Completion of `UpdateAccount` acknowledges the snapshot update, not completion of every SDK lifecycle listener. Do not use it as a barrier for credential cleanup.
+The SDK's inherited account-change credential/cache cleanup is asynchronous and outside the daemon coordinator; it can overlap another SDK instance sharing the same identity and store. Completion of `UpdateAccount` acknowledges the snapshot update, not completion of every SDK lifecycle listener. Do not use it as a barrier for credential cleanup. The SDK's `clearCredentialsOnWalletChange` opt-out is not exposed in the daemon config yet, so native clients always clear.
 
 ## Supported SDK methods
 
