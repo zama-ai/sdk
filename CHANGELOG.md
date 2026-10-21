@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.8.0-beta.5](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.4...v3.8.0-beta.5) (2026-10-21)
+
+### Features
+
+- telemetry-query-params ([#858](https://github.com/zama-ai/sdk/issues/858)) ([f642cfb]())
+
 ## [3.8.0-beta.4](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.3...v3.8.0-beta.4) (2026-10-21)
 
 ### Features
