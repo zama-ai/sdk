@@ -29,8 +29,8 @@ jobs:
         example:
           - example-bnb
           - example-hoodi
-          - example-ingen
           - example-polygon-amoy
+          - example-zenith
           - node-ethers
           - node-viem
           - react-ethers

@@ -1,34 +1,13 @@
 version: 2
 updates:
-  # SDK core packages and workspace tooling
+  # SDK core, workspace tooling, and test apps -- one pnpm workspace, "/" must stay in scope for the shared lockfile.
   - package-ecosystem: npm
     target-branch: beta
     directories:
       - /
       - /packages/sdk
       - /packages/react-sdk
-    schedule:
-      interval: weekly
-    cooldown:
-      default-days: 3
-      exclude:
-        - "@zama-fhe/relayer-sdk"
-    groups:
-      sdk:
-        update-types:
-          - minor
-          - patch
-    ignore:
-      - dependency-name: "*"
-        update-types:
-          - version-update:semver-patch
-      # Protocol-version-tied; bumped via alpha, not routine Dependabot.
-      - dependency-name: "@fhevm/sdk"
-
-  # Test apps
-  - package-ecosystem: npm
-    target-branch: beta
-    directories:
+      - /packages/sdk-daemon
       - /test/test-nextjs
       - /test/test-vite
     schedule:
@@ -40,7 +19,7 @@ updates:
         - "@zama-fhe/react-sdk"
         - "@zama-fhe/test-components"
     groups:
-      test-apps:
+      sdk:
         update-types:
           - minor
           - patch
@@ -48,6 +27,8 @@ updates:
       - dependency-name: "*"
         update-types:
           - version-update:semver-patch
+      # Protocol-version-tied; bumped via alpha, not routine Dependabot.
+      - dependency-name: "@fhevm/sdk"
 
   # Example apps
   - package-ecosystem: npm
@@ -63,6 +44,57 @@ updates:
         - "@zama-fhe/react-sdk"
     groups:
       example-apps:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-patch
+
+  # Daemon image bases, pinned by digest. Majors are ignored: the Node.js line follows the daemon's engines field.
+  # The client example images are left out on purpose: their toolchains track go.mod and rust-toolchain.toml.
+  - package-ecosystem: docker
+    target-branch: beta
+    directory: /packages/sdk-daemon
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
+
+  # Go and Rust clients
+  - package-ecosystem: gomod
+    target-branch: beta
+    directories:
+      - /clients/go
+      - /clients/go/examples/balance
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    groups:
+      go-client:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-patch
+
+  - package-ecosystem: cargo
+    target-branch: beta
+    directory: /clients/rust
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    groups:
+      rust-client:
         update-types:
           - minor
           - patch

@@ -8,3 +8,5 @@ export type {
 } from "./types";
 export { WILDCARD_PERMIT, type WildcardPermit } from "./utils";
 export type { ChecksummedAddress } from "../schemas/primitives";
+
+export { parsePreparedPermit } from "./parse-prepared-permit";

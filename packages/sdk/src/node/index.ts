@@ -43,7 +43,7 @@ export {
   sepolia,
   polygonAmoy,
   hoodi,
-  ingenTestnet,
+  zenithTrexTestnet,
   bscTestnet,
   hardhat,
   anvil,

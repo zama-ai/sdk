@@ -25,6 +25,14 @@ const extract = (name) => {
 const mainTemplate = extract("mainTemplate").replace(/^\* /gm, "- ");
 const commitPartial = extract("commitPartial").replace(/^\*/, "-");
 
+// Shell command appending `key=value` lines to the GitHub Actions step output; a no-op outside Actions.
+const githubOutput = (...pairs) =>
+  `if [ -n "$GITHUB_OUTPUT" ]; then printf '%s\\n' ${pairs.map((pair) => `'${pair}'`).join(" ")} >> "$GITHUB_OUTPUT"; fi`;
+const releaseOutputs = [
+  "version=${nextRelease.version}",
+  'channel=${nextRelease.channel || "latest"}',
+];
+
 module.exports = {
   branches: [
     "main",
@@ -93,12 +101,49 @@ module.exports = {
     ],
     [
       "@semantic-release/exec",
-      { prepareCmd: "node scripts/release/prepare-lockstep.mjs ${nextRelease.version}" },
+      {
+        // The bundles inline package.json's version, so rebuild after the bump; the bump
+        // trips `verifyDepsBeforeRun`, hence the frozen install from the unchanged lockfile.
+        prepareCmd: [
+          "node scripts/release/prepare-lockstep.mjs ${nextRelease.version}",
+          "pnpm install --frozen-lockfile --ignore-scripts --offline",
+          "pnpm build",
+          "pnpm llm:build",
+        ].join(" && "),
+        // Runs in dry-run and before tagging, so the preview and the release both reject a mismatched Go module path.
+        verifyReleaseCmd: [
+          "node scripts/release/go-module.mjs ${nextRelease.version}",
+          githubOutput(...releaseOutputs),
+        ].join(" && "),
+        // Also runs when adding a channel, which skips verifyRelease, so it writes every output itself; gitHead is
+        // then the release commit.
+        successCmd: githubOutput(
+          "released=true",
+          "revision=${nextRelease.gitHead}",
+          ...releaseOutputs,
+        ),
+      },
     ],
     [
       "@semantic-release/git",
       {
-        assets: ["CHANGELOG.md", "packages/sdk/package.json", "packages/react-sdk/package.json"],
+        assets: [
+          "CHANGELOG.md",
+          "packages/sdk/package.json",
+          "packages/react-sdk/package.json",
+          "packages/sdk-daemon/package.json",
+          "clients/rust/Cargo.toml",
+          "clients/rust/Cargo.lock",
+          "docs/gitbook/src/native/tutorials/go-quick-start.md",
+          "docs/gitbook/src/native/tutorials/rust-quick-start.md",
+          "docs/gitbook/src/native/operations/run-in-production.md",
+          "clients/go/README.md",
+          "clients/rust/README.md",
+          "packages/sdk-daemon/README.md",
+          "llms.txt",
+          "llms-full.txt",
+          "docs/llm/corpus-manifest.json",
+        ],
         message: "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}",
       },
     ],

@@ -97,23 +97,24 @@ export const hoodi = {
 } as const satisfies FheChain;
 
 /**
- * T-Rex InGen testnet configuration (chainId 364301).
+ * T-Rex Zenith testnet configuration (chainId 936486).
  *
- * InGen does not have full FHE infrastructure — use with `cleartext()` transport.
- * Contract addresses match the cleartext deployment.
+ * T-Rex's testnet instance on Zenith EVM (Reth execution, Canton-mediated
+ * finality) — a separate chain from Zenith's shared testnet (chainId 936485).
+ * It does not have full FHE infrastructure — use with `cleartext()` transport.
  */
-export const ingenTestnet = {
-  id: 364301,
+export const zenithTrexTestnet = {
+  id: 936486,
   gatewayChainId: 10901,
   relayerUrl: "",
-  network: "https://rpc.ingen.t-rex.network",
-  aclContractAddress: "0x09a4710BfBe7B557cD5CFE88BB31e9b5b85C419b",
-  kmsContractAddress: "0xd885DEa6a924785fCcdf9CE993FEe27EA11832e6",
-  inputVerifierContractAddress: "0x90f05B10db153365D8cB143EA17f5E5714D0bCD5",
+  network: "https://rpc.testnet.t-rex.zenith.network",
+  aclContractAddress: "0x061AAc7aAACc98d8e30459d4D858DaB9b6F3bd23",
+  kmsContractAddress: "0x85fBA21840059cB7E2E5BB7Fa2c5b2A324Ea7a7D",
+  inputVerifierContractAddress: "0xE90965601D10D42D3d88486b47b0Caf12C5C9fDe",
   verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
   verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
-  registryAddress: "0x7FC3D79EF9d01fA318CF2Aa5D91dDC492383Be0F",
-  executorAddress: "0x1B05DE5b67b8f8363DC04E3a5996a616f11f8C7B",
+  registryAddress: "0xde2e3948d35ef9C406A7317eAF332F3c2786a566",
+  executorAddress: "0x6C5036A4ad55DBA8007ae82c4e9C123F143e53ab",
 } as const satisfies FheChain;
 
 /**
@@ -167,7 +168,7 @@ export const chains: Record<number, FheChain> = {
   [sepolia.id]: sepolia,
   [polygonAmoy.id]: polygonAmoy,
   [hoodi.id]: hoodi,
-  [ingenTestnet.id]: ingenTestnet,
+  [zenithTrexTestnet.id]: zenithTrexTestnet,
   [bscTestnet.id]: bscTestnet,
   [hardhat.id]: hardhat,
 } as const;

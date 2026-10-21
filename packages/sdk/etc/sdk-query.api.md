@@ -95,6 +95,12 @@ export interface BatchDecryptResult {
 }
 
 // @public
+export function batchPreparePermitsMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.batchPreparePermits"], PreparePermitRequest, PreparedPermit[]>;
+
+// @public
+export function batchRegisterPermitsMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.batchRegisterPermits"], readonly SignedPreparedPermit[], void>;
+
+// @public
 export type ChecksummedAddress = Address & {
     readonly [checksummedTag]: true;
 };
@@ -256,8 +262,8 @@ export interface DecryptInput {
 
 // @public
 export class Decryption {
-    decryptPublicValues(encryptedValues: EncryptedValue[], options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<DecryptPublicValuesResult>;
-    decryptValues(encryptedInput: DecryptInput[], options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<Record<EncryptedValue, ClearValue>>;
+    decryptPublicValues(encryptedValues: EncryptedValue[], options?: RelayerRequestOptions): Promise<DecryptPublicValuesResult>;
+    decryptValues(encryptedInput: DecryptInput[], options?: RelayerRequestOptions): Promise<Record<EncryptedValue, ClearValue>>;
     delegatedBatchDecryptValues(input: {
         encryptedInputs: DecryptInput[];
         delegatorAddress: Address;
@@ -649,6 +655,7 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
 
 // @public
 export class Offline {
+    batchPreparePermits(request: PreparePermitRequest): Promise<PreparedPermit[]>;
     prepare<K extends TransactionKind>(request: Extract<PrepareTransactionRequest, {
         kind: K;
     }>, options?: PrepareOptions): Promise<PreparedFor<K>>;
@@ -686,6 +693,7 @@ export type PermitOperation = "grantPermit" | "grantDelegationPermit" | "registe
 
 // @public
 export class Permits {
+    batchRegisterPermits(permits: readonly SignedPreparedPermit[]): Promise<void>;
     clear(): Promise<void>;
     grantDelegationPermit(delegator: Address, contracts: Address[] | WildcardPermit): Promise<void>;
     grantPermit(contracts: Address[] | WildcardPermit): Promise<void>;
@@ -808,10 +816,10 @@ export type ReadFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractF
 export function registerPermitMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.registerPermit"], RegisterPermitParams, void>;
 
 // @public
-export interface RegisterPermitParams {
-    prepared: PreparedPermit;
-    signature: Hex;
-}
+export type RegisterPermitParams = SignedPreparedPermit;
+
+// @public
+export interface RelayerRequestOptions extends Pick<FhevmRelayerOptions, "signal" | "timeout"> {}
 
 // @public
 export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "signUnifiedDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
@@ -916,6 +924,12 @@ export interface ShieldSubmittedEvent extends BaseEvent {
     shieldPath: ShieldPath;
     txHash: Hex;
     type: typeof ZamaSDKEvents.ShieldSubmitted;
+}
+
+// @public
+export interface SignedPreparedPermit {
+    prepared: PreparedPermit;
+    signature: Hex;
 }
 
 // @public
@@ -1039,7 +1053,7 @@ export interface TransactionErrorEvent extends BaseEvent {
 export type TransactionKind = PrepareTransactionRequest["kind"];
 
 // @public
-export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "invalidateDecryptionSignatures" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll";
+export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "invalidateDecryptionSignatures" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll" | "vault:join" | "vault:quit" | "vault:claim" | "vault:recover" | "vault:dispatchBatch";
 
 // @public
 export interface TransactionReceipt {
@@ -1353,6 +1367,7 @@ export type ZamaConfig = {
     readonly permitStorage: GenericStorage;
     readonly transportKeyPairTTL: number;
     readonly permitTTL: number;
+    readonly clearCredentialsOnWalletChange: boolean;
     readonly transportKeyPairScope: string | undefined;
     readonly registryTTL: number;
     readonly onEvent: ZamaSDKEventListener | undefined;
@@ -1623,7 +1638,7 @@ export class ZamaSDK {
     readonly decryption: Decryption;
     readonly delegations: Delegations;
     dispose(): void;
-    encrypt(params: EncryptParams, options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<EncryptResult>;
+    encrypt(params: EncryptParams, options?: RelayerRequestOptions): Promise<EncryptResult>;
     readonly offline: Offline;
     readonly permits: Permits;
     readonly provider: GenericProvider;
@@ -1634,8 +1649,10 @@ export class ZamaSDK {
     terminate(): void;
 }
 
+// Warning: (ae-forgotten-export) The symbol "VaultSubmittedEvent" needs to be exported by the entry point index.d.ts
+//
 // @public
-export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | PermitErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | WrapSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | InvalidateDecryptionSignaturesSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
+export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | PermitErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | VaultSubmittedEvent | ApproveUnderlyingSubmittedEvent | WrapSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | InvalidateDecryptionSignaturesSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
 export type ZamaSDKEventListener = (event: ZamaSDKEvent) => void;
@@ -1658,6 +1675,7 @@ export const ZamaSDKEvents: {
     readonly WrapSubmitted: "wrap:submitted";
     readonly UnwrapSubmitted: "unwrap:submitted";
     readonly FinalizeUnwrapSubmitted: "finalizeUnwrap:submitted";
+    readonly VaultSubmitted: "vault:submitted";
     readonly DelegationSubmitted: "delegation:submitted";
     readonly RevokeDelegationSubmitted: "revokeDelegation:submitted";
     readonly InvalidateDecryptionSignaturesSubmitted: "invalidateDecryptionSignatures:submitted";

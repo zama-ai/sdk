@@ -4,6 +4,7 @@ import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import type { Address, WildcardPermit } from "@zama-fhe/sdk";
 import { grantPermitMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
+import { removeQueriesOnSuccess } from "../utils/query";
 
 /**
  * Sign an EIP-712 message authorizing decryption of confidential handles
@@ -39,9 +40,6 @@ export function useGrantPermit(
   return useMutation<void, Error, Address[] | WildcardPermit>({
     ...grantPermitMutationOptions(sdk),
     ...options,
-    onSuccess: (data, variables, onMutateResult, context) => {
-      options?.onSuccess?.(data, variables, onMutateResult, context);
-      context.client.removeQueries({ queryKey: zamaQueryKeys.hasPermit.all });
-    },
+    onSuccess: removeQueriesOnSuccess(options, zamaQueryKeys.hasPermit.all),
   });
 }

@@ -20,6 +20,7 @@ import type { FheChain } from "../chains/types";
 import { ConfigurationError } from "../errors";
 import { getAppliedWireRuntime, hasAppliedLocateFile } from "./applied-runtime";
 import type { LoggerService } from "../services/logger-service";
+import { type RelayerTelemetry, telemetryHeaders } from "../telemetry";
 import {
   DEFAULT_ENCRYPT_WORKER_TIMEOUTS,
   EncryptWorkerClient,
@@ -33,6 +34,7 @@ import type {
   FhevmDecryptClient,
   FhevmEncryptBackend,
   FhevmRelayerOptions,
+  RelayerRequestOptions,
   RelayerSDK,
   RelayerOptions,
   WireRuntimeConfig,
@@ -64,6 +66,7 @@ export interface FhevmRelayerConfig {
   offloadWorker?: string | URL | (() => Worker);
   /** Receives worker log lines and offload-fallback warnings. */
   logger: LoggerService;
+  telemetry?: RelayerTelemetry;
 }
 
 /**
@@ -94,6 +97,7 @@ export class FhevmRelayer implements RelayerSDK {
   readonly #decrypt: FhevmDecryptClient;
   readonly #encrypt: FhevmEncryptBackend;
   readonly #defaultOptions: Partial<FhevmRelayerOptions>;
+  readonly #telemetry: RelayerTelemetry | undefined;
   #encryptInitPromise: Promise<void> | undefined;
 
   /**
@@ -120,11 +124,12 @@ export class FhevmRelayer implements RelayerSDK {
       ...(timeout !== undefined && { timeout }),
       ...(debug !== undefined && { debug }),
     };
+    this.#telemetry = config.telemetry;
     // The FHE key is always fetched here, on the calling thread, so the chain's
     // default request options (auth in particular) apply; a worker realm has no
     // access to them.
     const prefetchKey = () =>
-      this.#base.fetchFheEncryptionKeyBytes({ options: this.#defaultOptions });
+      this.#base.fetchFheEncryptionKeyBytes({ options: this.#requestOptions(undefined) });
     // Re-listed rather than spread: the upstream client exposes an enumerable
     // `ready` getter, and a spread would call it, starting init at construction.
     const withInlineInit = (client: FhevmEncryptBackend): FhevmEncryptBackend => ({
@@ -212,6 +217,23 @@ export class FhevmRelayer implements RelayerSDK {
     return this.#chain;
   }
 
+  // `operation` becomes a header here and must never reach `@fhevm/sdk`.
+  #requestOptions<T extends Partial<FhevmRelayerOptions> | undefined>(
+    options: T,
+  ): Omit<Partial<FhevmRelayerOptions> & NonNullable<T>, "operation"> {
+    const { operation, ...merged } = {
+      ...this.#defaultOptions,
+      ...options,
+    } as Partial<FhevmRelayerOptions> & NonNullable<T> & RelayerRequestOptions;
+    if (this.#telemetry === undefined) {
+      return merged;
+    }
+    return {
+      ...merged,
+      headers: { ...merged.headers, ...telemetryHeaders(this.#telemetry, operation) },
+    };
+  }
+
   // Only a fulfilled init is memoized: a rejection clears the memo so the next
   // encryption retries instead of inheriting a transient key-fetch failure.
   #initEncrypt = (): Promise<void> => {
@@ -247,7 +269,7 @@ export class FhevmRelayer implements RelayerSDK {
     await this.#base.init();
     return this.#base.decryptPublicValue({
       ...parameters,
-      options: { ...this.#defaultOptions, ...parameters.options },
+      options: this.#requestOptions(parameters.options),
     });
   };
 
@@ -267,7 +289,7 @@ export class FhevmRelayer implements RelayerSDK {
     await this.#base.init();
     return this.#base.decryptPublicValues({
       ...parameters,
-      options: { ...this.#defaultOptions, ...parameters.options },
+      options: this.#requestOptions(parameters.options),
     });
   };
 
@@ -289,7 +311,7 @@ export class FhevmRelayer implements RelayerSDK {
     await this.#base.init();
     return this.#base.decryptPublicValuesWithSignatures({
       ...parameters,
-      options: { ...this.#defaultOptions, ...parameters.options },
+      options: this.#requestOptions(parameters.options),
     });
   };
 
@@ -312,7 +334,7 @@ export class FhevmRelayer implements RelayerSDK {
     await this.#initEncrypt();
     return this.#encrypt.encryptValue({
       ...parameters,
-      options: { ...this.#defaultOptions, ...parameters.options },
+      options: this.#requestOptions(parameters.options),
     });
   };
 
@@ -337,7 +359,7 @@ export class FhevmRelayer implements RelayerSDK {
     await this.#initEncrypt();
     return this.#encrypt.encryptValues({
       ...parameters,
-      options: { ...this.#defaultOptions, ...parameters.options },
+      options: this.#requestOptions(parameters.options),
     });
   };
 
@@ -362,7 +384,7 @@ export class FhevmRelayer implements RelayerSDK {
     await this.#decrypt.init();
     return this.#decrypt.decryptValue({
       ...parameters,
-      options: { ...this.#defaultOptions, ...parameters.options },
+      options: this.#requestOptions(parameters.options),
     });
   };
 
@@ -385,7 +407,7 @@ export class FhevmRelayer implements RelayerSDK {
     await this.#decrypt.init();
     return this.#decrypt.decryptValues({
       ...parameters,
-      options: { ...this.#defaultOptions, ...parameters.options },
+      options: this.#requestOptions(parameters.options),
     });
   };
 
@@ -410,7 +432,7 @@ export class FhevmRelayer implements RelayerSDK {
     await this.#decrypt.init();
     return this.#decrypt.decryptValuesFromPairs({
       ...parameters,
-      options: { ...this.#defaultOptions, ...parameters.options },
+      options: this.#requestOptions(parameters.options),
     });
   };
 
@@ -432,7 +454,7 @@ export class FhevmRelayer implements RelayerSDK {
     await this.#base.init();
     return this.#base.fetchFheEncryptionKeyBytes({
       ...parameters,
-      options: { ...this.#defaultOptions, ...parameters?.options },
+      options: this.#requestOptions(parameters?.options),
     });
   };
 
@@ -615,7 +637,14 @@ export class FhevmRelayer implements RelayerSDK {
    */
   parseSignedDecryptionPermit: FhevmClient["parseSignedDecryptionPermit"] = async (parameters) => {
     await this.#base.init();
-    return this.#base.parseSignedDecryptionPermit(parameters);
+    const { serializedPermit } = parameters;
+    return this.#base.parseSignedDecryptionPermit({
+      ...parameters,
+      serializedPermit: {
+        ...serializedPermit,
+        signature: normalizeSignatureV(serializedPermit.signature),
+      },
+    });
   };
 
   /**
@@ -633,6 +662,22 @@ export class FhevmRelayer implements RelayerSDK {
     await this.#decrypt.init();
     return this.#decrypt.generateTransportKeyPair();
   };
+}
+
+/**
+ * Rewrites a 65-byte signature's recovery byte from 0/1 to 27/28. The gateway
+ * verifies V1 permits on-chain with OpenZeppelin `ECDSA.recover`, which rejects
+ * 0/1. Longer signatures (ERC-1271, concatenated) pass through untouched.
+ */
+function normalizeSignatureV(signature: string): string {
+  if (signature.length !== 132) {
+    return signature;
+  }
+  const v = parseInt(signature.slice(130), 16);
+  if (v !== 0 && v !== 1) {
+    return signature;
+  }
+  return `${signature.slice(0, 130)}${v === 0 ? "1b" : "1c"}`;
 }
 
 /**
@@ -659,7 +704,7 @@ function encryptOffloadBlocker(runtime: WireRuntimeConfig | undefined): string |
  *
  * @throws if the auth discriminator is not one of the supported kinds.
  */
-function toFhevmAuth(
+export function toFhevmAuth(
   auth: NonNullable<FheChain["auth"]>,
 ): NonNullable<FhevmRelayerOptions["auth"]> {
   const type = auth["__type"];

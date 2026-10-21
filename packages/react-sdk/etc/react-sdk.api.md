@@ -36,6 +36,7 @@ import { RegisterPermitParams } from '@zama-fhe/sdk/query';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
 import { RevokeDelegationParams } from '@zama-fhe/sdk/query';
 import { ShieldParams } from '@zama-fhe/sdk/query';
+import { SignedPreparedPermit } from '@zama-fhe/sdk';
 import { Token } from '@zama-fhe/sdk';
 import { TokenMetadata } from '@zama-fhe/sdk/query';
 import { TokenWrapperPair } from '@zama-fhe/sdk';
@@ -61,6 +62,12 @@ export function useApproveUnderlying(address: Address, options?: UseMutationOpti
 
 // @public
 export function useBatchDecryptBalancesAs(tokens: Token[], options?: UseMutationOptions<Map<Address, bigint>, Error, BatchDecryptBalancesAsParams>): UseMutationResult<Map<`0x${string}`, bigint>, Error, BatchDecryptAsOptions, unknown>;
+
+// @public
+export function useBatchPreparePermits(options?: UseMutationOptions<PreparedPermit[], Error, PreparePermitRequest>): UseMutationResult<PreparedPermit[], Error, PreparePermitRequest, unknown>;
+
+// @public
+export function useBatchRegisterPermits(options?: UseMutationOptions<void, Error, readonly SignedPreparedPermit[]>): UseMutationResult<void, Error, readonly SignedPreparedPermit[], unknown>;
 
 // @public
 export function useClearCredentials(options?: UseMutationOptions<void>): UseMutationResult<void, Error, void, unknown>;
@@ -233,7 +240,7 @@ export function usePendingUnshieldSuspense(tokenAddress: Address): UseSuspenseQu
 export function usePreparePermit(options?: UseMutationOptions<PreparedPermit, Error, PreparePermitRequest>): UseMutationResult<PreparedPermit, Error, PreparePermitRequest, unknown>;
 
 // @public
-export function useRegisterPermit(options?: UseMutationOptions<void, Error, RegisterPermitParams>): UseMutationResult<void, Error, RegisterPermitParams, unknown>;
+export function useRegisterPermit(options?: UseMutationOptions<void, Error, RegisterPermitParams>): UseMutationResult<void, Error, SignedPreparedPermit, unknown>;
 
 // @public
 export function useResumeUnshield(address: Address, options?: UseMutationOptions<TransactionResult, Error, ResumeUnshieldParams, Address>): UseMutationResult<TransactionResult, Error, ResumeUnshieldParams, `0x${string}`>;

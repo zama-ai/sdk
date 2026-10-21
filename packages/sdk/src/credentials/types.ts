@@ -131,18 +131,19 @@ export interface SerializedTransportKeyPairWithPermissions {
 }
 
 /**
- * Offline `preparePermit` request — `grantPermit`'s parameters split around
- * the wallet signature. `signer` and `delegator` are explicit addresses, not
- * read from a connected wallet: preparing works without a configured signer,
- * which is the point of the offline flow.
+ * Offline `preparePermit` / `batchPreparePermits` request — `grantPermit`'s
+ * parameters split around the wallet signature. `signer` and `delegator` are
+ * explicit addresses, not read from a connected wallet: preparing works
+ * without a configured signer, which is the point of the offline flow.
  */
 export interface PreparePermitRequest {
   /** Address that will sign the returned EIP-712 typed data. */
   signer: Address;
   /**
    * Contract addresses to authorize, or {@link WildcardPermit} to request a
-   * V2 permit covering every contract. Maximum {@link MAX_CONTRACTS_PER_PERMIT}
-   * per call — no chunking. Ignored (and unchecked) when requesting a wildcard.
+   * V2 permit covering every contract. `preparePermit` caps this at
+   * {@link MAX_CONTRACTS_PER_PERMIT}; `batchPreparePermits` chunks past it.
+   * Ignored (and unchecked) when requesting a wildcard.
    */
   contracts: readonly Address[] | WildcardPermit;
   /** Delegator address, for a delegated permit. Omit for a self permit. */
@@ -193,4 +194,12 @@ export interface PreparedPermitV2 extends PreparedPermitBase {
   version: 2;
   /** Delegator address, for a delegated permit. Absent for a self permit. */
   delegatorAddress?: ChecksummedAddress;
+}
+
+/** A {@link PreparedPermit} together with the signature to register it with. */
+export interface SignedPreparedPermit {
+  /** Payload from `sdk.offline.preparePermit` or `batchPreparePermits`. */
+  prepared: PreparedPermit;
+  /** `eth_signTypedData_v4` signature over `prepared.eip712`. */
+  signature: Hex;
 }

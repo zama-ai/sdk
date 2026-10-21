@@ -1,0 +1,9 @@
+{
+  "extends": "../../api-extractor.base.json",
+  "mainEntryPointFilePath": "<projectFolder>/dist/vaults/index.d.ts",
+  "apiReport": {
+    "enabled": true,
+    "reportFileName": "react-sdk-vaults.api.md",
+    "reportFolder": "<projectFolder>/etc/"
+  }
+}

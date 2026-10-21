@@ -1,4 +1,5 @@
 import type { Address } from "viem";
+import type { RelayerRequestOptions } from "../relayer/types";
 import type { ChainRouter } from "../chains/router";
 import {
   approveContract,
@@ -192,11 +193,14 @@ export class OfflineService {
     request: ConfidentialTransferRequest,
   ): Promise<ReturnType<typeof confidentialTransferContract>> {
     request = parseSchema(confidentialTransferRequest, request);
-    const { encryptedValues, inputProof } = await this.#encryption.encryptValues({
-      values: [{ value: request.amount, type: "euint64" }],
-      contractAddress: request.token,
-      userAddress: request.from,
-    });
+    const { encryptedValues, inputProof } = await this.#encryption.encryptValues(
+      {
+        values: [{ value: request.amount, type: "euint64" }],
+        contractAddress: request.token,
+        userAddress: request.from,
+      },
+      { operation: "offline-confidential-transfer" },
+    );
     const handle = encryptedValues[0];
     if (!handle) {
       throw new EncryptionFailedError("Encryption returned no handles for ConfidentialTransfer");
@@ -211,11 +215,14 @@ export class OfflineService {
     // The encrypted input's proof binds to the tx sender (fhevm verifies it
     // against `msg.sender`), which for `transferFrom` is the operator == the
     // `from` wallet that signs and broadcasts — not the `owner` being debited.
-    const { encryptedValues, inputProof } = await this.#encryption.encryptValues({
-      values: [{ value: request.amount, type: "euint64" }],
-      contractAddress: request.token,
-      userAddress: request.from,
-    });
+    const { encryptedValues, inputProof } = await this.#encryption.encryptValues(
+      {
+        values: [{ value: request.amount, type: "euint64" }],
+        contractAddress: request.token,
+        userAddress: request.from,
+      },
+      { operation: "offline-confidential-transfer-from" },
+    );
     const handle = encryptedValues[0];
     if (!handle) {
       throw new EncryptionFailedError(
@@ -238,11 +245,14 @@ export class OfflineService {
 
   async #buildUnwrap(request: UnwrapRequest): Promise<ReturnType<typeof unwrapContract>> {
     request = parseSchema(unwrapRequest, request);
-    const { encryptedValues, inputProof } = await this.#encryption.encryptValues({
-      values: [{ value: request.amount, type: "euint64" }],
-      contractAddress: request.token,
-      userAddress: request.from,
-    });
+    const { encryptedValues, inputProof } = await this.#encryption.encryptValues(
+      {
+        values: [{ value: request.amount, type: "euint64" }],
+        contractAddress: request.token,
+        userAddress: request.from,
+      },
+      { operation: "offline-unwrap" },
+    );
     const handle = encryptedValues[0];
     if (!handle) {
       throw new EncryptionFailedError("Encryption returned no handles for Unwrap");
@@ -264,8 +274,12 @@ export class OfflineService {
     request: FinalizeUnwrapRequest,
   ): Promise<ReturnType<typeof finalizeUnwrapContract>> {
     request = parseSchema(finalizeUnwrapRequest, request);
+    const options: RelayerRequestOptions = { operation: "offline-finalize-unwrap" };
     const decrypted = await this.#router.relayer
-      .decryptPublicValuesWithSignatures({ encryptedValues: [request.unwrapRequestIdOrAmount] })
+      .decryptPublicValuesWithSignatures({
+        encryptedValues: [request.unwrapRequestIdOrAmount],
+        options,
+      })
       .catch((error: unknown) => {
         throw wrapDecryptError(error, "Public decryption failed during FinalizeUnwrap");
       });

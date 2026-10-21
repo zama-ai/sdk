@@ -123,6 +123,21 @@ Transport key pair validity duration in seconds. Default: `2592000` (30 days). M
 
 Permit lifetime in days. Default: `30`. Controls how long each signed EIP-712 permit remains valid.
 
+### clearCredentialsOnWalletChange
+
+`boolean | undefined`
+
+Wipe the previous account's transport key pair, permits, and decrypt cache whenever the connected account changes or disconnects (account switch, empty account list, disconnect). Default: `true`. Set to `false` to keep them: credentials are stored per signer address, so a user switching A → B → A then reuses A's permits and cached decrypts without signing again. Permits expire after `permitTTL` and transport key pairs after `transportKeyPairTTL`; cached decrypts stay until [`permits.clear`](#permits-clear) or [`permits.revokePermits`](#permits-revokepermits) runs. With the option off, call [`permits.clear`](#permits-clear) in your sign-out flow while the wallet is still connected.
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  walletClient,
+  relayers: { [sepolia.id]: web() },
+  clearCredentialsOnWalletChange: false, // keep permits across account switches
+});
+```
+
 ### transportKeyPairScope
 
 `string | undefined`
@@ -177,6 +192,7 @@ Every event extends a common shape (an optional `tokenAddress`, a `timestamp`, a
 | `PermitError`                                                                                                                                                                        | `grantPermit`, `grantDelegationPermit`, or `registerPermit` fails — but not every failure of these methods: transport-key-pair issues (`TransportKeyPairChangedError`, `KeyWrappingError`) are deliberately excluded from this event.                                                                                                                   |
 | `TransactionError`                                                                                                                                                                   | `submitTransaction` itself rejects — before broadcast (estimation/validation) or while waiting for the receipt. It does **not** fire for a transaction that broadcasts successfully but reverts on execution: the SDK doesn't currently inspect `receipt.status`, so a mined-but-reverted transaction resolves as a success with no error and no event. |
 | `ShieldSubmitted`, `TransferSubmitted`, `TransferFromSubmitted`, `SetOperatorSubmitted`, `ApproveUnderlyingSubmitted`, `WrapSubmitted`, `UnwrapSubmitted`, `FinalizeUnwrapSubmitted` | The corresponding write transaction is submitted — each carries the transaction's `txHash`.                                                                                                                                                                                                                                                             |
+| `VaultSubmitted`                                                                                                                                                                     | A vault batcher write is submitted — carries the `txHash`, the batcher address as `tokenAddress`, and `vaultOperation` (`join`, `quit`, `claim`, `recover`, or `dispatchBatch`). See [Vault deposits and redemptions](../../guides/vault-deposits.md).                                                                                                  |
 | `DelegationSubmitted` / `RevokeDelegationSubmitted`                                                                                                                                  | A delegation grant or revoke transaction is submitted — see [Delegation events](./delegation.md#events).                                                                                                                                                                                                                                                |
 | `UnshieldPhase1Submitted` / `UnshieldPhase2Started` / `UnshieldPhase2Submitted`                                                                                                      | The two-phase unshield flow's request and finalize steps progress.                                                                                                                                                                                                                                                                                      |
 
@@ -204,6 +220,22 @@ const config = createConfig({
 ```
 
 `TransactionError.operation` is one of the write operations (`transfer`, `wrap`, `unwrap`, `finalizeUnwrap`, `delegateDecryption`, and others); `PermitError.operation` is `grantPermit`, `grantDelegationPermit`, or `registerPermit`. See [`SigningRejectedError`](./errors.md#signingrejectederror) and [`SigningFailedError`](./errors.md#signingfailederror) for the shapes `PermitError.error` most commonly carries.
+
+### telemetry
+
+`boolean | undefined`
+
+Whether to attach the `x-zama-sdk-*` usage headers (SDK version, package layer, runtime, and high-level operation) to every relayer request. Default: `true`. The headers carry no end-user data; a self-hosted relayer simply ignores them. See [SDK usage telemetry](../../guides/telemetry.md) for exactly what is sent.
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
+  telemetry: false,
+});
+```
 
 ### runtime
 
@@ -371,6 +403,23 @@ await sdk.permits.registerPermit(prepared, signature);
 - `SigningFailedError` - the signature is invalid or malformed
 
 See the [Offline reference](./Offline.md#preparepermit) for `preparePermit`'s request/response shape and the [Offline signing guide](../../guides/offline.md#offline-permits) for the full workflow.
+
+### permits.batchRegisterPermits
+
+`(permits: SignedPreparedPermit[]) => Promise<void>`
+
+[`registerPermit`](#permits-registerpermit) for every [`offline.batchPreparePermits`](#offline-batchpreparepermits) payload, each paired with its `signature`. Every permit is verified before any is stored, so a permit that fails verification leaves the store untouched. Storing stays best-effort, like `registerPermit`: a failed store write is logged, not thrown. Throws `ConfigurationError` for an empty list, and otherwise whatever `registerPermit` throws for the first failing permit; with more than one permit, the error message is prefixed with that permit's position (`permits[i]: …`).
+
+```ts
+const prepared = await sdk.offline.batchPreparePermits({
+  signer: custodyAddress,
+  contracts: tokenAddresses,
+});
+const signed = await Promise.all(
+  prepared.map(async (p) => ({ prepared: p, signature: await custody.signTypedData(p.eip712) })),
+);
+await sdk.permits.batchRegisterPermits(signed);
+```
 
 ### decryption.decryptValues
 
@@ -599,6 +648,12 @@ See the [Offline reference](./Offline.md) for the request kinds and options, and
 Builds the unsigned EIP-712 typed data for a decryption permit, without signing it — the offline counterpart to [`permits.grantPermit`](#permits-grantpermit). Hand the result to an out-of-process signer, then pass the returned signature to [`permits.registerPermit`](#permits-registerpermit). Works without a configured signer.
 
 See the [Offline reference](./Offline.md#preparepermit) for the request/response shape and typed errors, and the [Offline signing guide](../../guides/offline.md#offline-permits) for the workflow.
+
+### offline.batchPreparePermits
+
+`sdk.offline.batchPreparePermits(request)`
+
+[`preparePermit`](#offline-preparepermit) for any number of contracts: returns one `PreparedPermit` per 10 contracts, each needing its own signature. Pass the signed pairs to [`permits.batchRegisterPermits`](#permits-batchregisterpermits). See the [Offline reference](./Offline.md#batchpreparepermits).
 
 ### dispose
 

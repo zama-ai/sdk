@@ -62,6 +62,36 @@ describe("LLM corpus config", () => {
 });
 
 describe("LLM corpus manifest", () => {
+  test("publishes native docs and client READMEs in the discovery index", () => {
+    const nativeEntries = entriesBySourceType("official-doc").filter((entry) =>
+      entry.source_path.startsWith("docs/gitbook/src/native/"),
+    );
+    expect(nativeEntries.length).toBeGreaterThan(0);
+    const index = buildLlmsTxt(manifest);
+    expect(index).toContain("### Go, Rust, and Daemon Reference");
+    expect(index).toContain("### Go and Rust Daemon Deployment");
+    for (const entry of nativeEntries) {
+      const expectedCategory = entry.source_path.includes("/tutorials/")
+        ? "tutorials"
+        : entry.source_path.includes("/concepts/")
+          ? "concepts"
+          : entry.source_path.includes("/operations/")
+            ? "daemon-operations"
+            : entry.source_path.includes("/reference/")
+              ? "reference-native"
+              : "guides";
+      expect(entry.category).toBe(expectedCategory);
+      expect(index).toContain(entry.source_url);
+      expect(entry.description).toMatch(/Go|Rust/);
+    }
+    for (const sourcePath of ["clients/go/README.md", "clients/rust/README.md"]) {
+      expect(entriesBySourceType("package-readme").map((entry) => entry.source_path)).toContain(
+        sourcePath,
+      );
+      expect(index).toContain(rawGithubUrl(sourcePath));
+    }
+  });
+
   test("includes every published docs page from SUMMARY.md", () => {
     const summaryEntries = parseSummary();
     const docsEntries = entriesBySourceType("official-doc");

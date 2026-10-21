@@ -8,6 +8,7 @@
       "@zama-fhe/sdk/viem": ["./packages/sdk/src/viem/index.ts"],
       "@zama-fhe/sdk/ethers": ["./packages/sdk/src/ethers/index.ts"],
       "@zama-fhe/sdk/node": ["./packages/sdk/src/node/index.ts"],
+      "@zama-fhe/sdk/vaults": ["./packages/sdk/src/vaults/index.ts"],
       "@zama-fhe/sdk/*": ["./packages/sdk/src/*"],
       "@zama-fhe/react-sdk": ["./packages/react-sdk/src/index.ts"],
       "@zama-fhe/react-sdk/*": ["./packages/react-sdk/src/*"]

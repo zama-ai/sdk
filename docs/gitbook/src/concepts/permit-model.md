@@ -120,15 +120,55 @@ Both `revokePermits()` and `clear()` are **signer-level**: they only ever act on
 
 Invalidating the _shared_ key pair is a separate, operator-level operation: `sdk.permits.revokeTransportKeyPair(scopeId)`. It deletes the scope's key pair — no permit needs to be touched directly, and no wallet needs to be connected. `hasPermit`/`grantPermit` then treat every permit in the scope as stale on next access, though not via one single mechanism: immediately after the revoke, `hasPermit()` returns `false` because there's no stored key pair left to compare against; once some later caller regenerates a key for the scope, it's the newly-mismatched embedded public key that `pruneUnusable` then filters existing permits on. Same end-user-visible outcome either way. Unlike other credential-store writes, this call is not best-effort: a storage failure rejects rather than being logged and swallowed, since a resolved promise here is expected to mean the key pair is actually gone — the primitive an operator reaches for on suspected compromise. This only stops the SDK from reissuing or reusing the key going forward; it does not revoke any permit already issued under it, which stays independently valid until its own `permitTTL` expiry — see [Security Model](./security-model.md#shared-tenant-scope-b2b2c-waas-operators) for the full explanation and when a shared scope makes sense.
 
+Each client exposes the same four calls:
+
+{% tabs %}
+{% tab title="Core SDK" %}
+
+```ts
+await sdk.permits.revokePermits(["0xTokenA"]); // selective
+await sdk.permits.revokePermits(); // full wipe
+await sdk.permits.clear(); // log out
+await sdk.permits.revokeTransportKeyPair("tenant-123"); // shared scope
+```
+
+{% endtab %}
+{% tab title="Go" %}
+
+```go
+err := sdk.RevokePermits(ctx, []common.Address{tokenA}) // selective
+err = sdk.RevokePermits(ctx, nil)                       // full wipe
+err = sdk.ClearPermits(ctx)                             // log out
+err = sdk.RevokeTransportKeyPair(ctx, "tenant-123")     // shared scope
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+let permits = sdk.permits();
+permits.revoke_permits(Some(&[token_a])).await?; // selective
+permits.revoke_permits(None).await?; // full wipe
+permits.clear().await?; // log out
+permits.revoke_transport_key_pair("tenant-123").await?; // shared scope
+```
+
+{% endtab %}
+{% endtabs %}
+
 ## Wallet account changes
 
-The SDK automatically manages permits when the wallet state changes:
+By default, the SDK clears the previous account's credentials when the wallet state changes:
 
-| Event                 | Effect on permits                                                                 |
-| --------------------- | --------------------------------------------------------------------------------- |
-| **Disconnect / lock** | All permits and transport key pair cleared for the previous account               |
-| **Account switch**    | Previous account's permits cleared; new account starts fresh                      |
-| **Chain switch**      | Permits are chain-scoped, so existing permits on the previous chain remain intact |
+| Event                 | Effect on permits                                                                                                                          |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Disconnect / lock** | All permits, the transport key pair, and the decrypt cache are cleared for the previous account                                            |
+| **Account switch**    | Previous account's permits, transport key pair, and decrypt cache are cleared; the new account starts fresh                                |
+| **Chain switch**      | Permits and the transport key pair are kept; permits are chain-scoped, so each chain keeps its own. The account's decrypt cache is cleared |
+
+Set `clearCredentialsOnWalletChange: false` on `createConfig` to keep them instead. Permits and transport key pairs are stored per signer address, so one account can never read another's entries, and a permit is an EIP-712 signature the relayer only accepts from the address that signed it. Keeping them lets a multi-wallet user switch A → B → A without signing a new permit, and stops wallets that emit an empty account list on auto-lock (Rabby, Brave) from wiping credentials on every lock. Permits still expire on their own after `permitTTL` and transport key pairs after `transportKeyPairTTL`.
+
+With the option off, handle sign-out yourself: call `sdk.permits.clear()` (or [`useClearCredentials`](../reference/react/useClearCredentials.md) in React) to remove the connected signer's transport key pair, permits, and decrypt cache. It needs a connected wallet account, so call it before the wallet disconnects. Once the wallet is gone, the SDK can no longer tell which account to clear.
 
 See [ZamaSDK.onWalletAccountChange](../reference/sdk/ZamaSDK.md#onwalletaccountchange) for programmatic access to these transitions.
 
@@ -141,5 +181,5 @@ The lifecycle above assumes a connected wallet signs `grantPermit`'s EIP-712 mes
 ## Related
 
 - [Security Model](./security-model.md) — transport key pair storage, threat model, and trust assumptions
-- [Configuration](../guides/configuration.md#5-optional-configure-ttls-and-event-listener) — `transportKeyPairTTL` and `permitTTL` settings
+- [Configuration](../guides/configuration.md#5-optional-configure-ttls-credential-cleanup-and-event-listener) — `transportKeyPairTTL` and `permitTTL` settings
 - [ZamaSDK](../reference/sdk/ZamaSDK.md) — `permits.grantPermit()`, `permits.revokePermits()`, `permits.clear()` API

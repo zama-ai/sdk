@@ -17,11 +17,14 @@ const cleartext = await sdk.decryption.decryptValues([
 
 This guide shows the full loop — fetch logs, decode them, decrypt the amounts — and explains the one real-world constraint that catches indexers: **who is allowed to decrypt a given encrypted value.**
 
-Before starting, set up a Node.js backend following the [Node.js backend](./node-js-backend.md) guide. This guide reuses that `sdk` and `publicClient`.
+Before starting, set up a Node.js backend following the [Node.js backend](./node-js-backend.md) guide. This guide reuses that `sdk` and `publicClient`. For Go or Rust, set up the SDK following [Configuration](./configuration.md) and [attach a wallet](../native/guides/attach-wallet.md); log queries use your go-ethereum or Alloy provider.
 
 ## Example
 
 A minimal indexer: fetch every confidential transfer for a token, decode each log, and decrypt the amounts in one batch.
+
+{% tabs %}
+{% tab title="Core SDK" %}
 
 {% code title="indexer.ts" %}
 
@@ -64,11 +67,132 @@ for (const transfer of transfers) {
 
 {% endcode %}
 
+{% endtab %}
+{% tab title="Go" %}
+
+Decode the logs with go-ethereum. The three `ConfidentialTransfer` fields are indexed topics.
+
+```go
+import (
+	"context"
+	"fmt"
+	"math/big"
+
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
+	zama "github.com/zama-ai/sdk/clients/go/v3"
+)
+
+var confidentialTransfer = crypto.Keccak256Hash([]byte("ConfidentialTransfer(address,address,bytes32)"))
+
+func indexTransfers(ctx context.Context, sdk *zama.SDKContext, eth *ethclient.Client) error {
+	tokenAddress := common.HexToAddress("0xYourConfidentialToken")
+	// The token's deployment block. Providers cap getLogs block ranges, so large
+	// backfills page forward from here instead of fetching everything in one call.
+	startBlock := big.NewInt(0)
+
+	// 1. Fetch the ConfidentialTransfer logs. `from`, `to`, and the encrypted
+	//    amount are all indexed, so each log carries them as topics 1 to 3.
+	logs, err := eth.FilterLogs(ctx, ethereum.FilterQuery{
+		Addresses: []common.Address{tokenAddress},
+		Topics:    [][]common.Hash{{confidentialTransfer}},
+		FromBlock: startBlock,
+	})
+	if err != nil {
+		return err
+	}
+
+	// 2. Pair each encrypted amount with the contract that emitted it.
+	inputs := make([]zama.EncryptedInput, 0, len(logs))
+	for _, log := range logs {
+		inputs = append(inputs, zama.EncryptedInput{EncryptedValue: log.Topics[3], ContractAddress: tokenAddress})
+	}
+
+	// 3. Decrypt every amount in a single call. The result is keyed by the
+	//    encrypted value.
+	cleartext, err := sdk.DecryptValues(ctx, inputs, zama.DecryptOptions{})
+	if err != nil {
+		return err
+	}
+
+	for _, log := range logs {
+		from := common.BytesToAddress(log.Topics[1].Bytes())
+		to := common.BytesToAddress(log.Topics[2].Bytes())
+		fmt.Printf("%s → %s: %s\n", from, to, cleartext[log.Topics[3]].Integer)
+	}
+	return nil
+}
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+Add `alloy-rpc-types-eth` and `alloy-sol-types` alongside `alloy-provider`, using the same Alloy major as `zama_sdk`.
+
+```rust
+use alloy_provider::Provider;
+use alloy_rpc_types_eth::Filter;
+use alloy_sol_types::{SolEvent, sol};
+use zama_sdk::{Address, ClearValue, EncryptedInput, Sdk};
+
+sol! {
+    event ConfidentialTransfer(address indexed from, address indexed to, bytes32 indexed amount);
+}
+
+pub async fn index_transfers(sdk: &Sdk, provider: &impl Provider) -> anyhow::Result<()> {
+    let token_address: Address = "0xYourConfidentialToken".parse()?;
+    // The token's deployment block. Providers cap getLogs block ranges, so large
+    // backfills page forward from here instead of fetching everything in one call.
+    let start_block = 0;
+
+    // 1. Fetch and decode the ConfidentialTransfer logs. Each carries the
+    //    encrypted amount as `amount`.
+    let filter = Filter::new()
+        .address(token_address)
+        .event_signature(ConfidentialTransfer::SIGNATURE_HASH)
+        .from_block(start_block);
+    let transfers = provider
+        .get_logs(&filter)
+        .await?
+        .iter()
+        .map(|log| ConfidentialTransfer::decode_log(&log.inner).map(|event| event.data))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    // 2. Pair each encrypted amount with the contract that emitted it.
+    let inputs: Vec<_> = transfers
+        .iter()
+        .map(|transfer| EncryptedInput {
+            encrypted_value: transfer.amount,
+            contract_address: token_address,
+        })
+        .collect();
+
+    // 3. Decrypt every amount in a single call. The result is keyed by the
+    //    encrypted value.
+    let cleartext = sdk.decryption().decrypt_values(&inputs, None).await?;
+
+    for transfer in &transfers {
+        if let Some(ClearValue::BigInt(amount)) = cleartext.get(&transfer.amount) {
+            println!("{} → {}: {amount}", transfer.from, transfer.to);
+        }
+    }
+    Ok(())
+}
+```
+
+{% endtab %}
+{% endtabs %}
+
 That is the entire pattern. The rest of this guide breaks it into steps and covers the access-control caveat.
 
 ## Steps
 
 ### 1. Fetch and decode the logs
+
+{% tabs %}
+{% tab title="Core SDK" %}
 
 Use the [event decoders](../reference/sdk/event-decoders.md) to turn raw `eth_getLogs` entries into typed events. `TOKEN_TOPICS` fetches every supported token event in one RPC call; `decodeOnChainEvents` decodes them and skips anything unrecognized.
 
@@ -96,9 +220,56 @@ Each decoded event exposes its encrypted value under a typed field:
 
 To decode a single log instead of a batch, use the individual decoders (`decodeConfidentialTransfer(log)`, `decodeWrap(log)`, …), each of which returns `null` for a non-matching log. See the [event decoders reference](../reference/sdk/event-decoders.md) for the full list and field types.
 
+{% endtab %}
+{% tab title="Go" %}
+
+Fetch the `ConfidentialTransfer` logs with go-ethereum. The event fields are all indexed, so no ABI decoding is needed.
+
+```go
+confidentialTransfer := crypto.Keccak256Hash([]byte("ConfidentialTransfer(address,address,bytes32)"))
+
+logs, err := eth.FilterLogs(ctx, ethereum.FilterQuery{
+	Addresses: []common.Address{tokenAddress},
+	Topics:    [][]common.Hash{{confidentialTransfer}},
+	FromBlock: startBlock,
+})
+if err != nil {
+	return err
+}
+// Topics 1 to 3 hold `from`, `to`, and the encrypted amount.
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+Fetch and decode the `ConfidentialTransfer` logs with Alloy.
+
+```rust
+sol! {
+    event ConfidentialTransfer(address indexed from, address indexed to, bytes32 indexed amount);
+}
+
+let filter = Filter::new()
+    .address(token_address)
+    .event_signature(ConfidentialTransfer::SIGNATURE_HASH)
+    .from_block(start_block);
+let transfers = provider
+    .get_logs(&filter)
+    .await?
+    .iter()
+    .map(|log| ConfidentialTransfer::decode_log(&log.inner).map(|event| event.data))
+    .collect::<Result<Vec<_>, _>>()?;
+```
+
+{% endtab %}
+{% endtabs %}
+
 ### 2. Decrypt the encrypted values
 
 Pass the decoded encrypted values to `sdk.decryption.decryptValues`. Each input pairs the encrypted value with the contract that emitted it. The result is a record mapping each encrypted value back to its clear-text value.
+
+{% tabs %}
+{% tab title="Core SDK" %}
 
 ```ts
 // Narrow the decoded `events` to the type you want. Each event exposes its
@@ -118,6 +289,45 @@ const cleartext = await sdk.decryption.decryptValues(
 // { "0xencryptedValue…": 500n }
 const amount = cleartext[transfers[0].encryptedAmount]; // 500n
 ```
+
+{% endtab %}
+{% tab title="Go" %}
+
+```go
+inputs := make([]zama.EncryptedInput, 0, len(logs))
+for _, log := range logs {
+	inputs = append(inputs, zama.EncryptedInput{EncryptedValue: log.Topics[3], ContractAddress: tokenAddress})
+}
+
+cleartext, err := sdk.DecryptValues(ctx, inputs, zama.DecryptOptions{})
+if err != nil {
+	return err
+}
+
+// cleartext maps each encrypted value back to its clear-text amount.
+amount := cleartext[logs[0].Topics[3]].Integer // 500
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+let inputs: Vec<_> = transfers
+    .iter()
+    .map(|transfer| EncryptedInput {
+        encrypted_value: transfer.amount,
+        contract_address: token_address,
+    })
+    .collect();
+
+let cleartext = sdk.decryption().decrypt_values(&inputs, None).await?;
+
+// cleartext maps each encrypted value back to its clear-text amount.
+let amount = cleartext.get(&transfers[0].amount); // Some(ClearValue::BigInt(500))
+```
+
+{% endtab %}
+{% endtabs %}
 
 `decryptValues` accepts many inputs at once and groups them by contract address — so decrypting a page of transfers costs one round-trip per token, not one per transfer. A group only splits into more than one relayer request if its values would otherwise exceed the relayer's per-request size budget (see [Automatic chunking for large decrypt batches](../changelog/v3-4.md#automatic-chunking-for-large-decrypt-batches)). Results are cached per signer and contract, so re-decrypting an encrypted value you have already seen returns instantly without hitting the relayer.
 

@@ -1519,7 +1519,7 @@ describe("CredentialService — ERC-1271 / variable-length V2 signatures", () =>
 
     const prepared = await service.preparePermit({ signer: USER, contracts: [A] });
     expect(prepared.version).toBe(2);
-    await service.registerPermit(prepared, TEST_ERC1271_SIGNATURE);
+    await service.batchRegisterPermits([{ prepared, signature: TEST_ERC1271_SIGNATURE }]);
 
     await expect(service.hasPermit([A])).resolves.toBe(true);
   });
@@ -1557,7 +1557,7 @@ describe("CredentialService — ERC-1271 / variable-length V2 signatures", () =>
     vi.mocked(relayer.parseSignedDecryptionPermit).mockRejectedValueOnce(rejectionError);
 
     const error = await service
-      .registerPermit(prepared, TEST_ERC1271_SIGNATURE)
+      .batchRegisterPermits([{ prepared, signature: TEST_ERC1271_SIGNATURE }])
       .catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(SigningFailedError);

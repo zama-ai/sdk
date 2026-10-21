@@ -157,9 +157,9 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.WalletNotConnected]: false,
   [ZamaErrorCode.WalletAccountNotReady]: true, // async wallet-account discovery still resolving
   [ZamaErrorCode.KeyWrappingFailed]: false, // a transportKeyPairDerivationSecret mismatch or environment capability issue, not transient
-  [ZamaErrorCode.TransportKeyPairChanged]: false, // caller must re-run preparePermit against the current key pair
+  [ZamaErrorCode.TransportKeyPairChanged]: false, // caller must prepare the permit again against the current key pair
   [ZamaErrorCode.PreparedPermitChainMismatch]: false, // caller must register against the chain the permit was prepared for
-  [ZamaErrorCode.PreparedPermitExpired]: false, // caller must re-run preparePermit for a fresh validity window
+  [ZamaErrorCode.PreparedPermitExpired]: false, // caller must prepare the permit again for a fresh validity window
   [ZamaErrorCode.UnifiedPermitNotSupported]: false, // resolves only once the chain itself upgrades to protocol v0.14+
   [ZamaErrorCode.UnifiedDecryptionUnsupported]: false, // resolves only once this relayer instance deploys /v3/user-decrypt, or the caller falls back to a V1 permit
   [ZamaErrorCode.InvalidationTimestampTooLow]: false, // the caller must pass a strictly later cutoff; retrying the same one always reverts

@@ -125,6 +125,7 @@ const assertWorkerIsSelfContained: Plugin = {
 
 const entryPoints = {
   index: "src/index.ts",
+  "internal/index": "src/internal/index.ts",
   "chains/index": "src/chains/index.ts",
   "cleartext/index": "src/cleartext/index.ts",
   "query/index": "src/query/index.ts",
@@ -132,6 +133,7 @@ const entryPoints = {
   "node/index": "src/node/index.ts",
   "viem/index": "src/viem/index.ts",
   "ethers/index": "src/ethers/index.ts",
+  "vaults/index": "src/vaults/index.ts",
 };
 
 export default defineConfig([

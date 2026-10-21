@@ -3,6 +3,7 @@ import type { ZamaSDKEventListener } from "../events";
 import type { ChainRouter } from "../chains/router";
 import type { FhevmRuntimeConfig, RelayerSDK } from "../relayer/types";
 import type { LoggerService } from "../services/logger-service";
+import type { TelemetryState } from "../telemetry";
 import type { GenericLogger, GenericProvider, GenericSigner, GenericStorage } from "../types";
 
 export type { AtLeastOneChain };
@@ -20,7 +21,11 @@ export interface RelayerConfig {
    * Create a single-chain relayer.
    * @internal
    */
-  readonly createRelayer: (chain: FheChain, logger: LoggerService) => RelayerSDK;
+  readonly createRelayer: (
+    chain: FheChain,
+    logger: LoggerService,
+    telemetry?: TelemetryState,
+  ) => RelayerSDK;
 }
 
 /** Web relayer config — drives the FHE backend directly. */
@@ -50,6 +55,13 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   /** Permit lifetime in days. Default: 30. Clamped to `transportKeyPairTTL / 86400`. */
   permitTTL?: number;
   /**
+   * Wipe the previous account's transport key pair, permits, and decrypt cache
+   * whenever the connected account changes or disconnects. Default: `true`.
+   * Set to `false` to keep them until permits expire or `sdk.permits.clear()`
+   * runs, so a user switching A → B → A does not sign a new permit each time.
+   */
+  clearCredentialsOnWalletChange?: boolean;
+  /**
    * Opt-in shared-tenant scope (B2B2C/WaaS operators) — an opaque identifier such
    * as a tenant ID. Every signer configured with the same scope shares one
    * transport key pair instead of one per signer address. Permits stay per-signer
@@ -62,6 +74,8 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   registryTTL?: number;
   /** SDK lifecycle event listener. */
   onEvent?: ZamaSDKEventListener;
+  /** Attach `x-zama-sdk-*` usage headers (SDK version, layer, runtime, operation) to every relayer request. Default: `true`. */
+  telemetry?: boolean;
   /**
    * Global `@fhevm/sdk` runtime config — WASM load mode, threads, logger, auth,
    * module versions. `runtime.auth` is the process-wide fallback; each chain's
@@ -108,9 +122,12 @@ export type ZamaConfig = {
   readonly permitStorage: GenericStorage;
   readonly transportKeyPairTTL: number;
   readonly permitTTL: number;
+  readonly clearCredentialsOnWalletChange: boolean;
   readonly transportKeyPairScope: string | undefined;
   readonly registryTTL: number;
   readonly onEvent: ZamaSDKEventListener | undefined;
+  /** @internal */
+  readonly telemetry: TelemetryState | undefined;
   /**
    * The SDK-wide logger, always present. Wraps the optional consumer-supplied
    * {@link GenericLogger}; silent when none was configured.

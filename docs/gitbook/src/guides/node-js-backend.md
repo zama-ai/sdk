@@ -61,7 +61,7 @@ For servers handling multiple users concurrently, use `asyncLocalStorage` instea
 
 ### 4. Isolate per-request state with `asyncLocalStorage`
 
-On a server where each HTTP request belongs to a different user, you need per-request transport key pair isolation. `asyncLocalStorage` wraps Node.js [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html) to scope storage to the current async context.
+On a server where each HTTP request belongs to a different user, you need per-request transport key pair isolation. `asyncLocalStorage` wraps Node.js [`AsyncLocalStorage`](https://nodejs.org/docs/latest-v24.x/api/async_context.html#class-asynclocalstorage) to scope storage to the current async context.
 
 ```ts
 import { asyncLocalStorage } from "@zama-fhe/sdk/node";

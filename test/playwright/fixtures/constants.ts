@@ -20,7 +20,7 @@ export const VITE_ANVIL_PORT = 8546;
 export const NODE_ANVIL_PORT = 8547;
 
 /** Anvil deployment timeout */
-export const ANVIL_DEPLOY_TIMEOUT_MS = 90_000;
+export const ANVIL_DEPLOY_TIMEOUT_MS = 300_000;
 
 /**
  * What a hermetic browser lane skips: node-only specs, plus `*-live.spec.ts`,

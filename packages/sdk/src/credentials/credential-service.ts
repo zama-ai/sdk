@@ -1,5 +1,7 @@
 import type { Address, Hex } from "viem";
+import type { ParseTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
 import type { ChainRouter } from "../chains/router";
+import type { RelayerSDK } from "../relayer/types";
 import { ZamaError } from "../errors/base";
 import {
   KeyWrappingError,
@@ -17,11 +19,13 @@ import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
 import type { GenericLogger, GenericSigner, GenericStorage } from "../types";
+import { assertNonNullable } from "../utils/assertions";
 import { isInvalidTransportKeyPairMessage } from "../utils/error";
 import { swallow } from "../utils/swallow";
 import { parseSchema } from "../validation";
 import { TransportKeyPairVault } from "./keypair-vault";
 import type { DerivationSecretHolder } from "./keypair-wrapping";
+import { parsePreparedPermit } from "./parse-prepared-permit";
 import { PermissionStore } from "./permission-store";
 import {
   buildPermission,
@@ -32,19 +36,14 @@ import {
   sortedUnion,
   uncoveredContracts,
 } from "./permissions";
-import {
-  Eip712Schema,
-  PermitTTLSchema,
-  PreparedPermitSchema,
-  SerializedPermitSchema,
-} from "./schemas";
+import { Eip712Schema, PermitTTLSchema, SerializedPermitSchema } from "./schemas";
 import { permissionScopeKey, type PermissionScope } from "./storage-keys";
 import type {
   Permission,
   PreparedPermit,
   PreparePermitRequest,
-  SerializedPermitEip712,
   SerializedTransportKeyPairWithPermissions,
+  SignedPreparedPermit,
   StoredTransportKeyPair,
 } from "./types";
 import {
@@ -56,6 +55,34 @@ import {
   WILDCARD_PERMIT,
   type WildcardPermit,
 } from "./utils";
+
+interface VerifiedPermit {
+  scope: PermissionScope;
+  permission: Permission;
+}
+
+/** State shared by every permit of one {@link CredentialService.batchRegisterPermits} call. */
+interface RegisterBatch {
+  relayer: RelayerSDK;
+  activeChainId: number;
+  /** Per signer, so permits from one signer share a single vault read and parse. */
+  storedKeyPairs: Map<ChecksummedAddress, StoredTransportKeyPair | null>;
+  transportKeyPairs: Map<ChecksummedAddress, ParseTransportKeyPairReturnType>;
+}
+
+async function memoized<K, V extends {} | null>(
+  cache: Map<K, V>,
+  key: K,
+  compute: () => Promise<V>,
+): Promise<V> {
+  const hit = cache.get(key);
+  if (hit !== undefined) {
+    return hit;
+  }
+  const value = await compute();
+  cache.set(key, value);
+  return value;
+}
 
 export const DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS = 30 * SECONDS_PER_DAY;
 export const DEFAULT_PERMIT_DURATION_DAYS = 30;
@@ -107,8 +134,7 @@ export interface CredentialServiceConfig {
 /**
  * Single facade coordinating the keypair vault and the permission store.
  *
- * `CredentialService` is the only credentials object held by {@link ZamaSDK}. It accepts identity
- * transitions via `handleWalletAccountChange`.
+ * `CredentialService` is the only credentials object held by {@link ZamaSDK}.
  *
  * Two distinct revocation tiers exist and must not be conflated: {@link clearCredentials}
  * (signer-level, e.g. an end-user "disconnect") only ever removes that signer's own
@@ -180,8 +206,11 @@ export class CredentialService {
    * adjacent to `transportKeyPairDerivationSecret` internals and must never
    * reach the public `onEvent` stream.
    */
-  #failPermit(operation: PermitOperation, error: unknown): ZamaError {
+  #failPermit(operation: PermitOperation, error: unknown, prefix = ""): ZamaError {
     const failure = wrapSigningError(error, { operation });
+    if (prefix) {
+      failure.message = prefix + failure.message;
+    }
     this.#emitEvent({ type: ZamaSDKEvents.PermitError, operation, error: failure });
     return failure;
   }
@@ -312,49 +341,71 @@ export class CredentialService {
   }
 
   /**
-   * Offline permit flow, phase 1: build the unsigned EIP-712 typed data for a
-   * decryption permit without signing it. The caller (an HSM, custody API, or
-   * any out-of-process signer) signs the returned `eip712` with
-   * `eth_signTypedData_v4` and hands the signature to {@link registerPermit}.
+   * Single-permit form of {@link batchPreparePermits}.
+   *
+   * @throws if `request.contracts` exceeds {@link MAX_CONTRACTS_PER_PERMIT} (not checked
+   *   for a wildcard request), is empty, `request.delegator` equals `request.signer`, or
+   *   `request.durationDays` exceeds the V1 permit maximum of 365 days. {@link ConfigurationError}
+   * @throws if a wildcard permit is requested against a chain that hasn't upgraded to
+   *   protocol v0.14+. `UnifiedPermitNotSupportedError`
+   * @throws if the transport key pair cannot be wrapped or unwrapped. {@link KeyWrappingError}
+   * @throws if a concurrent rotation replaces the transport key pair while this
+   *   call is generating one. {@link TransportKeyPairChangedError}
+   */
+  async preparePermit(request: PreparePermitRequest): Promise<PreparedPermit> {
+    const count =
+      request.contracts === WILDCARD_PERMIT ? 0 : normalizeAddresses(request.contracts).length;
+    if (count > MAX_CONTRACTS_PER_PERMIT) {
+      throw new ConfigurationError(
+        `preparePermit: request.contracts must not exceed ${MAX_CONTRACTS_PER_PERMIT} addresses ` +
+          `(got ${count}). Use batchPreparePermits to split them across permits.`,
+      );
+    }
+    const [prepared] = await this.batchPreparePermits(request);
+    assertNonNullable(prepared, "batchPreparePermits result");
+    return prepared;
+  }
+
+  /**
+   * Offline permit flow, phase 1: build the unsigned EIP-712 typed data for
+   * decryption permits without signing it, one permit per chunk of
+   * {@link MAX_CONTRACTS_PER_PERMIT} contracts. The caller signs each returned
+   * `eip712` out-of-process with `eth_signTypedData_v4` and hands the
+   * signatures to {@link batchRegisterPermits}.
    *
    * Signer-less: the transport key pair is resolved from `request.signer`
    * directly — no wallet account or configured signer needed. Signer-offline,
    * not network-offline: building the typed data still reads the chain's KMS
    * signers context on-chain.
    *
-   * One permit per call — no widening or chunking against existing permits,
-   * unlike {@link grantPermit}. Prefer `grantPermit` unless signing must
-   * happen out-of-process.
+   * Unlike {@link grantPermit}, existing permits are never consulted or widened.
    *
    * Prefers V2 (unified) permits whenever the chain supports them, mirroring
    * {@link grantPermit}'s version selection exactly — including the
-   * {@link WILDCARD_PERMIT} chain-support precheck.
+   * {@link WILDCARD_PERMIT} chain-support precheck. A wildcard request yields a
+   * single V2 permit; an address list is chunked per {@link MAX_CONTRACTS_PER_PERMIT}.
    *
-   * @throws if `request.contracts` is empty or exceeds {@link MAX_CONTRACTS_PER_PERMIT}
-   *   (not checked for a wildcard request), `request.delegator` equals `request.signer`,
-   *   or `request.durationDays` exceeds the V1 permit maximum of 365 days (enforced by
-   *   `PermitTTLSchema`). {@link ConfigurationError}
+   * @throws if `request.contracts` is empty, `request.delegator` equals
+   *   `request.signer`, or `request.durationDays` exceeds the V1 permit maximum
+   *   of 365 days. {@link ConfigurationError}
    * @throws if a wildcard permit is requested against a chain that hasn't upgraded to
    *   protocol v0.14+. `UnifiedPermitNotSupportedError`
+   * @throws if the transport key pair cannot be wrapped or unwrapped. {@link KeyWrappingError}
+   * @throws if a concurrent rotation replaces the transport key pair while this
+   *   call is generating one. {@link TransportKeyPairChangedError}
    */
-  async preparePermit(request: PreparePermitRequest): Promise<PreparedPermit> {
+  async batchPreparePermits(request: PreparePermitRequest): Promise<PreparedPermit[]> {
     const signerAddress = checksum(request.signer);
     const isWildcard = request.contracts === WILDCARD_PERMIT;
     const contracts =
       request.contracts === WILDCARD_PERMIT ? [] : normalizeAddresses(request.contracts);
     if (!isWildcard && contracts.length === 0) {
-      throw new ConfigurationError("preparePermit: request.contracts must not be empty.");
-    }
-    if (!isWildcard && contracts.length > MAX_CONTRACTS_PER_PERMIT) {
-      throw new ConfigurationError(
-        `preparePermit: request.contracts must not exceed ${MAX_CONTRACTS_PER_PERMIT} addresses per call ` +
-          `(got ${contracts.length}) — grantPermit chunks automatically, preparePermit does not.`,
-      );
+      throw new ConfigurationError("request.contracts must not be empty.");
     }
     const delegatorAddress = request.delegator ? checksum(request.delegator) : undefined;
     if (delegatorAddress !== undefined && delegatorAddress === signerAddress) {
       throw new ConfigurationError(
-        "preparePermit: request.delegator must differ from request.signer — self-delegation is not allowed.",
+        "request.delegator must differ from request.signer: self-delegation is not allowed.",
       );
     }
     // PermitTTLSchema caps at MAX_V1_PERMIT_DURATION_DAYS, so an explicit
@@ -386,55 +437,67 @@ export class CredentialService {
       throw wildcardPermitNotSupportedError("preparePermit");
     }
     const version = isWildcard ? 2 : chainVersion;
+    // A wildcard is one V2 permit with an empty allowedContracts; an address
+    // list is split to the per-permit cap, every chunk sharing the key pair,
+    // start timestamp, and version resolved above.
+    const chunks: readonly (readonly ChecksummedAddress[])[] = isWildcard
+      ? [[]]
+      : chunkContracts(contracts);
 
-    let eip712: SerializedPermitEip712;
     try {
-      const eip712Raw =
-        version === 2
-          ? await relayer.createUnsignedUnifiedDecryptionPermitEip712({
-              transportKeyPair,
-              contractAddresses: contracts,
-              startTimestamp,
-              durationSeconds,
-              signerAddress,
-            })
-          : await relayer.createUnsignedLegacyDecryptionPermitEip712({
-              transportKeyPair,
-              contractAddresses: contracts,
-              startTimestamp,
-              durationSeconds,
-              ...(delegatorAddress && { delegatorAddress }),
-            });
-      eip712 = toJsonSafeEip712(Eip712Schema.parse(eip712Raw));
+      return await Promise.all(
+        chunks.map(async (chunk): Promise<PreparedPermit> => {
+          const eip712Raw =
+            version === 2
+              ? await relayer.createUnsignedUnifiedDecryptionPermitEip712({
+                  transportKeyPair,
+                  contractAddresses: chunk,
+                  startTimestamp,
+                  durationSeconds,
+                  signerAddress,
+                })
+              : await relayer.createUnsignedLegacyDecryptionPermitEip712({
+                  transportKeyPair,
+                  contractAddresses: chunk,
+                  startTimestamp,
+                  durationSeconds,
+                  ...(delegatorAddress && { delegatorAddress }),
+                });
+          const eip712 = toJsonSafeEip712(Eip712Schema.parse(eip712Raw));
+          return version === 2
+            ? { version: 2, eip712, signerAddress, ...(delegatorAddress && { delegatorAddress }) }
+            : { version: 1, eip712, signerAddress };
+        }),
+      );
     } catch (error) {
       // A race between the precheck above and this call (the chain downgrading,
       // or the probe having defensively returned 1) surfaces the same way here.
       throw toUnifiedPermitNotSupportedError("preparePermit", error) ?? error;
     }
-
-    return version === 2
-      ? { version: 2, eip712, signerAddress, ...(delegatorAddress && { delegatorAddress }) }
-      : { version: 1, eip712, signerAddress };
   }
 
   /**
    * Offline permit flow, phase 2: verify the signature an out-of-process
-   * signer produced for a {@link preparePermit} payload, then persist it as a
-   * usable permit.
+   * signer produced for each {@link batchPreparePermits} payload, then persist
+   * them as usable permits. Every permit is verified before any is persisted,
+   * so a verification failure stores nothing. Persisting is best-effort: a
+   * failed store write is logged, not thrown.
    *
    * Idempotent: safe to call more than once for the same `(prepared, signature)`
    * pair (e.g. a webhook re-delivery, or a retried registration call) — the
    * second call replaces the first call's stored entry instead of duplicating it.
    *
-   * Every field used below (chain, timing, transport key, contracts, delegation)
-   * is read from `prepared.eip712` — the unsigned typed data — or, once verified,
-   * from the signature-checked `signedPermit` the relayer returns. `preparePermit`
-   * never hands back a separate "claimed" copy of any of these for this method to
-   * cross-check against: there is exactly one source of truth for each field, so
-   * there is nothing to tamper with independently of the signature itself.
+   * Every field (chain, timing, transport key, contracts, delegation) is read
+   * from `prepared.eip712` or the signature-checked permit the relayer returns.
+   * There is no separate "claimed" copy to cross-check, so nothing can be
+   * tampered with independently of the signature itself.
    *
-   * @throws if `prepared` doesn't match the {@link PreparedPermit} shape (e.g. it
-   *   crossed a process boundary and was corrupted). {@link ConfigurationError}
+   * Stops at the first permit that fails verification. With more than one
+   * permit, the error message is prefixed with that permit's position
+   * (`permits[i]: …`).
+   *
+   * @throws if `permits` is empty, or a `prepared` doesn't match the {@link PreparedPermit}
+   *   shape (e.g. it crossed a process boundary and was corrupted). {@link ConfigurationError}
    * @throws if the chain embedded in `prepared.eip712` doesn't match the currently
    *   active chain. {@link PreparedPermitChainMismatchError}
    * @throws if the permit's validity window has already elapsed. {@link PreparedPermitExpiredError}
@@ -443,18 +506,49 @@ export class CredentialService {
    *   expiry or eviction in between). {@link TransportKeyPairChangedError}
    * @throws if the signature is invalid or malformed. {@link SigningFailedError}
    */
-  async registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void> {
+  async batchRegisterPermits(permits: readonly SignedPreparedPermit[]): Promise<void> {
+    if (permits.length === 0) {
+      throw new ConfigurationError("permits must not be empty.");
+    }
+    // Snapshot the relayer and chain together, before the first await: a chain
+    // switch mid-batch must not verify a later permit against a different chain
+    // than the one active when this call started.
+    const batch: RegisterBatch = {
+      relayer: this.#router.relayer,
+      activeChainId: this.#router.chain.id,
+      storedKeyPairs: new Map(),
+      transportKeyPairs: new Map(),
+    };
+    // Sequential, not Promise.all: parallel verification would emit a
+    // PermitError per failing permit instead of just the first.
+    const verified: VerifiedPermit[] = [];
+    for (const [index, { prepared, signature }] of permits.entries()) {
+      const prefix = permits.length > 1 ? `permits[${index}]: ` : "";
+      verified.push(await this.#verifyPermit(prepared, signature, batch, prefix));
+    }
+    // Sequential: replace rewrites the scope's whole permit list, so concurrent
+    // writes to one scope would drop entries.
+    for (const { scope, permission } of verified) {
+      await swallow(
+        "replace permit",
+        () => this.#store.replace(scope, permission.serializedPermit.signature, permission),
+        this.#logger,
+      );
+    }
+  }
+
+  async #verifyPermit(
+    prepared: PreparedPermit,
+    signature: Hex,
+    { relayer, activeChainId, storedKeyPairs, transportKeyPairs }: RegisterBatch,
+    prefix: string,
+  ): Promise<VerifiedPermit> {
     let parsed: PreparedPermit;
     try {
-      parsed = parseSchema(PreparedPermitSchema, prepared);
+      parsed = parsePreparedPermit(prepared);
     } catch (error) {
-      throw this.#failPermit("registerPermit", error);
+      throw this.#failPermit("registerPermit", error, prefix);
     }
-
-    // Snapshot the relayer and chain together, before the first await — see the
-    // identical guard in preparePermit.
-    const relayer = this.#router.relayer;
-    const activeChainId = this.#router.chain.id;
 
     const { domain, message } = parsed.eip712;
     const preparedChainId = Number(domain.chainId);
@@ -462,6 +556,7 @@ export class CredentialService {
       throw this.#failPermit(
         "registerPermit",
         new PreparedPermitChainMismatchError({ preparedChainId, activeChainId }),
+        prefix,
       );
     }
     const startTimestamp = Number(message.startTimestamp);
@@ -474,30 +569,35 @@ export class CredentialService {
         "registerPermit",
         new PreparedPermitExpiredError(
           `registerPermit: the prepared permit's validity window (starting ${startTimestamp}, ` +
-            `${durationSeconds}s) has already elapsed — call preparePermit again.`,
+            `${durationSeconds}s) has already elapsed. Prepare the permit again.`,
         ),
+        prefix,
       );
     }
 
     // No key pair to fall back on generating here: `prepared.eip712` was built
     // against a specific transport public key, so a missing (or mismatched)
-    // stored key pair can only mean it changed since preparePermit ran —
+    // stored key pair can only mean it changed after the permit was prepared —
     // generating a fresh one via getOrCreate would just be discarded by the
     // comparison below, having wastefully persisted a key nothing will use.
     //
     // Credential/vault resolution is deliberately not wrapped; those
     // failures must never reach onEvent.
     const signerAddress = parsed.signerAddress;
-    const keypair = await this.#vault.readStored(signerAddress);
+    const keypair = await memoized(storedKeyPairs, signerAddress, () =>
+      this.#vault.readStored(signerAddress),
+    );
     if (keypair === null || keypair.publicKey !== message.publicKey) {
       throw new TransportKeyPairChangedError(
-        "registerPermit: the transport key pair changed since preparePermit ran — call " +
-          "preparePermit again to rebind the signature request to the current key pair.",
+        `${prefix}registerPermit: the transport key pair changed since the permit was prepared. ` +
+          "Prepare it again to rebind the signature request to the current key pair.",
       );
     }
 
     try {
-      const transportKeyPair = await relayer.parseTransportKeyPair(keypair);
+      const transportKeyPair = await memoized(transportKeyPairs, signerAddress, () =>
+        relayer.parseTransportKeyPair(keypair),
+      );
       const signedPermit = await relayer.parseSignedDecryptionPermit({
         serializedPermit: {
           version: parsed.version,
@@ -537,13 +637,9 @@ export class CredentialService {
         chainId: activeChainId,
         delegatorAddress: checksum(signedPermit.encryptedDataOwnerAddress),
       };
-      await swallow(
-        "replace permit",
-        () => this.#store.replace(scope, serializedPermit.signature, permission),
-        this.#logger,
-      );
+      return { scope, permission };
     } catch (error) {
-      throw this.#failPermit("registerPermit", error);
+      throw this.#failPermit("registerPermit", error, prefix);
     }
   }
 
@@ -743,11 +839,8 @@ export class CredentialService {
   }
 
   /**
-   * Apply a wallet account transition.
-   *
-   * Address change clears persisted credentials for the previous account.
-   * Chain-only changes keep credentials intact because permits are chain-scoped
-   * already and stale decrypt plaintext is cleared by {@link ZamaSDK}.
+   * Wipe the previous account's persisted credentials on a wallet account change.
+   * Chain-only changes keep credentials, since permits are already chain-scoped.
    */
   async handleWalletAccountChange(
     prev?: { address: Address },

@@ -32,6 +32,7 @@ export type {
   FhevmClient,
   FhevmClientOptions,
   FhevmRelayerOptions,
+  RelayerRequestOptions,
   FhevmRuntimeConfig,
   RelayerOptions,
   RelayerSDK,
@@ -50,11 +51,11 @@ export {
   chains,
   hardhat,
   hoodi,
-  ingenTestnet,
   mainnet,
   polygon,
   polygonAmoy,
   sepolia,
+  zenithTrexTestnet,
 } from "./chains";
 export type { FheChain, FheChainAuth } from "./chains/types";
 
@@ -80,6 +81,7 @@ export type {
   WildcardPermit,
 } from "./credentials";
 export { WILDCARD_PERMIT } from "./credentials";
+export { parsePreparedPermit } from "./credentials";
 export type {
   PreparedPermit,
   PreparedPermitBase,
@@ -88,6 +90,7 @@ export type {
   PreparePermitRequest,
   SerializedPermit,
   SerializedPermitEip712,
+  SignedPreparedPermit,
 } from "./credentials/types";
 export {
   AclPausedError,
@@ -170,6 +173,8 @@ export type {
   UnshieldPhase2StartedEvent,
   UnshieldPhase2SubmittedEvent,
   UnwrapSubmittedEvent,
+  VaultOperation,
+  VaultSubmittedEvent,
   WrapSubmittedEvent,
   ZamaSDKEvent,
   ZamaSDKEventListener,

@@ -318,7 +318,7 @@ export interface TransactionErrorEvent extends BaseEvent {
 }
 
 // @public
-export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "invalidateDecryptionSignatures" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll";
+export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "invalidateDecryptionSignatures" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll" | "vault:join" | "vault:quit" | "vault:claim" | "vault:recover" | "vault:dispatchBatch";
 
 // @public
 export interface TransactionReceipt {
@@ -469,6 +469,7 @@ export type ZamaConfig = {
     readonly permitStorage: GenericStorage;
     readonly transportKeyPairTTL: number;
     readonly permitTTL: number;
+    readonly clearCredentialsOnWalletChange: boolean;
     readonly transportKeyPairScope: string | undefined;
     readonly registryTTL: number;
     readonly onEvent: ZamaSDKEventListener | undefined;
@@ -480,6 +481,7 @@ export type ZamaConfig = {
 // @public
 export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
     chains: TChains;
+    clearCredentialsOnWalletChange?: boolean;
     logger?: GenericLogger;
     onEvent?: ZamaSDKEventListener;
     permitStorage?: GenericStorage;
@@ -488,6 +490,7 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
     relayers: { [K in TChains[number]["id"]]: RelayerConfig; };
     runtime?: FhevmRuntimeConfig;
     storage?: GenericStorage;
+    telemetry?: boolean;
     transportKeyPairScope?: string;
     transportKeyPairTTL?: number;
 }
@@ -499,8 +502,10 @@ export interface ZamaConfigViem<TChains extends AtLeastOneChain = AtLeastOneChai
     walletClient: WalletClient;
 }
 
+// Warning: (ae-forgotten-export) The symbol "VaultSubmittedEvent" needs to be exported by the entry point index.d.ts
+//
 // @public
-export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | PermitErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | WrapSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | InvalidateDecryptionSignaturesSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
+export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | PermitErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | VaultSubmittedEvent | ApproveUnderlyingSubmittedEvent | WrapSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | InvalidateDecryptionSignaturesSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
 export type ZamaSDKEventListener = (event: ZamaSDKEvent) => void;
@@ -523,6 +528,7 @@ export const ZamaSDKEvents: {
     readonly WrapSubmitted: "wrap:submitted";
     readonly UnwrapSubmitted: "unwrap:submitted";
     readonly FinalizeUnwrapSubmitted: "finalizeUnwrap:submitted";
+    readonly VaultSubmitted: "vault:submitted";
     readonly DelegationSubmitted: "delegation:submitted";
     readonly RevokeDelegationSubmitted: "revokeDelegation:submitted";
     readonly InvalidateDecryptionSignaturesSubmitted: "invalidateDecryptionSignatures:submitted";

@@ -16,6 +16,8 @@ API reference for the `@zama-fhe/react-sdk` package. Each page documents a singl
 
 🟨 Go to [**useUnshield**](useUnshield.md) to withdraw confidential tokens back to public ERC-20.
 
+🟨 Go to [**useDeposit**](useDeposit.md) and [**useRedeem**](useRedeem.md) to join a confidential ERC-4626 vault's deposit or redeem batch.
+
 🟨 Go to [**Query keys**](query-keys.md) for manual cache invalidation and custom query composition.
 
 ## Help center

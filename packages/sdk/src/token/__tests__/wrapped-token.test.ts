@@ -306,6 +306,7 @@ describe("WrappedToken", () => {
         values: [{ value: 50n, type: "euint64" }],
         contractAddress: wrapperAddress,
         userAddress,
+        options: { operation: "unwrap" },
       });
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "unwrap" }),
@@ -393,6 +394,7 @@ describe("WrappedToken", () => {
 
       expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
         encryptedValues: [unwrapRequestId],
+        options: { operation: "finalize-unwrap" },
       });
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
@@ -447,18 +449,45 @@ describe("WrappedToken", () => {
 
       const result = await wrappedToken.unshield(50n, { skipBalanceCheck: true });
 
-      expect(relayer.encryptValues).toHaveBeenCalled();
+      expect(relayer.encryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({ options: { operation: "unshield" } }),
+      );
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "unwrap" }),
       );
       expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xtxhash");
       expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
         encryptedValues: [BURN_HANDLE],
+        options: { operation: "unshield" },
       });
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
       );
       expect(result.txHash).toBe("0xtxhash");
+    });
+
+    test("labels the unshield balance pre-flight with unshield", async ({
+      userAddress,
+      wrappedToken,
+      provider,
+    }) => {
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+        logs: [
+          {
+            topics: [
+              Topics.UnwrapRequested,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"ff".repeat(32)}`,
+            ],
+            data: `0x${"ff".repeat(32)}`,
+          },
+        ],
+      });
+      const decryptBalance = vi.spyOn(wrappedToken, "decryptBalance").mockResolvedValue(1000n);
+
+      await wrappedToken.unshield(50n);
+
+      expect(decryptBalance).toHaveBeenCalledWith(userAddress, "unshield");
     });
 
     test("unshieldAll orchestrates unwrapAll → receipt → finalizeUnwrap", async ({
@@ -486,6 +515,7 @@ describe("WrappedToken", () => {
 
       expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
         encryptedValues: [BURN_HANDLE],
+        options: { operation: "unshield-all" },
       });
       expect(result.txHash).toBe("0xtxhash");
     });
@@ -525,6 +555,7 @@ describe("WrappedToken", () => {
       expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xprevioustx");
       expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
         encryptedValues: [BURN_HANDLE],
+        options: { operation: "resume-unshield" },
       });
       expect(result.txHash).toBe("0xtxhash");
     });

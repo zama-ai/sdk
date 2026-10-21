@@ -3,7 +3,7 @@ import type { ChainRouter } from "../chains/router";
 import { wrapEncryptError } from "../errors";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import type { EncryptParams, EncryptResult, FhevmRelayerOptions } from "../relayer/types";
+import type { EncryptParams, EncryptResult, RelayerRequestOptions } from "../relayer/types";
 import { toError } from "../utils";
 
 export class EncryptionService {
@@ -26,7 +26,7 @@ export class EncryptionService {
 
   async encryptValues(
     params: EncryptParams,
-    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
+    options?: RelayerRequestOptions,
   ): Promise<EncryptResult> {
     const t0 = Date.now();
     const normalizedContractAddress = getAddress(params.contractAddress);

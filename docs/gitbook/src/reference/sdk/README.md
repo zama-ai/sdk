@@ -12,6 +12,8 @@ API reference for the core `@zama-fhe/sdk` package. Each page documents a single
 
 🟨 Go to [**WrappedToken**](WrappedToken.md) for ERC-7984 ERC-20 wrapper operations — shield, unshield, allowance.
 
+🟨 Go to [**Vault**](Vault.md) and [**VaultBatcher**](VaultBatcher.md) for confidential ERC-4626 vaults — batched deposits, redemptions, and claims.
+
 🟨 Go to [**web() transport**](RelayerWeb.md) for browser-side FHE encryption via bundled WASM.
 
 🟨 Go to [**node() transport**](RelayerNode.md) for server-side FHE operations in Node.js.

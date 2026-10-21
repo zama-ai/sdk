@@ -4,7 +4,9 @@
 
 ## Getting Started
 
-- [Quick start](tutorials/quick-start.md)
+- [TypeScript quick start](tutorials/quick-start.md)
+- [Go quick start](native/tutorials/go-quick-start.md)
+- [Rust quick start](native/tutorials/rust-quick-start.md)
 - [First confidential dApp](tutorials/first-confidential-dapp.md)
 - [Wallet & exchange integration](tutorials/wallet-exchange-integration.md)
 - [Build with an LLM](tutorials/build-with-an-llm.md)
@@ -19,6 +21,7 @@
 - [Release channels](changelog/README.md)
 - [Beta (unreleased)](changelog/beta.md)
 - [3.x (current)](changelog/v3.md)
+  - [3.7.x](changelog/v3-7.md)
   - [3.6.x](changelog/v3-6.md)
   - [3.5.x](changelog/v3-5.md)
   - [3.4.x](changelog/v3-4.md)
@@ -35,6 +38,7 @@
 - [Configuration](guides/configuration.md)
 - [Authentication](guides/authentication.md)
 - [Relayer API keys](guides/relayer-api-keys.md)
+- [SDK usage telemetry](guides/telemetry.md)
 - [Shield tokens](guides/shield-tokens.md)
 - [Transfer privately](guides/transfer-privately.md)
 - [Unshield tokens](guides/unshield-tokens.md)
@@ -49,6 +53,22 @@
 - [Operator approvals](guides/operator-approvals.md)
 - [Delegated decryption](guides/delegated-decryption.md)
 - [Encrypt & decrypt](guides/encrypt-decrypt.md)
+- [Vault deposits and redemptions](guides/vault-deposits.md)
+
+## Go & Rust clients
+
+- [Go & Rust overview](native/README.md)
+- [Attach a wallet](native/guides/attach-wallet.md)
+- [Store credentials](native/guides/credential-storage.md)
+- [Observe events](native/guides/observe-events.md)
+- [Recover from disconnections](native/guides/recover-from-disconnections.md)
+- [Resolve uncertain transaction outcomes](native/guides/uncertain-transaction-outcomes.md)
+
+## Go & Rust daemon deployment
+
+- [Deploy in production](native/operations/run-in-production.md)
+- [Monitor and troubleshoot](native/operations/monitor-and-troubleshoot.md)
+- [Upgrade the daemon](native/operations/upgrade-and-recover.md)
 
 ## API References
 
@@ -57,6 +77,8 @@
   - [Token](reference/sdk/Token.md)
   - [WrappedToken](reference/sdk/WrappedToken.md)
   - [WrappersRegistry](reference/sdk/WrappersRegistry.md)
+  - [Vault](reference/sdk/Vault.md)
+  - [VaultBatcher](reference/sdk/VaultBatcher.md)
   - [web() transport](reference/sdk/RelayerWeb.md)
   - [node() transport](reference/sdk/RelayerNode.md)
   - [cleartext() transport](reference/sdk/RelayerCleartext.md)
@@ -92,7 +114,9 @@
   - [useFinalizeUnwrap](reference/react/useFinalizeUnwrap.md)
   - [useGrantPermit](reference/react/useGrantPermit.md)
   - [usePreparePermit](reference/react/usePreparePermit.md)
+  - [useBatchPreparePermits](reference/react/useBatchPreparePermits.md)
   - [useRegisterPermit](reference/react/useRegisterPermit.md)
+  - [useBatchRegisterPermits](reference/react/useBatchRegisterPermits.md)
   - [useHasPermit](reference/react/useHasPermit.md)
   - [useRevokePermits](reference/react/useRevokePermits.md)
   - [useClearCredentials](reference/react/useClearCredentials.md)
@@ -124,10 +148,30 @@
   - [useDelegationStatus](reference/react/useDelegationStatus.md)
   - [useDecryptBalanceAs](reference/react/useDecryptBalanceAs.md)
   - [useBatchDecryptBalancesAs](reference/react/useBatchDecryptBalancesAs.md)
+  - [useVault](reference/react/useVault.md)
+  - [useVaultBatcher](reference/react/useVaultBatcher.md)
+  - [useDeposit](reference/react/useDeposit.md)
+  - [useRedeem](reference/react/useRedeem.md)
+  - [useJoin](reference/react/useJoin.md)
+  - [useClaim](reference/react/useClaim.md)
+  - [useQuit](reference/react/useQuit.md)
+  - [useRecover](reference/react/useRecover.md)
+  - [useDispatchBatch](reference/react/useDispatchBatch.md)
+  - [useCurrentBatchId](reference/react/useCurrentBatchId.md)
+  - [useBatchState](reference/react/useBatchState.md)
+  - [useTimeUntilDispatchable](reference/react/useTimeUntilDispatchable.md)
   - [Query keys](reference/react/query-keys.md)
+
+- [Go client](native/reference/go-client.md)
+- [Rust client](native/reference/rust-client.md)
+- [Daemon configuration](native/reference/daemon-configuration.md)
+- [Daemon error codes](native/reference/error-codes.md)
+- [Client and daemon compatibility](native/reference/client-and-daemon-compatibility.md)
 
 ## Concepts
 
 - [Architecture](concepts/architecture.md)
 - [Permit model](concepts/permit-model.md)
 - [Security model](concepts/security-model.md)
+- [Daemon architecture](native/concepts/architecture.md)
+- [Daemon trust model](native/concepts/trust-boundary.md)
