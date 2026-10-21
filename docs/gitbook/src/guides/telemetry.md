@@ -69,7 +69,7 @@ If browser traffic reaches the relayer through [your own backend proxy](./authen
 
 ## Sending query parameters instead of headers
 
-Some proxies and edges rebuild the request with their own header set, or strip headers they do not know, while they forward the request URL unchanged. For those deployments, set `telemetry: "query"` in `createConfig`. The SDK then sends the same four fields as `zama_sdk_*` query parameters and no `x-zama-sdk-*` headers:
+Some deployments forward the request URL unchanged but lose custom headers on the way: for example a proxy that rebuilds the request with its own header set, a strict `Access-Control-Allow-Headers` list on the relayer or proxy, or a gateway that drops headers it does not know. For those deployments, set `telemetry: "query"` in `createConfig`. The SDK then sends the same four fields as `zama_sdk_*` query parameters and no `x-zama-sdk-*` headers:
 
 ```ts
 const config = createConfig({
@@ -81,7 +81,7 @@ const config = createConfig({
 });
 ```
 
-The parameters are appended to every relayer request URL, so they show up in network tabs and request logs where headers would not. Keep the default `"header"` mode unless your proxy needs the query form.
+The parameters are appended to every relayer request URL, so they end up in request logs and anywhere else URLs are stored, and the URL changes with each operation, which splits log grouping or caching keyed on the URL. Keep the default `"header"` mode unless your proxy needs the query form.
 
 ## Turning it off
 
@@ -97,10 +97,10 @@ const config = createConfig({
 });
 ```
 
-On Node.js, the `node()` transport also honours the `ZAMA_SDK_TELEMETRY` environment variable, which overrides the config for the whole process. It takes the same values as `telemetry`: `header`, `query` or `off` (`0` and `false` also mean `off`). For example, in CI:
+On Node.js, the `node()` transport also honours the `ZAMA_SDK_TELEMETRY` environment variable for the whole process. It takes the same values as `telemetry`, case-insensitive: `header`, `query` or `off` (`0` and `false` also mean `off`). It can switch between `header` and `query` or turn telemetry off, but it cannot turn on what the config disabled, and an unrecognised value is ignored. For example, in CI:
 
 ```bash
 ZAMA_SDK_TELEMETRY=off node server.js
 ```
 
-Either switch removes every `x-zama-sdk-*` header and `zama_sdk_*` query parameter from every request.
+With `telemetry: "off"` or `ZAMA_SDK_TELEMETRY=off`, no request carries an `x-zama-sdk-*` header or a `zama_sdk_*` query parameter.

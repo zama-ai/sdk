@@ -80,13 +80,14 @@ export function withOperation<T extends { readonly operation?: TelemetryOperatio
   return Object.assign({}, options, { operation: options?.operation ?? operation });
 }
 
-export function telemetryModeFromEnv(
-  env: Record<string, string | undefined>,
-): TelemetryMode | undefined {
-  const value = env.ZAMA_SDK_TELEMETRY?.trim().toLowerCase();
+export function parseTelemetryMode(value: string | boolean | undefined): TelemetryMode | undefined {
+  if (typeof value === "boolean") {
+    return value ? "header" : "off";
+  }
+  const mode = value?.trim().toLowerCase();
   // `0` and `false` predate the named modes and still mean off.
-  if (value === "0" || value === "false") {
+  if (mode === "0" || mode === "false") {
     return "off";
   }
-  return value === "header" || value === "query" || value === "off" ? value : undefined;
+  return mode === "header" || mode === "query" || mode === "off" ? mode : undefined;
 }

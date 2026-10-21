@@ -44,17 +44,33 @@ describe("node() telemetry", () => {
     expect(relayerConfig().telemetry).toBeUndefined();
   });
 
-  test("ZAMA_SDK_TELEMETRY=query overrides the config's mode for the process", () => {
-    vi.stubEnv("ZAMA_SDK_TELEMETRY", "query");
-    const telemetry: TelemetryState = { layer: "core", mode: "header" };
-    node().createRelayer(anvil, new LoggerService(), telemetry);
+  test.each([
+    { env: undefined, config: "query", mode: "query" },
+    { env: "query", config: "header", mode: "query" },
+    { env: "header", config: "query", mode: "header" },
+    { env: "yes", config: "query", mode: "query" },
+  ] as const)(
+    "ZAMA_SDK_TELEMETRY=$env with telemetry: $config sends $mode",
+    ({ env, config, mode }) => {
+      if (env !== undefined) {
+        vi.stubEnv("ZAMA_SDK_TELEMETRY", env);
+      }
+      const telemetry: TelemetryState = { layer: "core", mode: config };
+      node().createRelayer(anvil, new LoggerService(), telemetry);
 
-    expect(relayerConfig().telemetry).toEqual({ state: telemetry, runtime: "node", mode: "query" });
-  });
+      expect(relayerConfig().telemetry).toEqual({ state: telemetry, runtime: "node", mode });
+    },
+  );
 
-  test("sends no telemetry without a config-wide context", () => {
-    node().createRelayer(anvil, new LoggerService());
+  test.each([undefined, "query"])(
+    "sends no telemetry without a config-wide context, even with ZAMA_SDK_TELEMETRY=%j",
+    (env) => {
+      if (env !== undefined) {
+        vi.stubEnv("ZAMA_SDK_TELEMETRY", env);
+      }
+      node().createRelayer(anvil, new LoggerService());
 
-    expect(relayerConfig().telemetry).toBeUndefined();
-  });
+      expect(relayerConfig().telemetry).toBeUndefined();
+    },
+  );
 });

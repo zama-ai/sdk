@@ -786,17 +786,22 @@ describe("FhevmRelayer usage telemetry", () => {
     });
   });
 
-  test("web() tags the relayer as the web runtime", async () => {
-    const relayer = web({ offloadEncrypt: false }).createRelayer(hostedChain, new LoggerService(), {
-      layer: "core",
-      mode: "header",
-    });
-    await relayer.fetchFheEncryptionKeyBytes();
+  test.each([
+    { mode: "header", options: { headers: staticHeaders } },
+    { mode: "query", options: { query: staticQuery } },
+  ] as const)(
+    "web() tags the relayer as the web runtime in $mode mode",
+    async ({ mode, options }) => {
+      const relayer = web({ offloadEncrypt: false }).createRelayer(
+        hostedChain,
+        new LoggerService(),
+        { layer: "core", mode },
+      );
+      await relayer.fetchFheEncryptionKeyBytes();
 
-    expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
-      options: { headers: staticHeaders },
-    });
-  });
+      expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({ options });
+    },
+  );
 
   test("sends the headers to a proxied or self-hosted relayer too", async () => {
     const relayer = makeRelayer({ chain: proxiedChain, telemetry: telemetry() });

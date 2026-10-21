@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import type { RelayerRequestOptions } from "../relayer/types";
 import {
-  telemetryModeFromEnv,
+  parseTelemetryMode,
   telemetryRequestOptions,
   type TelemetryMode,
   withOperation,
@@ -48,24 +48,22 @@ describe("telemetryRequestOptions", () => {
   });
 });
 
-describe("telemetryModeFromEnv", () => {
-  test.each(["0", "false", " FALSE ", "off"])("treats ZAMA_SDK_TELEMETRY=%j as off", (value) => {
-    expect(telemetryModeFromEnv({ ZAMA_SDK_TELEMETRY: value })).toBe("off");
+describe("parseTelemetryMode", () => {
+  test.each(["0", "false", " FALSE ", "off", "OFF", false])("reads %j as off", (value) => {
+    expect(parseTelemetryMode(value)).toBe("off");
   });
 
   test.each([
     ["header", "header"],
+    [true, "header"],
     [" Query ", "query"],
-  ])("reads ZAMA_SDK_TELEMETRY=%j as the %s mode", (value, mode) => {
-    expect(telemetryModeFromEnv({ ZAMA_SDK_TELEMETRY: value })).toBe(mode);
+  ])("reads %j as the %s mode", (value, mode) => {
+    expect(parseTelemetryMode(value)).toBe(mode);
   });
 
-  test.each(["1", "true", "", "yes", undefined])(
-    "leaves the config's choice for ZAMA_SDK_TELEMETRY=%j",
-    (value) => {
-      expect(telemetryModeFromEnv({ ZAMA_SDK_TELEMETRY: value })).toBeUndefined();
-    },
-  );
+  test.each(["1", "true", "", "yes", undefined])("leaves %j to the caller", (value) => {
+    expect(parseTelemetryMode(value)).toBeUndefined();
+  });
 });
 
 describe("withOperation", () => {

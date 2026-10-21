@@ -110,4 +110,24 @@ describe("buildZamaConfig telemetry", () => {
 
     expect(config.telemetry).toBeUndefined();
   });
+
+  test("telemetry: true means headers", () => {
+    const config = buildZamaConfig(undefined, {} as never, { ...params(), telemetry: true });
+
+    expect(config.telemetry).toEqual({ layer: "core", mode: "header" });
+  });
+
+  // TypeScript rejects these values; JavaScript callers can still pass them.
+  test.each([
+    [" QUERY ", "query"],
+    ["Off", undefined],
+    ["yes", "header"],
+  ])("telemetry: %j is read as %j", (telemetry, mode) => {
+    const config = buildZamaConfig(undefined, {} as never, {
+      ...params(),
+      telemetry: telemetry as never,
+    });
+
+    expect(config.telemetry?.mode).toBe(mode);
+  });
 });

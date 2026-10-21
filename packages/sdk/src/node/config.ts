@@ -3,7 +3,7 @@ import type { RelayerConfig } from "../config/types";
 import { FhevmRelayer } from "../relayer/fhevm-relayer";
 import type { RelayerOptions } from "../relayer/types";
 import type { LoggerService } from "../services/logger-service";
-import { telemetryModeFromEnv, type TelemetryState } from "../telemetry";
+import { parseTelemetryMode, type TelemetryState } from "../telemetry";
 
 /** Node transport — drives the FHE backend directly on the calling thread. */
 export interface NodeRelayerConfig extends RelayerConfig {
@@ -20,8 +20,9 @@ export interface NodeRelayerConfig extends RelayerConfig {
 /**
  * Node.js transport — drives `@fhevm/sdk` via {@link FhevmRelayer} on the calling thread.
  *
- * `ZAMA_SDK_TELEMETRY` overrides `createConfig({ telemetry })` for the whole
- * process: `header`, `query` or `off` (`0` and `false` also mean `off`).
+ * `ZAMA_SDK_TELEMETRY=header|query|off` applies to the whole process
+ * (case-insensitive; `0` and `false` also mean `off`). It cannot turn on what
+ * `createConfig({ telemetry })` disabled.
  *
  * @example
  * ```ts
@@ -35,7 +36,8 @@ export function node(options?: RelayerOptions): NodeRelayerConfig {
   return {
     type: "node",
     createRelayer: (chain, logger, telemetry) => {
-      const mode = telemetryModeFromEnv(globalThis.process?.env ?? {}) ?? telemetry?.mode;
+      const mode =
+        parseTelemetryMode(globalThis.process?.env.ZAMA_SDK_TELEMETRY) ?? telemetry?.mode;
       return new FhevmRelayer({
         chain,
         options,
