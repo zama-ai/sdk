@@ -2207,6 +2207,23 @@ Plain-language release notes for the `3.x` line — the current, actively-mainta
 
 This page covers the `3.7.x` line.
 
+## 3.7.1
+
+_Released 2026-10-22._
+
+### InGen testnet removed
+
+
+> [!WARNING]
+> **Removed export in a patch release.** 3.7.1 removes the `ingenTestnet` preset. If your code imports it, upgrading from 3.7.0 fails to compile until you remove that import.
+
+
+The SDK no longer supports the T-Rex InGen testnet (chain ID `364301`). The `ingenTestnet` preset is removed from `@zama-fhe/sdk`, `@zama-fhe/sdk/chains` and `@zama-fhe/sdk/node`, from the built-in `chains` map, and from the deprecated `DefaultRegistryAddresses` map. The `example-ingen` app is removed too. For a cleartext testnet, use `zenithTrexTestnet`, `hoodi` or `bscTestnet` with the [`cleartext()` transport](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerCleartext.md). See [Chain presets](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md).
+
+### Security and toolchain updates
+
+Patched versions of handlebars, vite, vitest, markdown-it, undici, brace-expansion and source-map-js. CI and the example apps move to Node.js 24.22.1, and the example apps to Next.js 16.4. These updates touch only the repository's tooling and the example apps; the dependencies of `@zama-fhe/sdk` and `@zama-fhe/react-sdk` are unchanged.
+
 ## 3.7.0
 
 _Released 2026-10-19._
