@@ -471,6 +471,7 @@ export interface FhevmRelayerOptions {
     readonly fetchRetries?: number;
     readonly fetchRetryDelayInMilliseconds?: number;
     readonly headers?: Record<string, string>;
+    readonly query?: Record<string, string>;
     readonly signal?: AbortSignal;
     readonly timeout?: number;
 }

@@ -1,5 +1,5 @@
 # Debian 13, the same release as the distroless runtime stage.
-FROM node:24-trixie-slim@sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66 AS build
+FROM node:24-trixie-slim@sha256:43b9ba1142b8dcf33fa8f922ca1be85714adc444e0586c7cf7726daaeabc1bea AS build
 RUN npm install --global pnpm@11.1.2
 WORKDIR /workspace
 ENV CI=1
@@ -23,7 +23,7 @@ RUN pnpm install --frozen-lockfile --offline \
   && install -d -m 0700 /rootfs/run/zama /rootfs/var/lib/zama
 
 # Node.js only: no shell or package manager.
-FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:9eeb7f5887d0e239e78264b06f7f11d2e14be534050481803a9e4728fcdd278e
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:78f07ef1b5ea71ad7c055df15d0dd8997f2d288f9158623c4d4ae3d765b7d50d
 ARG RUNTIME_UID=10000
 ARG RUNTIME_GID=10001
 ENV NODE_ENV=production PATH=/nodejs/bin:$PATH

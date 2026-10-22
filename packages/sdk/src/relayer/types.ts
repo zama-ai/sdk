@@ -181,6 +181,8 @@ export interface FhevmRelayerOptions {
   readonly auth?: FhevmRuntimeConfig["auth"];
   /** Extra HTTP headers attached to each relayer request. */
   readonly headers?: Record<string, string>;
+  /** Extra query parameters appended to each relayer request URL. */
+  readonly query?: Record<string, string>;
   /**
    * When `true`, `@fhevm/sdk`'s relayer emits verbose per-request trace logs to
    * `console.log` (`[RelayerAsyncRequest]:…`), following each round-trip through
