@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.7.1](https://github.com/zama-ai/sdk/compare/v3.7.0...v3.7.1) (2026-10-22)
+
+### Bug Fixes
+
+- **security:** patch handlebars, vite, vitest, markdown-it, undici, brace-expansion, source-map-js ([#867](https://github.com/zama-ai/sdk/issues/867)) ([5a7c31d]()), closes [#864]() [#845]() [#846]() [#861]()
+
+### Build System
+
+- **security:** update Node to 24.22.1 and Next to 16.4 and remove InGen testnet ([#864](https://github.com/zama-ai/sdk/issues/864)) ([7ab9a07]())
+
+## [3.8.0-beta.6](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.5...v3.8.0-beta.6) (2026-10-22)
+
+### Build System
+
+- **security:** refresh container base images and toolchains ([#865](https://github.com/zama-ai/sdk/issues/865)) ([18ff429]())
+
 ## [3.8.0-beta.5](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.4...v3.8.0-beta.5) (2026-10-21)
 
 ### Features
