@@ -141,7 +141,7 @@ The submission emits a [`VaultSubmitted`](ZamaSDK.md#events) event with `vaultOp
 - [`InsufficientConfidentialBalanceError`](errors.md#insufficientconfidentialbalanceerror) — the asset balance is less than `amount`.
 - [`BalanceCheckUnavailableError`](errors.md#balancecheckunavailableerror) — the balance check needs a decryption the signer can't perform; pass `skipBalanceCheck: true`.
 - [`UnlistedConfidentialTokenError`](errors.md#unlistedconfidentialtokenerror) — the router's registry does not list the asset.
-- [`TransactionRevertedError`](errors.md#transactionrevertederror) — the transaction was mined, but a leg's batcher reported no `Joined` event.
+- [`VaultGroupJoinUnconfirmedError`](errors.md#vaultgroupjoinunconfirmederror) — the transaction was mined, but a leg's batcher reported no `Joined` event. Carries the `txHash`, the `receipt`, the `joins` of the legs that did report and the `unconfirmed` member ids, so the batches that took the join can still be claimed or quit.
 
 ### redeem
 

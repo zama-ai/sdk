@@ -124,6 +124,7 @@ export {
   UnlistedConfidentialTokenError,
   UnshieldAlreadyFinalizedError,
   VaultBatcherPausedError,
+  VaultGroupJoinUnconfirmedError,
   WalletAccountNotReadyError,
   WalletNotConnectedError,
   ZamaError,
@@ -134,6 +135,7 @@ export {
   type UnlistedConfidentialTokenDetails,
   type UnshieldAlreadyFinalizedDetails,
   type VaultBatcherPausedDetails,
+  type VaultGroupJoinUnconfirmedDetails,
 } from "./errors";
 export { ZamaSDKEvents } from "./events";
 export type {

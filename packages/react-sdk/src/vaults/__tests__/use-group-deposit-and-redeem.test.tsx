@@ -1,4 +1,4 @@
-import { act } from "@testing-library/react";
+import { act, waitFor } from "@testing-library/react";
 import { getAddress } from "viem";
 import { Token, type Address, type GenericProvider } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
@@ -40,15 +40,21 @@ const BATCHERS: Readonly<
 };
 
 /** Every read a router submission makes, plus the receipt it reads its batch ids from. */
-function mockGroupSubmission(provider: GenericProvider, account: Address, batchers: Address[]) {
+function mockGroupSubmission(
+  provider: GenericProvider,
+  account: Address,
+  batchers: Address[],
+  options: { operatorGranted?: boolean } = {},
+) {
   vi.mocked(provider.readContract).mockImplementation(async (call: unknown) => {
     const { functionName, address } = call as { functionName: string; address: Address };
     switch (functionName) {
       case "tokenWrapperRegistry":
         return REGISTRY;
       case "isConfidentialTokenValid":
-      case "isOperator":
         return true;
+      case "isOperator":
+        return options.operatorGranted ?? true;
       case "paused":
         return false;
       case "fromToken":
@@ -136,6 +142,48 @@ describe("useGroupRedeem", () => {
     await act(() => result.current.mutateAsync({ vaultId: "alpha", amount: 500n }));
 
     expect(queryClient).toHaveInvalidatedQueries(keys);
+  });
+
+  test("invalidates every member's operator cache when a later grant is rejected, but no batch reads", async ({
+    renderWithProviders,
+    provider,
+    relayer,
+    signer,
+    userAddress,
+  }) => {
+    mockGroupSubmission(provider, userAddress, [ALPHA_REDEEM, BETA_REDEEM], {
+      operatorGranted: false,
+    });
+    mockEncryptedLegs(relayer, 2);
+    vi.mocked(signer.writeContract).mockImplementation(async (call) => {
+      if (call.functionName === "setOperator" && getAddress(call.address) === BETA_SHARE) {
+        throw new Error("User rejected the request");
+      }
+      return `0x${"11".repeat(32)}`;
+    });
+
+    const { result, queryClient } = renderWithProviders(() => useGroupRedeem({ group }));
+
+    const operatorKeys = [
+      zamaQueryKeys.confidentialIsOperator.scope(ALPHA_SHARE, userAddress, ROUTER),
+      zamaQueryKeys.confidentialIsOperator.scope(BETA_SHARE, userAddress, ROUTER),
+    ];
+    const batchKeys = [
+      vaultQueryKeys.currentBatchId.batcher(ALPHA_REDEEM),
+      vaultQueryKeys.currentBatchId.batcher(BETA_REDEEM),
+    ];
+    for (const key of [...operatorKeys, ...batchKeys]) {
+      queryClient.setQueryData(key, 1n);
+    }
+
+    await act(() =>
+      expect(result.current.mutateAsync({ vaultId: "alpha", amount: 500n })).rejects.toThrow(
+        "setOperator",
+      ),
+    );
+
+    await waitFor(() => expect(queryClient).toHaveInvalidatedQueries(operatorKeys));
+    expect(queryClient).not.toHaveInvalidatedQueries(batchKeys);
   });
 
   test("forwards onSuccess", async ({ renderWithProviders, provider, relayer, userAddress }) => {

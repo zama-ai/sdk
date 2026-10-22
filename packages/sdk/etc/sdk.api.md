@@ -5877,6 +5877,7 @@ export interface ErrorForCode {
     [ZamaErrorCode.UnlistedConfidentialToken]: UnlistedConfidentialTokenError;
     [ZamaErrorCode.UnshieldAlreadyFinalized]: UnshieldAlreadyFinalizedError;
     [ZamaErrorCode.VaultBatcherPaused]: VaultBatcherPausedError;
+    [ZamaErrorCode.VaultGroupJoinUnconfirmed]: VaultGroupJoinUnconfirmedError;
     [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
     [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
 }
@@ -19529,6 +19530,24 @@ export class VaultBatcherPausedError extends ZamaError {
 }
 
 // @public
+export interface VaultGroupJoinUnconfirmedDetails {
+    // Warning: (ae-forgotten-export) The symbol "VaultGroupJoin" needs to be exported by the entry point index.d.ts
+    readonly joins: readonly VaultGroupJoin[];
+    readonly receipt: TransactionReceipt;
+    readonly txHash: Hex;
+    readonly unconfirmed: readonly string[];
+}
+
+// @public
+export class VaultGroupJoinUnconfirmedError extends ZamaError {
+    constructor(message: string, details: VaultGroupJoinUnconfirmedDetails, options?: ErrorOptions);
+    readonly joins: readonly VaultGroupJoin[];
+    readonly receipt: TransactionReceipt;
+    readonly txHash: Hex;
+    readonly unconfirmed: readonly string[];
+}
+
+// @public
 export type VaultOperation = "join" | "quit" | "claim" | "recover" | "dispatchBatch" | "routerJoin";
 
 // @public
@@ -20920,6 +20939,7 @@ export const ZamaErrorCode: {
     readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
     readonly UnlistedConfidentialToken: "UNLISTED_CONFIDENTIAL_TOKEN";
     readonly VaultBatcherPaused: "VAULT_BATCHER_PAUSED";
+    readonly VaultGroupJoinUnconfirmed: "VAULT_GROUP_JOIN_UNCONFIRMED";
 };
 
 // @public

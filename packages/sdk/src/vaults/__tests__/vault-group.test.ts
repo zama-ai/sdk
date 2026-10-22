@@ -2,11 +2,14 @@ import { decodeAbiParameters, getAbiItem, getAddress, type Address, type Hex } f
 import { vi } from "vitest";
 import {
   ConfigurationError,
+  DecryptionFailedError,
+  EncryptionFailedError,
   InsufficientConfidentialBalanceError,
   SignerNotConfiguredError,
-  TransactionRevertedError,
   UnlistedConfidentialTokenError,
   VaultBatcherPausedError,
+  VaultGroupJoinUnconfirmedError,
+  type ZamaError,
 } from "../../errors";
 import type { ZamaSDKEvent } from "../../events/sdk-events";
 import type { RelayerSDK } from "../../relayer/types";
@@ -25,21 +28,22 @@ import { vaultRouterAbi } from "../abi/vault-router.abi";
 import { takeJoined } from "../events";
 import { VaultGroup, type VaultGroupConfig } from "../vault-group";
 
-const ROUTER = getAddress("0x4444444444444444444444444444444444444444");
-const REGISTRY = getAddress("0x5555555555555555555555555555555555555555");
-const ASSET = getAddress("0x2222222222222222222222222222222222222222");
+// Every fixture address has hex letters, so a missing `getAddress` shows up as a casing mismatch.
+const ROUTER = getAddress("0x4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e");
+const REGISTRY = getAddress("0x5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f");
+const ASSET = getAddress("0x2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a");
 
 const ALPHA = {
   id: "alpha",
-  vault: getAddress("0x1010101010101010101010101010101010101010"),
-  share: getAddress("0x1111111111111111111111111111111111111111"),
+  vault: getAddress("0x1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b"),
+  share: getAddress("0x1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c"),
   depositBatcher: getAddress("0xAaaAaAAaAaAAaAaAAaaAaaAaAaAAaAaAaAAAAaaA"),
   redeemBatcher: getAddress("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"),
 };
 const BETA = {
   id: "beta",
-  vault: getAddress("0x3030303030303030303030303030303030303030"),
-  share: getAddress("0x3333333333333333333333333333333333333333"),
+  vault: getAddress("0x3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d"),
+  share: getAddress("0x3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e"),
   depositBatcher: getAddress("0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC"),
   redeemBatcher: getAddress("0xdDdDddDdDdddDDddDdDdDDDDdDdDDdDDdDDDDDDd"),
 };
@@ -81,6 +85,8 @@ function mockReads(
     /** Per token; `balance` is the default for the rest. */
     balances?: Readonly<Record<Address, bigint>>;
     balance?: bigint;
+    /** Per token: that token's decrypt fails with this error. */
+    balanceErrors?: Readonly<Record<Address, ZamaError>>;
     batchers?: typeof BATCHERS;
   } = {},
 ) {
@@ -106,15 +112,19 @@ function mockReads(
         throw new Error(`Unexpected read of ${functionName}`);
     }
   });
-  vi.spyOn(Token, "batchBalancesOf").mockImplementation(async (tokens) => ({
-    results: new Map(
-      tokens.map((token) => [
-        token.address,
-        answers.balances?.[token.address] ?? answers.balance ?? 1_000_000n,
-      ]),
-    ),
-    errors: new Map(),
-  }));
+  vi.spyOn(Token, "batchBalancesOf").mockImplementation(async (tokens) => {
+    const results = new Map<Address, bigint>();
+    const errors = new Map<Address, ZamaError>();
+    for (const { address } of tokens) {
+      const error = answers.balanceErrors?.[address];
+      if (error) {
+        errors.set(address, error);
+      } else {
+        results.set(address, answers.balances?.[address] ?? answers.balance ?? 1_000_000n);
+      }
+    }
+    return { results, errors };
+  });
 }
 
 /** Every batcher reports a join, so a submission can read its batch ids back. */
@@ -157,6 +167,25 @@ describe("VaultGroup construction", () => {
     expect(group.members.map((entry) => entry.id)).toStrictEqual(["alpha", "beta"]);
     expect(group.cAsset).toBe(ASSET);
     expect(group.router).toBe(ROUTER);
+  });
+
+  test("checksums lowercase addresses from the config", ({ sdk }) => {
+    const group = new VaultGroup(sdk, {
+      ...GROUP,
+      cAsset: ASSET.toLowerCase() as Address,
+      router: ROUTER.toLowerCase() as Address,
+      vaults: GROUP.vaults.map((entry) => ({
+        ...entry,
+        depositBatcher: entry.depositBatcher.toLowerCase() as Address,
+        redeemBatcher: entry.redeemBatcher.toLowerCase() as Address,
+      })),
+    });
+    expect(group.cAsset).toBe(ASSET);
+    expect(group.router).toBe(ROUTER);
+    expect(group.members.map((entry) => entry.vault.depositBatcher.address)).toStrictEqual([
+      ALPHA.depositBatcher,
+      BETA.depositBatcher,
+    ]);
   });
 
   test("refuses a group above the leg count a submission can carry", ({ sdk }) => {
@@ -231,6 +260,13 @@ describe("VaultGroup isAssetListed", () => {
   test("asks the router's registry about the asset", async ({ sdk, provider }) => {
     mockReads(provider, { isTokenListed: false });
     await expect(new VaultGroup(sdk, GROUP).isAssetListed()).resolves.toBe(false);
+
+    const listingReads = vi
+      .mocked(provider.readContract)
+      .mock.calls.filter(([call]) => call.functionName === "isConfidentialTokenValid");
+    expect(listingReads.map(([call]) => [call.address, call.args])).toStrictEqual([
+      [REGISTRY, [ASSET]],
+    ]);
   });
 
   test("reads the registry address once across calls", async ({ sdk, provider }) => {
@@ -345,7 +381,7 @@ describe("VaultGroup deposit", () => {
     ]);
   });
 
-  test("fails after the transaction if a leg's batcher reported no join", async ({
+  test("fails after the transaction if a leg's batcher reported no join, keeping the legs that did", async ({
     sdk,
     provider,
     relayer,
@@ -355,12 +391,33 @@ describe("VaultGroup deposit", () => {
     mockEncryptedLegs(relayer, 2);
     mockReceipts(provider, userAddress, [ALPHA.depositBatcher]);
 
-    await expect(new VaultGroup(sdk, GROUP).deposit("alpha", 1_000n)).rejects.toThrow(
-      TransactionRevertedError,
+    const attempt = new VaultGroup(sdk, GROUP).deposit("alpha", 1_000n);
+    await expect(attempt).rejects.toThrow(VaultGroupJoinUnconfirmedError);
+    await expect(attempt).rejects.toThrow(
+      /was mined, but its receipt has no Joined event for .* of vault\(s\) "beta"/,
     );
-    await expect(new VaultGroup(sdk, GROUP).deposit("alpha", 1_000n)).rejects.toThrow(
-      new RegExp(`was mined, but its receipt has no Joined event for .* of vault "beta"`),
-    );
+    await expect(attempt).rejects.toMatchObject({
+      txHash: expect.any(String),
+      receipt: { logs: [expect.objectContaining({ address: ALPHA.depositBatcher })] },
+      joins: [expect.objectContaining({ vaultId: "alpha", batchId: 7n })],
+      unconfirmed: ["beta"],
+    });
+  });
+
+  test("reads every leg before failing, so a later leg's join survives an earlier miss", async ({
+    sdk,
+    provider,
+    relayer,
+    userAddress,
+  }) => {
+    mockReads(provider);
+    mockEncryptedLegs(relayer, 2);
+    mockReceipts(provider, userAddress, [BETA.depositBatcher]);
+
+    await expect(new VaultGroup(sdk, GROUP).deposit("alpha", 1_000n)).rejects.toMatchObject({
+      joins: [expect.objectContaining({ vaultId: "beta", batchId: 7n })],
+      unconfirmed: ["alpha"],
+    });
   });
 
   test("pairs each leg with its own log when the adapter omits log addresses", async ({
@@ -388,6 +445,56 @@ describe("VaultGroup deposit", () => {
       ["alpha", 7n],
       ["beta", 8n],
     ]);
+  });
+
+  test("matches lowercase batcher reports against the config and reports checksummed tokens", async ({
+    sdk,
+    provider,
+    relayer,
+    userAddress,
+  }) => {
+    const lowercase = Object.fromEntries(
+      Object.entries(BATCHERS).map(([batcher, report]) => [
+        batcher,
+        {
+          fromToken: report.fromToken.toLowerCase() as Address,
+          toToken: report.toToken.toLowerCase() as Address,
+          vault: report.vault.toLowerCase() as Address,
+        },
+      ]),
+    ) as typeof BATCHERS;
+    mockReads(provider, { batchers: lowercase });
+    mockEncryptedLegs(relayer, 2);
+    mockReceipts(provider, userAddress, [ALPHA.depositBatcher, BETA.depositBatcher]);
+
+    const result = await new VaultGroup(sdk, {
+      ...GROUP,
+      cAsset: ASSET.toLowerCase() as Address,
+    }).deposit("alpha", 1_000n);
+
+    expect(result.joins.map((join) => join.token)).toStrictEqual([ASSET, ASSET]);
+  });
+
+  test("fails before submitting when the transfer encryption returns no value", async ({
+    sdk,
+    provider,
+    relayer,
+    signer,
+  }) => {
+    mockReads(provider);
+    vi.mocked(relayer.encryptValues).mockImplementation(async (params: unknown) => {
+      const { contractAddress } = params as { contractAddress: Address };
+      return (getAddress(contractAddress) === ROUTER
+        ? { encryptedValues: [...LEG_VALUES], inputProof: ROUTER_PROOF }
+        : { encryptedValues: [], inputProof: ASSET_PROOF }) as unknown as Awaited<
+        ReturnType<RelayerSDK["encryptValues"]>
+      >;
+    });
+
+    await expect(new VaultGroup(sdk, GROUP).deposit("alpha", 1_000n)).rejects.toThrow(
+      EncryptionFailedError,
+    );
+    expect(signer.writeContract).not.toHaveBeenCalled();
   });
 
   test("fails before submitting when the router's registry does not list the asset", async ({
@@ -610,6 +717,13 @@ describe("VaultGroup redeem", () => {
 
     await new VaultGroup(sdk, GROUP).redeem("alpha", 500n, { operatorUntil: 1_800_000_000 });
 
+    const operatorReads = vi
+      .mocked(provider.readContract)
+      .mock.calls.filter(([call]) => call.functionName === "isOperator");
+    expect(operatorReads.map(([call]) => [call.address, call.args])).toStrictEqual([
+      [ALPHA.share, [userAddress, ROUTER]],
+      [BETA.share, [userAddress, ROUTER]],
+    ]);
     const grants = writesTo(signer, "setOperator");
     expect(grants.map(([call]) => [call.address, call.args?.[0], call.args?.[1]])).toStrictEqual([
       [BETA.share, ROUTER, 1_800_000_000],
@@ -657,6 +771,55 @@ describe("VaultGroup redeem", () => {
     expect(signer.writeContract).not.toHaveBeenCalled();
     const [tokens] = vi.mocked(Token.batchBalancesOf).mock.calls[0] ?? [];
     expect(tokens?.map((token) => token.address)).toStrictEqual([ALPHA.share, BETA.share]);
+  });
+
+  test("ignores the decoys' balances: zero shares in another member still redeems", async ({
+    sdk,
+    provider,
+    relayer,
+    userAddress,
+  }) => {
+    mockReads(provider, { balances: { [ALPHA.share]: 1_000n, [BETA.share]: 0n } });
+    mockEncryptedLegs(relayer, 2);
+    mockReceipts(provider, userAddress, [ALPHA.redeemBatcher, BETA.redeemBatcher]);
+
+    await expect(new VaultGroup(sdk, GROUP).redeem("alpha", 500n)).resolves.toBeDefined();
+  });
+
+  test("ignores a decoy's failed decrypt, but fails on the chosen member's with that error", async ({
+    sdk,
+    provider,
+    relayer,
+    signer,
+    userAddress,
+  }) => {
+    const failure = new DecryptionFailedError("share decrypt failed");
+    mockReads(provider, { balanceErrors: { [BETA.share]: failure } });
+    mockEncryptedLegs(relayer, 2);
+    mockReceipts(provider, userAddress, [ALPHA.redeemBatcher, BETA.redeemBatcher]);
+
+    await expect(new VaultGroup(sdk, GROUP).redeem("alpha", 500n)).resolves.toBeDefined();
+
+    vi.clearAllMocks();
+    mockReads(provider, { balanceErrors: { [ALPHA.share]: failure } });
+
+    await expect(new VaultGroup(sdk, GROUP).redeem("alpha", 500n)).rejects.toBe(failure);
+    expect(signer.writeContract).not.toHaveBeenCalled();
+  });
+
+  test("fails before granting or submitting when the relayer returns fewer values than legs", async ({
+    sdk,
+    provider,
+    relayer,
+    signer,
+  }) => {
+    mockReads(provider, { operators: { [ALPHA.share]: false, [BETA.share]: false } });
+    mockEncryptedLegs(relayer, 1);
+
+    await expect(new VaultGroup(sdk, GROUP).redeem("alpha", 500n)).rejects.toThrow(
+      EncryptionFailedError,
+    );
+    expect(signer.writeContract).not.toHaveBeenCalled();
   });
 
   test("refuses to write when a redeem batcher pays out a token other than the asset", async ({

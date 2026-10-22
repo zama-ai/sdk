@@ -22,6 +22,7 @@ import {
   UnshieldAlreadyFinalizedError,
   UnlistedConfidentialTokenError,
   VaultBatcherPausedError,
+  VaultGroupJoinUnconfirmedError,
   InvalidTransportKeyPairError,
   TransportKeyPairExpiredError,
   RevokedKmsContextError,
@@ -123,6 +124,7 @@ Exactly five error classes are retryable today: `RpcRateLimitError`, `RelayerReq
 | `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
 | `UnlistedConfidentialTokenError`          | `UNLISTED_CONFIDENTIAL_TOKEN`            | The vault router's registry does not list the confidential token, so the router would reject a transfer of it                     |
 | `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | A batcher one leg of a group submission would join is paused, so the whole submission would revert                                |
+| `VaultGroupJoinUnconfirmedError`          | `VAULT_GROUP_JOIN_UNCONFIRMED`           | A group submission was mined, but its receipt has no `Joined` event for at least one leg                                          |
 | `InvalidTransportKeyPairError`            | `INVALID_KEYPAIR`                        | Relayer rejected transport key pair (stale or malformed)                                                                          |
 | `TransportKeyPairExpiredError`            | `KEYPAIR_EXPIRED`                        | Transport key pair expired — user must re-sign                                                                                    |
 | `RevokedKmsContextError`                  | `REVOKED_KMS_CONTEXT`                    | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                                   |
@@ -313,6 +315,20 @@ Thrown by `VaultGroup.deposit()` when the registry the router checks does not li
 Thrown by `VaultGroup.deposit()` and `VaultGroup.redeem()` when the batcher one member's leg would join reports `paused()`. A group submission joins every member in one transaction and a paused batcher rejects `join`, so the whole submission would revert; the SDK refuses before the caller pays for it. The error carries the paused `batcher` and the `vaultId` of the member it serves.
 
 **How to handle:** Not retryable until the batcher's owner unpauses it. Quitting and claiming on the paused batcher still work, so existing positions are not stuck; only new joins are. Show the user which member is paused rather than a generic failure.
+
+### VaultGroupJoinUnconfirmedError
+
+**Code:** `VAULT_GROUP_JOIN_UNCONFIRMED`
+
+Thrown by `VaultGroup.deposit()` and `VaultGroup.redeem()` after the transaction is mined, when its receipt has no `Joined` event for at least one leg. The error carries the `txHash`, the `receipt`, the `joins` of the legs whose batchers did report (with their batch ids) and the `unconfirmed` member ids.
+
+```ts
+matchZamaError(error, {
+  VAULT_GROUP_JOIN_UNCONFIRMED: (e) => showPartialJoin(e.txHash, e.joins, e.unconfirmed),
+});
+```
+
+**How to handle:** Do not resubmit blindly: the transaction is already mined, and funds may sit in the batches listed in `joins`, which can still be claimed or quit through their batchers. A reverted transaction and a mined one with unexpected logs both end here, so look the transaction up before deciding.
 
 ### InvalidTransportKeyPairError
 

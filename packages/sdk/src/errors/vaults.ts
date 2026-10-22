@@ -1,4 +1,6 @@
-import type { Address } from "viem";
+import type { Address, Hex } from "viem";
+import type { TransactionReceipt } from "../types/transaction";
+import type { VaultGroupJoin } from "../vaults/vault-group";
 import { ZamaError, ZamaErrorCode } from "./base";
 
 /** What an {@link UnlistedConfidentialTokenError} carries. */
@@ -51,5 +53,42 @@ export class VaultBatcherPausedError extends ZamaError {
     this.name = "VaultBatcherPausedError";
     this.batcher = details.batcher;
     this.vaultId = details.vaultId;
+  }
+}
+
+/** What a {@link VaultGroupJoinUnconfirmedError} carries. */
+export interface VaultGroupJoinUnconfirmedDetails {
+  /** The mined transaction. */
+  readonly txHash: Hex;
+  /** Its receipt, for callers that want to inspect the logs themselves. */
+  readonly receipt: TransactionReceipt;
+  /** The legs whose batchers did report a join, so their batches can still be claimed or quit. */
+  readonly joins: readonly VaultGroupJoin[];
+  /** The ids of the members whose batchers reported no join. */
+  readonly unconfirmed: readonly string[];
+}
+
+/**
+ * A group submission was mined, but its receipt has no `Joined` event for at
+ * least one leg. A reverted transaction ends here too, so look the transaction
+ * up before resubmitting; `joins` names the batches that did take the join.
+ */
+export class VaultGroupJoinUnconfirmedError extends ZamaError {
+  /** The mined transaction. */
+  readonly txHash: Hex;
+  /** Its receipt, for callers that want to inspect the logs themselves. */
+  readonly receipt: TransactionReceipt;
+  /** The legs whose batchers did report a join, so their batches can still be claimed or quit. */
+  readonly joins: readonly VaultGroupJoin[];
+  /** The ids of the members whose batchers reported no join. */
+  readonly unconfirmed: readonly string[];
+
+  constructor(message: string, details: VaultGroupJoinUnconfirmedDetails, options?: ErrorOptions) {
+    super(ZamaErrorCode.VaultGroupJoinUnconfirmed, message, options);
+    this.name = "VaultGroupJoinUnconfirmedError";
+    this.txHash = details.txHash;
+    this.receipt = details.receipt;
+    this.joins = details.joins;
+    this.unconfirmed = details.unconfirmed;
   }
 }

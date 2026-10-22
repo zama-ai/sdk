@@ -90,7 +90,7 @@ Default: `false`. As in [`useGroupDeposit`](./useGroupDeposit.md#skipbalancechec
 
 `data` resolves to a `VaultGroupJoinResult` — see [`VaultGroup` → VaultGroupJoinResult](../sdk/VaultGroup.md#vaultgroupjoinresult).
 
-On success the hook invalidates every member's share balance and operator status — each leg transferred its own share token, even where the amount moved was zero — and the batch reads of every batcher a leg joined.
+On success the hook invalidates every member's share balance — each leg transferred its own share token, even where the amount moved was zero — and the batch reads of every batcher a leg joined. Every member's operator status is invalidated whether the mutation succeeded or failed: each grant is its own transaction, so one can have landed before a later prompt was rejected.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 
