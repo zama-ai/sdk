@@ -9,6 +9,6 @@
   "devDependencies": {
     "@types/node": "^22.20.1",
     "codemod": "^1.18.3",
-    "typescript": "6.0.3"
+    "typescript": "7.0.2"
   }
 }

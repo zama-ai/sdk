@@ -124,7 +124,7 @@
     "size-limit": "^14.2.0",
     "ts-proto": "2.18.0",
     "turbo": "2.11.2",
-    "typescript": "6.0.3",
+    "typescript": "7.0.2",
     "typescript-language-server": "^6.0.0",
     "vitest": "^4.1.12"
   },
