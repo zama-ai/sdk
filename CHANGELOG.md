@@ -1,5 +1,53 @@
 # Changelog
 
+## [3.8.0-beta.5](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.4...v3.8.0-beta.5) (2026-10-21)
+
+### Features
+
+- telemetry-query-params ([#858](https://github.com/zama-ai/sdk/issues/858)) ([f642cfb]())
+
+## [3.8.0-beta.4](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.3...v3.8.0-beta.4) (2026-10-21)
+
+### Features
+
+- stop-auto-clearing-credentials-and-decrypt-cache-on-wallet ([#859](https://github.com/zama-ai/sdk/issues/859)) ([17db9c5]())
+
+## [3.8.0-beta.3](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.2...v3.8.0-beta.3) (2026-10-20)
+
+### Bug Fixes
+
+- bigint free permit signing ([#834](https://github.com/zama-ai/sdk/issues/834)) ([825f6bc]()), closes [#701]()
+
+## [3.8.0-beta.2](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.1...v3.8.0-beta.2) (2026-10-19)
+
+### Bug Fixes
+
+- remove the InGen testnet preset and example ([#854](https://github.com/zama-ai/sdk/issues/854)) ([4136b52]())
+
+## [3.8.0-beta.1](https://github.com/zama-ai/sdk/compare/v3.7.0...v3.8.0-beta.1) (2026-10-19)
+
+### Features
+
+- **daemon:** add the SDK daemon with Rust and Go clients ([#813](https://github.com/zama-ai/sdk/issues/813)) ([a52315f]())
+
+### Build System
+
+- **daemon:** scan the daemon image with Trivy and bump dependencies ([#835](https://github.com/zama-ai/sdk/issues/835)) ([7fb932b]())
+
+## [3.7.0](https://github.com/zama-ai/sdk/compare/v3.6.0...v3.7.0) (2026-10-19)
+
+### Features
+
+- add confidential ERC-4626 vault support (batched deposits/withdrawals) ([#748](https://github.com/zama-ai/sdk/issues/748)) ([426198a]())
+- expose wildcard delegation ([#703](https://github.com/zama-ai/sdk/issues/703)) ([#819](https://github.com/zama-ai/sdk/issues/819)) ([8a7cc3d]())
+- offline permit chunking ([#820](https://github.com/zama-ai/sdk/issues/820)) ([957a58e]())
+- telemetry ([#826](https://github.com/zama-ai/sdk/issues/826)) ([a65488b]())
+- zenith trex testnet ([#812](https://github.com/zama-ai/sdk/issues/812)) ([860acf4]())
+
+### Bug Fixes
+
+- **sdk:** normalize permit signature recovery byte to 27/28 ([#806](https://github.com/zama-ai/sdk/issues/806)) ([9de6352]())
+
 ## [3.7.0-beta.8](https://github.com/zama-ai/sdk/compare/v3.7.0-beta.7...v3.7.0-beta.8) (2026-10-09)
 
 ### Build System

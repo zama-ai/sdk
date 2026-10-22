@@ -48,7 +48,6 @@ let config = SdkConfig::new(11_155_111, rpc_url); // Sepolia preset
 | `sepolia`           | `11155111` | Sepolia Testnet         |
 | `polygonAmoy`       | `80002`    | Polygon Amoy Testnet    |
 | `hoodi`             | `560048`   | Hoodi Testnet           |
-| `ingenTestnet`      | `364301`   | InGen Testnet           |
 | `zenithTrexTestnet` | `936486`   | T-Rex Zenith Testnet    |
 | `bscTestnet`        | `97`       | BNB Smart Chain Testnet |
 | `hardhat`           | `31337`    | Local Hardhat node      |
@@ -490,9 +489,9 @@ async fn main() -> anyhow::Result<()> {
 
 Browser apps should proxy relayer requests through a backend to keep the API key secret. See the [Authentication guide](./authentication.md) for the full setup.
 
-### 5. (Optional) Configure TTLs and event listener
+### 5. (Optional) Configure TTLs, credential cleanup, and event listener
 
-You can tune how long the transport key pair and permits remain valid, and subscribe to lifecycle events for debugging:
+You can tune how long the transport key pair and permits remain valid, choose whether a wallet account change clears the previous account's credentials, and subscribe to lifecycle events for debugging:
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -504,6 +503,7 @@ const config = createConfig({
   relayers: { [sepolia.id]: web() },
   transportKeyPairTTL: 604800, // 7 days in seconds (default: 2592000 = 30 days)
   permitTTL: 7, // 7 days (default: 30 days)
+  clearCredentialsOnWalletChange: false, // keep permits across account switches (default: true)
   onEvent: ({ type, tokenAddress, ...rest }) => {
     console.debug(`[zama] ${type}`, rest);
   },
@@ -542,6 +542,8 @@ let sdk = client.sdk(config).events(Diagnostics).build().await?;
 
 {% endtab %}
 {% endtabs %}
+
+By default, a wallet account change, lock, or disconnect clears the previous account's permits, transport key pair, and decrypt cache. Set `clearCredentialsOnWalletChange: false` to keep them: both are keyed per signer address and expire on their own, so a user switching between accounts does not sign a new permit each time. With the option off, call `sdk.permits.clear()` in your sign-out flow before disconnecting the wallet; it needs a connected wallet account. The Go and Rust clients always clear on `UpdateAccount` / `update_account`; the option is not exposed to them yet. See the [Permit Model](../concepts/permit-model.md#wallet-account-changes).
 
 When done with the SDK, call `sdk.terminate()` to unsubscribe wallet listeners and release the SDK's resources.
 

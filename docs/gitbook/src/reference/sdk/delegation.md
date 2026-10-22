@@ -53,7 +53,18 @@ Returns `{ txHash: Hex; receipt: TransactionReceipt }`.
 `expirationDate` must be at least 1 hour in the future. The SDK validates this before sending the transaction.
 {% endhint %}
 
-When no `expirationDate` is provided, the SDK uses `2^64 - 1` (effectively permanent). The SDK accepts a standard JavaScript `Date` and converts it to a UTC Unix timestamp internally — timezone normalization is handled automatically.
+To delegate for every confidential contract at once, including ones deployed later, pass `WILDCARD_CONTRACT` as `contractAddress`. It doesn't widen access: the delegate can only read what the delegator can already read on each contract. See [Delegate for all contracts with the wildcard address](../../guides/delegated-decryption.md#6-delegate-for-all-contracts-with-the-wildcard-address-optional).
+
+```ts
+import { WILDCARD_CONTRACT } from "@zama-fhe/sdk";
+
+await sdk.delegations.delegateDecryption({
+  contractAddress: WILDCARD_CONTRACT,
+  delegateAddress: "0xDelegate",
+});
+```
+
+When no `expirationDate` is provided, the SDK uses `MAX_UINT64` (`2^64 - 1`, effectively permanent), which is also exported from `@zama-fhe/sdk`. The SDK accepts a standard JavaScript `Date` and converts it to a UTC Unix timestamp internally — timezone normalization is handled automatically.
 
 **Throws:**
 
@@ -116,7 +127,7 @@ const active = await sdk.delegations.isActive({
 
 `(params: { contractAddress: Address; delegatorAddress: Address; delegateAddress: Address }) => Promise<bigint>`
 
-Returns the expiration timestamp of a delegation as a Unix timestamp in seconds.
+Returns the expiration timestamp of a delegation as a Unix timestamp in seconds. This is the raw on-chain expiry for exactly the given `contractAddress`: it doesn't fall back to a wildcard grant the way `isActive` and `getStatus` do. Pass `WILDCARD_CONTRACT` to read the wildcard grant's expiry.
 
 Signer-independent — works without a configured signer.
 
@@ -131,17 +142,17 @@ const expiry = await sdk.delegations.getExpiry({
 const expiryDate = new Date(Number(expiry) * 1000);
 ```
 
-| Return value | Meaning                              |
-| ------------ | ------------------------------------ |
-| `0n`         | No delegation (never set or revoked) |
-| `2^64 - 1`   | Permanent                            |
-| Other        | UTC Unix timestamp in seconds        |
+| Return value              | Meaning                              |
+| ------------------------- | ------------------------------------ |
+| `0n`                      | No delegation (never set or revoked) |
+| `MAX_UINT64` (`2^64 - 1`) | Permanent                            |
+| Other                     | UTC Unix timestamp in seconds        |
 
 ### getStatus
 
 `(params: { contractAddress: Address; delegatorAddress: Address; delegateAddress: Address }) => Promise<DelegationStatus>`
 
-Returns activity and expiry together (`{ isActive: boolean; expiryTimestamp: bigint }`) from a single on-chain read, instead of calling `isActive()` and `getExpiry()` separately.
+Returns activity and expiry together (`{ isActive: boolean; expiryTimestamp: bigint }`), instead of calling `isActive()` and `getExpiry()` separately. For a specific contract it also checks the delegate's `WILDCARD_CONTRACT` grant, so an active wildcard-only delegation reports `isActive: true` with the wildcard grant's expiry.
 
 Signer-independent — works without a configured signer.
 

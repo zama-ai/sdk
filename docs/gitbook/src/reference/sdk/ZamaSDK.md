@@ -123,6 +123,21 @@ Transport key pair validity duration in seconds. Default: `2592000` (30 days). M
 
 Permit lifetime in days. Default: `30`. Controls how long each signed EIP-712 permit remains valid.
 
+### clearCredentialsOnWalletChange
+
+`boolean | undefined`
+
+Wipe the previous account's transport key pair, permits, and decrypt cache whenever the connected account changes or disconnects (account switch, empty account list, disconnect). Default: `true`. Set to `false` to keep them: credentials are stored per signer address, so a user switching A → B → A then reuses A's permits and cached decrypts without signing again. Permits expire after `permitTTL` and transport key pairs after `transportKeyPairTTL`; cached decrypts stay until [`permits.clear`](#permits-clear) or [`permits.revokePermits`](#permits-revokepermits) runs. With the option off, call [`permits.clear`](#permits-clear) in your sign-out flow while the wallet is still connected.
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  walletClient,
+  relayers: { [sepolia.id]: web() },
+  clearCredentialsOnWalletChange: false, // keep permits across account switches
+});
+```
+
 ### transportKeyPairScope
 
 `string | undefined`
@@ -177,6 +192,7 @@ Every event extends a common shape (an optional `tokenAddress`, a `timestamp`, a
 | `PermitError`                                                                                                                                                                        | `grantPermit`, `grantDelegationPermit`, or `registerPermit` fails — but not every failure of these methods: transport-key-pair issues (`TransportKeyPairChangedError`, `KeyWrappingError`) are deliberately excluded from this event.                                                                                                                   |
 | `TransactionError`                                                                                                                                                                   | `submitTransaction` itself rejects — before broadcast (estimation/validation) or while waiting for the receipt. It does **not** fire for a transaction that broadcasts successfully but reverts on execution: the SDK doesn't currently inspect `receipt.status`, so a mined-but-reverted transaction resolves as a success with no error and no event. |
 | `ShieldSubmitted`, `TransferSubmitted`, `TransferFromSubmitted`, `SetOperatorSubmitted`, `ApproveUnderlyingSubmitted`, `WrapSubmitted`, `UnwrapSubmitted`, `FinalizeUnwrapSubmitted` | The corresponding write transaction is submitted — each carries the transaction's `txHash`.                                                                                                                                                                                                                                                             |
+| `VaultSubmitted`                                                                                                                                                                     | A vault batcher write is submitted — carries the `txHash`, the batcher address as `tokenAddress`, and `vaultOperation` (`join`, `quit`, `claim`, `recover`, or `dispatchBatch`). See [Vault deposits and redemptions](../../guides/vault-deposits.md).                                                                                                  |
 | `DelegationSubmitted` / `RevokeDelegationSubmitted`                                                                                                                                  | A delegation grant or revoke transaction is submitted — see [Delegation events](./delegation.md#events).                                                                                                                                                                                                                                                |
 | `UnshieldPhase1Submitted` / `UnshieldPhase2Started` / `UnshieldPhase2Submitted`                                                                                                      | The two-phase unshield flow's request and finalize steps progress.                                                                                                                                                                                                                                                                                      |
 
@@ -207,9 +223,9 @@ const config = createConfig({
 
 ### telemetry
 
-`boolean | undefined`
+`"header" | "query" | "off" | boolean | undefined`
 
-Whether to attach the `x-zama-sdk-*` usage headers (SDK version, package layer, runtime, and high-level operation) to every relayer request. Default: `true`. The headers carry no end-user data; a self-hosted relayer simply ignores them. See [SDK usage telemetry](../../guides/telemetry.md) for exactly what is sent.
+How the SDK usage labels (SDK version, package layer, runtime, and high-level operation) travel on relayer requests. `"header"` (default) sends them as `x-zama-sdk-*` headers. `"query"` sends them as `zama_sdk_*` query parameters instead, for proxies that rebuild the request headers. `"off"` sends nothing. `true` and `false` are still accepted and mean `"header"` and `"off"`. The labels carry no end-user data; a self-hosted relayer simply ignores them. See [SDK usage telemetry](../../guides/telemetry.md) for exactly what is sent.
 
 ```ts
 const config = createConfig({
@@ -217,7 +233,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   relayers: { [sepolia.id]: web() },
-  telemetry: false,
+  telemetry: "query",
 });
 ```
 

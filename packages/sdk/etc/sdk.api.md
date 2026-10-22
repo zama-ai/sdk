@@ -5922,6 +5922,7 @@ export interface FhevmRelayerOptions {
     readonly fetchRetries?: number;
     readonly fetchRetryDelayInMilliseconds?: number;
     readonly headers?: Record<string, string>;
+    readonly query?: Record<string, string>;
     readonly signal?: AbortSignal;
     readonly timeout?: number;
 }
@@ -9620,21 +9621,6 @@ export function inferredTotalSupplyContract(wrapperAddress: Address): {
     }];
     readonly functionName: "inferredTotalSupply";
     readonly args: readonly [];
-};
-
-// @public
-export const ingenTestnet: {
-    readonly id: 364301;
-    readonly gatewayChainId: 10901;
-    readonly relayerUrl: "";
-    readonly network: "https://rpc.ingen.t-rex.network";
-    readonly aclContractAddress: "0x09a4710BfBe7B557cD5CFE88BB31e9b5b85C419b";
-    readonly kmsContractAddress: "0xd885DEa6a924785fCcdf9CE993FEe27EA11832e6";
-    readonly inputVerifierContractAddress: "0x90f05B10db153365D8cB143EA17f5E5714D0bCD5";
-    readonly verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64";
-    readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
-    readonly registryAddress: "0x7FC3D79EF9d01fA318CF2Aa5D91dDC492383Be0F";
-    readonly executorAddress: "0x1B05DE5b67b8f8363DC04E3a5996a616f11f8C7B";
 };
 
 // @public
@@ -20803,6 +20789,7 @@ export type ZamaConfig = {
     readonly permitStorage: GenericStorage;
     readonly transportKeyPairTTL: number;
     readonly permitTTL: number;
+    readonly clearCredentialsOnWalletChange: boolean;
     readonly transportKeyPairScope: string | undefined;
     readonly registryTTL: number;
     readonly onEvent: ZamaSDKEventListener | undefined;
@@ -20814,6 +20801,7 @@ export type ZamaConfig = {
 // @public
 export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
     chains: TChains;
+    clearCredentialsOnWalletChange?: boolean;
     logger?: GenericLogger;
     onEvent?: ZamaSDKEventListener;
     permitStorage?: GenericStorage;
@@ -20822,7 +20810,7 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
     relayers: { [K in TChains[number]["id"]]: RelayerConfig; };
     runtime?: FhevmRuntimeConfig;
     storage?: GenericStorage;
-    telemetry?: boolean;
+    telemetry?: "header" | "query" | "off" | boolean;
     transportKeyPairScope?: string;
     transportKeyPairTTL?: number;
 }
