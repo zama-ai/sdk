@@ -131,4 +131,4 @@ On success the hook invalidates the asset token's balance cache, the deposit bat
 - [useRedeem](./useRedeem.md) — the redeem direction
 - [useBatchState](./useBatchState.md) / [useClaim](./useClaim.md) — follow and settle the batch you joined
 - [Vault.deposit](../sdk/Vault.md#deposit) — imperative equivalent on the `Vault` class
-- [Vault deposits and redemptions](../../guides/vault-deposits.md)
+- [Vault deposits and redemptions](../../guides/vaults/deposits.md)

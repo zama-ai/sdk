@@ -113,4 +113,4 @@ On success the hook invalidates the share token's balance cache, the redeem batc
 - [useDeposit](./useDeposit.md) — the deposit direction
 - [useClaim](./useClaim.md) — claim the assets once the batch is finalized
 - [Vault.redeem](../sdk/Vault.md#redeem) — imperative equivalent on the `Vault` class
-- [Vault deposits and redemptions](../../guides/vault-deposits.md#redemptions)
+- [Vault deposits and redemptions](../../guides/vaults/deposits.md#redemptions)

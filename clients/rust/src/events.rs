@@ -92,6 +92,7 @@ native_event_enum!(EventOperation {
     VaultClaim,
     VaultRecover,
     VaultDispatchBatch,
+    VaultRouterJoin,
 });
 native_event_enum!(ShieldPath {
     Unspecified,
@@ -109,7 +110,8 @@ native_event_enum!(VaultOperation {
     Quit,
     Claim,
     Recover,
-    DispatchBatch
+    DispatchBatch,
+    RouterJoin
 });
 native_event_enum!(ProgressKind {
     Unspecified,

@@ -94,6 +94,12 @@ export const ZamaErrorCode = {
   PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED",
   /** The unwrap request was already finalized on-chain; there is nothing left to resume. */
   UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED",
+  /** The vault router's registry does not list this confidential token. */
+  UnlistedConfidentialToken: "UNLISTED_CONFIDENTIAL_TOKEN",
+  /** A batcher one leg of a group submission would join is paused. */
+  VaultBatcherPaused: "VAULT_BATCHER_PAUSED",
+  /** A group submission was mined, but its receipt does not confirm every leg's join. */
+  VaultGroupJoinUnconfirmed: "VAULT_GROUP_JOIN_UNCONFIRMED",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
@@ -153,6 +159,9 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.PreparedPermitChainMismatch]: false, // caller must register against the chain the permit was prepared for
   [ZamaErrorCode.PreparedPermitExpired]: false, // caller must prepare the permit again for a fresh validity window
   [ZamaErrorCode.UnshieldAlreadyFinalized]: false, // the funds already arrived; the stale pointer is cleared
+  [ZamaErrorCode.UnlistedConfidentialToken]: false, // only a registry listing changes the answer, not a retry
+  [ZamaErrorCode.VaultBatcherPaused]: false, // stays paused until the batcher is unpaused, not on retry
+  [ZamaErrorCode.VaultGroupJoinUnconfirmed]: false, // the transaction is mined; a retry would submit another
 };
 
 /**

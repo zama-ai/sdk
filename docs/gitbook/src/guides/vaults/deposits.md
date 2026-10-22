@@ -16,7 +16,7 @@ Core SDK usage imports from `@zama-fhe/sdk/vaults`; React hooks import from `@za
 ## The two layers
 
 - **`VaultBatcher`** mirrors one on-chain batcher contract directly, the way `Token` mirrors an ERC-7984 confidential token. A vault has two directions — deposit and redeem — each behind its own batcher contract.
-- **`Vault`** pairs a deposit batcher and a redeem batcher into one object with ERC-4626-style methods (`deposit`, `redeem`, …), the way `WrappedToken` builds on `Token`. It also automates a step you'd otherwise have to do by hand: granting the batcher an operator approval before it can pull the joined amount — see [Operator approvals](./operator-approvals.md).
+- **`Vault`** pairs a deposit batcher and a redeem batcher into one object with ERC-4626-style methods (`deposit`, `redeem`, …), the way `WrappedToken` builds on `Token`. It also automates a step you'd otherwise have to do by hand: granting the batcher an operator approval before it can pull the joined amount — see [Operator approvals](../operator-approvals.md).
 
 Most apps should use `Vault` (`useVault` / `useDeposit` / `useRedeem` in React). Reach for `VaultBatcher` (`createVaultBatcher`, or `useVaultBatcher` / `useJoin` / `useClaim` / … in React) directly only if you need a single direction, or want to control the operator grant yourself.
 
@@ -307,8 +307,8 @@ recover.mutate({ batchId, account: "0xDepositor" });
 
 ## Next steps
 
-- [`Vault`](../reference/sdk/Vault.md) and [`VaultBatcher`](../reference/sdk/VaultBatcher.md) — full API reference, including the per-batch reads
-- [`useDeposit`](../reference/react/useDeposit.md), [`useRedeem`](../reference/react/useRedeem.md), [`useBatchState`](../reference/react/useBatchState.md), [`useClaim`](../reference/react/useClaim.md) — the React hooks used above
+- [`Vault`](../../reference/sdk/Vault.md) and [`VaultBatcher`](../../reference/sdk/VaultBatcher.md) — full API reference, including the per-batch reads
+- [`useDeposit`](../../reference/react/useDeposit.md), [`useRedeem`](../../reference/react/useRedeem.md), [`useBatchState`](../../reference/react/useBatchState.md), [`useClaim`](../../reference/react/useClaim.md) — the React hooks used above
 - [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault) — the protocol side: how batching, dispatch and settlement work
-- [Operator approvals](./operator-approvals.md) — the approval model `vault.deposit()` / `vault.redeem()` automate
-- [Check balances](./check-balances.md) — reading confidential balances on `cAsset()` / `cShare()`
+- [Operator approvals](../operator-approvals.md) — the approval model `vault.deposit()` / `vault.redeem()` automate
+- [Check balances](../check-balances.md) — reading confidential balances on `cAsset()` / `cShare()`

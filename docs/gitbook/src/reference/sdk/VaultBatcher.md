@@ -315,6 +315,6 @@ The React hooks are built on these query and mutation option builders; they are 
 ## Related
 
 - [Vault](Vault.md) — pairs two batchers behind `deposit()` / `redeem()` with automatic operator approval
-- [Vault deposits and redemptions](../../guides/vault-deposits.md) — the full flow, including when each write is legal
+- [Vault deposits and redemptions](../../guides/vaults/deposits.md) — the full flow, including when each write is legal
 - [Errors](errors.md) — the error classes thrown above
 - [useVaultBatcher](../react/useVaultBatcher.md) — React hook returning a `VaultBatcher`

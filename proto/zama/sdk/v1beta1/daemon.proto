@@ -734,6 +734,7 @@ enum EventOperation {
   EVENT_OPERATION_VAULT_CLAIM = 21;
   EVENT_OPERATION_VAULT_RECOVER = 22;
   EVENT_OPERATION_VAULT_DISPATCH_BATCH = 23;
+  EVENT_OPERATION_VAULT_ROUTER_JOIN = 24;
 }
 // The SDK-selected route for a submitted shield transaction.
 enum ShieldPath {
@@ -755,6 +756,7 @@ enum VaultOperation {
   VAULT_OPERATION_CLAIM = 3;
   VAULT_OPERATION_RECOVER = 4;
   VAULT_OPERATION_DISPATCH_BATCH = 5;
+  VAULT_OPERATION_ROUTER_JOIN = 6;
 }
 // A lifecycle event; timestamp is Unix epoch milliseconds, and timestamp and
 // duration_ms preserve fractional milliseconds.
