@@ -542,13 +542,25 @@
     },
     {
       "id": "doc:native/README",
-      "title": "Go & Rust clients",
+      "title": "Go & Rust guide",
       "source_path": "docs/gitbook/src/native/README.md",
       "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/README.md",
       "source_type": "official-doc",
       "category": "guides",
       "logical_path": "native/README",
       "description": "Integrate Go and Rust applications with the Zama SDK daemon and manage wallets, credentials, and connection lifecycles.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:native/guides/README",
+      "title": "Clients",
+      "source_path": "docs/gitbook/src/native/guides/README.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/README.md",
+      "source_type": "official-doc",
+      "category": "guides",
+      "logical_path": "native/guides/README",
+      "description": "Integrate your Go or Rust application with the Zama SDK daemon — wallet, credentials, events, and connection lifecycle.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -609,6 +621,18 @@
       "category": "guides",
       "logical_path": "native/guides/uncertain-transaction-outcomes",
       "description": "Reconcile uncertain transaction outcomes observed by Go and Rust applications.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:native/operations/README",
+      "title": "Daemon deployment",
+      "source_path": "docs/gitbook/src/native/operations/README.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/README.md",
+      "source_type": "official-doc",
+      "category": "daemon-operations",
+      "logical_path": "native/operations/README",
+      "description": "Run, monitor, and upgrade the Zama SDK daemon in production for Go and Rust integrations.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

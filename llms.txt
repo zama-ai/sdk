@@ -50,7 +50,8 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Overview](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/README.md): Integrate confidential ERC-4626 vaults with the Zama SDK — single vaults and multi-vault groups.
 - [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md): How to integrate confidential ERC-4626 vaults with the Zama SDK.
 - [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/groups.md): Deposit into one of several vaults without revealing which one.
-- [Go & Rust clients](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/README.md): Integrate Go and Rust applications with the Zama SDK daemon and manage wallets, credentials, and connection lifecycles.
+- [Go & Rust guide](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/README.md): Integrate Go and Rust applications with the Zama SDK daemon and manage wallets, credentials, and connection lifecycles.
+- [Clients](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/README.md): Integrate your Go or Rust application with the Zama SDK daemon — wallet, credentials, events, and connection lifecycle.
 - [Attach a wallet](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/attach-wallet.md): Connect signing and transaction callbacks from Go and Rust to the daemon.
 - [Store credentials](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/credential-storage.md): Choose where the daemon keeps Go and Rust decryption credentials, or keep them in your own database.
 - [Observe events](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/observe-events.md): Subscribe to lifecycle, wallet, and progress notifications in Go and Rust.
@@ -165,6 +166,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 
 ### Go and Rust Daemon Deployment
 
+- [Daemon deployment](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/README.md): Run, monitor, and upgrade the Zama SDK daemon in production for Go and Rust integrations.
 - [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md): Deploy the Zama SDK daemon next to a Go or Rust application on your infrastructure.
 - [Monitor and troubleshoot](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md): Monitor daemon-backed Go and Rust operations and diagnose daemon failures.
 - [Upgrade the daemon](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/upgrade-and-recover.md): Replace the Zama SDK daemon and its Go or Rust client without losing stored credentials.

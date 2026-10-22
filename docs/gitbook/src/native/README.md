@@ -2,9 +2,9 @@
 description: Integrate Go and Rust applications with the Zama SDK daemon and manage wallets, credentials, and connection lifecycles.
 ---
 
-# Go & Rust clients
+# Go & Rust guide
 
-Use these guides to integrate your Go or Rust application with the local daemon, your wallet, and your credential storage.
+Use these guides to integrate your Go or Rust application with the local daemon, your wallet, and your credential storage, and to deploy the daemon in production.
 
 {% hint style="warning" %}
 The daemon and its Go and Rust clients are experimental. The wire protocol can change between minor versions, so upgrade the daemon image and the clients together.

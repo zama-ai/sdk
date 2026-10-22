@@ -10155,16 +10155,16 @@ For a **redemption**, the router pulls each leg's share token, so the SDK grants
 
 Every submission sends a leg to every member, so the SDK reads `paused()` on each batcher first and throws `VaultBatcherPausedError` naming the member, instead of letting one paused member revert the transaction.
 
-## Go & Rust clients
+## Go & Rust guide
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/native/README.md
 - source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/README.md
 - logical_path: native/README
 
-# Go & Rust clients
+# Go & Rust guide
 
-Use these guides to integrate your Go or Rust application with the local daemon, your wallet, and your credential storage.
+Use these guides to integrate your Go or Rust application with the local daemon, your wallet, and your credential storage, and to deploy the daemon in production.
 
 
 > [!WARNING]
@@ -10186,6 +10186,36 @@ The shared SDK guides, such as [Encrypt & decrypt](https://raw.githubusercontent
 ## Deploy the daemon
 
 The daemon is a required part of a Go or Rust integration. Read [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md) before running it on your infrastructure, and check [client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md) when upgrading.
+
+## Clients
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/native/guides/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/README.md
+- logical_path: native/guides/README
+
+# Clients
+
+Integrate your Go or Rust application with the local daemon: connect a wallet, store credentials, observe SDK activity, and handle disconnections and uncertain transaction outcomes.
+
+
+> [!WARNING]
+> The daemon and its Go and Rust clients are experimental. The wire protocol can change between minor versions, so upgrade the daemon image and the clients together.
+
+
+## Where to go next
+
+🟨 Go to [**Attach a wallet**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/attach-wallet.md) for signatures and transaction submission.
+
+🟨 Go to [**Store credentials**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/credential-storage.md) in your own database.
+
+🟨 Go to [**Observe events**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/observe-events.md) for SDK activity.
+
+🟨 Go to [**Recover from disconnections**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/recover-from-disconnections.md) of the signer, storage, or event channel.
+
+🟨 Go to [**Resolve uncertain transaction outcomes**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/uncertain-transaction-outcomes.md) before retrying a write.
+
+The shared SDK guides — such as [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/encrypt-decrypt.md), [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/delegated-decryption.md), and [Offline signing](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/offline.md) — include Go and Rust tabs for supported operations.
 
 ## Attach a wallet
 
@@ -10707,6 +10737,30 @@ The SDK operation returns only an error code and message, not the hash. In Go, t
 Once a built-in adapter starts sending, cancellation does not interrupt the send. A process crash can still happen before you record the outcome. Check both pending and mined transactions for the account before issuing another write; the pending nonce alone cannot tell a lost send from an accepted one.
 
 To restore a closed signer channel, see [Recover from disconnections](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/recover-from-disconnections.md). To sign outside the SDK operation entirely, use [Offline signing](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/offline.md).
+
+## Daemon deployment
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/native/operations/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/README.md
+- logical_path: native/operations/README
+
+# Daemon deployment
+
+The daemon is a required part of a Go or Rust integration. Run it on your own infrastructure, keep it healthy, and upgrade it safely.
+
+
+> [!WARNING]
+> The daemon is experimental. The wire protocol can change between minor versions, so upgrade the daemon image and the clients together — see [client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md).
+
+
+## Where to go next
+
+🟨 Go to [**Deploy in production**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md) to run the daemon on your infrastructure.
+
+🟨 Go to [**Monitor and troubleshoot**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md) a running daemon.
+
+🟨 Go to [**Upgrade the daemon**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/upgrade-and-recover.md) and recover from issues.
 
 ## Deploy in production
 
