@@ -21,7 +21,7 @@ packageExtensions:
 
 overrides:
   minimatch: ">=10.2.4"
-  next: ">=16.2.11"
+  next: ">=16.4.1"
   "@walletconnect/ethereum-provider": "^2.23.7"
   lodash: ">=4.18.0"
   lodash-es: ">=4.18.0"
