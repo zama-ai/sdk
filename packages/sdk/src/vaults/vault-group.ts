@@ -8,9 +8,9 @@ import {
   ConfigurationError,
   EncryptionFailedError,
   SignerNotConfiguredError,
-  TransactionRevertedError,
   UnlistedConfidentialTokenError,
   VaultBatcherPausedError,
+  VaultGroupJoinUnconfirmedError,
 } from "../errors";
 import type { EncryptedValue } from "../relayer/types";
 import { Token, type WrappedToken } from "../token";
@@ -234,7 +234,7 @@ export class VaultGroup {
    * @throws if the router's registry does not list `cAsset`. {@link UnlistedConfidentialTokenError}
    * @throws if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
    * @throws if balance validation requires decryption that is not possible. {@link BalanceCheckUnavailableError}
-   * @throws if the mined transaction's receipt has no `Joined` event for a leg. {@link TransactionRevertedError}
+   * @throws if the mined transaction's receipt has no `Joined` event for a leg; carries the legs that did report. {@link VaultGroupJoinUnconfirmedError}
    */
   async deposit(
     vaultId: string,
@@ -294,7 +294,7 @@ export class VaultGroup {
    * @throws if a member's redeem batcher is paused. {@link VaultBatcherPausedError}
    * @throws if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
    * @throws if balance validation requires decryption that is not possible. {@link BalanceCheckUnavailableError}
-   * @throws if the mined transaction's receipt has no `Joined` event for a leg. {@link TransactionRevertedError}
+   * @throws if the mined transaction's receipt has no `Joined` event for a leg; carries the legs that did report. {@link VaultGroupJoinUnconfirmedError}
    */
   async redeem(
     vaultId: string,
@@ -478,21 +478,28 @@ export class VaultGroup {
     // Each log is consumed once: the router joins the legs in order, so the
     // Nth match is the Nth leg's even when the adapter omits log addresses.
     const logs = [...transaction.receipt.logs];
-    const joins = legs.map((leg) => {
+    const joins: VaultGroupJoin[] = [];
+    const unconfirmed: string[] = [];
+    for (const leg of legs) {
       const joined = takeJoined(logs, leg.batcher.address, holder);
       if (!joined) {
-        throw new TransactionRevertedError(
-          `Transaction ${transaction.txHash} was mined, but its receipt has no Joined event for ${holder} from batcher ${leg.batcher.address} of vault "${leg.member.id}"`,
-        );
+        unconfirmed.push(leg.member.id);
+        continue;
       }
-      return {
+      joins.push({
         vaultId: leg.member.id,
         batcher: leg.batcher.address,
         token: leg.token.address,
         batchId: joined.batchId,
         confidentialJoinedAmount: joined.confidentialAmount,
-      };
-    });
+      });
+    }
+    if (unconfirmed.length > 0) {
+      throw new VaultGroupJoinUnconfirmedError(
+        `Transaction ${transaction.txHash} was mined, but its receipt has no Joined event for ${holder} from the batcher of vault(s) ${unconfirmed.map((id) => `"${id}"`).join(", ")} in group "${this.id}"`,
+        { txHash: transaction.txHash, receipt: transaction.receipt, joins, unconfirmed },
+      );
+    }
     return { ...transaction, vaultId, joins };
   }
 }

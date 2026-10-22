@@ -133,7 +133,7 @@ describe("eip1193Subscribe", () => {
     });
   });
 
-  test("emits disconnect and reconnect transitions for repeated lock/unlock cycles", async ({
+  test("emits disconnect and reconnect transitions for repeated empty-then-populated accountsChanged cycles", async ({
     provider,
     onWalletAccountChange,
   }) => {
