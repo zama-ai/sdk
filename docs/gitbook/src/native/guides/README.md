@@ -6,15 +6,11 @@ description: Integrate your Go or Rust application with the Zama SDK daemon — 
 
 Integrate your Go or Rust application with the local daemon: connect a wallet, store credentials, observe SDK activity, and handle disconnections and uncertain transaction outcomes.
 
-{% hint style="warning" %}
-The daemon and its Go and Rust clients are experimental. The wire protocol can change between minor versions, so upgrade the daemon image and the clients together.
-{% endhint %}
-
 ## Where to go next
 
 🟨 Go to [**Attach a wallet**](attach-wallet.md) for signatures and transaction submission.
 
-🟨 Go to [**Store credentials**](credential-storage.md) in your own database.
+🟨 Go to [**Store credentials**](credential-storage.md) to choose where the daemon keeps decryption credentials, or keep them in your own database.
 
 🟨 Go to [**Observe events**](observe-events.md) for SDK activity.
 

@@ -3,7 +3,7 @@ title: Vaults
 description: Integrate confidential ERC-4626 vaults with the Zama SDK — single vaults and multi-vault groups.
 ---
 
-# Overview
+# Vaults overview
 
 **Welcome to the vault guides!**
 
@@ -19,7 +19,7 @@ Core SDK usage imports from `@zama-fhe/sdk/vaults`; React hooks import from `@za
 
 - **`VaultBatcher`** mirrors one on-chain batcher contract directly, the way `Token` mirrors an ERC-7984 confidential token. Each vault has two directions — deposit and redeem — behind their own batcher.
 - **`Vault`** pairs a deposit batcher and a redeem batcher into one ERC-4626-style object (`deposit`, `redeem`, …), and automates the operator approval the batcher needs before it can pull the joined amount. Most single-vault apps use this.
-- **`VaultGroup`** joins several vaults in one transaction — the vault you chose gets the amount, the rest get an encrypted zero — so an observer cannot tell which vault received the deposit.
+- **`VaultGroup`** joins several vaults in one transaction — the vault you chose gets the amount, the rest get an encrypted zero — so an observer cannot tell which vault received the deposit, provided every client follows the leg-list rules in [Vault groups](groups.md).
 
 ## Where to go next
 

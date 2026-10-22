@@ -506,7 +506,7 @@
     },
     {
       "id": "doc:guides/vaults/README",
-      "title": "Overview",
+      "title": "Vaults overview",
       "source_path": "docs/gitbook/src/guides/vaults/README.md",
       "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/README.md",
       "source_type": "official-doc",
@@ -542,13 +542,13 @@
     },
     {
       "id": "doc:native/README",
-      "title": "Go & Rust guide",
+      "title": "Go & Rust overview",
       "source_path": "docs/gitbook/src/native/README.md",
       "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/README.md",
       "source_type": "official-doc",
       "category": "guides",
       "logical_path": "native/README",
-      "description": "Integrate Go and Rust applications with the Zama SDK daemon and manage wallets, credentials, and connection lifecycles.",
+      "description": "Integrate Go and Rust applications with the Zama SDK daemon, manage wallets, credentials, and connection lifecycles, and deploy the daemon in production.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

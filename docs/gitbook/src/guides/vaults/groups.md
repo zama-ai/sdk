@@ -76,7 +76,7 @@ Both methods check the caller's confidential balance before submitting, as `Vaul
 
 ### Claiming
 
-Claiming, quitting and batch state are unchanged: they happen per batcher, on the batcher a leg actually joined. Each entry in `joins` gives you that address and the batch id, so `createVaultBatcher(sdk, join.batcher).claim(join.batchId)` is the follow-up. See [Vault deposits and withdrawals](./deposits.md) for the batch lifecycle.
+Claiming, quitting and batch state are unchanged: they happen per batcher, on the batcher a leg actually joined. Each entry in `joins` gives you that address and the batch id, so `createVaultBatcher(sdk, join.batcher).claim(join.batchId)` is the follow-up. See [Vault deposits and redemptions](./deposits.md) for the batch lifecycle.
 
 ## Grants and registry listing
 

@@ -9731,14 +9731,14 @@ let result = sdk
 - [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md) — chains, relayers, authentication, and permit management
 - [Go client API](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/go-client.md) and [Rust client API](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/rust-client.md)
 
-## Overview
+## Vaults overview
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/guides/vaults/README.md
 - source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/README.md
 - logical_path: guides/vaults/README
 
-# Overview
+# Vaults overview
 
 **Welcome to the vault guides!**
 
@@ -9755,7 +9755,7 @@ Core SDK usage imports from `@zama-fhe/sdk/vaults`; React hooks import from `@za
 
 - **`VaultBatcher`** mirrors one on-chain batcher contract directly, the way `Token` mirrors an ERC-7984 confidential token. Each vault has two directions — deposit and redeem — behind their own batcher.
 - **`Vault`** pairs a deposit batcher and a redeem batcher into one ERC-4626-style object (`deposit`, `redeem`, …), and automates the operator approval the batcher needs before it can pull the joined amount. Most single-vault apps use this.
-- **`VaultGroup`** joins several vaults in one transaction — the vault you chose gets the amount, the rest get an encrypted zero — so an observer cannot tell which vault received the deposit.
+- **`VaultGroup`** joins several vaults in one transaction — the vault you chose gets the amount, the rest get an encrypted zero — so an observer cannot tell which vault received the deposit, provided every client follows the leg-list rules in [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/groups.md).
 
 ## Where to go next
 
@@ -10145,7 +10145,7 @@ Both methods check the caller's confidential balance before submitting, as `Vaul
 
 ### Claiming
 
-Claiming, quitting and batch state are unchanged: they happen per batcher, on the batcher a leg actually joined. Each entry in `joins` gives you that address and the batch id, so `createVaultBatcher(sdk, join.batcher).claim(join.batchId)` is the follow-up. See [Vault deposits and withdrawals](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md) for the batch lifecycle.
+Claiming, quitting and batch state are unchanged: they happen per batcher, on the batcher a leg actually joined. Each entry in `joins` gives you that address and the batch id, so `createVaultBatcher(sdk, join.batcher).claim(join.batchId)` is the follow-up. See [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md) for the batch lifecycle.
 
 ## Grants and registry listing
 
@@ -10155,14 +10155,14 @@ For a **redemption**, the router pulls each leg's share token, so the SDK grants
 
 Every submission sends a leg to every member, so the SDK reads `paused()` on each batcher first and throws `VaultBatcherPausedError` naming the member, instead of letting one paused member revert the transaction.
 
-## Go & Rust guide
+## Go & Rust overview
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/native/README.md
 - source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/README.md
 - logical_path: native/README
 
-# Go & Rust guide
+# Go & Rust overview
 
 Use these guides to integrate your Go or Rust application with the local daemon, your wallet, and your credential storage, and to deploy the daemon in production.
 
@@ -10198,16 +10198,11 @@ The daemon is a required part of a Go or Rust integration. Read [Deploy in produ
 
 Integrate your Go or Rust application with the local daemon: connect a wallet, store credentials, observe SDK activity, and handle disconnections and uncertain transaction outcomes.
 
-
-> [!WARNING]
-> The daemon and its Go and Rust clients are experimental. The wire protocol can change between minor versions, so upgrade the daemon image and the clients together.
-
-
 ## Where to go next
 
 🟨 Go to [**Attach a wallet**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/attach-wallet.md) for signatures and transaction submission.
 
-🟨 Go to [**Store credentials**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/credential-storage.md) in your own database.
+🟨 Go to [**Store credentials**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/credential-storage.md) to choose where the daemon keeps decryption credentials, or keep them in your own database.
 
 🟨 Go to [**Observe events**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/observe-events.md) for SDK activity.
 
@@ -10747,12 +10742,7 @@ To restore a closed signer channel, see [Recover from disconnections](https://ra
 
 # Daemon deployment
 
-The daemon is a required part of a Go or Rust integration. Run it on your own infrastructure, keep it healthy, and upgrade it safely.
-
-
-> [!WARNING]
-> The daemon is experimental. The wire protocol can change between minor versions, so upgrade the daemon image and the clients together — see [client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md).
-
+The daemon is a required part of a Go or Rust integration. Run it on your own infrastructure, keep it healthy, and upgrade it safely. Upgrade the daemon image and the clients together, and check [client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md) before you do.
 
 ## Where to go next
 
@@ -10760,7 +10750,7 @@ The daemon is a required part of a Go or Rust integration. Run it on your own in
 
 🟨 Go to [**Monitor and troubleshoot**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md) a running daemon.
 
-🟨 Go to [**Upgrade the daemon**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/upgrade-and-recover.md) and recover from issues.
+🟨 Go to [**Upgrade the daemon**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/upgrade-and-recover.md) to replace the daemon and clients together, or roll back.
 
 ## Deploy in production
 
@@ -11212,7 +11202,7 @@ Every event extends a common shape (an optional `tokenAddress`, a `timestamp`, a
 | `PermitError`                                                                                                                                                                        | `grantPermit`, `grantDelegationPermit`, or `registerPermit` fails — but not every failure of these methods: transport-key-pair issues (`TransportKeyPairChangedError`, `KeyWrappingError`) are deliberately excluded from this event.                                                                                                                   |
 | `TransactionError`                                                                                                                                                                   | `submitTransaction` itself rejects — before broadcast (estimation/validation) or while waiting for the receipt. It does **not** fire for a transaction that broadcasts successfully but reverts on execution: the SDK doesn't currently inspect `receipt.status`, so a mined-but-reverted transaction resolves as a success with no error and no event. |
 | `ShieldSubmitted`, `TransferSubmitted`, `TransferFromSubmitted`, `SetOperatorSubmitted`, `ApproveUnderlyingSubmitted`, `WrapSubmitted`, `UnwrapSubmitted`, `FinalizeUnwrapSubmitted` | The corresponding write transaction is submitted — each carries the transaction's `txHash`.                                                                                                                                                                                                                                                             |
-| `VaultSubmitted`                                                                                                                                                                     | A vault batcher write is submitted — carries the `txHash`, the batcher address as `tokenAddress`, and `vaultOperation` (`join`, `quit`, `claim`, `recover`, `dispatchBatch`, or `routerJoin`). See [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md).                                                                                   |
+| `VaultSubmitted`                                                                                                                                                                     | A vault batcher or router write is submitted — carries the `txHash`, the batcher's address as `tokenAddress` (the router's for `routerJoin`), and `vaultOperation` (`join`, `quit`, `claim`, `recover`, `dispatchBatch`, or `routerJoin`). See [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md).                                       |
 | `DelegationSubmitted` / `RevokeDelegationSubmitted`                                                                                                                                  | A delegation grant or revoke transaction is submitted — see [Delegation events](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/delegation.md#events).                                                                                                                                                                                                                                                |
 | `UnshieldPhase1Submitted` / `UnshieldPhase2Started` / `UnshieldPhase2Submitted`                                                                                                      | The two-phase unshield flow's request and finalize steps progress.                                                                                                                                                                                                                                                                                      |
 
