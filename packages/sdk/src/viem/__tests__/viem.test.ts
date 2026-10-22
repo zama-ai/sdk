@@ -176,7 +176,7 @@ describe("ViemSigner", () => {
         message: {
           publicKey: "0xkey",
           contractAddresses: ["0x1" as Address],
-          startTimestamp: "1000",
+          startTimestamp: 1000n,
           durationDays: "1",
           extraData: "0x",
         },
@@ -197,9 +197,31 @@ describe("ViemSigner", () => {
               typedData.types as { UserDecryptRequestVerification: unknown }
             ).UserDecryptRequestVerification,
           },
-          domain: typedData.domain,
-          message: { ...typedData.message, startTimestamp: 1000n, durationDays: 1n },
+          domain: { ...typedData.domain, chainId: 1 },
+          message: { ...typedData.message, startTimestamp: "1000" },
         });
+      },
+    );
+
+    vit(
+      "hands viem a payload a hijacked BigInt.prototype.toJSON cannot corrupt",
+      async ({ tokenAddress, viemSigner, walletClient }) => {
+        const bigintPrototype = BigInt.prototype as { toJSON?: () => string };
+        const originalToJSON = bigintPrototype.toJSON;
+        bigintPrototype.toJSON = function (this: bigint) {
+          return `${this}n`;
+        };
+        try {
+          await viemSigner.signTypedData(createTypedData(tokenAddress));
+          const [params] = vi.mocked(walletClient.signTypedData).mock.calls[0]!;
+          expect(JSON.stringify(params)).not.toMatch(/\d+n"/);
+        } finally {
+          if (originalToJSON) {
+            bigintPrototype.toJSON = originalToJSON;
+          } else {
+            delete bigintPrototype.toJSON;
+          }
+        }
       },
     );
 

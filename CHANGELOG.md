@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.8.0-beta.5](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.4...v3.8.0-beta.5) (2026-10-21)
+
+### Features
+
+- telemetry-query-params ([#858](https://github.com/zama-ai/sdk/issues/858)) ([f642cfb]())
+
+## [3.8.0-beta.4](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.3...v3.8.0-beta.4) (2026-10-21)
+
+### Features
+
+- stop-auto-clearing-credentials-and-decrypt-cache-on-wallet ([#859](https://github.com/zama-ai/sdk/issues/859)) ([17db9c5]())
+
+## [3.8.0-beta.3](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.2...v3.8.0-beta.3) (2026-10-20)
+
+### Bug Fixes
+
+- bigint free permit signing ([#834](https://github.com/zama-ai/sdk/issues/834)) ([825f6bc]()), closes [#701]()
+
 ## [3.8.0-beta.2](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.1...v3.8.0-beta.2) (2026-10-19)
 
 ### Bug Fixes

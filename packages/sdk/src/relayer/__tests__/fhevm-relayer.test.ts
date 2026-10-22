@@ -700,7 +700,16 @@ describe("FhevmRelayer usage telemetry", () => {
     "x-zama-sdk-layer": "core",
     "x-zama-sdk-runtime": "web",
   };
-  const telemetry = () => ({ state: { layer: "core" } as TelemetryState, runtime: "web" as const });
+  const staticQuery = {
+    zama_sdk_version: SDK_VERSION,
+    zama_sdk_layer: "core",
+    zama_sdk_runtime: "web",
+  };
+  const telemetry = (mode: TelemetryState["mode"] = "header") => ({
+    state: { layer: "core", mode } as TelemetryState,
+    runtime: "web" as const,
+    mode,
+  });
 
   test("stamps the x-zama-sdk-* headers and consumes the operation label", async () => {
     const relayer = makeRelayer({ chain: hostedChain, telemetry: telemetry() });
@@ -708,6 +717,15 @@ describe("FhevmRelayer usage telemetry", () => {
 
     expect(clients.decryptClient.decryptValues).toHaveBeenCalledWith({
       options: { timeout: 42, headers: { ...staticHeaders, "x-zama-sdk-operation": "balance-of" } },
+    });
+  });
+
+  test("stamps zama_sdk_* query parameters instead of headers in query mode", async () => {
+    const relayer = makeRelayer({ chain: hostedChain, telemetry: telemetry("query") });
+    await relayer.decryptValues({ options: { timeout: 42, operation: "balance-of" } } as never);
+
+    expect(clients.decryptClient.decryptValues).toHaveBeenCalledWith({
+      options: { timeout: 42, query: { ...staticQuery, zama_sdk_operation: "balance-of" } },
     });
   });
 
@@ -744,9 +762,22 @@ describe("FhevmRelayer usage telemetry", () => {
     });
   });
 
+  test("keeps the caller's own query parameters in query mode", async () => {
+    const relayer = makeRelayer({ chain: hostedChain, telemetry: telemetry("query") });
+    await relayer.encryptValues({ ...encryptArgs, options: { query: { custom: "1" } } } as never);
+
+    expect(clients.encryptClient.encryptValues).toHaveBeenCalledWith({
+      ...encryptArgs,
+      options: { query: { custom: "1", ...staticQuery } },
+    });
+  });
+
   test("reports the layer the SDK was constructed under", async () => {
-    const state: TelemetryState = { layer: "core" };
-    const relayer = makeRelayer({ chain: hostedChain, telemetry: { state, runtime: "web" } });
+    const state: TelemetryState = { layer: "core", mode: "header" };
+    const relayer = makeRelayer({
+      chain: hostedChain,
+      telemetry: { state, runtime: "web", mode: "header" },
+    });
     state.layer = "react";
     await relayer.fetchFheEncryptionKeyBytes();
 
@@ -755,16 +786,22 @@ describe("FhevmRelayer usage telemetry", () => {
     });
   });
 
-  test("web() tags the relayer as the web runtime", async () => {
-    const relayer = web({ offloadEncrypt: false }).createRelayer(hostedChain, new LoggerService(), {
-      layer: "core",
-    });
-    await relayer.fetchFheEncryptionKeyBytes();
+  test.each([
+    { mode: "header", options: { headers: staticHeaders } },
+    { mode: "query", options: { query: staticQuery } },
+  ] as const)(
+    "web() tags the relayer as the web runtime in $mode mode",
+    async ({ mode, options }) => {
+      const relayer = web({ offloadEncrypt: false }).createRelayer(
+        hostedChain,
+        new LoggerService(),
+        { layer: "core", mode },
+      );
+      await relayer.fetchFheEncryptionKeyBytes();
 
-    expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
-      options: { headers: staticHeaders },
-    });
-  });
+      expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({ options });
+    },
+  );
 
   test("sends the headers to a proxied or self-hosted relayer too", async () => {
     const relayer = makeRelayer({ chain: proxiedChain, telemetry: telemetry() });
@@ -775,7 +812,7 @@ describe("FhevmRelayer usage telemetry", () => {
     });
   });
 
-  test("sends no headers and drops the label when telemetry is off", async () => {
+  test("sends no labels and drops the operation when telemetry is off", async () => {
     const relayer = makeRelayer({ chain: hostedChain });
     await relayer.decryptValues({ options: { timeout: 42, operation: "balance-of" } } as never);
 
