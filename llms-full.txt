@@ -616,7 +616,7 @@ See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/git
 Create a module and add the client:
 
 ```sh
-export ZAMA_SDK_VERSION=3.8.0-beta.5
+export ZAMA_SDK_VERSION=3.8.0-beta.6
 mkdir encrypt-input
 cd encrypt-input
 go mod init example.com/encrypt-input
@@ -794,7 +794,7 @@ See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/git
 Create a binary project and add the client with the runtime this example uses:
 
 ```sh
-export ZAMA_SDK_VERSION=3.8.0-beta.5
+export ZAMA_SDK_VERSION=3.8.0-beta.6
 cargo new encrypt-input
 cd encrypt-input
 cargo add zama_sdk@=$ZAMA_SDK_VERSION
@@ -2599,6 +2599,20 @@ Plain-language release notes for the `3.x` line — the current, actively-mainta
 # 3.7.x
 
 This page covers the `3.7.x` line.
+
+## 3.7.1
+
+_Released 2026-10-22._
+
+### Security release: Node.js emergency patches and dependency fixes
+
+Node.js shipped emergency security releases for every supported release line: **22.23.4**, **24.22.1** and **26.12.1**. Node.js 18 and 20 are end-of-life and get no fix. 3.7.1 moves the SDK's CI, release pipeline and example apps to Node.js 24.22.1, moves the example apps to Next.js 16.4, and patches open advisories in handlebars, vite, vitest, markdown-it, undici, brace-expansion and source-map-js.
+
+These fixes are in the toolchain and the example apps, not in the SDK's own dependencies, so upgrading the package alone doesn't patch your app. What to do:
+
+- **Upgrade your Node.js runtime** to 22.23.4, 24.22.1 or 26.12.1, matching your release line, anywhere the SDK runs on Node.js: backends, scripts and server-side rendering. The SDK requires Node.js 22 or later. Rebuild and redeploy containers so they pick up the patched runtime.
+- **Browser-only apps** still use Node.js to build, and to serve pages if you use a framework like Next.js, so update those environments too.
+- **If you started from an example app**, move it to Node.js 24.22.1 and Next.js 16.4.
 
 ## 3.7.0
 
@@ -10666,7 +10680,7 @@ services:
 Download the daemon file next to it, then start both:
 
 ```bash
-export ZAMA_SDK_VERSION=3.8.0-beta.5
+export ZAMA_SDK_VERSION=3.8.0-beta.6
 curl -fsSL -o zama-sdk-daemon.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.yaml"
 docker compose up -d --wait
 ```
@@ -10680,7 +10694,7 @@ When your application runs directly on a Linux host rather than in a container, 
 From the directory that will hold the daemon's files, replace `myapp` with the user your application runs as:
 
 ```bash
-export ZAMA_SDK_VERSION=3.8.0-beta.5
+export ZAMA_SDK_VERSION=3.8.0-beta.6
 curl -fsSL -o compose.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.host.yaml"
 sudo install -d -m 700 -o myapp -g myapp socket storage
 ZAMA_SDK_DAEMON_UID="$(id -u myapp)" ZAMA_SDK_DAEMON_GID="$(id -g myapp)" docker compose up -d --wait
@@ -29859,7 +29873,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 ## Installation
 
 ```sh
-go get github.com/zama-ai/sdk/clients/go/v3@v3.8.0-beta.5
+go get github.com/zama-ai/sdk/clients/go/v3@v3.8.0-beta.6
 ```
 
 Run the `ghcr.io/zama-ai/sdk-daemon` image at exactly the same version as the client.
@@ -29888,7 +29902,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 ## Installation
 
 ```sh
-cargo add zama_sdk@=3.8.0-beta.5
+cargo add zama_sdk@=3.8.0-beta.6
 ```
 
 Run the `ghcr.io/zama-ai/sdk-daemon` image at exactly the same version as the client. Enable the `alloy` feature for the Alloy signing and transaction adapters.
