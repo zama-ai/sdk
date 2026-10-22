@@ -1,5 +1,20 @@
 # Changelog
 
+## [4.0.0-alpha.3](https://github.com/zama-ai/sdk/compare/v4.0.0-alpha.2...v4.0.0-alpha.3) (2026-10-22)
+
+### Features
+
+- telemetry-query-params ([#858](https://github.com/zama-ai/sdk/issues/858)) ([f642cfb]())
+
+### Bug Fixes
+
+- **security:** patch handlebars, vite, vitest, markdown-it, undici, brace-expansion, source-map-js ([#867](https://github.com/zama-ai/sdk/issues/867)) ([5a7c31d]()), closes [#864]() [#845]() [#846]() [#861]()
+
+### Build System
+
+- **security:** refresh container base images and toolchains ([#865](https://github.com/zama-ai/sdk/issues/865)) ([18ff429]())
+- **security:** update Node to 24.22.1 and Next to 16.4 and remove InGen testnet ([#864](https://github.com/zama-ai/sdk/issues/864)) ([7ab9a07]())
+
 ## [4.0.0-alpha.2](https://github.com/zama-ai/sdk/compare/v4.0.0-alpha.1...v4.0.0-alpha.2) (2026-10-21)
 
 ### Features
