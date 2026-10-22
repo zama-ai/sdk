@@ -5,7 +5,7 @@ COPY rust-toolchain.toml ./
 COPY clients/rust/ ./
 RUN cargo build --locked --release --features alloy --example balance
 
-FROM gcr.io/distroless/cc-debian13:nonroot@sha256:c31ff9abcb1910f3ab25c7957bdaf0bfe12a01eb546e8df2282f1c8f682b606c
+FROM gcr.io/distroless/cc-debian13:nonroot@sha256:83b9b50586253821cf63ffcec87d3d94265a093ad30da232039af962dd8f4edf
 ARG RUNTIME_UID=10000
 ARG RUNTIME_GID=10001
 COPY --from=build /src/target/release/examples/balance /usr/local/bin/balance
