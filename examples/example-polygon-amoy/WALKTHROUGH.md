@@ -86,7 +86,7 @@ The upstream default is the shared public testnet relayer, which serves both Sep
 The proxy also normalizes failures: a network error or a 30-second timeout returns a JSON `503` rather than an HTML error page, which the `web()` worker can parse.
 
 ```
-Full FHE stack (Polygon Amoy, Sepolia, Mainnet)   Cleartext stack (Hoodi, BNB testnet, InGen)
+Full FHE stack (Polygon Amoy, Sepolia, Mainnet)   Cleartext stack (Hoodi, BNB testnet, Zenith)
 ─────────────────────────────────────────────     ──────────────────────────────────────────────
 web() → relayer over HTTP                         cleartext() → on-chain executor
   └─ real ciphertexts on chain                       └─ plaintexts stored on chain
