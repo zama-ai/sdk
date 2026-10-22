@@ -172,7 +172,7 @@ describe("createConfig", () => {
   });
 
   describe("options passthrough", () => {
-    test("passes transportKeyPairTTL, permitTTL, registryTTL, onEvent through", () => {
+    test("passes transportKeyPairTTL, permitTTL, clearCredentialsOnWalletChange, registryTTL, onEvent through", () => {
       const onEvent = vi.fn();
       const config = createViemConfig({
         chains: [sepolia],
@@ -181,11 +181,13 @@ describe("createConfig", () => {
         relayers: { [11155111]: web() },
         transportKeyPairTTL: 86400,
         permitTTL: 7,
+        clearCredentialsOnWalletChange: false,
         registryTTL: 3600,
         onEvent,
       });
       expect(config.transportKeyPairTTL).toBe(86400);
       expect(config.permitTTL).toBe(7);
+      expect(config.clearCredentialsOnWalletChange).toBe(false);
       expect(config.registryTTL).toBe(3600);
       expect(config.onEvent).toBe(onEvent);
     });
