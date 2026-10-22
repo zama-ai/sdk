@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.8.0-beta.6](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.5...v3.8.0-beta.6) (2026-10-22)
+
+### Build System
+
+- **security:** refresh container base images and toolchains ([#865](https://github.com/zama-ai/sdk/issues/865)) ([18ff429]())
+
 ## [3.8.0-beta.5](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.4...v3.8.0-beta.5) (2026-10-21)
 
 ### Features
