@@ -5,7 +5,7 @@ description: Mutation hook that redeems shares of one vault of a group by joinin
 
 # useGroupRedeem
 
-Mutation hook that redeems a plaintext amount of shares from one member of a [vault group](../../guides/vault-groups.md). It checks the caller's balance of that member's share token — decrypting every member's, so the relayer cannot tell which was chosen — verifies every member's configured redeem batcher, and joins all of them, each leg spending its own vault's share token — the same flow as [`VaultGroup.redeem`](../sdk/VaultGroup.md#redeem).
+Mutation hook that redeems a plaintext amount of shares from one member of a [vault group](../../guides/vaults/groups.md). It checks the caller's balance of that member's share token — decrypting every member's, so the relayer cannot tell which was chosen — verifies every member's configured redeem batcher, and joins all of them, each leg spending its own vault's share token — the same flow as [`VaultGroup.redeem`](../sdk/VaultGroup.md#redeem).
 
 The router pulls each share token, so the SDK grants it an operator approval on every member's share token that lacks one before the join. Each grant is its own wallet prompt: a first redemption from a group of N vaults can ask the user to sign up to N + 1 times.
 
@@ -98,4 +98,4 @@ On success the hook invalidates every member's share balance and operator status
 
 - [useGroupDeposit](./useGroupDeposit.md) — the deposit direction
 - [VaultGroup.redeem](../sdk/VaultGroup.md#redeem) — imperative equivalent on the `VaultGroup` class
-- [Vault groups](../../guides/vault-groups.md)
+- [Vault groups](../../guides/vaults/groups.md)

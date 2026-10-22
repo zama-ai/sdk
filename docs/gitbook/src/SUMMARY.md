@@ -53,8 +53,9 @@
 - [Operator approvals](guides/operator-approvals.md)
 - [Delegated decryption](guides/delegated-decryption.md)
 - [Encrypt & decrypt](guides/encrypt-decrypt.md)
-- [Vault deposits and redemptions](guides/vault-deposits.md)
-- [Vault groups](guides/vault-groups.md)
+- [Vaults](guides/vaults/README.md)
+  - [Deposits and redemptions](guides/vaults/deposits.md)
+  - [Vault groups](guides/vaults/groups.md)
 
 ## Go & Rust clients
 

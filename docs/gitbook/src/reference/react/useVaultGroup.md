@@ -58,4 +58,4 @@ function Members() {
 
 - [`VaultGroup`](../sdk/VaultGroup.md) — the underlying class
 - [`useGroupDeposit`](./useGroupDeposit.md) / [`useGroupRedeem`](./useGroupRedeem.md) — mutation hooks over `group.deposit()` / `group.redeem()`
-- [Vault groups](../../guides/vault-groups.md)
+- [Vault groups](../../guides/vaults/groups.md)

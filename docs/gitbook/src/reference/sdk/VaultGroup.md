@@ -216,5 +216,5 @@ See [Query keys → `vaultQueryKeys`](../react/query-keys.md#vaultquerykeys) for
 ## Related
 
 - [Vault](Vault.md) / [VaultBatcher](VaultBatcher.md) — the single-vault API, and where claiming lives
-- [Vault groups](../../guides/vault-groups.md) — the integration guide
+- [Vault groups](../../guides/vaults/groups.md) — the integration guide
 - [useVaultGroup](../react/useVaultGroup.md), [useGroupDeposit](../react/useGroupDeposit.md), [useGroupRedeem](../react/useGroupRedeem.md) — the React hooks

@@ -5,7 +5,7 @@ description: Mutation hook that deposits into one vault of a group by joining ev
 
 # useGroupDeposit
 
-Mutation hook that deposits a plaintext amount into one member of a [vault group](../../guides/vault-groups.md). It verifies every member's configured deposit batcher, checks the caller's confidential balance, and joins all of them — the chosen vault with the amount, the rest with an encrypted zero — the same flow as [`VaultGroup.deposit`](../sdk/VaultGroup.md#deposit).
+Mutation hook that deposits a plaintext amount into one member of a [vault group](../../guides/vaults/groups.md). It verifies every member's configured deposit batcher, checks the caller's confidential balance, and joins all of them — the chosen vault with the amount, the rest with an encrypted zero — the same flow as [`VaultGroup.deposit`](../sdk/VaultGroup.md#deposit).
 
 The deposit is not settled when the mutation resolves: it has joined a batch on every member. Keep the returned `joins` and follow each one with [`useBatchState`](./useBatchState.md), then [`useClaim`](./useClaim.md) once it is `Finalized`.
 
@@ -111,4 +111,4 @@ On success the hook invalidates the asset token's balance, and the batch reads (
 - [useGroupRedeem](./useGroupRedeem.md) — the redeem direction
 - [useBatchState](./useBatchState.md) / [useClaim](./useClaim.md) — follow and settle each batch you joined
 - [VaultGroup.deposit](../sdk/VaultGroup.md#deposit) — imperative equivalent on the `VaultGroup` class
-- [Vault groups](../../guides/vault-groups.md)
+- [Vault groups](../../guides/vaults/groups.md)

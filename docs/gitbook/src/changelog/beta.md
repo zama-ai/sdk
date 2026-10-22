@@ -25,7 +25,7 @@ Start with the [Go quick start](../native/tutorials/go-quick-start.md) or the [R
 
 A group deposit throws the new `UnlistedConfidentialTokenError` when the router's registry does not list the asset; `VaultGroup.isAssetListed()` gives the same answer without throwing. Both directions throw the new `VaultBatcherPausedError`, naming the member, when any batcher a leg would join is paused. Every submission through the router, deposit or redemption, surfaces as a `VaultSubmitted` event with `vaultOperation: "routerJoin"` tagged with the router's address.
 
-See [Vault groups](../guides/vault-groups.md).
+See [Vault groups](../guides/vaults/groups.md).
 
 ## Permit signing with browser extensions that patch `BigInt`
 
