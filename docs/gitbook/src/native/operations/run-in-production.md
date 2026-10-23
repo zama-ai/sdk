@@ -29,6 +29,46 @@ There is no network listener. Keep the application and its daemon on the same ho
 Two daemons must not share a SQLite credential volume: each named database is locked to one daemon. Replicas can share application-owned storage, but credential coordination does not span daemons, so concurrent replicas can race on the same user's credentials and cause extra signature prompts.
 {% endhint %}
 
+## Verify and pin the image
+
+Each release signs the image in the release workflow and stores the signature, build provenance, and an SBOM next to it on GitHub Container Registry. Before the first deployment of a version, and before every upgrade, resolve the release tag to its digest, verify that digest, and pin it. A tag can be moved; a digest cannot.
+
+Resolve the tag first, so the digest you verify is the digest you pin:
+
+```bash
+export ZAMA_SDK_VERSION=3.8.0-beta.7
+export ZAMA_SDK_DAEMON_DIGEST="$(docker buildx imagetools inspect "ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION}" --format '{{ .Manifest.Digest }}')"
+```
+
+Verify the digest with the [GitHub CLI](https://cli.github.com/):
+
+```bash
+gh attestation verify "oci://ghcr.io/zama-ai/sdk-daemon@${ZAMA_SDK_DAEMON_DIGEST}" --repo zama-ai/sdk \
+  --signer-workflow zama-ai/sdk/.github/workflows/release.yml
+```
+
+The command checks that the image was built by the release workflow of the `zama-ai/sdk` repository. With [cosign](https://github.com/sigstore/cosign) instead:
+
+```bash
+cosign verify-attestation "ghcr.io/zama-ai/sdk-daemon@${ZAMA_SDK_DAEMON_DIGEST}" --new-bundle-format \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  --certificate-identity-regexp '^https://github.com/zama-ai/sdk/\.github/workflows/release\.yml@refs/heads/(main|beta|alpha)$' \
+  --type https://slsa.dev/provenance/v1
+```
+
+Keep `ZAMA_SDK_DAEMON_DIGEST` exported. The Compose files below then pull `ghcr.io/zama-ai/sdk-daemon:<version>@sha256:…`, and Docker refuses any content that doesn't match. Images released before signing was introduced carry no attestations, and the verification fails for them.
+
+The SBOM is attached to each platform image, not to the manifest list the tag resolves to. To read the SBOM of the image your platform runs, resolve that platform's digest and verify it with `--predicate-type https://spdx.dev/Document` and `--format json`:
+
+```bash
+platform_digest="$(docker buildx imagetools inspect "ghcr.io/zama-ai/sdk-daemon@${ZAMA_SDK_DAEMON_DIGEST}" \
+  --format '{{ range .Manifest.Manifests }}{{ if eq .Platform.Architecture "amd64" }}{{ .Digest }}{{ end }}{{ end }}')"
+gh attestation verify "oci://ghcr.io/zama-ai/sdk-daemon@${platform_digest}" --repo zama-ai/sdk \
+  --predicate-type https://spdx.dev/Document --format json
+```
+
+Published images are re-scanned daily. A critical or high CVE in a published image is tracked in a GitHub issue on the repository and fixed with a patched release, so subscribe to releases and plan to [upgrade](upgrade-and-recover.md) when one ships.
+
 ## Run with Docker Compose
 
 The [Compose file](https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml) runs the daemon with a read-only root filesystem, no Linux capabilities, a healthcheck and a stop grace period above its shutdown timeout, and keeps its socket and SQLite storage in named volumes. A new named volume copies the image's private directories, so the daemon starts without host directory setup. The image runs the daemon as UID `10000` and GID `10001`.
@@ -60,7 +100,7 @@ curl -fsSL -o zama-sdk-daemon.yaml "https://raw.githubusercontent.com/zama-ai/sd
 docker compose up -d --wait
 ```
 
-Set `ZAMA_SDK_VERSION` to the version of your Go module or Rust crate. `--wait` returns once the daemon's healthcheck passes. This works on Linux and on Docker Desktop.
+Set `ZAMA_SDK_VERSION` to the version of your Go module or Rust crate, and keep the `ZAMA_SDK_DAEMON_DIGEST` you verified above exported. `--wait` returns once the daemon's healthcheck passes. This works on Linux and on Docker Desktop.
 
 ### Application on a Linux host
 
@@ -75,7 +115,7 @@ sudo install -d -m 700 -o myapp -g myapp socket storage
 ZAMA_SDK_DAEMON_UID="$(id -u myapp)" ZAMA_SDK_DAEMON_GID="$(id -g myapp)" docker compose up -d --wait
 ```
 
-The daemon rejects directories that aren't private to its user, so create them before starting. Point the application at `socket/sdk.sock` in that directory.
+The daemon rejects directories that aren't private to its user, so create them before starting. Point the application at `socket/sdk.sock` in that directory. This file reads `ZAMA_SDK_DAEMON_DIGEST` too.
 
 ## Back up daemon SQLite storage
 

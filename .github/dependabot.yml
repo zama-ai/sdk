@@ -1,4 +1,13 @@
 version: 2
+# Dependabot cannot use OIDC: a read-only Docker Hub organization access token, stored as Dependabot secrets
+# (not Actions secrets).
+registries:
+  dhi:
+    type: docker-registry
+    url: https://dhi.io
+    username: ${{ secrets.DOCKERHUB_USER }}
+    password: ${{ secrets.DOCKERHUB_TOKEN }}
+
 updates:
   # SDK core, workspace tooling, and test apps -- one pnpm workspace, "/" must stay in scope for the shared lockfile.
   - package-ecosystem: npm
@@ -57,6 +66,8 @@ updates:
   - package-ecosystem: docker
     target-branch: beta
     directory: /packages/sdk-daemon
+    registries:
+      - dhi
     schedule:
       interval: weekly
     cooldown:
