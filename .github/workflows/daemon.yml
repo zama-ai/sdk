@@ -147,9 +147,9 @@ jobs:
   image:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
-    # Pull request runs deploy as refs/pull/<n>/merge, which the environment's branch rules must allow.
-    # A pull request from a fork gets no OIDC token and fails at the login.
-    environment: release-dockerhub
+    # Pull requests use a pull-only Docker Hub connection; release runs use the release connection, whose
+    # environment allows only main, beta and alpha. A pull request from a fork gets no OIDC token and fails at the login.
+    environment: ${{ github.event_name == 'pull_request' && 'pull-dockerhub' || 'release-dockerhub' }}
     permissions:
       contents: read
       id-token: write # Docker Hub OIDC login
