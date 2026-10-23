@@ -33,8 +33,8 @@ jobs:
         with:
           version: v0.76.0
 
-      # Each channel tag points at the newest release of that channel, which is the one a patch would replace.
-      # Same settings as the release gate, so a finding here is one the gate would have blocked.
+      # Each channel tag is the newest release of that channel, the one a patch would replace. Same severity and
+      # ignore file as the release gate, so a risk-accepted CVE stays quiet here too.
       - name: Scan the channel tags
         id: scan
         run: |
@@ -82,7 +82,7 @@ jobs:
 
           Findings: ${RUN_URL}
 
-          Ship a patched release, or risk-accept the CVE in \`.trivyignore\` with the Security team's review."
+          Ship a patched release, or risk-accept the CVE in \`.trivyignore\` after a security review."
           number="$(gh issue list --repo "${GITHUB_REPOSITORY}" --state open --search "in:title \"${ISSUE_TITLE}\"" \
             --json number,title --jq ".[] | select(.title == \"${ISSUE_TITLE}\") | .number" | head -n 1)"
           if [[ -n "${number}" ]]; then

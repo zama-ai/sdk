@@ -3,7 +3,7 @@ name: zama-sdk-daemon
 
 services:
   daemon:
-    # Set ZAMA_SDK_DAEMON_DIGEST to the verified sha256 of the release to pin the image by digest.
+    # Optional: ZAMA_SDK_DAEMON_DIGEST, the verified sha256 of the release, pins the image by digest.
     image: ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION:?Set ZAMA_SDK_VERSION to the release that matches your Go or Rust client}${ZAMA_SDK_DAEMON_DIGEST:+@${ZAMA_SDK_DAEMON_DIGEST}}
     environment:
       ZAMA_SDK_DAEMON_SOCKET_PATH: /run/zama/sdk.sock

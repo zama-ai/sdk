@@ -249,8 +249,8 @@ jobs:
     needs: [validate-branch]
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     uses: ./.github/workflows/daemon.yml
-    # An environment secret this job cannot read; passed by name, it reaches the called job that declares the
-    # environment. `secrets: inherit` does not carry it.
+    # Only the called job, which declares the environment, can read this environment secret, but the caller must
+    # still pass it by name: `secrets: inherit` does not carry it.
     secrets:
       DOCKERHUB_OIDC_CONNECTIONID: ${{ secrets.DOCKERHUB_OIDC_CONNECTIONID }}
 
@@ -436,23 +436,40 @@ jobs:
           provenance: mode=max
           sbom: true
 
+      # With provenance and sbom on, the pushed digest is a one-platform index: the image manifest plus BuildKit's
+      # attestation manifest. The manifest list flattens it, so the tag references the image manifest, never the
+      # index. That is the digest to scan and attest.
+      - name: Resolve the image manifest digest
+        id: image
+        env:
+          INDEX_DIGEST: ${{ steps.build.outputs.digest }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          digest="$(docker buildx imagetools inspect "${DAEMON_IMAGE}@${INDEX_DIGEST}" \
+            --format '{{ range .Manifest.Manifests }}{{ if eq .Platform.Architecture "'"${ARCH}"'" }}{{ .Digest }}{{ end }}{{ end }}')"
+          if [[ "${digest}" != sha256:* ]]; then
+            echo "::error::No ${ARCH} image manifest in ${DAEMON_IMAGE}@${INDEX_DIGEST}: got '${digest}'."
+            exit 1
+          fi
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+
       # The digest is pushed untagged: nothing below it is reachable by tag until publish-image-manifest runs,
-      # and that job only runs when every platform passed this gate. Same settings as the Daemon CI scan:
-      # every CRITICAL or HIGH finding fails unless the Security team risk-accepted it in .trivyignore.
+      # and that job only runs when every platform passed this gate. Same gate as Daemon CI: every CRITICAL or
+      # HIGH finding fails unless it was risk-accepted in .trivyignore after a security review.
       - name: Scan the pushed digest
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: ${{ env.DAEMON_IMAGE }}@${{ steps.build.outputs.digest }}
+          image-ref: ${{ env.DAEMON_IMAGE }}@${{ steps.image.outputs.digest }}
           exit-code: "1"
           vuln-type: os,library
           severity: CRITICAL,HIGH
           trivyignores: .trivyignore
+          version: v0.76.0
 
-      # Syft reads the runner's platform from the digest, which is the one this matrix job built.
       - name: Generate the SBOM
         uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
         with:
-          image: ${{ env.DAEMON_IMAGE }}@${{ steps.build.outputs.digest }}
+          image: ${{ env.DAEMON_IMAGE }}@${{ steps.image.outputs.digest }}
           format: spdx-json
           output-file: ${{ runner.temp }}/sbom.spdx.json
           upload-artifact: false
@@ -464,14 +481,14 @@ jobs:
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ${{ env.DAEMON_IMAGE }}
-          subject-digest: ${{ steps.build.outputs.digest }}
+          subject-digest: ${{ steps.image.outputs.digest }}
           push-to-registry: true
 
       - name: Attest the SBOM
         uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
         with:
           subject-name: ${{ env.DAEMON_IMAGE }}
-          subject-digest: ${{ steps.build.outputs.digest }}
+          subject-digest: ${{ steps.image.outputs.digest }}
           sbom-path: ${{ runner.temp }}/sbom.spdx.json
           push-to-registry: true
 
@@ -570,7 +587,7 @@ jobs:
           echo "digest=${digest}" >> "$GITHUB_OUTPUT"
 
       # Tags resolve to the manifest list, so partners verifying `:<version>` or pinning its digest need an
-      # attestation on this digest too; the per-platform digests were attested in publish-image.
+      # attestation on this digest too; the per-platform image manifests were attested in publish-image.
       - name: Attest the manifest list
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:

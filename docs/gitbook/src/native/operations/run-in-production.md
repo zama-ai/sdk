@@ -31,35 +31,39 @@ Two daemons must not share a SQLite credential volume: each named database is lo
 
 ## Verify and pin the image
 
-Each release signs the image in the release workflow and stores the signature, build provenance, and an SBOM next to it on GitHub Container Registry. Before the first deployment of a version, and before every upgrade, verify the image and pin it by digest. A tag can be moved; a digest cannot.
+Each release signs the image in the release workflow and stores the signature, build provenance, and an SBOM next to it on GitHub Container Registry. Before the first deployment of a version, and before every upgrade, resolve the release tag to its digest, verify that digest, and pin it. A tag can be moved; a digest cannot.
 
-Verify the release tag with the [GitHub CLI](https://cli.github.com/):
+Resolve the tag first, so the digest you verify is the digest you pin:
 
 ```bash
-export ZAMA_SDK_VERSION=3.8.0-beta.3
-gh attestation verify "oci://ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION}" --repo zama-ai/sdk \
+export ZAMA_SDK_VERSION=3.8.0-beta.7
+export ZAMA_SDK_DAEMON_DIGEST="$(docker buildx imagetools inspect "ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION}" --format '{{ .Manifest.Digest }}')"
+```
+
+Verify the digest with the [GitHub CLI](https://cli.github.com/):
+
+```bash
+gh attestation verify "oci://ghcr.io/zama-ai/sdk-daemon@${ZAMA_SDK_DAEMON_DIGEST}" --repo zama-ai/sdk \
   --signer-workflow zama-ai/sdk/.github/workflows/release.yml
 ```
 
-The command checks that the image was built by the release workflow of the `zama-ai/sdk` repository, and prints the digest it verified. With [cosign](https://github.com/sigstore/cosign) instead:
+The command checks that the image was built by the release workflow of the `zama-ai/sdk` repository. With [cosign](https://github.com/sigstore/cosign) instead:
 
 ```bash
-cosign verify-attestation "ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION}" --new-bundle-format \
+cosign verify-attestation "ghcr.io/zama-ai/sdk-daemon@${ZAMA_SDK_DAEMON_DIGEST}" --new-bundle-format \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   --certificate-identity-regexp '^https://github.com/zama-ai/sdk/\.github/workflows/release\.yml@refs/heads/(main|beta|alpha)$' \
   --type https://slsa.dev/provenance/v1
 ```
 
-Record the verified digest and pass it as `ZAMA_SDK_DAEMON_DIGEST`. The Compose files below then pull `ghcr.io/zama-ai/sdk-daemon:<version>@sha256:…`, and Docker refuses any content that doesn't match:
+Keep `ZAMA_SDK_DAEMON_DIGEST` exported. The Compose files below then pull `ghcr.io/zama-ai/sdk-daemon:<version>@sha256:…`, and Docker refuses any content that doesn't match. Images released before signing was introduced carry no attestations, and the verification fails for them.
+
+The SBOM is attached to each platform image, not to the manifest list the tag resolves to. To read the SBOM of the image your platform runs, resolve that platform's digest and verify it with `--predicate-type https://spdx.dev/Document` and `--format json`:
 
 ```bash
-export ZAMA_SDK_DAEMON_DIGEST="$(docker buildx imagetools inspect "ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION}" --format '{{ .Manifest.Digest }}')"
-```
-
-To read the SBOM of the image your platform runs, verify one platform digest with `--predicate-type https://spdx.dev/Document` and `--format json`:
-
-```bash
-gh attestation verify "oci://ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION}" --repo zama-ai/sdk \
+platform_digest="$(docker buildx imagetools inspect "ghcr.io/zama-ai/sdk-daemon@${ZAMA_SDK_DAEMON_DIGEST}" \
+  --format '{{ range .Manifest.Manifests }}{{ if eq .Platform.Architecture "amd64" }}{{ .Digest }}{{ end }}{{ end }}')"
+gh attestation verify "oci://ghcr.io/zama-ai/sdk-daemon@${platform_digest}" --repo zama-ai/sdk \
   --predicate-type https://spdx.dev/Document --format json
 ```
 
@@ -96,7 +100,7 @@ curl -fsSL -o zama-sdk-daemon.yaml "https://raw.githubusercontent.com/zama-ai/sd
 docker compose up -d --wait
 ```
 
-Set `ZAMA_SDK_VERSION` to the version of your Go module or Rust crate, and `ZAMA_SDK_DAEMON_DIGEST` to the digest you verified above. `--wait` returns once the daemon's healthcheck passes. This works on Linux and on Docker Desktop.
+Set `ZAMA_SDK_VERSION` to the version of your Go module or Rust crate, and keep the `ZAMA_SDK_DAEMON_DIGEST` you verified above exported. `--wait` returns once the daemon's healthcheck passes. This works on Linux and on Docker Desktop.
 
 ### Application on a Linux host
 

@@ -25,7 +25,7 @@ RUN pnpm install --frozen-lockfile --offline \
   && find /pruned/full/packages/sdk /pruned/full/packages/sdk-daemon -mindepth 1 -maxdepth 1 ! -name dist ! -name package.json ! -name node_modules ! -name LICENSE -exec rm -rf {} + \
   && install -d -m 0700 /rootfs/run/zama /rootfs/var/lib/zama
 
-# Node.js only: no shell or package manager. The image has no entrypoint, so CMD names node explicitly.
+# Node.js only: no shell or package manager, and no entrypoint, so CMD names node.
 FROM dhi.io/node:24-debian13@sha256:0e6bbf45c6befccdfb0f20d8c2e9e9b3621533f7f5a749eee3d4618e701f3448
 ARG RUNTIME_UID=10000
 ARG RUNTIME_GID=10001
@@ -36,7 +36,7 @@ COPY --from=build /pruned/full /app
 COPY LICENSE /app/LICENSE
 COPY --from=build --chown=${RUNTIME_UID}:${RUNTIME_GID} /rootfs/run/ /run/
 COPY --from=build --chown=${RUNTIME_UID}:${RUNTIME_GID} /rootfs/var/lib/ /var/lib/
-# The base image's own user is node (1000); the daemon runs as a dedicated high UID instead.
+# A dedicated high UID, not the base image's node user.
 USER ${RUNTIME_UID}:${RUNTIME_GID}
 HEALTHCHECK --interval=3s --timeout=3s --start-period=10s CMD ["node", "dist/healthcheck.js"]
 CMD ["node", "dist/main.js"]
