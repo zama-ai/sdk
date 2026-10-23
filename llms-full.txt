@@ -20581,9 +20581,9 @@ This hook takes no parameters. It reads registry addresses from the `ZamaSDK` in
 
 The registry contract address for the connected chain, or `undefined` if unavailable.
 
-## Caching
+## Chain resolution
 
-The underlying chain ID query uses `staleTime: 30000` (30 seconds). Chain switches may take up to 30 seconds to reflect.
+With a connected wallet, the hook follows the wallet's chain, so a chain switch re-resolves the registry immediately. Without a wallet, it falls back to the provider's chain ID, cached for 30 seconds (`staleTime: 30000`).
 
 ## Related
 
