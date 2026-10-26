@@ -58,13 +58,14 @@ cosign verify-attestation "ghcr.io/zama-ai/sdk-daemon@${ZAMA_SDK_DAEMON_DIGEST}"
 
 Keep `ZAMA_SDK_DAEMON_DIGEST` exported. The Compose files below then pull `ghcr.io/zama-ai/sdk-daemon:<version>@sha256:…`, and Docker refuses any content that doesn't match. Images released before signing was introduced carry no attestations, and the verification fails for them.
 
-The SBOM is attached to each platform image, not to the manifest list the tag resolves to. To read the SBOM of the image your platform runs, resolve that platform's digest and verify it with `--predicate-type https://spdx.dev/Document` and `--format json`:
+The SBOM is attached to each platform image, not to the manifest list the tag resolves to. To read the SBOM of the image your Docker host runs, resolve the digest for its architecture and verify it with `--predicate-type https://spdx.dev/Document/v2.3` and `--format json`:
 
 ```bash
+arch="$(docker version --format '{{ .Server.Arch }}')"
 platform_digest="$(docker buildx imagetools inspect "ghcr.io/zama-ai/sdk-daemon@${ZAMA_SDK_DAEMON_DIGEST}" \
-  --format '{{ range .Manifest.Manifests }}{{ if eq .Platform.Architecture "amd64" }}{{ .Digest }}{{ end }}{{ end }}')"
+  --format "{{ range .Manifest.Manifests }}{{ if eq .Platform.Architecture \"${arch}\" }}{{ .Digest }}{{ end }}{{ end }}")"
 gh attestation verify "oci://ghcr.io/zama-ai/sdk-daemon@${platform_digest}" --repo zama-ai/sdk \
-  --predicate-type https://spdx.dev/Document --format json
+  --predicate-type https://spdx.dev/Document/v2.3 --format json
 ```
 
 Published images are re-scanned daily. A critical or high CVE in a published image is tracked in a GitHub issue on the repository and fixed with a patched release, so subscribe to releases and plan to [upgrade](upgrade-and-recover.md) when one ships.
