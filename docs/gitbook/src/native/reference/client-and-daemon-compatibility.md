@@ -20,7 +20,7 @@ Each release publishes the image for `linux/amd64` and `linux/arm64`, tagged wit
 
 The quickstarts and the deployment page set one `ZAMA_SDK_VERSION` variable for the image tag and the client version, and each release updates it to that release.
 
-For deployments, record the selected client version and pin the daemon image to its matching release tag. Do not rely on a moving image tag when restarting an existing deployment. Retain the Go module files or your Rust application's lockfile to reproduce the selected dependencies.
+For deployments, record the selected client version and pin the daemon image to the digest of its matching release. Do not rely on a moving image tag when restarting an existing deployment. Each release signs the image and attaches build provenance and an SBOM; [Deploy in production](../operations/run-in-production.md#verify-and-pin-the-image) shows how to verify them and obtain the digest. Retain the Go module files or your Rust application's lockfile to reproduce the selected dependencies.
 
 The wire protocol is named `v1beta1`. This identifier does not select an SDK release channel or replace the exact-version pairing rule.
 

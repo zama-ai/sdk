@@ -1,5 +1,8 @@
-# Debian 13, the same release as the distroless runtime stage.
-FROM node:24-trixie-slim@sha256:43b9ba1142b8dcf33fa8f922ca1be85714adc444e0586c7cf7726daaeabc1bea AS build
+# Pulling from dhi.io needs `docker login dhi.io` with a Docker Hub account. The build stage is the same Debian
+# release as the runtime stage, so the pruned node_modules link against the same glibc.
+FROM dhi.io/node:24-debian13-dev@sha256:63f14705bd247a343712a0b1484224e82c7c693a9ee8a8317fd53e655e0583a1 AS build
+# The dev image ships bash; don't depend on /bin/sh being present.
+SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 RUN npm install --global pnpm@11.1.2
 WORKDIR /workspace
 ENV CI=1
@@ -22,18 +25,18 @@ RUN pnpm install --frozen-lockfile --offline \
   && find /pruned/full/packages/sdk /pruned/full/packages/sdk-daemon -mindepth 1 -maxdepth 1 ! -name dist ! -name package.json ! -name node_modules ! -name LICENSE -exec rm -rf {} + \
   && install -d -m 0700 /rootfs/run/zama /rootfs/var/lib/zama
 
-# Node.js only: no shell or package manager.
-FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:78f07ef1b5ea71ad7c055df15d0dd8997f2d288f9158623c4d4ae3d765b7d50d
+# Node.js only: no shell or package manager, and no entrypoint, so CMD names node.
+FROM dhi.io/node:24-debian13@sha256:0e6bbf45c6befccdfb0f20d8c2e9e9b3621533f7f5a749eee3d4618e701f3448
 ARG RUNTIME_UID=10000
 ARG RUNTIME_GID=10001
-ENV NODE_ENV=production PATH=/nodejs/bin:$PATH
+ENV NODE_ENV=production
 WORKDIR /app/packages/sdk-daemon
 # Root-owned, so the daemon user cannot modify its own code.
 COPY --from=build /pruned/full /app
 COPY LICENSE /app/LICENSE
 COPY --from=build --chown=${RUNTIME_UID}:${RUNTIME_GID} /rootfs/run/ /run/
 COPY --from=build --chown=${RUNTIME_UID}:${RUNTIME_GID} /rootfs/var/lib/ /var/lib/
+# A dedicated high UID, not the base image's node user.
 USER ${RUNTIME_UID}:${RUNTIME_GID}
 HEALTHCHECK --interval=3s --timeout=3s --start-period=10s CMD ["node", "dist/healthcheck.js"]
-# The base image's entrypoint is node.
-CMD ["dist/main.js"]
+CMD ["node", "dist/main.js"]

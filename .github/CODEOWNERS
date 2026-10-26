@@ -1,0 +1,5 @@
+# Risk acceptances for the daemon image gate. Trivy also reads a root trivy.yaml on its own, and this file owns
+# itself so the review can't be removed without one.
+/.github/CODEOWNERS @zama-ai/security-team
+/.trivyignore* @zama-ai/security-team
+/trivy.yaml @zama-ai/security-team
