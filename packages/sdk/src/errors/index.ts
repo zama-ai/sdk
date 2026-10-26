@@ -50,6 +50,14 @@ export {
   type BalanceErrorDetails,
 } from "./balance";
 export { UnshieldAlreadyFinalizedError, type UnshieldAlreadyFinalizedDetails } from "./unshield";
+export {
+  UnlistedConfidentialTokenError,
+  VaultBatcherPausedError,
+  VaultGroupJoinUnconfirmedError,
+  type UnlistedConfidentialTokenDetails,
+  type VaultBatcherPausedDetails,
+  type VaultGroupJoinUnconfirmedDetails,
+} from "./vaults";
 export { wrapDecryptError, type DecryptErrorContext } from "./decrypt";
 export { wrapEncryptError } from "./encrypt";
 export { isFatalBatchError } from "./fatal-batch";

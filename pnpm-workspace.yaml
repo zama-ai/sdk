@@ -37,6 +37,8 @@ overrides:
   "brace-expansion@^5.0.0": ">=5.0.12 <6"
   postcss: ">=8.5.23"
   source-map-js: ">=1.2.2"
+  # Security floor for the daemon image scan; zod comes in via viem → ox → abitype.
+  "zod@^4.0.0": ">=4.6.6 <5"
   # undici-types@6.19.3+ dropped provenance attestation (likely a switch away
   # from CI publish), triggering trustPolicy:no-downgrade on every install.
   # 6.19.2 is the last version with a sigstore attestation. Pin here until

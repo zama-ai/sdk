@@ -1460,6 +1460,7 @@ pub enum EventOperation {
     VaultClaim = 21,
     VaultRecover = 22,
     VaultDispatchBatch = 23,
+    VaultRouterJoin = 24,
 }
 impl EventOperation {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -1492,6 +1493,7 @@ impl EventOperation {
             Self::VaultClaim => "EVENT_OPERATION_VAULT_CLAIM",
             Self::VaultRecover => "EVENT_OPERATION_VAULT_RECOVER",
             Self::VaultDispatchBatch => "EVENT_OPERATION_VAULT_DISPATCH_BATCH",
+            Self::VaultRouterJoin => "EVENT_OPERATION_VAULT_ROUTER_JOIN",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -1527,6 +1529,7 @@ impl EventOperation {
             "EVENT_OPERATION_VAULT_CLAIM" => Some(Self::VaultClaim),
             "EVENT_OPERATION_VAULT_RECOVER" => Some(Self::VaultRecover),
             "EVENT_OPERATION_VAULT_DISPATCH_BATCH" => Some(Self::VaultDispatchBatch),
+            "EVENT_OPERATION_VAULT_ROUTER_JOIN" => Some(Self::VaultRouterJoin),
             _ => None,
         }
     }
@@ -1601,6 +1604,7 @@ pub enum VaultOperation {
     Claim = 3,
     Recover = 4,
     DispatchBatch = 5,
+    RouterJoin = 6,
 }
 impl VaultOperation {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -1615,6 +1619,7 @@ impl VaultOperation {
             Self::Claim => "VAULT_OPERATION_CLAIM",
             Self::Recover => "VAULT_OPERATION_RECOVER",
             Self::DispatchBatch => "VAULT_OPERATION_DISPATCH_BATCH",
+            Self::RouterJoin => "VAULT_OPERATION_ROUTER_JOIN",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -1626,6 +1631,7 @@ impl VaultOperation {
             "VAULT_OPERATION_CLAIM" => Some(Self::Claim),
             "VAULT_OPERATION_RECOVER" => Some(Self::Recover),
             "VAULT_OPERATION_DISPATCH_BATCH" => Some(Self::DispatchBatch),
+            "VAULT_OPERATION_ROUTER_JOIN" => Some(Self::RouterJoin),
             _ => None,
         }
     }

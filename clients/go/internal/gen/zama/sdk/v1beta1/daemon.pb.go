@@ -336,6 +336,7 @@ const (
 	EventOperation_EVENT_OPERATION_VAULT_CLAIM              EventOperation = 21
 	EventOperation_EVENT_OPERATION_VAULT_RECOVER            EventOperation = 22
 	EventOperation_EVENT_OPERATION_VAULT_DISPATCH_BATCH     EventOperation = 23
+	EventOperation_EVENT_OPERATION_VAULT_ROUTER_JOIN        EventOperation = 24
 )
 
 // Enum value maps for EventOperation.
@@ -365,6 +366,7 @@ var (
 		21: "EVENT_OPERATION_VAULT_CLAIM",
 		22: "EVENT_OPERATION_VAULT_RECOVER",
 		23: "EVENT_OPERATION_VAULT_DISPATCH_BATCH",
+		24: "EVENT_OPERATION_VAULT_ROUTER_JOIN",
 	}
 	EventOperation_value = map[string]int32{
 		"EVENT_OPERATION_UNSPECIFIED":              0,
@@ -391,6 +393,7 @@ var (
 		"EVENT_OPERATION_VAULT_CLAIM":              21,
 		"EVENT_OPERATION_VAULT_RECOVER":            22,
 		"EVENT_OPERATION_VAULT_DISPATCH_BATCH":     23,
+		"EVENT_OPERATION_VAULT_ROUTER_JOIN":        24,
 	}
 )
 
@@ -531,6 +534,7 @@ const (
 	VaultOperation_VAULT_OPERATION_CLAIM          VaultOperation = 3
 	VaultOperation_VAULT_OPERATION_RECOVER        VaultOperation = 4
 	VaultOperation_VAULT_OPERATION_DISPATCH_BATCH VaultOperation = 5
+	VaultOperation_VAULT_OPERATION_ROUTER_JOIN    VaultOperation = 6
 )
 
 // Enum value maps for VaultOperation.
@@ -542,6 +546,7 @@ var (
 		3: "VAULT_OPERATION_CLAIM",
 		4: "VAULT_OPERATION_RECOVER",
 		5: "VAULT_OPERATION_DISPATCH_BATCH",
+		6: "VAULT_OPERATION_ROUTER_JOIN",
 	}
 	VaultOperation_value = map[string]int32{
 		"VAULT_OPERATION_UNSPECIFIED":    0,
@@ -550,6 +555,7 @@ var (
 		"VAULT_OPERATION_CLAIM":          3,
 		"VAULT_OPERATION_RECOVER":        4,
 		"VAULT_OPERATION_DISPATCH_BATCH": 5,
+		"VAULT_OPERATION_ROUTER_JOIN":    6,
 	}
 )
 
@@ -8764,7 +8770,7 @@ const file_zama_sdk_v1beta1_daemon_proto_rawDesc = "" +
 	"(SDK_EVENT_KIND_UNSHIELD_PHASE1_SUBMITTED\x10\x13\x12*\n" +
 	"&SDK_EVENT_KIND_UNSHIELD_PHASE2_STARTED\x10\x14\x12,\n" +
 	"(SDK_EVENT_KIND_UNSHIELD_PHASE2_SUBMITTED\x10\x15\x12\"\n" +
-	"\x1eSDK_EVENT_KIND_VAULT_SUBMITTED\x10\x16*\x85\a\n" +
+	"\x1eSDK_EVENT_KIND_VAULT_SUBMITTED\x10\x16*\xac\a\n" +
 	"\x0eEventOperation\x12\x1f\n" +
 	"\x1bEVENT_OPERATION_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cEVENT_OPERATION_GRANT_PERMIT\x10\x01\x12+\n" +
@@ -8790,7 +8796,8 @@ const file_zama_sdk_v1beta1_daemon_proto_rawDesc = "" +
 	"\x1aEVENT_OPERATION_VAULT_QUIT\x10\x14\x12\x1f\n" +
 	"\x1bEVENT_OPERATION_VAULT_CLAIM\x10\x15\x12!\n" +
 	"\x1dEVENT_OPERATION_VAULT_RECOVER\x10\x16\x12(\n" +
-	"$EVENT_OPERATION_VAULT_DISPATCH_BATCH\x10\x17*n\n" +
+	"$EVENT_OPERATION_VAULT_DISPATCH_BATCH\x10\x17\x12%\n" +
+	"!EVENT_OPERATION_VAULT_ROUTER_JOIN\x10\x18*n\n" +
 	"\n" +
 	"ShieldPath\x12\x1b\n" +
 	"\x17SHIELD_PATH_UNSPECIFIED\x10\x00\x12!\n" +
@@ -8799,14 +8806,15 @@ const file_zama_sdk_v1beta1_daemon_proto_rawDesc = "" +
 	"\fApprovalStep\x12\x1d\n" +
 	"\x19APPROVAL_STEP_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13APPROVAL_STEP_RESET\x10\x01\x12\x19\n" +
-	"\x15APPROVAL_STEP_APPROVE\x10\x02*\xc1\x01\n" +
+	"\x15APPROVAL_STEP_APPROVE\x10\x02*\xe2\x01\n" +
 	"\x0eVaultOperation\x12\x1f\n" +
 	"\x1bVAULT_OPERATION_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14VAULT_OPERATION_JOIN\x10\x01\x12\x18\n" +
 	"\x14VAULT_OPERATION_QUIT\x10\x02\x12\x19\n" +
 	"\x15VAULT_OPERATION_CLAIM\x10\x03\x12\x1b\n" +
 	"\x17VAULT_OPERATION_RECOVER\x10\x04\x12\"\n" +
-	"\x1eVAULT_OPERATION_DISPATCH_BATCH\x10\x05*\xcb\x02\n" +
+	"\x1eVAULT_OPERATION_DISPATCH_BATCH\x10\x05\x12\x1f\n" +
+	"\x1bVAULT_OPERATION_ROUTER_JOIN\x10\x06*\xcb\x02\n" +
 	"\fProgressKind\x12\x1d\n" +
 	"\x19PROGRESS_KIND_UNSPECIFIED\x10\x00\x12\"\n" +
 	"\x1ePROGRESS_KIND_ENCRYPT_COMPLETE\x10\x01\x12$\n" +
