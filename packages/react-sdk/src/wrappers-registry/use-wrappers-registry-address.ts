@@ -15,7 +15,8 @@ export function useWrappersRegistryAddress(): Address | undefined {
   const walletChainId = useWalletAccount(sdk)?.chainId;
 
   const { data: chainId } = useQuery<number>({
-    // Keyed by the wallet's chain so a wallet switch refetches instead of waiting out staleTime.
+    // Keyed by the wallet's chain: the wallet-lifecycle invalidation skips a first connect, so
+    // without the key a wallet connecting on another chain would wait out staleTime.
     queryKey: zamaQueryKeys.wrappersRegistry.chainId(walletChainId),
     queryFn: () => sdk.provider.getChainId(),
     staleTime: 30_000,
