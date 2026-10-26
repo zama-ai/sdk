@@ -47,8 +47,11 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Operator approvals](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/operator-approvals.md): How to approve another address to act on your confidential tokens.
 - [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/delegated-decryption.md): Grant another address the right to decrypt confidential balances, then read those balances as a delegate, in TypeScript, React, Go, or Rust.
 - [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/encrypt-decrypt.md): How to encrypt values and decrypt FHE encrypted values in TypeScript, React, Go, or Rust for custom confidential smart contracts that are not wrapped ERC-20 tokens.
-- [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vault-deposits.md): How to integrate confidential ERC-4626 vaults with the Zama SDK.
-- [Go & Rust clients](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/README.md): Integrate Go and Rust applications with the Zama SDK daemon and manage wallets, credentials, and connection lifecycles.
+- [Vaults overview](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/README.md): Integrate confidential ERC-4626 vaults with the Zama SDK — single vaults and multi-vault groups.
+- [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md): How to integrate confidential ERC-4626 vaults with the Zama SDK.
+- [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/groups.md): Deposit into one of several vaults without revealing which one.
+- [Go & Rust overview](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/README.md): Integrate Go and Rust applications with the Zama SDK daemon, manage wallets, credentials, and connection lifecycles, and deploy the daemon in production.
+- [Clients](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/README.md): Integrate your Go or Rust application with the Zama SDK daemon — wallet, credentials, events, and connection lifecycle.
 - [Attach a wallet](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/attach-wallet.md): Connect signing and transaction callbacks from Go and Rust to the daemon.
 - [Store credentials](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/credential-storage.md): Choose where the daemon keeps Go and Rust decryption credentials, or keep them in your own database.
 - [Observe events](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/observe-events.md): Subscribe to lifecycle, wallet, and progress notifications in Go and Rust.
@@ -64,6 +67,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/WrappersRegistry.md): Query the on-chain token wrappers registry — list pairs, look up tokens, and validate confidential tokens.
 - [Vault](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md): Confidential ERC-4626 vault interface — deposit and redeem through a pair of batchers.
 - [VaultBatcher](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md): One on-chain vault batcher — join, batch state, dispatch, claim, quit, recover.
+- [VaultGroup](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md): A set of confidential ERC-4626 vaults sharing one asset, joined together so a deposit hides which vault it went to.
 - [`web()` transport](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/RelayerWeb.md): Browser relayer transport that runs FHE operations via bundled WASM.
 - [`node()` transport](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/RelayerNode.md): Node.js relayer transport that runs FHE operations through @fhevm/sdk on the calling thread.
 - [`cleartext()` transport](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/RelayerCleartext.md): Development relayer transport that operates in cleartext mode, without FHE, KMS, or gateway dependencies.
@@ -147,6 +151,9 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useCurrentBatchId](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useCurrentBatchId.md): Query hook for the id of a vault batcher's currently open batch.
 - [useBatchState](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md): Query hook for a vault batch's lifecycle state, which decides what the user can do next.
 - [useTimeUntilDispatchable](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md): Query hook for the seconds until a vault batch becomes eligible for dispatch.
+- [useVaultGroup](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultGroup.md): React hook returning a memoized VaultGroup instance for a set of vaults sharing one confidential asset.
+- [useGroupDeposit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupDeposit.md): Mutation hook that deposits into one vault of a group by joining every member's current deposit batch.
+- [useGroupRedeem](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupRedeem.md): Mutation hook that redeems shares of one vault of a group by joining every member's current redeem batch.
 - [Query keys](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/query-keys.md): Reference for the zamaQueryKeys factory used for manual React Query cache control.
 
 ### Go, Rust, and Daemon Reference
@@ -159,6 +166,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 
 ### Go and Rust Daemon Deployment
 
+- [Daemon deployment](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/README.md): Run, monitor, and upgrade the Zama SDK daemon in production for Go and Rust integrations.
 - [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md): Deploy the Zama SDK daemon next to a Go or Rust application on your infrastructure.
 - [Monitor and troubleshoot](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md): Monitor daemon-backed Go and Rust operations and diagnose daemon failures.
 - [Upgrade the daemon](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/upgrade-and-recover.md): Replace the Zama SDK daemon and its Go or Rust client without losing stored credentials.

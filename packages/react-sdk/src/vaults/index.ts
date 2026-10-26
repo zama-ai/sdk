@@ -4,6 +4,9 @@
  * @packageDocumentation
  */
 export { useVault } from "./use-vault";
+export { useVaultGroup } from "./use-vault-group";
+export { useGroupDeposit, type UseGroupDepositConfig } from "./use-group-deposit";
+export { useGroupRedeem, type UseGroupRedeemConfig } from "./use-group-redeem";
 export { useVaultBatcher } from "./use-vault-batcher";
 export { useDeposit, type UseDepositConfig } from "./use-deposit";
 export { useRedeem, type UseRedeemConfig } from "./use-redeem";
