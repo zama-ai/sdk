@@ -4751,6 +4751,8 @@ Each public method that reaches the relayer sends its own value. When a method m
 | `vault-redeem`                        | `Vault.redeem`                                    |
 | `vault-join`                          | `VaultBatcher.join`                               |
 | `vault-deposit-of`                    | `VaultBatcher.depositOf`                          |
+| `vault-group-deposit`                 | `VaultGroup.deposit`                              |
+| `vault-group-redeem`                  | `VaultGroup.redeem`                               |
 | `encrypt`                             | `sdk.encrypt`                                     |
 | `decrypt-values`                      | `sdk.decryption.decryptValues`                    |
 | `delegated-decrypt-values`            | `sdk.decryption.delegatedDecryptValues`           |
