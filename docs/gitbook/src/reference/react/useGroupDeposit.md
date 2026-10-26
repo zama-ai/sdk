@@ -54,7 +54,7 @@ import { type UseGroupDepositConfig } from "@zama-fhe/react-sdk/vaults";
 
 `VaultGroupConfig`
 
-The group to deposit into. Same shape as [`useVaultGroup`](./useVaultGroup.md) takes. Pass a stable object (a module constant or a memoized value): a fresh object each render rebuilds the group and its cached reads.
+The group to deposit into. Same shape as [`useVaultGroup`](./useVaultGroup.md) takes, and memoized the same way, by its contents.
 
 ---
 
@@ -93,6 +93,7 @@ Default: `false`. Skips the confidential-balance pre-flight, for accounts whose 
 - `BalanceCheckUnavailableError` — the balance check needs a decryption the signer can't perform
 - `UnlistedConfidentialTokenError` — the router's registry does not list the asset
 - `VaultBatcherPausedError` — a member's batcher is paused, so the submission would revert
+- `VaultGroupJoinUnconfirmedError` — the transaction was mined, but a leg's `Joined` event could not be matched. See [`VaultGroup.deposit`](../sdk/VaultGroup.md#deposit).
 
 ## Return Type
 
@@ -102,7 +103,7 @@ import { type VaultGroupJoinResult } from "@zama-fhe/sdk/vaults";
 
 `data` resolves to a `VaultGroupJoinResult`: the transaction's `txHash` and `receipt`, the chosen `vaultId`, and `joins` with one entry per member. See [`VaultGroup` → VaultGroupJoinResult](../sdk/VaultGroup.md#vaultgroupjoinresult).
 
-On success the hook invalidates the asset token's balance, and the batch reads (`useCurrentBatchId`, `useBatchState`, `useTimeUntilDispatchable`) of every batcher a leg joined.
+Once the transaction is mined the hook invalidates the asset token's balance, and the batch reads (`useCurrentBatchId`, `useBatchState`, `useTimeUntilDispatchable`) of every member's deposit batcher. This also runs when the mutation fails with `VaultGroupJoinUnconfirmedError`, since a mined transaction joined every leg.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

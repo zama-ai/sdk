@@ -5,7 +5,7 @@ description: React hook returning a memoized VaultGroup instance for a set of va
 
 # useVaultGroup
 
-Returns a memoized [`VaultGroup`](../sdk/VaultGroup.md) bound to the SDK in the current `ZamaProvider`. The instance is memoized on `[sdk, config]`: pass a stable config object (a module constant or a memoized value), since a fresh object each render rebuilds the group.
+Returns a memoized [`VaultGroup`](../sdk/VaultGroup.md) bound to the SDK in the current `ZamaProvider`. The instance is memoized on the SDK and the config's contents — its id, `cAsset`, `router` and each member's id and addresses — so a config rebuilt each render keeps the same group and its cached reads, as [`useVault`](./useVault.md) does for its addresses.
 
 A group has at least two vaults; [`useVault`](./useVault.md) covers a single vault.
 

@@ -19531,8 +19531,16 @@ export class VaultBatcherPausedError extends ZamaError {
 }
 
 // @public
+export interface VaultGroupJoin {
+    batcher: Address;
+    batchId: bigint;
+    confidentialJoinedAmount: EncryptedValue;
+    token: Address;
+    vaultId: string;
+}
+
+// @public
 export interface VaultGroupJoinUnconfirmedDetails {
-    // Warning: (ae-forgotten-export) The symbol "VaultGroupJoin" needs to be exported by the entry point index.d.ts
     readonly joins: readonly VaultGroupJoin[];
     readonly receipt: TransactionReceipt;
     readonly txHash: Hex;

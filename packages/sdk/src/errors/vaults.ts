@@ -62,25 +62,27 @@ export interface VaultGroupJoinUnconfirmedDetails {
   readonly txHash: Hex;
   /** Its receipt, for callers that want to inspect the logs themselves. */
   readonly receipt: TransactionReceipt;
-  /** The legs whose batchers did report a join, so their batches can still be claimed or quit. */
+  /** The legs whose `Joined` log the SDK matched, with the batch each landed in. */
   readonly joins: readonly VaultGroupJoin[];
-  /** The ids of the members whose batchers reported no join. */
+  /** The ids of the members whose `Joined` log the SDK could not match; not a list of legs that did not join. */
   readonly unconfirmed: readonly string[];
 }
 
 /**
- * A group submission was mined, but its receipt has no `Joined` event for at
- * least one leg. A reverted transaction ends here too, so look the transaction
- * up before resubmitting; `joins` names the batches that did take the join.
+ * A group submission was mined, but the SDK could not match a `Joined` event
+ * in its receipt to every leg. The router is all-or-nothing, so either the
+ * transaction reverted and nothing moved, or it succeeded and *every* leg
+ * joined, the `unconfirmed` ones included; look the transaction up before
+ * resubmitting. `joins` gives the batch ids the SDK could read.
  */
 export class VaultGroupJoinUnconfirmedError extends ZamaError {
   /** The mined transaction. */
   readonly txHash: Hex;
   /** Its receipt, for callers that want to inspect the logs themselves. */
   readonly receipt: TransactionReceipt;
-  /** The legs whose batchers did report a join, so their batches can still be claimed or quit. */
+  /** The legs whose `Joined` log the SDK matched, with the batch each landed in. */
   readonly joins: readonly VaultGroupJoin[];
-  /** The ids of the members whose batchers reported no join. */
+  /** The ids of the members whose `Joined` log the SDK could not match; not a list of legs that did not join. */
   readonly unconfirmed: readonly string[];
 
   constructor(message: string, details: VaultGroupJoinUnconfirmedDetails, options?: ErrorOptions) {

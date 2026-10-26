@@ -25,7 +25,7 @@ Start with the [Go quick start](../native/tutorials/go-quick-start.md) or the [R
 
 A group deposit throws the new `UnlistedConfidentialTokenError` when the router's registry does not list the asset; `VaultGroup.isAssetListed()` gives the same answer without throwing. Both directions throw the new `VaultBatcherPausedError`, naming the member, when any batcher a leg would join is paused. Every submission through the router, deposit or redemption, surfaces as a `VaultSubmitted` event with `vaultOperation: "routerJoin"` tagged with the router's address.
 
-If the mined transaction's receipt has no `Joined` event for a leg, the new `VaultGroupJoinUnconfirmedError` carries the transaction hash, the receipt, the batches that did take the join and the members that did not, so those batches can still be claimed or quit.
+If the SDK cannot match a `Joined` event in the mined transaction's receipt to every leg, the new `VaultGroupJoinUnconfirmedError` carries the transaction hash, the receipt, the batch ids it could read and the members it could not match. The router is all-or-nothing, so the transaction either reverted or joined every leg; look it up before resubmitting.
 
 See [Vault groups](../guides/vaults/groups.md).
 

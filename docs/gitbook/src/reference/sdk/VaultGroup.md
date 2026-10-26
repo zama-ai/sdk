@@ -141,7 +141,7 @@ The submission emits a [`VaultSubmitted`](ZamaSDK.md#events) event with `vaultOp
 - [`InsufficientConfidentialBalanceError`](errors.md#insufficientconfidentialbalanceerror) — the asset balance is less than `amount`.
 - [`BalanceCheckUnavailableError`](errors.md#balancecheckunavailableerror) — the balance check needs a decryption the signer can't perform; pass `skipBalanceCheck: true`.
 - [`UnlistedConfidentialTokenError`](errors.md#unlistedconfidentialtokenerror) — the router's registry does not list the asset.
-- [`VaultGroupJoinUnconfirmedError`](errors.md#vaultgroupjoinunconfirmederror) — the transaction was mined, but a leg's batcher reported no `Joined` event. Carries the `txHash`, the `receipt`, the `joins` of the legs that did report and the `unconfirmed` member ids, so the batches that took the join can still be claimed or quit.
+- [`VaultGroupJoinUnconfirmedError`](errors.md#vaultgroupjoinunconfirmederror) — the transaction was mined, but the SDK could not match a `Joined` event to every leg. Carries the `txHash`, the `receipt`, the `joins` it could match and the `unconfirmed` member ids. The router is all-or-nothing, so either nothing moved or every leg joined, the unconfirmed ones included; look the transaction up before resubmitting.
 
 ### redeem
 
@@ -209,7 +209,7 @@ import { groupDepositMutationOptions, groupRedeemMutationOptions } from "@zama-f
 The React hooks are built on these; they are exported for non-React TanStack Query consumers and for custom compositions.
 
 - `groupDepositMutationOptions(group)` / `groupRedeemMutationOptions(group)` — `group.deposit` / `group.redeem` as mutations taking `{ vaultId, amount, ...options }`. Keyed on `["zama.vaultGroup.deposit", { cAsset, batchers }]` (redeem likewise), where `batchers` are the direction's batcher addresses.
-- On success the hooks call [`invalidateAfterJoin`](VaultBatcher.md#tanstack-query-helpers) once per entry in `joins`, with the batcher it joined and the token it spent. The redeem hook additionally invalidates operator status for each share token.
+- Once the transaction is mined, the hooks invalidate what [`invalidateAfterJoin`](VaultBatcher.md#tanstack-query-helpers) covers for every member: the balance of each token the legs spent (`cAsset` once for a deposit, each share token for a redemption) and each batcher's batch reads. This runs on success and on `VaultGroupJoinUnconfirmedError` alike, since a mined transaction joined every leg. The redeem hook additionally invalidates operator status for each share token.
 
 See [Query keys → `vaultQueryKeys`](../react/query-keys.md#vaultquerykeys) for the cache keys.
 

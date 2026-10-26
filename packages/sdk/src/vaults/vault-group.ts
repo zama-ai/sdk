@@ -13,6 +13,7 @@ import {
   VaultGroupJoinUnconfirmedError,
 } from "../errors";
 import type { EncryptedValue } from "../relayer/types";
+import { withOperation, type TelemetryOperation } from "../telemetry";
 import { Token, type WrappedToken } from "../token";
 import type { GenericSigner, TransactionResult, WriteContractConfig } from "../types";
 import { requireAlignedWalletAccount } from "../utils/alignment";
@@ -121,6 +122,11 @@ const SIDES = {
   },
 } as const;
 
+// Deduped: every deposit leg spends the same `cAsset`.
+function uniqueTokens(legs: readonly GroupLeg[]): WrappedToken[] {
+  return [...new Map(legs.map((leg) => [leg.token.address, leg.token])).values()];
+}
+
 function duplicate<T>(values: readonly T[]): T | undefined {
   const seen = new Set<T>();
   for (const value of values) {
@@ -193,6 +199,7 @@ export class VaultGroup {
     this.cAsset = getAddress(config.cAsset);
     this.router = getAddress(config.router);
     this.members = members;
+    // The router declares its registry `immutable`, so one read holds for the group's lifetime.
     this.#registry = memoizeAddressRead(async () =>
       getAddress(await sdk.provider.readContract(tokenWrapperRegistryContract(this.router))),
     );
@@ -234,13 +241,14 @@ export class VaultGroup {
    * @throws if the router's registry does not list `cAsset`. {@link UnlistedConfidentialTokenError}
    * @throws if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
    * @throws if balance validation requires decryption that is not possible. {@link BalanceCheckUnavailableError}
-   * @throws if the mined transaction's receipt has no `Joined` event for a leg; carries the legs that did report. {@link VaultGroupJoinUnconfirmedError}
+   * @throws if a `Joined` event in the mined receipt could not be matched to every leg. {@link VaultGroupJoinUnconfirmedError}
    */
   async deposit(
     vaultId: string,
     amount: bigint,
     options?: JoinOptions,
   ): Promise<VaultGroupJoinResult> {
+    const { operation } = withOperation(options, "vault-group-deposit");
     const { member, signer, holder } = await this.#caller("deposit", vaultId);
     // Read alongside the legs, so an unlisted asset fails before the balance check can prompt the wallet.
     const [legs] = await Promise.all([
@@ -251,12 +259,15 @@ export class VaultGroup {
 
     // One encryption per verifying contract: the asset checks the transfer's proof, the router the allocation's.
     const [transfer, allocation] = await Promise.all([
-      this.sdk.encrypt({
-        values: [{ value: amount, type: "euint64" }],
-        contractAddress: this.cAsset,
-        userAddress: holder,
-      }),
-      this.#encryptLegs(holder, legs),
+      this.sdk.encrypt(
+        {
+          values: [{ value: amount, type: "euint64" }],
+          contractAddress: this.cAsset,
+          userAddress: holder,
+        },
+        { operation },
+      ),
+      this.#encryptLegs(holder, legs, operation),
     ]);
     const [encryptedAmount] = transfer.encryptedValues;
     if (!encryptedAmount) {
@@ -294,23 +305,23 @@ export class VaultGroup {
    * @throws if a member's redeem batcher is paused. {@link VaultBatcherPausedError}
    * @throws if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
    * @throws if balance validation requires decryption that is not possible. {@link BalanceCheckUnavailableError}
-   * @throws if the mined transaction's receipt has no `Joined` event for a leg; carries the legs that did report. {@link VaultGroupJoinUnconfirmedError}
+   * @throws if a `Joined` event in the mined receipt could not be matched to every leg. {@link VaultGroupJoinUnconfirmedError}
    */
   async redeem(
     vaultId: string,
     amount: bigint,
     options?: VaultGroupRedeemOptions,
   ): Promise<VaultGroupJoinResult> {
+    const { operation } = withOperation(options, "vault-group-redeem");
     const { member, signer, holder } = await this.#caller("redeem", vaultId);
     // A router address with no registry to read fails here, before anything is granted to it.
     const [legs] = await Promise.all([this.#legs("redeem", member, amount), this.#registry()]);
     await this.#assertBalance("redeem", member, amount, legs, signer, options);
 
     // Encrypted before the grants, which cost the user a signature each; a proof does not expire.
-    const allocation = await this.#encryptLegs(holder, legs);
-    const tokens = [...new Map(legs.map((leg) => [leg.token.address, leg.token])).values()];
+    const allocation = await this.#encryptLegs(holder, legs, operation);
     const grants = await Promise.all(
-      tokens.map(async (token) => ({
+      uniqueTokens(legs).map(async (token) => ({
         token,
         granted: await token.isOperator(holder, this.router),
       })),
@@ -399,7 +410,7 @@ export class VaultGroup {
     }
     const token = await SIDES[direction].token(member.vault);
     // Every leg's token is decrypted, not just the chosen one's: a lone decrypt would tell the relayer which vault was picked.
-    const tokens = [...new Map(legs.map((leg) => [leg.token.address, leg.token])).values()];
+    const tokens = uniqueTokens(legs);
     await assertConfidentialBalance({
       operation: direction,
       tokenAddress: token.address,
@@ -424,12 +435,16 @@ export class VaultGroup {
   async #encryptLegs(
     holder: Address,
     legs: readonly GroupLeg[],
+    operation: TelemetryOperation,
   ): Promise<{ legs: readonly EncryptedAllocationLeg[]; inputProof: Hex }> {
-    const { encryptedValues, inputProof } = await this.sdk.encrypt({
-      values: legs.map((leg) => ({ value: leg.amount, type: "euint64" as const })),
-      contractAddress: this.router,
-      userAddress: holder,
-    });
+    const { encryptedValues, inputProof } = await this.sdk.encrypt(
+      {
+        values: legs.map((leg) => ({ value: leg.amount, type: "euint64" as const })),
+        contractAddress: this.router,
+        userAddress: holder,
+      },
+      { operation },
+    );
     if (encryptedValues.length !== legs.length) {
       throw new EncryptionFailedError(
         `Encryption returned ${encryptedValues.length} values for ${legs.length} legs`,

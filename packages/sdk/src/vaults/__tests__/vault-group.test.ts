@@ -326,6 +326,13 @@ describe("VaultGroup deposit", () => {
         contractAddress: ASSET,
         userAddress,
         values: [{ value: 1_000n, type: "euint64" }],
+        options: { operation: "vault-group-deposit" },
+      }),
+    );
+    expect(relayer.encryptValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contractAddress: ROUTER,
+        options: { operation: "vault-group-deposit" },
       }),
     );
     const transfers = writesTo(signer, "confidentialTransferAndCall");
@@ -397,7 +404,7 @@ describe("VaultGroup deposit", () => {
       /was mined, but its receipt has no Joined event for .* of vault\(s\) "beta"/,
     );
     await expect(attempt).rejects.toMatchObject({
-      txHash: expect.any(String),
+      txHash: "0xtxhash",
       receipt: { logs: [expect.objectContaining({ address: ALPHA.depositBatcher })] },
       joins: [expect.objectContaining({ vaultId: "alpha", batchId: 7n })],
       unconfirmed: ["beta"],
@@ -688,6 +695,7 @@ describe("VaultGroup redeem", () => {
           { value: 500n, type: "euint64" },
           { value: 0n, type: "euint64" },
         ],
+        options: { operation: "vault-group-redeem" },
       }),
     );
     const joins = writesTo(signer, "join");
@@ -786,6 +794,28 @@ describe("VaultGroup redeem", () => {
     await expect(new VaultGroup(sdk, GROUP).redeem("alpha", 500n)).resolves.toBeDefined();
   });
 
+  test("checks the chosen member's share balance, not the first leg's", async ({
+    sdk,
+    provider,
+    relayer,
+    signer,
+    userAddress,
+  }) => {
+    mockReads(provider, { balances: { [ALPHA.share]: 0n, [BETA.share]: 1_000n } });
+    mockEncryptedLegs(relayer, 2);
+    mockReceipts(provider, userAddress, [ALPHA.redeemBatcher, BETA.redeemBatcher]);
+
+    await expect(new VaultGroup(sdk, GROUP).redeem("beta", 500n)).resolves.toBeDefined();
+
+    vi.clearAllMocks();
+    mockReads(provider, { balances: { [ALPHA.share]: 1_000n, [BETA.share]: 0n } });
+
+    await expect(new VaultGroup(sdk, GROUP).redeem("beta", 500n)).rejects.toThrow(
+      InsufficientConfidentialBalanceError,
+    );
+    expect(signer.writeContract).not.toHaveBeenCalled();
+  });
+
   test("ignores a decoy's failed decrypt, but fails on the chosen member's with that error", async ({
     sdk,
     provider,
@@ -807,20 +837,26 @@ describe("VaultGroup redeem", () => {
     expect(signer.writeContract).not.toHaveBeenCalled();
   });
 
-  test("fails before granting or submitting when the relayer returns fewer values than legs", async ({
-    sdk,
-    provider,
-    relayer,
-    signer,
-  }) => {
-    mockReads(provider, { operators: { [ALPHA.share]: false, [BETA.share]: false } });
-    mockEncryptedLegs(relayer, 1);
+  for (const count of [1, 3]) {
+    test(`fails before granting or submitting when the relayer returns ${count} values for 2 legs`, async ({
+      sdk,
+      provider,
+      relayer,
+      signer,
+    }) => {
+      mockReads(provider, { operators: { [ALPHA.share]: false, [BETA.share]: false } });
+      const handles = mockEncryptedLegs(relayer, count);
+      vi.mocked(relayer.encryptValues).mockResolvedValue({
+        encryptedValues: [...handles],
+        inputProof: VALID_INPUT_PROOF,
+      } as unknown as Awaited<ReturnType<RelayerSDK["encryptValues"]>>);
 
-    await expect(new VaultGroup(sdk, GROUP).redeem("alpha", 500n)).rejects.toThrow(
-      EncryptionFailedError,
-    );
-    expect(signer.writeContract).not.toHaveBeenCalled();
-  });
+      await expect(new VaultGroup(sdk, GROUP).redeem("alpha", 500n)).rejects.toThrow(
+        EncryptionFailedError,
+      );
+      expect(signer.writeContract).not.toHaveBeenCalled();
+    });
+  }
 
   test("refuses to write when a redeem batcher pays out a token other than the asset", async ({
     sdk,

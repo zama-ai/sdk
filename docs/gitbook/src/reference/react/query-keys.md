@@ -135,7 +135,7 @@ import { vaultQueryKeys, invalidateBatchQueries } from "@zama-fhe/sdk/vaults";
 
 A `batcher(...)` key is a prefix of every `batch(...)` key for that batcher, so invalidating it clears all of them at once. `invalidateBatchQueries(queryClient, batcherAddr)` invalidates all three namespaces for a batcher — this is what the vault mutation hooks call after a join, quit, recover or dispatch. Balances on the batcher's input and output tokens go through the regular [`invalidateBalanceQueries`](#invalidatebalancequeries).
 
-`useGroupDeposit` / `useGroupRedeem` call `invalidateAfterJoin` once per leg, with the batcher it joined and the token it spent. `useGroupRedeem` additionally invalidates operator status for each share token.
+`useGroupDeposit` / `useGroupRedeem` invalidate, once the transaction is mined, the balance of each token the legs spent and every member's batch reads — on success and on `VaultGroupJoinUnconfirmedError` alike. `useGroupRedeem` additionally invalidates operator status for each share token.
 
 ## Common patterns
 

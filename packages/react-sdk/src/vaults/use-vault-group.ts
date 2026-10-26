@@ -6,9 +6,8 @@ import { useZamaSDK } from "../provider";
 
 /**
  * Get a {@link VaultGroup} instance for a set of vaults sharing one confidential
- * asset, memoized by config. Pass a stable config object (a module constant or
- * a memoized value): a fresh object each render rebuilds the group and its
- * cached reads. `useVault` covers a single vault.
+ * asset, memoized by the config's contents, so a config rebuilt each render
+ * keeps one group. `useVault` covers a single vault.
  *
  * @param config - The group: its `cAsset`, `router` and members.
  *
@@ -19,5 +18,20 @@ import { useZamaSDK } from "../provider";
  */
 export function useVaultGroup(config: VaultGroupConfig): VaultGroup {
   const sdk = useZamaSDK();
-  return useMemo<VaultGroup>(() => createVaultGroup(sdk, config), [sdk, config]);
+  // Rebuilt from the key so the memo depends on the config's contents, not its identity.
+  const key = JSON.stringify({
+    id: config.id,
+    cAsset: config.cAsset,
+    router: config.router,
+    vaults: config.vaults.map(({ id, vault, depositBatcher, redeemBatcher }) => ({
+      id,
+      vault,
+      depositBatcher,
+      redeemBatcher,
+    })),
+  });
+  return useMemo<VaultGroup>(
+    () => createVaultGroup(sdk, JSON.parse(key) as VaultGroupConfig),
+    [sdk, key],
+  );
 }

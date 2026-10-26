@@ -2552,7 +2552,7 @@ Start with the [Go quick start](https://raw.githubusercontent.com/zama-ai/sdk/be
 
 A group deposit throws the new `UnlistedConfidentialTokenError` when the router's registry does not list the asset; `VaultGroup.isAssetListed()` gives the same answer without throwing. Both directions throw the new `VaultBatcherPausedError`, naming the member, when any batcher a leg would join is paused. Every submission through the router, deposit or redemption, surfaces as a `VaultSubmitted` event with `vaultOperation: "routerJoin"` tagged with the router's address.
 
-If the mined transaction's receipt has no `Joined` event for a leg, the new `VaultGroupJoinUnconfirmedError` carries the transaction hash, the receipt, the batches that did take the join and the members that did not, so those batches can still be claimed or quit.
+If the SDK cannot match a `Joined` event in the mined transaction's receipt to every leg, the new `VaultGroupJoinUnconfirmedError` carries the transaction hash, the receipt, the batch ids it could read and the members it could not match. The router is all-or-nothing, so the transaction either reverted or joined every leg; look it up before resubmitting.
 
 See [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/groups.md).
 
@@ -10198,6 +10198,14 @@ Both methods check the caller's confidential balance before submitting, as `Vaul
 
 Claiming, quitting and batch state are unchanged: they happen per batcher, on the batcher a leg actually joined. Each entry in `joins` gives you that address and the batch id, so `createVaultBatcher(sdk, join.batcher).claim(join.batchId)` is the follow-up. See [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md) for the batch lifecycle.
 
+Claim or quit **every** entry in `joins`, the decoys included. A claim or quit is public, so acting on the chosen member's batcher alone shows which vault the zero legs were hiding. A decoy's claim pays out zero.
+
+```ts
+for (const join of joins) {
+  await createVaultBatcher(sdk, join.batcher).claim(join.batchId);
+}
+```
+
 ## Grants and registry listing
 
 For a **redemption**, the router pulls each leg's share token, so the SDK grants it an operator approval on every share token that lacks one, one wallet prompt each — a grant to the _router_, not to the batchers as with `Vault.redeem`. A **deposit** needs no grant, but the asset must be listed in the router's registry; the SDK checks and throws `UnlistedConfidentialTokenError` rather than paying for a revert.
@@ -13088,7 +13096,7 @@ The submission emits a [`VaultSubmitted`](https://raw.githubusercontent.com/zama
 - [`InsufficientConfidentialBalanceError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#insufficientconfidentialbalanceerror) — the asset balance is less than `amount`.
 - [`BalanceCheckUnavailableError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#balancecheckunavailableerror) — the balance check needs a decryption the signer can't perform; pass `skipBalanceCheck: true`.
 - [`UnlistedConfidentialTokenError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unlistedconfidentialtokenerror) — the router's registry does not list the asset.
-- [`VaultGroupJoinUnconfirmedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultgroupjoinunconfirmederror) — the transaction was mined, but a leg's batcher reported no `Joined` event. Carries the `txHash`, the `receipt`, the `joins` of the legs that did report and the `unconfirmed` member ids, so the batches that took the join can still be claimed or quit.
+- [`VaultGroupJoinUnconfirmedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultgroupjoinunconfirmederror) — the transaction was mined, but the SDK could not match a `Joined` event to every leg. Carries the `txHash`, the `receipt`, the `joins` it could match and the `unconfirmed` member ids. The router is all-or-nothing, so either nothing moved or every leg joined, the unconfirmed ones included; look the transaction up before resubmitting.
 
 ### redeem
 
@@ -13156,7 +13164,7 @@ import { groupDepositMutationOptions, groupRedeemMutationOptions } from "@zama-f
 The React hooks are built on these; they are exported for non-React TanStack Query consumers and for custom compositions.
 
 - `groupDepositMutationOptions(group)` / `groupRedeemMutationOptions(group)` — `group.deposit` / `group.redeem` as mutations taking `{ vaultId, amount, ...options }`. Keyed on `["zama.vaultGroup.deposit", { cAsset, batchers }]` (redeem likewise), where `batchers` are the direction's batcher addresses.
-- On success the hooks call [`invalidateAfterJoin`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#tanstack-query-helpers) once per entry in `joins`, with the batcher it joined and the token it spent. The redeem hook additionally invalidates operator status for each share token.
+- Once the transaction is mined, the hooks invalidate what [`invalidateAfterJoin`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#tanstack-query-helpers) covers for every member: the balance of each token the legs spent (`cAsset` once for a deposit, each share token for a redemption) and each batcher's batch reads. This runs on success and on `VaultGroupJoinUnconfirmedError` alike, since a mined transaction joined every leg. The redeem hook additionally invalidates operator status for each share token.
 
 See [Query keys → `vaultQueryKeys`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/query-keys.md#vaultquerykeys) for the cache keys.
 
@@ -14562,7 +14570,7 @@ Thrown by `VaultGroup.deposit()` and `VaultGroup.redeem()` when the batcher one 
 
 **Code:** `VAULT_GROUP_JOIN_UNCONFIRMED`
 
-Thrown by `VaultGroup.deposit()` and `VaultGroup.redeem()` after the transaction is mined, when its receipt has no `Joined` event for at least one leg. The error carries the `txHash`, the `receipt`, the `joins` of the legs whose batchers did report (with their batch ids) and the `unconfirmed` member ids.
+Thrown by `VaultGroup.deposit()` and `VaultGroup.redeem()` after the transaction is mined, when the SDK could not match a `Joined` event in its receipt to every leg. The error carries the `txHash`, the `receipt`, the `joins` whose log was matched (with their batch ids) and the `unconfirmed` member ids. `unconfirmed` means the SDK could not match a log, not that the leg did not join.
 
 ```ts
 matchZamaError(error, {
@@ -14570,7 +14578,10 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Do not resubmit blindly: the transaction is already mined, and funds may sit in the batches listed in `joins`, which can still be claimed or quit through their batchers. A reverted transaction and a mined one with unexpected logs both end here, so look the transaction up before deciding.
+**How to handle:** Do not resubmit blindly. The router is all-or-nothing, so one of two things happened; look the transaction up to tell which:
+
+- It reverted: nothing moved, and resubmitting is safe.
+- It succeeded: _every_ leg joined, the `unconfirmed` ones included, so the deposit is in the chosen member's batch even when that member is listed in `unconfirmed`. `joins` gives the batch ids the SDK could read; the rest can be read from the batchers. Resubmitting would deposit twice.
 
 ### InvalidTransportKeyPairError
 
@@ -25995,7 +26006,7 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 # useVaultGroup
 
-Returns a memoized [`VaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md) bound to the SDK in the current `ZamaProvider`. The instance is memoized on `[sdk, config]`: pass a stable config object (a module constant or a memoized value), since a fresh object each render rebuilds the group.
+Returns a memoized [`VaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md) bound to the SDK in the current `ZamaProvider`. The instance is memoized on the SDK and the config's contents — its id, `cAsset`, `router` and each member's id and addresses — so a config rebuilt each render keeps the same group and its cached reads, as [`useVault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVault.md) does for its addresses.
 
 A group has at least two vaults; [`useVault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVault.md) covers a single vault.
 
@@ -26106,7 +26117,7 @@ import { type UseGroupDepositConfig } from "@zama-fhe/react-sdk/vaults";
 
 `VaultGroupConfig`
 
-The group to deposit into. Same shape as [`useVaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultGroup.md) takes. Pass a stable object (a module constant or a memoized value): a fresh object each render rebuilds the group and its cached reads.
+The group to deposit into. Same shape as [`useVaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultGroup.md) takes, and memoized the same way, by its contents.
 
 ---
 
@@ -26168,6 +26179,7 @@ Default: `false`. Skips the confidential-balance pre-flight, for accounts whose 
 - `BalanceCheckUnavailableError` — the balance check needs a decryption the signer can't perform
 - `UnlistedConfidentialTokenError` — the router's registry does not list the asset
 - `VaultBatcherPausedError` — a member's batcher is paused, so the submission would revert
+- `VaultGroupJoinUnconfirmedError` — the transaction was mined, but a leg's `Joined` event could not be matched. See [`VaultGroup.deposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#deposit).
 
 ## Return Type
 
@@ -26177,7 +26189,7 @@ import { type VaultGroupJoinResult } from "@zama-fhe/sdk/vaults";
 
 `data` resolves to a `VaultGroupJoinResult`: the transaction's `txHash` and `receipt`, the chosen `vaultId`, and `joins` with one entry per member. See [`VaultGroup` → VaultGroupJoinResult](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#vaultgroupjoinresult).
 
-On success the hook invalidates the asset token's balance, and the batch reads (`useCurrentBatchId`, `useBatchState`, `useTimeUntilDispatchable`) of every batcher a leg joined.
+Once the transaction is mined the hook invalidates the asset token's balance, and the batch reads (`useCurrentBatchId`, `useBatchState`, `useTimeUntilDispatchable`) of every member's deposit batcher. This also runs when the mutation fails with `VaultGroupJoinUnconfirmedError`, since a mined transaction joined every leg.
 
 ### `mutate`
 
@@ -26285,7 +26297,7 @@ import { type UseGroupRedeemConfig } from "@zama-fhe/react-sdk/vaults";
 
 `VaultGroupConfig`
 
-The group to redeem from. Same shape as [`useVaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultGroup.md) takes. Pass a stable object (a module constant or a memoized value): a fresh object each render rebuilds the group and its cached reads.
+The group to redeem from. Same shape as [`useVaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultGroup.md) takes, and memoized the same way, by its contents.
 
 ---
 
@@ -26350,7 +26362,7 @@ Default: `false`. As in [`useGroupDeposit`](https://raw.githubusercontent.com/za
 
 `data` resolves to a `VaultGroupJoinResult` — see [`VaultGroup` → VaultGroupJoinResult](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#vaultgroupjoinresult).
 
-On success the hook invalidates every member's share balance — each leg transferred its own share token, even where the amount moved was zero — and the batch reads of every batcher a leg joined. Every member's operator status is invalidated whether the mutation succeeded or failed: each grant is its own transaction, so one can have landed before a later prompt was rejected.
+Once the transaction is mined the hook invalidates every member's share balance — each leg transferred its own share token, even where the amount moved was zero — and the batch reads of every member's redeem batcher. This also runs when the mutation fails with `VaultGroupJoinUnconfirmedError`, since a mined transaction joined every leg. Every member's operator status is invalidated whether the mutation succeeded or failed: each grant is its own transaction, so one can have landed before a later prompt was rejected.
 
 ### `mutate`
 
@@ -26547,7 +26559,7 @@ import { vaultQueryKeys, invalidateBatchQueries } from "@zama-fhe/sdk/vaults";
 
 A `batcher(...)` key is a prefix of every `batch(...)` key for that batcher, so invalidating it clears all of them at once. `invalidateBatchQueries(queryClient, batcherAddr)` invalidates all three namespaces for a batcher — this is what the vault mutation hooks call after a join, quit, recover or dispatch. Balances on the batcher's input and output tokens go through the regular [`invalidateBalanceQueries`](#invalidatebalancequeries).
 
-`useGroupDeposit` / `useGroupRedeem` call `invalidateAfterJoin` once per leg, with the batcher it joined and the token it spent. `useGroupRedeem` additionally invalidates operator status for each share token.
+`useGroupDeposit` / `useGroupRedeem` invalidate, once the transaction is mined, the balance of each token the legs spent and every member's batch reads — on success and on `VaultGroupJoinUnconfirmedError` alike. `useGroupRedeem` additionally invalidates operator status for each share token.
 
 ## Common patterns
 

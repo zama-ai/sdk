@@ -48,7 +48,7 @@ import { type UseGroupRedeemConfig } from "@zama-fhe/react-sdk/vaults";
 
 `VaultGroupConfig`
 
-The group to redeem from. Same shape as [`useVaultGroup`](./useVaultGroup.md) takes. Pass a stable object (a module constant or a memoized value): a fresh object each render rebuilds the group and its cached reads.
+The group to redeem from. Same shape as [`useVaultGroup`](./useVaultGroup.md) takes, and memoized the same way, by its contents.
 
 ---
 
@@ -90,7 +90,7 @@ Default: `false`. As in [`useGroupDeposit`](./useGroupDeposit.md#skipbalancechec
 
 `data` resolves to a `VaultGroupJoinResult` — see [`VaultGroup` → VaultGroupJoinResult](../sdk/VaultGroup.md#vaultgroupjoinresult).
 
-On success the hook invalidates every member's share balance — each leg transferred its own share token, even where the amount moved was zero — and the batch reads of every batcher a leg joined. Every member's operator status is invalidated whether the mutation succeeded or failed: each grant is its own transaction, so one can have landed before a later prompt was rejected.
+Once the transaction is mined the hook invalidates every member's share balance — each leg transferred its own share token, even where the amount moved was zero — and the batch reads of every member's redeem batcher. This also runs when the mutation fails with `VaultGroupJoinUnconfirmedError`, since a mined transaction joined every leg. Every member's operator status is invalidated whether the mutation succeeded or failed: each grant is its own transaction, so one can have landed before a later prompt was rejected.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

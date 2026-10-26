@@ -1,6 +1,11 @@
 import { act, waitFor } from "@testing-library/react";
 import { getAddress } from "viem";
-import { Token, type Address, type GenericProvider } from "@zama-fhe/sdk";
+import {
+  Token,
+  VaultGroupJoinUnconfirmedError,
+  type Address,
+  type GenericProvider,
+} from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { vaultQueryKeys, type VaultGroupConfig } from "@zama-fhe/sdk/vaults";
 import { describe, expect, joinedLog, mockEncryptedLegs, test, vi } from "../../test-fixtures";
@@ -101,7 +106,36 @@ describe("useGroupDeposit", () => {
     await act(() => result.current.mutateAsync({ vaultId: "alpha", amount: 1_000n }));
 
     expect(queryClient).toHaveInvalidatedQueries(keys);
-    expect(queryClient).not.toHaveInvalidatedQueries([operatorKey]);
+    expect(queryClient).toHaveCacheUntouched(operatorKey, 1n);
+  });
+
+  test("invalidates every member when the transaction mined but a leg's log went unmatched", async ({
+    renderWithProviders,
+    provider,
+    relayer,
+    userAddress,
+  }) => {
+    mockGroupSubmission(provider, userAddress, [ALPHA_DEPOSIT]);
+    mockEncryptedLegs(relayer, 2);
+
+    const { result, queryClient } = renderWithProviders(() => useGroupDeposit({ group }));
+
+    const keys = [
+      zamaQueryKeys.confidentialBalance.owner(ASSET, userAddress),
+      vaultQueryKeys.currentBatchId.batcher(ALPHA_DEPOSIT),
+      vaultQueryKeys.currentBatchId.batcher(BETA_DEPOSIT),
+    ];
+    for (const key of keys) {
+      queryClient.setQueryData(key, 1n);
+    }
+
+    await act(() =>
+      expect(result.current.mutateAsync({ vaultId: "alpha", amount: 1_000n })).rejects.toThrow(
+        VaultGroupJoinUnconfirmedError,
+      ),
+    );
+
+    expect(queryClient).toHaveInvalidatedQueries(keys);
   });
 
   test("forwards onSuccess", async ({ renderWithProviders, provider, relayer, userAddress }) => {
@@ -183,7 +217,39 @@ describe("useGroupRedeem", () => {
     );
 
     await waitFor(() => expect(queryClient).toHaveInvalidatedQueries(operatorKeys));
-    expect(queryClient).not.toHaveInvalidatedQueries(batchKeys);
+    for (const key of batchKeys) {
+      expect(queryClient).toHaveCacheUntouched(key, 1n);
+    }
+  });
+
+  test("invalidates every member when the transaction mined but a leg's log went unmatched", async ({
+    renderWithProviders,
+    provider,
+    relayer,
+    userAddress,
+  }) => {
+    mockGroupSubmission(provider, userAddress, [ALPHA_REDEEM]);
+    mockEncryptedLegs(relayer, 2);
+
+    const { result, queryClient } = renderWithProviders(() => useGroupRedeem({ group }));
+
+    const keys = [
+      zamaQueryKeys.confidentialBalance.owner(ALPHA_SHARE, userAddress),
+      zamaQueryKeys.confidentialBalance.owner(BETA_SHARE, userAddress),
+      vaultQueryKeys.currentBatchId.batcher(ALPHA_REDEEM),
+      vaultQueryKeys.currentBatchId.batcher(BETA_REDEEM),
+    ];
+    for (const key of keys) {
+      queryClient.setQueryData(key, 1n);
+    }
+
+    await act(() =>
+      expect(result.current.mutateAsync({ vaultId: "alpha", amount: 500n })).rejects.toThrow(
+        VaultGroupJoinUnconfirmedError,
+      ),
+    );
+
+    await waitFor(() => expect(queryClient).toHaveInvalidatedQueries(keys));
   });
 
   test("forwards onSuccess", async ({ renderWithProviders, provider, relayer, userAddress }) => {

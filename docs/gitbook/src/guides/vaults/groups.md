@@ -78,6 +78,14 @@ Both methods check the caller's confidential balance before submitting, as `Vaul
 
 Claiming, quitting and batch state are unchanged: they happen per batcher, on the batcher a leg actually joined. Each entry in `joins` gives you that address and the batch id, so `createVaultBatcher(sdk, join.batcher).claim(join.batchId)` is the follow-up. See [Vault deposits and redemptions](./deposits.md) for the batch lifecycle.
 
+Claim or quit **every** entry in `joins`, the decoys included. A claim or quit is public, so acting on the chosen member's batcher alone shows which vault the zero legs were hiding. A decoy's claim pays out zero.
+
+```ts
+for (const join of joins) {
+  await createVaultBatcher(sdk, join.batcher).claim(join.batchId);
+}
+```
+
 ## Grants and registry listing
 
 For a **redemption**, the router pulls each leg's share token, so the SDK grants it an operator approval on every share token that lacks one, one wallet prompt each — a grant to the _router_, not to the batchers as with `Vault.redeem`. A **deposit** needs no grant, but the asset must be listed in the router's registry; the SDK checks and throws `UnlistedConfidentialTokenError` rather than paying for a revert.

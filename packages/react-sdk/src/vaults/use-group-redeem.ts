@@ -5,6 +5,8 @@ import {
   type UseMutationOptions,
   type UseMutationResult,
 } from "@tanstack/react-query";
+import { VaultGroupJoinUnconfirmedError } from "@zama-fhe/sdk";
+import { invalidateAfterSetOperator } from "@zama-fhe/sdk/query";
 import {
   groupRedeemMutationOptions,
   invalidateAfterJoin,
@@ -12,7 +14,6 @@ import {
   type VaultGroupConfig,
   type VaultGroupJoinResult,
 } from "@zama-fhe/sdk/vaults";
-import { invalidateAfterSetOperator } from "@zama-fhe/sdk/query";
 import { invalidateOnceResolved } from "./invalidate-once-resolved";
 import { useVaultGroup } from "./use-vault-group";
 
@@ -24,14 +25,13 @@ export interface UseGroupRedeemConfig {
 
 /**
  * Redeem shares of one vault of a group, joining every member's current redeem
- * batch with its own share token. Grants the router an operator approval on
- * each share token first if one isn't already active, one wallet prompt per
- * grant. Invalidates the share balances and the joined batchers' batch reads
- * on success, and every member's operator status whether or not the mutation
- * succeeded, since a grant that landed before a rejected prompt stays granted.
+ * batch with its own share token, after granting the router an operator
+ * approval on each share token that lacks one (one wallet prompt per grant).
+ * Once the transaction is mined, invalidates the share balances and every
+ * member's batch reads; every member's operator status is invalidated whether
+ * or not the mutation succeeded.
  *
- * @param config - The group. Pass a stable object: a fresh one each render
- *   rebuilds the group and its cached reads (see {@link useVaultGroup}).
+ * @param config - The group, memoized by its contents (see {@link useVaultGroup}).
  * @param options - React Query mutation options.
  *
  * @example
@@ -56,14 +56,27 @@ export function useGroupRedeem<TContext = unknown>(
       return options?.onSuccess?.(data, variables, onMutateResult, context);
     },
     onSettled: (data, error, variables, onMutateResult, context) => {
+      // The router is all-or-nothing: a mined transaction with an unmatched log still joined every leg.
+      const joinedUnconfirmed = error instanceof VaultGroupJoinUnconfirmedError;
       // Taken from the members, not `data`: a rejected prompt leaves `data` undefined but earlier grants in place.
       invalidateOnceResolved(
         group.sdk,
         "redeem",
-        Promise.all(group.members.map(({ vault }) => vault.cShare())),
-        (shares) => {
-          for (const share of shares) {
+        Promise.all(
+          group.members.map(async ({ vault }) => ({
+            batcher: vault.redeemBatcher.address,
+            share: await vault.cShare(),
+          })),
+        ),
+        (legs) => {
+          for (const { batcher, share } of legs) {
             invalidateAfterSetOperator(context.client, share.address);
+            if (joinedUnconfirmed) {
+              invalidateAfterJoin(context.client, {
+                batcherAddress: batcher,
+                fromToken: share.address,
+              });
+            }
           }
         },
       );

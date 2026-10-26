@@ -320,7 +320,7 @@ Thrown by `VaultGroup.deposit()` and `VaultGroup.redeem()` when the batcher one 
 
 **Code:** `VAULT_GROUP_JOIN_UNCONFIRMED`
 
-Thrown by `VaultGroup.deposit()` and `VaultGroup.redeem()` after the transaction is mined, when its receipt has no `Joined` event for at least one leg. The error carries the `txHash`, the `receipt`, the `joins` of the legs whose batchers did report (with their batch ids) and the `unconfirmed` member ids.
+Thrown by `VaultGroup.deposit()` and `VaultGroup.redeem()` after the transaction is mined, when the SDK could not match a `Joined` event in its receipt to every leg. The error carries the `txHash`, the `receipt`, the `joins` whose log was matched (with their batch ids) and the `unconfirmed` member ids. `unconfirmed` means the SDK could not match a log, not that the leg did not join.
 
 ```ts
 matchZamaError(error, {
@@ -328,7 +328,10 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Do not resubmit blindly: the transaction is already mined, and funds may sit in the batches listed in `joins`, which can still be claimed or quit through their batchers. A reverted transaction and a mined one with unexpected logs both end here, so look the transaction up before deciding.
+**How to handle:** Do not resubmit blindly. The router is all-or-nothing, so one of two things happened; look the transaction up to tell which:
+
+- It reverted: nothing moved, and resubmitting is safe.
+- It succeeded: _every_ leg joined, the `unconfirmed` ones included, so the deposit is in the chosen member's batch even when that member is listed in `unconfirmed`. `joins` gives the batch ids the SDK could read; the rest can be read from the batchers. Resubmitting would deposit twice.
 
 ### InvalidTransportKeyPairError
 

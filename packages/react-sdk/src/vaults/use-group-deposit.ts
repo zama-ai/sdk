@@ -2,12 +2,15 @@
 
 import {
   useMutation,
+  type QueryClient,
   type UseMutationOptions,
   type UseMutationResult,
 } from "@tanstack/react-query";
+import { VaultGroupJoinUnconfirmedError } from "@zama-fhe/sdk";
+import { invalidateBalanceQueries } from "@zama-fhe/sdk/query";
 import {
   groupDepositMutationOptions,
-  invalidateAfterJoin,
+  invalidateBatchQueries,
   type GroupDepositParams,
   type VaultGroupConfig,
   type VaultGroupJoinResult,
@@ -22,11 +25,10 @@ export interface UseGroupDepositConfig {
 
 /**
  * Deposit into one vault of a group, joining every member's current deposit
- * batch. Invalidates the asset's balance and the joined batchers' batch reads
- * on success.
+ * batch. Invalidates the asset's balance and every member's batch reads once
+ * the transaction is mined, whether or not every `Joined` log was matched.
  *
- * @param config - The group. Pass a stable object: a fresh one each render
- *   rebuilds the group and its cached reads (see {@link useVaultGroup}).
+ * @param config - The group, memoized by its contents (see {@link useVaultGroup}).
  * @param options - React Query mutation options.
  *
  * @example
@@ -41,14 +43,26 @@ export function useGroupDeposit<TContext = unknown>(
 ): UseMutationResult<VaultGroupJoinResult, Error, GroupDepositParams, TContext> {
   const group = useVaultGroup(config.group);
 
+  const invalidateJoins = (client: QueryClient) => {
+    invalidateBalanceQueries(client, group.cAsset);
+    for (const { vault } of group.members) {
+      invalidateBatchQueries(client, vault.depositBatcher.address);
+    }
+  };
+
   return useMutation({
     ...groupDepositMutationOptions(group),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
-      for (const { batcher, token } of data.joins) {
-        invalidateAfterJoin(context.client, { batcherAddress: batcher, fromToken: token });
-      }
+      invalidateJoins(context.client);
       return options?.onSuccess?.(data, variables, onMutateResult, context);
+    },
+    onSettled: (data, error, variables, onMutateResult, context) => {
+      // The router is all-or-nothing: a mined transaction with an unmatched log still joined every leg.
+      if (error instanceof VaultGroupJoinUnconfirmedError) {
+        invalidateJoins(context.client);
+      }
+      return options?.onSettled?.(data, error, variables, onMutateResult, context);
     },
   }) as UseMutationResult<VaultGroupJoinResult, Error, GroupDepositParams, TContext>;
 }

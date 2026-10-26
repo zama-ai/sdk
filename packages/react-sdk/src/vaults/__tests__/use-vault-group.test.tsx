@@ -37,7 +37,18 @@ describe("useVaultGroup", () => {
     expect(result.current).toBe(first);
   });
 
-  test("builds a new group when the config object changes", ({ renderWithProviders }) => {
+  test("keeps one instance when an equal config is rebuilt each render", ({
+    renderWithProviders,
+  }) => {
+    const { result, rerender } = renderWithProviders(() => useVaultGroup(config(REDEEM)));
+    const first = result.current;
+
+    rerender();
+
+    expect(result.current).toBe(first);
+  });
+
+  test("builds a new group when the config's contents change", ({ renderWithProviders }) => {
     let current = config(REDEEM);
     const { result, rerender } = renderWithProviders(() => useVaultGroup(current));
     const first = result.current;

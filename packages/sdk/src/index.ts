@@ -137,6 +137,8 @@ export {
   type VaultBatcherPausedDetails,
   type VaultGroupJoinUnconfirmedDetails,
 } from "./errors";
+// Type-only: the root entry bundles no vault code.
+export type { VaultGroupJoin } from "./vaults/vault-group";
 export { ZamaSDKEvents } from "./events";
 export type {
   ApproveUnderlyingSubmittedEvent,
