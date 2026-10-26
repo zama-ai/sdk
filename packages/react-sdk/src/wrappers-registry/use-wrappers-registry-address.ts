@@ -4,22 +4,20 @@ import type { Address } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 import { useQuery } from "../utils/query";
+import { useWalletAccount } from "../utils/wallet-account";
 
 /**
- * Resolves the wrappers registry address for the current chain.
- * Uses the registry addresses from `sdk.registry` (built-in defaults from chain configs).
- *
- * Returns `undefined` when the chain ID hasn't been fetched yet
- * or when no registry is configured for the connected chain.
- *
- * The chain ID is cached for 30 seconds (`staleTime`), so chain
- * switches may take up to 30s to reflect.
+ * Registry address for the provider's chain, or `undefined` until the chain ID
+ * is known or when no registry is configured for that chain.
  */
 export function useWrappersRegistryAddress(): Address | undefined {
   const sdk = useZamaSDK();
+  const walletChainId = useWalletAccount(sdk)?.chainId;
 
   const { data: chainId } = useQuery<number>({
-    queryKey: zamaQueryKeys.wrappersRegistry.chainId(),
+    // Keyed by the wallet's chain: the wallet-lifecycle invalidation skips a first connect, so
+    // without the key a wallet connecting on another chain would wait out staleTime.
+    queryKey: zamaQueryKeys.wrappersRegistry.chainId(walletChainId),
     queryFn: () => sdk.provider.getChainId(),
     staleTime: 30_000,
   });
