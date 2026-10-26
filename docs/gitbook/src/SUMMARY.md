@@ -53,22 +53,26 @@
 - [Operator approvals](guides/operator-approvals.md)
 - [Delegated decryption](guides/delegated-decryption.md)
 - [Encrypt & decrypt](guides/encrypt-decrypt.md)
-- [Vault deposits and redemptions](guides/vault-deposits.md)
 
-## Go & Rust clients
+## Vaults
+
+- [Vaults overview](guides/vaults/README.md)
+- [Deposits and redemptions](guides/vaults/deposits.md)
+- [Vault groups](guides/vaults/groups.md)
+
+## Go & Rust guide
 
 - [Go & Rust overview](native/README.md)
-- [Attach a wallet](native/guides/attach-wallet.md)
-- [Store credentials](native/guides/credential-storage.md)
-- [Observe events](native/guides/observe-events.md)
-- [Recover from disconnections](native/guides/recover-from-disconnections.md)
-- [Resolve uncertain transaction outcomes](native/guides/uncertain-transaction-outcomes.md)
-
-## Go & Rust daemon deployment
-
-- [Deploy in production](native/operations/run-in-production.md)
-- [Monitor and troubleshoot](native/operations/monitor-and-troubleshoot.md)
-- [Upgrade the daemon](native/operations/upgrade-and-recover.md)
+- [Clients](native/guides/README.md)
+  - [Attach a wallet](native/guides/attach-wallet.md)
+  - [Store credentials](native/guides/credential-storage.md)
+  - [Observe events](native/guides/observe-events.md)
+  - [Recover from disconnections](native/guides/recover-from-disconnections.md)
+  - [Resolve uncertain transaction outcomes](native/guides/uncertain-transaction-outcomes.md)
+- [Daemon deployment](native/operations/README.md)
+  - [Deploy in production](native/operations/run-in-production.md)
+  - [Monitor and troubleshoot](native/operations/monitor-and-troubleshoot.md)
+  - [Upgrade the daemon](native/operations/upgrade-and-recover.md)
 
 ## API References
 
@@ -79,6 +83,7 @@
   - [WrappersRegistry](reference/sdk/WrappersRegistry.md)
   - [Vault](reference/sdk/Vault.md)
   - [VaultBatcher](reference/sdk/VaultBatcher.md)
+  - [VaultGroup](reference/sdk/VaultGroup.md)
   - [web() transport](reference/sdk/RelayerWeb.md)
   - [node() transport](reference/sdk/RelayerNode.md)
   - [cleartext() transport](reference/sdk/RelayerCleartext.md)
@@ -159,6 +164,9 @@
   - [useCurrentBatchId](reference/react/useCurrentBatchId.md)
   - [useBatchState](reference/react/useBatchState.md)
   - [useTimeUntilDispatchable](reference/react/useTimeUntilDispatchable.md)
+  - [useVaultGroup](reference/react/useVaultGroup.md)
+  - [useGroupDeposit](reference/react/useGroupDeposit.md)
+  - [useGroupRedeem](reference/react/useGroupRedeem.md)
   - [Query keys](reference/react/query-keys.md)
 
 - [Go client](native/reference/go-client.md)

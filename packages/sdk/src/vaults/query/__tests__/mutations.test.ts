@@ -3,15 +3,19 @@ import { describe, expect, test, vi } from "../../../test-fixtures";
 import type { TransactionResult } from "../../../types";
 import type { Vault } from "../../vault";
 import type { VaultBatcher } from "../../vault-batcher";
+import type { VaultGroup } from "../../vault-group";
 import { claimMutationOptions } from "../claim";
 import { depositMutationOptions } from "../deposit";
 import { dispatchBatchMutationOptions } from "../dispatch-batch";
+import { groupDepositMutationOptions } from "../group-deposit";
+import { groupRedeemMutationOptions } from "../group-redeem";
 import { joinMutationOptions } from "../join";
 import { quitMutationOptions } from "../quit";
 import { redeemMutationOptions } from "../redeem";
 
 const DEPOSIT_BATCHER = "0x1111111111111111111111111111111111111111" as Address;
 const REDEEM_BATCHER = "0x2222222222222222222222222222222222222222" as Address;
+const ROUTER = "0x4444444444444444444444444444444444444444" as Address;
 const ACCOUNT = "0x3333333333333333333333333333333333333333" as Address;
 const TX_RESULT: TransactionResult = { txHash: `0x${"11".repeat(32)}`, receipt: { logs: [] } };
 
@@ -51,6 +55,54 @@ describe("deposit / redeem mutation options", () => {
     expect(options.mutationKey).toEqual(["zama.vault.redeem", REDEEM_BATCHER]);
     await options.mutationFn({ amount: 500n });
     expect(vault.redeem).toHaveBeenCalledWith(500n, {});
+  });
+});
+
+function createMockGroup(): VaultGroup {
+  return {
+    id: "stable",
+    cAsset: ACCOUNT,
+    members: [
+      {
+        id: "alpha",
+        vault: {
+          depositBatcher: { address: DEPOSIT_BATCHER },
+          redeemBatcher: { address: REDEEM_BATCHER },
+        },
+      },
+      {
+        id: "beta",
+        vault: { depositBatcher: { address: ACCOUNT }, redeemBatcher: { address: ROUTER } },
+      },
+    ],
+    deposit: vi.fn().mockResolvedValue(TX_RESULT),
+    redeem: vi.fn().mockResolvedValue(TX_RESULT),
+  } as unknown as VaultGroup;
+}
+
+describe("group mutation options", () => {
+  test("groupDepositMutationOptions keys on the deposit batchers and delegates to group.deposit", async () => {
+    const group = createMockGroup();
+    const options = groupDepositMutationOptions(group);
+
+    expect(options.mutationKey).toEqual([
+      "zama.vaultGroup.deposit",
+      { cAsset: ACCOUNT, batchers: [DEPOSIT_BATCHER, ACCOUNT] },
+    ]);
+    await options.mutationFn({ vaultId: "alpha", amount: 1_000n, skipBalanceCheck: true });
+    expect(group.deposit).toHaveBeenCalledWith("alpha", 1_000n, { skipBalanceCheck: true });
+  });
+
+  test("groupRedeemMutationOptions keys on the redeem batchers and delegates to group.redeem", async () => {
+    const group = createMockGroup();
+    const options = groupRedeemMutationOptions(group);
+
+    expect(options.mutationKey).toEqual([
+      "zama.vaultGroup.redeem",
+      { cAsset: ACCOUNT, batchers: [REDEEM_BATCHER, ROUTER] },
+    ]);
+    await options.mutationFn({ vaultId: "beta", amount: 500n, operatorUntil: 1_800_000_000 });
+    expect(group.redeem).toHaveBeenCalledWith("beta", 500n, { operatorUntil: 1_800_000_000 });
   });
 });
 
