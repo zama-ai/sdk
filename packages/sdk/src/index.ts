@@ -121,7 +121,10 @@ export {
   TransactionRevertedError,
   TransportKeyPairChangedError,
   TransportKeyPairExpiredError,
+  UnlistedConfidentialTokenError,
   UnshieldAlreadyFinalizedError,
+  VaultBatcherPausedError,
+  VaultGroupJoinUnconfirmedError,
   WalletAccountNotReadyError,
   WalletNotConnectedError,
   ZamaError,
@@ -129,8 +132,13 @@ export {
   type BalanceErrorDetails,
   type ErrorForCode,
   type SigningErrorMetadata,
+  type UnlistedConfidentialTokenDetails,
   type UnshieldAlreadyFinalizedDetails,
+  type VaultBatcherPausedDetails,
+  type VaultGroupJoinUnconfirmedDetails,
 } from "./errors";
+// Type-only: the root entry bundles no vault code.
+export type { VaultGroupJoin } from "./vaults/vault-group";
 export { ZamaSDKEvents } from "./events";
 export type {
   ApproveUnderlyingSubmittedEvent,

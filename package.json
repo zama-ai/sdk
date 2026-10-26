@@ -123,7 +123,7 @@
     "semantic-release": "^25.0.5",
     "size-limit": "^14.2.0",
     "ts-proto": "2.18.0",
-    "turbo": "2.11.2",
+    "turbo": "2.11.10",
     "typescript": "6.0.3",
     "typescript-language-server": "^6.0.0",
     "vitest": "^4.1.12"

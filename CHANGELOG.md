@@ -1,5 +1,65 @@
 # Changelog
 
+## [3.8.0-beta.8](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.7...v3.8.0-beta.8) (2026-10-26)
+
+### ⚠ BREAKING CHANGES
+
+- **deps-dev:** Disables CSS and IFrame loading by default (<a
+href="https://redirect.github.com/capricorn86/happy-dom/issues/2502">#2502</a>)</li>
+<li><a
+href="https://github.com/capricorn86/happy-dom/commit/f21dbd7d0a0c63cdd41954ba5d0f05def4e0f2b3"><code>f21dbd7</code></a>
+fix: Fixes cookie scope forgery vulnerability (<a
+href="https://redirect.github.com/capricorn86/happy-dom/issues/2477">#2477</a>)</li>
+<li><a
+href="https://github.com/capricorn86/happy-dom/commit/0d4cdbe7442af49d16b49ddf1acf7cc9684ed318"><code>0d4cdbe</code></a>
+fix: <a
+href="https://redirect.github.com/capricorn86/happy-dom/issues/2409">#2409</a>
+Preserve character references in comment data (<a
+href="https://redirect.github.com/capricorn86/happy-dom/issues/2410">#2410</a>)</li>
+<li><a
+href="https://github.com/capricorn86/happy-dom/commit/9c920a414a0e27a9c8f279a2be59beaaefd754e0"><code>9c920a4</code></a>
+fix: <a
+href="https://redirect.github.com/capricorn86/happy-dom/issues/2407">#2407</a>
+End comments at the first comment end tag when it overlaps a com...</li>
+<li><a
+href="https://github.com/capricorn86/happy-dom/commit/5fb1df3df8fcbd037341e848bfd33e5a35c6d910"><code>5fb1df3</code></a>
+fix: <a
+href="https://redirect.github.com/capricorn86/happy-dom/issues/2363">#2363</a>
+Avoids cloning all properties in CSSPropertyManager.toString() (...</li>
+<li><a
+href="https://github.com/capricorn86/happy-dom/commit/de0a1e9107f75dc089cf72853257c83818e1874b"><code>de0a1e9</code></a>
+fix: <a
+href="https://redirect.github.com/capricorn86/happy-dom/issues/2344">#2344</a>
+Resolve every var() in a value, not only the first one (<a
+href="https://redirect.github.com/capricorn86/happy-dom/issues/2395">#2395</a>)</li>
+<li>Additional commits viewable in <a
+href="https://github.com/capricorn86/happy-dom/compare/v20.14.0...v21.0.3">compare
+view</a></li>
+</ul>
+</details>
+<br />
+
+
+[![Dependabot compatibility
+score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=happy-dom&package-manager=npm_and_yarn&previous-version=20.14.0&new-version=21.0.3)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+
+Dependabot will resolve any conflicts with this PR as long as you don't
+alter it yourself. You can also trigger a rebase manually by commenting
+`@dependabot rebase`.
+
+[//]: # (dependabot-automerge-start)
+[//]: # (dependabot-automerge-end)
+
+- **deps-dev:** bump happy-dom from 20.14.0 to 21.0.3 ([#850](https://github.com/zama-ai/sdk/issues/850)) ([035114c]())
+
+### Features
+
+- **vaults:** multi-vault groups over the batcher router ([#781](https://github.com/zama-ai/sdk/issues/781)) ([998f941]()), closes [#748]()
+
+### Build System
+
+- **deps:** bump turbo from 2.11.2 to 2.11.10 ([#871](https://github.com/zama-ai/sdk/issues/871)) ([25c5dfa]())
+
 ## [3.8.0-beta.7](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.6...v3.8.0-beta.7) (2026-10-22)
 
 ### Bug Fixes

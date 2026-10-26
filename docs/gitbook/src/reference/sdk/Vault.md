@@ -179,7 +179,7 @@ Both writes resolve to a `JoinResult`, which extends `TransactionResult`:
 ## Related
 
 - [VaultBatcher](VaultBatcher.md) — the per-direction batcher API: batch state, dispatch, claim, quit, recover
-- [Vault deposits and redemptions](../../guides/vault-deposits.md) — the full deposit → dispatch → claim flow
+- [Vault deposits and redemptions](../../guides/vaults/deposits.md) — the full deposit → dispatch → claim flow
 - [Operator approvals](../../guides/operator-approvals.md) — the approval `deposit()` / `redeem()` grant automatically
 - [useVault](../react/useVault.md) — React hook returning a `Vault`
 - [useDeposit](../react/useDeposit.md) / [useRedeem](../react/useRedeem.md) — mutation hooks over `deposit()` / `redeem()`

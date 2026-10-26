@@ -59,4 +59,4 @@ Define `addresses` outside the component, or memoize it, so its identity is stab
 - [`Vault`](../sdk/Vault.md) — the underlying class
 - [`useDeposit`](./useDeposit.md) / [`useRedeem`](./useRedeem.md) — mutation hooks over `vault.deposit()` / `vault.redeem()`
 - [`useVaultBatcher`](./useVaultBatcher.md) — single-batcher variant
-- [Vault deposits and redemptions](../../guides/vault-deposits.md)
+- [Vault deposits and redemptions](../../guides/vaults/deposits.md)
