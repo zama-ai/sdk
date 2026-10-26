@@ -20543,9 +20543,9 @@ function WrapperInfo({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 # useWrappersRegistryAddress
 
-Resolves the wrappers registry address for the connected chain. Uses built-in defaults (Mainnet, Sepolia) merged with chain-level registry addresses from the config.
+Resolves the wrappers registry address for the provider's chain. Uses built-in defaults (Mainnet, Sepolia) merged with chain-level registry addresses from the config.
 
-Returns `undefined` when the chain ID hasn't been fetched yet or when no registry is configured for the connected chain.
+Returns `undefined` when the chain ID hasn't been fetched yet or when no registry is configured for that chain.
 
 ## Import
 
@@ -20579,11 +20579,11 @@ This hook takes no parameters. It reads registry addresses from the `ZamaSDK` in
 
 `Address | undefined`
 
-The registry contract address for the connected chain, or `undefined` if unavailable.
+The registry contract address for the provider's chain, or `undefined` if unavailable.
 
 ## Chain resolution
 
-The chain ID comes from the provider, the same source every registry read uses, and is cached for 30 seconds (`staleTime: 30000`). The cache is keyed by the connected wallet's chain, so once the SDK reports a wallet chain switch (after its own chain-switch handling has run) the registry is re-resolved instead of waiting out the cache. Without a wallet, the cached provider chain ID is used as is.
+The registry is resolved for the provider's chain, the same chain every registry read uses. The chain ID is cached for 30 seconds (`staleTime: 30000`), but the cache is keyed by the connected wallet's chain, so connecting a wallet or switching its chain refetches it instead of waiting out the cache. While that refetch is in flight the hook returns `undefined`, so dependent hooks show pending briefly rather than the previous chain's registry. With no wallet connected, the cached chain ID is reused until it goes stale. If your provider is pinned to one chain (for example, a single-chain `publicClient`), the registry stays on that chain even when the wallet switches.
 
 ## Related
 
@@ -25641,7 +25641,7 @@ On-chain wrappers registry queries.
 | Key                                                         | Scope                                      |
 | ----------------------------------------------------------- | ------------------------------------------ |
 | `.all`                                                      | All registry queries                       |
-| `.chainId()`                                                | Chain ID resolution                        |
+| `.chainId(walletChainId?)`                                  | Chain ID resolution, per wallet chain      |
 | `.tokenPairs(registryAddr)`                                 | All pairs for a registry                   |
 | `.tokenPairsLength(registryAddr)`                           | Pair count                                 |
 | `.tokenPairsSlice(registryAddr, from, to)`                  | Index-based slice                          |

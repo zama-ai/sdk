@@ -6,23 +6,27 @@ import { useWrappersRegistryAddress } from "../use-wrappers-registry-address";
 // The fixture chain (31337) has no registry; mainnet and Sepolia ship with a default one.
 
 describe("useWrappersRegistryAddress", () => {
-  test("re-resolves from the provider when the wallet switches chain", async ({
+  test("re-resolves when a wallet connects on another chain", async ({
     renderWithProviders,
     signer,
     provider,
   }) => {
-    const { result } = renderWithProviders(() => useWrappersRegistryAddress());
-    await waitFor(() => expect(provider.getChainId).toHaveBeenCalledTimes(1));
-    expect(result.current).toBeUndefined();
+    const account = signer.walletAccount.getSnapshot()!;
+    // No wallet yet; the provider answers for Sepolia.
+    vi.mocked(signer.walletAccount.getSnapshot).mockReturnValue(undefined);
+    vi.mocked(provider.getChainId).mockResolvedValue(sepolia.id);
 
-    // The store is a mock, so the switch is replayed to its subscribers by hand.
+    const { result } = renderWithProviders(() => useWrappersRegistryAddress());
+    await waitFor(() => expect(result.current).toBe(sepolia.registryAddress));
+
+    // The wallet connects on mainnet and the provider follows it. The store is a mock,
+    // so the change is replayed to its subscribers by hand.
     vi.mocked(provider.getChainId).mockResolvedValue(mainnet.id);
-    const account = signer.walletAccount.getSnapshot();
-    const next = { ...account!, chainId: mainnet.id };
+    const next = { ...account, chainId: mainnet.id };
     vi.mocked(signer.walletAccount.getSnapshot).mockReturnValue(next);
     act(() => {
       for (const [listener] of vi.mocked(signer.walletAccount.subscribe).mock.calls) {
-        listener({ previous: account, next });
+        listener({ previous: undefined, next });
       }
     });
 

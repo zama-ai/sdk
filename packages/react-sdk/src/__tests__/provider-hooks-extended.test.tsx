@@ -92,13 +92,13 @@ describe("useTotalSupplySuspense", () => {
 
 describe("useWrapperDiscoverySuspense", () => {
   test("returns wrapper address via suspense", async ({
-    chain,
     signer,
     tokenAddress,
     renderWithProviders,
     provider,
   }) => {
     const wrapperAddr = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address;
+    vi.mocked(provider.getChainId).mockResolvedValue(1);
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce([true, wrapperAddr])
       .mockResolvedValueOnce(true);
@@ -109,13 +109,7 @@ describe("useWrapperDiscoverySuspense", () => {
           tokenAddress,
           erc20Address: "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address,
         }),
-      // The fixture chain ships without a registry.
-      {
-        signer,
-        chains: [
-          { ...chain, registryAddress: "0x1111111111111111111111111111111111111111" as Address },
-        ],
-      },
+      { signer },
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));

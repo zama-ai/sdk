@@ -94,7 +94,7 @@ On-chain wrappers registry queries.
 | Key                                                         | Scope                                      |
 | ----------------------------------------------------------- | ------------------------------------------ |
 | `.all`                                                      | All registry queries                       |
-| `.chainId()`                                                | Chain ID resolution                        |
+| `.chainId(walletChainId?)`                                  | Chain ID resolution, per wallet chain      |
 | `.tokenPairs(registryAddr)`                                 | All pairs for a registry                   |
 | `.tokenPairsLength(registryAddr)`                           | Pair count                                 |
 | `.tokenPairsSlice(registryAddr, from, to)`                  | Index-based slice                          |

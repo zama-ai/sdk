@@ -3,8 +3,6 @@ import { renderHook, waitFor } from "@testing-library/react";
 import type { Address } from "viem";
 import { useWrapperDiscovery } from "../use-wrapper-discovery";
 const ERC20_ADDR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
-// The fixture chain ships without a registry.
-const REGISTRY_ADDR = "0x1111111111111111111111111111111111111111" as Address;
 
 describe("useWrapperDiscovery", () => {
   test("behavior: disabled when erc20Address is undefined", ({
@@ -37,17 +35,18 @@ describe("useWrapperDiscovery", () => {
 
   test("behavior: erc20Address: undefined -> defined", async ({
     createWrapper,
-    chain,
     signer,
     provider,
     tokenAddress,
   }) => {
     const wrapperAddress = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
+    // Mock chainId to Mainnet (has default registry)
+    vi.mocked(provider.getChainId).mockResolvedValue(1);
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce([true, wrapperAddress]) // getConfidentialTokenAddress
       .mockResolvedValueOnce(true); // isConfidentialTokenValid
 
-    const ctx = createWrapper({ signer, chains: [{ ...chain, registryAddress: REGISTRY_ADDR }] });
+    const ctx = createWrapper({ signer });
     const { result, rerender } = renderHook(
       ({ erc20Address }) => useWrapperDiscovery({ tokenAddress: tokenAddress, erc20Address }),
       { wrapper: ctx.Wrapper, initialProps: { erc20Address: undefined as Address | undefined } },
@@ -62,15 +61,15 @@ describe("useWrapperDiscovery", () => {
     expect(result.current.data).toBe(wrapperAddress);
   });
 
-  test("default", async ({ renderWithProviders, provider, chain, tokenAddress }) => {
+  test("default", async ({ renderWithProviders, provider, tokenAddress }) => {
     const wrapperAddress = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address;
+    vi.mocked(provider.getChainId).mockResolvedValue(1);
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce([true, wrapperAddress]) // getConfidentialTokenAddress
       .mockResolvedValueOnce(true); // isConfidentialTokenValid
 
-    const { result } = renderWithProviders(
-      () => useWrapperDiscovery({ tokenAddress: tokenAddress, erc20Address: ERC20_ADDR }),
-      { chains: [{ ...chain, registryAddress: REGISTRY_ADDR }] },
+    const { result } = renderWithProviders(() =>
+      useWrapperDiscovery({ tokenAddress: tokenAddress, erc20Address: ERC20_ADDR }),
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
