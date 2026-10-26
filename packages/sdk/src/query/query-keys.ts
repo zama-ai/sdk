@@ -194,7 +194,11 @@ export const zamaQueryKeys = {
 
   wrappersRegistry: {
     all: ["zama.wrappersRegistry"] as const,
-    chainId: () => ["zama.wrappersRegistry", { type: "chainId" }] as const,
+    // The wallet's chain is an optional tail so `chainId()` still prefix-matches every entry.
+    chainId: (walletChainId?: number) =>
+      walletChainId === undefined
+        ? (["zama.wrappersRegistry", { type: "chainId" }] as const)
+        : (["zama.wrappersRegistry", { type: "chainId" }, walletChainId] as const),
     tokenPairs: (registryAddress: Address) =>
       [
         "zama.wrappersRegistry",

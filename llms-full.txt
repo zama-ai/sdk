@@ -20583,7 +20583,7 @@ The registry contract address for the connected chain, or `undefined` if unavail
 
 ## Chain resolution
 
-With a connected wallet, the hook follows the wallet's chain, so a chain switch re-resolves the registry immediately. Without a wallet, it falls back to the provider's chain ID, cached for 30 seconds (`staleTime: 30000`).
+The registry is resolved for the chain the provider reads from. That chain ID is cached for 30 seconds (`staleTime: 30000`) but refetched as soon as the connected wallet switches chain, so a switch re-resolves the registry immediately. A provider pinned to one chain (a viem `publicClient` or an ethers provider) keeps its registry even while the wallet is on another chain; the SDK's write paths reject that state with `ChainMismatchError`.
 
 ## Related
 
@@ -28411,6 +28411,8 @@ All server-side variables are read by the proxy only and never reach the browser
 | `NEXT_PUBLIC_<NETWORK>_RPC_URL`        | No       | RPC override per network: `SEPOLIA`, `POLYGON_AMOY`, `BNB_TESTNET`, `HOODI`, `ZENITH`, `MAINNET`, `POLYGON`. |
 | `NEXT_PUBLIC_VAULT_ADDRESS`            | No       | `ConfidentialVault` demo address on Sepolia (`confidentialTransferAndCall`).                                 |
 | `NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN` | No       | Confidential token the vault is bound to (cUSDC). Vault cards render only when it is selected on Sepolia.    |
+
+Earlier versions of this app, and the per-chain apps it replaces, read `RELAYER_URL`, `RELAYER_API_KEY`, `NEXT_PUBLIC_AMOY_RPC_URL` and `NEXT_PUBLIC_BSC_TESTNET_RPC_URL`. Those names are no longer read: a stale `.env.local` silently falls back to the public testnet relayer, so rename them to the per-network names above.
 
 ## Relayer proxy
 

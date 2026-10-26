@@ -26,18 +26,22 @@ export default function Home() {
 
   // Networks the server can serve: cleartext rows always, relayer rows only when it has a
   // relayer URL for them. Mainnet stays hidden until a deployment opts in.
-  const { data: enabledNetworks = [], isPending: isNetworksPending } = useEnabledNetworks();
+  const {
+    data: enabledNetworks = [],
+    isPending: isNetworksPending,
+    isFetching: isNetworksFetching,
+    isError: isNetworksError,
+    refetch: refetchNetworks,
+  } = useEnabledNetworks();
   const activeKey = networkForChain(chainId);
   const activeNetwork = activeKey && enabledNetworks.includes(activeKey) ? activeKey : undefined;
   const network = activeNetwork && networks[activeNetwork];
 
   const [selectedTokenAddress, setSelectedTokenAddress] = useState<Address | null>(null);
 
-  // react-sdk 3.7 resolves the registry from a chain id it caches for 30 s, so after a switch
-  // the token list would keep showing the previous network's tokens. Drop that entry on every
-  // chain change so the registry query follows the wallet immediately. Fixed upstream
-  // (useWrappersRegistryAddress follows the wallet's chain); remove this effect once the
-  // example pins a release that includes it.
+  // The installed react-sdk resolves the registry from a chain id it caches for 30 s, so after a
+  // switch the token list would keep showing the previous network's tokens. Drop that entry on
+  // every chain change. Remove once the example installs a react-sdk that refetches it itself.
   const queryClient = useQueryClient();
   useEffect(() => {
     void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.wrappersRegistry.chainId() });
@@ -113,6 +117,19 @@ export default function Home() {
 
   // ── Screen 2: Unsupported network — pick one ──────────────────────────────
   if (!network) {
+    // Without the list, nothing is known about the wallet's chain, so don't call it unsupported.
+    if (isNetworksError) {
+      return (
+        <ActionScreen
+          title="Choose a Network"
+          description="Could not load the networks this app can serve."
+          actionLabel="Retry"
+          pendingLabel="Retrying…"
+          pending={isNetworksFetching}
+          onAction={() => void refetchNetworks()}
+        />
+      );
+    }
     return (
       <main className="app-container connect-screen">
         <section aria-labelledby="choose-network-title">

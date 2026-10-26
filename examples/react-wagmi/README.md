@@ -80,6 +80,8 @@ All server-side variables are read by the proxy only and never reach the browser
 | `NEXT_PUBLIC_VAULT_ADDRESS`            | No       | `ConfidentialVault` demo address on Sepolia (`confidentialTransferAndCall`).                                 |
 | `NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN` | No       | Confidential token the vault is bound to (cUSDC). Vault cards render only when it is selected on Sepolia.    |
 
+Earlier versions of this app, and the per-chain apps it replaces, read `RELAYER_URL`, `RELAYER_API_KEY`, `NEXT_PUBLIC_AMOY_RPC_URL` and `NEXT_PUBLIC_BSC_TESTNET_RPC_URL`. Those names are no longer read: a stale `.env.local` silently falls back to the public testnet relayer, so rename them to the per-network names above.
+
 ## Relayer proxy
 
 Relayer traffic for `web()` networks goes through `src/app/api/relayer/[network]/[...path]/route.ts`, following the pattern in the [SDK authentication guide](https://docs.zama.org/protocol/sdk/beta/guides/authentication). The route looks the network up in [`src/lib/relayers.ts`](src/lib/relayers.ts), adds the API key server-side, forwards only the headers the SDK sends and the relayer routes it calls (plus their job polling paths), and:

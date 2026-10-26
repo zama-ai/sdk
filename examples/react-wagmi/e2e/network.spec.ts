@@ -1,6 +1,7 @@
 import {
   test,
   expect,
+  MOCK_CTOKEN1_ADDRESS,
   NETWORKS,
   WRONG_CHAIN_ID,
   SEPOLIA_CHAIN_ID_HEX,
@@ -112,5 +113,62 @@ test.describe("chain switch", () => {
 
     await expect(page.getByRole("combobox", { name: "Network" })).toHaveValue("mainnet");
     await expect(page.locator(".balance-value").first()).toHaveText("—");
+  });
+});
+
+test.describe("cleartext network", () => {
+  test("switches to BNB Testnet from the picker and loads its token list", async ({
+    page,
+    mockRpc,
+    mockWallet,
+  }) => {
+    await mockRpc();
+    await mockRpc({ network: "bnb-testnet" });
+    await mockWallet({
+      accounts: [],
+      chainId: SEPOLIA_CHAIN_ID_HEX,
+      requestAccounts: [TEST_ADDRESS],
+    });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Connect Wallet" }).click({ force: true });
+    await expect(page.getByText("Balances")).toBeVisible();
+
+    await page.getByRole("combobox", { name: "Network" }).selectOption("bnb-testnet");
+
+    await expect(page.getByRole("combobox", { name: "Network" })).toHaveValue("bnb-testnet");
+    await expect(page.getByText(/tBNB:/)).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Confidential token" })).toHaveValue(
+      MOCK_CTOKEN1_ADDRESS,
+    );
+    await expect(page.getByRole("button", { name: /Mint/ })).toBeVisible();
+    await expect(page.getByText("Reacting contract — ConfidentialVault")).toHaveCount(0);
+  });
+});
+
+test.describe("network list unavailable", () => {
+  test("offers a retry instead of calling the wallet's chain unsupported", async ({
+    page,
+    mockRpc,
+    mockWallet,
+  }) => {
+    await mockRpc();
+    await mockWallet({
+      accounts: [],
+      chainId: SEPOLIA_CHAIN_ID_HEX,
+      requestAccounts: [TEST_ADDRESS],
+    });
+    await page.route("**/api/networks", (route) => route.fulfill({ status: 500 }));
+    await page.goto("/");
+    await page.getByRole("button", { name: "Connect Wallet" }).click({ force: true });
+
+    // TanStack Query retries three times (about 7 s) before the query reports an error.
+    await expect(page.getByText("Could not load the networks this app can serve.")).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText(/unsupported network/)).toHaveCount(0);
+
+    await page.unroute("**/api/networks");
+    await page.getByRole("button", { name: "Retry" }).click();
+    await expect(page.getByText("Balances")).toBeVisible();
   });
 });

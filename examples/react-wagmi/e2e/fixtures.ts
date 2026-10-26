@@ -15,6 +15,12 @@ export const NETWORKS = {
     rpc: "**/ethereum-rpc.publicnode.com**",
     registry: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0",
   },
+  // A cleartext row: no relayer, every read still goes through the RPC mock.
+  "bnb-testnet": {
+    chainIdHex: "0x61", // 97
+    rpc: "**/bsc-testnet.bnbchain.org**",
+    registry: "0xc0E8B73b1C58D846e1d4f8fAE2E1466C85BCeAeC",
+  },
 } as const;
 export type MockNetwork = keyof typeof NETWORKS;
 
