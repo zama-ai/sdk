@@ -1,7 +1,7 @@
 "use client";
 
-import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
-import { useMintUnderlying, useUnderlyingBalance } from "@/lib/hooks";
+import { describeError } from "@/lib/errors";
+import { useMintUnderlying, useNetwork, useUnderlyingBalance } from "@/lib/hooks";
 import { useConfidentialBalance, useGrantPermit, useHasPermit } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { formatUnits } from "viem";
@@ -25,6 +25,7 @@ export function BalancesCard({
   disabled,
   onSuccess,
 }: BalancesCardProps) {
+  const { explorerUrl, canMint } = useNetwork();
   const { data: isAllowed } = useHasPermit({ contractAddresses: [token.confidentialTokenAddress] });
 
   const { data: erc20Balance } = useUnderlyingBalance(token, account, { enabled: !disabled });
@@ -48,9 +49,12 @@ export function BalancesCard({
   const isLoadingConfidential = balance.isLoading || balance.isFetching;
 
   const mintError = mint.isError ? (mint.error?.message ?? null) : null;
+  // Surface both failure points: the permit signature and the decryption itself.
   const decryptError = grantPermit.isError
-    ? (grantPermit.error?.message ?? "Signing failed")
-    : null;
+    ? describeError(grantPermit.error, "Signing failed")
+    : balance.isError
+      ? describeError(balance.error, "Decryption failed")
+      : null;
 
   return (
     <section className="card" aria-labelledby="balances-title">
@@ -60,15 +64,17 @@ export function BalancesCard({
       <div className="balance-row">
         <div className="balance-label-group">
           <span className="balance-label">ERC-20 (public)</span>
-          <form action={() => mint.mutate()}>
-            <button
-              type="submit"
-              className="btn btn-sm btn-secondary"
-              disabled={disabled || mint.isPending}
-            >
-              {mint.isPending ? "Minting…" : `Mint ${token.underlying.symbol}`}
-            </button>
-          </form>
+          {canMint && (
+            <form action={() => mint.mutate()}>
+              <button
+                type="submit"
+                className="btn btn-sm btn-secondary"
+                disabled={disabled || mint.isPending}
+              >
+                {mint.isPending ? "Minting…" : `Mint ${token.underlying.symbol}`}
+              </button>
+            </form>
+          )}
         </div>
         <output className="balance-value">{formattedErc20}</output>
       </div>
@@ -107,7 +113,7 @@ export function BalancesCard({
       {mint.isSuccess && mint.data && (
         <output className="alert alert-success card-status">
           Minted!{" "}
-          <a href={`${SEPOLIA_EXPLORER_URL}/tx/${mint.data}`} target="_blank" rel="noreferrer">
+          <a href={`${explorerUrl}/tx/${mint.data}`} target="_blank" rel="noreferrer">
             {mint.data.slice(0, 10)}…
           </a>
         </output>

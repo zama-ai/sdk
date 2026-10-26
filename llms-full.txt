@@ -21038,9 +21038,9 @@ This hook takes no parameters. It reads registry addresses from the `ZamaSDK` in
 
 The registry contract address for the connected chain, or `undefined` if unavailable.
 
-## Caching
+## Chain resolution
 
-The underlying chain ID query uses `staleTime: 30000` (30 seconds). Chain switches may take up to 30 seconds to reflect.
+The registry is resolved for the chain the provider reads from. That chain ID is cached for 30 seconds (`staleTime: 30000`) but refetched as soon as the connected wallet switches chain, so a switch re-resolves the registry immediately. A provider pinned to one chain (a viem `publicClient` or an ethers provider) keeps its registry even while the wallet is on another chain; the SDK's write paths reject that state with `ChainMismatchError`.
 
 ## Related
 
@@ -27430,727 +27430,6 @@ Apply these boundaries when you [deploy the daemon in production](https://raw.gi
 
 ## Official Examples
 
-## example-hoodi README
-
-- source_type: official-example
-- source_path: examples/example-hoodi/README.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/examples/example-hoodi/README.md
-- logical_path: examples/example-hoodi/readme
-
-# Example Hoodi app with cleartext Zama Protocol support
-
-Next.js app demonstrating ERC-7984 confidential token operations on the **Hoodi** testnet with **wagmi 3** and **viem 2** — including on-chain ACL delegation.
-
-## Cleartext Zama Protocol
-
-[Zama Protocol](https://docs.zama.org/protocol) is currently supported officially on Ethereum mainnet and Sepolia testnet. This setup uses a co-processor model to offload FHE computation from the host chain to a decentralized network.
-
-To provide support for yet-unsupported testnets, such as Hoodi, this example app simulates Zama Protocol using a **cleartext stack**. Essentially, it uses mocked FHE contracts to provide an API-compatible surface to write the values to the host chain, without needing an actual co-processor or relayer support to be added by Zama Protocol.
-
-This mode allows developers to test **smart contracts** and **app/backend integrations** with Hoodi chain in an API-compatible fashion with the real Zama Protocol.
-
-**WARNING**: Support for testnets such as Hoodi via this cleartext Zama Protocol method is only intended for **testing** purposes. A **the "encrypted" values are stored in cleartext** on Hoodi testnet.
-
-## Stack
-
-- **Next.js** (App Router)
-- **wagmi 3** — injected-wallet connection and chain lifecycle
-- **viem 2** — EVM types and utilities
-- **`@zama-fhe/react-sdk/wagmi`** — Zama signer adapter for the active wagmi connection
-- **`cleartext()`** — cleartext FHE backend (no external relayer service required)
-- **@tanstack/react-query** — async state management
-- Any injected **EIP-1193 wallet** (Rabby, Phantom, …)
-- **Chain:** Hoodi testnet (chainId 560048)
-
-## Operations demonstrated
-
-| Operation                    | SDK API                                       |
-| ---------------------------- | --------------------------------------------- |
-| Decrypt confidential balance | `useConfidentialBalance`                      |
-| Shield (ERC-20 → cToken)     | `useShield`                                   |
-| Confidential transfer        | `useConfidentialTransfer`                     |
-| Unshield (cToken → ERC-20)   | `useUnshield`                                 |
-| Grant decryption access      | `useDelegateDecryption`                       |
-| Revoke decryption access     | `useRevokeDelegation`                         |
-| Decrypt balance as delegate  | `useDecryptBalanceAs` + `useDelegationStatus` |
-
-> **Shield** uses `useShield`. The SDK owns balance checks, allowance handling—including USDT-style reset when needed—and wrapper routing. The app passes an exact approval strategy and does not recompose ERC-20 approval and wrapper calls.
-
-> **Wallet lifecycle** is owned by wagmi. `useConnection` exposes the active account and chain; `useConnect` and `useSwitchChain` use their wagmi v3 mutation functions. The app does not install application-owned `accountsChanged` or `chainChanged` listeners.
-
-> **IndexedDB storage** persists SDK transport material and permits. Both configuration fields use the SDK's `indexedDBStorage`; keys are namespaced internally.
-
-> **Delegation revocation cache:** `useDecryptBalanceAs` caches decrypted values in IndexedDB keyed by `(token, owner, handle)`. When delegation is revoked, the cached plaintext is still served until the owner's balance changes (via shield, transfer, or unshield), which produces a new on-chain handle and invalidates the cache entry. No TTL is applied — the handle itself is the cache key.
-
-## How it differs from `react-wagmi`
-
-|           | `react-wagmi`                    | `example-hoodi`                 |
-| --------- | -------------------------------- | ------------------------------- |
-| Relayer   | Web transport (HTTP proxy route) | `cleartext()` (no proxy needed) |
-| Network   | Sepolia                          | Hoodi (chainId 560048)          |
-| Auth      | Relayer configuration            | None                            |
-| API route | `/api/relayer/[...path]`         | Not present                     |
-
-`cleartext()` reads plaintext values directly from the on-chain executor contract—no external relayer service is required.
-
-## Setup
-
-> **Network:** Hoodi testnet — chainId `560048`, default RPC `https://rpc.hoodi.ethpandaops.io`.
-> Your wallet will be prompted to add the network automatically on first connect.
-
-> **Gas:** Operations require Hoodi ETH. Get some at [hoodi-faucet.pk910.de](https://hoodi-faucet.pk910.de) (proof-of-work, no account required).
-
-```bash
-cp .env.example .env.local
-# Optional: set NEXT_PUBLIC_HOODI_RPC_URL to a private endpoint (Infura, Alchemy, etc.)
-# Leave empty to use the default public Hoodi RPC.
-
-npm install
-```
-
-## Run
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) and connect your wallet. The app will prompt you to switch to (or add) the Hoodi network automatically.
-
-> **Disconnecting:** wallets manage their own site connections. To fully disconnect, use your wallet's "Connected sites" settings (e.g. MetaMask → ⋮ → Connected sites → disconnect).
-
-## Tests
-
-```bash
-npm run test:e2e          # run all tests (starts dev server automatically)
-npx playwright test --ui  # interactive mode — watch tests run in the browser
-```
-
-Playwright e2e tests covering the connect flow, wrong-network screen, main UI, and delegation section (no real wallet or transactions required — uses a mocked EIP-1193 provider).
-
-## Environment variables
-
-| Variable                    | Required | Default                            | Description                                                                                                     |
-| --------------------------- | -------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_HOODI_RPC_URL` | No       | `https://rpc.hoodi.ethpandaops.io` | Override the default Hoodi RPC. Example: `https://hoodi.infura.io/v3/YOUR_KEY`. Leaving empty uses the default. |
-
-## Hoodi contract addresses
-
-| Token      | ERC-20                                       | ERC-7984 (cToken / wrapper)                  |
-| ---------- | -------------------------------------------- | -------------------------------------------- |
-| USDT Mock  | `0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b` | `0x2dEBbe0487Ef921dF4457F9E36eD05Be2df1AC75` |
-| Test Token | `0x7740F913dC24D4F9e1A72531372c3170452B2F87` | `0x7B1d59BbCD291DAA59cb6C8C5Bc04de1Afc4Aba1` |
-
-Registry: `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`
-
-All contracts verified on [eth-hoodi.blockscout.com](https://eth-hoodi.blockscout.com).
-
-## Getting test tokens
-
-Both tokens have a permissionless `mint(address to, uint256 amount)` function.
-
-**Via the app:** click the **Mint** button next to the ERC-20 balance — mints 10 tokens directly to your wallet.
-
-**Via Blockscout:** navigate to the contract on [eth-hoodi.blockscout.com](https://eth-hoodi.blockscout.com) → Write Contract → Connect Wallet → call `mint(yourAddress, amount)`.
-
-**Via code** (amounts are raw integers — use `parseUnits` to convert from human-readable values):
-
-```ts
-import { parseUnits } from "viem";
-import { useConnection, useWriteContract } from "wagmi";
-
-const mintAbi = [
-  {
-    type: "function",
-    name: "mint",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "to", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [],
-  },
-] as const;
-
-const { address } = useConnection();
-const { mutate: writeContract } = useWriteContract();
-
-writeContract({
-  address: "0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b",
-  abi: mintAbi,
-  functionName: "mint",
-  args: [address!, parseUnits("10", 6)],
-});
-```
-
-For a detailed partner-facing guide including prerequisites, step-by-step flow, and troubleshooting, see [WALKTHROUGH.md](./WALKTHROUGH.md).
-
-## example-hoodi WALKTHROUGH
-
-- source_type: official-example
-- source_path: examples/example-hoodi/WALKTHROUGH.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/examples/example-hoodi/WALKTHROUGH.md
-- logical_path: examples/example-hoodi/walkthrough
-
-# Integrating Zama Confidential Tokens (ERC-7984) on Hoodi
-
-**Audience:** Partners integrating Zama confidential tokens on the Hoodi testnet with wagmi and viem, including on-chain ACL delegation.
-
-**What this document covers:** context and motivation, how the cleartext stack works, prerequisites, step-by-step operation walkthrough, minting instructions, environment variable reference, and troubleshooting.
-
-**Chain:** Hoodi testnet (chainId 560048)
-
----
-
-## Context
-
-ERC-7984 is a token standard that adds **confidential balances and transfer amounts** to ERC-20 tokens. Instead of storing plaintext balances on-chain, balances are stored as encrypted handles. Only the token owner can decrypt their own balance.
-
-The **Zama SDK** (`@zama-fhe/sdk`, `@zama-fhe/react-sdk`) handles all cryptographic operations — encryption, decryption, EIP-712 signing — behind simple React hooks (`useShield`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`).
-
-This example uses the **cleartext stack** (`cleartext()`), which is Zama's lightweight backend for chains where the full FHE co-processor is not deployed (including Hoodi). See [How the cleartext stack works](#how-the-cleartext-stack-works) below.
-
----
-
-## What this example demonstrates
-
-> Any EIP-1193 browser wallet (Rabby, Phantom…) can interact with ERC-7984 confidential tokens on Hoodi using the Zama SDK's wagmi integration and the cleartext backend — with no external relayer service and no API key.
-
-Specifically:
-
-1. A user connects any injected EIP-1193 wallet.
-2. They can select between two tokens (USDC Mock / USDT Mock).
-3. All ERC-7984 protocol operations work end-to-end: shield, transfer, unshield, balance decryption, and on-chain ACL delegation (grant, revoke, decrypt-as).
-
----
-
-## Supported operations
-
-| Operation                    | SDK API                                                      | Source file                                            | Transactions          |
-| ---------------------------- | ------------------------------------------------------------ | ------------------------------------------------------ | --------------------- |
-| Decrypt confidential balance | `useHasPermit` + `useGrantPermit` + `useConfidentialBalance` | `src/app/page.tsx` + `src/components/BalancesCard.tsx` | 0 (read)              |
-| Shield (ERC-20 → cToken)     | `useShield`                                                  | `src/components/ShieldCard.tsx`                        | 1–3 (wrap, ± approve) |
-| Confidential transfer        | `useConfidentialTransfer`                                    | `src/components/TransferCard.tsx`                      | 1                     |
-| Unshield (cToken → ERC-20)   | `useUnshield`                                                | `src/components/UnshieldCard.tsx`                      | 2 (unwrap + finalize) |
-| Grant decryption access      | `useDelegateDecryption`                                      | `src/components/DelegateDecryptionCard.tsx`            | 1                     |
-| Revoke decryption access     | `useRevokeDelegation`                                        | `src/components/RevokeDelegationCard.tsx`              | 1                     |
-| Decrypt balance as delegate  | `useDecryptBalanceAs` + `useDelegationStatus`                | `src/components/DecryptAsCard.tsx`                     | 0 (read)              |
-
----
-
-## Wallet compatibility
-
-| Wallet type                                             | Supported | Notes                                                                                              |
-| ------------------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------- |
-| EIP-1193 browser wallet EOA (Rabby, MetaMask, Phantom…) | Yes       | Must support `wallet_switchEthereumChain` / `wallet_addEthereumChain`.                             |
-| Smart account (ERC-4337)                                | No        | The Zama relayer uses ECDSA (`ecrecover`) — smart account signing key differs from account address |
-
----
-
-## How the cleartext stack works
-
-The full Zama FHE stack (used on Sepolia and Mainnet) relies on:
-
-- An **FHE co-processor** that stores encrypted ciphertexts on-chain
-- A **Zama relayer** — an off-chain service that performs server-side decryption using KMS private keys
-
-**Hoodi uses the cleartext stack.** In cleartext mode:
-
-- Values are stored as **plaintexts** in the `CleartextFHEVMExecutor` contract on-chain (no actual FHE encryption)
-- The `cleartext()` transport acts as a local relayer: it reads plaintexts directly from the executor contract and produces mock KMS signatures locally
-- **No external service** is required — no relayer URL, no API key
-
-The SDK interface is identical in both modes. From the application developer's perspective, you swap `web()` (or `node()`) for `cleartext()` and point it at the Hoodi preset config. All hooks behave the same way.
-
-```
-Full FHE stack (Sepolia / Mainnet)      Cleartext stack (Hoodi)
-──────────────────────────────────      ──────────────────────────────────────
-web() → external HTTP service      cleartext() → on-chain executor
-  └─ FHE co-processor (on-chain)          └─ plaintexts(handle) → plaintext
-  └─ KMS decryption (server-side)         └─ mock KMS signature (local)
-  └─ Zama relayer API key required        └─ No API key, no external service
-```
-
----
-
-## Architecture at a glance
-
-```
-User (browser wallet)
-  │
-  ▼
-page.tsx — useShield / useConfidentialTransfer / useUnshield / useConfidentialBalance
-  │
-  ▼
-@zama-fhe/react-sdk (React hooks + ZamaProvider)
-  │
-  ▼
-@zama-fhe/react-sdk/wagmi  ← createConfig({ wagmiConfig, chains, relayers })
-  ├─ reads → viem HTTP transport(HOODI_RPC_URL)
-  ├─ writes + EIP-712 signing → active wagmi injected connection
-  └─ cleartext() → the Hoodi SDK chain preset
-       └─ reads plaintexts from CleartextFHEVMExecutor (on-chain, Hoodi)
-       └─ produces mock KMS signatures locally (no external call)
-```
-
-**Reads vs writes:** wagmi's viem HTTP transport handles reads through `HOODI_RPC_URL`; writes and EIP-712 signing use the active injected connector. The Zama wagmi adapter consumes that same connection.
-
-**Wallet-switch lifecycle:** wagmi owns account and chain subscriptions. The UI reads them with wagmi v3's `useConnection`; connection and switching use the mutation functions returned by `useConnect` and `useSwitchChain`. No manual `accountsChanged` or `chainChanged` listeners—or forced `ZamaProvider` remounts—are needed. Permits persist in IndexedDB.
-
----
-
-## Prerequisites
-
-### 1. Browser wallet
-
-Install any EIP-1193 browser wallet (e.g. [Rabby](https://rabby.io), [Phantom](https://phantom.com)) and create or import an account. The app automatically adds the Hoodi network when you connect.
-
-If you prefer to add Hoodi manually:
-
-| Field           | Value                              |
-| --------------- | ---------------------------------- |
-| Network name    | Hoodi                              |
-| RPC URL         | `https://rpc.hoodi.ethpandaops.io` |
-| Chain ID        | 560048                             |
-| Currency symbol | ETH                                |
-| Block explorer  | `https://eth-hoodi.blockscout.com` |
-
-### 2. Hoodi ETH (gas)
-
-All on-chain operations require Hoodi ETH. Aim for at least **0.01 ETH** before starting — shield and unshield each involve multiple transactions.
-
-Recommended faucets:
-
-- [hoodi-faucet.pk910.de](https://hoodi-faucet.pk910.de) — proof-of-work faucet, unlimited
-- [faucet.quicknode.com](https://faucet.quicknode.com/ethereum/hoodi) — requires QuickNode account
-
-### 3. Test tokens
-
-Both `USDC Mock` and `USDT Mock` have a permissionless `mint(address to, uint256 amount)` function. See [Minting test tokens](#minting-test-tokens) below.
-
----
-
-## Hoodi contract addresses
-
-| Token     | ERC-20 address                               | ERC-7984 address (cToken / wrapper)          |
-| --------- | -------------------------------------------- | -------------------------------------------- |
-| USDC Mock | `0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b` | `0x2dEBbe0487Ef921dF4457F9E36eD05Be2df1AC75` |
-| USDT Mock | `0x7740F913dC24D4F9e1A72531372c3170452B2F87` | `0x7B1d59BbCD291DAA59cb6C8C5Bc04de1Afc4Aba1` |
-
-Registry (DeploymentCoordinator): `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`
-
-All contracts verified on [eth-hoodi.blockscout.com](https://eth-hoodi.blockscout.com).
-
-> Token pairs are loaded dynamically from the on-chain WrappersRegistry (`0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`) at runtime — `src/app/page.tsx` no longer contains a hardcoded `TOKENS` constant. If contracts are redeployed, the registry should be updated; the app will pick up the new addresses automatically.
-
----
-
-## Minting test tokens
-
-### Via the app
-
-Click the **Mint** button next to the ERC-20 balance. This mints 10 whole tokens directly to your connected wallet using the token's `mint(address, uint256)` function.
-
-### Via Blockscout
-
-1. Go to the ERC-20 contract on [eth-hoodi.blockscout.com](https://eth-hoodi.blockscout.com) (e.g., `0x51a63b...` for USDC Mock).
-2. Click the **Contract** tab → **Write Contract**.
-3. Click **Connect to Web3** and connect your wallet.
-4. Find the `mint` function, enter your wallet address and the desired amount in raw units (e.g., `10000000` for 10 USDC Mock, which has 6 decimals).
-5. Click **Write** and confirm in your wallet.
-
-### Via code
-
-```ts
-import { parseUnits } from "viem";
-import { useConnection, useWriteContract } from "wagmi";
-
-const mintAbi = [
-  {
-    type: "function",
-    name: "mint",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "to", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [],
-  },
-] as const;
-
-const { address } = useConnection();
-const { mutate: writeContract } = useWriteContract();
-
-writeContract({
-  address: "0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b",
-  abi: mintAbi,
-  functionName: "mint",
-  args: [address!, parseUnits("10", 6)],
-});
-```
-
----
-
-## Step-by-step walkthrough
-
-### Step 1 — Connect wallet
-
-Open the app at [http://localhost:3000](http://localhost:3000) and click **Connect Wallet**.
-
-The app calls `eth_requestAccounts` to connect, then `wallet_switchEthereumChain` (or `wallet_addEthereumChain` if Hoodi is not yet known to the wallet) to switch to Hoodi (chainId 560048 / `0x88bb0`). No further setup is needed.
-
-Once connected, your wallet address and ETH balance appear at the top of the page.
-
-If you switch to a different network after connecting, the app shows a full-page **Hoodi Network Required** screen with a **Switch to Hoodi** button. All operation buttons are disabled until you switch back.
-
-### Step 2 — Select a token
-
-Use the **Token** dropdown to select between available tokens. Token pairs are loaded from the on-chain **WrappersRegistry** via `useListPairs({ metadata: true })` — no hardcoded addresses needed. The registry address for Hoodi (`0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`) is resolved automatically from the connected chain ID. Name, symbol, and decimal precision are included in the registry response.
-
-### Step 3 — Mint tokens (if needed)
-
-If your ERC-20 balance shows `0`, click **Mint** next to the ERC-20 balance, or use one of the manual methods above. The button mints 10 whole tokens to your wallet and refreshes the balance automatically.
-
-### Step 4 — Check your balances
-
-Two balances are displayed:
-
-- **ERC-20 balance** — your public on-chain balance of the underlying token. Read via a standard `balanceOf` call.
-- **Confidential balance** — your confidential cToken balance, read via `useConfidentialBalance`. The SDK reads the encrypted handle on-chain (Phase 1), then decrypts it via `cleartext()` (Phase 2).
-
-**Explicit decrypt pattern:** the confidential balance is not queried until you explicitly authorize FHE decryption. The Balances card shows a **Decrypt Balance** button instead of a balance value until you sign. This avoids blind EIP-712 prompts on mount.
-
-Click **Decrypt Balance** and approve the EIP-712 signature in your wallet. A single signature covers all registered tokens — switching tokens will not prompt again. The credential is cached in IndexedDB (30-day TTL) and reused for all subsequent decryptions.
-
-If you have never shielded any tokens, the confidential balance shows **—** after decryption — this is expected, as there is no encrypted balance to read yet.
-
-### Step 5 — Shield (ERC-20 → cToken)
-
-Enter a human-readable amount (e.g., `1.5`) and click **Shield**. This converts public ERC-20 tokens into confidential cTokens.
-
-The app delegates the entire approve + wrap flow to `useShield` — it does not read ERC-20 allowances, submit approvals, or call wrapper contracts directly. With `approvalStrategy: "exact"` the SDK approves exactly the shielded amount, performing a USDT-style allowance reset first when an existing non-zero allowance would block the approval. The number of wallet confirmations depends on the underlying token and current allowance:
-
-| Situation                                          | Transactions                              | Confirmations |
-| -------------------------------------------------- | ----------------------------------------- | ------------- |
-| Allowance already covers the amount                | `wrap` only                               | 1             |
-| No existing allowance (or zero)                    | `approve(amount)` → `wrap`                | 2             |
-| Non-zero allowance insufficient — USDT-style token | `approve(0)` → `approve(amount)` → `wrap` | 3 _(rare)_    |
-
-The button shows **Shielding… (approving)** during approval and **Shielding… (wrapping)** once the approval is confirmed. Gas fees on Hoodi are effectively zero. The ERC-20 balance refreshes automatically on success.
-
-### Step 6 — Confidential transfer
-
-Enter a **recipient address** and an **amount**, then click **Transfer**. This sends cTokens to another address with the amount hidden on-chain.
-
-The operation has two phases:
-
-1. **FHE encryption** — the amount is encrypted locally by the SDK. The button shows **Encrypting…** during this phase (no wallet interaction).
-2. **Transaction submission** — the encrypted transfer is sent on-chain. The button shows **Submitting…** and one wallet confirmation is required.
-
-### Step 7 — Unshield (cToken → ERC-20)
-
-Enter an amount and click **Unshield**. This converts cTokens back into public ERC-20 tokens.
-
-Unshield is a two-phase operation:
-
-1. **Unwrap** — a transaction that burns the cTokens and emits an `UnwrapRequested` event containing the encrypted amount handle. The button shows **Unshielding… (1/2)**. One wallet confirmation.
-2. **Finalize** — the `cleartext()` decrypts the amount locally (no external call, no wallet prompt), then submits a `finalizeUnwrap` transaction that releases the ERC-20 tokens. The button shows **Unshielding… (2/2)**. One wallet confirmation.
-
-Both phases complete within seconds on Hoodi. The ERC-20 balance refreshes automatically on success.
-
-**Tab close resilience:** if you close the tab after Phase 1 completes but before Phase 2 starts, the pending unshield is saved in IndexedDB. A **Pending Unshield** card will appear when you reopen the app, allowing you to resume finalization.
-
-### Step 8 — Verify updated balances
-
-After each operation, balances refresh automatically. All three operations (shield, transfer, unshield) invalidate the same set of queries: the ERC-20 balance, the ETH balance, and the confidential handle. The ERC-20 balance changes after shield and unshield (when tokens cross the public/confidential boundary). The confidential balance re-decrypts after all three — shield, transfer, and unshield each modify the encrypted handle on-chain.
-
----
-
-## Delegation walkthrough
-
-The three delegation cards are located below the core operation cards. They require **two separate wallets** — one acting as the token owner (delegator) and one as the delegate.
-
-### Step 9 — Grant decryption access (owner wallet)
-
-In the **Grant Decryption Access** card, enter the delegate's wallet address. By default, access is permanent (the **No expiration** checkbox is checked). To set a time limit, uncheck it and pick a date and time — the SDK sends `MAX_UINT64` on-chain for permanent delegations, or the expiry timestamp otherwise. **The ACL contract requires the expiry to be at least 1 hour in the future** (`expirationDate >= block.timestamp + 1 hours`); shorter values will revert on-chain.
-
-Click **Grant Access** and confirm the transaction in your wallet. One transaction is submitted to the on-chain ACL contract.
-
-### Step 10 — Decrypt balance as delegate (delegate wallet)
-
-Switch to the delegate wallet (or open a second browser profile with the delegate account). In the **Decrypt Balance On Behalf Of** card, enter the owner's wallet address.
-
-As soon as a valid address is entered, a live **delegation status** indicator appears:
-
-- **✓ Delegated · Permanent** — delegation is active and has no expiry.
-- **✓ Delegated · \<date\>** — delegation is active until the shown date.
-- **No active delegation for this token** — no delegation exists; go back to Step 9.
-
-Click **Decrypt Balance** to decrypt the owner's confidential balance. The result is displayed in token units.
-
-> **Cache behavior:** decrypted values are cached locally in IndexedDB, keyed by the on-chain encrypted handle. If the owner's balance does not change between two decrypt calls, the second call returns the cached value without re-checking the ACL — this is intentional. See [Troubleshooting](#troubleshooting) for details.
-
-### Step 11 — Revoke decryption access (owner wallet)
-
-Switch back to the owner wallet. In the **Revoke Decryption Access** card, enter the delegate's address and click **Revoke Access**. One transaction is submitted. After confirmation, the delegation is removed from the on-chain ACL.
-
-> **Revocation and caching:** if the delegate calls Decrypt Balance again immediately after revocation and the owner's balance has not changed, the cached plaintext is returned — no new ACL check occurs. Revocation takes full effect for the delegate as soon as the owner's balance changes (any shield, transfer, or unshield), which produces a new on-chain handle and invalidates the cache entry.
-
----
-
-## SDK integration details
-
-### Providers setup
-
-```tsx
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
-import { cleartext, indexedDBStorage } from "@zama-fhe/sdk";
-import { hoodi as fheHoodi } from "@zama-fhe/sdk/chains";
-import { createConfig, http, WagmiProvider } from "wagmi";
-import { hoodi } from "wagmi/chains";
-import { injected } from "wagmi/connectors/injected";
-
-const wagmiConfig = createConfig({
-  chains: [hoodi],
-  connectors: [injected()],
-  transports: { [hoodi.id]: http(HOODI_RPC_URL) },
-});
-const zamaHoodi = { ...fheHoodi, network: HOODI_RPC_URL } as const;
-const zamaConfig = createZamaConfig({
-  wagmiConfig,
-  chains: [zamaHoodi],
-  relayers: { [zamaHoodi.id]: cleartext() },
-  storage: indexedDBStorage,
-  permitStorage: indexedDBStorage,
-});
-
-<WagmiProvider config={wagmiConfig}>
-  <QueryClientProvider client={queryClient}>
-    <ZamaProvider config={zamaConfig}>{children}</ZamaProvider>
-  </QueryClientProvider>
-</WagmiProvider>;
-```
-
-### Hook usage
-
-```tsx
-import { parseUnits } from "viem";
-import {
-  useShield,
-  useListPairs,
-  useHasPermit,
-  useGrantPermit,
-  useConfidentialTransfer,
-  useUnshield,
-  useConfidentialBalance,
-} from "@zama-fhe/react-sdk";
-
-// Fetch all valid token pairs from the on-chain WrappersRegistry.
-// Registry address is resolved automatically from the chain via DefaultRegistryAddresses.
-// metadata: true fetches name/symbol/decimals for both tokens in each pair.
-const { data: pairsData } = useListPairs({ metadata: true });
-const pair = pairsData?.items?.[0]; // or find by confidentialTokenAddress
-
-// Addresses and metadata from the registry response — no hardcoded values needed.
-const cTokenAddress = pair?.confidentialTokenAddress;
-const erc20Address = pair?.tokenAddress;
-const cTokenDecimals = pair?.confidential.decimals ?? 0;
-const erc20Decimals = pair?.underlying.decimals ?? 0;
-
-// Explicit decrypt pattern: check credentials before enabling the balance display.
-// useHasPermit returns true only when cached credentials cover the selected token.
-const { data: hasPermit } = useHasPermit(
-  { contractAddresses: cTokenAddress ? [cTokenAddress] : [] },
-  { enabled: Boolean(cTokenAddress) },
-);
-
-// useGrantPermit triggers the EIP-712 wallet signature that authorizes decryption.
-// Pass all confidential token addresses at once — a single signature covers all tokens.
-const grantPermits = useGrantPermit();
-function handleDecrypt() {
-  const addresses = pairsData?.items?.map((p) => p.confidentialTokenAddress) ?? [];
-  if (addresses.length > 0) grantPermits.mutate(addresses);
-}
-
-const transfer = useConfidentialTransfer({ address: cTokenAddress });
-const unshield = useUnshield(cTokenAddress);
-
-// Pass enabled: false until the user has authorized decrypt (hasPermit).
-// This prevents the hook from firing an EIP-712 prompt on mount.
-const balance = useConfidentialBalance(
-  // `account` (the balance holder) is optional — it defaults to the connected signer.
-  // page.tsx passes it explicitly; omit it for the connected wallet's own balance.
-  { address: cTokenAddress ?? "0x0000000000000000000000000000000000000000" },
-  { enabled: !!hasPermit && !!cTokenAddress },
-);
-
-// Shield: useShield owns the entire approve + wrap flow — the app does not read ERC-20
-// allowances, submit approvals, or call wrapper contracts. approvalStrategy "exact" approves
-// exactly the shielded amount; the SDK performs the USDT-style allowance reset when an
-// existing non-zero allowance would otherwise block the approval, and routes through ERC-1363
-// transferAndCall when the underlying ERC-20 supports it.
-const shield = useShield({ address: cTokenAddress });
-shield.mutate({
-  amount: parseUnits("10", erc20Decimals),
-  approvalStrategy: "exact",
-  onApprovalSubmitted: () => setPhase("approve"),
-  onShieldSubmitted: () => setPhase("wrap"),
-});
-
-// Transfer: FHE encryption (local) + 1 transaction.
-// Amount is in confidential token units — use cTokenDecimals.
-// onEncryptComplete fires when encryption is done, before the tx is submitted.
-transfer.mutate({
-  to: "0xRecipient",
-  amount: parseUnits("5", cTokenDecimals),
-  onEncryptComplete: () => setStep(2),
-});
-
-// Unshield: 2 transactions (unwrap + finalizeUnwrap).
-// Amount is in confidential token units — use cTokenDecimals.
-// onFinalizing fires between the two transactions — use it to update the progress UI.
-unshield.mutate({ amount: parseUnits("2", cTokenDecimals), onFinalizing: () => setStep(2) });
-```
-
-### Delegation hooks
-
-```tsx
-import {
-  useDelegateDecryption,
-  useRevokeDelegation,
-  useDelegationStatus,
-  useDecryptBalanceAs,
-} from "@zama-fhe/react-sdk";
-import { DelegationNotFoundError, DelegationExpiredError } from "@zama-fhe/sdk";
-
-// Grant decryption access — 1 transaction.
-// expirationDate: undefined → SDK sends MAX_UINT64 on-chain (permanent delegation).
-const delegate = useDelegateDecryption(cTokenAddress);
-// Permanent delegation (no expiry):
-delegate.mutate({ delegateAddress: "0xDelegate" });
-// With expiry (must be at least 1 hour in the future):
-delegate.mutate({ delegateAddress: "0xDelegate", expirationDate: new Date("2027-01-01") });
-
-// Revoke decryption access — 1 transaction.
-const revoke = useRevokeDelegation(cTokenAddress);
-revoke.mutate({ delegateAddress: "0xDelegate" });
-
-// Query delegation status — fires automatically when both addresses are valid.
-// Pass undefined for either address to disable the query (useful before the user
-// has entered an address).
-const { data: status } = useDelegationStatus({
-  contractAddress: cTokenAddress,
-  delegatorAddress: "0xOwner", // the wallet that granted the delegation
-  delegateAddress: "0xDelegate", // the wallet that received it (usually the connected wallet)
-});
-// status?.isActive          → boolean
-// status?.expiryTimestamp   → bigint (MAX_UINT64 for permanent delegations)
-
-// Decrypt owner's balance as a delegate — 0 transactions (read + local cache).
-// Throws DelegationNotFoundError / DelegationExpiredError if the ACL check fails.
-// Note: useDecryptBalanceAs, useDelegateDecryption, and useRevokeDelegation all take a
-// positional tokenAddress as their first argument.
-const decryptAs = useDecryptBalanceAs(cTokenAddress);
-decryptAs.mutate({ delegatorAddress: "0xOwner" });
-// decryptAs.data → bigint (raw balance)
-
-// Typed error handling:
-if (decryptAs.error instanceof DelegationNotFoundError) {
-  /* no delegation */
-}
-if (decryptAs.error instanceof DelegationExpiredError) {
-  /* expired */
-}
-```
-
----
-
-## Environment variables
-
-| Variable                    | Required | Default                            | Description                                                                    |
-| --------------------------- | -------- | ---------------------------------- | ------------------------------------------------------------------------------ |
-| `NEXT_PUBLIC_HOODI_RPC_URL` | No       | `https://rpc.hoodi.ethpandaops.io` | Override the Hoodi RPC endpoint. Infura: `https://hoodi.infura.io/v3/YOUR_KEY` |
-
-Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_HOODI_RPC_URL` if you want to use a private RPC endpoint. Leaving the value empty is safe — the app falls back to the public endpoint automatically.
-
----
-
-## Troubleshooting
-
-| Symptom                                                   | Likely cause                                                                                                                                             | Fix                                                                                                                                                                                                                                                                                                                                                                   |
-| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "No wallet found" on connect                              | No EIP-1193 wallet extension installed                                                                                                                   | Install an EIP-1193 browser wallet ([Rabby](https://rabby.io) recommended; MetaMask or Phantom also work)                                                                                                                                                                                                                                                             |
-| Phantom shows a multi-chain connect dialog                | Phantom's generic picker — app auto-selects Phantom's Ethereum provider                                                                                  | Proceed normally; only Ethereum accounts are used. For a cleaner experience use [Rabby](https://rabby.io)                                                                                                                                                                                                                                                             |
-| Stuck on "Connect Wallet" after clicking                  | Wallet popup was dismissed or blocked                                                                                                                    | Open your wallet manually and approve the connection request                                                                                                                                                                                                                                                                                                          |
-| Network switch fails with error                           | Wallet cannot reach the Hoodi RPC                                                                                                                        | Check `NEXT_PUBLIC_HOODI_RPC_URL`; try the default `https://rpc.hoodi.ethpandaops.io`                                                                                                                                                                                                                                                                                 |
-| Wrong network screen appears                              | Wallet switched away from Hoodi                                                                                                                          | Click **Switch to Hoodi** to switch back to Hoodi                                                                                                                                                                                                                                                                                                                     |
-| ERC-20 balance shows `—`                                  | Not yet connected or query pending                                                                                                                       | Wait for the connection to complete                                                                                                                                                                                                                                                                                                                                   |
-| ERC-20 balance shows `0`                                  | Tokens not yet minted                                                                                                                                    | Click the **Mint** button or use one of the methods in [Minting test tokens](#minting-test-tokens)                                                                                                                                                                                                                                                                    |
-| Confidential balance shows `—` immediately after connect  | No shielded balance yet — no encrypted handle to read                                                                                                    | Shield some tokens first; the balance will display once there is something to decrypt                                                                                                                                                                                                                                                                                 |
-| "Decrypting…" stays indefinitely                          | Wallet EIP-712 signature request was missed (small notification badge)                                                                                   | Open your wallet and approve the pending signature request; balance will update immediately                                                                                                                                                                                                                                                                           |
-| Asked to sign an EIP-712 message after each action        | Permit not yet cached (first use — expected)                                                                                                             | Approve once — subsequent decryptions reuse the IndexedDB-persisted permit (30-day TTL). Sharing one `IndexedDBStorage` instance for `storage` and `permitStorage` is safe (the SDK namespaces the keys internally); if the prompt still recurs every time, check that both point at a storage backend that actually persists across page loads (see Providers setup) |
-| Shield fails right after the approval transaction         | The approval reverted or was rejected before the wrap step                                                                                               | Retry — useShield re-reads the allowance and re-approves only if needed                                                                                                                                                                                                                                                                                               |
-| Shield fails after a recent transfer or other operation   | Pending transaction in the mempool caused a nonce conflict                                                                                               | Wait for all pending transactions to confirm, then retry                                                                                                                                                                                                                                                                                                              |
-| Shield stuck on "Shielding… (approving)"                  | Ran out of Hoodi ETH after the approval transaction                                                                                                      | Top up your wallet with Hoodi ETH and try again                                                                                                                                                                                                                                                                                                                       |
-| Shield completes but balances unchanged                   | Decimal mismatch — wrong number of decimals used to parse the amount                                                                                     | Ensure the amount input uses the ERC-20 contract's decimals (not the ERC-7984 token's); decimals are available as `pair.underlying.decimals` and `pair.confidential.decimals` from `useListPairs`                                                                                                                                                                     |
-| "nonce too low: next nonce X, tx nonce Y"                 | The wallet or Hoodi RPC observed a stale nonce                                                                                                           | Retry the transaction. The injected connector submits transactions through the wallet; if you build transactions yourself, ensure the nonce comes from the same node that receives `eth_sendTransaction` rather than a load-balanced read RPC                                                                                                                         |
-| "Transaction reverted" on any operation                   | Insufficient token balance, or wrong network                                                                                                             | Verify you are on Hoodi (chainId 560048) and have sufficient tokens                                                                                                                                                                                                                                                                                                   |
-| Unshield shows "Unshielding… (2/2)" for longer than usual | Finalize phase waiting for the Phase 2 receipt                                                                                                           | Normal on Hoodi — the public RPC can be slow; the app polls receipt via the wallet's node for consistency                                                                                                                                                                                                                                                             |
-| Pending unshield card appears on reload                   | Tab was closed between Phase 1 and Phase 2 of an unshield                                                                                                | Click **Finalize** in the Pending Unshield card to complete the operation and receive your ERC-20 tokens                                                                                                                                                                                                                                                              |
-| Amounts displayed as very large or very small numbers     | Raw units displayed without decimal conversion                                                                                                           | Always use `formatUnits(balance, decimals)` for display and `parseUnits(input, decimals)` for input; decimals are available from `pair.underlying.decimals` / `pair.confidential.decimals` via `useListPairs`                                                                                                                                                         |
-| Delegate can still decrypt after revocation               | Expected behavior — decrypted values are cached in IndexedDB keyed by `(token, owner, handle)`; the cache is served without re-checking the on-chain ACL | This is by design: the SDK uses the on-chain encrypted handle as the cache key (no TTL). Revocation takes effect for the delegate as soon as the owner's balance changes (via shield, transfer, or unshield), which produces a new handle and automatically invalidates the cache entry. Until then, the previously decrypted value is still accessible locally.      |
-| Grant Access reverts with `ExpirationDateBeforeOneHour`   | Expiration date is less than 1 hour in the future (ACL contract requirement)                                                                             | Set the expiry to at least 1 hour from now. The contract compares against `block.timestamp` (UTC), not your local clock — account for any clock skew. A future SDK release will validate this client-side before submitting the transaction.                                                                                                                          |
-| Grant Access reverts with `SenderCannotBeDelegate`        | Attempted to delegate decryption access to your own address                                                                                              | Enter a different wallet address. The ACL contract does not allow self-delegation. A future SDK release will validate this client-side before submitting the transaction.                                                                                                                                                                                             |
-| Revoke Access reverts with `NotDelegatedYet`              | No active delegation exists for the entered address and token                                                                                            | Verify the delegate address is correct and that a grant was previously confirmed on-chain for the selected token. A future SDK release will validate this client-side before submitting the transaction.                                                                                                                                                              |
-
----
-
-## Running tests
-
-This example ships with a Playwright e2e test suite. Tests run against the real Next.js dev server with a mocked EIP-1193 browser wallet — no real wallet, no on-chain transactions required.
-
-```bash
-# Install deps (first time only)
-npm install
-
-# Run all tests — starts the dev server automatically
-npm run test:e2e
-
-# Interactive mode — watch each test run step-by-step in the browser
-npx playwright test --ui
-
-# Single file
-npx playwright test e2e/connect.spec.ts
-```
-
-Covered flows: connect screen (no wallet, install error, page title, auto-detect, click-to-connect), wrong-network screen (display, chain ID, back-to-Hoodi transition), main UI (all cards rendered, connected address, ETH balance, token selector, registry empty state, balance display, token switching, pending unshield absence, mint button state), delegation section (section labels, buttons disabled before address entry, Grant Access and Revoke Access enabled after valid address entry).
-
-Tests run automatically on CI for every pull request that touches `examples/example-hoodi/`.
-
----
-
-## Going further
-
-- **Additional tokens** — register new ERC-7984 pairs in the on-chain WrappersRegistry at `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`. The app picks them up automatically via `useListPairs` on the next load — no code change required.
-- **Production use** — replace `cleartext()` with `web()` (browser) or `node()` (server) when targeting a chain with the full FHE co-processor (Sepolia, Mainnet).
-- **Batch balance decryption** — for multiple tokens, use `useConfidentialBalances` (batch hook) to decrypt all balances in a single relayer call.
-- **Optimistic balance updates** — for `useConfidentialTransfer`, pass `optimistic: true` to immediately update the cached confidential balance while the transaction confirms, then roll back automatically on error. Improves perceived responsiveness in production UIs.
-
----
-
-## Tech stack
-
-| Package                 | Version            | Role                                                                                                                                                                                                                             |
-| ----------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@zama-fhe/sdk`         | see `package.json` | FHE core — `cleartext()`, chain presets, contract builders                                                                                                                                                                       |
-| `@zama-fhe/react-sdk`   | see `package.json` | React hooks — `useListPairs`, `useHasPermit`, `useGrantPermit`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useDelegateDecryption`, `useRevokeDelegation`, `useDelegationStatus`, `useDecryptBalanceAs` |
-| `wagmi`                 | ^3.7.1             | Injected-wallet and chain lifecycle                                                                                                                                                                                              |
-| `viem`                  | ^2.55.0            | EVM types, encoding, and utilities                                                                                                                                                                                               |
-| `@tanstack/react-query` | ^5.90.0            | Async state management                                                                                                                                                                                                           |
-| `next`                  | ^16.0.0            | React framework (App Router)                                                                                                                                                                                                     |
-| **Chain**               | Hoodi testnet      | chainId 560048                                                                                                                                                                                                                   |
-
 ## node-ethers README
 
 - source_type: official-example
@@ -29932,12 +29211,35 @@ npm run test:e2e   # starts dev server and runs all specs
 - source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/examples/react-wagmi/README.md
 - logical_path: examples/react-wagmi/readme
 
-# Sepolia Confidential Token Quickstart — react-wagmi
+# Confidential Token Quickstart — react-wagmi
 
 Next.js 16 example app demonstrating how to integrate `@zama-fhe/react-sdk` with
-[wagmi v3](https://wagmi.sh/) on Sepolia testnet.
+[wagmi v3](https://wagmi.sh/) on every network the SDK ships a chain preset for. A network
+picker switches the wallet between them; nothing else in the app changes per chain.
 
-Covers: connect wallet, shield ERC-20 → confidential, confidential transfer, unshield, grant/revoke/use delegation, pending unshield recovery, deposit into a reacting contract (`confidentialTransferAndCall`).
+Covers: connect wallet, pick a network, shield ERC-20 → confidential, confidential transfer, unshield, grant/revoke/use delegation, pending unshield recovery, deposit into a reacting contract (`confidentialTransferAndCall`, Sepolia only).
+
+This app replaces the former `example-bnb`, `example-hoodi`, `example-polygon-amoy` and `example-zenith` apps, which were copies of it pinned to one chain each.
+
+## Networks
+
+| Network                  | Chain ID   | Transport         | Gas token                                                          | Listed when                  |
+| ------------------------ | ---------- | ----------------- | ------------------------------------------------------------------ | ---------------------------- |
+| Sepolia (default)        | `11155111` | `web()` via proxy | Sepolia ETH, any public faucet                                     | always                       |
+| Polygon Amoy             | `80002`    | `web()` via proxy | POL, [faucet](https://faucet.polygon.technology) (select Amoy)     | always                       |
+| BNB Testnet · Cleartext  | `97`       | `cleartext()`     | tBNB, [faucet](https://www.bnbchain.org/en/testnet-faucet)         | always                       |
+| Hoodi · Cleartext        | `560048`   | `cleartext()`     | Hoodi ETH, [faucet](https://hoodi-faucet.pk910.de)                 | always                       |
+| T-Rex Zenith · Cleartext | `936486`   | `cleartext()`     | CC, [faucet](https://explorer.testnet.t-rex.zenith.network/faucet) | always                       |
+| Ethereum                 | `1`        | `web()` via proxy | ETH                                                                | `MAINNET_RELAYER_URL` is set |
+| Polygon                  | `137`      | `web()` via proxy | POL                                                                | `POLYGON_RELAYER_URL` is set |
+
+The table lives in [`src/lib/networks.ts`](src/lib/networks.ts). Each row pairs a viem chain with the matching preset from `@zama-fhe/sdk/chains` (protocol addresses, registry, public RPC) and a few flags: the transport, the explorer, whether the test tokens can be minted from the app, and the ConfidentialVault demo binding.
+
+**Cleartext rows** run against a _cleartext_ FHEVM deployment: a stand-in for the full FHE stack where the "encrypted" values are stored in cleartext on-chain and there is no relayer or KMS. They exist to integrate and test the SDK on chains without the full protocol. Do not use them for anything real.
+
+**Mainnet rows** are hidden until the server has a relayer URL for them (see [Mainnet access](#mainnet-access)). Nothing points at mainnet by default.
+
+Token pairs on every network come from the on-chain `WrappersRegistry` at runtime; no token addresses are hardcoded. On testnets, the underlying mock tokens expose `mint(address,uint256)`, which the **Mint** button calls.
 
 ## Stack
 
@@ -29946,32 +29248,70 @@ Covers: connect wallet, shield ERC-20 → confidential, confidential transfer, u
 - **TanStack Query v5** for async state
 - **@zama-fhe/react-sdk** — `ZamaProvider`, `useConfidentialBalance`, `useUnshield`, `useConfidentialTransferAndCall`, `useDelegateDecryption`, etc.
 - **@zama-fhe/react-sdk/wagmi** — `createConfig` adapter for wagmi signer/provider wiring
-- **@zama-fhe/sdk/web** — browser FHE worker transport via `web()`, routed through a local Next.js proxy (`/api/relayer`)
+- **@zama-fhe/sdk/web** — browser FHE worker transport via `web()`, routed through the local Next.js proxy (`/api/relayer/<network>`)
+- **@zama-fhe/sdk** `cleartext()` — transport for the cleartext deployments, no relayer involved
 
 ## Setup
 
 ```bash
 cp .env.example .env.local
-# No changes needed for Sepolia testnet — defaults are pre-configured.
-# Set RELAYER_URL + RELAYER_API_KEY in .env.local only if using a private relayer.
+# No changes needed for the testnets — defaults are pre-configured.
 
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and connect MetaMask (or any EIP-1193 wallet) on **Sepolia**.
+Open [http://localhost:3004](http://localhost:3004) and connect MetaMask (or any EIP-1193 wallet).
 
-If your wallet is on the wrong network, the app shows a message and offers a **Switch to Sepolia** button.
+If the wallet is on a chain the app does not support, the app shows a **Choose a Network** screen. Picking a network asks the wallet to switch, and to add the chain first if the wallet does not know it (Hoodi and Zenith, typically). The same picker sits above the token selector once connected.
+
+## Mainnet access
+
+Ethereum and Polygon mainnet appear in the picker only when you give the server a relayer for them. The public testnet relayer does not serve mainnet, so a self-run instance has two options:
+
+1. **A Zama relayer API key.** Set `MAINNET_RELAYER_URL=https://relayer.mainnet.zama.org` and `MAINNET_RELAYER_API_KEY` to a key from the [API key request form](https://docs.zama.org/protocol/sdk/guides/relayer-api-keys). Keys are issued after manual review.
+2. **A self-hosted relayer.** Set `MAINNET_RELAYER_URL` to your relayer, no key needed. See the [relayer self-hosting guide](https://github.com/zama-ai/fhevm/blob/main/relayer/docs/SELF_HOSTING.md); a relayer needs ETH and $ZAMA on the Gateway chain.
+
+Without one of these the wallet can still connect to mainnet, but the app hides the network, because every encrypt and decrypt request would fail.
 
 ## Environment variables
 
-| Variable                               | Required | Description                                                                                         |
-| -------------------------------------- | -------- | --------------------------------------------------------------------------------------------------- |
-| `RELAYER_URL`                          | No       | Relayer base URL, no `/v2` suffix. Defaults to `https://relayer.testnet.zama.org`.                  |
-| `RELAYER_API_KEY`                      | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet.                 |
-| `NEXT_PUBLIC_SEPOLIA_RPC_URL`          | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                                   |
-| `NEXT_PUBLIC_VAULT_ADDRESS`            | No       | `ConfidentialVault` demo address (`confidentialTransferAndCall`). Defaults to a Sepolia deployment. |
-| `NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN` | No       | Confidential token the vault is bound to (cUSDC). Vault cards render only when it is selected.      |
+All server-side variables are read by the proxy only and never reach the browser.
+
+| Variable                               | Required | Description                                                                                                  |
+| -------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------ |
+| `MAINNET_RELAYER_URL`                  | No       | Enables Ethereum mainnet. Bare relayer host, no `/v2` suffix. Unset hides the network; there is no fallback. |
+| `MAINNET_RELAYER_API_KEY`              | No       | Added as `x-api-key` by the proxy. Needed for the Zama-hosted mainnet relayer, not for a self-hosted one.    |
+| `POLYGON_RELAYER_URL`                  | No       | Same for Polygon mainnet.                                                                                    |
+| `POLYGON_RELAYER_API_KEY`              | No       | Same for Polygon mainnet.                                                                                    |
+| `SEPOLIA_RELAYER_URL`                  | No       | Defaults to the public testnet relayer `https://relayer.testnet.zama.org`, which needs no key.               |
+| `SEPOLIA_RELAYER_API_KEY`              | No       | Only for a private Sepolia relayer.                                                                          |
+| `POLYGON_AMOY_RELAYER_URL`             | No       | Defaults to the public testnet relayer.                                                                      |
+| `POLYGON_AMOY_RELAYER_API_KEY`         | No       | Only for a private Polygon Amoy relayer.                                                                     |
+| `RELAYER_PROXY_ALLOWED_ORIGINS`        | No       | Comma-separated origins allowed to call the proxy. Defaults to the app's own origin.                         |
+| `NEXT_PUBLIC_<NETWORK>_RPC_URL`        | No       | RPC override per network: `SEPOLIA`, `POLYGON_AMOY`, `BNB_TESTNET`, `HOODI`, `ZENITH`, `MAINNET`, `POLYGON`. |
+| `NEXT_PUBLIC_VAULT_ADDRESS`            | No       | `ConfidentialVault` demo address on Sepolia (`confidentialTransferAndCall`).                                 |
+| `NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN` | No       | Confidential token the vault is bound to (cUSDC). Vault cards render only when it is selected on Sepolia.    |
+
+Earlier versions of this app, and the per-chain apps it replaces, read `RELAYER_URL`, `RELAYER_API_KEY`, `NEXT_PUBLIC_AMOY_RPC_URL` and `NEXT_PUBLIC_BSC_TESTNET_RPC_URL`. Those names are no longer read: a stale `.env.local` silently falls back to the public testnet relayer, so rename them to the per-network names above.
+
+## Relayer proxy
+
+Relayer traffic for `web()` networks goes through `src/app/api/relayer/[network]/[...path]/route.ts`, following the pattern in the [SDK authentication guide](https://docs.zama.org/protocol/sdk/beta/guides/authentication). The route looks the network up in [`src/lib/relayers.ts`](src/lib/relayers.ts), adds the API key server-side, forwards only the headers the SDK sends and the relayer routes it calls (plus their job polling paths), and:
+
+- returns `404` for a network it has no upstream for (never a default relayer),
+- returns `403` when the request's `Origin` is not the app's own (or one in `RELAYER_PROXY_ALLOWED_ORIGINS`),
+- never logs request bodies, which carry user addresses and handles.
+
+Rate limiting belongs at the hosting layer; a public deployment that adds its own API key should add it.
+
+`GET /api/networks` returns the networks the server can serve, which is what the picker lists.
+
+## Adding a network
+
+1. Add a row to `networks` in `src/lib/networks.ts`: the viem chain, the `@zama-fhe/sdk/chains` preset, the transport, the explorer and the flags.
+2. For a `relayer` network, add an upstream entry in `src/lib/relayers.ts` (and the env vars it reads).
+3. If the suite should cover it, add the chain to `NETWORKS` in `e2e/fixtures.ts`.
 
 ## Running e2e tests
 
@@ -29979,7 +29319,7 @@ If your wallet is on the wrong network, the app shows a message and offers a **S
 npm run test:e2e        # runs Playwright (starts the dev server automatically)
 ```
 
-Tests mock `window.ethereum` and the Sepolia RPC — no wallet or real network required.
+Tests mock `window.ethereum` and the RPC of the network under test, and abort every relayer request — no wallet or real network required. The config enables the Ethereum mainnet row with an unreachable relayer URL so the picker and the mainnet feature flags are covered.
 
 ## Architecture at a glance
 
@@ -30001,10 +29341,15 @@ A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using wagm
 ## Architecture at a glance
 
 ```
-page.tsx                         — wallet connect (wagmi hooks), token selector, layout
-├── providers.tsx                — wagmi + ZamaProvider config wiring
-│   └── /api/relayer/[...path]   — Next.js proxy (keeps RELAYER_API_KEY server-side)
-├── BalancesCard.tsx             — ETH / ERC-20 / confidential balance display
+page.tsx                         — wallet connect (wagmi hooks), network picker, token selector
+├── lib/networks.ts              — the network table: one row per chain (viem chain, FHE preset, flags)
+├── lib/relayers.ts              — server-side: upstream relayer URL + API key per network
+├── providers.tsx                — wagmi + ZamaProvider config, built from the network table
+│   ├── /api/networks            — which networks the server can serve (drives the picker)
+│   └── /api/relayer/[network]/[...path] — Next.js proxy (keeps API keys server-side)
+├── PageChrome.tsx               — connect screen, header, network picker, token selector
+├── SelectedTokenPanel.tsx       — composes the cards below for the selected token
+├── BalancesCard.tsx             — native / ERC-20 / confidential balance display
 ├── ShieldCard.tsx               — ERC-20 → confidential via `useShield`
 ├── TransferCard.tsx             — confidential → confidential
 ├── UnshieldCard.tsx             — confidential → ERC-20 (2-phase)
@@ -30019,33 +29364,56 @@ page.tsx                         — wallet connect (wagmi hooks), token selecto
 ## 1. Wiring the SDK (`providers.tsx`)
 
 SDK 3.x uses a single Zama config object. The wagmi adapter creates the SDK signer
-and provider from the app's `wagmiConfig`; `web()` creates the browser FHE relayer
-transport from the configured FHE chain.
+and provider from the app's `wagmiConfig`. Both configs are built from the network table in
+`src/lib/networks.ts`, so every row is registered once: `web()` networks get the same-origin
+proxy as their relayer URL, cleartext networks get `cleartext()` and no relayer at all.
 
 ```ts
+// src/lib/networks.ts — one row per chain
+export const networks = {
+  sepolia: defineNetwork({
+    label: "Sepolia",
+    chain: sepolia, // viem/chains
+    fhe: fheSepolia, // @zama-fhe/sdk/chains
+    rpcUrl: process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL,
+    transport: "relayer",
+    explorerUrl: "https://eth-sepolia.blockscout.com",
+    canMint: true,
+    vault: { address, confidentialToken },
+  }),
+  "bnb-testnet": defineNetwork({ label: "BNB Testnet · Cleartext", transport: "cleartext", ... }),
+  mainnet: defineNetwork({ label: "Ethereum", transport: "relayer", canMint: false, ... }),
+  // ...
+};
+
+// src/providers.tsx
+const chains = NETWORK_KEYS.map((key) => networks[key].chain);
 const wagmiConfig = createConfig({
-  chains: [sepolia],
+  chains,
   connectors: [injected()],
-  transports: { [sepolia.id]: http(SEPOLIA_RPC_URL) },
+  transports: Object.fromEntries(chains.map((c) => [c.id, http(c.rpcUrls.default.http[0])])),
 });
 
 // The relayer requires an absolute URL, so resolve the same-origin proxy at runtime.
 // The SSR placeholder never issues requests.
-const relayerProxyUrl =
-  typeof window === "undefined"
-    ? "http://localhost/api/relayer"
-    : `${window.location.origin}/api/relayer`;
+const origin = typeof window === "undefined" ? "http://localhost" : window.location.origin;
 
-const mySepolia = {
-  ...fheSepolia,
-  relayerUrl: relayerProxyUrl,
-  network: SEPOLIA_RPC_URL,
-} as const satisfies FheChain;
+const fheChains = NETWORK_KEYS.map((key) => {
+  const { fhe, transport } = networks[key];
+  return transport === "relayer" ? { ...fhe, relayerUrl: `${origin}/api/relayer/${key}` } : fhe;
+});
+
+const relayers = Object.fromEntries(
+  NETWORK_KEYS.map((key) => [
+    networks[key].chain.id,
+    networks[key].transport === "relayer" ? web() : cleartext(),
+  ]),
+);
 
 const zamaConfig = createZamaConfig({
-  chains: [mySepolia],
   wagmiConfig,
-  relayers: { [mySepolia.id]: web() },
+  chains: fheChains,
+  relayers,
   storage: indexedDBStorage,
   permitStorage: indexedDBStorage,
 });
@@ -30081,13 +29449,18 @@ The wagmi config adapter creates a `WagmiSigner` internally. It subscribes to
 
 ## 3. Wallet connect flow (`page.tsx`)
 
-Three screens, driven by `isConnected` and `isSepolia`:
+Three screens, driven by `isConnected` and whether the wallet's chain is an enabled row of
+the network table:
 
-| Screen            | Condition                  | What's shown                                      |
-| ----------------- | -------------------------- | ------------------------------------------------- |
-| 1 — No wallet     | `!isConnected`             | "Connect Wallet" button                           |
-| 2 — Wrong network | `!isSepolia`               | "Switch to Sepolia" button (+ error if rejected)  |
-| 3 — Main UI       | `isConnected && isSepolia` | Registry loading, token selector, operation cards |
+| Screen                  | Condition                | What's shown                                              |
+| ----------------------- | ------------------------ | --------------------------------------------------------- |
+| 1 — No wallet           | `!isConnected`           | "Connect Wallet" button                                   |
+| 2 — Unsupported network | `!network`               | "Choose a Network" picker (+ error if the switch failed)  |
+| 3 — Main UI             | `isConnected && network` | Picker, registry loading, token selector, operation cards |
+
+Which rows are _enabled_ comes from `GET /api/networks`: cleartext rows always, `relayer` rows
+only when the server has an upstream relayer URL for them. That is how mainnet stays hidden
+until a deployment configures `MAINNET_RELAYER_URL`.
 
 Because wagmi does not auto-connect without stored connector state, the connect flow is
 explicit:
@@ -30099,13 +29472,19 @@ const { switchChain, isPending: isSwitching } = useSwitchChain();
 // Screen 1: !isConnected
 connect({ connector: injected() });
 
-// Screen 2: chainId !== SEPOLIA_CHAIN_ID
-switchChain({ chainId: sepolia.id });
+// Screen 2 (and the picker on screen 3): the user picked a row of the table
+switchChain({ chainId: networks[key].chain.id });
 ```
 
-`wagmi` handles `wallet_switchEthereumChain` internally for known chains — no
-`wallet_addEthereumChain` fallback is needed for Sepolia (natively known to MetaMask and
-most wallets). Add an error fallback if testing with custom wallets that don't know Sepolia.
+`wagmi` handles `wallet_switchEthereumChain` internally, and falls back to
+`wallet_addEthereumChain` with the viem chain definition when the wallet does not know the
+chain (error 4902). That covers Hoodi and Zenith, which most wallets don't ship. The RPC
+override from `NEXT_PUBLIC_<NETWORK>_RPC_URL` is applied to the viem chain too, so the
+"add network" prompt shows the same RPC the app uses.
+
+Everything that depends on the active network — explorer links, the native balance label,
+the Mint button, the vault demo — reads its row through `useNetwork()` (`src/lib/hooks.ts`)
+rather than a hardcoded constant.
 
 **Screen 2 is passive**: there is no `isInitializing` guard (unlike the ethers/viem examples)
 because `useConnection()` is synchronous and never returns a transient loading state — wagmi's
@@ -30129,14 +29508,13 @@ const {
 `metadata: true` fetches name, symbol, and decimals for both the underlying ERC-20 and the
 confidential wrapper in a single call — no separate `useMetadata` calls needed.
 
-The first valid pair is auto-selected:
+The selection falls back to the first valid pair, so a fresh load or a network switch (which
+replaces the pair list) never leaves the selector empty:
 
 ```ts
-useEffect(() => {
-  if (validPairs.length > 0 && selectedTokenAddress === null) {
-    setSelectedTokenAddress(validPairs[0].confidentialTokenAddress);
-  }
-}, [validPairs, selectedTokenAddress]);
+const token =
+  validPairs.find((pair) => pair.confidentialTokenAddress === selectedTokenAddress) ??
+  validPairs[0];
 ```
 
 With `WagmiSigner` (viem-based), named fields (`tokenAddress`, `confidentialTokenAddress`,
@@ -30144,7 +29522,7 @@ With `WagmiSigner` (viem-based), named fields (`tokenAddress`, `confidentialToke
 `EthersSigner`, where ethers `Result` non-enumerable prototype getters require a numeric
 index fallback).
 
-**Token-dependent hooks live in the local `TokenWorkspace` component**: hooks such as `useHasPermit`,
+**Token-dependent hooks live in the local `SelectedTokenPanel` component**: hooks such as `useHasPermit`,
 `useConfidentialBalance`, and the ERC-20 `useReadContract` are mounted only after a registry
 pair has been selected. This keeps React hook calls unconditional inside the component while
 avoiding placeholder addresses such as `ZERO_ADDRESS`.
@@ -30251,11 +29629,21 @@ transaction(s), shield transaction, and cache invalidation.
 
 ## 8. Relayer proxy
 
-The proxy route `src/app/api/relayer/[...path]/route.ts` keeps `RELAYER_API_KEY` server-side.
-Set `RELAYER_URL` in `.env.local` (bare host, no `/v2` suffix; defaults to the public Sepolia
-testnet relayer if unset).
-`NEXT_PUBLIC_SEPOLIA_RPC_URL` overrides the default publicnode RPC — useful to avoid rate
-limiting with a private node.
+The proxy route `src/app/api/relayer/[network]/[...path]/route.ts` keeps API keys server-side.
+The `[network]` segment is a key of the network table; the route looks it up in
+`src/lib/relayers.ts`, which maps each `relayer` network to an upstream from env
+(`SEPOLIA_RELAYER_URL`, `MAINNET_RELAYER_URL`, … — bare hosts, no `/v2` suffix). Testnets
+default to the public testnet relayer; mainnets have no default and are hidden until set.
+
+The proxy fails closed and is deliberately narrow:
+
+- unknown or unconfigured network → `404`, never a default upstream
+- `Origin` not the app's own (or `RELAYER_PROXY_ALLOWED_ORIGINS`) → `403`
+- only the relayer routes `web()` calls, and their `<route>/<job id>` polling paths, are forwarded; any other path → `404`
+- request bodies are never logged
+
+`NEXT_PUBLIC_<NETWORK>_RPC_URL` overrides the default public RPC of a network — useful to
+avoid rate limiting with a private node.
 
 ---
 
@@ -30282,8 +29670,9 @@ value moves and the receiver reacts atomically — no two-step transfer-then-not
 
 The receiver is a minimal confidential escrow, [`contracts/src/ConfidentialVault.sol`](../../contracts/src/ConfidentialVault.sol),
 deployed on Sepolia and bound to one confidential token (cUSDC). The cards only render when
-that token is selected. Configure the addresses via `NEXT_PUBLIC_VAULT_ADDRESS` and
-`NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN` (see `src/lib/config.ts`); deploy your own with
+that token is selected on Sepolia: the binding is the `vault` field of the Sepolia row in
+`src/lib/networks.ts`, configurable via `NEXT_PUBLIC_VAULT_ADDRESS` and
+`NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN`. Deploy your own with
 [`contracts/script/DeployVault.s.sol`](../../contracts/script/DeployVault.s.sol).
 
 **Deposit (`VaultDepositCard.tsx`).** The `data` payload carries a real domain message — the
@@ -30330,7 +29719,7 @@ confidential balance back via `confidentialTransfer`.
 cd examples/react-wagmi
 cp .env.example .env.local           # all values are optional — defaults work for testnet
 npm install
-npm run dev                          # dev server on :3000
+npm run dev                          # dev server on :3004
 npm run build                        # production build (must pass cleanly)
 npm run typecheck                    # tsc --noEmit
 npm run test:e2e                     # Playwright e2e tests (starts dev server automatically)

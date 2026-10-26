@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { getAddress } from "viem";
 import { useDelegateDecryption } from "@zama-fhe/react-sdk";
 import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
-import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
+import { useNetwork } from "@/lib/hooks";
 
 interface DelegateDecryptionCardProps {
   token: TokenWrapperPairWithMetadata;
@@ -12,6 +12,7 @@ interface DelegateDecryptionCardProps {
 }
 
 export function DelegateDecryptionCard({ token, disabled = false }: DelegateDecryptionCardProps) {
+  const { explorerUrl } = useNetwork();
   const delegate = useDelegateDecryption(token.confidentialTokenAddress);
 
   // datetime-local min: one hour from now, in the browser's local wall-clock time.
@@ -89,11 +90,7 @@ export function DelegateDecryptionCard({ token, disabled = false }: DelegateDecr
       {state && "data" in state && state.data.txHash && (
         <output className="alert alert-success card-status">
           Access granted!{" "}
-          <a
-            href={`${SEPOLIA_EXPLORER_URL}/tx/${state.data.txHash}`}
-            target="_blank"
-            rel="noreferrer"
-          >
+          <a href={`${explorerUrl}/tx/${state.data.txHash}`} target="_blank" rel="noreferrer">
             {state.data.txHash.slice(0, 10)}…
           </a>
         </output>

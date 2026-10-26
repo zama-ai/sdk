@@ -27,10 +27,6 @@ jobs:
       fail-fast: false
       matrix:
         example:
-          - example-bnb
-          - example-hoodi
-          - example-polygon-amoy
-          - example-zenith
           - node-ethers
           - node-viem
           - react-ethers
@@ -74,9 +70,6 @@ jobs:
       fail-fast: false
       matrix:
         example:
-          - example-bnb
-          - example-hoodi
-          - example-polygon-amoy
           - react-ethers
           - react-viem
           - react-wagmi
