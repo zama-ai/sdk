@@ -20583,7 +20583,7 @@ The registry contract address for the connected chain, or `undefined` if unavail
 
 ## Chain resolution
 
-With a connected wallet, the hook follows the wallet's chain, so a chain switch re-resolves the registry immediately. Without a wallet, it falls back to the provider's chain ID, cached for 30 seconds (`staleTime: 30000`).
+The chain ID comes from the provider, the same source every registry read uses, and is cached for 30 seconds (`staleTime: 30000`). The cache is keyed by the connected wallet's chain, so once the SDK reports a wallet chain switch (after its own chain-switch handling has run) the registry is re-resolved instead of waiting out the cache. Without a wallet, the cached provider chain ID is used as is.
 
 ## Related
 

@@ -3,7 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import type { Address } from "viem";
 import { useWrapperDiscovery } from "../use-wrapper-discovery";
 const ERC20_ADDR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
-// The registry follows the wallet's chain, and the fixture chain ships without a registry.
+// The fixture chain ships without a registry.
 const REGISTRY_ADDR = "0x1111111111111111111111111111111111111111" as Address;
 
 describe("useWrapperDiscovery", () => {
