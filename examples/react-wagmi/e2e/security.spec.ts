@@ -25,6 +25,8 @@ test.describe("security headers", () => {
       expect(headers["x-content-type-options"]).toBe("nosniff");
       expect(headers["x-frame-options"]).toBe("DENY");
       expect(headers["referrer-policy"]).toBe("no-referrer");
+      expect(headers["permissions-policy"]).toBe("camera=(), microphone=(), geolocation=()");
+      expect(headers["strict-transport-security"]).toContain("max-age=63072000");
     }
   });
 

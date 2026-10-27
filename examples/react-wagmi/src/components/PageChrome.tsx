@@ -78,7 +78,9 @@ export function AppHeader({
 }
 
 // Where this deployment's code lives, so a visitor can check what they are running.
-const SOURCE_REPO_URL = process.env.NEXT_PUBLIC_SOURCE_REPO_URL || "https://github.com/zama-ai/sdk";
+const SOURCE_REPO_URL = (
+  process.env.NEXT_PUBLIC_SOURCE_REPO_URL || "https://github.com/zama-ai/sdk"
+).replace(/\/+$/, "");
 const COMMIT_SHA = process.env.NEXT_PUBLIC_COMMIT_SHA || "";
 
 export function SiteFooter() {
@@ -99,7 +101,7 @@ export function SiteFooter() {
 
 export function MainnetBanner({ label }: { label: string }) {
   return (
-    <div className="alert alert-warning" role="alert">
+    <div className="alert alert-warning" role="status">
       <strong>{label} mainnet.</strong> Transactions here move real funds. The source code and the
       commit this deployment runs are linked in the footer.
     </div>

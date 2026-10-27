@@ -1,13 +1,24 @@
 import { test, expect } from "@playwright/test";
 
-// The allowlist is read once when the relayer table loads, and the dev server under test
+// The allowlist is read once when the relayer table loads, and the server under test
 // runs with it unset, so these tests load the module in this process instead.
+const saved: Record<string, string | undefined> = {};
+
 function loadRelayers(env: Record<string, string>) {
+  for (const key of Object.keys(env)) saved[key] ??= process.env[key];
   Object.assign(process.env, env);
   const modulePath = require.resolve("../src/lib/relayers");
   delete require.cache[modulePath];
   return require(modulePath) as typeof import("../src/lib/relayers");
 }
+
+test.afterEach(() => {
+  for (const [key, value] of Object.entries(saved)) {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+    delete saved[key];
+  }
+});
 
 test.describe("ENABLED_NETWORKS", () => {
   test("restricts the picker list and the proxy to the listed networks", () => {

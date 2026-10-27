@@ -81,7 +81,7 @@ All server-side variables are read by the proxy only and never reach the browser
 | `ENABLED_NETWORKS`                     | No       | Comma-separated table keys to offer, e.g. `mainnet,sepolia`. Unset offers every network the server can serve. |
 | `CSP_CONNECT_SRC`                      | No       | Comma-separated extra origins for the CSP `connect-src`: the key storage each relayer's `keyurl` names.       |
 | `NEXT_PUBLIC_COMMIT_SHA`               | No       | Commit shown in the footer. Vercel's `VERCEL_GIT_COMMIT_SHA` is used when this is unset.                      |
-| `NEXT_PUBLIC_SOURCE_REPO_URL`          | No       | Repository the footer links to. Defaults to `https://github.com/zama-ai/sdk`.                                 |
+| `NEXT_PUBLIC_SOURCE_REPO_URL`          | No       | Repository the footer links to. Defaults to `https://github.com/zama-ai/sdk`; a fork must set its own.        |
 | `NEXT_PUBLIC_<NETWORK>_RPC_URL`        | No       | RPC override per network: `SEPOLIA`, `POLYGON_AMOY`, `BNB_TESTNET`, `HOODI`, `ZENITH`, `MAINNET`, `POLYGON`.  |
 | `NEXT_PUBLIC_VAULT_ADDRESS`            | No       | `ConfidentialVault` demo address on Sepolia (`confidentialTransferAndCall`).                                  |
 | `NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN` | No       | Confidential token the vault is bound to (cUSDC). Vault cards render only when it is selected on Sepolia.     |

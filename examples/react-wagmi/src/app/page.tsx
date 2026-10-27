@@ -44,8 +44,6 @@ export default function Home() {
   const activeNetwork = activeKey && enabledNetworks.includes(activeKey) ? activeKey : undefined;
   const network = activeNetwork && networks[activeNetwork];
 
-  const [selectedTokenAddress, setSelectedTokenAddress] = useState<Address | null>(null);
-
   // The installed react-sdk resolves the registry from a chain id it caches for 30 s, so after a
   // switch the token list would keep showing the previous network's tokens. Drop that entry on
   // every chain change. Remove once the example installs a react-sdk that refetches it itself.
@@ -53,33 +51,6 @@ export default function Home() {
   useEffect(() => {
     void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.wrappersRegistry.chainId() });
   }, [chainId, queryClient]);
-
-  // Fetch all valid token pairs from the on-chain WrappersRegistry. The registry address
-  // comes from the connected chain's FHE config — no configuration required.
-  // metadata: true fetches name/symbol/decimals on-chain for both tokens in each pair.
-  // isPending stays true until the first successful response — covers both the initial
-  // disabled state (registry address not yet resolved internally) and the active-fetching
-  // state. isLoading alone is insufficient: in TanStack Query v5, isLoading = isPending &&
-  // isFetching, so it is false while the query is disabled.
-  const {
-    data: pairsData,
-    isPending: isRegistryPending,
-    isError: isRegistryError,
-  } = useListPairs({ metadata: true });
-
-  const validPairs = useMemo(
-    () =>
-      (pairsData?.items ?? []).filter(
-        (pair): pair is TokenWrapperPairWithMetadata => pair.isValid && "underlying" in pair,
-      ),
-    [pairsData],
-  );
-
-  // The selected pair, falling back to the first one so a fresh load or a network switch
-  // (which replaces the pair list) never leaves the selector empty.
-  const token =
-    validPairs.find((pair) => pair.confidentialTokenAddress === selectedTokenAddress) ??
-    validPairs[0];
 
   // Native balance via the wagmi transport — auto-updates on account or chain switch. The
   // token panel refetches this same key after actions; useBalance shares wagmi's query
@@ -153,9 +124,8 @@ export default function Home() {
           </p>
           {unserved?.transport === "relayer" && (
             <p className="token-meta">
-              Encrypting and decrypting on {unserved.label} needs a relayer this app can reach. To
-              run it yourself, set the relayer URL in the server environment: either Zama's relayer
-              with an{" "}
+              Encrypting and decrypting on {unserved.label} needs a relayer. To use it, run the app
+              yourself with a relayer configured for {unserved.label}: either Zama's relayer with an{" "}
               <a href="https://docs.zama.org/protocol/sdk/guides/relayer-api-keys">API key</a> or a{" "}
               <a href="https://github.com/zama-ai/fhevm/blob/main/relayer/docs/SELF_HOSTING.md">
                 relayer you host
@@ -185,6 +155,45 @@ export default function Home() {
         disconnecting={isDisconnecting}
       />
       {picker}
+      <TokenScreen chainId={chainId} address={address} />
+    </main>
+  );
+}
+
+// Mounted only on the connected screen: the registry read goes to the wallet chain's RPC, and
+// an unserved chain's RPC origin is outside the page CSP.
+function TokenScreen({ chainId, address }: { chainId: number | undefined; address: Address }) {
+  const [selectedTokenAddress, setSelectedTokenAddress] = useState<Address | null>(null);
+
+  // Fetch all valid token pairs from the on-chain WrappersRegistry. The registry address
+  // comes from the connected chain's FHE config — no configuration required.
+  // metadata: true fetches name/symbol/decimals on-chain for both tokens in each pair.
+  // isPending stays true until the first successful response — covers both the initial
+  // disabled state (registry address not yet resolved internally) and the active-fetching
+  // state. isLoading alone is insufficient: in TanStack Query v5, isLoading = isPending &&
+  // isFetching, so it is false while the query is disabled.
+  const {
+    data: pairsData,
+    isPending: isRegistryPending,
+    isError: isRegistryError,
+  } = useListPairs({ metadata: true });
+
+  const validPairs = useMemo(
+    () =>
+      (pairsData?.items ?? []).filter(
+        (pair): pair is TokenWrapperPairWithMetadata => pair.isValid && "underlying" in pair,
+      ),
+    [pairsData],
+  );
+
+  // The selected pair, falling back to the first one so a fresh load or a network switch
+  // (which replaces the pair list) never leaves the selector empty.
+  const token =
+    validPairs.find((pair) => pair.confidentialTokenAddress === selectedTokenAddress) ??
+    validPairs[0];
+
+  return (
+    <>
       <TokenSelector
         value={token?.confidentialTokenAddress ?? ""}
         options={validPairs.map((pair) => ({
@@ -204,6 +213,6 @@ export default function Home() {
         />
       )}
       {!token && !isRegistryPending && <NoTokenPanel />}
-    </main>
+    </>
   );
 }

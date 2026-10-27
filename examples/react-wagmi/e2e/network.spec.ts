@@ -64,8 +64,7 @@ test.describe("network in the table without a relayer", () => {
     mockWallet,
   }) => {
     // Polygon mainnet is in the table, but POLYGON_RELAYER_URL is unset for the test server.
-    // The registry read on Polygon's public RPC is aborted: it is not what this test is about.
-    await page.route("**/polygon-bor-rpc.publicnode.com**", (route) => route.abort());
+    // No RPC mock: this screen must not read the chain, since its RPC is outside the page CSP.
     await mockWallet({ accounts: [], chainId: "0x89", requestAccounts: [TEST_ADDRESS] });
     await page.goto("/");
     await page.getByRole("button", { name: "Connect Wallet" }).click({ force: true });
