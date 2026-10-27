@@ -58,6 +58,28 @@ test.describe("network picker on an unsupported chain", () => {
   });
 });
 
+test.describe("network in the table without a relayer", () => {
+  test("explains that the deployment does not serve it and how to run one", async ({
+    page,
+    mockWallet,
+  }) => {
+    // Polygon mainnet is in the table, but POLYGON_RELAYER_URL is unset for the test server.
+    // The registry read on Polygon's public RPC is aborted: it is not what this test is about.
+    await page.route("**/polygon-bor-rpc.publicnode.com**", (route) => route.abort());
+    await mockWallet({ accounts: [], chainId: "0x89", requestAccounts: [TEST_ADDRESS] });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Connect Wallet" }).click({ force: true });
+
+    await expect(page.getByText("This deployment does not serve Polygon.")).toBeVisible();
+    await expect(page.getByRole("link", { name: "API key" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "relayer you host" })).toBeVisible();
+    await expect(page.getByText(/unsupported network/)).toHaveCount(0);
+
+    await page.getByRole("combobox", { name: "Network" }).selectOption("sepolia");
+    await expect(page.getByText("Balances")).toBeVisible();
+  });
+});
+
 test.describe("mainnet", () => {
   test.beforeEach(async ({ page, mockRpc, mockWallet }) => {
     await mockRpc({ network: "mainnet" });
@@ -74,6 +96,11 @@ test.describe("mainnet", () => {
   test("is selected in the picker and shows the native balance label", async ({ page }) => {
     await expect(page.getByRole("combobox", { name: "Network" })).toHaveValue("mainnet");
     await expect(page.getByText(/ETH:/)).toBeVisible();
+  });
+
+  test("shows the real-funds banner", async ({ page }) => {
+    await expect(page.getByText(/Ethereum mainnet\./)).toBeVisible();
+    await expect(page.getByText(/move real funds/)).toBeVisible();
   });
 
   test("hides the mint button and the vault demo", async ({ page }) => {

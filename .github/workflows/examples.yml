@@ -59,11 +59,12 @@ jobs:
         run: npm run build --if-present
 
   # Runs the Playwright e2e suite for the examples that ship one. These tests
-  # mock the RPC at the network layer and boot the app's own `npm run dev`
-  # server (on the per-app port pinned in each playwright.config.ts), so they
-  # need no chain, keys, or secrets — only the browser binary. GitHub Actions
-  # sets CI=true, which flips `reuseExistingServer` off so Playwright always
-  # starts a fresh server.
+  # mock the RPC at the network layer and boot the app's own server (on the
+  # per-app port pinned in each playwright.config.ts), so they need no chain,
+  # keys, or secrets — only the browser binary. GitHub Actions sets CI=true,
+  # which flips `reuseExistingServer` off so Playwright always starts a fresh
+  # server; react-wagmi then builds and runs `next start` instead of `next dev`,
+  # because its production CSP is the one worth testing.
   e2e:
     runs-on: ubuntu-latest
     strategy:

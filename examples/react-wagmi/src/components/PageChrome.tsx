@@ -46,11 +46,15 @@ export function AppHeader({
   address,
   balanceLabel,
   balance,
+  onDisconnect,
+  disconnecting,
 }: {
   title: string;
   address: string;
   balanceLabel: string;
   balance: string;
+  onDisconnect: () => void;
+  disconnecting: boolean;
 }) {
   return (
     <header className="app-header">
@@ -61,7 +65,44 @@ export function AppHeader({
       <p className="connected-address">
         {balanceLabel}: <output>{balance}</output>
       </p>
+      <button
+        type="button"
+        className="btn btn-sm btn-secondary header-action"
+        onClick={onDisconnect}
+        disabled={disconnecting}
+      >
+        {disconnecting ? "Disconnecting…" : "Disconnect"}
+      </button>
     </header>
+  );
+}
+
+// Where this deployment's code lives, so a visitor can check what they are running.
+const SOURCE_REPO_URL = process.env.NEXT_PUBLIC_SOURCE_REPO_URL || "https://github.com/zama-ai/sdk";
+const COMMIT_SHA = process.env.NEXT_PUBLIC_COMMIT_SHA || "";
+
+export function SiteFooter() {
+  return (
+    <footer className="site-footer">
+      <a href={SOURCE_REPO_URL}>Source code</a>
+      {" · "}
+      {COMMIT_SHA ? (
+        <a href={`${SOURCE_REPO_URL}/commit/${COMMIT_SHA}`}>
+          Commit <code>{COMMIT_SHA.slice(0, 7)}</code>
+        </a>
+      ) : (
+        "Development build"
+      )}
+    </footer>
+  );
+}
+
+export function MainnetBanner({ label }: { label: string }) {
+  return (
+    <div className="alert alert-warning" role="alert">
+      <strong>{label} mainnet.</strong> Transactions here move real funds. The source code and the
+      commit this deployment runs are linked in the footer.
+    </div>
   );
 }
 

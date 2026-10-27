@@ -3,12 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatEther } from "viem";
-import { useBalance, useConnect, useConnection, useSwitchChain } from "wagmi";
+import { useBalance, useConnect, useConnection, useDisconnect, useSwitchChain } from "wagmi";
 import { injected } from "wagmi/connectors/injected";
 import { useListPairs } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
-import { ActionScreen, AppHeader, NetworkPicker, TokenSelector } from "@/components/PageChrome";
+import {
+  ActionScreen,
+  AppHeader,
+  MainnetBanner,
+  NetworkPicker,
+  TokenSelector,
+} from "@/components/PageChrome";
 import { NoTokenPanel, SelectedTokenPanel } from "@/components/SelectedTokenPanel";
 import { useEnabledNetworks } from "@/lib/hooks";
 import { networkForChain, networks } from "@/lib/networks";
@@ -22,6 +28,7 @@ export default function Home() {
   // polling or walletKey/refSeededRef remount pattern needed.
   const { address, chainId, isConnected } = useConnection();
   const { mutate: connect, isPending: isConnecting, error: connectError } = useConnect();
+  const { mutate: disconnect, isPending: isDisconnecting } = useDisconnect();
   const { mutate: switchChain, isPending: isSwitching, error: switchError } = useSwitchChain();
 
   // Networks the server can serve: cleartext rows always, relayer rows only when it has a
@@ -130,6 +137,9 @@ export default function Home() {
         />
       );
     }
+    // A chain in the table that this deployment does not serve: typically mainnet with no
+    // relayer configured. Say so, instead of calling the chain unsupported.
+    const unserved = activeKey && !isNetworksPending ? networks[activeKey] : undefined;
     return (
       <main className="app-container connect-screen">
         <section aria-labelledby="choose-network-title">
@@ -137,8 +147,22 @@ export default function Home() {
           <p className="subtitle">
             {isNetworksPending
               ? "Loading networks…"
-              : `Your wallet is on an unsupported network (chain ID ${chainId}). Pick one to switch.`}
+              : unserved
+                ? `This deployment does not serve ${unserved.label}. Pick another network to switch.`
+                : `Your wallet is on an unsupported network (chain ID ${chainId}). Pick one to switch.`}
           </p>
+          {unserved?.transport === "relayer" && (
+            <p className="token-meta">
+              Encrypting and decrypting on {unserved.label} needs a relayer this app can reach. To
+              run it yourself, set the relayer URL in the server environment: either Zama's relayer
+              with an{" "}
+              <a href="https://docs.zama.org/protocol/sdk/guides/relayer-api-keys">API key</a> or a{" "}
+              <a href="https://github.com/zama-ai/fhevm/blob/main/relayer/docs/SELF_HOSTING.md">
+                relayer you host
+              </a>
+              .
+            </p>
+          )}
           {picker}
         </section>
       </main>
@@ -148,6 +172,8 @@ export default function Home() {
   // ── Screen 3: Connected on a supported network — main UI ──────────────────
   return (
     <main className="app-container">
+      {/* viem marks every testnet; the rows without the flag are the mainnets. */}
+      {!network.chain.testnet && <MainnetBanner label={network.label} />}
       <AppHeader
         title={TITLE}
         address={address}
@@ -155,6 +181,8 @@ export default function Home() {
         balance={
           nativeBalance !== undefined ? Number(formatEther(nativeBalance.value)).toFixed(4) : "—"
         }
+        onDisconnect={() => disconnect()}
+        disconnecting={isDisconnecting}
       />
       {picker}
       <TokenSelector
