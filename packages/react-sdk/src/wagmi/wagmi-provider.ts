@@ -73,10 +73,10 @@ export class WagmiProvider implements GenericProvider {
    * Wait for a transaction receipt.
    *
    * Polls the configured public transport and, in parallel, the connected
-   * wallet's own `eth_getTransactionReceipt`. Smart-contract wallets such as
-   * Safe over WalletConnect answer `eth_sendTransaction` with a wallet-side
-   * hash the chain never sees, so only the wallet can map it to the mined
-   * receipt. Whichever source answers first wins.
+   * wallet (see {@link walletReceipt}). Smart-contract wallets such as Safe
+   * over WalletConnect answer `eth_sendTransaction` with a wallet-side hash
+   * the chain never sees, so only the wallet can map it to the mined receipt.
+   * Whichever source answers first wins.
    *
    * @param hash - The transaction hash to wait for.
    * @returns The transaction receipt.
@@ -112,23 +112,18 @@ export class WagmiProvider implements GenericProvider {
 
   /**
    * Resolves once the connected wallet reports a receipt for `hash`. Never
-   * rejects: when no wallet is connected or it cannot serve the request, the
-   * promise stays pending so the public-transport wait alone decides.
+   * rejects: when no wallet is connected, the promise stays pending so the
+   * public-transport wait alone decides.
    */
   async #pollWalletReceipt(hash: Hex, isSettled: () => boolean): Promise<TransactionReceipt> {
-    while (!isSettled()) {
-      try {
-        const client = await getConnectorClient(this.#config);
-        const receipt = await client.request({
-          method: "eth_getTransactionReceipt",
-          params: [hash],
-        });
+    const client = await getConnectorClient(this.#config).catch(() => undefined);
+    if (client) {
+      while (!isSettled()) {
+        const receipt = await walletReceipt(client, hash);
         if (receipt) {
           return receipt;
         }
         await new Promise((resolve) => setTimeout(resolve, client.pollingInterval));
-      } catch {
-        break;
       }
     }
     return new Promise<never>(() => {});
@@ -201,4 +196,27 @@ export class WagmiProvider implements GenericProvider {
       maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
     });
   }
+}
+
+/**
+ * Asks the wallet for the receipt behind `hash`: first as a transaction hash,
+ * then as an EIP-5792 call-bundle id. Safe answers `wallet_getCallsStatus`
+ * with its Safe transaction hash, and WalletConnect forwards that method to
+ * the wallet whereas it serves `eth_getTransactionReceipt` from its own RPC.
+ * Returns `undefined` while the wallet has nothing yet or rejects the request.
+ */
+async function walletReceipt(
+  client: Awaited<ReturnType<typeof getConnectorClient>>,
+  hash: Hex,
+): Promise<TransactionReceipt | undefined> {
+  const receipt = await client
+    .request({ method: "eth_getTransactionReceipt", params: [hash] })
+    .catch(() => null);
+  if (receipt) {
+    return receipt;
+  }
+  const calls = await client
+    .request({ method: "wallet_getCallsStatus", params: [hash] })
+    .catch(() => undefined);
+  return calls?.receipts?.[0];
 }

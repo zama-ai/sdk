@@ -144,8 +144,21 @@ describe("WagmiProvider.waitForTransactionReceipt", () => {
   const WALLET_RECEIPT = { logs: [{ topics: ["0x02" as Hex], data: "0x" as Hex }] };
   const never = () => new Promise<never>(() => {});
 
-  function makeConnectorClient(request: (args: unknown) => Promise<unknown>) {
+  type RpcArgs = { method: string; params: unknown[] };
+
+  function makeConnectorClient(request: (args: RpcArgs) => Promise<unknown>) {
     return { request, pollingInterval: 1 };
+  }
+
+  /** Wallet stub answering per RPC method; unlisted methods reject like an unsupported one. */
+  function walletAnswering(answers: Record<string, () => unknown>) {
+    return vi.fn(async ({ method }: RpcArgs) => {
+      const answer = answers[method];
+      if (!answer) {
+        throw new Error(`Method not supported: ${method}`);
+      }
+      return answer();
+    });
   }
 
   beforeEach(() => {
@@ -162,15 +175,30 @@ describe("WagmiProvider.waitForTransactionReceipt", () => {
     expect(mockWaitForReceipt).toHaveBeenCalledWith(CONFIG, { hash: HASH });
   });
 
-  test("falls back to the connected wallet when the chain never sees the hash", async () => {
-    // A Safe over WalletConnect returns its own safeTxHash; the public RPC never resolves it.
+  test("falls back to the wallet's eth_getTransactionReceipt when the chain never sees the hash", async () => {
     mockWaitForReceipt.mockImplementation(never);
-    const request = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(WALLET_RECEIPT);
+    const receipts = [null, WALLET_RECEIPT];
+    const request = walletAnswering({ eth_getTransactionReceipt: () => receipts.shift() });
     mockGetConnectorClient.mockResolvedValue(makeConnectorClient(request));
 
     await expect(provider.waitForTransactionReceipt(HASH)).resolves.toBe(WALLET_RECEIPT);
     expect(request).toHaveBeenCalledWith({ method: "eth_getTransactionReceipt", params: [HASH] });
-    expect(request).toHaveBeenCalledTimes(2);
+  });
+
+  test("resolves a Safe transaction hash through wallet_getCallsStatus", async () => {
+    // Safe over WalletConnect returns its safeTxHash from eth_sendTransaction. WalletConnect
+    // serves eth_getTransactionReceipt from its own RPC (null forever) but forwards
+    // wallet_getCallsStatus to the Safe, which answers with the receipt once executed.
+    mockWaitForReceipt.mockImplementation(never);
+    const statuses = [{ status: 100 }, { status: 200, receipts: [WALLET_RECEIPT] }];
+    const request = walletAnswering({
+      eth_getTransactionReceipt: () => null,
+      wallet_getCallsStatus: () => statuses.shift(),
+    });
+    mockGetConnectorClient.mockResolvedValue(makeConnectorClient(request));
+
+    await expect(provider.waitForTransactionReceipt(HASH)).resolves.toBe(WALLET_RECEIPT);
+    expect(request).toHaveBeenCalledWith({ method: "wallet_getCallsStatus", params: [HASH] });
   });
 
   test("stops polling the wallet once the public transport has answered", async () => {
