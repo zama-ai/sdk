@@ -1,12 +1,38 @@
 import { test as base, expect, type Page } from "@playwright/test";
 import { decodeFunctionData, encodeAbiParameters, parseAbi, type Hex } from "viem";
 
-export const SEPOLIA_CHAIN_ID_HEX = "0xaa36a7"; // 11155111 in hex — Sepolia chain ID
-export const WRONG_CHAIN_ID = "0x1"; // Ethereum mainnet — used for wrong-network tests
-export const TEST_ADDRESS = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+// Networks the suite can mock: the wallet's chain ID, the RPC host the app's network table
+// uses by default (so interceptRpc catches every read), and the on-chain WrappersRegistry
+// address from the SDK's chain preset.
+export const NETWORKS = {
+  sepolia: {
+    chainIdHex: "0xaa36a7", // 11155111
+    rpc: "**/ethereum-sepolia-rpc.publicnode.com**",
+    registry: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e",
+  },
+  mainnet: {
+    chainIdHex: "0x1",
+    rpc: "**/ethereum-rpc.publicnode.com**",
+    registry: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0",
+  },
+  // The test server has no relayer for it, so the app never serves it.
+  polygon: {
+    chainIdHex: "0x89", // 137
+    rpc: "**/polygon-bor-rpc.publicnode.com**",
+    registry: "0xc8908569868758dAF814B5a8b96bBc44D1653d54",
+  },
+  // A cleartext row: no relayer, every read still goes through the RPC mock.
+  "bnb-testnet": {
+    chainIdHex: "0x61", // 97
+    rpc: "**/bsc-testnet.bnbchain.org**",
+    registry: "0xc0E8B73b1C58D846e1d4f8fAE2E1466C85BCeAeC",
+  },
+} as const;
+export type MockNetwork = keyof typeof NETWORKS;
 
-// On-chain WrappersRegistry address for Sepolia (DefaultRegistryAddresses).
-export const REGISTRY_ADDRESS = "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
+export const SEPOLIA_CHAIN_ID_HEX = NETWORKS.sepolia.chainIdHex;
+export const WRONG_CHAIN_ID = "0x5"; // Goerli — not in the app's network table
+export const TEST_ADDRESS = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
 
 // Mock ERC-20 and confidential token addresses returned by the registry mock.
 // All-digit addresses avoid EIP-55 checksum ambiguity (digits are case-neutral).
@@ -36,6 +62,10 @@ export interface RpcOptions {
    * The UI will show "No tokens available." and all action buttons will be disabled.
    */
   emptyRegistry?: boolean;
+  /** Which network's RPC host and registry address to mock. Defaults to Sepolia. */
+  network?: MockNetwork;
+  /** Raw `balanceOf` result for every ERC-20 read. Unset returns "0x" (shown as "—"). */
+  erc20Balance?: bigint;
 }
 
 // ── ABI encoding helpers (Node.js) ────────────────────────────────────────────
@@ -69,7 +99,6 @@ function abiStr(s: string): string {
 
 // ── Mock contract addresses (lowercase for case-insensitive comparison) ───────
 
-const REGISTRY = REGISTRY_ADDRESS.toLowerCase();
 const MULTICALL3 = "0xca11bde05977b3631167028862be2a173976ca11";
 
 const MULTICALL3_ABI = parseAbi([
@@ -99,7 +128,7 @@ const TOKEN_META: Record<string, { name: string; symbol: string; decimals: numbe
 function resolveDirectEthCall(to: string, data: string, options: RpcOptions): Hex {
   const hex = (value: string) => value as Hex;
   const sel = data.slice(0, 10).toLowerCase();
-  if (to === REGISTRY) {
+  if (to === NETWORKS[options.network ?? "sepolia"].registry.toLowerCase()) {
     // getTokenConfidentialTokenPairsLength() → uint256
     if (sel === "0x483cdcf4") {
       return hex("0x" + abiU256(options.emptyRegistry ? 0 : 2));
@@ -134,6 +163,10 @@ function resolveDirectEthCall(to: string, data: string, options: RpcOptions): He
   }
   // totalSupply() — called only on the underlying ERC-20; returns uint256
   if (sel === "0x18160ddd") return hex("0x" + abiU256(0));
+  // balanceOf(address) — the public ERC-20 balance shown in BalancesCard
+  if (sel === "0x70a08231" && options.erc20Balance !== undefined) {
+    return hex("0x" + abiU256(options.erc20Balance));
+  }
 
   // All other eth_call requests (e.g. balanceOf) return empty data,
   // causing the caller to fail gracefully (query error → "—" in UI).
@@ -219,7 +252,7 @@ async function injectMockWallet(page: Page, config: WalletConfig) {
           case "eth_sendTransaction":
             return Promise.resolve("0x" + "1".repeat(64));
           case "net_version":
-            return Promise.resolve("11155111");
+            return Promise.resolve(String(parseInt(chainId, 16)));
           case "eth_blockNumber":
             return Promise.resolve("0x1");
           case "eth_getTransactionReceipt":
@@ -266,7 +299,7 @@ async function injectMockWallet(page: Page, config: WalletConfig) {
 }
 
 /**
- * Intercepts HTTP requests to the Sepolia RPC endpoint and returns minimal
+ * Intercepts HTTP requests to one network's RPC endpoint and returns minimal
  * valid JSON-RPC responses.
  *
  * eth_call is routed by contract address and function selector so that
@@ -278,7 +311,8 @@ async function injectMockWallet(page: Page, config: WalletConfig) {
  * react-ethers where EthersSigner routes reads through BrowserProvider(window.ethereum).
  */
 async function interceptRpc(page: Page, options: RpcOptions = {}) {
-  await page.route("**/ethereum-sepolia-rpc.publicnode.com**", async (route) => {
+  const network = NETWORKS[options.network ?? "sepolia"];
+  await page.route(network.rpc, async (route) => {
     const body = route.request().postDataJSON() as
       | { id?: number; method?: string; params?: unknown[] }
       | { id?: number; method?: string; params?: unknown[] }[]
@@ -288,7 +322,7 @@ async function interceptRpc(page: Page, options: RpcOptions = {}) {
       let result: unknown = null;
       switch (req?.method) {
         case "eth_chainId":
-          result = "0xaa36a7";
+          result = network.chainIdHex;
           break;
         case "eth_blockNumber":
           result = "0x1";
@@ -303,7 +337,7 @@ async function interceptRpc(page: Page, options: RpcOptions = {}) {
           result = "0x5208";
           break;
         case "net_version":
-          result = "11155111";
+          result = String(parseInt(network.chainIdHex, 16));
           break;
         case "eth_call":
           result = resolveEthCall(req.params, options);
@@ -326,8 +360,13 @@ async function interceptRpc(page: Page, options: RpcOptions = {}) {
 interface TestFixtures {
   /** Call with a WalletConfig to inject a mock EIP-1193 provider before page load. */
   mockWallet: (config: WalletConfig) => Promise<void>;
-  /** Call to intercept Sepolia RPC requests with registry and metadata mocking. */
+  /** Call to intercept a network's RPC requests with registry and metadata mocking. */
   mockRpc: (options?: RpcOptions) => Promise<void>;
+  /**
+   * Every load the page CSP blocked so far, as `<directive> <blocked URI>`. Collected from
+   * before the first script runs, so it covers the whole page load.
+   */
+  cspViolations: () => Promise<string[]>;
 }
 
 export const test = base.extend<TestFixtures>({
@@ -341,6 +380,18 @@ export const test = base.extend<TestFixtures>({
   },
   mockRpc: async ({ page }, use) => {
     await use((options?: RpcOptions) => interceptRpc(page, options));
+  },
+  cspViolations: async ({ page }, use) => {
+    await page.addInitScript(() => {
+      const violations: string[] = [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__cspViolations = violations;
+      document.addEventListener("securitypolicyviolation", (event) => {
+        violations.push(`${event.violatedDirective} ${event.blockedURI}`);
+      });
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await use(() => page.evaluate(() => (window as any).__cspViolations as string[]));
   },
 });
 

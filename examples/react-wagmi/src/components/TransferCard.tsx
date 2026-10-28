@@ -5,7 +5,7 @@ import { getAddress } from "viem";
 import { useConfidentialTransfer, useHasPermit } from "@zama-fhe/react-sdk";
 import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { parseAmount, minAmount } from "@/lib/parseAmount";
-import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
+import { useNetwork } from "@/lib/hooks";
 
 interface TransferCardProps {
   token: TokenWrapperPairWithMetadata;
@@ -14,6 +14,7 @@ interface TransferCardProps {
 }
 
 export function TransferCard({ token, disabled, onSuccess }: TransferCardProps) {
+  const { explorerUrl } = useNetwork();
   const decimals = token.confidential.decimals;
   const symbol = token.confidential.symbol;
 
@@ -106,11 +107,7 @@ export function TransferCard({ token, disabled, onSuccess }: TransferCardProps) 
       {state && "data" in state && state.data.txHash && (
         <output className="alert alert-success card-status">
           Transferred!{" "}
-          <a
-            href={`${SEPOLIA_EXPLORER_URL}/tx/${state.data.txHash}`}
-            target="_blank"
-            rel="noreferrer"
-          >
+          <a href={`${explorerUrl}/tx/${state.data.txHash}`} target="_blank" rel="noreferrer">
             {state.data.txHash.slice(0, 10)}…
           </a>
         </output>

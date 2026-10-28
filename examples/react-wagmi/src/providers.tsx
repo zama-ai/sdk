@@ -3,33 +3,37 @@
 import { type ReactNode } from "react";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
-import { indexedDBStorage } from "@zama-fhe/sdk";
-import type { FheChain } from "@zama-fhe/sdk/chains";
+import { cleartext, indexedDBStorage, type RelayerConfig } from "@zama-fhe/sdk";
 import { web } from "@zama-fhe/sdk/web";
-import { fheChain, SEPOLIA_RPC_URL } from "@/lib/config";
+import { NETWORK_KEYS, networks } from "@/lib/networks";
 import { wagmiConfig, WalletProviders } from "@/lib/wallet";
 
-// Route relayer traffic through the local Next.js proxy so RELAYER_API_KEY stays server-side.
-// The relayer requires an absolute URL, so resolve the same-origin proxy at runtime.
-// The SSR placeholder never issues requests.
-const relayerProxyUrl =
-  typeof window === "undefined"
-    ? "http://localhost/api/relayer"
-    : `${window.location.origin}/api/relayer`;
+// Relayer traffic goes through the same-origin Next.js proxy so API keys stay server-side.
+// The relayer requires an absolute URL, so resolve the origin at runtime; the SSR
+// placeholder never issues requests. Cleartext networks have no relayer at all.
+const origin = typeof window === "undefined" ? "http://localhost" : window.location.origin;
 
-// fheChain is the testnet or custom Sepolia config, picked by NEXT_PUBLIC_ZAMA_ENV (lib/config.ts).
-const zamaSepolia = {
-  ...fheChain,
-  relayerUrl: relayerProxyUrl,
-  network: SEPOLIA_RPC_URL,
-} as const satisfies FheChain;
+// Every row of the network table is registered; the picker decides which ones are offered.
+// Destructuring gives the non-empty tuple type the config requires.
+const [firstFheChain, ...otherFheChains] = NETWORK_KEYS.map((key) => {
+  const { fhe, transport } = networks[key];
+  return transport === "relayer" ? { ...fhe, relayerUrl: `${origin}/api/relayer/${key}` } : fhe;
+});
+const fheChains = [firstFheChain, ...otherFheChains] as const;
+
+const relayers = Object.fromEntries(
+  NETWORK_KEYS.map((key) => {
+    const { chain, transport } = networks[key];
+    return [chain.id, transport === "relayer" ? web() : cleartext()];
+  }),
+) as Record<number, RelayerConfig>;
 
 // Stable module-level reference — recreating on re-render would reset the SDK.
-// wagmiConfig is the Privy-managed or plain wagmi config, whichever lib/wallet.ts built.
+// wagmiConfig is the Privy-managed or plain wagmi config, whichever lib/wallet.tsx built.
 const zamaConfig = createZamaConfig({
   wagmiConfig,
-  chains: [zamaSepolia],
-  relayers: { [zamaSepolia.id]: web() },
+  chains: fheChains,
+  relayers,
   storage: indexedDBStorage,
   permitStorage: indexedDBStorage,
 });

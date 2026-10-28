@@ -1,13 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { formatEther } from "viem";
 import { useBalance, useConnection, useSwitchChain } from "wagmi";
 import { useListPairs } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
-import { TokenWorkspace, NoTokenWorkspace } from "@/components/TokenWorkspace";
-import { fheChain, sepolia, SEPOLIA_CHAIN_ID, ZAMA_ENV } from "@/lib/config";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
+import {
+  ActionScreen,
+  AppHeader,
+  MainnetBanner,
+  NetworkPicker,
+  TokenSelector,
+} from "@/components/PageChrome";
+import { NoTokenPanel, SelectedTokenPanel } from "@/components/SelectedTokenPanel";
+import { useEnabledNetworks } from "@/lib/hooks";
+import { networkForChain, networks } from "@/lib/networks";
 import { useWalletConnection } from "@/lib/wallet";
+
+const TITLE = "Confidential Token Quickstart";
 
 export default function Home() {
   // ── Wagmi hooks — wallet state managed reactively by wagmi ──────────────────
@@ -17,187 +29,195 @@ export default function Home() {
   // Connect/disconnect go through lib/wallet.tsx, which backs them with either the Privy
   // wallet modal or wagmi's injected connector; wagmi state is the same in both modes.
   const { address, chainId, isConnected } = useConnection();
-  const { ready, connect, disconnect, isConnecting, connectError } = useWalletConnection();
+  const { ready, connect, disconnect, isConnecting, isDisconnecting, connectError } =
+    useWalletConnection();
   const { mutate: switchChain, isPending: isSwitching, error: switchError } = useSwitchChain();
 
+  // Networks the server can serve: cleartext rows always, relayer rows only when it has a
+  // relayer URL for them. Mainnet stays hidden until a deployment opts in.
+  const {
+    data: enabledNetworks = [],
+    isPending: isNetworksPending,
+    isFetching: isNetworksFetching,
+    isError: isNetworksError,
+    refetch: refetchNetworks,
+  } = useEnabledNetworks();
+  const activeKey = networkForChain(chainId);
+  const activeNetwork = activeKey && enabledNetworks.includes(activeKey) ? activeKey : undefined;
+  const network = activeNetwork && networks[activeNetwork];
+
+  // The installed react-sdk resolves the registry from a chain id it caches for 30 s, so after a
+  // switch the token list would keep showing the previous network's tokens. Drop that entry on
+  // every chain change. Remove once the example installs a react-sdk that refetches it itself.
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.wrappersRegistry.chainId() });
+  }, [chainId, queryClient]);
+
+  // Native balance via the wagmi transport — auto-updates on account or chain switch. The
+  // token panel refetches this same key after actions; useBalance shares wagmi's query
+  // cache by key, so this header copy updates too.
+  const { data: nativeBalance } = useBalance({
+    address,
+    query: { enabled: isConnected && network !== undefined },
+  });
+
+  const picker = (
+    <NetworkPicker
+      options={enabledNetworks}
+      value={activeNetwork ?? ""}
+      pending={isSwitching}
+      onChange={(key) => switchChain({ chainId: networks[key].chain.id })}
+      error={switchError && "Could not switch network. Please switch manually in your wallet."}
+    />
+  );
+
+  // ── Screen 1: No wallet connected ─────────────────────────────────────────
+  if (!isConnected || !address) {
+    // wagmi surfaces ProviderNotFoundError when no injected wallet is available.
+    // Cast to string: wagmi's error discriminant union doesn't include ProviderNotFoundError
+    // but the injected() connector does throw it at runtime when window.ethereum is absent.
+    const isNoWallet = (connectError?.name as string) === "ProviderNotFoundError";
+    return (
+      <ActionScreen
+        title={TITLE}
+        description="Connect your wallet to interact with ERC-7984 confidential tokens."
+        actionLabel="Connect Wallet"
+        pendingLabel="Connecting…"
+        pending={isConnecting}
+        // Privy's modal is unusable until the SDK has loaded; the injected stack is always ready.
+        disabled={!ready}
+        onAction={connect}
+        error={
+          isNoWallet
+            ? "No Ethereum wallet found. Please install an EIP-1193 browser wallet (e.g. Rabby, MetaMask, or Phantom)."
+            : connectError?.message
+        }
+      />
+    );
+  }
+
+  // ── Screen 2: Unsupported network — pick one ──────────────────────────────
+  if (!network) {
+    // Without the list, nothing is known about the wallet's chain, so don't call it unsupported.
+    if (isNetworksError) {
+      return (
+        <ActionScreen
+          title="Choose a Network"
+          description="Could not load the networks this app can serve."
+          actionLabel="Retry"
+          pendingLabel="Retrying…"
+          pending={isNetworksFetching}
+          onAction={() => void refetchNetworks()}
+        />
+      );
+    }
+    // A chain in the table that this deployment does not serve: typically mainnet with no
+    // relayer configured. Say so, instead of calling the chain unsupported.
+    const unserved = activeKey && !isNetworksPending ? networks[activeKey] : undefined;
+    return (
+      <main className="app-container connect-screen">
+        <section aria-labelledby="choose-network-title">
+          <h1 id="choose-network-title">Choose a Network</h1>
+          <p className="subtitle">
+            {isNetworksPending
+              ? "Loading networks…"
+              : unserved
+                ? `This deployment does not serve ${unserved.label}. Pick another network to switch.`
+                : `Your wallet is on an unsupported network (chain ID ${chainId}). Pick one to switch.`}
+          </p>
+          {/* Testnets have a public relayer, so only a mainnet row needs one configured. */}
+          {unserved?.transport === "relayer" && !unserved.chain.testnet && (
+            <p className="token-meta">
+              Encrypting and decrypting on {unserved.label} needs a relayer. To use it, run the app
+              yourself with a relayer configured for {unserved.label}: either Zama's relayer with an{" "}
+              <a href="https://docs.zama.org/protocol/sdk/guides/relayer-api-keys">API key</a> or a{" "}
+              <a href="https://github.com/zama-ai/fhevm/blob/main/relayer/docs/SELF_HOSTING.md">
+                relayer you host
+              </a>
+              .
+            </p>
+          )}
+          {picker}
+        </section>
+      </main>
+    );
+  }
+
+  // ── Screen 3: Connected on a supported network — main UI ──────────────────
+  return (
+    <main className="app-container">
+      {/* viem marks every testnet; the rows without the flag are the mainnets. */}
+      {!network.chain.testnet && <MainnetBanner label={network.label} />}
+      <AppHeader
+        title={TITLE}
+        address={address}
+        balanceLabel={network.chain.nativeCurrency.symbol}
+        balance={
+          nativeBalance !== undefined ? Number(formatEther(nativeBalance.value)).toFixed(4) : "—"
+        }
+        onDisconnect={disconnect}
+        disconnecting={isDisconnecting}
+      />
+      {picker}
+      <TokenScreen chainId={chainId} address={address} />
+    </main>
+  );
+}
+
+// Mounted only on the connected screen, so the token list is never read from a chain this
+// deployment does not serve.
+function TokenScreen({ chainId, address }: { chainId: number | undefined; address: Address }) {
   const [selectedTokenAddress, setSelectedTokenAddress] = useState<Address | null>(null);
 
-  const isSepolia = chainId === SEPOLIA_CHAIN_ID;
-
-  // Fetch all valid token pairs from the on-chain WrappersRegistry.
-  // Registry address is resolved automatically from the connected chain via DefaultRegistryAddresses
-  // (Sepolia: 0x2f0750Bbb0A246059d80e94c454586a7F27a128e) — no configuration required.
-  // metadata: true fetches name/symbol/decimals on-chain for both tokens in each pair,
-  // removing the need for separate useMetadata calls.
+  // Fetch all valid token pairs from the on-chain WrappersRegistry. The registry address
+  // comes from the connected chain's FHE config — no configuration required.
+  // metadata: true fetches name/symbol/decimals on-chain for both tokens in each pair.
   // isPending stays true until the first successful response — covers both the initial
-  // disabled state (registry address not yet resolved internally) and the active-fetching state.
-  // isLoading alone is insufficient: in TanStack Query v5, isLoading = isPending && isFetching,
-  // so it is false when the query is disabled (enabled: false), causing a premature
-  // "No tokens available" display before the chain ID has been resolved.
+  // disabled state (registry address not yet resolved internally) and the active-fetching
+  // state. isLoading alone is insufficient: in TanStack Query v5, isLoading = isPending &&
+  // isFetching, so it is false while the query is disabled.
   const {
     data: pairsData,
     isPending: isRegistryPending,
     isError: isRegistryError,
   } = useListPairs({ metadata: true });
 
-  // Filter pairs: keep only isValid pairs with metadata.
-  // With WagmiSigner (viem-based), named fields (tokenAddress, confidentialTokenAddress, isValid)
-  // are directly accessible — no normalizePair workaround needed (unlike EthersSigner).
   const validPairs = useMemo(
     () =>
       (pairsData?.items ?? []).filter(
-        (p): p is TokenWrapperPairWithMetadata => p.isValid && "underlying" in p,
+        (pair): pair is TokenWrapperPairWithMetadata => pair.isValid && "underlying" in pair,
       ),
     [pairsData],
   );
 
-  // Auto-select the first valid pair once the registry resolves.
-  useEffect(() => {
-    if (validPairs.length > 0 && selectedTokenAddress === null) {
-      setSelectedTokenAddress(validPairs[0].confidentialTokenAddress);
-    }
-  }, [validPairs, selectedTokenAddress]);
+  // The selected pair, falling back to the first one so a fresh load or a network switch
+  // (which replaces the pair list) never leaves the selector empty.
+  const token =
+    validPairs.find((pair) => pair.confidentialTokenAddress === selectedTokenAddress) ??
+    validPairs[0];
 
-  // Currently selected token pair, or undefined while the registry is loading.
-  const token = validPairs.find((p) => p.confidentialTokenAddress === selectedTokenAddress);
-
-  // ETH balance via wagmi transport (SEPOLIA_RPC_URL) — auto-updates on account switch.
-  // The workspace panel refetches this same key after actions; useBalance shares wagmi's
-  // query cache by key, so this header copy updates too.
-  const { data: ethBalanceData } = useBalance({
-    address,
-    query: { enabled: isConnected && isSepolia },
-  });
-
-  // ── Screen 1: No wallet connected ─────────────────────────────────────────
-  if (!isConnected) {
-    // wagmi surfaces ProviderNotFoundError when no injected wallet is available.
-    // Cast to string: wagmi's error discriminant union doesn't include ProviderNotFoundError
-    // but the injected() connector does throw it at runtime when window.ethereum is absent.
-    const isNoWallet = (connectError?.name as string) === "ProviderNotFoundError";
-    return (
-      <main className="app-container connect-screen">
-        <h1>Sepolia Confidential Token Quickstart</h1>
-        <p className="subtitle">
-          Connect your wallet to interact with ERC-7984 tokens on Sepolia ({ZAMA_ENV}).
-        </p>
-        <form action={connect}>
-          <button type="submit" className="btn btn-primary" disabled={!ready || isConnecting}>
-            {isConnecting ? "Connecting…" : "Connect Wallet"}
-          </button>
-        </form>
-        {isNoWallet && (
-          <div className="alert alert-error card-status" role="alert">
-            No Ethereum wallet found. Please install an EIP-1193 browser wallet (e.g. Rabby,
-            MetaMask, or Phantom).
-          </div>
-        )}
-        {connectError && !isNoWallet && (
-          <div className="alert alert-error card-status" role="alert">
-            {connectError.message}
-          </div>
-        )}
-      </main>
-    );
-  }
-
-  // ── Screen 2: Wrong network ────────────────────────────────────────────────
-  if (!isSepolia) {
-    return (
-      <main className="app-container connect-screen">
-        <h1>Sepolia Network Required</h1>
-        <p className="subtitle">
-          This app only works on the Sepolia testnet (chain ID {SEPOLIA_CHAIN_ID}). Switch your
-          wallet to continue.
-        </p>
-        <form action={() => switchChain({ chainId: sepolia.id })}>
-          <button type="submit" className="btn btn-primary" disabled={isSwitching}>
-            {isSwitching ? "Switching…" : "Switch to Sepolia"}
-          </button>
-        </form>
-        {switchError && (
-          <div className="alert alert-error card-status" role="alert">
-            Could not switch to Sepolia. Please switch manually in your wallet.
-          </div>
-        )}
-      </main>
-    );
-  }
-
-  // ── Screen 3: Connected on Sepolia — main UI ───────────────────────────────
   return (
-    <main className="app-container">
-      {/* Header */}
-      <header className="app-header">
-        <h1>Sepolia Confidential Token Quickstart</h1>
-        <p className="connected-address">
-          Zama environment: <code>{ZAMA_ENV}</code>
-        </p>
-        <p className="connected-address">
-          Connected: <code>{address}</code>{" "}
-          <button type="button" className="btn btn-sm btn-secondary" onClick={disconnect}>
-            Disconnect
-          </button>
-        </p>
-        <p className="connected-address">
-          ETH:{" "}
-          <output>
-            {ethBalanceData !== undefined
-              ? Number(formatEther(ethBalanceData.value)).toFixed(4)
-              : "—"}
-          </output>
-        </p>
-      </header>
-
-      {/* Token selector — populated from the on-chain WrappersRegistry */}
-      <section className="card" aria-labelledby="token-selector-title">
-        <h2 className="card-title" id="token-selector-title">
-          Token
-        </h2>
-        <label className="sr-only" htmlFor="token-selector">
-          Confidential token
-        </label>
-        <select
-          id="token-selector"
-          className="select"
-          value={selectedTokenAddress ?? ""}
-          onChange={(e) => {
-            setSelectedTokenAddress(e.target.value as Address);
-          }}
-          disabled={isRegistryPending || isRegistryError || validPairs.length === 0}
-        >
-          {(isRegistryPending || selectedTokenAddress === null) && (
-            <option value="" disabled>
-              {isRegistryPending || validPairs.length > 0 ? "Loading…" : "No tokens available"}
-            </option>
-          )}
-          {validPairs.map((pair) => (
-            <option key={pair.confidentialTokenAddress} value={pair.confidentialTokenAddress}>
-              {pair.underlying.symbol}
-            </option>
-          ))}
-        </select>
-        {isRegistryPending && <output className="token-meta">Loading tokens from registry…</output>}
-        {!isRegistryPending && isRegistryError && (
-          <p className="token-meta" role="alert">
-            {fheChain.registryAddress === undefined
-              ? "No wrapper registry is deployed on this environment. Deploy your own wrapper pairs and set NEXT_PUBLIC_REGISTRY_ADDRESS."
-              : "Failed to load tokens from registry."}
-          </p>
-        )}
-        {!isRegistryPending && !isRegistryError && validPairs.length === 0 && (
-          <p className="token-meta">No tokens available.</p>
-        )}
-      </section>
+    <>
+      <TokenSelector
+        value={token?.confidentialTokenAddress ?? ""}
+        options={validPairs.map((pair) => ({
+          address: pair.confidentialTokenAddress,
+          symbol: pair.underlying.symbol,
+        }))}
+        pending={isRegistryPending}
+        error={isRegistryError}
+        onChange={(event) => setSelectedTokenAddress(event.currentTarget.value as Address)}
+      />
 
       {token && (
-        <TokenWorkspace
-          key={`${address}-${token.confidentialTokenAddress}`}
+        <SelectedTokenPanel
+          key={`${chainId}-${address}-${token.confidentialTokenAddress}`}
           token={token}
           validPairs={validPairs}
         />
       )}
-      {!token && !isRegistryPending && <NoTokenWorkspace />}
-    </main>
+      {!token && !isRegistryPending && <NoTokenPanel />}
+    </>
   );
 }

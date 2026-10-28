@@ -4,9 +4,9 @@
 // Two interchangeable wallet stacks behind one `useWalletConnection()` hook:
 //
 // - Privy (NEXT_PUBLIC_PRIVY_APP_ID set): Privy's wallet modal connects injected wallets
-//   and WalletConnect peers — including a Gnosis Safe paired over WalletConnect — and
-//   `@privy-io/wagmi` mirrors the active Privy wallet into wagmi's connection state.
-//   Connect-only: no Privy login / SIWE signature, the connected wallet is the session.
+//   and WalletConnect peers — including a Safe paired over WalletConnect from the Safe web
+//   app — and `@privy-io/wagmi` mirrors the active Privy wallet into wagmi's connection
+//   state. Connect-only: no Privy login / SIWE signature, the connected wallet is the session.
 // - Injected (app ID unset): plain wagmi with the `injected()` connector. Needs no Privy
 //   account and is what the Playwright suite runs against, since Privy replaces wagmi's
 //   connector list and cannot be driven by a mocked `window.ethereum`.
@@ -29,34 +29,37 @@ import {
   createConfig as createPrivyWagmiConfig,
   WagmiProvider as PrivyWagmiProvider,
 } from "@privy-io/wagmi";
-import { sepolia, SEPOLIA_RPC_URL } from "@/lib/config";
+import { NETWORK_KEYS, networks } from "@/lib/networks";
 
 // || not ??: Next.js inlines unset NEXT_PUBLIC_* variables as "" at build time.
 export const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID || "";
 
 // Stable module-level references — recreating on re-render would reset wagmi's state.
-// SEPOLIA_RPC_URL overrides the default RPC if NEXT_PUBLIC_SEPOLIA_RPC_URL is set.
+// Every row of the network table is registered; the picker decides which ones are offered.
+// Destructuring gives the non-empty tuple type both configs require.
+const [firstChain, ...otherChains] = NETWORK_KEYS.map((key) => networks[key].chain);
+const chains = [firstChain, ...otherChains] as const;
+const transports = Object.fromEntries(
+  chains.map((chain) => [chain.id, http(chain.rpcUrls.default.http[0])]),
+);
+
+// The page is server-rendered as disconnected. Without `ssr`, wagmi restores a stored
+// connection synchronously on the client's first render and React reports a hydration
+// mismatch; with it, the restore runs after mount.
 // Privy supplies its own connectors, so its config takes none; wagmi's gets `injected()`.
 export const wagmiConfig = PRIVY_APP_ID
-  ? createPrivyWagmiConfig({
-      chains: [sepolia],
-      transports: { [sepolia.id]: http(SEPOLIA_RPC_URL) },
-    })
-  : createConfig({
-      chains: [sepolia],
-      connectors: [injected()],
-      transports: { [sepolia.id]: http(SEPOLIA_RPC_URL) },
-    });
+  ? createPrivyWagmiConfig({ chains, transports, ssr: true })
+  : createConfig({ chains, connectors: [injected()], transports, ssr: true });
 
 const privyConfig: PrivyClientConfig = {
-  defaultChain: sepolia,
-  supportedChains: [sepolia],
+  defaultChain: firstChain,
+  supportedChains: [...chains],
   loginMethods: ["wallet"],
   // External wallets only — no Privy embedded wallet is created.
   embeddedWallets: { showWalletUIs: true, ethereum: { createOnLogin: "off" } },
   appearance: {
     walletChainType: "ethereum-only",
-    // WalletConnect entries are what a Gnosis Safe uses to pair from the Safe web app.
+    // The WalletConnect entries are what a Safe uses to pair from the Safe web app.
     walletList: [
       "detected_ethereum_wallets",
       "metamask",
@@ -66,7 +69,8 @@ const privyConfig: PrivyClientConfig = {
       "wallet_connect",
       "wallet_connect_qr",
     ],
-    showWalletLoginFirst: false,
+    // Wallets are the only login method, so the modal opens on them directly.
+    showWalletLoginFirst: true,
   },
 };
 
@@ -79,6 +83,7 @@ export interface WalletConnection {
   connect: () => void;
   disconnect: () => void;
   isConnecting: boolean;
+  isDisconnecting: boolean;
   connectError: Error | null;
 }
 
@@ -92,12 +97,13 @@ export function useWalletConnection(): WalletConnection {
 
 function InjectedWalletConnection({ children }: { children: ReactNode }) {
   const { mutate: connect, isPending: isConnecting, error: connectError } = useConnect();
-  const { mutate: disconnect } = useDisconnect();
+  const { mutate: disconnect, isPending: isDisconnecting } = useDisconnect();
   const value: WalletConnection = {
     ready: true,
     connect: () => connect({ connector: injected() }),
     disconnect: () => disconnect({}),
     isConnecting,
+    isDisconnecting,
     connectError,
   };
   return (
@@ -110,7 +116,7 @@ function PrivyWalletConnection({ children }: { children: ReactNode }) {
   const { ready: walletsReady, wallets } = useWallets();
   const { isOpen: isModalOpen } = useModalStatus();
   const { connectWallet } = useConnectWallet();
-  const { mutate: disconnect } = useDisconnect();
+  const { mutate: disconnect, isPending: isDisconnecting } = useDisconnect();
   const value: WalletConnection = {
     ready: privyReady && walletsReady,
     connect: () => connectWallet(),
@@ -121,6 +127,7 @@ function PrivyWalletConnection({ children }: { children: ReactNode }) {
       disconnect({});
     },
     isConnecting: isModalOpen,
+    isDisconnecting,
     connectError: null,
   };
   return (

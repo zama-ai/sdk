@@ -2,7 +2,7 @@
 
 import { useResumeUnshield, usePendingUnshield } from "@zama-fhe/react-sdk";
 import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
-import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
+import { useNetwork } from "@/lib/hooks";
 
 interface PendingUnshieldCardProps {
   token: TokenWrapperPairWithMetadata;
@@ -10,6 +10,7 @@ interface PendingUnshieldCardProps {
 }
 
 export function PendingUnshieldCard({ token, onSuccess }: PendingUnshieldCardProps) {
+  const { explorerUrl } = useNetwork();
   const tokenAddress = token.confidentialTokenAddress;
   const label = token.underlying.symbol;
 
@@ -43,11 +44,7 @@ export function PendingUnshieldCard({ token, onSuccess }: PendingUnshieldCardPro
         <div className="balance-row">
           <span className="balance-label">
             Unwrap confirmed, finalization pending —{" "}
-            <a
-              href={`${SEPOLIA_EXPLORER_URL}/tx/${pendingTxHash}`}
-              target="_blank"
-              rel="noreferrer"
-            >
+            <a href={`${explorerUrl}/tx/${pendingTxHash}`} target="_blank" rel="noreferrer">
               {pendingTxHash.slice(0, 10)}…
             </a>
           </span>
@@ -66,11 +63,7 @@ export function PendingUnshieldCard({ token, onSuccess }: PendingUnshieldCardPro
       {resume.isSuccess && resume.data?.txHash && (
         <output className="alert alert-success card-status">
           Unshielded!{" "}
-          <a
-            href={`${SEPOLIA_EXPLORER_URL}/tx/${resume.data.txHash}`}
-            target="_blank"
-            rel="noreferrer"
-          >
+          <a href={`${explorerUrl}/tx/${resume.data.txHash}`} target="_blank" rel="noreferrer">
             {resume.data.txHash.slice(0, 10)}…
           </a>
         </output>

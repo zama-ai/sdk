@@ -7,12 +7,16 @@ A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using wagm
 ## Architecture at a glance
 
 ```
-page.tsx                         — wallet connect, token selector, layout
-├── lib/config.ts                — Sepolia chain + Zama environment (testnet / custom) selection
-├── lib/wallet.tsx               — wallet stack: Privy modal or wagmi injected connector
-├── providers.tsx                — wallet providers + ZamaProvider config wiring
-│   └── /api/relayer/[...path]   — Next.js proxy (keeps RELAYER_API_KEY server-side)
-├── BalancesCard.tsx             — ETH / ERC-20 / confidential balance display
+page.tsx                         — wallet connect, network picker, token selector
+├── lib/networks.ts              — the network table: one row per chain (viem chain, FHE preset, flags)
+├── lib/relayers.ts              — server-side: upstream relayer URL + API key per network
+├── lib/wallet.tsx               — wallet stack: Privy modal or wagmi injected connector, built from the table
+├── providers.tsx                — wallet providers + ZamaProvider config, built from the network table
+│   ├── /api/networks            — which networks the server can serve (drives the picker)
+│   └── /api/relayer/[network]/[...path] — Next.js proxy (keeps API keys server-side)
+├── PageChrome.tsx               — connect screen, header, network picker, token selector
+├── SelectedTokenPanel.tsx       — composes the cards below for the selected token
+├── BalancesCard.tsx             — native / ERC-20 / confidential balance display
 ├── ShieldCard.tsx               — ERC-20 → confidential via `useShield`
 ├── TransferCard.tsx             — confidential → confidential
 ├── UnshieldCard.tsx             — confidential → ERC-20 (2-phase)
@@ -26,35 +30,57 @@ page.tsx                         — wallet connect, token selector, layout
 
 ## 1. Wiring the SDK (`providers.tsx`)
 
-The SDK uses a single Zama config object. The wagmi adapter creates the SDK signer
-and provider from the app's `wagmiConfig`; `web()` creates the browser FHE relayer
-transport from the configured FHE chain.
+SDK 3.x uses a single Zama config object. The wagmi adapter creates the SDK signer
+and provider from the app's `wagmiConfig`. Both configs are built from the network table in
+`src/lib/networks.ts`, so every row is registered once: `web()` networks get the same-origin
+proxy as their relayer URL, cleartext networks get `cleartext()` and no relayer at all.
 
 ```ts
-// lib/wallet.tsx — the Privy-managed or plain wagmi config (see section 1a)
-const wagmiConfig = createConfig({
-  chains: [sepolia],
-  transports: { [sepolia.id]: http(SEPOLIA_RPC_URL) },
-});
+// src/lib/networks.ts — one row per chain
+export const networks = {
+  sepolia: defineNetwork({
+    label: "Sepolia",
+    chain: sepolia, // viem/chains
+    fhe: fheSepolia, // @zama-fhe/sdk/chains
+    rpcUrl: process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL,
+    transport: "relayer",
+    explorerUrl: "https://eth-sepolia.blockscout.com",
+    canMint: true,
+    vault: { address, confidentialToken },
+  }),
+  "bnb-testnet": defineNetwork({ label: "BNB Testnet · Cleartext", transport: "cleartext", ... }),
+  mainnet: defineNetwork({ label: "Ethereum", transport: "relayer", canMint: false, ... }),
+  // ...
+};
 
+// src/lib/wallet.tsx — the Privy-managed or plain wagmi config (see section 1a)
+const chains = NETWORK_KEYS.map((key) => networks[key].chain);
+const transports = Object.fromEntries(chains.map((c) => [c.id, http(c.rpcUrls.default.http[0])]));
+export const wagmiConfig = PRIVY_APP_ID
+  ? createPrivyWagmiConfig({ chains, transports, ssr: true }) // @privy-io/wagmi
+  : createConfig({ chains, connectors: [injected()], transports, ssr: true }); // wagmi
+
+// src/providers.tsx
 // The relayer requires an absolute URL, so resolve the same-origin proxy at runtime.
 // The SSR placeholder never issues requests.
-const relayerProxyUrl =
-  typeof window === "undefined"
-    ? "http://localhost/api/relayer"
-    : `${window.location.origin}/api/relayer`;
+const origin = typeof window === "undefined" ? "http://localhost" : window.location.origin;
 
-// fheChain is the testnet or custom Sepolia config (see section 1b).
-const zamaSepolia = {
-  ...fheChain,
-  relayerUrl: relayerProxyUrl,
-  network: SEPOLIA_RPC_URL,
-} as const satisfies FheChain;
+const fheChains = NETWORK_KEYS.map((key) => {
+  const { fhe, transport } = networks[key];
+  return transport === "relayer" ? { ...fhe, relayerUrl: `${origin}/api/relayer/${key}` } : fhe;
+});
+
+const relayers = Object.fromEntries(
+  NETWORK_KEYS.map((key) => [
+    networks[key].chain.id,
+    networks[key].transport === "relayer" ? web() : cleartext(),
+  ]),
+);
 
 const zamaConfig = createZamaConfig({
-  chains: [zamaSepolia],
   wagmiConfig,
-  relayers: { [zamaSepolia.id]: web() },
+  chains: fheChains,
+  relayers,
   storage: indexedDBStorage,
   permitStorage: indexedDBStorage,
 });
@@ -75,7 +101,7 @@ the transport key pair and signed permits survive page reloads during local deve
 
 `WalletProviders` picks one of two wallet stacks at build time and exposes both through the
 same `useWalletConnection()` hook (`ready`, `connect`, `disconnect`, `isConnecting`,
-`connectError`):
+`isDisconnecting`, `connectError`):
 
 | `NEXT_PUBLIC_PRIVY_APP_ID` | Stack                                                                                |
 | -------------------------- | ------------------------------------------------------------------------------------ |
@@ -84,12 +110,13 @@ same `useWalletConnection()` hook (`ready`, `connect`, `disconnect`, `isConnecti
 
 With Privy, `connect` calls `useConnectWallet().connectWallet()`, which opens Privy's wallet
 modal: detected browser wallets, MetaMask, Rabby, Rainbow, Coinbase, and WalletConnect. It is
-connect-only — no Privy login or SIWE signature — so a Gnosis Safe paired over WalletConnect
-from the Safe web app works like any other wallet. `@privy-io/wagmi`'s `WagmiProvider` mirrors
-the active Privy wallet into wagmi, so `useConnection()` and the SDK's wagmi adapter see the
-same connection in both modes. Privy's `walletChainType: "ethereum-only"` keeps its Solana
-code paths unused; `next.config.ts` aliases the optional Solana peer packages to an empty
-module so Turbopack does not try to resolve them.
+connect-only — no Privy login or SIWE signature — so a Safe paired over WalletConnect from the
+Safe web app works like any other wallet. `@privy-io/wagmi`'s `WagmiProvider` mirrors the
+active Privy wallet into wagmi, so `useConnection()` and the SDK's wagmi adapter see the same
+connection in both modes. Privy's `walletChainType: "ethereum-only"` keeps its Solana code
+paths unused; `next.config.ts` aliases the optional Solana peer packages to an empty module so
+Turbopack does not try to resolve them, and `src/proxy.ts` widens the Content Security Policy
+for Privy's iframe, API and WalletConnect's relay only when the app ID is set.
 
 Disconnecting under Privy calls `wallet.disconnect()` on every Privy wallet and wagmi's
 `disconnect()`, because wagmi alone cannot release an injected wallet Privy owns.
@@ -97,27 +124,6 @@ Disconnecting under Privy calls `wallet.disconnect()` on every Privy wallet and 
 The injected stack is what the Playwright suite runs against (`playwright.config.ts` clears
 `NEXT_PUBLIC_PRIVY_APP_ID`): Privy replaces wagmi's connector list, so a mocked
 `window.ethereum` cannot drive it.
-
-### 1b. Zama environment: testnet or custom (`lib/config.ts`)
-
-A Zama environment on Sepolia is defined by its protocol contracts (ACL, KMS verifier, input
-verifier, EIP-712 verifying contracts, `ProtocolConfig`), its gateway chain and its relayer.
-The public testnet is the `sepolia` preset shipped with the SDK. Any other environment on
-Sepolia, for example a pre-release one, is a `custom` environment described entirely by the
-`NEXT_PUBLIC_ZAMA_*` variables in `.env.local`. Because the host chain is the same, the
-environment is a build-time switch (`NEXT_PUBLIC_ZAMA_ENV`), not a second wagmi chain:
-
-```ts
-export const fheChain: FheChain = {
-  ...(customSepolia ?? fheSepolia), // customSepolia is built from env, fheSepolia = SDK preset
-  ...(REGISTRY_ADDRESS_OVERRIDE ? { registryAddress: REGISTRY_ADDRESS_OVERRIDE } : {}),
-};
-```
-
-A custom environment usually has no wrapper registry, so `NEXT_PUBLIC_REGISTRY_ADDRESS` must
-point at a registry of wrapper pairs you deployed yourself; until then the token selector
-explains that. The relayer proxy (`/api/relayer`) defaults its upstream to the
-environment's relayer via `RELAYER_URL_DEFAULT`.
 
 ---
 
@@ -140,13 +146,18 @@ The wagmi config adapter creates a `WagmiSigner` internally. It subscribes to
 
 ## 3. Wallet connect flow (`page.tsx`)
 
-Three screens, driven by `isConnected` and `isSepolia`:
+Three screens, driven by `isConnected` and whether the wallet's chain is an enabled row of
+the network table:
 
-| Screen            | Condition                  | What's shown                                      |
-| ----------------- | -------------------------- | ------------------------------------------------- |
-| 1 — No wallet     | `!isConnected`             | "Connect Wallet" button                           |
-| 2 — Wrong network | `!isSepolia`               | "Switch to Sepolia" button (+ error if rejected)  |
-| 3 — Main UI       | `isConnected && isSepolia` | Registry loading, token selector, operation cards |
+| Screen                  | Condition                | What's shown                                                                                                                                 |
+| ----------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 — No wallet           | `!isConnected`           | "Connect Wallet" button                                                                                                                      |
+| 2 — Unsupported network | `!network`               | "Choose a Network" picker (+ error if the switch failed); a table row the server does not serve gets a relayer hint instead of "unsupported" |
+| 3 — Main UI             | `isConnected && network` | Picker, registry loading, token selector, operation cards                                                                                    |
+
+Which rows are _enabled_ comes from `GET /api/networks`: cleartext rows always, `relayer` rows
+only when the server has an upstream relayer URL for them. That is how mainnet stays hidden
+until a deployment configures `MAINNET_RELAYER_URL`.
 
 Because wagmi does not auto-connect without stored connector state, the connect flow is
 explicit. `page.tsx` never talks to a connector directly: it goes through the
@@ -161,13 +172,19 @@ const { switchChain, isPending: isSwitching } = useSwitchChain();
 // (Privy has loaded; immediately true on the injected stack)
 connect();
 
-// Screen 2: chainId !== SEPOLIA_CHAIN_ID
-switchChain({ chainId: sepolia.id });
+// Screen 2 (and the picker on screen 3): the user picked a row of the table
+switchChain({ chainId: networks[key].chain.id });
 ```
 
-`wagmi` handles `wallet_switchEthereumChain` internally for known chains — no
-`wallet_addEthereumChain` fallback is needed for Sepolia (natively known to MetaMask and
-most wallets). Add an error fallback if testing with custom wallets that don't know Sepolia.
+`wagmi` handles `wallet_switchEthereumChain` internally, and falls back to
+`wallet_addEthereumChain` with the viem chain definition when the wallet does not know the
+chain (error 4902). That covers Hoodi and Zenith, which most wallets don't ship. The RPC
+override from `NEXT_PUBLIC_<NETWORK>_RPC_URL` is applied to the viem chain too, so the
+"add network" prompt shows the same RPC the app uses.
+
+Everything that depends on the active network — explorer links, the native balance label,
+the Mint button, the vault demo — reads its row through `useNetwork()` (`src/lib/hooks.ts`)
+rather than a hardcoded constant.
 
 **Screen 2 is passive**: there is no `isInitializing` guard (unlike the ethers/viem examples)
 because `useConnection()` is synchronous and never returns a transient loading state — wagmi's
@@ -191,14 +208,13 @@ const {
 `metadata: true` fetches name, symbol, and decimals for both the underlying ERC-20 and the
 confidential wrapper in a single call — no separate `useMetadata` calls needed.
 
-The first valid pair is auto-selected:
+The selection falls back to the first valid pair, so a fresh load or a network switch (which
+replaces the pair list) never leaves the selector empty:
 
 ```ts
-useEffect(() => {
-  if (validPairs.length > 0 && selectedTokenAddress === null) {
-    setSelectedTokenAddress(validPairs[0].confidentialTokenAddress);
-  }
-}, [validPairs, selectedTokenAddress]);
+const token =
+  validPairs.find((pair) => pair.confidentialTokenAddress === selectedTokenAddress) ??
+  validPairs[0];
 ```
 
 With `WagmiSigner` (viem-based), named fields (`tokenAddress`, `confidentialTokenAddress`,
@@ -206,7 +222,7 @@ With `WagmiSigner` (viem-based), named fields (`tokenAddress`, `confidentialToke
 `EthersSigner`, where ethers `Result` non-enumerable prototype getters require a numeric
 index fallback).
 
-**Token-dependent hooks live in the local `TokenWorkspace` component**: hooks such as `useHasPermit`,
+**Token-dependent hooks live in the local `SelectedTokenPanel` component**: hooks such as `useHasPermit`,
 `useConfidentialBalance`, and the ERC-20 `useReadContract` are mounted only after a registry
 pair has been selected. This keeps React hook calls unconditional inside the component while
 avoiding placeholder addresses such as `ZERO_ADDRESS`.
@@ -313,11 +329,24 @@ transaction(s), shield transaction, and cache invalidation.
 
 ## 8. Relayer proxy
 
-The proxy route `src/app/api/relayer/[...path]/route.ts` keeps `RELAYER_API_KEY` server-side.
-Set `RELAYER_URL` in `.env.local` (bare host, no `/v2` suffix; defaults to the public Sepolia
-testnet relayer if unset).
-`NEXT_PUBLIC_SEPOLIA_RPC_URL` overrides the default publicnode RPC — useful to avoid rate
-limiting with a private node.
+The proxy route `src/app/api/relayer/[network]/[...path]/route.ts` keeps API keys server-side.
+The `[network]` segment is a key of the network table; the route looks it up in
+`src/lib/relayers.ts`, which maps each `relayer` network to an upstream from env
+(`SEPOLIA_RELAYER_URL`, `MAINNET_RELAYER_URL`, … — bare hosts, no `/v2` suffix). Testnets
+default to the public testnet relayer; mainnets have no default and are hidden until set.
+
+The proxy fails closed and is deliberately narrow:
+
+- unknown or unconfigured network → `404`, never a default upstream
+- `Origin` not the app's own (or `RELAYER_PROXY_ALLOWED_ORIGINS`) → `403`
+- only the relayer routes `web()` calls, and their `<route>/<job id>` polling paths, are forwarded; any other path → `404`
+- request bodies are never logged
+
+`NEXT_PUBLIC_<NETWORK>_RPC_URL` overrides the default public RPC of a network — useful to
+avoid rate limiting with a private node.
+
+`ENABLED_NETWORKS` (comma-separated table keys) narrows what the server offers; a network
+outside the list is neither listed by `/api/networks` nor proxied.
 
 ---
 
@@ -344,8 +373,9 @@ value moves and the receiver reacts atomically — no two-step transfer-then-not
 
 The receiver is a minimal confidential escrow, [`contracts/src/ConfidentialVault.sol`](../../contracts/src/ConfidentialVault.sol),
 deployed on Sepolia and bound to one confidential token (cUSDC). The cards only render when
-that token is selected. Configure the addresses via `NEXT_PUBLIC_VAULT_ADDRESS` and
-`NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN` (see `src/lib/config.ts`); deploy your own with
+that token is selected on Sepolia: the binding is the `vault` field of the Sepolia row in
+`src/lib/networks.ts`, configurable via `NEXT_PUBLIC_VAULT_ADDRESS` and
+`NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN`. Deploy your own with
 [`contracts/script/DeployVault.s.sol`](../../contracts/script/DeployVault.s.sol).
 
 **Deposit (`VaultDepositCard.tsx`).** The `data` payload carries a real domain message — the
@@ -392,8 +422,42 @@ confidential balance back via `confidentialTransfer`.
 cd examples/react-wagmi
 cp .env.example .env.local           # all values are optional — defaults work for testnet
 npm install
-npm run dev                          # dev server on :3000
+npm run dev                          # dev server on :3004
 npm run build                        # production build (must pass cleanly)
 npm run typecheck                    # tsc --noEmit
-npm run test:e2e                     # Playwright e2e tests (starts dev server automatically)
+npm run test:e2e                     # Playwright e2e tests (starts its own dev server; port 3004 must be free)
+CI=1 npm run test:e2e                # same suite against a production build, as CI runs it
 ```
+
+---
+
+## 12. Security headers (`src/proxy.ts`, `next.config.ts`)
+
+`src/proxy.ts` runs before every page render and sets a Content Security Policy with a
+fresh nonce. Next.js reads the nonce from the request's `Content-Security-Policy` header
+and stamps it on every script it emits, so the policy can forbid inline scripts outright.
+That only works for pages rendered per request, which is why `layout.tsx` exports
+`dynamic = "force-dynamic"`.
+
+The directives that are specific to this app:
+
+- `connect-src`: this origin (the proxy, `/api/networks`, WASM and worker files), the
+  RPC origin of every network in the table (the SDK probes the wallet's chain on connect,
+  served or not), the storage the relayer's `keyurl` points the
+  browser at for the FHE public key and CRS (`CSP_CONNECT_SRC`, since the relayer owns that
+  address and the app does not hardcode it), and `data:` URLs (the FHE runtime compiles its
+  WASM from one).
+- `script-src 'wasm-unsafe-eval'` and `worker-src 'self' blob:`: what the FHE runtime
+  needs to compile WASM and spawn its thread pool. See the SDK's security model docs.
+- `'unsafe-eval'` and inline styles are allowed under `next dev` only.
+
+The policy covers the page and the workers it spawns. The SDK's encrypt worker is loaded
+from `/_next/static`, which the proxy matcher skips, so it runs with no policy of its own
+and its key download is not subject to `connect-src`. The key-storage entries matter when
+encryption falls back to the page.
+
+`next.config.ts` adds the static headers (`nosniff`, `X-Frame-Options`, `Referrer-Policy`,
+`Permissions-Policy`, HSTS) and fills `NEXT_PUBLIC_COMMIT_SHA` from Vercel's
+`VERCEL_GIT_COMMIT_SHA`, which the footer (`SiteFooter` in `PageChrome.tsx`) links next to
+the source repository. The mainnet banner (`MainnetBanner`) renders when the wallet's
+chain has no `testnet` flag in viem.
