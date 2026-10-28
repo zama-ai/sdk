@@ -5,17 +5,17 @@
 // of its own, so its relayer and key-storage fetches are not subject to this one.
 import { NextResponse, type NextRequest } from "next/server";
 import { envList } from "@/lib/env";
-import { networks } from "@/lib/networks";
-import { enabledNetworks } from "@/lib/relayers";
+import { NETWORK_KEYS, networks } from "@/lib/networks";
 
 // Everything the page connects to: this origin (relayer proxy, /api/networks, WASM and
-// worker files), the RPC of every network the server offers, the storage each relayer's
-// `keyurl` names for the FHE public key and CRS (CSP_CONNECT_SRC, since the relayer owns
-// that address), and data: URLs, which the FHE runtime fetches to compile its WASM when
-// encryption runs in the page instead of the encrypt worker.
+// worker files), the RPC of every network in the table (the SDK probes the wallet's chain
+// on connect, served or not), the storage each relayer's `keyurl` names for the FHE public
+// key and CRS (CSP_CONNECT_SRC, since the relayer owns that address), and data: URLs, which
+// the FHE runtime fetches to compile its WASM when encryption runs in the page instead of
+// the encrypt worker.
 const connectSrc = new Set([
   "'self'",
-  ...enabledNetworks().map((key) => new URL(networks[key].chain.rpcUrls.default.http[0]).origin),
+  ...NETWORK_KEYS.map((key) => new URL(networks[key].chain.rpcUrls.default.http[0]).origin),
   ...envList("CSP_CONNECT_SRC"),
   "data:",
 ]);
@@ -38,7 +38,6 @@ function contentSecurityPolicy(nonce: string): string {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    ...(isDev ? [] : ["upgrade-insecure-requests"]),
   ].join("; ");
 }
 
@@ -60,7 +59,7 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     {
-      source: "/((?!api|_next/static|_next/image|favicon.ico).*)",
+      source: "/((?!api/|_next/static/|_next/image|favicon.ico).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },

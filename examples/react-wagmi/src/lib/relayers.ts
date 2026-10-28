@@ -24,7 +24,8 @@ const upstreams: Partial<Record<NetworkKey, { url?: string; apiKey?: string }>> 
 
 // Optional allowlist of table keys for a deployment that offers a subset (a hosted instance:
 // `mainnet,sepolia`). Unset means every row the server can serve. An unknown key is a typo
-// that would silently hide a network, so it fails at startup.
+// that would silently hide a network, so it fails at startup: the instrumentation hook loads
+// this module at boot, where the API routes would only load it on the first request.
 const allowlist = envList("ENABLED_NETWORKS");
 const unknownKeys = allowlist.filter((key) => !(NETWORK_KEYS as string[]).includes(key));
 if (unknownKeys.length > 0) {

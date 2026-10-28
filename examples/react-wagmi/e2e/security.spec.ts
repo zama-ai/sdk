@@ -15,8 +15,10 @@ test.describe("security headers", () => {
     if (process.env.CI) {
       expect(csp).not.toContain("'unsafe-eval'");
       expect(csp).not.toContain("'unsafe-inline'");
-      expect(csp).toContain("upgrade-insecure-requests");
     }
+    // A page path that merely starts with "api" is still a page.
+    const notFound = await request.get("/api-docs");
+    expect(notFound.headers()["content-security-policy"]).toContain("default-src 'self'");
   });
 
   test("sets the static headers on pages and API responses", async ({ request }) => {
@@ -33,17 +35,12 @@ test.describe("security headers", () => {
   // Covers the page load, wallet connect and the RPC reads behind the token list. Encryption
   // is not covered: every relayer call is aborted in this suite, so the key download, WASM
   // compile and encrypt worker never run. Check those by hand with a wallet on Sepolia.
-  test("the app runs without CSP violations", async ({ page, mockRpc, mockWallet }) => {
-    // The browser reports every blocked load as a securitypolicyviolation event; collect
-    // them from before the first script runs.
-    await page.addInitScript(() => {
-      const violations: string[] = [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).__cspViolations = violations;
-      document.addEventListener("securitypolicyviolation", (event) => {
-        violations.push(`${event.violatedDirective} ${event.blockedURI}`);
-      });
-    });
+  test("the app runs without CSP violations", async ({
+    page,
+    mockRpc,
+    mockWallet,
+    cspViolations,
+  }) => {
     await mockRpc();
     await mockWallet({
       accounts: [],
@@ -56,8 +53,7 @@ test.describe("security headers", () => {
       MOCK_CTOKEN1_ADDRESS,
     );
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect(await page.evaluate(() => (window as any).__cspViolations)).toEqual([]);
+    expect(await cspViolations()).toEqual([]);
   });
 });
 

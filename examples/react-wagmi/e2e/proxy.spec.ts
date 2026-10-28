@@ -46,4 +46,20 @@ test.describe("relayer proxy", () => {
     });
     expect(res.status()).toBe(403);
   });
+
+  // From the browser, so the Origin header is the one the page's referrer policy produces
+  // (`no-referrer` turns it into "null" for form posts, not for fetch). Mainnet's upstream is
+  // unreachable: passing the check gives 503, failing it 403.
+  test("accepts a same-origin POST from the page", async ({ page, baseURL }) => {
+    await page.unroute("**/api/relayer/**");
+    await page.goto("/");
+    const [sent, status] = await Promise.all([
+      page.waitForRequest("**/api/relayer/mainnet/v2/keyurl"),
+      page.evaluate(() =>
+        fetch("/api/relayer/mainnet/v2/keyurl", { method: "POST" }).then((res) => res.status),
+      ),
+    ]);
+    expect((await sent.allHeaders()).origin).toBe(baseURL);
+    expect(status).toBe(503);
+  });
 });

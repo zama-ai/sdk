@@ -391,7 +391,7 @@ npm install
 npm run dev                          # dev server on :3004
 npm run build                        # production build (must pass cleanly)
 npm run typecheck                    # tsc --noEmit
-npm run test:e2e                     # Playwright e2e tests (starts dev server automatically)
+npm run test:e2e                     # Playwright e2e tests (starts its own dev server; port 3004 must be free)
 CI=1 npm run test:e2e                # same suite against a production build, as CI runs it
 ```
 
@@ -408,7 +408,8 @@ That only works for pages rendered per request, which is why `layout.tsx` export
 The directives that are specific to this app:
 
 - `connect-src`: this origin (the proxy, `/api/networks`, WASM and worker files), the
-  RPC origin of every offered network, the storage the relayer's `keyurl` points the
+  RPC origin of every network in the table (the SDK probes the wallet's chain on connect,
+  served or not), the storage the relayer's `keyurl` points the
   browser at for the FHE public key and CRS (`CSP_CONNECT_SRC`, since the relayer owns that
   address and the app does not hardcode it), and `data:` URLs (the FHE runtime compiles its
   WASM from one).

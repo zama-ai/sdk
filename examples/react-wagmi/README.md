@@ -104,11 +104,11 @@ Rate limiting belongs at the hosting layer; a public deployment that adds its ow
 
 The app is built to be hosted as-is, with the user's browser wallet doing all signing and the proxy the only server-side code. What a deployment gets:
 
-- **Security headers.** `src/proxy.ts` sets a per-request Content Security Policy on every page: scripts need the request's nonce, `connect-src` is limited to this origin, the RPCs of the offered networks and the relayers' key storage, `worker-src 'self' blob:` and `'wasm-unsafe-eval'` are what the FHE runtime needs, and `frame-ancestors 'none'` blocks framing. The policy governs the page and the workers it spawns; the SDK's encrypt worker is a static file with no policy of its own. `next.config.ts` adds `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` and HSTS. There are no third-party scripts, fonts or analytics. A production build assumes HTTPS (HSTS, `upgrade-insecure-requests`); `localhost` is exempt, so `next start` works for a local check.
+- **Security headers.** `src/proxy.ts` sets a per-request Content Security Policy on every page: scripts need the request's nonce, `connect-src` is limited to this origin, the RPCs of the networks in the table and the relayers' key storage, `worker-src 'self' blob:` and `'wasm-unsafe-eval'` are what the FHE runtime needs, and `frame-ancestors 'none'` blocks framing. The policy governs the page and the workers it spawns; the SDK's encrypt worker is a static file with no policy of its own. `next.config.ts` adds `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` and HSTS. There are no third-party scripts, fonts or analytics. HSTS covers the app's own host only, so a copy on an apex domain does not pin its subdomains, and the policy does not upgrade `http://` requests, so an RPC override on a private `http://` node keeps working.
 - **Mainnet banner.** A wallet on Ethereum or Polygon mainnet sees a banner saying transactions move real funds.
 - **Deployed commit in the footer.** The footer links the source repository (`NEXT_PUBLIC_SOURCE_REPO_URL`) and the commit the build was made from (`NEXT_PUBLIC_COMMIT_SHA`, filled from `VERCEL_GIT_COMMIT_SHA` on Vercel), so anyone can check what they are running.
 - **Pinned dependencies.** `package.json` pins exact versions and the lockfile is committed; `npm ci` installs exactly what was reviewed.
-- **Network subset.** `ENABLED_NETWORKS=mainnet,sepolia` offers only those rows; the proxy refuses the rest.
+- **Network subset.** `ENABLED_NETWORKS=mainnet,sepolia` offers only those rows; the proxy refuses the rest. An unknown key stops the server at boot (`src/instrumentation.ts`), so a typo cannot silently hide a network.
 
 To host on Vercel: import the repository, set the root directory to `examples/react-wagmi`, and set `MAINNET_RELAYER_URL`, `MAINNET_RELAYER_API_KEY`, `ENABLED_NETWORKS` and `CSP_CONNECT_SRC` (the key storage of every relayer you serve). Use a relayer key with its own quota, and add a per-IP rate limit on `/api/relayer/*` in the hosting layer (a Vercel Firewall rate-limit rule, say): the origin check stops other sites' pages from using the proxy, not scripted abuse. Deploy from tags rather than from every push.
 
@@ -123,12 +123,12 @@ A `.env.local` on your own machine is enough to run the same app yourself (see [
 ## Running e2e tests
 
 ```bash
-npm run test:e2e        # runs Playwright (starts the dev server automatically)
+npm run test:e2e        # runs Playwright (starts its own dev server; port 3004 must be free)
 ```
 
 Tests mock `window.ethereum` and the RPC of the network under test, and abort every relayer request — no wallet or real network required. The config enables the Ethereum mainnet row with an unreachable relayer URL so the picker and the mainnet feature flags are covered.
 
-With `CI` set, Playwright builds the app and runs the suite against `next start` instead of the dev server, because the production CSP is stricter than the development one (no `'unsafe-eval'`, no inline styles). `security.spec.ts` checks the headers and that the app loads without a CSP violation; encryption is not exercised, since every relayer call is aborted. `allowlist.spec.ts` covers `ENABLED_NETWORKS` by loading the relayer table in the test process, since the server under test runs with it unset.
+With `CI` set, Playwright builds the app and runs the suite against `next start` instead of the dev server, because the production CSP is stricter than the development one (no `'unsafe-eval'`, no inline styles). `security.spec.ts` checks the headers and that the app loads without a CSP violation; encryption is not exercised, since every relayer call is aborted. `allowlist.spec.ts` covers `ENABLED_NETWORKS` by loading the relayer table in the test process, since the server under test runs with it unset, and with `CI` set it also checks that `next start` refuses to boot on an unknown key.
 
 ## Architecture at a glance
 

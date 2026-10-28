@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { test, expect } from "@playwright/test";
 
 // The allowlist is read once when the relayer table loads, and the server under test
@@ -32,7 +33,20 @@ test.describe("ENABLED_NETWORKS", () => {
     expect(upstreamFor("sepolia")).toBeDefined();
   });
 
-  test("fails at startup on an unknown key", () => {
+  test("rejects an unknown key", () => {
     expect(() => loadRelayers({ ENABLED_NETWORKS: "mainet" })).toThrow(/unknown keys: mainet/);
+  });
+
+  // The instrumentation hook turns that throw into a boot failure. Needs the production build
+  // CI makes; `next start` has nothing to run otherwise.
+  test("stops `next start` on an unknown key", () => {
+    test.skip(!process.env.CI, "needs the production build");
+    const result = spawnSync(
+      process.execPath,
+      [require.resolve("next/dist/bin/next"), "start", "-p", "3005"],
+      { env: { ...process.env, ENABLED_NETWORKS: "mainet" }, encoding: "utf8", timeout: 60_000 },
+    );
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/unknown keys: mainet/);
   });
 });

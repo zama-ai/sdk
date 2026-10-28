@@ -61,11 +61,23 @@ test.describe("network picker on an unsupported chain", () => {
 test.describe("network in the table without a relayer", () => {
   test("explains that the deployment does not serve it and how to run one", async ({
     page,
+    mockRpc,
     mockWallet,
+    cspViolations,
   }) => {
     // Polygon mainnet is in the table, but POLYGON_RELAYER_URL is unset for the test server.
-    // No RPC mock: this screen must not read the chain, since its RPC is outside the page CSP.
-    await mockWallet({ accounts: [], chainId: "0x89", requestAccounts: [TEST_ADDRESS] });
+    // The SDK probes the wallet's chain on connect (within the CSP), but the token list must
+    // not be read on this screen: no request to the chain may name its registry.
+    const polygonReads: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes("polygon-bor-rpc")) polygonReads.push(request.postData() ?? "");
+    });
+    await mockRpc({ network: "polygon" });
+    await mockWallet({
+      accounts: [],
+      chainId: NETWORKS.polygon.chainIdHex,
+      requestAccounts: [TEST_ADDRESS],
+    });
     await page.goto("/");
     await page.getByRole("button", { name: "Connect Wallet" }).click({ force: true });
 
@@ -73,6 +85,10 @@ test.describe("network in the table without a relayer", () => {
     await expect(page.getByRole("link", { name: "API key" })).toBeVisible();
     await expect(page.getByRole("link", { name: "relayer you host" })).toBeVisible();
     await expect(page.getByText(/unsupported network/)).toHaveCount(0);
+    expect(await cspViolations()).toEqual([]);
+    expect(polygonReads.join().toLowerCase()).not.toContain(
+      NETWORKS.polygon.registry.toLowerCase(),
+    );
 
     await page.getByRole("combobox", { name: "Network" }).selectOption("sepolia");
     await expect(page.getByText("Balances")).toBeVisible();

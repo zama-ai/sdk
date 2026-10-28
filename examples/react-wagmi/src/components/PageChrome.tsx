@@ -102,8 +102,11 @@ export function SiteFooter() {
 export function MainnetBanner({ label }: { label: string }) {
   return (
     <div className="alert alert-warning" role="status">
-      <strong>{label} mainnet.</strong> Transactions here move real funds. The source code and the
-      commit this deployment runs are linked in the footer.
+      <strong>{label} mainnet.</strong> Transactions here move real funds.{" "}
+      {COMMIT_SHA
+        ? "The source code and the commit this deployment runs are"
+        : "The source code is"}{" "}
+      linked in the footer.
     </div>
   );
 }

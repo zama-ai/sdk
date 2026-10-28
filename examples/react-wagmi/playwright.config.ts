@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 // CI runs the suite against a production build. The CSP differs between `next dev` and
 // `next start` (dev allows eval and inline styles), and the production policy is the one a
-// deployment serves. Locally the dev server is reused for fast iteration.
+// deployment serves.
 const production = Boolean(process.env.CI);
 
 export default defineConfig({
@@ -12,7 +12,9 @@ export default defineConfig({
   webServer: {
     command: production ? "npm run build && npm run start -- -p 3004" : "npm run dev",
     url: "http://localhost:3004",
-    reuseExistingServer: !production,
+    // Never reuse a dev server already on the port: the tests depend on the env below, which
+    // a developer's own server does not have.
+    reuseExistingServer: false,
     timeout: production ? 300_000 : 120_000,
     // Applied to the build too, so NEXT_PUBLIC_* values are inlined from here rather than
     // from a dev's .env.local.

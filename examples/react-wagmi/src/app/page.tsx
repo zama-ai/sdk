@@ -122,7 +122,8 @@ export default function Home() {
                 ? `This deployment does not serve ${unserved.label}. Pick another network to switch.`
                 : `Your wallet is on an unsupported network (chain ID ${chainId}). Pick one to switch.`}
           </p>
-          {unserved?.transport === "relayer" && (
+          {/* Testnets have a public relayer, so only a mainnet row needs one configured. */}
+          {unserved?.transport === "relayer" && !unserved.chain.testnet && (
             <p className="token-meta">
               Encrypting and decrypting on {unserved.label} needs a relayer. To use it, run the app
               yourself with a relayer configured for {unserved.label}: either Zama's relayer with an{" "}
@@ -160,8 +161,8 @@ export default function Home() {
   );
 }
 
-// Mounted only on the connected screen: the registry read goes to the wallet chain's RPC, and
-// an unserved chain's RPC origin is outside the page CSP.
+// Mounted only on the connected screen, so the token list is never read from a chain this
+// deployment does not serve.
 function TokenScreen({ chainId, address }: { chainId: number | undefined; address: Address }) {
   const [selectedTokenAddress, setSelectedTokenAddress] = useState<Address | null>(null);
 
