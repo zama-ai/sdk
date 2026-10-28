@@ -7,10 +7,11 @@ A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using wagm
 ## Architecture at a glance
 
 ```
-page.tsx                         — wallet connect (wagmi hooks), network picker, token selector
+page.tsx                         — wallet connect, network picker, token selector
 ├── lib/networks.ts              — the network table: one row per chain (viem chain, FHE preset, flags)
 ├── lib/relayers.ts              — server-side: upstream relayer URL + API key per network
-├── providers.tsx                — wagmi + ZamaProvider config, built from the network table
+├── lib/wallet.tsx               — wallet stack: Privy modal or wagmi injected connector, built from the table
+├── providers.tsx                — wallet providers + ZamaProvider config, built from the network table
 │   ├── /api/networks            — which networks the server can serve (drives the picker)
 │   └── /api/relayer/[network]/[...path] — Next.js proxy (keeps API keys server-side)
 ├── PageChrome.tsx               — connect screen, header, network picker, token selector
@@ -52,14 +53,14 @@ export const networks = {
   // ...
 };
 
-// src/providers.tsx
+// src/lib/wallet.tsx — the Privy-managed or plain wagmi config (see section 1a)
 const chains = NETWORK_KEYS.map((key) => networks[key].chain);
-const wagmiConfig = createConfig({
-  chains,
-  connectors: [injected()],
-  transports: Object.fromEntries(chains.map((c) => [c.id, http(c.rpcUrls.default.http[0])])),
-});
+const transports = Object.fromEntries(chains.map((c) => [c.id, http(c.rpcUrls.default.http[0])]));
+export const wagmiConfig = PRIVY_APP_ID
+  ? createPrivyWagmiConfig({ chains, transports, ssr: true }) // @privy-io/wagmi
+  : createConfig({ chains, connectors: [injected()], transports, ssr: true }); // wagmi
 
+// src/providers.tsx
 // The relayer requires an absolute URL, so resolve the same-origin proxy at runtime.
 // The SSR placeholder never issues requests.
 const origin = typeof window === "undefined" ? "http://localhost" : window.location.origin;
@@ -85,14 +86,44 @@ const zamaConfig = createZamaConfig({
 });
 ```
 
-`ZamaProvider` receives the resolved config:
+`ZamaProvider` receives the resolved config, nested inside the wallet providers:
 
-```ts
-<ZamaProvider config={zamaConfig}>
+```tsx
+<WalletProviders>
+  <ZamaProvider config={zamaConfig}>{children}</ZamaProvider>
+</WalletProviders>
 ```
 
 `storage` and `permitStorage` use the same IndexedDB-backed storage in this browser app so
 the transport key pair and signed permits survive page reloads during local development.
+
+### 1a. Wallet stack (`lib/wallet.tsx`)
+
+`WalletProviders` picks one of two wallet stacks at build time and exposes both through the
+same `useWalletConnection()` hook (`ready`, `connect`, `disconnect`, `isConnecting`,
+`isDisconnecting`, `connectError`):
+
+| `NEXT_PUBLIC_PRIVY_APP_ID` | Stack                                                                                |
+| -------------------------- | ------------------------------------------------------------------------------------ |
+| set                        | `PrivyProvider` > `QueryClientProvider` > `WagmiProvider` from `@privy-io/wagmi`     |
+| unset                      | `WagmiProvider` from `wagmi` with the `injected()` connector > `QueryClientProvider` |
+
+With Privy, `connect` calls `useConnectWallet().connectWallet()`, which opens Privy's wallet
+modal: detected browser wallets, MetaMask, Rabby, Rainbow, Coinbase, and WalletConnect. It is
+connect-only — no Privy login or SIWE signature — so a Safe paired over WalletConnect from the
+Safe web app works like any other wallet. `@privy-io/wagmi`'s `WagmiProvider` mirrors the
+active Privy wallet into wagmi, so `useConnection()` and the SDK's wagmi adapter see the same
+connection in both modes. Privy's `walletChainType: "ethereum-only"` keeps its Solana code
+paths unused; `next.config.ts` aliases the optional Solana peer packages to an empty module so
+Turbopack does not try to resolve them, and `src/proxy.ts` widens the Content Security Policy
+for Privy's iframe, API and WalletConnect's relay only when the app ID is set.
+
+Disconnecting under Privy calls `wallet.disconnect()` on every Privy wallet and wagmi's
+`disconnect()`, because wagmi alone cannot release an injected wallet Privy owns.
+
+The injected stack is what the Playwright suite runs against (`playwright.config.ts` clears
+`NEXT_PUBLIC_PRIVY_APP_ID`): Privy replaces wagmi's connector list, so a mocked
+`window.ethereum` cannot drive it.
 
 ---
 
@@ -129,14 +160,17 @@ only when the server has an upstream relayer URL for them. That is how mainnet s
 until a deployment configures `MAINNET_RELAYER_URL`.
 
 Because wagmi does not auto-connect without stored connector state, the connect flow is
-explicit:
+explicit. `page.tsx` never talks to a connector directly: it goes through the
+`useWalletConnection()` context from `lib/wallet.tsx`, which hides whether Privy or the
+injected connector sits behind it (section 1a):
 
 ```ts
-const { connect, isPending: isConnecting, error: connectError } = useConnect();
+const { ready, connect, disconnect, isConnecting, connectError } = useWalletConnection();
 const { switchChain, isPending: isSwitching } = useSwitchChain();
 
-// Screen 1: !isConnected
-connect({ connector: injected() });
+// Screen 1: !isConnected — the button stays disabled until `ready`
+// (Privy has loaded; immediately true on the injected stack)
+connect();
 
 // Screen 2 (and the picker on screen 3): the user picked a row of the table
 switchChain({ chainId: networks[key].chain.id });

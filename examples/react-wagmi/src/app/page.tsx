@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatEther } from "viem";
-import { useBalance, useConnect, useConnection, useDisconnect, useSwitchChain } from "wagmi";
-import { injected } from "wagmi/connectors/injected";
+import { useBalance, useConnection, useSwitchChain } from "wagmi";
 import { useListPairs } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
@@ -18,6 +17,7 @@ import {
 import { NoTokenPanel, SelectedTokenPanel } from "@/components/SelectedTokenPanel";
 import { useEnabledNetworks } from "@/lib/hooks";
 import { networkForChain, networks } from "@/lib/networks";
+import { useWalletConnection } from "@/lib/wallet";
 
 const TITLE = "Confidential Token Quickstart";
 
@@ -26,9 +26,11 @@ export default function Home() {
   // The Zama wagmi config adapter subscribes to wagmi connection state internally,
   // so account and chain changes are handled automatically — no manual eth_accounts
   // polling or walletKey/refSeededRef remount pattern needed.
+  // Connect/disconnect go through lib/wallet.tsx, which backs them with either the Privy
+  // wallet modal or wagmi's injected connector; wagmi state is the same in both modes.
   const { address, chainId, isConnected } = useConnection();
-  const { mutate: connect, isPending: isConnecting, error: connectError } = useConnect();
-  const { mutate: disconnect, isPending: isDisconnecting } = useDisconnect();
+  const { ready, connect, disconnect, isConnecting, isDisconnecting, connectError } =
+    useWalletConnection();
   const { mutate: switchChain, isPending: isSwitching, error: switchError } = useSwitchChain();
 
   // Networks the server can serve: cleartext rows always, relayer rows only when it has a
@@ -83,7 +85,9 @@ export default function Home() {
         actionLabel="Connect Wallet"
         pendingLabel="Connecting…"
         pending={isConnecting}
-        onAction={() => connect({ connector: injected() })}
+        // Privy's modal is unusable until the SDK has loaded; the injected stack is always ready.
+        disabled={!ready}
+        onAction={connect}
         error={
           isNoWallet
             ? "No Ethereum wallet found. Please install an EIP-1193 browser wallet (e.g. Rabby, MetaMask, or Phantom)."
@@ -152,7 +156,7 @@ export default function Home() {
         balance={
           nativeBalance !== undefined ? Number(formatEther(nativeBalance.value)).toFixed(4) : "—"
         }
-        onDisconnect={() => disconnect()}
+        onDisconnect={disconnect}
         disconnecting={isDisconnecting}
       />
       {picker}
