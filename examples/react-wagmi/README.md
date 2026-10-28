@@ -28,6 +28,8 @@ The table lives in [`src/lib/networks.ts`](src/lib/networks.ts). Each row pairs 
 
 Token pairs on every network come from the on-chain `WrappersRegistry` at runtime; no token addresses are hardcoded. On testnets, the underlying mock tokens expose `mint(address,uint256)`, which the **Mint** button calls.
 
+**Custom environment.** `NEXT_PUBLIC_ZAMA_ENV=custom` swaps the Sepolia row's protocol contracts and gateway for the `NEXT_PUBLIC_ZAMA_*` values in `.env.local` (see `.env.example`): another Zama environment on Sepolia, for example a pre-release one the SDK ships no preset for. Its relayer is set like any other upstream (`SEPOLIA_RELAYER_URL`), and its wrapper registry through `NEXT_PUBLIC_REGISTRY_ADDRESS`, since such an environment usually has none deployed. Same host chain, so it replaces the row rather than adding one.
+
 ## Stack
 
 - **Next.js 16** (App Router, Webpack — Turbopack not yet supported with WASM)
@@ -88,6 +90,9 @@ All server-side variables are read by the proxy only and never reach the browser
 | `RELAYER_PROXY_ALLOWED_ORIGINS`        | No       | Comma-separated origins allowed to call the proxy. Defaults to the app's own origin.                          |
 | `ENABLED_NETWORKS`                     | No       | Comma-separated table keys to offer, e.g. `mainnet,sepolia`. Unset offers every network the server can serve. |
 | `CSP_CONNECT_SRC`                      | No       | Comma-separated extra origins for the CSP `connect-src`: the key storage each relayer's `keyurl` names.       |
+| `NEXT_PUBLIC_ZAMA_ENV`                 | No       | `custom` swaps the Sepolia row's protocol contracts for the `NEXT_PUBLIC_ZAMA_*` values. Unset = SDK preset.  |
+| `NEXT_PUBLIC_ZAMA_*`                   | Custom   | Gateway chain ID and protocol contract addresses of the custom environment. See `.env.example`.               |
+| `NEXT_PUBLIC_REGISTRY_ADDRESS`         | Custom   | Wrapper registry of the custom environment, which usually has no registry deployment.                         |
 | `NEXT_PUBLIC_PRIVY_APP_ID`             | No       | Privy app ID from the Privy dashboard. Enables the Privy wallet modal; unset = injected connector only.       |
 | `NEXT_PUBLIC_COMMIT_SHA`               | No       | Commit shown in the footer. Vercel's `VERCEL_GIT_COMMIT_SHA` is used when this is unset.                      |
 | `NEXT_PUBLIC_SOURCE_REPO_URL`          | No       | Repository the footer links to. Defaults to `https://github.com/zama-ai/sdk`; a fork must set its own.        |

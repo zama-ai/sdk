@@ -26,6 +26,10 @@ export default defineConfig({
       // Force the injected-wallet stack: the suite drives a mocked window.ethereum, which
       // Privy's modal cannot use, and a dev's .env.local may enable Privy.
       NEXT_PUBLIC_PRIVY_APP_ID: "",
+      // Force the stock Sepolia preset: a dev's .env.local may select a custom environment,
+      // whose registry address would not match the mocked one.
+      NEXT_PUBLIC_ZAMA_ENV: "",
+      NEXT_PUBLIC_REGISTRY_ADDRESS: "",
       // Enable the mainnet row so the picker and the mainnet feature flags are testable, and pin
       // Polygon off. Nothing listens on port 9, so a forwarded proxy call fails fast with 503.
       MAINNET_RELAYER_URL: "http://127.0.0.1:9",
