@@ -63,11 +63,70 @@ const zenith = defineChain({
   },
 });
 
+// ─── Custom Zama environment on Sepolia ───────────────────────────────────────
+// NEXT_PUBLIC_ZAMA_ENV=custom swaps the Sepolia row's protocol contracts and gateway for the
+// ones in the NEXT_PUBLIC_ZAMA_* variables (see .env.example): another Zama environment that
+// runs on Sepolia, for example a pre-release one the SDK ships no preset for. Its relayer is
+// configured server-side like any other upstream (SEPOLIA_RELAYER_URL in src/lib/relayers.ts).
+// Same host chain, so this is a build-time switch on the existing row, not a second row:
+// the picker resolves rows by chain id.
+export const ZAMA_ENV = process.env.NEXT_PUBLIC_ZAMA_ENV === "custom" ? "custom" : "testnet";
+
+function customEnvValue(name: string, value: string | undefined): string {
+  if (!value) {
+    throw new Error(`NEXT_PUBLIC_ZAMA_ENV=custom requires ${name} to be set in .env.local`);
+  }
+  return value;
+}
+
+// Next.js inlines NEXT_PUBLIC_* variables only where they are referenced literally, so each
+// one is spelled out here rather than looked up by name.
+function customSepolia(): FheChain & { network: string } {
+  return {
+    id: fheSepolia.id,
+    gatewayChainId: Number(
+      customEnvValue(
+        "NEXT_PUBLIC_ZAMA_GATEWAY_CHAIN_ID",
+        process.env.NEXT_PUBLIC_ZAMA_GATEWAY_CHAIN_ID,
+      ),
+    ),
+    // Placeholder: providers.tsx points every relayer row at the same-origin proxy.
+    relayerUrl: fheSepolia.relayerUrl,
+    network: fheSepolia.network,
+    aclContractAddress: customEnvValue(
+      "NEXT_PUBLIC_ZAMA_ACL_ADDRESS",
+      process.env.NEXT_PUBLIC_ZAMA_ACL_ADDRESS,
+    ) as Address,
+    kmsContractAddress: customEnvValue(
+      "NEXT_PUBLIC_ZAMA_KMS_VERIFIER_ADDRESS",
+      process.env.NEXT_PUBLIC_ZAMA_KMS_VERIFIER_ADDRESS,
+    ) as Address,
+    inputVerifierContractAddress: customEnvValue(
+      "NEXT_PUBLIC_ZAMA_INPUT_VERIFIER_ADDRESS",
+      process.env.NEXT_PUBLIC_ZAMA_INPUT_VERIFIER_ADDRESS,
+    ) as Address,
+    verifyingContractAddressDecryption: customEnvValue(
+      "NEXT_PUBLIC_ZAMA_DECRYPTION_ADDRESS",
+      process.env.NEXT_PUBLIC_ZAMA_DECRYPTION_ADDRESS,
+    ) as Address,
+    verifyingContractAddressInputVerification: customEnvValue(
+      "NEXT_PUBLIC_ZAMA_INPUT_VERIFICATION_ADDRESS",
+      process.env.NEXT_PUBLIC_ZAMA_INPUT_VERIFICATION_ADDRESS,
+    ) as Address,
+    // Optional: needed for unified (V2) decryption permits on protocol v0.14+.
+    protocolConfigContractAddress:
+      (process.env.NEXT_PUBLIC_ZAMA_PROTOCOL_CONFIG_ADDRESS as Address | undefined) || undefined,
+    // A custom environment usually has no wrapper registry deployment; point this at wrapper
+    // pairs and a ConfidentialTokenWrappersRegistry deployed there by hand.
+    registryAddress: (process.env.NEXT_PUBLIC_REGISTRY_ADDRESS as Address | undefined) || undefined,
+  };
+}
+
 export const networks = {
   sepolia: defineNetwork({
-    label: "Sepolia",
+    label: ZAMA_ENV === "custom" ? "Sepolia · Custom environment" : "Sepolia",
     chain: sepolia,
-    fhe: fheSepolia,
+    fhe: ZAMA_ENV === "custom" ? customSepolia() : fheSepolia,
     rpcUrl: process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL,
     transport: "relayer",
     explorerUrl: "https://eth-sepolia.blockscout.com",
