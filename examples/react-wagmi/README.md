@@ -50,7 +50,7 @@ npm run dev
 
 Open [http://localhost:3004](http://localhost:3004) and connect MetaMask (or any EIP-1193 wallet).
 
-If the wallet is on a chain the app does not support, the app shows a **Choose a Network** screen. Picking a network asks the wallet to switch, and to add the chain first if the wallet does not know it (Hoodi and Zenith, typically). The same picker sits above the token selector once connected.
+If the wallet is on a chain the app does not support, the app shows a **Choose a Network** screen. A chain that is in the table but that the deployment has no relayer for (mainnet, until you configure one) gets the same screen with a note on how to run the app with a relayer. Picking a network asks the wallet to switch, and to add the chain first if the wallet does not know it (Hoodi and Zenith, typically). The same picker sits above the token selector once connected.
 
 ## Mainnet access
 
@@ -59,26 +59,32 @@ Ethereum and Polygon mainnet appear in the picker only when you give the server 
 1. **A Zama relayer API key.** Set `MAINNET_RELAYER_URL=https://relayer.mainnet.zama.org` and `MAINNET_RELAYER_API_KEY` to a key from the [API key request form](https://docs.zama.org/protocol/sdk/guides/relayer-api-keys). Keys are issued after manual review.
 2. **A self-hosted relayer.** Set `MAINNET_RELAYER_URL` to your relayer, no key needed. See the [relayer self-hosting guide](https://github.com/zama-ai/fhevm/blob/main/relayer/docs/SELF_HOSTING.md); a relayer needs ETH and $ZAMA on the Gateway chain.
 
-Without one of these the wallet can still connect to mainnet, but the app hides the network, because every encrypt and decrypt request would fail.
+Without one of these the wallet can still connect to mainnet, but the app hides the network, because every encrypt and decrypt request would fail. A wallet that switches to mainnet anyway sees the **Choose a Network** screen with these two options spelled out.
+
+The browser downloads the FHE public key and CRS straight from the storage the relayer's `keyurl` names. The SDK does that from its encrypt worker, which is outside the page's Content Security Policy. When encryption falls back to the page (the worker could not start), the policy applies, and the storage origin has to be in `CSP_CONNECT_SRC` for the download to go through. The relayer owns that address, so the app does not hardcode it; read it from the relayer's answer, for example `curl https://relayer.testnet.zama.org/v2/keyurl`, and set the origin of the URLs it returns.
 
 ## Environment variables
 
 All server-side variables are read by the proxy only and never reach the browser.
 
-| Variable                               | Required | Description                                                                                                  |
-| -------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------ |
-| `MAINNET_RELAYER_URL`                  | No       | Enables Ethereum mainnet. Bare relayer host, no `/v2` suffix. Unset hides the network; there is no fallback. |
-| `MAINNET_RELAYER_API_KEY`              | No       | Added as `x-api-key` by the proxy. Needed for the Zama-hosted mainnet relayer, not for a self-hosted one.    |
-| `POLYGON_RELAYER_URL`                  | No       | Same for Polygon mainnet.                                                                                    |
-| `POLYGON_RELAYER_API_KEY`              | No       | Same for Polygon mainnet.                                                                                    |
-| `SEPOLIA_RELAYER_URL`                  | No       | Defaults to the public testnet relayer `https://relayer.testnet.zama.org`, which needs no key.               |
-| `SEPOLIA_RELAYER_API_KEY`              | No       | Only for a private Sepolia relayer.                                                                          |
-| `POLYGON_AMOY_RELAYER_URL`             | No       | Defaults to the public testnet relayer.                                                                      |
-| `POLYGON_AMOY_RELAYER_API_KEY`         | No       | Only for a private Polygon Amoy relayer.                                                                     |
-| `RELAYER_PROXY_ALLOWED_ORIGINS`        | No       | Comma-separated origins allowed to call the proxy. Defaults to the app's own origin.                         |
-| `NEXT_PUBLIC_<NETWORK>_RPC_URL`        | No       | RPC override per network: `SEPOLIA`, `POLYGON_AMOY`, `BNB_TESTNET`, `HOODI`, `ZENITH`, `MAINNET`, `POLYGON`. |
-| `NEXT_PUBLIC_VAULT_ADDRESS`            | No       | `ConfidentialVault` demo address on Sepolia (`confidentialTransferAndCall`).                                 |
-| `NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN` | No       | Confidential token the vault is bound to (cUSDC). Vault cards render only when it is selected on Sepolia.    |
+| Variable                               | Required | Description                                                                                                   |
+| -------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------- |
+| `MAINNET_RELAYER_URL`                  | No       | Enables Ethereum mainnet. Bare relayer host, no `/v2` suffix. Unset hides the network; there is no fallback.  |
+| `MAINNET_RELAYER_API_KEY`              | No       | Added as `x-api-key` by the proxy. Needed for the Zama-hosted mainnet relayer, not for a self-hosted one.     |
+| `POLYGON_RELAYER_URL`                  | No       | Same for Polygon mainnet.                                                                                     |
+| `POLYGON_RELAYER_API_KEY`              | No       | Same for Polygon mainnet.                                                                                     |
+| `SEPOLIA_RELAYER_URL`                  | No       | Defaults to the public testnet relayer `https://relayer.testnet.zama.org`, which needs no key.                |
+| `SEPOLIA_RELAYER_API_KEY`              | No       | Only for a private Sepolia relayer.                                                                           |
+| `POLYGON_AMOY_RELAYER_URL`             | No       | Defaults to the public testnet relayer.                                                                       |
+| `POLYGON_AMOY_RELAYER_API_KEY`         | No       | Only for a private Polygon Amoy relayer.                                                                      |
+| `RELAYER_PROXY_ALLOWED_ORIGINS`        | No       | Comma-separated origins allowed to call the proxy. Defaults to the app's own origin.                          |
+| `ENABLED_NETWORKS`                     | No       | Comma-separated table keys to offer, e.g. `mainnet,sepolia`. Unset offers every network the server can serve. |
+| `CSP_CONNECT_SRC`                      | No       | Comma-separated extra origins for the CSP `connect-src`: the key storage each relayer's `keyurl` names.       |
+| `NEXT_PUBLIC_COMMIT_SHA`               | No       | Commit shown in the footer. Vercel's `VERCEL_GIT_COMMIT_SHA` is used when this is unset.                      |
+| `NEXT_PUBLIC_SOURCE_REPO_URL`          | No       | Repository the footer links to. Defaults to `https://github.com/zama-ai/sdk`; a fork must set its own.        |
+| `NEXT_PUBLIC_<NETWORK>_RPC_URL`        | No       | RPC override per network: `SEPOLIA`, `POLYGON_AMOY`, `BNB_TESTNET`, `HOODI`, `ZENITH`, `MAINNET`, `POLYGON`.  |
+| `NEXT_PUBLIC_VAULT_ADDRESS`            | No       | `ConfidentialVault` demo address on Sepolia (`confidentialTransferAndCall`).                                  |
+| `NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN` | No       | Confidential token the vault is bound to (cUSDC). Vault cards render only when it is selected on Sepolia.     |
 
 Earlier versions of this app, and the per-chain apps it replaces, read `RELAYER_URL`, `RELAYER_API_KEY`, `NEXT_PUBLIC_AMOY_RPC_URL` and `NEXT_PUBLIC_BSC_TESTNET_RPC_URL`. Those names are no longer read: a stale `.env.local` silently falls back to the public testnet relayer, so rename them to the per-network names above.
 
@@ -94,6 +100,20 @@ Rate limiting belongs at the hosting layer; a public deployment that adds its ow
 
 `GET /api/networks` returns the networks the server can serve, which is what the picker lists.
 
+## Hosting
+
+The app is built to be hosted as-is, with the user's browser wallet doing all signing and the proxy the only server-side code. What a deployment gets:
+
+- **Security headers.** `src/proxy.ts` sets a per-request Content Security Policy on every page: scripts need the request's nonce, `connect-src` is limited to this origin, the RPCs of the networks in the table and the relayers' key storage, `worker-src 'self' blob:` and `'wasm-unsafe-eval'` are what the FHE runtime needs, and `frame-ancestors 'none'` blocks framing. The policy governs the page and the workers it spawns; the SDK's encrypt worker is a static file with no policy of its own. `next.config.ts` adds `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` and HSTS. There are no third-party scripts, fonts or analytics. HSTS covers the app's own host only, so a copy on an apex domain does not pin its subdomains, and the policy does not upgrade `http://` requests, so an RPC override on a private `http://` node keeps working.
+- **Mainnet banner.** A wallet on Ethereum or Polygon mainnet sees a banner saying transactions move real funds.
+- **Deployed commit in the footer.** The footer links the source repository (`NEXT_PUBLIC_SOURCE_REPO_URL`) and the commit the build was made from (`NEXT_PUBLIC_COMMIT_SHA`, filled from `VERCEL_GIT_COMMIT_SHA` on Vercel), so anyone can check what they are running.
+- **Pinned dependencies.** `package.json` pins exact versions and the lockfile is committed; `npm ci` installs exactly what was reviewed.
+- **Network subset.** `ENABLED_NETWORKS=mainnet,sepolia` offers only those rows; the proxy refuses the rest. An unknown key stops the server at boot (`src/instrumentation.ts`), so a typo cannot silently hide a network.
+
+To host on Vercel: import the repository, set the root directory to `examples/react-wagmi`, and set `MAINNET_RELAYER_URL`, `MAINNET_RELAYER_API_KEY`, `ENABLED_NETWORKS` and `CSP_CONNECT_SRC` (the key storage of every relayer you serve). Use a relayer key with its own quota, and add a per-IP rate limit on `/api/relayer/*` in the hosting layer (a Vercel Firewall rate-limit rule, say): the origin check stops other sites' pages from using the proxy, not scripted abuse. Deploy from tags rather than from every push.
+
+A `.env.local` on your own machine is enough to run the same app yourself (see [Setup](#setup) and [Mainnet access](#mainnet-access)).
+
 ## Adding a network
 
 1. Add a row to `networks` in `src/lib/networks.ts`: the viem chain, the `@zama-fhe/sdk/chains` preset, the transport, the explorer and the flags.
@@ -103,10 +123,12 @@ Rate limiting belongs at the hosting layer; a public deployment that adds its ow
 ## Running e2e tests
 
 ```bash
-npm run test:e2e        # runs Playwright (starts the dev server automatically)
+npm run test:e2e        # runs Playwright (starts its own dev server; port 3004 must be free)
 ```
 
 Tests mock `window.ethereum` and the RPC of the network under test, and abort every relayer request — no wallet or real network required. The config enables the Ethereum mainnet row with an unreachable relayer URL so the picker and the mainnet feature flags are covered.
+
+With `CI` set, Playwright builds the app and runs the suite against `next start` instead of the dev server, because the production CSP is stricter than the development one (no `'unsafe-eval'`, no inline styles). `security.spec.ts` checks the headers and that the app loads without a CSP violation; encryption is not exercised, since every relayer call is aborted. `allowlist.spec.ts` covers `ENABLED_NETWORKS` by loading the relayer table in the test process, since the server under test runs with it unset, and with `CI` set it also checks that `next start` refuses to boot on an unknown key.
 
 ## Architecture at a glance
 

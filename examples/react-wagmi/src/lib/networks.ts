@@ -57,6 +57,7 @@ const zenith = defineChain({
   name: "T-Rex Zenith",
   nativeCurrency: { name: "Canton Coin", symbol: "CC", decimals: 18 },
   rpcUrls: { default: { http: [fheZenith.network] } },
+  testnet: true,
   blockExplorers: {
     default: { name: "Zenith Explorer", url: "https://explorer.testnet.t-rex.zenith.network" },
   },

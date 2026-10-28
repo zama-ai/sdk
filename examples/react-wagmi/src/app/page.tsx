@@ -3,12 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatEther } from "viem";
-import { useBalance, useConnect, useConnection, useSwitchChain } from "wagmi";
+import { useBalance, useConnect, useConnection, useDisconnect, useSwitchChain } from "wagmi";
 import { injected } from "wagmi/connectors/injected";
 import { useListPairs } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
-import { ActionScreen, AppHeader, NetworkPicker, TokenSelector } from "@/components/PageChrome";
+import {
+  ActionScreen,
+  AppHeader,
+  MainnetBanner,
+  NetworkPicker,
+  TokenSelector,
+} from "@/components/PageChrome";
 import { NoTokenPanel, SelectedTokenPanel } from "@/components/SelectedTokenPanel";
 import { useEnabledNetworks } from "@/lib/hooks";
 import { networkForChain, networks } from "@/lib/networks";
@@ -22,6 +28,7 @@ export default function Home() {
   // polling or walletKey/refSeededRef remount pattern needed.
   const { address, chainId, isConnected } = useConnection();
   const { mutate: connect, isPending: isConnecting, error: connectError } = useConnect();
+  const { mutate: disconnect, isPending: isDisconnecting } = useDisconnect();
   const { mutate: switchChain, isPending: isSwitching, error: switchError } = useSwitchChain();
 
   // Networks the server can serve: cleartext rows always, relayer rows only when it has a
@@ -37,8 +44,6 @@ export default function Home() {
   const activeNetwork = activeKey && enabledNetworks.includes(activeKey) ? activeKey : undefined;
   const network = activeNetwork && networks[activeNetwork];
 
-  const [selectedTokenAddress, setSelectedTokenAddress] = useState<Address | null>(null);
-
   // The installed react-sdk resolves the registry from a chain id it caches for 30 s, so after a
   // switch the token list would keep showing the previous network's tokens. Drop that entry on
   // every chain change. Remove once the example installs a react-sdk that refetches it itself.
@@ -46,33 +51,6 @@ export default function Home() {
   useEffect(() => {
     void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.wrappersRegistry.chainId() });
   }, [chainId, queryClient]);
-
-  // Fetch all valid token pairs from the on-chain WrappersRegistry. The registry address
-  // comes from the connected chain's FHE config — no configuration required.
-  // metadata: true fetches name/symbol/decimals on-chain for both tokens in each pair.
-  // isPending stays true until the first successful response — covers both the initial
-  // disabled state (registry address not yet resolved internally) and the active-fetching
-  // state. isLoading alone is insufficient: in TanStack Query v5, isLoading = isPending &&
-  // isFetching, so it is false while the query is disabled.
-  const {
-    data: pairsData,
-    isPending: isRegistryPending,
-    isError: isRegistryError,
-  } = useListPairs({ metadata: true });
-
-  const validPairs = useMemo(
-    () =>
-      (pairsData?.items ?? []).filter(
-        (pair): pair is TokenWrapperPairWithMetadata => pair.isValid && "underlying" in pair,
-      ),
-    [pairsData],
-  );
-
-  // The selected pair, falling back to the first one so a fresh load or a network switch
-  // (which replaces the pair list) never leaves the selector empty.
-  const token =
-    validPairs.find((pair) => pair.confidentialTokenAddress === selectedTokenAddress) ??
-    validPairs[0];
 
   // Native balance via the wagmi transport — auto-updates on account or chain switch. The
   // token panel refetches this same key after actions; useBalance shares wagmi's query
@@ -130,6 +108,9 @@ export default function Home() {
         />
       );
     }
+    // A chain in the table that this deployment does not serve: typically mainnet with no
+    // relayer configured. Say so, instead of calling the chain unsupported.
+    const unserved = activeKey && !isNetworksPending ? networks[activeKey] : undefined;
     return (
       <main className="app-container connect-screen">
         <section aria-labelledby="choose-network-title">
@@ -137,8 +118,22 @@ export default function Home() {
           <p className="subtitle">
             {isNetworksPending
               ? "Loading networks…"
-              : `Your wallet is on an unsupported network (chain ID ${chainId}). Pick one to switch.`}
+              : unserved
+                ? `This deployment does not serve ${unserved.label}. Pick another network to switch.`
+                : `Your wallet is on an unsupported network (chain ID ${chainId}). Pick one to switch.`}
           </p>
+          {/* Testnets have a public relayer, so only a mainnet row needs one configured. */}
+          {unserved?.transport === "relayer" && !unserved.chain.testnet && (
+            <p className="token-meta">
+              Encrypting and decrypting on {unserved.label} needs a relayer. To use it, run the app
+              yourself with a relayer configured for {unserved.label}: either Zama's relayer with an{" "}
+              <a href="https://docs.zama.org/protocol/sdk/guides/relayer-api-keys">API key</a> or a{" "}
+              <a href="https://github.com/zama-ai/fhevm/blob/main/relayer/docs/SELF_HOSTING.md">
+                relayer you host
+              </a>
+              .
+            </p>
+          )}
           {picker}
         </section>
       </main>
@@ -148,6 +143,8 @@ export default function Home() {
   // ── Screen 3: Connected on a supported network — main UI ──────────────────
   return (
     <main className="app-container">
+      {/* viem marks every testnet; the rows without the flag are the mainnets. */}
+      {!network.chain.testnet && <MainnetBanner label={network.label} />}
       <AppHeader
         title={TITLE}
         address={address}
@@ -155,8 +152,49 @@ export default function Home() {
         balance={
           nativeBalance !== undefined ? Number(formatEther(nativeBalance.value)).toFixed(4) : "—"
         }
+        onDisconnect={() => disconnect()}
+        disconnecting={isDisconnecting}
       />
       {picker}
+      <TokenScreen chainId={chainId} address={address} />
+    </main>
+  );
+}
+
+// Mounted only on the connected screen, so the token list is never read from a chain this
+// deployment does not serve.
+function TokenScreen({ chainId, address }: { chainId: number | undefined; address: Address }) {
+  const [selectedTokenAddress, setSelectedTokenAddress] = useState<Address | null>(null);
+
+  // Fetch all valid token pairs from the on-chain WrappersRegistry. The registry address
+  // comes from the connected chain's FHE config — no configuration required.
+  // metadata: true fetches name/symbol/decimals on-chain for both tokens in each pair.
+  // isPending stays true until the first successful response — covers both the initial
+  // disabled state (registry address not yet resolved internally) and the active-fetching
+  // state. isLoading alone is insufficient: in TanStack Query v5, isLoading = isPending &&
+  // isFetching, so it is false while the query is disabled.
+  const {
+    data: pairsData,
+    isPending: isRegistryPending,
+    isError: isRegistryError,
+  } = useListPairs({ metadata: true });
+
+  const validPairs = useMemo(
+    () =>
+      (pairsData?.items ?? []).filter(
+        (pair): pair is TokenWrapperPairWithMetadata => pair.isValid && "underlying" in pair,
+      ),
+    [pairsData],
+  );
+
+  // The selected pair, falling back to the first one so a fresh load or a network switch
+  // (which replaces the pair list) never leaves the selector empty.
+  const token =
+    validPairs.find((pair) => pair.confidentialTokenAddress === selectedTokenAddress) ??
+    validPairs[0];
+
+  return (
+    <>
       <TokenSelector
         value={token?.confidentialTokenAddress ?? ""}
         options={validPairs.map((pair) => ({
@@ -176,6 +214,6 @@ export default function Home() {
         />
       )}
       {!token && !isRegistryPending && <NoTokenPanel />}
-    </main>
+    </>
   );
 }

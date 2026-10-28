@@ -118,11 +118,11 @@ The wagmi config adapter creates a `WagmiSigner` internally. It subscribes to
 Three screens, driven by `isConnected` and whether the wallet's chain is an enabled row of
 the network table:
 
-| Screen                  | Condition                | What's shown                                              |
-| ----------------------- | ------------------------ | --------------------------------------------------------- |
-| 1 — No wallet           | `!isConnected`           | "Connect Wallet" button                                   |
-| 2 — Unsupported network | `!network`               | "Choose a Network" picker (+ error if the switch failed)  |
-| 3 — Main UI             | `isConnected && network` | Picker, registry loading, token selector, operation cards |
+| Screen                  | Condition                | What's shown                                                                                                                                 |
+| ----------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 — No wallet           | `!isConnected`           | "Connect Wallet" button                                                                                                                      |
+| 2 — Unsupported network | `!network`               | "Choose a Network" picker (+ error if the switch failed); a table row the server does not serve gets a relayer hint instead of "unsupported" |
+| 3 — Main UI             | `isConnected && network` | Picker, registry loading, token selector, operation cards                                                                                    |
 
 Which rows are _enabled_ comes from `GET /api/networks`: cleartext rows always, `relayer` rows
 only when the server has an upstream relayer URL for them. That is how mainnet stays hidden
@@ -311,6 +311,9 @@ The proxy fails closed and is deliberately narrow:
 `NEXT_PUBLIC_<NETWORK>_RPC_URL` overrides the default public RPC of a network — useful to
 avoid rate limiting with a private node.
 
+`ENABLED_NETWORKS` (comma-separated table keys) narrows what the server offers; a network
+outside the list is neither listed by `/api/networks` nor proxied.
+
 ---
 
 ## 9. Pending unshield recovery
@@ -388,5 +391,39 @@ npm install
 npm run dev                          # dev server on :3004
 npm run build                        # production build (must pass cleanly)
 npm run typecheck                    # tsc --noEmit
-npm run test:e2e                     # Playwright e2e tests (starts dev server automatically)
+npm run test:e2e                     # Playwright e2e tests (starts its own dev server; port 3004 must be free)
+CI=1 npm run test:e2e                # same suite against a production build, as CI runs it
 ```
+
+---
+
+## 12. Security headers (`src/proxy.ts`, `next.config.ts`)
+
+`src/proxy.ts` runs before every page render and sets a Content Security Policy with a
+fresh nonce. Next.js reads the nonce from the request's `Content-Security-Policy` header
+and stamps it on every script it emits, so the policy can forbid inline scripts outright.
+That only works for pages rendered per request, which is why `layout.tsx` exports
+`dynamic = "force-dynamic"`.
+
+The directives that are specific to this app:
+
+- `connect-src`: this origin (the proxy, `/api/networks`, WASM and worker files), the
+  RPC origin of every network in the table (the SDK probes the wallet's chain on connect,
+  served or not), the storage the relayer's `keyurl` points the
+  browser at for the FHE public key and CRS (`CSP_CONNECT_SRC`, since the relayer owns that
+  address and the app does not hardcode it), and `data:` URLs (the FHE runtime compiles its
+  WASM from one).
+- `script-src 'wasm-unsafe-eval'` and `worker-src 'self' blob:`: what the FHE runtime
+  needs to compile WASM and spawn its thread pool. See the SDK's security model docs.
+- `'unsafe-eval'` and inline styles are allowed under `next dev` only.
+
+The policy covers the page and the workers it spawns. The SDK's encrypt worker is loaded
+from `/_next/static`, which the proxy matcher skips, so it runs with no policy of its own
+and its key download is not subject to `connect-src`. The key-storage entries matter when
+encryption falls back to the page.
+
+`next.config.ts` adds the static headers (`nosniff`, `X-Frame-Options`, `Referrer-Policy`,
+`Permissions-Policy`, HSTS) and fills `NEXT_PUBLIC_COMMIT_SHA` from Vercel's
+`VERCEL_GIT_COMMIT_SHA`, which the footer (`SiteFooter` in `PageChrome.tsx`) links next to
+the source repository. The mainnet banner (`MainnetBanner`) renders when the wallet's
+chain has no `testnet` flag in viem.
