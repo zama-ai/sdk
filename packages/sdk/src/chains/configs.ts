@@ -50,6 +50,9 @@ export const sepolia = {
 
 /**
  * Polygon Amoy testnet network configuration (chainId 80002).
+ *
+ * Ships without a wrappers registry: set `registryAddress` to your own
+ * deployment to use token operations.
  */
 export const polygonAmoy = {
   id: 80002,
@@ -61,7 +64,7 @@ export const polygonAmoy = {
   inputVerifierContractAddress: "0x6e5A7D8b0c645467Cba7e62D6624917085118631",
   verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
   verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
-  registryAddress: "0xF486c3D4F4562760A43883e72E8D6f6Cf2EFdA94",
+  registryAddress: undefined,
 } as const satisfies FheChain;
 
 /**

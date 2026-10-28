@@ -29,7 +29,6 @@ jobs:
         example:
           - example-bnb
           - example-hoodi
-          - example-polygon-amoy
           - example-zenith
           - node-ethers
           - node-viem
@@ -76,7 +75,6 @@ jobs:
         example:
           - example-bnb
           - example-hoodi
-          - example-polygon-amoy
           - react-ethers
           - react-viem
           - react-wagmi
