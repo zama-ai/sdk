@@ -1,9 +1,11 @@
 import type { NextRequest } from "next/server";
+import { RELAYER_URL_DEFAULT } from "@/lib/config";
 
-// Default to the public Sepolia testnet relayer — no API key required.
+// Default to the relayer of the selected Zama environment (testnet, or the custom one from
+// NEXT_PUBLIC_ZAMA_RELAYER_URL, per NEXT_PUBLIC_ZAMA_ENV). The testnet one needs no API key.
 // For production or private deployments, set RELAYER_URL and RELAYER_API_KEY in .env.local.
 // Bare relayer host, no /v2 suffix.
-const RELAYER_URL = process.env.RELAYER_URL ?? "https://relayer.testnet.zama.org";
+const RELAYER_URL = process.env.RELAYER_URL || RELAYER_URL_DEFAULT;
 const RELAYER_API_KEY = process.env.RELAYER_API_KEY;
 
 const HOP_BY_HOP = new Set([

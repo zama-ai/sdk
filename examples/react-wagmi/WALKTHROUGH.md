@@ -7,8 +7,10 @@ A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using wagm
 ## Architecture at a glance
 
 ```
-page.tsx                         — wallet connect (wagmi hooks), token selector, layout
-├── providers.tsx                — wagmi + ZamaProvider config wiring
+page.tsx                         — wallet connect, token selector, layout
+├── lib/config.ts                — Sepolia chain + Zama environment (testnet / custom) selection
+├── lib/wallet.tsx               — wallet stack: Privy modal or wagmi injected connector
+├── providers.tsx                — wallet providers + ZamaProvider config wiring
 │   └── /api/relayer/[...path]   — Next.js proxy (keeps RELAYER_API_KEY server-side)
 ├── BalancesCard.tsx             — ETH / ERC-20 / confidential balance display
 ├── ShieldCard.tsx               — ERC-20 → confidential via `useShield`
@@ -24,14 +26,14 @@ page.tsx                         — wallet connect (wagmi hooks), token selecto
 
 ## 1. Wiring the SDK (`providers.tsx`)
 
-SDK 3.x uses a single Zama config object. The wagmi adapter creates the SDK signer
+The SDK uses a single Zama config object. The wagmi adapter creates the SDK signer
 and provider from the app's `wagmiConfig`; `web()` creates the browser FHE relayer
 transport from the configured FHE chain.
 
 ```ts
+// lib/wallet.tsx — the Privy-managed or plain wagmi config (see section 1a)
 const wagmiConfig = createConfig({
   chains: [sepolia],
-  connectors: [injected()],
   transports: { [sepolia.id]: http(SEPOLIA_RPC_URL) },
 });
 
@@ -42,29 +44,80 @@ const relayerProxyUrl =
     ? "http://localhost/api/relayer"
     : `${window.location.origin}/api/relayer`;
 
-const mySepolia = {
-  ...fheSepolia,
+// fheChain is the testnet or custom Sepolia config (see section 1b).
+const zamaSepolia = {
+  ...fheChain,
   relayerUrl: relayerProxyUrl,
   network: SEPOLIA_RPC_URL,
 } as const satisfies FheChain;
 
 const zamaConfig = createZamaConfig({
-  chains: [mySepolia],
+  chains: [zamaSepolia],
   wagmiConfig,
-  relayers: { [mySepolia.id]: web() },
+  relayers: { [zamaSepolia.id]: web() },
   storage: indexedDBStorage,
   permitStorage: indexedDBStorage,
 });
 ```
 
-`ZamaProvider` receives the resolved config:
+`ZamaProvider` receives the resolved config, nested inside the wallet providers:
 
-```ts
-<ZamaProvider config={zamaConfig}>
+```tsx
+<WalletProviders>
+  <ZamaProvider config={zamaConfig}>{children}</ZamaProvider>
+</WalletProviders>
 ```
 
 `storage` and `permitStorage` use the same IndexedDB-backed storage in this browser app so
 the transport key pair and signed permits survive page reloads during local development.
+
+### 1a. Wallet stack (`lib/wallet.tsx`)
+
+`WalletProviders` picks one of two wallet stacks at build time and exposes both through the
+same `useWalletConnection()` hook (`ready`, `connect`, `disconnect`, `isConnecting`,
+`connectError`):
+
+| `NEXT_PUBLIC_PRIVY_APP_ID` | Stack                                                                                |
+| -------------------------- | ------------------------------------------------------------------------------------ |
+| set                        | `PrivyProvider` > `QueryClientProvider` > `WagmiProvider` from `@privy-io/wagmi`     |
+| unset                      | `WagmiProvider` from `wagmi` with the `injected()` connector > `QueryClientProvider` |
+
+With Privy, `connect` calls `useConnectWallet().connectWallet()`, which opens Privy's wallet
+modal: detected browser wallets, MetaMask, Rabby, Rainbow, Coinbase, and WalletConnect. It is
+connect-only — no Privy login or SIWE signature — so a Gnosis Safe paired over WalletConnect
+from the Safe web app works like any other wallet. `@privy-io/wagmi`'s `WagmiProvider` mirrors
+the active Privy wallet into wagmi, so `useConnection()` and the SDK's wagmi adapter see the
+same connection in both modes. Privy's `walletChainType: "ethereum-only"` keeps its Solana
+code paths unused; `next.config.ts` aliases the optional Solana peer packages to an empty
+module so Turbopack does not try to resolve them.
+
+Disconnecting under Privy calls `wallet.disconnect()` on every Privy wallet and wagmi's
+`disconnect()`, because wagmi alone cannot release an injected wallet Privy owns.
+
+The injected stack is what the Playwright suite runs against (`playwright.config.ts` clears
+`NEXT_PUBLIC_PRIVY_APP_ID`): Privy replaces wagmi's connector list, so a mocked
+`window.ethereum` cannot drive it.
+
+### 1b. Zama environment: testnet or custom (`lib/config.ts`)
+
+A Zama environment on Sepolia is defined by its protocol contracts (ACL, KMS verifier, input
+verifier, EIP-712 verifying contracts, `ProtocolConfig`), its gateway chain and its relayer.
+The public testnet is the `sepolia` preset shipped with the SDK. Any other environment on
+Sepolia, for example a pre-release one, is a `custom` environment described entirely by the
+`NEXT_PUBLIC_ZAMA_*` variables in `.env.local`. Because the host chain is the same, the
+environment is a build-time switch (`NEXT_PUBLIC_ZAMA_ENV`), not a second wagmi chain:
+
+```ts
+export const fheChain: FheChain = {
+  ...(customSepolia ?? fheSepolia), // customSepolia is built from env, fheSepolia = SDK preset
+  ...(REGISTRY_ADDRESS_OVERRIDE ? { registryAddress: REGISTRY_ADDRESS_OVERRIDE } : {}),
+};
+```
+
+A custom environment usually has no wrapper registry, so `NEXT_PUBLIC_REGISTRY_ADDRESS` must
+point at a registry of wrapper pairs you deployed yourself; until then the token selector
+explains that. The relayer proxy (`/api/relayer`) defaults its upstream to the
+environment's relayer via `RELAYER_URL_DEFAULT`.
 
 ---
 
@@ -96,14 +149,17 @@ Three screens, driven by `isConnected` and `isSepolia`:
 | 3 — Main UI       | `isConnected && isSepolia` | Registry loading, token selector, operation cards |
 
 Because wagmi does not auto-connect without stored connector state, the connect flow is
-explicit:
+explicit. `page.tsx` never talks to a connector directly: it goes through the
+`useWalletConnection()` context from `lib/wallet.tsx`, which hides whether Privy or the
+injected connector sits behind it (section 1a):
 
 ```ts
-const { connect, isPending: isConnecting, error: connectError } = useConnect();
+const { ready, connect, disconnect, isConnecting, connectError } = useWalletConnection();
 const { switchChain, isPending: isSwitching } = useSwitchChain();
 
-// Screen 1: !isConnected
-connect({ connector: injected() });
+// Screen 1: !isConnected — the button stays disabled until `ready`
+// (Privy has loaded; immediately true on the injected stack)
+connect();
 
 // Screen 2: chainId !== SEPOLIA_CHAIN_ID
 switchChain({ chainId: sepolia.id });

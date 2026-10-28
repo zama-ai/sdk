@@ -2,20 +2,22 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { formatEther } from "viem";
-import { useBalance, useConnect, useConnection, useSwitchChain } from "wagmi";
-import { injected } from "wagmi/connectors/injected";
+import { useBalance, useConnection, useSwitchChain } from "wagmi";
 import { useListPairs } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { TokenWorkspace, NoTokenWorkspace } from "@/components/TokenWorkspace";
-import { sepolia, SEPOLIA_CHAIN_ID } from "@/lib/config";
+import { fheChain, sepolia, SEPOLIA_CHAIN_ID, ZAMA_ENV } from "@/lib/config";
+import { useWalletConnection } from "@/lib/wallet";
 
 export default function Home() {
   // ── Wagmi hooks — wallet state managed reactively by wagmi ──────────────────
   // The Zama wagmi config adapter subscribes to wagmi connection state internally,
   // so account and chain changes are handled automatically — no manual eth_accounts
   // polling or walletKey/refSeededRef remount pattern needed.
+  // Connect/disconnect go through lib/wallet.tsx, which backs them with either the Privy
+  // wallet modal or wagmi's injected connector; wagmi state is the same in both modes.
   const { address, chainId, isConnected } = useConnection();
-  const { mutate: connect, isPending: isConnecting, error: connectError } = useConnect();
+  const { ready, connect, disconnect, isConnecting, connectError } = useWalletConnection();
   const { mutate: switchChain, isPending: isSwitching, error: switchError } = useSwitchChain();
 
   const [selectedTokenAddress, setSelectedTokenAddress] = useState<Address | null>(null);
@@ -77,10 +79,10 @@ export default function Home() {
       <main className="app-container connect-screen">
         <h1>Sepolia Confidential Token Quickstart</h1>
         <p className="subtitle">
-          Connect your wallet to interact with ERC-7984 tokens on Sepolia testnet.
+          Connect your wallet to interact with ERC-7984 tokens on Sepolia ({ZAMA_ENV}).
         </p>
-        <form action={() => connect({ connector: injected() })}>
-          <button type="submit" className="btn btn-primary" disabled={isConnecting}>
+        <form action={connect}>
+          <button type="submit" className="btn btn-primary" disabled={!ready || isConnecting}>
             {isConnecting ? "Connecting…" : "Connect Wallet"}
           </button>
         </form>
@@ -129,7 +131,13 @@ export default function Home() {
       <header className="app-header">
         <h1>Sepolia Confidential Token Quickstart</h1>
         <p className="connected-address">
-          Connected: <code>{address}</code>
+          Zama environment: <code>{ZAMA_ENV}</code>
+        </p>
+        <p className="connected-address">
+          Connected: <code>{address}</code>{" "}
+          <button type="button" className="btn btn-sm btn-secondary" onClick={disconnect}>
+            Disconnect
+          </button>
         </p>
         <p className="connected-address">
           ETH:{" "}
@@ -172,7 +180,9 @@ export default function Home() {
         {isRegistryPending && <output className="token-meta">Loading tokens from registry…</output>}
         {!isRegistryPending && isRegistryError && (
           <p className="token-meta" role="alert">
-            Failed to load tokens from registry.
+            {fheChain.registryAddress === undefined
+              ? "No wrapper registry is deployed on this environment. Deploy your own wrapper pairs and set NEXT_PUBLIC_REGISTRY_ADDRESS."
+              : "Failed to load tokens from registry."}
           </p>
         )}
         {!isRegistryPending && !isRegistryError && validPairs.length === 0 && (
