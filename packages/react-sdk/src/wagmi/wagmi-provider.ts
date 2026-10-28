@@ -13,11 +13,17 @@ import type {
   WriteFunctionName,
 } from "@zama-fhe/sdk";
 import { ConfigurationError, TransactionRevertedError } from "@zama-fhe/sdk";
-import { encodeFunctionData, serializeTransaction, type Abi } from "viem";
+import {
+  encodeFunctionData,
+  serializeTransaction,
+  WaitForTransactionReceiptTimeoutError,
+  type Abi,
+} from "viem";
 import type { Config } from "wagmi";
 import {
   getBlock,
   getChainId,
+  getConnectorClient,
   getPublicClient,
   readContract,
   waitForTransactionReceipt,
@@ -66,26 +72,66 @@ export class WagmiProvider implements GenericProvider {
   /**
    * Wait for a transaction receipt.
    *
+   * Polls the configured public transport and, in parallel, the connected
+   * wallet's own `eth_getTransactionReceipt`. Smart-contract wallets such as
+   * Safe over WalletConnect answer `eth_sendTransaction` with a wallet-side
+   * hash the chain never sees, so only the wallet can map it to the mined
+   * receipt. Whichever source answers first wins.
+   *
    * @param hash - The transaction hash to wait for.
    * @returns The transaction receipt.
-   * @throws if the transaction hash cannot be found (e.g. an ERC-4337 bundler
+   * @throws if neither source produces a receipt (e.g. an ERC-4337 bundler
    *   returned a `UserOperation` hash instead of a transaction hash). {@link TransactionRevertedError}
    */
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
+    let settled = false;
     try {
-      return await waitForTransactionReceipt(this.#config, { hash });
+      return await Promise.race([
+        waitForTransactionReceipt(this.#config, { hash }),
+        this.#pollWalletReceipt(hash, () => settled),
+      ]);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (message.includes("could not be found") || message.includes("Transaction not found")) {
+      if (
+        error instanceof WaitForTransactionReceiptTimeoutError ||
+        message.includes("could not be found") ||
+        message.includes("Transaction not found")
+      ) {
         throw new TransactionRevertedError(
           `Could not find transaction receipt for hash "${hash.slice(0, 10)}…". ` +
-            "If using ERC-4337 with a bundler, your connector may be returning a UserOperation hash " +
-            "instead of a transaction hash.",
+            "If the connected wallet is a smart-contract wallet (e.g. Safe) or an ERC-4337 account, " +
+            "it may have returned a wallet-side hash instead of a transaction hash.",
           { cause: error instanceof Error ? error : undefined },
         );
       }
       throw error;
+    } finally {
+      settled = true;
     }
+  }
+
+  /**
+   * Resolves once the connected wallet reports a receipt for `hash`. Never
+   * rejects: when no wallet is connected or it cannot serve the request, the
+   * promise stays pending so the public-transport wait alone decides.
+   */
+  async #pollWalletReceipt(hash: Hex, isSettled: () => boolean): Promise<TransactionReceipt> {
+    while (!isSettled()) {
+      try {
+        const client = await getConnectorClient(this.#config);
+        const receipt = await client.request({
+          method: "eth_getTransactionReceipt",
+          params: [hash],
+        });
+        if (receipt) {
+          return receipt;
+        }
+        await new Promise((resolve) => setTimeout(resolve, client.pollingInterval));
+      } catch {
+        break;
+      }
+    }
+    return new Promise<never>(() => {});
   }
 
   async getBlockTimestamp(): Promise<bigint> {
