@@ -1540,9 +1540,11 @@ export const zamaQueryKeys: {
     };
     readonly wrappersRegistry: {
         readonly all: readonly ["zama.wrappersRegistry"];
-        readonly chainId: () => readonly ["zama.wrappersRegistry", {
+        readonly chainId: (walletChainId?: number) => readonly ["zama.wrappersRegistry", {
             readonly type: "chainId";
-        }];
+        }] | readonly ["zama.wrappersRegistry", {
+            readonly type: "chainId";
+        }, number];
         readonly tokenPairs: (registryAddress: Address) => readonly ["zama.wrappersRegistry", {
             readonly type: "tokenPairs";
             readonly registryAddress: `0x${string}`;
