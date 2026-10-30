@@ -2573,6 +2573,10 @@ See [Wallet account changes](https://raw.githubusercontent.com/zama-ai/sdk/beta/
 
 `createConfig` now takes `telemetry: "header" | "query" | "off"`. The default, `"header"`, keeps sending the `x-zama-sdk-*` usage headers. `"query"` sends the same four fields as `zama_sdk_*` query parameters instead, for backend proxies and edges that rebuild or strip request headers. `"off"` sends nothing; `true` and `false` still work as `"header"` and `"off"`. On Node.js, `ZAMA_SDK_TELEMETRY` takes the same three values, case-insensitive, and switches the mode or turns telemetry off for the whole process; it cannot turn on what the config disabled. See [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md).
 
+## Amoy mock registry and tokens removed
+
+The mock wrappers registry and mock confidential tokens on Polygon Amoy are no longer maintained, so the SDK no longer ships them. `polygonAmoy.registryAddress` is now `undefined`, Amoy is removed from the deprecated `DefaultRegistryAddresses` map, and the `example-polygon-amoy` app is removed. The `polygonAmoy` preset stays available for the base protocol: encrypting inputs and decrypting values on Amoy work as before. If you deploy your own registry on Amoy, pass its address via `registryAddresses` when creating a `WrappersRegistry`, or set `registryAddress` on the chain definition. The Polygon mainnet registry and wrappers are unchanged.
+
 ## InGen testnet removed
 
 The SDK no longer supports the T-Rex InGen testnet (chain ID `364301`). The `ingenTestnet` preset is removed from `@zama-fhe/sdk/chains`, from the built-in `chains` map and from the deprecated `DefaultRegistryAddresses`, and the `example-ingen` app is removed. Use `zenithTrexTestnet`, `hoodi` or `bscTestnet` for a cleartext testnet.
@@ -2742,7 +2746,12 @@ const config = createConfig({
 });
 ```
 
-The shared Zama **testnet** relayer needs no API key, so `polygonAmoy` works as-is; the **mainnet** relayer used by `polygon` requires one — see [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md). A full `example-polygon-amoy` reference app is included in the examples. See [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md#1-pick-your-chains) for the complete preset list.
+The shared Zama **testnet** relayer needs no API key, so `polygonAmoy` works as-is; the **mainnet** relayer used by `polygon` requires one — see [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md). See [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md#1-pick-your-chains) for the complete preset list.
+
+
+> [!INFO]
+> The `example-polygon-amoy` reference app that shipped with this release, and the Amoy mock wrappers registry it was built on, have since been removed. The `polygonAmoy` preset itself remains available for the base protocol (encrypt and decrypt).
+
 
 ### Offline signing
 
@@ -12424,7 +12433,7 @@ if (await registry.isConfidentialTokenValid("0xcUSDC")) {
 > **Deprecated.** Read `registryAddress` from the chain presets instead (e.g. `sepolia.registryAddress` from `@zama-fhe/sdk/chains`). This export will be removed in the next major version.
 
 
-Exported map of built-in registry addresses for every built-in chain with a deployed registry. Includes Mainnet (`1`), Polygon (`137`), Sepolia (`11155111`), Polygon Amoy (`80002`), Hoodi (`560048`), T-Rex Zenith Testnet (`936486`), and BNB Smart Chain Testnet (`97`). Addresses are EIP-55 checksummed.
+Exported map of built-in registry addresses for every built-in chain with a deployed registry. Includes Mainnet (`1`), Polygon (`137`), Sepolia (`11155111`), Hoodi (`560048`), T-Rex Zenith Testnet (`936486`), and BNB Smart Chain Testnet (`97`). Addresses are EIP-55 checksummed.
 
 ```ts
 import { sepolia } from "@zama-fhe/sdk/chains";
@@ -16043,7 +16052,7 @@ Each chain object implements the `FheChain` interface:
 | `inputVerifierContractAddress`              | `Address`                   | Input verifier contract address                                                                                                                                                           |
 | `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations                                                                                                                                         |
 | `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations                                                                                                                                         |
-| `registryAddress`                           | `Address \| undefined`      | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat)                                                                                  |
+| `registryAddress`                           | `Address \| undefined`      | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat and Polygon Amoy)                                                                 |
 | `executorAddress`                           | `Address \| undefined`      | TFHEExecutor contract address (cleartext mode only, undefined for real FHE chains)                                                                                                        |
 | `auth`                                      | `Auth \| undefined`         | Relayer authentication. Required for the Zama-hosted **mainnet** relayer (Ethereum, Polygon); leave unset on the shared Zama testnet relayer (Sepolia, Polygon Amoy), which needs no key. |
 | `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key for EIP-712 verification (cleartext mode)                                                                                                                          |
@@ -16151,7 +16160,7 @@ import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 > **Deprecated.** Read `registryAddress` from the chain presets instead (e.g. `sepolia.registryAddress`). This export will be removed in the next major version.
 
 
-A convenience export of built-in registry addresses for every built-in chain with a deployed registry (Mainnet, Polygon, Sepolia, Polygon Amoy, Hoodi, T-Rex Zenith Testnet, BNB Smart Chain Testnet) as a `Record<number, Address>` map. Used internally by the [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/WrappersRegistry.md) class.
+A convenience export of built-in registry addresses for every built-in chain with a deployed registry (Mainnet, Polygon, Sepolia, Hoodi, T-Rex Zenith Testnet, BNB Smart Chain Testnet) as a `Record<number, Address>` map. Used internally by the [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/WrappersRegistry.md) class.
 
 ```ts
 // Deprecated
@@ -16164,7 +16173,7 @@ console.log(sepolia.registryAddress);
 
 
 > [!INFO]
-> `hardhat` has no registry address by default. Pass one via `registryAddresses` when creating a [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/WrappersRegistry.md), or set `registryAddress` on the chain definition.
+> `hardhat` and `polygonAmoy` have no registry address by default. Pass one via `registryAddresses` when creating a [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/WrappersRegistry.md), or set `registryAddress` on the chain definition.
 
 
 ## Related
