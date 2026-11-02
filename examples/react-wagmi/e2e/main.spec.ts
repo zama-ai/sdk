@@ -44,14 +44,14 @@ test.describe("main screen", () => {
   test("shows token selector populated from the registry", async ({ page }) => {
     // useListPairs resolves via the mock RPC eth_call handler — wait for the registry
     // to load before asserting option content.
-    const select = page.getByRole("combobox");
+    const select = page.getByRole("combobox", { name: "Confidential token" });
     await expect(select).toBeVisible();
     await expect(select.locator("option", { hasText: "USDC Mock" })).toHaveCount(1);
     await expect(select.locator("option", { hasText: "USDT Mock" })).toHaveCount(1);
   });
 
   test("switching token updates the selector value", async ({ page }) => {
-    const select = page.getByRole("combobox");
+    const select = page.getByRole("combobox", { name: "Confidential token" });
     // Wait for registry to load and the first cToken address to be auto-selected.
     await expect(select).toHaveValue(MOCK_CTOKEN1_ADDRESS);
     await select.selectOption(MOCK_CTOKEN2_ADDRESS);
