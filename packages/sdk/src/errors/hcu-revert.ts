@@ -18,7 +18,7 @@ const HCU_REVERTS = [
     name: "HCUTransactionLimitExceeded",
     error: (cause: unknown) =>
       new HcuTransactionLimitExceededError(
-        "The transaction needs more FHE compute (HCU) than one transaction may use.",
+        "The transaction needs more total FHE compute (HCU) than one transaction may use.",
         { cause },
       ),
   },

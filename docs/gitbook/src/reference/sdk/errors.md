@@ -121,7 +121,7 @@ Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequ
 | `EncryptOffloadUnavailableError`          | `ENCRYPT_OFFLOAD_UNAVAILABLE`            | `offloadEncrypt: true` required the encrypt worker, which is unavailable                                                          |
 | `DecryptionFailedError`                   | `DECRYPTION_FAILED`                      | FHE decryption failed                                                                                                             |
 | `TransactionRevertedError`                | `TRANSACTION_REVERTED`                   | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
-| `HcuBlockLimitExceededError`              | `HCU_BLOCK_LIMIT_EXCEEDED`               | The block's FHE compute budget (HCU) is spent; retry in the next block (retryable)                                                |
+| `HcuBlockLimitExceededError`              | `HCU_BLOCK_LIMIT_EXCEEDED`               | Gas estimation found too little FHE compute (HCU) left in the block; retry in the next block (retryable)                          |
 | `HcuTransactionLimitExceededError`        | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | The transaction needs more FHE compute (HCU), in total or in one sequential chain, than one transaction may use                   |
 | `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request behind a resumed unshield was already finalized â€” funds delivered, nothing to resume                           |
 | `UnlistedConfidentialTokenError`          | `UNLISTED_CONFIDENTIAL_TOKEN`            | The vault router's registry does not list the confidential token, so the router would reject a transfer of it                     |
@@ -278,7 +278,7 @@ matchZamaError(error, { DECRYPTION_FAILED: () => showError("Decryption failed â€
 
 **Code:** `TRANSACTION_REVERTED`
 
-An on-chain transaction reverted. The error `.message` includes the revert reason when available.
+An on-chain transaction reverted, either before submission or in the block it was mined in. The error `.message` includes the revert reason when available; a receipt reports no reason, only the transaction hash.
 
 ```ts
 matchZamaError(error, {
@@ -292,7 +292,7 @@ matchZamaError(error, {
 
 **Code:** `HCU_BLOCK_LIMIT_EXCEEDED`
 
-The protocol caps the FHE compute, measured in HCU, that a block can use. The current block's budget is spent.
+The protocol caps the FHE compute, measured in HCU, that a block can use. Gas estimation found too little left in the current block for this transaction. The cap is checked again when the transaction is mined, so a transaction that passed estimation can still revert in the block it lands in; that case surfaces as `TransactionRevertedError`.
 
 ```ts
 matchZamaError(error, {

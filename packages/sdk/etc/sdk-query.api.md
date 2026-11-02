@@ -1024,6 +1024,7 @@ export type TransactionOperation = "approveUnderlying" | "approveUnderlying:rese
 // @public
 export interface TransactionReceipt {
     readonly logs: readonly RawLog[];
+    readonly status?: "success" | "reverted";
 }
 
 // @public

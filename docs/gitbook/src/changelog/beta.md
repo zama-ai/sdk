@@ -31,7 +31,9 @@ See [Vault groups](../guides/vaults/groups.md).
 
 ## Typed errors for the protocol's FHE compute limits
 
-The protocol caps the FHE compute, measured in HCU, that a transaction and a block can use. A write that hits one of them now throws a typed error instead of a bare `TransactionRevertedError`: `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`) when the block's budget is spent, which is retryable in the next block, and `HcuTransactionLimitExceededError` (`HCU_TRANSACTION_LIMIT_EXCEEDED`) when the transaction needs more HCU, in total or in one sequential chain, than one transaction may use, which a retry cannot fix.
+The protocol caps the FHE compute, measured in HCU, that a transaction and a block can use. A write whose gas estimation hits one of them now throws a typed error instead of a bare `TransactionRevertedError`, from `submitTransaction`-backed methods and from `sdk.offline.prepare` alike: `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`) when the block has too little left, which is retryable in the next block, and `HcuTransactionLimitExceededError` (`HCU_TRANSACTION_LIMIT_EXCEEDED`) when the transaction needs more HCU, in total or in one sequential chain, than one transaction may use, which a retry cannot fix.
+
+A transaction that is mined and then reverts now throws `TransactionRevertedError` instead of returning a result. `TransactionReceipt` gained an optional `status` (`"success"` or `"reverted"`); the viem, ethers and wagmi providers fill it.
 
 See [Errors](../reference/sdk/errors.md#hcublocklimitexceedederror).
 

@@ -1,5 +1,6 @@
 import { getAddress, type Address, type Hex } from "viem";
 import { describe, expect, TEST_UNSIGNED_TX, test, vi } from "../../test-fixtures";
+import { HcuTransactionLimitExceededError, TransactionRevertedError } from "../../errors";
 import type { GenericProvider } from "../../types/provider";
 
 /** A raw 20-byte address payload — the only recipientData length the wrapper accepts verbatim. */
@@ -9,6 +10,32 @@ const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const RECIPIENT = "0x3333333333333333333333333333333333333333" as Address;
 const DELEGATE = "0x4444444444444444444444444444444444444444" as Address;
 const UNSIGNED = TEST_UNSIGNED_TX;
+
+describe("OfflineService — HCU limit reverts", () => {
+  test("maps a gas-estimation HCU revert wrapped by the provider to its typed error", async ({
+    createSDK,
+    signer,
+    provider,
+    userAddress,
+  }) => {
+    vi.mocked(provider.prepareTransaction).mockRejectedValue(
+      new TransactionRevertedError("gas estimation reverted", {
+        cause: Object.assign(new Error("call revert exception"), { data: "0x77e3c293" }),
+      }),
+    );
+    const sdk = createSDK({ signer });
+
+    await expect(
+      sdk.offline.prepare({
+        kind: "ConfidentialTransfer",
+        from: userAddress,
+        token: TOKEN,
+        to: RECIPIENT,
+        amount: 1_000n,
+      }),
+    ).rejects.toBeInstanceOf(HcuTransactionLimitExceededError);
+  });
+});
 
 describe("OfflineService — ConfidentialTransfer prepare", () => {
   test("prepare encrypts amount + asks the provider for an unsigned tx", async ({

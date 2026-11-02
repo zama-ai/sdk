@@ -20,7 +20,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `ENCRYPTION_FAILED`                      | `EncryptionFailedError`                   | FHE encryption failed in the WASM runtime                                                                      |
 | `DECRYPTION_FAILED`                      | `DecryptionFailedError`                   | FHE decryption failed                                                                                          |
 | `TRANSACTION_REVERTED`                   | `TransactionRevertedError`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                 |
-| `HCU_BLOCK_LIMIT_EXCEEDED`               | `HcuBlockLimitExceededError`              | The block's FHE compute budget (HCU) is spent (retryable)                                                      |
+| `HCU_BLOCK_LIMIT_EXCEEDED`               | `HcuBlockLimitExceededError`              | Gas estimation found too little FHE compute (HCU) left in the block (retryable)                                |
 | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | `HcuTransactionLimitExceededError`        | The transaction needs more FHE compute (HCU) than one transaction may use                                      |
 | `UNSHIELD_ALREADY_FINALIZED`             | `UnshieldAlreadyFinalizedError`           | `resumeUnshield()` called for an unwrap that was already finalized -- funds already arrived, nothing to resume |
 | `INVALID_KEYPAIR`                        | `InvalidTransportKeyPairError`            | Relayer rejected transport key pair (stale or malformed)                                                       |
@@ -309,7 +309,7 @@ Six causes are transient — the operation can simply be retried, ideally with b
 | `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`) | `undefined`                                       | The SDK already rides out the propagation window internally; only surfaces if it's exceeded.            |
 | `DelegationCooldownError` (`DELEGATION_COOLDOWN`)            | `undefined`                                       | Per-block timing gate; resolves on the next block.                                                      |
 | `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`)    | `undefined`                                       | Async signer adapters (e.g. `EthersSigner`) refresh once internally; only surfaces if still unresolved. |
-| `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`)    | `undefined`                                       | The block's FHE compute budget is spent; resolves on the next block.                                    |
+| `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`)    | `undefined`                                       | Too little FHE compute left in the block at estimation; resolves on the next block.                     |
 
 {% tabs %}
 {% tab title="Core SDK" %}

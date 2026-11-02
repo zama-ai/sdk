@@ -123,6 +123,7 @@ export class EthersProvider implements GenericProvider {
         topics: log.topics.filter((t): t is Hex => t !== null),
         data: log.data as Hex,
       })),
+      status: receipt.status === 1 ? "success" : "reverted",
     };
   }
 
