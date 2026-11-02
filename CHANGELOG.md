@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.8.0-beta.10](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.9...v3.8.0-beta.10) (2026-11-02)
+
+### Bug Fixes
+
+- **react-sdk:** refetch the registry chain id when a wallet connects on another chain ([#872](https://github.com/zama-ai/sdk/issues/872)) ([ea0ce57]()), closes [#873]() [#873]() [#873]()
+
 ## [3.8.0-beta.9](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.8...v3.8.0-beta.9) (2026-11-02)
 
 ### Bug Fixes
