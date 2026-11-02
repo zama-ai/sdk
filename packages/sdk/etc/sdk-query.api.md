@@ -1353,6 +1353,8 @@ export const ZamaErrorCode: {
     readonly DecryptionFailed: "DECRYPTION_FAILED";
     readonly EncryptOffloadUnavailable: "ENCRYPT_OFFLOAD_UNAVAILABLE";
     readonly TransactionReverted: "TRANSACTION_REVERTED";
+    readonly HcuBlockLimitExceeded: "HCU_BLOCK_LIMIT_EXCEEDED";
+    readonly HcuTransactionLimitExceeded: "HCU_TRANSACTION_LIMIT_EXCEEDED";
     readonly TransportKeyPairExpired: "KEYPAIR_EXPIRED";
     readonly InvalidTransportKeyPair: "INVALID_KEYPAIR";
     readonly RevokedKmsContext: "REVOKED_KMS_CONTEXT";

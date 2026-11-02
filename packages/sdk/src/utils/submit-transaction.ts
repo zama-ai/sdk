@@ -1,5 +1,6 @@
 import type { Hex } from "viem";
 import { TransactionRevertedError, ZamaError } from "../errors";
+import { matchHcuRevert } from "../errors/hcu-revert";
 import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
 import { transactionOperationMetadata, ZamaSDKEvents } from "../events/sdk-events";
 import type {
@@ -20,7 +21,8 @@ import { swallow } from "./swallow";
  *
  * On failure: emits a {@link ZamaSDKEvents.TransactionError} event with the
  * transaction-level error it will throw, then throws it. Existing `ZamaError`
- * instances are rethrown as-is; all other failures are wrapped in
+ * instances are rethrown as-is, a revert from the protocol's HCU limits becomes
+ * its typed error, and all other failures are wrapped in
  * `TransactionRevertedError` with the original error as `cause`.
  */
 export async function submitTransaction(params: {
@@ -45,7 +47,8 @@ export async function submitTransaction(params: {
     const failure =
       error instanceof ZamaError
         ? error
-        : new TransactionRevertedError(`Transaction failed during ${operation}`, { cause: error });
+        : (matchHcuRevert(error) ??
+          new TransactionRevertedError(`Transaction failed during ${operation}`, { cause: error }));
 
     emit({ type: ZamaSDKEvents.TransactionError, operation, error: failure });
     throw failure;

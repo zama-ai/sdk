@@ -5856,6 +5856,8 @@ export interface ErrorForCode {
     [ZamaErrorCode.EncryptOffloadUnavailable]: EncryptOffloadUnavailableError;
     [ZamaErrorCode.EncryptionFailed]: EncryptionFailedError;
     [ZamaErrorCode.ERC20ReadFailed]: ERC20ReadFailedError;
+    [ZamaErrorCode.HcuBlockLimitExceeded]: HcuBlockLimitExceededError;
+    [ZamaErrorCode.HcuTransactionLimitExceeded]: HcuTransactionLimitExceededError;
     [ZamaErrorCode.InsufficientAllowance]: InsufficientAllowanceError;
     [ZamaErrorCode.InsufficientConfidentialBalance]: InsufficientConfidentialBalanceError;
     [ZamaErrorCode.InsufficientERC20Balance]: InsufficientERC20BalanceError;
@@ -8460,6 +8462,16 @@ export const hardhat: {
     readonly registryAddress: undefined;
     readonly executorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
 };
+
+// @public
+export class HcuBlockLimitExceededError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
+export class HcuTransactionLimitExceededError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
 
 export { Hex }
 
@@ -20915,6 +20927,8 @@ export const ZamaErrorCode: {
     readonly DecryptionFailed: "DECRYPTION_FAILED";
     readonly EncryptOffloadUnavailable: "ENCRYPT_OFFLOAD_UNAVAILABLE";
     readonly TransactionReverted: "TRANSACTION_REVERTED";
+    readonly HcuBlockLimitExceeded: "HCU_BLOCK_LIMIT_EXCEEDED";
+    readonly HcuTransactionLimitExceeded: "HCU_TRANSACTION_LIMIT_EXCEEDED";
     readonly TransportKeyPairExpired: "KEYPAIR_EXPIRED";
     readonly InvalidTransportKeyPair: "INVALID_KEYPAIR";
     readonly RevokedKmsContext: "REVOKED_KMS_CONTEXT";

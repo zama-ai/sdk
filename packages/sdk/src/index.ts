@@ -119,6 +119,8 @@ export {
   SigningFailedError,
   SigningRejectedError,
   TransactionRevertedError,
+  HcuBlockLimitExceededError,
+  HcuTransactionLimitExceededError,
   TransportKeyPairChangedError,
   TransportKeyPairExpiredError,
   UnlistedConfidentialTokenError,

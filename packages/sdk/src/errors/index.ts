@@ -6,7 +6,11 @@ export {
   DecryptionFailedError,
   EncryptOffloadUnavailableError,
 } from "./encryption";
-export { TransactionRevertedError } from "./transaction";
+export {
+  TransactionRevertedError,
+  HcuBlockLimitExceededError,
+  HcuTransactionLimitExceededError,
+} from "./transaction";
 export {
   TransportKeyPairExpiredError,
   InvalidTransportKeyPairError,
