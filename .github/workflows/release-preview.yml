@@ -19,8 +19,6 @@ env:
   # pnpm-workspace.yaml — mirror both the age (72 h) and the exclusion here.
   SAFE_CHAIN_MINIMUM_PACKAGE_AGE_HOURS: "72"
   SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@fhevm/sdk,@zama-fhe/sdk,@zama-fhe/react-sdk"
-  # Pinned safe-chain release used by the verified installer below; bump as newer versions are vetted.
-  SAFE_CHAIN_VERSION: "1.5.15"
   DAEMON_IMAGE: ghcr.io/zama-ai/sdk-daemon
   CRATE: zama_sdk
 
@@ -50,14 +48,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - name: Install dependencies
+        uses: ./.github/actions/install-deps
         with:
-          node-version: 24.22.1
-          cache: pnpm
+          ignore-scripts: "true"
 
       - name: Ensure npm >=11
         run: |
@@ -70,22 +64,6 @@ jobs:
           fi
           echo "npm $(npm --version)"
           [[ "$(npm --version | cut -d. -f1)" -ge 11 ]]
-
-      - name: Install Aikido Safe Chain
-        run: |
-          # Resolve the installer asset URL + its GitHub-published SHA-256, download it,
-          # verify the hash, then execute — no piping a remote script into a shell.
-          SAFECHAIN_URL="https://api.github.com/repos/AikidoSec/safe-chain/releases/tags/${SAFE_CHAIN_VERSION}"
-          SC_INSTALL_URL=$(curl -fsSL "$SAFECHAIN_URL" | jq -r '.assets[] | select(.name=="install-safe-chain.sh") | .browser_download_url')
-          SC_INSTALL_HASH=$(curl -fsSL "$SAFECHAIN_URL" | jq -r '.assets[] | select(.name=="install-safe-chain.sh") | .digest[7:]')
-          curl -fsSL "$SC_INSTALL_URL" -o install-safe-chain.sh
-          [ "$(sha256sum install-safe-chain.sh | awk '{print $1}')" = "$SC_INSTALL_HASH" ] \
-            && echo "=> SHA256 install script matched" \
-            || { echo "=> SHA256 mismatch — aborting"; rm -f install-safe-chain.sh; exit 1; }
-          bash ./install-safe-chain.sh --ci
-
-      - name: Install dependencies
-        run: pnpm ci --ignore-scripts
 
       - name: Build packages
         run: pnpm build

@@ -22,16 +22,16 @@ packageExtensions:
       caniuse-lite: "*"
 
 overrides:
-  minimatch: ">=10.2.4"
+  "minimatch@^10.0.0": ">=11.0.1 <12"
   next: ">=16.4.1"
   "@walletconnect/ethereum-provider": "^2.23.7"
   lodash: ">=4.18.0"
   lodash-es: ">=4.18.0"
   # Security floors for transitive dev-tooling deps flagged by Dependabot.
   "undici@^6.0.0": ">=6.28.1 <7"
-  "undici@^7.0.0": ">=7.29.1 <8"
+  "undici@^7.0.0": ">=7.30.1 <8"
   "js-yaml@^4.0.0": ">=4.3.2 <5"
-  "fast-uri@^3.0.0": ">=3.1.6 <4"
+  "fast-uri@^3.0.0": ">=3.1.9 <4"
   "handlebars@^4.0.0": ">=4.7.10 <5"
   "source-map-js@^1.0.0": ">=1.2.2 <2"
   "brace-expansion@^5.0.0": ">=5.0.12 <6"

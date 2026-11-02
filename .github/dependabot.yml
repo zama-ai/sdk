@@ -114,9 +114,13 @@ updates:
         update-types:
           - version-update:semver-patch
 
+  # "/" only covers .github/workflows; composite actions must be listed explicitly.
   - package-ecosystem: github-actions
     target-branch: beta
-    directory: /
+    directories:
+      - /
+      - /.github/actions/install-deps
+      - /.github/actions/build-contracts
     schedule:
       interval: weekly
     cooldown:
