@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.8.0-beta.11](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.10...v3.8.0-beta.11) (2026-11-02)
+
+### Bug Fixes
+
+- **deps:** update dev tooling advisories and pin the CI Safe Chain installer ([#886](https://github.com/zama-ai/sdk/issues/886)) ([4c5ea28]())
+
 ## [3.8.0-beta.10](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.9...v3.8.0-beta.10) (2026-11-02)
 
 ### Bug Fixes
