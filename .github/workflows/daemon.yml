@@ -21,8 +21,12 @@ on:
       - "tools/**"
       - ".github/actions/install-deps/**"
       - ".github/workflows/daemon.yml"
+      - ".trivyignore"
   workflow_dispatch:
   workflow_call:
+    secrets:
+      DOCKERHUB_OIDC_CONNECTIONID:
+        required: true
 
 # Namespaced by workflow so a standalone run and a calling workflow on the same ref do not cancel each other.
 concurrency:
@@ -143,6 +147,12 @@ jobs:
   image:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
+    # release-dockerhub allows only main, beta and alpha; every other ref (pull requests, dispatches from other
+    # branches) uses the pull-only connection. A pull request from a fork gets no OIDC token and fails at the login.
+    environment: ${{ contains(fromJSON('["refs/heads/main", "refs/heads/beta", "refs/heads/alpha"]'), github.ref) && 'release-dockerhub' || 'pull-dockerhub' }}
+    permissions:
+      contents: read
+      id-token: write # Docker Hub OIDC login
     strategy:
       fail-fast: false
       matrix:
@@ -155,6 +165,24 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      # No password: the action exchanges the job's OIDC token for a short-lived Docker Hub token.
+      - name: Log in to Docker Hardened Images
+        if: github.actor != 'dependabot[bot]'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        env:
+          DOCKERHUB_OIDC_CONNECTIONID: ${{ secrets.DOCKERHUB_OIDC_CONNECTIONID }}
+        with:
+          registry: dhi.io
+          username: ${{ vars.DOCKERHUB_OIDC_USER }}
+      # Dependabot runs get no OIDC token and only Dependabot secrets: the read-only token Dependabot itself uses
+      # to resolve the base image digests.
+      - name: Log in to Docker Hardened Images as Dependabot
+        if: github.actor == 'dependabot[bot]'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: dhi.io
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
@@ -164,16 +192,17 @@ jobs:
           # Scoped per architecture so the two builds don't overwrite each other's cache.
           cache-from: type=gha,scope=daemon-image-${{ matrix.arch }}
           cache-to: type=gha,scope=daemon-image-${{ matrix.arch }},mode=max
-      # From zama-ai/ci-templates security/trivy.yml. Only fixable HIGH or CRITICAL findings fail: Debian
-      # advisories without a fix yet can't be addressed in the image.
+      # Every CRITICAL or HIGH finding fails, fixed or not: a finding without a fix is either risk-accepted in
+      # .trivyignore after a security review, or it blocks the image. Keep in step with the release scan.
       - name: Scan the image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ghcr.io/zama-ai/sdk-daemon:ci
           exit-code: "1"
-          ignore-unfixed: true
           vuln-type: os,library
           severity: CRITICAL,HIGH
+          trivyignores: .trivyignore
+          version: v0.76.0
       - name: Start the daemon with the deployment Compose file
         env:
           ZAMA_SDK_VERSION: ci

@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.8.0-beta.9](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.8...v3.8.0-beta.9) (2026-11-02)
+
+### Bug Fixes
+
+- drop-amoy-mock-registry ([#883](https://github.com/zama-ai/sdk/issues/883)) ([2fd030a]())
+
 ## [3.8.0-beta.8](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.7...v3.8.0-beta.8) (2026-10-26)
 
 ### ⚠ BREAKING CHANGES

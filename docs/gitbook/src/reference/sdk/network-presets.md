@@ -41,7 +41,7 @@ Each chain object implements the `FheChain` interface:
 | `inputVerifierContractAddress`              | `Address`                   | Input verifier contract address                                                                                                                                                           |
 | `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations                                                                                                                                         |
 | `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations                                                                                                                                         |
-| `registryAddress`                           | `Address \| undefined`      | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat)                                                                                  |
+| `registryAddress`                           | `Address \| undefined`      | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat and Polygon Amoy)                                                                 |
 | `executorAddress`                           | `Address \| undefined`      | TFHEExecutor contract address (cleartext mode only, undefined for real FHE chains)                                                                                                        |
 | `auth`                                      | `Auth \| undefined`         | Relayer authentication. Required for the Zama-hosted **mainnet** relayer (Ethereum, Polygon); leave unset on the shared Zama testnet relayer (Sepolia, Polygon Amoy), which needs no key. |
 | `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key for EIP-712 verification (cleartext mode)                                                                                                                          |
@@ -148,7 +148,7 @@ import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 **Deprecated.** Read `registryAddress` from the chain presets instead (e.g. `sepolia.registryAddress`). This export will be removed in the next major version.
 {% endhint %}
 
-A convenience export of built-in registry addresses for every built-in chain with a deployed registry (Mainnet, Polygon, Sepolia, Polygon Amoy, Hoodi, T-Rex Zenith Testnet, BNB Smart Chain Testnet) as a `Record<number, Address>` map. Used internally by the [WrappersRegistry](./WrappersRegistry.md) class.
+A convenience export of built-in registry addresses for every built-in chain with a deployed registry (Mainnet, Polygon, Sepolia, Hoodi, T-Rex Zenith Testnet, BNB Smart Chain Testnet) as a `Record<number, Address>` map. Used internally by the [WrappersRegistry](./WrappersRegistry.md) class.
 
 ```ts
 // Deprecated
@@ -160,7 +160,7 @@ console.log(sepolia.registryAddress);
 ```
 
 {% hint style="info" %}
-`hardhat` has no registry address by default. Pass one via `registryAddresses` when creating a [WrappersRegistry](./WrappersRegistry.md), or set `registryAddress` on the chain definition.
+`hardhat` and `polygonAmoy` have no registry address by default. Pass one via `registryAddresses` when creating a [WrappersRegistry](./WrappersRegistry.md), or set `registryAddress` on the chain definition.
 {% endhint %}
 
 ## Related
