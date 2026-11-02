@@ -136,8 +136,17 @@ jobs:
           ref: ${{ needs.verify-tag.outputs.revision }}
           persist-credentials: false
 
+      # Local actions resolve against the checkout above, i.e. the old tag. Take install-deps
+      # from the workflow's own commit so an old tag cannot bring back an unpinned installer.
+      - name: Checkout workflow actions
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          path: .workflow
+          sparse-checkout: .github/actions
+          persist-credentials: false
+
       - name: Install dependencies
-        uses: ./.github/actions/install-deps
+        uses: ./.workflow/.github/actions/install-deps
         with:
           ignore-scripts: "true"
 

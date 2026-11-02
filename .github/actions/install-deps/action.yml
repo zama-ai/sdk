@@ -24,17 +24,14 @@ runs:
     - name: Install Aikido Safe Chain
       shell: bash
       env:
-        # Pinned safe-chain release. The installer reads SAFE_CHAIN_VERSION to pick
-        # the binary and carries the binary checksums for its own release, so the
-        # two must move together. Bump both values after vetting a newer release:
-        #   curl -fsSL https://github.com/AikidoSec/safe-chain/releases/download/<ver>/install-safe-chain.sh | sha256sum
-        SAFE_CHAIN_VERSION: "1.5.27"
+        # A release's installer has that release's version and binary checksums baked in, so
+        # these two move together. Not SAFE_CHAIN_VERSION: the installer treats it as deprecated.
+        SAFE_CHAIN_RELEASE: "1.5.27"
         SAFE_CHAIN_INSTALLER_SHA256: "600ebddcb3aaf1fd53653a8d7985df44528722c0f5ee7eb9fff86f26a1a4e5a8"
       run: |
-        # Download the pinned installer, verify it against the hash committed here,
-        # then run it — never pipe a remote script into a shell.
+        # Verify before running; never pipe a remote script into a shell.
         installer="$RUNNER_TEMP/install-safe-chain.sh"
-        curl -fsSL "https://github.com/AikidoSec/safe-chain/releases/download/${SAFE_CHAIN_VERSION}/install-safe-chain.sh" -o "$installer"
+        curl -fsSL "https://github.com/AikidoSec/safe-chain/releases/download/${SAFE_CHAIN_RELEASE}/install-safe-chain.sh" -o "$installer"
         echo "${SAFE_CHAIN_INSTALLER_SHA256}  ${installer}" | sha256sum -c -
         sh "$installer" --ci
 
