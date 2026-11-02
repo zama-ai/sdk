@@ -1,7 +1,0 @@
-# Next.js — regenerated on every dev/build run
-next-env.d.ts
-tsconfig.tsbuildinfo
-
-# Playwright output
-test-results/
-playwright-report/

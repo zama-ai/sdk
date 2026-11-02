@@ -46,6 +46,10 @@ See [Wallet account changes](../concepts/permit-model.md#wallet-account-changes)
 
 `createConfig` now takes `telemetry: "header" | "query" | "off"`. The default, `"header"`, keeps sending the `x-zama-sdk-*` usage headers. `"query"` sends the same four fields as `zama_sdk_*` query parameters instead, for backend proxies and edges that rebuild or strip request headers. `"off"` sends nothing; `true` and `false` still work as `"header"` and `"off"`. On Node.js, `ZAMA_SDK_TELEMETRY` takes the same three values, case-insensitive, and switches the mode or turns telemetry off for the whole process; it cannot turn on what the config disabled. See [SDK usage telemetry](../guides/telemetry.md).
 
+## Amoy mock registry and tokens removed
+
+The mock wrappers registry and mock confidential tokens on Polygon Amoy are no longer maintained, so the SDK no longer ships them. `polygonAmoy.registryAddress` is now `undefined`, Amoy is removed from the deprecated `DefaultRegistryAddresses` map, and the `example-polygon-amoy` app is removed. The `polygonAmoy` preset stays available for the base protocol: encrypting inputs and decrypting values on Amoy work as before. If you deploy your own registry on Amoy, pass its address via `registryAddresses` when creating a `WrappersRegistry`, or set `registryAddress` on the chain definition. The Polygon mainnet registry and wrappers are unchanged.
+
 ## InGen testnet removed
 
 The SDK no longer supports the T-Rex InGen testnet (chain ID `364301`). The `ingenTestnet` preset is removed from `@zama-fhe/sdk/chains`, from the built-in `chains` map and from the deprecated `DefaultRegistryAddresses`, and the `example-ingen` app is removed. Use `zenithTrexTestnet`, `hoodi` or `bscTestnet` for a cleartext testnet.
