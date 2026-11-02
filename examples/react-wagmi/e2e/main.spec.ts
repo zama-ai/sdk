@@ -33,6 +33,13 @@ test.describe("main screen", () => {
     await expect(page.getByText("Grant Decryption Access")).toBeVisible();
     await expect(page.getByText("Revoke Decryption Access")).toBeVisible();
     await expect(page.getByText("Decrypt Balance On Behalf Of")).toBeVisible();
+    await expect(page.getByText(/move real funds/)).toHaveCount(0);
+  });
+
+  test("disconnect returns to the connect screen", async ({ page }) => {
+    await page.getByRole("button", { name: "Disconnect" }).click();
+    await expect(page.getByRole("button", { name: "Connect Wallet" })).toBeVisible();
+    await expect(page.getByText(/Connected:/)).toHaveCount(0);
   });
 
   test("shows connected address in header", async ({ page }) => {

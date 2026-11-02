@@ -8,12 +8,13 @@ import {
   hoodi as fheHoodi,
   mainnet as fheMainnet,
   polygon as fhePolygon,
+  polygonAmoy as fhePolygonAmoy,
   sepolia as fheSepolia,
   zenithTrexTestnet as fheZenith,
   type FheChain,
 } from "@zama-fhe/sdk/chains";
 import { defineChain, type Chain } from "viem";
-import { bscTestnet, hoodi, mainnet, polygon, sepolia } from "viem/chains";
+import { bscTestnet, hoodi, mainnet, polygon, polygonAmoy, sepolia } from "viem/chains";
 
 export interface Network {
   /** Shown in the network picker. Cleartext deployments say so here. */
@@ -56,6 +57,7 @@ const zenith = defineChain({
   name: "T-Rex Zenith",
   nativeCurrency: { name: "Canton Coin", symbol: "CC", decimals: 18 },
   rpcUrls: { default: { http: [fheZenith.network] } },
+  testnet: true,
   blockExplorers: {
     default: { name: "Zenith Explorer", url: "https://explorer.testnet.t-rex.zenith.network" },
   },
@@ -79,8 +81,15 @@ export const networks = {
         "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639") as Address,
     },
   }),
-  // Polygon Amoy is deliberately absent: the SDK preset no longer carries a wrappers registry
-  // for it, so the token list would never resolve.
+  "polygon-amoy": defineNetwork({
+    label: "Polygon Amoy",
+    chain: polygonAmoy,
+    fhe: fhePolygonAmoy,
+    rpcUrl: process.env.NEXT_PUBLIC_POLYGON_AMOY_RPC_URL,
+    transport: "relayer",
+    explorerUrl: "https://amoy.polygonscan.com",
+    canMint: true,
+  }),
   // Cleartext rows are development deployments: "encrypted" values are stored in cleartext
   // on-chain and there is no relayer or KMS. They exist to integrate against the SDK on
   // chains without the full FHE stack, not for production use.
