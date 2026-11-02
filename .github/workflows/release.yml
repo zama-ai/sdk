@@ -249,6 +249,10 @@ jobs:
     needs: [validate-branch]
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     uses: ./.github/workflows/daemon.yml
+    # Only the called job, which declares the environment, can read this environment secret, but the caller must
+    # still pass it by name: `secrets: inherit` does not carry it.
+    secrets:
+      DOCKERHUB_OIDC_CONNECTIONID: ${{ secrets.DOCKERHUB_OIDC_CONNECTIONID }}
 
   release:
     needs: [ci, playwright, docs, daemon]
@@ -351,9 +355,13 @@ jobs:
       REVISION: ${{ needs.release.outputs.revision || needs.verify-tag.outputs.revision }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
+    # The environment allows only main, beta and alpha, so a publish-tag run must be dispatched from one of them.
+    environment: release-dockerhub
     permissions:
       contents: read
       packages: write
+      id-token: write # Sigstore signing of the attestations, Docker Hub OIDC login
+      attestations: write
     strategy:
       # A failed platform must not cancel the other, so re-running only the failed job completes the matrix.
       fail-fast: false
@@ -381,6 +389,15 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # No password: the action exchanges the job's OIDC token for a short-lived Docker Hub token.
+      - name: Log in to Docker Hardened Images
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        env:
+          DOCKERHUB_OIDC_CONNECTIONID: ${{ secrets.DOCKERHUB_OIDC_CONNECTIONID }}
+        with:
+          registry: dhi.io
+          username: ${{ vars.DOCKERHUB_OIDC_USER }}
 
       # Boots this build before the push below reuses its layers. Reads, never writes, the gate's layer cache:
       # a release can only restore caches from its own branch or the default branch, which only merges write.
@@ -419,6 +436,73 @@ jobs:
           provenance: mode=max
           sbom: true
 
+      # With provenance and sbom on, the pushed digest is a one-platform index: the image manifest plus BuildKit's
+      # attestation manifest. The manifest list flattens it, so the tag references the image manifest, never the
+      # index. That is the digest to scan and attest.
+      - name: Resolve the image manifest digest
+        id: image
+        env:
+          INDEX_DIGEST: ${{ steps.build.outputs.digest }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          digest="$(docker buildx imagetools inspect "${DAEMON_IMAGE}@${INDEX_DIGEST}" \
+            --format '{{ range .Manifest.Manifests }}{{ if eq .Platform.Architecture "'"${ARCH}"'" }}{{ .Digest }}{{ end }}{{ end }}')"
+          if [[ "${digest}" != sha256:* ]]; then
+            echo "::error::No ${ARCH} image manifest in ${DAEMON_IMAGE}@${INDEX_DIGEST}: got '${digest}'."
+            exit 1
+          fi
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+
+      # The branch tip, not the release commit: a CVE disclosed after the Daemon CI gate is risk-accepted on the
+      # branch and picked up by re-running this job, and tags cut before the file existed can still be republished.
+      - name: Checkout the branch's risk acceptances
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.ref }}
+          path: branch-tip
+          sparse-checkout: .trivyignore
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      # The digest is pushed untagged: nothing below it is reachable by tag until publish-image-manifest runs,
+      # and that job only runs when every platform passed this gate. Same gate as Daemon CI: every CRITICAL or
+      # HIGH finding fails unless it was risk-accepted in .trivyignore after a security review.
+      - name: Scan the pushed digest
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.DAEMON_IMAGE }}@${{ steps.image.outputs.digest }}
+          exit-code: "1"
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+          trivyignores: branch-tip/.trivyignore
+          version: v0.76.0
+
+      - name: Generate the SBOM
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: ${{ env.DAEMON_IMAGE }}@${{ steps.image.outputs.digest }}
+          format: spdx-json
+          output-file: ${{ runner.temp }}/sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      # Signed with the workflow's OIDC identity and stored next to the image, so partners verify it with
+      # `gh attestation verify oci://…` or cosign without trusting anything outside the registry and Sigstore.
+      - name: Attest the build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.DAEMON_IMAGE }}
+          subject-digest: ${{ steps.image.outputs.digest }}
+          push-to-registry: true
+
+      - name: Attest the SBOM
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-name: ${{ env.DAEMON_IMAGE }}
+          subject-digest: ${{ steps.image.outputs.digest }}
+          sbom-path: ${{ runner.temp }}/sbom.spdx.json
+          push-to-registry: true
+
       - name: Export digest
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
@@ -448,6 +532,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write # Sigstore signing of the attestation
+      attestations: write
     steps:
       # One step per platform: a missing digest fails the job instead of publishing a single-platform image.
       - name: Download the amd64 digest
@@ -472,6 +558,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create manifest list
+        id: manifest
         working-directory: ${{ runner.temp }}/digests
         env:
           SOURCE: ${{ github.server_url }}/${{ github.repository }}
@@ -507,6 +594,33 @@ jobs:
             --annotation "index:org.opencontainers.image.licenses=${DAEMON_IMAGE_LICENSES}" \
             "${sources[@]}"
           docker buildx imagetools inspect "${DAEMON_IMAGE}:${VERSION}"
+          digest="$(docker buildx imagetools inspect "${DAEMON_IMAGE}:${VERSION}" --format '{{ .Manifest.Digest }}')"
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+
+      # Tags resolve to the manifest list, so partners verifying `:<version>` or pinning its digest need an
+      # attestation on this digest too; the per-platform image manifests were attested in publish-image.
+      - name: Attest the manifest list
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.DAEMON_IMAGE }}
+          subject-digest: ${{ steps.manifest.outputs.digest }}
+          push-to-registry: true
+
+      - name: Summary
+        env:
+          DIGEST: ${{ steps.manifest.outputs.digest }}
+        run: |
+          {
+            echo "### Published the daemon image"
+            echo ""
+            echo "Pin: \`${DAEMON_IMAGE}:${VERSION}@${DIGEST}\`"
+            echo ""
+            echo "Verify:"
+            echo ""
+            echo '```sh'
+            echo "gh attestation verify oci://${DAEMON_IMAGE}@${DIGEST} --repo ${GITHUB_REPOSITORY}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # Runs even if npm publish failed: the tag exists and a re-run of the release job cannot republish it.
   publish-crate:

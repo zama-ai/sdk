@@ -1,0 +1,125 @@
+name: Daemon image scan
+
+# Re-scans the published daemon images every day: new CVEs are disclosed after a release, and a CRITICAL or
+# HIGH one means shipping a patched release. Schedules only run from the default branch.
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+env:
+  DAEMON_IMAGE: ghcr.io/zama-ai/sdk-daemon
+  ISSUE_TITLE: "Daemon image: CRITICAL or HIGH CVEs in a published release"
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read # .trivyignore
+      packages: read # pull the image
+      issues: write
+    strategy:
+      fail-fast: false
+      # One channel at a time, so two channels with findings cannot both open a tracking issue.
+      max-parallel: 1
+      matrix:
+        include:
+          - channel: latest
+            branch: main
+          - channel: beta
+            branch: beta
+          - channel: alpha
+            branch: alpha
+    steps:
+      # The channel's branch, so its .trivyignore applies here as it does in that channel's release gate. Trivy
+      # reads the file on its own; passing --ignorefile would fail on a branch that has none yet.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ matrix.branch }}
+          persist-credentials: false
+
+      - uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
+        with:
+          version: v0.76.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The channel tag is the newest release of that channel, the one a patch would replace. Same severity and
+      # package types as the release gate. Exit code 2 is findings only, so a Trivy error fails the run instead
+      # of being reported as a CVE.
+      - name: Scan the channel tag
+        id: scan
+        env:
+          CHANNEL: ${{ matrix.channel }}
+        run: |
+          ref="${DAEMON_IMAGE}:${CHANNEL}"
+          # Only a missing tag is skipped; an auth or registry error must not pass as unpublished.
+          if docker buildx imagetools inspect "${ref}" > /dev/null 2> "${RUNNER_TEMP}/inspect.err"; then
+            :
+          elif grep -q "not found" "${RUNNER_TEMP}/inspect.err"; then
+            echo "::notice::${ref} is not published; skipping."
+            echo "failed=" >> "$GITHUB_OUTPUT"
+            exit 0
+          else
+            cat "${RUNNER_TEMP}/inspect.err"
+            exit 1
+          fi
+          failed=()
+          for platform in linux/amd64 linux/arm64; do
+            echo "::group::${ref} (${platform})"
+            trivy image --platform "${platform}" --pkg-types os,library --severity CRITICAL,HIGH --exit-code 2 "${ref}" \
+              && rc=0 || rc=$?
+            echo "::endgroup::"
+            if [[ "${rc}" -eq 2 ]]; then
+              echo "::error::${ref} (${platform}) has CRITICAL or HIGH findings."
+              failed+=("${ref} (${platform})")
+            elif [[ "${rc}" -ne 0 ]]; then
+              exit "${rc}"
+            fi
+          done
+          if [[ "${#failed[@]}" -eq 0 ]]; then
+            echo "No CRITICAL or HIGH findings in ${ref}." >> "$GITHUB_STEP_SUMMARY"
+            echo "failed=" >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "### CRITICAL or HIGH findings"
+              echo ""
+              printf -- '- %s\n' "${failed[@]}"
+            } >> "$GITHUB_STEP_SUMMARY"
+            joined="$(printf '%s, ' "${failed[@]}")"
+            echo "failed=${joined%, }" >> "$GITHUB_OUTPUT"
+          fi
+
+      # One open issue at a time: a new day's findings are added as a comment instead of a new issue.
+      - name: Open or update the tracking issue
+        if: steps.scan.outputs.failed != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FAILED: ${{ steps.scan.outputs.failed }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          body="Trivy found CRITICAL or HIGH CVEs in: ${FAILED}.
+
+          Findings: ${RUN_URL}
+
+          Ship a patched release, or risk-accept the CVE in \`.trivyignore\` after a security review."
+          number="$(gh issue list --repo "${GITHUB_REPOSITORY}" --state open --search "in:title \"${ISSUE_TITLE}\"" \
+            --json number,title --jq ".[] | select(.title == \"${ISSUE_TITLE}\") | .number" | head -n 1)"
+          if [[ -n "${number}" ]]; then
+            gh issue comment "${number}" --repo "${GITHUB_REPOSITORY}" --body "${body}"
+          else
+            gh issue create --repo "${GITHUB_REPOSITORY}" --title "${ISSUE_TITLE}" --body "${body}"
+          fi
+          exit 1
