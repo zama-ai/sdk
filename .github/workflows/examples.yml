@@ -1,7 +1,8 @@
 name: Examples CI
 
-# Typechecks (and builds, where applicable) every app under examples/ against
-# the exact published SDK versions each example pins in its own package.json.
+# Lints, typechecks and builds (where applicable) every app under examples/
+# against the exact published SDK versions each example pins in its own
+# package.json.
 # examples/* are deliberately standalone npm projects (not pnpm workspace
 # members) with committed lockfiles, so this installs each example exactly as
 # an end user would and catches breakage in the example code itself — a bad
@@ -54,6 +55,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Lint
+        run: npm run lint --if-present
 
       - name: Typecheck
         run: npm run typecheck
