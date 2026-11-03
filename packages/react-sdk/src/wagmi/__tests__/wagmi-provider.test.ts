@@ -1,10 +1,4 @@
 /**
- * Coverage for {@link WagmiProvider}:
- * - `prepareTransaction` happy path + `ConfigurationError` when no public client
- * - `waitForTransactionReceipt` public-transport path, connected-wallet fallback
- *   for wallet-side hashes (Safe), revert detection on the wallet leg, probe
- *   error logging, and the timeout error mapping
- *
  * The `wagmi/actions` module is hoist-mocked because wagmi reads its config
  * from a module-level registry rather than from the passed `Config` object.
  */
@@ -153,7 +147,6 @@ describe("WagmiProvider.waitForTransactionReceipt", () => {
     return { request, pollingInterval: 1 };
   }
 
-  /** Wallet stub answering per RPC method; unlisted methods reject like an unsupported one. */
   function walletAnswering(answers: Record<string, () => unknown>) {
     return vi.fn(async ({ method }: RpcArgs) => {
       const answer = answers[method];

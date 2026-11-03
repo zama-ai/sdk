@@ -84,17 +84,11 @@ export class WagmiProvider implements GenericProvider {
   }
 
   /**
-   * Wait for a transaction receipt.
+   * Races the public transport against the connected wallet: smart-contract
+   * wallets such as Safe over WalletConnect answer `eth_sendTransaction` with
+   * a wallet-side hash the chain never sees, so only the wallet can map it to
+   * the mined receipt. A reverted transaction fails from either source.
    *
-   * Polls the configured public transport and, in parallel, the connected
-   * wallet (see {@link walletReceipt}). Smart-contract wallets such as Safe
-   * over WalletConnect answer `eth_sendTransaction` with a wallet-side hash
-   * the chain never sees, so only the wallet can map it to the mined receipt.
-   * Whichever source answers first wins. Both sources treat a reverted
-   * transaction as a failure.
-   *
-   * @param hash - The transaction hash to wait for.
-   * @returns The transaction receipt.
    * @throws {@link TransactionRevertedError} when the transaction reverted, or
    *   when no receipt arrived within the timeout (the outcome is then unknown).
    */
@@ -124,11 +118,7 @@ export class WagmiProvider implements GenericProvider {
     }
   }
 
-  /**
-   * Resolves once the connected wallet reports a receipt for `hash`, rejects
-   * once it reports a revert. When no wallet is connected, the promise stays
-   * pending so the public-transport wait alone decides.
-   */
+  /** Stays pending forever when no wallet is connected, so the public-transport wait alone decides. */
   async #pollWalletReceipt(hash: Hex, isSettled: () => boolean): Promise<TransactionReceipt> {
     // Every failure here means there is no wallet to ask, so it is only worth a debug line.
     const client = await getConnectorClient(this.#config).catch((error: unknown) => {
@@ -217,12 +207,10 @@ export class WagmiProvider implements GenericProvider {
 }
 
 /**
- * Asks the wallet for the receipt behind `hash`: first as a transaction hash,
- * then as an EIP-5792 call-bundle id. Safe answers `wallet_getCallsStatus`
- * with its Safe transaction hash, and WalletConnect forwards that method to
- * the wallet whereas it serves `eth_getTransactionReceipt` from its own RPC.
- * Returns `undefined` while the wallet has nothing yet or rejects the request;
- * throws {@link TransactionRevertedError} once it reports a failed execution.
+ * Safe answers `wallet_getCallsStatus` with its Safe transaction hash as the
+ * bundle id, and WalletConnect forwards that method to the wallet while it
+ * serves `eth_getTransactionReceipt` from its own RPC, so both are tried.
+ * Returns `undefined` while the wallet has nothing yet.
  */
 async function walletReceipt(
   client: Awaited<ReturnType<typeof getConnectorClient>>,
@@ -248,10 +236,6 @@ async function walletReceipt(
   return calls && calls.status >= 200 ? calls.receipts?.[0] : undefined;
 }
 
-/**
- * Turns a failed wallet request into "nothing yet". A wallet that does not
- * implement the method is expected and stays quiet; anything else is logged.
- */
 function ignoreUnsupported(method: string, logger: GenericLogger | undefined) {
   return (error: unknown): undefined => {
     const { code, message } = (error ?? {}) as { code?: unknown; message?: unknown };
