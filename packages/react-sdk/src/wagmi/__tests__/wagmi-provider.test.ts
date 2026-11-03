@@ -2,7 +2,8 @@
  * Coverage for {@link WagmiProvider}:
  * - `prepareTransaction` happy path + `ConfigurationError` when no public client
  * - `waitForTransactionReceipt` public-transport path, connected-wallet fallback
- *   for wallet-side hashes (Safe, ERC-4337), and the timeout error mapping
+ *   for wallet-side hashes (Safe), revert detection on the wallet leg, probe
+ *   error logging, and the timeout error mapping
  *
  * The `wagmi/actions` module is hoist-mocked because wagmi reads its config
  * from a module-level registry rather than from the passed `Config` object.
@@ -141,7 +142,9 @@ describe("WagmiProvider.prepareTransaction", () => {
 
 describe("WagmiProvider.waitForTransactionReceipt", () => {
   const PUBLIC_RECEIPT = { logs: [{ topics: ["0x01" as Hex], data: "0x" as Hex }] };
-  const WALLET_RECEIPT = { logs: [{ topics: ["0x02" as Hex], data: "0x" as Hex }] };
+  // Raw JSON-RPC receipts as a wallet returns them: `status` is "0x1" / "0x0".
+  const WALLET_RECEIPT = { status: "0x1", logs: [{ topics: ["0x02" as Hex], data: "0x" as Hex }] };
+  const REVERTED_RECEIPT = { ...WALLET_RECEIPT, status: "0x0" };
   const never = () => new Promise<never>(() => {});
 
   type RpcArgs = { method: string; params: unknown[] };
@@ -172,7 +175,9 @@ describe("WagmiProvider.waitForTransactionReceipt", () => {
     mockGetConnectorClient.mockRejectedValue(new Error("Connector not connected."));
 
     await expect(provider.waitForTransactionReceipt(HASH)).resolves.toBe(PUBLIC_RECEIPT);
-    expect(mockWaitForReceipt).toHaveBeenCalledWith(CONFIG, { hash: HASH });
+    // wagmi defaults `timeout` to 0 (unbounded); the explicit timeout is what
+    // bounds the wait on a hash the chain never sees.
+    expect(mockWaitForReceipt).toHaveBeenCalledWith(CONFIG, { hash: HASH, timeout: 180_000 });
   });
 
   test("falls back to the wallet's eth_getTransactionReceipt when the chain never sees the hash", async () => {
@@ -213,7 +218,62 @@ describe("WagmiProvider.waitForTransactionReceipt", () => {
     expect(request.mock.calls.length).toBe(callsAfterSettle);
   });
 
-  test("maps a public-transport timeout to TransactionRevertedError with the smart-wallet hint", async () => {
+  test("rejects with TransactionRevertedError when the wallet's receipt has status 0x0", async () => {
+    // An EOA wallet serves eth_getTransactionReceipt from its own RPC and can answer
+    // before wagmi's revert path does; the raw receipt must not pass as a success.
+    mockWaitForReceipt.mockImplementation(never);
+    const request = walletAnswering({ eth_getTransactionReceipt: () => REVERTED_RECEIPT });
+    mockGetConnectorClient.mockResolvedValue(makeConnectorClient(request));
+
+    const err = await provider.waitForTransactionReceipt(HASH).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(TransactionRevertedError);
+    expect((err as Error).message).toContain("reverted");
+  });
+
+  test.each([400, 500, 600])(
+    "rejects with TransactionRevertedError when wallet_getCallsStatus reports %i",
+    async (status) => {
+      mockWaitForReceipt.mockImplementation(never);
+      const request = walletAnswering({
+        eth_getTransactionReceipt: () => null,
+        wallet_getCallsStatus: () => ({ status, receipts: [REVERTED_RECEIPT] }),
+      });
+      mockGetConnectorClient.mockResolvedValue(makeConnectorClient(request));
+
+      const err = await provider.waitForTransactionReceipt(HASH).catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(TransactionRevertedError);
+      expect((err as Error).message).toContain(String(status));
+    },
+  );
+
+  test("logs unexpected wallet probe failures and stays quiet on unsupported methods", async () => {
+    const logger = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const logging = new WagmiProvider({ config: CONFIG, logger });
+    mockWaitForReceipt.mockResolvedValue(PUBLIC_RECEIPT);
+    const unsupported = Object.assign(new Error("Unsupported method"), { code: 4200 });
+    const request = walletAnswering({
+      eth_getTransactionReceipt: () => {
+        throw new Error("Internal JSON-RPC error");
+      },
+      wallet_getCallsStatus: () => {
+        throw unsupported;
+      },
+    });
+    mockGetConnectorClient.mockResolvedValue(makeConnectorClient(request));
+
+    await expect(logging.waitForTransactionReceipt(HASH)).resolves.toBe(PUBLIC_RECEIPT);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    expect(logger.warn).toHaveBeenCalledWith(
+      "WagmiProvider: wallet eth_getTransactionReceipt failed",
+      expect.objectContaining({ error: expect.any(Error) }),
+    );
+    expect(logger.warn).not.toHaveBeenCalledWith(
+      "WagmiProvider: wallet wallet_getCallsStatus failed",
+      expect.anything(),
+    );
+  });
+
+  test("maps a public-transport timeout to TransactionRevertedError saying the outcome is unknown", async () => {
     mockWaitForReceipt.mockRejectedValue(new WaitForTransactionReceiptTimeoutError({ hash: HASH }));
     mockGetConnectorClient.mockResolvedValue(
       makeConnectorClient(vi.fn().mockRejectedValue(new Error("Method not supported"))),
@@ -221,6 +281,7 @@ describe("WagmiProvider.waitForTransactionReceipt", () => {
 
     const err = await provider.waitForTransactionReceipt(HASH).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(TransactionRevertedError);
+    expect((err as Error).message).toContain("outcome is unknown");
     expect((err as Error).message).toContain("Safe");
     expect((err as Error).cause).toBeInstanceOf(WaitForTransactionReceiptTimeoutError);
   });

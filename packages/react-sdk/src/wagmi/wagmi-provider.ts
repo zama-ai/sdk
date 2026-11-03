@@ -1,6 +1,7 @@
 import type {
   Address,
   ContractAbi,
+  GenericLogger,
   GenericProvider,
   Hex,
   ReadContractArgs,
@@ -33,7 +34,18 @@ import {
 export interface WagmiProviderConfig {
   /** Wagmi `Config` — same instance passed to {@link WagmiSigner}. */
   config: Config;
+  /** Receives unexpected failures of the best-effort wallet receipt probe. Silent when omitted. */
+  logger?: GenericLogger;
 }
+
+/**
+ * wagmi waits for a receipt with no timeout by default, which never ends on a
+ * wallet-side hash the chain never sees; viem's own default bounds it.
+ */
+const RECEIPT_TIMEOUT_MS = 180_000;
+
+/** EIP-1193 / JSON-RPC codes a wallet answers with when it does not implement a method. */
+const UNSUPPORTED_METHOD_CODES = new Set([4200, -32601, -32004]);
 
 /**
  * Read-only {@link GenericProvider} backed by wagmi.
@@ -50,9 +62,11 @@ export interface WagmiProviderConfig {
  */
 export class WagmiProvider implements GenericProvider {
   readonly #config: Config;
+  readonly #logger: GenericLogger | undefined;
 
   constructor(providerConfig: WagmiProviderConfig) {
     this.#config = providerConfig.config;
+    this.#logger = providerConfig.logger;
   }
 
   async getChainId(): Promise<number> {
@@ -76,18 +90,19 @@ export class WagmiProvider implements GenericProvider {
    * wallet (see {@link walletReceipt}). Smart-contract wallets such as Safe
    * over WalletConnect answer `eth_sendTransaction` with a wallet-side hash
    * the chain never sees, so only the wallet can map it to the mined receipt.
-   * Whichever source answers first wins.
+   * Whichever source answers first wins. Both sources treat a reverted
+   * transaction as a failure.
    *
    * @param hash - The transaction hash to wait for.
    * @returns The transaction receipt.
-   * @throws if neither source produces a receipt (e.g. an ERC-4337 bundler
-   *   returned a `UserOperation` hash instead of a transaction hash). {@link TransactionRevertedError}
+   * @throws {@link TransactionRevertedError} when the transaction reverted, or
+   *   when no receipt arrived within the timeout (the outcome is then unknown).
    */
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
     let settled = false;
     try {
       return await Promise.race([
-        waitForTransactionReceipt(this.#config, { hash }),
+        waitForTransactionReceipt(this.#config, { hash, timeout: RECEIPT_TIMEOUT_MS }),
         this.#pollWalletReceipt(hash, () => settled),
       ]);
     } catch (error) {
@@ -98,9 +113,9 @@ export class WagmiProvider implements GenericProvider {
         message.includes("Transaction not found")
       ) {
         throw new TransactionRevertedError(
-          `Could not find transaction receipt for hash "${hash.slice(0, 10)}…". ` +
-            "If the connected wallet is a smart-contract wallet (e.g. Safe) or an ERC-4337 account, " +
-            "it may have returned a wallet-side hash instead of a transaction hash.",
+          `No receipt found for transaction "${hash.slice(0, 10)}…" within ${RECEIPT_TIMEOUT_MS / 1000}s; ` +
+            "its outcome is unknown. It may still be pending (e.g. a Safe awaiting other signers), or the " +
+            "connected smart-contract wallet may have returned a wallet-side hash instead of a transaction hash.",
           { cause: error instanceof Error ? error : undefined },
         );
       }
@@ -111,15 +126,19 @@ export class WagmiProvider implements GenericProvider {
   }
 
   /**
-   * Resolves once the connected wallet reports a receipt for `hash`. Never
-   * rejects: when no wallet is connected, the promise stays pending so the
-   * public-transport wait alone decides.
+   * Resolves once the connected wallet reports a receipt for `hash`, rejects
+   * once it reports a revert. When no wallet is connected, the promise stays
+   * pending so the public-transport wait alone decides.
    */
   async #pollWalletReceipt(hash: Hex, isSettled: () => boolean): Promise<TransactionReceipt> {
-    const client = await getConnectorClient(this.#config).catch(() => undefined);
+    // Every failure here means there is no wallet to ask, so it is only worth a debug line.
+    const client = await getConnectorClient(this.#config).catch((error: unknown) => {
+      this.#logger?.debug("WagmiProvider: no connected wallet to probe for receipts", { error });
+      return undefined;
+    });
     if (client) {
       while (!isSettled()) {
-        const receipt = await walletReceipt(client, hash);
+        const receipt = await walletReceipt(client, hash, this.#logger);
         if (receipt) {
           return receipt;
         }
@@ -203,20 +222,49 @@ export class WagmiProvider implements GenericProvider {
  * then as an EIP-5792 call-bundle id. Safe answers `wallet_getCallsStatus`
  * with its Safe transaction hash, and WalletConnect forwards that method to
  * the wallet whereas it serves `eth_getTransactionReceipt` from its own RPC.
- * Returns `undefined` while the wallet has nothing yet or rejects the request.
+ * Returns `undefined` while the wallet has nothing yet or rejects the request;
+ * throws {@link TransactionRevertedError} once it reports a failed execution.
  */
 async function walletReceipt(
   client: Awaited<ReturnType<typeof getConnectorClient>>,
   hash: Hex,
+  logger: GenericLogger | undefined,
 ): Promise<TransactionReceipt | undefined> {
   const receipt = await client
     .request({ method: "eth_getTransactionReceipt", params: [hash] })
-    .catch(() => null);
+    .catch(ignoreUnsupported("eth_getTransactionReceipt", logger));
   if (receipt) {
+    if (receipt.status !== "0x1") {
+      throw new TransactionRevertedError(`Transaction "${hash}" reverted (wallet receipt).`);
+    }
     return receipt;
   }
   const calls = await client
     .request({ method: "wallet_getCallsStatus", params: [hash] })
-    .catch(() => undefined);
-  return calls?.receipts?.[0];
+    .catch(ignoreUnsupported("wallet_getCallsStatus", logger));
+  // EIP-5792 status codes: 1xx pending, 2xx confirmed, 3xx–6xx failed.
+  if (calls && calls.status >= 300) {
+    throw new TransactionRevertedError(
+      `Transaction "${hash}" failed (wallet_getCallsStatus status ${calls.status}).`,
+    );
+  }
+  return calls && calls.status >= 200 ? calls.receipts?.[0] : undefined;
+}
+
+/**
+ * Turns a failed wallet request into "nothing yet". A wallet that does not
+ * implement the method is expected and stays quiet; anything else is logged.
+ */
+function ignoreUnsupported(method: string, logger: GenericLogger | undefined) {
+  return (error: unknown): undefined => {
+    const code = (error as { code?: unknown } | null)?.code;
+    const message = error instanceof Error ? error.message : String(error);
+    const unsupported =
+      (typeof code === "number" && UNSUPPORTED_METHOD_CODES.has(code)) ||
+      /unsupported|not supported|does not exist/i.test(message);
+    if (!unsupported) {
+      logger?.warn(`WagmiProvider: wallet ${method} failed`, { error });
+    }
+    return undefined;
+  };
 }
