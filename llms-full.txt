@@ -616,7 +616,7 @@ See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/git
 Create a module and add the client:
 
 ```sh
-export ZAMA_SDK_VERSION=3.8.0-beta.8
+export ZAMA_SDK_VERSION=3.8.0-beta.11
 mkdir encrypt-input
 cd encrypt-input
 go mod init example.com/encrypt-input
@@ -794,7 +794,7 @@ See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/git
 Create a binary project and add the client with the runtime this example uses:
 
 ```sh
-export ZAMA_SDK_VERSION=3.8.0-beta.8
+export ZAMA_SDK_VERSION=3.8.0-beta.11
 cargo new encrypt-input
 cd encrypt-input
 cargo add zama_sdk@=$ZAMA_SDK_VERSION
@@ -2543,6 +2543,7 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 - **Artifacts:** the `ghcr.io/zama-ai/sdk-daemon` Docker image, the Go module `github.com/zama-ai/sdk/clients/go/v3`, and the Rust crate `zama_sdk`. Run the image and the client at exactly the same version; see [client and daemon compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md).
 - **Guides:** Go and Rust tabs in [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md), [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/encrypt-decrypt.md), [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/delegated-decryption.md), [Offline signing](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/offline.md), [Handle errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/handle-errors.md), [Local development](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/local-development.md), [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md), and [Decrypt values from event logs](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/decrypt-from-event-logs.md).
 - **Deployment:** [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md), [Monitor and troubleshoot](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md), and [Upgrade the daemon](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/upgrade-and-recover.md).
+- **Signed, scanned image:** the daemon image is built on Docker Hardened Images, every release digest is scanned with Trivy before it is tagged, and the image carries signed build provenance and an SBOM. Verify a release with `gh attestation verify` or cosign and pin it by digest with `ZAMA_SDK_DAEMON_DIGEST`; see [Verify and pin the image](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md#verify-and-pin-the-image). Published images are re-scanned daily.
 
 Start with the [Go quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/go-quick-start.md) or the [Rust quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/rust-quick-start.md).
 
@@ -2580,6 +2581,10 @@ See [Wallet account changes](https://raw.githubusercontent.com/zama-ai/sdk/beta/
 ## Telemetry as query parameters
 
 `createConfig` now takes `telemetry: "header" | "query" | "off"`. The default, `"header"`, keeps sending the `x-zama-sdk-*` usage headers. `"query"` sends the same four fields as `zama_sdk_*` query parameters instead, for backend proxies and edges that rebuild or strip request headers. `"off"` sends nothing; `true` and `false` still work as `"header"` and `"off"`. On Node.js, `ZAMA_SDK_TELEMETRY` takes the same three values, case-insensitive, and switches the mode or turns telemetry off for the whole process; it cannot turn on what the config disabled. See [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md).
+
+## Amoy mock registry and tokens removed
+
+The mock wrappers registry and mock confidential tokens on Polygon Amoy are no longer maintained, so the SDK no longer ships them. `polygonAmoy.registryAddress` is now `undefined`, Amoy is removed from the deprecated `DefaultRegistryAddresses` map, and the `example-polygon-amoy` app is removed. The `polygonAmoy` preset stays available for the base protocol: encrypting inputs and decrypting values on Amoy work as before. If you deploy your own registry on Amoy, pass its address via `registryAddresses` when creating a `WrappersRegistry`, or set `registryAddress` on the chain definition. The Polygon mainnet registry and wrappers are unchanged.
 
 ## InGen testnet removed
 
@@ -2750,7 +2755,12 @@ const config = createConfig({
 });
 ```
 
-The shared Zama **testnet** relayer needs no API key, so `polygonAmoy` works as-is; the **mainnet** relayer used by `polygon` requires one — see [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md). A full `example-polygon-amoy` reference app is included in the examples. See [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md#1-pick-your-chains) for the complete preset list.
+The shared Zama **testnet** relayer needs no API key, so `polygonAmoy` works as-is; the **mainnet** relayer used by `polygon` requires one — see [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md). See [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/configuration.md#1-pick-your-chains) for the complete preset list.
+
+
+> [!INFO]
+> The `example-polygon-amoy` reference app that shipped with this release, and the Amoy mock wrappers registry it was built on, have since been removed. The `polygonAmoy` preset itself remains available for the base protocol (encrypt and decrypt).
+
 
 ### Offline signing
 
@@ -10860,6 +10870,47 @@ There is no network listener. Keep the application and its daemon on the same ho
 > Two daemons must not share a SQLite credential volume: each named database is locked to one daemon. Replicas can share application-owned storage, but credential coordination does not span daemons, so concurrent replicas can race on the same user's credentials and cause extra signature prompts.
 
 
+## Verify and pin the image
+
+Each release signs the image in the release workflow and stores the signature, build provenance, and an SBOM next to it on GitHub Container Registry. Before the first deployment of a version, and before every upgrade, resolve the release tag to its digest, verify that digest, and pin it. A tag can be moved; a digest cannot.
+
+Resolve the tag first, so the digest you verify is the digest you pin:
+
+```bash
+export ZAMA_SDK_VERSION=3.8.0-beta.11
+export ZAMA_SDK_DAEMON_DIGEST="$(docker buildx imagetools inspect "ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION}" --format '{{ .Manifest.Digest }}')"
+```
+
+Verify the digest with the [GitHub CLI](https://cli.github.com/):
+
+```bash
+gh attestation verify "oci://ghcr.io/zama-ai/sdk-daemon@${ZAMA_SDK_DAEMON_DIGEST}" --repo zama-ai/sdk \
+  --signer-workflow zama-ai/sdk/.github/workflows/release.yml
+```
+
+The command checks that the image was built by the release workflow of the `zama-ai/sdk` repository. With [cosign](https://github.com/sigstore/cosign) instead:
+
+```bash
+cosign verify-attestation "ghcr.io/zama-ai/sdk-daemon@${ZAMA_SDK_DAEMON_DIGEST}" --new-bundle-format \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  --certificate-identity-regexp '^https://github.com/zama-ai/sdk/\.github/workflows/release\.yml@refs/heads/(main|beta|alpha)$' \
+  --type https://slsa.dev/provenance/v1
+```
+
+Keep `ZAMA_SDK_DAEMON_DIGEST` exported. The Compose files below then pull `ghcr.io/zama-ai/sdk-daemon:<version>@sha256:…`, and Docker refuses any content that doesn't match. Images released before signing was introduced carry no attestations, and the verification fails for them.
+
+The SBOM is attached to each platform image, not to the manifest list the tag resolves to. To read the SBOM of the image your Docker host runs, resolve the digest for its architecture and verify it with `--predicate-type https://spdx.dev/Document/v2.3` and `--format json`:
+
+```bash
+arch="$(docker version --format '{{ .Server.Arch }}')"
+platform_digest="$(docker buildx imagetools inspect "ghcr.io/zama-ai/sdk-daemon@${ZAMA_SDK_DAEMON_DIGEST}" \
+  --format "{{ range .Manifest.Manifests }}{{ if eq .Platform.Architecture \"${arch}\" }}{{ .Digest }}{{ end }}{{ end }}")"
+gh attestation verify "oci://ghcr.io/zama-ai/sdk-daemon@${platform_digest}" --repo zama-ai/sdk \
+  --predicate-type https://spdx.dev/Document/v2.3 --format json
+```
+
+Published images are re-scanned daily. A critical or high CVE in a published image is tracked in a GitHub issue on the repository and fixed with a patched release, so subscribe to releases and plan to [upgrade](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/upgrade-and-recover.md) when one ships.
+
 ## Run with Docker Compose
 
 The [Compose file](https://raw.githubusercontent.com/zama-ai/sdk/beta/packages/sdk-daemon/deploy/compose.yaml) runs the daemon with a read-only root filesystem, no Linux capabilities, a healthcheck and a stop grace period above its shutdown timeout, and keeps its socket and SQLite storage in named volumes. A new named volume copies the image's private directories, so the daemon starts without host directory setup. The image runs the daemon as UID `10000` and GID `10001`.
@@ -10886,12 +10937,12 @@ services:
 Download the daemon file next to it, then start both:
 
 ```bash
-export ZAMA_SDK_VERSION=3.8.0-beta.8
+export ZAMA_SDK_VERSION=3.8.0-beta.11
 curl -fsSL -o zama-sdk-daemon.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.yaml"
 docker compose up -d --wait
 ```
 
-Set `ZAMA_SDK_VERSION` to the version of your Go module or Rust crate. `--wait` returns once the daemon's healthcheck passes. This works on Linux and on Docker Desktop.
+Set `ZAMA_SDK_VERSION` to the version of your Go module or Rust crate, and keep the `ZAMA_SDK_DAEMON_DIGEST` you verified above exported. `--wait` returns once the daemon's healthcheck passes. This works on Linux and on Docker Desktop.
 
 ### Application on a Linux host
 
@@ -10900,13 +10951,13 @@ When your application runs directly on a Linux host rather than in a container, 
 From the directory that will hold the daemon's files, replace `myapp` with the user your application runs as:
 
 ```bash
-export ZAMA_SDK_VERSION=3.8.0-beta.8
+export ZAMA_SDK_VERSION=3.8.0-beta.11
 curl -fsSL -o compose.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.host.yaml"
 sudo install -d -m 700 -o myapp -g myapp socket storage
 ZAMA_SDK_DAEMON_UID="$(id -u myapp)" ZAMA_SDK_DAEMON_GID="$(id -g myapp)" docker compose up -d --wait
 ```
 
-The daemon rejects directories that aren't private to its user, so create them before starting. Point the application at `socket/sdk.sock` in that directory.
+The daemon rejects directories that aren't private to its user, so create them before starting. Point the application at `socket/sdk.sock` in that directory. This file reads `ZAMA_SDK_DAEMON_DIGEST` too.
 
 ## Back up daemon SQLite storage
 
@@ -11047,14 +11098,15 @@ SDK contexts and in-flight operations never move between daemons. The new pair c
 2. Stop sending new operations to the old pair and let in-flight operations finish.
 3. Close the application's SDK contexts and client connections.
 4. Send `SIGTERM` to the old daemon and wait for it to exit. It waits up to `ZAMA_SDK_DAEMON_SHUTDOWN_TIMEOUT_MS` (120 seconds by default) for SDK work that is still running, then logs `SHUTDOWN_DEADLINE_EXCEEDED` and exits with status 1. Set your platform's stop grace period above this timeout so the daemon exits before it is killed; the deployment examples use 150 seconds.
-5. Start the new daemon and application with the same storage configuration and derivation secret.
-6. Recreate SDK contexts, then run an operation that reaches your RPC endpoint and relayer before resuming traffic.
+5. Verify the new daemon image and pin its digest, as in [Verify and pin the image](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md#verify-and-pin-the-image). Replace the previous `ZAMA_SDK_DAEMON_DIGEST`: with the old digest still set, the Compose files pull the old image under the new tag.
+6. Start the new daemon and application with the same storage configuration and derivation secret.
+7. Recreate SDK contexts, then run an operation that reaches your RPC endpoint and relayer before resuming traffic.
 
 A forced stop during a write can leave its outcome unknown. Follow [Resolve uncertain transaction outcomes](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/uncertain-transaction-outcomes.md) before repeating it.
 
 ## Roll back
 
-Stop the new pair and start the previous images with the same storage and derivation secret. If the new version wrote credentials the previous version can't read, restore the storage backup taken before the upgrade; see [Back up daemon SQLite storage](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md#back-up-daemon-sqlite-storage). Never run the old and new daemons against one SQLite volume at the same time.
+Stop the new pair and start the previous images with the same storage and derivation secret; set `ZAMA_SDK_DAEMON_DIGEST` back to the previous digest, or unset it. If the new version wrote credentials the previous version can't read, restore the storage backup taken before the upgrade; see [Back up daemon SQLite storage](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md#back-up-daemon-sqlite-storage). Never run the old and new daemons against one SQLite volume at the same time.
 
 ## Overview
 
@@ -12435,7 +12487,7 @@ if (await registry.isConfidentialTokenValid("0xcUSDC")) {
 > **Deprecated.** Read `registryAddress` from the chain presets instead (e.g. `sepolia.registryAddress` from `@zama-fhe/sdk/chains`). This export will be removed in the next major version.
 
 
-Exported map of built-in registry addresses for every built-in chain with a deployed registry. Includes Mainnet (`1`), Polygon (`137`), Sepolia (`11155111`), Polygon Amoy (`80002`), Hoodi (`560048`), T-Rex Zenith Testnet (`936486`), and BNB Smart Chain Testnet (`97`). Addresses are EIP-55 checksummed.
+Exported map of built-in registry addresses for every built-in chain with a deployed registry. Includes Mainnet (`1`), Polygon (`137`), Sepolia (`11155111`), Hoodi (`560048`), T-Rex Zenith Testnet (`936486`), and BNB Smart Chain Testnet (`97`). Addresses are EIP-55 checksummed.
 
 ```ts
 import { sepolia } from "@zama-fhe/sdk/chains";
@@ -16085,7 +16137,7 @@ Each chain object implements the `FheChain` interface:
 | `inputVerifierContractAddress`              | `Address`                   | Input verifier contract address                                                                                                                                                           |
 | `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations                                                                                                                                         |
 | `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations                                                                                                                                         |
-| `registryAddress`                           | `Address \| undefined`      | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat)                                                                                  |
+| `registryAddress`                           | `Address \| undefined`      | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat and Polygon Amoy)                                                                 |
 | `executorAddress`                           | `Address \| undefined`      | TFHEExecutor contract address (cleartext mode only, undefined for real FHE chains)                                                                                                        |
 | `auth`                                      | `Auth \| undefined`         | Relayer authentication. Required for the Zama-hosted **mainnet** relayer (Ethereum, Polygon); leave unset on the shared Zama testnet relayer (Sepolia, Polygon Amoy), which needs no key. |
 | `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key for EIP-712 verification (cleartext mode)                                                                                                                          |
@@ -16193,7 +16245,7 @@ import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 > **Deprecated.** Read `registryAddress` from the chain presets instead (e.g. `sepolia.registryAddress`). This export will be removed in the next major version.
 
 
-A convenience export of built-in registry addresses for every built-in chain with a deployed registry (Mainnet, Polygon, Sepolia, Polygon Amoy, Hoodi, T-Rex Zenith Testnet, BNB Smart Chain Testnet) as a `Record<number, Address>` map. Used internally by the [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/WrappersRegistry.md) class.
+A convenience export of built-in registry addresses for every built-in chain with a deployed registry (Mainnet, Polygon, Sepolia, Hoodi, T-Rex Zenith Testnet, BNB Smart Chain Testnet) as a `Record<number, Address>` map. Used internally by the [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/WrappersRegistry.md) class.
 
 ```ts
 // Deprecated
@@ -16206,7 +16258,7 @@ console.log(sepolia.registryAddress);
 
 
 > [!INFO]
-> `hardhat` has no registry address by default. Pass one via `registryAddresses` when creating a [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/WrappersRegistry.md), or set `registryAddress` on the chain definition.
+> `hardhat` and `polygonAmoy` have no registry address by default. Pass one via `registryAddresses` when creating a [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/WrappersRegistry.md), or set `registryAddress` on the chain definition.
 
 
 ## Related
@@ -21042,9 +21094,9 @@ function WrapperInfo({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 # useWrappersRegistryAddress
 
-Resolves the wrappers registry address for the connected chain. Uses built-in defaults (Mainnet, Sepolia) merged with chain-level registry addresses from the config.
+Resolves the wrappers registry address for the provider's chain. Uses built-in defaults (Mainnet, Sepolia) merged with chain-level registry addresses from the config.
 
-Returns `undefined` when the chain ID hasn't been fetched yet or when no registry is configured for the connected chain.
+Returns `undefined` when the chain ID hasn't been fetched yet or when no registry is configured for that chain.
 
 ## Import
 
@@ -21078,11 +21130,11 @@ This hook takes no parameters. It reads registry addresses from the `ZamaSDK` in
 
 `Address | undefined`
 
-The registry contract address for the connected chain, or `undefined` if unavailable.
+The registry contract address for the provider's chain, or `undefined` if unavailable.
 
-## Caching
+## Chain resolution
 
-The underlying chain ID query uses `staleTime: 30000` (30 seconds). Chain switches may take up to 30 seconds to reflect.
+The registry is resolved for the provider's chain, the same chain every registry read uses. The chain ID is cached for 30 seconds (`staleTime: 30000`), but the cache is keyed by the connected wallet's chain, so connecting a wallet or switching its chain refetches it instead of waiting out the cache. While that refetch is in flight the hook returns `undefined`, so dependent hooks show pending briefly rather than the previous chain's registry. With no wallet connected, the cached chain ID is reused until it goes stale. If your provider is pinned to one chain (for example, a single-chain `publicClient`), the registry stays on that chain even when the wallet switches.
 
 ## Related
 
@@ -26562,7 +26614,7 @@ On-chain wrappers registry queries.
 | Key                                                         | Scope                                      |
 | ----------------------------------------------------------- | ------------------------------------------ |
 | `.all`                                                      | All registry queries                       |
-| `.chainId()`                                                | Chain ID resolution                        |
+| `.chainId(walletChainId?)`                                  | Chain ID resolution, per wallet chain      |
 | `.tokenPairs(registryAddr)`                                 | All pairs for a registry                   |
 | `.tokenPairsLength(registryAddr)`                           | Pair count                                 |
 | `.tokenPairsSlice(registryAddr, from, to)`                  | Index-based slice                          |
@@ -26871,7 +26923,7 @@ Each release publishes the image for `linux/amd64` and `linux/arm64`, tagged wit
 
 The quickstarts and the deployment page set one `ZAMA_SDK_VERSION` variable for the image tag and the client version, and each release updates it to that release.
 
-For deployments, record the selected client version and pin the daemon image to its matching release tag. Do not rely on a moving image tag when restarting an existing deployment. Retain the Go module files or your Rust application's lockfile to reproduce the selected dependencies.
+For deployments, record the selected client version and pin the daemon image to the digest of its matching release. Do not rely on a moving image tag when restarting an existing deployment. Each release signs the image and attaches build provenance and an SBOM; [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md#verify-and-pin-the-image) shows how to verify them and obtain the digest. Retain the Go module files or your Rust application's lockfile to reproduce the selected dependencies.
 
 The wire protocol is named `v1beta1`. This identifier does not select an SDK release channel or replace the exact-version pairing rule.
 
@@ -30796,7 +30848,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 ## Installation
 
 ```sh
-go get github.com/zama-ai/sdk/clients/go/v3@v3.8.0-beta.8
+go get github.com/zama-ai/sdk/clients/go/v3@v3.8.0-beta.11
 ```
 
 Run the `ghcr.io/zama-ai/sdk-daemon` image at exactly the same version as the client.
@@ -30825,7 +30877,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 ## Installation
 
 ```sh
-cargo add zama_sdk@=3.8.0-beta.8
+cargo add zama_sdk@=3.8.0-beta.11
 ```
 
 Run the `ghcr.io/zama-ai/sdk-daemon` image at exactly the same version as the client. Enable the `alloy` feature for the Alloy signing and transaction adapters.

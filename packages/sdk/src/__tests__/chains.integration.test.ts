@@ -3,10 +3,10 @@
  *
  * Unlike the mocked `integration.test.ts`, this suite hits live infrastructure —
  * a public RPC per chain plus, where one exists, the chain's hosted Zama relayer
- * (`relayer.testnet.zama.org` on Sepolia and Polygon Amoy,
- * `relayer.mainnet.zama.org` on
+ * (`relayer.testnet.zama.org` on Sepolia, `relayer.mainnet.zama.org` on
  * Ethereum mainnet and Polygon). It runs the same read-only flow against every relayer-backed and
- * cleartext chain the SDK ships in `chains/configs.ts`:
+ * cleartext chain the SDK ships in `chains/configs.ts` with a built-in wrappers
+ * registry:
  *
  *   1. the target confidential token is registered and valid in the on-chain
  *      wrappers registry, and reverse-resolves to its documented ERC-20,
@@ -22,7 +22,7 @@
  * Each entry runs its own single-chain `ZamaSDK` rather than one shared
  * multi-chain instance: reads are bound to a single RPC (`ViemProvider` wraps
  * one `PublicClient`) and the relayer transport differs per chain. Mainnet,
- * Polygon, Sepolia and Polygon Amoy have full FHE infrastructure and use the `node()`
+ * Polygon and Sepolia have full FHE infrastructure and use the `node()`
  * relayer; the cleartext testnets (hoodi / bsc / zenith) have no hosted relayer
  * and drive the
  * FHE backend through `cleartext()`. `hardhat` needs a local node and is out of
@@ -51,7 +51,6 @@ import {
   hoodi,
   mainnet,
   polygon,
-  polygonAmoy,
   sepolia,
   zenithTrexTestnet,
 } from "@zama-fhe/sdk/chains";
@@ -98,12 +97,6 @@ const entries: readonly ChainEntry[] = [
     relayer: node(),
     confidentialTokenAddress: "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639",
     underlyingTokenAddress: "0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF",
-  },
-  {
-    chain: polygonAmoy,
-    relayer: node(),
-    confidentialTokenAddress: "0x7a1728f2A07cE4D62167dE1348af168509011b7b",
-    underlyingTokenAddress: "0x8516e725223e3F829537D6A877E1aAE954811B69",
   },
   {
     chain: hoodi,
