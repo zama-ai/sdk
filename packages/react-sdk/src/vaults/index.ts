@@ -15,6 +15,7 @@ export { useClaim, type UseClaimConfig } from "./use-claim";
 export { useQuit, type UseQuitConfig } from "./use-quit";
 export { useRecover, type UseRecoverConfig } from "./use-recover";
 export { useDispatchBatch, type UseDispatchBatchConfig } from "./use-dispatch-batch";
+export { useFinalize, type UseFinalizeConfig } from "./use-finalize";
 export {
   useCurrentBatchId,
   type UseCurrentBatchIdConfig,

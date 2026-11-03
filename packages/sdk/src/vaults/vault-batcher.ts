@@ -1,4 +1,5 @@
-import { getAddress, type Address } from "viem";
+import { getAddress, type Address, type Hex } from "viem";
+import { unwrapAmountContract } from "../contracts";
 import {
   DecryptionFailedError,
   EncryptionFailedError,
@@ -27,6 +28,7 @@ import {
   claimContract,
   currentBatchIdContract,
   depositsContract,
+  dispatchBatchCallbackContract,
   dispatchBatchContract,
   exchangeRateContract,
   exchangeRateDecimalsContract,
@@ -38,10 +40,23 @@ import {
   recoverContract,
   toTokenContract,
   totalDepositsContract,
+  unwrapRequestIdContract,
   vaultContract,
 } from "./contracts";
 import { findJoined } from "./events";
 import { BatchState, type JoinOptions, type JoinResult } from "./types";
+
+/** A settlement built but not sent: what {@link VaultBatcher.prepareFinalize} returns. */
+export interface PreparedFinalize {
+  /** The batch the call settles. */
+  readonly batchId: bigint;
+  /** The publicly decrypted amount the batch's unwrap released. */
+  readonly unwrapAmountCleartext: bigint;
+  /** The relayer's proof of that decryption, which the batcher verifies. */
+  readonly decryptionProof: Hex;
+  /** The `dispatchBatchCallback` call, ready for the host's own signer. */
+  readonly call: WriteContractConfig;
+}
 
 /**
  * One on-chain batcher contract: it pools participants' encrypted amounts,
@@ -49,10 +64,10 @@ import { BatchState, type JoinOptions, type JoinResult } from "./types";
  * vault, and lets each participant claim their share. A vault has one batcher
  * per direction, so construct one instance for deposits and one for redeems.
  *
- * The lifecycle is `join` → `dispatchBatch` → `claim`, but finalization
- * between the last two is driven by the relayer, not by the caller: a batch
- * is claimable only once it reaches {@link BatchState.Finalized}, which can be
- * well after dispatch.
+ * The lifecycle is `join` → `dispatchBatch` → `claim`. Finalization between
+ * the last two is normally driven by the relayer, so a batch is claimable only
+ * once it reaches {@link BatchState.Finalized}, which can be well after
+ * dispatch; {@link finalize} settles a batch the relayer has not.
  */
 export class VaultBatcher {
   /** The SDK instance this batcher reads and writes through. */
@@ -221,6 +236,14 @@ export class VaultBatcher {
   }
 
   /**
+   * The unwrap request on `fromToken` that a dispatched batch settles against
+   * once its amount is publicly decrypted. Zero until the batch is dispatched.
+   */
+  async unwrapRequestId(batchId: bigint): Promise<EncryptedValue> {
+    return this.sdk.provider.readContract(unwrapRequestIdContract(this.address, batchId));
+  }
+
+  /**
    * Decrypt and return the plaintext amount `account` joined into a batch.
    * Acquires FHE credentials via a wallet signature if none are cached.
    */
@@ -360,6 +383,59 @@ export class VaultBatcher {
     this.#requireSigner("dispatchBatch");
     await requireChainAlignment("dispatchBatch", this.sdk.signer, this.sdk.provider);
     return this.#submitTransaction("vault:dispatchBatch", dispatchBatchContract(this.address));
+  }
+
+  /**
+   * Settle a dispatched batch yourself: publicly decrypt the aggregate amount
+   * its unwrap request released and hand the cleartext and proof to the
+   * batcher, which executes the route. Permissionless, like
+   * {@link dispatchBatch}. The relayer normally does this, so reach for it
+   * when a batch has sat in {@link BatchState.Dispatched} longer than
+   * expected. Past the batch's callback deadline the same call cancels the
+   * batch instead of settling it.
+   *
+   * Only legal while the batch is {@link BatchState.Dispatched}.
+   *
+   * @throws if the public decryption returns no cleartext for the amount. {@link DecryptionFailedError}
+   */
+  async finalize(batchId: bigint): Promise<TransactionResult> {
+    this.#requireSigner("finalize");
+    await requireChainAlignment("finalize", this.sdk.signer, this.sdk.provider);
+    const { call } = await this.prepareFinalize(batchId);
+    return this.#submitTransaction("vault:finalize", call);
+  }
+
+  /**
+   * Build the settlement {@link finalize} sends without sending it: the
+   * `dispatchBatchCallback` call with the publicly decrypted amount and its
+   * proof, for a host that signs and sends through its own pipeline. Needs no
+   * signer.
+   *
+   * @throws if the public decryption returns no cleartext for the amount. {@link DecryptionFailedError}
+   */
+  async prepareFinalize(batchId: bigint): Promise<PreparedFinalize> {
+    const [unwrapRequestId, wrapper] = await Promise.all([
+      this.unwrapRequestId(batchId),
+      this.fromToken(),
+    ]);
+    const encryptedAmount = await this.sdk.provider.readContract(
+      unwrapAmountContract(wrapper, unwrapRequestId),
+    );
+    const { clearValues, decryptionProof } = await this.sdk.decryption.decryptPublicValues(
+      [encryptedAmount],
+      { operation: "vault-finalize" },
+    );
+    const cleartext = clearValues[encryptedAmount];
+    if (cleartext === undefined) {
+      throw new DecryptionFailedError(`Public decryption returned no value for ${encryptedAmount}`);
+    }
+    assertBigint(cleartext, "finalize: clearValues[encryptedAmount]");
+    return {
+      batchId,
+      unwrapAmountCleartext: cleartext,
+      decryptionProof,
+      call: dispatchBatchCallbackContract(this.address, batchId, cleartext, decryptionProof),
+    };
   }
 
   // INTERNAL

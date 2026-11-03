@@ -194,7 +194,7 @@ Use the per-batch reads (`batchMinBatchAge`, `batchCallbackDeadline`) rather tha
 
 ### 5. Claim
 
-Dispatch only starts the decryption; finalization lands later. Wait for `batchState` to reach `Finalized`, then claim. Claiming is permissionless — anyone can call it on another account's behalf, but the output always goes to that account, never to the caller:
+Dispatch only starts the decryption; finalization lands later, when the relayer calls back with the decrypted aggregate. Wait for `batchState` to reach `Finalized`, then claim. A batch that stays `Dispatched` longer than expected can be settled by anyone with `vault.depositBatcher.finalize(batchId)` (`useFinalize` in React); past its callback deadline that same call cancels it instead. Claiming is permissionless — anyone can call it on another account's behalf, but the output always goes to that account, never to the caller:
 
 {% tabs %}
 {% tab title="Core SDK" %}

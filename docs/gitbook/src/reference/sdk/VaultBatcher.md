@@ -9,7 +9,7 @@ description: One on-chain vault batcher — join, batch state, dispatch, claim, 
 
 A vault has one batcher per direction — deposit and redeem — so a [`Vault`](Vault.md) holds two instances. Most apps should start from `Vault`, which adds the operator-approval step to `join`, and reach for `VaultBatcher` directly only for a single direction or to control the approval yourself.
 
-The lifecycle is `join` → `dispatchBatch` → `claim`. Finalization between the last two is driven by the relayer, not the caller: a batch is claimable only once it reaches `BatchState.Finalized`, which can be well after dispatch.
+The lifecycle is `join` → `dispatchBatch` → `claim`. Finalization between the last two is normally driven by the relayer: a batch is claimable only once it reaches `BatchState.Finalized`, which can be well after dispatch. `finalize` settles a batch the relayer has not.
 
 ## Import
 
@@ -182,6 +182,12 @@ Decrypts and returns the plaintext amount `account` joined into a batch. Acquire
 const joined = await batcher.depositOf(batchId, address);
 ```
 
+### unwrapRequestId
+
+`(batchId: bigint) => Promise<EncryptedValue>`
+
+The unwrap request a dispatched batch is waiting on. At dispatch the batcher unwraps its aggregate through `fromToken`, and the batch settles once that request's amount is publicly decrypted. Zero until the batch is dispatched. `finalize` reads it for you.
+
 ## Batcher policy reads
 
 The batcher-wide values describe batches opened **from now on**. An existing batch pins the policy in force when it opened — use the per-batch reads above (`batchMinBatchAge`, `batchCallbackDeadline`) for it.
@@ -244,6 +250,24 @@ Closes the current batch once it has reached its pinned minimum age and kicks of
 await batcher.dispatchBatch();
 ```
 
+### finalize
+
+`(batchId: bigint) => Promise<TransactionResult>`
+
+Settles a dispatched batch yourself: reads the batch's `unwrapRequestId`, publicly decrypts the amount that unwrap released, and submits `dispatchBatchCallback` with the cleartext and its proof, which executes the route. Permissionless, like `dispatchBatch`. The relayer normally does this, so reach for it when a batch has sat in `BatchState.Dispatched` longer than expected. Past the batch's callback deadline (`batchDispatchedAt + batchCallbackDeadline`) the same call cancels the batch instead of settling it.
+
+Only legal while the batch is `BatchState.Dispatched`.
+
+```ts
+await batcher.finalize(batchId);
+```
+
+**Throws:**
+
+- [`DecryptionFailedError`](errors.md#decryptionfailederror) — the public decryption returned no cleartext for the amount.
+
+`prepareFinalize(batchId)` does everything but the send and returns `{ batchId, unwrapAmountCleartext, decryptionProof, call }`, the `dispatchBatchCallback` call ready for a host's own signer. It needs no signer.
+
 ### claim
 
 `(batchId: bigint, account?: Address) => Promise<TransactionResult>`
@@ -281,10 +305,47 @@ Only legal once the batch reaches `BatchState.Canceled`; before that, a particip
 await batcher.recover(batchId, "0xDepositor");
 ```
 
+## Call builders
+
+```ts
+import {
+  joinContract,
+  claimContract,
+  quitContract,
+  recoverContract,
+  dispatchBatchContract,
+  dispatchBatchCallbackContract,
+  currentBatchIdContract,
+  batchStateContract,
+  unwrapRequestIdContract,
+} from "@zama-fhe/sdk/vaults";
+```
+
+Every read and write above has a pure builder that returns `{ address, abi, functionName, args }` without executing anything, for apps that submit transactions through their own pipeline (a bundler, a transaction queue, an EIP-5792 `wallet_sendCalls` batch) or read through their own multicall. Pass the result to viem's `encodeFunctionData` / `readContract`, or spread it into a wagmi `readContracts` entry.
+
+| Builder                                                                       | Mirrors                                              |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `joinContract(batcher, beneficiary, encryptedAmount, inputProof)`             | `join`                                               |
+| `claimContract(batcher, batchId, account)`                                    | `claim`                                              |
+| `quitContract(batcher, batchId)`                                              | `quit`                                               |
+| `recoverContract(batcher, batchId, account)`                                  | `recover`                                            |
+| `dispatchBatchContract(batcher)`                                              | `dispatchBatch`                                      |
+| `dispatchBatchCallbackContract(batcher, batchId, cleartext, decryptionProof)` | the write inside `finalize`                          |
+| `unwrapRequestIdContract(batcher, batchId)`                                   | `unwrapRequestId`                                    |
+| `currentBatchIdContract`, `batchStateContract`, `pausedContract`, …           | the matching read, one builder per read listed above |
+
+A builder encodes a call; it does not check balances, encrypt, or grant anything. The class method is the full pre-flight, so an app that uses the builders takes those steps on itself.
+
 ## Events
 
 ```ts
-import { VaultTopics, decodeJoined, findJoined, type JoinedEvent } from "@zama-fhe/sdk/vaults";
+import {
+  VaultTopics,
+  decodeJoined,
+  findJoined,
+  takeJoined,
+  type JoinedEvent,
+} from "@zama-fhe/sdk/vaults";
 ```
 
 `join` decodes its own receipt, but the helpers are exported for apps that index logs themselves.
@@ -292,6 +353,7 @@ import { VaultTopics, decodeJoined, findJoined, type JoinedEvent } from "@zama-f
 - `VaultTopics.Joined` — topic0 of `Joined(uint256 indexed batchId, address indexed account, euint64 amount)`.
 - `decodeJoined(log)` — decodes one raw log into `{ batchId, account, confidentialAmount }`, or `null` if it isn't a `Joined` event.
 - `findJoined(logs, batcher, account?)` — the first `Joined` log emitted by `batcher` (and crediting `account`, when given). Filters by emitter and account because one transaction can join several batchers and credit several beneficiaries.
+- `takeJoined(logs, batcher, account?)` — `findJoined` that also removes the match from `logs`. Walk a receipt that joined several batchers for one account leg by leg, so each leg pairs with its own log even when the adapter omits emitter addresses.
 
 ## TanStack Query helpers
 
@@ -306,6 +368,7 @@ import {
   quitMutationOptions,
   recoverMutationOptions,
   dispatchBatchMutationOptions,
+  finalizeMutationOptions,
   invalidateBatchQueries,
 } from "@zama-fhe/sdk/vaults";
 ```

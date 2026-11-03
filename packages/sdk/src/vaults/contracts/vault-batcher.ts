@@ -186,3 +186,31 @@ export function exchangeRateDecimalsContract(batcher: Address) {
 export function pausedContract(batcher: Address) {
   return { address: batcher, abi: vaultBatcherAbi, functionName: "paused", args: [] } as const;
 }
+
+/** Returns the contract config to read the unwrap request a dispatched batch is waiting on. */
+export function unwrapRequestIdContract(batcher: Address, batchId: bigint) {
+  return {
+    address: batcher,
+    abi: vaultBatcherAbi,
+    functionName: "unwrapRequestId",
+    args: [batchId],
+  } as const;
+}
+
+/**
+ * Returns the contract config to settle a dispatched batch with the public decryption of its
+ * aggregate amount, or to cancel it once its callback deadline has passed. Permissionless.
+ */
+export function dispatchBatchCallbackContract(
+  batcher: Address,
+  batchId: bigint,
+  unwrapAmountCleartext: bigint,
+  decryptionProof: Hex,
+) {
+  return {
+    address: batcher,
+    abi: vaultBatcherAbi,
+    functionName: "dispatchBatchCallback",
+    args: [batchId, unwrapAmountCleartext, decryptionProof],
+  } as const;
+}

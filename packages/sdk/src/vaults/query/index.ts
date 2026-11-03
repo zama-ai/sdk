@@ -2,6 +2,7 @@ export { vaultQueryKeys } from "./query-keys";
 export {
   invalidateAfterClaim,
   invalidateAfterDispatchBatch,
+  invalidateAfterFinalize,
   invalidateAfterJoin,
   invalidateAfterQuit,
   invalidateBatchQueries,
@@ -21,3 +22,4 @@ export { claimMutationOptions, type ClaimParams } from "./claim";
 export { quitMutationOptions, type QuitParams } from "./quit";
 export { recoverMutationOptions, type RecoverParams } from "./recover";
 export { dispatchBatchMutationOptions } from "./dispatch-batch";
+export { finalizeMutationOptions, type FinalizeParams } from "./finalize";

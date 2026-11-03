@@ -161,6 +161,7 @@
   - [useQuit](reference/react/useQuit.md)
   - [useRecover](reference/react/useRecover.md)
   - [useDispatchBatch](reference/react/useDispatchBatch.md)
+  - [useFinalize](reference/react/useFinalize.md)
   - [useCurrentBatchId](reference/react/useCurrentBatchId.md)
   - [useBatchState](reference/react/useBatchState.md)
   - [useTimeUntilDispatchable](reference/react/useTimeUntilDispatchable.md)

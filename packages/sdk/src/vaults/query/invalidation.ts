@@ -51,3 +51,11 @@ export function invalidateAfterDispatchBatch(
 ): void {
   invalidateBatchQueries(queryClient, batcherAddress);
 }
+
+/** Invalidates the caches affected by a finalize: the batch leaves `Dispatched` and gains an exchange rate. */
+export function invalidateAfterFinalize(
+  queryClient: QueryClientLike,
+  batcherAddress: Address,
+): void {
+  invalidateBatchQueries(queryClient, batcherAddress);
+}

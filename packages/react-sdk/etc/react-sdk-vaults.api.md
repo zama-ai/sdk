@@ -8,6 +8,7 @@ import { Address } from '@zama-fhe/sdk';
 import { BatchState } from '@zama-fhe/sdk/vaults';
 import { ClaimParams } from '@zama-fhe/sdk/vaults';
 import { DepositParams } from '@zama-fhe/sdk/vaults';
+import { FinalizeParams } from '@zama-fhe/sdk/vaults';
 import { GroupDepositParams } from '@zama-fhe/sdk/vaults';
 import { GroupRedeemParams } from '@zama-fhe/sdk/vaults';
 import { JoinParams } from '@zama-fhe/sdk/vaults';
@@ -75,6 +76,14 @@ export function useDispatchBatch<TContext = unknown>(config: UseDispatchBatchCon
 
 // @public
 export interface UseDispatchBatchConfig {
+    address: Address;
+}
+
+// @public
+export function useFinalize<TContext = unknown>(config: UseFinalizeConfig, options?: UseMutationOptions<TransactionResult, Error, FinalizeParams, TContext>): UseMutationResult<TransactionResult, Error, FinalizeParams, TContext>;
+
+// @public
+export interface UseFinalizeConfig {
     address: Address;
 }
 

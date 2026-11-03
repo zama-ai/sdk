@@ -10,10 +10,10 @@ import { requireAlignedWalletAccount } from "./alignment";
 
 /**
  * Pre-flight for a write that would silently move zero on a short balance:
- * decrypt the connected account's balance on `tokenAddress` and throw if it
- * is below `amount`. Decrypting can prompt for a permit signature when none
- * is cached. A failure that is not already a typed SDK error surfaces as
- * {@link BalanceCheckUnavailableError}.
+ * decrypt `account`'s balance on `tokenAddress`, or the connected account's
+ * when none is given, and throw if it is below `amount`. Decrypting can
+ * prompt for a permit signature when none is cached. A failure that is not
+ * already a typed SDK error surfaces as {@link BalanceCheckUnavailableError}.
  *
  * @internal
  */
@@ -21,6 +21,7 @@ export async function assertConfidentialBalance(params: {
   operation: string;
   tokenAddress: Address;
   amount: bigint;
+  account?: Address;
   signer: GenericSigner | undefined;
   provider: GenericProvider;
   readBalance: (owner: Address) => Promise<bigint>;
@@ -32,8 +33,9 @@ export async function assertConfidentialBalance(params: {
 
   let balance: bigint;
   try {
-    const account = await requireAlignedWalletAccount(operation, signer, provider);
-    balance = await readBalance(getAddress(account.address));
+    const owner =
+      params.account ?? (await requireAlignedWalletAccount(operation, signer, provider)).address;
+    balance = await readBalance(getAddress(owner));
   } catch (error) {
     if (error instanceof ZamaError) {
       throw error;
