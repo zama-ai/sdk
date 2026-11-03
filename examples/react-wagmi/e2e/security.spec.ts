@@ -9,6 +9,10 @@ test.describe("security headers", () => {
       /script-src 'self' 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic' 'wasm-unsafe-eval'/,
     );
     expect(csp).toContain("worker-src 'self' blob:");
+    // The SDK downloads the FHE key on the page thread, so the testnet bucket must be allowed.
+    expect(csp).toMatch(
+      /connect-src [^;]*https:\/\/zama-mpc-testnet-public-efd88e2b\.s3\.eu-west-1\.amazonaws\.com/,
+    );
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("object-src 'none'");
     // Only `next dev` needs eval and inline styles; CI runs the build.

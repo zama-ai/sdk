@@ -4,8 +4,10 @@
 import { envList } from "@/lib/env";
 import { NETWORK_KEYS, networks, type NetworkKey } from "@/lib/networks";
 
-// The public testnet relayer serves every testnet and needs no API key.
+// The public testnet relayer serves every testnet and needs no API key. Its `keyurl` names
+// this bucket for the FHE public key and CRS.
 const TESTNET_RELAYER_URL = "https://relayer.testnet.zama.org";
+const TESTNET_KEY_STORAGE = "https://zama-mpc-testnet-public-efd88e2b.s3.eu-west-1.amazonaws.com";
 
 // Bare relayer hosts, no /v2 suffix.
 const upstreams: Partial<Record<NetworkKey, { url?: string; apiKey?: string }>> = {
@@ -37,6 +39,20 @@ if (unknownKeys.length > 0) {
 function listed(key: NetworkKey): boolean {
   return allowlist.length === 0 || allowlist.includes(key);
 }
+
+// The SDK downloads the FHE key on the page thread, so these origins go into the page CSP's
+// connect-src verbatim. Each has to be an origin: `*` would open connect-src to everything
+// and a `;` would append a directive.
+const ORIGIN = /^https?:\/\/[a-z0-9.-]+(:\d+)?$/i;
+const extraOrigins = envList("CSP_CONNECT_SRC");
+const notOrigins = extraOrigins.filter((entry) => !ORIGIN.test(entry));
+if (notOrigins.length > 0) {
+  throw new Error(
+    `CSP_CONNECT_SRC has entries that are not origins: ${notOrigins.join(", ")}. Expected http(s)://host[:port], no path or trailing slash.`,
+  );
+}
+
+export const keyStorageOrigins: readonly string[] = [TESTNET_KEY_STORAGE, ...extraOrigins];
 
 export interface Upstream {
   url: string;

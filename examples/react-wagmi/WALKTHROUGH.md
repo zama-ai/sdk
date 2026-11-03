@@ -319,7 +319,7 @@ default to the public testnet relayer; mainnets have no default and are hidden u
 The proxy fails closed and is deliberately narrow:
 
 - unknown or unconfigured network → `404`, never a default upstream
-- `Origin` not the app's own (or `RELAYER_PROXY_ALLOWED_ORIGINS`) → `403`
+- `Origin` not the app's own, or not in `RELAYER_PROXY_ALLOWED_ORIGINS` when that is set (it replaces the default) → `403`
 - only the relayer routes `web()` calls, and their `<route>/<job id>` polling paths, are forwarded; any other path → `404`
 - request bodies are never logged
 
@@ -424,18 +424,18 @@ The directives that are specific to this app:
 
 - `connect-src`: this origin (the proxy, `/api/networks`, WASM and worker files), the
   RPC origin of every network in the table (the SDK probes the wallet's chain on connect,
-  served or not), the storage the relayer's `keyurl` points the
-  browser at for the FHE public key and CRS (`CSP_CONNECT_SRC`, since the relayer owns that
-  address and the app does not hardcode it), and `data:` URLs (the FHE runtime compiles its
-  WASM from one).
+  served or not), the storage each relayer's `keyurl` points the browser at for the FHE
+  public key and CRS (the public testnet bucket is built in; `CSP_CONNECT_SRC` for any other
+  relayer, each entry checked to be an origin when `relayers.ts` loads at boot), and `data:`
+  URLs (the FHE runtime compiles its WASM from one).
 - `script-src 'wasm-unsafe-eval'` and `worker-src 'self' blob:`: what the FHE runtime
   needs to compile WASM and spawn its thread pool. See the SDK's security model docs.
 - `'unsafe-eval'` and inline styles are allowed under `next dev` only.
 
 The policy covers the page and the workers it spawns. The SDK's encrypt worker is loaded
-from `/_next/static`, which the proxy matcher skips, so it runs with no policy of its own
-and its key download is not subject to `connect-src`. The key-storage entries matter when
-encryption falls back to the page.
+from `/_next/static`, which the proxy matcher skips, so it runs with no policy of its own,
+but the SDK downloads the FHE key on the page thread and hands the bytes to the worker, so
+the key-storage entries are needed for any encryption at all.
 
 `next.config.ts` adds the static headers (`nosniff`, `X-Frame-Options`, `Referrer-Policy`,
 `Permissions-Policy`, HSTS) and fills `NEXT_PUBLIC_COMMIT_SHA` from Vercel's

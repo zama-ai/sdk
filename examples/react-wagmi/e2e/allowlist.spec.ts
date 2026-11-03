@@ -50,3 +50,22 @@ test.describe("ENABLED_NETWORKS", () => {
     expect(result.stderr).toMatch(/unknown keys: mainet/);
   });
 });
+
+test.describe("CSP_CONNECT_SRC", () => {
+  test("adds origins to the key storage list", () => {
+    const { keyStorageOrigins } = loadRelayers({
+      CSP_CONNECT_SRC: "https://keys.example.com, http://127.0.0.1:9000",
+    });
+    expect(keyStorageOrigins).toEqual([
+      "https://zama-mpc-testnet-public-efd88e2b.s3.eu-west-1.amazonaws.com",
+      "https://keys.example.com",
+      "http://127.0.0.1:9000",
+    ]);
+  });
+
+  test("rejects anything that is not an origin", () => {
+    for (const entry of ["*", "https://keys.example.com/", "keys.example.com", "https://a;b"]) {
+      expect(() => loadRelayers({ CSP_CONNECT_SRC: entry })).toThrow(/not origins/);
+    }
+  });
+});
