@@ -113,9 +113,8 @@ export class WagmiProvider implements GenericProvider {
         message.includes("Transaction not found")
       ) {
         throw new TransactionRevertedError(
-          `No receipt found for transaction "${hash.slice(0, 10)}…" within ${RECEIPT_TIMEOUT_MS / 1000}s; ` +
-            "its outcome is unknown. It may still be pending (e.g. a Safe awaiting other signers), or the " +
-            "connected smart-contract wallet may have returned a wallet-side hash instead of a transaction hash.",
+          `No receipt for transaction ${hash.slice(0, 10)}… within ${RECEIPT_TIMEOUT_MS / 1000}s; its outcome is unknown. ` +
+            "It may still be pending (e.g. a Safe awaiting other signers), or the wallet may have returned a wallet-side hash.",
           { cause: error instanceof Error ? error : undefined },
         );
       }
@@ -133,7 +132,7 @@ export class WagmiProvider implements GenericProvider {
   async #pollWalletReceipt(hash: Hex, isSettled: () => boolean): Promise<TransactionReceipt> {
     // Every failure here means there is no wallet to ask, so it is only worth a debug line.
     const client = await getConnectorClient(this.#config).catch((error: unknown) => {
-      this.#logger?.debug("WagmiProvider: no connected wallet to probe for receipts", { error });
+      this.#logger?.debug("no connected wallet to probe for receipts", { error });
       return undefined;
     });
     if (client) {
@@ -235,7 +234,7 @@ async function walletReceipt(
     .catch(ignoreUnsupported("eth_getTransactionReceipt", logger));
   if (receipt) {
     if (receipt.status !== "0x1") {
-      throw new TransactionRevertedError(`Transaction "${hash}" reverted (wallet receipt).`);
+      throw new TransactionRevertedError(`Transaction ${hash} reverted.`);
     }
     return receipt;
   }
@@ -244,9 +243,7 @@ async function walletReceipt(
     .catch(ignoreUnsupported("wallet_getCallsStatus", logger));
   // EIP-5792 status codes: 1xx pending, 2xx confirmed, 3xx–6xx failed.
   if (calls && calls.status >= 300) {
-    throw new TransactionRevertedError(
-      `Transaction "${hash}" failed (wallet_getCallsStatus status ${calls.status}).`,
-    );
+    throw new TransactionRevertedError(`Transaction ${hash} failed (status ${calls.status}).`);
   }
   return calls && calls.status >= 200 ? calls.receipts?.[0] : undefined;
 }
@@ -257,13 +254,12 @@ async function walletReceipt(
  */
 function ignoreUnsupported(method: string, logger: GenericLogger | undefined) {
   return (error: unknown): undefined => {
-    const code = (error as { code?: unknown } | null)?.code;
-    const message = error instanceof Error ? error.message : String(error);
+    const { code, message } = (error ?? {}) as { code?: unknown; message?: unknown };
     const unsupported =
-      (typeof code === "number" && UNSUPPORTED_METHOD_CODES.has(code)) ||
-      /unsupported|not supported|does not exist/i.test(message);
+      UNSUPPORTED_METHOD_CODES.has(code as number) ||
+      /unsupported|not supported|does not exist/i.test(String(message));
     if (!unsupported) {
-      logger?.warn(`WagmiProvider: wallet ${method} failed`, { error });
+      logger?.warn(`wallet ${method} failed`, { error });
     }
     return undefined;
   };

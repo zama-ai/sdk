@@ -264,11 +264,11 @@ describe("WagmiProvider.waitForTransactionReceipt", () => {
     await expect(logging.waitForTransactionReceipt(HASH)).resolves.toBe(PUBLIC_RECEIPT);
     await new Promise((resolve) => setTimeout(resolve, 5));
     expect(logger.warn).toHaveBeenCalledWith(
-      "WagmiProvider: wallet eth_getTransactionReceipt failed",
+      "wallet eth_getTransactionReceipt failed",
       expect.objectContaining({ error: expect.any(Error) }),
     );
     expect(logger.warn).not.toHaveBeenCalledWith(
-      "WagmiProvider: wallet wallet_getCallsStatus failed",
+      "wallet wallet_getCallsStatus failed",
       expect.anything(),
     );
   });

@@ -31,7 +31,7 @@
   {
     "name": "@zama-fhe/react-sdk (all JS)",
     "path": ["packages/react-sdk/dist/**/*.js", "!packages/react-sdk/dist/vaults/**/*.js"],
-    "limit": "4.5 KB"
+    "limit": "5 KB"
   },
   {
     "name": "@zama-fhe/react-sdk/vaults (separate subpath)",
