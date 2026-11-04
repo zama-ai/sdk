@@ -119,6 +119,7 @@ export interface FheChain<TId extends number = number> {
     readonly network: EIP1193Provider | string;
     readonly registryAddress: Address | undefined;
     readonly relayerUrl: string;
+    readonly vaultRouterAddress?: Address;
     readonly verifyingContractAddressDecryption: Address;
     readonly verifyingContractAddressInputVerification: Address;
 }

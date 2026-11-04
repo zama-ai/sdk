@@ -12,6 +12,7 @@ import {
   VaultBatcherPausedError,
   VaultGroupJoinUnconfirmedError,
 } from "../errors";
+import { chains } from "../chains/configs";
 import type { EncryptedValue } from "../relayer/types";
 import { withOperation, type TelemetryOperation } from "../telemetry";
 import { Token, WrappedToken } from "../token";
@@ -383,6 +384,20 @@ export class VaultGroup {
     return this.router;
   }
 
+  // Runs even with `skipPreflight`. Chains without a preset router (local nodes) are not checked.
+  async #assertCanonicalRouter(router: Address): Promise<void> {
+    if (this.#config.allowCustomRouter) {
+      return;
+    }
+    const chainId = await this.sdk.provider.getChainId();
+    const canonical = chains[chainId]?.vaultRouterAddress;
+    if (canonical !== undefined && getAddress(canonical) !== router) {
+      throw new ConfigurationError(
+        `Vault group "${this.id}" names router ${router}, but the router on chain ${chainId} is ${getAddress(canonical)}; set allowCustomRouter to use another`,
+      );
+    }
+  }
+
   // A group of one has nothing to hide a leg among, so it joins its batcher directly.
   #delivery(requested: JoinDelivery | undefined): JoinDelivery {
     return this.members.length === 1 ? "legs" : (requested ?? "router");
@@ -398,6 +413,9 @@ export class VaultGroup {
     const member = this.member(vaultId);
     const delivery = this.#delivery(options?.delivery);
     const router = delivery === "router" ? this.#router() : undefined;
+    if (router !== undefined) {
+      await this.#assertCanonicalRouter(router);
+    }
     const account = await this.#account(direction, options);
 
     // Read alongside the legs, so an unlisted asset, or a router with no registry to read, fails

@@ -15524,6 +15524,7 @@ export class VaultGroup {
 
 // @public
 export interface VaultGroupConfig {
+    readonly allowCustomRouter?: boolean;
     readonly cAsset: Address;
     readonly id: string;
     readonly router?: Address;

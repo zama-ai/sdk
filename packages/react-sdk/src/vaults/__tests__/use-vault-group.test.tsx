@@ -60,6 +60,17 @@ describe("useVaultGroup", () => {
     expect(result.current.members[0]?.vault.redeemBatcher.address).toBe(OTHER_REDEEM);
   });
 
+  test("builds a new group when allowCustomRouter changes", ({ renderWithProviders }) => {
+    let current = config(REDEEM);
+    const { result, rerender } = renderWithProviders(() => useVaultGroup(current));
+    const first = result.current;
+
+    current = { ...config(REDEEM), allowCustomRouter: true };
+    rerender();
+
+    expect(result.current).not.toBe(first);
+  });
+
   test("keeps each member's cShare", ({ renderWithProviders }) => {
     const shares = [
       "0x8888888888888888888888888888888888888888",

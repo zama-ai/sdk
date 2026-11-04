@@ -86,9 +86,10 @@ export class Vault {
 
   /**
    * Deposit a plaintext amount of the underlying confidential asset,
-   * joining the current deposit batch. Grants the deposit batcher an
-   * ERC-7984 operator approval on the deposit token first, unless one is
-   * already active.
+   * joining the current deposit batch. The amount is sent to the batcher, so
+   * no operator grant is needed, except for another `beneficiary`: then the
+   * batcher pulls it and is granted an ERC-7984 operator approval on the
+   * deposit token first, unless one is already active.
    *
    * @param amount - The plaintext amount to deposit.
    * @throws before any approval is granted, if the batchers do not agree on
@@ -96,12 +97,7 @@ export class Vault {
    */
   async deposit(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult> {
     const [, token] = await Promise.all([this.vaultAddress(), this.cAsset()]);
-    await this.#ensureOperator(
-      "deposit",
-      token,
-      this.depositBatcher.address,
-      options?.operatorUntil,
-    );
+    await this.#ensureOperator("deposit", token, this.depositBatcher.address, options);
     return this.depositBatcher.join(amount, options?.beneficiary, {
       skipBalanceCheck: options?.skipBalanceCheck,
       operation: "vault-deposit",
@@ -110,9 +106,10 @@ export class Vault {
 
   /**
    * Join the current redeem batch, which the vault later settles into the
-   * underlying asset at the batch's exchange rate. Grants the redeem batcher
-   * an ERC-7984 operator approval on the share token first, unless one is
-   * already active.
+   * underlying asset at the batch's exchange rate. The shares are sent to the
+   * batcher, so no operator grant is needed, except for another
+   * `beneficiary`: then the batcher pulls them and is granted an ERC-7984
+   * operator approval on the share token first, unless one is already active.
    *
    * @param amount - The plaintext amount of shares — ERC-4626 `redeem`, not
    *   `withdraw`, so this is denominated in shares, never in assets.
@@ -121,7 +118,7 @@ export class Vault {
    */
   async redeem(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult> {
     const [, token] = await Promise.all([this.vaultAddress(), this.cShare()]);
-    await this.#ensureOperator("redeem", token, this.redeemBatcher.address, options?.operatorUntil);
+    await this.#ensureOperator("redeem", token, this.redeemBatcher.address, options);
     return this.redeemBatcher.join(amount, options?.beneficiary, {
       skipBalanceCheck: options?.skipBalanceCheck,
       operation: "vault-redeem",
@@ -148,22 +145,26 @@ export class Vault {
   }
 
   /**
-   * The batcher pulls with `confidentialTransferFrom`, which ERC-7984 rejects
-   * unless the batcher is already an operator of the caller.
+   * A join for another beneficiary pulls with `confidentialTransferFrom`, which
+   * ERC-7984 rejects unless the batcher is already an operator of the caller.
+   * A join for the caller sends the amount instead and needs no grant.
    */
   async #ensureOperator(
     operation: string,
     token: WrappedToken,
     operator: Address,
-    until: number | undefined,
+    options: VaultJoinOptions | undefined,
   ): Promise<void> {
     if (!this.sdk.signer) {
       throw new SignerNotConfiguredError(operation);
     }
-    const account = this.sdk.signer.requireWalletAccount(operation);
-    const alreadyApproved = await token.isOperator(account.address, operator);
+    const account = getAddress(this.sdk.signer.requireWalletAccount(operation).address);
+    if (options?.beneficiary === undefined || getAddress(options.beneficiary) === account) {
+      return;
+    }
+    const alreadyApproved = await token.isOperator(account, operator);
     if (!alreadyApproved) {
-      await token.setOperator(operator, until);
+      await token.setOperator(operator, options.operatorUntil);
     }
   }
 }

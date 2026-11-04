@@ -24,7 +24,7 @@ export interface UseJoinConfig {
 /**
  * Join the currently open batch on a single batcher directly. Low-level —
  * most apps should use `useDeposit` / `useRedeem` instead, which
- * also handle the operator-approval grant.
+ * also grant the operator approval a join for another beneficiary needs.
  *
  * @param config - The batcher address.
  * @param options - React Query mutation options.

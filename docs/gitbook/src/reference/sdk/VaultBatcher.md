@@ -7,7 +7,7 @@ description: One on-chain vault batcher — join, batch state, dispatch, claim, 
 
 `VaultBatcher` mirrors one on-chain batcher contract, the way [`Token`](Token.md) mirrors an ERC-7984 token. A batcher pools participants' encrypted amounts, dispatches only the decrypted aggregate through the underlying ERC-4626 vault, and lets each participant claim their share of the output.
 
-A vault has one batcher per direction — deposit and redeem — so a [`Vault`](Vault.md) holds two instances. Most apps should start from `Vault`, which adds the operator-approval step to `join`, and reach for `VaultBatcher` directly only for a single direction or to control the approval yourself.
+A vault has one batcher per direction — deposit and redeem — so a [`Vault`](Vault.md) holds two instances. Most apps should start from `Vault`, which pairs both directions and grants the operator approval a join for another `beneficiary` needs, and reach for `VaultBatcher` directly only for a single direction.
 
 The lifecycle is `join` → `dispatchBatch` → `claim`. Finalization between the last two is normally driven by a keeper, an off-chain service that watches batches and sends each dispatched batch's callback once its decryption is published: a batch is claimable only once it reaches `BatchState.Finalized`, which can be well after dispatch. `finalize` settles a batch the keeper has not.
 
@@ -235,7 +235,7 @@ Every write requires a configured signer and throws [`SignerNotConfiguredError`]
 
 Joins the currently open batch with a plaintext amount, encrypted automatically. `amount` is denominated in `fromToken`'s base units. `beneficiary` defaults to the connected wallet account and owns the resulting position.
 
-The batcher must already hold an ERC-7984 operator grant from the caller, or it cannot pull the amount — `Vault.deposit` / `Vault.redeem` grant it for you; with a bare `VaultBatcher` call `Token.setOperator` on `fromToken` first. A join with too little balance still succeeds on-chain and credits nothing, so the SDK checks the caller's confidential balance on `fromToken` first.
+A join that credits the caller sends the amount to the batcher with `confidentialTransferAndCall` on `fromToken`, so it needs no operator grant. A join for another `beneficiary` calls the batcher's `join`, which pulls the amount, so the batcher must already hold an ERC-7984 operator grant from the caller — `Vault.deposit` / `Vault.redeem` grant it for you; with a bare `VaultBatcher` call `Token.setOperator` on `fromToken` first. A join with too little balance still succeeds on-chain and credits nothing, so the SDK checks the caller's confidential balance on `fromToken` first.
 
 ```ts
 const { txHash, batchId, beneficiary, confidentialJoinedAmount } = await batcher.join(1_000_000n);
@@ -387,7 +387,7 @@ The React hooks are built on these query and mutation option builders; they are 
 
 ## Related
 
-- [Vault](Vault.md) — pairs two batchers behind `deposit()` / `redeem()` with automatic operator approval
+- [Vault](Vault.md) — pairs two batchers behind `deposit()` / `redeem()`
 - [Vault deposits and redemptions](../../guides/vaults/deposits.md) — the full flow, including when each write is legal
 - [Errors](errors.md) — the error classes thrown above
 - [useTimeUntilCallbackDeadline](../react/useTimeUntilCallbackDeadline.md) — React hook for `timeUntilCallbackDeadline`

@@ -24,8 +24,8 @@ export interface UseRedeemConfig {
 
 /**
  * Redeem shares by joining the current redeem batch with a plaintext amount of
- * shares. Grants the redeem batcher an ERC-7984 operator approval first if one
- * isn't already active. Invalidates the share token's balance and
+ * shares. Only a redemption for another `beneficiary` needs an ERC-7984
+ * operator approval, granted first if none is active. Invalidates the share token's balance and
  * operator-status caches on success.
  *
  * @param config - The vault's addresses.

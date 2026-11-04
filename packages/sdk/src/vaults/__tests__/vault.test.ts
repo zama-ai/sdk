@@ -117,7 +117,7 @@ describe("Vault", () => {
   });
 
   describe("deposit", () => {
-    test("grants the batcher an operator approval when none is active, then joins", async ({
+    test("sends the amount to the deposit batcher without any operator grant", async ({
       sdk,
       provider,
       signer,
@@ -128,46 +128,44 @@ describe("Vault", () => {
     }) => {
       mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN, vault: VAULT_ADDRESS });
       mockJoinReceipt(provider, { batcher: DEPOSIT_BATCHER, account: userAddress });
-      vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(false);
-      const setOperator = vi
-        .spyOn(WrappedToken.prototype, "setOperator")
-        .mockResolvedValue({ txHash: "0xoptxhash", receipt: { logs: [] } });
+      const isOperator = vi.spyOn(WrappedToken.prototype, "isOperator");
+      const setOperator = vi.spyOn(WrappedToken.prototype, "setOperator");
 
       const vault = createVault(sdk, addresses());
       const result = await vault.deposit(1_000n);
 
-      expect(setOperator).toHaveBeenCalledWith(DEPOSIT_BATCHER, undefined);
+      expect(isOperator).not.toHaveBeenCalled();
+      expect(setOperator).not.toHaveBeenCalled();
       expect(Token.prototype.decryptBalance).toHaveBeenCalledWith(userAddress, "vault-deposit");
       expect(relayer.encryptValues).toHaveBeenCalledWith(
         expect.objectContaining({
           values: [{ value: 1_000n, type: "euint64" }],
-          contractAddress: DEPOSIT_BATCHER,
+          contractAddress: DEPOSIT_TOKEN,
           userAddress,
           options: { operation: "vault-deposit" },
         }),
       );
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
-          address: DEPOSIT_BATCHER,
-          functionName: "join",
-          args: [userAddress, handle, inputProof],
+          address: DEPOSIT_TOKEN,
+          functionName: "confidentialTransferAndCall",
+          args: [DEPOSIT_BATCHER, handle, inputProof, "0x"],
         }),
       );
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    test("skips the operator grant when one is already active", async ({
+    test("skips the beneficiary's operator grant when one is already active", async ({
       sdk,
       provider,
-      userAddress,
     }) => {
       mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN, vault: VAULT_ADDRESS });
-      mockJoinReceipt(provider, { batcher: DEPOSIT_BATCHER, account: userAddress });
+      mockJoinReceipt(provider, { batcher: DEPOSIT_BATCHER, account: OTHER_ADDRESS });
       vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(true);
       const setOperator = vi.spyOn(WrappedToken.prototype, "setOperator");
 
       const vault = createVault(sdk, addresses());
-      await vault.deposit(1_000n);
+      await vault.deposit(1_000n, { beneficiary: OTHER_ADDRESS });
 
       expect(setOperator).not.toHaveBeenCalled();
     });
@@ -200,7 +198,7 @@ describe("Vault", () => {
       expect(error).toMatchObject({ operation: "deposit" });
     });
 
-    test("joins on behalf of an explicit beneficiary", async ({
+    test("grants the batcher an operator approval, then joins, for another beneficiary", async ({
       sdk,
       provider,
       signer,
@@ -209,18 +207,26 @@ describe("Vault", () => {
     }) => {
       mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN, vault: VAULT_ADDRESS });
       mockJoinReceipt(provider, { batcher: DEPOSIT_BATCHER, account: OTHER_ADDRESS });
-      vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(true);
+      vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(false);
+      const setOperator = vi
+        .spyOn(WrappedToken.prototype, "setOperator")
+        .mockResolvedValue({ txHash: "0xoptxhash", receipt: { logs: [] } });
 
       const vault = createVault(sdk, addresses());
-      await vault.deposit(1_000n, { beneficiary: OTHER_ADDRESS });
+      await vault.deposit(1_000n, { beneficiary: OTHER_ADDRESS, operatorUntil: 123 });
 
+      expect(setOperator).toHaveBeenCalledWith(DEPOSIT_BATCHER, 123);
       expect(signer.writeContract).toHaveBeenCalledWith(
-        expect.objectContaining({ args: [OTHER_ADDRESS, handle, inputProof] }),
+        expect.objectContaining({
+          address: DEPOSIT_BATCHER,
+          functionName: "join",
+          args: [OTHER_ADDRESS, handle, inputProof],
+        }),
       );
     });
   });
 
-  test("redeem joins the redeem batcher using the share token's operator grant", async ({
+  test("redeem sends the shares to the redeem batcher without any operator grant", async ({
     sdk,
     provider,
     signer,
@@ -229,21 +235,25 @@ describe("Vault", () => {
   }) => {
     mockJoinBalance(provider, { fromToken: SHARE_TOKEN, vault: VAULT_ADDRESS });
     mockJoinReceipt(provider, { batcher: REDEEM_BATCHER, account: userAddress });
-    vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(true);
+    const setOperator = vi.spyOn(WrappedToken.prototype, "setOperator");
 
     const vault = createVault(sdk, addresses());
     await vault.redeem(500n);
 
     expect(Token.prototype.decryptBalance).toHaveBeenCalledWith(userAddress, "vault-redeem");
-
+    expect(setOperator).not.toHaveBeenCalled();
     expect(relayer.encryptValues).toHaveBeenCalledWith(
       expect.objectContaining({
-        contractAddress: REDEEM_BATCHER,
+        contractAddress: SHARE_TOKEN,
         options: { operation: "vault-redeem" },
       }),
     );
     expect(signer.writeContract).toHaveBeenCalledWith(
-      expect.objectContaining({ address: REDEEM_BATCHER, functionName: "join" }),
+      expect.objectContaining({
+        address: SHARE_TOKEN,
+        functionName: "confidentialTransferAndCall",
+        args: [REDEEM_BATCHER, expect.anything(), expect.anything(), "0x"],
+      }),
     );
   });
 });

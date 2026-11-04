@@ -2571,6 +2571,14 @@ A group may now hold a single vault, which joins its batcher directly, so `route
 
 The `vaults` subpath also exports the pure call builders these are built on — `routerJoinContract`, `encodeAllocationData` and `tokenWrapperRegistryContract`, with the `EncryptedAllocationLeg` type — plus `dispatchBatchCallbackContract`, and `unwrapRequestIdContract`. The root entry now exports `confidentialTransferAndCallContract`, `confidentialTransferFromAndCallContract` and `unwrapAmountContract`. See [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/groups.md#using-your-own-transaction-layer).
 
+## Vault joins without an operator grant
+
+`Vault.deposit`, `Vault.redeem`, `VaultBatcher.join` and their hooks (`useDeposit`, `useRedeem`, `useJoin`) now send the amount to the batcher with `confidentialTransferAndCall` when they credit the caller. They no longer grant the batcher an ERC-7984 operator approval first, so a deposit takes one wallet prompt instead of two. A join for another `beneficiary` still goes through the batcher's `join`, which pulls the amount, so `Vault` still grants the approval in that case, and `operatorUntil` applies only there. Existing operator approvals are left in place. Revoke one with `Token.setOperator(batcher, 0)` if you no longer need it.
+
+## Vault groups only submit through the chain's router
+
+The Ethereum mainnet and Sepolia presets gain `vaultRouterAddress`, the one multi-vault router on each chain. A `VaultGroup` `"router"` submission now throws `ConfigurationError` when the group's `router` is a different address, before it encrypts or asks for a signature, and also with `skipPreflight`. Set `allowCustomRouter: true` in the group config for a router you deployed yourself. `"legs"` deliveries, which never touch the router, and chains without a preset router are not checked.
+
 ## Opt out of clearing credentials on wallet account changes
 
 New `clearCredentialsOnWalletChange` option on `createConfig`. By default (`true`) the SDK keeps its existing behavior: switching wallet accounts, locking the wallet, or disconnecting wipes the previous account's transport key pair, permits, and decrypt cache. Set it to `false` to keep them. Storage is keyed per signer address and a permit is only accepted from the address that signed it, so one account can never use another's entries; keeping them lets a multi-wallet user switch A → B → A without signing a new permit or re-decrypting, and stops wallets that emit an empty account list on auto-lock (Rabby, Brave) from wiping credentials on every lock.
@@ -9832,7 +9840,7 @@ Core SDK usage imports from `@zama-fhe/sdk/vaults`; React hooks import from `@za
 ## The three building blocks
 
 - **`VaultBatcher`** mirrors one on-chain batcher contract directly, the way `Token` mirrors an ERC-7984 confidential token. Each vault has two directions — deposit and redeem — behind their own batcher.
-- **`Vault`** pairs a deposit batcher and a redeem batcher into one ERC-4626-style object (`deposit`, `redeem`, …), and automates the operator approval the batcher needs before it can pull the joined amount. Most single-vault apps use this.
+- **`Vault`** pairs a deposit batcher and a redeem batcher into one ERC-4626-style object (`deposit`, `redeem`, …), and sends the joined amount straight to the batcher, so it needs no operator approval. Most single-vault apps use this.
 - **`VaultGroup`** joins several vaults in one transaction — the vault you chose gets the amount, the rest get an encrypted zero — so an observer cannot tell which vault received the deposit, provided every client follows the leg-list rules in [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/groups.md).
 
 ## Where to go next
@@ -9872,9 +9880,9 @@ Core SDK usage imports from `@zama-fhe/sdk/vaults`; React hooks import from `@za
 ## The two layers
 
 - **`VaultBatcher`** mirrors one on-chain batcher contract directly, the way `Token` mirrors an ERC-7984 confidential token. A vault has two directions — deposit and redeem — each behind its own batcher contract.
-- **`Vault`** pairs a deposit batcher and a redeem batcher into one object with ERC-4626-style methods (`deposit`, `redeem`, …), the way `WrappedToken` builds on `Token`. It also automates a step you'd otherwise have to do by hand: granting the batcher an operator approval before it can pull the joined amount — see [Operator approvals](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/operator-approvals.md).
+- **`Vault`** pairs a deposit batcher and a redeem batcher into one object with ERC-4626-style methods (`deposit`, `redeem`, …), the way `WrappedToken` builds on `Token`. A join for the caller sends the amount to the batcher with `confidentialTransferAndCall`, so it needs no operator approval. Only a join for another `beneficiary` makes the batcher pull the amount, and `Vault` grants that approval for you — see [Operator approvals](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/operator-approvals.md).
 
-Most apps should use `Vault` (`useVault` / `useDeposit` / `useRedeem` in React). Reach for `VaultBatcher` (`createVaultBatcher`, or `useVaultBatcher` / `useJoin` / `useClaim` / … in React) directly only if you need a single direction, or want to control the operator grant yourself.
+Most apps should use `Vault` (`useVault` / `useDeposit` / `useRedeem` in React). Reach for `VaultBatcher` (`createVaultBatcher`, or `useVaultBatcher` / `useJoin` / `useClaim` / … in React) directly only if you need a single direction.
 
 ## Steps
 
@@ -9918,7 +9926,7 @@ The snippets below reuse `sdk`, `addresses` and `vault` from this step, and `add
 
 ### 2. Deposit
 
-Depositing grants the deposit batcher an operator approval on the underlying token if one isn't already active, checks the caller's confidential balance, encrypts the amount, and joins the currently open batch:
+Depositing checks the caller's confidential balance, encrypts the amount, and sends it to the deposit batcher, which joins it into the currently open batch:
 
 
 ### Tab: Core SDK
@@ -9941,7 +9949,7 @@ The amount is denominated in the confidential asset token's base units — the t
 
 `deposit` returns the `batchId` it joined, read back from the batcher's `Joined` event — keep it, since every later call (`batchState`, `claim`, `quit`) needs it.
 
-Pass `beneficiary` to credit a different account, and `operatorUntil` to control how long the operator grant lasts (defaults to 1 hour, same as `Token.setOperator`). The React hook invalidates the deposit token's balance cache on success.
+Pass `beneficiary` to credit a different account. That is the one case where the batcher pulls the amount instead, so `Vault` first grants it an operator approval if none is active; `operatorUntil` controls how long that grant lasts (defaults to 1 hour, same as `Token.setOperator`). The React hook invalidates the deposit token's balance cache on success.
 
 
 > [!WARNING]
@@ -10141,7 +10149,7 @@ recover.mutate({ batchId, account: "0xDepositor" });
 - [`Vault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) and [`VaultBatcher`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md) — full API reference, including the per-batch reads
 - [`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md), [`useRedeem`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRedeem.md), [`useBatchState`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md), [`useClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md) — the React hooks used above
 - [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault) — the protocol side: how batching, dispatch and settlement work
-- [Operator approvals](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/operator-approvals.md) — the approval model `vault.deposit()` / `vault.redeem()` automate
+- [Operator approvals](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/operator-approvals.md) — the approval model `vault.deposit()` / `vault.redeem()` use for another `beneficiary`
 - [Check balances](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/check-balances.md) — reading confidential balances on `cAsset()` / `cShare()`
 
 ## Vault groups
@@ -10190,6 +10198,8 @@ const group = createVaultGroup(sdk, STABLE_GROUP);
 ```
 
 The SDK ships no group configuration; the addresses belong to your app. Each member is checked against chain before a submission writes anything, and a mismatch throws `ConfigurationError`.
+
+The router is the exception: there is one per chain, and the chain presets carry it as `vaultRouterAddress` (for example `mainnet.vaultRouterAddress` from `@zama-fhe/sdk/chains`). A `"router"` submission throws `ConfigurationError` for any other router, before it encrypts or asks for a signature. The check runs even with `skipPreflight`. Set `allowCustomRouter: true` in the group config only for a router you deployed yourself; chains without a preset router, such as a local node, are not checked.
 
 ## Depositing and redeeming
 
@@ -12537,7 +12547,7 @@ console.log(sepolia.registryAddress); // "0x2f0750Bb..."
 
 `Vault` is the high-level interface for a confidential ERC-4626 vault. It pairs the vault's two on-chain batcher contracts — one for deposits, one for redemptions — behind ERC-4626-style `deposit` and `redeem` methods, the way [`WrappedToken`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/WrappedToken.md) builds on [`Token`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Token.md).
 
-Both methods grant the batcher an ERC-7984 operator approval if one isn't already active, check the caller's confidential balance, encrypt the amount, and join the currently open batch. Everything after the join — tracking the batch, dispatching it, claiming, quitting — lives on the two [`VaultBatcher`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md) instances the vault exposes as `depositBatcher` and `redeemBatcher`.
+Both methods check the caller's confidential balance, encrypt the amount, and send it to the batcher with `confidentialTransferAndCall`, which joins it into the currently open batch. That needs no operator approval; only a join for another `beneficiary` does, and the method grants it first if none is active. Everything after the join — tracking the batch, dispatching it, claiming, quitting — lives on the two [`VaultBatcher`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md) instances the vault exposes as `depositBatcher` and `redeemBatcher`.
 
 ## Import
 
@@ -12652,9 +12662,9 @@ Deposits a plaintext amount of the underlying confidential asset by joining the 
 In order, the call:
 
 1. Resolves `vaultAddress()` and `cAsset()`, throwing `ConfigurationError` if the batchers disagree.
-2. Grants the deposit batcher an operator approval on `cAsset` via `Token.setOperator`, unless `isOperator` already reports one.
+2. Only for another `beneficiary`: grants the deposit batcher an operator approval on `cAsset` via `Token.setOperator`, unless `isOperator` already reports one.
 3. Checks the caller's confidential balance (skippable with `skipBalanceCheck`).
-4. Encrypts `amount` and submits `join` on the deposit batcher.
+4. Encrypts `amount` and sends it to the deposit batcher with `confidentialTransferAndCall` on `cAsset` — or, for another `beneficiary`, submits `join` on the deposit batcher.
 5. Reads the `Joined` event from the receipt and returns the `batchId`.
 
 ```ts
@@ -12666,7 +12676,7 @@ Options (`VaultJoinOptions`):
 | Option             | Type      | Default          | Description                                                                                                                                                                                                  |
 | ------------------ | --------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `beneficiary`      | `Address` | connected wallet | Account credited in the batch. The beneficiary owns the position: only they can `quit` it, and `claim` always pays out to them.                                                                              |
-| `operatorUntil`    | `number`  | now + 1 hour     | Unix timestamp (seconds) until which the batcher's operator grant is valid. Only used when a grant isn't already active. Same default as `Token.setOperator`.                                                |
+| `operatorUntil`    | `number`  | now + 1 hour     | Unix timestamp (seconds) until which the batcher's operator grant is valid. Only used for another `beneficiary`, and only when a grant isn't already active. Same default as `Token.setOperator`.            |
 | `skipBalanceCheck` | `boolean` | `false`          | Skip the confidential-balance pre-flight. For accounts whose balance the connected signer can't decrypt, such as smart wallets. The on-chain transfer then moves zero, not reverts, if the balance is short. |
 
 **Throws:**
@@ -12710,7 +12720,7 @@ Both writes resolve to a `JoinResult`, which extends `TransactionResult`:
 
 - [VaultBatcher](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md) — the per-direction batcher API: batch state, dispatch, claim, quit, recover
 - [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md) — the full deposit → dispatch → claim flow
-- [Operator approvals](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/operator-approvals.md) — the approval `deposit()` / `redeem()` grant automatically
+- [Operator approvals](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/operator-approvals.md) — the approval `deposit()` / `redeem()` grant for another `beneficiary`
 - [useVault](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVault.md) — React hook returning a `Vault`
 - [useDeposit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md) / [useRedeem](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRedeem.md) — mutation hooks over `deposit()` / `redeem()`
 
@@ -12725,7 +12735,7 @@ Both writes resolve to a `JoinResult`, which extends `TransactionResult`:
 
 `VaultBatcher` mirrors one on-chain batcher contract, the way [`Token`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Token.md) mirrors an ERC-7984 token. A batcher pools participants' encrypted amounts, dispatches only the decrypted aggregate through the underlying ERC-4626 vault, and lets each participant claim their share of the output.
 
-A vault has one batcher per direction — deposit and redeem — so a [`Vault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) holds two instances. Most apps should start from `Vault`, which adds the operator-approval step to `join`, and reach for `VaultBatcher` directly only for a single direction or to control the approval yourself.
+A vault has one batcher per direction — deposit and redeem — so a [`Vault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) holds two instances. Most apps should start from `Vault`, which pairs both directions and grants the operator approval a join for another `beneficiary` needs, and reach for `VaultBatcher` directly only for a single direction.
 
 The lifecycle is `join` → `dispatchBatch` → `claim`. Finalization between the last two is normally driven by a keeper, an off-chain service that watches batches and sends each dispatched batch's callback once its decryption is published: a batch is claimable only once it reaches `BatchState.Finalized`, which can be well after dispatch. `finalize` settles a batch the keeper has not.
 
@@ -12953,7 +12963,7 @@ Every write requires a configured signer and throws [`SignerNotConfiguredError`]
 
 Joins the currently open batch with a plaintext amount, encrypted automatically. `amount` is denominated in `fromToken`'s base units. `beneficiary` defaults to the connected wallet account and owns the resulting position.
 
-The batcher must already hold an ERC-7984 operator grant from the caller, or it cannot pull the amount — `Vault.deposit` / `Vault.redeem` grant it for you; with a bare `VaultBatcher` call `Token.setOperator` on `fromToken` first. A join with too little balance still succeeds on-chain and credits nothing, so the SDK checks the caller's confidential balance on `fromToken` first.
+A join that credits the caller sends the amount to the batcher with `confidentialTransferAndCall` on `fromToken`, so it needs no operator grant. A join for another `beneficiary` calls the batcher's `join`, which pulls the amount, so the batcher must already hold an ERC-7984 operator grant from the caller — `Vault.deposit` / `Vault.redeem` grant it for you; with a bare `VaultBatcher` call `Token.setOperator` on `fromToken` first. A join with too little balance still succeeds on-chain and credits nothing, so the SDK checks the caller's confidential balance on `fromToken` first.
 
 ```ts
 const { txHash, batchId, beneficiary, confidentialJoinedAmount } = await batcher.join(1_000_000n);
@@ -13105,7 +13115,7 @@ The React hooks are built on these query and mutation option builders; they are 
 
 ## Related
 
-- [Vault](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) — pairs two batchers behind `deposit()` / `redeem()` with automatic operator approval
+- [Vault](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) — pairs two batchers behind `deposit()` / `redeem()`
 - [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md) — the full flow, including when each write is legal
 - [Errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md) — the error classes thrown above
 - [useTimeUntilCallbackDeadline](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md) — React hook for `timeUntilCallbackDeadline`
@@ -13159,12 +13169,13 @@ The constructor throws [`ConfigurationError`](https://raw.githubusercontent.com/
 import { type VaultGroupConfig, type VaultMemberConfig } from "@zama-fhe/sdk/vaults";
 ```
 
-| Field    | Type                           | Description                                                                                                                                                  |
-| -------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `id`     | `string`                       | Stable identifier for the group, used in error messages.                                                                                                     |
-| `cAsset` | `Address`                      | The confidential wrapper of the asset every member takes deposits in.                                                                                        |
-| `router` | `Address`                      | Optional. The router that fans a `"router"` submission out across the members. A group of one, or a host that only prepares `"legs"` deliveries, needs none. |
-| `vaults` | `readonly VaultMemberConfig[]` | The members, in the order their legs are submitted. That order is visible on chain, so treat it as part of the group.                                        |
+| Field               | Type                           | Description                                                                                                                                                                                                                                                               |
+| ------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                | `string`                       | Stable identifier for the group, used in error messages.                                                                                                                                                                                                                  |
+| `cAsset`            | `Address`                      | The confidential wrapper of the asset every member takes deposits in.                                                                                                                                                                                                     |
+| `router`            | `Address`                      | Optional. The router that fans a `"router"` submission out across the members. A group of one, or a host that only prepares `"legs"` deliveries, needs none.                                                                                                              |
+| `vaults`            | `readonly VaultMemberConfig[]` | The members, in the order their legs are submitted. That order is visible on chain, so treat it as part of the group.                                                                                                                                                     |
+| `allowCustomRouter` | `boolean`                      | Optional, default `false`. A `"router"` submission throws `ConfigurationError` when `router` is not the chain preset's `vaultRouterAddress`, even with `skipPreflight`. Set this only for a router you deployed yourself. Chains without a preset router are not checked. |
 
 `VaultMemberConfig` extends [`VaultAddresses`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md#vaultaddresses) with the `id` callers pass to `deposit` / `redeem` to pick the vault:
 
@@ -16322,22 +16333,23 @@ import { sepolia, mainnet, polygon, polygonAmoy, hoodi, hardhat } from "@zama-fh
 
 Each chain object implements the `FheChain` interface:
 
-| Field                                       | Type                        | Description                                                                                                                                                                               |
-| ------------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                                        | `number`                    | Chain identifier                                                                                                                                                                          |
-| `gatewayChainId`                            | `number`                    | Chain ID of the gateway                                                                                                                                                                   |
-| `relayerUrl`                                | `string`                    | Default relayer endpoint for this network                                                                                                                                                 |
-| `network`                                   | `EIP1193Provider \| string` | Default RPC URL or EIP-1193 provider for this network                                                                                                                                     |
-| `aclContractAddress`                        | `Address`                   | ACL contract address                                                                                                                                                                      |
-| `kmsContractAddress`                        | `Address`                   | KMS contract address                                                                                                                                                                      |
-| `inputVerifierContractAddress`              | `Address`                   | Input verifier contract address                                                                                                                                                           |
-| `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations                                                                                                                                         |
-| `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations                                                                                                                                         |
-| `registryAddress`                           | `Address \| undefined`      | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat and Polygon Amoy)                                                                 |
-| `executorAddress`                           | `Address \| undefined`      | TFHEExecutor contract address (cleartext mode only, undefined for real FHE chains)                                                                                                        |
-| `auth`                                      | `Auth \| undefined`         | Relayer authentication. Required for the Zama-hosted **mainnet** relayer (Ethereum, Polygon); leave unset on the shared Zama testnet relayer (Sepolia, Polygon Amoy), which needs no key. |
-| `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key for EIP-712 verification (cleartext mode)                                                                                                                          |
-| `inputSignerPrivateKey`                     | `Hex \| undefined`          | Input signer private key for EIP-712 verification (cleartext mode)                                                                                                                        |
+| Field                                       | Type                        | Description                                                                                                                                                                                |
+| ------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`                                        | `number`                    | Chain identifier                                                                                                                                                                           |
+| `gatewayChainId`                            | `number`                    | Chain ID of the gateway                                                                                                                                                                    |
+| `relayerUrl`                                | `string`                    | Default relayer endpoint for this network                                                                                                                                                  |
+| `network`                                   | `EIP1193Provider \| string` | Default RPC URL or EIP-1193 provider for this network                                                                                                                                      |
+| `aclContractAddress`                        | `Address`                   | ACL contract address                                                                                                                                                                       |
+| `kmsContractAddress`                        | `Address`                   | KMS contract address                                                                                                                                                                       |
+| `inputVerifierContractAddress`              | `Address`                   | Input verifier contract address                                                                                                                                                            |
+| `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations                                                                                                                                          |
+| `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations                                                                                                                                          |
+| `registryAddress`                           | `Address \| undefined`      | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat and Polygon Amoy)                                                                  |
+| `vaultRouterAddress`                        | `Address \| undefined`      | Optional. The multi-vault router, one per chain; set on Ethereum mainnet and Sepolia. A [`VaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md) refuses any other router unless its config sets `allowCustomRouter`. |
+| `executorAddress`                           | `Address \| undefined`      | TFHEExecutor contract address (cleartext mode only, undefined for real FHE chains)                                                                                                         |
+| `auth`                                      | `Auth \| undefined`         | Relayer authentication. Required for the Zama-hosted **mainnet** relayer (Ethereum, Polygon); leave unset on the shared Zama testnet relayer (Sepolia, Polygon Amoy), which needs no key.  |
+| `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key for EIP-712 verification (cleartext mode)                                                                                                                           |
+| `inputSignerPrivateKey`                     | `Hex \| undefined`          | Input signer private key for EIP-712 verification (cleartext mode)                                                                                                                         |
 
 ### Usage with `createConfig`
 
@@ -24536,7 +24548,7 @@ Define `addresses` outside the component, or memoize it, so its identity is stab
 
 Returns a memoized [`VaultBatcher`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md) bound to the SDK in the current `ZamaProvider`. The instance is recreated only when the SDK or the address changes, so its cached address reads survive re-renders.
 
-This is the low-level entry point — the batch hooks ([`useBatchState`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md), [`useClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md), …) call it internally. Most apps should use [`useVault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVault.md), which pairs both directions and adds the operator-approval step to joins.
+This is the low-level entry point — the batch hooks ([`useBatchState`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md), [`useClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md), …) call it internally. Most apps should use [`useVault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVault.md), which pairs both directions and grants the operator approval a join for another `beneficiary` needs.
 
 ## Import
 
@@ -24588,7 +24600,7 @@ function DepositedAmount({ batchId, account }: { batchId: bigint; account: `0x${
 
 # useDeposit
 
-Mutation hook that deposits a plaintext amount into a confidential vault. It grants the deposit batcher an ERC-7984 operator approval if one isn't already active, checks the caller's confidential balance, encrypts the amount, and joins the currently open deposit batch — the same flow as [`Vault.deposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md#deposit).
+Mutation hook that deposits a plaintext amount into a confidential vault. It checks the caller's confidential balance, encrypts the amount, and sends it to the deposit batcher, which joins it into the currently open deposit batch. Only a deposit for another `beneficiary` needs an ERC-7984 operator approval, which it grants first if none is active — the same flow as [`Vault.deposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md#deposit).
 
 The deposit is not settled when the mutation resolves: it has joined a batch. Keep the returned `batchId` and follow the batch with [`useBatchState`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md), then [`useClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md) once it is `Finalized`.
 
@@ -24700,7 +24712,7 @@ await deposit({ amount: 1_000_000n, beneficiary: "0xRecipient" });
 
 `number | undefined`
 
-Default: now + 1 hour. Unix timestamp (seconds) until which the batcher's operator grant on the asset token is valid. Only used when a grant isn't already active.
+Default: now + 1 hour. Unix timestamp (seconds) until which the batcher's operator grant on the asset token is valid. Only used for another `beneficiary`, and only when a grant isn't already active.
 
 ### skipBalanceCheck
 
@@ -24793,7 +24805,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useRedeem
 
-Mutation hook that redeems a plaintext amount of shares from a confidential vault. It grants the redeem batcher an ERC-7984 operator approval on the share token if one isn't already active, checks the caller's share balance, encrypts the amount, and joins the currently open redeem batch — the same flow as [`Vault.redeem`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md#redeem).
+Mutation hook that redeems a plaintext amount of shares from a confidential vault. It checks the caller's share balance, encrypts the amount, and sends the shares to the redeem batcher, which joins them into the currently open redeem batch. Only a redemption for another `beneficiary` needs an ERC-7984 operator approval, which it grants first if none is active — the same flow as [`Vault.redeem`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md#redeem).
 
 The amount is denominated in **shares**, never in assets — ERC-4626 `redeem`, not `withdraw`. The vault settles the batch into the underlying asset at the batch's exchange rate; claim the proceeds with [`useClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md) on the redeem batcher once the batch is `Finalized`.
 
@@ -24895,7 +24907,7 @@ Default: the connected wallet. The account credited in the batch; it owns the po
 
 `number | undefined`
 
-Default: now + 1 hour. Unix timestamp (seconds) until which the batcher's operator grant on the share token is valid. Only used when a grant isn't already active.
+Default: now + 1 hour. Unix timestamp (seconds) until which the batcher's operator grant on the share token is valid. Only used for another `beneficiary`, and only when a grant isn't already active.
 
 ### skipBalanceCheck
 
@@ -24982,7 +24994,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 Mutation hook that joins the currently open batch on one batcher contract — the same call as [`VaultBatcher.join`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#join). It checks the caller's balance on the batcher's input token, encrypts the amount, and submits the join.
 
-This is the low-level escape hatch. It does **not** grant the batcher an operator approval, so the caller must already have set one on the input token (see [`useConfidentialSetOperator`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useConfidentialSetOperator.md)) or the batcher cannot pull the amount. Most apps should use [`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md) / [`useRedeem`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRedeem.md), which handle the grant.
+This is the low-level escape hatch. A join for the caller sends the amount to the batcher and needs no operator approval. A join for another `beneficiary` makes the batcher pull the amount, and this hook does **not** grant that approval, so the caller must already have set one on the input token (see [`useConfidentialSetOperator`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useConfidentialSetOperator.md)). Most apps should use [`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md) / [`useRedeem`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRedeem.md), which handle the grant.
 
 ## Import
 
@@ -25145,7 +25157,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 ## Related
 
-- [useDeposit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md) / [useRedeem](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRedeem.md) — the recommended hooks, with the operator grant included
+- [useDeposit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md) / [useRedeem](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRedeem.md) — the recommended hooks, which grant the operator approval a join for another `beneficiary` needs
 - [VaultBatcher.join](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#join) — imperative equivalent
 
 ## useClaim

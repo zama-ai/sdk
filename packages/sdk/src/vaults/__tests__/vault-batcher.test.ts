@@ -33,7 +33,7 @@ describe("VaultBatcher", () => {
   });
 
   describe("join", () => {
-    test("encrypts the amount, submits join, and reads the batch id from the Joined event", async ({
+    test("sends the amount to the batcher with confidentialTransferAndCall and reads the batch id from the Joined event", async ({
       sdk,
       provider,
       signer,
@@ -50,13 +50,17 @@ describe("VaultBatcher", () => {
       expect(result.batchId).toBe(12n);
       expect(relayer.encryptValues).toHaveBeenCalledWith({
         values: [{ value: 1_000n, type: "euint64" }],
-        contractAddress: BATCHER_ADDRESS,
+        contractAddress: FROM_TOKEN,
         userAddress,
         options: { operation: "vault-join" },
       });
       expect(Token.prototype.decryptBalance).toHaveBeenCalledWith(userAddress, "vault-join");
       expect(signer.writeContract).toHaveBeenCalledWith(
-        expect.objectContaining({ functionName: "join", args: [userAddress, handle, inputProof] }),
+        expect.objectContaining({
+          address: FROM_TOKEN,
+          functionName: "confidentialTransferAndCall",
+          args: [BATCHER_ADDRESS, handle, inputProof, "0x"],
+        }),
       );
     });
 
@@ -82,10 +86,11 @@ describe("VaultBatcher", () => {
       );
     });
 
-    test("uses an explicit beneficiary when provided", async ({
+    test("calls the pulling join, with input bound to the batcher, for another beneficiary", async ({
       sdk,
       provider,
       signer,
+      relayer,
       handle,
       inputProof,
     }) => {
@@ -94,8 +99,15 @@ describe("VaultBatcher", () => {
       const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
       await batcher.join(1_000n, OTHER_ADDRESS);
 
+      expect(relayer.encryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({ contractAddress: BATCHER_ADDRESS }),
+      );
       expect(signer.writeContract).toHaveBeenCalledWith(
-        expect.objectContaining({ args: [OTHER_ADDRESS, handle, inputProof] }),
+        expect.objectContaining({
+          address: BATCHER_ADDRESS,
+          functionName: "join",
+          args: [OTHER_ADDRESS, handle, inputProof],
+        }),
       );
     });
 
@@ -176,7 +188,7 @@ describe("VaultBatcher", () => {
       await batcher.join(1_000n, undefined, { skipBalanceCheck: true });
 
       expect(signer.writeContract).toHaveBeenCalledWith(
-        expect.objectContaining({ functionName: "join" }),
+        expect.objectContaining({ functionName: "confidentialTransferAndCall" }),
       );
     });
   });

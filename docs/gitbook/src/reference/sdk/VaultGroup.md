@@ -44,12 +44,13 @@ The constructor throws [`ConfigurationError`](errors.md#configurationerror) for 
 import { type VaultGroupConfig, type VaultMemberConfig } from "@zama-fhe/sdk/vaults";
 ```
 
-| Field    | Type                           | Description                                                                                                                                                  |
-| -------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `id`     | `string`                       | Stable identifier for the group, used in error messages.                                                                                                     |
-| `cAsset` | `Address`                      | The confidential wrapper of the asset every member takes deposits in.                                                                                        |
-| `router` | `Address`                      | Optional. The router that fans a `"router"` submission out across the members. A group of one, or a host that only prepares `"legs"` deliveries, needs none. |
-| `vaults` | `readonly VaultMemberConfig[]` | The members, in the order their legs are submitted. That order is visible on chain, so treat it as part of the group.                                        |
+| Field               | Type                           | Description                                                                                                                                                                                                                                                               |
+| ------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                | `string`                       | Stable identifier for the group, used in error messages.                                                                                                                                                                                                                  |
+| `cAsset`            | `Address`                      | The confidential wrapper of the asset every member takes deposits in.                                                                                                                                                                                                     |
+| `router`            | `Address`                      | Optional. The router that fans a `"router"` submission out across the members. A group of one, or a host that only prepares `"legs"` deliveries, needs none.                                                                                                              |
+| `vaults`            | `readonly VaultMemberConfig[]` | The members, in the order their legs are submitted. That order is visible on chain, so treat it as part of the group.                                                                                                                                                     |
+| `allowCustomRouter` | `boolean`                      | Optional, default `false`. A `"router"` submission throws `ConfigurationError` when `router` is not the chain preset's `vaultRouterAddress`, even with `skipPreflight`. Set this only for a router you deployed yourself. Chains without a preset router are not checked. |
 
 `VaultMemberConfig` extends [`VaultAddresses`](Vault.md#vaultaddresses) with the `id` callers pass to `deposit` / `redeem` to pick the vault:
 
