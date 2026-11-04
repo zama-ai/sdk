@@ -185,7 +185,7 @@ export function allowanceContract(tokenAddress: Address, owner: Address, spender
 };
 
 // @public
-export const anvil: {
+export const anvil: Readonly<{
     readonly id: 31337;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "";
@@ -197,7 +197,7 @@ export const anvil: {
     readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
     readonly registryAddress: undefined;
     readonly executorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
-};
+}>;
 
 // @public
 export type ApprovalStrategy = "max" | "exact" | "skip";
@@ -565,7 +565,7 @@ export interface BatchDecryptResult {
 }
 
 // @public
-export const bscTestnet: {
+export const bscTestnet: Readonly<{
     readonly id: 97;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "";
@@ -577,7 +577,7 @@ export const bscTestnet: {
     readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
     readonly registryAddress: "0xc0E8B73b1C58D846e1d4f8fAE2E1466C85BCeAeC";
     readonly executorAddress: "0x5985e48689550c1b2893ABfBbe4cc0eE3A22cc54";
-};
+}>;
 
 // @public
 export class ChainMismatchError extends ZamaError {
@@ -8447,7 +8447,7 @@ export function getTokenPairsSliceContract(registry: Address, fromIndex: bigint,
 };
 
 // @public
-export const hardhat: {
+export const hardhat: Readonly<{
     readonly id: 31337;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "";
@@ -8459,12 +8459,12 @@ export const hardhat: {
     readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
     readonly registryAddress: undefined;
     readonly executorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
-};
+}>;
 
 export { Hex }
 
 // @public
-export const hoodi: {
+export const hoodi: Readonly<{
     readonly id: 560048;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "";
@@ -8476,7 +8476,7 @@ export const hoodi: {
     readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
     readonly registryAddress: "0x1807aE2f693F8530DFB126D0eF98F2F2518F292f";
     readonly executorAddress: "0xC316692627de536368d82e9121F1D44a550894E6";
-};
+}>;
 
 // @public
 export class IndexedDBStorage implements GenericStorage {
@@ -11249,7 +11249,7 @@ export interface ListPairsOptions {
 }
 
 // @public
-export const mainnet: {
+export const mainnet: Readonly<{
     readonly id: 1;
     readonly gatewayChainId: 261131;
     readonly relayerUrl: "https://relayer.mainnet.zama.org";
@@ -11260,7 +11260,7 @@ export const mainnet: {
     readonly verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24";
     readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
     readonly registryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0";
-};
+}>;
 
 // @public
 export function matchZamaError<R>(error: unknown, handlers: { [K in ZamaErrorCode]?: (error: ErrorForCode[K]) => R; } & {
@@ -11506,7 +11506,7 @@ export class Permits {
 }
 
 // @public
-export const polygon: {
+export const polygon: Readonly<{
     readonly id: 137;
     readonly gatewayChainId: 261131;
     readonly relayerUrl: "https://relayer.mainnet.zama.org";
@@ -11517,10 +11517,10 @@ export const polygon: {
     readonly verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24";
     readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
     readonly registryAddress: "0xc8908569868758dAF814B5a8b96bBc44D1653d54";
-};
+}>;
 
 // @public
-export const polygonAmoy: {
+export const polygonAmoy: Readonly<{
     readonly id: 80002;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "https://relayer.testnet.zama.org";
@@ -11531,7 +11531,7 @@ export const polygonAmoy: {
     readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
     readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
     readonly registryAddress: undefined;
-};
+}>;
 
 // @public
 export interface PreparedFor<K extends TransactionKind> extends PreparedTransaction {
@@ -13034,7 +13034,7 @@ export class RpcRateLimitError extends ZamaError {
 }
 
 // @public
-export const sepolia: {
+export const sepolia: Readonly<{
     readonly id: 11155111;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "https://relayer.testnet.zama.org";
@@ -13045,7 +13045,7 @@ export const sepolia: {
     readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
     readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
     readonly registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
-};
+}>;
 
 // @public
 export interface SerializedPermit {
@@ -21018,7 +21018,7 @@ export interface ZamaSDKOptions {
 }
 
 // @public
-export const zenithTrexTestnet: {
+export const zenithTrexTestnet: Readonly<{
     readonly id: 936486;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "";
@@ -21030,7 +21030,7 @@ export const zenithTrexTestnet: {
     readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
     readonly registryAddress: "0xde2e3948d35ef9C406A7317eAF332F3c2786a566";
     readonly executorAddress: "0x6C5036A4ad55DBA8007ae82c4e9C123F143e53ab";
-};
+}>;
 
 // @public
 export const ZERO_ENCRYPTED_VALUE: "0x0000000000000000000000000000000000000000000000000000000000000000";
