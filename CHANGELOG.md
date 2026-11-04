@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.8.0-beta.12](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.11...v3.8.0-beta.12) (2026-11-04)
+
+### Bug Fixes
+
+- **sdk:** freeze exported chain presets at runtime ([#900](https://github.com/zama-ai/sdk/issues/900)) ([38457f7]())
+
 ## [3.8.0-beta.11](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.10...v3.8.0-beta.11) (2026-11-02)
 
 ### Bug Fixes
