@@ -15,6 +15,7 @@ import { mainnet } from "../../chains";
 import type { ZamaSDKEvent } from "../../events/sdk-events";
 import type { RelayerSDK } from "../../relayer/types";
 import {
+  createMockRouter,
   describe,
   expect,
   joinedLog,
@@ -1426,6 +1427,8 @@ function onMainnet(provider: GenericProvider, signer: GenericSigner) {
 }
 
 describe("VaultGroup router check", () => {
+  test.scoped({ chain: mainnet });
+
   test("refuses a router other than the chain's before encrypting, granting or writing", async ({
     sdk,
     provider,
@@ -1495,5 +1498,26 @@ describe("VaultGroup router check", () => {
     });
 
     expect(prepared.delivery).toBe("legs");
+  });
+
+  test("checks against the configured chain's router, not the preset's", async ({
+    createSDK,
+    provider,
+    relayer,
+    signer,
+  }) => {
+    onMainnet(provider, signer);
+    mockReads(provider);
+    mockEncryptedLegs(relayer, 2);
+    const sdk = createSDK({
+      router: createMockRouter({ relayer, chains: [{ ...mainnet, vaultRouterAddress: ROUTER }] }),
+    });
+
+    const prepared = await new VaultGroup(sdk, GROUP).prepareDeposit("alpha", 1_000n, {
+      skipPreflight: true,
+      skipBalanceCheck: true,
+    });
+
+    expect(prepared.writes).toHaveLength(1);
   });
 });

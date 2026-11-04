@@ -12,7 +12,6 @@ import {
   VaultBatcherPausedError,
   VaultGroupJoinUnconfirmedError,
 } from "../errors";
-import { chains } from "../chains/configs";
 import type { EncryptedValue } from "../relayer/types";
 import { withOperation, type TelemetryOperation } from "../telemetry";
 import { Token, WrappedToken } from "../token";
@@ -46,7 +45,7 @@ import type {
   VaultGroupRedeemOptions,
 } from "./vault-group-types";
 
-/** The most vaults a group may name: the router's per-transaction leg limit on the pull path, so a group is always exitable. */
+/** The most vaults a group may name: the router's per-transaction leg limit for a redemption, so a group can always be exited. */
 export const MAX_GROUP_VAULTS = 10;
 
 /** How long a grant `redeem` makes lasts when the caller gives no `operatorUntil`. */
@@ -63,7 +62,7 @@ interface GroupLeg {
 const SIDES = {
   deposit: {
     batcher: (vault: Vault) => vault.depositBatcher,
-    // The batcher's asset side: what a deposit batcher pulls, what a redeem batcher pays out.
+    // The batcher's asset side: what a deposit batcher takes in, what a redeem batcher pays out.
     asset: (vault: Vault) => vault.depositBatcher.fromToken(),
   },
   redeem: {
@@ -212,7 +211,9 @@ export class VaultGroup {
    * The operator grants a redemption with `delivery` relies on, from the
    * config alone: the router on every member's share token for `"router"`,
    * none for `"legs"` or a group of one. Lets a host check the grants before
-   * it prepares anything.
+   * it prepares anything. It does not check the router against the chain's
+   * `vaultRouterAddress`; `prepareRedeem` does, so make the grants only after
+   * it succeeds.
    *
    * @throws if `delivery` is `"router"` and a member's config gives no `cShare`, or the config names no router. {@link ConfigurationError}
    */
@@ -247,7 +248,7 @@ export class VaultGroup {
    * @param amount - The plaintext amount; encrypted before submission.
    * @param options - The account, delivery, and which checks to skip.
    *
-   * @throws if no member has id `vaultId`, a `"router"` delivery has no router, or the balance check would run for an `account` that is not the signer's. {@link ConfigurationError}
+   * @throws if no member has id `vaultId`, a `"router"` delivery has no router or names one other than the chain's `vaultRouterAddress` without `allowCustomRouter`, or the balance check would run for an `account` that is not the signer's. {@link ConfigurationError}
    * @throws unless `skipPreflight`, if a member's batchers disagree with its config or are not paired with `cAsset`, or two members' batchers report the same vault. {@link ConfigurationError}
    * @throws if a member's deposit batcher is paused. {@link VaultBatcherPausedError}
    * @throws unless `skipPreflight`, if a router deposit's `cAsset` is not listed in the router's registry. {@link UnlistedConfidentialTokenError}
@@ -272,7 +273,7 @@ export class VaultGroup {
    *   `withdraw`, so this is denominated in shares, never in assets.
    * @param options - The account, delivery, and which checks to skip.
    *
-   * @throws if no member has id `vaultId`, a `"router"` delivery has no router, or the balance check would run for an `account` that is not the signer's. {@link ConfigurationError}
+   * @throws if no member has id `vaultId`, a `"router"` delivery has no router or names one other than the chain's `vaultRouterAddress` without `allowCustomRouter`, or the balance check would run for an `account` that is not the signer's. {@link ConfigurationError}
    * @throws unless `skipPreflight`, if a member's batchers disagree with its config or are not paired with `cAsset`, or two members' batchers report the same vault. {@link ConfigurationError}
    * @throws if a member's redeem batcher is paused. {@link VaultBatcherPausedError}
    * @throws if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
@@ -298,7 +299,7 @@ export class VaultGroup {
    * from, so a group deposit cannot be made on someone else's behalf.
    *
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
-   * @throws if no member has id `vaultId`, a member's batchers disagree with its config or are not paired with `cAsset`, two members' batchers report the same vault, or a group of more than one member names no router. {@link ConfigurationError}
+   * @throws if no member has id `vaultId`, a member's batchers disagree with its config or are not paired with `cAsset`, two members' batchers report the same vault, or a group of more than one member names no router or one other than the chain's `vaultRouterAddress` without `allowCustomRouter`. {@link ConfigurationError}
    * @throws if a member's deposit batcher is paused. {@link VaultBatcherPausedError}
    * @throws if the router's registry does not list `cAsset`. {@link UnlistedConfidentialTokenError}
    * @throws if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
@@ -335,7 +336,7 @@ export class VaultGroup {
    * the chosen one's.
    *
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
-   * @throws if no member has id `vaultId`, a member's batchers disagree with its config or are not paired with `cAsset`, two members' batchers report the same vault, or a group of more than one member names no router. {@link ConfigurationError}
+   * @throws if no member has id `vaultId`, a member's batchers disagree with its config or are not paired with `cAsset`, two members' batchers report the same vault, or a group of more than one member names no router or one other than the chain's `vaultRouterAddress` without `allowCustomRouter`. {@link ConfigurationError}
    * @throws if a member's redeem batcher is paused. {@link VaultBatcherPausedError}
    * @throws if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
    * @throws if balance validation requires decryption that is not possible. {@link BalanceCheckUnavailableError}
@@ -384,16 +385,16 @@ export class VaultGroup {
     return this.router;
   }
 
-  // Runs even with `skipPreflight`. Chains without a preset router (local nodes) are not checked.
+  // Runs even with `skipPreflight`. A chain whose config names no router (a local node) is not checked.
   async #assertCanonicalRouter(router: Address): Promise<void> {
     if (this.#config.allowCustomRouter) {
       return;
     }
     const chainId = await this.sdk.provider.getChainId();
-    const canonical = chains[chainId]?.vaultRouterAddress;
+    const canonical = this.sdk.chains.find((chain) => chain.id === chainId)?.vaultRouterAddress;
     if (canonical !== undefined && getAddress(canonical) !== router) {
       throw new ConfigurationError(
-        `Vault group "${this.id}" names router ${router}, but the router on chain ${chainId} is ${getAddress(canonical)}; set allowCustomRouter to use another`,
+        `Vault group "${this.id}" names router ${router}, but the configured router on chain ${chainId} is ${getAddress(canonical)}; set allowCustomRouter to use another`,
       );
     }
   }

@@ -44,13 +44,13 @@ The constructor throws [`ConfigurationError`](errors.md#configurationerror) for 
 import { type VaultGroupConfig, type VaultMemberConfig } from "@zama-fhe/sdk/vaults";
 ```
 
-| Field               | Type                           | Description                                                                                                                                                                                                                                                               |
-| ------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                | `string`                       | Stable identifier for the group, used in error messages.                                                                                                                                                                                                                  |
-| `cAsset`            | `Address`                      | The confidential wrapper of the asset every member takes deposits in.                                                                                                                                                                                                     |
-| `router`            | `Address`                      | Optional. The router that fans a `"router"` submission out across the members. A group of one, or a host that only prepares `"legs"` deliveries, needs none.                                                                                                              |
-| `vaults`            | `readonly VaultMemberConfig[]` | The members, in the order their legs are submitted. That order is visible on chain, so treat it as part of the group.                                                                                                                                                     |
-| `allowCustomRouter` | `boolean`                      | Optional, default `false`. A `"router"` submission throws `ConfigurationError` when `router` is not the chain preset's `vaultRouterAddress`, even with `skipPreflight`. Set this only for a router you deployed yourself. Chains without a preset router are not checked. |
+| Field               | Type                           | Description                                                                                                                                                                                                                                                                                             |
+| ------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                | `string`                       | Stable identifier for the group, used in error messages.                                                                                                                                                                                                                                                |
+| `cAsset`            | `Address`                      | The confidential wrapper of the asset every member takes deposits in.                                                                                                                                                                                                                                   |
+| `router`            | `Address`                      | Optional. The router that fans a `"router"` submission out across the members. A group of one, or a host that only prepares `"legs"` deliveries, needs none.                                                                                                                                            |
+| `vaults`            | `readonly VaultMemberConfig[]` | The members, in the order their legs are submitted. That order is visible on chain, so treat it as part of the group.                                                                                                                                                                                   |
+| `allowCustomRouter` | `boolean`                      | Optional, default `false`. A `"router"` submission throws `ConfigurationError` when `router` is not the `vaultRouterAddress` of the chain the SDK is configured with, even with `skipPreflight`. Set this only for a router you deployed yourself. A chain whose config names no router is not checked. |
 
 `VaultMemberConfig` extends [`VaultAddresses`](Vault.md#vaultaddresses) with the `id` callers pass to `deposit` / `redeem` to pick the vault:
 
@@ -137,7 +137,7 @@ A router submission emits a [`VaultSubmitted`](ZamaSDK.md#events) event with `va
 
 **Throws:**
 
-- [`ConfigurationError`](errors.md#configurationerror) — unknown `vaultId`, a member whose batchers disagree with its config or are not paired with `cAsset`, or two members whose batchers report the same vault. Thrown before any grant or transfer.
+- [`ConfigurationError`](errors.md#configurationerror) — unknown `vaultId`, a member whose batchers disagree with its config or are not paired with `cAsset`, two members whose batchers report the same vault, or a router other than the configured chain's `vaultRouterAddress` without `allowCustomRouter`. Thrown before any grant or transfer.
 - [`VaultBatcherPausedError`](errors.md#vaultbatcherpausederror) — a member's batcher is paused, so the submission would revert. Names the member.
 - [`SignerNotConfiguredError`](errors.md#signernotconfigurederror) — no signer on the SDK.
 - [`InsufficientConfidentialBalanceError`](errors.md#insufficientconfidentialbalanceerror) — the asset balance is less than `amount`.
@@ -278,6 +278,8 @@ const missing = await group.missingOperators(prepared);
 The grants a redemption with `delivery` (default `"router"`) relies on, from the config alone, so a host can check them before preparing anything: the router on every member's `cShare` for `"router"`, none for `"legs"` or a group of one. Throws [`ConfigurationError`](errors.md#configurationerror) for a `"router"` delivery when a member's config gives no `cShare`, or the config names no router.
 
 `vaultGroupRedeemOperators(config, delivery?)`, exported beside the class, gives the same answer from a `VaultGroupConfig` alone, for the parts of a host's pipeline that run with the config in hand but no SDK instance in scope, such as the guard that decides whether a grant transaction is needed.
+
+Neither checks the router against the chain's `vaultRouterAddress`; `prepareRedeem` does. Make the grants only after it succeeds, so a misconfigured router never gets an operator approval.
 
 ### decodeVaultGroupJoins
 

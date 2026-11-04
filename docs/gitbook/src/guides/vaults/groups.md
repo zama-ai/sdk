@@ -41,7 +41,7 @@ const group = createVaultGroup(sdk, STABLE_GROUP);
 
 The SDK ships no group configuration; the addresses belong to your app. Each member is checked against chain before a submission writes anything, and a mismatch throws `ConfigurationError`.
 
-The router is the exception: there is one per chain, and the chain presets carry it as `vaultRouterAddress` (for example `mainnet.vaultRouterAddress` from `@zama-fhe/sdk/chains`). A `"router"` submission throws `ConfigurationError` for any other router, before it encrypts or asks for a signature. The check runs even with `skipPreflight`. Set `allowCustomRouter: true` in the group config only for a router you deployed yourself; chains without a preset router, such as a local node, are not checked.
+The router is the exception: there is one per chain, and the chain presets carry it as `vaultRouterAddress` (for example `mainnet.vaultRouterAddress` from `@zama-fhe/sdk/chains`). A `"router"` submission throws `ConfigurationError` for any router other than the `vaultRouterAddress` of the chain the SDK is configured with, before it encrypts or asks for a signature. The check runs even with `skipPreflight`. Set `allowCustomRouter: true` in the group config only for a router you deployed yourself; a chain whose config names no router, such as a local node, is not checked.
 
 ## Depositing and redeeming
 

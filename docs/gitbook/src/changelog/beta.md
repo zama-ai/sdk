@@ -50,7 +50,7 @@ The `vaults` subpath also exports the pure call builders these are built on — 
 
 ## Vault groups only submit through the chain's router
 
-The Ethereum mainnet and Sepolia presets gain `vaultRouterAddress`, the one multi-vault router on each chain. A `VaultGroup` `"router"` submission now throws `ConfigurationError` when the group's `router` is a different address, before it encrypts or asks for a signature, and also with `skipPreflight`. Set `allowCustomRouter: true` in the group config for a router you deployed yourself. `"legs"` deliveries, which never touch the router, and chains without a preset router are not checked.
+The Ethereum mainnet and Sepolia presets gain `vaultRouterAddress`, the one multi-vault router on each chain. A `VaultGroup` `"router"` submission now throws `ConfigurationError` when the group's `router` is a different address, before it encrypts or asks for a signature, and also with `skipPreflight`. Set `allowCustomRouter: true` in the group config for a router you deployed yourself. The check uses the `vaultRouterAddress` of the chain the SDK is configured with, so a chain config that sets its own takes precedence. `"legs"` deliveries, which never touch the router, and chains whose config names no router are not checked.
 
 ## Opt out of clearing credentials on wallet account changes
 

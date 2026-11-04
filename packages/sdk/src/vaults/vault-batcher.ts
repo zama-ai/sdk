@@ -302,9 +302,9 @@ export class VaultBatcher {
    *
    * @remarks
    * A join that credits the caller sends the amount to the batcher with
-   * `confidentialTransferAndCall`, so it needs no operator grant. A join for another `beneficiary` calls the batcher's
-   * `join`, which pulls the amount and so needs an active ERC-7984 operator
-   * grant from the caller.
+   * `confidentialTransferAndCall`, so it needs no operator grant. A join for
+   * another `beneficiary` calls the batcher's `join`, which pulls the amount
+   * and so needs an active ERC-7984 operator grant from the caller.
    *
    * A join with too little balance still succeeds on chain and credits
    * nothing, so the amount is checked against the caller's confidential
@@ -330,7 +330,7 @@ export class VaultBatcher {
     const token =
       resolvedBeneficiary === userAddress ? (await this.#inputToken()).address : undefined;
 
-    // The input proof is bound to the contract that consumes it: the token for a push.
+    // The input proof is bound to the contract that verifies it: the token for a transfer-and-call, the batcher for `join`.
     const { encryptedValues, inputProof } = await this.sdk.encrypt(
       {
         values: [{ value: amount, type: "euint64" }],

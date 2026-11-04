@@ -32,7 +32,7 @@ export interface VaultGroupConfig {
    */
   readonly router?: Address;
   /**
-   * Submit through a `router` other than the chain preset's
+   * Submit through a `router` other than the configured chain's
    * `vaultRouterAddress`. Off by default; set it only for a router you
    * deployed yourself.
    */
