@@ -165,6 +165,7 @@
   - [useCurrentBatchId](reference/react/useCurrentBatchId.md)
   - [useBatchState](reference/react/useBatchState.md)
   - [useTimeUntilDispatchable](reference/react/useTimeUntilDispatchable.md)
+  - [useTimeUntilCallbackDeadline](reference/react/useTimeUntilCallbackDeadline.md)
   - [useVaultGroup](reference/react/useVaultGroup.md)
   - [useGroupDeposit](reference/react/useGroupDeposit.md)
   - [useGroupRedeem](reference/react/useGroupRedeem.md)

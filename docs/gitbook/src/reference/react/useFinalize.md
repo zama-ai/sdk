@@ -7,7 +7,9 @@ description: Mutation hook that settles a dispatched vault batch when the relaye
 
 Mutation hook that settles a dispatched batch yourself. Same call as [`VaultBatcher.finalize`](../sdk/VaultBatcher.md#finalize): it publicly decrypts the batch's aggregate amount and hands the cleartext and its proof to the batcher, which executes the route.
 
-The relayer normally finalizes a batch after dispatch, so this is for a batch that has sat in `BatchState.Dispatched` longer than expected. Finalizing is permissionless. Past the batch's callback deadline the same call cancels the batch instead of settling it, and its participants take their deposits back with [`useQuit`](./useQuit.md).
+The relayer normally finalizes a batch after dispatch, so this is for a batch that has sat in `BatchState.Dispatched` longer than expected. Finalizing is permissionless. Past the batch's callback deadline (see [`useTimeUntilCallbackDeadline`](./useTimeUntilCallbackDeadline.md)) the same call cancels the batch instead of settling it, and its participants take their deposits back with [`useQuit`](./useQuit.md).
+
+The call reads the batch state first and rejects with [`VaultBatchNotDispatchedError`](../sdk/errors.md#vaultbatchnotdispatchederror) when the batch is not `Dispatched`, for example because the relayer already finalized it.
 
 ## Import
 
@@ -81,5 +83,6 @@ On success the hook invalidates the batcher's batch reads: the batch leaves `Dis
 ## Related
 
 - [useBatchState](./useBatchState.md) — only a `Dispatched` batch can be finalized
+- [useTimeUntilCallbackDeadline](./useTimeUntilCallbackDeadline.md) — whether finalizing still settles the batch
 - [useClaim](./useClaim.md) — the step after a batch is `Finalized`
 - [VaultBatcher.finalize](../sdk/VaultBatcher.md#finalize) — imperative equivalent

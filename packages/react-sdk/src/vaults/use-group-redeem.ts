@@ -9,7 +9,7 @@ import { VaultGroupJoinUnconfirmedError } from "@zama-fhe/sdk";
 import { invalidateAfterSetOperator } from "@zama-fhe/sdk/query";
 import {
   groupRedeemMutationOptions,
-  invalidateAfterJoin,
+  invalidateAfterGroupJoin,
   type GroupRedeemParams,
   type VaultGroupConfig,
   type VaultGroupJoinResult,
@@ -50,9 +50,7 @@ export function useGroupRedeem<TContext = unknown>(
     ...groupRedeemMutationOptions(group),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
-      for (const { batcher, token } of data.joins) {
-        invalidateAfterJoin(context.client, { batcherAddress: batcher, fromToken: token });
-      }
+      invalidateAfterGroupJoin(context.client, data.joins);
       return options?.onSuccess?.(data, variables, onMutateResult, context);
     },
     onSettled: (data, error, variables, onMutateResult, context) => {
@@ -69,14 +67,14 @@ export function useGroupRedeem<TContext = unknown>(
           })),
         ),
         (legs) => {
-          for (const { batcher, share } of legs) {
+          for (const { share } of legs) {
             invalidateAfterSetOperator(context.client, share.address);
-            if (joinedUnconfirmed) {
-              invalidateAfterJoin(context.client, {
-                batcherAddress: batcher,
-                fromToken: share.address,
-              });
-            }
+          }
+          if (joinedUnconfirmed) {
+            invalidateAfterGroupJoin(
+              context.client,
+              legs.map(({ batcher, share }) => ({ batcher, token: share.address })),
+            );
           }
         },
       );

@@ -52,12 +52,12 @@ import { BatchState } from "@zama-fhe/sdk/vaults";
 
 A batch's lifecycle state. The numbers mirror the contract's own enum. `batchState()` returns one of these, and it decides which write is legal:
 
-| Value                   | Meaning                                                                       | Legal writes      |
-| ----------------------- | ----------------------------------------------------------------------------- | ----------------- |
-| `BatchState.Pending`    | `0` — open. Always the batcher's `currentBatchId()`.                          | `join`, `quit`    |
-| `BatchState.Dispatched` | `1` — closed; the aggregate amount is being decrypted.                        | none — wait       |
-| `BatchState.Finalized`  | `2` — settled with an exchange rate.                                          | `claim`           |
-| `BatchState.Canceled`   | `3` — the route failed or the callback deadline passed; nothing was executed. | `quit`, `recover` |
+| Value                   | Meaning                                                                       | Legal writes                               |
+| ----------------------- | ----------------------------------------------------------------------------- | ------------------------------------------ |
+| `BatchState.Pending`    | `0` — open. Always the batcher's `currentBatchId()`.                          | `join`, `quit`                             |
+| `BatchState.Dispatched` | `1` — closed; the aggregate amount is being decrypted.                        | `finalize` — the relayer normally sends it |
+| `BatchState.Finalized`  | `2` — settled with an exchange rate.                                          | `claim`                                    |
+| `BatchState.Canceled`   | `3` — the route failed or the callback deadline passed; nothing was executed. | `quit`, `recover`                          |
 
 Claiming a canceled batch reverts — there is nothing to claim, only a deposit to take back.
 
@@ -122,6 +122,21 @@ Measured against the chain's block timestamp and the batch's own pinned minimum 
 ```ts
 const secondsLeft = await batcher.timeUntilDispatchable(batchId);
 if (secondsLeft === 0n) await batcher.dispatchBatch();
+```
+
+### timeUntilCallbackDeadline
+
+`(batchId: bigint) => Promise<bigint | null>`
+
+Seconds until the dispatched batch `batchId` reaches its callback deadline, `0` once it has. From then on `finalize` cancels the batch instead of settling it. Returns `null` outside `Dispatched`.
+
+Measured against the chain's block timestamp (`batchDispatchedAt + batchCallbackDeadline`), not the local clock.
+
+```ts
+const secondsLeft = await batcher.timeUntilCallbackDeadline(batchId);
+if (secondsLeft === 0n) {
+  // finalize now cancels the batch
+}
 ```
 
 ### batchCreatedAt
@@ -256,7 +271,7 @@ await batcher.dispatchBatch();
 
 Settles a dispatched batch yourself: reads the batch's `unwrapRequestId`, publicly decrypts the amount that unwrap released, and submits `dispatchBatchCallback` with the cleartext and its proof, which executes the route. Permissionless, like `dispatchBatch`. The relayer normally does this, so reach for it when a batch has sat in `BatchState.Dispatched` longer than expected. Past the batch's callback deadline (`batchDispatchedAt + batchCallbackDeadline`) the same call cancels the batch instead of settling it.
 
-Only legal while the batch is `BatchState.Dispatched`.
+Only legal while the batch is `BatchState.Dispatched`. Read [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline) to see whether the call will settle or cancel.
 
 ```ts
 await batcher.finalize(batchId);
@@ -264,9 +279,10 @@ await batcher.finalize(batchId);
 
 **Throws:**
 
+- [`VaultBatchNotDispatchedError`](errors.md#vaultbatchnotdispatchederror) — the batch is not `Dispatched`, for example because the relayer already finalized it. Thrown before any decryption.
 - [`DecryptionFailedError`](errors.md#decryptionfailederror) — the public decryption returned no cleartext for the amount.
 
-`prepareFinalize(batchId)` does everything but the send and returns `{ batchId, unwrapAmountCleartext, decryptionProof, call }`, the `dispatchBatchCallback` call ready for a host's own signer. It needs no signer.
+`prepareFinalize(batchId)` does everything but the send, including the `Dispatched` check, and returns `{ batchId, unwrapAmountCleartext, decryptionProof, call }`, the `dispatchBatchCallback` call ready for a host's own signer. It needs no signer.
 
 ### claim
 
@@ -363,6 +379,7 @@ import {
   batchStateQueryOptions,
   currentBatchIdQueryOptions,
   timeUntilDispatchableQueryOptions,
+  timeUntilCallbackDeadlineQueryOptions,
   joinMutationOptions,
   claimMutationOptions,
   quitMutationOptions,
@@ -380,4 +397,5 @@ The React hooks are built on these query and mutation option builders; they are 
 - [Vault](Vault.md) — pairs two batchers behind `deposit()` / `redeem()` with automatic operator approval
 - [Vault deposits and redemptions](../../guides/vaults/deposits.md) — the full flow, including when each write is legal
 - [Errors](errors.md) — the error classes thrown above
+- [useTimeUntilCallbackDeadline](../react/useTimeUntilCallbackDeadline.md) — React hook for `timeUntilCallbackDeadline`
 - [useVaultBatcher](../react/useVaultBatcher.md) — React hook returning a `VaultBatcher`

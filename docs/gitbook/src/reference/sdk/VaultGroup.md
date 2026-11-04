@@ -132,7 +132,7 @@ const { txHash, joins } = await group.deposit("alpha", 1_000_000n);
 
 Unlike `Vault.deposit` there is no `beneficiary`: the router credits the account the legs came from.
 
-The submission emits a [`VaultSubmitted`](ZamaSDK.md#events) event with `vaultOperation: "routerJoin"` tagged with the router's address, in either direction.
+A router submission emits a [`VaultSubmitted`](ZamaSDK.md#events) event with `vaultOperation: "routerJoin"` tagged with the router's address, in either direction. A group of one joins its batcher directly and emits `vaultOperation: "join"` tagged with the batcher.
 
 **Throws:**
 
@@ -153,7 +153,7 @@ Redeems `amount` shares of the member `vaultId` by joining every member's curren
 1. Builds one leg per member from its configured redeem batcher and verifies each member as `deposit` does, with the redeem batcher paying out `cAsset` and each member's share token read from it. Alongside, reads the router's registry address, so a `router` with none fails before anything is granted to it.
 2. Checks the caller's balance of the chosen member's share token, decrypting every member's share balance so the relayer cannot tell which was chosen (skippable with `skipBalanceCheck`).
 3. Encrypts the allocation against the router.
-4. Grants the router an operator approval on each share token that lacks one. Each grant is its own wallet prompt, so a first redemption from a group of N vaults can ask the user to sign up to N + 1 times.
+4. Grants the router an operator approval on each share token that lacks one, as [`missingOperators`](#missingoperators) reports. Each grant is its own wallet prompt, so a first redemption from a group of N vaults can ask the user to sign up to N + 1 times.
 5. Submits the router `join`.
 6. Reads the `Joined` events.
 
@@ -171,10 +171,10 @@ import { type JoinOptions, type VaultGroupRedeemOptions } from "@zama-fhe/sdk/va
 
 `deposit` takes `JoinOptions`; `redeem` takes `VaultGroupRedeemOptions`, which adds `operatorUntil`.
 
-| Option             | Type      | Default      | Description                                                                                                                                         |
-| ------------------ | --------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `skipBalanceCheck` | `boolean` | `false`      | Skip the confidential-balance pre-flight. A short balance then joins every batch with an encrypted zero rather than reverting.                      |
-| `operatorUntil`    | `number`  | now + 1 hour | Redeem only. Unix timestamp (seconds) until which the router's operator grant on each share token is valid, for a grant the redemption has to make. |
+| Option             | Type      | Default             | Description                                                                                                                                                                                                                     |
+| ------------------ | --------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `skipBalanceCheck` | `boolean` | `false`             | Skip the confidential-balance pre-flight. A short balance then joins every batch with an encrypted zero rather than reverting.                                                                                                  |
+| `operatorUntil`    | `number`  | chain time + 1 hour | Redeem only. Unix timestamp (seconds) until which the router's operator grant on each share token is valid, for a grant the redemption has to make. The default is the chain's current time plus one hour, not the local clock. |
 
 ## VaultGroupJoinResult
 
@@ -231,12 +231,12 @@ const { joins, unconfirmed } = prepared.decodeJoins(receipt.logs);
 import { type PrepareVaultGroupJoinOptions, type JoinDelivery } from "@zama-fhe/sdk/vaults";
 ```
 
-| Option             | Type           | Default             | Description                                                                                                                                                                                                                                                                                          |
-| ------------------ | -------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `account`          | `Address`      | the signer's wallet | The account the legs come from. A host without a signer passes it, and skips the balance check, which decrypts as the signer.                                                                                                                                                                        |
-| `delivery`         | `JoinDelivery` | `"router"`          | `"router"`: one transaction through the router. `"legs"`: one transfer per member straight to its batcher, for a wallet that lands them atomically; sent one by one, a user who stops partway reveals the rest. A group of one always goes `"legs"`.                                                 |
-| `skipBalanceCheck` | `boolean`      | `false`             | Skip the confidential-balance pre-flight.                                                                                                                                                                                                                                                            |
-| `skipPreflight`    | `boolean`      | `false`             | Skip the chain reads that verify the group: each member's batchers against its config, `paused()` on every batcher a leg would join, and the registry listing for a router deposit. For a host that verified the group itself. A member's share token is still read when `cShare` is not configured. |
+| Option             | Type           | Default             | Description                                                                                                                                                                                                                                                                                                                                              |
+| ------------------ | -------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `account`          | `Address`      | the signer's wallet | The account the legs come from. The balance check decrypts as the signer, so an `account` other than the signer's (or no signer) throws `ConfigurationError` unless `skipBalanceCheck` is passed.                                                                                                                                                        |
+| `delivery`         | `JoinDelivery` | `"router"`          | `"router"`: one transaction through the router. `"legs"`: one transfer per member straight to its batcher, for a wallet that lands them atomically; sent one by one, a user who stops partway reveals the rest. A group of one always goes `"legs"`.                                                                                                     |
+| `skipBalanceCheck` | `boolean`      | `false`             | Skip the confidential-balance pre-flight.                                                                                                                                                                                                                                                                                                                |
+| `skipPreflight`    | `boolean`      | `false`             | Skip the chain reads that verify the group: each member's batchers against its config, and the registry listing for a router deposit. `paused()` is always read on every batcher a leg would join and throws `VaultBatcherPausedError`. For a host that verified the group itself. A member's share token is still read when `cShare` is not configured. |
 
 ### PreparedVaultGroupJoin
 
@@ -260,6 +260,16 @@ import {
 | `requiredOperators` | `readonly VaultGroupOperator[]`      | `{ token, spender }` grants the writes rely on: the router on each share token of a `"router"` redemption, otherwise none. Grant the ones the account lacks first.             |
 | `decodeJoins(logs)` | `(logs) => { joins, unconfirmed }`   | Pairs each leg with its `Joined` log in the mined receipts' logs, in leg order, and lists the members without one instead of throwing.                                         |
 
+### missingOperators
+
+`(prepared) => Promise<readonly VaultGroupOperator[]>`
+
+The grants in `prepared.requiredOperators` that `prepared.account` lacks at the current block (`Token.isOperator`). `redeem` grants exactly these; a host sending its own writes makes them first. The check answers for now, so give each grant an `until` that outlasts the time the writes take to land.
+
+```ts
+const missing = await group.missingOperators(prepared);
+```
+
 ### redeemOperators
 
 `(delivery?: JoinDelivery) => readonly VaultGroupOperator[]`
@@ -267,6 +277,20 @@ import {
 The grants a redemption with `delivery` (default `"router"`) relies on, from the config alone, so a host can check them before preparing anything: the router on every member's `cShare` for `"router"`, none for `"legs"` or a group of one. Throws [`ConfigurationError`](errors.md#configurationerror) for a `"router"` delivery when a member's config gives no `cShare`, or the config names no router.
 
 `vaultGroupRedeemOperators(config, delivery?)`, exported beside the class, gives the same answer from a `VaultGroupConfig` alone, for the parts of a host's pipeline that run with the config in hand but no SDK instance in scope, such as the guard that decides whether a grant transaction is needed.
+
+### decodeVaultGroupJoins
+
+`(prepared: { legs, account }, logs) => DecodedVaultGroupJoins`
+
+```ts
+import { decodeVaultGroupJoins, type DecodedVaultGroupJoins } from "@zama-fhe/sdk/vaults";
+```
+
+What `prepared.decodeJoins` does, from plain data, so a host that saved `legs` and `account` can decode after a reload. Returns `{ joins, unconfirmed }`. For a `"legs"` delivery pass the logs of every receipt in leg order. For a partly sent `"legs"` delivery, `unconfirmed` lists the legs still to send.
+
+```ts
+const { joins, unconfirmed } = decodeVaultGroupJoins({ legs, account }, receipt.logs);
+```
 
 ## Call builders
 
@@ -293,13 +317,18 @@ A builder encodes a call and nothing else. The verification `deposit` and `redee
 ## TanStack Query helpers
 
 ```ts
-import { groupDepositMutationOptions, groupRedeemMutationOptions } from "@zama-fhe/sdk/vaults";
+import {
+  groupDepositMutationOptions,
+  groupRedeemMutationOptions,
+  invalidateAfterGroupJoin,
+} from "@zama-fhe/sdk/vaults";
 ```
 
 The React hooks are built on these; they are exported for non-React TanStack Query consumers and for custom compositions.
 
 - `groupDepositMutationOptions(group)` / `groupRedeemMutationOptions(group)` — `group.deposit` / `group.redeem` as mutations taking `{ vaultId, amount, ...options }`. Keyed on `["zama.vaultGroup.deposit", { cAsset, batchers }]` (redeem likewise), where `batchers` are the direction's batcher addresses.
-- Once the transaction is mined, the hooks invalidate what [`invalidateAfterJoin`](VaultBatcher.md#tanstack-query-helpers) covers for every member: the balance of each token the legs spent (`cAsset` once for a deposit, each share token for a redemption) and each batcher's batch reads. This runs on success and on `VaultGroupJoinUnconfirmedError` alike, since a mined transaction joined every leg. The redeem hook additionally invalidates operator status for each share token.
+- `invalidateAfterGroupJoin(queryClient, legs)` takes `prepared.legs` or a result's `joins`, and invalidates each leg's token balance and batcher batch reads. Call it after sending the writes yourself.
+- Once the transaction is mined, the hooks call it, so they invalidate what [`invalidateAfterJoin`](VaultBatcher.md#tanstack-query-helpers) covers for every member: the balance of each token the legs spent (`cAsset` once for a deposit, each share token for a redemption) and each batcher's batch reads. This runs on success and on `VaultGroupJoinUnconfirmedError` alike, since a mined transaction joined every leg. The redeem hook additionally invalidates operator status for each share token.
 
 See [Query keys → `vaultQueryKeys`](../react/query-keys.md#vaultquerykeys) for the cache keys.
 

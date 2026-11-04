@@ -136,6 +136,20 @@ export interface UseRedeemConfig {
 }
 
 // @public
+export function useTimeUntilCallbackDeadline(config: UseTimeUntilCallbackDeadlineConfig, options?: UseTimeUntilCallbackDeadlineOptions): UseQueryResult<bigint | null, Error>;
+
+// @public
+export interface UseTimeUntilCallbackDeadlineConfig {
+    address: Address;
+    batchId: bigint | undefined;
+}
+
+// @public
+export interface UseTimeUntilCallbackDeadlineOptions extends Omit<UseQueryOptions<bigint | null>, "queryKey" | "queryFn" | "enabled"> {
+    enabled?: boolean;
+}
+
+// @public
 export function useTimeUntilDispatchable(config: UseTimeUntilDispatchableConfig, options?: UseTimeUntilDispatchableOptions): UseQueryResult<bigint | null, Error>;
 
 // @public

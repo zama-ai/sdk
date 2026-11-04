@@ -31,3 +31,8 @@ export {
   type UseTimeUntilDispatchableConfig,
   type UseTimeUntilDispatchableOptions,
 } from "./use-time-until-dispatchable";
+export {
+  useTimeUntilCallbackDeadline,
+  type UseTimeUntilCallbackDeadlineConfig,
+  type UseTimeUntilCallbackDeadlineOptions,
+} from "./use-time-until-callback-deadline";

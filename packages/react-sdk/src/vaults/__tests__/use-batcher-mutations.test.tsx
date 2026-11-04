@@ -1,7 +1,7 @@
 import { act, waitFor } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
-import { vaultQueryKeys } from "@zama-fhe/sdk/vaults";
+import { BatchState, vaultQueryKeys } from "@zama-fhe/sdk/vaults";
 import { describe, expect, mockJoinBalance, mockJoinReceipt, test, vi } from "../../test-fixtures";
 import { useClaim } from "../use-claim";
 import { useDispatchBatch } from "../use-dispatch-batch";
@@ -140,9 +140,19 @@ describe("useFinalize", () => {
     renderWithProviders,
     provider,
   }) => {
-    vi.mocked(provider.readContract).mockImplementation(async (config) =>
-      config.functionName === "fromToken" ? FROM_TOKEN : `0x${"ab".repeat(32)}`,
-    );
+    vi.mocked(provider.readContract).mockImplementation(async (config) => {
+      switch (config.functionName) {
+        case "batchState": {
+          return BatchState.Dispatched;
+        }
+        case "fromToken": {
+          return FROM_TOKEN;
+        }
+        default: {
+          return `0x${"ab".repeat(32)}`;
+        }
+      }
+    });
     const { result, queryClient } = renderWithProviders(() =>
       useFinalize({ address: BATCHER_ADDRESS }),
     );

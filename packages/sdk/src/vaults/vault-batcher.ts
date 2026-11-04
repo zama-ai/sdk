@@ -5,6 +5,7 @@ import {
   EncryptionFailedError,
   SignerNotConfiguredError,
   TransactionRevertedError,
+  VaultBatchNotDispatchedError,
 } from "../errors";
 import type { TransactionOperation } from "../events/sdk-events";
 import type { EncryptedValue } from "../relayer/types";
@@ -223,6 +224,29 @@ export class VaultBatcher {
     return eligibleAt > now ? eligibleAt - now : 0n;
   }
 
+  /**
+   * Seconds until a dispatched batch reaches its callback deadline, `0` once
+   * it has. From then on {@link finalize} cancels the batch instead of
+   * settling it. `null` outside {@link BatchState.Dispatched}, where there is
+   * nothing to finalize.
+   *
+   * Measured against the chain's block timestamp and the batch's own pinned
+   * deadline, like {@link timeUntilDispatchable}.
+   */
+  async timeUntilCallbackDeadline(batchId: bigint): Promise<bigint | null> {
+    const [state, dispatchedAt, deadline, now] = await Promise.all([
+      this.batchState(batchId),
+      this.batchDispatchedAt(batchId),
+      this.batchCallbackDeadline(batchId),
+      this.sdk.provider.getBlockTimestamp(),
+    ]);
+    if (state !== BatchState.Dispatched) {
+      return null;
+    }
+    const cancelsAt = dispatchedAt + deadline;
+    return cancelsAt > now ? cancelsAt - now : 0n;
+  }
+
   /** The encrypted aggregate amount joined into a batch, without decrypting it. */
   async confidentialTotalDeposits(batchId: bigint): Promise<EncryptedValue> {
     return this.sdk.provider.readContract(totalDepositsContract(this.address, batchId));
@@ -392,10 +416,11 @@ export class VaultBatcher {
    * {@link dispatchBatch}. The relayer normally does this, so reach for it
    * when a batch has sat in {@link BatchState.Dispatched} longer than
    * expected. Past the batch's callback deadline the same call cancels the
-   * batch instead of settling it.
+   * batch instead of settling it; {@link timeUntilCallbackDeadline} says
+   * which one a call now does.
    *
-   * Only legal while the batch is {@link BatchState.Dispatched}.
-   *
+   * @throws if no signer is configured. {@link SignerNotConfiguredError}
+   * @throws if the batch is not {@link BatchState.Dispatched}, for example because the relayer already finalized it. {@link VaultBatchNotDispatchedError}
    * @throws if the public decryption returns no cleartext for the amount. {@link DecryptionFailedError}
    */
   async finalize(batchId: bigint): Promise<TransactionResult> {
@@ -411,13 +436,24 @@ export class VaultBatcher {
    * proof, for a host that signs and sends through its own pipeline. Needs no
    * signer.
    *
+   * @throws if the batch is not {@link BatchState.Dispatched}, for example because the relayer already finalized it. {@link VaultBatchNotDispatchedError}
    * @throws if the public decryption returns no cleartext for the amount. {@link DecryptionFailedError}
    */
   async prepareFinalize(batchId: bigint): Promise<PreparedFinalize> {
-    const [unwrapRequestId, wrapper] = await Promise.all([
+    const [state, unwrapRequestId, wrapper] = await Promise.all([
+      this.batchState(batchId),
       this.unwrapRequestId(batchId),
       this.fromToken(),
     ]);
+    // Checked before the decryption: outside `Dispatched` the request id is unset or already
+    // consumed, so the relayer round trip would end in an opaque error or a reverting call.
+    if (state !== BatchState.Dispatched) {
+      const name = Object.entries(BatchState).find(([, value]) => value === state)?.[0] ?? state;
+      throw new VaultBatchNotDispatchedError(
+        `Batch ${batchId} of batcher ${this.address} is ${name}, but only a Dispatched batch can be finalized`,
+        { batcher: this.address, batchId, state },
+      );
+    }
     const encryptedAmount = await this.sdk.provider.readContract(
       unwrapAmountContract(wrapper, unwrapRequestId),
     );

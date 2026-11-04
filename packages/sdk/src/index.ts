@@ -124,6 +124,7 @@ export {
   UnlistedConfidentialTokenError,
   UnshieldAlreadyFinalizedError,
   VaultBatcherPausedError,
+  VaultBatchNotDispatchedError,
   VaultGroupJoinUnconfirmedError,
   WalletAccountNotReadyError,
   WalletNotConnectedError,
@@ -135,6 +136,7 @@ export {
   type UnlistedConfidentialTokenDetails,
   type UnshieldAlreadyFinalizedDetails,
   type VaultBatcherPausedDetails,
+  type VaultBatchNotDispatchedDetails,
   type VaultGroupJoinUnconfirmedDetails,
 } from "./errors";
 // Type-only: the root entry bundles no vault code.

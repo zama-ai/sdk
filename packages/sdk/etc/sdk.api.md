@@ -8148,6 +8148,7 @@ export interface ErrorForCode {
     [ZamaErrorCode.TransportKeyPairChanged]: TransportKeyPairChangedError;
     [ZamaErrorCode.UnlistedConfidentialToken]: UnlistedConfidentialTokenError;
     [ZamaErrorCode.UnshieldAlreadyFinalized]: UnshieldAlreadyFinalizedError;
+    [ZamaErrorCode.VaultBatchNotDispatched]: VaultBatchNotDispatchedError;
     [ZamaErrorCode.VaultBatcherPaused]: VaultBatcherPausedError;
     [ZamaErrorCode.VaultGroupJoinUnconfirmed]: VaultGroupJoinUnconfirmedError;
     [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
@@ -22939,6 +22940,22 @@ export class VaultBatcherPausedError extends ZamaError {
 }
 
 // @public
+export interface VaultBatchNotDispatchedDetails {
+    readonly batcher: Address;
+    readonly batchId: bigint;
+    // Warning: (ae-forgotten-export) The symbol "BatchState" needs to be exported by the entry point index.d.ts
+    readonly state: BatchState;
+}
+
+// @public
+export class VaultBatchNotDispatchedError extends ZamaError {
+    constructor(message: string, details: VaultBatchNotDispatchedDetails, options?: ErrorOptions);
+    readonly batcher: Address;
+    readonly batchId: bigint;
+    readonly state: BatchState;
+}
+
+// @public
 export interface VaultGroupJoin {
     batcher: Address;
     batchId: bigint;
@@ -24358,6 +24375,7 @@ export const ZamaErrorCode: {
     readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
     readonly UnlistedConfidentialToken: "UNLISTED_CONFIDENTIAL_TOKEN";
     readonly VaultBatcherPaused: "VAULT_BATCHER_PAUSED";
+    readonly VaultBatchNotDispatched: "VAULT_BATCH_NOT_DISPATCHED";
     readonly VaultGroupJoinUnconfirmed: "VAULT_GROUP_JOIN_UNCONFIRMED";
 };
 

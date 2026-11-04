@@ -1,6 +1,10 @@
 import type { EncryptValuesReturnType } from "@fhevm/sdk/actions/encrypt";
 import type { Address } from "viem";
-import { InsufficientConfidentialBalanceError, SignerNotConfiguredError } from "../../errors";
+import {
+  InsufficientConfidentialBalanceError,
+  SignerNotConfiguredError,
+  VaultBatchNotDispatchedError,
+} from "../../errors";
 import type { ZamaSDKEvent } from "../../events/sdk-events";
 import {
   describe,
@@ -199,9 +203,15 @@ describe("VaultBatcher", () => {
     const UNWRAP_REQUEST_ID = `0x${"ab".repeat(32)}` as const;
     const UNWRAP_AMOUNT = `0x${"cd".repeat(32)}` as const;
 
-    function mockDispatchedBatch(provider: GenericProvider): void {
+    function mockDispatchedBatch(
+      provider: GenericProvider,
+      state: BatchState = BatchState.Dispatched,
+    ): void {
       vi.mocked(provider.readContract).mockImplementation(async (config) => {
         switch (config.functionName) {
+          case "batchState": {
+            return state;
+          }
           case "unwrapRequestId": {
             return UNWRAP_REQUEST_ID;
           }
@@ -295,6 +305,63 @@ describe("VaultBatcher", () => {
         }),
       });
     });
+
+    test.for([BatchState.Pending, BatchState.Finalized, BatchState.Canceled])(
+      "refuses a batch in state %s before decrypting anything",
+      async (state, { sdk, provider, relayer, signer }) => {
+        mockDispatchedBatch(provider, state);
+        const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+
+        const error = await batcher.finalize(7n).catch((error: unknown) => error);
+
+        expect(error).toBeInstanceOf(VaultBatchNotDispatchedError);
+        expect(error).toMatchObject({ batcher: BATCHER_ADDRESS, batchId: 7n, state });
+        expect(relayer.decryptPublicValuesWithSignatures).not.toHaveBeenCalled();
+        expect(signer.writeContract).not.toHaveBeenCalled();
+      },
+    );
+  });
+
+  describe("timeUntilCallbackDeadline", () => {
+    test("returns the seconds left before a dispatched batch would be canceled", async ({
+      sdk,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(BatchState.Dispatched) // batchState
+        .mockResolvedValueOnce(1_000n) // batchDispatchedAt
+        .mockResolvedValueOnce(600n); // batchCallbackDeadline
+      vi.mocked(provider.getBlockTimestamp).mockResolvedValueOnce(1_200n);
+
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+      // canceled from 1_000 + 600 = 1_600; now is 1_200 → 400 remaining
+      await expect(batcher.timeUntilCallbackDeadline(58n)).resolves.toBe(400n);
+    });
+
+    test("returns 0 from the deadline on, when finalize cancels", async ({ sdk, provider }) => {
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(BatchState.Dispatched)
+        .mockResolvedValueOnce(1_000n)
+        .mockResolvedValueOnce(600n);
+      vi.mocked(provider.getBlockTimestamp).mockResolvedValueOnce(1_600n);
+
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+      await expect(batcher.timeUntilCallbackDeadline(58n)).resolves.toBe(0n);
+    });
+
+    test.for([BatchState.Pending, BatchState.Finalized, BatchState.Canceled])(
+      "returns null for a batch in state %s, which has nothing to finalize",
+      async (state, { sdk, provider }) => {
+        vi.mocked(provider.readContract)
+          .mockResolvedValueOnce(state)
+          .mockResolvedValueOnce(1_000n)
+          .mockResolvedValueOnce(600n);
+        vi.mocked(provider.getBlockTimestamp).mockResolvedValueOnce(1_200n);
+
+        const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+        await expect(batcher.timeUntilCallbackDeadline(58n)).resolves.toBeNull();
+      },
+    );
   });
 
   describe("claim", () => {

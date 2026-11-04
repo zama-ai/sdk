@@ -10,7 +10,7 @@ import type { TransactionResult } from "../types";
 export const BatchState = {
   /** Open: accepts joins and quits. Always the batcher's `currentBatchId`. */
   Pending: 0,
-  /** Closed; the aggregate amount is being decrypted. No user action is possible. */
+  /** Closed; the aggregate amount is being decrypted. Only `finalize` applies, which the relayer normally sends. */
   Dispatched: 1,
   /** Settled with an exchange rate — the only state in which `claim` succeeds. */
   Finalized: 2,

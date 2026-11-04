@@ -7,9 +7,11 @@ export { createVaultBatcher, VaultBatcher, type PreparedFinalize } from "./vault
 export { createVault, Vault } from "./vault";
 export {
   createVaultGroup,
+  decodeVaultGroupJoins,
   MAX_GROUP_VAULTS,
   VaultGroup,
   vaultGroupRedeemOperators,
+  type DecodedVaultGroupJoins,
   type JoinDelivery,
   type PreparedVaultGroupJoin,
   type PreparedVaultGroupWrite,
@@ -71,6 +73,7 @@ export {
   invalidateAfterClaim,
   invalidateAfterDispatchBatch,
   invalidateAfterFinalize,
+  invalidateAfterGroupJoin,
   invalidateAfterJoin,
   invalidateAfterQuit,
   invalidateBatchQueries,
@@ -78,6 +81,7 @@ export {
   quitMutationOptions,
   recoverMutationOptions,
   redeemMutationOptions,
+  timeUntilCallbackDeadlineQueryOptions,
   timeUntilDispatchableQueryOptions,
   vaultQueryKeys,
   type BatchStateQueryConfig,
@@ -91,5 +95,6 @@ export {
   type QuitParams,
   type RecoverParams,
   type RedeemParams,
+  type TimeUntilCallbackDeadlineQueryConfig,
   type TimeUntilDispatchableQueryConfig,
 } from "./query";

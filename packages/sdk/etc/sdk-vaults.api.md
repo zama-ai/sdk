@@ -5299,10 +5299,19 @@ export interface CurrentBatchIdQueryConfig {
 // @public
 export function currentBatchIdQueryOptions(batcher: VaultBatcher, config?: CurrentBatchIdQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof vaultQueryKeys.currentBatchId.batcher>>;
 
+// @public
+export interface DecodedVaultGroupJoins {
+    readonly joins: readonly VaultGroupJoin[];
+    readonly unconfirmed: readonly string[];
+}
+
 // Warning: (ae-forgotten-export) The symbol "RawLog" needs to be exported by the entry point index.d.ts
 //
 // @public
 export function decodeJoined(log: RawLog): JoinedEvent | null;
+
+// @public
+export function decodeVaultGroupJoins(prepared: Pick<PreparedVaultGroupJoin, "legs" | "account">, logs: readonly RawLog[]): DecodedVaultGroupJoins;
 
 // @public
 export function depositMutationOptions(vault: Vault): MutationFactoryOptions<readonly ["zama.vault.deposit", Address], DepositParams, JoinResult>;
@@ -9293,6 +9302,12 @@ export function invalidateAfterDispatchBatch(queryClient: QueryClientLike, batch
 export function invalidateAfterFinalize(queryClient: QueryClientLike, batcherAddress: Address): void;
 
 // @public
+export function invalidateAfterGroupJoin(queryClient: QueryClientLike, legs: readonly {
+    readonly batcher: Address;
+    readonly token: Address;
+}[]): void;
+
+// @public
 export function invalidateAfterJoin(queryClient: QueryClientLike, params: {
     batcherAddress: Address;
     fromToken: Address;
@@ -11312,10 +11327,7 @@ export interface PreparedFinalize {
 // @public
 export interface PreparedVaultGroupJoin {
     readonly account: Address;
-    decodeJoins(logs: readonly RawLog[]): {
-        readonly joins: readonly VaultGroupJoin[];
-        readonly unconfirmed: readonly string[];
-    };
+    decodeJoins(logs: readonly RawLog[]): DecodedVaultGroupJoins;
     readonly delivery: JoinDelivery;
     // Warning: (ae-forgotten-export) The symbol "Direction" needs to be exported by the entry point index.d.ts
     readonly direction: Direction;
@@ -12740,6 +12752,15 @@ export function routerJoinContract(router: Address, legs: readonly EncryptedAllo
 
 // @public
 export function takeJoined(logs: RawLog[], batcher: Address, account?: Address): JoinedEvent | null;
+
+// @public
+export interface TimeUntilCallbackDeadlineQueryConfig {
+    batchId?: bigint;
+    query?: Record<string, unknown>;
+}
+
+// @public
+export function timeUntilCallbackDeadlineQueryOptions(batcher: VaultBatcher, config?: TimeUntilCallbackDeadlineQueryConfig): QueryFactoryOptions<bigint | null, Error, bigint | null, ReturnType<typeof vaultQueryKeys.timeUntilCallbackDeadline.batch>>;
 
 // @public
 export interface TimeUntilDispatchableQueryConfig {
@@ -14826,6 +14847,7 @@ export class VaultBatcher {
     quit(batchId: bigint): Promise<TransactionResult>;
     recover(batchId: bigint, account?: Address): Promise<TransactionResult>;
     readonly sdk: ZamaSDK;
+    timeUntilCallbackDeadline(batchId: bigint): Promise<bigint | null>;
     timeUntilDispatchable(batchId: bigint): Promise<bigint | null>;
     toToken(): Promise<Address>;
     unwrapRequestId(batchId: bigint): Promise<EncryptedValue>;
@@ -15494,6 +15516,7 @@ export class VaultGroup {
     isAssetListed(): Promise<boolean>;
     member(vaultId: string): VaultGroupMember;
     readonly members: readonly VaultGroupMember[];
+    missingOperators(prepared: Pick<PreparedVaultGroupJoin, "account" | "requiredOperators">): Promise<readonly VaultGroupOperator[]>;
     prepareDeposit(vaultId: string, amount: bigint, options?: PrepareVaultGroupJoinOptions): Promise<PreparedVaultGroupJoin>;
     prepareRedeem(vaultId: string, amount: bigint, options?: PrepareVaultGroupJoinOptions): Promise<PreparedVaultGroupJoin>;
     redeem(vaultId: string, amount: bigint, options?: VaultGroupRedeemOptions): Promise<VaultGroupJoinResult>;
@@ -15586,6 +15609,15 @@ export const vaultQueryKeys: {
             readonly batcherAddress: `0x${string}`;
         }];
         batch: (batcherAddress: Address, batchId: bigint | undefined) => readonly ["zama.vault.timeUntilDispatchable", {
+            readonly batcherAddress: `0x${string}`;
+            readonly batchId: bigint | undefined;
+        }];
+    };
+    timeUntilCallbackDeadline: {
+        batcher: (batcherAddress: Address) => readonly ["zama.vault.timeUntilCallbackDeadline", {
+            readonly batcherAddress: `0x${string}`;
+        }];
+        batch: (batcherAddress: Address, batchId: bigint | undefined) => readonly ["zama.vault.timeUntilCallbackDeadline", {
             readonly batcherAddress: `0x${string}`;
             readonly batchId: bigint | undefined;
         }];

@@ -2549,9 +2549,9 @@ Start with the [Go quick start](https://raw.githubusercontent.com/zama-ai/sdk/be
 
 ## Vault groups over the multi-vault router
 
-`VaultGroup` (`createVaultGroup`, or `useVaultGroup` in React) joins several confidential vaults that share one `cAsset` as a single leg list: `deposit` and `redeem` join _every_ member's batch, the chosen vault with the amount and the rest with an encrypted zero, so the choice of vault stays private. Every group submits through the on-chain `VaultBatcherConfidentialRouter` in one transaction — pushed for a deposit, pulled for a redemption. The React hooks are `useGroupDeposit` and `useGroupRedeem`.
+`VaultGroup` (`createVaultGroup`, or `useVaultGroup` in React) joins several confidential vaults that share one `cAsset` as a single leg list: `deposit` and `redeem` join _every_ member's batch, the chosen vault with the amount and the rest with an encrypted zero, so the choice of vault stays private. A group of several vaults submits through the on-chain `VaultBatcherConfidentialRouter` in one transaction — pushed for a deposit, pulled for a redemption. The React hooks are `useGroupDeposit` and `useGroupRedeem`.
 
-A group deposit throws the new `UnlistedConfidentialTokenError` when the router's registry does not list the asset; `VaultGroup.isAssetListed()` gives the same answer without throwing. Both directions throw the new `VaultBatcherPausedError`, naming the member, when any batcher a leg would join is paused. Every submission through the router, deposit or redemption, surfaces as a `VaultSubmitted` event with `vaultOperation: "routerJoin"` tagged with the router's address.
+A group deposit throws the new `UnlistedConfidentialTokenError` when the router's registry does not list the asset; `VaultGroup.isAssetListed()` gives the same answer without throwing. Both directions throw the new `VaultBatcherPausedError`, naming the member, when any batcher a leg would join is paused. Every submission through the router, deposit or redemption, surfaces as a `VaultSubmitted` event with `vaultOperation: "routerJoin"` tagged with the router's address; a group of one joins its batcher directly and surfaces as `vaultOperation: "join"` tagged with the batcher.
 
 If the SDK cannot match a `Joined` event in the mined transaction's receipt to every leg, the new `VaultGroupJoinUnconfirmedError` carries the transaction hash, the receipt, the batch ids it could read and the members it could not match. The router is all-or-nothing, so the transaction either reverted or joined every leg; look it up before resubmitting.
 
@@ -2559,11 +2559,13 @@ See [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbo
 
 ## Settle a dispatched batch yourself
 
-New `VaultBatcher.finalize(batchId)` (`useFinalize` in React, `finalizeMutationOptions` for TanStack Query). The relayer normally finalizes a dispatched batch; when it has not, any account can now settle the batch from the SDK: `finalize` reads the batch's unwrap request, publicly decrypts the amount it released, and submits `dispatchBatchCallback` with the cleartext and its proof. Past the batch's callback deadline the same call cancels the batch. The submission surfaces as a `VaultSubmitted` event with `vaultOperation: "finalize"`. `VaultBatcher.unwrapRequestId(batchId)` exposes the underlying read.
+New `VaultBatcher.finalize(batchId)` (`useFinalize` in React, `finalizeMutationOptions` for TanStack Query). The relayer normally finalizes a dispatched batch; when it has not, any account can now settle the batch from the SDK: `finalize` reads the batch's unwrap request, publicly decrypts the amount it released, and submits `dispatchBatchCallback` with the cleartext and its proof. Past the batch's callback deadline the same call cancels the batch. The submission surfaces as a `VaultSubmitted` event with `vaultOperation: "finalize"`. `VaultBatcher.unwrapRequestId(batchId)` exposes the underlying read. `finalize` and `prepareFinalize` read the batch state first and throw the new `VaultBatchNotDispatchedError` when the batch is not `Dispatched`, for example because the relayer already finalized it, before any decryption. New `VaultBatcher.timeUntilCallbackDeadline(batchId)` (`useTimeUntilCallbackDeadline`, `timeUntilCallbackDeadlineQueryOptions`) reads the seconds until a dispatched batch reaches its callback deadline: `0` once it has, when `finalize` cancels instead of settling, and `null` outside `Dispatched`.
 
 ## Vault groups for your own transaction layer
 
-`VaultGroup.prepareDeposit` and `VaultGroup.prepareRedeem` do everything `deposit` and `redeem` do up to the send — the pre-flight, the balance check, the encryptions — and return the calls, the legs, the operator grants a router redemption relies on, and a `decodeJoins` helper for the mined receipt. An app that signs through its own pipeline (a transaction queue, a bundler, an EIP-5792 batch) sends them itself. The new `delivery` option picks between one transaction through the router and one transfer per member straight to its batcher, the shape an atomic bundle can land privately; `account` prepares for a given account without a signer; `skipPreflight` trusts a group the host verified. `VaultBatcher.prepareFinalize` does the same for a settlement.
+`VaultGroup.prepareDeposit` and `VaultGroup.prepareRedeem` do everything `deposit` and `redeem` do up to the send — the pre-flight, the balance check, the encryptions — and return the calls, the legs, the operator grants a router redemption relies on, and a `decodeJoins` helper for the mined receipt. An app that signs through its own pipeline (a transaction queue, a bundler, an EIP-5792 batch) sends them itself. The new `delivery` option picks between one transaction through the router and one transfer per member straight to its batcher, the shape an atomic bundle can land privately; `account` prepares for a given account without a signer; `skipPreflight` trusts a group the host verified, though `paused()` is always read. The balance check decrypts as the signer, so an `account` other than the signer's throws `ConfigurationError` unless `skipBalanceCheck` is passed. `VaultBatcher.prepareFinalize` does the same for a settlement.
+
+`VaultGroup.missingOperators(prepared)` returns the grants in `requiredOperators` the account lacks at the current block, and `redeem` uses it; its default `operatorUntil` is the chain's current time plus one hour. The pure `decodeVaultGroupJoins({ legs, account }, logs)` does what `prepared.decodeJoins` does from saved data, so a host can decode after a reload. `invalidateAfterGroupJoin(queryClient, legs)` invalidates each leg's token balance and batch reads, as the group hooks do.
 
 A group may now hold a single vault, which joins its batcher directly, so `router` is optional. A member's config can give its `cShare`, which spares a read and feeds the new `VaultGroup.redeemOperators()`.
 
@@ -9977,7 +9979,7 @@ const { data: openBatchId } = useCurrentBatchId({ address: vault.depositBatcher.
 | `BatchState` | What the user can do                            |
 | ------------ | ----------------------------------------------- |
 | `Pending`    | `deposit` / `redeem`, or `quit`                 |
-| `Dispatched` | Nothing — wait                                  |
+| `Dispatched` | `finalize` — the relayer normally does it       |
 | `Finalized`  | `claim`                                         |
 | `Canceled`   | `quit` (or `recover`), to take the deposit back |
 
@@ -10034,7 +10036,7 @@ Use the per-batch reads (`batchMinBatchAge`, `batchCallbackDeadline`) rather tha
 
 ### 5. Claim
 
-Dispatch only starts the decryption; finalization lands later, when the relayer calls back with the decrypted aggregate. Wait for `batchState` to reach `Finalized`, then claim. A batch that stays `Dispatched` longer than expected can be settled by anyone with `vault.depositBatcher.finalize(batchId)` (`useFinalize` in React); past its callback deadline that same call cancels it instead. Claiming is permissionless — anyone can call it on another account's behalf, but the output always goes to that account, never to the caller:
+Dispatch only starts the decryption; finalization lands later, when the relayer calls back with the decrypted aggregate. Wait for `batchState` to reach `Finalized`, then claim. A batch that stays `Dispatched` longer than expected can be settled by anyone with `vault.depositBatcher.finalize(batchId)` (`useFinalize` in React); past its callback deadline that same call cancels it instead. `timeUntilCallbackDeadline(batchId)` (`useTimeUntilCallbackDeadline`) reads the seconds left, `0` once it has passed. `finalize` throws `VaultBatchNotDispatchedError` when the batch is not `Dispatched`, for example because the relayer got there first. Claiming is permissionless — anyone can call it on another account's behalf, but the output always goes to that account, never to the caller:
 
 
 ### Tab: Core SDK
@@ -10236,7 +10238,7 @@ For a **redemption**, the router pulls each leg's share token, so the SDK grants
 
 ## Paused batchers
 
-Every submission sends a leg to every member, so the SDK reads `paused()` on each batcher first and throws `VaultBatcherPausedError` naming the member, instead of letting one paused member revert the transaction.
+Every submission sends a leg to every member, so the SDK reads `paused()` on each batcher first and throws `VaultBatcherPausedError` naming the member, instead of letting one paused member revert the transaction. The prepare methods read it too, even with `skipPreflight`.
 
 ## Using your own transaction layer
 
@@ -10251,7 +10253,9 @@ const prepared = await group.prepareRedeem("alpha", 500n, {
 const { joins } = prepared.decodeJoins(receipt.logs);
 ```
 
-`"legs"` delivery sends one transfer per member straight to its batcher and needs no grant; it keeps the choice of vault private only when the wallet lands every leg atomically. `"router"` is the single transaction the SDK sends itself. A host that has already verified the group passes `skipPreflight`, and one that gates the amount on a balance it already shows passes `skipBalanceCheck`. See [`VaultGroup` → Prepare](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#prepare).
+`group.missingOperators(prepared)` returns the grants the account still lacks; give each an `until` that outlasts the time the writes take. After a reload, `decodeVaultGroupJoins({ legs, account }, logs)` does what `decodeJoins` does from the saved `legs` and `account`. When you send the writes yourself, call `invalidateAfterGroupJoin(queryClient, prepared.legs)` to refresh balances and batch reads.
+
+`"legs"` delivery sends one transfer per member straight to its batcher and needs no grant; it keeps the choice of vault private only when the wallet lands every leg atomically. `"router"` is the single transaction the SDK sends itself. A host that has already verified the group passes `skipPreflight`, which skips the config verification and the registry listing but not the `paused()` read. The balance check decrypts as the signer, so an `account` other than the signer's needs `skipBalanceCheck`. One that gates the amount on a balance it already shows passes `skipBalanceCheck`. See [`VaultGroup` → Prepare](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#prepare).
 
 ## Go & Rust overview
 
@@ -11350,16 +11354,16 @@ const config = createConfig({
 
 Every event extends a common shape (an optional `tokenAddress`, a `timestamp`, and, for multi-phase operations like unshield, a shared `operationId`), plus fields specific to its `type`:
 
-| Event                                                                                                                                                                                | Fires when                                                                                                                                                                                                                                                                                                                                              |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `EncryptStart` / `EncryptEnd` / `EncryptError`                                                                                                                                       | An FHE encryption begins, succeeds, or fails.                                                                                                                                                                                                                                                                                                           |
-| `DecryptStart` / `DecryptEnd` / `DecryptError`                                                                                                                                       | A decryption begins, succeeds, or fails — `DecryptEnd`/`DecryptError` carry decrypted cleartext values; see [`decryption.decryptValues`](#decryption-decryptvalues) for the full walkthrough and code samples.                                                                                                                                          |
-| `PermitError`                                                                                                                                                                        | `grantPermit`, `grantDelegationPermit`, or `registerPermit` fails — but not every failure of these methods: transport-key-pair issues (`TransportKeyPairChangedError`, `KeyWrappingError`) are deliberately excluded from this event.                                                                                                                   |
-| `TransactionError`                                                                                                                                                                   | `submitTransaction` itself rejects — before broadcast (estimation/validation) or while waiting for the receipt. It does **not** fire for a transaction that broadcasts successfully but reverts on execution: the SDK doesn't currently inspect `receipt.status`, so a mined-but-reverted transaction resolves as a success with no error and no event. |
-| `ShieldSubmitted`, `TransferSubmitted`, `TransferFromSubmitted`, `SetOperatorSubmitted`, `ApproveUnderlyingSubmitted`, `WrapSubmitted`, `UnwrapSubmitted`, `FinalizeUnwrapSubmitted` | The corresponding write transaction is submitted — each carries the transaction's `txHash`.                                                                                                                                                                                                                                                             |
-| `VaultSubmitted`                                                                                                                                                                     | A vault batcher or router write is submitted — carries the `txHash`, the batcher's address as `tokenAddress` (the router's for `routerJoin`), and `vaultOperation` (`join`, `quit`, `claim`, `recover`, `dispatchBatch`, `finalize`, or `routerJoin`). See [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md).                           |
-| `DelegationSubmitted` / `RevokeDelegationSubmitted`                                                                                                                                  | A delegation grant or revoke transaction is submitted — see [Delegation events](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/delegation.md#events).                                                                                                                                                                                                                                                |
-| `UnshieldPhase1Submitted` / `UnshieldPhase2Started` / `UnshieldPhase2Submitted`                                                                                                      | The two-phase unshield flow's request and finalize steps progress.                                                                                                                                                                                                                                                                                      |
+| Event                                                                                                                                                                                | Fires when                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EncryptStart` / `EncryptEnd` / `EncryptError`                                                                                                                                       | An FHE encryption begins, succeeds, or fails.                                                                                                                                                                                                                                                                                                                         |
+| `DecryptStart` / `DecryptEnd` / `DecryptError`                                                                                                                                       | A decryption begins, succeeds, or fails — `DecryptEnd`/`DecryptError` carry decrypted cleartext values; see [`decryption.decryptValues`](#decryption-decryptvalues) for the full walkthrough and code samples.                                                                                                                                                        |
+| `PermitError`                                                                                                                                                                        | `grantPermit`, `grantDelegationPermit`, or `registerPermit` fails — but not every failure of these methods: transport-key-pair issues (`TransportKeyPairChangedError`, `KeyWrappingError`) are deliberately excluded from this event.                                                                                                                                 |
+| `TransactionError`                                                                                                                                                                   | `submitTransaction` itself rejects — before broadcast (estimation/validation) or while waiting for the receipt. It does **not** fire for a transaction that broadcasts successfully but reverts on execution: the SDK doesn't currently inspect `receipt.status`, so a mined-but-reverted transaction resolves as a success with no error and no event.               |
+| `ShieldSubmitted`, `TransferSubmitted`, `TransferFromSubmitted`, `SetOperatorSubmitted`, `ApproveUnderlyingSubmitted`, `WrapSubmitted`, `UnwrapSubmitted`, `FinalizeUnwrapSubmitted` | The corresponding write transaction is submitted — each carries the transaction's `txHash`.                                                                                                                                                                                                                                                                           |
+| `VaultSubmitted`                                                                                                                                                                     | A vault batcher or router write is submitted — carries the `txHash`, the batcher's address as `tokenAddress` (the router's for `routerJoin`, which only a router submission carries), and `vaultOperation` (`join`, `quit`, `claim`, `recover`, `dispatchBatch`, `finalize`, or `routerJoin`). See [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md). |
+| `DelegationSubmitted` / `RevokeDelegationSubmitted`                                                                                                                                  | A delegation grant or revoke transaction is submitted — see [Delegation events](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/delegation.md#events).                                                                                                                                                                                                                                                              |
+| `UnshieldPhase1Submitted` / `UnshieldPhase2Started` / `UnshieldPhase2Submitted`                                                                                                      | The two-phase unshield flow's request and finalize steps progress.                                                                                                                                                                                                                                                                                                    |
 
 `TransactionError` and `PermitError` usually carry the same classified error your `await` also throws or rejects with, so you can wire similar handling into telemetry — but don't assume they always match exactly. One documented exception: finalizing an already-finalized unshield concurrently (two tabs, a double click) emits `TransactionError` with the raw `TransactionRevertedError` from the losing finalize attempt, then `unshield()`/`unshieldAll()`/`resumeUnshield()` translates that into the more specific [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) before it reaches your `await`.
 
@@ -12765,12 +12769,12 @@ import { BatchState } from "@zama-fhe/sdk/vaults";
 
 A batch's lifecycle state. The numbers mirror the contract's own enum. `batchState()` returns one of these, and it decides which write is legal:
 
-| Value                   | Meaning                                                                       | Legal writes      |
-| ----------------------- | ----------------------------------------------------------------------------- | ----------------- |
-| `BatchState.Pending`    | `0` — open. Always the batcher's `currentBatchId()`.                          | `join`, `quit`    |
-| `BatchState.Dispatched` | `1` — closed; the aggregate amount is being decrypted.                        | none — wait       |
-| `BatchState.Finalized`  | `2` — settled with an exchange rate.                                          | `claim`           |
-| `BatchState.Canceled`   | `3` — the route failed or the callback deadline passed; nothing was executed. | `quit`, `recover` |
+| Value                   | Meaning                                                                       | Legal writes                               |
+| ----------------------- | ----------------------------------------------------------------------------- | ------------------------------------------ |
+| `BatchState.Pending`    | `0` — open. Always the batcher's `currentBatchId()`.                          | `join`, `quit`                             |
+| `BatchState.Dispatched` | `1` — closed; the aggregate amount is being decrypted.                        | `finalize` — the relayer normally sends it |
+| `BatchState.Finalized`  | `2` — settled with an exchange rate.                                          | `claim`                                    |
+| `BatchState.Canceled`   | `3` — the route failed or the callback deadline passed; nothing was executed. | `quit`, `recover`                          |
 
 Claiming a canceled batch reverts — there is nothing to claim, only a deposit to take back.
 
@@ -12835,6 +12839,21 @@ Measured against the chain's block timestamp and the batch's own pinned minimum 
 ```ts
 const secondsLeft = await batcher.timeUntilDispatchable(batchId);
 if (secondsLeft === 0n) await batcher.dispatchBatch();
+```
+
+### timeUntilCallbackDeadline
+
+`(batchId: bigint) => Promise<bigint | null>`
+
+Seconds until the dispatched batch `batchId` reaches its callback deadline, `0` once it has. From then on `finalize` cancels the batch instead of settling it. Returns `null` outside `Dispatched`.
+
+Measured against the chain's block timestamp (`batchDispatchedAt + batchCallbackDeadline`), not the local clock.
+
+```ts
+const secondsLeft = await batcher.timeUntilCallbackDeadline(batchId);
+if (secondsLeft === 0n) {
+  // finalize now cancels the batch
+}
 ```
 
 ### batchCreatedAt
@@ -12969,7 +12988,7 @@ await batcher.dispatchBatch();
 
 Settles a dispatched batch yourself: reads the batch's `unwrapRequestId`, publicly decrypts the amount that unwrap released, and submits `dispatchBatchCallback` with the cleartext and its proof, which executes the route. Permissionless, like `dispatchBatch`. The relayer normally does this, so reach for it when a batch has sat in `BatchState.Dispatched` longer than expected. Past the batch's callback deadline (`batchDispatchedAt + batchCallbackDeadline`) the same call cancels the batch instead of settling it.
 
-Only legal while the batch is `BatchState.Dispatched`.
+Only legal while the batch is `BatchState.Dispatched`. Read [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline) to see whether the call will settle or cancel.
 
 ```ts
 await batcher.finalize(batchId);
@@ -12977,9 +12996,10 @@ await batcher.finalize(batchId);
 
 **Throws:**
 
+- [`VaultBatchNotDispatchedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultbatchnotdispatchederror) — the batch is not `Dispatched`, for example because the relayer already finalized it. Thrown before any decryption.
 - [`DecryptionFailedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#decryptionfailederror) — the public decryption returned no cleartext for the amount.
 
-`prepareFinalize(batchId)` does everything but the send and returns `{ batchId, unwrapAmountCleartext, decryptionProof, call }`, the `dispatchBatchCallback` call ready for a host's own signer. It needs no signer.
+`prepareFinalize(batchId)` does everything but the send, including the `Dispatched` check, and returns `{ batchId, unwrapAmountCleartext, decryptionProof, call }`, the `dispatchBatchCallback` call ready for a host's own signer. It needs no signer.
 
 ### claim
 
@@ -13076,6 +13096,7 @@ import {
   batchStateQueryOptions,
   currentBatchIdQueryOptions,
   timeUntilDispatchableQueryOptions,
+  timeUntilCallbackDeadlineQueryOptions,
   joinMutationOptions,
   claimMutationOptions,
   quitMutationOptions,
@@ -13093,6 +13114,7 @@ The React hooks are built on these query and mutation option builders; they are 
 - [Vault](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) — pairs two batchers behind `deposit()` / `redeem()` with automatic operator approval
 - [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md) — the full flow, including when each write is legal
 - [Errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md) — the error classes thrown above
+- [useTimeUntilCallbackDeadline](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md) — React hook for `timeUntilCallbackDeadline`
 - [useVaultBatcher](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultBatcher.md) — React hook returning a `VaultBatcher`
 
 ## VaultGroup
@@ -13231,7 +13253,7 @@ const { txHash, joins } = await group.deposit("alpha", 1_000_000n);
 
 Unlike `Vault.deposit` there is no `beneficiary`: the router credits the account the legs came from.
 
-The submission emits a [`VaultSubmitted`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#events) event with `vaultOperation: "routerJoin"` tagged with the router's address, in either direction.
+A router submission emits a [`VaultSubmitted`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#events) event with `vaultOperation: "routerJoin"` tagged with the router's address, in either direction. A group of one joins its batcher directly and emits `vaultOperation: "join"` tagged with the batcher.
 
 **Throws:**
 
@@ -13252,7 +13274,7 @@ Redeems `amount` shares of the member `vaultId` by joining every member's curren
 1. Builds one leg per member from its configured redeem batcher and verifies each member as `deposit` does, with the redeem batcher paying out `cAsset` and each member's share token read from it. Alongside, reads the router's registry address, so a `router` with none fails before anything is granted to it.
 2. Checks the caller's balance of the chosen member's share token, decrypting every member's share balance so the relayer cannot tell which was chosen (skippable with `skipBalanceCheck`).
 3. Encrypts the allocation against the router.
-4. Grants the router an operator approval on each share token that lacks one. Each grant is its own wallet prompt, so a first redemption from a group of N vaults can ask the user to sign up to N + 1 times.
+4. Grants the router an operator approval on each share token that lacks one, as [`missingOperators`](#missingoperators) reports. Each grant is its own wallet prompt, so a first redemption from a group of N vaults can ask the user to sign up to N + 1 times.
 5. Submits the router `join`.
 6. Reads the `Joined` events.
 
@@ -13270,10 +13292,10 @@ import { type JoinOptions, type VaultGroupRedeemOptions } from "@zama-fhe/sdk/va
 
 `deposit` takes `JoinOptions`; `redeem` takes `VaultGroupRedeemOptions`, which adds `operatorUntil`.
 
-| Option             | Type      | Default      | Description                                                                                                                                         |
-| ------------------ | --------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `skipBalanceCheck` | `boolean` | `false`      | Skip the confidential-balance pre-flight. A short balance then joins every batch with an encrypted zero rather than reverting.                      |
-| `operatorUntil`    | `number`  | now + 1 hour | Redeem only. Unix timestamp (seconds) until which the router's operator grant on each share token is valid, for a grant the redemption has to make. |
+| Option             | Type      | Default             | Description                                                                                                                                                                                                                     |
+| ------------------ | --------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `skipBalanceCheck` | `boolean` | `false`             | Skip the confidential-balance pre-flight. A short balance then joins every batch with an encrypted zero rather than reverting.                                                                                                  |
+| `operatorUntil`    | `number`  | chain time + 1 hour | Redeem only. Unix timestamp (seconds) until which the router's operator grant on each share token is valid, for a grant the redemption has to make. The default is the chain's current time plus one hour, not the local clock. |
 
 ## VaultGroupJoinResult
 
@@ -13330,12 +13352,12 @@ const { joins, unconfirmed } = prepared.decodeJoins(receipt.logs);
 import { type PrepareVaultGroupJoinOptions, type JoinDelivery } from "@zama-fhe/sdk/vaults";
 ```
 
-| Option             | Type           | Default             | Description                                                                                                                                                                                                                                                                                          |
-| ------------------ | -------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `account`          | `Address`      | the signer's wallet | The account the legs come from. A host without a signer passes it, and skips the balance check, which decrypts as the signer.                                                                                                                                                                        |
-| `delivery`         | `JoinDelivery` | `"router"`          | `"router"`: one transaction through the router. `"legs"`: one transfer per member straight to its batcher, for a wallet that lands them atomically; sent one by one, a user who stops partway reveals the rest. A group of one always goes `"legs"`.                                                 |
-| `skipBalanceCheck` | `boolean`      | `false`             | Skip the confidential-balance pre-flight.                                                                                                                                                                                                                                                            |
-| `skipPreflight`    | `boolean`      | `false`             | Skip the chain reads that verify the group: each member's batchers against its config, `paused()` on every batcher a leg would join, and the registry listing for a router deposit. For a host that verified the group itself. A member's share token is still read when `cShare` is not configured. |
+| Option             | Type           | Default             | Description                                                                                                                                                                                                                                                                                                                                              |
+| ------------------ | -------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `account`          | `Address`      | the signer's wallet | The account the legs come from. The balance check decrypts as the signer, so an `account` other than the signer's (or no signer) throws `ConfigurationError` unless `skipBalanceCheck` is passed.                                                                                                                                                        |
+| `delivery`         | `JoinDelivery` | `"router"`          | `"router"`: one transaction through the router. `"legs"`: one transfer per member straight to its batcher, for a wallet that lands them atomically; sent one by one, a user who stops partway reveals the rest. A group of one always goes `"legs"`.                                                                                                     |
+| `skipBalanceCheck` | `boolean`      | `false`             | Skip the confidential-balance pre-flight.                                                                                                                                                                                                                                                                                                                |
+| `skipPreflight`    | `boolean`      | `false`             | Skip the chain reads that verify the group: each member's batchers against its config, and the registry listing for a router deposit. `paused()` is always read on every batcher a leg would join and throws `VaultBatcherPausedError`. For a host that verified the group itself. A member's share token is still read when `cShare` is not configured. |
 
 ### PreparedVaultGroupJoin
 
@@ -13359,6 +13381,16 @@ import {
 | `requiredOperators` | `readonly VaultGroupOperator[]`      | `{ token, spender }` grants the writes rely on: the router on each share token of a `"router"` redemption, otherwise none. Grant the ones the account lacks first.             |
 | `decodeJoins(logs)` | `(logs) => { joins, unconfirmed }`   | Pairs each leg with its `Joined` log in the mined receipts' logs, in leg order, and lists the members without one instead of throwing.                                         |
 
+### missingOperators
+
+`(prepared) => Promise<readonly VaultGroupOperator[]>`
+
+The grants in `prepared.requiredOperators` that `prepared.account` lacks at the current block (`Token.isOperator`). `redeem` grants exactly these; a host sending its own writes makes them first. The check answers for now, so give each grant an `until` that outlasts the time the writes take to land.
+
+```ts
+const missing = await group.missingOperators(prepared);
+```
+
 ### redeemOperators
 
 `(delivery?: JoinDelivery) => readonly VaultGroupOperator[]`
@@ -13366,6 +13398,20 @@ import {
 The grants a redemption with `delivery` (default `"router"`) relies on, from the config alone, so a host can check them before preparing anything: the router on every member's `cShare` for `"router"`, none for `"legs"` or a group of one. Throws [`ConfigurationError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#configurationerror) for a `"router"` delivery when a member's config gives no `cShare`, or the config names no router.
 
 `vaultGroupRedeemOperators(config, delivery?)`, exported beside the class, gives the same answer from a `VaultGroupConfig` alone, for the parts of a host's pipeline that run with the config in hand but no SDK instance in scope, such as the guard that decides whether a grant transaction is needed.
+
+### decodeVaultGroupJoins
+
+`(prepared: { legs, account }, logs) => DecodedVaultGroupJoins`
+
+```ts
+import { decodeVaultGroupJoins, type DecodedVaultGroupJoins } from "@zama-fhe/sdk/vaults";
+```
+
+What `prepared.decodeJoins` does, from plain data, so a host that saved `legs` and `account` can decode after a reload. Returns `{ joins, unconfirmed }`. For a `"legs"` delivery pass the logs of every receipt in leg order. For a partly sent `"legs"` delivery, `unconfirmed` lists the legs still to send.
+
+```ts
+const { joins, unconfirmed } = decodeVaultGroupJoins({ legs, account }, receipt.logs);
+```
 
 ## Call builders
 
@@ -13392,13 +13438,18 @@ A builder encodes a call and nothing else. The verification `deposit` and `redee
 ## TanStack Query helpers
 
 ```ts
-import { groupDepositMutationOptions, groupRedeemMutationOptions } from "@zama-fhe/sdk/vaults";
+import {
+  groupDepositMutationOptions,
+  groupRedeemMutationOptions,
+  invalidateAfterGroupJoin,
+} from "@zama-fhe/sdk/vaults";
 ```
 
 The React hooks are built on these; they are exported for non-React TanStack Query consumers and for custom compositions.
 
 - `groupDepositMutationOptions(group)` / `groupRedeemMutationOptions(group)` — `group.deposit` / `group.redeem` as mutations taking `{ vaultId, amount, ...options }`. Keyed on `["zama.vaultGroup.deposit", { cAsset, batchers }]` (redeem likewise), where `batchers` are the direction's batcher addresses.
-- Once the transaction is mined, the hooks invalidate what [`invalidateAfterJoin`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#tanstack-query-helpers) covers for every member: the balance of each token the legs spent (`cAsset` once for a deposit, each share token for a redemption) and each batcher's batch reads. This runs on success and on `VaultGroupJoinUnconfirmedError` alike, since a mined transaction joined every leg. The redeem hook additionally invalidates operator status for each share token.
+- `invalidateAfterGroupJoin(queryClient, legs)` takes `prepared.legs` or a result's `joins`, and invalidates each leg's token balance and batcher batch reads. Call it after sending the writes yourself.
+- Once the transaction is mined, the hooks call it, so they invalidate what [`invalidateAfterJoin`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#tanstack-query-helpers) covers for every member: the balance of each token the legs spent (`cAsset` once for a deposit, each share token for a redemption) and each batcher's batch reads. This runs on success and on `VaultGroupJoinUnconfirmedError` alike, since a mined transaction joined every leg. The redeem hook additionally invalidates operator status for each share token.
 
 See [Query keys → `vaultQueryKeys`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/query-keys.md#vaultquerykeys) for the cache keys.
 
@@ -14506,6 +14557,7 @@ import {
   UnshieldAlreadyFinalizedError,
   UnlistedConfidentialTokenError,
   VaultBatcherPausedError,
+  VaultBatchNotDispatchedError,
   VaultGroupJoinUnconfirmedError,
   InvalidTransportKeyPairError,
   TransportKeyPairExpiredError,
@@ -14608,6 +14660,7 @@ Exactly five error classes are retryable today: `RpcRateLimitError`, `RelayerReq
 | `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
 | `UnlistedConfidentialTokenError`          | `UNLISTED_CONFIDENTIAL_TOKEN`            | The vault router's registry does not list the confidential token, so the router would reject a transfer of it                     |
 | `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | A batcher one leg of a group submission would join is paused, so the whole submission would revert                                |
+| `VaultBatchNotDispatchedError`            | `VAULT_BATCH_NOT_DISPATCHED`             | A batch to be finalized is not `Dispatched`, for example because the relayer already finalized it                                 |
 | `VaultGroupJoinUnconfirmedError`          | `VAULT_GROUP_JOIN_UNCONFIRMED`           | A group submission was mined, but its receipt has no `Joined` event for at least one leg                                          |
 | `InvalidTransportKeyPairError`            | `INVALID_KEYPAIR`                        | Relayer rejected transport key pair (stale or malformed)                                                                          |
 | `TransportKeyPairExpiredError`            | `KEYPAIR_EXPIRED`                        | Transport key pair expired — user must re-sign                                                                                    |
@@ -14799,6 +14852,14 @@ Thrown by `VaultGroup.deposit()` when the registry the router checks does not li
 Thrown by `VaultGroup.deposit()` and `VaultGroup.redeem()` when the batcher one member's leg would join reports `paused()`. A group submission joins every member in one transaction and a paused batcher rejects `join`, so the whole submission would revert; the SDK refuses before the caller pays for it. The error carries the paused `batcher` and the `vaultId` of the member it serves.
 
 **How to handle:** Not retryable until the batcher's owner unpauses it. Quitting and claiming on the paused batcher still work, so existing positions are not stuck; only new joins are. Show the user which member is paused rather than a generic failure.
+
+### VaultBatchNotDispatchedError
+
+**Code:** `VAULT_BATCH_NOT_DISPATCHED`
+
+Thrown by `VaultBatcher.finalize()` and `VaultBatcher.prepareFinalize()` when the batch is not `Dispatched`. The SDK reads the batch state first, so this is thrown before any decryption. The error carries the `batcher`, the `batchId` and the batch's current `state`.
+
+**How to handle:** Not retryable. A settled batch stays settled, and a `Pending` batch is finalizable only after it is dispatched. Read `state` and move on: claim a `Finalized` batch, quit or recover a `Canceled` one. The relayer finalizing first is the usual cause.
 
 ### VaultGroupJoinUnconfirmedError
 
@@ -25732,7 +25793,9 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 Mutation hook that settles a dispatched batch yourself. Same call as [`VaultBatcher.finalize`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#finalize): it publicly decrypts the batch's aggregate amount and hands the cleartext and its proof to the batcher, which executes the route.
 
-The relayer normally finalizes a batch after dispatch, so this is for a batch that has sat in `BatchState.Dispatched` longer than expected. Finalizing is permissionless. Past the batch's callback deadline the same call cancels the batch instead of settling it, and its participants take their deposits back with [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md).
+The relayer normally finalizes a batch after dispatch, so this is for a batch that has sat in `BatchState.Dispatched` longer than expected. Finalizing is permissionless. Past the batch's callback deadline (see [`useTimeUntilCallbackDeadline`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md)) the same call cancels the batch instead of settling it, and its participants take their deposits back with [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md).
+
+The call reads the batch state first and rejects with [`VaultBatchNotDispatchedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultbatchnotdispatchederror) when the batch is not `Dispatched`, for example because the relayer already finalized it.
 
 ## Import
 
@@ -25874,6 +25937,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 ## Related
 
 - [useBatchState](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md) — only a `Dispatched` batch can be finalized
+- [useTimeUntilCallbackDeadline](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md) — whether finalizing still settles the batch
 - [useClaim](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md) — the step after a batch is `Finalized`
 - [VaultBatcher.finalize](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#finalize) — imperative equivalent
 
@@ -26049,7 +26113,7 @@ The state decides which action is legal, so read it before offering the user a b
 | `BatchState` | What the user can do                                  |
 | ------------ | ----------------------------------------------------- |
 | `Pending`    | join (`useDeposit` / `useRedeem`), or `useQuit`       |
-| `Dispatched` | Nothing — wait                                        |
+| `Dispatched` | `useFinalize` — the relayer normally does it          |
 | `Finalized`  | `useClaim`                                            |
 | `Canceled`   | `useQuit` (or `useRecover`), to take the deposit back |
 
@@ -26220,6 +26284,7 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 - [useClaim](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md), [useQuit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md), [useRecover](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRecover.md) — the actions each state allows
 - [useTimeUntilDispatchable](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md) — countdown while `Pending`
+- [useTimeUntilCallbackDeadline](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md) — countdown while `Dispatched`
 - [VaultBatcher → BatchState](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#batchstate)
 
 ## useTimeUntilDispatchable
@@ -26387,6 +26452,171 @@ The current status of the query. Prefer the boolean flags above for conditional 
 - [useDispatchBatch](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDispatchBatch.md) — dispatch once this reads `0`
 - [useBatchState](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md) — why the value went `null`
 - [VaultBatcher.timeUntilDispatchable](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#timeuntildispatchable)
+
+## useTimeUntilCallbackDeadline
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md
+- logical_path: reference/react/useTimeUntilCallbackDeadline
+
+# useTimeUntilCallbackDeadline
+
+Reads how many seconds remain until a dispatched batch reaches its callback deadline. Same read as [`VaultBatcher.timeUntilCallbackDeadline`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#timeuntilcallbackdeadline).
+
+- A positive value is the countdown. Pass `refetchInterval` to keep it live.
+- `0` means the deadline has passed. From then on [`useFinalize`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useFinalize.md) cancels the batch instead of settling it.
+- `null` means the batch is not `Dispatched`, so there is no deadline to wait for.
+
+The value is measured against the chain's block timestamp, not the local clock.
+
+## Import
+
+```ts
+import { useTimeUntilCallbackDeadline } from "@zama-fhe/react-sdk/vaults";
+```
+
+## Usage
+
+
+### Tab: Deadline.tsx
+
+```tsx
+import { useTimeUntilCallbackDeadline } from "@zama-fhe/react-sdk/vaults";
+
+function Deadline({ batchId }: { batchId: bigint }) {
+  const { data: secondsLeft } = useTimeUntilCallbackDeadline(
+    { address: "0xDepositBatcher", batchId },
+    { refetchInterval: 15_000 },
+  );
+
+  if (secondsLeft === undefined) return <span>Loading…</span>;
+  if (secondsLeft === null) return <span>Not awaiting finalization</span>;
+  if (secondsLeft > 0n) return <span>Settles within {secondsLeft.toString()}s</span>;
+  return <span>Deadline passed — finalizing now cancels the batch</span>;
+}
+```
+
+
+## Parameters
+
+```ts
+import { type UseTimeUntilCallbackDeadlineConfig } from "@zama-fhe/react-sdk/vaults";
+```
+
+### address
+
+`Address`
+
+The batcher contract address (deposit or redeem direction).
+
+---
+
+### batchId
+
+`bigint | undefined`
+
+The batch to check. The query is disabled while `undefined`.
+
+### `enabled`
+
+**Type:** `boolean`
+
+Set to `false` to prevent the query from running automatically. The query will only execute when `refetch` is called or when `enabled` changes to `true`.
+
+### `staleTime`
+
+**Type:** `number` (milliseconds)
+
+How long fetched data is considered fresh. While fresh, the query will not re-fetch on mount or window focus. Defaults to `0` (always stale).
+
+### `gcTime`
+
+**Type:** `number` (milliseconds)
+
+How long inactive query data stays in the cache before garbage collection. Defaults to `300000` (5 minutes).
+
+### `refetchInterval`
+
+**Type:** `number | false` (milliseconds)
+
+Poll at a fixed interval. Set to `false` or omit to disable polling.
+
+### `refetchOnWindowFocus`
+
+**Type:** `boolean`
+
+Re-fetch when the browser tab regains focus. Defaults to `true`.
+
+
+## Return Type
+
+```ts
+import { type UseTimeUntilCallbackDeadlineOptions } from "@zama-fhe/react-sdk/vaults";
+```
+
+The `data` property is `bigint | null | undefined`: seconds remaining, `0n` once the deadline has passed, `null` when the batch is not `Dispatched`, `undefined` while loading or disabled.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
+
+
+## Related
+
+- [useFinalize](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useFinalize.md) — settles the batch, or cancels it past the deadline
+- [useBatchState](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md) — why the value is `null`
+- [VaultBatcher.timeUntilCallbackDeadline](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#timeuntilcallbackdeadline)
 
 ## useVaultGroup
 
@@ -26934,21 +27164,23 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 ### `vaultQueryKeys`
 
-Batch reads for confidential ERC-4626 vaults, used by [`useCurrentBatchId`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useCurrentBatchId.md), [`useBatchState`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md) and [`useTimeUntilDispatchable`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md). Lives in the `vaults` subpath, not on `zamaQueryKeys`.
+Batch reads for confidential ERC-4626 vaults, used by [`useCurrentBatchId`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useCurrentBatchId.md), [`useBatchState`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md), [`useTimeUntilDispatchable`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md) and [`useTimeUntilCallbackDeadline`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md). Lives in the `vaults` subpath, not on `zamaQueryKeys`.
 
 ```ts
 import { vaultQueryKeys, invalidateBatchQueries } from "@zama-fhe/sdk/vaults";
 ```
 
-| Key                                             | Scope                                   |
-| ----------------------------------------------- | --------------------------------------- |
-| `.currentBatchId.batcher(batcherAddr)`          | One batcher's open batch id             |
-| `.batchState.batcher(batcherAddr)`              | All batch states for one batcher        |
-| `.batchState.batch(batcherAddr, batchId)`       | One batch's state                       |
-| `.timeUntilDispatchable.batcher(batcherAddr)`   | All dispatch countdowns for one batcher |
-| `.timeUntilDispatchable.batch(batcherAddr, id)` | One batch's dispatch countdown          |
+| Key                                                 | Scope                                            |
+| --------------------------------------------------- | ------------------------------------------------ |
+| `.currentBatchId.batcher(batcherAddr)`              | One batcher's open batch id                      |
+| `.batchState.batcher(batcherAddr)`                  | All batch states for one batcher                 |
+| `.batchState.batch(batcherAddr, batchId)`           | One batch's state                                |
+| `.timeUntilDispatchable.batcher(batcherAddr)`       | All dispatch countdowns for one batcher          |
+| `.timeUntilDispatchable.batch(batcherAddr, id)`     | One batch's dispatch countdown                   |
+| `.timeUntilCallbackDeadline.batcher(batcherAddr)`   | All callback-deadline countdowns for one batcher |
+| `.timeUntilCallbackDeadline.batch(batcherAddr, id)` | One batch's callback-deadline countdown          |
 
-A `batcher(...)` key is a prefix of every `batch(...)` key for that batcher, so invalidating it clears all of them at once. `invalidateBatchQueries(queryClient, batcherAddr)` invalidates all three namespaces for a batcher — this is what the vault mutation hooks call after a join, quit, recover, dispatch or finalize. Balances on the batcher's input and output tokens go through the regular [`invalidateBalanceQueries`](#invalidatebalancequeries).
+A `batcher(...)` key is a prefix of every `batch(...)` key for that batcher, so invalidating it clears all of them at once. `invalidateBatchQueries(queryClient, batcherAddr)` invalidates all four namespaces for a batcher — this is what the vault mutation hooks call after a join, quit, recover, dispatch or finalize. Balances on the batcher's input and output tokens go through the regular [`invalidateBalanceQueries`](#invalidatebalancequeries).
 
 `useGroupDeposit` / `useGroupRedeem` invalidate, once the transaction is mined, the balance of each token the legs spent and every member's batch reads — on success and on `VaultGroupJoinUnconfirmedError` alike. `useGroupRedeem` additionally invalidates operator status for each share token.
 

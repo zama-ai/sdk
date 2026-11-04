@@ -12,7 +12,7 @@ The state decides which action is legal, so read it before offering the user a b
 | `BatchState` | What the user can do                                  |
 | ------------ | ----------------------------------------------------- |
 | `Pending`    | join (`useDeposit` / `useRedeem`), or `useQuit`       |
-| `Dispatched` | Nothing — wait                                        |
+| `Dispatched` | `useFinalize` — the relayer normally does it          |
 | `Finalized`  | `useClaim`                                            |
 | `Canceled`   | `useQuit` (or `useRecover`), to take the deposit back |
 
@@ -103,4 +103,5 @@ The `data` property is `BatchState | undefined`. Compare it against the `BatchSt
 
 - [useClaim](./useClaim.md), [useQuit](./useQuit.md), [useRecover](./useRecover.md) — the actions each state allows
 - [useTimeUntilDispatchable](./useTimeUntilDispatchable.md) — countdown while `Pending`
+- [useTimeUntilCallbackDeadline](./useTimeUntilCallbackDeadline.md) — countdown while `Dispatched`
 - [VaultBatcher → BatchState](../sdk/VaultBatcher.md#batchstate)

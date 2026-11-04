@@ -38,6 +38,9 @@ type Direction = "deposit" | "redeem";
 /** The most vaults a group may name: the router's per-transaction leg limit on the pull path, so a group is always exitable. */
 export const MAX_GROUP_VAULTS = 10;
 
+/** How long a grant `redeem` makes lasts when the caller gives no `operatorUntil`. */
+const OPERATOR_WINDOW_SECONDS = 3600;
+
 /** One vault of a group. */
 export interface VaultMemberConfig extends VaultAddresses {
   /** What callers pass to `deposit` and `redeem` to pick this vault. */
@@ -77,8 +80,8 @@ export interface VaultGroupMember {
 export interface VaultGroupRedeemOptions extends JoinOptions {
   /**
    * Unix timestamp until which the router's operator grant on each share
-   * token is valid, for a grant this redemption has to make. Defaults to
-   * now + 1 hour.
+   * token is valid, for a grant this redemption has to make. Defaults to the
+   * chain's current time + 1 hour.
    */
   operatorUntil?: number;
 }
@@ -142,31 +145,34 @@ export interface PreparedVaultGroupJoin {
    * account lacks before sending the writes.
    */
   readonly requiredOperators: readonly VaultGroupOperator[];
-  /**
-   * Pairs each leg with its `Joined` log in the mined receipts' logs, in leg
-   * order. A leg with no log is reported in `unconfirmed` rather than thrown,
-   * so a host decides what a partial match means for its delivery.
-   */
-  decodeJoins(logs: readonly RawLog[]): {
-    readonly joins: readonly VaultGroupJoin[];
-    readonly unconfirmed: readonly string[];
-  };
+  /** {@link decodeVaultGroupJoins} bound to this submission's legs and account. */
+  decodeJoins(logs: readonly RawLog[]): DecodedVaultGroupJoins;
+}
+
+/** What {@link decodeVaultGroupJoins} found in a submission's logs. */
+export interface DecodedVaultGroupJoins {
+  /** One entry per leg whose `Joined` log was found, in leg order. */
+  readonly joins: readonly VaultGroupJoin[];
+  /** The ids of the members whose leg has no `Joined` log in the logs given. */
+  readonly unconfirmed: readonly string[];
 }
 
 /** Options for {@link VaultGroup.prepareDeposit} and {@link VaultGroup.prepareRedeem}. */
 export interface PrepareVaultGroupJoinOptions extends JoinOptions {
   /**
    * The account the legs come from. Defaults to the signer's wallet account,
-   * so a host without a signer must pass it.
+   * so a host without a signer must pass it. The balance check decrypts as
+   * the signer, so for any other account also pass `skipBalanceCheck`.
    */
   account?: Address;
   /** Defaults to `"router"`. A group of one always goes `"legs"`. */
   delivery?: JoinDelivery;
   /**
-   * Skip the chain reads that verify the group (each member's batchers against
-   * its config, `paused()` on every batcher, the registry listing for a router
-   * deposit), for a host that verified it itself. A member's share token is
-   * still read when its config gives no `cShare`.
+   * Skip the chain reads that verify the configuration (each member's
+   * batchers against its config, the registry listing for a router deposit),
+   * for a host that verified it itself. `paused()` is still read on every
+   * batcher, since no configuration can vouch for it, and a member's share
+   * token is still read when its config gives no `cShare`.
    */
   skipPreflight?: boolean;
 }
@@ -271,6 +277,45 @@ export function vaultGroupRedeemOperators(
   });
 }
 
+/**
+ * Pair each leg of a submission with its `Joined` log in `logs`: what
+ * {@link PreparedVaultGroupJoin.decodeJoins} does, from plain data, so a host
+ * that saved the legs and the account can decode after a reload. A leg with
+ * no log is reported in `unconfirmed` rather than thrown, so the host decides
+ * what a partial match means for its delivery; for a partly sent `"legs"`
+ * delivery, those are the legs still to send.
+ *
+ * @param prepared - The submission's `legs` and `account`.
+ * @param logs - Every mined receipt's logs. For a `"legs"` delivery, pass the
+ *   receipts in leg order: when the adapter omits log addresses, legs pair
+ *   with logs by position.
+ */
+export function decodeVaultGroupJoins(
+  prepared: Pick<PreparedVaultGroupJoin, "legs" | "account">,
+  logs: readonly RawLog[],
+): DecodedVaultGroupJoins {
+  // Each log is consumed once, so the Nth match is the Nth leg's even when
+  // the adapter omits log addresses.
+  const remaining = [...logs];
+  const joins: VaultGroupJoin[] = [];
+  const unconfirmed: string[] = [];
+  for (const leg of prepared.legs) {
+    const joined = takeJoined(remaining, leg.batcher, prepared.account);
+    if (!joined) {
+      unconfirmed.push(leg.vaultId);
+      continue;
+    }
+    joins.push({
+      vaultId: leg.vaultId,
+      batcher: leg.batcher,
+      token: leg.token,
+      batchId: joined.batchId,
+      confidentialJoinedAmount: joined.confidentialAmount,
+    });
+  }
+  return { joins, unconfirmed };
+}
+
 function toLeg(leg: GroupLeg): VaultGroupLeg {
   return {
     vaultId: leg.member.id,
@@ -281,13 +326,14 @@ function toLeg(leg: GroupLeg): VaultGroupLeg {
 }
 
 /**
- * Vaults that take deposits in the same confidential asset, joined as one
- * through the router: a deposit into one member joins *every* member's batch,
- * the chosen vault with the amount and the rest with an encrypted zero.
+ * Vaults that take deposits in the same confidential asset, joined together: a
+ * deposit into one member joins *every* member's batch, the chosen vault with
+ * the amount and the rest with an encrypted zero.
  *
- * `deposit` and `redeem` sign and send through the SDK's signer.
+ * `deposit` and `redeem` sign and send one transaction through the SDK's
+ * signer: through the router, or straight to the batcher for a group of one.
  * `prepareDeposit` and `prepareRedeem` stop short of sending, for a host with
- * its own transaction pipeline.
+ * its own transaction pipeline, and can also prepare one transfer per member.
  */
 export class VaultGroup {
   /** The SDK the group reads and writes through. */
@@ -398,16 +444,36 @@ export class VaultGroup {
   }
 
   /**
+   * The grants in a prepared redemption's `requiredOperators` that its
+   * account does not hold: the ones the host makes before sending the
+   * writes, and the ones `redeem` makes itself. `isOperator` answers for the
+   * current block, so make each grant with an `until` that outlasts the time
+   * the writes take to land.
+   */
+  async missingOperators(
+    prepared: Pick<PreparedVaultGroupJoin, "account" | "requiredOperators">,
+  ): Promise<readonly VaultGroupOperator[]> {
+    const granted = await Promise.all(
+      prepared.requiredOperators.map((operator) =>
+        new Token(this.sdk, operator.token).isOperator(prepared.account, operator.spender),
+      ),
+    );
+    return prepared.requiredOperators.filter((_operator, index) => !granted[index]);
+  }
+
+  /**
    * Build a deposit without sending it: every verification `deposit` does,
    * the encryptions, and the writes, for a host that signs and sends through
    * its own pipeline.
    *
    * @param vaultId - The member to deposit into.
    * @param amount - The plaintext amount; encrypted before submission.
+   * @param options - The account, delivery, and which checks to skip.
    *
-   * @throws if no member has id `vaultId`, a member's batchers disagree with its config or are not paired with `cAsset`, two members' batchers report the same vault, or a `"router"` delivery has no router. {@link ConfigurationError}
+   * @throws if no member has id `vaultId`, a `"router"` delivery has no router, or the balance check would run for an `account` that is not the signer's. {@link ConfigurationError}
+   * @throws unless `skipPreflight`, if a member's batchers disagree with its config or are not paired with `cAsset`, or two members' batchers report the same vault. {@link ConfigurationError}
    * @throws if a member's deposit batcher is paused. {@link VaultBatcherPausedError}
-   * @throws if a router deposit's `cAsset` is not listed in the router's registry. {@link UnlistedConfidentialTokenError}
+   * @throws unless `skipPreflight`, if a router deposit's `cAsset` is not listed in the router's registry. {@link UnlistedConfidentialTokenError}
    * @throws if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
    * @throws if balance validation requires decryption that is not possible. {@link BalanceCheckUnavailableError}
    */
@@ -421,13 +487,16 @@ export class VaultGroup {
 
   /**
    * Build a redemption without sending it. The writes rely on the grants in
-   * `requiredOperators`; the host grants the ones the account lacks first.
+   * `requiredOperators`; the host makes the ones {@link missingOperators}
+   * returns first.
    *
    * @param vaultId - The member to redeem from.
    * @param amount - The plaintext amount of shares: ERC-4626 `redeem`, not
    *   `withdraw`, so this is denominated in shares, never in assets.
+   * @param options - The account, delivery, and which checks to skip.
    *
-   * @throws if no member has id `vaultId`, a member's batchers disagree with its config or are not paired with `cAsset`, two members' batchers report the same vault, or a `"router"` delivery has no router. {@link ConfigurationError}
+   * @throws if no member has id `vaultId`, a `"router"` delivery has no router, or the balance check would run for an `account` that is not the signer's. {@link ConfigurationError}
+   * @throws unless `skipPreflight`, if a member's batchers disagree with its config or are not paired with `cAsset`, or two members' batchers report the same vault. {@link ConfigurationError}
    * @throws if a member's redeem batcher is paused. {@link VaultBatcherPausedError}
    * @throws if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
    * @throws if balance validation requires decryption that is not possible. {@link BalanceCheckUnavailableError}
@@ -451,6 +520,7 @@ export class VaultGroup {
    * There is no `beneficiary`: the router credits the account the legs came
    * from, so a group deposit cannot be made on someone else's behalf.
    *
+   * @throws if no signer is configured. {@link SignerNotConfiguredError}
    * @throws if no member has id `vaultId`, a member's batchers disagree with its config or are not paired with `cAsset`, two members' batchers report the same vault, or a group of more than one member names no router. {@link ConfigurationError}
    * @throws if a member's deposit batcher is paused. {@link VaultBatcherPausedError}
    * @throws if the router's registry does not list `cAsset`. {@link UnlistedConfidentialTokenError}
@@ -480,12 +550,14 @@ export class VaultGroup {
    *   `withdraw`, so this is denominated in shares, never in assets.
    *
    * @remarks
-   * The router pulls every leg's share token, so before the join this grants
-   * it an operator approval on each member's share token that lacks one. Each
-   * grant is its own wallet prompt, so a first redemption from a group of N
-   * vaults can ask the user to sign up to N + 1 times. The balance check
-   * decrypts every member's share balance, not only the chosen one's.
+   * In a group of more than one, the router pulls every leg's share token, so
+   * before the join this grants it an operator approval on each member's share
+   * token that lacks one. Each grant is its own wallet prompt, so a first
+   * redemption from a group of N vaults can ask the user to sign up to N + 1
+   * times. The balance check decrypts every member's share balance, not only
+   * the chosen one's.
    *
+   * @throws if no signer is configured. {@link SignerNotConfiguredError}
    * @throws if no member has id `vaultId`, a member's batchers disagree with its config or are not paired with `cAsset`, two members' batchers report the same vault, or a group of more than one member names no router. {@link ConfigurationError}
    * @throws if a member's redeem batcher is paused. {@link VaultBatcherPausedError}
    * @throws if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
@@ -503,18 +575,15 @@ export class VaultGroup {
       operation: options?.operation,
     });
     // Encrypted before the grants, which cost the user a signature each; a proof does not expire.
-    const grants = await Promise.all(
-      prepared.requiredOperators.map(async (operator) => {
-        const token = new Token(this.sdk, operator.token);
-        return {
-          token,
-          operator,
-          granted: await token.isOperator(prepared.account, operator.spender),
-        };
-      }),
-    );
-    for (const { token, operator } of grants.filter((grant) => !grant.granted)) {
-      await token.setOperator(operator.spender, options?.operatorUntil);
+    const missing = await this.missingOperators(prepared);
+    if (missing.length > 0) {
+      // The token compares the deadline against the block's time, not the local clock.
+      const until =
+        options?.operatorUntil ??
+        Number(await this.sdk.provider.getBlockTimestamp()) + OPERATOR_WINDOW_SECONDS;
+      for (const operator of missing) {
+        await new Token(this.sdk, operator.token).setOperator(operator.spender, until);
+      }
     }
     return this.#send(signer, prepared);
   }
@@ -553,12 +622,7 @@ export class VaultGroup {
     const member = this.member(vaultId);
     const delivery = this.#delivery(options?.delivery);
     const router = delivery === "router" ? this.#router() : undefined;
-    const account = options?.account
-      ? getAddress(options.account)
-      : getAddress(
-          (await requireAlignedWalletAccount(direction, this.sdk.signer, this.sdk.provider))
-            .address,
-        );
+    const account = await this.#account(direction, options);
 
     // Read alongside the legs, so an unlisted asset, or a router with no registry to read, fails
     // before the balance check can prompt the wallet.
@@ -581,19 +645,45 @@ export class VaultGroup {
         ? await this.#legWrites(direction, legs, account, operation)
         : await this.#routerWrite(direction, router, member, legs, account, operation);
 
+    const publicLegs = legs.map(toLeg);
     return {
       direction,
       vaultId,
       account,
       delivery,
-      legs: legs.map(toLeg),
+      legs: publicLegs,
       writes,
       requiredOperators:
         direction === "redeem" && router !== undefined
           ? uniqueTokens(legs).map((token) => ({ token: token.address, spender: router }))
           : [],
-      decodeJoins: (logs) => this.#decodeJoins(legs, account, logs),
+      decodeJoins: (logs) => decodeVaultGroupJoins({ legs: publicLegs, account }, logs),
     };
+  }
+
+  async #account(
+    direction: Direction,
+    options: PrepareVaultGroupJoinOptions | undefined,
+  ): Promise<Address> {
+    const requested = options?.account === undefined ? undefined : getAddress(options.account);
+    if (requested !== undefined && options?.skipBalanceCheck) {
+      return requested;
+    }
+    // The balance check decrypts as the signer, so it can only vouch for the signer's account.
+    if (requested !== undefined && this.sdk.signer === undefined) {
+      throw new ConfigurationError(
+        `The balance check for ${requested} decrypts as the signer, and none is configured; pass skipBalanceCheck to prepare without one`,
+      );
+    }
+    const wallet = getAddress(
+      (await requireAlignedWalletAccount(direction, this.sdk.signer, this.sdk.provider)).address,
+    );
+    if (requested !== undefined && requested !== wallet) {
+      throw new ConfigurationError(
+        `The balance check for ${requested} decrypts as the signer's account ${wallet}; pass skipBalanceCheck to prepare for another account`,
+      );
+    }
+    return wallet;
   }
 
   // Every member gets a leg, zero-amount ones included: trimming them would reveal which vault was chosen.
@@ -601,23 +691,33 @@ export class VaultGroup {
     return member === chosen ? amount : 0n;
   }
 
-  // What the config says each leg joins and spends, with no read but a missing share token.
+  // What the config says each leg joins and spends. Only `paused()` and a missing share token are read.
   async #configuredLegs(
     direction: Direction,
     chosen: VaultGroupMember,
     amount: bigint,
   ): Promise<readonly GroupLeg[]> {
     return Promise.all(
-      this.members.map(async (member) => ({
-        member,
-        batcher: SIDES[direction].batcher(member.vault),
-        token:
-          direction === "deposit"
-            ? new WrappedToken(this.sdk, this.cAsset)
-            : await this.#share(member),
-        amount: this.#amountFor(member, chosen, amount),
-      })),
+      this.members.map(async (member) => {
+        const batcher = SIDES[direction].batcher(member.vault);
+        const [token, paused] = await Promise.all([
+          direction === "deposit" ? new WrappedToken(this.sdk, this.cAsset) : this.#share(member),
+          batcher.paused(),
+        ]);
+        this.#assertNotPaused(member, batcher, paused);
+        return { member, batcher, token, amount: this.#amountFor(member, chosen, amount) };
+      }),
     );
+  }
+
+  // One paused batcher reverts the whole submission, so every leg's is checked, not just the chosen one's.
+  #assertNotPaused(member: VaultGroupMember, batcher: VaultBatcher, paused: boolean): void {
+    if (paused) {
+      throw new VaultBatcherPausedError(
+        `Batcher ${batcher.address} of vault "${member.id}" in group "${this.id}" is paused, so no member can be joined until it resumes`,
+        { batcher: batcher.address, vaultId: member.id },
+      );
+    }
   }
 
   async #share(member: VaultGroupMember): Promise<WrappedToken> {
@@ -647,7 +747,6 @@ export class VaultGroup {
     return legs;
   }
 
-  // One paused batcher reverts the whole submission, so every leg's is read, not just the chosen one's.
   async #verifiedLeg(
     direction: Direction,
     member: VaultGroupMember,
@@ -672,12 +771,7 @@ export class VaultGroup {
         `Vault "${member.id}" of group "${this.id}" is configured with share token ${configuredShare}, but its redeem batcher pulls ${share.address}`,
       );
     }
-    if (paused) {
-      throw new VaultBatcherPausedError(
-        `Batcher ${batcher.address} of vault "${member.id}" in group "${this.id}" is paused, so no member can be joined until it resumes`,
-        { batcher: batcher.address, vaultId: member.id },
-      );
-    }
+    this.#assertNotPaused(member, batcher, paused);
     return {
       member,
       batcher,
@@ -850,34 +944,8 @@ export class VaultGroup {
     }
   }
 
-  #decodeJoins(
-    legs: readonly GroupLeg[],
-    account: Address,
-    logs: readonly RawLog[],
-  ): { joins: VaultGroupJoin[]; unconfirmed: string[] } {
-    // Each log is consumed once: the router joins the legs in order, so the
-    // Nth match is the Nth leg's even when the adapter omits log addresses.
-    const remaining = [...logs];
-    const joins: VaultGroupJoin[] = [];
-    const unconfirmed: string[] = [];
-    for (const leg of legs) {
-      const joined = takeJoined(remaining, leg.batcher.address, account);
-      if (!joined) {
-        unconfirmed.push(leg.member.id);
-        continue;
-      }
-      joins.push({
-        vaultId: leg.member.id,
-        batcher: leg.batcher.address,
-        token: leg.token.address,
-        batchId: joined.batchId,
-        confidentialJoinedAmount: joined.confidentialAmount,
-      });
-    }
-    return { joins, unconfirmed };
-  }
-
-  // `deposit` and `redeem` prepare a router delivery, or a group of one's single leg: one write either way.
+  // A router delivery, or a group of one's lone leg: one write either way. Several legs are only
+  // private as an atomic bundle, which a host sends itself.
   async #send(
     signer: GenericSigner,
     prepared: PreparedVaultGroupJoin,
@@ -889,11 +957,15 @@ export class VaultGroup {
       );
     }
     const transaction = await submitSdkTransaction({
-      operation: "vault:routerJoin",
+      operation: prepared.delivery === "router" ? "vault:routerJoin" : "vault:join",
       signer,
       provider: this.sdk.provider,
       config: write.call,
-      emit: (input) => this.sdk.emitEvent(input, this.router ?? write.call.address),
+      emit: (input) =>
+        this.sdk.emitEvent(
+          input,
+          prepared.delivery === "router" ? this.#router() : write.leg.batcher,
+        ),
       logger: this.sdk.logger,
     });
     const { joins, unconfirmed } = prepared.decodeJoins(transaction.receipt.logs);
