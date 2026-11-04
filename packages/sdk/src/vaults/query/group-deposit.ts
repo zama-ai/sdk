@@ -1,7 +1,8 @@
 import type { Address } from "viem";
 import type { MutationFactoryOptions } from "../../query/factory-types";
 import type { JoinOptions } from "../types";
-import type { VaultGroup, VaultGroupJoinResult } from "../vault-group";
+import type { VaultGroup } from "../vault-group";
+import type { VaultGroupJoinResult } from "../vault-group-types";
 
 /** Variables for {@link groupDepositMutationOptions}. */
 export interface GroupDepositParams extends JoinOptions {

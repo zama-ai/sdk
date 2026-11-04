@@ -26,12 +26,9 @@ import type { GenericProvider, GenericSigner } from "../../types";
 import type { RawLog } from "../../types/transaction";
 import { vaultRouterAbi } from "../abi/vault-router.abi";
 import { takeJoined } from "../events";
-import {
-  decodeVaultGroupJoins,
-  VaultGroup,
-  vaultGroupRedeemOperators,
-  type VaultGroupConfig,
-} from "../vault-group";
+import { VaultGroup } from "../vault-group";
+import { decodeVaultGroupJoins, vaultGroupRedeemOperators } from "../vault-group-standalone";
+import type { VaultGroupConfig } from "../vault-group-types";
 
 // Every fixture address has hex letters, so a missing `getAddress` shows up as a casing mismatch.
 const ROUTER = getAddress("0x4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e");
@@ -1180,8 +1177,8 @@ describe("VaultGroup prepare", () => {
     const reads = vi.mocked(provider.readContract).mock.calls.map(([call]) => call.functionName);
     expect(reads.sort()).toEqual(["fromToken", "fromToken", "paused", "paused"]);
     expect(prepared.requiredOperators).toStrictEqual([
-      { token: ALPHA.share, spender: ROUTER },
-      { token: BETA.share, spender: ROUTER },
+      { vaultId: ALPHA.id, token: ALPHA.share, spender: ROUTER },
+      { vaultId: BETA.id, token: BETA.share, spender: ROUTER },
     ]);
     expect(prepared.writes).toHaveLength(1);
     expect(prepared.writes[0]?.call).toMatchObject({ address: ROUTER, functionName: "join" });
@@ -1207,8 +1204,8 @@ describe("VaultGroup prepare", () => {
       ],
     });
     expect(group.redeemOperators()).toStrictEqual([
-      { token: ALPHA.share, spender: ROUTER },
-      { token: BETA.share, spender: ROUTER },
+      { vaultId: ALPHA.id, token: ALPHA.share, spender: ROUTER },
+      { vaultId: BETA.id, token: BETA.share, spender: ROUTER },
     ]);
     expect(group.redeemOperators("legs")).toStrictEqual([]);
 
@@ -1261,8 +1258,8 @@ describe("VaultGroup prepare", () => {
       call.functionName === "isOperator" ? call.address === ALPHA.share : undefined,
     );
     const operators = [
-      { token: ALPHA.share, spender: ROUTER },
-      { token: BETA.share, spender: ROUTER },
+      { vaultId: ALPHA.id, token: ALPHA.share, spender: ROUTER },
+      { vaultId: BETA.id, token: BETA.share, spender: ROUTER },
     ];
 
     await expect(
@@ -1270,7 +1267,7 @@ describe("VaultGroup prepare", () => {
         account: HOST_ACCOUNT,
         requiredOperators: operators,
       }),
-    ).resolves.toStrictEqual([{ token: BETA.share, spender: ROUTER }]);
+    ).resolves.toStrictEqual([{ vaultId: BETA.id, token: BETA.share, spender: ROUTER }]);
   });
 
   test("decodeVaultGroupJoins pairs saved legs with receipts' logs and reports the rest", () => {
@@ -1318,8 +1315,8 @@ describe("VaultGroup prepare", () => {
       ],
     };
     expect(new VaultGroup(sdk, config).redeemOperators()).toStrictEqual([
-      { token: ALPHA.share, spender: ROUTER },
-      { token: BETA.share, spender: ROUTER },
+      { vaultId: ALPHA.id, token: ALPHA.share, spender: ROUTER },
+      { vaultId: BETA.id, token: BETA.share, spender: ROUTER },
     ]);
     expect(
       new VaultGroup(sdk, { ...config, vaults: [config.vaults[0]!] }).redeemOperators(),

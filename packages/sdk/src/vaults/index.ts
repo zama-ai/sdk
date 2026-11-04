@@ -5,12 +5,9 @@
  */
 export { createVaultBatcher, VaultBatcher, type PreparedFinalize } from "./vault-batcher";
 export { createVault, Vault } from "./vault";
+export { createVaultGroup, MAX_GROUP_VAULTS, VaultGroup } from "./vault-group";
+export { decodeVaultGroupJoins, vaultGroupRedeemOperators } from "./vault-group-standalone";
 export {
-  createVaultGroup,
-  decodeVaultGroupJoins,
-  MAX_GROUP_VAULTS,
-  VaultGroup,
-  vaultGroupRedeemOperators,
   type DecodedVaultGroupJoins,
   type JoinDelivery,
   type PreparedVaultGroupJoin,
@@ -24,10 +21,10 @@ export {
   type VaultGroupJoinResult,
   type VaultGroupMember,
   type VaultMemberConfig,
-} from "./vault-group";
+} from "./vault-group-types";
 export { BatchState } from "./types";
 export type { JoinOptions, JoinResult, VaultAddresses, VaultJoinOptions } from "./types";
-export { decodeJoined, findJoined, takeJoined, VaultTopics, type JoinedEvent } from "./events";
+export { decodeJoined, findJoined, VaultTopics, type JoinedEvent } from "./events";
 
 export {
   batchCallbackDeadlineContract,

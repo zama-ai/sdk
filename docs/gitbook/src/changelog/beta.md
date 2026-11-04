@@ -42,7 +42,7 @@ New `VaultBatcher.finalize(batchId)` (`useFinalize` in React, `finalizeMutationO
 
 A group may now hold a single vault, which joins its batcher directly, so `router` is optional. A member's config can give its `cShare`, which spares a read and feeds the new `VaultGroup.redeemOperators()`.
 
-The `vaults` subpath also exports the pure call builders these are built on — `routerJoinContract`, `encodeAllocationData` and `tokenWrapperRegistryContract`, with the `EncryptedAllocationLeg` type — plus `dispatchBatchCallbackContract`, `unwrapRequestIdContract` and the receipt helper `takeJoined`. The root entry now exports `confidentialTransferAndCallContract`, `confidentialTransferFromAndCallContract` and `unwrapAmountContract`. See [Vault groups](../guides/vaults/groups.md#using-your-own-transaction-layer).
+The `vaults` subpath also exports the pure call builders these are built on — `routerJoinContract`, `encodeAllocationData` and `tokenWrapperRegistryContract`, with the `EncryptedAllocationLeg` type — plus `dispatchBatchCallbackContract`, and `unwrapRequestIdContract`. The root entry now exports `confidentialTransferAndCallContract`, `confidentialTransferFromAndCallContract` and `unwrapAmountContract`. See [Vault groups](../guides/vaults/groups.md#using-your-own-transaction-layer).
 
 ## Opt out of clearing credentials on wallet account changes
 

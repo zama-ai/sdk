@@ -1,7 +1,7 @@
 import type { Address, Hex } from "viem";
 import type { TransactionReceipt } from "../types/transaction";
 import type { BatchState } from "../vaults/types";
-import type { VaultGroupJoin } from "../vaults/vault-group";
+import type { VaultGroupJoin } from "../vaults/vault-group-types";
 import { ZamaError, ZamaErrorCode } from "./base";
 
 /** What an {@link UnlistedConfidentialTokenError} carries. */

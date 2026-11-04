@@ -12751,9 +12751,6 @@ export function routerJoinContract(router: Address, legs: readonly EncryptedAllo
 };
 
 // @public
-export function takeJoined(logs: RawLog[], batcher: Address, account?: Address): JoinedEvent | null;
-
-// @public
 export interface TimeUntilCallbackDeadlineQueryConfig {
     batchId?: bigint;
     query?: Record<string, unknown>;
@@ -15566,6 +15563,7 @@ export interface VaultGroupMember {
 export interface VaultGroupOperator {
     readonly spender: Address;
     readonly token: Address;
+    readonly vaultId: string;
 }
 
 // @public

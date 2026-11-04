@@ -257,7 +257,7 @@ import {
 | `delivery`          | `JoinDelivery`                       | The delivery the writes take.                                                                                                                                                  |
 | `legs`              | `readonly VaultGroupLeg[]`           | One per member, in group order: `{ vaultId, batcher, token, amount }`, the chosen member's `amount` and zero for the rest.                                                     |
 | `writes`            | `readonly PreparedVaultGroupWrite[]` | The calls to send, in order, each with the `leg` it funds: one through the router carrying the chosen leg, or one per leg. A `call` is `{ address, abi, functionName, args }`. |
-| `requiredOperators` | `readonly VaultGroupOperator[]`      | `{ token, spender }` grants the writes rely on: the router on each share token of a `"router"` redemption, otherwise none. Grant the ones the account lacks first.             |
+| `requiredOperators` | `readonly VaultGroupOperator[]`      | `{ vaultId, token, spender }` grants the writes rely on: the router on each share token of a `"router"` redemption, otherwise none. Grant the ones the account lacks first.    |
 | `decodeJoins(logs)` | `(logs) => { joins, unconfirmed }`   | Pairs each leg with its `Joined` log in the mined receipts' logs, in leg order, and lists the members without one instead of throwing.                                         |
 
 ### missingOperators

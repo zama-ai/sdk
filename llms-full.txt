@@ -2569,7 +2569,7 @@ New `VaultBatcher.finalize(batchId)` (`useFinalize` in React, `finalizeMutationO
 
 A group may now hold a single vault, which joins its batcher directly, so `router` is optional. A member's config can give its `cShare`, which spares a read and feeds the new `VaultGroup.redeemOperators()`.
 
-The `vaults` subpath also exports the pure call builders these are built on — `routerJoinContract`, `encodeAllocationData` and `tokenWrapperRegistryContract`, with the `EncryptedAllocationLeg` type — plus `dispatchBatchCallbackContract`, `unwrapRequestIdContract` and the receipt helper `takeJoined`. The root entry now exports `confidentialTransferAndCallContract`, `confidentialTransferFromAndCallContract` and `unwrapAmountContract`. See [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/groups.md#using-your-own-transaction-layer).
+The `vaults` subpath also exports the pure call builders these are built on — `routerJoinContract`, `encodeAllocationData` and `tokenWrapperRegistryContract`, with the `EncryptedAllocationLeg` type — plus `dispatchBatchCallbackContract`, and `unwrapRequestIdContract`. The root entry now exports `confidentialTransferAndCallContract`, `confidentialTransferFromAndCallContract` and `unwrapAmountContract`. See [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/groups.md#using-your-own-transaction-layer).
 
 ## Opt out of clearing credentials on wallet account changes
 
@@ -13072,13 +13072,7 @@ A builder encodes a call; it does not check balances, encrypt, or grant anything
 ## Events
 
 ```ts
-import {
-  VaultTopics,
-  decodeJoined,
-  findJoined,
-  takeJoined,
-  type JoinedEvent,
-} from "@zama-fhe/sdk/vaults";
+import { VaultTopics, decodeJoined, findJoined, type JoinedEvent } from "@zama-fhe/sdk/vaults";
 ```
 
 `join` decodes its own receipt, but the helpers are exported for apps that index logs themselves.
@@ -13086,7 +13080,6 @@ import {
 - `VaultTopics.Joined` — topic0 of `Joined(uint256 indexed batchId, address indexed account, euint64 amount)`.
 - `decodeJoined(log)` — decodes one raw log into `{ batchId, account, confidentialAmount }`, or `null` if it isn't a `Joined` event.
 - `findJoined(logs, batcher, account?)` — the first `Joined` log emitted by `batcher` (and crediting `account`, when given). Filters by emitter and account because one transaction can join several batchers and credit several beneficiaries.
-- `takeJoined(logs, batcher, account?)` — `findJoined` that also removes the match from `logs`. Walk a receipt that joined several batchers for one account leg by leg, so each leg pairs with its own log even when the adapter omits emitter addresses.
 
 ## TanStack Query helpers
 
@@ -13378,7 +13371,7 @@ import {
 | `delivery`          | `JoinDelivery`                       | The delivery the writes take.                                                                                                                                                  |
 | `legs`              | `readonly VaultGroupLeg[]`           | One per member, in group order: `{ vaultId, batcher, token, amount }`, the chosen member's `amount` and zero for the rest.                                                     |
 | `writes`            | `readonly PreparedVaultGroupWrite[]` | The calls to send, in order, each with the `leg` it funds: one through the router carrying the chosen leg, or one per leg. A `call` is `{ address, abi, functionName, args }`. |
-| `requiredOperators` | `readonly VaultGroupOperator[]`      | `{ token, spender }` grants the writes rely on: the router on each share token of a `"router"` redemption, otherwise none. Grant the ones the account lacks first.             |
+| `requiredOperators` | `readonly VaultGroupOperator[]`      | `{ vaultId, token, spender }` grants the writes rely on: the router on each share token of a `"router"` redemption, otherwise none. Grant the ones the account lacks first.    |
 | `decodeJoins(logs)` | `(logs) => { joins, unconfirmed }`   | Pairs each leg with its `Joined` log in the mined receipts' logs, in leg order, and lists the members without one instead of throwing.                                         |
 
 ### missingOperators

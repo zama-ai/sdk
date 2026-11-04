@@ -355,13 +355,7 @@ A builder encodes a call; it does not check balances, encrypt, or grant anything
 ## Events
 
 ```ts
-import {
-  VaultTopics,
-  decodeJoined,
-  findJoined,
-  takeJoined,
-  type JoinedEvent,
-} from "@zama-fhe/sdk/vaults";
+import { VaultTopics, decodeJoined, findJoined, type JoinedEvent } from "@zama-fhe/sdk/vaults";
 ```
 
 `join` decodes its own receipt, but the helpers are exported for apps that index logs themselves.
@@ -369,7 +363,6 @@ import {
 - `VaultTopics.Joined` — topic0 of `Joined(uint256 indexed batchId, address indexed account, euint64 amount)`.
 - `decodeJoined(log)` — decodes one raw log into `{ batchId, account, confidentialAmount }`, or `null` if it isn't a `Joined` event.
 - `findJoined(logs, batcher, account?)` — the first `Joined` log emitted by `batcher` (and crediting `account`, when given). Filters by emitter and account because one transaction can join several batchers and credit several beneficiaries.
-- `takeJoined(logs, batcher, account?)` — `findJoined` that also removes the match from `logs`. Walk a receipt that joined several batchers for one account leg by leg, so each leg pairs with its own log even when the adapter omits emitter addresses.
 
 ## TanStack Query helpers
 
