@@ -1,7 +1,7 @@
 import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { KeyWrappingError } from "../../errors/credential";
-import { MemoryStorage } from "../../storage/memory-storage";
+import { createMockStorage } from "../../test-fixtures/storage";
 import type { GenericStorage } from "../../types";
 import { WRAPPING_SCHEME_V1 } from "../keypair-wrapping";
 import { transportKeyPairScopeStorageKey, transportKeyPairStorageKey } from "../storage-keys";
@@ -65,7 +65,7 @@ function patchStoredReads(
   storage: GenericStorage,
   patch: (raw: StoredEntry) => StoredEntry,
 ): { restore: () => void } {
-  const realGet = storage.get.bind(storage);
+  const realGet = vi.mocked(storage.get).getMockImplementation()!;
   vi.spyOn(storage, "get").mockImplementation(async (key: string) =>
     patch((await realGet(key)) as StoredEntry),
   );
@@ -81,7 +81,7 @@ function patchNextStoredRead(
   storage: GenericStorage,
   patch: (raw: StoredEntry) => StoredEntry,
 ): void {
-  const realGet = storage.get.bind(storage);
+  const realGet = vi.mocked(storage.get).getMockImplementation()!;
   vi.spyOn(storage, "get").mockImplementationOnce(async (key: string) =>
     patch((await realGet(key)) as StoredEntry),
   );
@@ -89,7 +89,7 @@ function patchNextStoredRead(
 
 describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () => {
   test("round-trips through storage: a second vault instance reads and unwraps it", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const vaultA = makeVault({ storage, secret: SECRET_A });
     const vaultB = makeVault({ storage, secret: SECRET_A });
 
@@ -98,7 +98,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   });
 
   test("regression guard: no wrapping when derivationSecret is absent — persisted value stays a plain privateKey", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const setSpy = vi.spyOn(storage, "set");
     const vault = makeVault({ storage });
 
@@ -112,7 +112,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   });
 
   test("when configured, the persisted value never contains the plaintext private key", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const setSpy = vi.spyOn(storage, "set");
     const vault = makeVault({ storage, secret: SECRET_A });
 
@@ -128,7 +128,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   });
 
   test("wrong secret is treated as a cache miss and regenerates — not a crash", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     // Shared generator: two independent ones would each return their own deterministic
     // first-call key, making the two calls below coincidentally equal regardless of
     // whether regeneration actually happened.
@@ -145,7 +145,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   });
 
   test("a pre-existing plaintext entry is a cache miss once derivationSecret is turned on — regenerates wrapped", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const generator = makeGenerator();
     const unwrapped = makeVault({ storage, generator });
     const wrapped = makeVault({ storage, generator, secret: SECRET_A });
@@ -159,7 +159,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   });
 
   test("a pre-existing wrapped entry read with derivationSecret turned off fails loudly instead of regenerating plaintext", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const wrapped = makeVault({ storage, secret: SECRET_A });
     const unwrappedLogger = makeLogger();
     const unwrapped = makeVault({ storage, logger: unwrappedLogger });
@@ -184,7 +184,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     vi.useFakeTimers();
     try {
       vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
-      const storage = new MemoryStorage();
+      const storage = createMockStorage();
       const vault = makeVault({ storage, secret: SECRET_A });
 
       const before = await vault.getOrCreate(USER);
@@ -206,7 +206,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     // The wrapping key is derived with the signer identity as HKDF salt, so lifting one
     // signer's ciphertext into another's slot must not hand the second signer a working
     // key pair — even though both entries are wrapped under the same secret.
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const logger = makeLogger();
     const vault = makeVault({ storage, logger, secret: SECRET_A });
 
@@ -226,7 +226,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   });
 
   test("composes with scope: two different signers, same scope and secret, derive the same wrapping key", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const generator = makeGenerator();
     const scopedAndWrapped = () =>
       makeVault({ storage, generator, scope: "tenant-1", secret: SECRET_A });
@@ -245,7 +245,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     // Same TOCTOU window as the unwrapped case, but the wrapped persist path runs the
     // extra wrap round trip after the generator; the epoch check must still gate the
     // write that lands behind clearScope()'s delete.
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const { generator, release } = makeGatedGenerator();
     const vault = makeVault({ storage, generator, scope: "tenant-1", secret: SECRET_A });
 
@@ -260,7 +260,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   });
 
   test("round-trips tkmsVersion through a wrapped entry, where it also participates in the AAD", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const wrappedVault = () =>
       makeVault({
         storage,
@@ -286,7 +286,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   });
 
   test("stores no tkmsVersion in a wrapped entry when the generator omits it", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const vault = makeVault({ storage, secret: SECRET_A });
 
     const created = await vault.getOrCreate(USER);
@@ -296,7 +296,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   });
 
   test("logs the unwrap-failure reason directly, unconditionally (not just when storage.delete() itself fails)", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const generator = makeGenerator();
     const vaultA = makeVault({ storage, generator, secret: SECRET_A });
     const loggerB = makeLogger();
@@ -312,7 +312,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   });
 
   test("a scoped entry that fails to unwrap is never clobbered — getOrCreate throws instead of silently regenerating", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const generator = makeGenerator();
     const correctlyConfigured = makeVault({
       storage,
@@ -342,7 +342,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   });
 
   test("an unscoped entry that fails to unwrap still self-heals (regenerates), unlike the scoped case", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const generator = makeGenerator();
     const vaultA = makeVault({ storage, generator, secret: SECRET_A });
     const vaultB = makeVault({ storage, generator, secret: SECRET_B });
@@ -386,7 +386,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     // key in the first place is not a persistence hiccup — the caller gets back a
     // rejected promise instead of a keypair, so it can't be silently swallowed the
     // way a storage write failure is.
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const setSpy = vi.spyOn(storage, "set");
     const vault = makeVault({ storage, secret: SECRET_A });
 
@@ -406,7 +406,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     // caught before it ever reaches crypto.subtle.decrypt, where it would otherwise fail
     // with the exact same generic OperationError a genuine wrong-derivationSecret case
     // produces.
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const vault = makeVault({ storage, secret: SECRET_A });
     const created = await vault.getOrCreate(USER);
     patchNextStoredRead(storage, (raw) => ({ ...raw, iv: TRUNCATED_IV }));
@@ -423,7 +423,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     // *scoped* vault, that structural-failure path must be just as strict as the
     // OperationError path: silently discarding and regenerating here would clobber the
     // scope's shared entry via a different code path.
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const deleteSpy = vi.spyOn(storage, "delete");
     const logger = makeLogger();
     const vault = makeVault({ storage, logger, scope: "tenant-1", secret: SECRET_A });
@@ -452,7 +452,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   });
 
   test("a scoped entry with a corrupted ciphertext is never clobbered either", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const deleteSpy = vi.spyOn(storage, "delete");
     const logger = makeLogger();
     const vault = makeVault({ storage, logger, scope: "tenant-1", secret: SECRET_A });
@@ -472,7 +472,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   test("a scoped entry that is recognizably wrapped but corrupted fails loudly when no derivationSecret is configured", async () => {
     // The loud no-secret failure keys off the wrapped envelope, not a clean schema parse:
     // a corrupted entry still belongs to a peer that may be able to read it.
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const deleteSpy = vi.spyOn(storage, "delete");
     const logger = makeLogger();
     const wrapped = makeVault({ storage, scope: "tenant-1", secret: SECRET_A });
@@ -493,7 +493,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   test("an unscoped entry written under an unrecognized wrappingVersion is preserved, not regenerated over", async () => {
     // Only a build that knows the scheme can read the ciphertext, so even the unscoped
     // vault fails closed rather than self-healing: regenerating would destroy it for good.
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const deleteSpy = vi.spyOn(storage, "delete");
     const generator = makeGenerator();
     const vault = makeVault({ storage, generator, secret: SECRET_A });
@@ -518,7 +518,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   });
 
   test("a scoped entry written under an unrecognized wrappingVersion is preserved and names the scope", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const deleteSpy = vi.spyOn(storage, "delete");
     const logger = makeLogger();
     const vault = makeVault({ storage, logger, scope: "tenant-1", secret: SECRET_A });
@@ -536,7 +536,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   });
 
   test("an entry with a missing wrappingVersion is preserved as an unreadable scheme, not discarded as junk", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const deleteSpy = vi.spyOn(storage, "delete");
     const vault = makeVault({ storage, scope: "tenant-1", secret: SECRET_A });
     await vault.getOrCreate(USER);
@@ -553,7 +553,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   test("a scoped plaintext entry read by a secret-configured instance fails loudly instead of self-healing", async () => {
     // A plaintext entry on a scope that this instance wraps means a peer is running
     // without the secret; regenerating wrapped would clobber the peer's entry.
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const generator = makeGenerator();
     const unwrapped = makeVault({ storage, generator, scope: "tenant-1" });
     const wrappedLogger = makeLogger();
@@ -590,7 +590,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   });
 
   test("a scoped wrapped entry read by an instance with no derivationSecret fails loudly instead of self-healing", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const generator = makeGenerator();
     const wrapped = makeVault({ storage, generator, scope: "tenant-1", secret: SECRET_A });
     const unwrappedLogger = makeLogger();
@@ -612,7 +612,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     // The loud scoped failure is reserved for entries that are *recognizably wrapped* — an
     // entry that is neither wrapped nor plaintext carries no peer's key pair to protect, so
     // discarding it must stay the ordinary self-heal instead of wedging the whole scope.
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const logger = makeLogger();
     const vault = makeVault({ storage, logger, scope: "tenant-1" });
     await storage.set(transportKeyPairScopeStorageKey("tenant-1"), { publicKey: PUBLIC_KEY });
@@ -627,7 +627,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   test("a scope named after a signer address derives a different wrapping key than that signer", async () => {
     // The HKDF salt is namespaced by identity kind, so a scope string that happens to equal
     // a checksummed signer address can never unwrap that signer's per-signer entry.
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const perSigner = makeVault({ storage, secret: SECRET_A });
     const scopedAsAddress = makeVault({ storage, scope: USER, secret: SECRET_A });
 
@@ -645,7 +645,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     const SENTINEL_B = "SENTINEL-derivationSecret-B-must-never-appear-in-a-log-abcdefabcd";
 
     // Unscoped wrong-secret self-heal → warn path.
-    const unscopedStorage = new MemoryStorage();
+    const unscopedStorage = createMockStorage();
     const unscopedGen = makeGenerator();
     const creatorLog = makeLogger();
     await makeVault({
@@ -664,7 +664,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     expect(wrongSecretLog.warn).toHaveBeenCalled();
 
     // Scoped wrong-secret → error path that also throws.
-    const scopedStorage = new MemoryStorage();
+    const scopedStorage = createMockStorage();
     const scopedGen = makeGenerator();
     const scopedCreatorLog = makeLogger();
     await makeVault({

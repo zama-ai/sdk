@@ -22,6 +22,7 @@ export class LoggerService implements GenericLogger {
 
   constructor(logger?: GenericLogger) {
     this.#logger = logger;
+    Object.freeze(this);
   }
 
   error(message: string, data?: Record<string, unknown>): void {
@@ -50,3 +51,5 @@ export class LoggerService implements GenericLogger {
     this.warn(message);
   }
 }
+
+Object.freeze(LoggerService.prototype);

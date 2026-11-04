@@ -149,6 +149,7 @@ export class FhevmRelayer implements RelayerSDK {
         createInlineClient: () => withInlineInit(createFhevmEncryptClient(params)),
       });
     }
+    Object.freeze(this);
   }
 
   /**
@@ -655,3 +656,5 @@ export function toFhevmAuth(
       throw new ConfigurationError(`Unknown auth type: ${String(type)}`);
   }
 }
+
+Object.freeze(FhevmRelayer.prototype);

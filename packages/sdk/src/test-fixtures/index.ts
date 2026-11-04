@@ -45,6 +45,7 @@ export type { RelayerFixtures } from "./relayer";
 export type { CreateMockRouterOverrides, RouterFixtures } from "./router";
 export { createMockRouter } from "./router";
 export type { CreateSDKFn, SdkFixtures } from "./sdk";
+export { withMembers } from "./sdk";
 export type {
   CreateCredentialServiceFn,
   CreateDecryptionServiceFn,

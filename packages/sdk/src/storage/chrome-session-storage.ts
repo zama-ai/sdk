@@ -35,6 +35,10 @@ declare const chrome: {
  * ```
  */
 export class ChromeSessionStorage implements GenericStorage {
+  constructor() {
+    Object.freeze(this);
+  }
+
   /**
    * Retrieve a value by key.
    * @returns The stored value, or `null` if the key does not exist.
@@ -57,3 +61,5 @@ export class ChromeSessionStorage implements GenericStorage {
 
 /** Default singleton for application-wide use. */
 export const chromeSessionStorage = new ChromeSessionStorage();
+
+Object.freeze(ChromeSessionStorage.prototype);

@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "../../test-fixtures";
+import { describe, expect, test, vi, withMembers } from "../../test-fixtures";
 import { Token } from "../token";
 import { MAX_UINT64 } from "../../contracts/constants";
 import type { Address } from "viem";
@@ -14,10 +14,11 @@ const HANDLE_A = ("0x" + "a1".repeat(32)) as EncryptedValue;
 const HANDLE_B = ("0x" + "b2".repeat(32)) as EncryptedValue;
 
 /**
- * Swap out the SDK's delegated batch decrypt call so these tests can focus on
- * Token batching without priming the full EIP-712 sign flow.
+ * A view of `sdk` whose delegated batch decrypt call is stubbed, so these tests can focus on
+ * Token batching without priming the full EIP-712 sign flow. The SDK is frozen, so the stub
+ * cannot be installed on the instance itself; build tokens from the returned view.
  */
-function stubDelegatedBatchDecrypt(sdk: ZamaSDK, values: Record<EncryptedValue, bigint>) {
+function stubDelegatedBatchDecrypt(sdk: ZamaSDK, values: Record<EncryptedValue, bigint>): ZamaSDK {
   const stub = vi
     .fn()
     .mockImplementation(
@@ -38,11 +39,9 @@ function stubDelegatedBatchDecrypt(sdk: ZamaSDK, values: Record<EncryptedValue, 
         }),
       }),
     );
-  Object.defineProperty(sdk.decryption, "delegatedBatchDecryptValues", {
-    value: stub,
-    configurable: true,
+  return withMembers(sdk, {
+    decryption: withMembers(sdk.decryption, { delegatedBatchDecryptValues: stub }),
   });
-  return stub;
 }
 
 describe("Token.batchDecryptBalancesAs", () => {
@@ -181,8 +180,8 @@ describe("Token.batchDecryptBalancesAs", () => {
       .mockResolvedValueOnce(HANDLE_A)
       .mockResolvedValueOnce(MAX_UINT64);
 
-    const token = new Token(delegateSdk, TOKEN_A);
-    stubDelegatedBatchDecrypt(delegateSdk, {});
+    const stubbedSdk = stubDelegatedBatchDecrypt(delegateSdk, {});
+    const token = new Token(stubbedSdk, TOKEN_A);
     const onError = vi.fn().mockReturnValue(0n);
 
     const balances = await Token.batchDecryptBalancesAs([token], {
@@ -262,8 +261,8 @@ describe("Token.batchDecryptBalancesAs", () => {
       .mockResolvedValueOnce(HANDLE_A)
       .mockResolvedValueOnce(MAX_UINT64);
 
-    const token = new Token(delegateSdk, TOKEN_A);
-    stubDelegatedBatchDecrypt(delegateSdk, { [HANDLE_A]: 42n });
+    const stubbedSdk = stubDelegatedBatchDecrypt(delegateSdk, { [HANDLE_A]: 42n });
+    const token = new Token(stubbedSdk, TOKEN_A);
 
     const balances = await Token.batchDecryptBalancesAs([token], { delegatorAddress: DELEGATOR });
 
@@ -284,8 +283,8 @@ describe("Token.batchDecryptBalancesAs", () => {
       .mockResolvedValueOnce(HANDLE_A)
       .mockResolvedValueOnce(MAX_UINT64);
 
-    const token = new Token(delegateSdk, TOKEN_A);
-    stubDelegatedBatchDecrypt(delegateSdk, {});
+    const stubbedSdk = stubDelegatedBatchDecrypt(delegateSdk, {});
+    const token = new Token(stubbedSdk, TOKEN_A);
 
     const throwingOnError = vi.fn().mockImplementation(() => {
       throw new Error("callback exploded");
@@ -314,8 +313,8 @@ describe("Token.batchDecryptBalancesAs", () => {
       .mockResolvedValueOnce(HANDLE_A)
       .mockResolvedValueOnce(MAX_UINT64);
 
-    const token = new Token(delegateSdk, TOKEN_A);
-    stubDelegatedBatchDecrypt(delegateSdk, { [HANDLE_A]: 99n });
+    const stubbedSdk = stubDelegatedBatchDecrypt(delegateSdk, { [HANDLE_A]: 99n });
+    const token = new Token(stubbedSdk, TOKEN_A);
 
     // Sabotage the storage so any cache write fails — decrypt should still succeed.
     vi.spyOn(storage, "set").mockRejectedValue(new Error("storage full"));

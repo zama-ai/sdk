@@ -930,3 +930,5 @@ export class CredentialService {
     }
   }
 }
+
+Object.freeze(CredentialService.prototype);

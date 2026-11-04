@@ -15,10 +15,11 @@ import { VaultBatcher } from "./vault-batcher";
 export class Vault {
   /** The SDK instance this vault reads and writes through. */
   readonly sdk: ZamaSDK;
-  /** Joined by deposits of the underlying asset. */
-  readonly depositBatcher: VaultBatcher;
-  /** Joined by share redemptions. */
-  readonly redeemBatcher: VaultBatcher;
+
+  // The batchers receive the operator approval and the funds, so they live in
+  // private fields: no code holding the instance can point a vault elsewhere.
+  readonly #depositBatcher: VaultBatcher;
+  readonly #redeemBatcher: VaultBatcher;
 
   // The promise is cached, not just the resolved value, so concurrent callers
   // share one lookup and end up with the same instance.
@@ -31,8 +32,19 @@ export class Vault {
   constructor(sdk: ZamaSDK, addresses: VaultAddresses) {
     this.sdk = sdk;
     this.#expectedVaultAddress = addresses.vault ? getAddress(addresses.vault) : undefined;
-    this.depositBatcher = new VaultBatcher(sdk, addresses.depositBatcher);
-    this.redeemBatcher = new VaultBatcher(sdk, addresses.redeemBatcher);
+    this.#depositBatcher = new VaultBatcher(sdk, addresses.depositBatcher);
+    this.#redeemBatcher = new VaultBatcher(sdk, addresses.redeemBatcher);
+    Object.freeze(this);
+  }
+
+  /** Joined by deposits of the underlying asset. */
+  get depositBatcher(): VaultBatcher {
+    return this.#depositBatcher;
+  }
+
+  /** Joined by share redemptions. */
+  get redeemBatcher(): VaultBatcher {
+    return this.#redeemBatcher;
   }
 
   /**
@@ -167,6 +179,11 @@ export class Vault {
     }
   }
 }
+
+// A dependency that patched `Vault.prototype.deposit` could swap the batcher
+// that receives the operator approval. Freezing the prototype makes such a
+// patch throw at the patcher's line instead of succeeding silently.
+Object.freeze(Vault.prototype);
 
 /**
  * Create a {@link Vault} bound to `sdk` for the deposit/redeem batchers at `addresses`.

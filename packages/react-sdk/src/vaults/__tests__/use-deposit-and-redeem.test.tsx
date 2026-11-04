@@ -1,6 +1,5 @@
 import { act } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
-import { WrappedToken } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, mockJoinBalance, mockJoinReceipt, test, vi } from "../../test-fixtures";
 import { useDeposit } from "../use-deposit";
@@ -26,7 +25,6 @@ describe("useDeposit", () => {
   }) => {
     mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN, vault: VAULT_ADDRESS });
     mockJoinReceipt(provider, { batcher: DEPOSIT_BATCHER, account: userAddress });
-    vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(true);
 
     const { result, queryClient } = renderWithProviders(() => useDeposit({ addresses }));
 
@@ -47,7 +45,6 @@ describe("useDeposit", () => {
   test("forwards onSuccess", async ({ renderWithProviders, provider, userAddress }) => {
     mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN, vault: VAULT_ADDRESS });
     mockJoinReceipt(provider, { batcher: DEPOSIT_BATCHER, account: userAddress });
-    vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(true);
     const onSuccess = vi.fn();
 
     const { result } = renderWithProviders(() => useDeposit({ addresses }, { onSuccess }));
@@ -65,7 +62,6 @@ describe("useRedeem", () => {
   }) => {
     mockJoinBalance(provider, { fromToken: SHARE_TOKEN, vault: VAULT_ADDRESS });
     mockJoinReceipt(provider, { batcher: REDEEM_BATCHER, account: userAddress });
-    vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(true);
 
     const { result, queryClient } = renderWithProviders(() => useRedeem({ addresses }));
 

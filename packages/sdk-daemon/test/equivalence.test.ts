@@ -18,6 +18,7 @@ import {
   RpcRateLimitError,
   type EIP712TypedData,
   type Hex,
+  type ZamaSDK,
 } from "@zama-fhe/sdk";
 import { bytesToHex, hexToBytes } from "viem";
 import { expect, test, vi } from "vitest";
@@ -28,6 +29,7 @@ import {
   TEST_SIGNATURE,
   VALID_ENCRYPTED_VALUE,
 } from "../../sdk/src/test-fixtures/constants.js";
+import { withMembers } from "../../sdk/src/test-fixtures/sdk.js";
 
 import type {
   ClearEntry,
@@ -46,12 +48,18 @@ class LocalSigner extends BaseSigner {
     throw new Error("No transaction expected");
   }
 }
-async function harness(signerEnabled = true, backing = storage(), permitTTL?: number) {
+async function harness(
+  signerEnabled = true,
+  backing = storage(),
+  permitTTL?: number,
+  // SDK instances are frozen; a test that needs to stub an SDK member hands the daemon a view.
+  wrapSdk: (sdk: ZamaSDK) => ZamaSDK = (sdk) => sdk,
+) {
   const fixtures: ReturnType<typeof fixture>[] = [];
   const server = await testServer(async (_, signer) => {
     const value = fixture(signer, backing, permitTTL);
     fixtures.push(value);
-    return { sdk: value.sdk, storageIdentities: ["shared-fixture"] };
+    return { sdk: wrapSdk(value.sdk), storageIdentities: ["shared-fixture"] };
   });
   const { client } = server;
   const created = await createContext(client, {
@@ -585,10 +593,12 @@ test("fatal signer rate limits preserve SDK code and retry delay without batch f
 test.each([undefined, 0, 2])(
   "batch concurrency preserves default, unlimited and finite settings: %s",
   async (maxConcurrency) => {
-    const remote = await harness();
-    const batch = vi
-      .spyOn(remote.fixtures[0]!.sdk.decryption, "delegatedBatchDecryptValues")
-      .mockResolvedValue({ items: [] });
+    const batch = vi.fn().mockResolvedValue({ items: [] });
+    const remote = await harness(true, storage(), undefined, (sdk) =>
+      withMembers(sdk, {
+        decryption: withMembers(sdk.decryption, { delegatedBatchDecryptValues: batch }),
+      }),
+    );
     try {
       await new Promise<void>((resolve, reject) =>
         remote.client.delegatedBatchDecryptValues(
@@ -612,7 +622,6 @@ test.each([undefined, 0, 2])(
           : { maxConcurrency: maxConcurrency === 0 ? Infinity : maxConcurrency }),
       });
     } finally {
-      batch.mockRestore();
       await remote.close();
     }
   },

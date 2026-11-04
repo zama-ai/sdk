@@ -79,6 +79,7 @@ export class EthersSigner extends BaseSigner {
         await this.refreshWalletAccount();
       });
     }
+    Object.freeze(this);
   }
 
   /**
@@ -207,3 +208,5 @@ export class EthersSigner extends BaseSigner {
     return { address: getAddress(accounts[0]), chainId };
   }
 }
+
+Object.freeze(EthersSigner.prototype);

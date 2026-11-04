@@ -1,9 +1,25 @@
+import { ConfigurationError } from "../errors/relayer";
 import type { FheChain } from "./types";
+
+/**
+ * The shipped presets, copied before anything outside this module can see them.
+ * Module-scoped and never exported: no other code in the process can read or
+ * change it, so {@link assertCanonicalChain} keeps working even if a preset
+ * object itself is rewritten later (for example by a dependency that disabled
+ * `Object.freeze` before this module evaluated).
+ */
+const canonical = new Map<number, FheChain>();
+
+/** Freezes a shipped preset and records its private copy. */
+function preset<T extends FheChain>(chain: T): Readonly<T> {
+  canonical.set(chain.id, { ...chain });
+  return Object.freeze(chain);
+}
 
 /**
  * Mainnet network configuration (chainId 1).
  */
-export const mainnet = Object.freeze({
+export const mainnet = preset({
   id: 1,
   gatewayChainId: 261131,
   relayerUrl: "https://relayer.mainnet.zama.org",
@@ -19,7 +35,7 @@ export const mainnet = Object.freeze({
 /**
  * Polygon mainnet network configuration (chainId 137).
  */
-export const polygon = Object.freeze({
+export const polygon = preset({
   id: 137,
   gatewayChainId: 261131,
   relayerUrl: "https://relayer.mainnet.zama.org",
@@ -35,7 +51,7 @@ export const polygon = Object.freeze({
 /**
  * Sepolia testnet network configuration (chainId 11155111).
  */
-export const sepolia = Object.freeze({
+export const sepolia = preset({
   id: 11155111,
   gatewayChainId: 10901,
   relayerUrl: "https://relayer.testnet.zama.org",
@@ -54,7 +70,7 @@ export const sepolia = Object.freeze({
  * Ships without a wrappers registry: set `registryAddress` to your own
  * deployment to use token operations.
  */
-export const polygonAmoy = Object.freeze({
+export const polygonAmoy = preset({
   id: 80002,
   gatewayChainId: 10901,
   relayerUrl: "https://relayer.testnet.zama.org",
@@ -73,7 +89,7 @@ export const polygonAmoy = Object.freeze({
  * Hoodi does not have full FHE infrastructure — use with `cleartext()` transport.
  * Contract addresses match the cleartext deployment.
  */
-export const hoodi = Object.freeze({
+export const hoodi = preset({
   id: 560048,
   gatewayChainId: 10901,
   relayerUrl: "",
@@ -94,7 +110,7 @@ export const hoodi = Object.freeze({
  * finality) — a separate chain from Zenith's shared testnet (chainId 936485).
  * It does not have full FHE infrastructure — use with `cleartext()` transport.
  */
-export const zenithTrexTestnet = Object.freeze({
+export const zenithTrexTestnet = preset({
   id: 936486,
   gatewayChainId: 10901,
   relayerUrl: "",
@@ -114,7 +130,7 @@ export const zenithTrexTestnet = Object.freeze({
  * BSC testnet does not have full FHE infrastructure — use with `cleartext()` transport.
  * Contract addresses match the cleartext deployment.
  */
-export const bscTestnet = Object.freeze({
+export const bscTestnet = preset({
   id: 97,
   gatewayChainId: 10901,
   relayerUrl: "",
@@ -163,3 +179,52 @@ export const chains: Record<number, FheChain> = Object.freeze({
   [bscTestnet.id]: bscTestnet,
   [hardhat.id]: hardhat,
 });
+
+/**
+ * Fields that decide where funds and permits go. `relayerUrl` and `network`
+ * are not pinned: apps proxy the relayer and pick their own RPC.
+ */
+const PINNED_FIELDS = [
+  "gatewayChainId",
+  "aclContractAddress",
+  "kmsContractAddress",
+  "inputVerifierContractAddress",
+  "verifyingContractAddressDecryption",
+  "verifyingContractAddressInputVerification",
+  "registryAddress",
+  "executorAddress",
+] as const;
+
+function samePinnedValue(a: string | number | undefined, b: string | number | undefined): boolean {
+  return typeof a === "string" && typeof b === "string"
+    ? a.toLowerCase() === b.toLowerCase()
+    : a === b;
+}
+
+/**
+ * Throws {@link ConfigurationError} when `chain` has the id of a shipped
+ * preset but different contract addresses or gateway, unless
+ * `allowNonCanonical` is set. Chains without a shipped preset (local
+ * networks, custom deployments) are not checked.
+ *
+ * @internal
+ */
+export function assertCanonicalChain(chain: FheChain, allowNonCanonical: boolean): void {
+  const expected = canonical.get(chain.id);
+  if (expected === undefined || allowNonCanonical) {
+    return;
+  }
+  const mismatches: string[] = [];
+  for (const field of PINNED_FIELDS) {
+    if (!samePinnedValue(chain[field], expected[field])) {
+      mismatches.push(`${field}: ${String(chain[field])} (shipped: ${String(expected[field])})`);
+    }
+  }
+  if (mismatches.length > 0) {
+    throw new ConfigurationError(
+      `Chain ${chain.id} does not match the shipped preset:\n  ${mismatches.join("\n  ")}\n` +
+        `Use the preset from "@zama-fhe/sdk/chains", or set allowNonCanonicalAddresses: true ` +
+        `if these addresses are your own deployment.`,
+    );
+  }
+}

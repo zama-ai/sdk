@@ -203,6 +203,7 @@ export class VaultGroup {
     this.#registry = memoizeAddressRead(async () =>
       getAddress(await sdk.provider.readContract(tokenWrapperRegistryContract(this.router))),
     );
+    Object.freeze(this);
   }
 
   /** Whether the router's registry lists `cAsset`, which a deposit requires. Not cached: a listing can be revoked. */
@@ -541,3 +542,5 @@ export class VaultGroup {
 export function createVaultGroup(sdk: ZamaSDK, config: VaultGroupConfig): VaultGroup {
   return new VaultGroup(sdk, config);
 }
+
+Object.freeze(VaultGroup.prototype);

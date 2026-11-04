@@ -11,7 +11,6 @@ import {
   test,
   vi,
 } from "../../test-fixtures";
-import { Token } from "../../token";
 import { BatchState } from "../types";
 import { createVaultBatcher, VaultBatcher } from "../vault-batcher";
 
@@ -49,7 +48,9 @@ describe("VaultBatcher", () => {
         userAddress,
         options: { operation: "vault-join" },
       });
-      expect(Token.prototype.decryptBalance).toHaveBeenCalledWith(userAddress, "vault-join");
+      expect(relayer.decryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({ options: { operation: "vault-join" } }),
+      );
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "join", args: [userAddress, handle, inputProof] }),
       );
@@ -156,19 +157,19 @@ describe("VaultBatcher", () => {
       provider,
       signer,
     }) => {
-      mockJoinBalance(provider, { fromToken: FROM_TOKEN, balance: 999n });
+      mockJoinBalance(provider, { fromToken: FROM_TOKEN });
       const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
 
-      await expect(batcher.join(1_000n)).rejects.toThrow(InsufficientConfidentialBalanceError);
+      await expect(batcher.join(1_001n)).rejects.toThrow(InsufficientConfidentialBalanceError);
       expect(signer.writeContract).not.toHaveBeenCalled();
     });
 
     test("skips the balance check when asked", async ({ sdk, provider, signer, userAddress }) => {
-      mockJoinBalance(provider, { fromToken: FROM_TOKEN, balance: 999n });
+      mockJoinBalance(provider, { fromToken: FROM_TOKEN });
       mockJoinReceipt(provider, { batcher: BATCHER_ADDRESS, account: userAddress });
       const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
 
-      await batcher.join(1_000n, undefined, { skipBalanceCheck: true });
+      await batcher.join(1_001n, undefined, { skipBalanceCheck: true });
 
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "join" }),

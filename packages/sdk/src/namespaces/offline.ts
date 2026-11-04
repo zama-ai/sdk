@@ -22,6 +22,7 @@ export class Offline {
   constructor(offlineService: OfflineService, credentialService: CredentialService) {
     this.#offlineService = offlineService;
     this.#credentialService = credentialService;
+    Object.freeze(this);
   }
 
   /**
@@ -97,3 +98,5 @@ export class Offline {
     return this.#credentialService.batchPreparePermits(request);
   }
 }
+
+Object.freeze(Offline.prototype);

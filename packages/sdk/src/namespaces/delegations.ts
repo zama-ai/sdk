@@ -30,6 +30,7 @@ export class Delegations {
     this.#signer = opts.signer;
     this.#provider = opts.provider;
     this.#delegationService = opts.delegationService;
+    Object.freeze(this);
   }
 
   #requireSigner(operation: string): GenericSigner {
@@ -170,3 +171,5 @@ export class Delegations {
     return this.#delegationService.getStatus(params);
   }
 }
+
+Object.freeze(Delegations.prototype);

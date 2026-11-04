@@ -163,3 +163,5 @@ export class CachingService {
     }
   }
 }
+
+Object.freeze(CachingService.prototype);

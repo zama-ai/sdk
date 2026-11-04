@@ -29,6 +29,7 @@ export const anvil: Readonly<{
 
 // @public
 export class AsyncLocalMapStorage implements GenericStorage {
+    constructor();
     delete(key: string): Promise<void>;
     get<T = unknown>(key: string): Promise<T | null>;
     run<R>(fn: () => R | Promise<R>): R | Promise<R>;

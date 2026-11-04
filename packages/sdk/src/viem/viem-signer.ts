@@ -58,6 +58,7 @@ export class ViemSigner extends BaseSigner {
     this.#walletClient = config.walletClient;
     this.#ethereum = config.ethereum;
     this.#unsubscribeProvider = this.#subscribeToProvider();
+    Object.freeze(this);
   }
 
   #requireAccount(operation: string): { walletClient: WalletClient; account: Account } {
@@ -105,3 +106,5 @@ export class ViemSigner extends BaseSigner {
     this.#unsubscribeProvider();
   }
 }
+
+Object.freeze(ViemSigner.prototype);

@@ -46,6 +46,14 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   chains: TChains;
   /** Per-chain relayer configuration. Every chain must have a relayer entry. */
   relayers: { [K in TChains[number]["id"]]: RelayerConfig };
+  /**
+   * Accept a chain whose id matches a shipped preset but whose contract
+   * addresses or gateway differ from it. Default: `false`, which throws a
+   * `ConfigurationError` at `createConfig` so that a rewritten preset cannot
+   * redirect shields, permits, or registry lookups. Set to `true` only for
+   * your own deployment of the protocol contracts on that chain.
+   */
+  allowNonCanonicalAddresses?: boolean;
   /** Credential storage. Default: IndexedDB in browser, memory in Node. */
   storage?: GenericStorage;
   /** Optional dedicated storage for permits. Defaults to `storage`. */

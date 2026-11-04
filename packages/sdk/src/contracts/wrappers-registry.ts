@@ -1,6 +1,7 @@
+import { deepFreeze } from "../utils/deep-freeze";
 import type { Address } from "viem";
 
-export const wrappersRegistryAbi = [
+export const wrappersRegistryAbi = deepFreeze([
   {
     inputs: [],
     name: "getTokenConfidentialTokenPairs",
@@ -116,7 +117,7 @@ export const wrappersRegistryAbi = [
     stateMutability: "nonpayable",
     type: "function",
   },
-] as const;
+] as const);
 
 /** A registered plain-token / confidential-token pairing from the wrappers registry. */
 export interface TokenWrapperPair {

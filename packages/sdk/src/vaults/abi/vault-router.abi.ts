@@ -1,3 +1,4 @@
+import { deepFreeze } from "../../utils/deep-freeze";
 /**
  * ABI for the vault batcher router, which fans one submission out across
  * several batchers. Transcribed by hand from `IVaultBatcherConfidentialRouter`
@@ -7,7 +8,7 @@
  * it, not the SDK; the router's custom errors are kept so its reverts decode
  * to a name.
  */
-export const vaultRouterAbi = [
+export const vaultRouterAbi = deepFreeze([
   {
     type: "function",
     name: "join",
@@ -43,4 +44,4 @@ export const vaultRouterAbi = [
     name: "UnlistedConfidentialToken",
     inputs: [{ name: "token", type: "address", internalType: "address" }],
   },
-] as const;
+] as const);

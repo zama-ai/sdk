@@ -470,6 +470,8 @@ describe("WrappedToken", () => {
       userAddress,
       wrappedToken,
       provider,
+      relayer,
+      handle,
     }) => {
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [
@@ -483,11 +485,13 @@ describe("WrappedToken", () => {
           },
         ],
       });
-      const decryptBalance = vi.spyOn(wrappedToken, "decryptBalance").mockResolvedValue(1000n);
+      vi.mocked(provider.readContract).mockResolvedValue(handle);
 
       await wrappedToken.unshield(50n);
 
-      expect(decryptBalance).toHaveBeenCalledWith(userAddress, "unshield");
+      expect(relayer.decryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({ options: { operation: "unshield" } }),
+      );
     });
 
     test("unshieldAll orchestrates unwrapAll → receipt → finalizeUnwrap", async ({

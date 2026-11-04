@@ -58,6 +58,7 @@ export class Decryption {
     this.#provider = opts.provider;
     this.#router = opts.router;
     this.#decryptionService = opts.decryptionService;
+    Object.freeze(this);
   }
 
   #requireDecryptionService(operation: string): DecryptionService {
@@ -264,3 +265,5 @@ export class Decryption {
     });
   }
 }
+
+Object.freeze(Decryption.prototype);

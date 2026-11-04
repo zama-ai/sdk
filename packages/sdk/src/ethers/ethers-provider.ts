@@ -60,6 +60,7 @@ export class EthersProvider implements GenericProvider {
     } else {
       this.#readProvider = config.provider;
     }
+    Object.freeze(this);
   }
 
   /** Return the chain ID of the connected network. */
@@ -212,3 +213,5 @@ export class EthersProvider implements GenericProvider {
     return tx.unsignedSerialized as Hex;
   }
 }
+
+Object.freeze(EthersProvider.prototype);

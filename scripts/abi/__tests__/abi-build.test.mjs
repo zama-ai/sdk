@@ -8,9 +8,9 @@ import { buildAbiSource, headerFor, loadAbi, repoRoot, targets } from "../build.
 // Function-constructor is acceptable here because input comes from files under
 // this repository's source control.
 function parseAbiSource(source) {
-  const match = source.match(/export const (\w+) = ([\s\S]+) as const;\s*$/u);
+  const match = source.match(/export const (\w+) = deepFreeze\(([\s\S]+) as const\);\s*$/u);
   if (!match) {
-    throw new Error("Could not locate `export const ... = ... as const;` in source");
+    throw new Error("Could not locate `export const ... = deepFreeze(... as const);` in source");
   }
   // oxlint-disable-next-line typescript/no-implied-eval
   const abi = new Function(`return ${match[2]}`)();
@@ -35,11 +35,12 @@ describe("abi:build helpers", () => {
     }
   });
 
-  test("buildAbiSource wraps the ABI as `export const X = [...] as const;`", () => {
+  test("buildAbiSource wraps the ABI as `export const X = deepFreeze([...] as const);`", () => {
     const artifactPath = "contracts/out/Foo.sol/Foo.json";
     const out = buildAbiSource("fooAbi", [], artifactPath);
     expect(out.startsWith(headerFor(artifactPath))).toBe(true);
-    expect(out).toContain("export const fooAbi = [] as const;");
+    expect(out).toContain('import { deepFreeze } from "../utils/deep-freeze";');
+    expect(out).toContain("export const fooAbi = deepFreeze([] as const);");
     expect(out.endsWith("\n")).toBe(true);
   });
 

@@ -92,6 +92,7 @@ export class Token {
   constructor(sdk: ZamaSDK, address: Address) {
     this.sdk = sdk;
     this.address = getAddress(address);
+    Object.freeze(this);
   }
 
   /** Resolve `sdk.signer` or throw {@link SignerNotConfiguredError} tagged with `operation`. */
@@ -950,3 +951,5 @@ export class Token {
     return sdk;
   }
 }
+
+Object.freeze(Token.prototype);

@@ -1,6 +1,5 @@
 import type { Address } from "viem";
 import { ConfigurationError, SignerNotConfiguredError } from "../../errors";
-import { Token, WrappedToken } from "../../token";
 import {
   beforeEach,
   describe,
@@ -10,7 +9,9 @@ import {
   test,
   vi,
 } from "../../test-fixtures";
+import { WrappedToken } from "../../token";
 import { createVault, Vault } from "../vault";
+import { VaultBatcher } from "../vault-batcher";
 
 const VAULT_ADDRESS = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const DEPOSIT_BATCHER = "0x7777777777777777777777777777777777777777" as Address;
@@ -126,18 +127,26 @@ describe("Vault", () => {
       handle,
       inputProof,
     }) => {
-      mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN, vault: VAULT_ADDRESS });
+      mockJoinBalance(provider, {
+        fromToken: DEPOSIT_TOKEN,
+        vault: VAULT_ADDRESS,
+        operator: false,
+      });
       mockJoinReceipt(provider, { batcher: DEPOSIT_BATCHER, account: userAddress });
-      vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(false);
-      const setOperator = vi
-        .spyOn(WrappedToken.prototype, "setOperator")
-        .mockResolvedValue({ txHash: "0xoptxhash", receipt: { logs: [] } });
 
       const vault = createVault(sdk, addresses());
       const result = await vault.deposit(1_000n);
 
-      expect(setOperator).toHaveBeenCalledWith(DEPOSIT_BATCHER, undefined);
-      expect(Token.prototype.decryptBalance).toHaveBeenCalledWith(userAddress, "vault-deposit");
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          address: DEPOSIT_TOKEN,
+          functionName: "setOperator",
+          args: [DEPOSIT_BATCHER, expect.any(Number)],
+        }),
+      );
+      expect(relayer.decryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({ options: { operation: "vault-deposit" } }),
+      );
       expect(relayer.encryptValues).toHaveBeenCalledWith(
         expect.objectContaining({
           values: [{ value: 1_000n, type: "euint64" }],
@@ -159,17 +168,18 @@ describe("Vault", () => {
     test("skips the operator grant when one is already active", async ({
       sdk,
       provider,
+      signer,
       userAddress,
     }) => {
       mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN, vault: VAULT_ADDRESS });
       mockJoinReceipt(provider, { batcher: DEPOSIT_BATCHER, account: userAddress });
-      vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(true);
-      const setOperator = vi.spyOn(WrappedToken.prototype, "setOperator");
 
       const vault = createVault(sdk, addresses());
       await vault.deposit(1_000n);
 
-      expect(setOperator).not.toHaveBeenCalled();
+      expect(signer.writeContract).not.toHaveBeenCalledWith(
+        expect.objectContaining({ functionName: "setOperator" }),
+      );
     });
 
     test("rejects a misconfigured batcher pair before granting any approval", async ({
@@ -178,14 +188,15 @@ describe("Vault", () => {
       signer,
     }) => {
       // Batchers agree on `fromToken` but report a vault other than the configured one.
-      mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN, vault: OTHER_ADDRESS });
-      vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(false);
-      const setOperator = vi.spyOn(WrappedToken.prototype, "setOperator");
+      mockJoinBalance(provider, {
+        fromToken: DEPOSIT_TOKEN,
+        vault: OTHER_ADDRESS,
+        operator: false,
+      });
 
       const vault = createVault(sdk, addresses());
 
       await expect(vault.deposit(1_000n)).rejects.toThrow(ConfigurationError);
-      expect(setOperator).not.toHaveBeenCalled();
       expect(signer.writeContract).not.toHaveBeenCalled();
     });
 
@@ -209,7 +220,6 @@ describe("Vault", () => {
     }) => {
       mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN, vault: VAULT_ADDRESS });
       mockJoinReceipt(provider, { batcher: DEPOSIT_BATCHER, account: OTHER_ADDRESS });
-      vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(true);
 
       const vault = createVault(sdk, addresses());
       await vault.deposit(1_000n, { beneficiary: OTHER_ADDRESS });
@@ -229,12 +239,13 @@ describe("Vault", () => {
   }) => {
     mockJoinBalance(provider, { fromToken: SHARE_TOKEN, vault: VAULT_ADDRESS });
     mockJoinReceipt(provider, { batcher: REDEEM_BATCHER, account: userAddress });
-    vi.spyOn(WrappedToken.prototype, "isOperator").mockResolvedValue(true);
 
     const vault = createVault(sdk, addresses());
     await vault.redeem(500n);
 
-    expect(Token.prototype.decryptBalance).toHaveBeenCalledWith(userAddress, "vault-redeem");
+    expect(relayer.decryptValues).toHaveBeenCalledWith(
+      expect.objectContaining({ options: { operation: "vault-redeem" } }),
+    );
 
     expect(relayer.encryptValues).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -245,5 +256,33 @@ describe("Vault", () => {
     expect(signer.writeContract).toHaveBeenCalledWith(
       expect.objectContaining({ address: REDEEM_BATCHER, functionName: "join" }),
     );
+  });
+});
+
+describe("Vault integrity", () => {
+  test("the batchers and their addresses cannot be reassigned", ({ sdk }) => {
+    const vault = createVault(sdk, addresses());
+    const other = new VaultBatcher(sdk, OTHER_ADDRESS);
+
+    expect(() => {
+      (vault as { depositBatcher: VaultBatcher }).depositBatcher = other;
+    }).toThrow(TypeError);
+    expect(() => {
+      (vault as { redeemBatcher: VaultBatcher }).redeemBatcher = other;
+    }).toThrow(TypeError);
+    expect(() => {
+      (vault.depositBatcher as { address: Address }).address = OTHER_ADDRESS;
+    }).toThrow(TypeError);
+
+    expect(vault.depositBatcher.address).toBe(DEPOSIT_BATCHER);
+    expect(vault.redeemBatcher.address).toBe(REDEEM_BATCHER);
+  });
+
+  test("the prototypes are frozen, so a method patch throws", () => {
+    expect(Object.isFrozen(Vault.prototype)).toBe(true);
+    expect(Object.isFrozen(VaultBatcher.prototype)).toBe(true);
+    expect(() => {
+      (Vault.prototype as { deposit: unknown }).deposit = () => undefined;
+    }).toThrow(TypeError);
   });
 });

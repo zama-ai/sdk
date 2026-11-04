@@ -86,3 +86,35 @@ export const sdkFixtures: FixturesOf<SdkFixtures, SdkDeps> = {
   },
   events: ZamaSDKEvents,
 };
+
+/**
+ * SDK instances, tokens and namespaces are frozen, so `vi.spyOn(sdk.permits, …)`
+ * cannot install a spy on them. This returns a view that inherits from `target`
+ * with the given members replaced. Every other prototype member is re-bound to
+ * `target`, so getters and methods that reach into private fields keep working
+ * when called through the view.
+ */
+export function withMembers<T extends object>(target: T, members: Partial<T>): T {
+  const descriptors: PropertyDescriptorMap = {};
+  for (
+    let proto: object | null = Object.getPrototypeOf(target);
+    proto !== null && proto !== Object.prototype;
+    proto = Object.getPrototypeOf(proto)
+  ) {
+    for (const [key, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(proto))) {
+      if (key === "constructor" || key in descriptors || key in members) {
+        continue;
+      }
+      if (descriptor.get !== undefined) {
+        descriptors[key] = { get: () => Reflect.get(target, key), configurable: true };
+      } else if (typeof descriptor.value === "function") {
+        const method = descriptor.value as (...args: unknown[]) => unknown;
+        descriptors[key] = { value: method.bind(target), configurable: true };
+      }
+    }
+  }
+  for (const [key, value] of Object.entries(members)) {
+    descriptors[key] = { value, enumerable: true, configurable: true };
+  }
+  return Object.create(target, descriptors) as T;
+}

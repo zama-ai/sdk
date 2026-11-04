@@ -534,8 +534,9 @@ describe("Token", () => {
 
     test("wraps a non-ZamaError from the balance read as BALANCE_CHECK_UNAVAILABLE", async ({
       token,
+      provider,
     }) => {
-      vi.spyOn(token, "decryptBalance").mockRejectedValueOnce(new Error("unexpected crash"));
+      vi.mocked(provider.readContract).mockRejectedValueOnce(new Error("unexpected crash"));
 
       await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
         code: ZamaErrorCode.BalanceCheckUnavailable,

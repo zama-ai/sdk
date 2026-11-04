@@ -239,6 +239,7 @@ export class ZamaSDK {
       decryptionService: this.#decryptionService,
     });
     this.offline = new Offline(this.#offlineService, this.#credentialService);
+    Object.freeze(this);
   }
 
   /**
@@ -414,3 +415,5 @@ export class ZamaSDK {
     this.terminate();
   }
 }
+
+Object.freeze(ZamaSDK.prototype);

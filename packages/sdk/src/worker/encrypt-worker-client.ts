@@ -666,3 +666,5 @@ export class EncryptWorkerClient implements EncryptOffloadBackend {
     );
   }
 }
+
+Object.freeze(EncryptWorkerClient.prototype);

@@ -11,7 +11,7 @@ import { createConfig } from "../config/create";
 import { KeyWrappingError } from "../errors";
 import type { ZamaSDKEvent, ZamaSDKEventListener } from "../events/sdk-events";
 import type { EncryptedValue } from "../relayer/types";
-import { MemoryStorage } from "../storage/memory-storage";
+import { createMockStorage } from "../test-fixtures/storage";
 import type { WalletAccount, WalletAccountChange } from "../types";
 import { ZamaSDK } from "../zama-sdk";
 
@@ -106,7 +106,7 @@ describe("ZamaSDK credentials lifecycle", () => {
       // Shared storage and relayer so every reconstruction finds the same FHE
       // keypair (keyed by signer address, chain-independent) — chain isolation
       // must come from permit scoping, not from a missing keypair.
-      const storage = new MemoryStorage();
+      const storage = createMockStorage();
       const relayer = createMockRelayer();
       const address = createMockSigner().walletAccount.getSnapshot()!.address;
 
@@ -319,7 +319,7 @@ describe("ZamaSDK credentials lifecycle", () => {
       createMockRouter,
       createSDK,
     }) => {
-      const storage = new MemoryStorage();
+      const storage = createMockStorage();
 
       const signerA = createMockSigner();
       const providerA = createMockProvider();
@@ -375,7 +375,7 @@ describe("ZamaSDK credentials lifecycle", () => {
       signer,
     }) => {
       // Real createConfig plus the real constructor option, so plumbing breaks are caught.
-      const storage = new MemoryStorage();
+      const storage = createMockStorage();
       const setSpy = vi.spyOn(storage, "set");
       const config = createConfig({
         chains: [chain],
@@ -392,7 +392,8 @@ describe("ZamaSDK credentials lifecycle", () => {
       await sdk.permits.grantPermit([CONTRACT_A]);
 
       const keypairWrite = setSpy.mock.calls.find(
-        ([, value]) => !Array.isArray(value) && typeof value === "object" && value !== null,
+        ([, value]: [string, unknown]) =>
+          !Array.isArray(value) && typeof value === "object" && value !== null,
       );
       expect(keypairWrite).toBeDefined();
       const keypair = keypairWrite![1] as Record<string, unknown>;
@@ -406,7 +407,7 @@ describe("ZamaSDK credentials lifecycle", () => {
       provider,
       signer,
     }) => {
-      const storage = new MemoryStorage();
+      const storage = createMockStorage();
       const callerSecret = new Uint8Array(32).fill(7);
       const makeConfig = () =>
         createConfig({
@@ -438,7 +439,7 @@ describe("ZamaSDK credentials lifecycle", () => {
       // Credential resolution happens before the emit-wrapped section of every operation
       // that calls it, so a failure here must never surface as, or be folded into, an
       // event payload: not the secret, and not the resolved config it was read from.
-      const storage = new MemoryStorage();
+      const storage = createMockStorage();
       const scope = "tenant-events";
       const writerConfig = createConfig({
         chains: [chain],

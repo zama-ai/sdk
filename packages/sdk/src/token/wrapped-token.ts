@@ -814,3 +814,5 @@ export class WrappedToken extends Token {
     });
   }
 }
+
+Object.freeze(WrappedToken.prototype);

@@ -46,28 +46,34 @@ describe("ZamaSDK", () => {
     expect(w2.address).toBe("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB");
   });
 
-  test("terminate disposes the SDK and signer", ({ createMockSigner, createSDK }) => {
+  test("terminate disposes the SDK and signer", ({
+    createMockSigner,
+    createSDK,
+    createMockRouter,
+  }) => {
     const dispose = vi.fn();
-    const sdk = createSDK({ signer: { ...createMockSigner(), dispose } });
-    const sdkDispose = vi.spyOn(sdk, "dispose");
+    const routerDispose = vi.fn();
+    const router = createMockRouter({ dispose: routerDispose });
+    const sdk = createSDK({ signer: { ...createMockSigner(), dispose }, router });
 
     sdk.terminate();
 
-    expect(sdkDispose).toHaveBeenCalledOnce();
+    expect(routerDispose).toHaveBeenCalledOnce();
     expect(dispose).toHaveBeenCalledOnce();
   });
 
-  test("[Symbol.dispose] delegates to terminate", ({ sdk }) => {
-    const terminate = vi.spyOn(sdk, "terminate");
+  test("[Symbol.dispose] delegates to terminate", ({ createMockSigner, createSDK }) => {
+    const dispose = vi.fn();
+    const sdk = createSDK({ signer: { ...createMockSigner(), dispose } });
 
     sdk[Symbol.dispose]();
 
-    expect(terminate).toHaveBeenCalledOnce();
+    expect(dispose).toHaveBeenCalledOnce();
   });
 
   test("dispose releases the relayer backends", ({ createSDK, createMockRouter }) => {
-    const router = createMockRouter();
-    const routerDispose = vi.spyOn(router, "dispose");
+    const routerDispose = vi.fn();
+    const router = createMockRouter({ dispose: routerDispose });
     const sdk = createSDK({ router });
 
     sdk.dispose();

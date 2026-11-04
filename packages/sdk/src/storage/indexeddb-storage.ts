@@ -20,6 +20,7 @@ export class IndexedDBStorage implements GenericStorage {
     this.#dbName = dbName;
     this.#dbVersion = dbVersion;
     this.#storeName = storeName;
+    Object.freeze(this);
   }
 
   #getDB(): Promise<IDBDatabase> {
@@ -114,3 +115,5 @@ export class IndexedDBStorage implements GenericStorage {
 
 /** Default singleton for application-wide use. */
 export const indexedDBStorage = new IndexedDBStorage();
+
+Object.freeze(IndexedDBStorage.prototype);

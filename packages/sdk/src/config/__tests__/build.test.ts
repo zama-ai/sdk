@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { hardhat } from "../../chains";
+import { type FheChain, hardhat, mainnet } from "../../chains";
+import { ConfigurationError } from "../../errors";
 import type { FhevmRuntimeConfig } from "../../relayer/types";
 import type { RelayerConfig, ZamaConfigBase } from "../types";
 
@@ -129,5 +130,44 @@ describe("buildZamaConfig telemetry", () => {
     });
 
     expect(config.telemetry?.mode).toBe(mode);
+  });
+});
+
+describe("buildZamaConfig chain integrity", () => {
+  const FAKE = "0x000000000000000000000000000000000000dEaD";
+
+  test("works from its own frozen copy of each chain", () => {
+    const mine: FheChain = { ...hardhat };
+    const config = buildZamaConfig(undefined, {} as never, {
+      chains: [mine],
+      relayers: { [hardhat.id]: relayerConfig },
+    });
+
+    (mine as { registryAddress?: string }).registryAddress = FAKE;
+
+    expect(config.chains[0]).not.toBe(mine);
+    expect(config.chains[0]?.registryAddress).toBe(hardhat.registryAddress);
+    expect(Object.isFrozen(config.chains)).toBe(true);
+    expect(Object.isFrozen(config.chains[0])).toBe(true);
+    expect(config.router.chain).toBe(config.chains[0]);
+  });
+
+  test("rejects a shipped preset whose addresses were rewritten", () => {
+    expect(() =>
+      buildZamaConfig(undefined, {} as never, {
+        chains: [{ ...mainnet, registryAddress: FAKE }],
+        relayers: { [mainnet.id]: relayerConfig },
+      }),
+    ).toThrow(ConfigurationError);
+  });
+
+  test("accepts it with allowNonCanonicalAddresses", () => {
+    const config = buildZamaConfig(undefined, {} as never, {
+      chains: [{ ...mainnet, registryAddress: FAKE }],
+      relayers: { [mainnet.id]: relayerConfig },
+      allowNonCanonicalAddresses: true,
+    });
+
+    expect(config.chains[0]?.registryAddress).toBe(FAKE);
   });
 });

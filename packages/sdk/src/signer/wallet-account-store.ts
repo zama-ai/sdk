@@ -28,6 +28,7 @@ export class MutableWalletAccountStore implements WalletAccountStore {
   constructor(initial?: WalletAccount) {
     this.#snapshot = initial;
     this.#resolved = initial !== undefined;
+    Object.freeze(this);
   }
 
   /** Return the current wallet account snapshot, or `undefined` when none is set. */
@@ -92,3 +93,5 @@ export class MutableWalletAccountStore implements WalletAccountStore {
 export function createWalletAccountStore(initial?: WalletAccount): MutableWalletAccountStore {
   return new MutableWalletAccountStore(initial);
 }
+
+Object.freeze(MutableWalletAccountStore.prototype);

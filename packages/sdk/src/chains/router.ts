@@ -42,6 +42,7 @@ export class ChainRouter {
       relayers.set(chainId, relayerConfig.createRelayer(chain, logger, telemetry));
     }
     this.#relayers = relayers;
+    Object.freeze(this);
   }
 
   get chains(): readonly FheChain[] {
@@ -92,3 +93,5 @@ export class ChainRouter {
     return relayer;
   }
 }
+
+Object.freeze(ChainRouter.prototype);

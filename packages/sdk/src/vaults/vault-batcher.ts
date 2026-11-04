@@ -57,8 +57,9 @@ import { BatchState, type JoinOptions, type JoinResult } from "./types";
 export class VaultBatcher {
   /** The SDK instance this batcher reads and writes through. */
   readonly sdk: ZamaSDK;
-  /** Checksummed address of the batcher contract. */
-  readonly address: Address;
+  // The address every join, approval and claim targets; private so that no
+  // code holding the instance can repoint the batcher.
+  readonly #address: Address;
 
   readonly #vault: () => Promise<Address>;
   readonly #fromToken: () => Promise<Address>;
@@ -69,7 +70,7 @@ export class VaultBatcher {
 
   constructor(sdk: ZamaSDK, address: Address) {
     this.sdk = sdk;
-    this.address = getAddress(address);
+    this.#address = getAddress(address);
     this.#vault = memoizeAddressRead(() => sdk.provider.readContract(vaultContract(this.address)));
     this.#fromToken = memoizeAddressRead(() =>
       sdk.provider.readContract(fromTokenContract(this.address)),
@@ -77,6 +78,12 @@ export class VaultBatcher {
     this.#toToken = memoizeAddressRead(() =>
       sdk.provider.readContract(toTokenContract(this.address)),
     );
+    Object.freeze(this);
+  }
+
+  /** Checksummed address of the batcher contract. */
+  get address(): Address {
+    return this.#address;
   }
 
   // READS
@@ -443,3 +450,6 @@ export class VaultBatcher {
 export function createVaultBatcher(sdk: ZamaSDK, address: Address): VaultBatcher {
   return new VaultBatcher(sdk, address);
 }
+
+// See Vault: a patched prototype must fail at the patcher's line.
+Object.freeze(VaultBatcher.prototype);

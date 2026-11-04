@@ -360,3 +360,5 @@ export class OfflineService {
     );
   }
 }
+
+Object.freeze(OfflineService.prototype);

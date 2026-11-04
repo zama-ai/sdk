@@ -47,3 +47,5 @@ export class EncryptionService {
     }
   }
 }
+
+Object.freeze(EncryptionService.prototype);

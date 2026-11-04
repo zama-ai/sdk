@@ -66,3 +66,5 @@ export abstract class BaseSigner implements GenericSigner, Disposable {
   /** Subclass cleanup hook, invoked once on the first {@link BaseSigner.dispose} call. */
   protected onDispose(): void {}
 }
+
+Object.freeze(BaseSigner.prototype);

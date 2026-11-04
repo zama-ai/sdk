@@ -1,9 +1,8 @@
 import { keccak256, pad, toBytes, type Address, type Hex } from "viem";
 import { vi } from "vitest";
 import type { EncryptedValue, RelayerSDK } from "../relayer/types";
-import { Token } from "../token";
 import type { GenericProvider } from "../types";
-import { VALID_INPUT_PROOF } from "./constants";
+import { VALID_ENCRYPTED_VALUE, VALID_INPUT_PROOF } from "./constants";
 import type { RawLog } from "../types/transaction";
 
 const JOINED_TOPIC = keccak256(toBytes("Joined(uint256,address,bytes32)"));
@@ -37,17 +36,27 @@ export function mockJoinReceipt(
 }
 
 /**
- * A join pre-flights the caller's balance on `fromToken` and throws without this.
- * Pass `vault` when joining through a `Vault`, which also checks both batchers report it.
+ * Answers the contract reads a join makes: both batchers report `fromToken`
+ * (and `vault`, when joining through a `Vault`), the balance handle on
+ * `fromToken` is a valid ciphertext (the relayer fixture decrypts it to 1000),
+ * and `isOperator` answers `operator` (default `true`, so no grant is needed).
  */
 export function mockJoinBalance(
   provider: GenericProvider,
-  params: { fromToken: Address; vault?: Address; balance?: bigint },
+  params: { fromToken: Address; vault?: Address; operator?: boolean },
 ): void {
-  vi.mocked(provider.readContract).mockImplementation(async (config) =>
-    config.functionName === "vault" && params.vault ? params.vault : params.fromToken,
-  );
-  vi.spyOn(Token.prototype, "decryptBalance").mockResolvedValue(params.balance ?? 1_000_000_000n);
+  vi.mocked(provider.readContract).mockImplementation(async (config) => {
+    switch (config.functionName) {
+      case "vault":
+        return params.vault ?? params.fromToken;
+      case "isOperator":
+        return params.operator ?? true;
+      case "confidentialBalanceOf":
+        return VALID_ENCRYPTED_VALUE;
+      default:
+        return params.fromToken;
+    }
+  });
 }
 
 /** `count` distinct handles under one proof, in leg order; each encrypt receives as many as it asks for. */

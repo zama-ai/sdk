@@ -5,6 +5,7 @@ import { node } from "@zama-fhe/sdk/node";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { createPublicClient, createWalletClient, custom, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { sepolia as viemSepolia } from "viem/chains";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 const OWNER_PRIVATE_KEY = process.env.SEPOLIA_OWNER_PRIVATE_KEY;
@@ -35,7 +36,8 @@ function setupWallets(ownerPrivateKey: Hex, operatorPrivateKey: Hex) {
       createConfig({
         chains: [sepolia],
         publicClient,
-        walletClient: createWalletClient({ account, transport }),
+        // The signer reads the wallet account's chain id from the client's `chain`.
+        walletClient: createWalletClient({ account, chain: viemSepolia, transport }),
         storage: new MemoryStorage(),
         relayers: { [sepolia.id]: node() },
       }),

@@ -44,6 +44,7 @@ export class ViemProvider implements GenericProvider {
 
   constructor(config: ViemProviderConfig) {
     this.#publicClient = config.publicClient;
+    Object.freeze(this);
   }
 
   /** Return the chain ID of the connected network. */
@@ -134,3 +135,5 @@ export class ViemProvider implements GenericProvider {
     });
   }
 }
+
+Object.freeze(ViemProvider.prototype);

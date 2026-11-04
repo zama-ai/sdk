@@ -23,6 +23,10 @@ import type { GenericStorage } from "../types";
 export class AsyncLocalMapStorage implements GenericStorage {
   readonly #als = new AsyncLocalStorage<Map<string, unknown>>();
 
+  constructor() {
+    Object.freeze(this);
+  }
+
   /** Execute `fn` within an isolated storage context. */
   run<R>(fn: () => R | Promise<R>): R | Promise<R> {
     return this.#als.run(new Map(), fn);
@@ -49,3 +53,5 @@ export class AsyncLocalMapStorage implements GenericStorage {
 
 /** Default singleton for application-wide use. */
 export const asyncLocalStorage = new AsyncLocalMapStorage();
+
+Object.freeze(AsyncLocalMapStorage.prototype);

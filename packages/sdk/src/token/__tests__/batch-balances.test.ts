@@ -6,7 +6,8 @@ import {
   type ZamaError,
 } from "../../errors";
 import type { EncryptedValue } from "../../relayer/types";
-import { describe, expect, test, vi } from "../../test-fixtures";
+import { describe, expect, test, vi, type Mock } from "../../test-fixtures";
+import type { TelemetryOperation } from "../../telemetry";
 import { Token } from "../token";
 import type { ZamaSDK } from "../../zama-sdk";
 import type { TypedValue } from "@fhevm/sdk/types";
@@ -26,8 +27,30 @@ function handleAt(index: number): EncryptedValue {
   return `0x${byte.repeat(32)}` as EncryptedValue;
 }
 
+type BalanceRead = Mock<(owner: Address, operation: TelemetryOperation) => Promise<bigint>>;
+const balanceReads = new WeakMap<Token, BalanceRead>();
+
+/**
+ * Token instances are frozen, so a stubbed balance read lives on a subclass, not on the
+ * instance. Tokens without a stub read through the real path (provider + relayer mocks).
+ */
+class StubbedToken extends Token {
+  override decryptBalance(owner: Address, operation: TelemetryOperation): Promise<bigint> {
+    return balanceReads.get(this)?.(owner, operation) ?? super.decryptBalance(owner, operation);
+  }
+}
+
+/** The stub installed by {@link stubBalances}, for call assertions. */
+function balanceRead(token: Token): BalanceRead {
+  const read = balanceReads.get(token);
+  if (read === undefined) {
+    throw new Error("token has no stubbed balance read");
+  }
+  return read;
+}
+
 function makeTokens(sdk: ZamaSDK, count = TOKEN_COUNT): Token[] {
-  return Array.from({ length: count }, (_, i) => new Token(sdk, tokenAddressAt(i)));
+  return Array.from({ length: count }, (_, i) => new StubbedToken(sdk, tokenAddressAt(i)));
 }
 
 /** Stubs every token's balance read, recording which tokens were called before the batch stopped. */
@@ -37,10 +60,13 @@ function stubBalances(
 ): { attempts: number[] } {
   const attempts: number[] = [];
   for (const [index, token] of tokens.entries()) {
-    vi.spyOn(token, "decryptBalance").mockImplementation(async () => {
-      attempts.push(index);
-      return outcome(index);
-    });
+    balanceReads.set(
+      token,
+      vi.fn(async () => {
+        attempts.push(index);
+        return outcome(index);
+      }),
+    );
   }
   return { attempts };
 }
@@ -110,7 +136,7 @@ describe("Token.batchBalancesOf", () => {
     expect(attempts.length).toBe(TOKEN_COUNT);
     expect(results.size).toBe(TOKEN_COUNT - 1);
     expect(errors.get(tokens[0]!.address)).toBe(perTokenError);
-    expect(tokens[1]!.decryptBalance).toHaveBeenCalledWith(OWNER, "batch-balances-of");
+    expect(balanceRead(tokens[1]!)).toHaveBeenCalledWith(OWNER, "batch-balances-of");
   });
 
   test("wraps a non-ZamaError per-token failure as DecryptionFailedError", async ({ sdk }) => {

@@ -49,6 +49,7 @@ export class WagmiSigner extends BaseSigner {
         this.walletAccount.setSnapshot(walletAccountFromConnection(connection));
       },
     });
+    Object.freeze(this);
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
@@ -67,3 +68,4 @@ export class WagmiSigner extends BaseSigner {
     this.#unsubscribeConnection();
   }
 }
+Object.freeze(WagmiSigner.prototype);

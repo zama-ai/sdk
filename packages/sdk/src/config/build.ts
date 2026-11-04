@@ -1,4 +1,6 @@
 import { hasFhevmRuntimeConfig, setFhevmRuntimeConfig } from "@fhevm/sdk/viem";
+import type { AtLeastOneChain } from "../chains";
+import { assertCanonicalChain } from "../chains/configs";
 import { ChainRouter } from "../chains/router";
 import {
   DEFAULT_PERMIT_DURATION_DAYS,
@@ -62,10 +64,22 @@ export function buildZamaConfig(
   const mode = parseTelemetryMode(params.telemetry) ?? "header";
   const telemetry: TelemetryState | undefined =
     mode === "off" ? undefined : { layer: "core", mode };
-  const router = new ChainRouter(params.chains, params.relayers, logger, telemetry);
+
+  // The SDK works from its own frozen copy of each chain, taken after the
+  // canonical check, so a later write to the caller's object (or to a preset)
+  // cannot change the addresses the SDK reads.
+  const allowNonCanonical = params.allowNonCanonicalAddresses === true;
+  const chains = params.chains.map((chain) => {
+    assertCanonicalChain(chain, allowNonCanonical);
+    return Object.freeze({
+      ...chain,
+      ...(chain.auth && { auth: Object.freeze({ ...chain.auth }) }),
+    });
+  }) as unknown as AtLeastOneChain;
+  const router = new ChainRouter(chains, params.relayers, logger, telemetry);
 
   return {
-    chains: params.chains,
+    chains: Object.freeze(chains),
     router,
     provider,
     signer,

@@ -3,10 +3,18 @@ import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { inspect } from "node:util";
-import { anvil, createConfig, MemoryStorage, ZamaSDK, type ZamaSDKOptions } from "@zama-fhe/sdk";
+import {
+  anvil,
+  createConfig,
+  type GenericStorage,
+  MemoryStorage,
+  ZamaSDK,
+  type ZamaSDKOptions,
+} from "@zama-fhe/sdk";
 import { expect, test, vi } from "vitest";
 import { createMockProvider } from "../../sdk/src/test-fixtures/provider.js";
 import { createMockRelayer } from "../../sdk/src/test-fixtures/relayer.js";
+import { createMockStorage } from "../../sdk/src/test-fixtures/storage.js";
 import {
   TEST_PRIVATE_KEY,
   TEST_SIGNATURE,
@@ -43,7 +51,7 @@ function signer() {
   return result;
 }
 function direct(
-  backing: MemoryStorage,
+  backing: GenericStorage,
   wallet: RemoteSigner,
   options: ZamaSDKOptions,
   scope?: string,
@@ -138,8 +146,8 @@ test.each([undefined, "partner"])(
   "protected credentials survive persistent restart with SDK scope %s",
   async (scope) => {
     const directory = await mkdtemp(join(tmpdir(), "sdk-362-protection-"));
-    const directStorage = new MemoryStorage();
-    const writes = vi.spyOn(directStorage, "set");
+    const directStorage = createMockStorage();
+    const writes = vi.mocked(directStorage.set);
     const directSigner = signer();
     const daemonSigner = signer();
     const logs = ["log", "warn", "error", "debug"].map((level) =>

@@ -373,3 +373,5 @@ export class DelegationService {
     );
   }
 }
+
+Object.freeze(DelegationService.prototype);

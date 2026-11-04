@@ -1,9 +1,10 @@
+import { deepFreeze } from "../../utils/deep-freeze";
 /**
  * ABI for the deposit and redeem vault batchers, which share one interface.
  * Owner-only writes and the relayer-driven `dispatchBatchCallback` are omitted;
  * every custom error is kept so reverts decode to a name.
  */
-export const vaultBatcherAbi = [
+export const vaultBatcherAbi = deepFreeze([
   {
     type: "function",
     name: "batchCallbackDeadline",
@@ -354,4 +355,4 @@ export const vaultBatcherAbi = [
       { name: "account", type: "address", internalType: "address" },
     ],
   },
-] as const;
+] as const);

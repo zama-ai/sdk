@@ -24,6 +24,8 @@ export interface CreateMockRouterOverrides {
    * observe ordering or inject side effects — you then own the active-chain state.
    */
   switchChain?: ChainRouter["switchChain"];
+  /** Custom `dispose`. Defaults to a `vi.fn`; the instance is frozen, so it cannot be spied on later. */
+  dispose?: ChainRouter["dispose"];
 }
 
 /**
@@ -39,6 +41,7 @@ class MockChainRouter extends ChainRouter {
   readonly #backends: Map<number, RelayerSDK>;
   readonly #backendFor: (id: number) => RelayerSDK;
   readonly #switchChainImpl: ChainRouter["switchChain"];
+  readonly #disposeImpl: ChainRouter["dispose"];
   #activeChainId: number;
 
   constructor(overrides: CreateMockRouterOverrides) {
@@ -68,6 +71,7 @@ class MockChainRouter extends ChainRouter {
       vi.fn((id: number) => {
         this.#activeChainId = id;
       });
+    this.#disposeImpl = overrides.dispose ?? vi.fn();
   }
 
   override get chains(): readonly FheChain[] {
@@ -89,6 +93,10 @@ class MockChainRouter extends ChainRouter {
 
   override switchChain(chainId: number): void {
     this.#switchChainImpl(chainId);
+  }
+
+  override dispose(): void {
+    this.#disposeImpl();
   }
 }
 

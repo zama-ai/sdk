@@ -50,6 +50,7 @@ export class Permits {
     this.#credentialService = opts.credentialService;
     this.#logger = opts.logger;
     this.#emitEvent = opts.emitEvent;
+    Object.freeze(this);
   }
 
   #requireCredentialService(operation: string): CredentialService {
@@ -338,3 +339,5 @@ export class Permits {
     await service.warmTransportKeyPairScope(scopeId);
   }
 }
+
+Object.freeze(Permits.prototype);

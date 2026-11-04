@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "../../test-fixtures";
+import { describe, expect, test, vi, withMembers } from "../../test-fixtures";
 
 import type { Address } from "viem";
 import { grantPermitMutationOptions } from "../grant-permit";
@@ -6,8 +6,11 @@ import { hasPermitQueryOptions } from "../has-permit";
 import { revokePermitsMutationOptions } from "../revoke-permits";
 
 describe("grantPermitMutationOptions", () => {
-  test("calls sdk.permits.grantPermit with provided addresses", async ({ sdk }) => {
-    const allowSpy = vi.spyOn(sdk.permits, "grantPermit").mockResolvedValue();
+  test("calls sdk.permits.grantPermit with provided addresses", async ({ sdk: realSdk }) => {
+    const allowSpy = vi.fn().mockResolvedValue(undefined);
+    const sdk = withMembers(realSdk, {
+      permits: withMembers(realSdk.permits, { grantPermit: allowSpy }),
+    });
 
     const options = grantPermitMutationOptions(sdk);
     expect(options.mutationKey).toEqual(["zama.grantPermit"]);
@@ -23,8 +26,11 @@ describe("grantPermitMutationOptions", () => {
 });
 
 describe("revokePermitsMutationOptions", () => {
-  test("calls sdk.permits.revokePermits with no arguments", async ({ sdk }) => {
-    const revokeSpy = vi.spyOn(sdk.permits, "revokePermits").mockResolvedValue(undefined);
+  test("calls sdk.permits.revokePermits with no arguments", async ({ sdk: realSdk }) => {
+    const revokeSpy = vi.fn().mockResolvedValue(undefined);
+    const sdk = withMembers(realSdk, {
+      permits: withMembers(realSdk.permits, { revokePermits: revokeSpy }),
+    });
 
     const options = revokePermitsMutationOptions(sdk);
     expect(options.mutationKey).toEqual(["zama.revokePermits"]);
@@ -37,8 +43,11 @@ describe("revokePermitsMutationOptions", () => {
 });
 
 describe("hasPermitQueryOptions", () => {
-  test("calls sdk.permits.hasPermit", async ({ sdk }) => {
-    const isAllowedSpy = vi.spyOn(sdk.permits, "hasPermit").mockResolvedValue(true);
+  test("calls sdk.permits.hasPermit", async ({ sdk: realSdk }) => {
+    const isAllowedSpy = vi.fn().mockResolvedValue(true);
+    const sdk = withMembers(realSdk, {
+      permits: withMembers(realSdk.permits, { hasPermit: isAllowedSpy }),
+    });
 
     const options = hasPermitQueryOptions(sdk, {
       contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
@@ -55,8 +64,11 @@ describe("hasPermitQueryOptions", () => {
     expect(isAllowedSpy).toHaveBeenCalledTimes(1);
   });
 
-  test("forwards contractAddresses to sdk.permits.hasPermit", async ({ sdk }) => {
-    const isAllowedSpy = vi.spyOn(sdk.permits, "hasPermit").mockResolvedValue(true);
+  test("forwards contractAddresses to sdk.permits.hasPermit", async ({ sdk: realSdk }) => {
+    const isAllowedSpy = vi.fn().mockResolvedValue(true);
+    const sdk = withMembers(realSdk, {
+      permits: withMembers(realSdk.permits, { hasPermit: isAllowedSpy }),
+    });
 
     const contracts = [
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",

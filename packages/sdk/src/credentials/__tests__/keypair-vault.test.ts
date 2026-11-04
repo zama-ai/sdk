@@ -1,6 +1,6 @@
 import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
 import { test as baseTest, describe, expect, vi } from "../../test-fixtures";
-import { MemoryStorage } from "../../storage/memory-storage";
+import { createMockStorage } from "../../test-fixtures/storage";
 import type { TransportKeyPairVault } from "../keypair-vault";
 import {
   makeGatedGenerator,
@@ -44,7 +44,7 @@ describe("TransportKeyPairVault", () => {
   });
 
   test("clear() routes a storage-delete failure to the logger", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     vi.spyOn(storage, "delete").mockRejectedValueOnce(new Error("delete boom"));
     const logger = makeLogger();
     const vault = makeVault({ storage, logger });
@@ -102,14 +102,14 @@ describe("TransportKeyPairVault", () => {
   });
 
   test("treats malformed stored data as a cache miss and regenerates", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const vault = makeVault({ storage });
 
     // Seed storage with a real keypair, then corrupt the value out-of-band.
     // We use a wrapper-driven approach (stub `get` to return junk for the next
     // call) rather than poking the private storage-key naming.
     const stored = await vault.getOrCreate(USER);
-    const realGet = storage.get.bind(storage);
+    const realGet = vi.mocked(storage.get).getMockImplementation()!;
     vi.spyOn(storage, "get").mockImplementationOnce(async () => ({ totally: "wrong shape" }));
     expect(await vault.readStored(USER)).toBeNull();
 
@@ -139,7 +139,7 @@ describe("TransportKeyPairVault", () => {
 
 describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
   test("two signers configured with the same scope share one key pair", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     // One shared generator across both vaults: each vault getting its own generator
     // would make `fromA`/`fromB` trivially equal (both are each generator's
     // deterministic first call) regardless of whether the implementation under test
@@ -157,7 +157,7 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
   });
 
   test("different scopes (and unscoped) never share a key pair", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     // One shared generator (not one per vault) so each first-time call is guaranteed
     // a distinct key — three independent counters would each start at 1 and collide.
     const generator = makeGenerator();
@@ -175,7 +175,7 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
   });
 
   test("clear() never deletes a scope's shared key pair — only clearScope() does", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const vaultA = makeVault({ storage, scope: "tenant-1" });
     const vaultB = makeVault({ storage, scope: "tenant-1" });
 
@@ -203,7 +203,7 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
     // operator relies on for suspected-compromise rotation: a caller that gets a
     // resolved promise must be able to trust the key pair is actually gone. A
     // transient storage failure must surface, not be logged-and-dropped.
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     vi.spyOn(storage, "delete").mockRejectedValueOnce(new Error("delete boom"));
     const logger = makeLogger();
     const vault = makeVault({ storage, logger, scope: "tenant-1" });
@@ -214,7 +214,7 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
   });
 
   test("warmScope() generates and persists the shared key pair, needing no signer address", async () => {
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     const generator = makeGenerator();
     const vaultA = makeVault({ storage, generator, scope: "tenant-1" });
     const vaultB = makeVault({ storage, generator, scope: "tenant-1" });
@@ -241,7 +241,7 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
     // an operator relies on to pre-warm before opening concurrent traffic — a resolved
     // promise must mean the key is actually in shared storage, not silently still absent
     // because a transient write failure was logged and dropped.
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     vi.spyOn(storage, "set").mockRejectedValueOnce(new Error("set boom"));
     const logger = makeLogger();
     const vault = makeVault({ storage, logger, scope: "tenant-1" });
@@ -255,7 +255,7 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
     // caller (getOrCreate) targeting the same shared scope identity must never adopt
     // each other's persistence guarantee — whichever registers its pending promise
     // first must not silently impose its strictness on the other.
-    const storage = new MemoryStorage();
+    const storage = createMockStorage();
     vi.spyOn(storage, "set").mockRejectedValue(new Error("set boom"));
     const logger = makeLogger();
     const vault = makeVault({ storage, logger, scope: "tenant-1" });

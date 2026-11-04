@@ -502,3 +502,5 @@ export class TransportKeyPairVault {
     );
   }
 }
+
+Object.freeze(TransportKeyPairVault.prototype);

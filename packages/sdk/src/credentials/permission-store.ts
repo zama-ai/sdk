@@ -186,3 +186,5 @@ export class PermissionStore {
     await swallow("delete permit entry", () => this.#storage.delete(scopeKey), this.#logger);
   }
 }
+
+Object.freeze(PermissionStore.prototype);

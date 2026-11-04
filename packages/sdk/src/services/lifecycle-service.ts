@@ -114,3 +114,5 @@ export class LifecycleService {
     }
   }
 }
+
+Object.freeze(LifecycleService.prototype);

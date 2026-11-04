@@ -269,9 +269,10 @@ describe("CredentialService.batchRegisterPermits", () => {
         signature: (await signer.signTypedData(p.eip712)) as Hex,
       })),
     );
-    const originalSet = storage.set.bind(storage);
+    // The storage fixture is already a mock; keep its implementation to call through.
+    const originalSet = vi.mocked(storage.set).getMockImplementation()!;
     let permitWrites = 0;
-    vi.spyOn(storage, "set").mockImplementation(async (key: string, value: unknown) => {
+    vi.mocked(storage.set).mockImplementation(async (key: string, value: unknown) => {
       if (key.startsWith("permits:") && ++permitWrites === 2) {
         throw new Error("quota exceeded");
       }
@@ -435,7 +436,7 @@ describe("CredentialService.batchRegisterPermits", () => {
 
     // Switch chains during registerPermit's keypair lookup (its first await),
     // simulating a race with a concurrent switchChain().
-    const originalGet = storage.get.bind(storage);
+    const originalGet = vi.mocked(storage.get).getMockImplementation()!;
     vi.spyOn(storage, "get").mockImplementationOnce(async (key: string) => {
       router.switchChain(2);
       return originalGet(key);

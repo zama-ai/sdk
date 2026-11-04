@@ -186,3 +186,5 @@ export function isUnwrapAuthFailure(error: unknown): boolean {
     error.name === "OperationError"
   );
 }
+
+Object.freeze(DerivationSecretHolder.prototype);

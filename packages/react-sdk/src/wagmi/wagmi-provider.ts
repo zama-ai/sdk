@@ -67,6 +67,7 @@ export class WagmiProvider implements GenericProvider {
   constructor(providerConfig: WagmiProviderConfig) {
     this.#config = providerConfig.config;
     this.#logger = providerConfig.logger;
+    Object.freeze(this);
   }
 
   async getChainId(): Promise<number> {
@@ -205,6 +206,7 @@ export class WagmiProvider implements GenericProvider {
     });
   }
 }
+Object.freeze(WagmiProvider.prototype);
 
 /**
  * Safe answers `wallet_getCallsStatus` with its Safe transaction hash as the

@@ -12917,9 +12917,9 @@ export class Vault {
     cAsset(): Promise<WrappedToken>;
     cShare(): Promise<WrappedToken>;
     deposit(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult>;
-    readonly depositBatcher: VaultBatcher;
+    get depositBatcher(): VaultBatcher;
     redeem(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult>;
-    readonly redeemBatcher: VaultBatcher;
+    get redeemBatcher(): VaultBatcher;
     readonly sdk: ZamaSDK;
     vaultAddress(): Promise<Address>;
 }
@@ -12934,7 +12934,7 @@ export interface VaultAddresses {
 // @public
 export class VaultBatcher {
     constructor(sdk: ZamaSDK, address: Address);
-    readonly address: Address;
+    get address(): Address;
     batchCallbackDeadline(batchId: bigint): Promise<bigint>;
     batchCreatedAt(batchId: bigint): Promise<bigint>;
     batchDispatchedAt(batchId: bigint): Promise<bigint>;

@@ -1,7 +1,6 @@
 // oxlint-disable no-empty-pattern
 // oxlint-disable eslint-plugin-react-hooks/rules-of-hooks
 import { vi } from "vitest";
-import { MemoryStorage } from "../storage/memory-storage";
 import type { GenericStorage } from "../types";
 import type { FixturesOf } from "./types";
 
@@ -27,7 +26,7 @@ export interface StorageFixtures {
 
 export const storageFixtures: FixturesOf<StorageFixtures> = {
   storage: async ({}, use) => {
-    await use(new MemoryStorage());
+    await use(createMockStorage());
   },
   createMockStorage: async ({}, use) => {
     await use(createMockStorage);

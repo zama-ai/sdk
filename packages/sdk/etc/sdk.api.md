@@ -601,6 +601,7 @@ export type ChecksummedAddress = Address & {
 
 // @public
 export class ChromeSessionStorage implements GenericStorage {
+    constructor();
     delete(key: string): Promise<void>;
     get<T = unknown>(key: string): Promise<T | null>;
     set(key: string, value: unknown): Promise<void>;
@@ -11272,6 +11273,7 @@ export const MAX_UINT64: bigint;
 
 // @public
 export class MemoryStorage implements GenericStorage {
+    constructor();
     delete(key: string): Promise<void>;
     get<T = unknown>(key: string): Promise<T | null>;
     set<T = unknown>(key: string, value: T): Promise<void>;
@@ -20855,6 +20857,7 @@ export type ZamaConfig = {
 
 // @public
 export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
+    allowNonCanonicalAddresses?: boolean;
     chains: TChains;
     clearCredentialsOnWalletChange?: boolean;
     logger?: GenericLogger;

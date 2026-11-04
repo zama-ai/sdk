@@ -4,6 +4,10 @@ import type { GenericStorage } from "../types";
 export class MemoryStorage implements GenericStorage {
   #map = new Map<string, unknown>();
 
+  constructor() {
+    Object.freeze(this);
+  }
+
   /**
    * Retrieve a value by key.
    * @returns The stored value, or `null` if the key does not exist.
@@ -25,3 +29,5 @@ export class MemoryStorage implements GenericStorage {
 
 /** Default singleton for application-wide use. */
 export const memoryStorage = new MemoryStorage();
+
+Object.freeze(MemoryStorage.prototype);

@@ -473,6 +473,7 @@ export type ZamaConfig = {
 
 // @public
 export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
+    allowNonCanonicalAddresses?: boolean;
     chains: TChains;
     clearCredentialsOnWalletChange?: boolean;
     logger?: GenericLogger;

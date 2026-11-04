@@ -27,14 +27,14 @@ import { parseSchema } from "./validation";
  * @deprecated Read `registryAddress` from the chain presets instead (e.g.
  * `sepolia.registryAddress`). Will be removed in the next major version.
  */
-export const DefaultRegistryAddresses: Record<number, Address> = {
+export const DefaultRegistryAddresses: Record<number, Address> = Object.freeze({
   [mainnet.id]: mainnet.registryAddress,
   [polygon.id]: polygon.registryAddress,
   [sepolia.id]: sepolia.registryAddress,
   [hoodi.id]: hoodi.registryAddress,
   [zenithTrexTestnet.id]: zenithTrexTestnet.registryAddress,
   [bscTestnet.id]: bscTestnet.registryAddress,
-};
+});
 
 /** Default registry TTL in seconds (24 hours). */
 export const DEFAULT_REGISTRY_TTL_SECONDS = 86_400;
@@ -138,6 +138,7 @@ export class WrappersRegistry {
     );
     this.#ttlMs =
       parseSchema(RegistryTTLSchema, config.registryTTL ?? DEFAULT_REGISTRY_TTL_SECONDS) * 1000;
+    Object.freeze(this);
   }
 
   /**
@@ -512,3 +513,5 @@ export class WrappersRegistry {
     );
   }
 }
+
+Object.freeze(WrappersRegistry.prototype);

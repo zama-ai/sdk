@@ -662,3 +662,5 @@ export class DecryptionService {
     }
   }
 }
+
+Object.freeze(DecryptionService.prototype);

@@ -57,8 +57,12 @@ export function loadAbi(artifactPath) {
   return json.abi;
 }
 
+// The table is deep-frozen so no code in the process can edit an entry (and
+// so the selector a call encodes) after the module loads.
 export function buildAbiSource(exportName, abi, artifactPath) {
-  return `${headerFor(artifactPath)}export const ${exportName} = ${JSON.stringify(abi, null, 2)} as const;\n`;
+  return `${headerFor(artifactPath)}import { deepFreeze } from "../utils/deep-freeze";
+
+export const ${exportName} = deepFreeze(${JSON.stringify(abi, null, 2)} as const);\n`;
 }
 
 function format(paths) {
