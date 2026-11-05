@@ -40,7 +40,7 @@ New `VaultBatcher.finalize(batchId)` (`useFinalize` in React, `finalizeMutationO
 
 `VaultGroup.missingOperators(prepared)` returns the grants in `requiredOperators` the account lacks at the current block, and `redeem` uses it; its default `operatorUntil` is the chain's current time plus one hour. The pure `decodeVaultGroupJoins({ legs, account }, logs)` does what `prepared.decodeJoins` does from saved data, so a host can decode after a reload. `invalidateAfterGroupJoin(queryClient, legs)` invalidates each leg's token balance and batch reads, as the group hooks do.
 
-A group may now hold a single vault, which joins its batcher directly, so `router` is optional. A member's config can give its `cShare`, which spares a read and feeds the new `VaultGroup.redeemOperators()`.
+A group may now hold a single vault, which joins its batcher directly, so `router` is optional. A member's config can give its `cShare`, which spares a read and feeds the new `VaultGroup.redeemOperators()` and its config-only counterpart `vaultGroupRedeemOperators(config)`, for code that has the config but no SDK instance.
 
 The `vaults` subpath also exports the pure call builders these are built on — `routerJoinContract`, `encodeAllocationData` and `tokenWrapperRegistryContract`, with the `EncryptedAllocationLeg` type — plus `dispatchBatchCallbackContract`, and `unwrapRequestIdContract`. The root entry now exports `confidentialTransferAndCallContract`, `confidentialTransferFromAndCallContract` and `unwrapAmountContract`. See [Vault groups](../guides/vaults/groups.md#using-your-own-transaction-layer).
 

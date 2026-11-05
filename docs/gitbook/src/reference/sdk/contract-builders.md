@@ -75,26 +75,29 @@ import {
 
 ## Confidential operations
 
-| Builder                                                                          | What it does                |
-| -------------------------------------------------------------------------------- | --------------------------- |
-| `confidentialBalanceOfContract(token, user)`                                     | Read encrypted balance      |
-| `confidentialTransferContract(token, to, encryptedAmount, inputProof)`           | Encrypted transfer          |
-| `confidentialTransferFromContract(token, from, to, encryptedAmount, inputProof)` | Operator encrypted transfer |
-| `isOperatorContract(token, holder, spender)`                                     | Check operator approval     |
-| `setOperatorContract(token, operator, until?)`                                   | Set operator approval       |
-| `confidentialTotalSupplyContract(token)`                                         | Read encrypted total supply |
-| `rateContract(token)`                                                            | Read conversion rate        |
+| Builder                                                                                       | What it does                                                                   |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `confidentialBalanceOfContract(token, user)`                                                  | Read encrypted balance                                                         |
+| `confidentialTransferContract(token, to, encryptedAmount, inputProof)`                        | Encrypted transfer                                                             |
+| `confidentialTransferFromContract(token, from, to, encryptedAmount, inputProof)`              | Operator encrypted transfer                                                    |
+| `confidentialTransferAndCallContract(token, to, encryptedAmount, inputProof, data)`           | Encrypted transfer, then call the recipient's `onConfidentialTransferReceived` |
+| `confidentialTransferFromAndCallContract(token, from, to, encryptedAmount, inputProof, data)` | Operator encrypted transfer, then call the recipient                           |
+| `isOperatorContract(token, holder, spender)`                                                  | Check operator approval                                                        |
+| `setOperatorContract(token, operator, until?)`                                                | Set operator approval                                                          |
+| `confidentialTotalSupplyContract(token)`                                                      | Read encrypted total supply                                                    |
+| `rateContract(token)`                                                                         | Read conversion rate                                                           |
 
 ## Wrapping and unwrapping
 
-| Builder                                                              | What it does                          |
-| -------------------------------------------------------------------- | ------------------------------------- |
-| `wrapContract(wrapper, to, amount)`                                  | Wrap ERC-20 tokens                    |
-| `unwrapContract(token, from, to, encryptedAmount, inputProof)`       | Request unwrap                        |
-| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`       | Unwrap using on-chain encrypted value |
-| `finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof)` | Finalize unwrap                       |
-| `underlyingContract(wrapper)`                                        | Read underlying ERC-20 address        |
-| `inferredTotalSupplyContract(wrapper)`                               | Read inferred plaintext total supply  |
+| Builder                                                              | What it does                                         |
+| -------------------------------------------------------------------- | ---------------------------------------------------- |
+| `wrapContract(wrapper, to, amount)`                                  | Wrap ERC-20 tokens                                   |
+| `unwrapContract(token, from, to, encryptedAmount, inputProof)`       | Request unwrap                                       |
+| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`       | Unwrap using on-chain encrypted value                |
+| `finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof)` | Finalize unwrap                                      |
+| `unwrapAmountContract(wrapper, unwrapRequestId)`                     | Read the encrypted amount an unwrap request released |
+| `underlyingContract(wrapper)`                                        | Read underlying ERC-20 address                       |
+| `inferredTotalSupplyContract(wrapper)`                               | Read inferred plaintext total supply                 |
 
 Use `totalSupplyQueryOptions` / React `useTotalSupply` for cached reads — they call
 `inferredTotalSupply()` under the hood.
