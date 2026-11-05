@@ -23,6 +23,9 @@ export default defineConfig({
       NEXT_PUBLIC_SEPOLIA_RPC_URL: "",
       NEXT_PUBLIC_MAINNET_RPC_URL: "",
       NEXT_PUBLIC_BNB_TESTNET_RPC_URL: "",
+      // Force the injected-wallet stack: the suite drives a mocked window.ethereum, which
+      // Privy's modal cannot use, and a dev's .env.local may enable Privy.
+      NEXT_PUBLIC_PRIVY_APP_ID: "",
       // Enable the mainnet row so the picker and the mainnet feature flags are testable, and pin
       // Polygon off. Nothing listens on port 9, so a forwarded proxy call fails fast with 503.
       MAINNET_RELAYER_URL: "http://127.0.0.1:9",
