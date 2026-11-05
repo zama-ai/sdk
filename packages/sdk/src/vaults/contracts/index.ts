@@ -8,6 +8,7 @@ export {
   claimContract,
   currentBatchIdContract,
   depositsContract,
+  dispatchBatchCallbackContract,
   dispatchBatchContract,
   exchangeRateContract,
   exchangeRateDecimalsContract,
@@ -19,6 +20,7 @@ export {
   recoverContract,
   toTokenContract,
   totalDepositsContract,
+  unwrapRequestIdContract,
   vaultContract,
 } from "./vault-batcher";
 

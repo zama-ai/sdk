@@ -4,6 +4,7 @@ import { BatchState } from "@zama-fhe/sdk/vaults";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useBatchState } from "../use-batch-state";
 import { useCurrentBatchId } from "../use-current-batch-id";
+import { useTimeUntilCallbackDeadline } from "../use-time-until-callback-deadline";
 import { useTimeUntilDispatchable } from "../use-time-until-dispatchable";
 
 const BATCHER_ADDRESS = "0x7777777777777777777777777777777777777777" as Address;
@@ -55,6 +56,25 @@ describe("useTimeUntilDispatchable", () => {
 
     // eligible at 1_000 + 3_480 = 4_480; now is 2_000 → 2_480 remaining
     await waitFor(() => expect(result.current.data).toBe(2_480n));
+  });
+});
+
+describe("useTimeUntilCallbackDeadline", () => {
+  test("reads seconds remaining before a dispatched batch is canceled", async ({
+    renderWithProviders,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract)
+      .mockResolvedValueOnce(BatchState.Dispatched) // batchState
+      .mockResolvedValueOnce(1_000n) // batchDispatchedAt
+      .mockResolvedValueOnce(600n); // batchCallbackDeadline
+    vi.mocked(provider.getBlockTimestamp).mockResolvedValueOnce(1_200n); // now
+
+    const { result } = renderWithProviders(() =>
+      useTimeUntilCallbackDeadline({ address: BATCHER_ADDRESS, batchId: 58n }),
+    );
+
+    await waitFor(() => expect(result.current.data).toBe(400n));
   });
 });
 

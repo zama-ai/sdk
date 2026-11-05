@@ -1,6 +1,7 @@
 import type { Address, Hex } from "viem";
 import type { TransactionReceipt } from "../types/transaction";
-import type { VaultGroupJoin } from "../vaults/vault-group";
+import type { BatchState } from "../vaults/types";
+import type { VaultGroupJoin } from "../vaults/vault-group-types";
 import { ZamaError, ZamaErrorCode } from "./base";
 
 /** What an {@link UnlistedConfidentialTokenError} carries. */
@@ -53,6 +54,37 @@ export class VaultBatcherPausedError extends ZamaError {
     this.name = "VaultBatcherPausedError";
     this.batcher = details.batcher;
     this.vaultId = details.vaultId;
+  }
+}
+
+/** What a {@link VaultBatchNotDispatchedError} carries. */
+export interface VaultBatchNotDispatchedDetails {
+  /** The batcher the batch belongs to. */
+  readonly batcher: Address;
+  /** The batch that was to be finalized. */
+  readonly batchId: bigint;
+  /** The state the batch is in instead. */
+  readonly state: BatchState;
+}
+
+/**
+ * A batch cannot be finalized because it is not `Dispatched`: it is still
+ * open, or it was already settled or canceled, by a keeper or anyone else.
+ */
+export class VaultBatchNotDispatchedError extends ZamaError {
+  /** The batcher the batch belongs to. */
+  readonly batcher: Address;
+  /** The batch that was to be finalized. */
+  readonly batchId: bigint;
+  /** The state the batch is in instead. */
+  readonly state: BatchState;
+
+  constructor(message: string, details: VaultBatchNotDispatchedDetails, options?: ErrorOptions) {
+    super(ZamaErrorCode.VaultBatchNotDispatched, message, options);
+    this.name = "VaultBatchNotDispatchedError";
+    this.batcher = details.batcher;
+    this.batchId = details.batchId;
+    this.state = details.state;
   }
 }
 

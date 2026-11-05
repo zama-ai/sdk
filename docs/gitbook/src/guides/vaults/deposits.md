@@ -129,12 +129,12 @@ const { data: openBatchId } = useCurrentBatchId({ address: vault.depositBatcher.
 
 `batchState` decides which action is legal, so read it before offering the user a button:
 
-| `BatchState` | What the user can do                            |
-| ------------ | ----------------------------------------------- |
-| `Pending`    | `deposit` / `redeem`, or `quit`                 |
-| `Dispatched` | Nothing — wait                                  |
-| `Finalized`  | `claim`                                         |
-| `Canceled`   | `quit` (or `recover`), to take the deposit back |
+| `BatchState` | What the user can do                                                           |
+| ------------ | ------------------------------------------------------------------------------ |
+| `Pending`    | `deposit` / `redeem`, or `quit`                                                |
+| `Dispatched` | Wait for a keeper to finalize it; `finalize` if it stays `Dispatched` too long |
+| `Finalized`  | `claim`                                                                        |
+| `Canceled`   | `quit` (or `recover`), to take the deposit back                                |
 
 {% hint style="warning" %}
 Claiming a canceled batch reverts — a canceled batch never executed, so there is nothing to claim, only a deposit to take back with `quit` or `recover`.
@@ -194,7 +194,7 @@ Use the per-batch reads (`batchMinBatchAge`, `batchCallbackDeadline`) rather tha
 
 ### 5. Claim
 
-Dispatch only starts the decryption; finalization lands later. Wait for `batchState` to reach `Finalized`, then claim. Claiming is permissionless — anyone can call it on another account's behalf, but the output always goes to that account, never to the caller:
+Dispatch only starts the decryption; finalization lands later, when a keeper (an off-chain service that watches batches) sends the callback with the decrypted aggregate. Wait for `batchState` to reach `Finalized`, then claim. A batch that stays `Dispatched` longer than expected can be settled by anyone with `vault.depositBatcher.finalize(batchId)` (`useFinalize` in React); past its callback deadline that same call cancels it instead. `timeUntilCallbackDeadline(batchId)` (`useTimeUntilCallbackDeadline`) reads the seconds left, `0` once it has passed. `finalize` throws `VaultBatchNotDispatchedError` when the batch is not `Dispatched`, for example because a keeper got there first. Claiming is permissionless — anyone can call it on another account's behalf, but the output always goes to that account, never to the caller:
 
 {% tabs %}
 {% tab title="Core SDK" %}

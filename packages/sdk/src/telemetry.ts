@@ -29,6 +29,7 @@ export type TelemetryOperation =
   | "vault-group-deposit"
   | "vault-group-redeem"
   | "vault-deposit-of"
+  | "vault-finalize"
   | "encrypt"
   | "decrypt-values"
   | "delegated-decrypt-values"

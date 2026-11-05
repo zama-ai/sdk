@@ -1686,6 +1686,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:reference/react/useFinalize",
+      "title": "useFinalize",
+      "source_path": "docs/gitbook/src/reference/react/useFinalize.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useFinalize.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/useFinalize",
+      "description": "Mutation hook that settles a dispatched vault batch when its keeper has not.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:reference/react/useCurrentBatchId",
       "title": "useCurrentBatchId",
       "source_path": "docs/gitbook/src/reference/react/useCurrentBatchId.md",
@@ -1718,6 +1730,18 @@
       "category": "reference-react",
       "logical_path": "reference/react/useTimeUntilDispatchable",
       "description": "Query hook for the seconds until a vault batch becomes eligible for dispatch.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:reference/react/useTimeUntilCallbackDeadline",
+      "title": "useTimeUntilCallbackDeadline",
+      "source_path": "docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/useTimeUntilCallbackDeadline",
+      "description": "Query hook for the seconds until a dispatched vault batch reaches its callback deadline.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

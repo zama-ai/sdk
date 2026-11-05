@@ -59,4 +59,21 @@ describe("useVaultGroup", () => {
     expect(result.current).not.toBe(first);
     expect(result.current.members[0]?.vault.redeemBatcher.address).toBe(OTHER_REDEEM);
   });
+
+  test("keeps each member's cShare", ({ renderWithProviders }) => {
+    const shares = [
+      "0x8888888888888888888888888888888888888888",
+      "0x9999999999999999999999999999999999999999",
+    ] as const;
+    const base = config(REDEEM);
+    const withShares = {
+      ...base,
+      vaults: base.vaults.map((member, index) => ({ ...member, cShare: shares[index] })),
+    };
+    const { result } = renderWithProviders(() => useVaultGroup(withShares));
+
+    expect(result.current.redeemOperators().map((operator) => operator.token)).toStrictEqual(
+      shares,
+    );
+  });
 });

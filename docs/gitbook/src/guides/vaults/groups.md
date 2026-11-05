@@ -13,7 +13,7 @@ This guide covers **integrating** the multi-vault router from the SDK. For what 
 
 A **vault group** is the SDK's name for the leg list: a set of confidential ERC-4626 vaults that all take deposits in the same confidential asset. Depositing into one member joins _every_ member's batch: the vault you chose gets the amount, the rest get an encrypted zero.
 
-A group has at least two vaults. For a single vault, use [`Vault`](./deposits.md).
+A group of one has nothing to hide a leg among, so it joins its only batcher directly, with no router.
 
 {% hint style="danger" %}
 Follow the [rules for clients](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#rules-for-clients): send the same leg list for every user, and exit through the list you entered with. The SDK never drops a zero-amount leg, and refuses a group above the documented [leg limit](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#leg-limits) (`MAX_GROUP_VAULTS`, ten) at construction.
@@ -92,4 +92,21 @@ For a **redemption**, the router pulls each leg's share token, so the SDK grants
 
 ## Paused batchers
 
-Every submission sends a leg to every member, so the SDK reads `paused()` on each batcher first and throws `VaultBatcherPausedError` naming the member, instead of letting one paused member revert the transaction.
+Every submission sends a leg to every member, so the SDK reads `paused()` on each batcher first and throws `VaultBatcherPausedError` naming the member, instead of letting one paused member revert the transaction. The prepare methods read it too, even with `skipPreflight`.
+
+## Using your own transaction layer
+
+`deposit` and `redeem` sign and send through the SDK's signer and wait for the receipt. An app that submits through its own pipeline — a transaction queue, a bundler, an EIP-5792 `wallet_sendCalls` batch that puts the operator grants and the join in one confirmation — calls `prepareDeposit` and `prepareRedeem` instead. They run the same pre-flight, balance check and encryptions and stop at the calls:
+
+```ts
+const prepared = await group.prepareRedeem("alpha", 500n, {
+  delivery: wallet.canBundle ? "legs" : "router",
+});
+// Grant what `prepared.requiredOperators` names and the account lacks, then send
+// `prepared.writes` — in one bundle for "legs", or one transaction for "router".
+const { joins } = prepared.decodeJoins(receipt.logs);
+```
+
+`group.missingOperators(prepared)` returns the grants the account still lacks; give each an `until` that outlasts the time the writes take. After a reload, `decodeVaultGroupJoins({ legs, account }, logs)` does what `decodeJoins` does from the saved `legs` and `account`. When you send the writes yourself, call `invalidateAfterGroupJoin(queryClient, prepared.legs)` to refresh balances and batch reads.
+
+`"legs"` delivery sends one transfer per member straight to its batcher and needs no grant; it keeps the choice of vault private only when the wallet lands every leg atomically. `"router"` is the single transaction the SDK sends itself. A host that has already verified the group passes `skipPreflight`, which skips the config verification and the registry listing but not the `paused()` read. The balance check decrypts as the signer, so an `account` other than the signer's needs `skipBalanceCheck`. One that gates the amount on a balance it already shows passes `skipBalanceCheck`. See [`VaultGroup` → Prepare](../../reference/sdk/VaultGroup.md#prepare).

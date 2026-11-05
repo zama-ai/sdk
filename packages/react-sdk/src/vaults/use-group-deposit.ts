@@ -7,10 +7,9 @@ import {
   type UseMutationResult,
 } from "@tanstack/react-query";
 import { VaultGroupJoinUnconfirmedError } from "@zama-fhe/sdk";
-import { invalidateBalanceQueries } from "@zama-fhe/sdk/query";
 import {
   groupDepositMutationOptions,
-  invalidateBatchQueries,
+  invalidateAfterGroupJoin,
   type GroupDepositParams,
   type VaultGroupConfig,
   type VaultGroupJoinResult,
@@ -43,12 +42,14 @@ export function useGroupDeposit<TContext = unknown>(
 ): UseMutationResult<VaultGroupJoinResult, Error, GroupDepositParams, TContext> {
   const group = useVaultGroup(config.group);
 
-  const invalidateJoins = (client: QueryClient) => {
-    invalidateBalanceQueries(client, group.cAsset);
-    for (const { vault } of group.members) {
-      invalidateBatchQueries(client, vault.depositBatcher.address);
-    }
-  };
+  const invalidateJoins = (client: QueryClient) =>
+    invalidateAfterGroupJoin(
+      client,
+      group.members.map(({ vault }) => ({
+        batcher: vault.depositBatcher.address,
+        token: group.cAsset,
+      })),
+    );
 
   return useMutation({
     ...groupDepositMutationOptions(group),
