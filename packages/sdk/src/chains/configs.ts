@@ -3,7 +3,7 @@ import type { FheChain } from "./types";
 /**
  * Mainnet network configuration (chainId 1).
  */
-export const mainnet = {
+export const mainnet = Object.freeze({
   id: 1,
   gatewayChainId: 261131,
   relayerUrl: "https://relayer.mainnet.zama.org",
@@ -14,12 +14,12 @@ export const mainnet = {
   verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24",
   verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287",
   registryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0",
-} as const satisfies FheChain;
+} as const satisfies FheChain);
 
 /**
  * Polygon mainnet network configuration (chainId 137).
  */
-export const polygon = {
+export const polygon = Object.freeze({
   id: 137,
   gatewayChainId: 261131,
   relayerUrl: "https://relayer.mainnet.zama.org",
@@ -30,12 +30,12 @@ export const polygon = {
   verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24",
   verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287",
   registryAddress: "0xc8908569868758dAF814B5a8b96bBc44D1653d54",
-} as const satisfies FheChain;
+} as const satisfies FheChain);
 
 /**
  * Sepolia testnet network configuration (chainId 11155111).
  */
-export const sepolia = {
+export const sepolia = Object.freeze({
   id: 11155111,
   gatewayChainId: 10901,
   relayerUrl: "https://relayer.testnet.zama.org",
@@ -46,7 +46,7 @@ export const sepolia = {
   verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
   verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
   registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e",
-} as const satisfies FheChain;
+} as const satisfies FheChain);
 
 /**
  * Polygon Amoy testnet network configuration (chainId 80002).
@@ -54,7 +54,7 @@ export const sepolia = {
  * Ships without a wrappers registry: set `registryAddress` to your own
  * deployment to use token operations.
  */
-export const polygonAmoy = {
+export const polygonAmoy = Object.freeze({
   id: 80002,
   gatewayChainId: 10901,
   relayerUrl: "https://relayer.testnet.zama.org",
@@ -65,7 +65,7 @@ export const polygonAmoy = {
   verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
   verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
   registryAddress: undefined,
-} as const satisfies FheChain;
+} as const satisfies FheChain);
 
 /**
  * Hoodi testnet configuration (chainId 560048).
@@ -73,7 +73,7 @@ export const polygonAmoy = {
  * Hoodi does not have full FHE infrastructure — use with `cleartext()` transport.
  * Contract addresses match the cleartext deployment.
  */
-export const hoodi = {
+export const hoodi = Object.freeze({
   id: 560048,
   gatewayChainId: 10901,
   relayerUrl: "",
@@ -85,7 +85,7 @@ export const hoodi = {
   verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
   registryAddress: "0x1807aE2f693F8530DFB126D0eF98F2F2518F292f",
   executorAddress: "0xC316692627de536368d82e9121F1D44a550894E6",
-} as const satisfies FheChain;
+} as const satisfies FheChain);
 
 /**
  * T-Rex Zenith testnet configuration (chainId 936486).
@@ -94,7 +94,7 @@ export const hoodi = {
  * finality) — a separate chain from Zenith's shared testnet (chainId 936485).
  * It does not have full FHE infrastructure — use with `cleartext()` transport.
  */
-export const zenithTrexTestnet = {
+export const zenithTrexTestnet = Object.freeze({
   id: 936486,
   gatewayChainId: 10901,
   relayerUrl: "",
@@ -106,7 +106,7 @@ export const zenithTrexTestnet = {
   verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
   registryAddress: "0xde2e3948d35ef9C406A7317eAF332F3c2786a566",
   executorAddress: "0x6C5036A4ad55DBA8007ae82c4e9C123F143e53ab",
-} as const satisfies FheChain;
+} as const satisfies FheChain);
 
 /**
  * BNB Smart Chain testnet configuration (chainId 97, Chapel).
@@ -114,7 +114,7 @@ export const zenithTrexTestnet = {
  * BSC testnet does not have full FHE infrastructure — use with `cleartext()` transport.
  * Contract addresses match the cleartext deployment.
  */
-export const bscTestnet = {
+export const bscTestnet = Object.freeze({
   id: 97,
   gatewayChainId: 10901,
   relayerUrl: "",
@@ -126,14 +126,14 @@ export const bscTestnet = {
   verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
   registryAddress: "0xc0E8B73b1C58D846e1d4f8fAE2E1466C85BCeAeC",
   executorAddress: "0x5985e48689550c1b2893ABfBbe4cc0eE3A22cc54",
-} as const satisfies FheChain;
+} as const satisfies FheChain);
 
 /**
  * Hardhat local network configuration (chainId 31337).
  *
  * The addresses in this configuration must match those of your deployment.
  */
-export const hardhat = {
+export const hardhat = Object.freeze({
   id: 31337,
   gatewayChainId: 10901,
   relayerUrl: "",
@@ -145,7 +145,7 @@ export const hardhat = {
   verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
   registryAddress: undefined,
   executorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24",
-} as const satisfies FheChain;
+} as const satisfies FheChain);
 
 /** Alias for {@link hardhat}. */
 export const anvil = hardhat;
@@ -153,7 +153,7 @@ export const anvil = hardhat;
 /**
  * Built-in chain configurations keyed by chain ID.
  */
-export const chains: Record<number, FheChain> = {
+export const chains: Record<number, FheChain> = Object.freeze({
   [mainnet.id]: mainnet,
   [polygon.id]: polygon,
   [sepolia.id]: sepolia,
@@ -162,4 +162,4 @@ export const chains: Record<number, FheChain> = {
   [zenithTrexTestnet.id]: zenithTrexTestnet,
   [bscTestnet.id]: bscTestnet,
   [hardhat.id]: hardhat,
-} as const;
+});
