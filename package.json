@@ -114,7 +114,7 @@
     "markdown-it": "^15.0.3",
     "oxfmt": "^0.75.0",
     "oxlint": "^1.90.0",
-    "oxlint-tsgolint": "7.0.2003",
+    "oxlint-tsgolint": "7.0.2005",
     "re2js": "^2.9.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
