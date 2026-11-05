@@ -133,11 +133,6 @@ function customSepolia(): FheChain & { network: string } {
       "NEXT_PUBLIC_ZAMA_INPUT_VERIFICATION_ADDRESS",
       process.env.NEXT_PUBLIC_ZAMA_INPUT_VERIFICATION_ADDRESS,
     ),
-    // Optional: needed for unified (V2) decryption permits on protocol v0.14+.
-    protocolConfigContractAddress: optionalCustomEnvAddress(
-      "NEXT_PUBLIC_ZAMA_PROTOCOL_CONFIG_ADDRESS",
-      process.env.NEXT_PUBLIC_ZAMA_PROTOCOL_CONFIG_ADDRESS,
-    ),
     // A custom environment usually has no wrapper registry deployment; point this at wrapper
     // pairs and a ConfidentialTokenWrappersRegistry deployed there by hand.
     registryAddress: optionalCustomEnvAddress(
