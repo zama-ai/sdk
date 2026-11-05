@@ -46,7 +46,7 @@ The `vaults` subpath also exports the pure call builders these are built on — 
 
 ## Vault joins without an operator grant
 
-`Vault.deposit`, `Vault.redeem`, `VaultBatcher.join` and their hooks (`useDeposit`, `useRedeem`, `useJoin`) now send the amount to the batcher with `confidentialTransferAndCall` when they credit the caller. They no longer grant the batcher an ERC-7984 operator approval first, so a deposit takes one wallet prompt instead of two. A join for another `beneficiary` still goes through the batcher's `join`, which pulls the amount, so `Vault` still grants the approval in that case, and `operatorUntil` applies only there. Existing operator approvals are left in place. Revoke one with `Token.setOperator(batcher, 0)` if you no longer need it.
+`Vault.deposit`, `Vault.redeem`, `VaultBatcher.join` and their hooks (`useDeposit`, `useRedeem`, `useJoin`) now send the amount to the batcher with `confidentialTransferAndCall` when they credit the caller. They no longer grant the batcher an ERC-7984 operator approval first, so a deposit takes one wallet prompt instead of two. A join for another `beneficiary` still goes through the batcher's `join`, which pulls the amount, so `Vault` still grants the approval in that case, and `operatorUntil` applies only there. The transaction now goes to the token rather than the batcher, so a host that allowlists call targets (a session-key or custody policy, for example) needs to allow the token. Existing operator approvals are left in place. Revoke one with `Token.setOperator(batcher, 0)` if you no longer need it.
 
 ## Vault groups only submit through the chain's router
 
