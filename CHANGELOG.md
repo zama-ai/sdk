@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.8.0-beta.14](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.13...v3.8.0-beta.14) (2026-11-05)
+
+### Features
+
+- **vaults:** prepare seam for group joins, user-driven finalize, and router call builders ([#898](https://github.com/zama-ai/sdk/issues/898)) ([57f4240]()), closes [#781]() [#748]()
+
 ## [3.8.0-beta.13](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.12...v3.8.0-beta.13) (2026-11-05)
 
 ### Features
