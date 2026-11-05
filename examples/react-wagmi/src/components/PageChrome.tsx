@@ -7,6 +7,8 @@ interface ActionScreenProps {
   actionLabel: string;
   pendingLabel: string;
   pending: boolean;
+  /** Keeps the button disabled without the pending label, e.g. while a wallet SDK loads. */
+  disabled?: boolean;
   onAction: () => void;
   error?: ReactNode;
 }
@@ -17,6 +19,7 @@ export function ActionScreen({
   actionLabel,
   pendingLabel,
   pending,
+  disabled = false,
   onAction,
   error,
 }: ActionScreenProps) {
@@ -27,7 +30,7 @@ export function ActionScreen({
         <h1 id={titleId}>{title}</h1>
         <p className="subtitle">{description}</p>
         <form action={onAction}>
-          <button type="submit" className="btn btn-primary" disabled={pending}>
+          <button type="submit" className="btn btn-primary" disabled={pending || disabled}>
             {pending ? pendingLabel : actionLabel}
           </button>
         </form>
