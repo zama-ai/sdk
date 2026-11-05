@@ -1,5 +1,11 @@
 # Risk acceptances for the daemon image gate. Trivy also reads a root trivy.yaml on its own, and this file owns
 # itself so the review can't be removed without one.
-/.github/CODEOWNERS @zama-ai/security-team
-/.trivyignore* @zama-ai/security-team
-/trivy.yaml @zama-ai/security-team
+/.github/CODEOWNERS @zama-ai/infosec
+/.trivyignore* @zama-ai/infosec
+/trivy.yaml @zama-ai/infosec
+
+# The daemon image and the workflows that build, scan and publish it, so the gate can't be weakened without a review.
+/packages/sdk-daemon/Dockerfile* @zama-ai/infosec
+/.github/workflows/daemon.yml @zama-ai/infosec
+/.github/workflows/release.yml @zama-ai/infosec
+/.github/workflows/daemon-image-scan.yml @zama-ai/infosec
