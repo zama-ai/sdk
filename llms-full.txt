@@ -4756,36 +4756,37 @@ With `telemetry: "query"` (see [below](#sending-query-parameters-instead-of-head
 
 Each public method that reaches the relayer sends its own value. When a method makes several relayer requests, such as the balance check, encryption and decryption of an unshield, all of them carry that method's value. React hooks send the value of the method they call.
 
-| `x-zama-sdk-operation`                | Sent by                                           |
-| ------------------------------------- | ------------------------------------------------- |
-| `balance-of`                          | `Token.balanceOf`                                 |
-| `decrypt-balance-as`                  | `Token.decryptBalanceAs`                          |
-| `batch-balances-of`                   | `Token.batchBalancesOf`                           |
-| `batch-decrypt-balances-as`           | `Token.batchDecryptBalancesAs`                    |
-| `confidential-transfer`               | `Token.confidentialTransfer`                      |
-| `confidential-transfer-from`          | `Token.confidentialTransferFrom`                  |
-| `confidential-transfer-and-call`      | `Token.confidentialTransferAndCall`               |
-| `confidential-transfer-from-and-call` | `Token.confidentialTransferFromAndCall`           |
-| `unshield`                            | `WrappedToken.unshield`                           |
-| `unshield-all`                        | `WrappedToken.unshieldAll`                        |
-| `resume-unshield`                     | `WrappedToken.resumeUnshield`                     |
-| `unwrap`                              | `WrappedToken.unwrap`                             |
-| `finalize-unwrap`                     | `WrappedToken.finalizeUnwrap`                     |
-| `vault-deposit`                       | `Vault.deposit`                                   |
-| `vault-redeem`                        | `Vault.redeem`                                    |
-| `vault-join`                          | `VaultBatcher.join`                               |
-| `vault-deposit-of`                    | `VaultBatcher.depositOf`                          |
-| `vault-group-deposit`                 | `VaultGroup.deposit`                              |
-| `vault-group-redeem`                  | `VaultGroup.redeem`                               |
-| `encrypt`                             | `sdk.encrypt`                                     |
-| `decrypt-values`                      | `sdk.decryption.decryptValues`                    |
-| `delegated-decrypt-values`            | `sdk.decryption.delegatedDecryptValues`           |
-| `delegated-batch-decrypt-values`      | `sdk.decryption.delegatedBatchDecryptValues`      |
-| `decrypt-public-values`               | `sdk.decryption.decryptPublicValues`              |
-| `offline-confidential-transfer`       | `sdk.offline.prepare`, `ConfidentialTransfer`     |
-| `offline-confidential-transfer-from`  | `sdk.offline.prepare`, `ConfidentialTransferFrom` |
-| `offline-unwrap`                      | `sdk.offline.prepare`, `Unwrap`                   |
-| `offline-finalize-unwrap`             | `sdk.offline.prepare`, `FinalizeUnwrap`           |
+| `x-zama-sdk-operation`                | Sent by                                                 |
+| ------------------------------------- | ------------------------------------------------------- |
+| `balance-of`                          | `Token.balanceOf`                                       |
+| `decrypt-balance-as`                  | `Token.decryptBalanceAs`                                |
+| `batch-balances-of`                   | `Token.batchBalancesOf`                                 |
+| `batch-decrypt-balances-as`           | `Token.batchDecryptBalancesAs`                          |
+| `confidential-transfer`               | `Token.confidentialTransfer`                            |
+| `confidential-transfer-from`          | `Token.confidentialTransferFrom`                        |
+| `confidential-transfer-and-call`      | `Token.confidentialTransferAndCall`                     |
+| `confidential-transfer-from-and-call` | `Token.confidentialTransferFromAndCall`                 |
+| `unshield`                            | `WrappedToken.unshield`                                 |
+| `unshield-all`                        | `WrappedToken.unshieldAll`                              |
+| `resume-unshield`                     | `WrappedToken.resumeUnshield`                           |
+| `unwrap`                              | `WrappedToken.unwrap`                                   |
+| `finalize-unwrap`                     | `WrappedToken.finalizeUnwrap`                           |
+| `vault-deposit`                       | `Vault.deposit`                                         |
+| `vault-redeem`                        | `Vault.redeem`                                          |
+| `vault-join`                          | `VaultBatcher.join`                                     |
+| `vault-deposit-of`                    | `VaultBatcher.depositOf`                                |
+| `vault-group-deposit`                 | `VaultGroup.deposit`, `VaultGroup.prepareDeposit`       |
+| `vault-group-redeem`                  | `VaultGroup.redeem`, `VaultGroup.prepareRedeem`         |
+| `vault-finalize`                      | `VaultBatcher.finalize`, `VaultBatcher.prepareFinalize` |
+| `encrypt`                             | `sdk.encrypt`                                           |
+| `decrypt-values`                      | `sdk.decryption.decryptValues`                          |
+| `delegated-decrypt-values`            | `sdk.decryption.delegatedDecryptValues`                 |
+| `delegated-batch-decrypt-values`      | `sdk.decryption.delegatedBatchDecryptValues`            |
+| `decrypt-public-values`               | `sdk.decryption.decryptPublicValues`                    |
+| `offline-confidential-transfer`       | `sdk.offline.prepare`, `ConfidentialTransfer`           |
+| `offline-confidential-transfer-from`  | `sdk.offline.prepare`, `ConfidentialTransferFrom`       |
+| `offline-unwrap`                      | `sdk.offline.prepare`, `Unwrap`                         |
+| `offline-finalize-unwrap`             | `sdk.offline.prepare`, `FinalizeUnwrap`                 |
 
 Calls made directly on `sdk.relayer` carry the version, layer and runtime headers but no operation.
 
@@ -13056,16 +13057,16 @@ import {
 
 Every read and write above has a pure builder that returns `{ address, abi, functionName, args }` without executing anything, for apps that submit transactions through their own pipeline (a bundler, a transaction queue, an EIP-5792 `wallet_sendCalls` batch) or read through their own multicall. Pass the result to viem's `encodeFunctionData` / `readContract`, or spread it into a wagmi `readContracts` entry.
 
-| Builder                                                                       | Mirrors                                              |
-| ----------------------------------------------------------------------------- | ---------------------------------------------------- |
-| `joinContract(batcher, beneficiary, encryptedAmount, inputProof)`             | `join`                                               |
-| `claimContract(batcher, batchId, account)`                                    | `claim`                                              |
-| `quitContract(batcher, batchId)`                                              | `quit`                                               |
-| `recoverContract(batcher, batchId, account)`                                  | `recover`                                            |
-| `dispatchBatchContract(batcher)`                                              | `dispatchBatch`                                      |
-| `dispatchBatchCallbackContract(batcher, batchId, cleartext, decryptionProof)` | the write inside `finalize`                          |
-| `unwrapRequestIdContract(batcher, batchId)`                                   | `unwrapRequestId`                                    |
-| `currentBatchIdContract`, `batchStateContract`, `pausedContract`, …           | the matching read, one builder per read listed above |
+| Builder                                                                                   | Mirrors                                              |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `joinContract(batcher, beneficiary, encryptedAmount, inputProof)`                         | `join`                                               |
+| `claimContract(batcher, batchId, account)`                                                | `claim`                                              |
+| `quitContract(batcher, batchId)`                                                          | `quit`                                               |
+| `recoverContract(batcher, batchId, account)`                                              | `recover`                                            |
+| `dispatchBatchContract(batcher)`                                                          | `dispatchBatch`                                      |
+| `dispatchBatchCallbackContract(batcher, batchId, unwrapAmountCleartext, decryptionProof)` | the write inside `finalize`                          |
+| `unwrapRequestIdContract(batcher, batchId)`                                               | `unwrapRequestId`                                    |
+| `currentBatchIdContract`, `batchStateContract`, `pausedContract`, …                       | the matching read, one builder per read listed above |
 
 A builder encodes a call; it does not check balances, encrypt, or grant anything. The class method is the full pre-flight, so an app that uses the builders takes those steps on itself.
 
@@ -26622,7 +26623,7 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 Returns a memoized [`VaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md) bound to the SDK in the current `ZamaProvider`. The instance is memoized on the SDK and the config's contents — its id, `cAsset`, `router` and each member's id and addresses — so a config rebuilt each render keeps the same group and its cached reads, as [`useVault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVault.md) does for its addresses.
 
-A group has at least two vaults; [`useVault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVault.md) covers a single vault.
+A group of one joins its only batcher directly, with no router; [`useVault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVault.md) is the same vault without the group vocabulary.
 
 ## Import
 

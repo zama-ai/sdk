@@ -339,16 +339,16 @@ import {
 
 Every read and write above has a pure builder that returns `{ address, abi, functionName, args }` without executing anything, for apps that submit transactions through their own pipeline (a bundler, a transaction queue, an EIP-5792 `wallet_sendCalls` batch) or read through their own multicall. Pass the result to viem's `encodeFunctionData` / `readContract`, or spread it into a wagmi `readContracts` entry.
 
-| Builder                                                                       | Mirrors                                              |
-| ----------------------------------------------------------------------------- | ---------------------------------------------------- |
-| `joinContract(batcher, beneficiary, encryptedAmount, inputProof)`             | `join`                                               |
-| `claimContract(batcher, batchId, account)`                                    | `claim`                                              |
-| `quitContract(batcher, batchId)`                                              | `quit`                                               |
-| `recoverContract(batcher, batchId, account)`                                  | `recover`                                            |
-| `dispatchBatchContract(batcher)`                                              | `dispatchBatch`                                      |
-| `dispatchBatchCallbackContract(batcher, batchId, cleartext, decryptionProof)` | the write inside `finalize`                          |
-| `unwrapRequestIdContract(batcher, batchId)`                                   | `unwrapRequestId`                                    |
-| `currentBatchIdContract`, `batchStateContract`, `pausedContract`, …           | the matching read, one builder per read listed above |
+| Builder                                                                                   | Mirrors                                              |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `joinContract(batcher, beneficiary, encryptedAmount, inputProof)`                         | `join`                                               |
+| `claimContract(batcher, batchId, account)`                                                | `claim`                                              |
+| `quitContract(batcher, batchId)`                                                          | `quit`                                               |
+| `recoverContract(batcher, batchId, account)`                                              | `recover`                                            |
+| `dispatchBatchContract(batcher)`                                                          | `dispatchBatch`                                      |
+| `dispatchBatchCallbackContract(batcher, batchId, unwrapAmountCleartext, decryptionProof)` | the write inside `finalize`                          |
+| `unwrapRequestIdContract(batcher, batchId)`                                               | `unwrapRequestId`                                    |
+| `currentBatchIdContract`, `batchStateContract`, `pausedContract`, …                       | the matching read, one builder per read listed above |
 
 A builder encodes a call; it does not check balances, encrypt, or grant anything. The class method is the full pre-flight, so an app that uses the builders takes those steps on itself.
 
