@@ -9,7 +9,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@tanstack/react-query": "5.104.1",
+    "@tanstack/react-query": "5.105.1",
     "@zama-fhe/react-sdk": "3.7.1",
     "@zama-fhe/sdk": "3.7.1",
     "next": "16.4.2",
