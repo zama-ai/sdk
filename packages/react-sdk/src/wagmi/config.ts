@@ -23,6 +23,6 @@ export function createConfig<const TChains extends AtLeastOneChain>(
 ): ZamaConfig {
   const { wagmiConfig, ...baseParams } = params;
   const signer = new WagmiSigner({ config: wagmiConfig });
-  const provider = new WagmiProvider({ config: wagmiConfig });
+  const provider = new WagmiProvider({ config: wagmiConfig, logger: params.logger });
   return createCoreConfig({ ...baseParams, signer, provider });
 }
