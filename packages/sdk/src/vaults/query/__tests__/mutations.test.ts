@@ -7,8 +7,11 @@ import type { VaultGroup } from "../../vault-group";
 import { claimMutationOptions } from "../claim";
 import { depositMutationOptions } from "../deposit";
 import { dispatchBatchMutationOptions } from "../dispatch-batch";
+import { finalizeMutationOptions } from "../finalize";
 import { groupDepositMutationOptions } from "../group-deposit";
 import { groupRedeemMutationOptions } from "../group-redeem";
+import { invalidateAfterGroupJoin } from "../invalidation";
+import { vaultQueryKeys } from "../query-keys";
 import { joinMutationOptions } from "../join";
 import { quitMutationOptions } from "../quit";
 import { redeemMutationOptions } from "../redeem";
@@ -35,6 +38,7 @@ function createMockBatcher(address: Address): VaultBatcher {
     claim: vi.fn().mockResolvedValue(TX_RESULT),
     quit: vi.fn().mockResolvedValue(TX_RESULT),
     dispatchBatch: vi.fn().mockResolvedValue(TX_RESULT),
+    finalize: vi.fn().mockResolvedValue(TX_RESULT),
   } as unknown as VaultBatcher;
 }
 
@@ -141,5 +145,30 @@ describe("batcher-level mutation options", () => {
     expect(options.mutationKey).toEqual(["zama.vault.dispatchBatch", DEPOSIT_BATCHER]);
     await options.mutationFn();
     expect(batcher.dispatchBatch).toHaveBeenCalled();
+  });
+
+  test("finalizeMutationOptions delegates to batcher.finalize", async () => {
+    const batcher = createMockBatcher(DEPOSIT_BATCHER);
+    const options = finalizeMutationOptions(batcher);
+
+    expect(options.mutationKey).toEqual(["zama.vault.finalize", DEPOSIT_BATCHER]);
+    await options.mutationFn({ batchId: 3n });
+    expect(batcher.finalize).toHaveBeenCalledWith(3n);
+  });
+});
+
+describe("invalidateAfterGroupJoin", () => {
+  test("invalidates every leg's batcher reads", () => {
+    const queryClient = { invalidateQueries: vi.fn(), removeQueries: vi.fn() };
+    invalidateAfterGroupJoin(queryClient, [
+      { batcher: DEPOSIT_BATCHER, token: ACCOUNT },
+      { batcher: REDEEM_BATCHER, token: ACCOUNT },
+    ]);
+
+    for (const batcher of [DEPOSIT_BATCHER, REDEEM_BATCHER]) {
+      expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+        queryKey: vaultQueryKeys.batchState.batcher(batcher),
+      });
+    }
   });
 });

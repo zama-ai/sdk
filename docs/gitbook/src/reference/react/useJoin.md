@@ -7,7 +7,7 @@ description: Low-level mutation hook that joins a single vault batcher's open ba
 
 Mutation hook that joins the currently open batch on one batcher contract — the same call as [`VaultBatcher.join`](../sdk/VaultBatcher.md#join). It checks the caller's balance on the batcher's input token, encrypts the amount, and submits the join.
 
-This is the low-level escape hatch. It does **not** grant the batcher an operator approval, so the caller must already have set one on the input token (see [`useConfidentialSetOperator`](./useConfidentialSetOperator.md)) or the batcher cannot pull the amount. Most apps should use [`useDeposit`](./useDeposit.md) / [`useRedeem`](./useRedeem.md), which handle the grant.
+This is the low-level escape hatch. A join for the caller sends the amount to the batcher and needs no operator approval. A join for another `beneficiary` makes the batcher pull the amount, and this hook does **not** grant that approval, so the caller must already have set one on the input token (see [`useConfidentialSetOperator`](./useConfidentialSetOperator.md)). Most apps should use [`useDeposit`](./useDeposit.md) / [`useRedeem`](./useRedeem.md), which handle the grant.
 
 ## Import
 
@@ -102,5 +102,5 @@ On success the hook invalidates the input token's balance cache and the batcher'
 
 ## Related
 
-- [useDeposit](./useDeposit.md) / [useRedeem](./useRedeem.md) — the recommended hooks, with the operator grant included
+- [useDeposit](./useDeposit.md) / [useRedeem](./useRedeem.md) — the recommended hooks, which grant the operator approval a join for another `beneficiary` needs
 - [VaultBatcher.join](../sdk/VaultBatcher.md#join) — imperative equivalent

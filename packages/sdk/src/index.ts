@@ -126,6 +126,7 @@ export {
   UnlistedConfidentialTokenError,
   UnshieldAlreadyFinalizedError,
   VaultBatcherPausedError,
+  VaultBatchNotDispatchedError,
   VaultGroupJoinUnconfirmedError,
   WalletAccountNotReadyError,
   WalletNotConnectedError,
@@ -137,10 +138,11 @@ export {
   type UnlistedConfidentialTokenDetails,
   type UnshieldAlreadyFinalizedDetails,
   type VaultBatcherPausedDetails,
+  type VaultBatchNotDispatchedDetails,
   type VaultGroupJoinUnconfirmedDetails,
 } from "./errors";
 // Type-only: the root entry bundles no vault code.
-export type { VaultGroupJoin } from "./vaults/vault-group";
+export type { VaultGroupJoin } from "./vaults/vault-group-types";
 export { ZamaSDKEvents } from "./events";
 export type {
   ApproveUnderlyingSubmittedEvent,
@@ -284,7 +286,9 @@ export {
   balanceOfContract,
   confidentialBalanceOfContract,
   confidentialTotalSupplyContract,
+  confidentialTransferAndCallContract,
   confidentialTransferContract,
+  confidentialTransferFromAndCallContract,
   confidentialTransferFromContract,
   decimalsContract,
   delegateForUserDecryptionContract,
@@ -310,6 +314,7 @@ export {
   symbolContract,
   transferAndCallContract,
   underlyingContract,
+  unwrapAmountContract,
   unwrapContract,
   unwrapFromBalanceContract,
   unwrapRequesterContract,

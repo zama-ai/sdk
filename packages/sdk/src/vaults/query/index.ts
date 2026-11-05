@@ -2,6 +2,8 @@ export { vaultQueryKeys } from "./query-keys";
 export {
   invalidateAfterClaim,
   invalidateAfterDispatchBatch,
+  invalidateAfterFinalize,
+  invalidateAfterGroupJoin,
   invalidateAfterJoin,
   invalidateAfterQuit,
   invalidateBatchQueries,
@@ -14,6 +16,10 @@ export {
   timeUntilDispatchableQueryOptions,
   type TimeUntilDispatchableQueryConfig,
 } from "./time-until-dispatchable";
+export {
+  timeUntilCallbackDeadlineQueryOptions,
+  type TimeUntilCallbackDeadlineQueryConfig,
+} from "./time-until-callback-deadline";
 export { depositMutationOptions, type DepositParams } from "./deposit";
 export { redeemMutationOptions, type RedeemParams } from "./redeem";
 export { joinMutationOptions, type JoinParams } from "./join";
@@ -21,3 +27,4 @@ export { claimMutationOptions, type ClaimParams } from "./claim";
 export { quitMutationOptions, type QuitParams } from "./quit";
 export { recoverMutationOptions, type RecoverParams } from "./recover";
 export { dispatchBatchMutationOptions } from "./dispatch-batch";
+export { finalizeMutationOptions, type FinalizeParams } from "./finalize";

@@ -22,6 +22,7 @@ import {
   UnshieldAlreadyFinalizedError,
   UnlistedConfidentialTokenError,
   VaultBatcherPausedError,
+  VaultBatchNotDispatchedError,
   VaultGroupJoinUnconfirmedError,
   InvalidTransportKeyPairError,
   TransportKeyPairExpiredError,
@@ -126,6 +127,7 @@ Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequ
 | `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
 | `UnlistedConfidentialTokenError`          | `UNLISTED_CONFIDENTIAL_TOKEN`            | The vault router's registry does not list the confidential token, so the router would reject a transfer of it                     |
 | `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | A batcher one leg of a group submission would join is paused, so the whole submission would revert                                |
+| `VaultBatchNotDispatchedError`            | `VAULT_BATCH_NOT_DISPATCHED`             | A batch to be finalized is not `Dispatched`, for example because a keeper already finalized it                                    |
 | `VaultGroupJoinUnconfirmedError`          | `VAULT_GROUP_JOIN_UNCONFIRMED`           | A group submission was mined, but its receipt has no `Joined` event for at least one leg                                          |
 | `InvalidTransportKeyPairError`            | `INVALID_KEYPAIR`                        | Relayer rejected transport key pair (stale or malformed)                                                                          |
 | `TransportKeyPairExpiredError`            | `KEYPAIR_EXPIRED`                        | Transport key pair expired — user must re-sign                                                                                    |
@@ -346,6 +348,14 @@ Thrown by `VaultGroup.deposit()` when the registry the router checks does not li
 Thrown by `VaultGroup.deposit()` and `VaultGroup.redeem()` when the batcher one member's leg would join reports `paused()`. A group submission joins every member in one transaction and a paused batcher rejects `join`, so the whole submission would revert; the SDK refuses before the caller pays for it. The error carries the paused `batcher` and the `vaultId` of the member it serves.
 
 **How to handle:** Not retryable until the batcher's owner unpauses it. Quitting and claiming on the paused batcher still work, so existing positions are not stuck; only new joins are. Show the user which member is paused rather than a generic failure.
+
+### VaultBatchNotDispatchedError
+
+**Code:** `VAULT_BATCH_NOT_DISPATCHED`
+
+Thrown by `VaultBatcher.finalize()` and `VaultBatcher.prepareFinalize()` when the batch is not `Dispatched`. The SDK reads the batch state first, so this is thrown before any decryption. The error carries the `batcher`, the `batchId` and the batch's current `state`.
+
+**How to handle:** Not retryable. A settled batch stays settled, and a `Pending` batch is finalizable only after it is dispatched. Read `state` and move on: claim a `Finalized` batch, quit or recover a `Canceled` one. A keeper finalizing first is the usual cause.
 
 ### VaultGroupJoinUnconfirmedError
 

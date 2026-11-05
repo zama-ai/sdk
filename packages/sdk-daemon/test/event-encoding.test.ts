@@ -157,6 +157,7 @@ test.each([
   ["vault:claim", EventOperation.EVENT_OPERATION_VAULT_CLAIM],
   ["vault:recover", EventOperation.EVENT_OPERATION_VAULT_RECOVER],
   ["vault:dispatchBatch", EventOperation.EVENT_OPERATION_VAULT_DISPATCH_BATCH],
+  ["vault:finalize", EventOperation.EVENT_OPERATION_VAULT_FINALIZE],
   ["vault:routerJoin", EventOperation.EVENT_OPERATION_VAULT_ROUTER_JOIN],
 ] as const)("transaction operation %s survives the wire round-trip", (operation, expected) => {
   const event: ZamaSDKEvent = { ...base, type: "transaction:error", operation, error };
@@ -185,6 +186,7 @@ test.each([
   ["claim", VaultOperation.VAULT_OPERATION_CLAIM],
   ["recover", VaultOperation.VAULT_OPERATION_RECOVER],
   ["dispatchBatch", VaultOperation.VAULT_OPERATION_DISPATCH_BATCH],
+  ["finalize", VaultOperation.VAULT_OPERATION_FINALIZE],
   ["routerJoin", VaultOperation.VAULT_OPERATION_ROUTER_JOIN],
 ] as const)("vault operation %s survives the wire round-trip", (vaultOperation, expected) => {
   const event: ZamaSDKEvent = { ...base, type: "vault:submitted", vaultOperation, txHash: hash };

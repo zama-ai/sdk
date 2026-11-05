@@ -57,9 +57,11 @@ export { UnshieldAlreadyFinalizedError, type UnshieldAlreadyFinalizedDetails } f
 export {
   UnlistedConfidentialTokenError,
   VaultBatcherPausedError,
+  VaultBatchNotDispatchedError,
   VaultGroupJoinUnconfirmedError,
   type UnlistedConfidentialTokenDetails,
   type VaultBatcherPausedDetails,
+  type VaultBatchNotDispatchedDetails,
   type VaultGroupJoinUnconfirmedDetails,
 } from "./vaults";
 export { wrapDecryptError, type DecryptErrorContext } from "./decrypt";

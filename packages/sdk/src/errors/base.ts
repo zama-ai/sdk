@@ -102,6 +102,8 @@ export const ZamaErrorCode = {
   UnlistedConfidentialToken: "UNLISTED_CONFIDENTIAL_TOKEN",
   /** A batcher one leg of a group submission would join is paused. */
   VaultBatcherPaused: "VAULT_BATCHER_PAUSED",
+  /** A batch to be finalized is not `Dispatched`. */
+  VaultBatchNotDispatched: "VAULT_BATCH_NOT_DISPATCHED",
   /** A group submission was mined, but its receipt does not confirm every leg's join. */
   VaultGroupJoinUnconfirmed: "VAULT_GROUP_JOIN_UNCONFIRMED",
 } as const;
@@ -167,6 +169,7 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.UnshieldAlreadyFinalized]: false, // the funds already arrived; the stale pointer is cleared
   [ZamaErrorCode.UnlistedConfidentialToken]: false, // only a registry listing changes the answer, not a retry
   [ZamaErrorCode.VaultBatcherPaused]: false, // stays paused until the batcher is unpaused, not on retry
+  [ZamaErrorCode.VaultBatchNotDispatched]: false, // a settled batch stays settled; an open one waits for its dispatch
   [ZamaErrorCode.VaultGroupJoinUnconfirmed]: false, // the transaction is mined; a retry would submit another
 };
 

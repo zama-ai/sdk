@@ -4,9 +4,11 @@ import { vaultRouterAbi } from "../abi/vault-router.abi";
 
 /** One vault's share of a fan-out, its amount encrypted against the router. */
 export interface EncryptedAllocationLeg {
+  /** The batcher this leg joins. */
   readonly batcher: Address;
   /** The confidential token this leg spends. */
   readonly token: Address;
+  /** The leg's amount, encrypted with the router as the verifying contract. */
   readonly amount: EncryptedValue;
 }
 

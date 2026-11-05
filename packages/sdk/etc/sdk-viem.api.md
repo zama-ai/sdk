@@ -119,6 +119,7 @@ export interface FheChain<TId extends number = number> {
     readonly network: EIP1193Provider | string;
     readonly registryAddress: Address | undefined;
     readonly relayerUrl: string;
+    readonly vaultRouterAddress?: Address;
     readonly verifyingContractAddressDecryption: Address;
     readonly verifyingContractAddressInputVerification: Address;
 }
@@ -311,7 +312,7 @@ export interface TransactionErrorEvent extends BaseEvent {
 }
 
 // @public
-export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll" | "vault:join" | "vault:quit" | "vault:claim" | "vault:recover" | "vault:dispatchBatch" | "vault:routerJoin";
+export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll" | "vault:join" | "vault:quit" | "vault:claim" | "vault:recover" | "vault:dispatchBatch" | "vault:finalize" | "vault:routerJoin";
 
 // @public
 export interface TransactionReceipt {

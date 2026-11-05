@@ -3,19 +3,25 @@
  *
  * @packageDocumentation
  */
-export { createVaultBatcher, VaultBatcher } from "./vault-batcher";
+export { createVaultBatcher, VaultBatcher, type PreparedFinalize } from "./vault-batcher";
 export { createVault, Vault } from "./vault";
+export { createVaultGroup, MAX_GROUP_VAULTS, VaultGroup } from "./vault-group";
+export { decodeVaultGroupJoins, vaultGroupRedeemOperators } from "./vault-group-standalone";
 export {
-  createVaultGroup,
-  MAX_GROUP_VAULTS,
-  VaultGroup,
+  type DecodedVaultGroupJoins,
+  type JoinDelivery,
+  type PreparedVaultGroupJoin,
+  type PreparedVaultGroupWrite,
+  type PrepareVaultGroupJoinOptions,
   type VaultGroupConfig,
   type VaultGroupJoin,
+  type VaultGroupLeg,
+  type VaultGroupOperator,
   type VaultGroupRedeemOptions,
   type VaultGroupJoinResult,
   type VaultGroupMember,
   type VaultMemberConfig,
-} from "./vault-group";
+} from "./vault-group-types";
 export { BatchState } from "./types";
 export type { JoinOptions, JoinResult, VaultAddresses, VaultJoinOptions } from "./types";
 export { decodeJoined, findJoined, VaultTopics, type JoinedEvent } from "./events";
@@ -30,7 +36,9 @@ export {
   claimContract,
   currentBatchIdContract,
   depositsContract,
+  dispatchBatchCallbackContract,
   dispatchBatchContract,
+  encodeAllocationData,
   exchangeRateContract,
   exchangeRateDecimalsContract,
   fromTokenContract,
@@ -39,9 +47,13 @@ export {
   pausedContract,
   quitContract,
   recoverContract,
+  routerJoinContract,
+  tokenWrapperRegistryContract,
   toTokenContract,
   totalDepositsContract,
+  unwrapRequestIdContract,
   vaultContract,
+  type EncryptedAllocationLeg,
 } from "./contracts";
 
 // Importing this barrel does not require TanStack Query to be installed: the
@@ -52,10 +64,13 @@ export {
   currentBatchIdQueryOptions,
   depositMutationOptions,
   dispatchBatchMutationOptions,
+  finalizeMutationOptions,
   groupDepositMutationOptions,
   groupRedeemMutationOptions,
   invalidateAfterClaim,
   invalidateAfterDispatchBatch,
+  invalidateAfterFinalize,
+  invalidateAfterGroupJoin,
   invalidateAfterJoin,
   invalidateAfterQuit,
   invalidateBatchQueries,
@@ -63,17 +78,20 @@ export {
   quitMutationOptions,
   recoverMutationOptions,
   redeemMutationOptions,
+  timeUntilCallbackDeadlineQueryOptions,
   timeUntilDispatchableQueryOptions,
   vaultQueryKeys,
   type BatchStateQueryConfig,
   type ClaimParams,
   type CurrentBatchIdQueryConfig,
   type DepositParams,
+  type FinalizeParams,
   type GroupDepositParams,
   type GroupRedeemParams,
   type JoinParams,
   type QuitParams,
   type RecoverParams,
   type RedeemParams,
+  type TimeUntilCallbackDeadlineQueryConfig,
   type TimeUntilDispatchableQueryConfig,
 } from "./query";

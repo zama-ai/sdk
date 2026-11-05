@@ -2893,6 +2893,1142 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
 };
 
 // @public
+export function confidentialTransferAndCallContract(encryptedErc20: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex, data: Hex): {
+    readonly address: `0x${string}`;
+    readonly abi: readonly [{
+        readonly type: "function";
+        readonly name: "UPGRADE_INTERFACE_VERSION";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+            readonly internalType: "string";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "acceptOwnership";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "blockUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialBalanceOf";
+        readonly inputs: readonly [{
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialProtocolId";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTotalSupply";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransfer";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "externalEuint64";
+        }, {
+            readonly name: "inputProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransfer";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransferAndCall";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "transferred";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransferAndCall";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "externalEuint64";
+        }, {
+            readonly name: "inputProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "transferred";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransferFrom";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "externalEuint64";
+        }, {
+            readonly name: "inputProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "transferred";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransferFrom";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "transferred";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransferFromAndCall";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "externalEuint64";
+        }, {
+            readonly name: "inputProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "transferred";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransferFromAndCall";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "transferred";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "contractURI";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+            readonly internalType: "string";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "decimals";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint8";
+            readonly internalType: "uint8";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "discloseEncryptedAmount";
+        readonly inputs: readonly [{
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "cleartextAmount";
+            readonly type: "uint64";
+            readonly internalType: "uint64";
+        }, {
+            readonly name: "decryptionProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "finalizeUnwrap";
+        readonly inputs: readonly [{
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }, {
+            readonly name: "unwrapAmountCleartext";
+            readonly type: "uint64";
+            readonly internalType: "uint64";
+        }, {
+            readonly name: "decryptionProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "getUnderlyingDenyListSelector";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "isSet";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }, {
+            readonly name: "selector";
+            readonly type: "bytes4";
+            readonly internalType: "bytes4";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "inferredTotalSupply";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "initialize";
+        readonly inputs: readonly [{
+            readonly name: "name_";
+            readonly type: "string";
+            readonly internalType: "string";
+        }, {
+            readonly name: "symbol_";
+            readonly type: "string";
+            readonly internalType: "string";
+        }, {
+            readonly name: "contractURI_";
+            readonly type: "string";
+            readonly internalType: "string";
+        }, {
+            readonly name: "underlying_";
+            readonly type: "address";
+            readonly internalType: "contract IERC20";
+        }, {
+            readonly name: "owner_";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "isBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "isOperator";
+        readonly inputs: readonly [{
+            readonly name: "holder";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "spender";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "maxTotalSupply";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "name";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+            readonly internalType: "string";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "onTransferReceived";
+        readonly inputs: readonly [{
+            readonly name: "operator";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes4";
+            readonly internalType: "bytes4";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "owner";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "pendingOwner";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "proxiableUUID";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "rate";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "reinitializeV2";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "reinitializeV3";
+        readonly inputs: readonly [{
+            readonly name: "blockedUsers";
+            readonly type: "address[]";
+            readonly internalType: "address[]";
+        }, {
+            readonly name: "underlyingDenyListSelector";
+            readonly type: "bytes4";
+            readonly internalType: "bytes4";
+        }, {
+            readonly name: "hasUnderlyingDenyListSelector_";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "renounceOwnership";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "requestDiscloseEncryptedAmount";
+        readonly inputs: readonly [{
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "setOperator";
+        readonly inputs: readonly [{
+            readonly name: "operator";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "until";
+            readonly type: "uint48";
+            readonly internalType: "uint48";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "supportsInterface";
+        readonly inputs: readonly [{
+            readonly name: "interfaceId";
+            readonly type: "bytes4";
+            readonly internalType: "bytes4";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "symbol";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+            readonly internalType: "string";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "transferOwnership";
+        readonly inputs: readonly [{
+            readonly name: "newOwner";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "unblockUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "underlying";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "unwrap";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "externalEuint64";
+        }, {
+            readonly name: "inputProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "unwrap";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "unwrapAmount";
+        readonly inputs: readonly [{
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "unwrapRequester";
+        readonly inputs: readonly [{
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "upgradeToAndCall";
+        readonly inputs: readonly [{
+            readonly name: "newImplementation";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "payable";
+    }, {
+        readonly type: "function";
+        readonly name: "wrap";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "event";
+        readonly name: "AmountDiscloseRequested";
+        readonly inputs: readonly [{
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly indexed: true;
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "requester";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "AmountDisclosed";
+        readonly inputs: readonly [{
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly indexed: true;
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "amount";
+            readonly type: "uint64";
+            readonly indexed: false;
+            readonly internalType: "uint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "ConfidentialTransfer";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly indexed: true;
+            readonly internalType: "euint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "Initialized";
+        readonly inputs: readonly [{
+            readonly name: "version";
+            readonly type: "uint64";
+            readonly indexed: false;
+            readonly internalType: "uint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "OperatorSet";
+        readonly inputs: readonly [{
+            readonly name: "holder";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "operator";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "until";
+            readonly type: "uint48";
+            readonly indexed: false;
+            readonly internalType: "uint48";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "OwnershipTransferStarted";
+        readonly inputs: readonly [{
+            readonly name: "previousOwner";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "newOwner";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "OwnershipTransferred";
+        readonly inputs: readonly [{
+            readonly name: "previousOwner";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "newOwner";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "PublicDecryptionVerified";
+        readonly inputs: readonly [{
+            readonly name: "handlesList";
+            readonly type: "bytes32[]";
+            readonly indexed: false;
+            readonly internalType: "bytes32[]";
+        }, {
+            readonly name: "abiEncodedCleartexts";
+            readonly type: "bytes";
+            readonly indexed: false;
+            readonly internalType: "bytes";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "UnwrapFinalized";
+        readonly inputs: readonly [{
+            readonly name: "receiver";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+        }, {
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly indexed: false;
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "cleartextAmount";
+            readonly type: "uint64";
+            readonly indexed: false;
+            readonly internalType: "uint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "UnwrapRequested";
+        readonly inputs: readonly [{
+            readonly name: "receiver";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly indexed: false;
+            readonly internalType: "euint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "Upgraded";
+        readonly inputs: readonly [{
+            readonly name: "implementation";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "UserBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "UserUnblocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "Wrap";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "roundedAmount";
+            readonly type: "uint256";
+            readonly indexed: false;
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "encryptedWrappedAmount";
+            readonly type: "bytes32";
+            readonly indexed: false;
+            readonly internalType: "euint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "error";
+        readonly name: "AddressEmptyCode";
+        readonly inputs: readonly [{
+            readonly name: "target";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "BlockedUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC1967InvalidImplementation";
+        readonly inputs: readonly [{
+            readonly name: "implementation";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC1967NonPayable";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984InvalidReceiver";
+        readonly inputs: readonly [{
+            readonly name: "receiver";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984InvalidReceiver";
+        readonly inputs: readonly [{
+            readonly name: "receiver";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984InvalidSender";
+        readonly inputs: readonly [{
+            readonly name: "sender";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984TotalSupplyOverflow";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984UnauthorizedCaller";
+        readonly inputs: readonly [{
+            readonly name: "caller";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984UnauthorizedSpender";
+        readonly inputs: readonly [{
+            readonly name: "holder";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "spender";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984UnauthorizedUseOfEncryptedAmount";
+        readonly inputs: readonly [{
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984ZeroBalance";
+        readonly inputs: readonly [{
+            readonly name: "holder";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "FailedCall";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidInitialization";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidKMSSignatures";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidUnderlyingDenyListResponse";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidUnwrapRequest";
+        readonly inputs: readonly [{
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "NotInitializing";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "OwnableInvalidOwner";
+        readonly inputs: readonly [{
+            readonly name: "owner";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "OwnableUnauthorizedAccount";
+        readonly inputs: readonly [{
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "SafeCastOverflowedUintDowncast";
+        readonly inputs: readonly [{
+            readonly name: "bits";
+            readonly type: "uint8";
+            readonly internalType: "uint8";
+        }, {
+            readonly name: "value";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "SafeERC20FailedOperation";
+        readonly inputs: readonly [{
+            readonly name: "token";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "SenderNotAllowedToUseHandle";
+        readonly inputs: readonly [{
+            readonly name: "handle";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }, {
+            readonly name: "sender";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "UUPSUnauthorizedCallContext";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "UUPSUnsupportedProxiableUUID";
+        readonly inputs: readonly [{
+            readonly name: "slot";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "UnderlyingDenyListCallFailed";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "UnderlyingDenyListedAddress";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "UserAlreadyBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "UserAlreadyUnblocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ZamaProtocolUnsupported";
+        readonly inputs: readonly [];
+    }];
+    readonly functionName: "confidentialTransferAndCall";
+    readonly args: readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
+};
+
+// @public
 export function confidentialTransferContract(encryptedErc20: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -4035,6 +5171,1142 @@ export interface ConfidentialTransferEvent {
     readonly from: Address;
     readonly to: Address;
 }
+
+// @public
+export function confidentialTransferFromAndCallContract(encryptedErc20: Address, from: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex, data: Hex): {
+    readonly address: `0x${string}`;
+    readonly abi: readonly [{
+        readonly type: "function";
+        readonly name: "UPGRADE_INTERFACE_VERSION";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+            readonly internalType: "string";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "acceptOwnership";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "blockUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialBalanceOf";
+        readonly inputs: readonly [{
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialProtocolId";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTotalSupply";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransfer";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "externalEuint64";
+        }, {
+            readonly name: "inputProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransfer";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransferAndCall";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "transferred";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransferAndCall";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "externalEuint64";
+        }, {
+            readonly name: "inputProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "transferred";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransferFrom";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "externalEuint64";
+        }, {
+            readonly name: "inputProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "transferred";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransferFrom";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "transferred";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransferFromAndCall";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "externalEuint64";
+        }, {
+            readonly name: "inputProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "transferred";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransferFromAndCall";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "transferred";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "contractURI";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+            readonly internalType: "string";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "decimals";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint8";
+            readonly internalType: "uint8";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "discloseEncryptedAmount";
+        readonly inputs: readonly [{
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "cleartextAmount";
+            readonly type: "uint64";
+            readonly internalType: "uint64";
+        }, {
+            readonly name: "decryptionProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "finalizeUnwrap";
+        readonly inputs: readonly [{
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }, {
+            readonly name: "unwrapAmountCleartext";
+            readonly type: "uint64";
+            readonly internalType: "uint64";
+        }, {
+            readonly name: "decryptionProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "getUnderlyingDenyListSelector";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "isSet";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }, {
+            readonly name: "selector";
+            readonly type: "bytes4";
+            readonly internalType: "bytes4";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "inferredTotalSupply";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "initialize";
+        readonly inputs: readonly [{
+            readonly name: "name_";
+            readonly type: "string";
+            readonly internalType: "string";
+        }, {
+            readonly name: "symbol_";
+            readonly type: "string";
+            readonly internalType: "string";
+        }, {
+            readonly name: "contractURI_";
+            readonly type: "string";
+            readonly internalType: "string";
+        }, {
+            readonly name: "underlying_";
+            readonly type: "address";
+            readonly internalType: "contract IERC20";
+        }, {
+            readonly name: "owner_";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "isBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "isOperator";
+        readonly inputs: readonly [{
+            readonly name: "holder";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "spender";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "maxTotalSupply";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "name";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+            readonly internalType: "string";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "onTransferReceived";
+        readonly inputs: readonly [{
+            readonly name: "operator";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes4";
+            readonly internalType: "bytes4";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "owner";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "pendingOwner";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "proxiableUUID";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "rate";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "reinitializeV2";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "reinitializeV3";
+        readonly inputs: readonly [{
+            readonly name: "blockedUsers";
+            readonly type: "address[]";
+            readonly internalType: "address[]";
+        }, {
+            readonly name: "underlyingDenyListSelector";
+            readonly type: "bytes4";
+            readonly internalType: "bytes4";
+        }, {
+            readonly name: "hasUnderlyingDenyListSelector_";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "renounceOwnership";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "requestDiscloseEncryptedAmount";
+        readonly inputs: readonly [{
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "setOperator";
+        readonly inputs: readonly [{
+            readonly name: "operator";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "until";
+            readonly type: "uint48";
+            readonly internalType: "uint48";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "supportsInterface";
+        readonly inputs: readonly [{
+            readonly name: "interfaceId";
+            readonly type: "bytes4";
+            readonly internalType: "bytes4";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "symbol";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+            readonly internalType: "string";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "transferOwnership";
+        readonly inputs: readonly [{
+            readonly name: "newOwner";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "unblockUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "underlying";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "unwrap";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "externalEuint64";
+        }, {
+            readonly name: "inputProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "unwrap";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "unwrapAmount";
+        readonly inputs: readonly [{
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "unwrapRequester";
+        readonly inputs: readonly [{
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "upgradeToAndCall";
+        readonly inputs: readonly [{
+            readonly name: "newImplementation";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "payable";
+    }, {
+        readonly type: "function";
+        readonly name: "wrap";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "event";
+        readonly name: "AmountDiscloseRequested";
+        readonly inputs: readonly [{
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly indexed: true;
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "requester";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "AmountDisclosed";
+        readonly inputs: readonly [{
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly indexed: true;
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "amount";
+            readonly type: "uint64";
+            readonly indexed: false;
+            readonly internalType: "uint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "ConfidentialTransfer";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly indexed: true;
+            readonly internalType: "euint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "Initialized";
+        readonly inputs: readonly [{
+            readonly name: "version";
+            readonly type: "uint64";
+            readonly indexed: false;
+            readonly internalType: "uint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "OperatorSet";
+        readonly inputs: readonly [{
+            readonly name: "holder";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "operator";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "until";
+            readonly type: "uint48";
+            readonly indexed: false;
+            readonly internalType: "uint48";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "OwnershipTransferStarted";
+        readonly inputs: readonly [{
+            readonly name: "previousOwner";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "newOwner";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "OwnershipTransferred";
+        readonly inputs: readonly [{
+            readonly name: "previousOwner";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "newOwner";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "PublicDecryptionVerified";
+        readonly inputs: readonly [{
+            readonly name: "handlesList";
+            readonly type: "bytes32[]";
+            readonly indexed: false;
+            readonly internalType: "bytes32[]";
+        }, {
+            readonly name: "abiEncodedCleartexts";
+            readonly type: "bytes";
+            readonly indexed: false;
+            readonly internalType: "bytes";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "UnwrapFinalized";
+        readonly inputs: readonly [{
+            readonly name: "receiver";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+        }, {
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly indexed: false;
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "cleartextAmount";
+            readonly type: "uint64";
+            readonly indexed: false;
+            readonly internalType: "uint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "UnwrapRequested";
+        readonly inputs: readonly [{
+            readonly name: "receiver";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly indexed: false;
+            readonly internalType: "euint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "Upgraded";
+        readonly inputs: readonly [{
+            readonly name: "implementation";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "UserBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "UserUnblocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "Wrap";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "roundedAmount";
+            readonly type: "uint256";
+            readonly indexed: false;
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "encryptedWrappedAmount";
+            readonly type: "bytes32";
+            readonly indexed: false;
+            readonly internalType: "euint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "error";
+        readonly name: "AddressEmptyCode";
+        readonly inputs: readonly [{
+            readonly name: "target";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "BlockedUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC1967InvalidImplementation";
+        readonly inputs: readonly [{
+            readonly name: "implementation";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC1967NonPayable";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984InvalidReceiver";
+        readonly inputs: readonly [{
+            readonly name: "receiver";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984InvalidReceiver";
+        readonly inputs: readonly [{
+            readonly name: "receiver";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984InvalidSender";
+        readonly inputs: readonly [{
+            readonly name: "sender";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984TotalSupplyOverflow";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984UnauthorizedCaller";
+        readonly inputs: readonly [{
+            readonly name: "caller";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984UnauthorizedSpender";
+        readonly inputs: readonly [{
+            readonly name: "holder";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "spender";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984UnauthorizedUseOfEncryptedAmount";
+        readonly inputs: readonly [{
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984ZeroBalance";
+        readonly inputs: readonly [{
+            readonly name: "holder";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "FailedCall";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidInitialization";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidKMSSignatures";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidUnderlyingDenyListResponse";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidUnwrapRequest";
+        readonly inputs: readonly [{
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "NotInitializing";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "OwnableInvalidOwner";
+        readonly inputs: readonly [{
+            readonly name: "owner";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "OwnableUnauthorizedAccount";
+        readonly inputs: readonly [{
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "SafeCastOverflowedUintDowncast";
+        readonly inputs: readonly [{
+            readonly name: "bits";
+            readonly type: "uint8";
+            readonly internalType: "uint8";
+        }, {
+            readonly name: "value";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "SafeERC20FailedOperation";
+        readonly inputs: readonly [{
+            readonly name: "token";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "SenderNotAllowedToUseHandle";
+        readonly inputs: readonly [{
+            readonly name: "handle";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }, {
+            readonly name: "sender";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "UUPSUnauthorizedCallContext";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "UUPSUnsupportedProxiableUUID";
+        readonly inputs: readonly [{
+            readonly name: "slot";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "UnderlyingDenyListCallFailed";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "UnderlyingDenyListedAddress";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "UserAlreadyBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "UserAlreadyUnblocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ZamaProtocolUnsupported";
+        readonly inputs: readonly [];
+    }];
+    readonly functionName: "confidentialTransferFromAndCall";
+    readonly args: readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
+};
 
 // @public
 export function confidentialTransferFromContract(encryptedErc20: Address, from: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): {
@@ -5878,6 +8150,7 @@ export interface ErrorForCode {
     [ZamaErrorCode.TransportKeyPairChanged]: TransportKeyPairChangedError;
     [ZamaErrorCode.UnlistedConfidentialToken]: UnlistedConfidentialTokenError;
     [ZamaErrorCode.UnshieldAlreadyFinalized]: UnshieldAlreadyFinalizedError;
+    [ZamaErrorCode.VaultBatchNotDispatched]: VaultBatchNotDispatchedError;
     [ZamaErrorCode.VaultBatcherPaused]: VaultBatcherPausedError;
     [ZamaErrorCode.VaultGroupJoinUnconfirmed]: VaultGroupJoinUnconfirmedError;
     [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
@@ -5896,6 +8169,7 @@ export interface FheChain<TId extends number = number> {
     readonly network: EIP1193Provider | string;
     readonly registryAddress: Address | undefined;
     readonly relayerUrl: string;
+    readonly vaultRouterAddress?: Address;
     readonly verifyingContractAddressDecryption: Address;
     readonly verifyingContractAddressInputVerification: Address;
 }
@@ -11272,6 +13546,7 @@ export const mainnet: Readonly<{
     readonly verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24";
     readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
     readonly registryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0";
+    readonly vaultRouterAddress: "0x11c6Acfd368DDFAB97d15649eB8043C0197fac4C";
 }>;
 
 // @public
@@ -13057,6 +15332,7 @@ export const sepolia: Readonly<{
     readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
     readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
     readonly registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
+    readonly vaultRouterAddress: "0xD5BBFF95F3401aeC3B111664F6b72EdAe73814e8";
 }>;
 
 // @public
@@ -14532,7 +16808,7 @@ export interface TransactionErrorEvent extends BaseEvent {
 export type TransactionKind = PrepareTransactionRequest["kind"];
 
 // @public
-export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll" | "vault:join" | "vault:quit" | "vault:claim" | "vault:recover" | "vault:dispatchBatch" | "vault:routerJoin";
+export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll" | "vault:join" | "vault:quit" | "vault:claim" | "vault:recover" | "vault:dispatchBatch" | "vault:finalize" | "vault:routerJoin";
 
 // @public
 export interface TransactionReceipt {
@@ -16084,6 +18360,1142 @@ export interface UnwrapAllRequest {
     to: Address;
     token: Address;
 }
+
+// @public
+export function unwrapAmountContract(wrapperAddress: Address, unwrapRequestId: EncryptedValue): {
+    readonly address: `0x${string}`;
+    readonly abi: readonly [{
+        readonly type: "function";
+        readonly name: "UPGRADE_INTERFACE_VERSION";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+            readonly internalType: "string";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "acceptOwnership";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "blockUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialBalanceOf";
+        readonly inputs: readonly [{
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialProtocolId";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTotalSupply";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransfer";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "externalEuint64";
+        }, {
+            readonly name: "inputProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransfer";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransferAndCall";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "transferred";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransferAndCall";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "externalEuint64";
+        }, {
+            readonly name: "inputProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "transferred";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransferFrom";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "externalEuint64";
+        }, {
+            readonly name: "inputProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "transferred";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransferFrom";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "transferred";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransferFromAndCall";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "externalEuint64";
+        }, {
+            readonly name: "inputProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "transferred";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "confidentialTransferFromAndCall";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "transferred";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "contractURI";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+            readonly internalType: "string";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "decimals";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint8";
+            readonly internalType: "uint8";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "discloseEncryptedAmount";
+        readonly inputs: readonly [{
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "cleartextAmount";
+            readonly type: "uint64";
+            readonly internalType: "uint64";
+        }, {
+            readonly name: "decryptionProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "finalizeUnwrap";
+        readonly inputs: readonly [{
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }, {
+            readonly name: "unwrapAmountCleartext";
+            readonly type: "uint64";
+            readonly internalType: "uint64";
+        }, {
+            readonly name: "decryptionProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "getUnderlyingDenyListSelector";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "isSet";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }, {
+            readonly name: "selector";
+            readonly type: "bytes4";
+            readonly internalType: "bytes4";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "inferredTotalSupply";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "initialize";
+        readonly inputs: readonly [{
+            readonly name: "name_";
+            readonly type: "string";
+            readonly internalType: "string";
+        }, {
+            readonly name: "symbol_";
+            readonly type: "string";
+            readonly internalType: "string";
+        }, {
+            readonly name: "contractURI_";
+            readonly type: "string";
+            readonly internalType: "string";
+        }, {
+            readonly name: "underlying_";
+            readonly type: "address";
+            readonly internalType: "contract IERC20";
+        }, {
+            readonly name: "owner_";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "isBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "isOperator";
+        readonly inputs: readonly [{
+            readonly name: "holder";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "spender";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "maxTotalSupply";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "name";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+            readonly internalType: "string";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "onTransferReceived";
+        readonly inputs: readonly [{
+            readonly name: "operator";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes4";
+            readonly internalType: "bytes4";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "owner";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "pendingOwner";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "proxiableUUID";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "rate";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "reinitializeV2";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "reinitializeV3";
+        readonly inputs: readonly [{
+            readonly name: "blockedUsers";
+            readonly type: "address[]";
+            readonly internalType: "address[]";
+        }, {
+            readonly name: "underlyingDenyListSelector";
+            readonly type: "bytes4";
+            readonly internalType: "bytes4";
+        }, {
+            readonly name: "hasUnderlyingDenyListSelector_";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "renounceOwnership";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "requestDiscloseEncryptedAmount";
+        readonly inputs: readonly [{
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "setOperator";
+        readonly inputs: readonly [{
+            readonly name: "operator";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "until";
+            readonly type: "uint48";
+            readonly internalType: "uint48";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "supportsInterface";
+        readonly inputs: readonly [{
+            readonly name: "interfaceId";
+            readonly type: "bytes4";
+            readonly internalType: "bytes4";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "symbol";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+            readonly internalType: "string";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "transferOwnership";
+        readonly inputs: readonly [{
+            readonly name: "newOwner";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "unblockUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "underlying";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "unwrap";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly internalType: "externalEuint64";
+        }, {
+            readonly name: "inputProof";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "unwrap";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "unwrapAmount";
+        readonly inputs: readonly [{
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "unwrapRequester";
+        readonly inputs: readonly [{
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "upgradeToAndCall";
+        readonly inputs: readonly [{
+            readonly name: "newImplementation";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "payable";
+    }, {
+        readonly type: "function";
+        readonly name: "wrap";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "event";
+        readonly name: "AmountDiscloseRequested";
+        readonly inputs: readonly [{
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly indexed: true;
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "requester";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "AmountDisclosed";
+        readonly inputs: readonly [{
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly indexed: true;
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "amount";
+            readonly type: "uint64";
+            readonly indexed: false;
+            readonly internalType: "uint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "ConfidentialTransfer";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly indexed: true;
+            readonly internalType: "euint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "Initialized";
+        readonly inputs: readonly [{
+            readonly name: "version";
+            readonly type: "uint64";
+            readonly indexed: false;
+            readonly internalType: "uint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "OperatorSet";
+        readonly inputs: readonly [{
+            readonly name: "holder";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "operator";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "until";
+            readonly type: "uint48";
+            readonly indexed: false;
+            readonly internalType: "uint48";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "OwnershipTransferStarted";
+        readonly inputs: readonly [{
+            readonly name: "previousOwner";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "newOwner";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "OwnershipTransferred";
+        readonly inputs: readonly [{
+            readonly name: "previousOwner";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "newOwner";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "PublicDecryptionVerified";
+        readonly inputs: readonly [{
+            readonly name: "handlesList";
+            readonly type: "bytes32[]";
+            readonly indexed: false;
+            readonly internalType: "bytes32[]";
+        }, {
+            readonly name: "abiEncodedCleartexts";
+            readonly type: "bytes";
+            readonly indexed: false;
+            readonly internalType: "bytes";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "UnwrapFinalized";
+        readonly inputs: readonly [{
+            readonly name: "receiver";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+        }, {
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+            readonly indexed: false;
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "cleartextAmount";
+            readonly type: "uint64";
+            readonly indexed: false;
+            readonly internalType: "uint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "UnwrapRequested";
+        readonly inputs: readonly [{
+            readonly name: "receiver";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+        }, {
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly indexed: false;
+            readonly internalType: "euint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "Upgraded";
+        readonly inputs: readonly [{
+            readonly name: "implementation";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "UserBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "UserUnblocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "Wrap";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "roundedAmount";
+            readonly type: "uint256";
+            readonly indexed: false;
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "encryptedWrappedAmount";
+            readonly type: "bytes32";
+            readonly indexed: false;
+            readonly internalType: "euint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "error";
+        readonly name: "AddressEmptyCode";
+        readonly inputs: readonly [{
+            readonly name: "target";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "BlockedUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC1967InvalidImplementation";
+        readonly inputs: readonly [{
+            readonly name: "implementation";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC1967NonPayable";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984InvalidReceiver";
+        readonly inputs: readonly [{
+            readonly name: "receiver";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984InvalidReceiver";
+        readonly inputs: readonly [{
+            readonly name: "receiver";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984InvalidSender";
+        readonly inputs: readonly [{
+            readonly name: "sender";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984TotalSupplyOverflow";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984UnauthorizedCaller";
+        readonly inputs: readonly [{
+            readonly name: "caller";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984UnauthorizedSpender";
+        readonly inputs: readonly [{
+            readonly name: "holder";
+            readonly type: "address";
+            readonly internalType: "address";
+        }, {
+            readonly name: "spender";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984UnauthorizedUseOfEncryptedAmount";
+        readonly inputs: readonly [{
+            readonly name: "amount";
+            readonly type: "bytes32";
+            readonly internalType: "euint64";
+        }, {
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ERC7984ZeroBalance";
+        readonly inputs: readonly [{
+            readonly name: "holder";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "FailedCall";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidInitialization";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidKMSSignatures";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidUnderlyingDenyListResponse";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidUnwrapRequest";
+        readonly inputs: readonly [{
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "NotInitializing";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "OwnableInvalidOwner";
+        readonly inputs: readonly [{
+            readonly name: "owner";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "OwnableUnauthorizedAccount";
+        readonly inputs: readonly [{
+            readonly name: "account";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "SafeCastOverflowedUintDowncast";
+        readonly inputs: readonly [{
+            readonly name: "bits";
+            readonly type: "uint8";
+            readonly internalType: "uint8";
+        }, {
+            readonly name: "value";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "SafeERC20FailedOperation";
+        readonly inputs: readonly [{
+            readonly name: "token";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "SenderNotAllowedToUseHandle";
+        readonly inputs: readonly [{
+            readonly name: "handle";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }, {
+            readonly name: "sender";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "UUPSUnauthorizedCallContext";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "UUPSUnsupportedProxiableUUID";
+        readonly inputs: readonly [{
+            readonly name: "slot";
+            readonly type: "bytes32";
+            readonly internalType: "bytes32";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "UnderlyingDenyListCallFailed";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "UnderlyingDenyListedAddress";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "UserAlreadyBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "UserAlreadyUnblocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "ZamaProtocolUnsupported";
+        readonly inputs: readonly [];
+    }];
+    readonly functionName: "unwrapAmount";
+    readonly args: readonly [`0x${string}`];
+};
 
 // @public
 export function unwrapContract(encryptedErc20: Address, from: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): {
@@ -19544,6 +22956,22 @@ export class VaultBatcherPausedError extends ZamaError {
 }
 
 // @public
+export interface VaultBatchNotDispatchedDetails {
+    readonly batcher: Address;
+    readonly batchId: bigint;
+    // Warning: (ae-forgotten-export) The symbol "BatchState" needs to be exported by the entry point index.d.ts
+    readonly state: BatchState;
+}
+
+// @public
+export class VaultBatchNotDispatchedError extends ZamaError {
+    constructor(message: string, details: VaultBatchNotDispatchedDetails, options?: ErrorOptions);
+    readonly batcher: Address;
+    readonly batchId: bigint;
+    readonly state: BatchState;
+}
+
+// @public
 export interface VaultGroupJoin {
     batcher: Address;
     batchId: bigint;
@@ -19570,7 +22998,7 @@ export class VaultGroupJoinUnconfirmedError extends ZamaError {
 }
 
 // @public
-export type VaultOperation = "join" | "quit" | "claim" | "recover" | "dispatchBatch" | "routerJoin";
+export type VaultOperation = "join" | "quit" | "claim" | "recover" | "dispatchBatch" | "finalize" | "routerJoin";
 
 // @public
 export interface VaultSubmittedEvent extends BaseEvent {
@@ -20965,6 +24393,7 @@ export const ZamaErrorCode: {
     readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
     readonly UnlistedConfidentialToken: "UNLISTED_CONFIDENTIAL_TOKEN";
     readonly VaultBatcherPaused: "VAULT_BATCHER_PAUSED";
+    readonly VaultBatchNotDispatched: "VAULT_BATCH_NOT_DISPATCHED";
     readonly VaultGroupJoinUnconfirmed: "VAULT_GROUP_JOIN_UNCONFIRMED";
 };
 

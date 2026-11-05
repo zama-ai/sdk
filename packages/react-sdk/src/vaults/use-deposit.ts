@@ -24,8 +24,8 @@ export interface UseDepositConfig {
 
 /**
  * Deposit a plaintext amount into a vault, joining the current deposit batch.
- * Grants the deposit batcher an ERC-7984 operator approval first if one isn't
- * already active. Invalidates the deposit token's balance and operator-status
+ * Only a deposit for another `beneficiary` needs an ERC-7984 operator approval,
+ * granted first if none is active. Invalidates the deposit token's balance and operator-status
  * caches on success.
  *
  * @param config - The vault's addresses.

@@ -10,7 +10,7 @@ import type { TransactionResult } from "../types";
 export const BatchState = {
   /** Open: accepts joins and quits. Always the batcher's `currentBatchId`. */
   Pending: 0,
-  /** Closed; the aggregate amount is being decrypted. No user action is possible. */
+  /** Closed; the aggregate amount is being decrypted. Only `finalize` applies, which a keeper normally sends. */
   Dispatched: 1,
   /** Settled with an exchange rate — the only state in which `claim` succeeds. */
   Finalized: 2,
@@ -59,7 +59,8 @@ export interface VaultJoinOptions extends JoinOptions {
   beneficiary?: Address;
   /**
    * Unix timestamp until which the batcher's operator grant on the joined
-   * token is valid. Only used when a grant isn't already active. Defaults to
+   * token is valid. Only used for a join with another `beneficiary`, the one
+   * case that needs a grant, and only when none is active. Defaults to
    * `Token.setOperator`'s own default (now + 1 hour).
    */
   operatorUntil?: number;
