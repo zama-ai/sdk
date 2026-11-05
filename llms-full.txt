@@ -2559,7 +2559,7 @@ See [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbo
 
 ## Settle a dispatched batch yourself
 
-New `VaultBatcher.finalize(batchId)` (`useFinalize` in React, `finalizeMutationOptions` for TanStack Query). The relayer normally finalizes a dispatched batch; when it has not, any account can now settle the batch from the SDK: `finalize` reads the batch's unwrap request, publicly decrypts the amount it released, and submits `dispatchBatchCallback` with the cleartext and its proof. Past the batch's callback deadline the same call cancels the batch. The submission surfaces as a `VaultSubmitted` event with `vaultOperation: "finalize"`. `VaultBatcher.unwrapRequestId(batchId)` exposes the underlying read. `finalize` and `prepareFinalize` read the batch state first and throw the new `VaultBatchNotDispatchedError` when the batch is not `Dispatched`, for example because the relayer already finalized it, before any decryption. New `VaultBatcher.timeUntilCallbackDeadline(batchId)` (`useTimeUntilCallbackDeadline`, `timeUntilCallbackDeadlineQueryOptions`) reads the seconds until a dispatched batch reaches its callback deadline: `0` once it has, when `finalize` cancels instead of settling, and `null` outside `Dispatched`.
+New `VaultBatcher.finalize(batchId)` (`useFinalize` in React, `finalizeMutationOptions` for TanStack Query). A keeper, an off-chain service that watches batches, normally finalizes a dispatched batch; when it has not, any account can now settle the batch from the SDK: `finalize` reads the batch's unwrap request, publicly decrypts the amount it released, and submits `dispatchBatchCallback` with the cleartext and its proof. Past the batch's callback deadline the same call cancels the batch. The submission surfaces as a `VaultSubmitted` event with `vaultOperation: "finalize"`. `VaultBatcher.unwrapRequestId(batchId)` exposes the underlying read. `finalize` and `prepareFinalize` read the batch state first and throw the new `VaultBatchNotDispatchedError` when the batch is not `Dispatched`, for example because a keeper already finalized it, before any decryption. New `VaultBatcher.timeUntilCallbackDeadline(batchId)` (`useTimeUntilCallbackDeadline`, `timeUntilCallbackDeadlineQueryOptions`) reads the seconds until a dispatched batch reaches its callback deadline: `0` once it has, when `finalize` cancels instead of settling, and `null` outside `Dispatched`.
 
 ## Vault groups for your own transaction layer
 
@@ -9977,12 +9977,12 @@ const { data: openBatchId } = useCurrentBatchId({ address: vault.depositBatcher.
 
 `batchState` decides which action is legal, so read it before offering the user a button:
 
-| `BatchState` | What the user can do                            |
-| ------------ | ----------------------------------------------- |
-| `Pending`    | `deposit` / `redeem`, or `quit`                 |
-| `Dispatched` | `finalize` — the relayer normally does it       |
-| `Finalized`  | `claim`                                         |
-| `Canceled`   | `quit` (or `recover`), to take the deposit back |
+| `BatchState` | What the user can do                                                           |
+| ------------ | ------------------------------------------------------------------------------ |
+| `Pending`    | `deposit` / `redeem`, or `quit`                                                |
+| `Dispatched` | Wait for a keeper to finalize it; `finalize` if it stays `Dispatched` too long |
+| `Finalized`  | `claim`                                                                        |
+| `Canceled`   | `quit` (or `recover`), to take the deposit back                                |
 
 
 > [!WARNING]
@@ -10037,7 +10037,7 @@ Use the per-batch reads (`batchMinBatchAge`, `batchCallbackDeadline`) rather tha
 
 ### 5. Claim
 
-Dispatch only starts the decryption; finalization lands later, when the relayer calls back with the decrypted aggregate. Wait for `batchState` to reach `Finalized`, then claim. A batch that stays `Dispatched` longer than expected can be settled by anyone with `vault.depositBatcher.finalize(batchId)` (`useFinalize` in React); past its callback deadline that same call cancels it instead. `timeUntilCallbackDeadline(batchId)` (`useTimeUntilCallbackDeadline`) reads the seconds left, `0` once it has passed. `finalize` throws `VaultBatchNotDispatchedError` when the batch is not `Dispatched`, for example because the relayer got there first. Claiming is permissionless — anyone can call it on another account's behalf, but the output always goes to that account, never to the caller:
+Dispatch only starts the decryption; finalization lands later, when a keeper (an off-chain service that watches batches) sends the callback with the decrypted aggregate. Wait for `batchState` to reach `Finalized`, then claim. A batch that stays `Dispatched` longer than expected can be settled by anyone with `vault.depositBatcher.finalize(batchId)` (`useFinalize` in React); past its callback deadline that same call cancels it instead. `timeUntilCallbackDeadline(batchId)` (`useTimeUntilCallbackDeadline`) reads the seconds left, `0` once it has passed. `finalize` throws `VaultBatchNotDispatchedError` when the batch is not `Dispatched`, for example because a keeper got there first. Claiming is permissionless — anyone can call it on another account's behalf, but the output always goes to that account, never to the caller:
 
 
 ### Tab: Core SDK
@@ -12727,7 +12727,7 @@ Both writes resolve to a `JoinResult`, which extends `TransactionResult`:
 
 A vault has one batcher per direction — deposit and redeem — so a [`Vault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) holds two instances. Most apps should start from `Vault`, which adds the operator-approval step to `join`, and reach for `VaultBatcher` directly only for a single direction or to control the approval yourself.
 
-The lifecycle is `join` → `dispatchBatch` → `claim`. Finalization between the last two is normally driven by the relayer: a batch is claimable only once it reaches `BatchState.Finalized`, which can be well after dispatch. `finalize` settles a batch the relayer has not.
+The lifecycle is `join` → `dispatchBatch` → `claim`. Finalization between the last two is normally driven by a keeper, an off-chain service that watches batches and sends each dispatched batch's callback once its decryption is published: a batch is claimable only once it reaches `BatchState.Finalized`, which can be well after dispatch. `finalize` settles a batch the keeper has not.
 
 ## Import
 
@@ -12770,12 +12770,12 @@ import { BatchState } from "@zama-fhe/sdk/vaults";
 
 A batch's lifecycle state. The numbers mirror the contract's own enum. `batchState()` returns one of these, and it decides which write is legal:
 
-| Value                   | Meaning                                                                       | Legal writes                               |
-| ----------------------- | ----------------------------------------------------------------------------- | ------------------------------------------ |
-| `BatchState.Pending`    | `0` — open. Always the batcher's `currentBatchId()`.                          | `join`, `quit`                             |
-| `BatchState.Dispatched` | `1` — closed; the aggregate amount is being decrypted.                        | `finalize` — the relayer normally sends it |
-| `BatchState.Finalized`  | `2` — settled with an exchange rate.                                          | `claim`                                    |
-| `BatchState.Canceled`   | `3` — the route failed or the callback deadline passed; nothing was executed. | `quit`, `recover`                          |
+| Value                   | Meaning                                                                       | Legal writes                            |
+| ----------------------- | ----------------------------------------------------------------------------- | --------------------------------------- |
+| `BatchState.Pending`    | `0` — open. Always the batcher's `currentBatchId()`.                          | `join`, `quit`                          |
+| `BatchState.Dispatched` | `1` — closed; the aggregate amount is being decrypted.                        | `finalize` — a keeper normally sends it |
+| `BatchState.Finalized`  | `2` — settled with an exchange rate.                                          | `claim`                                 |
+| `BatchState.Canceled`   | `3` — the route failed or the callback deadline passed; nothing was executed. | `quit`, `recover`                       |
 
 Claiming a canceled batch reverts — there is nothing to claim, only a deposit to take back.
 
@@ -12987,7 +12987,7 @@ await batcher.dispatchBatch();
 
 `(batchId: bigint) => Promise<TransactionResult>`
 
-Settles a dispatched batch yourself: reads the batch's `unwrapRequestId`, publicly decrypts the amount that unwrap released, and submits `dispatchBatchCallback` with the cleartext and its proof, which executes the route. Permissionless, like `dispatchBatch`. The relayer normally does this, so reach for it when a batch has sat in `BatchState.Dispatched` longer than expected. Past the batch's callback deadline (`batchDispatchedAt + batchCallbackDeadline`) the same call cancels the batch instead of settling it.
+Settles a dispatched batch yourself: reads the batch's `unwrapRequestId`, publicly decrypts the amount that unwrap released, and submits `dispatchBatchCallback` with the cleartext and its proof, which executes the route. Permissionless, like `dispatchBatch`. A keeper normally does this, so reach for it when a batch has sat in `BatchState.Dispatched` longer than expected. Past the batch's callback deadline (`batchDispatchedAt + batchCallbackDeadline`) the same call cancels the batch instead of settling it.
 
 Only legal while the batch is `BatchState.Dispatched`. Read [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline) to see whether the call will settle or cancel.
 
@@ -12997,7 +12997,7 @@ await batcher.finalize(batchId);
 
 **Throws:**
 
-- [`VaultBatchNotDispatchedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultbatchnotdispatchederror) — the batch is not `Dispatched`, for example because the relayer already finalized it. Thrown before any decryption.
+- [`VaultBatchNotDispatchedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultbatchnotdispatchederror) — the batch is not `Dispatched`, for example because a keeper already finalized it. Thrown before any decryption.
 - [`DecryptionFailedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#decryptionfailederror) — the public decryption returned no cleartext for the amount.
 
 `prepareFinalize(batchId)` does everything but the send, including the `Dispatched` check, and returns `{ batchId, unwrapAmountCleartext, decryptionProof, call }`, the `dispatchBatchCallback` call ready for a host's own signer. It needs no signer.
@@ -14654,7 +14654,7 @@ Exactly five error classes are retryable today: `RpcRateLimitError`, `RelayerReq
 | `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
 | `UnlistedConfidentialTokenError`          | `UNLISTED_CONFIDENTIAL_TOKEN`            | The vault router's registry does not list the confidential token, so the router would reject a transfer of it                     |
 | `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | A batcher one leg of a group submission would join is paused, so the whole submission would revert                                |
-| `VaultBatchNotDispatchedError`            | `VAULT_BATCH_NOT_DISPATCHED`             | A batch to be finalized is not `Dispatched`, for example because the relayer already finalized it                                 |
+| `VaultBatchNotDispatchedError`            | `VAULT_BATCH_NOT_DISPATCHED`             | A batch to be finalized is not `Dispatched`, for example because a keeper already finalized it                                    |
 | `VaultGroupJoinUnconfirmedError`          | `VAULT_GROUP_JOIN_UNCONFIRMED`           | A group submission was mined, but its receipt has no `Joined` event for at least one leg                                          |
 | `InvalidTransportKeyPairError`            | `INVALID_KEYPAIR`                        | Relayer rejected transport key pair (stale or malformed)                                                                          |
 | `TransportKeyPairExpiredError`            | `KEYPAIR_EXPIRED`                        | Transport key pair expired — user must re-sign                                                                                    |
@@ -14853,7 +14853,7 @@ Thrown by `VaultGroup.deposit()` and `VaultGroup.redeem()` when the batcher one 
 
 Thrown by `VaultBatcher.finalize()` and `VaultBatcher.prepareFinalize()` when the batch is not `Dispatched`. The SDK reads the batch state first, so this is thrown before any decryption. The error carries the `batcher`, the `batchId` and the batch's current `state`.
 
-**How to handle:** Not retryable. A settled batch stays settled, and a `Pending` batch is finalizable only after it is dispatched. Read `state` and move on: claim a `Finalized` batch, quit or recover a `Canceled` one. The relayer finalizing first is the usual cause.
+**How to handle:** Not retryable. A settled batch stays settled, and a `Pending` batch is finalizable only after it is dispatched. Read `state` and move on: claim a `Finalized` batch, quit or recover a `Canceled` one. A keeper finalizing first is the usual cause.
 
 ### VaultGroupJoinUnconfirmedError
 
@@ -25642,7 +25642,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 Mutation hook that closes a batcher's current batch and kicks off decryption of its aggregate amount. Same call as [`VaultBatcher.dispatchBatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#dispatchbatch).
 
-Dispatching is permissionless — any connected account can do it, not just participants — but it reverts until the batch has reached its pinned minimum age (when [`useTimeUntilDispatchable`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md) reads `0`) and while the batcher is paused. Dispatch only starts decryption; the batch becomes claimable later, once the relayer finalizes it, or once you do with [`useFinalize`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useFinalize.md).
+Dispatching is permissionless — any connected account can do it, not just participants — but it reverts until the batch has reached its pinned minimum age (when [`useTimeUntilDispatchable`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md) reads `0`) and while the batcher is paused. Dispatch only starts decryption; the batch becomes claimable later, once a keeper finalizes it, or once you do with [`useFinalize`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useFinalize.md).
 
 ## Import
 
@@ -25776,7 +25776,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 - [useTimeUntilDispatchable](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md) — when the batch becomes dispatchable
 - [useBatchState](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md) — watch for `Finalized` after dispatch
-- [useFinalize](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useFinalize.md) — settle the batch yourself if the relayer does not
+- [useFinalize](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useFinalize.md) — settle the batch yourself if its keeper does not
 - [VaultBatcher.dispatchBatch](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#dispatchbatch) — imperative equivalent
 
 ## useFinalize
@@ -25790,9 +25790,9 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 Mutation hook that settles a dispatched batch yourself. Same call as [`VaultBatcher.finalize`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#finalize): it publicly decrypts the batch's aggregate amount and hands the cleartext and its proof to the batcher, which executes the route.
 
-The relayer normally finalizes a batch after dispatch, so this is for a batch that has sat in `BatchState.Dispatched` longer than expected. Finalizing is permissionless. Past the batch's callback deadline (see [`useTimeUntilCallbackDeadline`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md)) the same call cancels the batch instead of settling it, and its participants take their deposits back with [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md).
+A keeper, an off-chain service that watches batches, normally finalizes a batch after dispatch, so this is for a batch that has sat in `BatchState.Dispatched` longer than expected. Finalizing is permissionless. Past the batch's callback deadline (see [`useTimeUntilCallbackDeadline`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md)) the same call cancels the batch instead of settling it, and its participants take their deposits back with [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md).
 
-The call reads the batch state first and rejects with [`VaultBatchNotDispatchedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultbatchnotdispatchederror) when the batch is not `Dispatched`, for example because the relayer already finalized it.
+The call reads the batch state first and rejects with [`VaultBatchNotDispatchedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultbatchnotdispatchederror) when the batch is not `Dispatched`, for example because a keeper already finalized it.
 
 ## Import
 
@@ -26107,12 +26107,12 @@ Reads a batch's lifecycle state — `Pending`, `Dispatched`, `Finalized` or `Can
 
 The state decides which action is legal, so read it before offering the user a button:
 
-| `BatchState` | What the user can do                                  |
-| ------------ | ----------------------------------------------------- |
-| `Pending`    | join (`useDeposit` / `useRedeem`), or `useQuit`       |
-| `Dispatched` | `useFinalize` — the relayer normally does it          |
-| `Finalized`  | `useClaim`                                            |
-| `Canceled`   | `useQuit` (or `useRecover`), to take the deposit back |
+| `BatchState` | What the user can do                                                              |
+| ------------ | --------------------------------------------------------------------------------- |
+| `Pending`    | join (`useDeposit` / `useRedeem`), or `useQuit`                                   |
+| `Dispatched` | Wait for a keeper to finalize it; `useFinalize` if it stays `Dispatched` too long |
+| `Finalized`  | `useClaim`                                                                        |
+| `Canceled`   | `useQuit` (or `useRecover`), to take the deposit back                             |
 
 Claiming a canceled batch reverts: a canceled batch never executed, so there is nothing to claim, only a deposit to take back.
 

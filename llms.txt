@@ -148,7 +148,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useQuit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md): Mutation hook that withdraws the caller's own deposit from a pending or canceled vault batch.
 - [useRecover](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRecover.md): Mutation hook that refunds a depositor's deposit from a canceled vault batch on their behalf.
 - [useDispatchBatch](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDispatchBatch.md): Mutation hook that dispatches a vault batcher's current batch once it is old enough.
-- [useFinalize](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useFinalize.md): Mutation hook that settles a dispatched vault batch when the relayer has not.
+- [useFinalize](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useFinalize.md): Mutation hook that settles a dispatched vault batch when its keeper has not.
 - [useCurrentBatchId](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useCurrentBatchId.md): Query hook for the id of a vault batcher's currently open batch.
 - [useBatchState](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md): Query hook for a vault batch's lifecycle state, which decides what the user can do next.
 - [useTimeUntilDispatchable](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md): Query hook for the seconds until a vault batch becomes eligible for dispatch.

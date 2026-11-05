@@ -20,7 +20,7 @@ export interface UseFinalizeConfig {
 }
 
 /**
- * Settle a dispatched batch yourself when the relayer has not: publicly
+ * Settle a dispatched batch yourself when its keeper has not: publicly
  * decrypts the batch's aggregate amount and hands it to the batcher, which
  * executes the route. Permissionless. Past the batch's callback deadline the
  * same call cancels the batch instead. Invalidates the batcher's cached batch

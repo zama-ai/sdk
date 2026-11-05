@@ -69,7 +69,7 @@ export interface VaultBatchNotDispatchedDetails {
 
 /**
  * A batch cannot be finalized because it is not `Dispatched`: it is still
- * open, or it was already settled or canceled, by the relayer or anyone else.
+ * open, or it was already settled or canceled, by a keeper or anyone else.
  */
 export class VaultBatchNotDispatchedError extends ZamaError {
   /** The batcher the batch belongs to. */

@@ -9,7 +9,7 @@ description: One on-chain vault batcher — join, batch state, dispatch, claim, 
 
 A vault has one batcher per direction — deposit and redeem — so a [`Vault`](Vault.md) holds two instances. Most apps should start from `Vault`, which adds the operator-approval step to `join`, and reach for `VaultBatcher` directly only for a single direction or to control the approval yourself.
 
-The lifecycle is `join` → `dispatchBatch` → `claim`. Finalization between the last two is normally driven by the relayer: a batch is claimable only once it reaches `BatchState.Finalized`, which can be well after dispatch. `finalize` settles a batch the relayer has not.
+The lifecycle is `join` → `dispatchBatch` → `claim`. Finalization between the last two is normally driven by a keeper, an off-chain service that watches batches and sends each dispatched batch's callback once its decryption is published: a batch is claimable only once it reaches `BatchState.Finalized`, which can be well after dispatch. `finalize` settles a batch the keeper has not.
 
 ## Import
 
@@ -52,12 +52,12 @@ import { BatchState } from "@zama-fhe/sdk/vaults";
 
 A batch's lifecycle state. The numbers mirror the contract's own enum. `batchState()` returns one of these, and it decides which write is legal:
 
-| Value                   | Meaning                                                                       | Legal writes                               |
-| ----------------------- | ----------------------------------------------------------------------------- | ------------------------------------------ |
-| `BatchState.Pending`    | `0` — open. Always the batcher's `currentBatchId()`.                          | `join`, `quit`                             |
-| `BatchState.Dispatched` | `1` — closed; the aggregate amount is being decrypted.                        | `finalize` — the relayer normally sends it |
-| `BatchState.Finalized`  | `2` — settled with an exchange rate.                                          | `claim`                                    |
-| `BatchState.Canceled`   | `3` — the route failed or the callback deadline passed; nothing was executed. | `quit`, `recover`                          |
+| Value                   | Meaning                                                                       | Legal writes                            |
+| ----------------------- | ----------------------------------------------------------------------------- | --------------------------------------- |
+| `BatchState.Pending`    | `0` — open. Always the batcher's `currentBatchId()`.                          | `join`, `quit`                          |
+| `BatchState.Dispatched` | `1` — closed; the aggregate amount is being decrypted.                        | `finalize` — a keeper normally sends it |
+| `BatchState.Finalized`  | `2` — settled with an exchange rate.                                          | `claim`                                 |
+| `BatchState.Canceled`   | `3` — the route failed or the callback deadline passed; nothing was executed. | `quit`, `recover`                       |
 
 Claiming a canceled batch reverts — there is nothing to claim, only a deposit to take back.
 
@@ -269,7 +269,7 @@ await batcher.dispatchBatch();
 
 `(batchId: bigint) => Promise<TransactionResult>`
 
-Settles a dispatched batch yourself: reads the batch's `unwrapRequestId`, publicly decrypts the amount that unwrap released, and submits `dispatchBatchCallback` with the cleartext and its proof, which executes the route. Permissionless, like `dispatchBatch`. The relayer normally does this, so reach for it when a batch has sat in `BatchState.Dispatched` longer than expected. Past the batch's callback deadline (`batchDispatchedAt + batchCallbackDeadline`) the same call cancels the batch instead of settling it.
+Settles a dispatched batch yourself: reads the batch's `unwrapRequestId`, publicly decrypts the amount that unwrap released, and submits `dispatchBatchCallback` with the cleartext and its proof, which executes the route. Permissionless, like `dispatchBatch`. A keeper normally does this, so reach for it when a batch has sat in `BatchState.Dispatched` longer than expected. Past the batch's callback deadline (`batchDispatchedAt + batchCallbackDeadline`) the same call cancels the batch instead of settling it.
 
 Only legal while the batch is `BatchState.Dispatched`. Read [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline) to see whether the call will settle or cancel.
 
@@ -279,7 +279,7 @@ await batcher.finalize(batchId);
 
 **Throws:**
 
-- [`VaultBatchNotDispatchedError`](errors.md#vaultbatchnotdispatchederror) — the batch is not `Dispatched`, for example because the relayer already finalized it. Thrown before any decryption.
+- [`VaultBatchNotDispatchedError`](errors.md#vaultbatchnotdispatchederror) — the batch is not `Dispatched`, for example because a keeper already finalized it. Thrown before any decryption.
 - [`DecryptionFailedError`](errors.md#decryptionfailederror) — the public decryption returned no cleartext for the amount.
 
 `prepareFinalize(batchId)` does everything but the send, including the `Dispatched` check, and returns `{ batchId, unwrapAmountCleartext, decryptionProof, call }`, the `dispatchBatchCallback` call ready for a host's own signer. It needs no signer.

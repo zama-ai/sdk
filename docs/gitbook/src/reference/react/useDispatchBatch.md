@@ -7,7 +7,7 @@ description: Mutation hook that dispatches a vault batcher's current batch once 
 
 Mutation hook that closes a batcher's current batch and kicks off decryption of its aggregate amount. Same call as [`VaultBatcher.dispatchBatch`](../sdk/VaultBatcher.md#dispatchbatch).
 
-Dispatching is permissionless — any connected account can do it, not just participants — but it reverts until the batch has reached its pinned minimum age (when [`useTimeUntilDispatchable`](./useTimeUntilDispatchable.md) reads `0`) and while the batcher is paused. Dispatch only starts decryption; the batch becomes claimable later, once the relayer finalizes it, or once you do with [`useFinalize`](./useFinalize.md).
+Dispatching is permissionless — any connected account can do it, not just participants — but it reverts until the batch has reached its pinned minimum age (when [`useTimeUntilDispatchable`](./useTimeUntilDispatchable.md) reads `0`) and while the batcher is paused. Dispatch only starts decryption; the batch becomes claimable later, once a keeper finalizes it, or once you do with [`useFinalize`](./useFinalize.md).
 
 ## Import
 
@@ -73,5 +73,5 @@ On success the hook invalidates the batcher's batch reads: a new batch opens and
 
 - [useTimeUntilDispatchable](./useTimeUntilDispatchable.md) — when the batch becomes dispatchable
 - [useBatchState](./useBatchState.md) — watch for `Finalized` after dispatch
-- [useFinalize](./useFinalize.md) — settle the batch yourself if the relayer does not
+- [useFinalize](./useFinalize.md) — settle the batch yourself if its keeper does not
 - [VaultBatcher.dispatchBatch](../sdk/VaultBatcher.md#dispatchbatch) — imperative equivalent

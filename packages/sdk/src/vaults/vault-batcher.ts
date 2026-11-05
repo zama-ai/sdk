@@ -66,9 +66,10 @@ export interface PreparedFinalize {
  * per direction, so construct one instance for deposits and one for redeems.
  *
  * The lifecycle is `join` → `dispatchBatch` → `claim`. Finalization between
- * the last two is normally driven by the relayer, so a batch is claimable only
- * once it reaches {@link BatchState.Finalized}, which can be well after
- * dispatch; {@link finalize} settles a batch the relayer has not.
+ * the last two is normally driven by a keeper, an off-chain service that
+ * sends each dispatched batch's callback, so a batch is claimable only once it
+ * reaches {@link BatchState.Finalized}, which can be well after dispatch;
+ * {@link finalize} settles a batch the keeper has not.
  */
 export class VaultBatcher {
   /** The SDK instance this batcher reads and writes through. */
@@ -293,8 +294,8 @@ export class VaultBatcher {
 
   /**
    * Join the currently open batch with a plaintext amount, encrypted via FHE
-   * automatically. Once someone calls {@link dispatchBatch} and the relayer
-   * finalizes it, call {@link claim} to receive the output.
+   * automatically. Once someone calls {@link dispatchBatch} and the batch
+   * is finalized, call {@link claim} to receive the output.
    *
    * @param amount - The plaintext amount to contribute; encrypted before submission.
    * @param beneficiary - Recipient of the batch's eventual output. Defaults to the connected wallet account.
@@ -413,14 +414,14 @@ export class VaultBatcher {
    * Settle a dispatched batch yourself: publicly decrypt the aggregate amount
    * its unwrap request released and hand the cleartext and proof to the
    * batcher, which executes the route. Permissionless, like
-   * {@link dispatchBatch}. The relayer normally does this, so reach for it
+   * {@link dispatchBatch}. A keeper normally does this, so reach for it
    * when a batch has sat in {@link BatchState.Dispatched} longer than
    * expected. Past the batch's callback deadline the same call cancels the
    * batch instead of settling it; {@link timeUntilCallbackDeadline} says
    * which one a call now does.
    *
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
-   * @throws if the batch is not {@link BatchState.Dispatched}, for example because the relayer already finalized it. {@link VaultBatchNotDispatchedError}
+   * @throws if the batch is not {@link BatchState.Dispatched}, for example because a keeper already finalized it. {@link VaultBatchNotDispatchedError}
    * @throws if the public decryption returns no cleartext for the amount. {@link DecryptionFailedError}
    */
   async finalize(batchId: bigint): Promise<TransactionResult> {
@@ -436,7 +437,7 @@ export class VaultBatcher {
    * proof, for a host that signs and sends through its own pipeline. Needs no
    * signer.
    *
-   * @throws if the batch is not {@link BatchState.Dispatched}, for example because the relayer already finalized it. {@link VaultBatchNotDispatchedError}
+   * @throws if the batch is not {@link BatchState.Dispatched}, for example because a keeper already finalized it. {@link VaultBatchNotDispatchedError}
    * @throws if the public decryption returns no cleartext for the amount. {@link DecryptionFailedError}
    */
   async prepareFinalize(batchId: bigint): Promise<PreparedFinalize> {

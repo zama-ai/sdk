@@ -9,12 +9,12 @@ Reads a batch's lifecycle state — `Pending`, `Dispatched`, `Finalized` or `Can
 
 The state decides which action is legal, so read it before offering the user a button:
 
-| `BatchState` | What the user can do                                  |
-| ------------ | ----------------------------------------------------- |
-| `Pending`    | join (`useDeposit` / `useRedeem`), or `useQuit`       |
-| `Dispatched` | `useFinalize` — the relayer normally does it          |
-| `Finalized`  | `useClaim`                                            |
-| `Canceled`   | `useQuit` (or `useRecover`), to take the deposit back |
+| `BatchState` | What the user can do                                                              |
+| ------------ | --------------------------------------------------------------------------------- |
+| `Pending`    | join (`useDeposit` / `useRedeem`), or `useQuit`                                   |
+| `Dispatched` | Wait for a keeper to finalize it; `useFinalize` if it stays `Dispatched` too long |
+| `Finalized`  | `useClaim`                                                                        |
+| `Canceled`   | `useQuit` (or `useRecover`), to take the deposit back                             |
 
 Claiming a canceled batch reverts: a canceled batch never executed, so there is nothing to claim, only a deposit to take back.
 
