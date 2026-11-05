@@ -6,3 +6,6 @@
 # One CVE per line, the reason on the line above. Trivy's `exp:` field expires the entry, so it gets re-reviewed:
 #   # glibc: no Debian fix yet; the daemon never reaches the affected code path.
 #   CVE-2025-00000 exp:2026-12-31
+
+# zlib1g: gzFile write overflow (gzwrite.c), no Debian 13 fix yet. Nothing in the image links or loads libz's gzFile API.
+CVE-2026-76844 exp:2026-12-31
