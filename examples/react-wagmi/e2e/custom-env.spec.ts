@@ -12,6 +12,7 @@ const validEnv = {
   NEXT_PUBLIC_ZAMA_INPUT_VERIFIER_ADDRESS: "0x3333333333333333333333333333333333333333",
   NEXT_PUBLIC_ZAMA_DECRYPTION_ADDRESS: "0x4444444444444444444444444444444444444444",
   NEXT_PUBLIC_ZAMA_INPUT_VERIFICATION_ADDRESS: "0x5555555555555555555555555555555555555555",
+  NEXT_PUBLIC_ZAMA_PROTOCOL_CONFIG_ADDRESS: "",
   NEXT_PUBLIC_REGISTRY_ADDRESS: "",
 };
 
@@ -45,10 +46,14 @@ test.describe("NEXT_PUBLIC_ZAMA_ENV=custom", () => {
     expect(networks.sepolia.fhe.registryAddress).toBeUndefined();
   });
 
-  test("accepts the optional registry address", () => {
+  test("accepts the optional protocol config and registry addresses", () => {
     const { networks } = loadNetworks({
+      NEXT_PUBLIC_ZAMA_PROTOCOL_CONFIG_ADDRESS: "0x6666666666666666666666666666666666666666",
       NEXT_PUBLIC_REGISTRY_ADDRESS: "0x7777777777777777777777777777777777777777",
     });
+    expect(networks.sepolia.fhe.protocolConfigContractAddress).toBe(
+      "0x6666666666666666666666666666666666666666",
+    );
     expect(networks.sepolia.fhe.registryAddress).toBe("0x7777777777777777777777777777777777777777");
   });
 
