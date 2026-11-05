@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.8.0-beta.16](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.15...v3.8.0-beta.16) (2026-11-05)
+
+### Features
+
+- **examples:** wallet modal and custom environment in react-wagmi ([#881](https://github.com/zama-ai/sdk/issues/881)) ([7bb84fe]()), closes [#882]() [#873]() [#878]() [#880]() [#882]()
+
 ## [3.8.0-beta.15](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.14...v3.8.0-beta.15) (2026-11-05)
 
 ### Features
