@@ -31,6 +31,12 @@ export interface VaultGroupConfig {
    * only ever prepares `"legs"` deliveries.
    */
   readonly router?: Address;
+  /**
+   * Submit through a `router` other than the configured chain's
+   * `vaultRouterAddress`. Off by default; set it only for a router you
+   * deployed yourself.
+   */
+  readonly allowCustomRouter?: boolean;
   /** The members, in the order their legs are submitted. */
   readonly vaults: readonly VaultMemberConfig[];
 }

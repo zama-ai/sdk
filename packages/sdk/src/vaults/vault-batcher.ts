@@ -1,5 +1,5 @@
 import { getAddress, type Address, type Hex } from "viem";
-import { unwrapAmountContract } from "../contracts";
+import { confidentialTransferAndCallContract, unwrapAmountContract } from "../contracts";
 import {
   DecryptionFailedError,
   EncryptionFailedError,
@@ -301,11 +301,15 @@ export class VaultBatcher {
    * @param beneficiary - Recipient of the batch's eventual output. Defaults to the connected wallet account.
    *
    * @remarks
-   * The batcher must already hold an ERC-7984 operator grant from the caller,
-   * or it cannot pull the amount. A join with too little balance still
-   * succeeds on chain and credits nothing, so the amount is checked against
-   * the caller's confidential balance first; `confidentialJoinedAmount` is the
-   * authoritative record of what actually landed.
+   * A join that credits the caller sends the amount to the batcher with
+   * `confidentialTransferAndCall`, so it needs no operator grant. A join for
+   * another `beneficiary` calls the batcher's `join`, which pulls the amount
+   * and so needs an active ERC-7984 operator grant from the caller.
+   *
+   * A join with too little balance still succeeds on chain and credits
+   * nothing, so the amount is checked against the caller's confidential
+   * balance first; `confidentialJoinedAmount` is the authoritative record of
+   * what actually landed.
    *
    * @throws if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
    * @throws if balance validation requires decryption that is not possible. {@link BalanceCheckUnavailableError}
@@ -321,8 +325,18 @@ export class VaultBatcher {
       await this.#assertJoinableBalance(amount, operation);
     }
 
+    // The batcher's transfer hook always credits the sender, so only a join for
+    // someone else goes through the pulling `join` and its operator grant.
+    const token =
+      resolvedBeneficiary === userAddress ? (await this.#inputToken()).address : undefined;
+
+    // The input proof is bound to the contract that verifies it: the token for a transfer-and-call, the batcher for `join`.
     const { encryptedValues, inputProof } = await this.sdk.encrypt(
-      { values: [{ value: amount, type: "euint64" }], contractAddress: this.address, userAddress },
+      {
+        values: [{ value: amount, type: "euint64" }],
+        contractAddress: token ?? this.address,
+        userAddress,
+      },
       { operation },
     );
 
@@ -333,7 +347,15 @@ export class VaultBatcher {
 
     const result = await this.#submitTransaction(
       "vault:join",
-      joinContract(this.address, resolvedBeneficiary, encryptedAmount, inputProof),
+      token
+        ? confidentialTransferAndCallContract(
+            token,
+            this.address,
+            encryptedAmount,
+            inputProof,
+            "0x",
+          )
+        : joinContract(this.address, resolvedBeneficiary, encryptedAmount, inputProof),
     );
 
     const joined = findJoined(result.receipt.logs, this.address, resolvedBeneficiary);

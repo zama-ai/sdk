@@ -11,9 +11,11 @@ import {
   VaultGroupJoinUnconfirmedError,
   type ZamaError,
 } from "../../errors";
+import { mainnet } from "../../chains";
 import type { ZamaSDKEvent } from "../../events/sdk-events";
 import type { RelayerSDK } from "../../relayer/types";
 import {
+  createMockRouter,
   describe,
   expect,
   joinedLog,
@@ -1414,5 +1416,108 @@ describe("VaultGroup prepare", () => {
       expect.objectContaining({ vaultId: "beta", batcher: BETA.depositBatcher, batchId: 9n }),
     ]);
     expect(unconfirmed).toStrictEqual(["alpha"]);
+  });
+});
+
+function onMainnet(provider: GenericProvider, signer: GenericSigner) {
+  vi.mocked(provider.getChainId).mockResolvedValue(mainnet.id);
+  const account = { ...signer.requireWalletAccount("test"), chainId: mainnet.id };
+  vi.mocked(signer.requireWalletAccount).mockReturnValue(account);
+  vi.mocked(signer.walletAccount.getSnapshot).mockReturnValue(account);
+}
+
+describe("VaultGroup router check", () => {
+  test.scoped({ chain: mainnet });
+
+  test("refuses a router other than the chain's before encrypting, granting or writing", async ({
+    sdk,
+    provider,
+    relayer,
+    signer,
+  }) => {
+    onMainnet(provider, signer);
+    mockReads(provider, { operators: { [ALPHA.share]: false, [BETA.share]: false } });
+
+    const group = new VaultGroup(sdk, GROUP);
+    await expect(group.deposit("alpha", 1_000n)).rejects.toThrow(ConfigurationError);
+    await expect(group.redeem("alpha", 500n)).rejects.toThrow(ConfigurationError);
+    await expect(
+      group.prepareRedeem("alpha", 500n, { skipPreflight: true, skipBalanceCheck: true }),
+    ).rejects.toThrow(mainnet.vaultRouterAddress);
+    expect(relayer.encryptValues).not.toHaveBeenCalled();
+    expect(signer.writeContract).not.toHaveBeenCalled();
+  });
+
+  test("accepts the chain's own router", async ({ sdk, provider, relayer, signer }) => {
+    onMainnet(provider, signer);
+    mockReads(provider);
+    mockEncryptedLegs(relayer, 2);
+
+    const group = new VaultGroup(sdk, { ...GROUP, router: mainnet.vaultRouterAddress });
+    const prepared = await group.prepareDeposit("alpha", 1_000n, {
+      skipPreflight: true,
+      skipBalanceCheck: true,
+    });
+
+    expect(prepared.writes).toHaveLength(1);
+  });
+
+  test("accepts another router when the config sets allowCustomRouter", async ({
+    sdk,
+    provider,
+    relayer,
+    signer,
+  }) => {
+    onMainnet(provider, signer);
+    mockReads(provider);
+    mockEncryptedLegs(relayer, 2);
+
+    const group = new VaultGroup(sdk, { ...GROUP, allowCustomRouter: true });
+    const prepared = await group.prepareDeposit("alpha", 1_000n, {
+      skipPreflight: true,
+      skipBalanceCheck: true,
+    });
+
+    expect(prepared.writes).toHaveLength(1);
+  });
+
+  test("does not check a legs delivery, which never touches the router", async ({
+    sdk,
+    provider,
+    relayer,
+    signer,
+  }) => {
+    onMainnet(provider, signer);
+    mockReads(provider);
+    mockEncryptedLegs(relayer, 2);
+
+    const prepared = await new VaultGroup(sdk, GROUP).prepareDeposit("alpha", 1_000n, {
+      delivery: "legs",
+      skipPreflight: true,
+      skipBalanceCheck: true,
+    });
+
+    expect(prepared.delivery).toBe("legs");
+  });
+
+  test("checks against the configured chain's router, not the preset's", async ({
+    createSDK,
+    provider,
+    relayer,
+    signer,
+  }) => {
+    onMainnet(provider, signer);
+    mockReads(provider);
+    mockEncryptedLegs(relayer, 2);
+    const sdk = createSDK({
+      router: createMockRouter({ relayer, chains: [{ ...mainnet, vaultRouterAddress: ROUTER }] }),
+    });
+
+    const prepared = await new VaultGroup(sdk, GROUP).prepareDeposit("alpha", 1_000n, {
+      skipPreflight: true,
+      skipBalanceCheck: true,
+    });
+
+    expect(prepared.writes).toHaveLength(1);
   });
 });

@@ -19,7 +19,9 @@ import type {
  * `"router"`, none for `"legs"` or a group of one. The same answer as
  * {@link VaultGroup.redeemOperators}, for the parts of a host's transaction
  * pipeline that run with the config in hand but no SDK instance in scope,
- * such as the guard that decides whether a grant transaction is needed.
+ * such as the guard that decides whether a grant transaction is needed. It
+ * does not check the router against the chain's `vaultRouterAddress`;
+ * `prepareRedeem` does, so make the grants only after it succeeds.
  *
  * @throws if `delivery` is `"router"` and a member gives no `cShare`, or the config names no router. {@link ConfigurationError}
  */
