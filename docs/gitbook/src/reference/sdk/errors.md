@@ -110,7 +110,7 @@ try {
 | `isRetryable`       | `(error: unknown) => error is ZamaError & { retryable: true }` | `true` only for a `ZamaError` instance whose `.retryable` is `true`; `false` for anything else, including non-SDK errors.                                                                                                                            |
 | `retryAfterSeconds` | `(error: unknown) => number \| undefined`                      | Reads the error's own `retryAfter` field when the error is retryable and carries one. Only `RelayerRequestFailedError` and `RpcRateLimitError` currently carry `retryAfter` — treat `undefined` as "retry with your own backoff," not "don't retry." |
 
-Exactly five error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, and `WalletAccountNotReadyError`. See [Retry transient failures](../../guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
+Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, `WalletAccountNotReadyError`, and `HcuBlockLimitExceededError`. See [Retry transient failures](../../guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
 
 ## Error summary
 
@@ -122,6 +122,8 @@ Exactly five error classes are retryable today: `RpcRateLimitError`, `RelayerReq
 | `EncryptOffloadUnavailableError`          | `ENCRYPT_OFFLOAD_UNAVAILABLE`            | `offloadEncrypt: true` required the encrypt worker, which is unavailable                                                          |
 | `DecryptionFailedError`                   | `DECRYPTION_FAILED`                      | FHE decryption failed                                                                                                             |
 | `TransactionRevertedError`                | `TRANSACTION_REVERTED`                   | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
+| `HcuBlockLimitExceededError`              | `HCU_BLOCK_LIMIT_EXCEEDED`               | Gas estimation found too little FHE compute (HCU) left in the block; retry in the next block (retryable)                          |
+| `HcuTransactionLimitExceededError`        | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | The transaction needs more FHE compute (HCU), in total or in one sequential chain, than one transaction may use                   |
 | `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
 | `UnlistedConfidentialTokenError`          | `UNLISTED_CONFIDENTIAL_TOKEN`            | The vault router's registry does not list the confidential token, so the router would reject a transfer of it                     |
 | `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | A batcher one leg of a group submission would join is paused, so the whole submission would revert                                |
@@ -278,7 +280,7 @@ matchZamaError(error, { DECRYPTION_FAILED: () => showError("Decryption failed �
 
 **Code:** `TRANSACTION_REVERTED`
 
-An on-chain transaction reverted. The error `.message` includes the revert reason when available.
+An on-chain transaction reverted, either before submission or in the block it was mined in. The error `.message` includes the revert reason when available; a receipt reports no reason, only the transaction hash.
 
 ```ts
 matchZamaError(error, {
@@ -286,7 +288,36 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Inspect the revert reason. Common causes: insufficient balance or an expired operator approval. Finalizing an already-finalized unwrap through `resumeUnshield()` or `unshield()` throws the more specific `UnshieldAlreadyFinalizedError` instead.
+**How to handle:** Inspect the revert reason. Common causes: insufficient balance or an expired operator approval. Finalizing an already-finalized unwrap through `resumeUnshield()` or `unshield()` throws the more specific `UnshieldAlreadyFinalizedError` instead, and a revert from the protocol's FHE compute limits throws `HcuBlockLimitExceededError` or `HcuTransactionLimitExceededError`.
+
+### HcuBlockLimitExceededError
+
+**Code:** `HCU_BLOCK_LIMIT_EXCEEDED`
+
+The protocol caps the FHE compute, measured in HCU, that a block can use. Gas estimation found too little left in the current block for this transaction. The cap is checked again when the transaction is mined, so a transaction that passed estimation can still revert in the block it lands in; that case surfaces as `TransactionRevertedError`.
+
+```ts
+matchZamaError(error, {
+  HCU_BLOCK_LIMIT_EXCEEDED: () => showError("The network is busy. Retrying in the next block…"),
+});
+```
+
+**How to handle:** Retry in the next block. The error is retryable, so `isRetryable(error)` is `true`; `retryAfterSeconds(error)` is `undefined`, so use your own backoff of about one block time.
+
+### HcuTransactionLimitExceededError
+
+**Code:** `HCU_TRANSACTION_LIMIT_EXCEEDED`
+
+The protocol caps the FHE compute, measured in HCU, that one transaction can use: a total, and a limit on one sequential chain of operations (depth). The transaction needs more than that; the `.message` says which cap was hit.
+
+```ts
+matchZamaError(error, {
+  HCU_TRANSACTION_LIMIT_EXCEEDED: () =>
+    showError("This operation is too large for one transaction"),
+});
+```
+
+**How to handle:** Do not retry: the same transaction costs the same HCU every time. Do less FHE work per transaction.
 
 ### UnshieldAlreadyFinalizedError
 

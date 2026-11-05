@@ -1,7 +1,29 @@
 import { status } from "@grpc/grpc-js";
-import { SigningFailedError, TransportKeyPairChangedError } from "@zama-fhe/sdk";
+import {
+  HcuBlockLimitExceededError,
+  SigningFailedError,
+  TransactionRevertedError,
+  TransportKeyPairChangedError,
+} from "@zama-fhe/sdk";
 import { expect, test, vi } from "vitest";
-import { DaemonError, serviceError } from "../src/errors.js";
+import { DaemonError, serviceError, TransactionCallbackError } from "../src/errors.js";
+
+test("prefers the wallet's broadcast outcome only under a plain TransactionRevertedError", () => {
+  const callback = new TransactionCallbackError(
+    "TRANSACTION_REVERTED",
+    status.FAILED_PRECONDITION,
+    "Execution reverted: unrecognized error 0xad251174",
+  );
+  const plain = serviceError(
+    new TransactionRevertedError("Transaction failed", { cause: callback }),
+  );
+  expect(plain.metadata.get("zama-error-code")).toEqual(["TRANSACTION_REVERTED"]);
+  expect(plain.details).toBe(callback.message);
+
+  const typed = serviceError(new HcuBlockLimitExceededError("Block budget", { cause: callback }));
+  expect(typed.metadata.get("zama-error-code")).toEqual(["HCU_BLOCK_LIMIT_EXCEEDED"]);
+  expect(typed.metadata.get("zama-error-retryable")).toEqual(["true"]);
+});
 
 test("retains canonical SDK codes and messages without reclassifying signing failures", () => {
   const signature = serviceError(new SigningFailedError("Wallet unavailable"));

@@ -224,7 +224,7 @@ async function walletReceipt(
     if (receipt.status !== "0x1") {
       throw new TransactionRevertedError(`Transaction ${hash} reverted.`);
     }
-    return receipt;
+    return { logs: receipt.logs, status: "success" };
   }
   const calls = await client
     .request({ method: "wallet_getCallsStatus", params: [hash] })
@@ -233,7 +233,8 @@ async function walletReceipt(
   if (calls && calls.status >= 300) {
     throw new TransactionRevertedError(`Transaction ${hash} failed (status ${calls.status}).`);
   }
-  return calls && calls.status >= 200 ? calls.receipts?.[0] : undefined;
+  const callReceipt = calls && calls.status >= 200 ? calls.receipts?.[0] : undefined;
+  return callReceipt && { logs: callReceipt.logs, status: "success" };
 }
 
 function ignoreUnsupported(method: string, logger: GenericLogger | undefined) {

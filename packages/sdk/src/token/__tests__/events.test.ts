@@ -7,7 +7,7 @@ import {
   type ZamaSDKEventListener,
   ZamaSDKEvents,
 } from "../../events/sdk-events";
-import { TransactionRevertedError } from "../../errors";
+import { HcuBlockLimitExceededError, TransactionRevertedError } from "../../errors";
 import type { Address } from "viem";
 import type { GenericProvider } from "../../types";
 import { ZERO_ENCRYPTED_VALUE } from "../../utils/handles";
@@ -305,6 +305,49 @@ describe("Token event emissions", () => {
       );
       expect("error" in txError! && txError.error.cause).toBeInstanceOf(Error);
       expect("error" in txError! && (txError.error.cause as Error).message).toBe("tx reverted");
+    });
+
+    test("maps an HCU limit revert from writeContract to its typed error", async ({
+      createSDK,
+      signer,
+      tokenAddress,
+    }) => {
+      const revert = Object.assign(new Error("execution reverted"), {
+        cause: { raw: "0xad251174", signature: "0xad251174" },
+      });
+      vi.mocked(signer.writeContract).mockRejectedValue(revert);
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
+
+      await expect(
+        token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n, {
+          skipBalanceCheck: true,
+        }),
+      ).rejects.toBeInstanceOf(HcuBlockLimitExceededError);
+
+      const txError = events.find((e) => e.type === ZamaSDKEvents.TransactionError);
+      expect("error" in txError! && txError.error).toBeInstanceOf(HcuBlockLimitExceededError);
+      expect("error" in txError! && txError.error.cause).toBe(revert);
+    });
+
+    test("fails when the mined receipt reports a revert", async ({
+      createSDK,
+      provider,
+      tokenAddress,
+    }) => {
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+        logs: [],
+        status: "reverted",
+      });
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
+
+      await expect(
+        token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n, {
+          skipBalanceCheck: true,
+        }),
+      ).rejects.toBeInstanceOf(TransactionRevertedError);
+
+      const txError = events.find((e) => e.type === ZamaSDKEvents.TransactionError);
+      expect("error" in txError! && txError.error.message).toContain("reverted during transfer");
     });
   });
 

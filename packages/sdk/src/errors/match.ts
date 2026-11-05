@@ -45,7 +45,11 @@ import type {
   WalletNotConnectedError,
 } from "./signer";
 import type { SigningFailedError, SigningRejectedError } from "./signing";
-import type { TransactionRevertedError } from "./transaction";
+import type {
+  HcuBlockLimitExceededError,
+  HcuTransactionLimitExceededError,
+  TransactionRevertedError,
+} from "./transaction";
 import type { UnshieldAlreadyFinalizedError } from "./unshield";
 import type {
   UnlistedConfidentialTokenError,
@@ -72,6 +76,10 @@ export interface ErrorForCode {
   [ZamaErrorCode.EncryptOffloadUnavailable]: EncryptOffloadUnavailableError;
   /** Thrown for {@link ZamaErrorCode.TransactionReverted}. */
   [ZamaErrorCode.TransactionReverted]: TransactionRevertedError;
+  /** Thrown for {@link ZamaErrorCode.HcuBlockLimitExceeded}. */
+  [ZamaErrorCode.HcuBlockLimitExceeded]: HcuBlockLimitExceededError;
+  /** Thrown for {@link ZamaErrorCode.HcuTransactionLimitExceeded}. */
+  [ZamaErrorCode.HcuTransactionLimitExceeded]: HcuTransactionLimitExceededError;
   /** Thrown for {@link ZamaErrorCode.TransportKeyPairExpired}. */
   [ZamaErrorCode.TransportKeyPairExpired]: TransportKeyPairExpiredError;
   /** Thrown for {@link ZamaErrorCode.InvalidTransportKeyPair}. */
