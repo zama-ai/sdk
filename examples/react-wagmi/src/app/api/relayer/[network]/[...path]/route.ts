@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { envList } from "@/lib/env";
 import { upstreamFor } from "@/lib/relayers";
 
 // The relayer routes the web() transport calls. Anything else is rejected, so the proxy
@@ -65,10 +66,8 @@ const RESPONSE_DROP = new Set([...HOP_BY_HOP, "content-encoding", "content-lengt
 function originAllowed(req: NextRequest): boolean {
   const origin = req.headers.get("origin");
   if (!origin) return true;
-  const configured = process.env.RELAYER_PROXY_ALLOWED_ORIGINS?.split(",")
-    .map((o) => o.trim())
-    .filter(Boolean);
-  const allowed = configured?.length ? configured : [req.nextUrl.origin];
+  const configured = envList("RELAYER_PROXY_ALLOWED_ORIGINS");
+  const allowed = configured.length > 0 ? configured : [req.nextUrl.origin];
   return allowed.includes(origin);
 }
 

@@ -15,6 +15,12 @@ export const NETWORKS = {
     rpc: "**/ethereum-rpc.publicnode.com**",
     registry: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0",
   },
+  // The test server has no relayer for it, so the app never serves it.
+  polygon: {
+    chainIdHex: "0x89", // 137
+    rpc: "**/polygon-bor-rpc.publicnode.com**",
+    registry: "0xc8908569868758dAF814B5a8b96bBc44D1653d54",
+  },
   // A cleartext row: no relayer, every read still goes through the RPC mock.
   "bnb-testnet": {
     chainIdHex: "0x61", // 97
@@ -356,6 +362,11 @@ interface TestFixtures {
   mockWallet: (config: WalletConfig) => Promise<void>;
   /** Call to intercept a network's RPC requests with registry and metadata mocking. */
   mockRpc: (options?: RpcOptions) => Promise<void>;
+  /**
+   * Every load the page CSP blocked so far, as `<directive> <blocked URI>`. Collected from
+   * before the first script runs, so it covers the whole page load.
+   */
+  cspViolations: () => Promise<string[]>;
 }
 
 export const test = base.extend<TestFixtures>({
@@ -369,6 +380,18 @@ export const test = base.extend<TestFixtures>({
   },
   mockRpc: async ({ page }, use) => {
     await use((options?: RpcOptions) => interceptRpc(page, options));
+  },
+  cspViolations: async ({ page }, use) => {
+    await page.addInitScript(() => {
+      const violations: string[] = [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__cspViolations = violations;
+      document.addEventListener("securitypolicyviolation", (event) => {
+        violations.push(`${event.violatedDirective} ${event.blockedURI}`);
+      });
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await use(() => page.evaluate(() => (window as any).__cspViolations as string[]));
   },
 });
 
