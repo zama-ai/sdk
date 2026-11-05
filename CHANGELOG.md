@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.8.0-beta.15](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.14...v3.8.0-beta.15) (2026-11-05)
+
+### Features
+
+- **vaults:** join batchers with confidentialTransferAndCall and check group routers against the configured chain ([#902](https://github.com/zama-ai/sdk/issues/902)) ([1ac7e64]())
+
 ## [3.8.0-beta.14](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.13...v3.8.0-beta.14) (2026-11-05)
 
 ### Features
