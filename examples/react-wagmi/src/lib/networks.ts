@@ -12,7 +12,7 @@ import {
   zenithTrexTestnet as fheZenith,
   type FheChain,
 } from "@zama-fhe/sdk/chains";
-import { defineChain, type Chain } from "viem";
+import { defineChain, isAddress, type Chain } from "viem";
 import { bscTestnet, hoodi, mainnet, polygon, sepolia } from "viem/chains";
 
 export interface Network {
@@ -78,46 +78,72 @@ function customEnvValue(name: string, value: string | undefined): string {
   return value;
 }
 
+// A wrong address would only show up later as a failed read or a rejected signature, so the
+// values are checked when the table loads. Mixed-case addresses must carry a valid checksum.
+function customEnvAddress(name: string, value: string | undefined): Address {
+  const address = customEnvValue(name, value);
+  if (!isAddress(address)) {
+    throw new Error(`NEXT_PUBLIC_ZAMA_ENV=custom: ${name} is not a valid address: ${address}`);
+  }
+  return address;
+}
+
+function optionalCustomEnvAddress(name: string, value: string | undefined): Address | undefined {
+  return value ? customEnvAddress(name, value) : undefined;
+}
+
+function customEnvChainId(name: string, value: string | undefined): number {
+  const raw = customEnvValue(name, value);
+  const chainId = Number(raw);
+  if (!Number.isSafeInteger(chainId) || chainId <= 0) {
+    throw new Error(`NEXT_PUBLIC_ZAMA_ENV=custom: ${name} must be a positive integer: ${raw}`);
+  }
+  return chainId;
+}
+
 // Next.js inlines NEXT_PUBLIC_* variables only where they are referenced literally, so each
 // one is spelled out here rather than looked up by name.
 function customSepolia(): FheChain & { network: string } {
   return {
     id: fheSepolia.id,
-    gatewayChainId: Number(
-      customEnvValue(
-        "NEXT_PUBLIC_ZAMA_GATEWAY_CHAIN_ID",
-        process.env.NEXT_PUBLIC_ZAMA_GATEWAY_CHAIN_ID,
-      ),
+    gatewayChainId: customEnvChainId(
+      "NEXT_PUBLIC_ZAMA_GATEWAY_CHAIN_ID",
+      process.env.NEXT_PUBLIC_ZAMA_GATEWAY_CHAIN_ID,
     ),
     // Placeholder: providers.tsx points every relayer row at the same-origin proxy.
     relayerUrl: fheSepolia.relayerUrl,
     network: fheSepolia.network,
-    aclContractAddress: customEnvValue(
+    aclContractAddress: customEnvAddress(
       "NEXT_PUBLIC_ZAMA_ACL_ADDRESS",
       process.env.NEXT_PUBLIC_ZAMA_ACL_ADDRESS,
-    ) as Address,
-    kmsContractAddress: customEnvValue(
+    ),
+    kmsContractAddress: customEnvAddress(
       "NEXT_PUBLIC_ZAMA_KMS_VERIFIER_ADDRESS",
       process.env.NEXT_PUBLIC_ZAMA_KMS_VERIFIER_ADDRESS,
-    ) as Address,
-    inputVerifierContractAddress: customEnvValue(
+    ),
+    inputVerifierContractAddress: customEnvAddress(
       "NEXT_PUBLIC_ZAMA_INPUT_VERIFIER_ADDRESS",
       process.env.NEXT_PUBLIC_ZAMA_INPUT_VERIFIER_ADDRESS,
-    ) as Address,
-    verifyingContractAddressDecryption: customEnvValue(
+    ),
+    verifyingContractAddressDecryption: customEnvAddress(
       "NEXT_PUBLIC_ZAMA_DECRYPTION_ADDRESS",
       process.env.NEXT_PUBLIC_ZAMA_DECRYPTION_ADDRESS,
-    ) as Address,
-    verifyingContractAddressInputVerification: customEnvValue(
+    ),
+    verifyingContractAddressInputVerification: customEnvAddress(
       "NEXT_PUBLIC_ZAMA_INPUT_VERIFICATION_ADDRESS",
       process.env.NEXT_PUBLIC_ZAMA_INPUT_VERIFICATION_ADDRESS,
-    ) as Address,
+    ),
     // Optional: needed for unified (V2) decryption permits on protocol v0.14+.
-    protocolConfigContractAddress:
-      (process.env.NEXT_PUBLIC_ZAMA_PROTOCOL_CONFIG_ADDRESS as Address | undefined) || undefined,
+    protocolConfigContractAddress: optionalCustomEnvAddress(
+      "NEXT_PUBLIC_ZAMA_PROTOCOL_CONFIG_ADDRESS",
+      process.env.NEXT_PUBLIC_ZAMA_PROTOCOL_CONFIG_ADDRESS,
+    ),
     // A custom environment usually has no wrapper registry deployment; point this at wrapper
     // pairs and a ConfidentialTokenWrappersRegistry deployed there by hand.
-    registryAddress: (process.env.NEXT_PUBLIC_REGISTRY_ADDRESS as Address | undefined) || undefined,
+    registryAddress: optionalCustomEnvAddress(
+      "NEXT_PUBLIC_REGISTRY_ADDRESS",
+      process.env.NEXT_PUBLIC_REGISTRY_ADDRESS,
+    ),
   };
 }
 
