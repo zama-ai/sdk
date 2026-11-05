@@ -28,9 +28,6 @@ jobs:
       fail-fast: false
       matrix:
         example:
-          - example-bnb
-          - example-hoodi
-          - example-zenith
           - node-ethers
           - node-viem
           - react-ethers
@@ -77,8 +74,6 @@ jobs:
       fail-fast: false
       matrix:
         example:
-          - example-bnb
-          - example-hoodi
           - react-ethers
           - react-viem
           - react-wagmi

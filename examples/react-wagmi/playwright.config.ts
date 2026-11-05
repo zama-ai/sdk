@@ -9,12 +9,19 @@ export default defineConfig({
     url: "http://localhost:3004",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    // Force the default RPC URL so mockRpc's intercept pattern always matches.
-    // Without this, a dev's .env.local override would bypass the route mock.
-    // Bind the vault demo to the mocked cUSDC pair (MOCK_CTOKEN1_ADDRESS) so the
-    // ConfidentialVault cards render when that token is selected in e2e.
     env: {
+      // Force the default RPC URLs so mockRpc's intercept patterns always match.
+      // Without this, a dev's .env.local override would bypass the route mock.
       NEXT_PUBLIC_SEPOLIA_RPC_URL: "",
+      NEXT_PUBLIC_MAINNET_RPC_URL: "",
+      NEXT_PUBLIC_BNB_TESTNET_RPC_URL: "",
+      // Enable the mainnet row so the picker and the mainnet feature flags are testable, and pin
+      // Polygon off so a dev's .env.local can't change what the picker lists. Nothing listens on
+      // port 9, so a forwarded proxy call fails fast with 503.
+      MAINNET_RELAYER_URL: "http://127.0.0.1:9",
+      POLYGON_RELAYER_URL: "",
+      // Bind the vault demo to the mocked cUSDC pair (MOCK_CTOKEN1_ADDRESS) so the
+      // ConfidentialVault cards render when that token is selected on Sepolia.
       NEXT_PUBLIC_VAULT_ADDRESS: "0x5555555555555555555555555555555555555555",
       NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN: "0x2222222222222222222222222222222222222222",
     },
