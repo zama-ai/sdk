@@ -8,13 +8,12 @@ import {
   hoodi as fheHoodi,
   mainnet as fheMainnet,
   polygon as fhePolygon,
-  polygonAmoy as fhePolygonAmoy,
   sepolia as fheSepolia,
   zenithTrexTestnet as fheZenith,
   type FheChain,
 } from "@zama-fhe/sdk/chains";
 import { defineChain, type Chain } from "viem";
-import { bscTestnet, hoodi, mainnet, polygon, polygonAmoy, sepolia } from "viem/chains";
+import { bscTestnet, hoodi, mainnet, polygon, sepolia } from "viem/chains";
 
 export interface Network {
   /** Shown in the network picker. Cleartext deployments say so here. */
@@ -80,15 +79,6 @@ export const networks = {
       confidentialToken: (process.env.NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN ||
         "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639") as Address,
     },
-  }),
-  "polygon-amoy": defineNetwork({
-    label: "Polygon Amoy",
-    chain: polygonAmoy,
-    fhe: fhePolygonAmoy,
-    rpcUrl: process.env.NEXT_PUBLIC_POLYGON_AMOY_RPC_URL,
-    transport: "relayer",
-    explorerUrl: "https://amoy.polygonscan.com",
-    canMint: true,
   }),
   // Cleartext rows are development deployments: "encrypted" values are stored in cleartext
   // on-chain and there is no relayer or KMS. They exist to integrate against the SDK on

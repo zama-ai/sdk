@@ -15,10 +15,6 @@ const upstreams: Partial<Record<NetworkKey, { url?: string; apiKey?: string }>> 
     url: process.env.SEPOLIA_RELAYER_URL || TESTNET_RELAYER_URL,
     apiKey: process.env.SEPOLIA_RELAYER_API_KEY,
   },
-  "polygon-amoy": {
-    url: process.env.POLYGON_AMOY_RELAYER_URL || TESTNET_RELAYER_URL,
-    apiKey: process.env.POLYGON_AMOY_RELAYER_API_KEY,
-  },
   // Mainnets have no default. Unset means the network is hidden, never a fallback.
   mainnet: { url: process.env.MAINNET_RELAYER_URL, apiKey: process.env.MAINNET_RELAYER_API_KEY },
   polygon: { url: process.env.POLYGON_RELAYER_URL, apiKey: process.env.POLYGON_RELAYER_API_KEY },
