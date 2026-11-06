@@ -2,6 +2,7 @@ import type { Address } from "viem";
 import { describe, expect, test, vi } from "../../../test-fixtures";
 import type { VaultBatcher } from "../../vault-batcher";
 import { batchStateQueryOptions } from "../batch-state";
+import { batchStatusQueryOptions } from "../batch-status";
 import { currentBatchIdQueryOptions } from "../current-batch-id";
 import { timeUntilCallbackDeadlineQueryOptions } from "../time-until-callback-deadline";
 import { timeUntilDispatchableQueryOptions } from "../time-until-dispatchable";
@@ -13,6 +14,7 @@ function createMockBatcher(): VaultBatcher {
     address: BATCHER_ADDRESS,
     currentBatchId: vi.fn().mockResolvedValue(58n),
     batchState: vi.fn().mockResolvedValue(0),
+    batchStatus: vi.fn().mockResolvedValue({ state: 2 }),
     timeUntilDispatchable: vi.fn().mockResolvedValue(120n),
     timeUntilCallbackDeadline: vi.fn().mockResolvedValue(30n),
   } as unknown as VaultBatcher;
@@ -84,5 +86,26 @@ describe("timeUntilCallbackDeadlineQueryOptions", () => {
     const result = await options.queryFn({ queryKey: options.queryKey } as never);
     expect(result).toBe(30n);
     expect(batcher.timeUntilCallbackDeadline).toHaveBeenCalledWith(58n);
+  });
+});
+
+describe("batchStatusQueryOptions", () => {
+  test("stays disabled until batchId is provided", () => {
+    const batcher = createMockBatcher();
+    expect(batchStatusQueryOptions(batcher).enabled).toBe(false);
+    expect(batchStatusQueryOptions(batcher, { batchId: 58n }).enabled).toBe(true);
+  });
+
+  test("delegates to batcher.batchStatus", async () => {
+    const batcher = createMockBatcher();
+    const options = batchStatusQueryOptions(batcher, { batchId: 58n });
+
+    expect(options.queryKey).toEqual([
+      "zama.vault.batchStatus",
+      { batcherAddress: BATCHER_ADDRESS, batchId: 58n },
+    ]);
+    const result = await options.queryFn({ queryKey: options.queryKey } as never);
+    expect(result).toEqual({ state: 2 });
+    expect(batcher.batchStatus).toHaveBeenCalledWith(58n);
   });
 });

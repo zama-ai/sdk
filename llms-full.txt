@@ -2561,6 +2561,10 @@ See [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbo
 
 New `VaultBatcher.finalize(batchId)` (`useFinalize` in React, `finalizeMutationOptions` for TanStack Query). A keeper, an off-chain service that watches batches, normally finalizes a dispatched batch; when it has not, any account can now settle the batch from the SDK: `finalize` reads the batch's unwrap request, publicly decrypts the amount it released, and submits `dispatchBatchCallback` with the cleartext and its proof. Past the batch's callback deadline the same call cancels the batch. The submission surfaces as a `VaultSubmitted` event with `vaultOperation: "finalize"`. `VaultBatcher.unwrapRequestId(batchId)` exposes the underlying read. `finalize` and `prepareFinalize` read the batch state first and throw the new `VaultBatchNotDispatchedError` when the batch is not `Dispatched`, for example because a keeper already finalized it, before any decryption. New `VaultBatcher.timeUntilCallbackDeadline(batchId)` (`useTimeUntilCallbackDeadline`, `timeUntilCallbackDeadlineQueryOptions`) reads the seconds until a dispatched batch reaches its callback deadline: `0` once it has, when `finalize` cancels instead of settling, and `null` outside `Dispatched`.
 
+## Batch status for vault UIs
+
+New `VaultBatcher.batchStatus(batchId)` (`useBatchStatus` in React, `batchStatusQueryOptions` for TanStack Query) returns a batch's state with the timestamps that state needs: `dispatchableAt` and `secondsUntilDispatchable` while `Pending`, `callbackDeadlineAt` and `secondsUntilCallbackDeadline` while `Dispatched`, plus `createdAt` and, once dispatched, `dispatchedAt`. The result is a union keyed on `state`, so an exhaustive `switch` makes TypeScript flag a state the UI does not handle. New `openBatchIds(logs, batcher, account)` returns the batches an account joined and has not claimed or quit, from the batcher's `Joined`, `Claimed` and `Quit` logs; `VaultTopics` gains `Claimed` and `Quit`. The new [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) guide lists what to show and offer in every state of a deposit or redemption.
+
 ## Vault groups for your own transaction layer
 
 `VaultGroup.prepareDeposit` and `VaultGroup.prepareRedeem` do everything `deposit` and `redeem` do up to the send — the pre-flight, the balance check, the encryptions — and return the calls, the legs, the operator grants a router redemption relies on, and a `decodeJoins` helper for the mined receipt. An app that signs through its own pipeline (a transaction queue, a bundler, an EIP-5792 batch) sends them itself. The new `delivery` option picks between one transaction through the router and one transfer per member straight to its batcher, the shape an atomic bundle can land privately; `account` prepares for a given account without a signer; `skipPreflight` trusts a group the host verified, though `paused()` is always read. The balance check decrypts as the signer, so an `account` other than the signer's throws `ConfigurationError` unless `skipBalanceCheck` is passed. `VaultBatcher.prepareFinalize` does the same for a settlement.
@@ -9849,6 +9853,8 @@ Core SDK usage imports from `@zama-fhe/sdk/vaults`; React hooks import from `@za
 
 🟨 Go to [**Vault groups**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/groups.md) to deposit into one of several vaults without revealing which one.
 
+🟨 Go to [**Building a vault UI**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) for every state your UI must show after a deposit, and what to offer in each one.
+
 For the API surface, see [**Vault**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md), [**VaultBatcher**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md), and [**VaultGroup**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md) in the SDK reference, and the vault hooks in the [React reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/README.md).
 
 ## Help center
@@ -10267,6 +10273,155 @@ const { joins } = prepared.decodeJoins(receipt.logs);
 `group.missingOperators(prepared)` returns the grants the account still lacks; give each an `until` that outlasts the time the writes take. After a reload, `decodeVaultGroupJoins({ legs, account }, logs)` does what `decodeJoins` does from the saved `legs` and `account`. When you send the writes yourself, call `invalidateAfterGroupJoin(queryClient, prepared.legs)` to refresh balances and batch reads.
 
 `"legs"` delivery sends one transfer per member straight to its batcher and needs no grant; it keeps the choice of vault private only when the wallet lands every leg atomically. `"router"` is the single transaction the SDK sends itself. A host that has already verified the group passes `skipPreflight`, which skips the config verification and the registry listing but not the `paused()` read. The balance check decrypts as the signer, so an `account` other than the signer's needs `skipBalanceCheck`. One that gates the amount on a balance it already shows passes `skipBalanceCheck`. See [`VaultGroup` → Prepare](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#prepare).
+
+## Building a vault UI
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/guides/vaults/building-a-ui.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md
+- logical_path: guides/vaults/building-a-ui
+
+# Building a vault UI
+
+A vault deposit is not done when the transaction is mined. The amount joins a **batch**, the batch is sent to the vault later, and the user claims their shares after that. A UI that only covers the deposit form leaves users with funds they cannot see or move.
+
+This guide lists every state your UI must handle and what to show in each one. It does not prescribe a layout: put the form in a modal, a page or a sidebar, and show batches in a list, a toast or a notification center. What matters is that no state is missing.
+
+
+> [!INFO]
+> Redemptions follow the same states with the redeem batcher. Read "shares" for "assets" below and the other way around.
+
+
+## The journey
+
+A deposit or redemption has three parts:
+
+1. **The form.** The user picks an amount. Your UI checks it before sending.
+2. **The send.** One transaction joins the open batch and returns its `batchId`.
+3. **The batch.** The batch moves through its states until the user claims or takes the amount back.
+
+## 1. The form
+
+| Situation                                         | What to do                                                                                                                                                                                                      |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The balance is encrypted                          | Show it as hidden with a button to decrypt it. The first decryption asks the wallet for a signature, so start it from a click. See [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useConfidentialBalance.md). |
+| The amount is above the balance                   | Disable the button and say why. A confidential transfer above the balance moves zero instead of reverting; the SDK checks this before sending, but the user should not have to find out from an error.          |
+| The batcher is paused                             | Disable the button and say deposits are paused. Quit and claim still work while paused.                                                                                                                         |
+| A redemption                                      | The amount is in shares, not assets. Label the field so the user knows which one they type.                                                                                                                     |
+| The user has public tokens, not confidential ones | Shield first with [`useShield`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useShield.md), then deposit.                                                                                                                              |
+
+## 2. The send
+
+`useDeposit` and `useRedeem` return the `batchId` the amount joined. **Keep track of it**, so the user finds the batch again after a reload or on another device. Either store the id with the user's account, or rebuild the list from the chain: fetch the batcher's `Joined`, `Claimed` and `Quit` logs for the account and pass them to [`openBatchIds`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#events), which returns the batches the user joined and has not claimed or quit yet.
+
+While the transaction is pending, show that the user has to confirm in their wallet and then wait for the transaction, and lock the form so the user cannot send twice.
+
+After it is mined, say the amount is **queued**, not deposited. The user does not hold shares yet.
+
+## 3. The batch
+
+Read the batch with [`useBatchStatus`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchStatus.md). It returns the state and the timestamps that state needs in one read. The `secondsUntil*` values are correct at read time; for a live countdown, tick from the `*At` timestamps between refetches:
+
+| State        | What the user sees                                    | What the user can do                              | Hooks                                                 |
+| ------------ | ----------------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------- |
+| `Pending`    | Queued, with the time until the batch can be sent     | Cancel, to get the amount back                    | [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md)         |
+| `Dispatched` | Processing                                            | Wait. If the batch stays here too long, settle it | [`useFinalize`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useFinalize.md) |
+| `Finalized`  | Ready to claim                                        | Claim the shares                                  | [`useClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md)       |
+| `Canceled`   | The batch did not go through, the amount is available | Take the amount back                              | [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md)         |
+
+Switch on `status.state` and handle every case. With an exhaustive `switch`, TypeScript flags a state your UI forgets:
+
+```tsx
+import { useBatchStatus, useClaim, useQuit } from "@zama-fhe/react-sdk/vaults";
+import type { Address } from "@zama-fhe/sdk";
+import { BatchState } from "@zama-fhe/sdk/vaults";
+
+// `Row` and `formatSeconds` stand in for your own components and helpers.
+
+function BatchRow({ batcher, batchId }: { batcher: Address; batchId: bigint }) {
+  const { data: status } = useBatchStatus(
+    { address: batcher, batchId },
+    { refetchInterval: 10_000 },
+  );
+  const claim = useClaim({ address: batcher });
+  const quit = useQuit({ address: batcher });
+
+  if (!status) return <Row label="Loading…" />;
+
+  switch (status.state) {
+    case BatchState.Pending:
+      return (
+        <Row
+          label={`Queued, sent in ${formatSeconds(status.secondsUntilDispatchable)} at the earliest`}
+          action={{ label: "Cancel", onClick: () => quit.mutate({ batchId }) }}
+        />
+      );
+    case BatchState.Dispatched:
+      return <Row label="Processing" />;
+    case BatchState.Finalized:
+      return (
+        <Row
+          label="Ready to claim"
+          action={{ label: "Claim", onClick: () => claim.mutate({ batchId }) }}
+        />
+      );
+    case BatchState.Canceled:
+      return (
+        <Row
+          label="Did not go through"
+          action={{ label: "Get it back", onClick: () => quit.mutate({ batchId }) }}
+        />
+      );
+    default:
+      return status satisfies never;
+  }
+}
+```
+
+### Pending
+
+The countdown is the earliest moment anyone may send the batch, not a promise. Word it as "at the earliest". When it reaches `0` the batch waits for someone to send it; anyone may call [`useDispatchBatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDispatchBatch.md), but you do not have to offer it.
+
+### Dispatched
+
+A keeper, an off-chain service that watches batches, normally settles the batch and the user only waits. If it stays `Dispatched` longer than your app expects, offer a button that calls `useFinalize`. Pick the delay yourself; the SDK does not decide when a keeper is late.
+
+`status.secondsUntilCallbackDeadline` says how long settling remains possible. Once it reaches `0`, `useFinalize` **cancels** the batch instead of settling it, and the user then takes the amount back from `Canceled`. Label the button accordingly, for example "Cancel and get it back" rather than "Settle".
+
+### Finalized
+
+Claiming is a separate transaction. Show it clearly: until the user claims, the shares are not in their balance. Claiming is permissionless and pays the depositor, never the caller, so your backend may also claim on the user's behalf.
+
+After a claim or a quit, the batch's state does not change, and the user's encrypted deposit is replaced by an encrypted zero rather than cleared, so neither `useBatchStatus` nor the deposit tells you the user already claimed. The public `Claimed` and `Quit` events do: [`openBatchIds`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#events) drops a batch once either is emitted for the user. If you store ids yourself, mark the batch as done after the claim or quit is mined.
+
+### Canceled
+
+A canceled batch never reached the vault. `useQuit` returns the original amount. Claiming reverts.
+
+## Vault groups
+
+A group deposit joins one batch per member: the chosen vault with the amount, the others with an encrypted zero. Store every `join` the deposit returns, not only the chosen one.
+
+Show the user one entry for the vault they chose, but **claim or quit every join**, the zero legs included. A claim or quit is public, so acting on the chosen vault alone shows which vault the user picked. Read the state of each join's batch with `useBatchStatus`, and offer the action once every leg allows it.
+
+## Checklist
+
+- [ ] The encrypted balance is decrypted only after a click.
+- [ ] The send button explains why it is disabled: no amount, above balance, paused.
+- [ ] The user's open batches survive a reload: stored ids, or `openBatchIds` over the batcher's logs.
+- [ ] After sending, the UI says "queued", not "deposited".
+- [ ] Every `BatchState` has a view, enforced by an exhaustive `switch`.
+- [ ] Pending batches offer a cancel.
+- [ ] Dispatched batches offer `finalize` after a delay you choose, and say when it cancels instead.
+- [ ] Finalized batches offer a claim.
+- [ ] Canceled batches offer to take the amount back.
+- [ ] Claimed and quit batches leave the list.
+
+## Next steps
+
+- The [`react-vaults` example](https://github.com/zama-ai/sdk/tree/main/examples/react-vaults) implements this guide end to end.
+- [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md) for the SDK calls behind each step.
+- [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/groups.md) when one form deposits into one of several vaults.
 
 ## Go & Rust overview
 
@@ -12839,6 +12994,19 @@ if ((await batcher.batchState(batchId)) === BatchState.Finalized) {
 }
 ```
 
+### batchStatus
+
+`(batchId: bigint) => Promise<BatchStatus>`
+
+A batch's state with the timestamps that state needs. Every state carries `createdAt`; `Pending` adds `dispatchableAt` and `secondsUntilDispatchable`; `Dispatched` adds `dispatchedAt`, `callbackDeadlineAt` and `secondsUntilCallbackDeadline`; `Finalized` and `Canceled` add `dispatchedAt`. Timestamps are Unix seconds on chain. The `secondsUntil*` values are measured against the block timestamp at read time, like [`timeUntilDispatchable`](#timeuntildispatchable) and [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline); tick a live countdown from the `*At` timestamps. Switch on `state` to decide what to show; see [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md).
+
+```ts
+const status = await batcher.batchStatus(batchId);
+if (status.state === BatchState.Pending && status.secondsUntilDispatchable === 0n) {
+  await batcher.dispatchBatch();
+}
+```
+
 ### timeUntilDispatchable
 
 `(batchId: bigint) => Promise<bigint | null>`
@@ -13083,14 +13251,39 @@ A builder encodes a call; it does not check balances, encrypt, or grant anything
 ## Events
 
 ```ts
-import { VaultTopics, decodeJoined, findJoined, type JoinedEvent } from "@zama-fhe/sdk/vaults";
+import {
+  VaultTopics,
+  decodeJoined,
+  findJoined,
+  openBatchIds,
+  type JoinedEvent,
+} from "@zama-fhe/sdk/vaults";
 ```
 
 `join` decodes its own receipt, but the helpers are exported for apps that index logs themselves.
 
-- `VaultTopics.Joined` — topic0 of `Joined(uint256 indexed batchId, address indexed account, euint64 amount)`.
+- `VaultTopics.Joined`, `VaultTopics.Claimed`, `VaultTopics.Quit` — topic0 of `Joined`, `Claimed` and `Quit`, each `(uint256 indexed batchId, address indexed account, euint64 amount)`.
 - `decodeJoined(log)` — decodes one raw log into `{ batchId, account, confidentialAmount }`, or `null` if it isn't a `Joined` event.
 - `findJoined(logs, batcher, account?)` — the first `Joined` log emitted by `batcher` (and crediting `account`, when given). Filters by emitter and account because one transaction can join several batchers and credit several beneficiaries.
+- `openBatchIds(logs, batcher, account)` — the batches `account` joined on `batcher` and has not claimed or quit, by ascending batch id. Pass that batcher's `Joined`, `Claimed` and `Quit` logs for the account in chain order, as `getLogs` returns them. A quit followed by a new join in the same batch opens it again.
+
+```ts
+import { pad, toHex } from "viem";
+
+// Raw eth_getLogs: the three events share the account topic, which viem's typed
+// getLogs only filters for a single event.
+const logs = await publicClient.request({
+  method: "eth_getLogs",
+  params: [
+    {
+      address: batcher,
+      topics: [[VaultTopics.Joined, VaultTopics.Claimed, VaultTopics.Quit], null, pad(account)],
+      fromBlock: toHex(deployBlock),
+    },
+  ],
+});
+const open = openBatchIds(logs, batcher, account);
+```
 
 ## TanStack Query helpers
 
@@ -13098,6 +13291,7 @@ import { VaultTopics, decodeJoined, findJoined, type JoinedEvent } from "@zama-f
 import {
   vaultQueryKeys,
   batchStateQueryOptions,
+  batchStatusQueryOptions,
   currentBatchIdQueryOptions,
   timeUntilDispatchableQueryOptions,
   timeUntilCallbackDeadlineQueryOptions,
@@ -13118,6 +13312,7 @@ The React hooks are built on these query and mutation option builders; they are 
 - [Vault](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) — pairs two batchers behind `deposit()` / `redeem()`
 - [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md) — the full flow, including when each write is legal
 - [Errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md) — the error classes thrown above
+- [useBatchStatus](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchStatus.md) — React hook for `batchStatus`
 - [useTimeUntilCallbackDeadline](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md) — React hook for `timeUntilCallbackDeadline`
 - [useVaultBatcher](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultBatcher.md) — React hook returning a `VaultBatcher`
 
@@ -26298,6 +26493,188 @@ The current status of the query. Prefer the boolean flags above for conditional 
 - [useTimeUntilCallbackDeadline](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md) — countdown while `Dispatched`
 - [VaultBatcher → BatchState](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#batchstate)
 
+## useBatchStatus
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/useBatchStatus.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchStatus.md
+- logical_path: reference/react/useBatchStatus
+
+# useBatchStatus
+
+Reads a batch's state together with the timestamps that state needs. Same read as [`VaultBatcher.batchStatus`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#batchstatus).
+
+- Every state carries `createdAt`.
+- `Pending` adds `dispatchableAt` and `secondsUntilDispatchable`.
+- `Dispatched` adds `dispatchedAt`, `callbackDeadlineAt` and `secondsUntilCallbackDeadline`.
+- `Finalized` and `Canceled` add `dispatchedAt`.
+
+Timestamps are Unix seconds on chain. The `secondsUntil*` values are correct at read time; to show a live countdown between refetches, tick from the `*At` timestamps.
+
+Switch on `data.state` to render each step after a deposit or redemption. See [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) for what to show in each state.
+
+## Import
+
+```ts
+import { useBatchStatus } from "@zama-fhe/react-sdk/vaults";
+```
+
+## Usage
+
+
+### Tab: BatchRow.tsx
+
+```tsx
+import { useBatchStatus } from "@zama-fhe/react-sdk/vaults";
+import { BatchState } from "@zama-fhe/sdk/vaults";
+
+function BatchRow({ batchId }: { batchId: bigint }) {
+  const { data: status } = useBatchStatus(
+    { address: "0xDepositBatcher", batchId },
+    { refetchInterval: 10_000 },
+  );
+
+  if (!status) return <span>Loading…</span>;
+
+  switch (status.state) {
+    case BatchState.Pending:
+      return (
+        <span>Queued, sent in {status.secondsUntilDispatchable.toString()}s at the earliest</span>
+      );
+    case BatchState.Dispatched:
+      return <span>Processing</span>;
+    case BatchState.Finalized:
+      return <span>Ready to claim</span>;
+    case BatchState.Canceled:
+      return <span>Did not go through</span>;
+    default:
+      return status satisfies never;
+  }
+}
+```
+
+
+## Parameters
+
+```ts
+import { type UseBatchStatusConfig } from "@zama-fhe/react-sdk/vaults";
+```
+
+### address
+
+`Address`
+
+The batcher contract address (deposit or redeem direction).
+
+---
+
+### batchId
+
+`bigint | undefined`
+
+The batch to read. The query is disabled while `undefined`.
+
+### `enabled`
+
+**Type:** `boolean`
+
+Set to `false` to prevent the query from running automatically. The query will only execute when `refetch` is called or when `enabled` changes to `true`.
+
+### `staleTime`
+
+**Type:** `number` (milliseconds)
+
+How long fetched data is considered fresh. While fresh, the query will not re-fetch on mount or window focus. Defaults to `0` (always stale).
+
+### `gcTime`
+
+**Type:** `number` (milliseconds)
+
+How long inactive query data stays in the cache before garbage collection. Defaults to `300000` (5 minutes).
+
+### `refetchInterval`
+
+**Type:** `number | false` (milliseconds)
+
+Poll at a fixed interval. Set to `false` or omit to disable polling.
+
+### `refetchOnWindowFocus`
+
+**Type:** `boolean`
+
+Re-fetch when the browser tab regains focus. Defaults to `true`.
+
+
+## Return Type
+
+```ts
+import { type UseBatchStatusOptions } from "@zama-fhe/react-sdk/vaults";
+```
+
+The `data` property is `BatchStatus | undefined`, `undefined` while loading or disabled. Seconds are measured against the chain's block timestamp at read time and stop at `0n`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
+
+
+## Related
+
+- [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) — what to show and offer in each state
+- [useBatchState](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md) — the state alone
+- [useTimeUntilDispatchable](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md) and [useTimeUntilCallbackDeadline](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md) — each countdown alone
+- [VaultBatcher.batchStatus](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#batchstatus)
+
 ## useTimeUntilDispatchable
 
 - source_type: official-doc
@@ -27175,7 +27552,7 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 ### `vaultQueryKeys`
 
-Batch reads for confidential ERC-4626 vaults, used by [`useCurrentBatchId`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useCurrentBatchId.md), [`useBatchState`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md), [`useTimeUntilDispatchable`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md) and [`useTimeUntilCallbackDeadline`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md). Lives in the `vaults` subpath, not on `zamaQueryKeys`.
+Batch reads for confidential ERC-4626 vaults, used by [`useCurrentBatchId`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useCurrentBatchId.md), [`useBatchState`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md), [`useBatchStatus`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchStatus.md), [`useTimeUntilDispatchable`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md) and [`useTimeUntilCallbackDeadline`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md). Lives in the `vaults` subpath, not on `zamaQueryKeys`.
 
 ```ts
 import { vaultQueryKeys, invalidateBatchQueries } from "@zama-fhe/sdk/vaults";
@@ -27186,12 +27563,14 @@ import { vaultQueryKeys, invalidateBatchQueries } from "@zama-fhe/sdk/vaults";
 | `.currentBatchId.batcher(batcherAddr)`              | One batcher's open batch id                      |
 | `.batchState.batcher(batcherAddr)`                  | All batch states for one batcher                 |
 | `.batchState.batch(batcherAddr, batchId)`           | One batch's state                                |
+| `.batchStatus.batcher(batcherAddr)`                 | All batch statuses for one batcher               |
+| `.batchStatus.batch(batcherAddr, batchId)`          | One batch's state with its timestamps            |
 | `.timeUntilDispatchable.batcher(batcherAddr)`       | All dispatch countdowns for one batcher          |
 | `.timeUntilDispatchable.batch(batcherAddr, id)`     | One batch's dispatch countdown                   |
 | `.timeUntilCallbackDeadline.batcher(batcherAddr)`   | All callback-deadline countdowns for one batcher |
 | `.timeUntilCallbackDeadline.batch(batcherAddr, id)` | One batch's callback-deadline countdown          |
 
-A `batcher(...)` key is a prefix of every `batch(...)` key for that batcher, so invalidating it clears all of them at once. `invalidateBatchQueries(queryClient, batcherAddr)` invalidates all four namespaces for a batcher — this is what the vault mutation hooks call after a join, quit, recover, dispatch or finalize. Balances on the batcher's input and output tokens go through the regular [`invalidateBalanceQueries`](#invalidatebalancequeries).
+A `batcher(...)` key is a prefix of every `batch(...)` key for that batcher, so invalidating it clears all of them at once. `invalidateBatchQueries(queryClient, batcherAddr)` invalidates all five namespaces for a batcher — this is what the vault mutation hooks call after a join, quit, recover, dispatch or finalize. Balances on the batcher's input and output tokens go through the regular [`invalidateBalanceQueries`](#invalidatebalancequeries).
 
 `useGroupDeposit` / `useGroupRedeem` invalidate, once the transaction is mined, the balance of each token the legs spent and every member's batch reads — on success and on `VaultGroupJoinUnconfirmedError` alike. `useGroupRedeem` additionally invalidates operator status for each share token.
 
@@ -29355,6 +29734,66 @@ Tests use Playwright with a mock EIP-1193 provider injected via `page.addInitScr
 ```bash
 npm run test:e2e   # starts dev server and runs all specs
 ```
+
+## react-vaults README
+
+- source_type: official-example
+- source_path: examples/react-vaults/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/examples/react-vaults/README.md
+- logical_path: examples/react-vaults/readme
+
+# Confidential Vault Reference UI — react-vaults
+
+Next.js 16 example app showing the full deposit and withdrawal lifecycle of a confidential vault with `@zama-fhe/react-sdk/vaults`, on Sepolia testnet.
+
+It is the code version of the [Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide: every state the guide lists has a view here. The UI is plain HTML with a few lines of CSS, so you can copy the logic into any design system.
+
+Covers: decrypt the balance on click, deposit and withdraw with a disabled reason (no amount, above balance, paused), "queued" after sending, find the account's open batches, and one row per batch with an exhaustive `switch` on its state: cancel while pending, settle a late batch, claim, and take a canceled amount back.
+
+## Stack
+
+- **Next.js 16** (App Router) + **React 19** + **viem v2**
+- **TanStack Query v5** for async state
+- **@zama-fhe/react-sdk** — `ZamaProvider`, `useConfidentialBalance`, `useGrantPermit`, `useHasPermit`, `useMetadata`
+- **@zama-fhe/react-sdk/vaults** — `useDeposit`, `useRedeem`, `useBatchStatus`, `useQuit`, `useClaim`, `useFinalize`, `useVaultBatcher`
+- **@zama-fhe/sdk/vaults** — `BatchState`, `openBatchIds`, `VaultTopics`
+- **Next.js relayer proxy** — routes browser relayer requests through `/api/relayer` so API credentials stay server-side
+
+## Setup
+
+```bash
+cp .env.example .env.local
+# Set the vault's batcher and token addresses, and the block the batchers were deployed at.
+
+npm install
+npm run dev
+```
+
+Open [http://localhost:3006](http://localhost:3006) and connect MetaMask (or any EIP-1193 wallet) on **Sepolia**.
+
+## Environment variables
+
+| Variable                      | Required | Description                                                                         |
+| ----------------------------- | -------- | ----------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_DEPOSIT_BATCHER` | Yes      | The vault's deposit batcher.                                                        |
+| `NEXT_PUBLIC_REDEEM_BATCHER`  | Yes      | The vault's redeem batcher.                                                         |
+| `NEXT_PUBLIC_ASSET_TOKEN`     | Yes      | The confidential token users deposit (the vault's asset).                           |
+| `NEXT_PUBLIC_SHARE_TOKEN`     | Yes      | The confidential token users receive for a deposit (the vault's shares).            |
+| `NEXT_PUBLIC_FROM_BLOCK`      | No       | Block the batchers were deployed at. The batch list reads events from here.         |
+| `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                   |
+| `RELAYER_URL`                 | No       | Relayer base URL, no `/v2` suffix. Defaults to `https://relayer.testnet.zama.org`.  |
+| `RELAYER_API_KEY`             | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet. |
+
+## Where to look
+
+| File                                                           | What it shows                                                                                                                                  |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`src/components/VaultForm.tsx`](src/components/VaultForm.tsx) | The form: decrypt on click, the disabled reason, the locked form while sending, and "queued" after it is mined.                                |
+| [`src/lib/open-batches.ts`](src/lib/open-batches.ts)           | The account's open batches: the batcher's `Joined`, `Claimed` and `Quit` events passed to `openBatchIds`, plus the ids deposits just returned. |
+| [`src/components/BatchList.tsx`](src/components/BatchList.tsx) | One row per batch: `useBatchStatus` and an exhaustive `switch` on `status.state`, with a countdown that ticks locally.                         |
+| [`src/lib/config.ts`](src/lib/config.ts)                       | The vault addresses and `FINALIZE_AFTER_SECONDS`, the delay after which a dispatched batch offers to settle it.                                |
+
+The batch list reads events from the chain so the example needs no backend. Public RPCs often cap the block range of `eth_getLogs`; a production app should keep the batch ids in its backend or an indexer instead.
 
 ## react-viem README
 

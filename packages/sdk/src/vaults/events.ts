@@ -10,6 +10,10 @@ import type { RawLog } from "../types/transaction";
 export const VaultTopics = {
   /** `Joined(uint256 indexed batchId, address indexed account, euint64 amount)` */
   Joined: eventTopic("Joined(uint256,address,bytes32)"),
+  /** `Claimed(uint256 indexed batchId, address indexed account, euint64 amount)` */
+  Claimed: eventTopic("Claimed(uint256,address,bytes32)"),
+  /** `Quit(uint256 indexed batchId, address indexed account, euint64 amount)` */
+  Quit: eventTopic("Quit(uint256,address,bytes32)"),
 } as const;
 
 /** A decoded `Joined` event. */
@@ -88,4 +92,54 @@ export function takeJoined(
     }
   }
   return null;
+}
+
+/**
+ * The batches `account` joined and has not yet claimed or quit, by ascending
+ * batch id: what a UI still has to show for that batcher.
+ *
+ * Pass the batcher's `Joined`, `Claimed` and `Quit` logs for the account in
+ * chain order, as `getLogs` returns them. A quit followed by a new join in the
+ * same batch opens it again. Logs from other batchers or accounts are ignored;
+ * logs carrying no emitter address are kept, since some adapters omit it.
+ *
+ * @example
+ * ```ts
+ * const logs = await publicClient.request({
+ *   method: "eth_getLogs",
+ *   params: [{
+ *     address: batcher,
+ *     topics: [[VaultTopics.Joined, VaultTopics.Claimed, VaultTopics.Quit], null, pad(account)],
+ *     fromBlock: toHex(deployBlock),
+ *   }],
+ * });
+ * const open = openBatchIds(logs, batcher, account);
+ * ```
+ */
+export function openBatchIds(
+  logs: readonly RawLog[],
+  batcher: Address,
+  account: Address,
+): bigint[] {
+  const normalizedBatcher = getAddress(batcher);
+  const normalizedAccount = getAddress(account);
+  const open = new Set<bigint>();
+  for (const log of logs) {
+    if (log.address !== undefined && getAddress(log.address) !== normalizedBatcher) {
+      continue;
+    }
+    const [topic, batchId, accountTopic] = log.topics;
+    if (batchId === undefined || accountTopic === undefined) {
+      continue;
+    }
+    if (topicToAddress(accountTopic) !== normalizedAccount) {
+      continue;
+    }
+    if (topic === VaultTopics.Joined) {
+      open.add(BigInt(batchId));
+    } else if (topic === VaultTopics.Claimed || topic === VaultTopics.Quit) {
+      open.delete(BigInt(batchId));
+    }
+  }
+  return [...open].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }

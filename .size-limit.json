@@ -21,7 +21,7 @@
   {
     "name": "@zama-fhe/sdk/vaults (CJS, separate subpath)",
     "path": "packages/sdk/dist/cjs/vaults/**/*.cjs",
-    "limit": "7 KB"
+    "limit": "7.5 KB"
   },
   {
     "name": "@zama-fhe/sdk (encrypt worker, self-contained, lazy-loaded)",
