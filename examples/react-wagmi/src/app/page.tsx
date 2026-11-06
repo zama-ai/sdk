@@ -26,10 +26,10 @@ export default function Home() {
   // The Zama wagmi config adapter subscribes to wagmi connection state internally,
   // so account and chain changes are handled automatically — no manual eth_accounts
   // polling or walletKey/refSeededRef remount pattern needed.
-  // Connect/disconnect go through lib/wallet.tsx, which backs them with either the Privy
-  // wallet modal or wagmi's injected connector; wagmi state is the same in both modes.
+  // Connect/disconnect go through lib/wallet.tsx, which backs them with either the Dynamic
+  // connect dialog or wagmi's injected connector; wagmi state is the same in both modes.
   const { address, chainId, isConnected } = useConnection();
-  const { ready, connect, disconnect, isConnecting, isDisconnecting, connectError } =
+  const { connect, disconnect, isConnecting, isDisconnecting, connectError } =
     useWalletConnection();
   const { mutate: switchChain, isPending: isSwitching, error: switchError } = useSwitchChain();
 
@@ -85,8 +85,6 @@ export default function Home() {
         actionLabel="Connect Wallet"
         pendingLabel="Connecting…"
         pending={isConnecting}
-        // Privy's modal is unusable until the SDK has loaded; the injected stack is always ready.
-        disabled={!ready}
         onAction={connect}
         error={
           isNoWallet
