@@ -7,8 +7,8 @@ description: Query hook for a vault batch's state together with its timestamps.
 
 Reads a batch's state together with the timestamps that state needs. Same read as [`VaultBatcher.batchStatus`](../sdk/VaultBatcher.md#batchstatus).
 
-- Every state carries `createdAt`.
-- `Pending` adds `dispatchableAt` and `secondsUntilDispatchable`.
+- Every state carries `createdAt` and `dispatchableAt`.
+- `Pending` adds `secondsUntilDispatchable`.
 - `Dispatched` adds `dispatchedAt`, `callbackDeadlineAt` and `secondsUntilCallbackDeadline`.
 - `Finalized` and `Canceled` add `dispatchedAt`.
 

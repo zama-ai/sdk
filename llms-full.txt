@@ -2575,7 +2575,7 @@ New `VaultBatcher.finalize(batchId)` (`useFinalize` in React, `finalizeMutationO
 
 ## Batch status for vault UIs
 
-New `VaultBatcher.batchStatus(batchId)` (`useBatchStatus` in React, `batchStatusQueryOptions` for TanStack Query) returns a batch's state with the timestamps that state needs: `dispatchableAt` and `secondsUntilDispatchable` while `Pending`, `callbackDeadlineAt` and `secondsUntilCallbackDeadline` while `Dispatched`, plus `createdAt` and, once dispatched, `dispatchedAt`. The result is a union keyed on `state`, so an exhaustive `switch` makes TypeScript flag a state the UI does not handle. New `openBatchIds(logs, batcher, account)` returns the batches an account joined and has not claimed or quit, from the batcher's `Joined`, `Claimed` and `Quit` logs; `VaultTopics` gains `Claimed` and `Quit`. The new [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) guide lists what to show and offer in every state of a deposit or redemption.
+New `VaultBatcher.batchStatus(batchId)` (`useBatchStatus` in React, `batchStatusQueryOptions` for TanStack Query) returns a batch's state with the timestamps that state needs: `secondsUntilDispatchable` while `Pending`, `callbackDeadlineAt` and `secondsUntilCallbackDeadline` while `Dispatched`, plus `createdAt`, `dispatchableAt` and, once dispatched, `dispatchedAt`. The result is a union keyed on `state`, so an exhaustive `switch` makes TypeScript flag a state the UI does not handle. New `openBatchIds(logs, batcher, account)` returns the batches an account joined and has not claimed or quit, from the batcher's `Joined`, `Claimed` and `Quit` logs; `VaultTopics` gains `Claimed` and `Quit`. The new [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) guide lists what to show and offer in every state of a deposit or redemption.
 
 ## Vault groups for your own transaction layer
 
@@ -13030,7 +13030,7 @@ if ((await batcher.batchState(batchId)) === BatchState.Finalized) {
 
 `(batchId: bigint) => Promise<BatchStatus>`
 
-A batch's state with the timestamps that state needs. Every state carries `createdAt`; `Pending` adds `dispatchableAt` and `secondsUntilDispatchable`; `Dispatched` adds `dispatchedAt`, `callbackDeadlineAt` and `secondsUntilCallbackDeadline`; `Finalized` and `Canceled` add `dispatchedAt`. Timestamps are Unix seconds on chain. The `secondsUntil*` values are measured against the block timestamp at read time, like [`timeUntilDispatchable`](#timeuntildispatchable) and [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline); tick a live countdown from the `*At` timestamps. Switch on `state` to decide what to show; see [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md).
+A batch's state with the timestamps that state needs. Every state carries `createdAt` and `dispatchableAt`; `Pending` adds `secondsUntilDispatchable`; `Dispatched` adds `dispatchedAt`, `callbackDeadlineAt` and `secondsUntilCallbackDeadline`; `Finalized` and `Canceled` add `dispatchedAt`. Timestamps are Unix seconds on chain. The `secondsUntil*` values are measured against the block timestamp at read time, like [`timeUntilDispatchable`](#timeuntildispatchable) and [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline); tick a live countdown from the `*At` timestamps. Switch on `state` to decide what to show; see [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md).
 
 ```ts
 const status = await batcher.batchStatus(batchId);
@@ -26570,8 +26570,8 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 Reads a batch's state together with the timestamps that state needs. Same read as [`VaultBatcher.batchStatus`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#batchstatus).
 
-- Every state carries `createdAt`.
-- `Pending` adds `dispatchableAt` and `secondsUntilDispatchable`.
+- Every state carries `createdAt` and `dispatchableAt`.
+- `Pending` adds `secondsUntilDispatchable`.
 - `Dispatched` adds `dispatchedAt`, `callbackDeadlineAt` and `secondsUntilCallbackDeadline`.
 - `Finalized` and `Canceled` add `dispatchedAt`.
 

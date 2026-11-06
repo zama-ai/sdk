@@ -3318,16 +3318,19 @@ export type BatchStatus = {
 } | {
     state: typeof BatchState.Dispatched;
     createdAt: bigint;
+    dispatchableAt: bigint;
     dispatchedAt: bigint;
     callbackDeadlineAt: bigint;
     secondsUntilCallbackDeadline: bigint;
 } | {
     state: typeof BatchState.Finalized;
     createdAt: bigint;
+    dispatchableAt: bigint;
     dispatchedAt: bigint;
 } | {
     state: typeof BatchState.Canceled;
     createdAt: bigint;
+    dispatchableAt: bigint;
     dispatchedAt: bigint;
 };
 
