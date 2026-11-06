@@ -1,5 +1,6 @@
 "use client";
 
+import "@/lib/zodJitless";
 import { type ReactNode } from "react";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
@@ -29,7 +30,6 @@ const relayers = Object.fromEntries(
 ) as Record<number, RelayerConfig>;
 
 // Stable module-level reference — recreating on re-render would reset the SDK.
-// wagmiConfig is the Privy-managed or plain wagmi config, whichever lib/wallet.tsx built.
 const zamaConfig = createZamaConfig({
   wagmiConfig,
   chains: fheChains,
