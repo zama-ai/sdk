@@ -8,11 +8,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { NETWORK_KEYS, networks } from "@/lib/networks";
 import { keyStorageOrigins } from "@/lib/relayers";
 
-// Everything the page connects to: this origin (relayer proxy, /api/networks, WASM and
-// worker files), the RPC of every network in the table (the SDK probes the wallet's chain
-// on connect, served or not), the storage the relayers' `keyurl` names for the FHE public
-// key and CRS, and data: URLs, which the FHE runtime fetches to compile its WASM when
-// encryption runs in the page instead of the encrypt worker.
 // Dynamic (opt-in through NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID) talks to its API and wallet
 // catalogue and pairs over WalletConnect's relay. It renders no UI, so styles stay nonce-only.
 const dynamicEnabled = Boolean(process.env.NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID);
@@ -27,6 +22,11 @@ const dynamicConnectSrc = [
 // WalletConnect's domain verification runs in an iframe.
 const dynamicFrameSrc = ["https://verify.walletconnect.com", "https://verify.walletconnect.org"];
 
+// Everything the page connects to: this origin (relayer proxy, /api/networks, WASM and
+// worker files), the RPC of every network in the table (the SDK probes the wallet's chain
+// on connect, served or not), the storage the relayers' `keyurl` names for the FHE public
+// key and CRS, and data: URLs, which the FHE runtime fetches to compile its WASM when
+// encryption runs in the page instead of the encrypt worker.
 const connectSrc = new Set([
   "'self'",
   ...NETWORK_KEYS.map((key) => new URL(networks[key].chain.rpcUrls.default.http[0]).origin),
