@@ -141,6 +141,8 @@ function startDynamic(): Dynamic {
     () => true,
     (error: unknown) => {
       console.error("Dynamic did not initialize", error);
+      // Drop the failed client so the dialog's Retry starts a fresh one.
+      dynamic = undefined;
       return false;
     },
   );
@@ -247,5 +249,10 @@ export async function connectWallet(
     await removeWalletAccount({ walletAccount }, client);
     signal.throwIfAborted();
   }
-  await connectDynamicWallet(config, wallets, walletAccount.walletProviderKey);
+  try {
+    await connectDynamicWallet(config, wallets, walletAccount.walletProviderKey);
+  } catch (error) {
+    await removeWalletAccount({ walletAccount }, client);
+    throw error;
+  }
 }
