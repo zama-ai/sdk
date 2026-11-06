@@ -211,7 +211,10 @@ function Pairing({
           type="button"
           className="btn btn-primary btn-full"
           onClick={() => {
-            void navigator.clipboard.writeText(uri).then(() => setCopied(true));
+            void navigator.clipboard.writeText(uri).then(
+              () => setCopied(true),
+              () => {},
+            );
           }}
         >
           {copied ? "Copied" : "Copy"}

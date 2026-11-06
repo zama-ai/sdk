@@ -6,7 +6,8 @@
 // - Dynamic (NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID set): a connect dialog lists the wallets in
 //   Dynamic's catalogue — browser wallets and WalletConnect peers, including a Safe paired
 //   from the Safe web app. Dynamic only authorizes the wallet (connect-only: no sign-in, no
-//   embedded wallet); a wagmi connector of our own wraps its provider, and wagmi persists, restores and follows the connection from then on.
+//   embedded wallet); a wagmi connector of our own wraps its provider, and wagmi persists,
+//   restores and follows the connection from then on.
 // - Injected (environment ID unset): plain wagmi with the `injected()` connector. Needs no
 //   Dynamic account and is what the Playwright suite runs against with a mocked
 //   `window.ethereum`.
@@ -75,7 +76,7 @@ export interface WalletConnection {
   /** Opens the wallet picker (Dynamic) or prompts the injected wallet. */
   connect: () => void;
   disconnect: () => void;
-  /** A connect attempt is open, or wagmi is restoring a previous session. */
+  /** A connect attempt is open; with Dynamic, also while wagmi restores a saved session. */
   isConnecting: boolean;
   isDisconnecting: boolean;
   connectError: Error | null;
