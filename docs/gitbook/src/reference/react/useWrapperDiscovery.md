@@ -58,13 +58,13 @@ useWrapperDiscovery({ tokenAddress: "0xConfidentialToken", erc20Address: "0xUSDC
 
 ## Return Type
 
-The `data` field resolves to `Address | null` -- the wrapper contract address for the given token, or `null` if no wrapper exists.
+The `data` field resolves to `Address | null` -- the wrapper contract address for the given token, or `null` if no wrapper is registered or the registered wrapper has been revoked.
 
 {% include ".gitbook/includes/query-result.md" %}
 
 ## Caching
 
-The query uses `staleTime: Infinity`. Wrapper addresses are immutable once deployed, so the result never re-fetches automatically.
+The query's `staleTime` matches the registry cache TTL (`registryTTL`, default 24 hours). Registry pairs can be revoked, so the result is re-fetched once it goes stale.
 
 ## Suspense
 
