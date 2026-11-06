@@ -1753,6 +1753,30 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:reference/react/usePaused",
+      "title": "usePaused",
+      "source_path": "docs/gitbook/src/reference/react/usePaused.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/usePaused.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/usePaused",
+      "description": "Query hook for whether a vault batcher is paused.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:reference/react/useBatcherTokens",
+      "title": "useBatcherTokens",
+      "source_path": "docs/gitbook/src/reference/react/useBatcherTokens.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatcherTokens.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/useBatcherTokens",
+      "description": "Query hook for a vault batcher's input and output token addresses.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:reference/react/useTimeUntilDispatchable",
       "title": "useTimeUntilDispatchable",
       "source_path": "docs/gitbook/src/reference/react/useTimeUntilDispatchable.md",

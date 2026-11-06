@@ -80,6 +80,7 @@ export class WagmiProvider implements GenericProvider {
   >(
     config: ReadContractConfig<TAbi, TFunctionName, TArgs>,
   ): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>> {
+    // wagmi routes a `chainId` to that chain's client, so the read need not be on the connected chain.
     return readContract(this.#config, config);
   }
 
@@ -137,8 +138,9 @@ export class WagmiProvider implements GenericProvider {
     return new Promise<never>(() => {});
   }
 
-  async getBlockTimestamp(): Promise<bigint> {
-    const block = await getBlock(this.#config);
+  /** Reads `chainId` through wagmi's client for it, so it need not be the connected chain. */
+  async getBlockTimestamp(chainId?: number): Promise<bigint> {
+    const block = await getBlock(this.#config, { chainId });
     return block.timestamp;
   }
 

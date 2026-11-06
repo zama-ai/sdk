@@ -20,7 +20,7 @@ interface GenericProvider {
   getChainId(): Promise<number>;
   readContract(config: ReadContractConfig): Promise<unknown>;
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-  getBlockTimestamp(): Promise<bigint>;
+  getBlockTimestamp(chainId?: number): Promise<bigint>;
   prepareTransaction(args: {
     from: Address;
     calldata: WriteContractConfig;
@@ -64,7 +64,7 @@ class MyProvider implements GenericProvider {
   async waitForTransactionReceipt(hash) {
     /* ... */
   }
-  async getBlockTimestamp() {
+  async getBlockTimestamp(chainId) {
     /* ... */
   }
   async prepareTransaction(args) {
@@ -89,7 +89,7 @@ Return the chain ID this provider is connected to.
 readContract(config: ReadContractConfig): Promise<unknown>
 ```
 
-Execute a read-only contract call. `ReadContractConfig` contains `address`, `abi`, `functionName`, and `args`.
+Execute a read-only contract call. `ReadContractConfig` contains `address`, `abi`, `functionName`, `args`, and an optional `chainId`. Without `chainId`, read the provider's current chain. With one, `WagmiProvider` reads that chain through wagmi; a provider bound to a single chain, such as `ViemProvider` or `EthersProvider`, throws `ConfigurationError` when it is a different chain, rather than answering from the wrong one. A custom provider should do one or the other.
 
 ### waitForTransactionReceipt
 
@@ -102,10 +102,10 @@ Poll for a transaction receipt by hash.
 ### getBlockTimestamp
 
 ```ts
-getBlockTimestamp(): Promise<bigint>
+getBlockTimestamp(chainId?: number): Promise<bigint>
 ```
 
-Return the timestamp of the latest block.
+Return the timestamp of the latest block, on `chainId` when given, with the same rules as `readContract`.
 
 ### prepareTransaction
 

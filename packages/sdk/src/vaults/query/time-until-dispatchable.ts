@@ -30,7 +30,11 @@ export function timeUntilDispatchableQueryOptions(
 
   return {
     ...filterQueryOptions(queryOpts),
-    queryKey: vaultQueryKeys.timeUntilDispatchable.batch(batcher.address, config.batchId),
+    queryKey: vaultQueryKeys.timeUntilDispatchable.batch(
+      batcher.address,
+      config.batchId,
+      batcher.chainId,
+    ),
     queryFn: async (context) => {
       const [, { batchId }] = context.queryKey;
       assertNonNullable(batchId, "timeUntilDispatchableQueryOptions: batchId");

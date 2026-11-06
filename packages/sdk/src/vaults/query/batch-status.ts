@@ -27,7 +27,7 @@ export function batchStatusQueryOptions(
 
   return {
     ...filterQueryOptions(queryOpts),
-    queryKey: vaultQueryKeys.batchStatus.batch(batcher.address, config.batchId),
+    queryKey: vaultQueryKeys.batchStatus.batch(batcher.address, config.batchId, batcher.chainId),
     queryFn: async (context) => {
       const [, { batchId }] = context.queryKey;
       assertNonNullable(batchId, "batchStatusQueryOptions: batchId");

@@ -223,7 +223,7 @@ const { data: balance } = useConfidentialBalance({ address: cShareAddress, accou
 {% endtab %}
 {% endtabs %}
 
-The share token is an ordinary confidential token, so `useConfidentialBalance` reads it directly — there is no vault-specific balance hook, and none that resolves the share token's address. Configure `cShareAddress` alongside the batcher addresses, as above, or read it once with `(await vault.cShare()).address` — in a `useEffect`, or a `useQuery` keyed on the vault — and keep it in state. The address is fixed at deploy time, so one read is enough.
+The share token is an ordinary confidential token, so `useConfidentialBalance` reads it directly — there is no vault-specific balance hook. Configure `cShareAddress` alongside the batcher addresses, as above, or read it with [`useBatcherTokens`](../../reference/react/useBatcherTokens.md): for the deposit batcher, `toToken` is the share and `fromToken` the asset. The addresses are fixed at deploy time, so the hook reads them once.
 
 ## Redemptions
 

@@ -37,7 +37,7 @@ export default function Home() {
   if (!IS_CONFIGURED) {
     return (
       <main>
-        <p>Set the vault addresses in .env.local (see .env.example), then restart the app.</p>
+        <p>Set the batcher addresses in .env.local (see .env.example), then restart the app.</p>
       </main>
     );
   }
