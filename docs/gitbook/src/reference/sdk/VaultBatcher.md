@@ -115,7 +115,7 @@ if ((await batcher.batchState(batchId)) === BatchState.Finalized) {
 
 `(batchId: bigint) => Promise<BatchStatus>`
 
-A batch's state with the timestamps that state needs. Every state carries `createdAt`; `Pending` adds `dispatchableAt` and `secondsUntilDispatchable`; `Dispatched` adds `dispatchedAt`, `callbackDeadlineAt` and `secondsUntilCallbackDeadline`; `Finalized` and `Canceled` add `dispatchedAt`. Timestamps are Unix seconds on chain. The `secondsUntil*` values are measured against the block timestamp at read time, like [`timeUntilDispatchable`](#timeuntildispatchable) and [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline); tick a live countdown from the `*At` timestamps. Switch on `state` to decide what to show; see [Building a vault UI](../../guides/vaults/building-a-ui.md).
+A batch's state with the timestamps that state needs. Every state carries `createdAt` and `dispatchableAt`; `Pending` adds `secondsUntilDispatchable`; `Dispatched` adds `dispatchedAt`, `callbackDeadlineAt` and `secondsUntilCallbackDeadline`; `Finalized` and `Canceled` add `dispatchedAt`. Timestamps are Unix seconds on chain. The `secondsUntil*` values are measured against the block timestamp at read time, like [`timeUntilDispatchable`](#timeuntildispatchable) and [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline); tick a live countdown from the `*At` timestamps. Switch on `state` to decide what to show; see [Building a vault UI](../../guides/vaults/building-a-ui.md).
 
 ```ts
 const status = await batcher.batchStatus(batchId);

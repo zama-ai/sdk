@@ -417,6 +417,7 @@ describe("VaultBatcher", () => {
       await expect(batcher.batchStatus(58n)).resolves.toEqual({
         state: BatchState.Dispatched,
         createdAt: 900n,
+        dispatchableAt: 1_500n,
         dispatchedAt: 1_000n,
         callbackDeadlineAt: 1_600n,
         secondsUntilCallbackDeadline: 0n,
@@ -432,6 +433,7 @@ describe("VaultBatcher", () => {
         await expect(batcher.batchStatus(58n)).resolves.toEqual({
           state,
           createdAt: 900n,
+          dispatchableAt: 1_500n,
           dispatchedAt: 1_000n,
         });
       },

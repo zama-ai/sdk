@@ -32,7 +32,7 @@ export type BatchStatus =
       state: typeof BatchState.Pending;
       /** When the batch opened. */
       createdAt: bigint;
-      /** When anyone may dispatch the batch. */
+      /** When anyone may dispatch the batch, pinned when it opened. */
       dispatchableAt: bigint;
       /** Seconds until `dispatchableAt`; `0` once reached. */
       secondsUntilDispatchable: bigint;
@@ -40,14 +40,25 @@ export type BatchStatus =
   | {
       state: typeof BatchState.Dispatched;
       createdAt: bigint;
+      dispatchableAt: bigint;
       dispatchedAt: bigint;
       /** From then on `finalize` cancels the batch instead of settling it. */
       callbackDeadlineAt: bigint;
       /** Seconds until `callbackDeadlineAt`; `0` once reached. */
       secondsUntilCallbackDeadline: bigint;
     }
-  | { state: typeof BatchState.Finalized; createdAt: bigint; dispatchedAt: bigint }
-  | { state: typeof BatchState.Canceled; createdAt: bigint; dispatchedAt: bigint };
+  | {
+      state: typeof BatchState.Finalized;
+      createdAt: bigint;
+      dispatchableAt: bigint;
+      dispatchedAt: bigint;
+    }
+  | {
+      state: typeof BatchState.Canceled;
+      createdAt: bigint;
+      dispatchableAt: bigint;
+      dispatchedAt: bigint;
+    };
 
 /** Addresses that make up one confidential vault. */
 export interface VaultAddresses {
