@@ -376,6 +376,68 @@ describe("VaultBatcher", () => {
     );
   });
 
+  describe("batchStatus", () => {
+    function mockBatch(
+      provider: GenericProvider,
+      state: BatchState,
+      reads: { createdAt: bigint; dispatchedAt: bigint; now: bigint },
+    ) {
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(state) // batchState
+        .mockResolvedValueOnce(reads.createdAt) // batchCreatedAt
+        .mockResolvedValueOnce(reads.dispatchedAt) // batchDispatchedAt
+        .mockResolvedValueOnce(600n) // batchMinBatchAge
+        .mockResolvedValueOnce(600n); // batchCallbackDeadline
+      vi.mocked(provider.getBlockTimestamp).mockResolvedValueOnce(reads.now);
+    }
+
+    test("gives a pending batch when it becomes dispatchable", async ({ sdk, provider }) => {
+      mockBatch(provider, BatchState.Pending, { createdAt: 1_000n, dispatchedAt: 0n, now: 1_200n });
+
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+      await expect(batcher.batchStatus(58n)).resolves.toEqual({
+        state: BatchState.Pending,
+        createdAt: 1_000n,
+        dispatchableAt: 1_600n,
+        secondsUntilDispatchable: 400n,
+      });
+    });
+
+    test("gives a dispatched batch its callback deadline, 0 seconds once passed", async ({
+      sdk,
+      provider,
+    }) => {
+      mockBatch(provider, BatchState.Dispatched, {
+        createdAt: 900n,
+        dispatchedAt: 1_000n,
+        now: 1_700n,
+      });
+
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+      await expect(batcher.batchStatus(58n)).resolves.toEqual({
+        state: BatchState.Dispatched,
+        createdAt: 900n,
+        dispatchedAt: 1_000n,
+        callbackDeadlineAt: 1_600n,
+        secondsUntilCallbackDeadline: 0n,
+      });
+    });
+
+    test.for([BatchState.Finalized, BatchState.Canceled])(
+      "gives a batch in state %s its timestamps",
+      async (state, { sdk, provider }) => {
+        mockBatch(provider, state, { createdAt: 900n, dispatchedAt: 1_000n, now: 2_000n });
+
+        const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+        await expect(batcher.batchStatus(58n)).resolves.toEqual({
+          state,
+          createdAt: 900n,
+          dispatchedAt: 1_000n,
+        });
+      },
+    );
+  });
+
   describe("claim", () => {
     test("defaults the target account to the connected wallet", async ({
       sdk,

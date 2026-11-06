@@ -1,0 +1,24 @@
+{
+  "name": "react-vaults-example",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3006",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.105.1",
+    "@zama-fhe/react-sdk": "3.8.0-beta.16",
+    "@zama-fhe/sdk": "3.8.0-beta.16",
+    "next": "16.4.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "viem": "2.57.5"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "@types/react": "19.3.0",
+    "typescript": "7.0.2"
+  }
+}

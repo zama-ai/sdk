@@ -119,7 +119,7 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 ### `vaultQueryKeys`
 
-Batch reads for confidential ERC-4626 vaults, used by [`useCurrentBatchId`](./useCurrentBatchId.md), [`useBatchState`](./useBatchState.md), [`useTimeUntilDispatchable`](./useTimeUntilDispatchable.md) and [`useTimeUntilCallbackDeadline`](./useTimeUntilCallbackDeadline.md). Lives in the `vaults` subpath, not on `zamaQueryKeys`.
+Batch reads for confidential ERC-4626 vaults, used by [`useCurrentBatchId`](./useCurrentBatchId.md), [`useBatchState`](./useBatchState.md), [`useBatchStatus`](./useBatchStatus.md), [`useTimeUntilDispatchable`](./useTimeUntilDispatchable.md) and [`useTimeUntilCallbackDeadline`](./useTimeUntilCallbackDeadline.md). Lives in the `vaults` subpath, not on `zamaQueryKeys`.
 
 ```ts
 import { vaultQueryKeys, invalidateBatchQueries } from "@zama-fhe/sdk/vaults";
@@ -130,12 +130,14 @@ import { vaultQueryKeys, invalidateBatchQueries } from "@zama-fhe/sdk/vaults";
 | `.currentBatchId.batcher(batcherAddr)`              | One batcher's open batch id                      |
 | `.batchState.batcher(batcherAddr)`                  | All batch states for one batcher                 |
 | `.batchState.batch(batcherAddr, batchId)`           | One batch's state                                |
+| `.batchStatus.batcher(batcherAddr)`                 | All batch statuses for one batcher               |
+| `.batchStatus.batch(batcherAddr, batchId)`          | One batch's state with its timestamps            |
 | `.timeUntilDispatchable.batcher(batcherAddr)`       | All dispatch countdowns for one batcher          |
 | `.timeUntilDispatchable.batch(batcherAddr, id)`     | One batch's dispatch countdown                   |
 | `.timeUntilCallbackDeadline.batcher(batcherAddr)`   | All callback-deadline countdowns for one batcher |
 | `.timeUntilCallbackDeadline.batch(batcherAddr, id)` | One batch's callback-deadline countdown          |
 
-A `batcher(...)` key is a prefix of every `batch(...)` key for that batcher, so invalidating it clears all of them at once. `invalidateBatchQueries(queryClient, batcherAddr)` invalidates all four namespaces for a batcher — this is what the vault mutation hooks call after a join, quit, recover, dispatch or finalize. Balances on the batcher's input and output tokens go through the regular [`invalidateBalanceQueries`](#invalidatebalancequeries).
+A `batcher(...)` key is a prefix of every `batch(...)` key for that batcher, so invalidating it clears all of them at once. `invalidateBatchQueries(queryClient, batcherAddr)` invalidates all five namespaces for a batcher — this is what the vault mutation hooks call after a join, quit, recover, dispatch or finalize. Balances on the batcher's input and output tokens go through the regular [`invalidateBalanceQueries`](#invalidatebalancequeries).
 
 `useGroupDeposit` / `useGroupRedeem` invalidate, once the transaction is mined, the balance of each token the legs spent and every member's batch reads — on success and on `VaultGroupJoinUnconfirmedError` alike. `useGroupRedeem` additionally invalidates operator status for each share token.
 

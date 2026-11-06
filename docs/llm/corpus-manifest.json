@@ -2,7 +2,14 @@
   "schemaVersion": 1,
   "config_path": "docs/llm/corpus.config.json",
   "raw_github_base_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta",
-  "approved_examples": ["node-ethers", "node-viem", "react-ethers", "react-viem", "react-wagmi"],
+  "approved_examples": [
+    "node-ethers",
+    "node-viem",
+    "react-ethers",
+    "react-vaults",
+    "react-viem",
+    "react-wagmi"
+  ],
   "excluded_examples": ["react-ledger"],
   "entries": [
     {
@@ -530,6 +537,18 @@
       "category": "guides",
       "logical_path": "guides/vaults/groups",
       "description": "Deposit into one of several vaults without revealing which one.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:guides/vaults/building-a-ui",
+      "title": "Building a vault UI",
+      "source_path": "docs/gitbook/src/guides/vaults/building-a-ui.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md",
+      "source_type": "official-doc",
+      "category": "guides",
+      "logical_path": "guides/vaults/building-a-ui",
+      "description": "The states a vault deposit or redemption goes through, and what your UI should show and offer in each one.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -1722,6 +1741,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:reference/react/useBatchStatus",
+      "title": "useBatchStatus",
+      "source_path": "docs/gitbook/src/reference/react/useBatchStatus.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchStatus.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/useBatchStatus",
+      "description": "Query hook for a vault batch's state together with its timestamps.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:reference/react/useTimeUntilDispatchable",
       "title": "useTimeUntilDispatchable",
       "source_path": "docs/gitbook/src/reference/react/useTimeUntilDispatchable.md",
@@ -1982,6 +2013,18 @@
       "category": "examples",
       "logical_path": "examples/react-ethers/walkthrough",
       "description": "A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using ethers v6.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "example:examples/react-vaults/readme",
+      "title": "react-vaults README",
+      "source_path": "examples/react-vaults/README.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/examples/react-vaults/README.md",
+      "source_type": "official-example",
+      "category": "examples",
+      "logical_path": "examples/react-vaults/readme",
+      "description": "Next.js 16 example app showing the full deposit and withdrawal lifecycle of a confidential vault with `@zama-fhe/react-sdk/vaults`, on Sepolia testnet.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

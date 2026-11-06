@@ -23,8 +23,14 @@ export {
   type VaultMemberConfig,
 } from "./vault-group-types";
 export { BatchState } from "./types";
-export type { JoinOptions, JoinResult, VaultAddresses, VaultJoinOptions } from "./types";
-export { decodeJoined, findJoined, VaultTopics, type JoinedEvent } from "./events";
+export type {
+  BatchStatus,
+  JoinOptions,
+  JoinResult,
+  VaultAddresses,
+  VaultJoinOptions,
+} from "./types";
+export { decodeJoined, findJoined, openBatchIds, VaultTopics, type JoinedEvent } from "./events";
 
 export {
   batchCallbackDeadlineContract,
@@ -60,6 +66,7 @@ export {
 // TanStack types below are type-only imports, erased at compile time.
 export {
   batchStateQueryOptions,
+  batchStatusQueryOptions,
   claimMutationOptions,
   currentBatchIdQueryOptions,
   depositMutationOptions,
@@ -82,6 +89,7 @@ export {
   timeUntilDispatchableQueryOptions,
   vaultQueryKeys,
   type BatchStateQueryConfig,
+  type BatchStatusQueryConfig,
   type ClaimParams,
   type CurrentBatchIdQueryConfig,
   type DepositParams,
