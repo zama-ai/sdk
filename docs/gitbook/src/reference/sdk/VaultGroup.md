@@ -172,10 +172,11 @@ import { type JoinOptions, type VaultGroupRedeemOptions } from "@zama-fhe/sdk/va
 
 `deposit` takes `JoinOptions`; `redeem` takes `VaultGroupRedeemOptions`, which adds `operatorUntil`.
 
-| Option             | Type      | Default             | Description                                                                                                                                                                                                                     |
-| ------------------ | --------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `skipBalanceCheck` | `boolean` | `false`             | Skip the confidential-balance pre-flight. A short balance then joins every batch with an encrypted zero rather than reverting.                                                                                                  |
-| `operatorUntil`    | `number`  | chain time + 1 hour | Redeem only. Unix timestamp (seconds) until which the router's operator grant on each share token is valid, for a grant the redemption has to make. The default is the chain's current time plus one hour, not the local clock. |
+| Option             | Type                    | Default             | Description                                                                                                                                                                                                                     |
+| ------------------ | ----------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `skipBalanceCheck` | `boolean`               | `false`             | Skip the confidential-balance pre-flight. A short balance then joins every batch with an encrypted zero rather than reverting.                                                                                                  |
+| `onJoinSubmitted`  | `(txHash: Hex) => void` | —                   | Called once the wallet has sent the submission, before the SDK waits for the receipt. Not called for the operator grants a redemption may send first.                                                                           |
+| `operatorUntil`    | `number`                | chain time + 1 hour | Redeem only. Unix timestamp (seconds) until which the router's operator grant on each share token is valid, for a grant the redemption has to make. The default is the chain's current time plus one hour, not the local clock. |
 
 ## VaultGroupJoinResult
 

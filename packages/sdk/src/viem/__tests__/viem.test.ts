@@ -17,6 +17,7 @@ import {
 } from "../contracts";
 import { ViemSigner } from "../viem-signer";
 import { ViemProvider } from "../viem-provider";
+import { ConfigurationError } from "../../errors";
 
 // ── Constants ────────────────────────────────────────────
 
@@ -306,6 +307,39 @@ describe("ViemProvider", () => {
         const result = await viemProvider.readContract(config);
         expect(result).toBe("0xresult");
         expect(publicClient.readContract).toHaveBeenCalledWith(config);
+      },
+    );
+
+    vit(
+      "reads with a chainId that matches the client, without passing it on",
+      async ({ tokenAddress, userAddress, publicClient }) => {
+        const viemProvider = new ViemProvider({ publicClient });
+        const call = {
+          address: tokenAddress,
+          abi: [{ name: "balanceOf" }],
+          functionName: "balanceOf",
+          args: [userAddress],
+        };
+        await viemProvider.readContract({ ...call, chainId: 1 });
+        expect(publicClient.readContract).toHaveBeenCalledWith(call);
+      },
+    );
+
+    vit(
+      "refuses a chainId the client is not on",
+      async ({ tokenAddress, userAddress, publicClient }) => {
+        const viemProvider = new ViemProvider({ publicClient });
+        await expect(
+          viemProvider.readContract({
+            address: tokenAddress,
+            abi: [{ name: "balanceOf" }],
+            functionName: "balanceOf",
+            args: [userAddress],
+            chainId: 11155111,
+          }),
+        ).rejects.toThrow(ConfigurationError);
+        await expect(viemProvider.getBlockTimestamp(11155111)).rejects.toThrow(ConfigurationError);
+        expect(publicClient.readContract).not.toHaveBeenCalled();
       },
     );
   });

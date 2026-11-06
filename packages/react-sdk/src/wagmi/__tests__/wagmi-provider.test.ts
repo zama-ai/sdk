@@ -279,3 +279,20 @@ describe("WagmiProvider.waitForTransactionReceipt", () => {
     expect((err as Error).cause).toBeInstanceOf(WaitForTransactionReceiptTimeoutError);
   });
 });
+
+describe("WagmiProvider reads on another chain", () => {
+  test("routes a read and the block timestamp to the requested chain", async () => {
+    const actions = await import("wagmi/actions");
+    const call = {
+      address: TO,
+      abi: [],
+      functionName: "paused",
+      args: [],
+      chainId: 11155111,
+    } as const;
+    await provider.readContract(call as never);
+    await provider.getBlockTimestamp(11155111);
+    expect(actions.readContract).toHaveBeenCalledWith(CONFIG, call);
+    expect(actions.getBlock).toHaveBeenCalledWith(CONFIG, { chainId: 11155111 });
+  });
+});

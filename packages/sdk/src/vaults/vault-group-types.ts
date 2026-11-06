@@ -133,7 +133,7 @@ export interface DecodedVaultGroupJoins {
 }
 
 /** Options for {@link VaultGroup.prepareDeposit} and {@link VaultGroup.prepareRedeem}. */
-export interface PrepareVaultGroupJoinOptions extends JoinOptions {
+export interface PrepareVaultGroupJoinOptions extends Omit<JoinOptions, "onJoinSubmitted"> {
   /**
    * The account the legs come from. Defaults to the signer's wallet account,
    * so a host without a signer must pass it. The balance check decrypts as

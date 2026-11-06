@@ -3,7 +3,12 @@
  *
  * @packageDocumentation
  */
-export { createVaultBatcher, VaultBatcher, type PreparedFinalize } from "./vault-batcher";
+export {
+  createVaultBatcher,
+  VaultBatcher,
+  type PreparedFinalize,
+  type VaultBatcherOptions,
+} from "./vault-batcher";
 export { createVault, Vault } from "./vault";
 export { createVaultGroup, MAX_GROUP_VAULTS, VaultGroup } from "./vault-group";
 export { decodeVaultGroupJoins, vaultGroupRedeemOperators } from "./vault-group-standalone";
@@ -67,6 +72,8 @@ export {
 export {
   batchStateQueryOptions,
   batchStatusQueryOptions,
+  batcherTokensQueryOptions,
+  pausedQueryOptions,
   claimMutationOptions,
   currentBatchIdQueryOptions,
   depositMutationOptions,
@@ -90,6 +97,9 @@ export {
   vaultQueryKeys,
   type BatchStateQueryConfig,
   type BatchStatusQueryConfig,
+  type BatcherTokens,
+  type BatcherTokensQueryConfig,
+  type PausedQueryConfig,
   type ClaimParams,
   type CurrentBatchIdQueryConfig,
   type DepositParams,

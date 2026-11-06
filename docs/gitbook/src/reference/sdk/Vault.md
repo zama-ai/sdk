@@ -133,11 +133,12 @@ const { txHash, batchId, confidentialJoinedAmount } = await vault.deposit(1_000_
 
 Options (`VaultJoinOptions`):
 
-| Option             | Type      | Default          | Description                                                                                                                                                                                                  |
-| ------------------ | --------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `beneficiary`      | `Address` | connected wallet | Account credited in the batch. The beneficiary owns the position: only they can `quit` it, and `claim` always pays out to them.                                                                              |
-| `operatorUntil`    | `number`  | now + 1 hour     | Unix timestamp (seconds) until which the batcher's operator grant is valid. Only used for another `beneficiary`, and only when a grant isn't already active. Same default as `Token.setOperator`.            |
-| `skipBalanceCheck` | `boolean` | `false`          | Skip the confidential-balance pre-flight. For accounts whose balance the connected signer can't decrypt, such as smart wallets. The on-chain transfer then moves zero, not reverts, if the balance is short. |
+| Option             | Type                    | Default          | Description                                                                                                                                                                                                  |
+| ------------------ | ----------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `beneficiary`      | `Address`               | connected wallet | Account credited in the batch. The beneficiary owns the position: only they can `quit` it, and `claim` always pays out to them.                                                                              |
+| `operatorUntil`    | `number`                | now + 1 hour     | Unix timestamp (seconds) until which the batcher's operator grant is valid. Only used for another `beneficiary`, and only when a grant isn't already active. Same default as `Token.setOperator`.            |
+| `skipBalanceCheck` | `boolean`               | `false`          | Skip the confidential-balance pre-flight. For accounts whose balance the connected signer can't decrypt, such as smart wallets. The on-chain transfer then moves zero, not reverts, if the balance is short. |
+| `onJoinSubmitted`  | `(txHash: Hex) => void` | —                | Called once the wallet has sent the join, before the SDK waits for the receipt: where a UI moves from "confirm in your wallet" to "waiting for the transaction".                                             |
 
 **Throws:**
 

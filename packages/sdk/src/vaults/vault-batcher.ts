@@ -1,6 +1,8 @@
 import { getAddress, type Address, type Hex } from "viem";
 import { confidentialTransferAndCallContract, unwrapAmountContract } from "../contracts";
 import {
+  ChainMismatchError,
+  ConfigurationError,
   DecryptionFailedError,
   EncryptionFailedError,
   SignerNotConfiguredError,
@@ -11,7 +13,15 @@ import type { TransactionOperation } from "../events/sdk-events";
 import type { EncryptedValue } from "../relayer/types";
 import { type TelemetryOperation, withOperation } from "../telemetry";
 import { Token } from "../token";
-import type { GenericSigner, TransactionResult, WriteContractConfig } from "../types";
+import type {
+  ContractAbi,
+  GenericSigner,
+  ReadContractArgs,
+  ReadContractConfig,
+  ReadFunctionName,
+  TransactionResult,
+  WriteContractConfig,
+} from "../types";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 import { assertConfidentialBalance } from "../utils/assert-balance";
 import { assertBigint } from "../utils/assertions";
@@ -47,6 +57,19 @@ import {
 import { findJoined } from "./events";
 import { BatchState, type BatchStatus, type JoinOptions, type JoinResult } from "./types";
 
+const BATCH_STATES: ReadonlySet<number> = new Set(Object.values(BatchState));
+
+/** Options for {@link VaultBatcher}. */
+export interface VaultBatcherOptions {
+  /**
+   * Chain to read the batcher from, when it is not the provider's current
+   * chain — for example a vault page shown before the wallet connects. Needs a
+   * provider that can route reads, such as `WagmiProvider`. Writes still go
+   * through the signer, which must then be on this chain.
+   */
+  chainId?: number;
+}
+
 /** Seconds from `now` until `at`, `0` once reached. */
 function secondsUntil(at: bigint, now: bigint): bigint {
   return at > now ? at - now : 0n;
@@ -81,6 +104,8 @@ export class VaultBatcher {
   readonly sdk: ZamaSDK;
   /** Checksummed address of the batcher contract. */
   readonly address: Address;
+  /** The chain reads go to; `undefined` for the provider's current chain. */
+  readonly chainId: number | undefined;
 
   readonly #vault: () => Promise<Address>;
   readonly #fromToken: () => Promise<Address>;
@@ -89,16 +114,13 @@ export class VaultBatcher {
   // One instance, so repeated joins reuse the token's decrypted-balance cache.
   #fromTokenInstance: Promise<Token> | null = null;
 
-  constructor(sdk: ZamaSDK, address: Address) {
+  constructor(sdk: ZamaSDK, address: Address, options?: VaultBatcherOptions) {
     this.sdk = sdk;
     this.address = getAddress(address);
-    this.#vault = memoizeAddressRead(() => sdk.provider.readContract(vaultContract(this.address)));
-    this.#fromToken = memoizeAddressRead(() =>
-      sdk.provider.readContract(fromTokenContract(this.address)),
-    );
-    this.#toToken = memoizeAddressRead(() =>
-      sdk.provider.readContract(toTokenContract(this.address)),
-    );
+    this.chainId = options?.chainId;
+    this.#vault = memoizeAddressRead(() => this.#read(vaultContract(this.address)));
+    this.#fromToken = memoizeAddressRead(() => this.#read(fromTokenContract(this.address)));
+    this.#toToken = memoizeAddressRead(() => this.#read(toTokenContract(this.address)));
   }
 
   // READS
@@ -130,7 +152,7 @@ export class VaultBatcher {
 
   /** The id of the currently open (not-yet-dispatched) batch. */
   async currentBatchId(): Promise<bigint> {
-    return this.sdk.provider.readContract(currentBatchIdContract(this.address));
+    return this.#read(currentBatchIdContract(this.address));
   }
 
   /**
@@ -139,16 +161,22 @@ export class VaultBatcher {
    *
    * @throws Reverts on chain with `BatchNonexistent` for an id above
    *   {@link currentBatchId} — batch ids start at 1.
+   * @throws if the contract returns a state the SDK does not know. {@link ConfigurationError}
    */
   async batchState(batchId: bigint): Promise<BatchState> {
     // The ABI types this uint8 enum as a plain `number`.
-    const state = await this.sdk.provider.readContract(batchStateContract(this.address, batchId));
+    const state = await this.#read(batchStateContract(this.address, batchId));
+    if (!BATCH_STATES.has(state)) {
+      throw new ConfigurationError(
+        `Batcher ${this.address} returned unknown batch state ${state} for batch ${batchId}; is it a vault batcher?`,
+      );
+    }
     return state as BatchState;
   }
 
   /** Whether the batcher is paused. While paused, `join` and `dispatchBatch` revert; `quit` and `claim` still work. */
   async paused(): Promise<boolean> {
-    return this.sdk.provider.readContract(pausedContract(this.address));
+    return this.#read(pausedContract(this.address));
   }
 
   /**
@@ -156,12 +184,12 @@ export class VaultBatcher {
    * is gated on {@link batchMinBatchAge} instead.
    */
   async minBatchAge(): Promise<bigint> {
-    return this.sdk.provider.readContract(minBatchAgeContract(this.address));
+    return this.#read(minBatchAgeContract(this.address));
   }
 
   /** The minimum age in seconds pinned to `batchId` when it opened — the value dispatch enforces. */
   async batchMinBatchAge(batchId: bigint): Promise<bigint> {
-    return this.sdk.provider.readContract(batchMinBatchAgeContract(this.address, batchId));
+    return this.#read(batchMinBatchAgeContract(this.address, batchId));
   }
 
   /**
@@ -171,7 +199,7 @@ export class VaultBatcher {
    * {@link batchCallbackDeadline}.
    */
   async callbackDeadline(): Promise<bigint> {
-    return this.sdk.provider.readContract(callbackDeadlineContract(this.address));
+    return this.#read(callbackDeadlineContract(this.address));
   }
 
   /**
@@ -179,17 +207,17 @@ export class VaultBatcher {
    * {@link batchDispatchedAt} for the timestamp that batch must finalize by.
    */
   async batchCallbackDeadline(batchId: bigint): Promise<bigint> {
-    return this.sdk.provider.readContract(batchCallbackDeadlineContract(this.address, batchId));
+    return this.#read(batchCallbackDeadlineContract(this.address, batchId));
   }
 
   /** The Unix timestamp (seconds) at which a batch was opened. */
   async batchCreatedAt(batchId: bigint): Promise<bigint> {
-    return this.sdk.provider.readContract(batchCreatedAtContract(this.address, batchId));
+    return this.#read(batchCreatedAtContract(this.address, batchId));
   }
 
   /** The Unix timestamp (seconds) at which a batch was dispatched, or `0` if it hasn't been yet. */
   async batchDispatchedAt(batchId: bigint): Promise<bigint> {
-    return this.sdk.provider.readContract(batchDispatchedAtContract(this.address, batchId));
+    return this.#read(batchDispatchedAtContract(this.address, batchId));
   }
 
   /**
@@ -198,12 +226,12 @@ export class VaultBatcher {
    * out `deposit * exchangeRate / 10 ** exchangeRateDecimals`, rounded down.
    */
   async exchangeRate(batchId: bigint): Promise<bigint> {
-    return this.sdk.provider.readContract(exchangeRateContract(this.address, batchId));
+    return this.#read(exchangeRateContract(this.address, batchId));
   }
 
   /** The number of decimals {@link exchangeRate} is scaled by. */
   async exchangeRateDecimals(): Promise<number> {
-    return this.sdk.provider.readContract(exchangeRateDecimalsContract(this.address));
+    return this.#read(exchangeRateDecimalsContract(this.address));
   }
 
   /**
@@ -221,7 +249,7 @@ export class VaultBatcher {
       this.batchState(batchId),
       this.batchCreatedAt(batchId),
       this.batchMinBatchAge(batchId),
-      this.sdk.provider.getBlockTimestamp(),
+      this.sdk.provider.getBlockTimestamp(this.chainId),
     ]);
     if (state !== BatchState.Pending) {
       return null;
@@ -244,7 +272,7 @@ export class VaultBatcher {
       this.batchState(batchId),
       this.batchDispatchedAt(batchId),
       this.batchCallbackDeadline(batchId),
-      this.sdk.provider.getBlockTimestamp(),
+      this.sdk.provider.getBlockTimestamp(this.chainId),
     ]);
     if (state !== BatchState.Dispatched) {
       return null;
@@ -267,7 +295,7 @@ export class VaultBatcher {
       this.batchDispatchedAt(batchId),
       this.batchMinBatchAge(batchId),
       this.batchCallbackDeadline(batchId),
-      this.sdk.provider.getBlockTimestamp(),
+      this.sdk.provider.getBlockTimestamp(this.chainId),
     ]);
     const dispatchableAt = createdAt + minAge;
     switch (state) {
@@ -297,14 +325,12 @@ export class VaultBatcher {
 
   /** The encrypted aggregate amount joined into a batch, without decrypting it. */
   async confidentialTotalDeposits(batchId: bigint): Promise<EncryptedValue> {
-    return this.sdk.provider.readContract(totalDepositsContract(this.address, batchId));
+    return this.#read(totalDepositsContract(this.address, batchId));
   }
 
   /** The encrypted amount `account` joined into a batch, without decrypting it. */
   async confidentialDepositOf(batchId: bigint, account: Address): Promise<EncryptedValue> {
-    return this.sdk.provider.readContract(
-      depositsContract(this.address, batchId, getAddress(account)),
-    );
+    return this.#read(depositsContract(this.address, batchId, getAddress(account)));
   }
 
   /**
@@ -312,7 +338,7 @@ export class VaultBatcher {
    * once its amount is publicly decrypted. Zero until the batch is dispatched.
    */
   async unwrapRequestId(batchId: bigint): Promise<EncryptedValue> {
-    return this.sdk.provider.readContract(unwrapRequestIdContract(this.address, batchId));
+    return this.#read(unwrapRequestIdContract(this.address, batchId));
   }
 
   /**
@@ -403,6 +429,7 @@ export class VaultBatcher {
             "0x",
           )
         : joinContract(this.address, resolvedBeneficiary, encryptedAmount, inputProof),
+      options?.onJoinSubmitted,
     );
 
     const joined = findJoined(result.receipt.logs, this.address, resolvedBeneficiary);
@@ -524,9 +551,7 @@ export class VaultBatcher {
         { batcher: this.address, batchId, state },
       );
     }
-    const encryptedAmount = await this.sdk.provider.readContract(
-      unwrapAmountContract(wrapper, unwrapRequestId),
-    );
+    const encryptedAmount = await this.#read(unwrapAmountContract(wrapper, unwrapRequestId));
     const { clearValues, decryptionProof } = await this.sdk.decryption.decryptPublicValues(
       [encryptedAmount],
       { operation: "vault-finalize" },
@@ -596,15 +621,37 @@ export class VaultBatcher {
     return getAddress(aligned.address);
   }
 
+  #read<
+    const TAbi extends ContractAbi,
+    TFunctionName extends ReadFunctionName<TAbi>,
+    const TArgs extends ReadContractArgs<TAbi, TFunctionName>,
+  >(config: ReadContractConfig<TAbi, TFunctionName, TArgs>) {
+    return this.sdk.provider.readContract({ ...config, chainId: this.chainId });
+  }
+
   async #submitTransaction(
     operation: TransactionOperation,
     config: WriteContractConfig,
+    onSubmitted?: (txHash: Hex) => void,
   ): Promise<TransactionResult> {
+    const signer = this.#requireSigner(operation);
+    // Reads go to `chainId`; a write must not land on another chain.
+    if (this.chainId !== undefined) {
+      const { chainId: signerChainId } = await requireAlignedWalletAccount(
+        operation,
+        signer,
+        this.sdk.provider,
+      );
+      if (signerChainId !== this.chainId) {
+        throw new ChainMismatchError({ operation, signerChainId, providerChainId: this.chainId });
+      }
+    }
     return submitSdkTransaction({
       operation,
-      signer: this.#requireSigner(operation),
+      signer,
       provider: this.sdk.provider,
       config,
+      onSubmitted,
       emit: (input) => this.sdk.emitEvent(input, this.address),
       logger: this.sdk.logger,
     });
@@ -622,6 +669,10 @@ export class VaultBatcher {
  * const { batchId } = await depositBatcher.join(1_000_000n);
  * ```
  */
-export function createVaultBatcher(sdk: ZamaSDK, address: Address): VaultBatcher {
-  return new VaultBatcher(sdk, address);
+export function createVaultBatcher(
+  sdk: ZamaSDK,
+  address: Address,
+  options?: VaultBatcherOptions,
+): VaultBatcher {
+  return new VaultBatcher(sdk, address, options);
 }

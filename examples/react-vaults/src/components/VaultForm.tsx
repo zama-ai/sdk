@@ -1,42 +1,58 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useConfidentialBalance,
   useGrantPermit,
   useHasPermit,
   useMetadata,
 } from "@zama-fhe/react-sdk";
-import { useDeposit, useRedeem, useVaultBatcher } from "@zama-fhe/react-sdk/vaults";
+import { useBatcherTokens, useDeposit, usePaused, useRedeem } from "@zama-fhe/react-sdk/vaults";
 import type { Address } from "@zama-fhe/sdk";
 import { formatUnits, parseUnits } from "viem";
-import { ASSET_TOKEN, SHARE_TOKEN, VAULT } from "@/lib/config";
+import { VAULT } from "@/lib/config";
 import { addOpenBatch } from "@/lib/open-batches";
 
-// A deposit sends assets and is claimed as shares. A withdrawal (an ERC-4626 redeem) sends
-// shares and is claimed as assets.
-const MODES = {
-  deposit: { label: "Deposit", token: ASSET_TOKEN, unit: "assets", batcher: VAULT.depositBatcher },
-  withdraw: { label: "Withdraw", token: SHARE_TOKEN, unit: "shares", batcher: VAULT.redeemBatcher },
-} as const;
-
 export function VaultForm({ account }: { account: Address }) {
+  // The deposit batcher takes the vault's asset and pays out its shares.
+  const { data: tokens, error } = useBatcherTokens({ address: VAULT.depositBatcher });
+  if (!tokens) {
+    return <section>{error ? <p className="error">{error.message}</p> : "Loading…"}</section>;
+  }
+  return <Form account={account} assetToken={tokens.fromToken} shareToken={tokens.toToken} />;
+}
+
+interface FormProps {
+  account: Address;
+  assetToken: Address;
+  shareToken: Address;
+}
+
+function Form({ account, assetToken, shareToken }: FormProps) {
   const queryClient = useQueryClient();
-  const [modeName, setModeName] = useState<keyof typeof MODES>("deposit");
-  const mode = MODES[modeName];
+  // A deposit sends assets and is claimed as shares. A withdrawal (an ERC-4626 redeem) sends
+  // shares and is claimed as assets.
+  const modes = {
+    deposit: { label: "Deposit", token: assetToken, unit: "assets", batcher: VAULT.depositBatcher },
+    withdraw: {
+      label: "Withdraw",
+      token: shareToken,
+      unit: "shares",
+      batcher: VAULT.redeemBatcher,
+    },
+  };
+  const [modeName, setModeName] = useState<keyof typeof modes>("deposit");
+  const mode = modes[modeName];
   const [amount, setAmount] = useState("");
+  const [submitted, setSubmitted] = useState(false);
 
   const { data: metadata } = useMetadata(mode.token);
-  const batcher = useVaultBatcher(mode.batcher);
-  const { data: paused } = useQuery({
-    queryKey: ["paused", mode.batcher],
-    queryFn: () => batcher.paused(),
-  });
+  const { data: paused } = usePaused({ address: mode.batcher });
 
   // The first decryption asks the wallet for a signature, so it starts from a click.
   // One permit covers both tokens, so switching mode does not ask again.
-  const { data: hasPermit } = useHasPermit({ contractAddresses: [ASSET_TOKEN, SHARE_TOKEN] });
+  const { data: hasPermit } = useHasPermit({ contractAddresses: [assetToken, shareToken] });
   const grantPermit = useGrantPermit();
   const balance = useConfidentialBalance(
     { address: mode.token, account },
@@ -82,11 +98,11 @@ export function VaultForm({ account }: { account: Address }) {
   return (
     <section>
       <div>
-        {Object.entries(MODES).map(([name, { label }]) => (
+        {Object.entries(modes).map(([name, { label }]) => (
           <button
             key={name}
             disabled={sending || name === modeName}
-            onClick={() => setModeName(name as keyof typeof MODES)}
+            onClick={() => setModeName(name as keyof typeof modes)}
           >
             {label}
           </button>
@@ -98,7 +114,7 @@ export function VaultForm({ account }: { account: Address }) {
         {!hasPermit ? (
           <button
             disabled={grantPermit.isPending}
-            onClick={() => grantPermit.mutate([ASSET_TOKEN, SHARE_TOKEN])}
+            onClick={() => grantPermit.mutate([assetToken, shareToken])}
           >
             {grantPermit.isPending ? "Sign in your wallet…" : "Decrypt"}
           </button>
@@ -113,7 +129,8 @@ export function VaultForm({ account }: { account: Address }) {
         onSubmit={(event) => {
           event.preventDefault();
           if (parsed) {
-            send.mutate({ amount: parsed });
+            setSubmitted(false);
+            send.mutate({ amount: parsed, onJoinSubmitted: () => setSubmitted(true) });
           }
         }}
       >
@@ -127,7 +144,11 @@ export function VaultForm({ account }: { account: Address }) {
           />
         </label>{" "}
         <button type="submit" disabled={sending || reason !== null}>
-          {sending ? "Confirm in your wallet, then wait…" : (reason ?? mode.label)}
+          {sending
+            ? submitted
+              ? "Waiting for the transaction…"
+              : "Confirm in your wallet…"
+            : (reason ?? mode.label)}
         </button>
       </form>
 

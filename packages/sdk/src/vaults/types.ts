@@ -1,4 +1,4 @@
-import type { Address } from "viem";
+import type { Address, Hex } from "viem";
 import type { EncryptedValue } from "../relayer/types";
 import type { TelemetryOperation } from "../telemetry";
 import type { TransactionResult } from "../types";
@@ -81,6 +81,12 @@ export interface JoinOptions {
    * whose balance the connected signer cannot decrypt, such as smart wallets.
    */
   skipBalanceCheck?: boolean;
+  /**
+   * Called with the join's transaction hash once the wallet has signed and
+   * sent it, before the SDK waits for the receipt — the moment a UI moves
+   * from "confirm in your wallet" to "waiting for the transaction".
+   */
+  onJoinSubmitted?: (txHash: Hex) => void;
   /** @internal */
   readonly operation?: TelemetryOperation;
 }

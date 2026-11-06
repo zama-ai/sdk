@@ -157,7 +157,7 @@ export interface GenericLogger {
 
 // @public
 export interface GenericProvider {
-    getBlockTimestamp(): Promise<bigint>;
+    getBlockTimestamp(chainId?: number): Promise<bigint>;
     getChainId(): Promise<number>;
     prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
         from: Address;
@@ -232,6 +232,7 @@ export interface ReadContractConfig<TAbi extends ContractAbi = ContractAbi, TFun
     readonly abi: TAbi;
     readonly address: Address;
     readonly args: TArgs;
+    readonly chainId?: number;
     readonly functionName: TFunctionName;
 }
 
@@ -357,7 +358,7 @@ export interface UnwrapSubmittedEvent extends BaseEvent {
 // @public
 export class ViemProvider implements GenericProvider {
     constructor(config: ViemProviderConfig);
-    getBlockTimestamp(): Promise<bigint>;
+    getBlockTimestamp(chainId?: number): Promise<bigint>;
     getChainId(): Promise<number>;
     prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
         from: Address;

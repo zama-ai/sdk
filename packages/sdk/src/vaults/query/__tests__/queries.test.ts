@@ -3,6 +3,8 @@ import { describe, expect, test, vi } from "../../../test-fixtures";
 import type { VaultBatcher } from "../../vault-batcher";
 import { batchStateQueryOptions } from "../batch-state";
 import { batchStatusQueryOptions } from "../batch-status";
+import { batcherTokensQueryOptions } from "../batcher-tokens";
+import { pausedQueryOptions } from "../paused";
 import { currentBatchIdQueryOptions } from "../current-batch-id";
 import { timeUntilCallbackDeadlineQueryOptions } from "../time-until-callback-deadline";
 import { timeUntilDispatchableQueryOptions } from "../time-until-dispatchable";
@@ -15,6 +17,9 @@ function createMockBatcher(): VaultBatcher {
     currentBatchId: vi.fn().mockResolvedValue(58n),
     batchState: vi.fn().mockResolvedValue(0),
     batchStatus: vi.fn().mockResolvedValue({ state: 2 }),
+    paused: vi.fn().mockResolvedValue(false),
+    fromToken: vi.fn().mockResolvedValue("0x2222222222222222222222222222222222222222"),
+    toToken: vi.fn().mockResolvedValue("0x3333333333333333333333333333333333333333"),
     timeUntilDispatchable: vi.fn().mockResolvedValue(120n),
     timeUntilCallbackDeadline: vi.fn().mockResolvedValue(30n),
   } as unknown as VaultBatcher;
@@ -107,5 +112,36 @@ describe("batchStatusQueryOptions", () => {
     const result = await options.queryFn({ queryKey: options.queryKey } as never);
     expect(result).toEqual({ state: 2 });
     expect(batcher.batchStatus).toHaveBeenCalledWith(58n);
+  });
+});
+
+describe("pausedQueryOptions", () => {
+  test("delegates to batcher.paused", async () => {
+    const batcher = createMockBatcher();
+    const options = pausedQueryOptions(batcher);
+
+    expect(options.queryKey).toEqual(["zama.vault.paused", { batcherAddress: BATCHER_ADDRESS }]);
+    await expect(options.queryFn(undefined as never)).resolves.toBe(false);
+  });
+});
+
+describe("batcherTokensQueryOptions", () => {
+  test("reads both tokens once and never goes stale", async () => {
+    const batcher = createMockBatcher();
+    const options = batcherTokensQueryOptions(batcher);
+
+    expect(options.staleTime).toBe(Infinity);
+    await expect(options.queryFn(undefined as never)).resolves.toEqual({
+      fromToken: "0x2222222222222222222222222222222222222222",
+      toToken: "0x3333333333333333333333333333333333333333",
+    });
+  });
+
+  test("keys a chain-pinned batcher by its chain", () => {
+    const batcher = Object.assign(createMockBatcher(), { chainId: 11155111 });
+    expect(batcherTokensQueryOptions(batcher).queryKey).toEqual([
+      "zama.vault.batcherTokens",
+      { batcherAddress: BATCHER_ADDRESS, chainId: 11155111 },
+    ]);
   });
 });
