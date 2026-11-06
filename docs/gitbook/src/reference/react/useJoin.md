@@ -86,6 +86,12 @@ Default: `false`. Skips the confidential-balance pre-flight.
 await join({ amount: 1_000_000n, beneficiary: "0xRecipient" });
 ```
 
+### onJoinSubmitted
+
+`((txHash: Hex) => void) | undefined`
+
+Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction".
+
 **Throws:**
 
 - `InsufficientConfidentialBalanceError` — the input-token balance is less than `amount`

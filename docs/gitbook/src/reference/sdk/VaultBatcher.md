@@ -19,7 +19,7 @@ import { createVaultBatcher, VaultBatcher, BatchState } from "@zama-fhe/sdk/vaul
 
 ## Construction
 
-Use `createVaultBatcher(sdk, address)`, or take one from a `Vault`:
+Use `createVaultBatcher(sdk, address, options?)`, or take one from a `Vault`:
 
 ```ts
 import { createVaultBatcher } from "@zama-fhe/sdk/vaults";
@@ -28,6 +28,12 @@ const depositBatcher = createVaultBatcher(sdk, "0xDepositBatcher");
 const { batchId } = await depositBatcher.join(1_000_000n);
 
 const sameBatcher = vault.depositBatcher;
+```
+
+To read a batcher on a chain other than the provider's current one, for example on a vault page shown before the wallet connects, pass `chainId`. Every read then goes to that chain, which needs a provider that can route reads, such as `WagmiProvider`. Writes still go through the signer: a write throws [`ChainMismatchError`](errors.md#chainmismatcherror) while the signer is on another chain.
+
+```ts
+const sepoliaBatcher = createVaultBatcher(sdk, "0xDepositBatcher", { chainId: 11155111 });
 ```
 
 ## Properties
@@ -43,6 +49,12 @@ The SDK instance this batcher reads and writes through.
 `Address`
 
 Checksummed address of the batcher contract.
+
+### chainId
+
+`number | undefined`
+
+The chain reads go to, or `undefined` for the provider's current chain.
 
 ## BatchState
 
@@ -103,7 +115,7 @@ The id of the currently open (not-yet-dispatched) batch. Batch ids start at `1`.
 
 `(batchId: bigint) => Promise<BatchState>`
 
-A batch's lifecycle state — see [BatchState](#batchstate). Reverts on-chain with `BatchNonexistent` for an id above `currentBatchId()`.
+A batch's lifecycle state — see [BatchState](#batchstate). Reverts on-chain with `BatchNonexistent` for an id above `currentBatchId()`. Throws `ConfigurationError` if the contract returns a state the SDK does not know, which means the address is not a vault batcher.
 
 ```ts
 if ((await batcher.batchState(batchId)) === BatchState.Finalized) {
@@ -256,9 +268,10 @@ const { txHash, batchId, beneficiary, confidentialJoinedAmount } = await batcher
 
 Options (`JoinOptions`):
 
-| Option             | Type      | Default | Description                                                                                              |
-| ------------------ | --------- | ------- | -------------------------------------------------------------------------------------------------------- |
-| `skipBalanceCheck` | `boolean` | `false` | Skip the confidential-balance pre-flight, for accounts whose balance the connected signer can't decrypt. |
+| Option             | Type                    | Default | Description                                                                                              |
+| ------------------ | ----------------------- | ------- | -------------------------------------------------------------------------------------------------------- |
+| `skipBalanceCheck` | `boolean`               | `false` | Skip the confidential-balance pre-flight, for accounts whose balance the connected signer can't decrypt. |
+| `onJoinSubmitted`  | `(txHash: Hex) => void` | —       | Called once the wallet has sent the join, before the SDK waits for the receipt.                          |
 
 Returns a `JoinResult` — `TransactionResult` plus `batchId`, `beneficiary` and `confidentialJoinedAmount`, decoded from the `Joined` event. See [`Vault` → JoinResult](Vault.md#joinresult) for the field table.
 
@@ -409,6 +422,8 @@ import {
   vaultQueryKeys,
   batchStateQueryOptions,
   batchStatusQueryOptions,
+  batcherTokensQueryOptions,
+  pausedQueryOptions,
   currentBatchIdQueryOptions,
   timeUntilDispatchableQueryOptions,
   timeUntilCallbackDeadlineQueryOptions,
@@ -430,5 +445,7 @@ The React hooks are built on these query and mutation option builders; they are 
 - [Vault deposits and redemptions](../../guides/vaults/deposits.md) — the full flow, including when each write is legal
 - [Errors](errors.md) — the error classes thrown above
 - [useBatchStatus](../react/useBatchStatus.md) — React hook for `batchStatus`
+- [usePaused](../react/usePaused.md) — React hook for `paused`
+- [useBatcherTokens](../react/useBatcherTokens.md) — React hook for `fromToken` and `toToken`
 - [useTimeUntilCallbackDeadline](../react/useTimeUntilCallbackDeadline.md) — React hook for `timeUntilCallbackDeadline`
 - [useVaultBatcher](../react/useVaultBatcher.md) — React hook returning a `VaultBatcher`

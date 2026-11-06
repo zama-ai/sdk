@@ -3,7 +3,9 @@ import type { Address } from "@zama-fhe/sdk";
 import { BatchState } from "@zama-fhe/sdk/vaults";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useBatchState } from "../use-batch-state";
+import { useBatcherTokens } from "../use-batcher-tokens";
 import { useBatchStatus } from "../use-batch-status";
+import { usePaused } from "../use-paused";
 import { useCurrentBatchId } from "../use-current-batch-id";
 import { useTimeUntilCallbackDeadline } from "../use-time-until-callback-deadline";
 import { useTimeUntilDispatchable } from "../use-time-until-dispatchable";
@@ -124,5 +126,28 @@ describe("useBatchStatus", () => {
         secondsUntilDispatchable: 400n,
       }),
     );
+  });
+});
+
+describe("usePaused", () => {
+  test("reads whether the batcher is paused", async ({ renderWithProviders, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValueOnce(true);
+    const { result } = renderWithProviders(() => usePaused({ address: BATCHER_ADDRESS }));
+
+    await waitFor(() => expect(result.current.data).toBe(true));
+  });
+});
+
+describe("useBatcherTokens", () => {
+  test("reads the input and output tokens", async ({ renderWithProviders, provider }) => {
+    const FROM = "0x2222222222222222222222222222222222222222";
+    const TO = "0x3333333333333333333333333333333333333333";
+    vi.mocked(provider.readContract).mockResolvedValueOnce(FROM).mockResolvedValueOnce(TO);
+    const { result } = renderWithProviders(() =>
+      useBatcherTokens({ address: BATCHER_ADDRESS, chainId: 31337 }),
+    );
+
+    await waitFor(() => expect(result.current.data).toEqual({ fromToken: FROM, toToken: TO }));
+    expect(provider.readContract).toHaveBeenCalledWith(expect.objectContaining({ chainId: 31337 }));
   });
 });

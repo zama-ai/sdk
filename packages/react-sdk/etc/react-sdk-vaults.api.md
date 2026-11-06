@@ -5,6 +5,7 @@
 ```ts
 
 import { Address } from '@zama-fhe/sdk';
+import { BatcherTokens } from '@zama-fhe/sdk/vaults';
 import { BatchState } from '@zama-fhe/sdk/vaults';
 import { BatchStatus } from '@zama-fhe/sdk/vaults';
 import { ClaimParams } from '@zama-fhe/sdk/vaults';
@@ -25,9 +26,24 @@ import { UseQueryResult } from '@tanstack/react-query';
 import { Vault } from '@zama-fhe/sdk/vaults';
 import { VaultAddresses } from '@zama-fhe/sdk/vaults';
 import { VaultBatcher } from '@zama-fhe/sdk/vaults';
+import { VaultBatcherOptions } from '@zama-fhe/sdk/vaults';
 import { VaultGroup } from '@zama-fhe/sdk/vaults';
 import { VaultGroupConfig } from '@zama-fhe/sdk/vaults';
 import { VaultGroupJoinResult } from '@zama-fhe/sdk/vaults';
+
+// @public
+export function useBatcherTokens(config: UseBatcherTokensConfig, options?: UseBatcherTokensOptions): UseQueryResult<BatcherTokens, Error>;
+
+// @public
+export interface UseBatcherTokensConfig {
+    address: Address;
+    chainId?: number;
+}
+
+// @public
+export interface UseBatcherTokensOptions extends Omit<UseQueryOptions<BatcherTokens>, "queryKey" | "queryFn" | "enabled"> {
+    enabled?: boolean;
+}
 
 // @public
 export function useBatchState(config: UseBatchStateConfig, options?: UseBatchStateOptions): UseQueryResult<BatchState, Error>;
@@ -36,6 +52,7 @@ export function useBatchState(config: UseBatchStateConfig, options?: UseBatchSta
 export interface UseBatchStateConfig {
     address: Address;
     batchId: bigint | undefined;
+    chainId?: number;
 }
 
 // @public
@@ -50,6 +67,7 @@ export function useBatchStatus(config: UseBatchStatusConfig, options?: UseBatchS
 export interface UseBatchStatusConfig {
     address: Address;
     batchId: bigint | undefined;
+    chainId?: number;
 }
 
 // @public
@@ -71,6 +89,7 @@ export function useCurrentBatchId(config: UseCurrentBatchIdConfig, options?: Use
 // @public
 export interface UseCurrentBatchIdConfig {
     address: Address;
+    chainId?: number;
 }
 
 // @public
@@ -127,6 +146,20 @@ export interface UseJoinConfig {
 }
 
 // @public
+export function usePaused(config: UsePausedConfig, options?: UsePausedOptions): UseQueryResult<boolean, Error>;
+
+// @public
+export interface UsePausedConfig {
+    address: Address;
+    chainId?: number;
+}
+
+// @public
+export interface UsePausedOptions extends Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn" | "enabled"> {
+    enabled?: boolean;
+}
+
+// @public
 export function useQuit<TContext = unknown>(config: UseQuitConfig, options?: UseMutationOptions<TransactionResult, Error, QuitParams, TContext>): UseMutationResult<TransactionResult, Error, QuitParams, TContext>;
 
 // @public
@@ -157,6 +190,7 @@ export function useTimeUntilCallbackDeadline(config: UseTimeUntilCallbackDeadlin
 export interface UseTimeUntilCallbackDeadlineConfig {
     address: Address;
     batchId: bigint | undefined;
+    chainId?: number;
 }
 
 // @public
@@ -171,6 +205,7 @@ export function useTimeUntilDispatchable(config: UseTimeUntilDispatchableConfig,
 export interface UseTimeUntilDispatchableConfig {
     address: Address;
     batchId: bigint | undefined;
+    chainId?: number;
 }
 
 // @public
@@ -182,7 +217,7 @@ export interface UseTimeUntilDispatchableOptions extends Omit<UseQueryOptions<bi
 export function useVault(addresses: VaultAddresses): Vault;
 
 // @public
-export function useVaultBatcher(address: Address): VaultBatcher;
+export function useVaultBatcher(address: Address, options?: VaultBatcherOptions): VaultBatcher;
 
 // @public
 export function useVaultGroup(config: VaultGroupConfig): VaultGroup;

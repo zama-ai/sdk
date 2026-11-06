@@ -166,6 +166,8 @@
   - [useCurrentBatchId](reference/react/useCurrentBatchId.md)
   - [useBatchState](reference/react/useBatchState.md)
   - [useBatchStatus](reference/react/useBatchStatus.md)
+  - [usePaused](reference/react/usePaused.md)
+  - [useBatcherTokens](reference/react/useBatcherTokens.md)
   - [useTimeUntilDispatchable](reference/react/useTimeUntilDispatchable.md)
   - [useTimeUntilCallbackDeadline](reference/react/useTimeUntilCallbackDeadline.md)
   - [useVaultGroup](reference/react/useVaultGroup.md)

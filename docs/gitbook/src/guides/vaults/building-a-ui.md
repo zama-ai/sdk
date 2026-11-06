@@ -23,21 +23,23 @@ A deposit or redemption has three parts:
 
 ## 1. The form
 
-| Situation                                         | What to do                                                                                                                                                                                                      |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The balance is encrypted                          | Show it as hidden with a button to decrypt it. The first decryption asks the wallet for a signature, so start it from a click. See [`useConfidentialBalance`](../../reference/react/useConfidentialBalance.md). |
-| The amount is above the balance                   | Disable the button and say why. A confidential transfer above the balance moves zero instead of reverting; the SDK checks this before sending, but the user should not have to find out from an error.          |
-| The batcher is paused                             | Disable the button and say deposits are paused. Quit and claim still work while paused.                                                                                                                         |
-| A redemption                                      | The amount is in shares, not assets. Label the field so the user knows which one they type.                                                                                                                     |
-| The user has public tokens, not confidential ones | Shield first with [`useShield`](../../reference/react/useShield.md), then deposit.                                                                                                                              |
+| Situation                                         | What to do                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The balance is encrypted                          | Show it as hidden with a button to decrypt it. The first decryption asks the wallet for a signature, so start it from a click. See [`useConfidentialBalance`](../../reference/react/useConfidentialBalance.md); [`useBatcherTokens`](../../reference/react/useBatcherTokens.md) gives the token addresses. |
+| The amount is above the balance                   | Disable the button and say why. A confidential transfer above the balance moves zero instead of reverting; the SDK checks this before sending, but the user should not have to find out from an error.                                                                                                     |
+| The batcher is paused                             | Read it with [`usePaused`](../../reference/react/usePaused.md), disable the button and say deposits are paused. Quit and claim still work while paused.                                                                                                                                                    |
+| A redemption                                      | The amount is in shares, not assets. Label the field so the user knows which one they type.                                                                                                                                                                                                                |
+| The user has public tokens, not confidential ones | Shield first with [`useShield`](../../reference/react/useShield.md), then deposit.                                                                                                                                                                                                                         |
 
 ## 2. The send
 
 `useDeposit` and `useRedeem` return the `batchId` the amount joined. **Keep track of it**, so the user finds the batch again after a reload or on another device. Either store the id with the user's account, or rebuild the list from the chain: fetch the batcher's `Joined`, `Claimed` and `Quit` logs for the account and pass them to [`openBatchIds`](../../reference/sdk/VaultBatcher.md#events), which returns the batches the user joined and has not claimed or quit yet.
 
-While the transaction is pending, show that the user has to confirm in their wallet and then wait for the transaction, and lock the form so the user cannot send twice.
+While the transaction is pending, lock the form so the user cannot send twice. Show "Confirm in your wallet" until the `onJoinSubmitted` callback you pass to `useDeposit` or `useRedeem` fires, then "Waiting for the transaction".
 
 After it is mined, say the amount is **queued**, not deposited. The user does not hold shares yet.
+
+A vault page can render before the wallet connects, when the provider may still be on another chain than the vault. Pass the vault's `chainId` to the read hooks (`useBatchStatus`, `useCurrentBatchId`, `usePaused`, `useBatcherTokens`, …) so they read the vault's chain; this needs a provider that can route reads, such as `WagmiProvider`.
 
 ## 3. The batch
 

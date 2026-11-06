@@ -37,8 +37,11 @@ export interface GenericProvider {
   ): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
   /** Wait for a transaction to be mined and return its receipt. */
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-  /** Return the latest block timestamp in seconds. */
-  getBlockTimestamp(): Promise<bigint>;
+  /**
+   * Return the latest block timestamp in seconds, on `chainId` when given
+   * (see {@link ReadContractConfig.chainId}).
+   */
+  getBlockTimestamp(chainId?: number): Promise<bigint>;
   /**
    * Build a fully-populated, RLP-encoded unsigned transaction from a
    * write-contract config and the originating wallet address. The provider

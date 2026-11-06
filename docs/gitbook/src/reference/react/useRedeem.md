@@ -94,6 +94,12 @@ Default: now + 1 hour. Unix timestamp (seconds) until which the batcher's operat
 
 Default: `false`. Skips the share-balance pre-flight, for accounts whose balance the connected signer can't decrypt.
 
+### onJoinSubmitted
+
+`((txHash: Hex) => void) | undefined`
+
+Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction".
+
 **Throws:**
 
 - `ConfigurationError` — the two batchers report different vaults, or disagree with a configured `vault` address

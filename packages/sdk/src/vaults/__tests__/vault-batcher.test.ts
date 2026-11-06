@@ -1,6 +1,8 @@
 import type { EncryptValuesReturnType } from "@fhevm/sdk/actions/encrypt";
 import type { Address } from "viem";
 import {
+  ChainMismatchError,
+  ConfigurationError,
   InsufficientConfidentialBalanceError,
   SignerNotConfiguredError,
   VaultBatchNotDispatchedError,
@@ -373,6 +375,52 @@ describe("VaultBatcher", () => {
         const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
         await expect(batcher.timeUntilCallbackDeadline(58n)).resolves.toBeNull();
       },
+    );
+  });
+
+  describe("join progress", () => {
+    test("reports the join's hash once sent, before the receipt", async ({
+      sdk,
+      provider,
+      userAddress,
+    }) => {
+      mockJoinBalance(provider, { fromToken: FROM_TOKEN });
+      mockJoinReceipt(provider, { batcher: BATCHER_ADDRESS, account: userAddress });
+      const onJoinSubmitted = vi.fn();
+
+      const result = await new VaultBatcher(sdk, BATCHER_ADDRESS).join(1_000n, undefined, {
+        onJoinSubmitted,
+      });
+
+      expect(onJoinSubmitted).toHaveBeenCalledWith(result.txHash);
+    });
+  });
+
+  describe("chainId", () => {
+    test("reads every value and the block time on the given chain", async ({ sdk, provider }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(BatchState.Finalized);
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS, { chainId: 11155111 });
+
+      await batcher.batchStatus(58n);
+
+      for (const [call] of vi.mocked(provider.readContract).mock.calls) {
+        expect(call).toMatchObject({ chainId: 11155111 });
+      }
+      expect(provider.getBlockTimestamp).toHaveBeenCalledWith(11155111);
+    });
+
+    test("refuses a write while the signer is on another chain", async ({ sdk, signer }) => {
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS, { chainId: 11155111 });
+
+      await expect(batcher.claim(7n)).rejects.toBeInstanceOf(ChainMismatchError);
+      expect(signer.writeContract).not.toHaveBeenCalled();
+    });
+  });
+
+  test("batchState refuses a state the SDK does not know", async ({ sdk, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValueOnce(7);
+    await expect(new VaultBatcher(sdk, BATCHER_ADDRESS).batchState(58n)).rejects.toBeInstanceOf(
+      ConfigurationError,
     );
   });
 

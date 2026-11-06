@@ -5,7 +5,7 @@ description: React hook returning a memoized VaultBatcher instance for one batch
 
 # useVaultBatcher
 
-Returns a memoized [`VaultBatcher`](../sdk/VaultBatcher.md) bound to the SDK in the current `ZamaProvider`. The instance is recreated only when the SDK or the address changes, so its cached address reads survive re-renders.
+Returns a memoized [`VaultBatcher`](../sdk/VaultBatcher.md) bound to the SDK in the current `ZamaProvider`. The instance is recreated only when the SDK, the address or `chainId` changes, so its cached address reads survive re-renders.
 
 This is the low-level entry point — the batch hooks ([`useBatchState`](./useBatchState.md), [`useClaim`](./useClaim.md), …) call it internally. Most apps should use [`useVault`](./useVault.md), which pairs both directions and grants the operator approval a join for another `beneficiary` needs.
 
@@ -18,7 +18,7 @@ import { useVaultBatcher } from "@zama-fhe/react-sdk/vaults";
 ## Signature
 
 ```ts
-function useVaultBatcher(address: Address): VaultBatcher;
+function useVaultBatcher(address: Address, options?: VaultBatcherOptions): VaultBatcher;
 ```
 
 ### address
@@ -26,6 +26,12 @@ function useVaultBatcher(address: Address): VaultBatcher;
 `Address`
 
 The batcher contract address — the deposit or the redeem direction of a vault.
+
+### options.chainId
+
+`number | undefined`
+
+Chain to read the batcher from, when it is not the connected one. See [`VaultBatcher` → Construction](../sdk/VaultBatcher.md#construction).
 
 ## Example
 

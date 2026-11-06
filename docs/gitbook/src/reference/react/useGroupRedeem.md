@@ -84,6 +84,12 @@ Default: now + 1 hour. Unix timestamp (seconds) until which the router's operato
 
 Default: `false`. As in [`useGroupDeposit`](./useGroupDeposit.md#skipbalancecheck). The check decrypts every member's share balance and compares the chosen member's.
 
+### onJoinSubmitted
+
+`((txHash: Hex) => void) | undefined`
+
+Called with the submission's transaction hash once the wallet has sent it, before the SDK waits for the receipt.
+
 **Throws:** the same errors as `useGroupDeposit`, including `VaultBatcherPausedError`, except `UnlistedConfidentialTokenError`, which only the deposit path raises.
 
 ## Return Type
