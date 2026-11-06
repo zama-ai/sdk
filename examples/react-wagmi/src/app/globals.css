@@ -316,3 +316,59 @@ body {
   flex: 1;
   border-top: 1px solid #e2e8f0;
 }
+
+/* Connect dialog (Dynamic stack) */
+.connect-dialog {
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(640px, calc(100vh - 32px));
+  margin: auto;
+  overflow-y: auto;
+}
+.connect-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.connect-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.4);
+}
+.connect-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.connect-dialog-header .card-title {
+  margin-bottom: 0;
+}
+.connect-dialog .btn-full {
+  text-align: center;
+  text-decoration: none;
+}
+.wallet-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.wallet-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.wallet-option:hover {
+  background: #f1f5f9;
+}
+.wallet-option img {
+  border-radius: 6px;
+}
+.wallet-option span:first-of-type {
+  flex: 1;
+}
