@@ -269,9 +269,9 @@ export class VaultBatcher {
       this.batchCallbackDeadline(batchId),
       this.sdk.provider.getBlockTimestamp(),
     ]);
+    const dispatchableAt = createdAt + minAge;
     switch (state) {
       case BatchState.Pending: {
-        const dispatchableAt = createdAt + minAge;
         return {
           state,
           createdAt,
@@ -284,13 +284,14 @@ export class VaultBatcher {
         return {
           state,
           createdAt,
+          dispatchableAt,
           dispatchedAt,
           callbackDeadlineAt,
           secondsUntilCallbackDeadline: secondsUntil(callbackDeadlineAt, now),
         };
       }
       default:
-        return { state, createdAt, dispatchedAt };
+        return { state, createdAt, dispatchableAt, dispatchedAt };
     }
   }
 
