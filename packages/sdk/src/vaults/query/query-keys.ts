@@ -17,6 +17,12 @@ export const vaultQueryKeys = {
     batch: (batcherAddress: Address, batchId: bigint | undefined) =>
       ["zama.vault.batchState", { batcherAddress: getAddress(batcherAddress), batchId }] as const,
   },
+  batchStatus: {
+    batcher: (batcherAddress: Address) =>
+      ["zama.vault.batchStatus", { batcherAddress: getAddress(batcherAddress) }] as const,
+    batch: (batcherAddress: Address, batchId: bigint | undefined) =>
+      ["zama.vault.batchStatus", { batcherAddress: getAddress(batcherAddress), batchId }] as const,
+  },
   timeUntilDispatchable: {
     batcher: (batcherAddress: Address) =>
       ["zama.vault.timeUntilDispatchable", { batcherAddress: getAddress(batcherAddress) }] as const,

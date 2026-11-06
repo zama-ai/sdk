@@ -21,6 +21,34 @@ export const BatchState = {
 /** Union of all {@link BatchState} values. */
 export type BatchState = (typeof BatchState)[keyof typeof BatchState];
 
+/**
+ * A batch's state with the timestamps that state needs, so a UI can switch on
+ * `state` and handle every case. Timestamps are Unix seconds on chain. The
+ * `secondsUntil*` fields are measured against the block timestamp at read
+ * time and stop at `0`; tick a live countdown from the `*At` timestamps.
+ */
+export type BatchStatus =
+  | {
+      state: typeof BatchState.Pending;
+      /** When the batch opened. */
+      createdAt: bigint;
+      /** When anyone may dispatch the batch. */
+      dispatchableAt: bigint;
+      /** Seconds until `dispatchableAt`; `0` once reached. */
+      secondsUntilDispatchable: bigint;
+    }
+  | {
+      state: typeof BatchState.Dispatched;
+      createdAt: bigint;
+      dispatchedAt: bigint;
+      /** From then on `finalize` cancels the batch instead of settling it. */
+      callbackDeadlineAt: bigint;
+      /** Seconds until `callbackDeadlineAt`; `0` once reached. */
+      secondsUntilCallbackDeadline: bigint;
+    }
+  | { state: typeof BatchState.Finalized; createdAt: bigint; dispatchedAt: bigint }
+  | { state: typeof BatchState.Canceled; createdAt: bigint; dispatchedAt: bigint };
+
 /** Addresses that make up one confidential vault. */
 export interface VaultAddresses {
   /**

@@ -27,6 +27,11 @@ export {
   type UseBatchStateOptions,
 } from "./use-batch-state";
 export {
+  useBatchStatus,
+  type UseBatchStatusConfig,
+  type UseBatchStatusOptions,
+} from "./use-batch-status";
+export {
   useTimeUntilDispatchable,
   type UseTimeUntilDispatchableConfig,
   type UseTimeUntilDispatchableOptions,

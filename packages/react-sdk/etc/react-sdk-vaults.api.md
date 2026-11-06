@@ -6,6 +6,7 @@
 
 import { Address } from '@zama-fhe/sdk';
 import { BatchState } from '@zama-fhe/sdk/vaults';
+import { BatchStatus } from '@zama-fhe/sdk/vaults';
 import { ClaimParams } from '@zama-fhe/sdk/vaults';
 import { DepositParams } from '@zama-fhe/sdk/vaults';
 import { FinalizeParams } from '@zama-fhe/sdk/vaults';
@@ -39,6 +40,20 @@ export interface UseBatchStateConfig {
 
 // @public
 export interface UseBatchStateOptions extends Omit<UseQueryOptions<BatchState>, "queryKey" | "queryFn" | "enabled"> {
+    enabled?: boolean;
+}
+
+// @public
+export function useBatchStatus(config: UseBatchStatusConfig, options?: UseBatchStatusOptions): UseQueryResult<BatchStatus, Error>;
+
+// @public
+export interface UseBatchStatusConfig {
+    address: Address;
+    batchId: bigint | undefined;
+}
+
+// @public
+export interface UseBatchStatusOptions extends Omit<UseQueryOptions<BatchStatus>, "queryKey" | "queryFn" | "enabled"> {
     enabled?: boolean;
 }
 

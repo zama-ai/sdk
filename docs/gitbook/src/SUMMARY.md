@@ -59,6 +59,7 @@
 - [Vaults overview](guides/vaults/README.md)
 - [Deposits and redemptions](guides/vaults/deposits.md)
 - [Vault groups](guides/vaults/groups.md)
+- [Building a vault UI](guides/vaults/building-a-ui.md)
 
 ## Go & Rust guide
 
@@ -164,6 +165,7 @@
   - [useFinalize](reference/react/useFinalize.md)
   - [useCurrentBatchId](reference/react/useCurrentBatchId.md)
   - [useBatchState](reference/react/useBatchState.md)
+  - [useBatchStatus](reference/react/useBatchStatus.md)
   - [useTimeUntilDispatchable](reference/react/useTimeUntilDispatchable.md)
   - [useTimeUntilCallbackDeadline](reference/react/useTimeUntilCallbackDeadline.md)
   - [useVaultGroup](reference/react/useVaultGroup.md)

@@ -45,7 +45,12 @@ import {
   vaultContract,
 } from "./contracts";
 import { findJoined } from "./events";
-import { BatchState, type JoinOptions, type JoinResult } from "./types";
+import { BatchState, type BatchStatus, type JoinOptions, type JoinResult } from "./types";
+
+/** Seconds from `now` until `at`, `0` once reached. */
+function secondsUntil(at: bigint, now: bigint): bigint {
+  return at > now ? at - now : 0n;
+}
 
 /** A settlement built but not sent: what {@link VaultBatcher.prepareFinalize} returns. */
 export interface PreparedFinalize {
@@ -222,7 +227,7 @@ export class VaultBatcher {
       return null;
     }
     const eligibleAt = createdAt + minAge;
-    return eligibleAt > now ? eligibleAt - now : 0n;
+    return secondsUntil(eligibleAt, now);
   }
 
   /**
@@ -245,7 +250,48 @@ export class VaultBatcher {
       return null;
     }
     const cancelsAt = dispatchedAt + deadline;
-    return cancelsAt > now ? cancelsAt - now : 0n;
+    return secondsUntil(cancelsAt, now);
+  }
+
+  /**
+   * A batch's state with the timestamps that state needs: when it becomes
+   * dispatchable while `Pending`, when its callback deadline passes while
+   * `Dispatched`. Switch on `state` to decide what to show and offer; see
+   * {@link BatchState}.
+   */
+  async batchStatus(batchId: bigint): Promise<BatchStatus> {
+    // One round of reads, so a poll costs one round trip whatever the state.
+    const [state, createdAt, dispatchedAt, minAge, deadline, now] = await Promise.all([
+      this.batchState(batchId),
+      this.batchCreatedAt(batchId),
+      this.batchDispatchedAt(batchId),
+      this.batchMinBatchAge(batchId),
+      this.batchCallbackDeadline(batchId),
+      this.sdk.provider.getBlockTimestamp(),
+    ]);
+    switch (state) {
+      case BatchState.Pending: {
+        const dispatchableAt = createdAt + minAge;
+        return {
+          state,
+          createdAt,
+          dispatchableAt,
+          secondsUntilDispatchable: secondsUntil(dispatchableAt, now),
+        };
+      }
+      case BatchState.Dispatched: {
+        const callbackDeadlineAt = dispatchedAt + deadline;
+        return {
+          state,
+          createdAt,
+          dispatchedAt,
+          callbackDeadlineAt,
+          secondsUntilCallbackDeadline: secondsUntil(callbackDeadlineAt, now),
+        };
+      }
+      default:
+        return { state, createdAt, dispatchedAt };
+    }
   }
 
   /** The encrypted aggregate amount joined into a batch, without decrypting it. */

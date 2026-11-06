@@ -3310,6 +3310,37 @@ export interface BatchStateQueryConfig {
 export function batchStateQueryOptions(batcher: VaultBatcher, config?: BatchStateQueryConfig): QueryFactoryOptions<BatchState, Error, BatchState, ReturnType<typeof vaultQueryKeys.batchState.batch>>;
 
 // @public
+export type BatchStatus = {
+    state: typeof BatchState.Pending;
+    createdAt: bigint;
+    dispatchableAt: bigint;
+    secondsUntilDispatchable: bigint;
+} | {
+    state: typeof BatchState.Dispatched;
+    createdAt: bigint;
+    dispatchedAt: bigint;
+    callbackDeadlineAt: bigint;
+    secondsUntilCallbackDeadline: bigint;
+} | {
+    state: typeof BatchState.Finalized;
+    createdAt: bigint;
+    dispatchedAt: bigint;
+} | {
+    state: typeof BatchState.Canceled;
+    createdAt: bigint;
+    dispatchedAt: bigint;
+};
+
+// @public
+export interface BatchStatusQueryConfig {
+    batchId?: bigint;
+    query?: Record<string, unknown>;
+}
+
+// @public
+export function batchStatusQueryOptions(batcher: VaultBatcher, config?: BatchStatusQueryConfig): QueryFactoryOptions<BatchStatus, Error, BatchStatus, ReturnType<typeof vaultQueryKeys.batchStatus.batch>>;
+
+// @public
 export function callbackDeadlineContract(batcher: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -10663,6 +10694,9 @@ export function minBatchAgeContract(batcher: Address): {
 };
 
 // @public
+export function openBatchIds(logs: readonly RawLog[], batcher: Address, account: Address): bigint[];
+
+// @public
 export function pausedContract(batcher: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -14826,6 +14860,7 @@ export class VaultBatcher {
     batchDispatchedAt(batchId: bigint): Promise<bigint>;
     batchMinBatchAge(batchId: bigint): Promise<bigint>;
     batchState(batchId: bigint): Promise<BatchState>;
+    batchStatus(batchId: bigint): Promise<BatchStatus>;
     callbackDeadline(): Promise<bigint>;
     claim(batchId: bigint, account?: Address): Promise<TransactionResult>;
     confidentialDepositOf(batchId: bigint, account: Address): Promise<EncryptedValue>;
@@ -15603,6 +15638,15 @@ export const vaultQueryKeys: {
             readonly batchId: bigint | undefined;
         }];
     };
+    batchStatus: {
+        batcher: (batcherAddress: Address) => readonly ["zama.vault.batchStatus", {
+            readonly batcherAddress: `0x${string}`;
+        }];
+        batch: (batcherAddress: Address, batchId: bigint | undefined) => readonly ["zama.vault.batchStatus", {
+            readonly batcherAddress: `0x${string}`;
+            readonly batchId: bigint | undefined;
+        }];
+    };
     timeUntilDispatchable: {
         batcher: (batcherAddress: Address) => readonly ["zama.vault.timeUntilDispatchable", {
             readonly batcherAddress: `0x${string}`;
@@ -15626,6 +15670,8 @@ export const vaultQueryKeys: {
 // @public
 export const VaultTopics: {
     readonly Joined: `0x${string}`;
+    readonly Claimed: `0x${string}`;
+    readonly Quit: `0x${string}`;
 };
 
 ```

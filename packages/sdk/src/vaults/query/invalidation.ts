@@ -14,6 +14,9 @@ export function invalidateBatchQueries(
     queryKey: vaultQueryKeys.batchState.batcher(batcherAddress),
   });
   void queryClient.invalidateQueries({
+    queryKey: vaultQueryKeys.batchStatus.batcher(batcherAddress),
+  });
+  void queryClient.invalidateQueries({
     queryKey: vaultQueryKeys.timeUntilDispatchable.batcher(batcherAddress),
   });
   void queryClient.invalidateQueries({
