@@ -23,7 +23,7 @@ export function currentBatchIdQueryOptions(
 
   return {
     ...filterQueryOptions(queryOpts),
-    queryKey: vaultQueryKeys.currentBatchId.batcher(batcher.address),
+    queryKey: vaultQueryKeys.currentBatchId.batcher(batcher.address, batcher.chainId),
     queryFn: async () => batcher.currentBatchId(),
     enabled: queryOpts.enabled !== false,
   };

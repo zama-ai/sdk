@@ -4,26 +4,53 @@ import { getAddress, type Address } from "viem";
  * Query keys for the vaults module.
  *
  * A `batcher(...)` key is a prefix of every `batch(...)` key for that batcher,
- * so invalidating it clears all of them at once.
+ * so invalidating it clears all of them at once. Keys carry the batcher's
+ * `chainId` when it reads another chain than the provider's current one.
  */
 export const vaultQueryKeys = {
   currentBatchId: {
-    batcher: (batcherAddress: Address) =>
-      ["zama.vault.currentBatchId", { batcherAddress: getAddress(batcherAddress) }] as const,
+    batcher: (batcherAddress: Address, chainId?: number) =>
+      [
+        "zama.vault.currentBatchId",
+        { batcherAddress: getAddress(batcherAddress), chainId },
+      ] as const,
+  },
+  paused: {
+    batcher: (batcherAddress: Address, chainId?: number) =>
+      ["zama.vault.paused", { batcherAddress: getAddress(batcherAddress), chainId }] as const,
+  },
+  batcherTokens: {
+    batcher: (batcherAddress: Address, chainId?: number) =>
+      [
+        "zama.vault.batcherTokens",
+        { batcherAddress: getAddress(batcherAddress), chainId },
+      ] as const,
   },
   batchState: {
     batcher: (batcherAddress: Address) =>
       ["zama.vault.batchState", { batcherAddress: getAddress(batcherAddress) }] as const,
-    batch: (batcherAddress: Address, batchId: bigint | undefined) =>
-      ["zama.vault.batchState", { batcherAddress: getAddress(batcherAddress), batchId }] as const,
+    batch: (batcherAddress: Address, batchId: bigint | undefined, chainId?: number) =>
+      [
+        "zama.vault.batchState",
+        { batcherAddress: getAddress(batcherAddress), batchId, chainId },
+      ] as const,
+  },
+  batchStatus: {
+    batcher: (batcherAddress: Address) =>
+      ["zama.vault.batchStatus", { batcherAddress: getAddress(batcherAddress) }] as const,
+    batch: (batcherAddress: Address, batchId: bigint | undefined, chainId?: number) =>
+      [
+        "zama.vault.batchStatus",
+        { batcherAddress: getAddress(batcherAddress), batchId, chainId },
+      ] as const,
   },
   timeUntilDispatchable: {
     batcher: (batcherAddress: Address) =>
       ["zama.vault.timeUntilDispatchable", { batcherAddress: getAddress(batcherAddress) }] as const,
-    batch: (batcherAddress: Address, batchId: bigint | undefined) =>
+    batch: (batcherAddress: Address, batchId: bigint | undefined, chainId?: number) =>
       [
         "zama.vault.timeUntilDispatchable",
-        { batcherAddress: getAddress(batcherAddress), batchId },
+        { batcherAddress: getAddress(batcherAddress), batchId, chainId },
       ] as const,
   },
   timeUntilCallbackDeadline: {
@@ -32,10 +59,10 @@ export const vaultQueryKeys = {
         "zama.vault.timeUntilCallbackDeadline",
         { batcherAddress: getAddress(batcherAddress) },
       ] as const,
-    batch: (batcherAddress: Address, batchId: bigint | undefined) =>
+    batch: (batcherAddress: Address, batchId: bigint | undefined, chainId?: number) =>
       [
         "zama.vault.timeUntilCallbackDeadline",
-        { batcherAddress: getAddress(batcherAddress), batchId },
+        { batcherAddress: getAddress(batcherAddress), batchId, chainId },
       ] as const,
   },
 };

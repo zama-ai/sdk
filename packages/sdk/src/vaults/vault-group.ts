@@ -316,7 +316,7 @@ export class VaultGroup {
       skipBalanceCheck: options?.skipBalanceCheck,
       operation: options?.operation,
     });
-    return this.#send(signer, prepared);
+    return this.#send(signer, prepared, options?.onJoinSubmitted);
   }
 
   /**
@@ -363,7 +363,7 @@ export class VaultGroup {
         await new Token(this.sdk, operator.token).setOperator(operator.spender, until);
       }
     }
-    return this.#send(signer, prepared);
+    return this.#send(signer, prepared, options?.onJoinSubmitted);
   }
 
   // INTERNAL
@@ -748,6 +748,7 @@ export class VaultGroup {
   async #send(
     signer: GenericSigner,
     prepared: PreparedVaultGroupJoin,
+    onSubmitted: ((txHash: Hex) => void) | undefined,
   ): Promise<VaultGroupJoinResult> {
     const [write, ...extra] = prepared.writes;
     if (write === undefined || extra.length > 0) {
@@ -760,6 +761,7 @@ export class VaultGroup {
       signer,
       provider: this.sdk.provider,
       config: write.call,
+      onSubmitted,
       emit: (input) =>
         this.sdk.emitEvent(
           input,

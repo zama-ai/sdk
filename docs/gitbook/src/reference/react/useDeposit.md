@@ -108,6 +108,12 @@ Default: `false`. Skips the confidential-balance pre-flight, for accounts whose 
 await deposit({ amount: 1_000_000n, skipBalanceCheck: true });
 ```
 
+### onJoinSubmitted
+
+`((txHash: Hex) => void) | undefined`
+
+Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction".
+
 **Throws:**
 
 - `ConfigurationError` — the two batchers report different vaults, or disagree with a configured `vault` address

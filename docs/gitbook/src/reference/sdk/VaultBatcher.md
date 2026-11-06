@@ -19,7 +19,7 @@ import { createVaultBatcher, VaultBatcher, BatchState } from "@zama-fhe/sdk/vaul
 
 ## Construction
 
-Use `createVaultBatcher(sdk, address)`, or take one from a `Vault`:
+Use `createVaultBatcher(sdk, address, options?)`, or take one from a `Vault`:
 
 ```ts
 import { createVaultBatcher } from "@zama-fhe/sdk/vaults";
@@ -28,6 +28,12 @@ const depositBatcher = createVaultBatcher(sdk, "0xDepositBatcher");
 const { batchId } = await depositBatcher.join(1_000_000n);
 
 const sameBatcher = vault.depositBatcher;
+```
+
+To read a batcher on a chain other than the provider's current one, for example on a vault page shown before the wallet connects, pass `chainId`. Every read then goes to that chain, which needs a provider that can route reads, such as `WagmiProvider`. Writes still go through the signer: a write throws [`ChainMismatchError`](errors.md#chainmismatcherror) while the signer is on another chain.
+
+```ts
+const sepoliaBatcher = createVaultBatcher(sdk, "0xDepositBatcher", { chainId: 11155111 });
 ```
 
 ## Properties
@@ -43,6 +49,12 @@ The SDK instance this batcher reads and writes through.
 `Address`
 
 Checksummed address of the batcher contract.
+
+### chainId
+
+`number | undefined`
+
+The chain reads go to, or `undefined` for the provider's current chain.
 
 ## BatchState
 
@@ -103,11 +115,24 @@ The id of the currently open (not-yet-dispatched) batch. Batch ids start at `1`.
 
 `(batchId: bigint) => Promise<BatchState>`
 
-A batch's lifecycle state — see [BatchState](#batchstate). Reverts on-chain with `BatchNonexistent` for an id above `currentBatchId()`.
+A batch's lifecycle state — see [BatchState](#batchstate). Reverts on-chain with `BatchNonexistent` for an id above `currentBatchId()`. Throws `ConfigurationError` if the contract returns a state the SDK does not know, which means the address is not a vault batcher.
 
 ```ts
 if ((await batcher.batchState(batchId)) === BatchState.Finalized) {
   await batcher.claim(batchId);
+}
+```
+
+### batchStatus
+
+`(batchId: bigint) => Promise<BatchStatus>`
+
+A batch's state with the timestamps that state needs. Every state carries `createdAt` and `dispatchableAt`; `Pending` adds `secondsUntilDispatchable`; `Dispatched` adds `dispatchedAt`, `callbackDeadlineAt` and `secondsUntilCallbackDeadline`; `Finalized` and `Canceled` add `dispatchedAt`. Timestamps are Unix seconds on chain. The `secondsUntil*` values are measured against the block timestamp at read time, like [`timeUntilDispatchable`](#timeuntildispatchable) and [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline); tick a live countdown from the `*At` timestamps. Switch on `state` to decide what to show; see [Building a vault UI](../../guides/vaults/building-a-ui.md).
+
+```ts
+const status = await batcher.batchStatus(batchId);
+if (status.state === BatchState.Pending && status.secondsUntilDispatchable === 0n) {
+  await batcher.dispatchBatch();
 }
 ```
 
@@ -243,9 +268,10 @@ const { txHash, batchId, beneficiary, confidentialJoinedAmount } = await batcher
 
 Options (`JoinOptions`):
 
-| Option             | Type      | Default | Description                                                                                              |
-| ------------------ | --------- | ------- | -------------------------------------------------------------------------------------------------------- |
-| `skipBalanceCheck` | `boolean` | `false` | Skip the confidential-balance pre-flight, for accounts whose balance the connected signer can't decrypt. |
+| Option             | Type                    | Default | Description                                                                                              |
+| ------------------ | ----------------------- | ------- | -------------------------------------------------------------------------------------------------------- |
+| `skipBalanceCheck` | `boolean`               | `false` | Skip the confidential-balance pre-flight, for accounts whose balance the connected signer can't decrypt. |
+| `onJoinSubmitted`  | `(txHash: Hex) => void` | —       | Called once the wallet has sent the join, before the SDK waits for the receipt.                          |
 
 Returns a `JoinResult` — `TransactionResult` plus `batchId`, `beneficiary` and `confidentialJoinedAmount`, decoded from the `Joined` event. See [`Vault` → JoinResult](Vault.md#joinresult) for the field table.
 
@@ -355,14 +381,39 @@ A builder encodes a call; it does not check balances, encrypt, or grant anything
 ## Events
 
 ```ts
-import { VaultTopics, decodeJoined, findJoined, type JoinedEvent } from "@zama-fhe/sdk/vaults";
+import {
+  VaultTopics,
+  decodeJoined,
+  findJoined,
+  openBatchIds,
+  type JoinedEvent,
+} from "@zama-fhe/sdk/vaults";
 ```
 
 `join` decodes its own receipt, but the helpers are exported for apps that index logs themselves.
 
-- `VaultTopics.Joined` — topic0 of `Joined(uint256 indexed batchId, address indexed account, euint64 amount)`.
+- `VaultTopics.Joined`, `VaultTopics.Claimed`, `VaultTopics.Quit` — topic0 of `Joined`, `Claimed` and `Quit`, each `(uint256 indexed batchId, address indexed account, euint64 amount)`.
 - `decodeJoined(log)` — decodes one raw log into `{ batchId, account, confidentialAmount }`, or `null` if it isn't a `Joined` event.
 - `findJoined(logs, batcher, account?)` — the first `Joined` log emitted by `batcher` (and crediting `account`, when given). Filters by emitter and account because one transaction can join several batchers and credit several beneficiaries.
+- `openBatchIds(logs, batcher, account)` — the batches `account` joined on `batcher` and has not claimed or quit, by ascending batch id. Pass that batcher's `Joined`, `Claimed` and `Quit` logs for the account in chain order, as `getLogs` returns them. A quit followed by a new join in the same batch opens it again.
+
+```ts
+import { pad, toHex } from "viem";
+
+// Raw eth_getLogs: the three events share the account topic, which viem's typed
+// getLogs only filters for a single event.
+const logs = await publicClient.request({
+  method: "eth_getLogs",
+  params: [
+    {
+      address: batcher,
+      topics: [[VaultTopics.Joined, VaultTopics.Claimed, VaultTopics.Quit], null, pad(account)],
+      fromBlock: toHex(deployBlock),
+    },
+  ],
+});
+const open = openBatchIds(logs, batcher, account);
+```
 
 ## TanStack Query helpers
 
@@ -370,6 +421,9 @@ import { VaultTopics, decodeJoined, findJoined, type JoinedEvent } from "@zama-f
 import {
   vaultQueryKeys,
   batchStateQueryOptions,
+  batchStatusQueryOptions,
+  batcherTokensQueryOptions,
+  pausedQueryOptions,
   currentBatchIdQueryOptions,
   timeUntilDispatchableQueryOptions,
   timeUntilCallbackDeadlineQueryOptions,
@@ -390,5 +444,8 @@ The React hooks are built on these query and mutation option builders; they are 
 - [Vault](Vault.md) — pairs two batchers behind `deposit()` / `redeem()`
 - [Vault deposits and redemptions](../../guides/vaults/deposits.md) — the full flow, including when each write is legal
 - [Errors](errors.md) — the error classes thrown above
+- [useBatchStatus](../react/useBatchStatus.md) — React hook for `batchStatus`
+- [usePaused](../react/usePaused.md) — React hook for `paused`
+- [useBatcherTokens](../react/useBatcherTokens.md) — React hook for `fromToken` and `toToken`
 - [useTimeUntilCallbackDeadline](../react/useTimeUntilCallbackDeadline.md) — React hook for `timeUntilCallbackDeadline`
 - [useVaultBatcher](../react/useVaultBatcher.md) — React hook returning a `VaultBatcher`

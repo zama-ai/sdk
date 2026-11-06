@@ -26,6 +26,17 @@ export {
   type UseBatchStateConfig,
   type UseBatchStateOptions,
 } from "./use-batch-state";
+export { usePaused, type UsePausedConfig, type UsePausedOptions } from "./use-paused";
+export {
+  useBatcherTokens,
+  type UseBatcherTokensConfig,
+  type UseBatcherTokensOptions,
+} from "./use-batcher-tokens";
+export {
+  useBatchStatus,
+  type UseBatchStatusConfig,
+  type UseBatchStatusOptions,
+} from "./use-batch-status";
 export {
   useTimeUntilDispatchable,
   type UseTimeUntilDispatchableConfig,

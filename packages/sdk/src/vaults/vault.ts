@@ -100,6 +100,7 @@ export class Vault {
     await this.#ensureOperator("deposit", token, this.depositBatcher.address, options);
     return this.depositBatcher.join(amount, options?.beneficiary, {
       skipBalanceCheck: options?.skipBalanceCheck,
+      onJoinSubmitted: options?.onJoinSubmitted,
       operation: "vault-deposit",
     });
   }
@@ -121,6 +122,7 @@ export class Vault {
     await this.#ensureOperator("redeem", token, this.redeemBatcher.address, options);
     return this.redeemBatcher.join(amount, options?.beneficiary, {
       skipBalanceCheck: options?.skipBalanceCheck,
+      onJoinSubmitted: options?.onJoinSubmitted,
       operation: "vault-redeem",
     });
   }

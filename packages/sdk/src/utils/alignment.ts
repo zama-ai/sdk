@@ -1,5 +1,6 @@
 import {
   ChainMismatchError,
+  ConfigurationError,
   SignerNotConfiguredError,
   WalletAccountNotReadyError,
 } from "../errors";
@@ -50,4 +51,26 @@ export async function requireChainAlignment(
   provider: GenericProvider,
 ): Promise<number> {
   return (await requireAlignedWalletAccount(operation, signer, provider)).chainId;
+}
+
+/**
+ * For a provider bound to one chain: throws when a read asks for another, so
+ * it never answers from the wrong chain.
+ *
+ * @internal
+ */
+export async function requireReadChain(
+  adapter: string,
+  chainId: number | undefined,
+  getChainId: () => Promise<number>,
+): Promise<void> {
+  if (chainId === undefined) {
+    return;
+  }
+  const current = await getChainId();
+  if (current !== chainId) {
+    throw new ConfigurationError(
+      `${adapter} is bound to chain ${current} and cannot read chain ${chainId}; use a provider for that chain`,
+    );
+  }
 }

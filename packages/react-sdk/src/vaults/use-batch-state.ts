@@ -12,6 +12,8 @@ export interface UseBatchStateConfig {
   address: Address;
   /** Batch to read the state of. The query is disabled while `undefined`. */
   batchId: bigint | undefined;
+  /** Chain to read from, when it is not the connected one. Needs a provider that can route reads, such as `WagmiProvider`. */
+  chainId?: number;
 }
 
 /** TanStack Query options accepted by {@link useBatchState} (excluding `queryKey`/`queryFn`). */
@@ -38,7 +40,7 @@ export interface UseBatchStateOptions extends Omit<
  */
 export function useBatchState(config: UseBatchStateConfig, options?: UseBatchStateOptions) {
   const { enabled = true } = options ?? {};
-  const batcher = useVaultBatcher(config.address);
+  const batcher = useVaultBatcher(config.address, { chainId: config.chainId });
   const baseOptions = batchStateQueryOptions(batcher, { batchId: config.batchId });
 
   return useQuery<BatchState>({

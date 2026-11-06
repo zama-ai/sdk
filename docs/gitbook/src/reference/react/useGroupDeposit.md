@@ -86,6 +86,12 @@ Amount to deposit, in the shared asset token's base units.
 
 Default: `false`. Skips the confidential-balance pre-flight, for accounts whose balance the connected signer can't decrypt (smart wallets). Without the check, a too-large deposit joins every batch with nothing.
 
+### onJoinSubmitted
+
+`((txHash: Hex) => void) | undefined`
+
+Called with the submission's transaction hash once the wallet has sent it, before the SDK waits for the receipt.
+
 **Throws:**
 
 - `ConfigurationError` — unknown `vaultId`, a member whose batchers disagree with its config or are not paired with `cAsset`, two members whose batchers report the same vault, or a router other than the configured chain's `vaultRouterAddress` without `allowCustomRouter`
