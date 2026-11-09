@@ -585,10 +585,12 @@ export class ChainMismatchError extends ZamaError {
         operation: string;
         signerChainId: number;
         providerChainId: number;
+        targetChainId?: number;
     }, options?: ErrorOptions);
     readonly operation: string;
     readonly providerChainId: number;
     readonly signerChainId: number;
+    readonly targetChainId: number | undefined;
 }
 
 // @public
