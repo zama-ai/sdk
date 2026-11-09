@@ -49,13 +49,13 @@ function contentSecurityPolicy(nonce: string): string {
     `connect-src ${[...connectSrc].join(" ")}${isDev ? " ws:" : ""}`,
     // The SDK's encrypt worker is a bundled file; the FHE runtime compiles WASM in blob workers.
     "worker-src 'self' blob:",
-    // WalletConnect's verification iframes, and wallet icons: catalogue icons come from
-    // wallet-book origins nobody enumerates, and EIP-6963 icons are data: URLs.
+    // WalletConnect's verification iframes, and wallet icons: the catalogue's come from Dynamic's
+    // icon sprite, and EIP-6963 wallets announce theirs as data: URLs.
     ...(dynamicEnabled
       ? [
           `frame-src ${dynamicFrameSrc.join(" ")}`,
           `child-src ${dynamicFrameSrc.join(" ")}`,
-          "img-src 'self' data: blob: https:",
+          "img-src 'self' data: blob: https://iconic.dynamic-static-assets.com",
         ]
       : []),
     "object-src 'none'",

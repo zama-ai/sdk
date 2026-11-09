@@ -28,7 +28,7 @@ import {
 } from "wagmi";
 import { injected } from "wagmi/connectors/injected";
 import { ConnectWalletDialog, type ConnectState } from "@/components/ConnectWalletDialog";
-import { DYNAMIC_ENVIRONMENT_ID, getDynamic } from "@/lib/dynamic";
+import { DYNAMIC_ENVIRONMENT_ID, dynamicWallets } from "@/lib/dynamic";
 import { dynamicConnector, readSavedWallet } from "@/lib/dynamicConnector";
 import { NETWORK_KEYS, networks } from "@/lib/networks";
 
@@ -53,7 +53,7 @@ const savedWallet =
 
 const connectors: CreateConnectorFn[] = DYNAMIC_ENVIRONMENT_ID
   ? savedWallet
-    ? [dynamicConnector(getDynamic().wallets, savedWallet) as CreateConnectorFn]
+    ? [dynamicConnector(dynamicWallets, savedWallet) as CreateConnectorFn]
     : []
   : [injected()];
 
