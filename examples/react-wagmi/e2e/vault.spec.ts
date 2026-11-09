@@ -28,6 +28,8 @@ test.describe("confidential vault — confidentialTransferAndCall", () => {
     await expect(page.getByRole("combobox", { name: "Confidential token" })).toHaveValue(
       MOCK_CTOKEN1_ADDRESS,
     );
+    // The transferAndCall demo lives on the Advanced tab.
+    await page.getByRole("tab", { name: "Advanced" }).click();
   });
 
   test("renders the vault section for the bound token", async ({ page }) => {

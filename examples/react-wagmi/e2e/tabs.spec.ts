@@ -1,0 +1,30 @@
+import { test, expect, SEPOLIA_CHAIN_ID_HEX, TEST_ADDRESS } from "./fixtures";
+
+test.describe("tabs", () => {
+  test.beforeEach(async ({ page, mockRpc, mockWallet }) => {
+    await mockRpc();
+    await mockWallet({
+      accounts: [],
+      chainId: SEPOLIA_CHAIN_ID_HEX,
+      requestAccounts: [TEST_ADDRESS],
+    });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Connect Wallet" }).click({ force: true });
+    await expect(page.getByText("Balances")).toBeVisible();
+  });
+
+  test("opens on the token operations", async ({ page }) => {
+    await expect(page.getByRole("tab", { name: "Tokens" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(page.getByText("Shield — ERC-20 → Confidential")).toBeVisible();
+    await expect(page.getByText("Delegation — as owner")).toHaveCount(0);
+  });
+
+  test("moves delegation to the Advanced tab", async ({ page }) => {
+    await page.getByRole("tab", { name: "Advanced" }).click();
+    await expect(page.getByText("Delegation — as owner")).toBeVisible();
+    await expect(page.getByText("Shield — ERC-20 → Confidential")).toHaveCount(0);
+  });
+});

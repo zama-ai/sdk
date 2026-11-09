@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBalance, useConnection } from "wagmi";
-import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
+import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { useNetwork } from "@/lib/hooks";
 import { erc20BalanceKey } from "@/lib/queryKeys";
 import { BalancesCard } from "@/components/BalancesCard";
@@ -75,9 +75,11 @@ export function NoTokenPanel() {
 interface SelectedTokenPanelProps {
   token: TokenWrapperPairWithMetadata;
   validPairs: TokenWrapperPairWithMetadata[];
+  /** `tokens`: balances and the core operations. `advanced`: transferAndCall and delegation. */
+  view: "tokens" | "advanced";
 }
 
-export function SelectedTokenPanel({ token, validPairs }: SelectedTokenPanelProps) {
+export function SelectedTokenPanel({ token, validPairs, view }: SelectedTokenPanelProps) {
   const queryClient = useQueryClient();
   const { chain, vault } = useNetwork();
   // Wallet state read straight from wagmi in place — nothing wallet-derived is passed in.
@@ -107,6 +109,22 @@ export function SelectedTokenPanel({ token, validPairs }: SelectedTokenPanelProp
   const showVault =
     vault !== undefined &&
     token.confidentialTokenAddress.toLowerCase() === vault.confidentialToken.toLowerCase();
+
+  if (view === "advanced") {
+    return (
+      <AdvancedOperations
+        token={token}
+        address={address}
+        vaultAddress={showVault ? vault?.address : undefined}
+        vaultNonce={vaultNonce}
+        onVaultDeposit={() => {
+          refreshPublicBalances();
+          setVaultNonce((n) => n + 1);
+        }}
+        onWithdraw={refreshPublicBalances}
+      />
+    );
+  }
 
   return (
     <>
@@ -151,11 +169,34 @@ export function SelectedTokenPanel({ token, validPairs }: SelectedTokenPanelProp
         disabled={false}
         onSuccess={refreshPublicBalances}
       />
+    </>
+  );
+}
 
+interface AdvancedOperationsProps {
+  token: TokenWrapperPairWithMetadata;
+  address: Address;
+  /** The ConfidentialVault demo's address, when it is bound to the selected token. */
+  vaultAddress: Address | undefined;
+  vaultNonce: number;
+  onVaultDeposit: () => void;
+  onWithdraw: () => void;
+}
+
+function AdvancedOperations({
+  token,
+  address,
+  vaultAddress,
+  vaultNonce,
+  onVaultDeposit,
+  onWithdraw,
+}: AdvancedOperationsProps) {
+  return (
+    <>
       {/* ── Reacting contract — confidentialTransferAndCall demo ───────────────
           Deposit moves tokens into the vault and credits a beneficiary atomically;
           the beneficiary reveals and withdraws their confidential position. */}
-      {showVault && (
+      {vaultAddress && (
         <>
           <h2 className="section-label">Reacting contract — ConfidentialVault</h2>
 
@@ -163,20 +204,17 @@ export function SelectedTokenPanel({ token, validPairs }: SelectedTokenPanelProp
             key={`vault-deposit-${address}-${token.confidentialTokenAddress}`}
             token={token}
             account={address}
-            vaultAddress={vault.address}
+            vaultAddress={vaultAddress}
             disabled={false}
-            onSuccess={() => {
-              refreshPublicBalances();
-              setVaultNonce((n) => n + 1);
-            }}
+            onSuccess={onVaultDeposit}
           />
 
           <VaultPositionCard
             key={`vault-position-${address}-${token.confidentialTokenAddress}-${vaultNonce}`}
             token={token}
             account={address}
-            vaultAddress={vault.address}
-            onWithdraw={refreshPublicBalances}
+            vaultAddress={vaultAddress}
+            onWithdraw={onWithdraw}
           />
         </>
       )}
