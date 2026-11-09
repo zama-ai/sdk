@@ -23,11 +23,13 @@ export function cancelled(): DaemonError {
 }
 export function errorDetails(error: unknown): SdkError {
   // The SDK wraps a wallet error it could not classify; native callers still need the
-  // broadcast outcome. A revert the SDK did classify keeps its more specific code.
+  // broadcast outcome. A revert the SDK did classify keeps its more specific code,
+  // unless the transaction may have been broadcast: that must never look retryable.
   if (
     error instanceof ZamaError &&
-    error.code === ZamaErrorCode.TransactionReverted &&
-    error.cause instanceof TransactionCallbackError
+    error.cause instanceof TransactionCallbackError &&
+    (error.code === ZamaErrorCode.TransactionReverted ||
+      error.cause.code === "TRANSACTION_OUTCOME_UNKNOWN")
   ) {
     return errorDetails(error.cause);
   }

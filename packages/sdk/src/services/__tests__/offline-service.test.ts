@@ -35,6 +35,29 @@ describe("OfflineService — HCU limit reverts", () => {
       }),
     ).rejects.toBeInstanceOf(HcuTransactionLimitExceededError);
   });
+
+  test("rethrows an unrelated gas-estimation revert unchanged", async ({
+    createSDK,
+    signer,
+    provider,
+    userAddress,
+  }) => {
+    const unrelated = new TransactionRevertedError("gas estimation reverted", {
+      cause: Object.assign(new Error("call revert exception"), { data: "0xdeadbeef" }),
+    });
+    vi.mocked(provider.prepareTransaction).mockRejectedValue(unrelated);
+    const sdk = createSDK({ signer });
+
+    await expect(
+      sdk.offline.prepare({
+        kind: "ConfidentialTransfer",
+        from: userAddress,
+        token: TOKEN,
+        to: RECIPIENT,
+        amount: 1_000n,
+      }),
+    ).rejects.toBe(unrelated);
+  });
 });
 
 describe("OfflineService — ConfidentialTransfer prepare", () => {

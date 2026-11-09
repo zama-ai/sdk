@@ -17,6 +17,8 @@ Record every transaction hash in your wallet's write path, together with the acc
 | `SIGNING_REJECTED`                                                                     | Request another wallet action only after user approval                       |
 | `SIGNING_FAILED` or `CHAIN_MISMATCH` before broadcast                                  | Correct the wallet or provider configuration                                 |
 | `TRANSACTION_REVERTED`                                                                 | Inspect the revert and fix its cause before submitting another write         |
+| `HCU_BLOCK_LIMIT_EXCEEDED`                                                             | Nothing was sent; submit again in a later block                              |
+| `HCU_TRANSACTION_LIMIT_EXCEEDED`                                                       | Nothing was sent; split the work into smaller transactions                   |
 | `TRANSACTION_OUTCOME_UNKNOWN`                                                          | Reconcile the recorded hash and account transactions before submitting again |
 | Transport failure or cancellation after the wallet received the write                  | Treat the outcome as uncertain, whatever the error code                      |
 | Cancellation, deadline, account change, or context close before the wallet received it | The operation fails with `CANCELLED`; nothing was sent                       |

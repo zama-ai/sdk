@@ -25,6 +25,17 @@ test("prefers the wallet's broadcast outcome only under a plain TransactionRever
   expect(typed.metadata.get("zama-error-retryable")).toEqual(["true"]);
 });
 
+test("keeps an uncertain broadcast terminal even when its message names an HCU revert", () => {
+  const uncertain = new TransactionCallbackError(
+    "TRANSACTION_OUTCOME_UNKNOWN",
+    status.FAILED_PRECONDITION,
+    "transaction 0xabc submission uncertain: execution reverted 0xad251174",
+  );
+  const error = serviceError(new HcuBlockLimitExceededError("Block budget", { cause: uncertain }));
+  expect(error.metadata.get("zama-error-code")).toEqual(["TRANSACTION_OUTCOME_UNKNOWN"]);
+  expect(error.metadata.get("zama-error-retryable")).toEqual(["false"]);
+});
+
 test("retains canonical SDK codes and messages without reclassifying signing failures", () => {
   const signature = serviceError(new SigningFailedError("Wallet unavailable"));
   expect(signature.code).toBe(status.FAILED_PRECONDITION);

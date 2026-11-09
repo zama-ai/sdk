@@ -19,6 +19,8 @@ import {
   EncryptOffloadUnavailableError,
   DecryptionFailedError,
   TransactionRevertedError,
+  HcuBlockLimitExceededError,
+  HcuTransactionLimitExceededError,
   UnshieldAlreadyFinalizedError,
   UnlistedConfidentialTokenError,
   VaultBatcherPausedError,

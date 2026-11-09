@@ -18,6 +18,8 @@ description: Unreleased changes on the prerelease (beta) line — not yet in a s
 - **Deployment:** [Deploy in production](../native/operations/run-in-production.md), [Monitor and troubleshoot](../native/operations/monitor-and-troubleshoot.md), and [Upgrade the daemon](../native/operations/upgrade-and-recover.md).
 - **Signed, scanned image:** the daemon image is built on Docker Hardened Images, every release digest is scanned with Trivy before it is tagged, and the image carries signed build provenance and an SBOM. Verify a release with `gh attestation verify` or cosign and pin it by digest with `ZAMA_SDK_DAEMON_DIGEST`; see [Verify and pin the image](../native/operations/run-in-production.md#verify-and-pin-the-image). Published images are re-scanned daily.
 
+**HCU limit errors for native clients.** A write whose gas estimation hits one of the protocol's FHE compute (HCU) limits now fails with `HCU_BLOCK_LIMIT_EXCEEDED` (retryable) or `HCU_TRANSACTION_LIMIT_EXCEEDED` instead of `TRANSACTION_REVERTED`. A write whose broadcast outcome is uncertain still fails with `TRANSACTION_OUTCOME_UNKNOWN`.
+
 Start with the [Go quick start](../native/tutorials/go-quick-start.md) or the [Rust quick start](../native/tutorials/rust-quick-start.md).
 
 ## Vault groups over the multi-vault router

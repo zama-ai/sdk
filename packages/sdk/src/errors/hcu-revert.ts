@@ -7,38 +7,35 @@ const HCU_REVERTS = [
   {
     selector: "0xad251174",
     name: "HCUBlockLimitExceeded",
-    error: (cause: unknown) =>
-      new HcuBlockLimitExceededError(
-        "The block's FHE compute budget (HCU) is spent. Retry in the next block.",
-        { cause },
-      ),
+    ErrorClass: HcuBlockLimitExceededError,
+    message: "The block's FHE compute budget (HCU) is spent. Retry in the next block.",
   },
   {
     selector: "0x77e3c293",
     name: "HCUTransactionLimitExceeded",
-    error: (cause: unknown) =>
-      new HcuTransactionLimitExceededError(
-        "The transaction needs more total FHE compute (HCU) than one transaction may use.",
-        { cause },
-      ),
+    ErrorClass: HcuTransactionLimitExceededError,
+    message: "The transaction needs more total FHE compute (HCU) than one transaction may use.",
   },
   {
     selector: "0xfc344870",
     name: "HCUTransactionDepthLimitExceeded",
-    error: (cause: unknown) =>
-      new HcuTransactionLimitExceededError(
-        "The transaction chains more sequential FHE compute (HCU depth) than one transaction may use.",
-        { cause },
-      ),
+    ErrorClass: HcuTransactionLimitExceededError,
+    message:
+      "The transaction chains more sequential FHE compute (HCU depth) than one transaction may use.",
   },
 ] as const;
 
 /**
  * Map an `HCULimit` revert to its typed error, or `null` for any other failure.
  * No SDK ABI carries these errors, so the selector is matched on the raw revert data.
+ * `operation` names the failing step in the message, since one flow can send several transactions.
  * @internal
  */
-export function matchHcuRevert(error: unknown): ZamaError | null {
+export function matchHcuRevert(error: unknown, operation: string): ZamaError | null {
   const match = HCU_REVERTS.find((revert) => hasRevert(error, revert.selector, revert.name));
-  return match ? match.error(error) : null;
+  return match
+    ? new match.ErrorClass(`Transaction failed during ${operation}: ${match.message}`, {
+        cause: error,
+      })
+    : null;
 }

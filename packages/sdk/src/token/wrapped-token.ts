@@ -461,6 +461,11 @@ export class WrappedToken extends Token {
       }
       throw new TransactionRevertedError("Failed to get unwrap receipt", { cause: error });
     }
+    if (receipt.status === "reverted") {
+      throw new TransactionRevertedError(
+        `Unwrap transaction ${unwrapTxHash} reverted, so there is nothing to resume`,
+      );
+    }
     const unwrapRequestId = this.#extractUnwrapRequestId(receipt.logs);
     if (await this.#isUnwrapRequestConsumed(unwrapRequestId)) {
       await this.#clearStoredPendingUnshield("resumeUnshield");
@@ -748,8 +753,13 @@ export class WrappedToken extends Token {
       // The id comes from this wrapper's own UnwrapRequested event and the only
       // transition to "gone" is a successful finalize, so this revert means a
       // concurrent finalize won the race (second tab, double click, third
-      // party). The funds arrived; heal.
-      if (!isInvalidUnwrapRequestRevert(error)) {
+      // party). The funds arrived; heal. A finalize mined as reverted carries no
+      // revert reason, so for a plain revert ask the chain whether the request is gone.
+      const finalizedElsewhere =
+        isInvalidUnwrapRequestRevert(error) ||
+        (error instanceof TransactionRevertedError &&
+          (await this.#isUnwrapRequestConsumed(unwrapRequestId)));
+      if (!finalizedElsewhere) {
         throw error;
       }
       await this.#clearStoredPendingUnshield("unshield");

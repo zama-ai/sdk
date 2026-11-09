@@ -777,6 +777,43 @@ describe("WrappedToken", () => {
       expect(await storage.get(`zama:pending-unshield:${wrapperAddress}`)).toBeNull();
     });
 
+    test("resumeUnshield maps a finalize mined as reverted after a concurrent finalize to UNSHIELD_ALREADY_FINALIZED", async ({
+      userAddress,
+      wrappedToken,
+      wrapperAddress,
+      storage,
+      provider,
+    }) => {
+      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX, REQUEST_ID);
+      vi.mocked(provider.waitForTransactionReceipt)
+        .mockResolvedValueOnce(receiptWithUnwrapRequested(userAddress))
+        .mockResolvedValueOnce({ logs: [], status: "reverted" });
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(REQUESTER) // pre-check: still open
+        .mockResolvedValueOnce(zeroAddress); // after the reverted finalize: gone
+
+      await expect(wrappedToken.resumeUnshield(UNWRAP_TX)).rejects.toMatchObject({
+        code: ZamaErrorCode.UnshieldAlreadyFinalized,
+      });
+      expect(await storage.get(`zama:pending-unshield:${wrapperAddress}`)).toBeNull();
+    });
+
+    test("resumeUnshield rejects an unwrap transaction that reverted", async ({
+      signer,
+      wrappedToken,
+      provider,
+    }) => {
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValueOnce({
+        logs: [],
+        status: "reverted",
+      });
+
+      await expect(wrappedToken.resumeUnshield(UNWRAP_TX)).rejects.toMatchObject({
+        code: ZamaErrorCode.TransactionReverted,
+      });
+      expect(signer.writeContract).not.toHaveBeenCalled();
+    });
+
     test("resumeUnshield rejects a tx hash whose UnwrapRequested event came from another wrapper", async ({
       userAddress,
       wrappedToken,

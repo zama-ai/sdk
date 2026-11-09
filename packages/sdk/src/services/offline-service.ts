@@ -145,7 +145,7 @@ export class OfflineService {
     };
     const parsed = parseSchema(prepareTransactionParams, params);
     const unsignedTx = await this.#provider.prepareTransaction(parsed).catch((error: unknown) => {
-      throw matchHcuRevert(error) ?? error;
+      throw matchHcuRevert(error, `prepare ${request.kind}`) ?? error;
     });
     return { kind: request.kind, unsignedTx, from: parsed.from } satisfies PreparedFor<K>;
   }
