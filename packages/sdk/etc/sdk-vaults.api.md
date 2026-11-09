@@ -15658,20 +15658,20 @@ export interface VaultMemberConfig extends VaultAddresses {
 export const vaultQueryKeys: {
     currentBatchId: {
         batcher: (batcherAddress: Address, chainId?: number) => readonly ["zama.vault.currentBatchId", {
-            readonly batcherAddress: `0x${string}`;
-            readonly chainId: number | undefined;
+            readonly batcherAddress: Address;
+            readonly chainId?: number;
         }];
     };
     paused: {
         batcher: (batcherAddress: Address, chainId?: number) => readonly ["zama.vault.paused", {
-            readonly batcherAddress: `0x${string}`;
-            readonly chainId: number | undefined;
+            readonly batcherAddress: Address;
+            readonly chainId?: number;
         }];
     };
     batcherTokens: {
         batcher: (batcherAddress: Address, chainId?: number) => readonly ["zama.vault.batcherTokens", {
-            readonly batcherAddress: `0x${string}`;
-            readonly chainId: number | undefined;
+            readonly batcherAddress: Address;
+            readonly chainId?: number;
         }];
     };
     batchState: {

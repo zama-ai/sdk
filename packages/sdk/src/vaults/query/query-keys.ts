@@ -1,5 +1,14 @@
 import { getAddress, type Address } from "viem";
 
+// Omit an unset `chainId`: TanStack matches every filter field, so `chainId: undefined` matches no pinned key.
+function batcherParams(
+  batcherAddress: Address,
+  chainId: number | undefined,
+): { readonly batcherAddress: Address; readonly chainId?: number } {
+  const params = { batcherAddress: getAddress(batcherAddress) };
+  return chainId === undefined ? params : { ...params, chainId };
+}
+
 /**
  * Query keys for the vaults module.
  *
@@ -10,21 +19,15 @@ import { getAddress, type Address } from "viem";
 export const vaultQueryKeys = {
   currentBatchId: {
     batcher: (batcherAddress: Address, chainId?: number) =>
-      [
-        "zama.vault.currentBatchId",
-        { batcherAddress: getAddress(batcherAddress), chainId },
-      ] as const,
+      ["zama.vault.currentBatchId", batcherParams(batcherAddress, chainId)] as const,
   },
   paused: {
     batcher: (batcherAddress: Address, chainId?: number) =>
-      ["zama.vault.paused", { batcherAddress: getAddress(batcherAddress), chainId }] as const,
+      ["zama.vault.paused", batcherParams(batcherAddress, chainId)] as const,
   },
   batcherTokens: {
     batcher: (batcherAddress: Address, chainId?: number) =>
-      [
-        "zama.vault.batcherTokens",
-        { batcherAddress: getAddress(batcherAddress), chainId },
-      ] as const,
+      ["zama.vault.batcherTokens", batcherParams(batcherAddress, chainId)] as const,
   },
   batchState: {
     batcher: (batcherAddress: Address) =>

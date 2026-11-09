@@ -142,6 +142,6 @@ Show the user one entry for the vault they chose, but **claim or quit every join
 
 ## Next steps
 
-- The [`react-vaults` example](https://github.com/zama-ai/sdk/tree/main/examples/react-vaults) implements this guide end to end.
+- The Vaults tab of the [`react-wagmi` example](https://github.com/zama-ai/sdk/tree/main/examples/react-wagmi) implements this guide end to end.
 - [Vault deposits and redemptions](deposits.md) for the SDK calls behind each step.
 - [Vault groups](groups.md) when one form deposits into one of several vaults.

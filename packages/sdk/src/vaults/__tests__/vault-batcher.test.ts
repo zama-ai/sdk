@@ -412,8 +412,24 @@ describe("VaultBatcher", () => {
     test("refuses a write while the signer is on another chain", async ({ sdk, signer }) => {
       const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS, { chainId: 11155111 });
 
-      await expect(batcher.claim(7n)).rejects.toBeInstanceOf(ChainMismatchError);
+      await expect(batcher.claim(7n)).rejects.toMatchObject({
+        name: "ChainMismatchError",
+        targetChainId: 11155111,
+        message: expect.stringContaining("targets chain 11155111"),
+      });
       expect(signer.writeContract).not.toHaveBeenCalled();
+    });
+
+    test("refuses a join on another chain before reading the balance or encrypting", async ({
+      sdk,
+      provider,
+      relayer,
+    }) => {
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS, { chainId: 11155111 });
+
+      await expect(batcher.join(100n)).rejects.toBeInstanceOf(ChainMismatchError);
+      expect(provider.readContract).not.toHaveBeenCalled();
+      expect(relayer.encryptValues).not.toHaveBeenCalled();
     });
   });
 

@@ -198,7 +198,7 @@ Thrown when a signer adapter is configured but does not currently have a connect
 
 **Code:** `CHAIN_MISMATCH`
 
-Thrown when the signer and provider resolve to different chains during an operation. The error carries `operation`, `signerChainId`, and `providerChainId`.
+Thrown when the signer and provider resolve to different chains during an operation, or when the signer is not on the chain a `VaultBatcher` created with a `chainId` is pinned to. The error carries `operation`, `signerChainId`, `providerChainId`, and `targetChainId` (the pinned chain, or `undefined`).
 
 ```ts
 matchZamaError(error, {

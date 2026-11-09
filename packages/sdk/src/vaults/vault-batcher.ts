@@ -288,7 +288,7 @@ export class VaultBatcher {
    * {@link BatchState}.
    */
   async batchStatus(batchId: bigint): Promise<BatchStatus> {
-    // One round of reads, so a poll costs one round trip whatever the state.
+    // Read concurrently, so a poll's latency is one request's whatever the state.
     const [state, createdAt, dispatchedAt, minAge, deadline, now] = await Promise.all([
       this.batchState(batchId),
       this.batchCreatedAt(batchId),
@@ -389,8 +389,8 @@ export class VaultBatcher {
    */
   async join(amount: bigint, beneficiary?: Address, options?: JoinOptions): Promise<JoinResult> {
     const { operation } = withOperation(options, "vault-join");
-    this.#requireSigner("join");
-    const account = await requireAlignedWalletAccount("join", this.sdk.signer, this.sdk.provider);
+    // Before the balance check and encryption, so a wrong chain fails before any wallet prompt.
+    const account = await this.#requireWriteAccount("join");
     const userAddress = getAddress(account.address);
     const resolvedBeneficiary = beneficiary ? getAddress(beneficiary) : userAddress;
 
@@ -621,6 +621,25 @@ export class VaultBatcher {
     return getAddress(aligned.address);
   }
 
+  async #requireWriteAccount(operation: string): Promise<{ address: Address; chainId: number }> {
+    const account = await requireAlignedWalletAccount(
+      operation,
+      this.#requireSigner(operation),
+      this.sdk.provider,
+    );
+    // Reads go to `chainId`; a write must not land on another chain.
+    if (this.chainId !== undefined && account.chainId !== this.chainId) {
+      throw new ChainMismatchError({
+        operation,
+        signerChainId: account.chainId,
+        // The alignment check above already put the signer on the provider's chain.
+        providerChainId: account.chainId,
+        targetChainId: this.chainId,
+      });
+    }
+    return account;
+  }
+
   #read<
     const TAbi extends ContractAbi,
     TFunctionName extends ReadFunctionName<TAbi>,
@@ -635,16 +654,8 @@ export class VaultBatcher {
     onSubmitted?: (txHash: Hex) => void,
   ): Promise<TransactionResult> {
     const signer = this.#requireSigner(operation);
-    // Reads go to `chainId`; a write must not land on another chain.
     if (this.chainId !== undefined) {
-      const { chainId: signerChainId } = await requireAlignedWalletAccount(
-        operation,
-        signer,
-        this.sdk.provider,
-      );
-      if (signerChainId !== this.chainId) {
-        throw new ChainMismatchError({ operation, signerChainId, providerChainId: this.chainId });
-      }
+      await this.#requireWriteAccount(operation);
     }
     return submitSdkTransaction({
       operation,

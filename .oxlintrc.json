@@ -30,7 +30,6 @@
       "rootDir": [
         "packages/test-nextjs",
         "examples/react-ethers",
-        "examples/react-vaults",
         "examples/react-viem",
         "examples/react-wagmi"
       ]
