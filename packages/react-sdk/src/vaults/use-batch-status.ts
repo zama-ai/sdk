@@ -26,7 +26,7 @@ export interface UseBatchStatusOptions extends Omit<
 }
 
 /**
- * A batch's state with the timestamps that state needs, in one read. Switch on
+ * A batch's state with the timestamps that state needs. Switch on
  * `data.state` to render every step of a deposit or redemption after it is
  * sent; an exhaustive switch makes TypeScript flag a state the UI forgets.
  *

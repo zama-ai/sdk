@@ -81,6 +81,7 @@ export function useClaim<TContext = unknown>(config: UseClaimConfig, options?: U
 // @public
 export interface UseClaimConfig {
     address: Address;
+    chainId?: number;
 }
 
 // @public
@@ -111,6 +112,7 @@ export function useDispatchBatch<TContext = unknown>(config: UseDispatchBatchCon
 // @public
 export interface UseDispatchBatchConfig {
     address: Address;
+    chainId?: number;
 }
 
 // @public
@@ -119,6 +121,7 @@ export function useFinalize<TContext = unknown>(config: UseFinalizeConfig, optio
 // @public
 export interface UseFinalizeConfig {
     address: Address;
+    chainId?: number;
 }
 
 // @public
@@ -143,6 +146,7 @@ export function useJoin<TContext = unknown>(config: UseJoinConfig, options?: Use
 // @public
 export interface UseJoinConfig {
     address: Address;
+    chainId?: number;
 }
 
 // @public
@@ -165,6 +169,7 @@ export function useQuit<TContext = unknown>(config: UseQuitConfig, options?: Use
 // @public
 export interface UseQuitConfig {
     address: Address;
+    chainId?: number;
 }
 
 // @public
@@ -173,6 +178,7 @@ export function useRecover<TContext = unknown>(config: UseRecoverConfig, options
 // @public
 export interface UseRecoverConfig {
     address: Address;
+    chainId?: number;
 }
 
 // @public

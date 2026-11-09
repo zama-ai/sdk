@@ -2579,7 +2579,7 @@ New `VaultBatcher.batchStatus(batchId)` (`useBatchStatus` in React, `batchStatus
 
 ## Vault reads on another chain, and smaller vault additions
 
-`ReadContractConfig` gains an optional `chainId`, and `GenericProvider.getBlockTimestamp` an optional `chainId` argument. `WagmiProvider` reads that chain through wagmi; `ViemProvider` and `EthersProvider`, which are bound to one chain, throw `ConfigurationError` for a different one. `createVaultBatcher(sdk, address, { chainId })` and `useVaultBatcher(address, { chainId })` read a batcher on that chain, and the batcher read hooks (`useBatchStatus`, `useBatchState`, `useCurrentBatchId`, `useTimeUntilDispatchable`, `useTimeUntilCallbackDeadline`) take a `chainId`, which is part of their query keys. A chain-pinned batcher throws `ChainMismatchError` for a write while the signer is on another chain.
+`ReadContractConfig` gains an optional `chainId`, and `GenericProvider.getBlockTimestamp` an optional `chainId` argument. `WagmiProvider` reads that chain through wagmi; `ViemProvider` and `EthersProvider`, which are bound to one chain, throw `ConfigurationError` for a different one. `createVaultBatcher(sdk, address, { chainId })` and `useVaultBatcher(address, { chainId })` read a batcher on that chain, and the batcher read hooks (`useBatchStatus`, `useBatchState`, `useCurrentBatchId`, `useTimeUntilDispatchable`, `useTimeUntilCallbackDeadline`) take a `chainId`, which is part of their query keys. The batcher write hooks (`useJoin`, `useQuit`, `useClaim`, `useRecover`, `useDispatchBatch`, `useFinalize`) take the same `chainId`, and a chain-pinned batcher throws `ChainMismatchError` for a write while the signer is on another chain. Its `depositOf` and `prepareFinalize` throw `ConfigurationError` until the provider is on that chain, since decryption runs on the provider's chain. A custom `GenericProvider` should read the `chainId` it is given, or throw for a chain it cannot read: one that ignores it answers a pinned batcher from the wrong chain.
 
 New `usePaused` (`pausedQueryOptions`) reads whether a batcher is paused, and `useBatcherTokens` (`batcherTokensQueryOptions`) its input and output token addresses. A new `onJoinSubmitted` option on `VaultBatcher.join`, `Vault.deposit` / `Vault.redeem`, `VaultGroup.deposit` / `VaultGroup.redeem` and their hooks reports the transaction hash once the wallet has sent the join. `VaultBatcher.batchState` now throws `ConfigurationError` for a state number it does not know.
 
@@ -10354,11 +10354,11 @@ While the transaction is pending, lock the form so the user cannot send twice. S
 
 After it is mined, say the amount is **queued**, not deposited. The user does not hold shares yet.
 
-A vault page can render before the wallet connects, when the provider may still be on another chain than the vault. Pass the vault's `chainId` to the read hooks (`useBatchStatus`, `useCurrentBatchId`, `usePaused`, `useBatcherTokens`, …) so they read the vault's chain; this needs a provider that can route reads, such as `WagmiProvider`.
+A vault page can render before the wallet connects, when the provider may still be on another chain than the vault. Pass the vault's `chainId` to the read hooks (`useBatchStatus`, `useCurrentBatchId`, `usePaused`, `useBatcherTokens`, …) so they read the vault's chain; this needs a provider that can route reads, such as `WagmiProvider`. Pass the same `chainId` to the write hooks (`useClaim`, `useQuit`, `useFinalize`, …): a wallet on another chain then gets `ChainMismatchError` instead of sending the transaction there.
 
 ## 3. The batch
 
-Read the batch with [`useBatchStatus`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchStatus.md). It returns the state and the timestamps that state needs in one read. The `secondsUntil*` values are correct at read time; for a live countdown, tick from the `*At` timestamps between refetches:
+Read the batch with [`useBatchStatus`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchStatus.md). It returns the state and the timestamps that state needs in one call. The `secondsUntil*` values are correct at read time; for a live countdown, tick from the `*At` timestamps between refetches:
 
 | State        | What the user sees                                    | What the user can do                              | Hooks                                                 |
 | ------------ | ----------------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------- |
@@ -12954,7 +12954,7 @@ const { batchId } = await depositBatcher.join(1_000_000n);
 const sameBatcher = vault.depositBatcher;
 ```
 
-To read a batcher on a chain other than the provider's current one, for example on a vault page shown before the wallet connects, pass `chainId`. Every read then goes to that chain, which needs a provider that can route reads, such as `WagmiProvider`. Writes still go through the signer: a write throws [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) while the signer is on another chain.
+To read a batcher on a chain other than the provider's current one, for example on a vault page shown before the wallet connects, pass `chainId`. Every read then goes to that chain, which needs a provider that can route reads, such as `WagmiProvider`. Writes still go through the signer: a write throws [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) while the signer is on another chain. Decryption runs on the provider's current chain, so `depositOf` and `prepareFinalize` throw `ConfigurationError` until the provider is on `chainId`.
 
 ```ts
 const sepoliaBatcher = createVaultBatcher(sdk, "0xDepositBatcher", { chainId: 11155111 });
@@ -25349,6 +25349,14 @@ The batcher contract address (deposit or redeem direction).
 
 ---
 
+### chainId
+
+`number | undefined`
+
+Chain the batcher is on. Pass the same `chainId` as the read hooks: while the wallet is on another chain, the mutation fails with [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending there.
+
+---
+
 ### `onSuccess`
 
 **Type:** `(data: TData, variables: TVariables, context: TContext) => void`
@@ -25532,6 +25540,14 @@ The batcher contract address (deposit or redeem direction).
 
 ---
 
+### chainId
+
+`number | undefined`
+
+Chain the batcher is on. Pass the same `chainId` as the read hooks: while the wallet is on another chain, the mutation fails with [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending there.
+
+---
+
 ### `onSuccess`
 
 **Type:** `(data: TData, variables: TVariables, context: TContext) => void`
@@ -25694,6 +25710,14 @@ The batcher contract address (deposit or redeem direction).
 
 ---
 
+### chainId
+
+`number | undefined`
+
+Chain the batcher is on. Pass the same `chainId` as the read hooks: while the wallet is on another chain, the mutation fails with [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending there.
+
+---
+
 ### `onSuccess`
 
 **Type:** `(data: TData, variables: TVariables, context: TContext) => void`
@@ -25846,6 +25870,14 @@ import { type UseRecoverConfig } from "@zama-fhe/react-sdk/vaults";
 `Address`
 
 The batcher contract address (deposit or redeem direction).
+
+---
+
+### chainId
+
+`number | undefined`
+
+Chain the batcher is on. Pass the same `chainId` as the read hooks: while the wallet is on another chain, the mutation fails with [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending there.
 
 ---
 
@@ -26014,6 +26046,14 @@ The batcher contract address (deposit or redeem direction).
 
 ---
 
+### chainId
+
+`number | undefined`
+
+Chain the batcher is on. Pass the same `chainId` as the read hooks: while the wallet is on another chain, the mutation fails with [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending there.
+
+---
+
 ### `onSuccess`
 
 **Type:** `(data: TData, variables: TVariables, context: TContext) => void`
@@ -26162,6 +26202,14 @@ import { type UseFinalizeConfig } from "@zama-fhe/react-sdk/vaults";
 `Address`
 
 The batcher contract address (deposit or redeem direction).
+
+---
+
+### chainId
+
+`number | undefined`
+
+Chain the batcher is on. Pass the same `chainId` as the read hooks: while the wallet is on another chain, the mutation fails with [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending there.
 
 ---
 
@@ -28057,7 +28105,7 @@ import { vaultQueryKeys, invalidateBatchQueries } from "@zama-fhe/sdk/vaults";
 | `.timeUntilCallbackDeadline.batcher(batcherAddr)`   | All callback-deadline countdowns for one batcher |
 | `.timeUntilCallbackDeadline.batch(batcherAddr, id)` | One batch's callback-deadline countdown          |
 
-A `batcher(...)` key is a prefix of every `batch(...)` key for that batcher, so invalidating it clears all of them at once. Each key builder also takes an optional `chainId`, set for a batcher that reads another chain than the connected one. `invalidateBatchQueries(queryClient, batcherAddr)` invalidates all five namespaces for a batcher — this is what the vault mutation hooks call after a join, quit, recover, dispatch or finalize. Balances on the batcher's input and output tokens go through the regular [`invalidateBalanceQueries`](#invalidatebalancequeries).
+A `batcher(...)` key is a prefix of every `batch(...)` key for that batcher, so invalidating it clears all of them at once. The `batch(...)` builders and the `currentBatchId`, `paused` and `batcherTokens` builders also take an optional `chainId`, set for a batcher that reads another chain than the connected one; the prefix `batcher(...)` builders leave it out, so they match pinned keys too. `invalidateBatchQueries(queryClient, batcherAddr)` invalidates all five namespaces for a batcher — this is what the vault mutation hooks call after a join, quit, recover, dispatch or finalize. Balances on the batcher's input and output tokens go through the regular [`invalidateBalanceQueries`](#invalidatebalancequeries).
 
 `useGroupDeposit` / `useGroupRedeem` invalidate, once the transaction is mined, the balance of each token the legs spent and every member's batch reads — on success and on `VaultGroupJoinUnconfirmedError` alike. `useGroupRedeem` additionally invalidates operator status for each share token.
 

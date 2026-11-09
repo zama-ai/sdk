@@ -39,11 +39,11 @@ While the transaction is pending, lock the form so the user cannot send twice. S
 
 After it is mined, say the amount is **queued**, not deposited. The user does not hold shares yet.
 
-A vault page can render before the wallet connects, when the provider may still be on another chain than the vault. Pass the vault's `chainId` to the read hooks (`useBatchStatus`, `useCurrentBatchId`, `usePaused`, `useBatcherTokens`, …) so they read the vault's chain; this needs a provider that can route reads, such as `WagmiProvider`.
+A vault page can render before the wallet connects, when the provider may still be on another chain than the vault. Pass the vault's `chainId` to the read hooks (`useBatchStatus`, `useCurrentBatchId`, `usePaused`, `useBatcherTokens`, …) so they read the vault's chain; this needs a provider that can route reads, such as `WagmiProvider`. Pass the same `chainId` to the write hooks (`useClaim`, `useQuit`, `useFinalize`, …): a wallet on another chain then gets `ChainMismatchError` instead of sending the transaction there.
 
 ## 3. The batch
 
-Read the batch with [`useBatchStatus`](../../reference/react/useBatchStatus.md). It returns the state and the timestamps that state needs in one read. The `secondsUntil*` values are correct at read time; for a live countdown, tick from the `*At` timestamps between refetches:
+Read the batch with [`useBatchStatus`](../../reference/react/useBatchStatus.md). It returns the state and the timestamps that state needs in one call. The `secondsUntil*` values are correct at read time; for a live countdown, tick from the `*At` timestamps between refetches:
 
 | State        | What the user sees                                    | What the user can do                              | Hooks                                                 |
 | ------------ | ----------------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------- |

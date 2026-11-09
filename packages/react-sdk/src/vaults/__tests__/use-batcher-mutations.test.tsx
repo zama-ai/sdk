@@ -53,6 +53,21 @@ describe("useClaim", () => {
 
     expect(queryClient).toHaveInvalidatedQueries([balanceKey]);
   });
+
+  test("refuses to send while the wallet is on another chain than the pinned one", async ({
+    renderWithProviders,
+    signer,
+  }) => {
+    const { result } = renderWithProviders(() =>
+      useClaim({ address: BATCHER_ADDRESS, chainId: 11155111 }),
+    );
+
+    await expect(act(() => result.current.mutateAsync({ batchId: 7n }))).rejects.toMatchObject({
+      name: "ChainMismatchError",
+      targetChainId: 11155111,
+    });
+    expect(signer.writeContract).not.toHaveBeenCalled();
+  });
 });
 
 describe("useQuit", () => {
