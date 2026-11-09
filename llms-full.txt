@@ -2108,7 +2108,7 @@ URL and auth are configured on the `FheChain` object (`network`, `relayerUrl`,
 > rejected at the edge). The `__type` discriminator is unchanged;
 > `ApiKeyHeader` uses `value`, while `BearerToken` uses `token`. `ApiKeyCookie`,
 > which v2 documented, is removed: use `ApiKeyHeader` with a `header` name if your
-> proxy reads the key from another header. See
+> proxy reads its credential from another header. See
 > [Relayer API keys](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/relayer-api-keys.md).
 
 
@@ -2613,7 +2613,7 @@ The SDK no longer supports the T-Rex InGen testnet (chain ID `364301`). The `ing
 - **TypeScript:** remove `{ __type: "ApiKeyCookie" }` from `FheChain.auth`. It no longer type-checks, and a config that still carries it (from untyped code, say) throws `ConfigurationError` with `Unknown auth type: ApiKeyCookie` when the SDK builds the relayer, rather than going out without credentials.
 - **Go and Rust clients:** `zama.APIKeyCookie` and `RelayerAuth::ApiKeyCookie` are removed, so code that uses them no longer compiles.
 - **Daemon protocol:** `api_key_cookie` is removed from `ChainAuth` and its field number (3) is reserved. A client that still sends it is rejected with `FAILED_PRECONDITION`; run the client and the daemon at exactly the same version.
-- **Migrate:** have your proxy read the key from a header and use `ApiKeyHeader` with the optional `header` name (the default is `x-api-key`). See [Auth methods reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md#5-auth-methods-reference).
+- **Migrate:** have your proxy read its credential from a header and use `ApiKeyHeader` with the optional `header` name (the default is `x-api-key`). See [Auth methods reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md#5-auth-methods-reference).
 
 ## 3.x
 
@@ -4589,8 +4589,8 @@ The `auth` field accepts two formats. **Which one to use depends on where your r
 // Zama-hosted relayer — API key in the x-api-key header (required)
 auth: { __type: "ApiKeyHeader", value: "your-api-key" }
 
-// Behind your own proxy — same key, in the header your proxy reads
-auth: { __type: "ApiKeyHeader", header: "x-proxy-key", value: "your-api-key" }
+// Behind your own proxy — a credential for your proxy, in the header it reads
+auth: { __type: "ApiKeyHeader", header: "x-proxy-key", value: "your-proxy-credential" }
 
 // Self-hosted relayer — only if your auth layer expects a bearer token
 auth: { __type: "BearerToken", token: "your-token" }
@@ -4602,9 +4602,9 @@ auth: { __type: "BearerToken", token: "your-token" }
 // Zama-hosted relayer -- API key in the x-api-key header (required)
 config.Auth = zama.APIKeyHeader{Value: "your-api-key"}
 
-// Behind your own proxy -- same key, in the header your proxy reads
+// Behind your own proxy -- a credential for your proxy, in the header it reads
 header := "x-proxy-key"
-config.Auth = zama.APIKeyHeader{Value: "your-api-key", Header: &header}
+config.Auth = zama.APIKeyHeader{Value: "your-proxy-credential", Header: &header}
 
 // Self-hosted relayer -- only if your auth layer expects a bearer token
 config.Auth = zama.BearerToken{Token: "your-token"}
@@ -4616,9 +4616,9 @@ config.Auth = zama.BearerToken{Token: "your-token"}
 // Zama-hosted relayer -- API key in the x-api-key header (required)
 let auth = RelayerAuth::api_key("your-api-key");
 
-// Behind your own proxy -- same key, in the header your proxy reads
+// Behind your own proxy -- a credential for your proxy, in the header it reads
 let auth = RelayerAuth::ApiKeyHeader {
-    value: "your-api-key".into(),
+    value: "your-proxy-credential".into(),
     header: Some("x-proxy-key".into()),
 };
 
@@ -4627,7 +4627,7 @@ let auth = RelayerAuth::BearerToken { token: "your-token".into() };
 ```
 
 
-`ApiKeyHeader` takes an optional `header` name (the default is `x-api-key`). Behind your own proxy, set it to whichever header your proxy reads; the proxy then forwards the key upstream as `x-api-key` for the Zama-hosted relayer.
+`ApiKeyHeader` takes an optional `header` name (the default is `x-api-key`). Behind your own proxy, set it to the header your proxy reads to authenticate the SDK; the proxy then adds the real `x-api-key` upstream, so the Zama API key stays server-side.
 
 When a browser relayer is routed through your own proxy, enforce CSRF protection
 at the proxy/application boundary (for example, with same-site cookies and your
@@ -6757,6 +6757,8 @@ The `auth` field supports two modes. For the **Zama-hosted relayer, use `ApiKeyH
 | -------------- | ------------------------------------------------ | -------------------------------------------- |
 | API key header | `{ __type: "ApiKeyHeader", value: "your-key" }`  | Zama-hosted relayer (required), or default   |
 | Bearer token   | `{ __type: "BearerToken", token: "your-token" }` | Self-hosted relayer with a bearer auth layer |
+
+Behind your own proxy, `ApiKeyHeader` also takes an optional `header` naming the header your proxy reads to authenticate the SDK.
 
 ### 7. Clean up on shutdown
 

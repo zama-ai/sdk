@@ -129,6 +129,8 @@ The `auth` field supports two modes. For the **Zama-hosted relayer, use `ApiKeyH
 | API key header | `{ __type: "ApiKeyHeader", value: "your-key" }`  | Zama-hosted relayer (required), or default   |
 | Bearer token   | `{ __type: "BearerToken", token: "your-token" }` | Self-hosted relayer with a bearer auth layer |
 
+Behind your own proxy, `ApiKeyHeader` also takes an optional `header` naming the header your proxy reads to authenticate the SDK.
+
 ### 7. Clean up on shutdown
 
 Release the SDK's resources when your process exits:

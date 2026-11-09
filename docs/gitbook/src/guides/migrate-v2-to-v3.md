@@ -361,7 +361,7 @@ pass supported client/request defaults directly to `web()` or `node()`.
 rejected at the edge). The `__type` discriminator is unchanged;
 `ApiKeyHeader` uses `value`, while `BearerToken` uses `token`. `ApiKeyCookie`,
 which v2 documented, is removed: use `ApiKeyHeader` with a `header` name if your
-proxy reads the key from another header. See
+proxy reads its credential from another header. See
 [Relayer API keys](./relayer-api-keys.md).
 {% endhint %}
 
