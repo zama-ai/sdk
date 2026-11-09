@@ -12,7 +12,7 @@ import {
   zenithTrexTestnet as fheZenith,
   type FheChain,
 } from "@zama-fhe/sdk/chains";
-import { defineChain, type Chain } from "viem";
+import { defineChain, isAddress, type Chain } from "viem";
 import { bscTestnet, hoodi, mainnet, polygon, sepolia } from "viem/chains";
 
 export interface Network {
@@ -29,6 +29,15 @@ export interface Network {
   canMint: boolean;
   /** ConfidentialVault demo (`confidentialTransferAndCall`). Deployed on Sepolia only. */
   vault?: { address: Address; confidentialToken: Address };
+  /** Confidential ERC-4626 vault for the Vaults tab: its two batchers and their deploy block. */
+  batchVault?: BatchVault;
+}
+
+export interface BatchVault {
+  depositBatcher: Address;
+  redeemBatcher: Address;
+  /** The batch list reads the batchers' events from this block. */
+  fromBlock: bigint;
 }
 
 interface NetworkInput extends Omit<Network, "chain" | "fhe"> {
@@ -62,6 +71,28 @@ const zenith = defineChain({
   },
 });
 
+// The Vaults tab shows a vault only when both batcher addresses are set (see .env.example).
+function batchVaultFromEnv(): BatchVault | undefined {
+  const depositBatcher = process.env.NEXT_PUBLIC_VAULT_DEPOSIT_BATCHER;
+  const redeemBatcher = process.env.NEXT_PUBLIC_VAULT_REDEEM_BATCHER;
+  if (!depositBatcher || !redeemBatcher) {
+    return undefined;
+  }
+  for (const [name, value] of [
+    ["NEXT_PUBLIC_VAULT_DEPOSIT_BATCHER", depositBatcher],
+    ["NEXT_PUBLIC_VAULT_REDEEM_BATCHER", redeemBatcher],
+  ]) {
+    if (!isAddress(value)) {
+      throw new Error(`${name} is not a valid address: ${value}`);
+    }
+  }
+  return {
+    depositBatcher: depositBatcher as Address,
+    redeemBatcher: redeemBatcher as Address,
+    fromBlock: BigInt(process.env.NEXT_PUBLIC_VAULT_FROM_BLOCK || "0"),
+  };
+}
+
 export const networks = {
   sepolia: defineNetwork({
     label: "Sepolia",
@@ -79,6 +110,7 @@ export const networks = {
       confidentialToken: (process.env.NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN ||
         "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639") as Address,
     },
+    batchVault: batchVaultFromEnv(),
   }),
   // Cleartext rows are development deployments: "encrypted" values are stored in cleartext
   // on-chain and there is no relayer or KMS. They exist to integrate against the SDK on

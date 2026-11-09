@@ -17,6 +17,7 @@ import {
   type AppTab,
 } from "@/components/PageChrome";
 import { NoTokenPanel, SelectedTokenPanel } from "@/components/SelectedTokenPanel";
+import { VaultsTab } from "@/components/vaults/VaultsTab";
 import { ENVIRONMENTS, isCustomized, labelFor, networkId } from "@/lib/environment";
 import { useEnabledNetworks } from "@/lib/hooks";
 import { networkForChain, networks } from "@/lib/networks";
@@ -190,8 +191,12 @@ export default function Home() {
       {picker}
       <AppTabs value={tab} onChange={setTab} />
       <div role="tabpanel" id={`tabpanel-${tab}`} aria-labelledby={`tab-${tab}`}>
-        {/* Remounted on an environment change: the same chain, but other tokens. */}
-        <TokenScreen key={env} chainId={chainId} address={address} view={tab} />
+        {tab === "vaults" ? (
+          <VaultsTab account={address} />
+        ) : (
+          // Remounted on an environment change: the same chain, but other tokens.
+          <TokenScreen key={env} chainId={chainId} address={address} view={tab} />
+        )}
       </div>
     </main>
   );

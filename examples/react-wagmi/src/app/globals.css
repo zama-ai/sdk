@@ -398,3 +398,18 @@ body {
   color: #0f172a;
   box-shadow: 0 1px 2px rgb(15 23 42 / 0.08);
 }
+
+/* Vault batch list */
+.batch-list {
+  list-style: none;
+}
+.batch-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+.batch-list li + li {
+  border-top: 1px solid #f1f5f9;
+}

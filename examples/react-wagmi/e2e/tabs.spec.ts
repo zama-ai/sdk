@@ -27,4 +27,10 @@ test.describe("tabs", () => {
     await expect(page.getByText("Delegation — as owner")).toBeVisible();
     await expect(page.getByText("Shield — ERC-20 → Confidential")).toHaveCount(0);
   });
+
+  test("shows a setup hint on the Vaults tab when no vault is configured", async ({ page }) => {
+    await page.getByRole("tab", { name: "Vaults" }).click();
+    await expect(page.getByText(/No vault is configured for this network/)).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Confidential token" })).toHaveCount(0);
+  });
 });
