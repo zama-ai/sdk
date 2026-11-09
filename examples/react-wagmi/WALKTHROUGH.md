@@ -27,7 +27,11 @@ page.tsx                         — wallet connect, network picker, tabs, token
 ├── PendingUnshieldCard.tsx      — recover an interrupted unshield from IndexedDB
 ├── DelegateDecryptionCard.tsx   — grant another wallet the right to decrypt your balance
 ├── RevokeDelegationCard.tsx     — revoke that right
-└── DecryptAsCard.tsx            — decrypt another wallet's balance (as a delegate)
+├── DecryptAsCard.tsx            — decrypt another wallet's balance (as a delegate)
+└── vaults/                      — the Vaults tab
+    ├── VaultsTab.tsx            — the vault's tokens, the decrypt click, and the position
+    ├── VaultActionCard.tsx      — the Deposit or Withdraw box: balance, form, batch list
+    └── BatchList.tsx            — one row per open batch, an exhaustive switch on its state
 ```
 
 ---
@@ -457,7 +461,31 @@ confidential balance back via `confidentialTransfer`.
 
 ---
 
-## 11. Running locally
+## 11. Confidential vault deposits and withdrawals (Vaults tab)
+
+A vault deposit or withdrawal does not settle when its transaction is mined. The amount joins
+a batch, the batch is sent to the vault, and the user claims the result once it settles. The
+Vaults tab shows each of those steps, following the
+[Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide.
+
+- **Tokens.** `useBatcherTokens` reads the vault's asset and share from the deposit batcher,
+  so the only configuration is the two batcher addresses (the `batchVault` field of the
+  Sepolia row in `src/lib/networks.ts`).
+- **Decrypt on click.** One `useGrantPermit` call covers both tokens and both batchers, so the
+  position card's "Decrypt balances" button is the only signature the tab asks for.
+- **Send.** `useDeposit` and `useRedeem` return the batch id. The button explains why it is
+  disabled (`usePaused`, no amount, above balance), and `onJoinSubmitted` tells "confirm in
+  your wallet" from "waiting for the transaction".
+- **Open batches.** `lib/openBatches.ts` reads the batcher's `Joined`, `Claimed` and `Quit`
+  events for the account and passes them to `openBatchIds`. A claim or quit leaves the batch
+  state unchanged, so the list is the only place that knows the user is done.
+- **One row per batch.** `useBatchStatus` returns a union keyed on `state`, and `BatchList.tsx`
+  switches on it exhaustively: cancel while pending, settle a late dispatched batch with
+  `useFinalize`, claim once finalized, take a canceled amount back with `useQuit`.
+
+---
+
+## 12. Running locally
 
 ```bash
 cd examples/react-wagmi
@@ -472,7 +500,7 @@ CI=1 npm run test:e2e                # same suite against a production build, as
 
 ---
 
-## 12. Security headers (`src/proxy.ts`, `next.config.ts`)
+## 13. Security headers (`src/proxy.ts`, `next.config.ts`)
 
 `src/proxy.ts` runs before every page render and sets a Content Security Policy with a
 fresh nonce. Next.js reads the nonce from the request's `Content-Security-Policy` header

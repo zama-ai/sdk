@@ -17,6 +17,7 @@ import {
   type AppTab,
 } from "@/components/PageChrome";
 import { NoTokenPanel, SelectedTokenPanel } from "@/components/SelectedTokenPanel";
+import { VaultsTab } from "@/components/vaults/VaultsTab";
 import { useEnabledNetworks } from "@/lib/hooks";
 import { networkForChain, networks } from "@/lib/networks";
 import { useWalletConnection } from "@/lib/wallet";
@@ -163,7 +164,11 @@ export default function Home() {
       {picker}
       <AppTabs value={tab} onChange={setTab} />
       <div role="tabpanel" id={`tabpanel-${tab}`} aria-labelledby={`tab-${tab}`}>
-        <TokenScreen chainId={chainId} address={address} view={tab} />
+        {tab === "vaults" ? (
+          <VaultsTab account={address} />
+        ) : (
+          <TokenScreen chainId={chainId} address={address} view={tab} />
+        )}
       </div>
     </main>
   );

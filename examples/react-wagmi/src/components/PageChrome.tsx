@@ -225,6 +225,7 @@ export function TokenSelector({ value, options, pending, error, onChange }: Toke
 
 export const APP_TABS = [
   { id: "tokens", label: "Tokens" },
+  { id: "vaults", label: "Vaults" },
   { id: "advanced", label: "Advanced" },
 ] as const;
 
