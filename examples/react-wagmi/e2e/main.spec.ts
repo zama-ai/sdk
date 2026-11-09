@@ -30,10 +30,11 @@ test.describe("main screen", () => {
     await expect(page.getByText("Shield — ERC-20 → Confidential")).toBeVisible();
     await expect(page.getByText("Confidential Transfer")).toBeVisible();
     await expect(page.getByText("Unshield — Confidential → ERC-20")).toBeVisible();
+    await expect(page.getByText(/move real funds/)).toHaveCount(0);
+    await page.getByRole("tab", { name: "Advanced" }).click();
     await expect(page.getByText("Grant Decryption Access")).toBeVisible();
     await expect(page.getByText("Revoke Decryption Access")).toBeVisible();
     await expect(page.getByText("Decrypt Balance On Behalf Of")).toBeVisible();
-    await expect(page.getByText(/move real funds/)).toHaveCount(0);
   });
 
   test("disconnect returns to the connect screen", async ({ page }) => {
