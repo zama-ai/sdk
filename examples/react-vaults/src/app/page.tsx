@@ -78,7 +78,21 @@ export default function Home() {
     // Keyed on the account: a new account gets a fresh signer and SDK instance.
     <Providers key={account} account={account}>
       <main>
-        <p>Connected as {account}</p>
+        <p>
+          Connected as {account}{" "}
+          <button
+            onClick={() => {
+              // Drops the site's wallet permission where the wallet supports it, so a
+              // reload does not reconnect silently. The local state is cleared either way.
+              void window.ethereum
+                ?.request({ method: "wallet_revokePermissions", params: [{ eth_accounts: {} }] })
+                .catch(() => {});
+              setAccount(undefined);
+            }}
+          >
+            Disconnect
+          </button>
+        </p>
         <VaultForm account={account} />
         <BatchList title="Deposits" batcher={VAULT.depositBatcher} account={account} />
         <BatchList title="Withdrawals" batcher={VAULT.redeemBatcher} account={account} />

@@ -1,10 +1,19 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useBatchStatus, useClaim, useFinalize, useQuit } from "@zama-fhe/react-sdk/vaults";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useHasPermit, useMetadata } from "@zama-fhe/react-sdk";
+import {
+  useBatcherTokens,
+  useBatchStatus,
+  useClaim,
+  useFinalize,
+  useQuit,
+  useVaultBatcher,
+} from "@zama-fhe/react-sdk/vaults";
 import type { Address } from "@zama-fhe/sdk";
 import { BatchState } from "@zama-fhe/sdk/vaults";
+import { formatUnits } from "viem";
 import { FINALIZE_AFTER_SECONDS } from "@/lib/config";
 import { removeOpenBatch, useOpenBatches } from "@/lib/open-batches";
 
@@ -65,7 +74,8 @@ function BatchRow({
   const row = (label: string, action?: { label: string; run: () => void }): ReactNode => (
     <li>
       <span>
-        Batch #{batchId.toString()}: {label}
+        Batch #{batchId.toString()}
+        <JoinedAmount batcher={batcher} account={account} batchId={batchId} />: {label}
         {actionError && <span className="error"> {actionError.message}</span>}
       </span>
       {action && (
@@ -112,6 +122,36 @@ function BatchRow({
     default:
       return status satisfies never;
   }
+}
+
+/**
+ * The amount `account` put into the batch, decrypted and shown in the batcher's input token.
+ * Waits for the permit the form grants, so it never prompts the wallet on its own.
+ */
+function JoinedAmount({
+  batcher,
+  account,
+  batchId,
+}: Omit<BatchListProps, "title"> & { batchId: bigint }) {
+  const vaultBatcher = useVaultBatcher(batcher);
+  const { data: hasPermit } = useHasPermit({ contractAddresses: [batcher] });
+  const { data: tokens } = useBatcherTokens({ address: batcher });
+  const { data: amount } = useQuery({
+    // A bigint cannot go in a query key: TanStack hashes keys with JSON.stringify.
+    queryKey: ["joined-amount", batcher, account, batchId.toString()],
+    queryFn: () => vaultBatcher.depositOf(batchId, account),
+    // The amount joined into a batch does not change.
+    staleTime: Infinity,
+    enabled: hasPermit === true,
+  });
+  return amount === undefined || !tokens ? null : (
+    <Amount token={tokens.fromToken} amount={amount} />
+  );
+}
+
+function Amount({ token, amount }: { token: Address; amount: bigint }) {
+  const { data: metadata } = useMetadata(token);
+  return metadata ? ` (${formatUnits(amount, metadata.decimals)} ${metadata.symbol})` : null;
 }
 
 /** The current Unix time in seconds, updated every second, for local countdowns. */

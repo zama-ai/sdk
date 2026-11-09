@@ -11,6 +11,7 @@ import {
 import { useBatcherTokens, useDeposit, usePaused, useRedeem } from "@zama-fhe/react-sdk/vaults";
 import type { Address } from "@zama-fhe/sdk";
 import { formatUnits, parseUnits } from "viem";
+import { MintButton } from "@/components/MintButton";
 import { VAULT } from "@/lib/config";
 import { addOpenBatch } from "@/lib/open-batches";
 
@@ -51,8 +52,10 @@ function Form({ account, assetToken, shareToken }: FormProps) {
   const { data: paused } = usePaused({ address: mode.batcher });
 
   // The first decryption asks the wallet for a signature, so it starts from a click.
-  // One permit covers both tokens, so switching mode does not ask again.
-  const { data: hasPermit } = useHasPermit({ contractAddresses: [assetToken, shareToken] });
+  // One permit covers both tokens and both batchers (for the amounts in the batch list),
+  // so switching mode does not ask again.
+  const permitContracts = [assetToken, shareToken, VAULT.depositBatcher, VAULT.redeemBatcher];
+  const { data: hasPermit } = useHasPermit({ contractAddresses: permitContracts });
   const grantPermit = useGrantPermit();
   const balance = useConfidentialBalance(
     { address: mode.token, account },
@@ -114,7 +117,7 @@ function Form({ account, assetToken, shareToken }: FormProps) {
         {!hasPermit ? (
           <button
             disabled={grantPermit.isPending}
-            onClick={() => grantPermit.mutate([assetToken, shareToken])}
+            onClick={() => grantPermit.mutate(permitContracts)}
           >
             {grantPermit.isPending ? "Sign in your wallet…" : "Decrypt"}
           </button>
@@ -122,6 +125,14 @@ function Form({ account, assetToken, shareToken }: FormProps) {
           "Decrypting…"
         ) : (
           `${formatUnits(balance.data, metadata.decimals)} ${metadata.symbol}`
+        )}{" "}
+        {modeName === "deposit" && metadata && (
+          <MintButton
+            account={account}
+            token={assetToken}
+            decimals={metadata.decimals}
+            symbol={metadata.symbol}
+          />
         )}
       </p>
 
