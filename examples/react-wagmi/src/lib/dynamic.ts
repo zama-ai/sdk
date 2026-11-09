@@ -1,14 +1,16 @@
 // Dynamic's headless SDK, connect-only (no sign-in, no embedded wallet): it supplies the wallet
 // catalogue, the connect step and each wallet's EIP-1193 provider. wagmi owns the session.
+// First, so jitless is on before the Dynamic SDK builds its schemas on import.
+import "@/lib/zodJitless";
 import {
   connectWalletOption,
   createDynamicClient,
   getWalletAccounts,
   getWalletOptionsCatalogue,
   getWalletProviderDataByKey,
+  initializeClient,
   onEvent,
   removeWalletAccount,
-  waitForClientInitialized,
   type DynamicClient,
   type NetworkData,
   type WalletAccount,
@@ -41,12 +43,13 @@ export const DYNAMIC_ENVIRONMENT_ID = process.env.NEXT_PUBLIC_DYNAMIC_ENVIRONMEN
 const BROWSER_WALLET_WAIT_MS = 3000;
 
 /** Dynamic's catalogue lists WalletConnect with no connection option, so the app pairs it. */
-export const WALLETCONNECT_KEY = "walletconnect";
+const WALLETCONNECT_KEY = "walletconnect";
 
 interface Dynamic {
   client: DynamicClient;
-  wallets: DynamicWallets;
-  initialized: Promise<boolean>;
+  initialized: Promise<void>;
+  /** Settles when a wallet that has not registered yet is no longer expected to. */
+  stopWaiting: (key: string) => Promise<unknown>;
 }
 
 let dynamic: Dynamic | undefined;
@@ -66,65 +69,12 @@ function toNetworkData(chain: Chain): NetworkData {
   };
 }
 
-function createWallets(
-  client: DynamicClient,
-  stopWaiting: (key: string) => Promise<unknown>,
-): DynamicWallets {
-  const find = (key: string): DynamicWallet | undefined => {
-    const provider = getWalletProviders(client).find((candidate) => candidate.key === key);
-    if (!provider) return undefined;
-    if (!isEvmWalletProvider(provider) || !provider.request) {
-      throw new Error(`Dynamic provider "${key}" is not an EIP-1193 EVM provider`);
-    }
-    return provider;
-  };
-
-  const onRegistered = (key: string, listener: () => void) =>
-    onEvent(
-      {
-        event: "walletProviderChanged",
-        listener: (event) => {
-          if (event.walletProviderKey === key) listener();
-        },
-      },
-      client,
-    );
-
-  const waitFor = async (key: string) => {
-    const present = find(key);
-    if (present) return present;
-    let unsubscribe = () => {};
-    const registered = new Promise<void>((resolve) => {
-      unsubscribe = onRegistered(key, resolve);
-    });
-    try {
-      await Promise.race([registered, stopWaiting(key)]);
-    } finally {
-      unsubscribe();
-    }
-    return find(key);
-  };
-
-  return {
-    find,
-    waitFor,
-    onRegistered,
-    displayName: (key) =>
-      getWalletProviderDataByKey({ walletProviderKey: key }, client).metadata.displayName,
-    release: async (key) => {
-      const accounts = getWalletAccounts(client).filter((a) => a.walletProviderKey === key);
-      await Promise.all(
-        accounts.map((walletAccount) => removeWalletAccount({ walletAccount }, client)),
-      );
-    },
-    toNetworkData,
-  };
-}
-
 function startDynamic(): Dynamic {
   const client = createDynamicClient({
     environmentId: DYNAMIC_ENVIRONMENT_ID,
     metadata: { name: "Zama Confidential Token Quickstart" },
+    // Initialized below, so a failure reaches our handler instead of going unhandled.
+    autoInitialize: false,
     // The network table is the only set of networks Dynamic knows, whatever its dashboard lists.
     transformers: {
       networksData: () => NETWORK_KEYS.map((key) => toNetworkData(networks[key].chain)),
@@ -137,38 +87,93 @@ function startDynamic(): Dynamic {
   // In-app wallet browsers inject `window.ethereum` without announcing it.
   addEvmWindowInjectedExtension(client);
 
-  const initialized = waitForClientInitialized(client).then(
-    () => true,
-    (error: unknown) => {
-      console.error("Dynamic did not initialize", error);
-      // Drop the failed client so the dialog's Retry starts a fresh one.
-      dynamic = undefined;
-      return false;
-    },
-  );
+  const initialized = initializeClient(client);
   // Restoring a WalletConnect session needs the project settings initialization loads.
-  const walletConnectRestored = initialized.then(async (ok) => {
-    if (!ok) return;
-    try {
-      await addWalletConnectEvmExtension(client);
-    } catch (error) {
-      console.error("Could not start WalletConnect", error);
-    }
-  });
+  const walletConnectRestored = initialized.then(
+    () =>
+      addWalletConnectEvmExtension(client).catch((error: unknown) => {
+        console.error("Could not start WalletConnect", error);
+      }),
+    () => {},
+  );
   const browserWalletsAnnounced = new Promise((resolve) =>
     setTimeout(resolve, BROWSER_WALLET_WAIT_MS),
   );
-  const stopWaiting = (key: string) =>
-    key.split(":")[1] === "walletConnect" ? walletConnectRestored : browserWalletsAnnounced;
 
-  return { client, wallets: createWallets(client, stopWaiting), initialized };
+  const started: Dynamic = {
+    client,
+    initialized,
+    // A WalletConnect provider key reads `<wallet>:walletConnect:<session topic>`.
+    stopWaiting: (key) =>
+      key.split(":")[1] === "walletConnect" ? walletConnectRestored : browserWalletsAnnounced,
+  };
+  initialized.catch((error: unknown) => {
+    console.error("Dynamic did not initialize", error);
+    // A client initializes once, so the dialog's Retry needs a fresh one.
+    if (dynamic === started) dynamic = undefined;
+  });
+  return started;
 }
 
-export function getDynamic(): Dynamic {
+function getDynamic(): Dynamic {
   if (typeof window === "undefined") throw new Error("The Dynamic client is browser-only");
   dynamic ??= startDynamic();
   return dynamic;
 }
+
+function findWallet(key: string): DynamicWallet | undefined {
+  const provider = getWalletProviders(getDynamic().client).find(
+    (candidate) => candidate.key === key,
+  );
+  if (!provider) return undefined;
+  if (!isEvmWalletProvider(provider) || !provider.request) {
+    throw new Error(`Dynamic provider "${key}" is not an EIP-1193 EVM provider`);
+  }
+  return provider;
+}
+
+function onRegistered(key: string, listener: () => void): () => void {
+  return onEvent(
+    {
+      event: "walletProviderChanged",
+      listener: (event) => {
+        if (event.walletProviderKey === key) listener();
+      },
+    },
+    getDynamic().client,
+  );
+}
+
+/** Looks up the current client on every call, so a connector outlives a client that failed. */
+export const dynamicWallets: DynamicWallets = {
+  find: findWallet,
+  onRegistered,
+  waitFor: async (key) => {
+    const present = findWallet(key);
+    if (present) return present;
+    let unsubscribe = () => {};
+    const registered = new Promise<void>((resolve) => {
+      unsubscribe = onRegistered(key, resolve);
+    });
+    try {
+      await Promise.race([registered, getDynamic().stopWaiting(key)]);
+    } finally {
+      unsubscribe();
+    }
+    return findWallet(key);
+  },
+  displayName: (key) =>
+    getWalletProviderDataByKey({ walletProviderKey: key }, getDynamic().client).metadata
+      .displayName,
+  release: async (key) => {
+    const { client } = getDynamic();
+    const accounts = getWalletAccounts(client).filter((a) => a.walletProviderKey === key);
+    await Promise.all(
+      accounts.map((walletAccount) => removeWalletAccount({ walletAccount }, client)),
+    );
+  },
+  toNetworkData,
+};
 
 export interface CatalogueWallet {
   key: string;
@@ -196,25 +201,25 @@ function toCatalogueWallet(option: WalletOption): CatalogueWallet {
 /** Every EVM wallet in Dynamic's catalogue, installed ones first, WalletConnect always listed. */
 export async function loadWallets(): Promise<CatalogueWallet[]> {
   const { client, initialized } = getDynamic();
-  if (!(await initialized)) throw new Error("Dynamic did not initialize");
+  await initialized;
   const catalogue = await getWalletOptionsCatalogue({ includeMobileOptions: true }, client);
   const offered = catalogue
     .filter((option) => evmConnections(option).length > 0 || option.key === WALLETCONNECT_KEY)
-    .map(toCatalogueWallet);
-  const hasWalletConnect = offered.some((wallet) => wallet.key === WALLETCONNECT_KEY);
-  return [
-    ...offered.filter((wallet) => wallet.installed),
-    ...offered.filter((wallet) => !wallet.installed),
-    ...(hasWalletConnect
-      ? []
-      : [{ key: WALLETCONNECT_KEY, name: "WalletConnect", installed: false }]),
-  ];
+    .map(toCatalogueWallet)
+    .sort((a, b) => Number(b.installed) - Number(a.installed));
+  if (!offered.some((wallet) => wallet.key === WALLETCONNECT_KEY)) {
+    offered.push({ key: WALLETCONNECT_KEY, name: "WalletConnect", installed: false });
+  }
+  return offered;
 }
 
-async function pairOverWalletConnect(onPairingUri: (uri: string) => void): Promise<WalletAccount> {
+async function pairOverWalletConnect(
+  client: DynamicClient,
+  onPairingUri: (uri: string) => void,
+): Promise<WalletAccount> {
   const { uri, approval } = await connectWithWalletConnectEvm(
     { addToDynamicWalletAccounts: true },
-    getDynamic().client,
+    client,
   );
   onPairingUri(uri);
   const [first] = (await approval()).walletAccounts;
@@ -222,11 +227,11 @@ async function pairOverWalletConnect(onPairingUri: (uri: string) => void): Promi
   return first;
 }
 
-function authorize(walletKey: string, onPairingUri: (uri: string) => void) {
-  if (walletKey === WALLETCONNECT_KEY) return pairOverWalletConnect(onPairingUri);
+function authorize(client: DynamicClient, walletKey: string, onPairingUri: (uri: string) => void) {
+  if (walletKey === WALLETCONNECT_KEY) return pairOverWalletConnect(client, onPairingUri);
   return connectWalletOption(
     { walletKey, chain: "EVM", onConnectionUri: ({ uri }) => onPairingUri(uri) },
-    getDynamic().client,
+    client,
   );
 }
 
@@ -242,17 +247,22 @@ export async function connectWallet(
   walletKey: string,
   { onPairingUri, signal }: ConnectOptions,
 ): Promise<void> {
-  const walletAccount = await authorize(walletKey, onPairingUri);
-  const { client, wallets } = getDynamic();
+  const { client } = getDynamic();
+  const walletAccount = await authorize(client, walletKey, onPairingUri);
+  // Logged, not thrown, so a failed cleanup never hides the error the user should see.
+  const release = () =>
+    removeWalletAccount({ walletAccount }, client).catch((error: unknown) => {
+      console.warn("Could not release the wallet", error);
+    });
   if (signal.aborted) {
     // The user left before the wallet answered, e.g. a phone approved a stale pairing.
-    await removeWalletAccount({ walletAccount }, client);
+    await release();
     signal.throwIfAborted();
   }
   try {
-    await connectDynamicWallet(config, wallets, walletAccount.walletProviderKey);
+    await connectDynamicWallet(config, dynamicWallets, walletAccount.walletProviderKey);
   } catch (error) {
-    await removeWalletAccount({ walletAccount }, client);
+    await release();
     throw error;
   }
 }

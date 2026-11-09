@@ -13,6 +13,7 @@ page.tsx                         — wallet connect, network picker, token selec
 ├── lib/wallet.tsx               — wallet stack: Dynamic connect dialog or wagmi injected connector, built from the table
 ├── lib/dynamic.ts               — Dynamic headless client: wallet catalogue and connect step
 ├── lib/dynamicConnector.ts      — wagmi connector over a Dynamic-authorized wallet
+├── lib/zodJitless.ts            — turns off zod's eval probe, which the page CSP blocks
 ├── ConnectWalletDialog.tsx      — wallet picker and WalletConnect pairing
 ├── providers.tsx                — wallet providers + ZamaProvider config, built from the network table
 │   ├── /api/networks            — which networks the server can serve (drives the picker)
@@ -121,8 +122,8 @@ headless SDK (`lib/dynamic.ts`) runs connect-only — no sign-in, no embedded wa
 supplies the wallet catalogue, the connect step (extension prompt, WalletConnect pairing) and
 each wallet's EIP-1193 provider. The dialog lists every EVM wallet in the catalogue, installed
 ones first. WalletConnect shows its pairing code to copy into the wallet (the Safe web app
-accepts a pasted code) or to open as a link. Going back, closing or picking another wallet aborts the attempt,
-and a wallet that approves afterwards is released.
+accepts a pasted code) or to open as a link. Going back, closing or picking another wallet
+aborts the attempt, and a wallet that approves afterwards is released.
 
 Once Dynamic authorizes a wallet, a wagmi connector of the app's own
 (`lib/dynamicConnector.ts`) wraps its provider, and wagmi persists, restores and follows the
@@ -137,8 +138,13 @@ connection:
   gives up after 3 s.
 - **Follows the wallet.** Account and chain switches inside the wallet reach wagmi through
   Dynamic's provider events.
-- **Disconnect** removes the wallet's Dynamic account, which also ends a WalletConnect session. It never
-  calls Dynamic's `logout()`, which strips every listener from the shared `window.ethereum`.
+- **Stays on the chains a WalletConnect session approved.** Dynamic sends a WalletConnect
+  wallet's requests on the chain it last recorded for it, which starts as the first network in
+  the table. The connector moves that record onto a chain the session approved, keeps it in
+  step with the wallet's own switches, and rejects a switch to any other chain.
+- **Disconnect** removes the wallet's Dynamic account, which also ends a WalletConnect session
+  (if that fails, it logs a warning and wagmi disconnects anyway). It never calls Dynamic's
+  `logout()`, which strips every listener from the shared `window.ethereum`.
 
 `src/proxy.ts` widens the Content Security Policy for Dynamic's API and WalletConnect only when
 the environment ID is set.

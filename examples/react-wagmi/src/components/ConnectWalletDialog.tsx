@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useConfig } from "wagmi";
 import { connectWallet, loadWallets, type CatalogueWallet } from "@/lib/dynamic";
+import { describeError } from "@/lib/errors";
 
 export type ConnectState =
   | { phase: "closed" }
@@ -30,6 +31,8 @@ export function ConnectWalletDialog({ state, onStateChange: setState }: ConnectW
     queryFn: loadWallets,
     enabled: isOpen,
     staleTime: 5 * 60_000,
+    // A wrong environment ID or a disallowed origin fails the same way every time.
+    retry: false,
   });
 
   useEffect(() => {
@@ -59,8 +62,7 @@ export function ConnectWalletDialog({ state, onStateChange: setState }: ConnectW
       if (!signal.aborted) setState({ phase: "closed" });
     } catch (error) {
       if (signal.aborted) return;
-      const message = error instanceof Error ? error.message : String(error);
-      setState({ phase: "failed", wallet, message });
+      setState({ phase: "failed", wallet, message: describeError(error, "Unknown error") });
     }
   };
 
@@ -93,7 +95,7 @@ export function ConnectWalletDialog({ state, onStateChange: setState }: ConnectW
       {state.phase === "wallets" && (
         <WalletList
           wallets={wallets.data}
-          isError={wallets.isError}
+          error={wallets.error}
           onRetry={() => void wallets.refetch()}
           onSelect={(wallet) => void run(wallet)}
         />
@@ -134,18 +136,18 @@ export function ConnectWalletDialog({ state, onStateChange: setState }: ConnectW
 
 interface WalletListProps {
   wallets: CatalogueWallet[] | undefined;
-  isError: boolean;
+  error: Error | null;
   onRetry: () => void;
   onSelect: (wallet: CatalogueWallet) => void;
 }
 
-function WalletList({ wallets, isError, onRetry, onSelect }: WalletListProps) {
+function WalletList({ wallets, error, onRetry, onSelect }: WalletListProps) {
   const [search, setSearch] = useState("");
-  if (isError) {
+  if (error) {
     return (
       <>
         <div className="alert alert-error card-status" role="alert">
-          Couldn&apos;t load wallets.
+          Couldn&apos;t load wallets: {describeError(error, "Unknown error")}
         </div>
         <button type="button" className="btn btn-secondary btn-full" onClick={onRetry}>
           Retry
@@ -198,7 +200,7 @@ function Pairing({
   uri: string;
   onBack: () => void;
 }) {
-  const [copied, setCopied] = useState(false);
+  const [copy, setCopy] = useState<"idle" | "copied" | "failed">("idle");
   return (
     <>
       <p className="token-meta">
@@ -211,13 +213,19 @@ function Pairing({
           type="button"
           className="btn btn-primary btn-full"
           onClick={() => {
-            void navigator.clipboard.writeText(uri).then(
-              () => setCopied(true),
-              () => {},
+            // No clipboard API outside a secure context, such as a dev server on a LAN IP.
+            const written = navigator.clipboard?.writeText(uri) ?? Promise.reject();
+            written.then(
+              () => setCopy("copied"),
+              () => setCopy("failed"),
             );
           }}
         >
-          {copied ? "Copied" : "Copy"}
+          {copy === "copied"
+            ? "Copied"
+            : copy === "failed"
+              ? "Copy failed, select the code"
+              : "Copy"}
         </button>
         <a className="btn btn-secondary btn-full" href={uri}>
           Open in wallet

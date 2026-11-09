@@ -2,7 +2,13 @@
 // connector, whose `connect()` never prompts — it reads the accounts the wallet already shares.
 import { NetworkNotAddedError, type NetworkData } from "@dynamic-labs-sdk/client";
 import type { EvmWalletProvider } from "@dynamic-labs-sdk/evm";
-import { getAddress, type Address, type Chain, type EIP1193RequestFn } from "viem";
+import {
+  getAddress,
+  SwitchChainError,
+  type Address,
+  type Chain,
+  type EIP1193RequestFn,
+} from "viem";
 import {
   ChainNotConfiguredError,
   createConnector,
@@ -22,7 +28,10 @@ export type DynamicWallet = Pick<
   | "events"
   | "switchActiveNetwork"
   | "addNetwork"
->;
+> & {
+  /** WalletConnect wallets only: the session the wallet approved. */
+  getSession?: () => { namespaces: Record<string, { accounts: string[]; chains?: string[] }> };
+};
 
 /** Browser wallets register with Dynamic as they announce, so a lookup can miss on a reload. */
 export interface DynamicWallets {
@@ -114,10 +123,38 @@ function followWallet(
   };
 }
 
+/** The chains a WalletConnect session approved; `undefined` for any other wallet. */
+function sessionChainIds(wallet: DynamicWallet): number[] | undefined {
+  const namespace = wallet.getSession?.().namespaces.eip155;
+  if (!namespace) return undefined;
+  // CAIP-2 chains (`eip155:1`); accounts are CAIP-10 (`eip155:1:0x…`) and carry them too.
+  const chains = namespace.chains ?? namespace.accounts;
+  return [...new Set(chains.map((chain) => Number(chain.split(":")[1])))];
+}
+
+/** Dynamic sends WalletConnect requests on its recorded chain (initially the first network). */
+async function activeChainId(wallet: DynamicWallet): Promise<number> {
+  const { networkId } = await wallet.getActiveNetworkId();
+  const approved = sessionChainIds(wallet);
+  if (!approved || approved.includes(Number(networkId))) return Number(networkId);
+  const [first] = approved;
+  if (first === undefined || !wallet.switchActiveNetwork) {
+    throw new Error("The WalletConnect session approved no chain this app can use");
+  }
+  await wallet.switchActiveNetwork({ networkId: String(first) });
+  return first;
+}
+
 /** Through Dynamic, so a WalletConnect wallet's later requests also move to the new chain. */
 async function switchWalletChain(wallet: DynamicWallet, chain: Chain, wallets: DynamicWallets) {
   const { switchActiveNetwork, addNetwork } = wallet;
   if (!switchActiveNetwork) throw new Error("The wallet cannot switch networks");
+  const approved = sessionChainIds(wallet);
+  if (approved && !approved.includes(chain.id)) {
+    throw new SwitchChainError(
+      new Error(`The wallet's WalletConnect session does not include ${chain.name}`),
+    );
+  }
   const networkId = String(chain.id);
   try {
     await switchActiveNetwork({ networkId });
@@ -152,7 +189,17 @@ export function dynamicConnector(
         if (accounts.length === 0) listeners.onDisconnect();
         else config.emitter.emit("change", { accounts: checksummed(accounts) });
       },
-      onChainChanged: (chainId) => config.emitter.emit("change", { chainId: Number(chainId) }),
+      onChainChanged: (chainId) => {
+        const wallet = wallets.find(key);
+        // A WalletConnect wallet's own switch does not move Dynamic's record of its chain.
+        const follow =
+          wallet && sessionChainIds(wallet)
+            ? wallet.switchActiveNetwork?.({ networkId: String(Number(chainId)) })
+            : undefined;
+        void Promise.resolve(follow)
+          .catch((error: unknown) => console.warn("Could not follow the wallet's chain", error))
+          .then(() => config.emitter.emit("change", { chainId: Number(chainId) }));
+      },
       onDisconnect: () => {
         stop();
         config.emitter.emit("disconnect");
@@ -169,7 +216,7 @@ export function dynamicConnector(
         const { addresses } = await wallet.getConnectedAddresses();
         if (addresses.length === 0) throw new Error(`Wallet "${name}" has not authorized this app`);
         stopFollowing ??= followWallet(wallets, key, wallet, listeners);
-        const { networkId } = await wallet.getActiveNetworkId();
+        const chainId = await activeChainId(wallet);
         await config.storage?.setItem(SAVED_WALLET_STORAGE_KEY, { key, name });
         const accounts = checksummed(addresses);
         return {
@@ -177,7 +224,7 @@ export function dynamicConnector(
           accounts: (withCapabilities
             ? accounts.map((address) => ({ address, capabilities: {} }))
             : accounts) as never,
-          chainId: Number(networkId),
+          chainId,
         };
       },
 
@@ -196,8 +243,7 @@ export function dynamicConnector(
       },
 
       async getChainId() {
-        const { networkId } = await (await provider()).getActiveNetworkId();
-        return Number(networkId);
+        return activeChainId(await provider());
       },
 
       async getProvider() {
@@ -207,11 +253,16 @@ export function dynamicConnector(
         return { request: request as EIP1193RequestFn };
       },
 
+      // wagmi's `reconnect` doesn't catch a throw here (a closed WalletConnect session throws).
       async isAuthorized() {
-        const wallet = await wallets.waitFor(key);
-        if (!wallet) return false;
-        const { addresses } = await wallet.getConnectedAddresses();
-        return addresses.length > 0;
+        try {
+          const wallet = await wallets.waitFor(key);
+          if (!wallet) return false;
+          const { addresses } = await wallet.getConnectedAddresses();
+          return addresses.length > 0;
+        } catch {
+          return false;
+        }
       },
 
       async switchChain({ chainId }) {

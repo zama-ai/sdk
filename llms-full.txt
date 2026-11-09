@@ -29966,7 +29966,7 @@ Rate limiting belongs at the hosting layer; a public deployment that adds its ow
 
 The app is built to be hosted as-is, with the user's browser wallet doing all signing and the proxy the only server-side code. What a deployment gets:
 
-- **Security headers.** `src/proxy.ts` sets a per-request Content Security Policy on every page: scripts need the request's nonce, `connect-src` is limited to this origin, the RPCs of the networks in the table and the relayers' key storage, `worker-src 'self' blob:` and `'wasm-unsafe-eval'` are what the FHE runtime needs, and `frame-ancestors 'none'` blocks framing. The policy governs the page and the workers it spawns; the SDK downloads the FHE key on the page thread, so the key storage of every relayer you serve has to be in `connect-src` (see [Mainnet access](#mainnet-access)). `next.config.ts` adds `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` and HSTS. There are no third-party scripts, fonts or analytics. With `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` set, the policy additionally allows Dynamic's API and wallet catalogue, WalletConnect's relay and verification iframes, and wallet icons from any `https:` origin (the catalogue's icons come from wallet-book hosts nobody enumerates). Dynamic's headless SDK renders no UI, so styles stay nonce-only in production either way. HSTS covers the app's own host only, so a copy on an apex domain does not pin its subdomains, and the policy does not upgrade `http://` requests, so an RPC override on a private `http://` node keeps working.
+- **Security headers.** `src/proxy.ts` sets a per-request Content Security Policy on every page: scripts need the request's nonce, `connect-src` is limited to this origin, the RPCs of the networks in the table and the relayers' key storage, `worker-src 'self' blob:` and `'wasm-unsafe-eval'` are what the FHE runtime needs, and `frame-ancestors 'none'` blocks framing. The policy governs the page and the workers it spawns; the SDK downloads the FHE key on the page thread, so the key storage of every relayer you serve has to be in `connect-src` (see [Mainnet access](#mainnet-access)). `next.config.ts` adds `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` and HSTS. There are no third-party scripts, fonts or analytics. With `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` set, the policy additionally allows Dynamic's API and wallet catalogue, WalletConnect's relay and verification iframes, and wallet icons from Dynamic's icon host. Dynamic's headless SDK renders no UI, so styles stay nonce-only in production either way. HSTS covers the app's own host only, so a copy on an apex domain does not pin its subdomains, and the policy does not upgrade `http://` requests, so an RPC override on a private `http://` node keeps working.
 - **Mainnet banner.** A wallet on Ethereum or Polygon mainnet sees a banner saying transactions move real funds.
 - **Deployed commit in the footer.** The footer links the source repository (`NEXT_PUBLIC_SOURCE_REPO_URL`) and the commit the build was made from (`NEXT_PUBLIC_COMMIT_SHA`, filled from `VERCEL_GIT_COMMIT_SHA` on Vercel), so anyone can check what they are running.
 - **Pinned dependencies.** `package.json` pins exact versions and the lockfile is committed; `npm ci` installs exactly what was reviewed.
@@ -30018,6 +30018,7 @@ page.tsx                         — wallet connect, network picker, token selec
 ├── lib/wallet.tsx               — wallet stack: Dynamic connect dialog or wagmi injected connector, built from the table
 ├── lib/dynamic.ts               — Dynamic headless client: wallet catalogue and connect step
 ├── lib/dynamicConnector.ts      — wagmi connector over a Dynamic-authorized wallet
+├── lib/zodJitless.ts            — turns off zod's eval probe, which the page CSP blocks
 ├── ConnectWalletDialog.tsx      — wallet picker and WalletConnect pairing
 ├── providers.tsx                — wallet providers + ZamaProvider config, built from the network table
 │   ├── /api/networks            — which networks the server can serve (drives the picker)
@@ -30126,8 +30127,8 @@ headless SDK (`lib/dynamic.ts`) runs connect-only — no sign-in, no embedded wa
 supplies the wallet catalogue, the connect step (extension prompt, WalletConnect pairing) and
 each wallet's EIP-1193 provider. The dialog lists every EVM wallet in the catalogue, installed
 ones first. WalletConnect shows its pairing code to copy into the wallet (the Safe web app
-accepts a pasted code) or to open as a link. Going back, closing or picking another wallet aborts the attempt,
-and a wallet that approves afterwards is released.
+accepts a pasted code) or to open as a link. Going back, closing or picking another wallet
+aborts the attempt, and a wallet that approves afterwards is released.
 
 Once Dynamic authorizes a wallet, a wagmi connector of the app's own
 (`lib/dynamicConnector.ts`) wraps its provider, and wagmi persists, restores and follows the
@@ -30142,8 +30143,13 @@ connection:
   gives up after 3 s.
 - **Follows the wallet.** Account and chain switches inside the wallet reach wagmi through
   Dynamic's provider events.
-- **Disconnect** removes the wallet's Dynamic account, which also ends a WalletConnect session. It never
-  calls Dynamic's `logout()`, which strips every listener from the shared `window.ethereum`.
+- **Stays on the chains a WalletConnect session approved.** Dynamic sends a WalletConnect
+  wallet's requests on the chain it last recorded for it, which starts as the first network in
+  the table. The connector moves that record onto a chain the session approved, keeps it in
+  step with the wallet's own switches, and rejects a switch to any other chain.
+- **Disconnect** removes the wallet's Dynamic account, which also ends a WalletConnect session
+  (if that fails, it logs a warning and wagmi disconnects anyway). It never calls Dynamic's
+  `logout()`, which strips every listener from the shared `window.ethereum`.
 
 `src/proxy.ts` widens the Content Security Policy for Dynamic's API and WalletConnect only when
 the environment ID is set.
