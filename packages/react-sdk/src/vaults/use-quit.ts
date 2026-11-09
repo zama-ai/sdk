@@ -14,6 +14,8 @@ import { useVaultBatcher } from "./use-vault-batcher";
 export interface UseQuitConfig {
   /** The batcher contract address (deposit or redeem direction). */
   address: Address;
+  /** Chain the batcher is on. A wallet on another chain then gets `ChainMismatchError` instead of sending there. */
+  chainId?: number;
 }
 
 /**
@@ -35,7 +37,7 @@ export function useQuit<TContext = unknown>(
   config: UseQuitConfig,
   options?: UseMutationOptions<TransactionResult, Error, QuitParams, TContext>,
 ): UseMutationResult<TransactionResult, Error, QuitParams, TContext> {
-  const batcher = useVaultBatcher(config.address);
+  const batcher = useVaultBatcher(config.address, { chainId: config.chainId });
 
   return useMutation({
     ...quitMutationOptions(batcher),

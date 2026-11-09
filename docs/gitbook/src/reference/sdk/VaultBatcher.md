@@ -30,7 +30,7 @@ const { batchId } = await depositBatcher.join(1_000_000n);
 const sameBatcher = vault.depositBatcher;
 ```
 
-To read a batcher on a chain other than the provider's current one, for example on a vault page shown before the wallet connects, pass `chainId`. Every read then goes to that chain, which needs a provider that can route reads, such as `WagmiProvider`. Writes still go through the signer: a write throws [`ChainMismatchError`](errors.md#chainmismatcherror) while the signer is on another chain.
+To read a batcher on a chain other than the provider's current one, for example on a vault page shown before the wallet connects, pass `chainId`. Every read then goes to that chain, which needs a provider that can route reads, such as `WagmiProvider`. Writes still go through the signer: a write throws [`ChainMismatchError`](errors.md#chainmismatcherror) while the signer is on another chain. Decryption runs on the provider's current chain, so `depositOf` and `prepareFinalize` throw `ConfigurationError` until the provider is on `chainId`.
 
 ```ts
 const sepoliaBatcher = createVaultBatcher(sdk, "0xDepositBatcher", { chainId: 11155111 });

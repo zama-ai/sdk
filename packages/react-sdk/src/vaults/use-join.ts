@@ -19,6 +19,8 @@ import { useVaultBatcher } from "./use-vault-batcher";
 export interface UseJoinConfig {
   /** The batcher contract address (deposit or redeem direction). */
   address: Address;
+  /** Chain the batcher is on. A wallet on another chain then gets `ChainMismatchError` instead of sending there. */
+  chainId?: number;
 }
 
 /**
@@ -39,7 +41,7 @@ export function useJoin<TContext = unknown>(
   config: UseJoinConfig,
   options?: UseMutationOptions<JoinResult, Error, JoinParams, TContext>,
 ): UseMutationResult<JoinResult, Error, JoinParams, TContext> {
-  const batcher = useVaultBatcher(config.address);
+  const batcher = useVaultBatcher(config.address, { chainId: config.chainId });
 
   return useMutation({
     ...joinMutationOptions(batcher),

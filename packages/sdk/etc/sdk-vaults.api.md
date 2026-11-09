@@ -15679,9 +15679,9 @@ export const vaultQueryKeys: {
             readonly batcherAddress: `0x${string}`;
         }];
         batch: (batcherAddress: Address, batchId: bigint | undefined, chainId?: number) => readonly ["zama.vault.batchState", {
-            readonly batcherAddress: `0x${string}`;
             readonly batchId: bigint | undefined;
-            readonly chainId: number | undefined;
+            readonly batcherAddress: Address;
+            readonly chainId?: number;
         }];
     };
     batchStatus: {
@@ -15689,9 +15689,9 @@ export const vaultQueryKeys: {
             readonly batcherAddress: `0x${string}`;
         }];
         batch: (batcherAddress: Address, batchId: bigint | undefined, chainId?: number) => readonly ["zama.vault.batchStatus", {
-            readonly batcherAddress: `0x${string}`;
             readonly batchId: bigint | undefined;
-            readonly chainId: number | undefined;
+            readonly batcherAddress: Address;
+            readonly chainId?: number;
         }];
     };
     timeUntilDispatchable: {
@@ -15699,9 +15699,9 @@ export const vaultQueryKeys: {
             readonly batcherAddress: `0x${string}`;
         }];
         batch: (batcherAddress: Address, batchId: bigint | undefined, chainId?: number) => readonly ["zama.vault.timeUntilDispatchable", {
-            readonly batcherAddress: `0x${string}`;
             readonly batchId: bigint | undefined;
-            readonly chainId: number | undefined;
+            readonly batcherAddress: Address;
+            readonly chainId?: number;
         }];
     };
     timeUntilCallbackDeadline: {
@@ -15709,9 +15709,9 @@ export const vaultQueryKeys: {
             readonly batcherAddress: `0x${string}`;
         }];
         batch: (batcherAddress: Address, batchId: bigint | undefined, chainId?: number) => readonly ["zama.vault.timeUntilCallbackDeadline", {
-            readonly batcherAddress: `0x${string}`;
             readonly batchId: bigint | undefined;
-            readonly chainId: number | undefined;
+            readonly batcherAddress: Address;
+            readonly chainId?: number;
         }];
     };
 };

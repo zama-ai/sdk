@@ -22,7 +22,7 @@ import type {
   TransactionResult,
   WriteContractConfig,
 } from "../types";
-import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
+import { requireAlignedWalletAccount } from "../utils/alignment";
 import { assertConfidentialBalance } from "../utils/assert-balance";
 import { assertBigint } from "../utils/assertions";
 import { isEncryptedValueZero } from "../utils/handles";
@@ -288,7 +288,7 @@ export class VaultBatcher {
    * {@link BatchState}.
    */
   async batchStatus(batchId: bigint): Promise<BatchStatus> {
-    // Read concurrently, so a poll's latency is one request's whatever the state.
+    // Read every field whatever the state, so a poll costs the same each time.
     const [state, createdAt, dispatchedAt, minAge, deadline, now] = await Promise.all([
       this.batchState(batchId),
       this.batchCreatedAt(batchId),
@@ -351,6 +351,7 @@ export class VaultBatcher {
     if (isEncryptedValueZero(encryptedValue)) {
       return 0n;
     }
+    await this.#requireDecryptChain("depositOf");
     const result = await this.sdk.decryption.decryptValues(
       [{ encryptedValue, contractAddress: this.address }],
       { operation: "vault-deposit-of" },
@@ -458,8 +459,7 @@ export class VaultBatcher {
    * batch, use {@link recover}.
    */
   async quit(batchId: bigint): Promise<TransactionResult> {
-    this.#requireSigner("quit");
-    await requireChainAlignment("quit", this.sdk.signer, this.sdk.provider);
+    await this.#requireWriteAccount("quit");
     return this.#submitTransaction("vault:quit", quitContract(this.address, batchId));
   }
 
@@ -501,8 +501,7 @@ export class VaultBatcher {
    * Reverts while the batcher is {@link paused}.
    */
   async dispatchBatch(): Promise<TransactionResult> {
-    this.#requireSigner("dispatchBatch");
-    await requireChainAlignment("dispatchBatch", this.sdk.signer, this.sdk.provider);
+    await this.#requireWriteAccount("dispatchBatch");
     return this.#submitTransaction("vault:dispatchBatch", dispatchBatchContract(this.address));
   }
 
@@ -521,8 +520,8 @@ export class VaultBatcher {
    * @throws if the public decryption returns no cleartext for the amount. {@link DecryptionFailedError}
    */
   async finalize(batchId: bigint): Promise<TransactionResult> {
-    this.#requireSigner("finalize");
-    await requireChainAlignment("finalize", this.sdk.signer, this.sdk.provider);
+    // Before the public decryption, so a wrong chain fails before the relayer round trip.
+    await this.#requireWriteAccount("finalize");
     const { call } = await this.prepareFinalize(batchId);
     return this.#submitTransaction("vault:finalize", call);
   }
@@ -534,6 +533,7 @@ export class VaultBatcher {
    * signer.
    *
    * @throws if the batch is not {@link BatchState.Dispatched}, for example because a keeper already finalized it. {@link VaultBatchNotDispatchedError}
+   * @throws if the batcher is pinned to a chain the provider is not on, since decryption runs on the provider's chain. {@link ConfigurationError}
    * @throws if the public decryption returns no cleartext for the amount. {@link DecryptionFailedError}
    */
   async prepareFinalize(batchId: bigint): Promise<PreparedFinalize> {
@@ -552,6 +552,7 @@ export class VaultBatcher {
       );
     }
     const encryptedAmount = await this.#read(unwrapAmountContract(wrapper, unwrapRequestId));
+    await this.#requireDecryptChain("prepareFinalize");
     const { clearValues, decryptionProof } = await this.sdk.decryption.decryptPublicValues(
       [encryptedAmount],
       { operation: "vault-finalize" },
@@ -608,17 +609,8 @@ export class VaultBatcher {
    * connected signer still submits the transaction.
    */
   async #resolveTarget(operation: string, account: Address | undefined): Promise<Address> {
-    this.#requireSigner(operation);
-    if (account) {
-      await requireChainAlignment(operation, this.sdk.signer, this.sdk.provider);
-      return getAddress(account);
-    }
-    const aligned = await requireAlignedWalletAccount(
-      operation,
-      this.sdk.signer,
-      this.sdk.provider,
-    );
-    return getAddress(aligned.address);
+    const aligned = await this.#requireWriteAccount(operation);
+    return getAddress(account ?? aligned.address);
   }
 
   async #requireWriteAccount(operation: string): Promise<{ address: Address; chainId: number }> {
@@ -632,12 +624,26 @@ export class VaultBatcher {
       throw new ChainMismatchError({
         operation,
         signerChainId: account.chainId,
-        // The alignment check above already put the signer on the provider's chain.
+        // The alignment check above guarantees the signer's chain is the provider's chain.
         providerChainId: account.chainId,
         targetChainId: this.chainId,
       });
     }
     return account;
+  }
+
+  // Decryption goes to the relayer of the provider's current chain, which must
+  // then be the chain the handle was read from.
+  async #requireDecryptChain(operation: string): Promise<void> {
+    if (this.chainId === undefined) {
+      return;
+    }
+    const providerChainId = await this.sdk.provider.getChainId();
+    if (providerChainId !== this.chainId) {
+      throw new ConfigurationError(
+        `Operation "${operation}" decrypts a value from chain ${this.chainId}, but the provider is on chain ${providerChainId}; switch to chain ${this.chainId} first`,
+      );
+    }
   }
 
   #read<
@@ -653,13 +659,9 @@ export class VaultBatcher {
     config: WriteContractConfig,
     onSubmitted?: (txHash: Hex) => void,
   ): Promise<TransactionResult> {
-    const signer = this.#requireSigner(operation);
-    if (this.chainId !== undefined) {
-      await this.#requireWriteAccount(operation);
-    }
     return submitSdkTransaction({
       operation,
-      signer,
+      signer: this.#requireSigner(operation),
       provider: this.sdk.provider,
       config,
       onSubmitted,

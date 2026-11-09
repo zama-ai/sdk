@@ -320,6 +320,35 @@ describe("VaultBatcher", () => {
       });
     });
 
+    test("prepareFinalize refuses to decrypt a pinned chain's value on another chain", async ({
+      createSDK,
+      provider,
+      relayer,
+    }) => {
+      mockDispatchedBatch(provider);
+      const batcher = new VaultBatcher(createSDK({ signer: undefined }), BATCHER_ADDRESS, {
+        chainId: 11155111,
+      });
+
+      await expect(batcher.prepareFinalize(7n)).rejects.toBeInstanceOf(ConfigurationError);
+      expect(relayer.decryptPublicValuesWithSignatures).not.toHaveBeenCalled();
+    });
+
+    test("refuses a pinned batcher on another chain before reading anything", async ({
+      sdk,
+      provider,
+      relayer,
+    }) => {
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS, { chainId: 11155111 });
+
+      await expect(batcher.finalize(7n)).rejects.toMatchObject({
+        name: "ChainMismatchError",
+        operation: "finalize",
+      });
+      expect(provider.readContract).not.toHaveBeenCalled();
+      expect(relayer.decryptPublicValuesWithSignatures).not.toHaveBeenCalled();
+    });
+
     test.for([BatchState.Pending, BatchState.Finalized, BatchState.Canceled])(
       "refuses a batch in state %s before decrypting anything",
       async (state, { sdk, provider, relayer, signer }) => {
@@ -414,6 +443,7 @@ describe("VaultBatcher", () => {
 
       await expect(batcher.claim(7n)).rejects.toMatchObject({
         name: "ChainMismatchError",
+        operation: "claim",
         targetChainId: 11155111,
         message: expect.stringContaining("targets chain 11155111"),
       });
@@ -653,6 +683,20 @@ describe("VaultBatcher", () => {
       expect(relayer.decryptValues).toHaveBeenCalledWith(
         expect.objectContaining({ options: { operation: "vault-deposit-of" } }),
       );
+    });
+
+    test("refuses to decrypt a pinned chain's deposit on another chain", async ({
+      sdk,
+      provider,
+      relayer,
+      userAddress,
+      handle,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS, { chainId: 11155111 });
+
+      await expect(batcher.depositOf(1n, userAddress)).rejects.toBeInstanceOf(ConfigurationError);
+      expect(relayer.decryptValues).not.toHaveBeenCalled();
     });
   });
 });
