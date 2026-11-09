@@ -1,5 +1,36 @@
 # Changelog
 
+## [3.8.0-beta.16](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.15...v3.8.0-beta.16) (2026-11-05)
+
+### Features
+
+- **examples:** wallet modal and custom environment in react-wagmi ([#881](https://github.com/zama-ai/sdk/issues/881)) ([7bb84fe]()), closes [#882]() [#873]() [#878]() [#880]() [#882]()
+
+## [3.8.0-beta.15](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.14...v3.8.0-beta.15) (2026-11-05)
+
+### Features
+
+- **vaults:** join batchers with confidentialTransferAndCall and check group routers against the configured chain ([#902](https://github.com/zama-ai/sdk/issues/902)) ([1ac7e64]())
+
+## [3.8.0-beta.14](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.13...v3.8.0-beta.14) (2026-11-05)
+
+### Features
+
+- **vaults:** prepare seam for group joins, user-driven finalize, and router call builders ([#898](https://github.com/zama-ai/sdk/issues/898)) ([57f4240]()), closes [#781]() [#748]()
+
+## [3.8.0-beta.13](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.12...v3.8.0-beta.13) (2026-11-05)
+
+### Features
+
+- **examples:** add Privy wallet modal to react-wagmi ([#882](https://github.com/zama-ai/sdk/issues/882)) ([5651f50]())
+- **examples:** consolidate the per-chain example apps behind a network picker ([#873](https://github.com/zama-ai/sdk/issues/873)) ([9982fd5]())
+- **examples:** harden react-wagmi for public hosting ([#878](https://github.com/zama-ai/sdk/issues/878)) ([4b16f16]())
+
+### Bug Fixes
+
+- **daemon:** risk-accept CVE-2026-76844 in the image scan ([#906](https://github.com/zama-ai/sdk/issues/906)) ([13418ba]())
+- **react-sdk:** resolve Safe and EIP-5792 wallet hashes to receipts in WagmiProvider ([#880](https://github.com/zama-ai/sdk/issues/880)) ([95ef735]())
+
 ## [3.8.0-beta.12](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.11...v3.8.0-beta.12) (2026-11-04)
 
 ### Bug Fixes

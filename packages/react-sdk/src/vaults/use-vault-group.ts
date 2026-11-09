@@ -23,9 +23,11 @@ export function useVaultGroup(config: VaultGroupConfig): VaultGroup {
     id: config.id,
     cAsset: config.cAsset,
     router: config.router,
-    vaults: config.vaults.map(({ id, vault, depositBatcher, redeemBatcher }) => ({
+    allowCustomRouter: config.allowCustomRouter,
+    vaults: config.vaults.map(({ id, vault, cShare, depositBatcher, redeemBatcher }) => ({
       id,
       vault,
+      cShare,
       depositBatcher,
       redeemBatcher,
     })),

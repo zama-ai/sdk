@@ -2,7 +2,12 @@ import { decodeAbiParameters, encodeFunctionData, getAbiItem, type Hex } from "v
 import type { EncryptedValue } from "../../relayer/types";
 import { describe, expect, test } from "../../test-fixtures";
 import { vaultRouterAbi } from "../abi/vault-router.abi";
-import { encodeAllocationData, type EncryptedAllocationLeg } from "../contracts/vault-router";
+import {
+  encodeAllocationData,
+  routerJoinContract,
+  tokenWrapperRegistryContract,
+  type EncryptedAllocationLeg,
+} from "../contracts/vault-router";
 
 const LEGS: readonly EncryptedAllocationLeg[] = [
   {
@@ -40,5 +45,27 @@ describe("encodeAllocationData", () => {
   test("keeps leg order, which is what pairs a handle with its batcher", () => {
     const swapped = [LEGS[1], LEGS[0]].filter((leg) => leg !== undefined);
     expect(encodeAllocationData(swapped, PROOF)).not.toBe(encodeAllocationData(LEGS, PROOF));
+  });
+});
+
+describe("router call builders", () => {
+  const ROUTER = "0x4444444444444444444444444444444444444444";
+
+  test("routerJoinContract takes the legs and the proof as `join` does", () => {
+    expect(routerJoinContract(ROUTER, LEGS, PROOF)).toStrictEqual({
+      address: ROUTER,
+      abi: vaultRouterAbi,
+      functionName: "join",
+      args: [LEGS, PROOF],
+    });
+  });
+
+  test("tokenWrapperRegistryContract reads the router's registry", () => {
+    expect(tokenWrapperRegistryContract(ROUTER)).toStrictEqual({
+      address: ROUTER,
+      abi: vaultRouterAbi,
+      functionName: "tokenWrapperRegistry",
+      args: [],
+    });
   });
 });

@@ -11,9 +11,11 @@ import {
   VaultGroupJoinUnconfirmedError,
   type ZamaError,
 } from "../../errors";
+import { mainnet } from "../../chains";
 import type { ZamaSDKEvent } from "../../events/sdk-events";
 import type { RelayerSDK } from "../../relayer/types";
 import {
+  createMockRouter,
   describe,
   expect,
   joinedLog,
@@ -26,7 +28,9 @@ import type { GenericProvider, GenericSigner } from "../../types";
 import type { RawLog } from "../../types/transaction";
 import { vaultRouterAbi } from "../abi/vault-router.abi";
 import { takeJoined } from "../events";
-import { VaultGroup, type VaultGroupConfig } from "../vault-group";
+import { VaultGroup } from "../vault-group";
+import { decodeVaultGroupJoins, vaultGroupRedeemOperators } from "../vault-group-standalone";
+import type { VaultGroupConfig } from "../vault-group-types";
 
 // Every fixture address has hex letters, so a missing `getAddress` shows up as a casing mismatch.
 const ROUTER = getAddress("0x4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e");
@@ -244,11 +248,27 @@ describe("VaultGroup construction", () => {
     ).toThrow(/batcher .* more than once/);
   });
 
-  test("refuses a group of fewer than two vaults", ({ sdk }) => {
+  test("refuses an empty group", ({ sdk }) => {
     expect(() => new VaultGroup(sdk, { ...GROUP, vaults: [] })).toThrow(ConfigurationError);
-    expect(() => new VaultGroup(sdk, { ...GROUP, vaults: [member(ALPHA)] })).toThrow(
-      /at least two/,
-    );
+  });
+
+  test("accepts a group of one, which needs no router", ({ sdk }) => {
+    const group = new VaultGroup(sdk, { id: "solo", cAsset: ASSET, vaults: [member(ALPHA)] });
+    expect(group.members.map((candidate) => candidate.id)).toStrictEqual(["alpha"]);
+    expect(group.router).toBeUndefined();
+  });
+
+  test("refuses a share token given for more than one member", ({ sdk }) => {
+    expect(
+      () =>
+        new VaultGroup(sdk, {
+          ...GROUP,
+          vaults: [
+            { ...member(ALPHA), cShare: ALPHA.share },
+            { ...member(BETA), cShare: ALPHA.share.toLowerCase() as Address },
+          ],
+        }),
+    ).toThrow(ConfigurationError);
   });
 
   test("member() rejects an id the group does not name", ({ sdk }) => {
@@ -670,6 +690,31 @@ describe("VaultGroup deposit", () => {
       expect.objectContaining({ type: events.TransferSubmitted }),
     );
   });
+
+  test("emits a group of one's direct leg as a join tagged with its batcher, even with a router configured", async ({
+    createSDK,
+    provider,
+    relayer,
+    userAddress,
+    events,
+  }) => {
+    const received: ZamaSDKEvent[] = [];
+    const sdk = createSDK({ onEvent: (event) => received.push(event) });
+    mockReads(provider);
+    mockEncryptedLegs(relayer, 1);
+    mockReceipts(provider, userAddress, [ALPHA.depositBatcher]);
+    const group = new VaultGroup(sdk, { ...GROUP, vaults: [member(ALPHA)] });
+
+    await group.deposit("alpha", 1_000n, { skipBalanceCheck: true });
+
+    expect(received).toContainEqual(
+      expect.objectContaining({
+        type: events.VaultSubmitted,
+        vaultOperation: "join",
+        tokenAddress: ALPHA.depositBatcher,
+      }),
+    );
+  });
 });
 
 describe("VaultGroup redeem", () => {
@@ -1022,5 +1067,457 @@ describe("takeJoined", () => {
     ];
 
     expect(takeJoined(logs, BETA.depositBatcher, ACCOUNT)?.batchId).toBe(5n);
+  });
+});
+
+describe("VaultGroup prepare", () => {
+  const PREPARE = { skipPreflight: true, skipBalanceCheck: true } as const;
+  const HOST_ACCOUNT = getAddress("0x9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a");
+
+  test("prepareDeposit reads only paused() when the host skips the pre-flight and the balance check", async ({
+    sdk,
+    provider,
+    relayer,
+    userAddress,
+  }) => {
+    mockDepositEncryptions(relayer);
+    const prepared = await new VaultGroup(sdk, GROUP).prepareDeposit("beta", 1_000n, PREPARE);
+
+    expect(
+      vi
+        .mocked(provider.readContract)
+        .mock.calls.map(([call]) => [call.address, call.functionName]),
+    ).toStrictEqual([
+      [ALPHA.depositBatcher, "paused"],
+      [BETA.depositBatcher, "paused"],
+    ]);
+    expect(prepared.delivery).toBe("router");
+    expect(prepared.account).toBe(userAddress);
+    expect(prepared.legs).toStrictEqual([
+      { vaultId: "alpha", batcher: ALPHA.depositBatcher, token: ASSET, amount: 0n },
+      { vaultId: "beta", batcher: BETA.depositBatcher, token: ASSET, amount: 1_000n },
+    ]);
+    expect(prepared.requiredOperators).toStrictEqual([]);
+    expect(prepared.writes).toHaveLength(1);
+    const [write] = prepared.writes;
+    expect(write?.leg.vaultId).toBe("beta");
+    expect(write?.call).toMatchObject({
+      address: ASSET,
+      functionName: "confidentialTransferAndCall",
+      args: [ROUTER, TOTAL_VALUE, ASSET_PROOF, expect.any(String)],
+    });
+  });
+
+  test("prepareDeposit with legs delivery encrypts every leg against the asset once and writes one transfer per batcher", async ({
+    sdk,
+    relayer,
+    userAddress,
+  }) => {
+    const handles = mockEncryptedLegs(relayer, 2);
+    const prepared = await new VaultGroup(sdk, GROUP).prepareDeposit("alpha", 1_000n, {
+      ...PREPARE,
+      delivery: "legs",
+    });
+
+    expect(prepared.delivery).toBe("legs");
+    expect(relayer.encryptValues).toHaveBeenCalledTimes(1);
+    expect(relayer.encryptValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contractAddress: ASSET,
+        userAddress,
+        values: [
+          { value: 1_000n, type: "euint64" },
+          { value: 0n, type: "euint64" },
+        ],
+      }),
+    );
+    expect(prepared.writes.map((write) => write.leg.vaultId)).toStrictEqual(["alpha", "beta"]);
+    expect(prepared.writes.map((write) => write.call)).toStrictEqual([
+      expect.objectContaining({
+        address: ASSET,
+        functionName: "confidentialTransferAndCall",
+        args: [ALPHA.depositBatcher, handles[0], VALID_INPUT_PROOF, "0x"],
+      }),
+      expect.objectContaining({
+        address: ASSET,
+        functionName: "confidentialTransferAndCall",
+        args: [BETA.depositBatcher, handles[1], VALID_INPUT_PROOF, "0x"],
+      }),
+    ]);
+  });
+
+  test("a group of one delivers its single leg straight to the batcher, whatever delivery is asked", async ({
+    sdk,
+    relayer,
+  }) => {
+    const handles = mockEncryptedLegs(relayer, 1);
+    const group = new VaultGroup(sdk, { id: "solo", cAsset: ASSET, vaults: [member(ALPHA)] });
+    const prepared = await group.prepareDeposit("alpha", 5n, { ...PREPARE, delivery: "router" });
+
+    expect(prepared.delivery).toBe("legs");
+    expect(prepared.writes).toHaveLength(1);
+    expect(prepared.writes[0]?.call).toMatchObject({
+      address: ASSET,
+      args: [ALPHA.depositBatcher, handles[0], VALID_INPUT_PROOF, "0x"],
+    });
+  });
+
+  test("a router delivery needs a router", async ({ sdk }) => {
+    const group = new VaultGroup(sdk, { id: "stable", cAsset: ASSET, vaults: GROUP.vaults });
+    await expect(group.prepareDeposit("alpha", 1n, PREPARE)).rejects.toThrow("names no router");
+  });
+
+  test("prepareRedeem through the router names the operator grants it relies on and reads only the share tokens", async ({
+    sdk,
+    provider,
+    relayer,
+  }) => {
+    mockReads(provider);
+    mockEncryptedLegs(relayer, 2);
+    const prepared = await new VaultGroup(sdk, GROUP).prepareRedeem("beta", 7n, PREPARE);
+
+    const reads = vi.mocked(provider.readContract).mock.calls.map(([call]) => call.functionName);
+    expect(reads.sort()).toEqual(["fromToken", "fromToken", "paused", "paused"]);
+    expect(prepared.requiredOperators).toStrictEqual([
+      { vaultId: ALPHA.id, token: ALPHA.share, spender: ROUTER },
+      { vaultId: BETA.id, token: BETA.share, spender: ROUTER },
+    ]);
+    expect(prepared.writes).toHaveLength(1);
+    expect(prepared.writes[0]?.call).toMatchObject({ address: ROUTER, functionName: "join" });
+    expect(prepared.writes[0]?.leg).toStrictEqual({
+      vaultId: "beta",
+      batcher: BETA.redeemBatcher,
+      token: BETA.share,
+      amount: 7n,
+    });
+  });
+
+  test("a configured cShare spares the share token read and feeds redeemOperators", async ({
+    sdk,
+    provider,
+    relayer,
+  }) => {
+    mockEncryptedLegs(relayer, 2);
+    const group = new VaultGroup(sdk, {
+      ...GROUP,
+      vaults: [
+        { ...member(ALPHA), cShare: ALPHA.share },
+        { ...member(BETA), cShare: BETA.share },
+      ],
+    });
+    expect(group.redeemOperators()).toStrictEqual([
+      { vaultId: ALPHA.id, token: ALPHA.share, spender: ROUTER },
+      { vaultId: BETA.id, token: BETA.share, spender: ROUTER },
+    ]);
+    expect(group.redeemOperators("legs")).toStrictEqual([]);
+
+    const prepared = await group.prepareRedeem("alpha", 7n, PREPARE);
+    expect(
+      vi.mocked(provider.readContract).mock.calls.map(([call]) => call.functionName),
+    ).toStrictEqual(["paused", "paused"]);
+    expect(prepared.legs.map((leg) => leg.token)).toStrictEqual([ALPHA.share, BETA.share]);
+  });
+
+  test("skipPreflight still refuses a paused batcher, naming its member", async ({
+    sdk,
+    provider,
+    relayer,
+  }) => {
+    mockEncryptedLegs(relayer, 2);
+    vi.mocked(provider.readContract).mockImplementation(async (call) =>
+      call.functionName === "paused" ? call.address === BETA.depositBatcher : undefined,
+    );
+
+    const error = await new VaultGroup(sdk, GROUP)
+      .prepareDeposit("alpha", 1_000n, PREPARE)
+      .catch((error: unknown) => error);
+
+    expect(error).toBeInstanceOf(VaultBatcherPausedError);
+    expect(error).toMatchObject({ batcher: BETA.depositBatcher, vaultId: "beta" });
+    expect(relayer.encryptValues).not.toHaveBeenCalled();
+  });
+
+  test("the balance check refuses an account that is not the signer's", async ({
+    sdk,
+    createSDK,
+  }) => {
+    const group = new VaultGroup(sdk, GROUP);
+    await expect(
+      group.prepareDeposit("alpha", 1n, { skipPreflight: true, account: HOST_ACCOUNT }),
+    ).rejects.toThrow(/pass skipBalanceCheck to prepare for another account/);
+
+    const unsigned = new VaultGroup(createSDK({ signer: undefined }), GROUP);
+    await expect(
+      unsigned.prepareDeposit("alpha", 1n, { skipPreflight: true, account: HOST_ACCOUNT }),
+    ).rejects.toThrow(/none is configured; pass skipBalanceCheck/);
+  });
+
+  test("missingOperators returns only the required grants the account lacks", async ({
+    sdk,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract).mockImplementation(async (call) =>
+      call.functionName === "isOperator" ? call.address === ALPHA.share : undefined,
+    );
+    const operators = [
+      { vaultId: ALPHA.id, token: ALPHA.share, spender: ROUTER },
+      { vaultId: BETA.id, token: BETA.share, spender: ROUTER },
+    ];
+
+    await expect(
+      new VaultGroup(sdk, GROUP).missingOperators({
+        account: HOST_ACCOUNT,
+        requiredOperators: operators,
+      }),
+    ).resolves.toStrictEqual([{ vaultId: BETA.id, token: BETA.share, spender: ROUTER }]);
+  });
+
+  test("decodeVaultGroupJoins pairs saved legs with receipts' logs and reports the rest", () => {
+    const legs = [
+      { vaultId: "alpha", batcher: ALPHA.depositBatcher, token: ASSET, amount: 0n },
+      { vaultId: "beta", batcher: BETA.depositBatcher, token: ASSET, amount: 5n },
+    ];
+    const logs = [joinedLog({ batcher: ALPHA.depositBatcher, account: HOST_ACCOUNT, batchId: 4n })];
+
+    const { joins, unconfirmed } = decodeVaultGroupJoins({ legs, account: HOST_ACCOUNT }, logs);
+
+    expect(joins).toMatchObject([
+      { vaultId: "alpha", batcher: ALPHA.depositBatcher, token: ASSET, batchId: 4n },
+    ]);
+    expect(unconfirmed).toStrictEqual(["beta"]);
+  });
+
+  test("redeemOperators refuses to guess a share token the config does not give", ({ sdk }) => {
+    expect(() => new VaultGroup(sdk, GROUP).redeemOperators()).toThrow(ConfigurationError);
+  });
+
+  test("vaultGroupRedeemOperators answers from the config alone, as the method does", ({ sdk }) => {
+    const config = {
+      ...GROUP,
+      vaults: [
+        { ...member(ALPHA), cShare: ALPHA.share },
+        { ...member(BETA), cShare: BETA.share },
+      ],
+    };
+    expect(vaultGroupRedeemOperators(config)).toStrictEqual(
+      new VaultGroup(sdk, config).redeemOperators(),
+    );
+    expect(vaultGroupRedeemOperators(config, "legs")).toStrictEqual([]);
+    expect(() => vaultGroupRedeemOperators(GROUP)).toThrow(ConfigurationError);
+  });
+
+  test("redeemOperators checksums a configured cShare, and needs none for a group of one or a missing router", ({
+    sdk,
+  }) => {
+    const config = {
+      ...GROUP,
+      vaults: [
+        { ...member(ALPHA), cShare: ALPHA.share.toLowerCase() as Address },
+        { ...member(BETA), cShare: BETA.share },
+      ],
+    };
+    expect(new VaultGroup(sdk, config).redeemOperators()).toStrictEqual([
+      { vaultId: ALPHA.id, token: ALPHA.share, spender: ROUTER },
+      { vaultId: BETA.id, token: BETA.share, spender: ROUTER },
+    ]);
+    expect(
+      new VaultGroup(sdk, { ...config, vaults: [config.vaults[0]!] }).redeemOperators(),
+    ).toStrictEqual([]);
+    expect(() => new VaultGroup(sdk, { ...config, router: undefined }).redeemOperators()).toThrow(
+      ConfigurationError,
+    );
+  });
+
+  test("the pre-flight rejects a configured cShare the redeem batcher does not pull", async ({
+    sdk,
+    provider,
+  }) => {
+    mockReads(provider);
+    const group = new VaultGroup(sdk, {
+      ...GROUP,
+      vaults: [{ ...member(ALPHA), cShare: BETA.share }, member(BETA)],
+    });
+    await expect(group.prepareRedeem("alpha", 7n, { skipBalanceCheck: true })).rejects.toThrow(
+      "configured with share token",
+    );
+  });
+
+  test("prepareRedeem with legs delivery encrypts each leg against its own share token and needs no grant", async ({
+    sdk,
+    provider,
+    relayer,
+    userAddress,
+  }) => {
+    mockReads(provider);
+    mockEncryptedLegs(relayer, 1);
+    const prepared = await new VaultGroup(sdk, GROUP).prepareRedeem("alpha", 7n, {
+      ...PREPARE,
+      delivery: "legs",
+    });
+
+    expect(prepared.requiredOperators).toStrictEqual([]);
+    expect(relayer.encryptValues).toHaveBeenCalledTimes(2);
+    expect(relayer.encryptValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contractAddress: ALPHA.share,
+        userAddress,
+        values: [{ value: 7n, type: "euint64" }],
+      }),
+    );
+    expect(relayer.encryptValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contractAddress: BETA.share,
+        values: [{ value: 0n, type: "euint64" }],
+      }),
+    );
+    expect(prepared.writes.map((write) => write.call.address)).toStrictEqual([
+      ALPHA.share,
+      BETA.share,
+    ]);
+    expect(
+      prepared.writes.map((write) => (write.call.args as readonly unknown[])[0]),
+    ).toStrictEqual([ALPHA.redeemBatcher, BETA.redeemBatcher]);
+  });
+
+  test("an explicit account lets a host without a signer prepare", async ({
+    createSDK,
+    relayer,
+  }) => {
+    mockDepositEncryptions(relayer);
+    const sdk = createSDK({ signer: undefined });
+    const prepared = await new VaultGroup(sdk, GROUP).prepareDeposit("alpha", 1n, {
+      ...PREPARE,
+      account: HOST_ACCOUNT.toLowerCase() as Address,
+    });
+    expect(prepared.account).toBe(HOST_ACCOUNT);
+    expect(relayer.encryptValues).toHaveBeenCalledWith(
+      expect.objectContaining({ userAddress: HOST_ACCOUNT }),
+    );
+  });
+
+  test("without an account the pre-flight needs the signer's wallet", async ({ createSDK }) => {
+    const sdk = createSDK({ signer: undefined });
+    await expect(new VaultGroup(sdk, GROUP).prepareDeposit("alpha", 1n, PREPARE)).rejects.toThrow(
+      SignerNotConfiguredError,
+    );
+  });
+
+  test("decodeJoins pairs legs with their logs and reports the rest instead of throwing", async ({
+    sdk,
+    relayer,
+    userAddress,
+  }) => {
+    mockDepositEncryptions(relayer);
+    const prepared = await new VaultGroup(sdk, GROUP).prepareDeposit("alpha", 1n, PREPARE);
+    const { joins, unconfirmed } = prepared.decodeJoins([
+      joinedLog({ batcher: BETA.depositBatcher, account: userAddress, batchId: 9n }),
+    ]);
+    expect(joins).toStrictEqual([
+      expect.objectContaining({ vaultId: "beta", batcher: BETA.depositBatcher, batchId: 9n }),
+    ]);
+    expect(unconfirmed).toStrictEqual(["alpha"]);
+  });
+});
+
+function onMainnet(provider: GenericProvider, signer: GenericSigner) {
+  vi.mocked(provider.getChainId).mockResolvedValue(mainnet.id);
+  const account = { ...signer.requireWalletAccount("test"), chainId: mainnet.id };
+  vi.mocked(signer.requireWalletAccount).mockReturnValue(account);
+  vi.mocked(signer.walletAccount.getSnapshot).mockReturnValue(account);
+}
+
+describe("VaultGroup router check", () => {
+  test.scoped({ chain: mainnet });
+
+  test("refuses a router other than the chain's before encrypting, granting or writing", async ({
+    sdk,
+    provider,
+    relayer,
+    signer,
+  }) => {
+    onMainnet(provider, signer);
+    mockReads(provider, { operators: { [ALPHA.share]: false, [BETA.share]: false } });
+
+    const group = new VaultGroup(sdk, GROUP);
+    await expect(group.deposit("alpha", 1_000n)).rejects.toThrow(ConfigurationError);
+    await expect(group.redeem("alpha", 500n)).rejects.toThrow(ConfigurationError);
+    await expect(
+      group.prepareRedeem("alpha", 500n, { skipPreflight: true, skipBalanceCheck: true }),
+    ).rejects.toThrow(mainnet.vaultRouterAddress);
+    expect(relayer.encryptValues).not.toHaveBeenCalled();
+    expect(signer.writeContract).not.toHaveBeenCalled();
+  });
+
+  test("accepts the chain's own router", async ({ sdk, provider, relayer, signer }) => {
+    onMainnet(provider, signer);
+    mockReads(provider);
+    mockEncryptedLegs(relayer, 2);
+
+    const group = new VaultGroup(sdk, { ...GROUP, router: mainnet.vaultRouterAddress });
+    const prepared = await group.prepareDeposit("alpha", 1_000n, {
+      skipPreflight: true,
+      skipBalanceCheck: true,
+    });
+
+    expect(prepared.writes).toHaveLength(1);
+  });
+
+  test("accepts another router when the config sets allowCustomRouter", async ({
+    sdk,
+    provider,
+    relayer,
+    signer,
+  }) => {
+    onMainnet(provider, signer);
+    mockReads(provider);
+    mockEncryptedLegs(relayer, 2);
+
+    const group = new VaultGroup(sdk, { ...GROUP, allowCustomRouter: true });
+    const prepared = await group.prepareDeposit("alpha", 1_000n, {
+      skipPreflight: true,
+      skipBalanceCheck: true,
+    });
+
+    expect(prepared.writes).toHaveLength(1);
+  });
+
+  test("does not check a legs delivery, which never touches the router", async ({
+    sdk,
+    provider,
+    relayer,
+    signer,
+  }) => {
+    onMainnet(provider, signer);
+    mockReads(provider);
+    mockEncryptedLegs(relayer, 2);
+
+    const prepared = await new VaultGroup(sdk, GROUP).prepareDeposit("alpha", 1_000n, {
+      delivery: "legs",
+      skipPreflight: true,
+      skipBalanceCheck: true,
+    });
+
+    expect(prepared.delivery).toBe("legs");
+  });
+
+  test("checks against the configured chain's router, not the preset's", async ({
+    createSDK,
+    provider,
+    relayer,
+    signer,
+  }) => {
+    onMainnet(provider, signer);
+    mockReads(provider);
+    mockEncryptedLegs(relayer, 2);
+    const sdk = createSDK({
+      router: createMockRouter({ relayer, chains: [{ ...mainnet, vaultRouterAddress: ROUTER }] }),
+    });
+
+    const prepared = await new VaultGroup(sdk, GROUP).prepareDeposit("alpha", 1_000n, {
+      skipPreflight: true,
+      skipBalanceCheck: true,
+    });
+
+    expect(prepared.writes).toHaveLength(1);
   });
 });

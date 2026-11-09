@@ -33,6 +33,13 @@ test.describe("main screen", () => {
     await expect(page.getByText("Grant Decryption Access")).toBeVisible();
     await expect(page.getByText("Revoke Decryption Access")).toBeVisible();
     await expect(page.getByText("Decrypt Balance On Behalf Of")).toBeVisible();
+    await expect(page.getByText(/move real funds/)).toHaveCount(0);
+  });
+
+  test("disconnect returns to the connect screen", async ({ page }) => {
+    await page.getByRole("button", { name: "Disconnect" }).click();
+    await expect(page.getByRole("button", { name: "Connect Wallet" })).toBeVisible();
+    await expect(page.getByText(/Connected:/)).toHaveCount(0);
   });
 
   test("shows connected address in header", async ({ page }) => {
@@ -44,14 +51,14 @@ test.describe("main screen", () => {
   test("shows token selector populated from the registry", async ({ page }) => {
     // useListPairs resolves via the mock RPC eth_call handler — wait for the registry
     // to load before asserting option content.
-    const select = page.getByRole("combobox");
+    const select = page.getByRole("combobox", { name: "Confidential token" });
     await expect(select).toBeVisible();
     await expect(select.locator("option", { hasText: "USDC Mock" })).toHaveCount(1);
     await expect(select.locator("option", { hasText: "USDT Mock" })).toHaveCount(1);
   });
 
   test("switching token updates the selector value", async ({ page }) => {
-    const select = page.getByRole("combobox");
+    const select = page.getByRole("combobox", { name: "Confidential token" });
     // Wait for registry to load and the first cToken address to be auto-selected.
     await expect(select).toHaveValue(MOCK_CTOKEN1_ADDRESS);
     await select.selectOption(MOCK_CTOKEN2_ADDRESS);

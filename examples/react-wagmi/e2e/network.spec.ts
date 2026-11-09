@@ -1,48 +1,216 @@
-import { test, expect, WRONG_CHAIN_ID, SEPOLIA_CHAIN_ID_HEX, TEST_ADDRESS } from "./fixtures";
+import {
+  test,
+  expect,
+  MOCK_CTOKEN1_ADDRESS,
+  NETWORKS,
+  WRONG_CHAIN_ID,
+  SEPOLIA_CHAIN_ID_HEX,
+  TEST_ADDRESS,
+} from "./fixtures";
 
 // All tests in this suite need to connect first (wagmi does not auto-connect without
-// stored localStorage state), then verify wrong-network behavior.
-test.describe("wrong network screen", () => {
+// stored localStorage state). The dev server is started by playwright.config.ts with
+// MAINNET_RELAYER_URL set, so the picker lists Ethereum mainnet; POLYGON_RELAYER_URL is
+// unset, so Polygon mainnet stays hidden.
+test.describe("network picker on an unsupported chain", () => {
   test.beforeEach(async ({ page, mockRpc, mockWallet }) => {
     await mockRpc();
-    // accounts: [] → shows connect screen on load.
-    // chainId: WRONG_CHAIN_ID → after connecting, wagmi reads eth_chainId = WRONG_CHAIN_ID
-    //   → chainId !== SEPOLIA_CHAIN_ID → Screen 2 ("Sepolia Network Required") renders.
+    // chainId: WRONG_CHAIN_ID → after connecting, the chain is not in the network table
+    //   → Screen 2 ("Choose a Network") renders.
     await mockWallet({ accounts: [], chainId: WRONG_CHAIN_ID, requestAccounts: [TEST_ADDRESS] });
     await page.goto("/");
     await page.getByRole("button", { name: "Connect Wallet" }).click({ force: true });
   });
 
-  test("shows wrong network screen when connected on wrong chain", async ({ page }) => {
-    await expect(page.getByText("Sepolia Network Required")).toBeVisible();
+  test("shows the picker with the wallet's chain ID", async ({ page }) => {
+    await expect(page.getByRole("heading", { name: "Choose a Network" })).toBeVisible();
+    await expect(page.getByText(/chain ID 5\b/)).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Network" })).toHaveValue("");
   });
 
-  test("shows chain ID in wrong network message", async ({ page }) => {
-    // The page embeds the numeric chain ID (11155111) in the wrong-network message.
-    await expect(page.getByText(/11155111/)).toBeVisible();
+  test("lists cleartext networks and configured relayer networks only", async ({ page }) => {
+    const picker = page.getByRole("combobox", { name: "Network" });
+    await expect(picker.locator("option", { hasText: "Sepolia" })).toHaveCount(1);
+    await expect(picker.locator("option", { hasText: "BNB Testnet · Cleartext" })).toHaveCount(1);
+    await expect(picker.locator("option", { hasText: "Ethereum" })).toHaveCount(1);
+    await expect(picker.locator("option", { hasText: /^Polygon$/ })).toHaveCount(0);
   });
 
-  test("transitions to main screen when switching to Sepolia", async ({ page }) => {
-    await expect(page.getByText("Sepolia Network Required")).toBeVisible();
-
-    // Click "Switch to Sepolia" — calls useSwitchChain() → wallet_switchEthereumChain →
-    // mock updates chainId + emits chainChanged → wagmi's useChainId() returns SEPOLIA_CHAIN_ID
-    // → isSepolia becomes true → Screen 3 renders.
-    await page.getByRole("button", { name: "Switch to Sepolia" }).click({ force: true });
-
+  test("switches to Sepolia from the picker", async ({ page }) => {
+    // Selecting an option calls useSwitchChain() → wallet_switchEthereumChain → the mock
+    // updates chainId + emits chainChanged → wagmi's chainId becomes Sepolia → Screen 3.
+    await page.getByRole("combobox", { name: "Network" }).selectOption("sepolia");
     await expect(page.getByText("Balances")).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Network" })).toHaveValue("sepolia");
   });
 
   test("transitions to main screen when user switches chain in their wallet", async ({ page }) => {
-    await expect(page.getByText("Sepolia Network Required")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Choose a Network" })).toBeVisible();
 
     // Simulate the user switching to Sepolia directly in their wallet — fires chainChanged
-    // without going through the "Switch to Sepolia" button.
+    // without going through the picker.
     await page.evaluate((chainId) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).__emitChainChanged(chainId);
     }, SEPOLIA_CHAIN_ID_HEX);
 
+    await expect(page.getByText("Balances")).toBeVisible();
+  });
+});
+
+test.describe("network in the table without a relayer", () => {
+  test("explains that the deployment does not serve it and how to run one", async ({
+    page,
+    mockRpc,
+    mockWallet,
+    cspViolations,
+  }) => {
+    // Polygon mainnet is in the table, but POLYGON_RELAYER_URL is unset for the test server.
+    // The SDK probes the wallet's chain on connect (within the CSP), but the token list must
+    // not be read on this screen: no request to the chain may name its registry.
+    const polygonReads: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes("polygon-bor-rpc")) polygonReads.push(request.postData() ?? "");
+    });
+    await mockRpc({ network: "polygon" });
+    await mockWallet({
+      accounts: [],
+      chainId: NETWORKS.polygon.chainIdHex,
+      requestAccounts: [TEST_ADDRESS],
+    });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Connect Wallet" }).click({ force: true });
+
+    await expect(page.getByText("This deployment does not serve Polygon.")).toBeVisible();
+    await expect(page.getByRole("link", { name: "API key" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "relayer you host" })).toBeVisible();
+    await expect(page.getByText(/unsupported network/)).toHaveCount(0);
+    expect(await cspViolations()).toEqual([]);
+    expect(polygonReads.join().toLowerCase()).not.toContain(
+      NETWORKS.polygon.registry.toLowerCase(),
+    );
+
+    await page.getByRole("combobox", { name: "Network" }).selectOption("sepolia");
+    await expect(page.getByText("Balances")).toBeVisible();
+  });
+});
+
+test.describe("mainnet", () => {
+  test.beforeEach(async ({ page, mockRpc, mockWallet }) => {
+    await mockRpc({ network: "mainnet" });
+    await mockWallet({
+      accounts: [],
+      chainId: NETWORKS.mainnet.chainIdHex,
+      requestAccounts: [TEST_ADDRESS],
+    });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Connect Wallet" }).click({ force: true });
+    await expect(page.getByText("Balances")).toBeVisible();
+  });
+
+  test("is selected in the picker and shows the native balance label", async ({ page }) => {
+    await expect(page.getByRole("combobox", { name: "Network" })).toHaveValue("mainnet");
+    await expect(page.getByText(/ETH:/)).toBeVisible();
+  });
+
+  test("shows the real-funds banner", async ({ page }) => {
+    await expect(page.getByText(/Ethereum mainnet\./)).toBeVisible();
+    await expect(page.getByText(/move real funds/)).toBeVisible();
+  });
+
+  test("hides the mint button and the vault demo", async ({ page }) => {
+    // The registry mock returns the same two pairs on every network, so cUSDC (the token
+    // the Sepolia vault is bound to) is selected here too — and must not show the vault.
+    await expect(page.getByRole("combobox", { name: "Confidential token" })).not.toHaveValue("");
+    await expect(page.getByRole("button", { name: /Mint/ })).toHaveCount(0);
+    await expect(page.getByText("Reacting contract — ConfidentialVault")).toHaveCount(0);
+    await expect(page.getByText("Shield — ERC-20 → Confidential")).toBeVisible();
+  });
+});
+
+test.describe("chain switch", () => {
+  test("does not show the previous chain's ERC-20 balance", async ({
+    page,
+    mockRpc,
+    mockWallet,
+  }) => {
+    // Sepolia answers balanceOf with 990; mainnet answers "0x", so its read fails. A failed
+    // refetch keeps the previous value in TanStack Query, which is why the balance key must
+    // carry the chain id — otherwise the Sepolia number would survive the switch.
+    await mockRpc({ erc20Balance: 990_000_000n });
+    await mockRpc({ network: "mainnet" });
+    await mockWallet({
+      accounts: [],
+      chainId: SEPOLIA_CHAIN_ID_HEX,
+      requestAccounts: [TEST_ADDRESS],
+    });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Connect Wallet" }).click({ force: true });
+    await expect(page.locator(".balance-value").first()).toHaveText(/990 USDC Mock/);
+
+    await page.evaluate((chainId) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__emitChainChanged(chainId);
+    }, NETWORKS.mainnet.chainIdHex);
+
+    await expect(page.getByRole("combobox", { name: "Network" })).toHaveValue("mainnet");
+    await expect(page.locator(".balance-value").first()).toHaveText("—");
+  });
+});
+
+test.describe("cleartext network", () => {
+  test("switches to BNB Testnet from the picker and loads its token list", async ({
+    page,
+    mockRpc,
+    mockWallet,
+  }) => {
+    await mockRpc();
+    await mockRpc({ network: "bnb-testnet" });
+    await mockWallet({
+      accounts: [],
+      chainId: SEPOLIA_CHAIN_ID_HEX,
+      requestAccounts: [TEST_ADDRESS],
+    });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Connect Wallet" }).click({ force: true });
+    await expect(page.getByText("Balances")).toBeVisible();
+
+    await page.getByRole("combobox", { name: "Network" }).selectOption("bnb-testnet");
+
+    await expect(page.getByRole("combobox", { name: "Network" })).toHaveValue("bnb-testnet");
+    await expect(page.getByText(/tBNB:/)).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Confidential token" })).toHaveValue(
+      MOCK_CTOKEN1_ADDRESS,
+    );
+    await expect(page.getByRole("button", { name: /Mint/ })).toBeVisible();
+    await expect(page.getByText("Reacting contract — ConfidentialVault")).toHaveCount(0);
+  });
+});
+
+test.describe("network list unavailable", () => {
+  test("offers a retry instead of calling the wallet's chain unsupported", async ({
+    page,
+    mockRpc,
+    mockWallet,
+  }) => {
+    await mockRpc();
+    await mockWallet({
+      accounts: [],
+      chainId: SEPOLIA_CHAIN_ID_HEX,
+      requestAccounts: [TEST_ADDRESS],
+    });
+    await page.route("**/api/networks", (route) => route.fulfill({ status: 500 }));
+    await page.goto("/");
+    await page.getByRole("button", { name: "Connect Wallet" }).click({ force: true });
+
+    // TanStack Query retries three times (about 7 s) before the query reports an error.
+    await expect(page.getByText("Could not load the networks this app can serve.")).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText(/unsupported network/)).toHaveCount(0);
+
+    await page.unroute("**/api/networks");
+    await page.getByRole("button", { name: "Retry" }).click();
     await expect(page.getByText("Balances")).toBeVisible();
   });
 });

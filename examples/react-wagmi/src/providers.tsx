@@ -1,54 +1,47 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { http, createConfig, WagmiProvider } from "wagmi";
-import { injected } from "wagmi/connectors/injected";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
-import { indexedDBStorage } from "@zama-fhe/sdk";
-import { sepolia as fheSepolia, type FheChain } from "@zama-fhe/sdk/chains";
+import { cleartext, indexedDBStorage, type RelayerConfig } from "@zama-fhe/sdk";
 import { web } from "@zama-fhe/sdk/web";
-import { sepolia, SEPOLIA_RPC_URL } from "@/lib/config";
+import { NETWORK_KEYS, networks } from "@/lib/networks";
+import { wagmiConfig, WalletProviders } from "@/lib/wallet";
 
-// Stable module-level references — recreating on re-render would reset wagmi's state.
-const wagmiConfig = createConfig({
-  chains: [sepolia],
-  connectors: [injected()],
-  // SEPOLIA_RPC_URL overrides the default RPC if NEXT_PUBLIC_SEPOLIA_RPC_URL is set.
-  transports: { [sepolia.id]: http(SEPOLIA_RPC_URL) },
+// Relayer traffic goes through the same-origin Next.js proxy so API keys stay server-side.
+// The relayer requires an absolute URL, so resolve the origin at runtime; the SSR
+// placeholder never issues requests. Cleartext networks have no relayer at all.
+const origin = typeof window === "undefined" ? "http://localhost" : window.location.origin;
+
+// Every row of the network table is registered; the picker decides which ones are offered.
+// Destructuring gives the non-empty tuple type the config requires.
+const [firstFheChain, ...otherFheChains] = NETWORK_KEYS.map((key) => {
+  const { fhe, transport } = networks[key];
+  return transport === "relayer" ? { ...fhe, relayerUrl: `${origin}/api/relayer/${key}` } : fhe;
 });
+const fheChains = [firstFheChain, ...otherFheChains] as const;
 
-// Route relayer traffic through the local Next.js proxy so RELAYER_API_KEY stays server-side.
-// The relayer requires an absolute URL, so resolve the same-origin proxy at runtime.
-// The SSR placeholder never issues requests.
-const relayerProxyUrl =
-  typeof window === "undefined"
-    ? "http://localhost/api/relayer"
-    : `${window.location.origin}/api/relayer`;
+const relayers = Object.fromEntries(
+  NETWORK_KEYS.map((key) => {
+    const { chain, transport } = networks[key];
+    return [chain.id, transport === "relayer" ? web() : cleartext()];
+  }),
+) as Record<number, RelayerConfig>;
 
-const zamaSepolia = {
-  ...fheSepolia,
-  relayerUrl: relayerProxyUrl,
-  network: SEPOLIA_RPC_URL,
-} as const satisfies FheChain;
-
+// Stable module-level reference — recreating on re-render would reset the SDK.
+// wagmiConfig is the Privy-managed or plain wagmi config, whichever lib/wallet.tsx built.
 const zamaConfig = createZamaConfig({
   wagmiConfig,
-  chains: [zamaSepolia],
-  relayers: { [zamaSepolia.id]: web() },
+  chains: fheChains,
+  relayers,
   storage: indexedDBStorage,
   permitStorage: indexedDBStorage,
 });
 
-const queryClient = new QueryClient();
-
 export function Providers({ children }: { children: ReactNode }) {
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <ZamaProvider config={zamaConfig}>{children}</ZamaProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <WalletProviders>
+      <ZamaProvider config={zamaConfig}>{children}</ZamaProvider>
+    </WalletProviders>
   );
 }

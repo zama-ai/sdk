@@ -1,10 +1,11 @@
 import { act, waitFor } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
-import { vaultQueryKeys } from "@zama-fhe/sdk/vaults";
+import { BatchState, vaultQueryKeys } from "@zama-fhe/sdk/vaults";
 import { describe, expect, mockJoinBalance, mockJoinReceipt, test, vi } from "../../test-fixtures";
 import { useClaim } from "../use-claim";
 import { useDispatchBatch } from "../use-dispatch-batch";
+import { useFinalize } from "../use-finalize";
 import { useJoin } from "../use-join";
 import { useQuit } from "../use-quit";
 import { useRecover } from "../use-recover";
@@ -131,5 +132,36 @@ describe("useDispatchBatch", () => {
     await act(() => result.current.mutateAsync());
 
     expect(queryClient).toHaveInvalidatedQueries([batchIdKey]);
+  });
+});
+
+describe("useFinalize", () => {
+  test("finalizes and invalidates the batcher's batch state cache", async ({
+    renderWithProviders,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract).mockImplementation(async (config) => {
+      switch (config.functionName) {
+        case "batchState": {
+          return BatchState.Dispatched;
+        }
+        case "fromToken": {
+          return FROM_TOKEN;
+        }
+        default: {
+          return `0x${"ab".repeat(32)}`;
+        }
+      }
+    });
+    const { result, queryClient } = renderWithProviders(() =>
+      useFinalize({ address: BATCHER_ADDRESS }),
+    );
+
+    const stateKey = vaultQueryKeys.batchState.batcher(BATCHER_ADDRESS);
+    queryClient.setQueryData(stateKey, 1);
+
+    await act(() => result.current.mutateAsync({ batchId: 7n }));
+
+    expect(queryClient).toHaveInvalidatedQueries([stateKey]);
   });
 });

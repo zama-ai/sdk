@@ -36,6 +36,12 @@ export interface FheChain<TId extends number = number> {
    */
   readonly registryAddress: Address | undefined;
   /**
+   * Address of the multi-vault `VaultBatcherConfidentialRouter`, one per chain.
+   * A `VaultGroup` refuses to submit through any other router unless its
+   * config sets `allowCustomRouter`. `undefined` where none is deployed.
+   */
+  readonly vaultRouterAddress?: Address;
+  /**
    * Address of the `TFHEExecutor` contract (cleartext mode only).
    * Required by the `cleartext()` transport to read mock plaintexts.
    * `undefined` for chains that use real FHE infrastructure.

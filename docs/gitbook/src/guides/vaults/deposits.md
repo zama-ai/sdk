@@ -16,9 +16,9 @@ Core SDK usage imports from `@zama-fhe/sdk/vaults`; React hooks import from `@za
 ## The two layers
 
 - **`VaultBatcher`** mirrors one on-chain batcher contract directly, the way `Token` mirrors an ERC-7984 confidential token. A vault has two directions — deposit and redeem — each behind its own batcher contract.
-- **`Vault`** pairs a deposit batcher and a redeem batcher into one object with ERC-4626-style methods (`deposit`, `redeem`, …), the way `WrappedToken` builds on `Token`. It also automates a step you'd otherwise have to do by hand: granting the batcher an operator approval before it can pull the joined amount — see [Operator approvals](../operator-approvals.md).
+- **`Vault`** pairs a deposit batcher and a redeem batcher into one object with ERC-4626-style methods (`deposit`, `redeem`, …), the way `WrappedToken` builds on `Token`. A join for the caller sends the amount to the batcher with `confidentialTransferAndCall`, so it needs no operator approval. Only a join for another `beneficiary` makes the batcher pull the amount, and `Vault` grants that approval for you — see [Operator approvals](../operator-approvals.md).
 
-Most apps should use `Vault` (`useVault` / `useDeposit` / `useRedeem` in React). Reach for `VaultBatcher` (`createVaultBatcher`, or `useVaultBatcher` / `useJoin` / `useClaim` / … in React) directly only if you need a single direction, or want to control the operator grant yourself.
+Most apps should use `Vault` (`useVault` / `useDeposit` / `useRedeem` in React). Reach for `VaultBatcher` (`createVaultBatcher`, or `useVaultBatcher` / `useJoin` / `useClaim` / … in React) directly only if you need a single direction.
 
 ## Steps
 
@@ -65,7 +65,7 @@ The snippets below reuse `sdk`, `addresses` and `vault` from this step, and `add
 
 ### 2. Deposit
 
-Depositing grants the deposit batcher an operator approval on the underlying token if one isn't already active, checks the caller's confidential balance, encrypts the amount, and joins the currently open batch:
+Depositing checks the caller's confidential balance, encrypts the amount, and sends it to the deposit batcher, which joins it into the currently open batch:
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -91,7 +91,7 @@ The amount is denominated in the confidential asset token's base units — the t
 
 `deposit` returns the `batchId` it joined, read back from the batcher's `Joined` event — keep it, since every later call (`batchState`, `claim`, `quit`) needs it.
 
-Pass `beneficiary` to credit a different account, and `operatorUntil` to control how long the operator grant lasts (defaults to 1 hour, same as `Token.setOperator`). The React hook invalidates the deposit token's balance cache on success.
+Pass `beneficiary` to credit a different account. That is the one case where the batcher pulls the amount instead, so `Vault` first grants it an operator approval if none is active; `operatorUntil` controls how long that grant lasts (defaults to 1 hour, same as `Token.setOperator`). The React hook invalidates the deposit token's balance cache on success.
 
 {% hint style="warning" %}
 The beneficiary owns the position, not the caller: only they can `quit` it, and `claim` always pays out to them.
@@ -129,12 +129,12 @@ const { data: openBatchId } = useCurrentBatchId({ address: vault.depositBatcher.
 
 `batchState` decides which action is legal, so read it before offering the user a button:
 
-| `BatchState` | What the user can do                            |
-| ------------ | ----------------------------------------------- |
-| `Pending`    | `deposit` / `redeem`, or `quit`                 |
-| `Dispatched` | Nothing — wait                                  |
-| `Finalized`  | `claim`                                         |
-| `Canceled`   | `quit` (or `recover`), to take the deposit back |
+| `BatchState` | What the user can do                                                           |
+| ------------ | ------------------------------------------------------------------------------ |
+| `Pending`    | `deposit` / `redeem`, or `quit`                                                |
+| `Dispatched` | Wait for a keeper to finalize it; `finalize` if it stays `Dispatched` too long |
+| `Finalized`  | `claim`                                                                        |
+| `Canceled`   | `quit` (or `recover`), to take the deposit back                                |
 
 {% hint style="warning" %}
 Claiming a canceled batch reverts — a canceled batch never executed, so there is nothing to claim, only a deposit to take back with `quit` or `recover`.
@@ -194,7 +194,7 @@ Use the per-batch reads (`batchMinBatchAge`, `batchCallbackDeadline`) rather tha
 
 ### 5. Claim
 
-Dispatch only starts the decryption; finalization lands later. Wait for `batchState` to reach `Finalized`, then claim. Claiming is permissionless — anyone can call it on another account's behalf, but the output always goes to that account, never to the caller:
+Dispatch only starts the decryption; finalization lands later, when a keeper (an off-chain service that watches batches) sends the callback with the decrypted aggregate. Wait for `batchState` to reach `Finalized`, then claim. A batch that stays `Dispatched` longer than expected can be settled by anyone with `vault.depositBatcher.finalize(batchId)` (`useFinalize` in React); past its callback deadline that same call cancels it instead. `timeUntilCallbackDeadline(batchId)` (`useTimeUntilCallbackDeadline`) reads the seconds left, `0` once it has passed. `finalize` throws `VaultBatchNotDispatchedError` when the batch is not `Dispatched`, for example because a keeper got there first. Claiming is permissionless — anyone can call it on another account's behalf, but the output always goes to that account, never to the caller:
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -310,5 +310,5 @@ recover.mutate({ batchId, account: "0xDepositor" });
 - [`Vault`](../../reference/sdk/Vault.md) and [`VaultBatcher`](../../reference/sdk/VaultBatcher.md) — full API reference, including the per-batch reads
 - [`useDeposit`](../../reference/react/useDeposit.md), [`useRedeem`](../../reference/react/useRedeem.md), [`useBatchState`](../../reference/react/useBatchState.md), [`useClaim`](../../reference/react/useClaim.md) — the React hooks used above
 - [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault) — the protocol side: how batching, dispatch and settlement work
-- [Operator approvals](../operator-approvals.md) — the approval model `vault.deposit()` / `vault.redeem()` automate
+- [Operator approvals](../operator-approvals.md) — the approval model `vault.deposit()` / `vault.redeem()` use for another `beneficiary`
 - [Check balances](../check-balances.md) — reading confidential balances on `cAsset()` / `cShare()`

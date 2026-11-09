@@ -44,7 +44,7 @@ test/
   test-components/  # Shared React components/forms reused across the test apps
 codemods/
   sdk-migration-v3/   # Upgrade codemod for the v3.x line
-examples/         # 9 runnable example apps (react-viem/wagmi/ethers, node-*, example-*)
+examples/         # 6 runnable example apps (react-viem/wagmi/ethers, react-turnkey-wallet, node-*)
 contracts/        # Foundry contracts + fhevm submodules (soldeer deps)
 docs/             # GitBook source (docs/gitbook/src), agent guides (docs/agents), diagrams
 scripts/          # Build, docs, LLM-corpus, and api-report tooling

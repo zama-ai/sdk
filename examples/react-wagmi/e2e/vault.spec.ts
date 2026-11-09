@@ -25,7 +25,9 @@ test.describe("confidential vault — confidentialTransferAndCall", () => {
     await page.getByRole("button", { name: "Connect Wallet" }).click({ force: true });
     await expect(page.getByText("Balances")).toBeVisible();
     // cUSDC (MOCK_CTOKEN1) is the auto-selected first pair.
-    await expect(page.getByRole("combobox")).toHaveValue(MOCK_CTOKEN1_ADDRESS);
+    await expect(page.getByRole("combobox", { name: "Confidential token" })).toHaveValue(
+      MOCK_CTOKEN1_ADDRESS,
+    );
   });
 
   test("renders the vault section for the bound token", async ({ page }) => {
@@ -51,7 +53,9 @@ test.describe("confidential vault — confidentialTransferAndCall", () => {
   });
 
   test("hides the vault section for an unbound token", async ({ page }) => {
-    await page.getByRole("combobox").selectOption(MOCK_CTOKEN2_ADDRESS);
+    await page
+      .getByRole("combobox", { name: "Confidential token" })
+      .selectOption(MOCK_CTOKEN2_ADDRESS);
     await expect(page.getByText("Reacting contract — ConfidentialVault")).toBeHidden();
     await expect(page.getByText("Deposit into Vault — confidentialTransferAndCall")).toBeHidden();
   });

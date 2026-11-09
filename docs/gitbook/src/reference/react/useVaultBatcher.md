@@ -7,7 +7,7 @@ description: React hook returning a memoized VaultBatcher instance for one batch
 
 Returns a memoized [`VaultBatcher`](../sdk/VaultBatcher.md) bound to the SDK in the current `ZamaProvider`. The instance is recreated only when the SDK or the address changes, so its cached address reads survive re-renders.
 
-This is the low-level entry point — the batch hooks ([`useBatchState`](./useBatchState.md), [`useClaim`](./useClaim.md), …) call it internally. Most apps should use [`useVault`](./useVault.md), which pairs both directions and adds the operator-approval step to joins.
+This is the low-level entry point — the batch hooks ([`useBatchState`](./useBatchState.md), [`useClaim`](./useClaim.md), …) call it internally. Most apps should use [`useVault`](./useVault.md), which pairs both directions and grants the operator approval a join for another `beneficiary` needs.
 
 ## Import
 

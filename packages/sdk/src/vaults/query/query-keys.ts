@@ -26,4 +26,16 @@ export const vaultQueryKeys = {
         { batcherAddress: getAddress(batcherAddress), batchId },
       ] as const,
   },
+  timeUntilCallbackDeadline: {
+    batcher: (batcherAddress: Address) =>
+      [
+        "zama.vault.timeUntilCallbackDeadline",
+        { batcherAddress: getAddress(batcherAddress) },
+      ] as const,
+    batch: (batcherAddress: Address, batchId: bigint | undefined) =>
+      [
+        "zama.vault.timeUntilCallbackDeadline",
+        { batcherAddress: getAddress(batcherAddress), batchId },
+      ] as const,
+  },
 };

@@ -17,7 +17,7 @@ test.describe("connect flow", () => {
   test("shows connect screen title", async ({ page }) => {
     await page.goto("/");
     await expect(
-      page.getByRole("heading", { name: "Sepolia Confidential Token Quickstart" }),
+      page.getByRole("heading", { name: "Confidential Token Quickstart" }),
     ).toBeVisible();
   });
 

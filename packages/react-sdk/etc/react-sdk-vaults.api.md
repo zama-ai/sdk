@@ -8,6 +8,7 @@ import { Address } from '@zama-fhe/sdk';
 import { BatchState } from '@zama-fhe/sdk/vaults';
 import { ClaimParams } from '@zama-fhe/sdk/vaults';
 import { DepositParams } from '@zama-fhe/sdk/vaults';
+import { FinalizeParams } from '@zama-fhe/sdk/vaults';
 import { GroupDepositParams } from '@zama-fhe/sdk/vaults';
 import { GroupRedeemParams } from '@zama-fhe/sdk/vaults';
 import { JoinParams } from '@zama-fhe/sdk/vaults';
@@ -79,6 +80,14 @@ export interface UseDispatchBatchConfig {
 }
 
 // @public
+export function useFinalize<TContext = unknown>(config: UseFinalizeConfig, options?: UseMutationOptions<TransactionResult, Error, FinalizeParams, TContext>): UseMutationResult<TransactionResult, Error, FinalizeParams, TContext>;
+
+// @public
+export interface UseFinalizeConfig {
+    address: Address;
+}
+
+// @public
 export function useGroupDeposit<TContext = unknown>(config: UseGroupDepositConfig, options?: UseMutationOptions<VaultGroupJoinResult, Error, GroupDepositParams, TContext>): UseMutationResult<VaultGroupJoinResult, Error, GroupDepositParams, TContext>;
 
 // @public
@@ -124,6 +133,20 @@ export function useRedeem<TContext = unknown>(config: UseRedeemConfig, options?:
 // @public
 export interface UseRedeemConfig {
     addresses: VaultAddresses;
+}
+
+// @public
+export function useTimeUntilCallbackDeadline(config: UseTimeUntilCallbackDeadlineConfig, options?: UseTimeUntilCallbackDeadlineOptions): UseQueryResult<bigint | null, Error>;
+
+// @public
+export interface UseTimeUntilCallbackDeadlineConfig {
+    address: Address;
+    batchId: bigint | undefined;
+}
+
+// @public
+export interface UseTimeUntilCallbackDeadlineOptions extends Omit<UseQueryOptions<bigint | null>, "queryKey" | "queryFn" | "enabled"> {
+    enabled?: boolean;
 }
 
 // @public

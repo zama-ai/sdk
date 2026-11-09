@@ -7,9 +7,9 @@ description: One on-chain vault batcher — join, batch state, dispatch, claim, 
 
 `VaultBatcher` mirrors one on-chain batcher contract, the way [`Token`](Token.md) mirrors an ERC-7984 token. A batcher pools participants' encrypted amounts, dispatches only the decrypted aggregate through the underlying ERC-4626 vault, and lets each participant claim their share of the output.
 
-A vault has one batcher per direction — deposit and redeem — so a [`Vault`](Vault.md) holds two instances. Most apps should start from `Vault`, which adds the operator-approval step to `join`, and reach for `VaultBatcher` directly only for a single direction or to control the approval yourself.
+A vault has one batcher per direction — deposit and redeem — so a [`Vault`](Vault.md) holds two instances. Most apps should start from `Vault`, which pairs both directions and grants the operator approval a join for another `beneficiary` needs, and reach for `VaultBatcher` directly only for a single direction.
 
-The lifecycle is `join` → `dispatchBatch` → `claim`. Finalization between the last two is driven by the relayer, not the caller: a batch is claimable only once it reaches `BatchState.Finalized`, which can be well after dispatch.
+The lifecycle is `join` → `dispatchBatch` → `claim`. Finalization between the last two is normally driven by a keeper, an off-chain service that watches batches and sends each dispatched batch's callback once its decryption is published: a batch is claimable only once it reaches `BatchState.Finalized`, which can be well after dispatch. `finalize` settles a batch the keeper has not.
 
 ## Import
 
@@ -52,12 +52,12 @@ import { BatchState } from "@zama-fhe/sdk/vaults";
 
 A batch's lifecycle state. The numbers mirror the contract's own enum. `batchState()` returns one of these, and it decides which write is legal:
 
-| Value                   | Meaning                                                                       | Legal writes      |
-| ----------------------- | ----------------------------------------------------------------------------- | ----------------- |
-| `BatchState.Pending`    | `0` — open. Always the batcher's `currentBatchId()`.                          | `join`, `quit`    |
-| `BatchState.Dispatched` | `1` — closed; the aggregate amount is being decrypted.                        | none — wait       |
-| `BatchState.Finalized`  | `2` — settled with an exchange rate.                                          | `claim`           |
-| `BatchState.Canceled`   | `3` — the route failed or the callback deadline passed; nothing was executed. | `quit`, `recover` |
+| Value                   | Meaning                                                                       | Legal writes                            |
+| ----------------------- | ----------------------------------------------------------------------------- | --------------------------------------- |
+| `BatchState.Pending`    | `0` — open. Always the batcher's `currentBatchId()`.                          | `join`, `quit`                          |
+| `BatchState.Dispatched` | `1` — closed; the aggregate amount is being decrypted.                        | `finalize` — a keeper normally sends it |
+| `BatchState.Finalized`  | `2` — settled with an exchange rate.                                          | `claim`                                 |
+| `BatchState.Canceled`   | `3` — the route failed or the callback deadline passed; nothing was executed. | `quit`, `recover`                       |
 
 Claiming a canceled batch reverts — there is nothing to claim, only a deposit to take back.
 
@@ -124,6 +124,21 @@ const secondsLeft = await batcher.timeUntilDispatchable(batchId);
 if (secondsLeft === 0n) await batcher.dispatchBatch();
 ```
 
+### timeUntilCallbackDeadline
+
+`(batchId: bigint) => Promise<bigint | null>`
+
+Seconds until the dispatched batch `batchId` reaches its callback deadline, `0` once it has. From then on `finalize` cancels the batch instead of settling it. Returns `null` outside `Dispatched`.
+
+Measured against the chain's block timestamp (`batchDispatchedAt + batchCallbackDeadline`), not the local clock.
+
+```ts
+const secondsLeft = await batcher.timeUntilCallbackDeadline(batchId);
+if (secondsLeft === 0n) {
+  // finalize now cancels the batch
+}
+```
+
 ### batchCreatedAt
 
 `(batchId: bigint) => Promise<bigint>`
@@ -182,6 +197,12 @@ Decrypts and returns the plaintext amount `account` joined into a batch. Acquire
 const joined = await batcher.depositOf(batchId, address);
 ```
 
+### unwrapRequestId
+
+`(batchId: bigint) => Promise<EncryptedValue>`
+
+The unwrap request a dispatched batch is waiting on. At dispatch the batcher unwraps its aggregate through `fromToken`, and the batch settles once that request's amount is publicly decrypted. Zero until the batch is dispatched. `finalize` reads it for you.
+
 ## Batcher policy reads
 
 The batcher-wide values describe batches opened **from now on**. An existing batch pins the policy in force when it opened — use the per-batch reads above (`batchMinBatchAge`, `batchCallbackDeadline`) for it.
@@ -214,7 +235,7 @@ Every write requires a configured signer and throws [`SignerNotConfiguredError`]
 
 Joins the currently open batch with a plaintext amount, encrypted automatically. `amount` is denominated in `fromToken`'s base units. `beneficiary` defaults to the connected wallet account and owns the resulting position.
 
-The batcher must already hold an ERC-7984 operator grant from the caller, or it cannot pull the amount — `Vault.deposit` / `Vault.redeem` grant it for you; with a bare `VaultBatcher` call `Token.setOperator` on `fromToken` first. A join with too little balance still succeeds on-chain and credits nothing, so the SDK checks the caller's confidential balance on `fromToken` first.
+A join that credits the caller sends the amount to the batcher with `confidentialTransferAndCall` on `fromToken`, so it needs no operator grant. A join for another `beneficiary` calls the batcher's `join`, which pulls the amount, so the batcher must already hold an ERC-7984 operator grant from the caller — `Vault.deposit` / `Vault.redeem` grant it for you; with a bare `VaultBatcher` call `Token.setOperator` on `fromToken` first. A join with too little balance still succeeds on-chain and credits nothing, so the SDK checks the caller's confidential balance on `fromToken` first.
 
 ```ts
 const { txHash, batchId, beneficiary, confidentialJoinedAmount } = await batcher.join(1_000_000n);
@@ -243,6 +264,25 @@ Closes the current batch once it has reached its pinned minimum age and kicks of
 ```ts
 await batcher.dispatchBatch();
 ```
+
+### finalize
+
+`(batchId: bigint) => Promise<TransactionResult>`
+
+Settles a dispatched batch yourself: reads the batch's `unwrapRequestId`, publicly decrypts the amount that unwrap released, and submits `dispatchBatchCallback` with the cleartext and its proof, which executes the route. Permissionless, like `dispatchBatch`. A keeper normally does this, so reach for it when a batch has sat in `BatchState.Dispatched` longer than expected. Past the batch's callback deadline (`batchDispatchedAt + batchCallbackDeadline`) the same call cancels the batch instead of settling it.
+
+Only legal while the batch is `BatchState.Dispatched`. Read [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline) to see whether the call will settle or cancel.
+
+```ts
+await batcher.finalize(batchId);
+```
+
+**Throws:**
+
+- [`VaultBatchNotDispatchedError`](errors.md#vaultbatchnotdispatchederror) — the batch is not `Dispatched`, for example because a keeper already finalized it. Thrown before any decryption.
+- [`DecryptionFailedError`](errors.md#decryptionfailederror) — the public decryption returned no cleartext for the amount.
+
+`prepareFinalize(batchId)` does everything but the send, including the `Dispatched` check, and returns `{ batchId, unwrapAmountCleartext, decryptionProof, call }`, the `dispatchBatchCallback` call ready for a host's own signer. It needs no signer.
 
 ### claim
 
@@ -281,6 +321,37 @@ Only legal once the batch reaches `BatchState.Canceled`; before that, a particip
 await batcher.recover(batchId, "0xDepositor");
 ```
 
+## Call builders
+
+```ts
+import {
+  joinContract,
+  claimContract,
+  quitContract,
+  recoverContract,
+  dispatchBatchContract,
+  dispatchBatchCallbackContract,
+  currentBatchIdContract,
+  batchStateContract,
+  unwrapRequestIdContract,
+} from "@zama-fhe/sdk/vaults";
+```
+
+Every read and write above has a pure builder that returns `{ address, abi, functionName, args }` without executing anything, for apps that submit transactions through their own pipeline (a bundler, a transaction queue, an EIP-5792 `wallet_sendCalls` batch) or read through their own multicall. Pass the result to viem's `encodeFunctionData` / `readContract`, or spread it into a wagmi `readContracts` entry.
+
+| Builder                                                                                   | Mirrors                                              |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `joinContract(batcher, beneficiary, encryptedAmount, inputProof)`                         | `join`                                               |
+| `claimContract(batcher, batchId, account)`                                                | `claim`                                              |
+| `quitContract(batcher, batchId)`                                                          | `quit`                                               |
+| `recoverContract(batcher, batchId, account)`                                              | `recover`                                            |
+| `dispatchBatchContract(batcher)`                                                          | `dispatchBatch`                                      |
+| `dispatchBatchCallbackContract(batcher, batchId, unwrapAmountCleartext, decryptionProof)` | the write inside `finalize`                          |
+| `unwrapRequestIdContract(batcher, batchId)`                                               | `unwrapRequestId`                                    |
+| `currentBatchIdContract`, `batchStateContract`, `pausedContract`, …                       | the matching read, one builder per read listed above |
+
+A builder encodes a call; it does not check balances, encrypt, or grant anything. The class method is the full pre-flight, so an app that uses the builders takes those steps on itself.
+
 ## Events
 
 ```ts
@@ -301,11 +372,13 @@ import {
   batchStateQueryOptions,
   currentBatchIdQueryOptions,
   timeUntilDispatchableQueryOptions,
+  timeUntilCallbackDeadlineQueryOptions,
   joinMutationOptions,
   claimMutationOptions,
   quitMutationOptions,
   recoverMutationOptions,
   dispatchBatchMutationOptions,
+  finalizeMutationOptions,
   invalidateBatchQueries,
 } from "@zama-fhe/sdk/vaults";
 ```
@@ -314,7 +387,8 @@ The React hooks are built on these query and mutation option builders; they are 
 
 ## Related
 
-- [Vault](Vault.md) — pairs two batchers behind `deposit()` / `redeem()` with automatic operator approval
+- [Vault](Vault.md) — pairs two batchers behind `deposit()` / `redeem()`
 - [Vault deposits and redemptions](../../guides/vaults/deposits.md) — the full flow, including when each write is legal
 - [Errors](errors.md) — the error classes thrown above
+- [useTimeUntilCallbackDeadline](../react/useTimeUntilCallbackDeadline.md) — React hook for `timeUntilCallbackDeadline`
 - [useVaultBatcher](../react/useVaultBatcher.md) — React hook returning a `VaultBatcher`

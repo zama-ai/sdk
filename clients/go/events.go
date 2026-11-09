@@ -46,6 +46,7 @@ const (
 	EventOperationVaultRecover           = EventOperation(pb.EventOperation_EVENT_OPERATION_VAULT_RECOVER)
 	EventOperationVaultDispatchBatch     = EventOperation(pb.EventOperation_EVENT_OPERATION_VAULT_DISPATCH_BATCH)
 	EventOperationVaultRouterJoin        = EventOperation(pb.EventOperation_EVENT_OPERATION_VAULT_ROUTER_JOIN)
+	EventOperationVaultFinalize          = EventOperation(pb.EventOperation_EVENT_OPERATION_VAULT_FINALIZE)
 	ShieldPathUnspecified                = ShieldPath(pb.ShieldPath_SHIELD_PATH_UNSPECIFIED)
 	ShieldPathTransferAndCall            = ShieldPath(pb.ShieldPath_SHIELD_PATH_TRANSFER_AND_CALL)
 	ShieldPathApproveAndWrap             = ShieldPath(pb.ShieldPath_SHIELD_PATH_APPROVE_AND_WRAP)
@@ -59,6 +60,7 @@ const (
 	VaultOperationRecover                = VaultOperation(pb.VaultOperation_VAULT_OPERATION_RECOVER)
 	VaultOperationDispatchBatch          = VaultOperation(pb.VaultOperation_VAULT_OPERATION_DISPATCH_BATCH)
 	VaultOperationRouterJoin             = VaultOperation(pb.VaultOperation_VAULT_OPERATION_ROUTER_JOIN)
+	VaultOperationFinalize               = VaultOperation(pb.VaultOperation_VAULT_OPERATION_FINALIZE)
 )
 
 const (

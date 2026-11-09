@@ -389,6 +389,7 @@ export enum EventOperation {
   EVENT_OPERATION_VAULT_RECOVER = 22,
   EVENT_OPERATION_VAULT_DISPATCH_BATCH = 23,
   EVENT_OPERATION_VAULT_ROUTER_JOIN = 24,
+  EVENT_OPERATION_VAULT_FINALIZE = 25,
   UNRECOGNIZED = -1,
 }
 
@@ -469,6 +470,9 @@ export function eventOperationFromJSON(object: any): EventOperation {
     case 24:
     case "EVENT_OPERATION_VAULT_ROUTER_JOIN":
       return EventOperation.EVENT_OPERATION_VAULT_ROUTER_JOIN;
+    case 25:
+    case "EVENT_OPERATION_VAULT_FINALIZE":
+      return EventOperation.EVENT_OPERATION_VAULT_FINALIZE;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -528,6 +532,8 @@ export function eventOperationToJSON(object: EventOperation): string {
       return "EVENT_OPERATION_VAULT_DISPATCH_BATCH";
     case EventOperation.EVENT_OPERATION_VAULT_ROUTER_JOIN:
       return "EVENT_OPERATION_VAULT_ROUTER_JOIN";
+    case EventOperation.EVENT_OPERATION_VAULT_FINALIZE:
+      return "EVENT_OPERATION_VAULT_FINALIZE";
     case EventOperation.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -623,6 +629,7 @@ export enum VaultOperation {
   VAULT_OPERATION_RECOVER = 4,
   VAULT_OPERATION_DISPATCH_BATCH = 5,
   VAULT_OPERATION_ROUTER_JOIN = 6,
+  VAULT_OPERATION_FINALIZE = 7,
   UNRECOGNIZED = -1,
 }
 
@@ -649,6 +656,9 @@ export function vaultOperationFromJSON(object: any): VaultOperation {
     case 6:
     case "VAULT_OPERATION_ROUTER_JOIN":
       return VaultOperation.VAULT_OPERATION_ROUTER_JOIN;
+    case 7:
+    case "VAULT_OPERATION_FINALIZE":
+      return VaultOperation.VAULT_OPERATION_FINALIZE;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -672,6 +682,8 @@ export function vaultOperationToJSON(object: VaultOperation): string {
       return "VAULT_OPERATION_DISPATCH_BATCH";
     case VaultOperation.VAULT_OPERATION_ROUTER_JOIN:
       return "VAULT_OPERATION_ROUTER_JOIN";
+    case VaultOperation.VAULT_OPERATION_FINALIZE:
+      return "VAULT_OPERATION_FINALIZE";
     case VaultOperation.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";

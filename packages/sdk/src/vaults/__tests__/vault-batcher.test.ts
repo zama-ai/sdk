@@ -1,6 +1,10 @@
 import type { EncryptValuesReturnType } from "@fhevm/sdk/actions/encrypt";
 import type { Address } from "viem";
-import { InsufficientConfidentialBalanceError, SignerNotConfiguredError } from "../../errors";
+import {
+  InsufficientConfidentialBalanceError,
+  SignerNotConfiguredError,
+  VaultBatchNotDispatchedError,
+} from "../../errors";
 import type { ZamaSDKEvent } from "../../events/sdk-events";
 import {
   describe,
@@ -12,6 +16,7 @@ import {
   vi,
 } from "../../test-fixtures";
 import { Token } from "../../token";
+import type { GenericProvider } from "../../types/provider";
 import { BatchState } from "../types";
 import { createVaultBatcher, VaultBatcher } from "../vault-batcher";
 
@@ -28,7 +33,7 @@ describe("VaultBatcher", () => {
   });
 
   describe("join", () => {
-    test("encrypts the amount, submits join, and reads the batch id from the Joined event", async ({
+    test("sends the amount to the batcher with confidentialTransferAndCall and reads the batch id from the Joined event", async ({
       sdk,
       provider,
       signer,
@@ -45,13 +50,17 @@ describe("VaultBatcher", () => {
       expect(result.batchId).toBe(12n);
       expect(relayer.encryptValues).toHaveBeenCalledWith({
         values: [{ value: 1_000n, type: "euint64" }],
-        contractAddress: BATCHER_ADDRESS,
+        contractAddress: FROM_TOKEN,
         userAddress,
         options: { operation: "vault-join" },
       });
       expect(Token.prototype.decryptBalance).toHaveBeenCalledWith(userAddress, "vault-join");
       expect(signer.writeContract).toHaveBeenCalledWith(
-        expect.objectContaining({ functionName: "join", args: [userAddress, handle, inputProof] }),
+        expect.objectContaining({
+          address: FROM_TOKEN,
+          functionName: "confidentialTransferAndCall",
+          args: [BATCHER_ADDRESS, handle, inputProof, "0x"],
+        }),
       );
     });
 
@@ -77,10 +86,11 @@ describe("VaultBatcher", () => {
       );
     });
 
-    test("uses an explicit beneficiary when provided", async ({
+    test("calls the pulling join, with input bound to the batcher, for another beneficiary", async ({
       sdk,
       provider,
       signer,
+      relayer,
       handle,
       inputProof,
     }) => {
@@ -89,8 +99,15 @@ describe("VaultBatcher", () => {
       const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
       await batcher.join(1_000n, OTHER_ADDRESS);
 
+      expect(relayer.encryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({ contractAddress: BATCHER_ADDRESS }),
+      );
       expect(signer.writeContract).toHaveBeenCalledWith(
-        expect.objectContaining({ args: [OTHER_ADDRESS, handle, inputProof] }),
+        expect.objectContaining({
+          address: BATCHER_ADDRESS,
+          functionName: "join",
+          args: [OTHER_ADDRESS, handle, inputProof],
+        }),
       );
     });
 
@@ -171,7 +188,7 @@ describe("VaultBatcher", () => {
       await batcher.join(1_000n, undefined, { skipBalanceCheck: true });
 
       expect(signer.writeContract).toHaveBeenCalledWith(
-        expect.objectContaining({ functionName: "join" }),
+        expect.objectContaining({ functionName: "confidentialTransferAndCall" }),
       );
     });
   });
@@ -192,6 +209,171 @@ describe("VaultBatcher", () => {
         expect.objectContaining({ functionName: "dispatchBatch", args: [] }),
       );
     });
+  });
+
+  describe("finalize", () => {
+    const UNWRAP_REQUEST_ID = `0x${"ab".repeat(32)}` as const;
+    const UNWRAP_AMOUNT = `0x${"cd".repeat(32)}` as const;
+
+    function mockDispatchedBatch(
+      provider: GenericProvider,
+      state: BatchState = BatchState.Dispatched,
+    ): void {
+      vi.mocked(provider.readContract).mockImplementation(async (config) => {
+        switch (config.functionName) {
+          case "batchState": {
+            return state;
+          }
+          case "unwrapRequestId": {
+            return UNWRAP_REQUEST_ID;
+          }
+          case "fromToken": {
+            return FROM_TOKEN;
+          }
+          case "unwrapAmount": {
+            return UNWRAP_AMOUNT;
+          }
+          default: {
+            throw new Error(`Unexpected read ${config.functionName}`);
+          }
+        }
+      });
+    }
+
+    test("decrypts the batch's unwrap amount and submits dispatchBatchCallback", async ({
+      sdk,
+      provider,
+      relayer,
+      signer,
+    }) => {
+      mockDispatchedBatch(provider);
+      const result = await new VaultBatcher(sdk, BATCHER_ADDRESS).finalize(7n);
+
+      expect(provider.readContract).toHaveBeenCalledWith(
+        expect.objectContaining({ functionName: "unwrapRequestId", args: [7n] }),
+      );
+      expect(provider.readContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          address: FROM_TOKEN,
+          functionName: "unwrapAmount",
+          args: [UNWRAP_REQUEST_ID],
+        }),
+      );
+      expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
+        encryptedValues: [UNWRAP_AMOUNT],
+        options: { operation: "vault-finalize" },
+      });
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          address: BATCHER_ADDRESS,
+          functionName: "dispatchBatchCallback",
+          args: [7n, 500n, expect.any(String)],
+        }),
+      );
+      expect(result.txHash).toBe("0xtxhash");
+    });
+
+    test("tags the submitted event as a finalize", async ({ createSDK, provider, events }) => {
+      const received: ZamaSDKEvent[] = [];
+      const sdk = createSDK({ onEvent: (event) => received.push(event) });
+      mockDispatchedBatch(provider);
+
+      await new VaultBatcher(sdk, BATCHER_ADDRESS).finalize(7n);
+
+      expect(received).toContainEqual(
+        expect.objectContaining({
+          type: events.VaultSubmitted,
+          vaultOperation: "finalize",
+          tokenAddress: BATCHER_ADDRESS,
+        }),
+      );
+    });
+
+    test("throws without a configured signer before reading anything", async ({
+      createSDK,
+      provider,
+    }) => {
+      const batcher = new VaultBatcher(createSDK({ signer: undefined }), BATCHER_ADDRESS);
+      await expect(batcher.finalize(7n)).rejects.toThrow(SignerNotConfiguredError);
+      expect(provider.readContract).not.toHaveBeenCalled();
+    });
+
+    test("prepareFinalize builds the callback without a signer", async ({
+      createSDK,
+      provider,
+    }) => {
+      mockDispatchedBatch(provider);
+      const batcher = new VaultBatcher(createSDK({ signer: undefined }), BATCHER_ADDRESS);
+
+      const prepared = await batcher.prepareFinalize(7n);
+
+      expect(prepared).toMatchObject({
+        batchId: 7n,
+        unwrapAmountCleartext: 500n,
+        call: expect.objectContaining({
+          address: BATCHER_ADDRESS,
+          functionName: "dispatchBatchCallback",
+          args: [7n, 500n, prepared.decryptionProof],
+        }),
+      });
+    });
+
+    test.for([BatchState.Pending, BatchState.Finalized, BatchState.Canceled])(
+      "refuses a batch in state %s before decrypting anything",
+      async (state, { sdk, provider, relayer, signer }) => {
+        mockDispatchedBatch(provider, state);
+        const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+
+        const error = await batcher.finalize(7n).catch((error: unknown) => error);
+
+        expect(error).toBeInstanceOf(VaultBatchNotDispatchedError);
+        expect(error).toMatchObject({ batcher: BATCHER_ADDRESS, batchId: 7n, state });
+        expect(relayer.decryptPublicValuesWithSignatures).not.toHaveBeenCalled();
+        expect(signer.writeContract).not.toHaveBeenCalled();
+      },
+    );
+  });
+
+  describe("timeUntilCallbackDeadline", () => {
+    test("returns the seconds left before a dispatched batch would be canceled", async ({
+      sdk,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(BatchState.Dispatched) // batchState
+        .mockResolvedValueOnce(1_000n) // batchDispatchedAt
+        .mockResolvedValueOnce(600n); // batchCallbackDeadline
+      vi.mocked(provider.getBlockTimestamp).mockResolvedValueOnce(1_200n);
+
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+      // canceled from 1_000 + 600 = 1_600; now is 1_200 → 400 remaining
+      await expect(batcher.timeUntilCallbackDeadline(58n)).resolves.toBe(400n);
+    });
+
+    test("returns 0 from the deadline on, when finalize cancels", async ({ sdk, provider }) => {
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(BatchState.Dispatched)
+        .mockResolvedValueOnce(1_000n)
+        .mockResolvedValueOnce(600n);
+      vi.mocked(provider.getBlockTimestamp).mockResolvedValueOnce(1_600n);
+
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+      await expect(batcher.timeUntilCallbackDeadline(58n)).resolves.toBe(0n);
+    });
+
+    test.for([BatchState.Pending, BatchState.Finalized, BatchState.Canceled])(
+      "returns null for a batch in state %s, which has nothing to finalize",
+      async (state, { sdk, provider }) => {
+        vi.mocked(provider.readContract)
+          .mockResolvedValueOnce(state)
+          .mockResolvedValueOnce(1_000n)
+          .mockResolvedValueOnce(600n);
+        vi.mocked(provider.getBlockTimestamp).mockResolvedValueOnce(1_200n);
+
+        const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+        await expect(batcher.timeUntilCallbackDeadline(58n)).resolves.toBeNull();
+      },
+    );
   });
 
   describe("claim", () => {

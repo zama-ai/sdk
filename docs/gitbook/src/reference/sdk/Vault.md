@@ -7,7 +7,7 @@ description: Confidential ERC-4626 vault interface — deposit and redeem throug
 
 `Vault` is the high-level interface for a confidential ERC-4626 vault. It pairs the vault's two on-chain batcher contracts — one for deposits, one for redemptions — behind ERC-4626-style `deposit` and `redeem` methods, the way [`WrappedToken`](WrappedToken.md) builds on [`Token`](Token.md).
 
-Both methods grant the batcher an ERC-7984 operator approval if one isn't already active, check the caller's confidential balance, encrypt the amount, and join the currently open batch. Everything after the join — tracking the batch, dispatching it, claiming, quitting — lives on the two [`VaultBatcher`](VaultBatcher.md) instances the vault exposes as `depositBatcher` and `redeemBatcher`.
+Both methods check the caller's confidential balance, encrypt the amount, and send it to the batcher with `confidentialTransferAndCall`, which joins it into the currently open batch. That needs no operator approval; only a join for another `beneficiary` does, and the method grants it first if none is active. Everything after the join — tracking the batch, dispatching it, claiming, quitting — lives on the two [`VaultBatcher`](VaultBatcher.md) instances the vault exposes as `depositBatcher` and `redeemBatcher`.
 
 ## Import
 
@@ -122,9 +122,9 @@ Deposits a plaintext amount of the underlying confidential asset by joining the 
 In order, the call:
 
 1. Resolves `vaultAddress()` and `cAsset()`, throwing `ConfigurationError` if the batchers disagree.
-2. Grants the deposit batcher an operator approval on `cAsset` via `Token.setOperator`, unless `isOperator` already reports one.
+2. Only for another `beneficiary`: grants the deposit batcher an operator approval on `cAsset` via `Token.setOperator`, unless `isOperator` already reports one.
 3. Checks the caller's confidential balance (skippable with `skipBalanceCheck`).
-4. Encrypts `amount` and submits `join` on the deposit batcher.
+4. Encrypts `amount` and sends it to the deposit batcher with `confidentialTransferAndCall` on `cAsset` — or, for another `beneficiary`, submits `join` on the deposit batcher.
 5. Reads the `Joined` event from the receipt and returns the `batchId`.
 
 ```ts
@@ -136,7 +136,7 @@ Options (`VaultJoinOptions`):
 | Option             | Type      | Default          | Description                                                                                                                                                                                                  |
 | ------------------ | --------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `beneficiary`      | `Address` | connected wallet | Account credited in the batch. The beneficiary owns the position: only they can `quit` it, and `claim` always pays out to them.                                                                              |
-| `operatorUntil`    | `number`  | now + 1 hour     | Unix timestamp (seconds) until which the batcher's operator grant is valid. Only used when a grant isn't already active. Same default as `Token.setOperator`.                                                |
+| `operatorUntil`    | `number`  | now + 1 hour     | Unix timestamp (seconds) until which the batcher's operator grant is valid. Only used for another `beneficiary`, and only when a grant isn't already active. Same default as `Token.setOperator`.            |
 | `skipBalanceCheck` | `boolean` | `false`          | Skip the confidential-balance pre-flight. For accounts whose balance the connected signer can't decrypt, such as smart wallets. The on-chain transfer then moves zero, not reverts, if the balance is short. |
 
 **Throws:**
@@ -180,6 +180,6 @@ Both writes resolve to a `JoinResult`, which extends `TransactionResult`:
 
 - [VaultBatcher](VaultBatcher.md) — the per-direction batcher API: batch state, dispatch, claim, quit, recover
 - [Vault deposits and redemptions](../../guides/vaults/deposits.md) — the full deposit → dispatch → claim flow
-- [Operator approvals](../../guides/operator-approvals.md) — the approval `deposit()` / `redeem()` grant automatically
+- [Operator approvals](../../guides/operator-approvals.md) — the approval `deposit()` / `redeem()` grant for another `beneficiary`
 - [useVault](../react/useVault.md) — React hook returning a `Vault`
 - [useDeposit](../react/useDeposit.md) / [useRedeem](../react/useRedeem.md) — mutation hooks over `deposit()` / `redeem()`
