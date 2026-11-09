@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getAddress, type Address } from "viem";
 import { sepolia } from "viem/chains";
 import { BatchList } from "@/components/BatchList";
+import { Position } from "@/components/Position";
 import { VaultForm } from "@/components/VaultForm";
 import { IS_CONFIGURED, VAULT } from "@/lib/config";
 import { Providers } from "@/providers";
@@ -94,6 +95,7 @@ export default function Home() {
           </button>
         </p>
         <VaultForm account={account} />
+        <Position account={account} />
         <BatchList title="Deposits" batcher={VAULT.depositBatcher} account={account} />
         <BatchList title="Withdrawals" batcher={VAULT.redeemBatcher} account={account} />
       </main>
