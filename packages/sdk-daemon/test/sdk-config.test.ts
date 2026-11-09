@@ -44,9 +44,9 @@ test.each<{ auth: ChainAuth; expected: object }>([
   },
   {
     auth: {
-      credential: { $case: "apiKeyCookie", apiKeyCookie: { name: "session", value: "cookie" } },
+      credential: { $case: "apiKeyHeader", apiKeyHeader: { name: "x-partner-key", value: "key" } },
     },
-    expected: { __type: "ApiKeyCookie", cookie: "session", value: "cookie" },
+    expected: { __type: "ApiKeyHeader", header: "x-partner-key", value: "key" },
   },
 ])(
   "authentication preserves credential variant and omitted name: $expected.__type",

@@ -9,10 +9,6 @@ pub enum RelayerAuth {
         value: String,
         header: Option<String>,
     },
-    ApiKeyCookie {
-        value: String,
-        cookie: Option<String>,
-    },
 }
 impl std::fmt::Debug for RelayerAuth {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -188,12 +184,6 @@ impl From<RelayerAuth> for generated::ChainAuth {
             RelayerAuth::ApiKeyHeader { value, header } => {
                 Credential::ApiKeyHeader(generated::NamedCredential {
                     name: header,
-                    value,
-                })
-            }
-            RelayerAuth::ApiKeyCookie { value, cookie } => {
-                Credential::ApiKeyCookie(generated::NamedCredential {
-                    name: cookie,
                     value,
                 })
             }

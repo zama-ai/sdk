@@ -132,10 +132,6 @@ export type FheChainAuth = {
     __type: "ApiKeyHeader";
     header?: string;
     value: string;
-} | {
-    __type: "ApiKeyCookie";
-    cookie?: string;
-    value: string;
 };
 
 // @public

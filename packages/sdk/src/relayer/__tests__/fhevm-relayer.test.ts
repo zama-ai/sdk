@@ -456,10 +456,6 @@ describe("FhevmRelayer capability initialization", () => {
       expected: { type: "ApiKeyHeader", value: "secret", header: "x-custom-key" } as const,
     },
     {
-      auth: { __type: "ApiKeyCookie", value: "secret", cookie: "custom-cookie" } as const,
-      expected: { type: "ApiKeyCookie", value: "secret", cookie: "custom-cookie" } as const,
-    },
-    {
       auth: { __type: "BearerToken", token: "secret" } as const,
       expected: { type: "BearerToken", token: "secret" } as const,
     },
