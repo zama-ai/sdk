@@ -16,13 +16,13 @@ describe("wrapperDiscoveryQueryOptions", () => {
     expect(missingErc20.enabled).toBe(false);
   });
 
-  test("staleTime is Infinity — wrapper mappings are immutable", ({ provider }) => {
-    const registry = new WrappersRegistry({ provider });
+  test("staleTime matches the registry TTL — pairs can be revoked", ({ provider }) => {
+    const registry = new WrappersRegistry({ provider, registryTTL: 60 });
     const options = wrapperDiscoveryQueryOptions(registry, {
       tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
     });
-    expect(options.staleTime).toBe(Infinity);
+    expect(options.staleTime).toBe(60_000);
   });
 
   test("includes erc20Address in query key", ({ provider }) => {
@@ -61,9 +61,10 @@ describe("wrapperDiscoveryQueryOptions", () => {
 
   test("returns wrapper address when it exists", async ({ provider, mockQueryContext }) => {
     vi.mocked(provider.getChainId).mockResolvedValue(1);
-    vi.mocked(provider.readContract)
-      .mockResolvedValueOnce([true, "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D"]) // getConfidentialTokenAddress
-      .mockResolvedValueOnce(true); // isConfidentialTokenValid
+    vi.mocked(provider.readContract).mockResolvedValueOnce([
+      true,
+      "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D",
+    ]); // getConfidentialTokenAddress
 
     const registry = new WrappersRegistry({ provider });
     const options = wrapperDiscoveryQueryOptions(registry, {
@@ -73,5 +74,25 @@ describe("wrapperDiscoveryQueryOptions", () => {
 
     const wrapper = await options.queryFn(mockQueryContext(options.queryKey));
     expect(wrapper).toBe("0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D");
+  });
+
+  test("returns null when the registered wrapper has been revoked", async ({
+    provider,
+    mockQueryContext,
+  }) => {
+    vi.mocked(provider.getChainId).mockResolvedValue(1);
+    vi.mocked(provider.readContract).mockResolvedValueOnce([
+      false,
+      "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D",
+    ]);
+
+    const registry = new WrappersRegistry({ provider });
+    const options = wrapperDiscoveryQueryOptions(registry, {
+      tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+    });
+
+    const wrapper = await options.queryFn(mockQueryContext(options.queryKey));
+    expect(wrapper).toBeNull();
   });
 });
