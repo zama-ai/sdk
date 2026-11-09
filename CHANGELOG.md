@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.7.2](https://github.com/zama-ai/sdk/compare/v3.7.1...v3.7.2) (2026-11-09)
+
+### Bug Fixes
+
+- revoked wrapper discovery ([#912](https://github.com/zama-ai/sdk/issues/912)) ([86270d9]())
+
 ## [3.7.1](https://github.com/zama-ai/sdk/compare/v3.7.0...v3.7.1) (2026-10-22)
 
 ### Bug Fixes
