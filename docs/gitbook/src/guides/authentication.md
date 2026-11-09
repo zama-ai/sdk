@@ -189,6 +189,9 @@ Against the **Zama-hosted relayer**, only `ApiKeyHeader` works — requests with
 // Zama-hosted relayer — API key in the x-api-key header (required)
 auth: { __type: "ApiKeyHeader", value: "your-api-key" }
 
+// Behind your own proxy — same key, in the header your proxy reads
+auth: { __type: "ApiKeyHeader", header: "x-proxy-key", value: "your-api-key" }
+
 // Self-hosted relayer — only if your auth layer expects a bearer token
 auth: { __type: "BearerToken", token: "your-token" }
 ```
@@ -199,6 +202,10 @@ auth: { __type: "BearerToken", token: "your-token" }
 ```go
 // Zama-hosted relayer -- API key in the x-api-key header (required)
 config.Auth = zama.APIKeyHeader{Value: "your-api-key"}
+
+// Behind your own proxy -- same key, in the header your proxy reads
+header := "x-proxy-key"
+config.Auth = zama.APIKeyHeader{Value: "your-api-key", Header: &header}
 
 // Self-hosted relayer -- only if your auth layer expects a bearer token
 config.Auth = zama.BearerToken{Token: "your-token"}
@@ -211,12 +218,20 @@ config.Auth = zama.BearerToken{Token: "your-token"}
 // Zama-hosted relayer -- API key in the x-api-key header (required)
 let auth = RelayerAuth::api_key("your-api-key");
 
+// Behind your own proxy -- same key, in the header your proxy reads
+let auth = RelayerAuth::ApiKeyHeader {
+    value: "your-api-key".into(),
+    header: Some("x-proxy-key".into()),
+};
+
 // Self-hosted relayer -- only if your auth layer expects a bearer token
 let auth = RelayerAuth::BearerToken { token: "your-token".into() };
 ```
 
 {% endtab %}
 {% endtabs %}
+
+`ApiKeyHeader` takes an optional `header` name (the default is `x-api-key`). Behind your own proxy, set it to whichever header your proxy reads; the proxy then forwards the key upstream as `x-api-key` for the Zama-hosted relayer.
 
 When a browser relayer is routed through your own proxy, enforce CSRF protection
 at the proxy/application boundary (for example, with same-site cookies and your
