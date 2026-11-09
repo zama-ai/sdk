@@ -222,3 +222,31 @@ export function TokenSelector({ value, options, pending, error, onChange }: Toke
     </section>
   );
 }
+
+export const APP_TABS = [
+  { id: "tokens", label: "Tokens" },
+  { id: "advanced", label: "Advanced" },
+] as const;
+
+export type AppTab = (typeof APP_TABS)[number]["id"];
+
+export function AppTabs({ value, onChange }: { value: AppTab; onChange: (tab: AppTab) => void }) {
+  return (
+    <div className="tabs" role="tablist" aria-label="Sections">
+      {APP_TABS.map(({ id, label }) => (
+        <button
+          key={id}
+          type="button"
+          role="tab"
+          id={`tab-${id}`}
+          aria-selected={value === id}
+          aria-controls={`tabpanel-${id}`}
+          className="tab"
+          onClick={() => onChange(id)}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}

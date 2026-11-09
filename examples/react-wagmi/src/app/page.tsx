@@ -10,9 +10,11 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import {
   ActionScreen,
   AppHeader,
+  AppTabs,
   MainnetBanner,
   NetworkPicker,
   TokenSelector,
+  type AppTab,
 } from "@/components/PageChrome";
 import { NoTokenPanel, SelectedTokenPanel } from "@/components/SelectedTokenPanel";
 import { useEnabledNetworks } from "@/lib/hooks";
@@ -32,6 +34,7 @@ export default function Home() {
   const { connect, disconnect, isConnecting, isDisconnecting, connectError } =
     useWalletConnection();
   const { mutate: switchChain, isPending: isSwitching, error: switchError } = useSwitchChain();
+  const [tab, setTab] = useState<AppTab>("tokens");
 
   // Networks the server can serve: cleartext rows always, relayer rows only when it has a
   // relayer URL for them. Mainnet stays hidden until a deployment opts in.
@@ -158,14 +161,25 @@ export default function Home() {
         disconnecting={isDisconnecting}
       />
       {picker}
-      <TokenScreen chainId={chainId} address={address} />
+      <AppTabs value={tab} onChange={setTab} />
+      <div role="tabpanel" id={`tabpanel-${tab}`} aria-labelledby={`tab-${tab}`}>
+        <TokenScreen chainId={chainId} address={address} view={tab} />
+      </div>
     </main>
   );
 }
 
 // Mounted only on the connected screen, so the token list is never read from a chain this
 // deployment does not serve.
-function TokenScreen({ chainId, address }: { chainId: number | undefined; address: Address }) {
+function TokenScreen({
+  chainId,
+  address,
+  view,
+}: {
+  chainId: number | undefined;
+  address: Address;
+  view: "tokens" | "advanced";
+}) {
   const [selectedTokenAddress, setSelectedTokenAddress] = useState<Address | null>(null);
 
   // Fetch all valid token pairs from the on-chain WrappersRegistry. The registry address
@@ -213,9 +227,10 @@ function TokenScreen({ chainId, address }: { chainId: number | undefined; addres
           key={`${chainId}-${address}-${token.confidentialTokenAddress}`}
           token={token}
           validPairs={validPairs}
+          view={view}
         />
       )}
-      {!token && !isRegistryPending && <NoTokenPanel />}
+      {!token && !isRegistryPending && view === "tokens" && <NoTokenPanel />}
     </>
   );
 }

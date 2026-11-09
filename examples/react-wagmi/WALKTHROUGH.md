@@ -7,7 +7,7 @@ A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using wagm
 ## Architecture at a glance
 
 ```
-page.tsx                         — wallet connect, network picker, token selector
+page.tsx                         — wallet connect, network picker, tabs, token selector
 ├── lib/networks.ts              — the network table: one row per chain (viem chain, FHE preset, flags)
 ├── lib/relayers.ts              — server-side: upstream relayer URL + API key per network
 ├── lib/wallet.tsx               — wallet stack: Dynamic connect dialog or wagmi injected connector, built from the table
@@ -409,7 +409,7 @@ If the user closes the tab between phases, `PendingUnshieldCard` recovers the st
 
 ## 10. Deposit into a reacting contract (`confidentialTransferAndCall`)
 
-The `Reacting contract — ConfidentialVault` section demonstrates the ERC-7984
+The `Reacting contract — ConfidentialVault` section of the Advanced tab demonstrates the ERC-7984
 `confidentialTransferAndCall` pattern: a confidential transfer that also invokes the
 recipient contract's `onConfidentialTransferReceived` hook **in the same transaction**, so
 value moves and the receiver reacts atomically — no two-step transfer-then-notify race.

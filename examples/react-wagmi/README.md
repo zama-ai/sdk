@@ -6,6 +6,11 @@ picker switches the wallet between them; nothing else in the app changes per cha
 
 Covers: connect wallet (browser wallet, or a Dynamic-backed connect dialog with WalletConnect for a Safe), pick a network, shield ERC-20 → confidential, confidential transfer, unshield, grant/revoke/use delegation, pending unshield recovery, deposit into a reacting contract (`confidentialTransferAndCall`, Sepolia only).
 
+The connected app has two tabs:
+
+- **Tokens**: balances, shield, confidential transfer, unshield and pending unshield recovery for the selected token. The core of the SDK.
+- **Advanced**: the reacting-contract deposit (`confidentialTransferAndCall`) and decryption delegation.
+
 This app replaces the former `example-bnb`, `example-hoodi`, `example-polygon-amoy` and `example-zenith` apps, which were copies of it pinned to one chain each.
 
 ## Networks
