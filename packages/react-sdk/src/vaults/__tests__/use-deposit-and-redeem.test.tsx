@@ -55,6 +55,21 @@ describe("useDeposit", () => {
 
     expect(onSuccess).toHaveBeenCalledOnce();
   });
+
+  test("refuses to send while the wallet is on another chain than the vault's", async ({
+    renderWithProviders,
+    provider,
+    signer,
+  }) => {
+    mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN, vault: VAULT_ADDRESS });
+    const { result } = renderWithProviders(() => useDeposit({ addresses, chainId: 11155111 }));
+
+    await expect(act(() => result.current.mutateAsync({ amount: 1_000n }))).rejects.toMatchObject({
+      name: "ChainMismatchError",
+      targetChainId: 11155111,
+    });
+    expect(signer.writeContract).not.toHaveBeenCalled();
+  });
 });
 
 describe("useRedeem", () => {

@@ -7,7 +7,9 @@ description: Mutation hook that settles a dispatched vault batch when its keeper
 
 Mutation hook that settles a dispatched batch yourself. Same call as [`VaultBatcher.finalize`](../sdk/VaultBatcher.md#finalize): it publicly decrypts the batch's aggregate amount and hands the cleartext and its proof to the batcher, which executes the route.
 
-A keeper, an off-chain service that watches batches, normally finalizes a batch after dispatch, so this is for a batch that has sat in `BatchState.Dispatched` longer than expected. Finalizing is permissionless. Past the batch's callback deadline (see [`useTimeUntilCallbackDeadline`](./useTimeUntilCallbackDeadline.md)) the same call cancels the batch instead of settling it, and its participants take their deposits back with [`useQuit`](./useQuit.md).
+A keeper, an off-chain service that watches batches, normally finalizes a batch after dispatch. Use this hook when a batch has stayed `BatchState.Dispatched` longer than expected. Anyone may call it.
+
+After the batch's callback deadline (see [`useTimeUntilCallbackDeadline`](./useTimeUntilCallbackDeadline.md)) the same call cancels the batch instead of settling it, and its participants take their deposits back with [`useQuit`](./useQuit.md). A redeem batcher whose vault settles redemptions asynchronously is the exception: once it has placed the redemption request, `finalize` keeps settling the batch past the deadline.
 
 The call reads the batch state first and rejects with [`VaultBatchNotDispatchedError`](../sdk/errors.md#vaultbatchnotdispatchederror) when the batch is not `Dispatched`, for example because a keeper already finalized it.
 
@@ -58,6 +60,14 @@ The batcher contract address (deposit or redeem direction).
 
 ---
 
+### chainId
+
+`number | undefined`
+
+Chain the batcher is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](../sdk/errors.md#chainmismatcherror) instead of sending.
+
+---
+
 {% include ".gitbook/includes/mutation-options.md" %}
 
 ## Mutation variables
@@ -76,7 +86,7 @@ The dispatched batch to settle.
 
 `data` is `{ txHash: Hex; receipt: TransactionReceipt }`.
 
-On success the hook invalidates the batcher's batch reads: the batch leaves `Dispatched` and gains an exchange rate, so `useBatchState` refetches.
+On success the hook invalidates the batcher's batch reads: the batch leaves `Dispatched` and gains an exchange rate, so `useBatchState` and `useBatchStatus` refetch.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

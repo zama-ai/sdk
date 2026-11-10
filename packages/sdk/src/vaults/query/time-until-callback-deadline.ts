@@ -30,7 +30,11 @@ export function timeUntilCallbackDeadlineQueryOptions(
 
   return {
     ...filterQueryOptions(queryOpts),
-    queryKey: vaultQueryKeys.timeUntilCallbackDeadline.batch(batcher.address, config.batchId),
+    queryKey: vaultQueryKeys.timeUntilCallbackDeadline.batch(
+      batcher.address,
+      config.batchId,
+      batcher.chainId,
+    ),
     queryFn: async (context) => {
       const [, { batchId }] = context.queryKey;
       assertNonNullable(batchId, "timeUntilCallbackDeadlineQueryOptions: batchId");

@@ -57,6 +57,11 @@ export interface ReadContractConfig<
   readonly functionName: TFunctionName;
   /** Contract call arguments inferred from the ABI and function name. */
   readonly args: TArgs;
+  /**
+   * Chain to read from. Omitted, the provider's current chain. A provider
+   * bound to one chain throws `ConfigurationError` for another.
+   */
+  readonly chainId?: number;
 }
 
 /**

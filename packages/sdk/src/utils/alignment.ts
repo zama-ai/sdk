@@ -1,5 +1,6 @@
 import {
   ChainMismatchError,
+  ConfigurationError,
   SignerNotConfiguredError,
   WalletAccountNotReadyError,
 } from "../errors";
@@ -38,6 +39,31 @@ export async function requireAlignedWalletAccount(
 }
 
 /**
+ * {@link requireAlignedWalletAccount}, plus a check that the wallet is on
+ * `targetChainId` when one is given, so a write never lands on another chain.
+ *
+ * @internal
+ */
+export async function requireWriteChain(
+  operation: string,
+  signer: GenericSigner | undefined,
+  provider: GenericProvider,
+  targetChainId: number | undefined,
+): Promise<WalletAccount> {
+  const account = await requireAlignedWalletAccount(operation, signer, provider);
+  if (targetChainId !== undefined && account.chainId !== targetChainId) {
+    throw new ChainMismatchError({
+      operation,
+      signerChainId: account.chainId,
+      // The alignment check above guarantees the signer's chain is the provider's chain.
+      providerChainId: account.chainId,
+      targetChainId,
+    });
+  }
+  return account;
+}
+
+/**
  * Variant of {@link requireAlignedWalletAccount} that returns only the aligned
  * chain ID. Useful when a write path only needs to ensure signer/provider
  * coherence and doesn't otherwise consume the account.
@@ -50,4 +76,26 @@ export async function requireChainAlignment(
   provider: GenericProvider,
 ): Promise<number> {
   return (await requireAlignedWalletAccount(operation, signer, provider)).chainId;
+}
+
+/**
+ * For a provider bound to one chain: throws when a read asks for another, so
+ * it never answers from the wrong chain.
+ *
+ * @internal
+ */
+export async function requireReadChain(
+  adapter: string,
+  chainId: number | undefined,
+  getChainId: () => Promise<number>,
+): Promise<void> {
+  if (chainId === undefined) {
+    return;
+  }
+  const current = await getChainId();
+  if (current !== chainId) {
+    throw new ConfigurationError(
+      `${adapter} is bound to chain ${current} and cannot read chain ${chainId}; use a provider for that chain`,
+    );
+  }
 }

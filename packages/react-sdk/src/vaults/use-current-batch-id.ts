@@ -10,6 +10,8 @@ import { useVaultBatcher } from "./use-vault-batcher";
 export interface UseCurrentBatchIdConfig {
   /** The batcher contract address (deposit or redeem direction). */
   address: Address;
+  /** Chain to read from, when it is not the connected one. Needs a provider that can route reads, such as `WagmiProvider`. */
+  chainId?: number;
 }
 
 /** TanStack Query options accepted by {@link useCurrentBatchId} (excluding `queryKey`/`queryFn`). */
@@ -37,7 +39,7 @@ export function useCurrentBatchId(
   options?: UseCurrentBatchIdOptions,
 ) {
   const { enabled = true } = options ?? {};
-  const batcher = useVaultBatcher(config.address);
+  const batcher = useVaultBatcher(config.address, { chainId: config.chainId });
   const baseOptions = currentBatchIdQueryOptions(batcher);
 
   return useQuery<bigint>({

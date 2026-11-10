@@ -8,7 +8,7 @@ description: Query hook for the seconds until a dispatched vault batch reaches i
 Reads how many seconds remain until a dispatched batch reaches its callback deadline. Same read as [`VaultBatcher.timeUntilCallbackDeadline`](../sdk/VaultBatcher.md#timeuntilcallbackdeadline).
 
 - A positive value is the countdown. Pass `refetchInterval` to keep it live.
-- `0` means the deadline has passed. From then on [`useFinalize`](./useFinalize.md) cancels the batch instead of settling it.
+- `0` means the deadline has passed. From then on [`useFinalize`](./useFinalize.md) cancels the batch instead of settling it, except on a redeem batcher whose vault settles redemptions asynchronously and that has already placed the redemption request.
 - `null` means the batch is not `Dispatched`, so there is no deadline to wait for.
 
 The value is measured against the chain's block timestamp, not the local clock.
@@ -62,6 +62,14 @@ The batcher contract address (deposit or redeem direction).
 `bigint | undefined`
 
 The batch to check. The query is disabled while `undefined`.
+
+---
+
+### chainId
+
+`number | undefined`
+
+Chain to read from, if it is not the connected one. Needs a provider that can read other chains, such as `WagmiProvider`.
 
 {% include ".gitbook/includes/query-options.md" %}
 

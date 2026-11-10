@@ -19,6 +19,7 @@ import type {
   WriteContractConfig,
   WriteFunctionName,
 } from "../types";
+import { requireReadChain } from "../utils/alignment";
 
 /** Configuration for {@link ViemProvider}. */
 export interface ViemProviderConfig {
@@ -59,7 +60,9 @@ export class ViemProvider implements GenericProvider {
   >(
     config: ReadContractConfig<TAbi, TFunctionName, TArgs>,
   ): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>> {
-    return this.#publicClient.readContract(config);
+    const { chainId, ...call } = config;
+    await requireReadChain("ViemProvider", chainId, () => this.getChainId());
+    return this.#publicClient.readContract(call as typeof config);
   }
 
   /** Wait for a transaction to be mined and return its receipt. */
@@ -68,7 +71,8 @@ export class ViemProvider implements GenericProvider {
   }
 
   /** Return the latest block timestamp in seconds. */
-  async getBlockTimestamp(): Promise<bigint> {
+  async getBlockTimestamp(chainId?: number): Promise<bigint> {
+    await requireReadChain("ViemProvider", chainId, () => this.getChainId());
     const block = await this.#publicClient.getBlock();
     return block.timestamp;
   }

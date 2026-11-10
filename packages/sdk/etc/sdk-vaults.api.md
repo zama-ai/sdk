@@ -1982,6 +1982,22 @@ export function batchDispatchedAtContract(batcher: Address, batchId: bigint): {
 };
 
 // @public
+export interface BatcherTokens {
+    fromToken: Address;
+    toToken: Address;
+}
+
+// @public
+export interface BatcherTokensQueryConfig {
+    query?: Record<string, unknown>;
+}
+
+// Warning: (ae-forgotten-export) The symbol "QueryFactoryOptions" needs to be exported by the entry point index.d.ts
+//
+// @public
+export function batcherTokensQueryOptions(batcher: VaultBatcher, config?: BatcherTokensQueryConfig): QueryFactoryOptions<BatcherTokens, Error, BatcherTokens, ReturnType<typeof vaultQueryKeys.batcherTokens.batcher>>;
+
+// @public
 export function batchMinBatchAgeContract(batcher: Address, batchId: bigint): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -3304,10 +3320,42 @@ export interface BatchStateQueryConfig {
     query?: Record<string, unknown>;
 }
 
-// Warning: (ae-forgotten-export) The symbol "QueryFactoryOptions" needs to be exported by the entry point index.d.ts
-//
 // @public
 export function batchStateQueryOptions(batcher: VaultBatcher, config?: BatchStateQueryConfig): QueryFactoryOptions<BatchState, Error, BatchState, ReturnType<typeof vaultQueryKeys.batchState.batch>>;
+
+// @public
+export type BatchStatus = {
+    state: typeof BatchState.Pending;
+    createdAt: bigint;
+    dispatchableAt: bigint;
+    secondsUntilDispatchable: bigint;
+} | {
+    state: typeof BatchState.Dispatched;
+    createdAt: bigint;
+    dispatchableAt: bigint;
+    dispatchedAt: bigint;
+    callbackDeadlineAt: bigint;
+    secondsUntilCallbackDeadline: bigint;
+} | {
+    state: typeof BatchState.Finalized;
+    createdAt: bigint;
+    dispatchableAt: bigint;
+    dispatchedAt: bigint;
+} | {
+    state: typeof BatchState.Canceled;
+    createdAt: bigint;
+    dispatchableAt: bigint;
+    dispatchedAt: bigint;
+};
+
+// @public
+export interface BatchStatusQueryConfig {
+    batchId?: bigint;
+    query?: Record<string, unknown>;
+}
+
+// @public
+export function batchStatusQueryOptions(batcher: VaultBatcher, config?: BatchStatusQueryConfig): QueryFactoryOptions<BatchStatus, Error, BatchStatus, ReturnType<typeof vaultQueryKeys.batchStatus.batch>>;
 
 // @public
 export function callbackDeadlineContract(batcher: Address): {
@@ -4630,10 +4678,10 @@ export interface ClaimParams {
 // Warning: (ae-forgotten-export) The symbol "ZamaSDK" needs to be exported by the entry point index.d.ts
 //
 // @public
-export function createVault(sdk: ZamaSDK, addresses: VaultAddresses): Vault;
+export function createVault(sdk: ZamaSDK, addresses: VaultAddresses, options?: VaultBatcherOptions): Vault;
 
 // @public
-export function createVaultBatcher(sdk: ZamaSDK, address: Address): VaultBatcher;
+export function createVaultBatcher(sdk: ZamaSDK, address: Address, options?: VaultBatcherOptions): VaultBatcher;
 
 // @public
 export function createVaultGroup(sdk: ZamaSDK, config: VaultGroupConfig): VaultGroup;
@@ -9990,6 +10038,7 @@ export function joinMutationOptions(batcher: VaultBatcher): MutationFactoryOptio
 
 // @public
 export interface JoinOptions {
+    onJoinSubmitted?: (txHash: Hex) => void;
     skipBalanceCheck?: boolean;
 }
 
@@ -10663,6 +10712,9 @@ export function minBatchAgeContract(batcher: Address): {
 };
 
 // @public
+export function openBatchIds(logs: readonly RawLog[], batcher: Address, account: Address): bigint[];
+
+// @public
 export function pausedContract(batcher: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -11316,6 +11368,14 @@ export function pausedContract(batcher: Address): {
 };
 
 // @public
+export interface PausedQueryConfig {
+    query?: Record<string, unknown>;
+}
+
+// @public
+export function pausedQueryOptions(batcher: VaultBatcher, config?: PausedQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof vaultQueryKeys.paused.batcher>>;
+
+// @public
 export interface PreparedFinalize {
     readonly batchId: bigint;
     // Warning: (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
@@ -11344,7 +11404,7 @@ export interface PreparedVaultGroupWrite {
 }
 
 // @public
-export interface PrepareVaultGroupJoinOptions extends JoinOptions {
+export interface PrepareVaultGroupJoinOptions extends Omit<JoinOptions, "onJoinSubmitted"> {
     account?: Address;
     delivery?: JoinDelivery;
     skipPreflight?: boolean;
@@ -14798,9 +14858,10 @@ export function unwrapRequestIdContract(batcher: Address, batchId: bigint): {
 
 // @public
 export class Vault {
-    constructor(sdk: ZamaSDK, addresses: VaultAddresses);
+    constructor(sdk: ZamaSDK, addresses: VaultAddresses, options?: VaultBatcherOptions);
     // Warning: (ae-forgotten-export) The symbol "WrappedToken" needs to be exported by the entry point index.d.ts
     cAsset(): Promise<WrappedToken>;
+    readonly chainId: number | undefined;
     cShare(): Promise<WrappedToken>;
     deposit(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult>;
     readonly depositBatcher: VaultBatcher;
@@ -14819,14 +14880,16 @@ export interface VaultAddresses {
 
 // @public
 export class VaultBatcher {
-    constructor(sdk: ZamaSDK, address: Address);
+    constructor(sdk: ZamaSDK, address: Address, options?: VaultBatcherOptions);
     readonly address: Address;
     batchCallbackDeadline(batchId: bigint): Promise<bigint>;
     batchCreatedAt(batchId: bigint): Promise<bigint>;
     batchDispatchedAt(batchId: bigint): Promise<bigint>;
     batchMinBatchAge(batchId: bigint): Promise<bigint>;
     batchState(batchId: bigint): Promise<BatchState>;
+    batchStatus(batchId: bigint): Promise<BatchStatus>;
     callbackDeadline(): Promise<bigint>;
+    readonly chainId: number | undefined;
     claim(batchId: bigint, account?: Address): Promise<TransactionResult>;
     confidentialDepositOf(batchId: bigint, account: Address): Promise<EncryptedValue>;
     confidentialTotalDeposits(batchId: bigint): Promise<EncryptedValue>;
@@ -14849,6 +14912,11 @@ export class VaultBatcher {
     toToken(): Promise<Address>;
     unwrapRequestId(batchId: bigint): Promise<EncryptedValue>;
     vault(): Promise<Address>;
+}
+
+// @public
+export interface VaultBatcherOptions {
+    chainId?: number;
 }
 
 // @public
@@ -15590,35 +15658,61 @@ export interface VaultMemberConfig extends VaultAddresses {
 // @public
 export const vaultQueryKeys: {
     currentBatchId: {
-        batcher: (batcherAddress: Address) => readonly ["zama.vault.currentBatchId", {
-            readonly batcherAddress: `0x${string}`;
+        batcher: (batcherAddress: Address, chainId?: number) => readonly ["zama.vault.currentBatchId", {
+            readonly batcherAddress: Address;
+            readonly chainId?: number;
+        }];
+    };
+    paused: {
+        batcher: (batcherAddress: Address, chainId?: number) => readonly ["zama.vault.paused", {
+            readonly batcherAddress: Address;
+            readonly chainId?: number;
+        }];
+    };
+    batcherTokens: {
+        batcher: (batcherAddress: Address, chainId?: number) => readonly ["zama.vault.batcherTokens", {
+            readonly batcherAddress: Address;
+            readonly chainId?: number;
         }];
     };
     batchState: {
         batcher: (batcherAddress: Address) => readonly ["zama.vault.batchState", {
             readonly batcherAddress: `0x${string}`;
         }];
-        batch: (batcherAddress: Address, batchId: bigint | undefined) => readonly ["zama.vault.batchState", {
-            readonly batcherAddress: `0x${string}`;
+        batch: (batcherAddress: Address, batchId: bigint | undefined, chainId?: number) => readonly ["zama.vault.batchState", {
             readonly batchId: bigint | undefined;
+            readonly batcherAddress: Address;
+            readonly chainId?: number;
+        }];
+    };
+    batchStatus: {
+        batcher: (batcherAddress: Address) => readonly ["zama.vault.batchStatus", {
+            readonly batcherAddress: `0x${string}`;
+        }];
+        batch: (batcherAddress: Address, batchId: bigint | undefined, chainId?: number) => readonly ["zama.vault.batchStatus", {
+            readonly batchId: bigint | undefined;
+            readonly batcherAddress: Address;
+            readonly chainId?: number;
         }];
     };
     timeUntilDispatchable: {
         batcher: (batcherAddress: Address) => readonly ["zama.vault.timeUntilDispatchable", {
             readonly batcherAddress: `0x${string}`;
         }];
-        batch: (batcherAddress: Address, batchId: bigint | undefined) => readonly ["zama.vault.timeUntilDispatchable", {
-            readonly batcherAddress: `0x${string}`;
+        batch: (batcherAddress: Address, batchId: bigint | undefined, chainId?: number) => readonly ["zama.vault.timeUntilDispatchable", {
             readonly batchId: bigint | undefined;
+            readonly batcherAddress: Address;
+            readonly chainId?: number;
         }];
     };
     timeUntilCallbackDeadline: {
         batcher: (batcherAddress: Address) => readonly ["zama.vault.timeUntilCallbackDeadline", {
             readonly batcherAddress: `0x${string}`;
         }];
-        batch: (batcherAddress: Address, batchId: bigint | undefined) => readonly ["zama.vault.timeUntilCallbackDeadline", {
-            readonly batcherAddress: `0x${string}`;
+        batch: (batcherAddress: Address, batchId: bigint | undefined, chainId?: number) => readonly ["zama.vault.timeUntilCallbackDeadline", {
             readonly batchId: bigint | undefined;
+            readonly batcherAddress: Address;
+            readonly chainId?: number;
         }];
     };
 };
@@ -15626,6 +15720,8 @@ export const vaultQueryKeys: {
 // @public
 export const VaultTopics: {
     readonly Joined: `0x${string}`;
+    readonly Claimed: `0x${string}`;
+    readonly Quit: `0x${string}`;
 };
 
 ```
