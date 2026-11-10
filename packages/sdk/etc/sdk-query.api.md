@@ -1396,8 +1396,8 @@ export const ZamaErrorCode: {
     readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
     readonly UnlistedConfidentialToken: "UNLISTED_CONFIDENTIAL_TOKEN";
     readonly VaultBatcherPaused: "VAULT_BATCHER_PAUSED";
-    readonly VaultBatchNotDispatched: "VAULT_BATCH_NOT_DISPATCHED";
-    readonly VaultGroupJoinUnconfirmed: "VAULT_GROUP_JOIN_UNCONFIRMED";
+    readonly VaultActionNotAllowed: "VAULT_ACTION_NOT_ALLOWED";
+    readonly VaultJoinUnconfirmed: "VAULT_JOIN_UNCONFIRMED";
 };
 
 // @public

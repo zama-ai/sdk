@@ -1,6 +1,6 @@
 ---
 title: Vault groups
-description: Deposit into one of several vaults without revealing which one.
+description: Deposit into one of several vaults without revealing which one, and send vault calls through your own pipeline.
 ---
 
 # Vault groups
@@ -9,111 +9,212 @@ description: Deposit into one of several vaults without revealing which one.
 Available in the Core SDK and React SDK.
 {% endhint %}
 
-This guide covers **integrating** the multi-vault router from the SDK. For what it does and why — one transaction joins several vault batchers, with encrypted-zero legs hiding which vault received the money — see the [Multi-Vault Router](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router) concept page and the [router interface](https://docs.zama.org/protocol/confidential-vault/reference/router-interface).
+A **vault group** is a set of confidential ERC-4626 vaults that take deposits in the same confidential asset. Every join sends a leg to every vault of the group: the vault you chose gets the amount, and the others get an encrypted zero. An observer cannot tell which vault received the money.
 
-A **vault group** is the SDK's name for the leg list: a set of confidential ERC-4626 vaults that all take deposits in the same confidential asset. Depositing into one member joins _every_ member's batch: the vault you chose gets the amount, the rest get an encrypted zero.
+For how the on-chain router fans one transaction out across several batchers, see the [Multi-Vault Router](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router) concept page and the [router interface](https://docs.zama.org/protocol/confidential-vault/reference/router-interface).
 
-A group of one has nothing to hide a leg among, so it joins its only batcher directly, with no router.
+## Configure a group
 
-{% hint style="danger" %}
-Follow the [rules for clients](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#rules-for-clients): send the same leg list for every user, and exit through the list you entered with. The SDK never drops a zero-amount leg, and refuses a group above the documented [leg limit](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#leg-limits) (`MAX_GROUP_VAULTS`, ten) at construction.
+A group names its asset and its vaults in your `defineVaults` config:
+
+```ts
+import { defineVaults } from "@zama-fhe/sdk/vaults";
+
+export const VAULTS = defineVaults({
+  chainId: 1,
+  groups: {
+    stable: {
+      asset: "0xConfidentialUSDC",
+      vaults: {
+        alpha: { depositBatcher: "0xAlphaDeposit", redeemBatcher: "0xAlphaRedeem" },
+        beta: { depositBatcher: "0xBetaDeposit", redeemBatcher: "0xBetaRedeem" },
+      },
+    },
+  },
+});
+```
+
+A group holds from one vault up to `MAX_GROUP_VAULTS`, the router's per-transaction leg limit. A group of one has nothing to hide a leg among, so it joins its batcher directly, without the router.
+
+A multi-vault join goes through the chain's router, `vaultRouterAddress` in the chain preset. Set `router` in the config only for a chain whose preset names none. When the preset names a router, a different `router` throws `ConfigurationError`.
+
+## Privacy rules the client enforces
+
+The client keeps a group's choice of vault private by never acting on part of a join:
+
+- **Every join covers every vault.** `deposit` and `redeem` send a leg to each vault, in config order, and never drop a zero leg.
+- **Every exit covers every leg.** `exit` quits, claims or recovers each leg, decoys included. A claim or quit is public, so exiting only the chosen leg would show which vault it was.
+- **Every decryption covers every leg.** The balance check decrypts every token the legs spend, and `readPosition` with `decrypt: true` decrypts every leg's deposit together. A lone decryption would tell the relayer which vault you care about.
+- **Every user gets the same leg list.** All users of a group join the same vaults in the same order, so their transactions look alike. Do not reorder or change a group's vaults once users have joined it.
+
+These follow the [rules for clients](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#rules-for-clients) of the router.
+
+## Wallet prompts
+
+The SDK's send methods send one transaction per call, so each call is one wallet prompt. The number depends on the action and the group's size:
+
+| Action                       | Group of one | Group of N vaults |
+| ---------------------------- | ------------ | ----------------- |
+| `deposit`                    | 1            | 1                 |
+| `deposit` with `beneficiary` | up to 2      | not allowed       |
+| `redeem`                     | 1            | **up to N + 1**   |
+| `exit`                       | 1            | N                 |
+| `dispatch`, `finalize`       | 1            | up to N           |
+
+A multi-vault deposit is one transfer of the asset to the router, which splits it into legs. It needs no grant, but the router's registry must list the asset. The SDK checks this and throws `UnlistedConfidentialTokenError` instead of paying for a revert.
+
+A multi-vault redemption is different. Each vault has its own share token, and the router pulls every one of them. So the account first grants the router an ERC-7984 operator approval on every share token it has not granted yet: one prompt each, then one prompt for the join.
+
+{% hint style="warning" %}
+**Make the N + 1 prompts visible to users.** The first redemption from a group of N vaults asks for up to N grants, then the join. Later redemptions ask for no grant while the grants last. A grant lasts `grantValiditySeconds` (one hour by default), so a redemption after the grants expire asks for all of them again. Say so on the redeem form before the user starts, pass a longer `grantValiditySeconds` if that suits your app, or use an [atomic wallet](#atomic-wallets).
 {% endhint %}
 
-## Configuring a group
-
-A group names the shared `cAsset`, its members, and the router that fans a submission out across them. Each member carries its deposit and redeem batchers, and optionally its ERC-4626 `vault`; the share token is read from the redeem batcher. The names follow the [vault addresses](https://docs.zama.org/protocol/confidential-vault/reference/addresses) reference.
-
 ```ts
-import { createVaultGroup } from "@zama-fhe/sdk/vaults";
-
-const STABLE_GROUP = {
-  id: "stable",
-  cAsset: "0xConfidentialAsset",
-  router: "0xRouter",
-  vaults: [
-    { id: "alpha", depositBatcher: "0xAlphaDeposit", redeemBatcher: "0xAlphaRedeem" },
-    { id: "beta", depositBatcher: "0xBetaDeposit", redeemBatcher: "0xBetaRedeem" },
-  ],
-} as const;
-
-const group = createVaultGroup(sdk, STABLE_GROUP);
+await client.redeem(
+  { groupId: "stable", vaultId: "beta", amount: 500n },
+  { grantValiditySeconds: 86_400 },
+);
 ```
-
-The SDK ships no group configuration; the addresses belong to your app. Each member is checked against chain before a submission writes anything, and a mismatch throws `ConfigurationError`.
-
-The router is the exception: there is one per chain, and the chain presets carry it as `vaultRouterAddress` (for example `mainnet.vaultRouterAddress` from `@zama-fhe/sdk/chains`). A `"router"` submission throws `ConfigurationError` for any router other than the `vaultRouterAddress` of the chain the SDK is configured with, before it encrypts or asks for a signature. The check runs even with `skipPreflight`. Set `allowCustomRouter: true` in the group config only for a router you deployed yourself; a chain whose config names no router, such as a local node, is not checked.
-
-## Depositing and redeeming
-
-{% tabs %}
-{% tab title="Core SDK" %}
-
-```ts
-const { joins } = await group.deposit("alpha", 1_000_000n);
-
-// One entry per member, in group order. The decoys are in here too — they
-// joined a real batch with an encrypted zero.
-const mine = joins.find((join) => join.vaultId === "alpha");
-const { redeemBatcher } = group.member("alpha").vault; // the member's batchers
-```
-
-{% endtab %}
-{% tab title="React SDK" %}
-
-```tsx
-import { useGroupDeposit } from "@zama-fhe/react-sdk/vaults";
-
-const deposit = useGroupDeposit({ group: STABLE_GROUP });
-deposit.mutate({ vaultId: "alpha", amount: 1_000_000n });
-```
-
-{% endtab %}
-{% endtabs %}
-
-Redeeming is the mirror image — `group.redeem("alpha", shares)` or `useGroupRedeem` — with one difference that matters: a deposit's legs all spend the group's shared asset, while a redemption's legs each spend their own vault's share token. As with `Vault.redeem`, the amount is denominated in shares.
-
-A group deposit always credits the caller. The router credits the account the legs came from, so unlike `Vault.deposit` there is no `beneficiary` option.
-
-Both methods check the caller's confidential balance before submitting, as `Vault` does; a redemption decrypts every member's share balance, so the relayer cannot tell which was chosen. Both take `skipBalanceCheck`; `redeem` also takes `operatorUntil`.
-
-### Claiming
-
-Claiming, quitting and batch state are unchanged: they happen per batcher, on the batcher a leg actually joined. Each entry in `joins` gives you that address and the batch id, so `createVaultBatcher(sdk, join.batcher).claim(join.batchId)` is the follow-up. See [Vault deposits and redemptions](./deposits.md) for the batch lifecycle.
-
-Claim or quit **every** entry in `joins`, the decoys included. A claim or quit is public, so acting on the chosen member's batcher alone shows which vault the zero legs were hiding. A decoy's claim pays out zero.
-
-```ts
-for (const join of joins) {
-  await createVaultBatcher(sdk, join.batcher).claim(join.batchId);
-}
-```
-
-## Grants and registry listing
-
-For a **redemption**, the router pulls each leg's share token, so the SDK grants it an operator approval on every share token that lacks one, one wallet prompt each — a grant to the _router_. `Vault.redeem` needs none for the caller, since it sends the shares to the batcher with `confidentialTransferAndCall`. A **deposit** needs no grant, but the asset must be listed in the router's registry; the SDK checks and throws `UnlistedConfidentialTokenError` rather than paying for a revert.
 
 ## Paused batchers
 
-Every submission sends a leg to every member, so the SDK reads `paused()` on each batcher first and throws `VaultBatcherPausedError` naming the member, instead of letting one paused member revert the transaction. The prepare methods read it too, even with `skipPreflight`.
+Every join sends a leg to every vault, and one paused batcher reverts the whole join. So `deposit` and `redeem` read `paused()` on each batcher first and throw `VaultBatcherPausedError`, naming the paused vault. This check cannot be skipped. Exits still work on a paused batcher, so existing positions are never stuck.
 
-## Using your own transaction layer
+## Upgrade a batcher
 
-`deposit` and `redeem` sign and send through the SDK's signer and wait for the receipt. An app that submits through its own pipeline — a transaction queue, a bundler, an EIP-5792 `wallet_sendCalls` batch that puts the operator grants and the join in one confirmation — calls `prepareDeposit` and `prepareRedeem` instead. They run the same pre-flight, balance check and encryptions and stop at the calls:
+A vault's batcher can be replaced by a new one, for example to pick up a contract fix. Users with batches on the old batcher must still be able to read and exit them, so your config keeps the old batcher as a retired entry. Replace the plain address with a `BatcherHistory`:
 
 ```ts
-const prepared = await group.prepareRedeem("alpha", 500n, {
-  delivery: wallet.canBundle ? "legs" : "router",
+import { defineVaults } from "@zama-fhe/sdk/vaults";
+
+export const VAULTS = defineVaults({
+  chainId: 1,
+  groups: {
+    stable: {
+      asset: "0xConfidentialUSDC",
+      vaults: {
+        alpha: {
+          depositBatcher: {
+            retired: [{ address: "0xAlphaDepositV1", lastBatchId: 41n }],
+            latest: "0xAlphaDepositV2",
+          },
+          redeemBatcher: "0xAlphaRedeem",
+        },
+        beta: { depositBatcher: "0xBetaDeposit", redeemBatcher: "0xBetaRedeem" },
+      },
+    },
+  },
 });
-// Grant what `prepared.requiredOperators` names and the account lacks, then send
-// `prepared.writes` — in one bundle for "legs", or one transaction for "router".
-const { joins } = prepared.decodeJoins(receipt.logs);
 ```
 
-`group.missingOperators(prepared)` returns the grants the account still lacks; give each an `until` that outlasts the time the writes take. After a reload, `decodeVaultGroupJoins({ legs, account }, logs)` does what `decodeJoins` does from the saved `legs` and `account`. When you send the writes yourself, call `invalidateAfterGroupJoin(queryClient, prepared.legs)` to refresh balances and batch reads.
+How the client uses it:
 
-`"legs"` delivery sends one transfer per member straight to its batcher and needs no grant; it keeps the choice of vault private only when the wallet lands every leg atomically. `"router"` is the single transaction the SDK sends itself. A host that has already verified the group passes `skipPreflight`, which skips the config verification and the registry listing but not the `paused()` read. The balance check decrypts as the signer, so an `account` other than the signer's needs `skipBalanceCheck`. One that gates the amount on a balance it already shows passes `skipBalanceCheck`. See [`VaultGroup` → Prepare](../../reference/sdk/VaultGroup.md#prepare).
+- **Joins switch on the batch, not the clock.** A join goes to the first retired batcher whose open batch is still at most its `lastBatchId`, and otherwise to `latest`. Joins keep landing on the old batcher until batch `lastBatchId` is dispatched, then go to the new one. You can ship the new config before the switch.
+- **Records keep the batcher each leg joined.** A position on a retired batcher reads and exits as before. `readPosition` and `exit` accept a record whose legs name any batcher in the vault's history.
+- **`readOpenBatches` reports the active batcher**, so a form shows the batch the next join lands in.
+- **Every batcher of a vault must serve the same vault.** On the first join, the client checks that each batcher, retired ones included, trades the group's asset for the same share token against the same ERC-4626 vault. A mismatch throws `ConfigurationError`.
+
+To upgrade again, append the current `latest` to the end of `retired` with its `lastBatchId`, and set the new `latest`. Keep `retired` oldest first.
+
+{% hint style="warning" %}
+Never remove a retired entry, even after all its batches settled. A user who has not exited yet still holds a record that names it, and the client rejects a record whose batcher is not in the config.
+{% endhint %}
+
+## Atomic wallets
+
+A wallet that lands several calls in one atomic bundle, such as an EIP-5792 `wallet_sendCalls` batch, can skip the router. Prepare the join with `walletMode: "atomic"`: you get one transfer per vault, straight to its batcher, and no grants.
+
+```ts
+const prepared = await client.prepareRedeem(
+  { groupId: "stable", vaultId: "beta", amount: 500n },
+  { walletMode: "atomic" },
+);
+if (prepared.atomic) {
+  await sendBundle([...prepared.grants, ...prepared.calls]);
+}
+```
+
+`sendBundle` stands in for your wallet's atomic batch call.
+
+{% hint style="danger" %}
+When `prepared.atomic` is `true`, send every call in one atomic bundle. If the calls go out one by one and the user stops partway, the vaults that were never joined show which vault the user picked. The SDK's send methods never send an atomic join, so `walletMode` is only on the `prepare*` methods.
+{% endhint %}
+
+An atomic join returns no join record, because you send it yourself. Build the record from your indexer, as described below.
+
+## Send through your own pipeline
+
+A host with its own transaction pipeline (a queue, a bundler, a custody service) uses the `prepare*` methods. Each returns a `PreparedVaultAction`, which is plain data:
+
+- `grants`: ERC-7984 operator grants the account lacks. Send them first, in any order.
+- `calls`: the action itself. Send them after the grants.
+- `sender`: the account that must send the calls, or `null` when anyone may.
+- `expiresAt`: when the earliest grant expires. Prepare again after this time.
+
+Each grant and call is `{ to, data }`. Send it to `to` with `data` and no value.
+
+```ts
+import { createVaultClient, type PreparedVaultAction } from "@zama-fhe/sdk/vaults";
+import { VAULTS } from "./vaults";
+
+const client = createVaultClient(sdk, VAULTS);
+
+async function sendPrepared(prepared: PreparedVaultAction) {
+  for (const grant of prepared.grants) await sendTransaction(grant);
+  for (const call of prepared.calls) await sendTransaction(call);
+}
+
+const prepared = await client.prepareDeposit(
+  { groupId: "stable", vaultId: "beta", amount: 1_000_000n },
+  { account: "0xUser", skipChecks: ["balance"] },
+);
+await sendPrepared(prepared);
+```
+
+`sendTransaction` stands in for your pipeline. The prepare methods take these options:
+
+- `account`: the account the join comes from. It defaults to the signer's. The balance check decrypts as the signer, so any other account needs `skipChecks: ["balance"]`.
+- `skipChecks`: `"balance"` skips the balance check, for a host that already gates the amount on a balance it shows. `"config"` skips the one-time check of the config against the chain and the router's registry listing, for a host that verified them itself. The paused check always runs.
+- `walletMode`: `"sequential"` (default) or `"atomic"`. See [Atomic wallets](#atomic-wallets).
+
+After you send, call `invalidateAfterVaultAction(queryClient, { chainId, groupId })` so the hooks read fresh data.
+
+### Build the join record from your indexer
+
+The `prepare*` methods do not return a join record, and the SDK does not export event decoding. A host gets batch ids from its own indexer of the batchers' `Joined(batchId, account, amount)` events, then builds the record:
+
+```ts
+import type { VaultRecord } from "@zama-fhe/sdk/vaults";
+import { VAULTS } from "./vaults";
+
+const record: VaultRecord<typeof VAULTS> = {
+  v: 1,
+  chainId: 1,
+  groupId: "stable",
+  direction: "deposit",
+  account: "0xUser",
+  legs: [
+    { vaultId: "alpha", batcher: "0xAlphaDeposit", batchId: 12n },
+    { vaultId: "beta", batcher: "0xBetaDeposit", batchId: 7n },
+  ],
+};
+```
+
+The record must hold one leg per vault of the group, in config order, each with the batcher that leg actually joined: the vault's `depositBatcher` or `redeemBatcher` for the direction, or an entry of its [batcher history](#upgrade-a-batcher). Take the batcher from the `Joined` log's emitter, not from the config. `account` is the account the batchers credited: the sender for a multi-vault join, or the `beneficiary` in a group of one. The client throws `ConfigurationError` for a record that does not match the config.
+
+With the record, the host reads the position and prepares the exit like any other app:
+
+```ts
+const position = await client.readPosition(record);
+if (position.availableActions.includes("exit")) {
+  await sendPrepared(await client.prepareExit(record));
+}
+```
+
+`prepareExit`, `prepareDispatch` and `prepareFinalize` build their calls from the batch states at the time you call them. Prepare them right before you send.
 
 ## Next steps
 
-- [Building a vault UI](building-a-ui.md) — what to show and offer in every state of a deposit or redemption
-- [Vault deposits and redemptions](deposits.md) — the batch lifecycle behind each leg
+- [Building a vault UI](building-a-ui.md): what to show and offer in each position phase
+- [Vault deposits and redemptions](deposits.md): the full flow with the SDK's signer
+- [`VaultClient`](../../reference/sdk/VaultClient.md#prepare-methods): the prepare methods in full

@@ -24,8 +24,8 @@ import {
   UnshieldAlreadyFinalizedError,
   UnlistedConfidentialTokenError,
   VaultBatcherPausedError,
-  VaultBatchNotDispatchedError,
-  VaultGroupJoinUnconfirmedError,
+  VaultActionNotAllowedError,
+  VaultJoinUnconfirmedError,
   InvalidTransportKeyPairError,
   TransportKeyPairExpiredError,
   RevokedKmsContextError,
@@ -128,9 +128,9 @@ Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequ
 | `HcuTransactionLimitExceededError`        | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | The transaction needs more FHE compute (HCU), in total or in one sequential chain, than one transaction may use                   |
 | `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
 | `UnlistedConfidentialTokenError`          | `UNLISTED_CONFIDENTIAL_TOKEN`            | The vault router's registry does not list the confidential token, so the router would reject a transfer of it                     |
-| `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | A batcher one leg of a group submission would join is paused, so the whole submission would revert                                |
-| `VaultBatchNotDispatchedError`            | `VAULT_BATCH_NOT_DISPATCHED`             | A batch to be finalized is not `Dispatched`, for example because a keeper already finalized it                                    |
-| `VaultGroupJoinUnconfirmedError`          | `VAULT_GROUP_JOIN_UNCONFIRMED`           | A group submission was mined, but its receipt has no `Joined` event for at least one leg                                          |
+| `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | A batcher one leg of a vault join would reach is paused, so the whole join would revert                                           |
+| `VaultActionNotAllowedError`              | `VAULT_ACTION_NOT_ALLOWED`               | The position's batches do not allow the vault action now, usually because their state moved since the position was read           |
+| `VaultJoinUnconfirmedError`               | `VAULT_JOIN_UNCONFIRMED`                 | A vault join was mined, but its receipt has no matching `Joined` event for at least one leg                                       |
 | `InvalidTransportKeyPairError`            | `INVALID_KEYPAIR`                        | Relayer rejected transport key pair (stale or malformed)                                                                          |
 | `TransportKeyPairExpiredError`            | `KEYPAIR_EXPIRED`                        | Transport key pair expired — user must re-sign                                                                                    |
 | `RevokedKmsContextError`                  | `REVOKED_KMS_CONTEXT`                    | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                                   |
@@ -161,7 +161,7 @@ Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequ
 | `SignerNotConfiguredError`                | `SIGNER_NOT_CONFIGURED`                  | SDK operation needs a signer but none is configured                                                                               |
 | `WalletNotConnectedError`                 | `WALLET_NOT_CONNECTED`                   | Signer exists but has no connected wallet account                                                                                 |
 | `WalletAccountNotReadyError`              | `WALLET_ACCOUNT_NOT_READY`               | Async signer adapter has not resolved its account yet                                                                             |
-| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains, or the signer is not on a pinned vault or batcher's `chainId`                        |
+| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains, or the signer is not on the vault config's `chainId`                                 |
 | `AclPausedError`                          | `ACL_PAUSED`                             | ACL contract is paused                                                                                                            |
 
 ## Error details
@@ -198,7 +198,7 @@ Thrown when a signer adapter is configured but does not currently have a connect
 
 **Code:** `CHAIN_MISMATCH`
 
-Thrown when the signer and provider resolve to different chains during an operation, or when the signer is not on the `chainId` a `Vault` or `VaultBatcher` was created with. The error carries `operation`, `signerChainId`, `providerChainId`, and `targetChainId` (the pinned chain, or `undefined`).
+Thrown when the signer and provider resolve to different chains during an operation, or when a vault action is sent while the signer is not on the vault config's `chainId`. The error carries `operation`, `signerChainId`, `providerChainId`, and `targetChainId` (the vault config's chain, or `undefined`).
 
 ```ts
 matchZamaError(error, {
@@ -339,42 +339,49 @@ matchZamaError(error, {
 
 **Code:** `UNLISTED_CONFIDENTIAL_TOKEN`
 
-Thrown by `VaultGroup.deposit()` when the registry the router checks does not list the confidential token. The router rejects a pushed transfer of an unlisted token on chain, so the SDK refuses before the caller pays for a reverted transaction. The error carries `token` and `registry`.
+Thrown by `VaultClient.deposit()` and `VaultClient.prepareDeposit()` for a multi-vault group sent through the router, when the router's registry does not list the group's asset. The router rejects a transfer of an unlisted token on chain, so the SDK refuses before the caller pays for a reverted transaction. The check is skipped with `skipChecks: ["config"]`. The error carries `token` and `registry`.
 
-**How to handle:** Not retryable. Listings are governed on chain and can be added or revoked at any time, so check the group's asset against the registry the router names. `VaultGroup.isAssetListed()` gives the same answer without throwing.
+**How to handle:** Not retryable. Listings are governed on chain and can be added or revoked at any time, so check the group's asset against the registry the router names.
 
 ### VaultBatcherPausedError
 
 **Code:** `VAULT_BATCHER_PAUSED`
 
-Thrown by `VaultGroup.deposit()` and `VaultGroup.redeem()` when the batcher one member's leg would join reports `paused()`. A group submission joins every member in one transaction and a paused batcher rejects `join`, so the whole submission would revert; the SDK refuses before the caller pays for it. The error carries the paused `batcher` and the `vaultId` of the member it serves.
+Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()` and `prepareRedeem()` when the batcher one leg would join reports `paused()`. Every join sends a leg to every vault of the group, and a paused batcher rejects joins, so the whole join would revert. The SDK refuses before the caller pays for it. This check cannot be skipped. The error carries the paused `batcher` and the `vaultId` of the vault it serves.
 
-**How to handle:** Not retryable until the batcher's owner unpauses it. Quitting and claiming on the paused batcher still work, so existing positions are not stuck; only new joins are. Show the user which member is paused rather than a generic failure.
+**How to handle:** Not retryable until the batcher's owner unpauses it. Exits still work on a paused batcher, so existing positions are not stuck; only new joins are. Show the user which vault is paused rather than a generic failure.
 
-### VaultBatchNotDispatchedError
+### VaultActionNotAllowedError
 
-**Code:** `VAULT_BATCH_NOT_DISPATCHED`
+**Code:** `VAULT_ACTION_NOT_ALLOWED`
 
-Thrown by `VaultBatcher.finalize()` and `VaultBatcher.prepareFinalize()` when the batch is not `Dispatched`. The SDK reads the batch state first, so this is thrown before any decryption. The error carries the `batcher`, the `batchId` and the batch's current `state`.
+Thrown by the `VaultClient` exit, dispatch and finalize methods, and their `prepare*` counterparts, when the position's batches do not allow the action now. The error carries the `action` (`"exit"`, `"dispatch"` or `"finalize"`) and a `reason`:
 
-**How to handle:** Not retryable. A settled batch stays settled, and a `Pending` batch is finalizable only after it is dispatched. Read `state` and move on: claim a `Finalized` batch, quit or recover a `Canceled` one. A keeper finalizing first is the usual cause.
+| `reason`                | Thrown by                     | Meaning                                                                  |
+| ----------------------- | ----------------------------- | ------------------------------------------------------------------------ |
+| `"leg-dispatched"`      | `exit`, `prepareExit`         | A leg is dispatched. Only `finalize` applies until it settles.           |
+| `"nothing-to-dispatch"` | `dispatch`, `prepareDispatch` | No leg is pending, old enough, and on an unpaused batcher.               |
+| `"nothing-to-finalize"` | `finalize`, `prepareFinalize` | No leg is dispatched, for example because a keeper already finalized it. |
 
-### VaultGroupJoinUnconfirmedError
+```ts
+matchZamaError(error, { VAULT_ACTION_NOT_ALLOWED: (e) => refreshPosition(e.action, e.reason) });
+```
 
-**Code:** `VAULT_GROUP_JOIN_UNCONFIRMED`
+**How to handle:** Not retryable as is. The batch states usually moved since the position was read, often because a keeper acted first. Read the position again and offer the actions in its `availableActions`.
 
-Thrown by `VaultGroup.deposit()` and `VaultGroup.redeem()` after the transaction is mined, when the SDK could not match a `Joined` event in its receipt to every leg. The error carries the `txHash`, the `receipt`, the `joins` whose log was matched (with their batch ids) and the `unconfirmed` member ids. `unconfirmed` means the SDK could not match a log, not that the leg did not join.
+### VaultJoinUnconfirmedError
+
+**Code:** `VAULT_JOIN_UNCONFIRMED`
+
+Thrown by `VaultClient.deposit()` and `VaultClient.redeem()` after the join transaction is mined, when the SDK could not match a `Joined` event in its receipt to every leg. Without every batch id, the SDK cannot build the join record. The error carries the `txHash`, the `receipt`, and `unconfirmedVaultIds`: the vaults whose log the SDK could not match. It does not mean those legs did not join.
 
 ```ts
 matchZamaError(error, {
-  VAULT_GROUP_JOIN_UNCONFIRMED: (e) => showPartialJoin(e.txHash, e.joins, e.unconfirmed),
+  VAULT_JOIN_UNCONFIRMED: (e) => showUnconfirmedJoin(e.txHash, e.unconfirmedVaultIds),
 });
 ```
 
-**How to handle:** Do not resubmit blindly. The router is all-or-nothing, so one of two things happened; look the transaction up to tell which:
-
-- It reverted: nothing moved, and resubmitting is safe.
-- It succeeded: _every_ leg joined, the `unconfirmed` ones included, so the deposit is in the chosen member's batch even when that member is listed in `unconfirmed`. `joins` gives the batch ids the SDK could read; the rest can be read from the batchers. Resubmitting would deposit twice.
+**How to handle:** Do not resubmit. A join is all-or-nothing, and a reverted transaction throws `TransactionRevertedError` instead, so every leg most likely joined. Resubmitting would deposit twice. Look the transaction up, and read the batch ids from the `Joined` events in `receipt` or from your indexer to build the record.
 
 ### InvalidTransportKeyPairError
 

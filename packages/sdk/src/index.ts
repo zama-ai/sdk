@@ -126,8 +126,8 @@ export {
   UnlistedConfidentialTokenError,
   UnshieldAlreadyFinalizedError,
   VaultBatcherPausedError,
-  VaultBatchNotDispatchedError,
-  VaultGroupJoinUnconfirmedError,
+  VaultActionNotAllowedError,
+  VaultJoinUnconfirmedError,
   WalletAccountNotReadyError,
   WalletNotConnectedError,
   ZamaError,
@@ -138,11 +138,11 @@ export {
   type UnlistedConfidentialTokenDetails,
   type UnshieldAlreadyFinalizedDetails,
   type VaultBatcherPausedDetails,
-  type VaultBatchNotDispatchedDetails,
-  type VaultGroupJoinUnconfirmedDetails,
+  type VaultActionNotAllowedDetails,
+  type VaultActionNotAllowedReason,
+  type VaultJoinUnconfirmedDetails,
 } from "./errors";
 // Type-only: the root entry bundles no vault code.
-export type { VaultGroupJoin } from "./vaults/vault-group-types";
 export { ZamaSDKEvents } from "./events";
 export type {
   ApproveUnderlyingSubmittedEvent,

@@ -119,29 +119,22 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 ### `vaultQueryKeys`
 
-Batch reads for confidential ERC-4626 vaults, used by [`useCurrentBatchId`](./useCurrentBatchId.md), [`useBatchState`](./useBatchState.md), [`useBatchStatus`](./useBatchStatus.md), [`usePaused`](./usePaused.md), [`useBatcherTokens`](./useBatcherTokens.md), [`useTimeUntilDispatchable`](./useTimeUntilDispatchable.md) and [`useTimeUntilCallbackDeadline`](./useTimeUntilCallbackDeadline.md). Lives in the `vaults` subpath, not on `zamaQueryKeys`.
+Reads of confidential ERC-4626 vaults, used by [`usePosition`](./usePosition.md) and [`useOpenBatches`](./useOpenBatches.md). Lives in the `vaults` subpath, not on `zamaQueryKeys`.
 
 ```ts
-import { vaultQueryKeys, invalidateBatchQueries } from "@zama-fhe/sdk/vaults";
+import { vaultQueryKeys, invalidateAfterVaultAction } from "@zama-fhe/sdk/vaults";
 ```
 
-| Key                                                 | Scope                                            |
-| --------------------------------------------------- | ------------------------------------------------ |
-| `.currentBatchId.batcher(batcherAddr)`              | One batcher's open batch id                      |
-| `.paused.batcher(batcherAddr)`                      | Whether one batcher is paused                    |
-| `.batcherTokens.batcher(batcherAddr)`               | One batcher's input and output tokens            |
-| `.batchState.batcher(batcherAddr)`                  | All batch states for one batcher                 |
-| `.batchState.batch(batcherAddr, batchId)`           | One batch's state                                |
-| `.batchStatus.batcher(batcherAddr)`                 | All batch statuses for one batcher               |
-| `.batchStatus.batch(batcherAddr, batchId)`          | One batch's state with its timestamps            |
-| `.timeUntilDispatchable.batcher(batcherAddr)`       | All dispatch countdowns for one batcher          |
-| `.timeUntilDispatchable.batch(batcherAddr, id)`     | One batch's dispatch countdown                   |
-| `.timeUntilCallbackDeadline.batcher(batcherAddr)`   | All callback-deadline countdowns for one batcher |
-| `.timeUntilCallbackDeadline.batch(batcherAddr, id)` | One batch's callback-deadline countdown          |
+| Key                                         | Scope                                                       |
+| ------------------------------------------- | ----------------------------------------------------------- |
+| `.all`                                      | Every vault read                                            |
+| `.group(chainId, groupId)`                  | Every read of one group                                     |
+| `.position(record, decrypt)`                | One join's position, read with or without decryption        |
+| `.openBatches(chainId, groupId, direction)` | The open batch of every vault of a group, for one direction |
 
-A `batcher(...)` key is a prefix of every `batch(...)` key for that batcher, so invalidating it clears all of them at once. The `batch(...)` builders and the `currentBatchId`, `paused` and `batcherTokens` builders also take an optional `chainId`, set for a batcher that reads another chain than the connected one; the prefix `batcher(...)` builders leave it out, so they match pinned keys too. `invalidateBatchQueries(queryClient, batcherAddr)` invalidates all five namespaces for a batcher — this is what the vault mutation hooks call after a join, quit, recover, dispatch or finalize. Balances on the batcher's input and output tokens go through the regular [`invalidateBalanceQueries`](#invalidatebalancequeries).
+A `group(...)` key is a prefix of every `position(...)` and `openBatches(...)` key of that group, so invalidating it clears all of them at once.
 
-`useGroupDeposit` / `useGroupRedeem` invalidate, once the transaction is mined, the balance of each token the legs spent and every member's batch reads — on success and on `VaultGroupJoinUnconfirmedError` alike. `useGroupRedeem` additionally invalidates operator status for each share token.
+`invalidateAfterVaultAction(queryClient, { chainId, groupId })` invalidates every read of the group and every confidential balance. The vault mutation hooks call it on success. Call it yourself after you send a prepared vault action through your own pipeline.
 
 ## Common patterns
 

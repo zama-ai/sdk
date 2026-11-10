@@ -1,13 +1,17 @@
 ---
 title: useRedeem
-description: Mutation hook that redeems confidential vault shares by joining the current redeem batch.
+description: Mutation hook that redeems confidential vault shares and returns the join record to store.
 ---
 
 # useRedeem
 
-Mutation hook that redeems a plaintext amount of shares from a confidential vault. It checks the caller's share balance, encrypts the amount, and sends the shares to the redeem batcher, which joins them into the currently open redeem batch. Only a redemption for another `beneficiary` needs an ERC-7984 operator approval, which it grants first if none is active — the same flow as [`Vault.redeem`](../sdk/Vault.md#redeem).
+Mutation hook that redeems a plaintext amount of a vault's shares. It checks the share balance, encrypts the amount, and joins the open redeem batch of every vault of the group: the chosen vault with the amount, the others with an encrypted zero. Same flow as [`VaultClient.redeem`](../sdk/VaultClient.md#redeem).
 
-The amount is denominated in **shares**, never in assets — ERC-4626 `redeem`, not `withdraw`. The vault settles the batch into the underlying asset at the batch's exchange rate; claim the proceeds with [`useClaim`](./useClaim.md) on the redeem batcher once the batch is `Finalized`.
+Store the returned `record` and follow it with [`usePosition`](./usePosition.md). Exiting a settled redemption pays out the asset.
+
+{% hint style="warning" %}
+**In a group of N vaults, a redemption can take up to N + 1 wallet prompts.** The router pulls each vault's share token, so the account first grants it an operator approval on every share token it has not granted yet, then sends the join. Grants last `grantValiditySeconds` (one hour by default), so a redemption after they expire asks for them again. Tell users before they start. See [Wallet prompts](../../guides/vaults/groups.md#wallet-prompts).
+{% endhint %}
 
 ## Import
 
@@ -22,20 +26,17 @@ import { useRedeem } from "@zama-fhe/react-sdk/vaults";
 
 ```tsx
 import { useRedeem } from "@zama-fhe/react-sdk/vaults";
-
-const addresses = { depositBatcher: "0xDepositBatcher", redeemBatcher: "0xRedeemBatcher" } as const;
+import { VAULTS } from "./vaults";
 
 function RedeemButton() {
-  const { mutateAsync: redeem, isPending } = useRedeem({ addresses });
-
-  async function handleRedeem() {
-    const { batchId } = await redeem({ amount: 500n });
-    console.log("Joined redeem batch", batchId);
-  }
+  const redeem = useRedeem(VAULTS, { onSuccess: ({ record }) => saveRecord(record) });
 
   return (
-    <button onClick={handleRedeem} disabled={isPending}>
-      {isPending ? "Redeeming..." : "Redeem"}
+    <button
+      disabled={redeem.isPending}
+      onClick={() => redeem.mutate({ groupId: "stable", vaultId: "beta", amount: 500n })}
+    >
+      {redeem.isPending ? "Redeeming..." : "Redeem"}
     </button>
   );
 }
@@ -46,23 +47,11 @@ function RedeemButton() {
 
 ## Parameters
 
-```ts
-import { type UseRedeemConfig } from "@zama-fhe/react-sdk/vaults";
-```
+### config
 
-### addresses
+`VaultsConfig`
 
-`VaultAddresses`
-
-The vault's `depositBatcher` and `redeemBatcher` addresses, and optionally the `vault` contract for cross-checking. Same shape as [`useVault`](./useVault.md) takes.
-
----
-
-### chainId
-
-`number | undefined`
-
-Chain the vault is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](../sdk/errors.md#chainmismatcherror) before sending anything.
+The config returned by [`defineVaults`](../sdk/VaultClient.md#definevaults).
 
 ---
 
@@ -70,61 +59,33 @@ Chain the vault is on. If the wallet is on another chain, the mutation throws [`
 
 ## Mutation variables
 
-```ts
-import { type RedeemParams } from "@zama-fhe/sdk/vaults";
+Same as [`useDeposit`](./useDeposit.md#mutation-variables): `groupId`, `vaultId`, `amount`, `beneficiary` (group of one only) and `options`. The `amount` is in shares, not assets.
+
+```tsx
+redeem.mutate({
+  groupId: "stable",
+  vaultId: "beta",
+  amount: 500n,
+  options: { grantValiditySeconds: 86_400 },
+});
 ```
 
-### amount
-
-`bigint`
-
-Number of shares to redeem, in the share token's base units (`vault.cShare().decimals()`).
-
-```ts
-await redeem({ amount: 500n });
-```
-
-### beneficiary
-
-`Address | undefined`
-
-Default: the connected wallet. The account credited in the batch; it owns the position and receives the claimed assets.
-
-### operatorUntil
-
-`number | undefined`
-
-Default: now + 1 hour. Unix timestamp (seconds) until which the batcher's operator grant on the share token is valid. Only used for another `beneficiary`, and only when a grant isn't already active.
-
-### skipBalanceCheck
-
-`boolean | undefined`
-
-Default: `false`. Skips the share-balance pre-flight, for accounts whose balance the connected signer can't decrypt.
-
-### onJoinSubmitted
-
-`((txHash: Hex) => void) | undefined`
-
-Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction". If the callback throws, the SDK logs a warning and the join continues.
-
-**Throws:**
-
-- `ConfigurationError` — the two batchers report different vaults, or disagree with a configured `vault` address
-- `InsufficientConfidentialBalanceError` — the share balance is less than `amount`
-- `BalanceCheckUnavailableError` — the balance check needs a decryption the signer can't perform
+**Throws:** as [`useDeposit`](./useDeposit.md#mutation-variables), except `UnlistedConfidentialTokenError`, which only applies to deposits.
 
 ## Return Type
 
-`data` resolves to a `JoinResult`: `{ txHash, receipt, batchId, beneficiary, confidentialJoinedAmount }`. See [`Vault` → JoinResult](../sdk/Vault.md#joinresult).
+The `data` property (after a successful mutation) is a `JoinOutcome`:
 
-On success the hook invalidates the share token's balance cache, the redeem batcher's batch reads, and the share token's operator-status cache.
+- **`record`**: the `JoinRecord` to store.
+- **`txHashes`**: every transaction sent, grants first.
+
+On success, the hook invalidates every vault read of the group and every confidential balance.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 
 ## Related
 
-- [useDeposit](./useDeposit.md) — the deposit direction
-- [useClaim](./useClaim.md) — claim the assets once the batch is finalized
-- [Vault.redeem](../sdk/Vault.md#redeem) — imperative equivalent on the `Vault` class
-- [Vault deposits and redemptions](../../guides/vaults/deposits.md#redemptions)
+- [useDeposit](./useDeposit.md): the deposit direction
+- [usePosition](./usePosition.md): follow the join
+- [VaultClient.redeem](../sdk/VaultClient.md#redeem)
+- [Vault groups](../../guides/vaults/groups.md)

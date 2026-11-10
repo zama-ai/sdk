@@ -3,47 +3,14 @@
  *
  * @packageDocumentation
  */
-export { useVault } from "./use-vault";
-export { useVaultGroup } from "./use-vault-group";
-export { useGroupDeposit, type UseGroupDepositConfig } from "./use-group-deposit";
-export { useGroupRedeem, type UseGroupRedeemConfig } from "./use-group-redeem";
-export { useVaultBatcher } from "./use-vault-batcher";
-export { useDeposit, type UseDepositConfig } from "./use-deposit";
-export { useRedeem, type UseRedeemConfig } from "./use-redeem";
-export { useJoin, type UseJoinConfig } from "./use-join";
-export { useClaim, type UseClaimConfig } from "./use-claim";
-export { useQuit, type UseQuitConfig } from "./use-quit";
-export { useRecover, type UseRecoverConfig } from "./use-recover";
-export { useDispatchBatch, type UseDispatchBatchConfig } from "./use-dispatch-batch";
-export { useFinalize, type UseFinalizeConfig } from "./use-finalize";
+export { useVaultClient } from "./use-vault-client";
+export { usePosition, type UsePositionOptions } from "./use-position";
+export { useOpenBatches } from "./use-open-batches";
 export {
-  useCurrentBatchId,
-  type UseCurrentBatchIdConfig,
-  type UseCurrentBatchIdOptions,
-} from "./use-current-batch-id";
-export {
-  useBatchState,
-  type UseBatchStateConfig,
-  type UseBatchStateOptions,
-} from "./use-batch-state";
-export { usePaused, type UsePausedConfig, type UsePausedOptions } from "./use-paused";
-export {
-  useBatcherTokens,
-  type UseBatcherTokensConfig,
-  type UseBatcherTokensOptions,
-} from "./use-batcher-tokens";
-export {
-  useBatchStatus,
-  type UseBatchStatusConfig,
-  type UseBatchStatusOptions,
-} from "./use-batch-status";
-export {
-  useTimeUntilDispatchable,
-  type UseTimeUntilDispatchableConfig,
-  type UseTimeUntilDispatchableOptions,
-} from "./use-time-until-dispatchable";
-export {
-  useTimeUntilCallbackDeadline,
-  type UseTimeUntilCallbackDeadlineConfig,
-  type UseTimeUntilCallbackDeadlineOptions,
-} from "./use-time-until-callback-deadline";
+  useDeposit,
+  useDispatch,
+  useExit,
+  useFinalize,
+  useRedeem,
+  type UseVaultMutationOptions,
+} from "./use-mutations";

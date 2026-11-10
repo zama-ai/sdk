@@ -72,16 +72,6 @@ export function batchStateContract(batcher: Address, batchId: bigint) {
   } as const;
 }
 
-/** Returns the contract config to read a batch's encrypted aggregate deposit amount. */
-export function totalDepositsContract(batcher: Address, batchId: bigint) {
-  return {
-    address: batcher,
-    abi: vaultBatcherAbi,
-    functionName: "totalDeposits",
-    args: [batchId],
-  } as const;
-}
-
 /** Returns the contract config to read one account's encrypted deposit within a batch. */
 export function depositsContract(batcher: Address, batchId: bigint, account: Address) {
   return {
@@ -107,11 +97,6 @@ export function toTokenContract(batcher: Address) {
   return { address: batcher, abi: vaultBatcherAbi, functionName: "toToken", args: [] } as const;
 }
 
-/** Returns the contract config to read the batcher's current minimum-batch-age policy. */
-export function minBatchAgeContract(batcher: Address) {
-  return { address: batcher, abi: vaultBatcherAbi, functionName: "minBatchAge", args: [] } as const;
-}
-
 /** Returns the contract config to read the minimum age pinned to one batch when it opened. */
 export function batchMinBatchAgeContract(batcher: Address, batchId: bigint) {
   return {
@@ -119,16 +104,6 @@ export function batchMinBatchAgeContract(batcher: Address, batchId: bigint) {
     abi: vaultBatcherAbi,
     functionName: "batchMinBatchAge",
     args: [batchId],
-  } as const;
-}
-
-/** Returns the contract config to read the batcher's current callback-deadline policy. */
-export function callbackDeadlineContract(batcher: Address) {
-  return {
-    address: batcher,
-    abi: vaultBatcherAbi,
-    functionName: "callbackDeadline",
-    args: [],
   } as const;
 }
 

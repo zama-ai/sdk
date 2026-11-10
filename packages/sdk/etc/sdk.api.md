@@ -8152,9 +8152,9 @@ export interface ErrorForCode {
     [ZamaErrorCode.TransportKeyPairChanged]: TransportKeyPairChangedError;
     [ZamaErrorCode.UnlistedConfidentialToken]: UnlistedConfidentialTokenError;
     [ZamaErrorCode.UnshieldAlreadyFinalized]: UnshieldAlreadyFinalizedError;
-    [ZamaErrorCode.VaultBatchNotDispatched]: VaultBatchNotDispatchedError;
+    [ZamaErrorCode.VaultActionNotAllowed]: VaultActionNotAllowedError;
     [ZamaErrorCode.VaultBatcherPaused]: VaultBatcherPausedError;
-    [ZamaErrorCode.VaultGroupJoinUnconfirmed]: VaultGroupJoinUnconfirmedError;
+    [ZamaErrorCode.VaultJoinUnconfirmed]: VaultJoinUnconfirmedError;
     [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
     [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
 }
@@ -22949,6 +22949,28 @@ export interface UnwrapSubmittedEvent extends BaseEvent {
 }
 
 // @public
+export interface VaultActionNotAllowedDetails {
+    readonly action: "exit" | "dispatch" | "finalize";
+    readonly reason: VaultActionNotAllowedReason;
+}
+
+// @public
+export class VaultActionNotAllowedError extends ZamaError {
+    constructor(message: string, details: VaultActionNotAllowedDetails, options?: ErrorOptions);
+    readonly action: VaultActionNotAllowedDetails["action"];
+    readonly reason: VaultActionNotAllowedReason;
+}
+
+// @public
+export type VaultActionNotAllowedReason =
+/** An exit was asked for while a leg is dispatched; only `finalize` applies until it settles. */
+"leg-dispatched" |
+/** A dispatch was asked for, but no leg is pending, old enough, and on an unpaused batcher. */
+"nothing-to-dispatch" |
+/** A finalize was asked for, but no leg is dispatched. */
+"nothing-to-finalize";
+
+// @public
 export interface VaultBatcherPausedDetails {
     readonly batcher: Address;
     readonly vaultId: string;
@@ -22962,45 +22984,18 @@ export class VaultBatcherPausedError extends ZamaError {
 }
 
 // @public
-export interface VaultBatchNotDispatchedDetails {
-    readonly batcher: Address;
-    readonly batchId: bigint;
-    // Warning: (ae-forgotten-export) The symbol "BatchState" needs to be exported by the entry point index.d.ts
-    readonly state: BatchState;
-}
-
-// @public
-export class VaultBatchNotDispatchedError extends ZamaError {
-    constructor(message: string, details: VaultBatchNotDispatchedDetails, options?: ErrorOptions);
-    readonly batcher: Address;
-    readonly batchId: bigint;
-    readonly state: BatchState;
-}
-
-// @public
-export interface VaultGroupJoin {
-    batcher: Address;
-    batchId: bigint;
-    confidentialJoinedAmount: EncryptedValue;
-    token: Address;
-    vaultId: string;
-}
-
-// @public
-export interface VaultGroupJoinUnconfirmedDetails {
-    readonly joins: readonly VaultGroupJoin[];
+export interface VaultJoinUnconfirmedDetails {
     readonly receipt: TransactionReceipt;
     readonly txHash: Hex;
-    readonly unconfirmed: readonly string[];
+    readonly unconfirmedVaultIds: readonly string[];
 }
 
 // @public
-export class VaultGroupJoinUnconfirmedError extends ZamaError {
-    constructor(message: string, details: VaultGroupJoinUnconfirmedDetails, options?: ErrorOptions);
-    readonly joins: readonly VaultGroupJoin[];
+export class VaultJoinUnconfirmedError extends ZamaError {
+    constructor(message: string, details: VaultJoinUnconfirmedDetails, options?: ErrorOptions);
     readonly receipt: TransactionReceipt;
     readonly txHash: Hex;
-    readonly unconfirmed: readonly string[];
+    readonly unconfirmedVaultIds: readonly string[];
 }
 
 // @public
@@ -24399,8 +24394,8 @@ export const ZamaErrorCode: {
     readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
     readonly UnlistedConfidentialToken: "UNLISTED_CONFIDENTIAL_TOKEN";
     readonly VaultBatcherPaused: "VAULT_BATCHER_PAUSED";
-    readonly VaultBatchNotDispatched: "VAULT_BATCH_NOT_DISPATCHED";
-    readonly VaultGroupJoinUnconfirmed: "VAULT_GROUP_JOIN_UNCONFIRMED";
+    readonly VaultActionNotAllowed: "VAULT_ACTION_NOT_ALLOWED";
+    readonly VaultJoinUnconfirmed: "VAULT_JOIN_UNCONFIRMED";
 };
 
 // @public

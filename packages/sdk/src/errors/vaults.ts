@@ -1,7 +1,5 @@
 import type { Address, Hex } from "viem";
 import type { TransactionReceipt } from "../types/transaction";
-import type { BatchState } from "../vaults/types";
-import type { VaultGroupJoin } from "../vaults/vault-group-types";
 import { ZamaError, ZamaErrorCode } from "./base";
 
 /** What an {@link UnlistedConfidentialTokenError} carries. */
@@ -34,19 +32,19 @@ export class UnlistedConfidentialTokenError extends ZamaError {
 export interface VaultBatcherPausedDetails {
   /** The batcher that reported `paused()`. */
   readonly batcher: Address;
-  /** The id of the group member whose leg would have joined it. */
+  /** The vault whose leg needs it. */
   readonly vaultId: string;
 }
 
 /**
- * A batcher one leg of a group submission would join is paused, so the whole
- * submission would revert. Pausing gates `join` and `dispatchBatch`; quitting
+ * A batcher a join needs is paused, so the join would revert. A dispatch
+ * skips paused batchers instead. Pausing gates `join` and `dispatchBatch`; quitting
  * and claiming on it still work.
  */
 export class VaultBatcherPausedError extends ZamaError {
   /** The batcher that reported `paused()`. */
   readonly batcher: Address;
-  /** The id of the group member whose leg would have joined it. */
+  /** The vault whose leg needs it. */
   readonly vaultId: string;
 
   constructor(message: string, details: VaultBatcherPausedDetails, options?: ErrorOptions) {
@@ -57,72 +55,69 @@ export class VaultBatcherPausedError extends ZamaError {
   }
 }
 
-/** What a {@link VaultBatchNotDispatchedError} carries. */
-export interface VaultBatchNotDispatchedDetails {
-  /** The batcher the batch belongs to. */
-  readonly batcher: Address;
-  /** The batch that was to be finalized. */
-  readonly batchId: bigint;
-  /** The state the batch is in instead. */
-  readonly state: BatchState;
+/** Why a vault action cannot be sent now. */
+export type VaultActionNotAllowedReason =
+  /** An exit was asked for while a leg is dispatched; only `finalize` applies until it settles. */
+  | "leg-dispatched"
+  /** A dispatch was asked for, but no leg is pending, old enough, and on an unpaused batcher. */
+  | "nothing-to-dispatch"
+  /** A finalize was asked for, but no leg is dispatched. */
+  | "nothing-to-finalize";
+
+/** What a {@link VaultActionNotAllowedError} carries. */
+export interface VaultActionNotAllowedDetails {
+  /** The action asked for. */
+  readonly action: "exit" | "dispatch" | "finalize";
+  /** Why the position does not allow it now. */
+  readonly reason: VaultActionNotAllowedReason;
 }
 
 /**
- * A batch cannot be finalized because it is not `Dispatched`: it is still
- * open, or it was already settled or canceled, by a keeper or anyone else.
+ * The position's batches do not allow the action now, usually because their
+ * state moved since the position was read. Read the position again.
  */
-export class VaultBatchNotDispatchedError extends ZamaError {
-  /** The batcher the batch belongs to. */
-  readonly batcher: Address;
-  /** The batch that was to be finalized. */
-  readonly batchId: bigint;
-  /** The state the batch is in instead. */
-  readonly state: BatchState;
+export class VaultActionNotAllowedError extends ZamaError {
+  /** The action asked for. */
+  readonly action: VaultActionNotAllowedDetails["action"];
+  /** Why the position does not allow it now. */
+  readonly reason: VaultActionNotAllowedReason;
 
-  constructor(message: string, details: VaultBatchNotDispatchedDetails, options?: ErrorOptions) {
-    super(ZamaErrorCode.VaultBatchNotDispatched, message, options);
-    this.name = "VaultBatchNotDispatchedError";
-    this.batcher = details.batcher;
-    this.batchId = details.batchId;
-    this.state = details.state;
+  constructor(message: string, details: VaultActionNotAllowedDetails, options?: ErrorOptions) {
+    super(ZamaErrorCode.VaultActionNotAllowed, message, options);
+    this.name = "VaultActionNotAllowedError";
+    this.action = details.action;
+    this.reason = details.reason;
   }
 }
 
-/** What a {@link VaultGroupJoinUnconfirmedError} carries. */
-export interface VaultGroupJoinUnconfirmedDetails {
-  /** The mined transaction. */
+/** What a {@link VaultJoinUnconfirmedError} carries. */
+export interface VaultJoinUnconfirmedDetails {
+  /** The mined join transaction. */
   readonly txHash: Hex;
-  /** Its receipt, for callers that want to inspect the logs themselves. */
+  /** Its receipt, to inspect the logs. */
   readonly receipt: TransactionReceipt;
-  /** The legs whose `Joined` log the SDK matched, with the batch each landed in. */
-  readonly joins: readonly VaultGroupJoin[];
-  /** The ids of the members whose `Joined` log the SDK could not match; not a list of legs that did not join. */
-  readonly unconfirmed: readonly string[];
+  /** The vaults whose `Joined` log the SDK could not match. Not a list of legs that did not join. */
+  readonly unconfirmedVaultIds: readonly string[];
 }
 
 /**
- * A group submission was mined, but the SDK could not match a `Joined` event
- * in its receipt to every leg. The router is all-or-nothing, so either the
- * transaction reverted and nothing moved, or it succeeded and *every* leg
- * joined, the `unconfirmed` ones included; look the transaction up before
- * resubmitting. `joins` gives the batch ids the SDK could read.
+ * A join was mined, but the SDK could not match a `Joined` log to every leg,
+ * so it cannot build the join record. A router join is all-or-nothing, so
+ * every leg most likely joined; look the transaction up before joining again.
  */
-export class VaultGroupJoinUnconfirmedError extends ZamaError {
-  /** The mined transaction. */
+export class VaultJoinUnconfirmedError extends ZamaError {
+  /** The mined join transaction. */
   readonly txHash: Hex;
-  /** Its receipt, for callers that want to inspect the logs themselves. */
+  /** Its receipt, to inspect the logs. */
   readonly receipt: TransactionReceipt;
-  /** The legs whose `Joined` log the SDK matched, with the batch each landed in. */
-  readonly joins: readonly VaultGroupJoin[];
-  /** The ids of the members whose `Joined` log the SDK could not match; not a list of legs that did not join. */
-  readonly unconfirmed: readonly string[];
+  /** The vaults whose `Joined` log the SDK could not match. Not a list of legs that did not join. */
+  readonly unconfirmedVaultIds: readonly string[];
 
-  constructor(message: string, details: VaultGroupJoinUnconfirmedDetails, options?: ErrorOptions) {
-    super(ZamaErrorCode.VaultGroupJoinUnconfirmed, message, options);
-    this.name = "VaultGroupJoinUnconfirmedError";
+  constructor(message: string, details: VaultJoinUnconfirmedDetails, options?: ErrorOptions) {
+    super(ZamaErrorCode.VaultJoinUnconfirmed, message, options);
+    this.name = "VaultJoinUnconfirmedError";
     this.txHash = details.txHash;
     this.receipt = details.receipt;
-    this.joins = details.joins;
-    this.unconfirmed = details.unconfirmed;
+    this.unconfirmedVaultIds = details.unconfirmedVaultIds;
   }
 }
