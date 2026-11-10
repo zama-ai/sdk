@@ -38,6 +38,7 @@ jobs:
       - name: Build contracts
         uses: ./.github/actions/build-contracts
         with:
+          fhevm: "true"
           fhevm-app-client-id: ${{ secrets.FHEVM_APP_CLIENT_ID }}
           fhevm-app-private-key: ${{ secrets.FHEVM_APP_PRIVATE_KEY }}
 
@@ -123,6 +124,7 @@ jobs:
       - name: Build contracts
         uses: ./.github/actions/build-contracts
         with:
+          fhevm: "true"
           fhevm-app-client-id: ${{ secrets.FHEVM_APP_CLIENT_ID }}
           fhevm-app-private-key: ${{ secrets.FHEVM_APP_PRIVATE_KEY }}
 
@@ -192,6 +194,7 @@ jobs:
       - name: Build contracts
         uses: ./.github/actions/build-contracts
         with:
+          fhevm: "true"
           fhevm-app-client-id: ${{ secrets.FHEVM_APP_CLIENT_ID }}
           fhevm-app-private-key: ${{ secrets.FHEVM_APP_PRIVATE_KEY }}
 

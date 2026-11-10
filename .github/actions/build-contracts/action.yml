@@ -1,20 +1,24 @@
 name: Build contracts
 description: >-
-  Initialise the forge-fhevm and fhevm submodules, install the pinned Foundry
-  toolchain, and materialise the contracts build (contracts/out + dependencies)
-  through a keyed cache. On a cache miss it installs Soldeer deps, builds
-  forge-fhevm and the project contracts, then saves the cache. The fhevm
-  cleartext host contracts are built on every run and never cached. Assumes the
-  repo is already checked out with `persist-credentials: false` — local
+  Initialise the forge-fhevm submodule, install the pinned Foundry toolchain,
+  and materialise the contracts build (contracts/out + dependencies) through a
+  keyed cache. On a cache miss it installs Soldeer deps, builds forge-fhevm and
+  the project contracts, then saves the cache. With `fhevm: "true"` it also
+  fetches the fhevm submodule and builds the fhevm cleartext host contracts on
+  every run (never cached); the caller must then check out with
+  `persist-credentials: false`. Assumes the repo is already checked out — local
   composite actions only resolve after checkout.
 
 inputs:
+  fhevm:
+    description: Fetch and build the fhevm host contracts (needed only by the Playwright E2E deploy).
+    default: "false"
   fhevm-app-client-id:
-    description: Client ID of the GitHub App used to fetch the fhevm submodule.
-    required: true
+    description: Client ID of the GitHub App used to fetch the fhevm submodule. Required when `fhevm` is "true".
+    default: ""
   fhevm-app-private-key:
-    description: Private key of the GitHub App used to fetch the fhevm submodule.
-    required: true
+    description: Private key of the GitHub App used to fetch the fhevm submodule. Required when `fhevm` is "true".
+    default: ""
 
 runs:
   using: composite
@@ -26,6 +30,7 @@ runs:
     # Short-lived installation token, read-only and scoped to zama-ai/fhevm.
     # It is revoked automatically when the job ends.
     - name: Create fhevm read token
+      if: inputs.fhevm == 'true'
       id: fhevm-token
       uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
       with:
@@ -38,6 +43,7 @@ runs:
     # The rewrite lives only in this command's config, so the token is never
     # written to .git/config or the submodule's remote URL.
     - name: Init fhevm submodule
+      if: inputs.fhevm == 'true'
       shell: bash
       env:
         FHEVM_TOKEN: ${{ steps.fhevm-token.outputs.token }}
@@ -80,9 +86,10 @@ runs:
       run: cd contracts/lib/forge-fhevm && forge build
 
     # Mirrors the `fhevm:install` + `fhevm:build` package.json scripts — the
-    # cleartext FHEVM host contracts the e2e cleartext deploy depends on. Runs on
-    # every job because its outputs are not cached (see above).
+    # cleartext FHEVM host contracts the e2e cleartext deploy depends on. Rebuilt
+    # on every run because its outputs are not cached (see above).
     - name: Build fhevm host contracts
+      if: inputs.fhevm == 'true'
       shell: bash
       run: |
         cd contracts/lib/fhevm/sdk/js-sdk/contracts
