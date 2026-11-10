@@ -18,6 +18,8 @@ description: Unreleased changes on the prerelease (beta) line — not yet in a s
 - **Deployment:** [Deploy in production](../native/operations/run-in-production.md), [Monitor and troubleshoot](../native/operations/monitor-and-troubleshoot.md), and [Upgrade the daemon](../native/operations/upgrade-and-recover.md).
 - **Signed, scanned image:** the daemon image is built on Docker Hardened Images, every release digest is scanned with Trivy before it is tagged, and the image carries signed build provenance and an SBOM. Verify a release with `gh attestation verify` or cosign and pin it by digest with `ZAMA_SDK_DAEMON_DIGEST`; see [Verify and pin the image](../native/operations/run-in-production.md#verify-and-pin-the-image). Published images are re-scanned daily.
 
+**HCU limit errors for native clients.** A write whose gas estimation hits one of the protocol's FHE compute (HCU) limits now fails with `HCU_BLOCK_LIMIT_EXCEEDED` (retryable) or `HCU_TRANSACTION_LIMIT_EXCEEDED` instead of `TRANSACTION_REVERTED`. A write whose broadcast outcome is uncertain still fails with `TRANSACTION_OUTCOME_UNKNOWN`.
+
 Start with the [Go quick start](../native/tutorials/go-quick-start.md) or the [Rust quick start](../native/tutorials/rust-quick-start.md).
 
 ## Vault groups over the multi-vault router
@@ -29,6 +31,14 @@ A group deposit throws the new `UnlistedConfidentialTokenError` when the router'
 If the SDK cannot match a `Joined` event in the mined transaction's receipt to every leg, the new `VaultGroupJoinUnconfirmedError` carries the transaction hash, the receipt, the batch ids it could read and the members it could not match. The router is all-or-nothing, so the transaction either reverted or joined every leg; look it up before resubmitting.
 
 See [Vault groups](../guides/vaults/groups.md).
+
+## Typed errors for the protocol's FHE compute limits
+
+The protocol caps the FHE compute, measured in HCU, that a transaction and a block can use. A write whose gas estimation hits one of them now throws a typed error instead of a bare `TransactionRevertedError`, from `submitTransaction`-backed methods and from `sdk.offline.prepare` alike: `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`) when the block has too little left, which is retryable in the next block, and `HcuTransactionLimitExceededError` (`HCU_TRANSACTION_LIMIT_EXCEEDED`) when the transaction needs more HCU, in total or in one sequential chain, than one transaction may use, which a retry cannot fix.
+
+A transaction that is mined and then reverts now throws `TransactionRevertedError` instead of returning a result. `TransactionReceipt` gained an optional `status` (`"success"` or `"reverted"`); the viem, ethers and wagmi providers fill it.
+
+See [Errors](../reference/sdk/errors.md#hcublocklimitexceedederror).
 
 ## Settle a dispatched batch yourself
 

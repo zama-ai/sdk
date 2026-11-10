@@ -6,6 +6,12 @@ describe("TransactionReceipt", () => {
   test("logs is readonly array of RawLog", () => {
     expectTypeOf<TransactionReceipt["logs"]>().toEqualTypeOf<readonly RawLog[]>();
   });
+
+  test("status is an optional success/reverted flag", () => {
+    expectTypeOf<TransactionReceipt["status"]>().toEqualTypeOf<
+      "success" | "reverted" | undefined
+    >();
+  });
 });
 
 describe("TransactionResult", () => {

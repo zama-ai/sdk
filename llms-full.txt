@@ -2545,6 +2545,8 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 - **Deployment:** [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md), [Monitor and troubleshoot](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md), and [Upgrade the daemon](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/upgrade-and-recover.md).
 - **Signed, scanned image:** the daemon image is built on Docker Hardened Images, every release digest is scanned with Trivy before it is tagged, and the image carries signed build provenance and an SBOM. Verify a release with `gh attestation verify` or cosign and pin it by digest with `ZAMA_SDK_DAEMON_DIGEST`; see [Verify and pin the image](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md#verify-and-pin-the-image). Published images are re-scanned daily.
 
+**HCU limit errors for native clients.** A write whose gas estimation hits one of the protocol's FHE compute (HCU) limits now fails with `HCU_BLOCK_LIMIT_EXCEEDED` (retryable) or `HCU_TRANSACTION_LIMIT_EXCEEDED` instead of `TRANSACTION_REVERTED`. A write whose broadcast outcome is uncertain still fails with `TRANSACTION_OUTCOME_UNKNOWN`.
+
 Start with the [Go quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/go-quick-start.md) or the [Rust quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/rust-quick-start.md).
 
 ## Vault groups over the multi-vault router
@@ -2556,6 +2558,14 @@ A group deposit throws the new `UnlistedConfidentialTokenError` when the router'
 If the SDK cannot match a `Joined` event in the mined transaction's receipt to every leg, the new `VaultGroupJoinUnconfirmedError` carries the transaction hash, the receipt, the batch ids it could read and the members it could not match. The router is all-or-nothing, so the transaction either reverted or joined every leg; look it up before resubmitting.
 
 See [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/groups.md).
+
+## Typed errors for the protocol's FHE compute limits
+
+The protocol caps the FHE compute, measured in HCU, that a transaction and a block can use. A write whose gas estimation hits one of them now throws a typed error instead of a bare `TransactionRevertedError`, from `submitTransaction`-backed methods and from `sdk.offline.prepare` alike: `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`) when the block has too little left, which is retryable in the next block, and `HcuTransactionLimitExceededError` (`HCU_TRANSACTION_LIMIT_EXCEEDED`) when the transaction needs more HCU, in total or in one sequential chain, than one transaction may use, which a retry cannot fix.
+
+A transaction that is mined and then reverts now throws `TransactionRevertedError` instead of returning a result. `TransactionReceipt` gained an optional `status` (`"success"` or `"reverted"`); the viem, ethers and wagmi providers fill it.
+
+See [Errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#hcublocklimitexceedederror).
 
 ## Settle a dispatched batch yourself
 
@@ -6207,6 +6217,8 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `ENCRYPTION_FAILED`                      | `EncryptionFailedError`                   | FHE encryption failed in the WASM runtime                                                                      |
 | `DECRYPTION_FAILED`                      | `DecryptionFailedError`                   | FHE decryption failed                                                                                          |
 | `TRANSACTION_REVERTED`                   | `TransactionRevertedError`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                 |
+| `HCU_BLOCK_LIMIT_EXCEEDED`               | `HcuBlockLimitExceededError`              | Gas estimation found too little FHE compute (HCU) left in the block (retryable)                                |
+| `HCU_TRANSACTION_LIMIT_EXCEEDED`         | `HcuTransactionLimitExceededError`        | The transaction needs more FHE compute (HCU) than one transaction may use                                      |
 | `UNSHIELD_ALREADY_FINALIZED`             | `UnshieldAlreadyFinalizedError`           | `resumeUnshield()` called for an unwrap that was already finalized -- funds already arrived, nothing to resume |
 | `INVALID_KEYPAIR`                        | `InvalidTransportKeyPairError`            | Relayer rejected transport key pair (stale or malformed)                                                       |
 | `KEYPAIR_EXPIRED`                        | `TransportKeyPairExpiredError`            | Transport key pair expired -- user needs to re-sign                                                            |
@@ -6480,7 +6492,7 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 
 ### 8. Retry transient failures
 
-Five causes are transient — the operation can simply be retried, ideally with backoff: `RpcRateLimitError` (`RPC_RATE_LIMITED`), `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`, only on a 429, or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`), `DelegationCooldownError` (`DELEGATION_COOLDOWN`), and `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`). Rather than hardcoding that set of codes, use `isRetryable(error)` and `retryAfterSeconds(error)` — they stay correct as the taxonomy grows, since every `ZamaError` declares its own `.retryable`.
+Six causes are transient — the operation can simply be retried, ideally with backoff: `RpcRateLimitError` (`RPC_RATE_LIMITED`), `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`, only on a 429, or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`), `DelegationCooldownError` (`DELEGATION_COOLDOWN`), `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`), and `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`). Rather than hardcoding that set of codes, use `isRetryable(error)` and `retryAfterSeconds(error)` — they stay correct as the taxonomy grows, since every `ZamaError` declares its own `.retryable`.
 
 | Cause                                                        | `retryAfterSeconds`                               | Notes                                                                                                   |
 | ------------------------------------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -6489,6 +6501,7 @@ Five causes are transient — the operation can simply be retried, ideally with 
 | `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`) | `undefined`                                       | The SDK already rides out the propagation window internally; only surfaces if it's exceeded.            |
 | `DelegationCooldownError` (`DELEGATION_COOLDOWN`)            | `undefined`                                       | Per-block timing gate; resolves on the next block.                                                      |
 | `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`)    | `undefined`                                       | Async signer adapters (e.g. `EthersSigner`) refresh once internally; only surfaces if still unresolved. |
+| `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`)    | `undefined`                                       | Too little FHE compute left in the block at estimation; resolves on the next block.                     |
 
 
 ### Tab: Core SDK
@@ -10439,7 +10452,7 @@ For a custom wallet:
 
 Wallet callbacks can run concurrently. Each built-in adapter instance sends one write at a time, so its concurrent writes do not reuse a nonce, and a stalled broadcast delays the next write by up to the broadcast timeout. A custom wallet must coordinate nonces across concurrent writes itself.
 
-Report a rejection or failure as an SDK error. Report a revert detected before broadcast with Go `ExecutionRevertError` or Rust `SdkError::execution_reverted`; the operation then fails with `TRANSACTION_REVERTED`.
+Report a rejection or failure as an SDK error. Report a revert detected before broadcast with Go `ExecutionRevertError` or Rust `SdkError::execution_reverted`; the operation then fails with `TRANSACTION_REVERTED`, or with `HCU_BLOCK_LIMIT_EXCEEDED` or `HCU_TRANSACTION_LIMIT_EXCEEDED` when the revert is one of the protocol's FHE compute (HCU) limits.
 
 If a write ends without a clear result, follow [Resolve uncertain transaction outcomes](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/uncertain-transaction-outcomes.md).
 
@@ -10834,6 +10847,8 @@ Record every transaction hash in your wallet's write path, together with the acc
 | `SIGNING_REJECTED`                                                                     | Request another wallet action only after user approval                       |
 | `SIGNING_FAILED` or `CHAIN_MISMATCH` before broadcast                                  | Correct the wallet or provider configuration                                 |
 | `TRANSACTION_REVERTED`                                                                 | Inspect the revert and fix its cause before submitting another write         |
+| `HCU_BLOCK_LIMIT_EXCEEDED`                                                             | Nothing was sent; submit again in a later block                              |
+| `HCU_TRANSACTION_LIMIT_EXCEEDED`                                                       | Nothing was sent; split the work into smaller transactions                   |
 | `TRANSACTION_OUTCOME_UNKNOWN`                                                          | Reconcile the recorded hash and account transactions before submitting again |
 | Transport failure or cancellation after the wallet received the write                  | Treat the outcome as uncertain, whatever the error code                      |
 | Cancellation, deadline, account change, or context close before the wallet received it | The operation fails with `CANCELLED`; nothing was sent                       |
@@ -11370,7 +11385,7 @@ Every event extends a common shape (an optional `tokenAddress`, a `timestamp`, a
 | `EncryptStart` / `EncryptEnd` / `EncryptError`                                                                                                                                       | An FHE encryption begins, succeeds, or fails.                                                                                                                                                                                                                                                                                                                         |
 | `DecryptStart` / `DecryptEnd` / `DecryptError`                                                                                                                                       | A decryption begins, succeeds, or fails — `DecryptEnd`/`DecryptError` carry decrypted cleartext values; see [`decryption.decryptValues`](#decryption-decryptvalues) for the full walkthrough and code samples.                                                                                                                                                        |
 | `PermitError`                                                                                                                                                                        | `grantPermit`, `grantDelegationPermit`, or `registerPermit` fails — but not every failure of these methods: transport-key-pair issues (`TransportKeyPairChangedError`, `KeyWrappingError`) are deliberately excluded from this event.                                                                                                                                 |
-| `TransactionError`                                                                                                                                                                   | `submitTransaction` itself rejects — before broadcast (estimation/validation) or while waiting for the receipt. It does **not** fire for a transaction that broadcasts successfully but reverts on execution: the SDK doesn't currently inspect `receipt.status`, so a mined-but-reverted transaction resolves as a success with no error and no event.               |
+| `TransactionError`                                                                                                                                                                   | `submitTransaction` itself rejects — before broadcast (estimation/validation), while waiting for the receipt, or when the mined receipt reports a revert (`receipt.status === "reverted"`).                                                                                                                                                                           |
 | `ShieldSubmitted`, `TransferSubmitted`, `TransferFromSubmitted`, `SetOperatorSubmitted`, `ApproveUnderlyingSubmitted`, `WrapSubmitted`, `UnwrapSubmitted`, `FinalizeUnwrapSubmitted` | The corresponding write transaction is submitted — each carries the transaction's `txHash`.                                                                                                                                                                                                                                                                           |
 | `VaultSubmitted`                                                                                                                                                                     | A vault batcher or router write is submitted — carries the `txHash`, the batcher's address as `tokenAddress` (the router's for `routerJoin`, which only a router submission carries), and `vaultOperation` (`join`, `quit`, `claim`, `recover`, `dispatchBatch`, `finalize`, or `routerJoin`). See [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md). |
 | `DelegationSubmitted` / `RevokeDelegationSubmitted`                                                                                                                                  | A delegation grant or revoke transaction is submitted — see [Delegation events](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/delegation.md#events).                                                                                                                                                                                                                                                              |
@@ -14561,6 +14576,8 @@ import {
   EncryptOffloadUnavailableError,
   DecryptionFailedError,
   TransactionRevertedError,
+  HcuBlockLimitExceededError,
+  HcuTransactionLimitExceededError,
   UnshieldAlreadyFinalizedError,
   UnlistedConfidentialTokenError,
   VaultBatcherPausedError,
@@ -14652,7 +14669,7 @@ try {
 | `isRetryable`       | `(error: unknown) => error is ZamaError & { retryable: true }` | `true` only for a `ZamaError` instance whose `.retryable` is `true`; `false` for anything else, including non-SDK errors.                                                                                                                            |
 | `retryAfterSeconds` | `(error: unknown) => number \| undefined`                      | Reads the error's own `retryAfter` field when the error is retryable and carries one. Only `RelayerRequestFailedError` and `RpcRateLimitError` currently carry `retryAfter` — treat `undefined` as "retry with your own backoff," not "don't retry." |
 
-Exactly five error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, and `WalletAccountNotReadyError`. See [Retry transient failures](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
+Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, `WalletAccountNotReadyError`, and `HcuBlockLimitExceededError`. See [Retry transient failures](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
 
 ## Error summary
 
@@ -14664,6 +14681,8 @@ Exactly five error classes are retryable today: `RpcRateLimitError`, `RelayerReq
 | `EncryptOffloadUnavailableError`          | `ENCRYPT_OFFLOAD_UNAVAILABLE`            | `offloadEncrypt: true` required the encrypt worker, which is unavailable                                                          |
 | `DecryptionFailedError`                   | `DECRYPTION_FAILED`                      | FHE decryption failed                                                                                                             |
 | `TransactionRevertedError`                | `TRANSACTION_REVERTED`                   | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
+| `HcuBlockLimitExceededError`              | `HCU_BLOCK_LIMIT_EXCEEDED`               | Gas estimation found too little FHE compute (HCU) left in the block; retry in the next block (retryable)                          |
+| `HcuTransactionLimitExceededError`        | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | The transaction needs more FHE compute (HCU), in total or in one sequential chain, than one transaction may use                   |
 | `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
 | `UnlistedConfidentialTokenError`          | `UNLISTED_CONFIDENTIAL_TOKEN`            | The vault router's registry does not list the confidential token, so the router would reject a transfer of it                     |
 | `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | A batcher one leg of a group submission would join is paused, so the whole submission would revert                                |
@@ -14820,7 +14839,7 @@ matchZamaError(error, { DECRYPTION_FAILED: () => showError("Decryption failed �
 
 **Code:** `TRANSACTION_REVERTED`
 
-An on-chain transaction reverted. The error `.message` includes the revert reason when available.
+An on-chain transaction reverted, either before submission or in the block it was mined in. The error `.message` includes the revert reason when available; a receipt reports no reason, only the transaction hash.
 
 ```ts
 matchZamaError(error, {
@@ -14828,7 +14847,36 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Inspect the revert reason. Common causes: insufficient balance or an expired operator approval. Finalizing an already-finalized unwrap through `resumeUnshield()` or `unshield()` throws the more specific `UnshieldAlreadyFinalizedError` instead.
+**How to handle:** Inspect the revert reason. Common causes: insufficient balance or an expired operator approval. Finalizing an already-finalized unwrap through `resumeUnshield()` or `unshield()` throws the more specific `UnshieldAlreadyFinalizedError` instead, and a revert from the protocol's FHE compute limits throws `HcuBlockLimitExceededError` or `HcuTransactionLimitExceededError`.
+
+### HcuBlockLimitExceededError
+
+**Code:** `HCU_BLOCK_LIMIT_EXCEEDED`
+
+The protocol caps the FHE compute, measured in HCU, that a block can use. Gas estimation found too little left in the current block for this transaction. The cap is checked again when the transaction is mined, so a transaction that passed estimation can still revert in the block it lands in; that case surfaces as `TransactionRevertedError`.
+
+```ts
+matchZamaError(error, {
+  HCU_BLOCK_LIMIT_EXCEEDED: () => showError("The network is busy. Retrying in the next block…"),
+});
+```
+
+**How to handle:** Retry in the next block. The error is retryable, so `isRetryable(error)` is `true`; `retryAfterSeconds(error)` is `undefined`, so use your own backoff of about one block time.
+
+### HcuTransactionLimitExceededError
+
+**Code:** `HCU_TRANSACTION_LIMIT_EXCEEDED`
+
+The protocol caps the FHE compute, measured in HCU, that one transaction can use: a total, and a limit on one sequential chain of operations (depth). The transaction needs more than that; the `.message` says which cap was hit.
+
+```ts
+matchZamaError(error, {
+  HCU_TRANSACTION_LIMIT_EXCEEDED: () =>
+    showError("This operation is too large for one transaction"),
+});
+```
+
+**How to handle:** Do not retry: the same transaction costs the same HCU every time. Do less FHE work per transaction.
 
 ### UnshieldAlreadyFinalizedError
 
@@ -16174,6 +16222,7 @@ Returns a `PreparedTransaction`. All three fields are JSON-safe, so the object c
 - `DecryptionFailedError` - fallback for an unclassified public-decryption failure (`FinalizeUnwrap`); classified failures preserve their specific [SDK error](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md)
 - `DelegationExpirationTooSoonError` / `DelegationSelfNotAllowedError` / `DelegationDelegateEqualsContractError` - delegation guards (`DelegateDecryption`)
 - `TransactionRevertedError` - gas estimation reverted, for example when `Wrap` is prepared before its approval mines
+- `HcuBlockLimitExceededError` / `HcuTransactionLimitExceededError` - gas estimation hit the protocol's FHE compute (HCU) limits; see [Errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#hcublocklimitexceedederror)
 
 ### preparePermit
 
