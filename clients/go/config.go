@@ -29,16 +29,6 @@ func (a APIKeyHeader) wire() *pb.ChainAuth {
 }
 func (APIKeyHeader) Format(state fmt.State, verb rune) { redactAuth(state) }
 
-type APIKeyCookie struct {
-	Value  string
-	Cookie *string
-}
-
-func (a APIKeyCookie) wire() *pb.ChainAuth {
-	return &pb.ChainAuth{Credential: &pb.ChainAuth_ApiKeyCookie{ApiKeyCookie: &pb.NamedCredential{Name: a.Cookie, Value: a.Value}}}
-}
-func (APIKeyCookie) Format(state fmt.State, verb rune) { redactAuth(state) }
-
 func redactAuth(state fmt.State) {
 	_, _ = state.Write([]byte("[REDACTED]"))
 }

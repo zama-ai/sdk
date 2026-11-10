@@ -91,7 +91,8 @@ import {
 import { web } from "../../config/web";
 import { LoggerService } from "../../services/logger-service";
 import { recordAppliedRuntimeConfig, resetAppliedRuntimeConfig } from "../applied-runtime";
-import { FhevmRelayer, type FhevmRelayerConfig } from "../fhevm-relayer";
+import { ConfigurationError } from "../../errors";
+import { FhevmRelayer, toFhevmAuth, type FhevmRelayerConfig } from "../fhevm-relayer";
 import type { TelemetryState } from "../../telemetry";
 import { SDK_VERSION } from "../../version";
 import type { FhevmRuntimeConfig } from "../types";
@@ -456,10 +457,6 @@ describe("FhevmRelayer capability initialization", () => {
       expected: { type: "ApiKeyHeader", value: "secret", header: "x-custom-key" } as const,
     },
     {
-      auth: { __type: "ApiKeyCookie", value: "secret", cookie: "custom-cookie" } as const,
-      expected: { type: "ApiKeyCookie", value: "secret", cookie: "custom-cookie" } as const,
-    },
-    {
       auth: { __type: "BearerToken", token: "secret" } as const,
       expected: { type: "BearerToken", token: "secret" } as const,
     },
@@ -477,6 +474,12 @@ describe("FhevmRelayer capability initialization", () => {
       expect(clients.decryptClient.init).not.toHaveBeenCalled();
     },
   );
+
+  test("rejects an unknown chain auth type", () => {
+    expect(() => toFhevmAuth({ __type: "ApiKeyCookie", value: "secret" } as never)).toThrow(
+      new ConfigurationError("Unknown auth type: ApiKeyCookie"),
+    );
+  });
 
   test("prefetches the FHE key before initializing encryption", async () => {
     const relayer = makeRelayer({ chain: anvil });

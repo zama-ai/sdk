@@ -10,7 +10,7 @@ A context owns its chain configuration, credentials and signer lifecycle. SDK ru
 
 `ContextConfig.chains` contains typed chain settings. `chain_id` selects the initial chain; omission selects the first entry. Preset chains inherit SDK protocol configuration, while custom chains supply their SDK chain settings.
 
-Each chain's `auth` selects a bearer token, API-key header or API-key cookie. Omitted header and cookie names retain SDK defaults. `permit_ttl` is in days; `transport_key_pair_ttl` and `registry_ttl` are in seconds. Omitted credential options retain SDK defaults.
+Each chain's `auth` selects a bearer token or API-key header. An omitted header name retains the SDK default. `permit_ttl` is in days; `transport_key_pair_ttl` and `registry_ttl` are in seconds. Omitted credential options retain SDK defaults.
 
 ## Runtime, relayers and providers
 

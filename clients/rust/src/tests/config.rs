@@ -13,19 +13,6 @@ fn auth_names_preserve_absence_and_explicit_values() {
             auth.credential,
             Some(generated::chain_auth::Credential::ApiKeyHeader(
                 generated::NamedCredential {
-                    name: name.clone(),
-                    value: "secret".into()
-                }
-            ))
-        );
-        let auth = generated::ChainAuth::from(RelayerAuth::ApiKeyCookie {
-            value: "secret".into(),
-            cookie: name.clone(),
-        });
-        assert_eq!(
-            auth.credential,
-            Some(generated::chain_auth::Credential::ApiKeyCookie(
-                generated::NamedCredential {
                     name,
                     value: "secret".into()
                 }
@@ -49,10 +36,6 @@ fn auth_debug_redacts_credentials() {
         RelayerAuth::ApiKeyHeader {
             value: "header-secret".into(),
             header: None,
-        },
-        RelayerAuth::ApiKeyCookie {
-            value: "cookie-secret".into(),
-            cookie: None,
         },
     ] {
         assert_eq!(format!("{auth:?}"), "[REDACTED]");

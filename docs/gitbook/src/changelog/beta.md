@@ -86,3 +86,12 @@ The mock wrappers registry and mock confidential tokens on Polygon Amoy are no l
 ## InGen testnet removed
 
 The SDK no longer supports the T-Rex InGen testnet (chain ID `364301`). The `ingenTestnet` preset is removed from `@zama-fhe/sdk/chains`, from the built-in `chains` map and from the deprecated `DefaultRegistryAddresses`, and the `example-ingen` app is removed. Use `zenithTrexTestnet`, `hoodi` or `bscTestnet` for a cleartext testnet.
+
+## `ApiKeyCookie` relayer auth removed
+
+`ApiKeyCookie` is removed from relayer authentication, so `FheChain.auth` is now `ApiKeyHeader | BearerToken`. The Zama-hosted relayer only accepts the `x-api-key` header, and in a browser the cookie never reached a server: it was written with `document.cookie` and marked `HttpOnly`, which browsers ignore when a script sets it. It was only ever sent, as a real `Cookie` header, from Node.js, which includes the daemon behind the Go and Rust clients. A setup that authenticated to its own proxy that way needs to change.
+
+- **TypeScript:** remove `{ __type: "ApiKeyCookie" }` from `FheChain.auth`. It no longer type-checks, and a config that still carries it (from untyped code, say) throws `ConfigurationError` with `Unknown auth type: ApiKeyCookie` when the SDK builds the relayer, rather than going out without credentials.
+- **Go and Rust clients:** `zama.APIKeyCookie` and `RelayerAuth::ApiKeyCookie` are removed, so code that uses them no longer compiles.
+- **Daemon protocol:** `api_key_cookie` is removed from `ChainAuth` and its field number (3) is reserved. A client that still sends it is rejected with `FAILED_PRECONDITION`; run the client and the daemon at exactly the same version.
+- **Migrate:** have your proxy read its credential from a header and use `ApiKeyHeader` with the optional `header` name (the default is `x-api-key`). See [Auth methods reference](../guides/authentication.md#5-auth-methods-reference).

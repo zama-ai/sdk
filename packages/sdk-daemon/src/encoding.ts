@@ -160,12 +160,6 @@ export function chainAuth(value: ChainAuth): FheChainAuth {
         ...defined({ header: value.credential.apiKeyHeader.name }),
         value: value.credential.apiKeyHeader.value,
       };
-    case "apiKeyCookie":
-      return {
-        __type: "ApiKeyCookie",
-        ...defined({ cookie: value.credential.apiKeyCookie.name }),
-        value: value.credential.apiKeyCookie.value,
-      };
     default:
       throw new ConfigurationError("Chain authentication requires a credential.");
   }
