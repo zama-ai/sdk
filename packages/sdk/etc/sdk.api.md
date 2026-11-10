@@ -24464,6 +24464,4 @@ export const zenithTrexTestnet: Readonly<{
 // @public
 export const ZERO_ENCRYPTED_VALUE: "0x0000000000000000000000000000000000000000000000000000000000000000";
 
-// (No @packageDocumentation comment for this package)
-
 ```

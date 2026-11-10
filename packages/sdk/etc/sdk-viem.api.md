@@ -533,6 +533,4 @@ export const ZamaSDKEvents: {
 // @public
 export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents];
 
-// (No @packageDocumentation comment for this package)
-
 ```

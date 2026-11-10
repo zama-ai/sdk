@@ -172,6 +172,4 @@ export function useVaultBatcher(address: Address): VaultBatcher;
 // @public
 export function useVaultGroup(config: VaultGroupConfig): VaultGroup;
 
-// (No @packageDocumentation comment for this package)
-
 ```
