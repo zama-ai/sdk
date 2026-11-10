@@ -135,7 +135,8 @@ connection:
 - **Restore reads a saved-wallet record.** wagmi only reconnects the connectors its config was
   created with, so the connector saves the wallet it connected in wagmi's storage and
   `wallet.tsx` lists that connector on load. A saved browser wallet that never announces itself
-  gives up after 3 s.
+  gives up after 3 s, and a WalletConnect session that closed while the page was away leaves
+  wagmi disconnected, with a console warning.
 - **Follows the wallet.** Account and chain switches inside the wallet reach wagmi through
   Dynamic's provider events.
 - **Stays on the chains a WalletConnect session approved.** Dynamic sends a WalletConnect
@@ -150,7 +151,8 @@ connection:
 the environment ID is set.
 
 The injected stack is what the Playwright suite runs against (`playwright.config.ts` clears
-`NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID`), since the dialog needs Dynamic's API.
+`NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID`), since the dialog needs Dynamic's API. The connector has its
+own spec (`e2e/dynamicConnector.spec.ts`), which runs it against a fake WalletConnect wallet.
 
 ---
 

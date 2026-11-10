@@ -260,7 +260,8 @@ export function dynamicConnector(
           if (!wallet) return false;
           const { addresses } = await wallet.getConnectedAddresses();
           return addresses.length > 0;
-        } catch {
+        } catch (error) {
+          console.warn("Could not check whether the wallet is still authorized", error);
           return false;
         }
       },

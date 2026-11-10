@@ -30054,7 +30054,7 @@ A `.env.local` on your own machine is enough to run the same app yourself (see [
 npm run test:e2e        # runs Playwright (starts its own dev server; port 3004 must be free)
 ```
 
-Tests mock `window.ethereum` and the RPC of the network under test, and abort every relayer request — no wallet or real network required. The suite forces the injected-wallet stack (`NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` cleared), since the Dynamic connect dialog needs Dynamic's API. The config enables the Ethereum mainnet row with an unreachable relayer URL so the picker and the mainnet feature flags are covered.
+Tests mock `window.ethereum` and the RPC of the network under test, and abort every relayer request — no wallet or real network required. The suite forces the injected-wallet stack (`NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` cleared), since the Dynamic connect dialog needs Dynamic's API. `dynamicConnector.spec.ts` covers the Dynamic path below the dialog: it drives the connector in the test process with a fake WalletConnect wallet (the chains a session approved, a wallet's own chain switch, a closed session), so it needs no page, Dynamic account or paired phone. The config enables the Ethereum mainnet row with an unreachable relayer URL so the picker and the mainnet feature flags are covered.
 
 With `CI` set, Playwright builds the app and runs the suite against `next start` instead of the dev server, because the production CSP is stricter than the development one (no `'unsafe-eval'`, no inline styles). `security.spec.ts` checks the headers and that the app loads without a CSP violation; encryption is not exercised, since every relayer call is aborted. `allowlist.spec.ts` covers `ENABLED_NETWORKS` by loading the relayer table in the test process, since the server under test runs with it unset, and with `CI` set it also checks that `next start` refuses to boot on an unknown key.
 
@@ -30206,7 +30206,8 @@ connection:
 - **Restore reads a saved-wallet record.** wagmi only reconnects the connectors its config was
   created with, so the connector saves the wallet it connected in wagmi's storage and
   `wallet.tsx` lists that connector on load. A saved browser wallet that never announces itself
-  gives up after 3 s.
+  gives up after 3 s, and a WalletConnect session that closed while the page was away leaves
+  wagmi disconnected, with a console warning.
 - **Follows the wallet.** Account and chain switches inside the wallet reach wagmi through
   Dynamic's provider events.
 - **Stays on the chains a WalletConnect session approved.** Dynamic sends a WalletConnect
@@ -30221,7 +30222,8 @@ connection:
 the environment ID is set.
 
 The injected stack is what the Playwright suite runs against (`playwright.config.ts` clears
-`NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID`), since the dialog needs Dynamic's API.
+`NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID`), since the dialog needs Dynamic's API. The connector has its
+own spec (`e2e/dynamicConnector.spec.ts`), which runs it against a fake WalletConnect wallet.
 
 ---
 
