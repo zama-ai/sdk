@@ -161,7 +161,7 @@ Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequ
 | `SignerNotConfiguredError`                | `SIGNER_NOT_CONFIGURED`                  | SDK operation needs a signer but none is configured                                                                               |
 | `WalletNotConnectedError`                 | `WALLET_NOT_CONNECTED`                   | Signer exists but has no connected wallet account                                                                                 |
 | `WalletAccountNotReadyError`              | `WALLET_ACCOUNT_NOT_READY`               | Async signer adapter has not resolved its account yet                                                                             |
-| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains, or the signer is not on a chain-pinned `VaultBatcher`'s chain                        |
+| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains, or the signer is not on a pinned vault or batcher's `chainId`                        |
 | `AclPausedError`                          | `ACL_PAUSED`                             | ACL contract is paused                                                                                                            |
 
 ## Error details
@@ -198,7 +198,7 @@ Thrown when a signer adapter is configured but does not currently have a connect
 
 **Code:** `CHAIN_MISMATCH`
 
-Thrown when the signer and provider resolve to different chains during an operation, or when the signer is not on the chain a `VaultBatcher` created with a `chainId` is pinned to. The error carries `operation`, `signerChainId`, `providerChainId`, and `targetChainId` (the pinned chain, or `undefined`).
+Thrown when the signer and provider resolve to different chains during an operation, or when the signer is not on the `chainId` a `Vault` or `VaultBatcher` was created with. The error carries `operation`, `signerChainId`, `providerChainId`, and `targetChainId` (the pinned chain, or `undefined`).
 
 ```ts
 matchZamaError(error, {

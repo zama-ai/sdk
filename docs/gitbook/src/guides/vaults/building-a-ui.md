@@ -35,11 +35,14 @@ A deposit or redemption has three parts:
 
 `useDeposit` and `useRedeem` return the `batchId` the amount joined. **Keep track of it**, so the user finds the batch again after a reload or on another device. Either store the id with the user's account, or rebuild the list from the chain: fetch the batcher's `Joined`, `Claimed` and `Quit` logs for the account and pass them to [`openBatchIds`](../../reference/sdk/VaultBatcher.md#events), which returns the batches the user joined and has not claimed or quit yet.
 
-While the transaction is pending, lock the form so the user cannot send twice. Show "Confirm in your wallet" until the `onJoinSubmitted` callback you pass to `useDeposit` or `useRedeem` fires, then "Waiting for the transaction". An error thrown by that callback goes to the SDK logger as a warning and does not stop the join, so a callback that throws leaves the label stuck.
+While the transaction is pending, lock the form so the user cannot send twice. Show "Confirm in your wallet" until the `onJoinSubmitted` callback you pass to `useDeposit` or `useRedeem` fires, then "Waiting for the transaction". If the callback throws, the SDK only logs a warning, so the label stays on "Confirm in your wallet".
 
 After it is mined, say the amount is **queued**, not deposited. The user does not hold shares yet.
 
-A vault page can render before the wallet connects, when the provider may still be on another chain than the vault. Pass the vault's `chainId` to the read hooks (`useBatchStatus`, `useCurrentBatchId`, `usePaused`, `useBatcherTokens`, …) so they read the vault's chain; this needs a provider that can route reads, such as `WagmiProvider`. Pass the same `chainId` to `useDeposit`, `useRedeem` and the batcher write hooks (`useClaim`, `useQuit`, `useFinalize`, …): a wallet on another chain then gets `ChainMismatchError` instead of sending the transaction there.
+A vault page can render before the wallet is on the vault's chain, for example before it connects. Pass the vault's `chainId` to:
+
+- The read hooks (`useBatchStatus`, `useCurrentBatchId`, `usePaused`, `useBatcherTokens`, …), so they read the vault's chain. This needs a provider that can read other chains, such as `WagmiProvider`.
+- `useDeposit`, `useRedeem` and the batcher write hooks (`useClaim`, `useQuit`, `useFinalize`, …), so a wallet on another chain gets `ChainMismatchError` instead of sending there.
 
 ## 3. The batch
 
@@ -117,7 +120,7 @@ A redeem batcher whose vault settles redemptions asynchronously is the exception
 
 Claiming is a separate transaction. Show it clearly: until the user claims, the shares are not in their balance. Claiming is permissionless and pays the depositor, never the caller, so your backend may also claim on the user's behalf.
 
-After a claim or a quit, the batch's state does not change, and the user's encrypted deposit is replaced by an encrypted zero rather than cleared, so neither `useBatchStatus` nor the deposit tells you the user already claimed. The public `Claimed` and `Quit` events do: [`openBatchIds`](../../reference/sdk/VaultBatcher.md#events) drops a batch once either is emitted for the user. If you store ids yourself, mark the batch as done after the claim or quit is mined.
+A claim or quit does not change the batch's state, and it replaces the user's encrypted deposit with an encrypted zero, so neither `useBatchStatus` nor the deposit shows that the user already claimed. The public `Claimed` and `Quit` events do, and [`openBatchIds`](../../reference/sdk/VaultBatcher.md#events) drops a batch once either is emitted for the user. If you store ids yourself, mark the batch done once the claim or quit is mined.
 
 ### Canceled
 

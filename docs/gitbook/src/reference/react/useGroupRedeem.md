@@ -88,7 +88,7 @@ Default: `false`. As in [`useGroupDeposit`](./useGroupDeposit.md#skipbalancechec
 
 `((txHash: Hex) => void) | undefined`
 
-Called with the submission's transaction hash once the wallet has sent it, before the SDK waits for the receipt. An error thrown by the callback goes to the SDK logger as a warning and does not stop the join, so keep it to UI state.
+Called with the submission's transaction hash once the wallet has sent it, before the SDK waits for the receipt. If the callback throws, the SDK logs a warning and the join continues.
 
 **Throws:** the same errors as `useGroupDeposit`, including `VaultBatcherPausedError`, except `UnlistedConfidentialTokenError`, which only the deposit path raises.
 

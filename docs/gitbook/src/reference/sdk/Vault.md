@@ -36,7 +36,7 @@ await vault.depositBatcher.claim(batchId);
 
 `createVault` is a thin factory over `new Vault(sdk, addresses, options)`; both take the same arguments.
 
-Pass `{ chainId }` to read both batchers on that chain, for example on a vault page shown before the wallet connects. It is passed to both batchers (see [`VaultBatcher` → Construction](VaultBatcher.md#construction)), and `deposit` and `redeem` throw `ChainMismatchError` while the wallet is on another chain, before any approval or join is sent.
+Pass `{ chainId }` for a vault on another chain than the provider's, for example on a vault page shown before the wallet connects. Both batchers get it (see [`VaultBatcher` → Construction](VaultBatcher.md#construction)), and `deposit` and `redeem` throw `ChainMismatchError` while the wallet is on another chain, before sending anything.
 
 ### VaultAddresses
 
@@ -146,7 +146,7 @@ Options (`VaultJoinOptions`):
 | `beneficiary`      | `Address`               | connected wallet | Account credited in the batch. The beneficiary owns the position: only they can `quit` it, and `claim` always pays out to them.                                                                              |
 | `operatorUntil`    | `number`                | now + 1 hour     | Unix timestamp (seconds) until which the batcher's operator grant is valid. Only used for another `beneficiary`, and only when a grant isn't already active. Same default as `Token.setOperator`.            |
 | `skipBalanceCheck` | `boolean`               | `false`          | Skip the confidential-balance pre-flight. For accounts whose balance the connected signer can't decrypt, such as smart wallets. The on-chain transfer then moves zero, not reverts, if the balance is short. |
-| `onJoinSubmitted`  | `(txHash: Hex) => void` | —                | Called once the wallet has sent the join, before the SDK waits for the receipt: where a UI moves from "confirm in your wallet" to "waiting for the transaction".                                             |
+| `onJoinSubmitted`  | `(txHash: Hex) => void` | —                | Called once the wallet has sent the join, before the SDK waits for the receipt. Use it to switch the UI from "confirm in your wallet" to "waiting for the transaction".                                      |
 
 **Throws:**
 

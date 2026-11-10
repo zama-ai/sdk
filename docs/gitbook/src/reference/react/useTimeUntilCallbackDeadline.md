@@ -69,7 +69,7 @@ The batch to check. The query is disabled while `undefined`.
 
 `number | undefined`
 
-Chain to read from, when it is not the connected one, for example on a vault page shown before the wallet connects. Needs a provider that can route reads, such as `WagmiProvider`. Part of the query key.
+Chain to read from, if it is not the connected one. Needs a provider that can read other chains, such as `WagmiProvider`.
 
 {% include ".gitbook/includes/query-options.md" %}
 

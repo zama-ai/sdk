@@ -31,7 +31,7 @@ The batcher contract address — the deposit or the redeem direction of a vault.
 
 `number | undefined`
 
-Chain to read the batcher from, when it is not the connected one. See [`VaultBatcher` → Construction](../sdk/VaultBatcher.md#construction).
+Chain to read the batcher from, if it is not the connected one. See [`VaultBatcher` → Construction](../sdk/VaultBatcher.md#construction).
 
 ## Example
 

@@ -33,7 +33,7 @@ The vault's `depositBatcher` and `redeemBatcher` addresses, and optionally the `
 
 `number | undefined`
 
-Chain to read both batchers from, when it is not the connected one. A deposit or redemption then throws `ChainMismatchError` while the wallet is on another chain. See [`Vault` → Construction](../sdk/Vault.md#construction).
+Chain the vault is on, if it is not the connected one. Both batchers read from it, and a deposit or redemption throws `ChainMismatchError` while the wallet is on another chain. See [`Vault` → Construction](../sdk/Vault.md#construction).
 
 ## Example
 

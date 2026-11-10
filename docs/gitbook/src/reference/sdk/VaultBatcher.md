@@ -30,7 +30,11 @@ const { batchId } = await depositBatcher.join(1_000_000n);
 const sameBatcher = vault.depositBatcher;
 ```
 
-To read a batcher on a chain other than the provider's current one, for example on a vault page shown before the wallet connects, pass `chainId`. Every read then goes to that chain, which needs a provider that can route reads, such as `WagmiProvider`. Writes still go through the signer: a write throws [`ChainMismatchError`](errors.md#chainmismatcherror) while the signer is on another chain. Decryption runs on the provider's current chain, so `depositOf` and `prepareFinalize` throw `ConfigurationError` until the provider is on `chainId`.
+Pass `chainId` to use a batcher on another chain than the provider's, for example on a vault page shown before the wallet connects:
+
+- **Reads** go to that chain. This needs a provider that can read other chains, such as `WagmiProvider`.
+- **Writes** throw [`ChainMismatchError`](errors.md#chainmismatcherror) while the signer is on another chain.
+- **Decryption** runs on the provider's chain, so `depositOf` and `prepareFinalize` throw `ConfigurationError` until the provider is on `chainId`.
 
 ```ts
 const sepoliaBatcher = createVaultBatcher(sdk, "0xDepositBatcher", { chainId: 11155111 });
@@ -127,7 +131,14 @@ if ((await batcher.batchState(batchId)) === BatchState.Finalized) {
 
 `(batchId: bigint) => Promise<BatchStatus>`
 
-A batch's state with the timestamps that state needs. Every state carries `createdAt` and `dispatchableAt`; `Pending` adds `secondsUntilDispatchable`; `Dispatched` adds `dispatchedAt`, `callbackDeadlineAt` and `secondsUntilCallbackDeadline`; `Finalized` and `Canceled` add `dispatchedAt`. Timestamps are Unix seconds on chain. The `secondsUntil*` values are measured against the block timestamp at read time, like [`timeUntilDispatchable`](#timeuntildispatchable) and [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline); tick a live countdown from the `*At` timestamps. Switch on `state` to decide what to show; see [Building a vault UI](../../guides/vaults/building-a-ui.md).
+A batch's state with the timestamps that state needs:
+
+- Every state carries `createdAt` and `dispatchableAt`.
+- `Pending` adds `secondsUntilDispatchable`.
+- `Dispatched` adds `dispatchedAt`, `callbackDeadlineAt` and `secondsUntilCallbackDeadline`.
+- `Finalized` and `Canceled` add `dispatchedAt`.
+
+Timestamps are Unix seconds on chain. The `secondsUntil*` values are measured against the block timestamp at read time, so for a live countdown tick from the `*At` timestamps. See [Building a vault UI](../../guides/vaults/building-a-ui.md) for what to show in each state.
 
 ```ts
 const status = await batcher.batchStatus(batchId);
@@ -153,7 +164,7 @@ if (secondsLeft === 0n) await batcher.dispatchBatch();
 
 `(batchId: bigint) => Promise<bigint | null>`
 
-Seconds until the dispatched batch `batchId` reaches its callback deadline, `0` once it has. From then on `finalize` cancels the batch instead of settling it. A redeem batcher whose vault settles redemptions asynchronously is the exception: once it has placed the redemption request, `finalize` keeps settling the batch past the deadline. Returns `null` outside `Dispatched`.
+Seconds until the dispatched batch `batchId` reaches its callback deadline: `0` once it has, `null` if the batch is not `Dispatched`. After the deadline `finalize` cancels the batch instead of settling it, except on an asynchronous redeem batcher that has already placed the redemption request.
 
 Measured against the chain's block timestamp (`batchDispatchedAt + batchCallbackDeadline`), not the local clock.
 
@@ -295,7 +306,9 @@ await batcher.dispatchBatch();
 
 `(batchId: bigint) => Promise<TransactionResult>`
 
-Settles a dispatched batch yourself: reads the batch's `unwrapRequestId`, publicly decrypts the amount that unwrap released, and submits `dispatchBatchCallback` with the cleartext and its proof, which executes the route. Permissionless, like `dispatchBatch`. A keeper normally does this, so reach for it when a batch has sat in `BatchState.Dispatched` longer than expected. Past the batch's callback deadline (`batchDispatchedAt + batchCallbackDeadline`) the same call cancels the batch instead of settling it. A redeem batcher whose vault settles redemptions asynchronously is the exception: once it has placed the redemption request, `finalize` keeps settling the batch past the deadline.
+Settles a dispatched batch. A keeper normally does this; call it when a batch has stayed `BatchState.Dispatched` longer than expected. Anyone may call it, like `dispatchBatch`. It reads the batch's `unwrapRequestId`, publicly decrypts the amount that unwrap released, and submits `dispatchBatchCallback` with the cleartext and its proof.
+
+After the callback deadline (`batchDispatchedAt + batchCallbackDeadline`) the same call cancels the batch instead. The exception is a redeem batcher whose vault settles redemptions asynchronously: once it has placed the redemption request, `finalize` keeps settling after the deadline.
 
 Only legal while the batch is `BatchState.Dispatched`. Read [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline) to see whether the deadline has passed.
 

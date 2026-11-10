@@ -89,7 +89,7 @@ Return the chain ID this provider is connected to.
 readContract(config: ReadContractConfig): Promise<unknown>
 ```
 
-Execute a read-only contract call. `ReadContractConfig` contains `address`, `abi`, `functionName`, `args`, and an optional `chainId`. Without `chainId`, read the provider's current chain. With one, `WagmiProvider` reads that chain through wagmi; a provider bound to a single chain, such as `ViemProvider` or `EthersProvider`, throws `ConfigurationError` when it is a different chain, rather than answering from the wrong one. A custom provider should do one or the other.
+Execute a read-only contract call. `ReadContractConfig` contains `address`, `abi`, `functionName`, `args`, and an optional `chainId`. Without `chainId`, read the provider's current chain. With one, `WagmiProvider` reads that chain through wagmi. `ViemProvider` and `EthersProvider` are bound to one chain and throw `ConfigurationError` for another. A custom provider must do one or the other, never answer from the wrong chain.
 
 ### waitForTransactionReceipt
 

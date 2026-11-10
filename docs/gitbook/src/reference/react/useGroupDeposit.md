@@ -90,7 +90,7 @@ Default: `false`. Skips the confidential-balance pre-flight, for accounts whose 
 
 `((txHash: Hex) => void) | undefined`
 
-Called with the submission's transaction hash once the wallet has sent it, before the SDK waits for the receipt. An error thrown by the callback goes to the SDK logger as a warning and does not stop the join, so keep it to UI state.
+Called with the submission's transaction hash once the wallet has sent it, before the SDK waits for the receipt. If the callback throws, the SDK logs a warning and the join continues.
 
 **Throws:**
 

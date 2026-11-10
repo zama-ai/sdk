@@ -60,7 +60,7 @@ The batcher contract address (deposit or redeem direction).
 
 `number | undefined`
 
-Chain the batcher is on. Pass the same `chainId` as the read hooks: while the wallet is on another chain, the mutation fails with [`ChainMismatchError`](../sdk/errors.md#chainmismatcherror) instead of sending there.
+Chain the batcher is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](../sdk/errors.md#chainmismatcherror) instead of sending.
 
 ---
 

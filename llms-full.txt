@@ -6285,7 +6285,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `SIGNER_NOT_CONFIGURED`                  | `SignerNotConfiguredError`                | SDK operation needs a signer but none is configured (subclass of `SignerRequiredError`)                        |
 | `WALLET_NOT_CONNECTED`                   | `WalletNotConnectedError`                 | Signer exists but has no connected wallet account (subclass of `SignerRequiredError`)                          |
 | `WALLET_ACCOUNT_NOT_READY`               | `WalletAccountNotReadyError`              | Async signer adapter hasn't resolved its account yet (subclass of `SignerRequiredError`, retryable)            |
-| `CHAIN_MISMATCH`                         | `ChainMismatchError`                      | Signer and provider are on different chains, or the signer is not on a chain-pinned `VaultBatcher`'s chain     |
+| `CHAIN_MISMATCH`                         | `ChainMismatchError`                      | Signer and provider are on different chains, or the signer is not on a pinned vault or batcher's `chainId`     |
 | `DELEGATION_CONTRACT_IS_SELF`            | `DelegationContractIsSelfError`           | Delegation contract address equals the caller                                                                  |
 | `DELEGATION_DELEGATE_EQUALS_CONTRACT`    | `DelegationDelegateEqualsContractError`   | Delegate equals the contract address                                                                           |
 | `DELEGATION_DELEGATE_CANNOT_BE_WILDCARD` | `DelegationDelegateCannotBeWildcardError` | Delegate address is the wildcard address                                                                       |
@@ -10374,11 +10374,14 @@ A deposit or redemption has three parts:
 
 `useDeposit` and `useRedeem` return the `batchId` the amount joined. **Keep track of it**, so the user finds the batch again after a reload or on another device. Either store the id with the user's account, or rebuild the list from the chain: fetch the batcher's `Joined`, `Claimed` and `Quit` logs for the account and pass them to [`openBatchIds`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#events), which returns the batches the user joined and has not claimed or quit yet.
 
-While the transaction is pending, lock the form so the user cannot send twice. Show "Confirm in your wallet" until the `onJoinSubmitted` callback you pass to `useDeposit` or `useRedeem` fires, then "Waiting for the transaction". An error thrown by that callback goes to the SDK logger as a warning and does not stop the join, so a callback that throws leaves the label stuck.
+While the transaction is pending, lock the form so the user cannot send twice. Show "Confirm in your wallet" until the `onJoinSubmitted` callback you pass to `useDeposit` or `useRedeem` fires, then "Waiting for the transaction". If the callback throws, the SDK only logs a warning, so the label stays on "Confirm in your wallet".
 
 After it is mined, say the amount is **queued**, not deposited. The user does not hold shares yet.
 
-A vault page can render before the wallet connects, when the provider may still be on another chain than the vault. Pass the vault's `chainId` to the read hooks (`useBatchStatus`, `useCurrentBatchId`, `usePaused`, `useBatcherTokens`, …) so they read the vault's chain; this needs a provider that can route reads, such as `WagmiProvider`. Pass the same `chainId` to `useDeposit`, `useRedeem` and the batcher write hooks (`useClaim`, `useQuit`, `useFinalize`, …): a wallet on another chain then gets `ChainMismatchError` instead of sending the transaction there.
+A vault page can render before the wallet is on the vault's chain, for example before it connects. Pass the vault's `chainId` to:
+
+- The read hooks (`useBatchStatus`, `useCurrentBatchId`, `usePaused`, `useBatcherTokens`, …), so they read the vault's chain. This needs a provider that can read other chains, such as `WagmiProvider`.
+- `useDeposit`, `useRedeem` and the batcher write hooks (`useClaim`, `useQuit`, `useFinalize`, …), so a wallet on another chain gets `ChainMismatchError` instead of sending there.
 
 ## 3. The batch
 
@@ -10456,7 +10459,7 @@ A redeem batcher whose vault settles redemptions asynchronously is the exception
 
 Claiming is a separate transaction. Show it clearly: until the user claims, the shares are not in their balance. Claiming is permissionless and pays the depositor, never the caller, so your backend may also claim on the user's behalf.
 
-After a claim or a quit, the batch's state does not change, and the user's encrypted deposit is replaced by an encrypted zero rather than cleared, so neither `useBatchStatus` nor the deposit tells you the user already claimed. The public `Claimed` and `Quit` events do: [`openBatchIds`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#events) drops a batch once either is emitted for the user. If you store ids yourself, mark the batch as done after the claim or quit is mined.
+A claim or quit does not change the batch's state, and it replaces the user's encrypted deposit with an encrypted zero, so neither `useBatchStatus` nor the deposit shows that the user already claimed. The public `Claimed` and `Quit` events do, and [`openBatchIds`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#events) drops a batch once either is emitted for the user. If you store ids yourself, mark the batch done once the claim or quit is mined.
 
 ### Canceled
 
@@ -12796,7 +12799,7 @@ await vault.depositBatcher.claim(batchId);
 
 `createVault` is a thin factory over `new Vault(sdk, addresses, options)`; both take the same arguments.
 
-Pass `{ chainId }` to read both batchers on that chain, for example on a vault page shown before the wallet connects. It is passed to both batchers (see [`VaultBatcher` → Construction](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#construction)), and `deposit` and `redeem` throw `ChainMismatchError` while the wallet is on another chain, before any approval or join is sent.
+Pass `{ chainId }` for a vault on another chain than the provider's, for example on a vault page shown before the wallet connects. Both batchers get it (see [`VaultBatcher` → Construction](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#construction)), and `deposit` and `redeem` throw `ChainMismatchError` while the wallet is on another chain, before sending anything.
 
 ### VaultAddresses
 
@@ -12906,7 +12909,7 @@ Options (`VaultJoinOptions`):
 | `beneficiary`      | `Address`               | connected wallet | Account credited in the batch. The beneficiary owns the position: only they can `quit` it, and `claim` always pays out to them.                                                                              |
 | `operatorUntil`    | `number`                | now + 1 hour     | Unix timestamp (seconds) until which the batcher's operator grant is valid. Only used for another `beneficiary`, and only when a grant isn't already active. Same default as `Token.setOperator`.            |
 | `skipBalanceCheck` | `boolean`               | `false`          | Skip the confidential-balance pre-flight. For accounts whose balance the connected signer can't decrypt, such as smart wallets. The on-chain transfer then moves zero, not reverts, if the balance is short. |
-| `onJoinSubmitted`  | `(txHash: Hex) => void` | —                | Called once the wallet has sent the join, before the SDK waits for the receipt: where a UI moves from "confirm in your wallet" to "waiting for the transaction".                                             |
+| `onJoinSubmitted`  | `(txHash: Hex) => void` | —                | Called once the wallet has sent the join, before the SDK waits for the receipt. Use it to switch the UI from "confirm in your wallet" to "waiting for the transaction".                                      |
 
 **Throws:**
 
@@ -12987,7 +12990,11 @@ const { batchId } = await depositBatcher.join(1_000_000n);
 const sameBatcher = vault.depositBatcher;
 ```
 
-To read a batcher on a chain other than the provider's current one, for example on a vault page shown before the wallet connects, pass `chainId`. Every read then goes to that chain, which needs a provider that can route reads, such as `WagmiProvider`. Writes still go through the signer: a write throws [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) while the signer is on another chain. Decryption runs on the provider's current chain, so `depositOf` and `prepareFinalize` throw `ConfigurationError` until the provider is on `chainId`.
+Pass `chainId` to use a batcher on another chain than the provider's, for example on a vault page shown before the wallet connects:
+
+- **Reads** go to that chain. This needs a provider that can read other chains, such as `WagmiProvider`.
+- **Writes** throw [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) while the signer is on another chain.
+- **Decryption** runs on the provider's chain, so `depositOf` and `prepareFinalize` throw `ConfigurationError` until the provider is on `chainId`.
 
 ```ts
 const sepoliaBatcher = createVaultBatcher(sdk, "0xDepositBatcher", { chainId: 11155111 });
@@ -13084,7 +13091,14 @@ if ((await batcher.batchState(batchId)) === BatchState.Finalized) {
 
 `(batchId: bigint) => Promise<BatchStatus>`
 
-A batch's state with the timestamps that state needs. Every state carries `createdAt` and `dispatchableAt`; `Pending` adds `secondsUntilDispatchable`; `Dispatched` adds `dispatchedAt`, `callbackDeadlineAt` and `secondsUntilCallbackDeadline`; `Finalized` and `Canceled` add `dispatchedAt`. Timestamps are Unix seconds on chain. The `secondsUntil*` values are measured against the block timestamp at read time, like [`timeUntilDispatchable`](#timeuntildispatchable) and [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline); tick a live countdown from the `*At` timestamps. Switch on `state` to decide what to show; see [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md).
+A batch's state with the timestamps that state needs:
+
+- Every state carries `createdAt` and `dispatchableAt`.
+- `Pending` adds `secondsUntilDispatchable`.
+- `Dispatched` adds `dispatchedAt`, `callbackDeadlineAt` and `secondsUntilCallbackDeadline`.
+- `Finalized` and `Canceled` add `dispatchedAt`.
+
+Timestamps are Unix seconds on chain. The `secondsUntil*` values are measured against the block timestamp at read time, so for a live countdown tick from the `*At` timestamps. See [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) for what to show in each state.
 
 ```ts
 const status = await batcher.batchStatus(batchId);
@@ -13110,7 +13124,7 @@ if (secondsLeft === 0n) await batcher.dispatchBatch();
 
 `(batchId: bigint) => Promise<bigint | null>`
 
-Seconds until the dispatched batch `batchId` reaches its callback deadline, `0` once it has. From then on `finalize` cancels the batch instead of settling it. A redeem batcher whose vault settles redemptions asynchronously is the exception: once it has placed the redemption request, `finalize` keeps settling the batch past the deadline. Returns `null` outside `Dispatched`.
+Seconds until the dispatched batch `batchId` reaches its callback deadline: `0` once it has, `null` if the batch is not `Dispatched`. After the deadline `finalize` cancels the batch instead of settling it, except on an asynchronous redeem batcher that has already placed the redemption request.
 
 Measured against the chain's block timestamp (`batchDispatchedAt + batchCallbackDeadline`), not the local clock.
 
@@ -13252,7 +13266,9 @@ await batcher.dispatchBatch();
 
 `(batchId: bigint) => Promise<TransactionResult>`
 
-Settles a dispatched batch yourself: reads the batch's `unwrapRequestId`, publicly decrypts the amount that unwrap released, and submits `dispatchBatchCallback` with the cleartext and its proof, which executes the route. Permissionless, like `dispatchBatch`. A keeper normally does this, so reach for it when a batch has sat in `BatchState.Dispatched` longer than expected. Past the batch's callback deadline (`batchDispatchedAt + batchCallbackDeadline`) the same call cancels the batch instead of settling it. A redeem batcher whose vault settles redemptions asynchronously is the exception: once it has placed the redemption request, `finalize` keeps settling the batch past the deadline.
+Settles a dispatched batch. A keeper normally does this; call it when a batch has stayed `BatchState.Dispatched` longer than expected. Anyone may call it, like `dispatchBatch`. It reads the batch's `unwrapRequestId`, publicly decrypts the amount that unwrap released, and submits `dispatchBatchCallback` with the cleartext and its proof.
+
+After the callback deadline (`batchDispatchedAt + batchCallbackDeadline`) the same call cancels the batch instead. The exception is a redeem batcher whose vault settles redemptions asynchronously: once it has placed the redemption request, `finalize` keeps settling after the deadline.
 
 Only legal while the batch is `BatchState.Dispatched`. Read [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline) to see whether the deadline has passed.
 
@@ -14136,7 +14152,7 @@ Return the chain ID this provider is connected to.
 readContract(config: ReadContractConfig): Promise<unknown>
 ```
 
-Execute a read-only contract call. `ReadContractConfig` contains `address`, `abi`, `functionName`, `args`, and an optional `chainId`. Without `chainId`, read the provider's current chain. With one, `WagmiProvider` reads that chain through wagmi; a provider bound to a single chain, such as `ViemProvider` or `EthersProvider`, throws `ConfigurationError` when it is a different chain, rather than answering from the wrong one. A custom provider should do one or the other.
+Execute a read-only contract call. `ReadContractConfig` contains `address`, `abi`, `functionName`, `args`, and an optional `chainId`. Without `chainId`, read the provider's current chain. With one, `WagmiProvider` reads that chain through wagmi. `ViemProvider` and `EthersProvider` are bound to one chain and throw `ConfigurationError` for another. A custom provider must do one or the other, never answer from the wrong chain.
 
 ### waitForTransactionReceipt
 
@@ -14990,7 +15006,7 @@ Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequ
 | `SignerNotConfiguredError`                | `SIGNER_NOT_CONFIGURED`                  | SDK operation needs a signer but none is configured                                                                               |
 | `WalletNotConnectedError`                 | `WALLET_NOT_CONNECTED`                   | Signer exists but has no connected wallet account                                                                                 |
 | `WalletAccountNotReadyError`              | `WALLET_ACCOUNT_NOT_READY`               | Async signer adapter has not resolved its account yet                                                                             |
-| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains, or the signer is not on a chain-pinned `VaultBatcher`'s chain                        |
+| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains, or the signer is not on a pinned vault or batcher's `chainId`                        |
 | `AclPausedError`                          | `ACL_PAUSED`                             | ACL contract is paused                                                                                                            |
 
 ## Error details
@@ -15027,7 +15043,7 @@ Thrown when a signer adapter is configured but does not currently have a connect
 
 **Code:** `CHAIN_MISMATCH`
 
-Thrown when the signer and provider resolve to different chains during an operation, or when the signer is not on the chain a `VaultBatcher` created with a `chainId` is pinned to. The error carries `operation`, `signerChainId`, `providerChainId`, and `targetChainId` (the pinned chain, or `undefined`).
+Thrown when the signer and provider resolve to different chains during an operation, or when the signer is not on the `chainId` a `Vault` or `VaultBatcher` was created with. The error carries `operation`, `signerChainId`, `providerChainId`, and `targetChainId` (the pinned chain, or `undefined`).
 
 ```ts
 matchZamaError(error, {
@@ -24832,7 +24848,7 @@ The vault's `depositBatcher` and `redeemBatcher` addresses, and optionally the `
 
 `number | undefined`
 
-Chain to read both batchers from, when it is not the connected one. A deposit or redemption then throws `ChainMismatchError` while the wallet is on another chain. See [`Vault` → Construction](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md#construction).
+Chain the vault is on, if it is not the connected one. Both batchers read from it, and a deposit or redemption throws `ChainMismatchError` while the wallet is on another chain. See [`Vault` → Construction](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md#construction).
 
 ## Example
 
@@ -24901,7 +24917,7 @@ The batcher contract address — the deposit or the redeem direction of a vault.
 
 `number | undefined`
 
-Chain to read the batcher from, when it is not the connected one. See [`VaultBatcher` → Construction](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#construction).
+Chain to read the batcher from, if it is not the connected one. See [`VaultBatcher` → Construction](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#construction).
 
 ## Example
 
@@ -24994,7 +25010,7 @@ const { mutateAsync: deposit } = useDeposit({ addresses });
 
 `number | undefined`
 
-Chain the vault is on. Pass the same `chainId` as the read hooks: while the wallet is on another chain, the mutation fails with [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) before any approval or join is sent.
+Chain the vault is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) before sending anything.
 
 ---
 
@@ -25071,7 +25087,7 @@ await deposit({ amount: 1_000_000n, skipBalanceCheck: true });
 
 `((txHash: Hex) => void) | undefined`
 
-Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction". An error thrown by the callback goes to the SDK logger as a warning and does not stop the join, so keep it to UI state.
+Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction". If the callback throws, the SDK logs a warning and the join continues.
 
 **Throws:**
 
@@ -25209,7 +25225,7 @@ The vault's `depositBatcher` and `redeemBatcher` addresses, and optionally the `
 
 `number | undefined`
 
-Chain the vault is on. Pass the same `chainId` as the read hooks: while the wallet is on another chain, the mutation fails with [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) before any approval or join is sent.
+Chain the vault is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) before sending anything.
 
 ---
 
@@ -25276,7 +25292,7 @@ Default: `false`. Skips the share-balance pre-flight, for accounts whose balance
 
 `((txHash: Hex) => void) | undefined`
 
-Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction". An error thrown by the callback goes to the SDK logger as a warning and does not stop the join, so keep it to UI state.
+Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction". If the callback throws, the SDK logs a warning and the join continues.
 
 **Throws:**
 
@@ -25408,7 +25424,7 @@ The batcher contract address (deposit or redeem direction).
 
 `number | undefined`
 
-Chain the batcher is on. Pass the same `chainId` as the read hooks: while the wallet is on another chain, the mutation fails with [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending there.
+Chain the batcher is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending.
 
 ---
 
@@ -25469,7 +25485,7 @@ await join({ amount: 1_000_000n, beneficiary: "0xRecipient" });
 
 `((txHash: Hex) => void) | undefined`
 
-Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction". An error thrown by the callback goes to the SDK logger as a warning and does not stop the join, so keep it to UI state.
+Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction". If the callback throws, the SDK logs a warning and the join continues.
 
 **Throws:**
 
@@ -25599,7 +25615,7 @@ The batcher contract address (deposit or redeem direction).
 
 `number | undefined`
 
-Chain the batcher is on. Pass the same `chainId` as the read hooks: while the wallet is on another chain, the mutation fails with [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending there.
+Chain the batcher is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending.
 
 ---
 
@@ -25769,7 +25785,7 @@ The batcher contract address (deposit or redeem direction).
 
 `number | undefined`
 
-Chain the batcher is on. Pass the same `chainId` as the read hooks: while the wallet is on another chain, the mutation fails with [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending there.
+Chain the batcher is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending.
 
 ---
 
@@ -25932,7 +25948,7 @@ The batcher contract address (deposit or redeem direction).
 
 `number | undefined`
 
-Chain the batcher is on. Pass the same `chainId` as the read hooks: while the wallet is on another chain, the mutation fails with [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending there.
+Chain the batcher is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending.
 
 ---
 
@@ -26105,7 +26121,7 @@ The batcher contract address (deposit or redeem direction).
 
 `number | undefined`
 
-Chain the batcher is on. Pass the same `chainId` as the read hooks: while the wallet is on another chain, the mutation fails with [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending there.
+Chain the batcher is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending.
 
 ---
 
@@ -26211,7 +26227,9 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 Mutation hook that settles a dispatched batch yourself. Same call as [`VaultBatcher.finalize`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#finalize): it publicly decrypts the batch's aggregate amount and hands the cleartext and its proof to the batcher, which executes the route.
 
-A keeper, an off-chain service that watches batches, normally finalizes a batch after dispatch, so this is for a batch that has sat in `BatchState.Dispatched` longer than expected. Finalizing is permissionless. Past the batch's callback deadline (see [`useTimeUntilCallbackDeadline`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md)) the same call cancels the batch instead of settling it, and its participants take their deposits back with [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md). A redeem batcher whose vault settles redemptions asynchronously is the exception: once it has placed the redemption request, `finalize` keeps settling the batch past the deadline.
+A keeper, an off-chain service that watches batches, normally finalizes a batch after dispatch. Use this hook when a batch has stayed `BatchState.Dispatched` longer than expected. Anyone may call it.
+
+After the batch's callback deadline (see [`useTimeUntilCallbackDeadline`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md)) the same call cancels the batch instead of settling it, and its participants take their deposits back with [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md). A redeem batcher whose vault settles redemptions asynchronously is the exception: once it has placed the redemption request, `finalize` keeps settling the batch past the deadline.
 
 The call reads the batch state first and rejects with [`VaultBatchNotDispatchedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultbatchnotdispatchederror) when the batch is not `Dispatched`, for example because a keeper already finalized it.
 
@@ -26264,7 +26282,7 @@ The batcher contract address (deposit or redeem direction).
 
 `number | undefined`
 
-Chain the batcher is on. Pass the same `chainId` as the read hooks: while the wallet is on another chain, the mutation fails with [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending there.
+Chain the batcher is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending.
 
 ---
 
@@ -26429,7 +26447,7 @@ The batcher contract address (deposit or redeem direction).
 
 `number | undefined`
 
-Chain to read from, when it is not the connected one, for example on a vault page shown before the wallet connects. Needs a provider that can route reads, such as `WagmiProvider`. Part of the query key.
+Chain to read from, if it is not the connected one. Needs a provider that can read other chains, such as `WagmiProvider`.
 
 ### `enabled`
 
@@ -26626,7 +26644,7 @@ const { data: state } = useBatchState({
 
 `number | undefined`
 
-Chain to read from, when it is not the connected one, for example on a vault page shown before the wallet connects. Needs a provider that can route reads, such as `WagmiProvider`. Part of the query key.
+Chain to read from, if it is not the connected one. Needs a provider that can read other chains, such as `WagmiProvider`.
 
 ### `enabled`
 
@@ -26816,7 +26834,7 @@ The batch to read. The query is disabled while `undefined`.
 
 `number | undefined`
 
-Chain to read from, when it is not the connected one, for example on a vault page shown before the wallet connects. Needs a provider that can route reads, such as `WagmiProvider`. Part of the query key.
+Chain to read from, if it is not the connected one. Needs a provider that can read other chains, such as `WagmiProvider`.
 
 ### `enabled`
 
@@ -26974,7 +26992,7 @@ The batcher contract address (deposit or redeem direction).
 
 `number | undefined`
 
-Chain to read from, when it is not the connected one. Needs a provider that can route reads, such as `WagmiProvider`. Part of the query key.
+Chain to read from, if it is not the connected one. Needs a provider that can read other chains, such as `WagmiProvider`.
 
 ### `enabled`
 
@@ -27133,7 +27151,7 @@ The batcher contract address (deposit or redeem direction).
 
 `number | undefined`
 
-Chain to read from, when it is not the connected one. Needs a provider that can route reads, such as `WagmiProvider`. Part of the query key.
+Chain to read from, if it is not the connected one. Needs a provider that can read other chains, such as `WagmiProvider`.
 
 ### `enabled`
 
@@ -27307,7 +27325,7 @@ The batch to check. The query is disabled while `undefined`.
 
 `number | undefined`
 
-Chain to read from, when it is not the connected one, for example on a vault page shown before the wallet connects. Needs a provider that can route reads, such as `WagmiProvider`. Part of the query key.
+Chain to read from, if it is not the connected one. Needs a provider that can read other chains, such as `WagmiProvider`.
 
 ### `enabled`
 
@@ -27480,7 +27498,7 @@ The batch to check. The query is disabled while `undefined`.
 
 `number | undefined`
 
-Chain to read from, when it is not the connected one, for example on a vault page shown before the wallet connects. Needs a provider that can route reads, such as `WagmiProvider`. Part of the query key.
+Chain to read from, if it is not the connected one. Needs a provider that can read other chains, such as `WagmiProvider`.
 
 ### `enabled`
 
@@ -27761,7 +27779,7 @@ Default: `false`. Skips the confidential-balance pre-flight, for accounts whose 
 
 `((txHash: Hex) => void) | undefined`
 
-Called with the submission's transaction hash once the wallet has sent it, before the SDK waits for the receipt. An error thrown by the callback goes to the SDK logger as a warning and does not stop the join, so keep it to UI state.
+Called with the submission's transaction hash once the wallet has sent it, before the SDK waits for the receipt. If the callback throws, the SDK logs a warning and the join continues.
 
 **Throws:**
 
@@ -27951,7 +27969,7 @@ Default: `false`. As in [`useGroupDeposit`](https://raw.githubusercontent.com/za
 
 `((txHash: Hex) => void) | undefined`
 
-Called with the submission's transaction hash once the wallet has sent it, before the SDK waits for the receipt. An error thrown by the callback goes to the SDK logger as a warning and does not stop the join, so keep it to UI state.
+Called with the submission's transaction hash once the wallet has sent it, before the SDK waits for the receipt. If the callback throws, the SDK logs a warning and the join continues.
 
 **Throws:** the same errors as `useGroupDeposit`, including `VaultBatcherPausedError`, except `UnlistedConfidentialTokenError`, which only the deposit path raises.
 
