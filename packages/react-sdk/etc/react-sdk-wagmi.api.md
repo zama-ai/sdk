@@ -17,6 +17,4 @@ export interface ZamaConfigWagmi<TChains extends AtLeastOneChain = AtLeastOneCha
     wagmiConfig: T;
 }
 
-// (No @packageDocumentation comment for this package)
-
 ```

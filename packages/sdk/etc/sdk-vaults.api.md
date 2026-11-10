@@ -15628,6 +15628,4 @@ export const VaultTopics: {
     readonly Joined: `0x${string}`;
 };
 
-// (No @packageDocumentation comment for this package)
-
 ```

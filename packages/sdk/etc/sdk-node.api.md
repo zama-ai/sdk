@@ -282,6 +282,4 @@ export const zenithTrexTestnet: Readonly<{
     readonly executorAddress: "0x6C5036A4ad55DBA8007ae82c4e9C123F143e53ab";
 }>;
 
-// (No @packageDocumentation comment for this package)
-
 ```

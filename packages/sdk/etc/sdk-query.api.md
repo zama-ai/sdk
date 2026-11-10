@@ -1649,6 +1649,4 @@ export interface ZamaSDKOptions {
     transportKeyPairDerivationSecret?: string | Uint8Array;
 }
 
-// (No @packageDocumentation comment for this package)
-
 ```
