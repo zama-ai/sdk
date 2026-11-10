@@ -13,9 +13,18 @@ import { usePublicClient } from "wagmi";
 const openBatchesKey = (batcher: Address, account: Address) =>
   ["open-batches", batcher, account] as const;
 
+// A bigint cannot go in a query key: TanStack hashes keys with JSON.stringify.
+export const joinedAmountKey = (batcher: Address, account: Address, batchId: bigint) =>
+  ["vault-joined-amount", batcher, account, batchId.toString()] as const;
+
 /** The batches `account` joined on `batcher` and has not claimed or quit yet. */
-export function useOpenBatches(batcher: Address, account: Address, fromBlock: bigint) {
-  const publicClient = usePublicClient();
+export function useOpenBatches(
+  batcher: Address,
+  account: Address,
+  fromBlock: bigint,
+  chainId: number,
+) {
+  const publicClient = usePublicClient({ chainId });
   return useQuery({
     queryKey: openBatchesKey(batcher, account),
     queryFn: async () => {
@@ -46,7 +55,7 @@ export function useOpenBatches(batcher: Address, account: Address, fromBlock: bi
   });
 }
 
-/** Adds a batch id a deposit or withdrawal just returned. */
+/** Records a deposit or withdrawal: it may have joined a batch the account is already in. */
 export function addOpenBatch(
   queryClient: QueryClient,
   batcher: Address,
@@ -56,6 +65,7 @@ export function addOpenBatch(
   queryClient.setQueryData<bigint[]>(openBatchesKey(batcher, account), (ids) =>
     ids && !ids.includes(batchId) ? [...ids, batchId] : ids,
   );
+  void queryClient.invalidateQueries({ queryKey: joinedAmountKey(batcher, account, batchId) });
 }
 
 /** Drops a batch after a claim or quit: its on-chain state does not change. */

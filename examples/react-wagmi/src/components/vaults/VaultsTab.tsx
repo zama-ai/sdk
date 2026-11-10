@@ -41,7 +41,10 @@ export function VaultsTab({ account }: { account: Address }) {
 
 function VaultPanel({ vault, account }: { vault: BatchVault; account: Address }) {
   // The deposit batcher takes the vault's asset and pays out its shares.
-  const { data: tokens, error } = useBatcherTokens({ address: vault.depositBatcher });
+  const { data: tokens, error } = useBatcherTokens({
+    address: vault.depositBatcher,
+    chainId: vault.chainId,
+  });
   if (!tokens) {
     return (
       <section className="card">
@@ -93,7 +96,7 @@ function PositionCard({
   shareToken,
 }: PositionCardProps) {
   const sdk = useZamaSDK();
-  const batcher = useVaultBatcher(vault.depositBatcher);
+  const batcher = useVaultBatcher(vault.depositBatcher, { chainId: vault.chainId });
   const { data: assetMetadata } = useMetadata(assetToken);
   const { data: shareMetadata } = useMetadata(shareToken);
   // The first decryption asks the wallet for a signature, so it starts from a click.
@@ -103,7 +106,7 @@ function PositionCard({
     { address: shareToken, account },
     { enabled: hasPermit === true },
   );
-  const { data: value } = useQuery({
+  const { data: value, error: valueError } = useQuery({
     queryKey: ["vault-position-value", shareToken, shares.data?.toString()],
     queryFn: async () => {
       const [vaultAddress, shareRate, assetRate] = await Promise.all([
@@ -169,6 +172,11 @@ function PositionCard({
       {(grantPermit.error ?? shares.error) && (
         <div className="alert alert-error card-status" role="alert">
           {describeError(grantPermit.error ?? shares.error, "Decryption failed")}
+        </div>
+      )}
+      {valueError && (
+        <div className="alert alert-error card-status" role="alert">
+          {describeError(valueError, "Could not read what your shares are worth")}
         </div>
       )}
     </section>

@@ -15,14 +15,19 @@ import type { Address } from "@zama-fhe/sdk";
 import { formatUnits, parseAbi, parseUnits } from "viem";
 import { BatchList } from "@/components/vaults/BatchList";
 import { describeError } from "@/lib/errors";
-import { useNetwork } from "@/lib/hooks";
+import { MINT_ABI, useNetwork } from "@/lib/hooks";
 import type { BatchVault } from "@/lib/networks";
 import { addOpenBatch } from "@/lib/openBatches";
 import { minAmount, parseAmount } from "@/lib/parseAmount";
 
 const COPY = {
-  deposit: { title: "Deposit", unit: "assets", receive: "shares" },
-  withdraw: { title: "Withdraw", unit: "shares", receive: "assets" },
+  deposit: { title: "Deposit", unit: "assets", receive: "shares", paused: "Deposits are paused" },
+  withdraw: {
+    title: "Withdraw",
+    unit: "shares",
+    receive: "assets",
+    paused: "Withdrawals are paused",
+  },
 } as const;
 
 interface VaultActionCardProps {
@@ -50,8 +55,11 @@ export function VaultActionCard({
   const [submitted, setSubmitted] = useState(false);
 
   const { data: metadata } = useMetadata(token);
-  const { data: paused, error: pausedError } = usePaused({ address: batcher });
-  // Uses the permit the position card grants: this card never prompts the wallet on its own.
+  const { data: paused, error: pausedError } = usePaused({
+    address: batcher,
+    chainId: vault.chainId,
+  });
+  // Decrypts only under an existing permit: this card never prompts the wallet on its own.
   const { data: hasPermit } = useHasPermit({ contractAddresses: permitContracts });
   const balance = useConfidentialBalance(
     { address: token, account },
@@ -70,20 +78,19 @@ export function VaultActionCard({
   const send = kind === "deposit" ? deposit : redeem;
 
   const parsed = metadata ? parseAmount(amount, metadata.decimals) : 0n;
-  const reason =
-    paused === undefined
-      ? pausedError
-        ? "Could not read whether the batcher is paused"
-        : "Loading…"
-      : paused
-        ? `${copy.title}s are paused`
-        : parsed === 0n
-          ? "Enter an amount"
-          : balance.data === undefined
-            ? "Decrypt your balances first"
-            : parsed > balance.data
-              ? "Amount is above your balance"
-              : null;
+  // Why the submit button is disabled, shown as its label; null when the form can be sent.
+  const blockedReason = (): string | null => {
+    if (paused === undefined) {
+      return pausedError ? "Could not read whether the batcher is paused" : "Loading…";
+    }
+    if (paused) return copy.paused;
+    if (parsed === 0n) return "Enter an amount";
+    if (!hasPermit) return "Decrypt your balances first";
+    if (balance.data === undefined) return "Decrypting your balance…";
+    if (parsed > balance.data) return "Amount is above your balance";
+    return null;
+  };
+  const reason = blockedReason();
 
   const errors = [send.error, balance.error, pausedError].filter((error) => error !== null);
 
@@ -155,22 +162,23 @@ export function VaultActionCard({
           batch is processed and you claim them below.
         </output>
       )}
-      {errors.map((error) => (
-        <div key={error.message} className="alert alert-error card-status" role="alert">
+      {errors.map((error, index) => (
+        <div key={index} className="alert alert-error card-status" role="alert">
           {describeError(error, `${copy.title} failed`)}
         </div>
       ))}
 
-      <BatchList batcher={batcher} account={account} fromBlock={vault.fromBlock} />
+      <BatchList
+        batcher={batcher}
+        account={account}
+        fromBlock={vault.fromBlock}
+        chainId={vault.chainId}
+      />
     </section>
   );
 }
 
-// Test tokens only: the ERC-20 behind the vault's asset lets anyone call mint.
-const UNDERLYING_ABI = parseAbi([
-  "function mint(address to, uint256 amount)",
-  "function decimals() view returns (uint8)",
-]);
+const DECIMALS_ABI = parseAbi(["function decimals() view returns (uint8)"]);
 const MINT_AMOUNT = "10";
 
 /** Mints the test ERC-20 behind `token`, then shields it into `token`. */
@@ -196,14 +204,14 @@ function MintAndShieldButton({
       // Mint and shield both take the ERC-20's units, which can differ from the confidential token's.
       const decimals = await sdk.provider.readContract({
         address: underlying,
-        abi: UNDERLYING_ABI,
+        abi: DECIMALS_ABI,
         functionName: "decimals",
         args: [],
       });
       const amount = parseUnits(MINT_AMOUNT, decimals);
       const txHash = await signer.writeContract({
         address: underlying,
-        abi: UNDERLYING_ABI,
+        abi: MINT_ABI,
         functionName: "mint",
         args: [account, amount],
       });

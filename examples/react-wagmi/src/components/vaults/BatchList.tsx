@@ -15,7 +15,7 @@ import type { Address } from "@zama-fhe/sdk";
 import { BatchState } from "@zama-fhe/sdk/vaults";
 import { formatUnits } from "viem";
 import { describeError } from "@/lib/errors";
-import { removeOpenBatch, useOpenBatches } from "@/lib/openBatches";
+import { joinedAmountKey, removeOpenBatch, useOpenBatches } from "@/lib/openBatches";
 
 // A keeper normally settles a dispatched batch. After this long, offer the user to settle it.
 const FINALIZE_AFTER_SECONDS = 15 * 60;
@@ -24,11 +24,12 @@ interface BatchListProps {
   batcher: Address;
   account: Address;
   fromBlock: bigint;
+  chainId: number;
 }
 
 /** The account's batches on one batcher that still need something from it or from the vault. */
-export function BatchList({ batcher, account, fromBlock }: BatchListProps) {
-  const { data: batchIds, error } = useOpenBatches(batcher, account, fromBlock);
+export function BatchList({ batcher, account, fromBlock, chainId }: BatchListProps) {
+  const { data: batchIds, error } = useOpenBatches(batcher, account, fromBlock, chainId);
 
   return (
     <div className="card-status">
@@ -49,6 +50,7 @@ export function BatchList({ batcher, account, fromBlock }: BatchListProps) {
               batcher={batcher}
               account={account}
               batchId={batchId}
+              chainId={chainId}
             />
           ))}
         </ul>
@@ -61,21 +63,30 @@ interface BatchRowProps {
   batcher: Address;
   account: Address;
   batchId: bigint;
+  chainId: number;
 }
 
-function BatchRow({ batcher, account, batchId }: BatchRowProps) {
+function BatchRow({ batcher, account, batchId, chainId }: BatchRowProps) {
   const queryClient = useQueryClient();
   const now = useNow();
+  const config = { address: batcher, chainId };
   const { data: status, error } = useBatchStatus(
-    { address: batcher, batchId },
-    { refetchInterval: 10_000 },
+    { ...config, batchId },
+    // Finalized and Canceled are final: only a queued or processing batch can still move.
+    {
+      refetchInterval: (query) =>
+        query.state.data?.state === BatchState.Pending ||
+        query.state.data?.state === BatchState.Dispatched
+          ? 10_000
+          : false,
+    },
   );
 
   // A claim or quit leaves the batch state unchanged, so drop the row here.
   const done = () => removeOpenBatch(queryClient, batcher, account, batchId);
-  const quit = useQuit({ address: batcher }, { onSuccess: done });
-  const claim = useClaim({ address: batcher }, { onSuccess: done });
-  const finalize = useFinalize({ address: batcher });
+  const quit = useQuit(config, { onSuccess: done });
+  const claim = useClaim(config, { onSuccess: done });
+  const finalize = useFinalize(config);
   const busy = quit.isPending || claim.isPending || finalize.isPending;
   const actionError = quit.error ?? claim.error ?? finalize.error;
 
@@ -84,7 +95,7 @@ function BatchRow({ batcher, account, batchId }: BatchRowProps) {
       <div>
         <span className="balance-label">
           Batch #{batchId.toString()}
-          <JoinedAmount batcher={batcher} account={account} batchId={batchId} />
+          <JoinedAmount batcher={batcher} account={account} batchId={batchId} chainId={chainId} />
         </span>
         <p className="token-meta">{label}</p>
         {actionError && (
@@ -121,12 +132,12 @@ function BatchRow({ batcher, account, batchId }: BatchRowProps) {
       );
     }
     case BatchState.Dispatched: {
-      // A keeper normally settles the batch: only offer finalize once it is late.
-      if (now < Number(status.dispatchedAt) + FINALIZE_AFTER_SECONDS) {
-        return row("Processing");
-      }
       // Past the callback deadline, finalize cancels the batch instead of settling it.
       const expired = now >= Number(status.callbackDeadlineAt);
+      // A keeper normally settles the batch: only offer finalize once it is late.
+      if (!expired && now < Number(status.dispatchedAt) + FINALIZE_AFTER_SECONDS) {
+        return row("Processing");
+      }
       return row(expired ? "Processing timed out" : "Processing is taking longer than usual", {
         label: expired ? "Cancel and get it back" : "Settle now",
         run: () => finalize.mutate({ batchId }),
@@ -146,17 +157,16 @@ function BatchRow({ batcher, account, batchId }: BatchRowProps) {
 
 /**
  * The amount `account` put into the batch, decrypted and shown in the batcher's input token.
- * Waits for the permit the position card grants, so it never prompts the wallet on its own.
+ * Waits for an existing permit, so it never prompts the wallet on its own.
  */
-function JoinedAmount({ batcher, account, batchId }: BatchRowProps) {
-  const vaultBatcher = useVaultBatcher(batcher);
+function JoinedAmount({ batcher, account, batchId, chainId }: BatchRowProps) {
+  const vaultBatcher = useVaultBatcher(batcher, { chainId });
   const { data: hasPermit } = useHasPermit({ contractAddresses: [batcher] });
-  const { data: tokens } = useBatcherTokens({ address: batcher });
+  const { data: tokens } = useBatcherTokens({ address: batcher, chainId });
   const { data: amount } = useQuery({
-    // A bigint cannot go in a query key: TanStack hashes keys with JSON.stringify.
-    queryKey: ["vault-joined-amount", batcher, account, batchId.toString()],
+    queryKey: joinedAmountKey(batcher, account, batchId),
     queryFn: () => vaultBatcher.depositOf(batchId, account),
-    // The amount joined into a batch does not change.
+    // Refreshed when the account joins the same batch again.
     staleTime: Infinity,
     enabled: hasPermit === true,
   });

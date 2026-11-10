@@ -54,7 +54,7 @@ export const networks = {
     transport: "relayer",
     explorerUrl: "https://eth-sepolia.blockscout.com",
     canMint: true,
-    vault: { address, confidentialToken },
+    batchVault: batchVaultFromEnv(sepolia.id),
   }),
   "bnb-testnet": defineNetwork({ label: "BNB Testnet · Cleartext", transport: "cleartext", ... }),
   mainnet: defineNetwork({ label: "Ethereum", transport: "relayer", canMint: false, ... }),
@@ -215,7 +215,7 @@ override from `NEXT_PUBLIC_<NETWORK>_RPC_URL` is applied to the viem chain too, 
 "add network" prompt shows the same RPC the app uses.
 
 Everything that depends on the active network — explorer links, the native balance label,
-the Mint button, the vault demo — reads its row through `useNetwork()` (`src/lib/hooks.ts`)
+the Mint button, the Vaults tab's batchers — reads its row through `useNetwork()` (`src/lib/hooks.ts`)
 rather than a hardcoded constant.
 
 **Screen 2 is passive**: there is no `isInitializing` guard (unlike the ethers/viem examples)
@@ -411,59 +411,7 @@ If the user closes the tab between phases, `PendingUnshieldCard` recovers the st
 
 ---
 
-## 10. Deposit into a reacting contract (`confidentialTransferAndCall`)
-
-The `Reacting contract — ConfidentialVault` section of the Advanced tab demonstrates the ERC-7984
-`confidentialTransferAndCall` pattern: a confidential transfer that also invokes the
-recipient contract's `onConfidentialTransferReceived` hook **in the same transaction**, so
-value moves and the receiver reacts atomically — no two-step transfer-then-notify race.
-
-The receiver is a minimal confidential escrow, [`contracts/src/ConfidentialVault.sol`](../../contracts/src/ConfidentialVault.sol),
-deployed on Sepolia and bound to one confidential token (cUSDC). The cards only render when
-that token is selected on Sepolia: the binding is the `vault` field of the Sepolia row in
-`src/lib/networks.ts`, configurable via `NEXT_PUBLIC_VAULT_ADDRESS` and
-`NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN`. Deploy your own with
-[`contracts/script/DeployVault.s.sol`](../../contracts/script/DeployVault.s.sol).
-
-**Deposit (`VaultDepositCard.tsx`).** The `data` payload carries a real domain message — the
-beneficiary to credit — not an opaque blob. The contract decodes and routes the credit on it:
-
-```ts
-const deposit = useConfidentialTransferAndCall({ address: tokenAddress }, { onSuccess });
-
-// The vault decodes `data` as the beneficiary address to credit.
-const data = encodeAbiParameters([{ type: "address" }], [beneficiary]);
-deposit.mutate({ to: vaultAddress, amount: parsedAmount, data });
-```
-
-**Position + withdraw (`VaultPositionCard.tsx`).** The vault stores an `euint64` share per
-beneficiary and grants that beneficiary FHE decrypt rights. Reading the position needs a
-permit scoped to the **vault** address — distinct from the confidential-token permits the main
-page grants:
-
-```ts
-const { data: handle } = useReadContract({
-  address: vaultAddress,
-  abi: VAULT_ABI,
-  functionName: "sharesOf",
-  args: [connectedAddress],
-});
-
-await grantPermit.mutateAsync([vaultAddress]); // permit scoped to the vault
-const shares = useDecryptValues([{ encryptedValue: handle, contractAddress: vaultAddress }]);
-```
-
-Withdraw calls the vault's `withdraw()` directly (`signer.writeContract`) — it is a custom
-contract method, not part of the `Token` surface. The vault transfers the caller's full
-confidential balance back via `confidentialTransfer`.
-
-> Depositing with `beneficiary == address(0)` makes the vault return an encrypted `false` from
-> the hook, and the token **refunds the transfer atomically** — a useful safety property of the
-> receiver-callback pattern.
-
----
-
-## 11. Confidential vault deposits and withdrawals (Vaults tab)
+## 10. Confidential vault deposits and withdrawals (Vaults tab)
 
 A vault deposit or withdrawal does not settle when its transaction is mined. The amount joins
 a batch, the batch is sent to the vault, and the user claims the result once it settles. The
@@ -473,6 +421,9 @@ Vaults tab shows each of those steps, following the
 - **Tokens.** `useBatcherTokens` reads the vault's asset and share from the deposit batcher,
   so the only configuration is the two batcher addresses (the `batchVault` field of the
   Sepolia row in `src/lib/networks.ts`).
+- **Pinned chain.** The read hooks and `useClaim`, `useQuit` and `useFinalize` take the vault's
+  `chainId`, so reads go to the vault's chain and a wallet on another chain gets
+  `ChainMismatchError` instead of sending the transaction there.
 - **Decrypt on click.** One `useGrantPermit` call covers both tokens and both batchers, so the
   position card's "Decrypt balances" button is the only signature the tab asks for.
 - **Send.** `useDeposit` and `useRedeem` return the batch id. The button explains why it is
@@ -487,7 +438,7 @@ Vaults tab shows each of those steps, following the
 
 ---
 
-## 12. Running locally
+## 11. Running locally
 
 ```bash
 cd examples/react-wagmi
@@ -502,7 +453,7 @@ CI=1 npm run test:e2e                # same suite against a production build, as
 
 ---
 
-## 13. Security headers (`src/proxy.ts`, `next.config.ts`)
+## 12. Security headers (`src/proxy.ts`, `next.config.ts`)
 
 `src/proxy.ts` runs before every page render and sets a Content Security Policy with a
 fresh nonce. Next.js reads the nonce from the request's `Content-Security-Policy` header

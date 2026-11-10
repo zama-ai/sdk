@@ -15,6 +15,7 @@ import {
   NetworkPicker,
   TokenSelector,
   type AppTab,
+  type TokenView,
 } from "@/components/PageChrome";
 import { NoTokenPanel, SelectedTokenPanel } from "@/components/SelectedTokenPanel";
 import { VaultsTab } from "@/components/vaults/VaultsTab";
@@ -36,6 +37,8 @@ export default function Home() {
     useWalletConnection();
   const { mutate: switchChain, isPending: isSwitching, error: switchError } = useSwitchChain();
   const [tab, setTab] = useState<AppTab>("tokens");
+  // Held here so the selected token survives a visit to the Vaults tab.
+  const [selectedTokenAddress, setSelectedTokenAddress] = useState<Address | null>(null);
 
   // Networks the server can serve: cleartext rows always, relayer rows only when it has a
   // relayer URL for them. Mainnet stays hidden until a deployment opts in.
@@ -165,9 +168,16 @@ export default function Home() {
       <AppTabs value={tab} onChange={setTab} />
       <div role="tabpanel" id={`tabpanel-${tab}`} aria-labelledby={`tab-${tab}`}>
         {tab === "vaults" ? (
-          <VaultsTab account={address} />
+          // Remounts on an account or chain switch, so no typed amount or result carries over.
+          <VaultsTab key={`${chainId}-${address}`} account={address} />
         ) : (
-          <TokenScreen chainId={chainId} address={address} view={tab} />
+          <TokenScreen
+            chainId={chainId}
+            address={address}
+            view={tab}
+            selectedTokenAddress={selectedTokenAddress}
+            onSelectToken={setSelectedTokenAddress}
+          />
         )}
       </div>
     </main>
@@ -180,13 +190,15 @@ function TokenScreen({
   chainId,
   address,
   view,
+  selectedTokenAddress,
+  onSelectToken,
 }: {
   chainId: number | undefined;
   address: Address;
-  view: "tokens" | "advanced";
+  view: TokenView;
+  selectedTokenAddress: Address | null;
+  onSelectToken: (address: Address) => void;
 }) {
-  const [selectedTokenAddress, setSelectedTokenAddress] = useState<Address | null>(null);
-
   // Fetch all valid token pairs from the on-chain WrappersRegistry. The registry address
   // comes from the connected chain's FHE config — no configuration required.
   // metadata: true fetches name/symbol/decimals on-chain for both tokens in each pair.
@@ -224,7 +236,7 @@ function TokenScreen({
         }))}
         pending={isRegistryPending}
         error={isRegistryError}
-        onChange={(event) => setSelectedTokenAddress(event.currentTarget.value as Address)}
+        onChange={(event) => onSelectToken(event.currentTarget.value as Address)}
       />
 
       {token && (

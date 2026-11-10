@@ -34,7 +34,7 @@ export function useNetwork(): Network {
 
 // mint(address, uint256) is not part of the ERC-20 standard — it is a convenience
 // function added to both test tokens for easy balance top-ups during development.
-const MINT_ABI = parseAbi(["function mint(address to, uint256 amount)"]);
+export const MINT_ABI = parseAbi(["function mint(address to, uint256 amount)"]);
 
 // Reads the public ERC-20 balance of the wrapper's underlying token. Shares its query
 // key with the operation cards' invalidations, so a shield/unshield/mint elsewhere

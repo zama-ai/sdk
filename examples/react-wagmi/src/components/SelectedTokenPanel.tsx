@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBalance, useConnection } from "wagmi";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
+import type { TokenView } from "@/components/PageChrome";
 import { useNetwork } from "@/lib/hooks";
 import { erc20BalanceKey } from "@/lib/queryKeys";
 import { BalancesCard } from "@/components/BalancesCard";
@@ -14,8 +14,6 @@ import { PendingUnshieldCard } from "@/components/PendingUnshieldCard";
 import { DelegateDecryptionCard } from "@/components/DelegateDecryptionCard";
 import { RevokeDelegationCard } from "@/components/RevokeDelegationCard";
 import { DecryptAsCard } from "@/components/DecryptAsCard";
-import { VaultDepositCard } from "@/components/VaultDepositCard";
-import { VaultPositionCard } from "@/components/VaultPositionCard";
 
 export function NoTokenPanel() {
   const { canMint } = useNetwork();
@@ -75,22 +73,17 @@ export function NoTokenPanel() {
 interface SelectedTokenPanelProps {
   token: TokenWrapperPairWithMetadata;
   validPairs: TokenWrapperPairWithMetadata[];
-  /** `tokens`: balances and the core operations. `advanced`: transferAndCall and delegation. */
-  view: "tokens" | "advanced";
+  view: TokenView;
 }
 
 export function SelectedTokenPanel({ token, validPairs, view }: SelectedTokenPanelProps) {
   const queryClient = useQueryClient();
-  const { chain, vault } = useNetwork();
+  const { chain } = useNetwork();
   // Wallet state read straight from wagmi in place — nothing wallet-derived is passed in.
   const { address } = useConnection();
   // The native balance lives in the header, but its refetch is triggered here after an
   // action; useBalance shares wagmi's query cache by key, so the header's copy updates too.
   const { refetch: refetchNativeBalance } = useBalance({ address });
-
-  // Bumped after a vault deposit to remount VaultPositionCard so it re-reads sharesOf
-  // (the deposit changed the position; the previously revealed value is now stale).
-  const [vaultNonce, setVaultNonce] = useState(0);
 
   // Narrow the address once (runtime guard, no cast) so the cards below get a definite
   // Address prop. The panel only renders on the connected screen, so this is a formality.
@@ -105,25 +98,8 @@ export function SelectedTokenPanel({ token, validPairs, view }: SelectedTokenPan
     void refetchNativeBalance();
   };
 
-  // The vault demo is bound to one confidential token on one network.
-  const showVault =
-    vault !== undefined &&
-    token.confidentialTokenAddress.toLowerCase() === vault.confidentialToken.toLowerCase();
-
-  if (view === "advanced") {
-    return (
-      <AdvancedOperations
-        token={token}
-        address={address}
-        vaultAddress={showVault ? vault?.address : undefined}
-        vaultNonce={vaultNonce}
-        onVaultDeposit={() => {
-          refreshPublicBalances();
-          setVaultNonce((n) => n + 1);
-        }}
-        onWithdraw={refreshPublicBalances}
-      />
-    );
+  if (view === "delegation") {
+    return <DelegationOperations token={token} address={address} />;
   }
 
   return (
@@ -173,52 +149,15 @@ export function SelectedTokenPanel({ token, validPairs, view }: SelectedTokenPan
   );
 }
 
-interface AdvancedOperationsProps {
-  token: TokenWrapperPairWithMetadata;
-  address: Address;
-  /** The ConfidentialVault demo's address, when it is bound to the selected token. */
-  vaultAddress: Address | undefined;
-  vaultNonce: number;
-  onVaultDeposit: () => void;
-  onWithdraw: () => void;
-}
-
-function AdvancedOperations({
+function DelegationOperations({
   token,
   address,
-  vaultAddress,
-  vaultNonce,
-  onVaultDeposit,
-  onWithdraw,
-}: AdvancedOperationsProps) {
+}: {
+  token: TokenWrapperPairWithMetadata;
+  address: Address;
+}) {
   return (
     <>
-      {/* ── Reacting contract — confidentialTransferAndCall demo ───────────────
-          Deposit moves tokens into the vault and credits a beneficiary atomically;
-          the beneficiary reveals and withdraws their confidential position. */}
-      {vaultAddress && (
-        <>
-          <h2 className="section-label">Reacting contract — ConfidentialVault</h2>
-
-          <VaultDepositCard
-            key={`vault-deposit-${address}-${token.confidentialTokenAddress}`}
-            token={token}
-            account={address}
-            vaultAddress={vaultAddress}
-            disabled={false}
-            onSuccess={onVaultDeposit}
-          />
-
-          <VaultPositionCard
-            key={`vault-position-${address}-${token.confidentialTokenAddress}-${vaultNonce}`}
-            token={token}
-            account={address}
-            vaultAddress={vaultAddress}
-            onWithdraw={onWithdraw}
-          />
-        </>
-      )}
-
       {/* ── Delegation — token owner perspective ──────────────────────────────
           These cards are used by the wallet that OWNS the token.
           Grant or revoke another wallet's right to decrypt your balance. */}

@@ -4,13 +4,13 @@ Next.js 16 example app demonstrating how to integrate `@zama-fhe/react-sdk` with
 [wagmi v3](https://wagmi.sh/) on every network the SDK ships a chain preset for. A network
 picker switches the wallet between them; nothing else in the app changes per chain.
 
-Covers: connect wallet (browser wallet, or a Dynamic-backed connect dialog with WalletConnect for a Safe), pick a network, shield ERC-20 → confidential, confidential transfer, unshield, grant/revoke/use delegation, pending unshield recovery, deposit into a reacting contract (`confidentialTransferAndCall`, Sepolia only).
+Covers: connect wallet (browser wallet, or a Dynamic-backed connect dialog with WalletConnect for a Safe), pick a network, shield ERC-20 → confidential, confidential transfer, unshield, grant/revoke/use delegation, pending unshield recovery, confidential vault deposits and withdrawals.
 
 The connected app has three tabs:
 
 - **Tokens**: balances, shield, confidential transfer, unshield and pending unshield recovery for the selected token. The core of the SDK.
+- **Delegation**: grant, revoke and use decryption delegation for the selected token.
 - **Vaults**: deposit into and withdraw from a confidential ERC-4626 vault with `@zama-fhe/react-sdk/vaults`. The Deposit and Withdraw boxes each hold their form and the batches still in progress, with one view per batch state: cancel, settle a late batch, claim, take a canceled amount back. It implements the [Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide. Set the vault's batchers in `.env.local` to use it.
-- **Advanced**: the reacting-contract deposit (`confidentialTransferAndCall`) and decryption delegation.
 
 This app replaces the former `example-bnb`, `example-hoodi`, `example-polygon-amoy` and `example-zenith` apps, which were copies of it pinned to one chain each.
 
@@ -25,7 +25,7 @@ This app replaces the former `example-bnb`, `example-hoodi`, `example-polygon-am
 | Ethereum                 | `1`        | `web()` via proxy | ETH                                                                | `MAINNET_RELAYER_URL` is set |
 | Polygon                  | `137`      | `web()` via proxy | POL                                                                | `POLYGON_RELAYER_URL` is set |
 
-The table lives in [`src/lib/networks.ts`](src/lib/networks.ts). Each row pairs a viem chain with the matching preset from `@zama-fhe/sdk/chains` (protocol addresses, registry, public RPC) and a few flags: the transport, the explorer, whether the test tokens can be minted from the app, and the ConfidentialVault demo binding.
+The table lives in [`src/lib/networks.ts`](src/lib/networks.ts). Each row pairs a viem chain with the matching preset from `@zama-fhe/sdk/chains` (protocol addresses, registry, public RPC) and a few flags: the transport, the explorer, whether the test tokens can be minted from the app, and the Vaults tab's batchers.
 
 **Cleartext rows** run against a _cleartext_ FHEVM deployment: a stand-in for the full FHE stack where the "encrypted" values are stored in cleartext on-chain and there is no relayer or KMS. They exist to integrate and test the SDK on chains without the full protocol. Do not use them for anything real.
 
@@ -41,7 +41,7 @@ Token pairs on every network come from the on-chain `WrappersRegistry` at runtim
 - **React 19** + **wagmi v3** + **viem v2**
 - **Dynamic** (optional) — `@dynamic-labs-sdk/client` and `@dynamic-labs-sdk/evm`, Dynamic's headless SDK in connect-only mode: it supplies the wallet catalogue and the connect step (browser wallets + WalletConnect, which is how a Safe pairs from the Safe web app). A wagmi connector of the app's own wraps the authorized wallet, so wagmi alone owns the session
 - **TanStack Query v5** for async state
-- **@zama-fhe/react-sdk** — `ZamaProvider`, `useConfidentialBalance`, `useUnshield`, `useConfidentialTransferAndCall`, `useDelegateDecryption`, etc.
+- **@zama-fhe/react-sdk** — `ZamaProvider`, `useConfidentialBalance`, `useShield`, `useUnshield`, `useDelegateDecryption`, etc.
 - **@zama-fhe/react-sdk/vaults** — `useDeposit`, `useRedeem`, `usePaused`, `useBatcherTokens`, `useBatchStatus`, `useQuit`, `useClaim`, `useFinalize`; `openBatchIds` from `@zama-fhe/sdk/vaults` rebuilds the open batch list from the batchers' events
 - **@zama-fhe/react-sdk/wagmi** — `createConfig` adapter for wagmi signer/provider wiring
 - **@zama-fhe/sdk/web** — browser FHE worker transport via `web()`, routed through the local Next.js proxy (`/api/relayer/<network>`)
@@ -89,29 +89,27 @@ curl -H "x-api-key: $MAINNET_RELAYER_API_KEY" https://relayer.mainnet.zama.org/v
 
 All server-side variables are read by the proxy only and never reach the browser.
 
-| Variable                               | Required                             | Description                                                                                                                                                                      |
-| -------------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MAINNET_RELAYER_URL`                  | No                                   | Enables Ethereum mainnet. Bare relayer host, no `/v2` suffix. Unset hides the network; there is no fallback.                                                                     |
-| `MAINNET_RELAYER_API_KEY`              | No                                   | Added as `x-api-key` by the proxy. Needed for the Zama-hosted mainnet relayer, not for a self-hosted one.                                                                        |
-| `POLYGON_RELAYER_URL`                  | No                                   | Same for Polygon mainnet.                                                                                                                                                        |
-| `POLYGON_RELAYER_API_KEY`              | No                                   | Same for Polygon mainnet.                                                                                                                                                        |
-| `SEPOLIA_RELAYER_URL`                  | No                                   | Defaults to the public testnet relayer `https://relayer.testnet.zama.org`, which needs no key.                                                                                   |
-| `SEPOLIA_RELAYER_API_KEY`              | No                                   | Only for a private Sepolia relayer.                                                                                                                                              |
-| `RELAYER_PROXY_ALLOWED_ORIGINS`        | No                                   | Comma-separated origins allowed to call the proxy. Replaces the default, the app's own origin, so list that too.                                                                 |
-| `ENABLED_NETWORKS`                     | No                                   | Comma-separated table keys to offer, e.g. `mainnet,sepolia`. Unset offers every network the server can serve.                                                                    |
-| `CSP_CONNECT_SRC`                      | For mainnet or a self-hosted relayer | Comma-separated origins the browser downloads the FHE keys from (each relayer's `keyurl`). The public testnet bucket is built in. Each entry must be an origin, checked at boot. |
-| `NEXT_PUBLIC_ZAMA_ENV`                 | No                                   | `custom` swaps the Sepolia row's protocol contracts for the `NEXT_PUBLIC_ZAMA_*` values. Unset = SDK preset.                                                                     |
-| `NEXT_PUBLIC_ZAMA_*`                   | Custom                               | Gateway chain ID and protocol contract addresses of the custom environment. See `.env.example`.                                                                                  |
-| `NEXT_PUBLIC_REGISTRY_ADDRESS`         | Custom                               | Wrapper registry of the custom environment, which usually has no registry deployment.                                                                                            |
-| `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID`   | No                                   | Environment ID from the Dynamic dashboard. Enables the Dynamic connect dialog; unset = injected connector only.                                                                  |
-| `NEXT_PUBLIC_COMMIT_SHA`               | No                                   | Commit shown in the footer. Vercel's `VERCEL_GIT_COMMIT_SHA` is used when this is unset.                                                                                         |
-| `NEXT_PUBLIC_SOURCE_REPO_URL`          | No                                   | Repository the footer links to. Defaults to `https://github.com/zama-ai/sdk`; a fork must set its own.                                                                           |
-| `NEXT_PUBLIC_<NETWORK>_RPC_URL`        | No                                   | RPC override per network: `SEPOLIA`, `BNB_TESTNET`, `HOODI`, `ZENITH`, `MAINNET`, `POLYGON`.                                                                                     |
-| `NEXT_PUBLIC_VAULT_ADDRESS`            | No                                   | `ConfidentialVault` demo address on Sepolia (`confidentialTransferAndCall`).                                                                                                     |
-| `NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN` | No                                   | Confidential token the vault is bound to (cUSDC). Vault cards render only when it is selected on Sepolia.                                                                        |
-| `NEXT_PUBLIC_VAULT_DEPOSIT_BATCHER`    | For the Vaults tab                   | Deposit batcher of the confidential vault on Sepolia. The Vaults tab shows a setup hint until both batchers are set.                                                             |
-| `NEXT_PUBLIC_VAULT_REDEEM_BATCHER`     | For the Vaults tab                   | Redeem batcher of the same vault.                                                                                                                                                |
-| `NEXT_PUBLIC_VAULT_FROM_BLOCK`         | No                                   | Block the batchers were deployed at. The batch lists read the batchers' events from here; public RPCs often cap the range.                                                       |
+| Variable                             | Required                             | Description                                                                                                                                                                      |
+| ------------------------------------ | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MAINNET_RELAYER_URL`                | No                                   | Enables Ethereum mainnet. Bare relayer host, no `/v2` suffix. Unset hides the network; there is no fallback.                                                                     |
+| `MAINNET_RELAYER_API_KEY`            | No                                   | Added as `x-api-key` by the proxy. Needed for the Zama-hosted mainnet relayer, not for a self-hosted one.                                                                        |
+| `POLYGON_RELAYER_URL`                | No                                   | Same for Polygon mainnet.                                                                                                                                                        |
+| `POLYGON_RELAYER_API_KEY`            | No                                   | Same for Polygon mainnet.                                                                                                                                                        |
+| `SEPOLIA_RELAYER_URL`                | No                                   | Defaults to the public testnet relayer `https://relayer.testnet.zama.org`, which needs no key.                                                                                   |
+| `SEPOLIA_RELAYER_API_KEY`            | No                                   | Only for a private Sepolia relayer.                                                                                                                                              |
+| `RELAYER_PROXY_ALLOWED_ORIGINS`      | No                                   | Comma-separated origins allowed to call the proxy. Replaces the default, the app's own origin, so list that too.                                                                 |
+| `ENABLED_NETWORKS`                   | No                                   | Comma-separated table keys to offer, e.g. `mainnet,sepolia`. Unset offers every network the server can serve.                                                                    |
+| `CSP_CONNECT_SRC`                    | For mainnet or a self-hosted relayer | Comma-separated origins the browser downloads the FHE keys from (each relayer's `keyurl`). The public testnet bucket is built in. Each entry must be an origin, checked at boot. |
+| `NEXT_PUBLIC_ZAMA_ENV`               | No                                   | `custom` swaps the Sepolia row's protocol contracts for the `NEXT_PUBLIC_ZAMA_*` values. Unset = SDK preset.                                                                     |
+| `NEXT_PUBLIC_ZAMA_*`                 | Custom                               | Gateway chain ID and protocol contract addresses of the custom environment. See `.env.example`.                                                                                  |
+| `NEXT_PUBLIC_REGISTRY_ADDRESS`       | Custom                               | Wrapper registry of the custom environment, which usually has no registry deployment.                                                                                            |
+| `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` | No                                   | Environment ID from the Dynamic dashboard. Enables the Dynamic connect dialog; unset = injected connector only.                                                                  |
+| `NEXT_PUBLIC_COMMIT_SHA`             | No                                   | Commit shown in the footer. Vercel's `VERCEL_GIT_COMMIT_SHA` is used when this is unset.                                                                                         |
+| `NEXT_PUBLIC_SOURCE_REPO_URL`        | No                                   | Repository the footer links to. Defaults to `https://github.com/zama-ai/sdk`; a fork must set its own.                                                                           |
+| `NEXT_PUBLIC_<NETWORK>_RPC_URL`      | No                                   | RPC override per network: `SEPOLIA`, `BNB_TESTNET`, `HOODI`, `ZENITH`, `MAINNET`, `POLYGON`.                                                                                     |
+| `NEXT_PUBLIC_VAULT_DEPOSIT_BATCHER`  | For the Vaults tab                   | Deposit batcher of the confidential vault on Sepolia. The Vaults tab shows a setup hint until both batchers are set.                                                             |
+| `NEXT_PUBLIC_VAULT_REDEEM_BATCHER`   | For the Vaults tab                   | Redeem batcher of the same vault.                                                                                                                                                |
+| `NEXT_PUBLIC_VAULT_FROM_BLOCK`       | No                                   | Block the batchers were deployed at. The batch lists read the batchers' events from here; public RPCs often cap the range.                                                       |
 
 Earlier versions of this app, and the per-chain apps it replaces, read `RELAYER_URL`, `RELAYER_API_KEY`, `NEXT_PUBLIC_AMOY_RPC_URL` and `NEXT_PUBLIC_BSC_TESTNET_RPC_URL`. Those names are no longer read: a stale `.env.local` silently falls back to the public testnet relayer, so rename them to the per-network names above.
 
