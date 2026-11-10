@@ -19,7 +19,7 @@ The `vaults` subpath is separate from the root entry, so apps that don't use vau
 
 ## Construction
 
-Use `createVault(sdk, addresses)`:
+Use `createVault(sdk, addresses, options?)`:
 
 ```ts
 import { createVault } from "@zama-fhe/sdk/vaults";
@@ -34,7 +34,9 @@ const { batchId } = await vault.deposit(1_000_000n);
 await vault.depositBatcher.claim(batchId);
 ```
 
-`createVault` is a thin factory over `new Vault(sdk, addresses)`; both take the same arguments.
+`createVault` is a thin factory over `new Vault(sdk, addresses, options)`; both take the same arguments.
+
+Pass `{ chainId }` to read both batchers on that chain, for example on a vault page shown before the wallet connects. It is passed to both batchers (see [`VaultBatcher` → Construction](VaultBatcher.md#construction)), and `deposit` and `redeem` throw `ChainMismatchError` while the wallet is on another chain, before any approval or join is sent.
 
 ### VaultAddresses
 
@@ -72,6 +74,12 @@ The batcher joined by share redemptions. Same API as `depositBatcher`, for the r
 const state = await vault.depositBatcher.batchState(batchId);
 await vault.redeemBatcher.claim(batchId);
 ```
+
+### chainId
+
+`number | undefined`
+
+The chain both batchers are on, or `undefined` for the provider's current chain.
 
 ## Reads
 

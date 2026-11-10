@@ -4678,7 +4678,7 @@ export interface ClaimParams {
 // Warning: (ae-forgotten-export) The symbol "ZamaSDK" needs to be exported by the entry point index.d.ts
 //
 // @public
-export function createVault(sdk: ZamaSDK, addresses: VaultAddresses): Vault;
+export function createVault(sdk: ZamaSDK, addresses: VaultAddresses, options?: VaultBatcherOptions): Vault;
 
 // @public
 export function createVaultBatcher(sdk: ZamaSDK, address: Address, options?: VaultBatcherOptions): VaultBatcher;
@@ -14858,9 +14858,10 @@ export function unwrapRequestIdContract(batcher: Address, batchId: bigint): {
 
 // @public
 export class Vault {
-    constructor(sdk: ZamaSDK, addresses: VaultAddresses);
+    constructor(sdk: ZamaSDK, addresses: VaultAddresses, options?: VaultBatcherOptions);
     // Warning: (ae-forgotten-export) The symbol "WrappedToken" needs to be exported by the entry point index.d.ts
     cAsset(): Promise<WrappedToken>;
+    readonly chainId: number | undefined;
     cShare(): Promise<WrappedToken>;
     deposit(amount: bigint, options?: VaultJoinOptions): Promise<JoinResult>;
     readonly depositBatcher: VaultBatcher;

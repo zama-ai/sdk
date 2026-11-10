@@ -2571,7 +2571,7 @@ See [Errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src
 
 ## Settle a dispatched batch yourself
 
-New `VaultBatcher.finalize(batchId)` (`useFinalize` in React, `finalizeMutationOptions` for TanStack Query). A keeper, an off-chain service that watches batches, normally finalizes a dispatched batch; when it has not, any account can now settle the batch from the SDK: `finalize` reads the batch's unwrap request, publicly decrypts the amount it released, and submits `dispatchBatchCallback` with the cleartext and its proof. Past the batch's callback deadline the same call cancels the batch. The submission surfaces as a `VaultSubmitted` event with `vaultOperation: "finalize"`. `VaultBatcher.unwrapRequestId(batchId)` exposes the underlying read. `finalize` and `prepareFinalize` read the batch state first and throw the new `VaultBatchNotDispatchedError` when the batch is not `Dispatched`, for example because a keeper already finalized it, before any decryption. New `VaultBatcher.timeUntilCallbackDeadline(batchId)` (`useTimeUntilCallbackDeadline`, `timeUntilCallbackDeadlineQueryOptions`) reads the seconds until a dispatched batch reaches its callback deadline: `0` once it has, when `finalize` cancels instead of settling, and `null` outside `Dispatched`.
+New `VaultBatcher.finalize(batchId)` (`useFinalize` in React, `finalizeMutationOptions` for TanStack Query). A keeper, an off-chain service that watches batches, normally finalizes a dispatched batch; when it has not, any account can now settle the batch from the SDK: `finalize` reads the batch's unwrap request, publicly decrypts the amount it released, and submits `dispatchBatchCallback` with the cleartext and its proof. Past the batch's callback deadline the same call cancels the batch. The submission surfaces as a `VaultSubmitted` event with `vaultOperation: "finalize"`. `VaultBatcher.unwrapRequestId(batchId)` exposes the underlying read. `finalize` and `prepareFinalize` read the batch state first and throw the new `VaultBatchNotDispatchedError` when the batch is not `Dispatched`, for example because a keeper already finalized it, before any decryption. New `VaultBatcher.timeUntilCallbackDeadline(batchId)` (`useTimeUntilCallbackDeadline`, `timeUntilCallbackDeadlineQueryOptions`) reads the seconds until a dispatched batch reaches its callback deadline: `0` once it has, when `finalize` cancels instead of settling (except on an asynchronous redeem batcher that has already placed the redemption request), and `null` outside `Dispatched`.
 
 ## Batch status for vault UIs
 
@@ -2579,7 +2579,7 @@ New `VaultBatcher.batchStatus(batchId)` (`useBatchStatus` in React, `batchStatus
 
 ## Vault reads on another chain, and smaller vault additions
 
-`ReadContractConfig` gains an optional `chainId`, and `GenericProvider.getBlockTimestamp` an optional `chainId` argument. `WagmiProvider` reads that chain through wagmi; `ViemProvider` and `EthersProvider`, which are bound to one chain, throw `ConfigurationError` for a different one. `createVaultBatcher(sdk, address, { chainId })` and `useVaultBatcher(address, { chainId })` read a batcher on that chain, exposed as `VaultBatcher.chainId`, and the batcher read hooks (`useBatchStatus`, `useBatchState`, `useCurrentBatchId`, `useTimeUntilDispatchable`, `useTimeUntilCallbackDeadline`, `usePaused`, `useBatcherTokens`) take a `chainId`, which is part of their query keys. The batcher write hooks (`useJoin`, `useQuit`, `useClaim`, `useRecover`, `useDispatchBatch`, `useFinalize`) take the same `chainId`, and a chain-pinned batcher throws `ChainMismatchError` for a write while the signer is on another chain; the error's new `targetChainId` names the pinned chain. Its `depositOf` and `prepareFinalize` throw `ConfigurationError` until the provider is on that chain, since decryption runs on the provider's chain. A custom `GenericProvider` should read the `chainId` it is given, or throw for a chain it cannot read: one that ignores it answers a pinned batcher from the wrong chain.
+`ReadContractConfig` gains an optional `chainId`, and `GenericProvider.getBlockTimestamp` an optional `chainId` argument. `WagmiProvider` reads that chain through wagmi; `ViemProvider` and `EthersProvider`, which are bound to one chain, throw `ConfigurationError` for a different one. `createVaultBatcher(sdk, address, { chainId })` and `useVaultBatcher(address, { chainId })` read a batcher on that chain, exposed as `VaultBatcher.chainId`, and the batcher read hooks (`useBatchStatus`, `useBatchState`, `useCurrentBatchId`, `useTimeUntilDispatchable`, `useTimeUntilCallbackDeadline`, `usePaused`, `useBatcherTokens`) take a `chainId`, which is part of their query keys. The batcher write hooks (`useJoin`, `useQuit`, `useClaim`, `useRecover`, `useDispatchBatch`, `useFinalize`) take the same `chainId`, as do `createVault(sdk, addresses, { chainId })`, `useVault`, `useDeposit` and `useRedeem`, and a chain-pinned batcher or vault throws `ChainMismatchError` for a write while the signer is on another chain; the error's new `targetChainId` names the pinned chain. Its `depositOf` and `prepareFinalize` throw `ConfigurationError` until the provider is on that chain, since decryption runs on the provider's chain. A custom `GenericProvider` should read the `chainId` it is given, or throw for a chain it cannot read: one that ignores it answers a pinned batcher from the wrong chain.
 
 New `usePaused` (`pausedQueryOptions`) reads whether a batcher is paused, and `useBatcherTokens` (`batcherTokensQueryOptions`) its input and output token addresses. A new `onJoinSubmitted` option on `VaultBatcher.join`, `Vault.deposit` / `Vault.redeem`, `VaultGroup.deposit` / `VaultGroup.redeem` and their hooks reports the transaction hash once the wallet has sent the join; an error thrown by the callback goes to the SDK logger as a warning and does not stop the join. `VaultBatcher.batchState` now throws `ConfigurationError` for a state number it does not know.
 
@@ -10360,7 +10360,7 @@ While the transaction is pending, lock the form so the user cannot send twice. S
 
 After it is mined, say the amount is **queued**, not deposited. The user does not hold shares yet.
 
-A vault page can render before the wallet connects, when the provider may still be on another chain than the vault. Pass the vault's `chainId` to the read hooks (`useBatchStatus`, `useCurrentBatchId`, `usePaused`, `useBatcherTokens`, …) so they read the vault's chain; this needs a provider that can route reads, such as `WagmiProvider`. Pass the same `chainId` to the write hooks (`useClaim`, `useQuit`, `useFinalize`, …): a wallet on another chain then gets `ChainMismatchError` instead of sending the transaction there.
+A vault page can render before the wallet connects, when the provider may still be on another chain than the vault. Pass the vault's `chainId` to the read hooks (`useBatchStatus`, `useCurrentBatchId`, `usePaused`, `useBatcherTokens`, …) so they read the vault's chain; this needs a provider that can route reads, such as `WagmiProvider`. Pass the same `chainId` to `useDeposit`, `useRedeem` and the batcher write hooks (`useClaim`, `useQuit`, `useFinalize`, …): a wallet on another chain then gets `ChainMismatchError` instead of sending the transaction there.
 
 ## 3. The batch
 
@@ -10432,6 +10432,8 @@ A keeper, an off-chain service that watches batches, normally settles the batch 
 
 `status.secondsUntilCallbackDeadline` says how long settling remains possible. Once it reaches `0`, `useFinalize` **cancels** the batch instead of settling it, and the user then takes the amount back from `Canceled`. Label the button accordingly, for example "Cancel and get it back" rather than "Settle".
 
+A redeem batcher whose vault settles redemptions asynchronously is the exception. Once it has placed the redemption request with the vault, `useFinalize` keeps settling past the deadline, or leaves the batch `Dispatched` until the vault pays out. For such a batcher, keep the "Settle" label after the deadline.
+
 ### Finalized
 
 Claiming is a separate transaction. Show it clearly: until the user claims, the shares are not in their balance. Claiming is permissionless and pays the depositor, never the caller, so your backend may also claim on the user's behalf.
@@ -10456,14 +10458,13 @@ Show the user one entry for the vault they chose, but **claim or quit every join
 - [ ] After sending, the UI says "queued", not "deposited".
 - [ ] Every `BatchState` has a view, enforced by an exhaustive `switch`.
 - [ ] Pending batches offer a cancel.
-- [ ] Dispatched batches offer `finalize` after a delay you choose, and say when it cancels instead.
+- [ ] Dispatched batches offer `finalize` after a delay you choose, and say when it cancels instead (not on an asynchronous redeem batcher).
 - [ ] Finalized batches offer a claim.
 - [ ] Canceled batches offer to take the amount back.
 - [ ] Claimed and quit batches leave the list.
 
 ## Next steps
 
-- The Vaults tab of the [`react-wagmi` example](https://github.com/zama-ai/sdk/tree/main/examples/react-wagmi) implements this guide end to end.
 - [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md) for the SDK calls behind each step.
 - [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/groups.md) when one form deposits into one of several vaults.
 
@@ -12760,7 +12761,7 @@ The `vaults` subpath is separate from the root entry, so apps that don't use vau
 
 ## Construction
 
-Use `createVault(sdk, addresses)`:
+Use `createVault(sdk, addresses, options?)`:
 
 ```ts
 import { createVault } from "@zama-fhe/sdk/vaults";
@@ -12775,7 +12776,9 @@ const { batchId } = await vault.deposit(1_000_000n);
 await vault.depositBatcher.claim(batchId);
 ```
 
-`createVault` is a thin factory over `new Vault(sdk, addresses)`; both take the same arguments.
+`createVault` is a thin factory over `new Vault(sdk, addresses, options)`; both take the same arguments.
+
+Pass `{ chainId }` to read both batchers on that chain, for example on a vault page shown before the wallet connects. It is passed to both batchers (see [`VaultBatcher` → Construction](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#construction)), and `deposit` and `redeem` throw `ChainMismatchError` while the wallet is on another chain, before any approval or join is sent.
 
 ### VaultAddresses
 
@@ -12813,6 +12816,12 @@ The batcher joined by share redemptions. Same API as `depositBatcher`, for the r
 const state = await vault.depositBatcher.batchState(batchId);
 await vault.redeemBatcher.claim(batchId);
 ```
+
+### chainId
+
+`number | undefined`
+
+The chain both batchers are on, or `undefined` for the provider's current chain.
 
 ## Reads
 
@@ -13083,7 +13092,7 @@ if (secondsLeft === 0n) await batcher.dispatchBatch();
 
 `(batchId: bigint) => Promise<bigint | null>`
 
-Seconds until the dispatched batch `batchId` reaches its callback deadline, `0` once it has. From then on `finalize` cancels the batch instead of settling it. Returns `null` outside `Dispatched`.
+Seconds until the dispatched batch `batchId` reaches its callback deadline, `0` once it has. From then on `finalize` cancels the batch instead of settling it. A redeem batcher whose vault settles redemptions asynchronously is the exception: once it has placed the redemption request, `finalize` keeps settling the batch past the deadline. Returns `null` outside `Dispatched`.
 
 Measured against the chain's block timestamp (`batchDispatchedAt + batchCallbackDeadline`), not the local clock.
 
@@ -13225,9 +13234,9 @@ await batcher.dispatchBatch();
 
 `(batchId: bigint) => Promise<TransactionResult>`
 
-Settles a dispatched batch yourself: reads the batch's `unwrapRequestId`, publicly decrypts the amount that unwrap released, and submits `dispatchBatchCallback` with the cleartext and its proof, which executes the route. Permissionless, like `dispatchBatch`. A keeper normally does this, so reach for it when a batch has sat in `BatchState.Dispatched` longer than expected. Past the batch's callback deadline (`batchDispatchedAt + batchCallbackDeadline`) the same call cancels the batch instead of settling it.
+Settles a dispatched batch yourself: reads the batch's `unwrapRequestId`, publicly decrypts the amount that unwrap released, and submits `dispatchBatchCallback` with the cleartext and its proof, which executes the route. Permissionless, like `dispatchBatch`. A keeper normally does this, so reach for it when a batch has sat in `BatchState.Dispatched` longer than expected. Past the batch's callback deadline (`batchDispatchedAt + batchCallbackDeadline`) the same call cancels the batch instead of settling it. A redeem batcher whose vault settles redemptions asynchronously is the exception: once it has placed the redemption request, `finalize` keeps settling the batch past the deadline.
 
-Only legal while the batch is `BatchState.Dispatched`. Read [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline) to see whether the call will settle or cancel.
+Only legal while the batch is `BatchState.Dispatched`. Read [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline) to see whether the deadline has passed.
 
 ```ts
 await batcher.finalize(batchId);
@@ -24777,7 +24786,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useVault
 
-Returns a memoized [`Vault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) bound to the SDK in the current `ZamaProvider`. The instance is recreated only when the SDK or one of the addresses changes, so its cached reads (`vaultAddress()`, `cAsset()`, `cShare()`) survive re-renders.
+Returns a memoized [`Vault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) bound to the SDK in the current `ZamaProvider`. The instance is recreated only when the SDK, one of the addresses or `chainId` changes, so its cached reads (`vaultAddress()`, `cAsset()`, `cShare()`) survive re-renders.
 
 Most apps should use this — together with [`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md) / [`useRedeem`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRedeem.md) — and reach for [`useVaultBatcher`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultBatcher.md) only for direct single-direction access.
 
@@ -24792,7 +24801,7 @@ The `vaults` subpath is separate from the root entry, so apps that don't use vau
 ## Signature
 
 ```ts
-function useVault(addresses: VaultAddresses): Vault;
+function useVault(addresses: VaultAddresses, options?: VaultBatcherOptions): Vault;
 ```
 
 ### addresses
@@ -24800,6 +24809,12 @@ function useVault(addresses: VaultAddresses): Vault;
 `VaultAddresses`
 
 The vault's `depositBatcher` and `redeemBatcher` addresses, and optionally the `vault` contract itself. Passing `vault` doesn't skip the on-chain read: the SDK verifies it against what both batchers report and throws a `ConfigurationError` on a mismatch. See [`Vault` → VaultAddresses](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md#vaultaddresses).
+
+### options.chainId
+
+`number | undefined`
+
+Chain to read both batchers from, when it is not the connected one. A deposit or redemption then throws `ChainMismatchError` while the wallet is on another chain. See [`Vault` → Construction](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md#construction).
 
 ## Example
 
@@ -24954,6 +24969,14 @@ The vault's `depositBatcher` and `redeemBatcher` addresses, and optionally the `
 ```ts
 const { mutateAsync: deposit } = useDeposit({ addresses });
 ```
+
+---
+
+### chainId
+
+`number | undefined`
+
+Chain the vault is on. Pass the same `chainId` as the read hooks: while the wallet is on another chain, the mutation fails with [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) before any approval or join is sent.
 
 ---
 
@@ -25161,6 +25184,14 @@ import { type UseRedeemConfig } from "@zama-fhe/react-sdk/vaults";
 `VaultAddresses`
 
 The vault's `depositBatcher` and `redeemBatcher` addresses, and optionally the `vault` contract for cross-checking. Same shape as [`useVault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVault.md) takes.
+
+---
+
+### chainId
+
+`number | undefined`
+
+Chain the vault is on. Pass the same `chainId` as the read hooks: while the wallet is on another chain, the mutation fails with [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) before any approval or join is sent.
 
 ---
 
@@ -26162,7 +26193,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 Mutation hook that settles a dispatched batch yourself. Same call as [`VaultBatcher.finalize`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#finalize): it publicly decrypts the batch's aggregate amount and hands the cleartext and its proof to the batcher, which executes the route.
 
-A keeper, an off-chain service that watches batches, normally finalizes a batch after dispatch, so this is for a batch that has sat in `BatchState.Dispatched` longer than expected. Finalizing is permissionless. Past the batch's callback deadline (see [`useTimeUntilCallbackDeadline`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md)) the same call cancels the batch instead of settling it, and its participants take their deposits back with [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md).
+A keeper, an off-chain service that watches batches, normally finalizes a batch after dispatch, so this is for a batch that has sat in `BatchState.Dispatched` longer than expected. Finalizing is permissionless. Past the batch's callback deadline (see [`useTimeUntilCallbackDeadline`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md)) the same call cancels the batch instead of settling it, and its participants take their deposits back with [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md). A redeem batcher whose vault settles redemptions asynchronously is the exception: once it has placed the redemption request, `finalize` keeps settling the batch past the deadline.
 
 The call reads the batch state first and rejects with [`VaultBatchNotDispatchedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultbatchnotdispatchederror) when the batch is not `Dispatched`, for example because a keeper already finalized it.
 
@@ -27372,7 +27403,7 @@ The current status of the query. Prefer the boolean flags above for conditional 
 Reads how many seconds remain until a dispatched batch reaches its callback deadline. Same read as [`VaultBatcher.timeUntilCallbackDeadline`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#timeuntilcallbackdeadline).
 
 - A positive value is the countdown. Pass `refetchInterval` to keep it live.
-- `0` means the deadline has passed. From then on [`useFinalize`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useFinalize.md) cancels the batch instead of settling it.
+- `0` means the deadline has passed. From then on [`useFinalize`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useFinalize.md) cancels the batch instead of settling it, except on a redeem batcher whose vault settles redemptions asynchronously and that has already placed the redemption request.
 - `null` means the batch is not `Dispatched`, so there is no deadline to wait for.
 
 The value is measured against the chain's block timestamp, not the local clock.

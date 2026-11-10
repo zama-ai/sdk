@@ -62,6 +62,14 @@ const { mutateAsync: deposit } = useDeposit({ addresses });
 
 ---
 
+### chainId
+
+`number | undefined`
+
+Chain the vault is on. Pass the same `chainId` as the read hooks: while the wallet is on another chain, the mutation fails with [`ChainMismatchError`](../sdk/errors.md#chainmismatcherror) before any approval or join is sent.
+
+---
+
 {% include ".gitbook/includes/mutation-options.md" %}
 
 ## Mutation variables

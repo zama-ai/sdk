@@ -5,7 +5,7 @@ description: React hook returning a memoized Vault instance for a deposit/redeem
 
 # useVault
 
-Returns a memoized [`Vault`](../sdk/Vault.md) bound to the SDK in the current `ZamaProvider`. The instance is recreated only when the SDK or one of the addresses changes, so its cached reads (`vaultAddress()`, `cAsset()`, `cShare()`) survive re-renders.
+Returns a memoized [`Vault`](../sdk/Vault.md) bound to the SDK in the current `ZamaProvider`. The instance is recreated only when the SDK, one of the addresses or `chainId` changes, so its cached reads (`vaultAddress()`, `cAsset()`, `cShare()`) survive re-renders.
 
 Most apps should use this — together with [`useDeposit`](./useDeposit.md) / [`useRedeem`](./useRedeem.md) — and reach for [`useVaultBatcher`](./useVaultBatcher.md) only for direct single-direction access.
 
@@ -20,7 +20,7 @@ The `vaults` subpath is separate from the root entry, so apps that don't use vau
 ## Signature
 
 ```ts
-function useVault(addresses: VaultAddresses): Vault;
+function useVault(addresses: VaultAddresses, options?: VaultBatcherOptions): Vault;
 ```
 
 ### addresses
@@ -28,6 +28,12 @@ function useVault(addresses: VaultAddresses): Vault;
 `VaultAddresses`
 
 The vault's `depositBatcher` and `redeemBatcher` addresses, and optionally the `vault` contract itself. Passing `vault` doesn't skip the on-chain read: the SDK verifies it against what both batchers report and throws a `ConfigurationError` on a mismatch. See [`Vault` → VaultAddresses](../sdk/Vault.md#vaultaddresses).
+
+### options.chainId
+
+`number | undefined`
+
+Chain to read both batchers from, when it is not the connected one. A deposit or redemption then throws `ChainMismatchError` while the wallet is on another chain. See [`Vault` → Construction](../sdk/Vault.md#construction).
 
 ## Example
 

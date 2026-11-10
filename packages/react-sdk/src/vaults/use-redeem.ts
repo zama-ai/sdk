@@ -20,6 +20,8 @@ import { useVault } from "./use-vault";
 export interface UseRedeemConfig {
   /** The vault, deposit batcher, and redeem batcher contract addresses. */
   addresses: VaultAddresses;
+  /** Chain the vault is on. A wallet on another chain then gets `ChainMismatchError` instead of sending there. */
+  chainId?: number;
 }
 
 /**
@@ -28,7 +30,7 @@ export interface UseRedeemConfig {
  * operator approval, granted first if none is active. Invalidates the share token's balance and
  * operator-status caches on success.
  *
- * @param config - The vault's addresses.
+ * @param config - The vault's addresses, and optionally its `chainId`.
  * @param options - React Query mutation options.
  *
  * @example
@@ -41,7 +43,7 @@ export function useRedeem<TContext = unknown>(
   config: UseRedeemConfig,
   options?: UseMutationOptions<JoinResult, Error, RedeemParams, TContext>,
 ): UseMutationResult<JoinResult, Error, RedeemParams, TContext> {
-  const vault = useVault(config.addresses);
+  const vault = useVault(config.addresses, { chainId: config.chainId });
 
   return useMutation({
     ...redeemMutationOptions(vault),

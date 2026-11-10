@@ -104,6 +104,7 @@ export function useDeposit<TContext = unknown>(config: UseDepositConfig, options
 // @public
 export interface UseDepositConfig {
     addresses: VaultAddresses;
+    chainId?: number;
 }
 
 // @public
@@ -187,6 +188,7 @@ export function useRedeem<TContext = unknown>(config: UseRedeemConfig, options?:
 // @public
 export interface UseRedeemConfig {
     addresses: VaultAddresses;
+    chainId?: number;
 }
 
 // @public
@@ -220,7 +222,7 @@ export interface UseTimeUntilDispatchableOptions extends Omit<UseQueryOptions<bi
 }
 
 // @public
-export function useVault(addresses: VaultAddresses): Vault;
+export function useVault(addresses: VaultAddresses, options?: VaultBatcherOptions): Vault;
 
 // @public
 export function useVaultBatcher(address: Address, options?: VaultBatcherOptions): VaultBatcher;

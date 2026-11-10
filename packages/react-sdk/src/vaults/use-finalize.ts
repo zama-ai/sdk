@@ -25,7 +25,8 @@ export interface UseFinalizeConfig {
  * Settle a dispatched batch yourself when its keeper has not: publicly
  * decrypts the batch's aggregate amount and hands it to the batcher, which
  * executes the route. Permissionless. Past the batch's callback deadline the
- * same call cancels the batch instead. Invalidates the batcher's cached batch
+ * same call cancels the batch instead, except on an asynchronous redeem
+ * batcher that has already placed the redemption request. Invalidates the batcher's cached batch
  * state on success.
  *
  * @param config - The batcher address.

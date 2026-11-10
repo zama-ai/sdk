@@ -1,7 +1,6 @@
 import { getAddress, type Address, type Hex } from "viem";
 import { confidentialTransferAndCallContract, unwrapAmountContract } from "../contracts";
 import {
-  ChainMismatchError,
   ConfigurationError,
   DecryptionFailedError,
   EncryptionFailedError,
@@ -22,7 +21,7 @@ import type {
   TransactionResult,
   WriteContractConfig,
 } from "../types";
-import { requireAlignedWalletAccount } from "../utils/alignment";
+import { requireWriteChain } from "../utils/alignment";
 import { assertConfidentialBalance } from "../utils/assert-balance";
 import { assertBigint } from "../utils/assertions";
 import { isEncryptedValueZero } from "../utils/handles";
@@ -261,7 +260,8 @@ export class VaultBatcher {
   /**
    * Seconds until a dispatched batch reaches its callback deadline, `0` once
    * it has. From then on {@link finalize} cancels the batch instead of
-   * settling it. `null` outside {@link BatchState.Dispatched}, where there is
+   * settling it, except on an asynchronous redeem batcher that has already
+   * placed the redemption request. `null` outside {@link BatchState.Dispatched}, where there is
    * nothing to finalize.
    *
    * Measured against the chain's block timestamp and the batch's own pinned
@@ -512,8 +512,9 @@ export class VaultBatcher {
    * {@link dispatchBatch}. A keeper normally does this, so reach for it
    * when a batch has sat in {@link BatchState.Dispatched} longer than
    * expected. Past the batch's callback deadline the same call cancels the
-   * batch instead of settling it; {@link timeUntilCallbackDeadline} says
-   * which one a call now does.
+   * batch instead of settling it, except on an asynchronous redeem batcher
+   * that has already placed the redemption request, which keeps settling.
+   * {@link timeUntilCallbackDeadline} says whether the deadline has passed.
    *
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
    * @throws if the batch is not {@link BatchState.Dispatched}, for example because a keeper already finalized it. {@link VaultBatchNotDispatchedError}
@@ -614,22 +615,13 @@ export class VaultBatcher {
   }
 
   async #requireWriteAccount(operation: string): Promise<{ address: Address; chainId: number }> {
-    const account = await requireAlignedWalletAccount(
+    // Reads go to `chainId`; a write must not land on another chain.
+    return requireWriteChain(
       operation,
       this.#requireSigner(operation),
       this.sdk.provider,
+      this.chainId,
     );
-    // Reads go to `chainId`; a write must not land on another chain.
-    if (this.chainId !== undefined && account.chainId !== this.chainId) {
-      throw new ChainMismatchError({
-        operation,
-        signerChainId: account.chainId,
-        // The alignment check above guarantees the signer's chain is the provider's chain.
-        providerChainId: account.chainId,
-        targetChainId: this.chainId,
-      });
-    }
-    return account;
   }
 
   // Decryption goes to the relayer of the provider's current chain, which must

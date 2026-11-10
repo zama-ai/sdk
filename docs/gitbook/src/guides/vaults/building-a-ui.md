@@ -39,7 +39,7 @@ While the transaction is pending, lock the form so the user cannot send twice. S
 
 After it is mined, say the amount is **queued**, not deposited. The user does not hold shares yet.
 
-A vault page can render before the wallet connects, when the provider may still be on another chain than the vault. Pass the vault's `chainId` to the read hooks (`useBatchStatus`, `useCurrentBatchId`, `usePaused`, `useBatcherTokens`, …) so they read the vault's chain; this needs a provider that can route reads, such as `WagmiProvider`. Pass the same `chainId` to the write hooks (`useClaim`, `useQuit`, `useFinalize`, …): a wallet on another chain then gets `ChainMismatchError` instead of sending the transaction there.
+A vault page can render before the wallet connects, when the provider may still be on another chain than the vault. Pass the vault's `chainId` to the read hooks (`useBatchStatus`, `useCurrentBatchId`, `usePaused`, `useBatcherTokens`, …) so they read the vault's chain; this needs a provider that can route reads, such as `WagmiProvider`. Pass the same `chainId` to `useDeposit`, `useRedeem` and the batcher write hooks (`useClaim`, `useQuit`, `useFinalize`, …): a wallet on another chain then gets `ChainMismatchError` instead of sending the transaction there.
 
 ## 3. The batch
 
@@ -111,6 +111,8 @@ A keeper, an off-chain service that watches batches, normally settles the batch 
 
 `status.secondsUntilCallbackDeadline` says how long settling remains possible. Once it reaches `0`, `useFinalize` **cancels** the batch instead of settling it, and the user then takes the amount back from `Canceled`. Label the button accordingly, for example "Cancel and get it back" rather than "Settle".
 
+A redeem batcher whose vault settles redemptions asynchronously is the exception. Once it has placed the redemption request with the vault, `useFinalize` keeps settling past the deadline, or leaves the batch `Dispatched` until the vault pays out. For such a batcher, keep the "Settle" label after the deadline.
+
 ### Finalized
 
 Claiming is a separate transaction. Show it clearly: until the user claims, the shares are not in their balance. Claiming is permissionless and pays the depositor, never the caller, so your backend may also claim on the user's behalf.
@@ -135,13 +137,12 @@ Show the user one entry for the vault they chose, but **claim or quit every join
 - [ ] After sending, the UI says "queued", not "deposited".
 - [ ] Every `BatchState` has a view, enforced by an exhaustive `switch`.
 - [ ] Pending batches offer a cancel.
-- [ ] Dispatched batches offer `finalize` after a delay you choose, and say when it cancels instead.
+- [ ] Dispatched batches offer `finalize` after a delay you choose, and say when it cancels instead (not on an asynchronous redeem batcher).
 - [ ] Finalized batches offer a claim.
 - [ ] Canceled batches offer to take the amount back.
 - [ ] Claimed and quit batches leave the list.
 
 ## Next steps
 
-- The Vaults tab of the [`react-wagmi` example](https://github.com/zama-ai/sdk/tree/main/examples/react-wagmi) implements this guide end to end.
 - [Vault deposits and redemptions](deposits.md) for the SDK calls behind each step.
 - [Vault groups](groups.md) when one form deposits into one of several vaults.

@@ -198,6 +198,27 @@ describe("Vault", () => {
       expect(error).toMatchObject({ operation: "deposit" });
     });
 
+    test("refuses a deposit on another chain than the vault's, before any operator grant", async ({
+      sdk,
+      provider,
+      signer,
+    }) => {
+      mockJoinBalance(provider, { fromToken: DEPOSIT_TOKEN, vault: VAULT_ADDRESS });
+      const setOperator = vi.spyOn(WrappedToken.prototype, "setOperator");
+
+      const vault = createVault(sdk, addresses(), { chainId: 11155111 });
+      expect(vault.depositBatcher.chainId).toBe(11155111);
+      expect(vault.redeemBatcher.chainId).toBe(11155111);
+
+      await expect(vault.deposit(1_000n, { beneficiary: OTHER_ADDRESS })).rejects.toMatchObject({
+        name: "ChainMismatchError",
+        operation: "deposit",
+        targetChainId: 11155111,
+      });
+      expect(setOperator).not.toHaveBeenCalled();
+      expect(signer.writeContract).not.toHaveBeenCalled();
+    });
+
     test("grants the batcher an operator approval, then joins, for another beneficiary", async ({
       sdk,
       provider,

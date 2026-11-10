@@ -153,7 +153,7 @@ if (secondsLeft === 0n) await batcher.dispatchBatch();
 
 `(batchId: bigint) => Promise<bigint | null>`
 
-Seconds until the dispatched batch `batchId` reaches its callback deadline, `0` once it has. From then on `finalize` cancels the batch instead of settling it. Returns `null` outside `Dispatched`.
+Seconds until the dispatched batch `batchId` reaches its callback deadline, `0` once it has. From then on `finalize` cancels the batch instead of settling it. A redeem batcher whose vault settles redemptions asynchronously is the exception: once it has placed the redemption request, `finalize` keeps settling the batch past the deadline. Returns `null` outside `Dispatched`.
 
 Measured against the chain's block timestamp (`batchDispatchedAt + batchCallbackDeadline`), not the local clock.
 
@@ -295,9 +295,9 @@ await batcher.dispatchBatch();
 
 `(batchId: bigint) => Promise<TransactionResult>`
 
-Settles a dispatched batch yourself: reads the batch's `unwrapRequestId`, publicly decrypts the amount that unwrap released, and submits `dispatchBatchCallback` with the cleartext and its proof, which executes the route. Permissionless, like `dispatchBatch`. A keeper normally does this, so reach for it when a batch has sat in `BatchState.Dispatched` longer than expected. Past the batch's callback deadline (`batchDispatchedAt + batchCallbackDeadline`) the same call cancels the batch instead of settling it.
+Settles a dispatched batch yourself: reads the batch's `unwrapRequestId`, publicly decrypts the amount that unwrap released, and submits `dispatchBatchCallback` with the cleartext and its proof, which executes the route. Permissionless, like `dispatchBatch`. A keeper normally does this, so reach for it when a batch has sat in `BatchState.Dispatched` longer than expected. Past the batch's callback deadline (`batchDispatchedAt + batchCallbackDeadline`) the same call cancels the batch instead of settling it. A redeem batcher whose vault settles redemptions asynchronously is the exception: once it has placed the redemption request, `finalize` keeps settling the batch past the deadline.
 
-Only legal while the batch is `BatchState.Dispatched`. Read [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline) to see whether the call will settle or cancel.
+Only legal while the batch is `BatchState.Dispatched`. Read [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline) to see whether the deadline has passed.
 
 ```ts
 await batcher.finalize(batchId);

@@ -27,7 +27,9 @@ export interface UseTimeUntilCallbackDeadlineOptions extends Omit<
 
 /**
  * Seconds until a dispatched batch reaches its callback deadline, `0` once it
- * has: from then on `useFinalize` cancels the batch instead of settling it.
+ * has: from then on `useFinalize` cancels the batch instead of settling it,
+ * except on an asynchronous redeem batcher that has already placed the
+ * redemption request.
  * Measured against the chain's block timestamp, not the caller's wall clock.
  *
  * `null` outside `Dispatched`, where there is nothing to finalize.

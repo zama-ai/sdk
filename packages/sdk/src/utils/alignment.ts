@@ -39,6 +39,31 @@ export async function requireAlignedWalletAccount(
 }
 
 /**
+ * {@link requireAlignedWalletAccount}, plus a check that the wallet is on
+ * `targetChainId` when one is given, so a write never lands on another chain.
+ *
+ * @internal
+ */
+export async function requireWriteChain(
+  operation: string,
+  signer: GenericSigner | undefined,
+  provider: GenericProvider,
+  targetChainId: number | undefined,
+): Promise<WalletAccount> {
+  const account = await requireAlignedWalletAccount(operation, signer, provider);
+  if (targetChainId !== undefined && account.chainId !== targetChainId) {
+    throw new ChainMismatchError({
+      operation,
+      signerChainId: account.chainId,
+      // The alignment check above guarantees the signer's chain is the provider's chain.
+      providerChainId: account.chainId,
+      targetChainId,
+    });
+  }
+  return account;
+}
+
+/**
  * Variant of {@link requireAlignedWalletAccount} that returns only the aligned
  * chain ID. Useful when a write path only needs to ensure signer/provider
  * coherence and doesn't otherwise consume the account.

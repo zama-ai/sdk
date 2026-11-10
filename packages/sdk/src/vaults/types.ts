@@ -42,7 +42,12 @@ export type BatchStatus =
       createdAt: bigint;
       dispatchableAt: bigint;
       dispatchedAt: bigint;
-      /** From then on `finalize` cancels the batch instead of settling it. */
+      /**
+       * From then on `finalize` cancels the batch instead of settling it. A
+       * redeem batcher whose vault settles redemptions asynchronously is the
+       * exception: once it has placed the redemption request, it keeps
+       * settling past this deadline.
+       */
       callbackDeadlineAt: bigint;
       /** Seconds until `callbackDeadlineAt`; `0` once reached. */
       secondsUntilCallbackDeadline: bigint;
