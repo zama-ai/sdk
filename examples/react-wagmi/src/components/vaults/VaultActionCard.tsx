@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import {
   useConfidentialBalance,
   useHasPermit,
@@ -10,20 +10,26 @@ import {
   useWrappedToken,
   useZamaSDK,
 } from "@zama-fhe/react-sdk";
-import { useDeposit, usePaused, useRedeem } from "@zama-fhe/react-sdk/vaults";
+import { useDeposit, useOpenBatches, useRedeem } from "@zama-fhe/react-sdk/vaults";
 import type { Address } from "@zama-fhe/sdk";
 import { formatUnits, parseAbi, parseUnits } from "viem";
-import { BatchList } from "@/components/vaults/BatchList";
+import { PositionList } from "@/components/vaults/PositionList";
 import { describeError } from "@/lib/errors";
 import { MINT_ABI, useNetwork } from "@/lib/hooks";
-import type { BatchVault } from "@/lib/networks";
-import { addOpenBatch } from "@/lib/openBatches";
 import { minAmount, parseAmount } from "@/lib/parseAmount";
+import { useJoinRecords, type Vaults } from "@/lib/vaults";
 
 const COPY = {
-  deposit: { title: "Deposit", unit: "assets", receive: "shares", paused: "Deposits are paused" },
+  deposit: {
+    title: "Deposit",
+    direction: "deposit",
+    unit: "assets",
+    receive: "shares",
+    paused: "Deposits are paused",
+  },
   withdraw: {
     title: "Withdraw",
+    direction: "redeem",
     unit: "shares",
     receive: "assets",
     paused: "Withdrawals are paused",
@@ -32,7 +38,7 @@ const COPY = {
 
 interface VaultActionCardProps {
   kind: keyof typeof COPY;
-  vault: BatchVault;
+  vaults: Vaults;
   account: Address;
   permitContracts: Address[];
   /** The confidential token the action spends: the asset to deposit, the share to withdraw. */
@@ -42,23 +48,23 @@ interface VaultActionCardProps {
 /** One direction of the vault: its balance, its form, and the batches it has in progress. */
 export function VaultActionCard({
   kind,
-  vault,
+  vaults,
   account,
   permitContracts,
   token,
 }: VaultActionCardProps) {
-  const queryClient = useQueryClient();
   const { canMint } = useNetwork();
   const copy = COPY[kind];
-  const batcher = kind === "deposit" ? vault.depositBatcher : vault.redeemBatcher;
+  const { records, add, remove } = useJoinRecords(vaults.chainId, account, copy.direction);
   const [amount, setAmount] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
   const { data: metadata } = useMetadata(token);
-  const { data: paused, error: pausedError } = usePaused({
-    address: batcher,
-    chainId: vault.chainId,
+  const { data: openBatches, error: pausedError } = useOpenBatches(vaults, {
+    groupId: "main",
+    direction: copy.direction,
   });
+  const paused = openBatches?.some((batch) => batch.paused);
   // Decrypts only under an existing permit: this card never prompts the wallet on its own.
   const { data: hasPermit } = useHasPermit({ contractAddresses: permitContracts });
   const balance = useConfidentialBalance(
@@ -66,15 +72,15 @@ export function VaultActionCard({
     { enabled: hasPermit === true },
   );
 
-  // Store the returned batch id: the batch list shows it right away.
+  // Store the returned join record: the position list reads it, now and after a reload.
   const callbacks = {
-    onSuccess: ({ batchId }: { batchId: bigint }) => {
-      addOpenBatch(queryClient, batcher, account, batchId);
+    onSuccess: ({ record }: { record: (typeof records)[number] }) => {
+      add(record);
       setAmount("");
     },
   };
-  const deposit = useDeposit({ addresses: vault }, callbacks);
-  const redeem = useRedeem({ addresses: vault }, callbacks);
+  const deposit = useDeposit(vaults, callbacks);
+  const redeem = useRedeem(vaults, callbacks);
   const send = kind === "deposit" ? deposit : redeem;
 
   const parsed = metadata ? parseAmount(amount, metadata.decimals) : 0n;
@@ -121,7 +127,11 @@ export function VaultActionCard({
           event.preventDefault();
           if (reason === null) {
             setSubmitted(false);
-            send.mutate({ amount: parsed, onJoinSubmitted: () => setSubmitted(true) });
+            send.mutate({
+              groupId: "main",
+              amount: parsed,
+              options: { onJoinSubmitted: () => setSubmitted(true) },
+            });
           }
         }}
       >
@@ -158,8 +168,8 @@ export function VaultActionCard({
 
       {send.data && (
         <output className="alert alert-success card-status">
-          Queued in batch #{send.data.batchId.toString()}. You receive your {copy.receive} once the
-          batch is processed and you claim them below.
+          Queued in batch #{send.data.record.legs[0]?.batchId.toString()}. You receive your{" "}
+          {copy.receive} once the batch is processed and you withdraw them below.
         </output>
       )}
       {errors.map((error, index) => (
@@ -168,11 +178,12 @@ export function VaultActionCard({
         </div>
       ))}
 
-      <BatchList
-        batcher={batcher}
-        account={account}
-        fromBlock={vault.fromBlock}
-        chainId={vault.chainId}
+      <PositionList
+        vaults={vaults}
+        records={records}
+        token={token}
+        permitContracts={permitContracts}
+        onExited={remove}
       />
     </section>
   );

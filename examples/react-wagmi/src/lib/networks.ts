@@ -27,7 +27,7 @@ export interface Network {
   explorerUrl: string;
   /** The test tokens expose `mint(address,uint256)`; real tokens do not. */
   canMint: boolean;
-  /** Confidential ERC-4626 vault for the Vaults tab: its two batchers and their deploy block. */
+  /** Confidential ERC-4626 vault for the Vaults tab: its two batchers. */
   batchVault?: BatchVault;
 }
 
@@ -36,8 +36,6 @@ export interface BatchVault {
   chainId: number;
   depositBatcher: Address;
   redeemBatcher: Address;
-  /** The batch list reads the batchers' events from this block. */
-  fromBlock: bigint;
 }
 
 interface NetworkInput extends Omit<Network, "chain" | "fhe"> {
@@ -157,15 +155,10 @@ function batchVaultFromEnv(chainId: number): BatchVault | undefined {
   if (!depositBatcher || !redeemBatcher) {
     return undefined;
   }
-  const fromBlock = process.env.NEXT_PUBLIC_VAULT_FROM_BLOCK || "0";
-  if (!/^\d+$/.test(fromBlock)) {
-    throw new Error(`NEXT_PUBLIC_VAULT_FROM_BLOCK is not a block number: ${fromBlock}`);
-  }
   return {
     chainId,
     depositBatcher: envAddress("NEXT_PUBLIC_VAULT_DEPOSIT_BATCHER", depositBatcher),
     redeemBatcher: envAddress("NEXT_PUBLIC_VAULT_REDEEM_BATCHER", redeemBatcher),
-    fromBlock: BigInt(fromBlock),
   };
 }
 

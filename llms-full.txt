@@ -28500,7 +28500,7 @@ The connected app has three tabs:
 
 - **Tokens**: balances, shield, confidential transfer, unshield and pending unshield recovery for the selected token. The core of the SDK.
 - **Delegation**: grant, revoke and use decryption delegation for the selected token.
-- **Vaults**: deposit into and withdraw from a confidential ERC-4626 vault with `@zama-fhe/react-sdk/vaults`. The Deposit and Withdraw boxes each hold their form and the batches still in progress, with one view per batch state: cancel, settle a late batch, claim, take a canceled amount back. It implements the [Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide. Set the vault's batchers in `.env.local` to use it.
+- **Vaults**: deposit into and withdraw from a confidential ERC-4626 vault with `@zama-fhe/react-sdk/vaults`. The Deposit and Withdraw boxes each hold their form and the positions still in progress, with one view per position phase: cancel, settle a late batch, claim, take a canceled amount back. The join records live in localStorage. It implements the [Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide. Set the vault's batchers in `.env.local` to use it.
 
 This app replaces the former `example-bnb`, `example-hoodi`, `example-polygon-amoy` and `example-zenith` apps, which were copies of it pinned to one chain each.
 
@@ -28532,7 +28532,7 @@ Token pairs on every network come from the on-chain `WrappersRegistry` at runtim
 - **Dynamic** (optional) — `@dynamic-labs-sdk/client` and `@dynamic-labs-sdk/evm`, Dynamic's headless SDK in connect-only mode: it supplies the wallet catalogue and the connect step (browser wallets + WalletConnect, which is how a Safe pairs from the Safe web app). A wagmi connector of the app's own wraps the authorized wallet, so wagmi alone owns the session
 - **TanStack Query v5** for async state
 - **@zama-fhe/react-sdk** — `ZamaProvider`, `useConfidentialBalance`, `useShield`, `useUnshield`, `useDelegateDecryption`, etc.
-- **@zama-fhe/react-sdk/vaults** — `useDeposit`, `useRedeem`, `usePaused`, `useBatcherTokens`, `useBatchStatus`, `useQuit`, `useClaim`, `useFinalize`; `openBatchIds` from `@zama-fhe/sdk/vaults` rebuilds the open batch list from the batchers' events
+- **@zama-fhe/react-sdk/vaults** — `useDeposit`, `useRedeem`, `useOpenBatches`, `usePosition`, `useExit`, `useFinalize`; `defineVaults` from `@zama-fhe/sdk/vaults` describes the vault
 - **@zama-fhe/react-sdk/wagmi** — `createConfig` adapter for wagmi signer/provider wiring
 - **@zama-fhe/sdk/web** — browser FHE worker transport via `web()`, routed through the local Next.js proxy (`/api/relayer/<network>`)
 - **@zama-fhe/sdk** `cleartext()` — transport for the cleartext deployments, no relayer involved
@@ -28599,7 +28599,6 @@ All server-side variables are read by the proxy only and never reach the browser
 | `NEXT_PUBLIC_<NETWORK>_RPC_URL`      | No                                   | RPC override per network: `SEPOLIA`, `BNB_TESTNET`, `HOODI`, `ZENITH`, `MAINNET`, `POLYGON`.                                                                                     |
 | `NEXT_PUBLIC_VAULT_DEPOSIT_BATCHER`  | For the Vaults tab                   | Deposit batcher of the confidential vault on Sepolia. The Vaults tab shows a setup hint until both batchers are set.                                                             |
 | `NEXT_PUBLIC_VAULT_REDEEM_BATCHER`   | For the Vaults tab                   | Redeem batcher of the same vault.                                                                                                                                                |
-| `NEXT_PUBLIC_VAULT_FROM_BLOCK`       | No                                   | Block the batchers were deployed at. The batch lists read the batchers' events from here; public RPCs often cap the range.                                                       |
 
 Earlier versions of this app, and the per-chain apps it replaces, read `RELAYER_URL`, `RELAYER_API_KEY`, `NEXT_PUBLIC_AMOY_RPC_URL` and `NEXT_PUBLIC_BSC_TESTNET_RPC_URL`. Those names are no longer read: a stale `.env.local` silently falls back to the public testnet relayer, so rename them to the per-network names above.
 
@@ -28688,8 +28687,8 @@ page.tsx                         — wallet connect, network picker, tabs, token
 ├── DecryptAsCard.tsx            — decrypt another wallet's balance (as a delegate)
 └── vaults/                      — the Vaults tab
     ├── VaultsTab.tsx            — the vault's tokens, the decrypt click, and the position
-    ├── VaultActionCard.tsx      — the Deposit or Withdraw box: balance, form, batch list
-    └── BatchList.tsx            — one row per open batch, an exhaustive switch on its state
+    ├── VaultActionCard.tsx      — the Deposit or Withdraw box: balance, form, positions
+    └── PositionList.tsx         — one row per join record, an exhaustive switch on its phase
 ```
 
 ---
@@ -29076,23 +29075,24 @@ a batch, the batch is sent to the vault, and the user claims the result once it 
 Vaults tab shows each of those steps, following the
 [Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide.
 
-- **Tokens.** `useBatcherTokens` reads the vault's asset and share from the deposit batcher,
-  so the only configuration is the two batcher addresses (the `batchVault` field of the
-  Sepolia row in `src/lib/networks.ts`).
-- **Pinned chain.** The read hooks and `useClaim`, `useQuit` and `useFinalize` take the vault's
-  `chainId`, so reads go to the vault's chain and a wallet on another chain gets
-  `ChainMismatchError` instead of sending the transaction there.
+- **Config.** `src/lib/vaults.ts` builds the `defineVaults` config: one group with one vault.
+  `VaultsTab.tsx` reads the vault's asset and share from the deposit batcher, so the only
+  configuration is the two batcher addresses (the `batchVault` field of the Sepolia row in
+  `src/lib/networks.ts`).
+- **Pinned chain.** Reads go to the config's `chainId`, and the write hooks throw
+  `ChainMismatchError` when the wallet is on another chain instead of sending the transaction
+  there.
 - **Decrypt on click.** One `useGrantPermit` call covers both tokens and both batchers, so the
   position card's "Decrypt balances" button is the only signature the tab asks for.
-- **Send.** `useDeposit` and `useRedeem` return the batch id. The button explains why it is
-  disabled (`usePaused`, no amount, above balance), and `onJoinSubmitted` tells "confirm in
-  your wallet" from "waiting for the transaction".
-- **Open batches.** `lib/openBatches.ts` reads the batcher's `Joined`, `Claimed` and `Quit`
-  events for the account and passes them to `openBatchIds`. A claim or quit leaves the batch
-  state unchanged, so the list is the only place that knows the user is done.
-- **One row per batch.** `useBatchStatus` returns a union keyed on `state`, and `BatchList.tsx`
-  switches on it exhaustively: cancel while pending, settle a late dispatched batch with
-  `useFinalize`, claim once finalized, take a canceled amount back with `useQuit`.
+- **Send.** `useDeposit` and `useRedeem` return a join record. The button explains why it is
+  disabled (a paused batcher from `useOpenBatches`, no amount, above balance), and
+  `onJoinSubmitted` tells "confirm in your wallet" from "waiting for the transaction".
+- **Join records.** The app needs each record to read and exit the position later, so
+  `src/lib/vaults.ts` keeps them in localStorage, with the bigint batch ids stored as strings.
+  An exit removes the record.
+- **One row per position.** `usePosition` reads a record and returns its `phase`, and
+  `PositionList.tsx` switches on it exhaustively: cancel while queued, settle a late batch with
+  `useFinalize`, claim or take a canceled amount back with `useExit`.
 
 ---
 

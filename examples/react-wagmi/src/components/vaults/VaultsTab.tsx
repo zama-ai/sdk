@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   useConfidentialBalance,
@@ -8,13 +9,22 @@ import {
   useMetadata,
   useZamaSDK,
 } from "@zama-fhe/react-sdk";
-import { useBatcherTokens, useVaultBatcher } from "@zama-fhe/react-sdk/vaults";
 import type { Address } from "@zama-fhe/sdk";
 import { formatUnits, parseAbi } from "viem";
+import { useReadContracts } from "wagmi";
 import { VaultActionCard } from "@/components/vaults/VaultActionCard";
 import { describeError } from "@/lib/errors";
 import { useNetwork } from "@/lib/hooks";
 import type { BatchVault } from "@/lib/networks";
+import { vaultsConfig } from "@/lib/vaults";
+
+// The vaults config names the asset, and the share token is the app's to know. This app reads
+// both from the deposit batcher, so only the two batchers need to be set.
+const BATCHER_ABI = parseAbi([
+  "function fromToken() view returns (address)",
+  "function toToken() view returns (address)",
+  "function vault() view returns (address)",
+]);
 
 const VALUE_ABI = parseAbi([
   // On each confidential wrapper: underlying units per confidential unit.
@@ -41,11 +51,22 @@ export function VaultsTab({ account }: { account: Address }) {
 
 function VaultPanel({ vault, account }: { vault: BatchVault; account: Address }) {
   // The deposit batcher takes the vault's asset and pays out its shares.
-  const { data: tokens, error } = useBatcherTokens({
-    address: vault.depositBatcher,
-    chainId: vault.chainId,
+  const { data, error } = useReadContracts({
+    contracts: (["fromToken", "toToken", "vault"] as const).map((functionName) => ({
+      address: vault.depositBatcher,
+      abi: BATCHER_ABI,
+      functionName,
+      chainId: vault.chainId,
+    })),
+    allowFailure: false,
   });
-  if (!tokens) {
+  const [assetToken, shareToken, erc4626] = data ?? [];
+  // Built once per vault: the vault hooks key their client on the config's identity.
+  const vaults = useMemo(
+    () => (assetToken ? vaultsConfig(vault, assetToken) : undefined),
+    [vault, assetToken],
+  );
+  if (!vaults || !assetToken || !shareToken || !erc4626) {
     return (
       <section className="card">
         {error ? (
@@ -59,30 +80,32 @@ function VaultPanel({ vault, account }: { vault: BatchVault; account: Address })
     );
   }
 
-  // One permit covers both tokens and both batchers (for the amounts in the batch lists),
+  // One permit covers both tokens and both batchers (for the amounts in the positions),
   // so the first decrypt is the only signature the tab asks for.
-  const permitContracts = [
-    tokens.fromToken,
-    tokens.toToken,
-    vault.depositBatcher,
-    vault.redeemBatcher,
-  ];
-  const props = { vault, account, permitContracts };
+  const permitContracts = [assetToken, shareToken, vault.depositBatcher, vault.redeemBatcher];
+  const props = { vaults, account, permitContracts };
   return (
     <>
-      <PositionCard {...props} assetToken={tokens.fromToken} shareToken={tokens.toToken} />
-      {/* A deposit sends assets and is claimed as shares; a withdrawal sends shares and is
-          claimed as assets. */}
-      <VaultActionCard {...props} kind="deposit" token={tokens.fromToken} />
-      <VaultActionCard {...props} kind="withdraw" token={tokens.toToken} />
+      <PositionCard
+        account={account}
+        permitContracts={permitContracts}
+        vault={erc4626}
+        assetToken={assetToken}
+        shareToken={shareToken}
+      />
+      {/* A deposit sends assets and is paid out in shares; a withdrawal sends shares and is
+          paid out in assets. */}
+      <VaultActionCard {...props} kind="deposit" token={assetToken} />
+      <VaultActionCard {...props} kind="withdraw" token={shareToken} />
     </>
   );
 }
 
 interface PositionCardProps {
-  vault: BatchVault;
   account: Address;
   permitContracts: Address[];
+  /** The ERC-4626 vault. */
+  vault: Address;
   assetToken: Address;
   shareToken: Address;
 }
@@ -96,7 +119,6 @@ function PositionCard({
   shareToken,
 }: PositionCardProps) {
   const sdk = useZamaSDK();
-  const batcher = useVaultBatcher(vault.depositBatcher, { chainId: vault.chainId });
   const { data: assetMetadata } = useMetadata(assetToken);
   const { data: shareMetadata } = useMetadata(shareToken);
   // The first decryption asks the wallet for a signature, so it starts from a click.
@@ -109,8 +131,7 @@ function PositionCard({
   const { data: value, error: valueError } = useQuery({
     queryKey: ["vault-position-value", shareToken, shares.data?.toString()],
     queryFn: async () => {
-      const [vaultAddress, shareRate, assetRate] = await Promise.all([
-        batcher.vault(),
+      const [shareRate, assetRate] = await Promise.all([
         sdk.provider.readContract({
           address: shareToken,
           abi: VALUE_ABI,
@@ -125,7 +146,7 @@ function PositionCard({
         }),
       ]);
       const assets = await sdk.provider.readContract({
-        address: vaultAddress,
+        address: vault,
         abi: VALUE_ABI,
         functionName: "convertToAssets",
         args: [shares.data! * shareRate],

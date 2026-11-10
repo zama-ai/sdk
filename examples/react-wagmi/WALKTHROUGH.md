@@ -30,8 +30,8 @@ page.tsx                         — wallet connect, network picker, tabs, token
 ├── DecryptAsCard.tsx            — decrypt another wallet's balance (as a delegate)
 └── vaults/                      — the Vaults tab
     ├── VaultsTab.tsx            — the vault's tokens, the decrypt click, and the position
-    ├── VaultActionCard.tsx      — the Deposit or Withdraw box: balance, form, batch list
-    └── BatchList.tsx            — one row per open batch, an exhaustive switch on its state
+    ├── VaultActionCard.tsx      — the Deposit or Withdraw box: balance, form, positions
+    └── PositionList.tsx         — one row per join record, an exhaustive switch on its phase
 ```
 
 ---
@@ -418,23 +418,24 @@ a batch, the batch is sent to the vault, and the user claims the result once it 
 Vaults tab shows each of those steps, following the
 [Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide.
 
-- **Tokens.** `useBatcherTokens` reads the vault's asset and share from the deposit batcher,
-  so the only configuration is the two batcher addresses (the `batchVault` field of the
-  Sepolia row in `src/lib/networks.ts`).
-- **Pinned chain.** The read hooks and `useClaim`, `useQuit` and `useFinalize` take the vault's
-  `chainId`, so reads go to the vault's chain and a wallet on another chain gets
-  `ChainMismatchError` instead of sending the transaction there.
+- **Config.** `src/lib/vaults.ts` builds the `defineVaults` config: one group with one vault.
+  `VaultsTab.tsx` reads the vault's asset and share from the deposit batcher, so the only
+  configuration is the two batcher addresses (the `batchVault` field of the Sepolia row in
+  `src/lib/networks.ts`).
+- **Pinned chain.** Reads go to the config's `chainId`, and the write hooks throw
+  `ChainMismatchError` when the wallet is on another chain instead of sending the transaction
+  there.
 - **Decrypt on click.** One `useGrantPermit` call covers both tokens and both batchers, so the
   position card's "Decrypt balances" button is the only signature the tab asks for.
-- **Send.** `useDeposit` and `useRedeem` return the batch id. The button explains why it is
-  disabled (`usePaused`, no amount, above balance), and `onJoinSubmitted` tells "confirm in
-  your wallet" from "waiting for the transaction".
-- **Open batches.** `lib/openBatches.ts` reads the batcher's `Joined`, `Claimed` and `Quit`
-  events for the account and passes them to `openBatchIds`. A claim or quit leaves the batch
-  state unchanged, so the list is the only place that knows the user is done.
-- **One row per batch.** `useBatchStatus` returns a union keyed on `state`, and `BatchList.tsx`
-  switches on it exhaustively: cancel while pending, settle a late dispatched batch with
-  `useFinalize`, claim once finalized, take a canceled amount back with `useQuit`.
+- **Send.** `useDeposit` and `useRedeem` return a join record. The button explains why it is
+  disabled (a paused batcher from `useOpenBatches`, no amount, above balance), and
+  `onJoinSubmitted` tells "confirm in your wallet" from "waiting for the transaction".
+- **Join records.** The app needs each record to read and exit the position later, so
+  `src/lib/vaults.ts` keeps them in localStorage, with the bigint batch ids stored as strings.
+  An exit removes the record.
+- **One row per position.** `usePosition` reads a record and returns its `phase`, and
+  `PositionList.tsx` switches on it exhaustively: cancel while queued, settle a late batch with
+  `useFinalize`, claim or take a canceled amount back with `useExit`.
 
 ---
 
