@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.8.0-beta.19](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.18...v3.8.0-beta.19) (2026-11-10)
+
+### Features
+
+- **vaults:** batch status, open batches, and reads on another chain ([#911](https://github.com/zama-ai/sdk/issues/911)) ([e38322f]()), closes [#915]()
+
 ## [3.8.0-beta.18](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.17...v3.8.0-beta.18) (2026-11-10)
 
 ### Features
