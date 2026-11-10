@@ -16,7 +16,7 @@ test.describe("delegation section", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Connect Wallet" }).click({ force: true });
     await expect(page.getByText("Balances")).toBeVisible();
-    await page.getByRole("tab", { name: "Advanced" }).click();
+    await page.getByRole("tab", { name: "Delegation" }).click();
   });
 
   test("shows section labels for owner and delegate perspectives", async ({ page }) => {
