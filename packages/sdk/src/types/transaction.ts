@@ -14,6 +14,8 @@ export interface RawLog {
 export interface TransactionReceipt {
   /** Event logs emitted during the transaction. */
   readonly logs: readonly RawLog[];
+  /** A provider that cannot report this omits it, and the SDK then assumes the transaction succeeded. */
+  readonly status?: "success" | "reverted";
 }
 
 /** Result of a write operation: the tx hash and its mined receipt. */
