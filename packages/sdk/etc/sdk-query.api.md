@@ -451,10 +451,6 @@ export type FheChainAuth = {
     __type: "ApiKeyHeader";
     header?: string;
     value: string;
-} | {
-    __type: "ApiKeyCookie";
-    cookie?: string;
-    value: string;
 };
 
 // @public
@@ -1025,6 +1021,7 @@ export type TransactionOperation = "approveUnderlying" | "approveUnderlying:rese
 // @public
 export interface TransactionReceipt {
     readonly logs: readonly RawLog[];
+    readonly status?: "success" | "reverted";
 }
 
 // @public
@@ -1354,6 +1351,8 @@ export const ZamaErrorCode: {
     readonly DecryptionFailed: "DECRYPTION_FAILED";
     readonly EncryptOffloadUnavailable: "ENCRYPT_OFFLOAD_UNAVAILABLE";
     readonly TransactionReverted: "TRANSACTION_REVERTED";
+    readonly HcuBlockLimitExceeded: "HCU_BLOCK_LIMIT_EXCEEDED";
+    readonly HcuTransactionLimitExceeded: "HCU_TRANSACTION_LIMIT_EXCEEDED";
     readonly TransportKeyPairExpired: "KEYPAIR_EXPIRED";
     readonly InvalidTransportKeyPair: "INVALID_KEYPAIR";
     readonly RevokedKmsContext: "REVOKED_KMS_CONTEXT";
@@ -1649,7 +1648,5 @@ export const ZamaSDKEvents: {
 export interface ZamaSDKOptions {
     transportKeyPairDerivationSecret?: string | Uint8Array;
 }
-
-// (No @packageDocumentation comment for this package)
 
 ```

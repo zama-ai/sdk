@@ -58,6 +58,7 @@ Returns a `PreparedTransaction`. All three fields are JSON-safe, so the object c
 - `DecryptionFailedError` - fallback for an unclassified public-decryption failure (`FinalizeUnwrap`); classified failures preserve their specific [SDK error](./errors.md)
 - `DelegationExpirationTooSoonError` / `DelegationSelfNotAllowedError` / `DelegationDelegateEqualsContractError` - delegation guards (`DelegateDecryption`)
 - `TransactionRevertedError` - gas estimation reverted, for example when `Wrap` is prepared before its approval mines
+- `HcuBlockLimitExceededError` / `HcuTransactionLimitExceededError` - gas estimation hit the protocol's FHE compute (HCU) limits; see [Errors](./errors.md#hcublocklimitexceedederror)
 
 ### preparePermit
 

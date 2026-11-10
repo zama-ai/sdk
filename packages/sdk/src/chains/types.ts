@@ -3,8 +3,7 @@ import type { Address, EIP1193Provider } from "viem";
 /** Authentication forwarded to a chain's relayer endpoint. */
 export type FheChainAuth =
   | { __type: "BearerToken"; token: string }
-  | { __type: "ApiKeyHeader"; header?: string; value: string }
-  | { __type: "ApiKeyCookie"; cookie?: string; value: string };
+  | { __type: "ApiKeyHeader"; header?: string; value: string };
 
 /**
  * Complete chain configuration — the single source of truth for

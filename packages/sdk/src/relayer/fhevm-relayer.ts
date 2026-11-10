@@ -647,8 +647,6 @@ export function toFhevmAuth(
   switch (type) {
     case "ApiKeyHeader":
       return { type, value: auth.value, header: auth.header };
-    case "ApiKeyCookie":
-      return { type, value: auth.value, cookie: auth.cookie };
     case "BearerToken":
       return { type, token: auth.token };
     default:

@@ -606,7 +606,7 @@ pub struct ChainConfig {
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ChainAuth {
-    #[prost(oneof = "chain_auth::Credential", tags = "1, 2, 3")]
+    #[prost(oneof = "chain_auth::Credential", tags = "1, 2")]
     pub credential: ::core::option::Option<chain_auth::Credential>,
 }
 /// Nested message and enum types in `ChainAuth`.
@@ -617,13 +617,11 @@ pub mod chain_auth {
         BearerToken(::prost::alloc::string::String),
         #[prost(message, tag = "2")]
         ApiKeyHeader(super::NamedCredential),
-        #[prost(message, tag = "3")]
-        ApiKeyCookie(super::NamedCredential),
     }
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct NamedCredential {
-    /// Omission preserves the SDK's default header or cookie name.
+    /// Omission preserves the SDK's default header name.
     #[prost(string, optional, tag = "1")]
     pub name: ::core::option::Option<::prost::alloc::string::String>,
     #[prost(string, tag = "2")]

@@ -503,6 +503,21 @@ describe("EthersProvider", () => {
       expect(receipt.logs[0]!.topics).toEqual(["0xa", "0xb"]);
     });
 
+    test("maps the ethers status, and omits it when ethers reports none", async () => {
+      const receiptWithStatus = async (status: number | null) => {
+        const mockProvider = {
+          waitForTransaction: vi.fn().mockResolvedValue({ logs: [], status }),
+        };
+        return new EthersProvider({ provider: mockProvider as never }).waitForTransactionReceipt(
+          "0xhash" as Hex,
+        );
+      };
+
+      expect((await receiptWithStatus(1)).status).toBe("success");
+      expect((await receiptWithStatus(0)).status).toBe("reverted");
+      expect("status" in (await receiptWithStatus(null))).toBe(false);
+    });
+
     test("throws when receipt is null", async () => {
       const mockProvider = { waitForTransaction: vi.fn().mockResolvedValue(null) };
       const ethersProvider = new EthersProvider({ provider: mockProvider as never });

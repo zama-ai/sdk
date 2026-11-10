@@ -122,13 +122,14 @@ const mySepolia = {
 } as const satisfies FheChain;
 ```
 
-The `auth` field supports three modes. For the **Zama-hosted relayer, use `ApiKeyHeader`** — it's the only mode the hosted endpoint accepts. `BearerToken` and `ApiKeyCookie` are for self-hosted relayers or proxied setups where you control the auth layer (see the [Authentication guide](./authentication.md)).
+The `auth` field supports two modes. For the **Zama-hosted relayer, use `ApiKeyHeader`** — it's the only mode the hosted endpoint accepts. `BearerToken` is for self-hosted relayers or proxied setups where you control the auth layer (see the [Authentication guide](./authentication.md)).
 
 | Mode           | Shape                                            | Use it when                                  |
 | -------------- | ------------------------------------------------ | -------------------------------------------- |
 | API key header | `{ __type: "ApiKeyHeader", value: "your-key" }`  | Zama-hosted relayer (required), or default   |
-| API key cookie | `{ __type: "ApiKeyCookie", value: "your-key" }`  | Behind your own proxy (SDK→proxy hop)        |
 | Bearer token   | `{ __type: "BearerToken", token: "your-token" }` | Self-hosted relayer with a bearer auth layer |
+
+Behind your own proxy, `ApiKeyHeader` also takes an optional `header` naming the header your proxy reads to authenticate the SDK.
 
 ### 7. Clean up on shutdown
 
