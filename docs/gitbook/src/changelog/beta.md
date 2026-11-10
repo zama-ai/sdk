@@ -42,17 +42,35 @@ See [Errors](../reference/sdk/errors.md#hcublocklimitexceedederror).
 
 ## Settle a dispatched batch yourself
 
-New `VaultBatcher.finalize(batchId)` (`useFinalize` in React, `finalizeMutationOptions` for TanStack Query). A keeper, an off-chain service that watches batches, normally finalizes a dispatched batch; when it has not, any account can now settle the batch from the SDK: `finalize` reads the batch's unwrap request, publicly decrypts the amount it released, and submits `dispatchBatchCallback` with the cleartext and its proof. Past the batch's callback deadline the same call cancels the batch. The submission surfaces as a `VaultSubmitted` event with `vaultOperation: "finalize"`. `VaultBatcher.unwrapRequestId(batchId)` exposes the underlying read. `finalize` and `prepareFinalize` read the batch state first and throw the new `VaultBatchNotDispatchedError` when the batch is not `Dispatched`, for example because a keeper already finalized it, before any decryption. New `VaultBatcher.timeUntilCallbackDeadline(batchId)` (`useTimeUntilCallbackDeadline`, `timeUntilCallbackDeadlineQueryOptions`) reads the seconds until a dispatched batch reaches its callback deadline: `0` once it has, when `finalize` cancels instead of settling (except on an asynchronous redeem batcher that has already placed the redemption request), and `null` outside `Dispatched`.
+A keeper normally finalizes a dispatched batch. When it has not, any account can now settle it with `VaultBatcher.finalize(batchId)` (`useFinalize` in React, `finalizeMutationOptions` for TanStack Query). After the batch's callback deadline the same call cancels the batch instead, except on an asynchronous redeem batcher that has already placed its redemption request.
+
+- `VaultBatcher.timeUntilCallbackDeadline(batchId)` (`useTimeUntilCallbackDeadline`, `timeUntilCallbackDeadlineQueryOptions`) returns the seconds left until the deadline: `0` once it has passed, `null` when the batch is not `Dispatched`.
+- `finalize` and `prepareFinalize` throw the new `VaultBatchNotDispatchedError` when the batch is not `Dispatched`, for example because a keeper got there first.
+- `VaultBatcher.unwrapRequestId(batchId)` returns the unwrap request `finalize` reads.
+- The submission emits a `VaultSubmitted` event with `vaultOperation: "finalize"`.
 
 ## Batch status for vault UIs
 
-New `VaultBatcher.batchStatus(batchId)` (`useBatchStatus` in React, `batchStatusQueryOptions` for TanStack Query) returns a batch's state with the timestamps that state needs: `secondsUntilDispatchable` while `Pending`, `callbackDeadlineAt` and `secondsUntilCallbackDeadline` while `Dispatched`, plus `createdAt`, `dispatchableAt` and, once dispatched, `dispatchedAt`. The result is a union keyed on `state`, so an exhaustive `switch` makes TypeScript flag a state the UI does not handle. New `openBatchIds(logs, batcher, account)` returns the batches an account joined and has not claimed or quit, from the batcher's `Joined`, `Claimed` and `Quit` logs; `VaultTopics` gains `Claimed` and `Quit`. The new [Building a vault UI](../guides/vaults/building-a-ui.md) guide lists what to show and offer in every state of a deposit or redemption.
+`VaultBatcher.batchStatus(batchId)` (`useBatchStatus`, `batchStatusQueryOptions`) returns a batch's state and the timestamps a UI needs for it, such as `secondsUntilDispatchable` while `Pending` and `secondsUntilCallbackDeadline` while `Dispatched`. The result is a union on `state`, so an exhaustive `switch` catches a state the UI does not handle.
 
-## Vault reads on another chain, and smaller vault additions
+`openBatchIds(logs, batcher, account)` lists the batches an account joined and has not claimed or quit, from the batcher's `Joined`, `Claimed` and `Quit` logs. `VaultTopics` adds `Claimed` and `Quit`.
 
-`ReadContractConfig` gains an optional `chainId`, and `GenericProvider.getBlockTimestamp` an optional `chainId` argument. `WagmiProvider` reads that chain through wagmi; `ViemProvider` and `EthersProvider`, which are bound to one chain, throw `ConfigurationError` for a different one. `createVaultBatcher(sdk, address, { chainId })` and `useVaultBatcher(address, { chainId })` read a batcher on that chain, exposed as `VaultBatcher.chainId`, and the batcher read hooks (`useBatchStatus`, `useBatchState`, `useCurrentBatchId`, `useTimeUntilDispatchable`, `useTimeUntilCallbackDeadline`, `usePaused`, `useBatcherTokens`) take a `chainId`, which is part of their query keys. The batcher write hooks (`useJoin`, `useQuit`, `useClaim`, `useRecover`, `useDispatchBatch`, `useFinalize`) take the same `chainId`, as do `createVault(sdk, addresses, { chainId })`, `useVault`, `useDeposit` and `useRedeem`, and a chain-pinned batcher or vault throws `ChainMismatchError` for a write while the signer is on another chain; the error's new `targetChainId` names the pinned chain. Its `depositOf` and `prepareFinalize` throw `ConfigurationError` until the provider is on that chain, since decryption runs on the provider's chain. A custom `GenericProvider` should read the `chainId` it is given, or throw for a chain it cannot read: one that ignores it answers a pinned batcher from the wrong chain.
+The new [Building a vault UI](../guides/vaults/building-a-ui.md) guide covers what to show and offer at each step of a deposit or redemption.
 
-New `usePaused` (`pausedQueryOptions`) reads whether a batcher is paused, and `useBatcherTokens` (`batcherTokensQueryOptions`) its input and output token addresses. A new `onJoinSubmitted` option on `VaultBatcher.join`, `Vault.deposit` / `Vault.redeem`, `VaultGroup.deposit` / `VaultGroup.redeem` and their hooks reports the transaction hash once the wallet has sent the join; an error thrown by the callback goes to the SDK logger as a warning and does not stop the join. `VaultBatcher.batchState` now throws `ConfigurationError` for a state number it does not know.
+## Vaults on another chain
+
+Pass a `chainId` to work with a vault while the wallet is not on its chain, for example on a page that renders before the wallet connects.
+
+- **Reads:** `createVaultBatcher(sdk, address, { chainId })`, `useVaultBatcher` and the batcher read hooks (`useBatchStatus`, `useBatchState`, `useCurrentBatchId`, `useTimeUntilDispatchable`, `useTimeUntilCallbackDeadline`, `usePaused`, `useBatcherTokens`) take a `chainId`, exposed as `VaultBatcher.chainId`. `WagmiProvider` reads that chain through wagmi. `ViemProvider` and `EthersProvider` are bound to one chain and throw `ConfigurationError` for another.
+- **Writes:** `createVault`, `useVault`, `useDeposit`, `useRedeem` and the batcher write hooks (`useJoin`, `useQuit`, `useClaim`, `useRecover`, `useDispatchBatch`, `useFinalize`) take the same `chainId`. A write while the wallet is on another chain throws `ChainMismatchError` before anything is sent; its new `targetChainId` is the vault's chain.
+- **Decryption:** `depositOf` and `prepareFinalize` decrypt on the provider's chain, so they throw `ConfigurationError` until the provider is on the vault's chain.
+- **Custom providers:** `ReadContractConfig` and `GenericProvider.getBlockTimestamp` gain an optional `chainId`. A custom `GenericProvider` must read that chain or throw; one that ignores it returns data from the wrong chain.
+
+## Smaller vault additions
+
+- `usePaused` (`pausedQueryOptions`) reads whether a batcher is paused, and `useBatcherTokens` (`batcherTokensQueryOptions`) its input and output tokens.
+- A new `onJoinSubmitted` option on `VaultBatcher.join`, `Vault.deposit` / `Vault.redeem`, `VaultGroup.deposit` / `VaultGroup.redeem` and their hooks receives the transaction hash once the wallet has sent the join. If the callback throws, the SDK logs a warning and the join continues.
+- `VaultBatcher.batchState` throws `ConfigurationError` for a state number it does not know.
 
 ## Vault groups for your own transaction layer
 
