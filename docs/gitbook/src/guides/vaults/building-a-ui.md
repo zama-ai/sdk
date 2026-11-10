@@ -35,7 +35,7 @@ A deposit or redemption has three parts:
 
 `useDeposit` and `useRedeem` return the `batchId` the amount joined. **Keep track of it**, so the user finds the batch again after a reload or on another device. Either store the id with the user's account, or rebuild the list from the chain: fetch the batcher's `Joined`, `Claimed` and `Quit` logs for the account and pass them to [`openBatchIds`](../../reference/sdk/VaultBatcher.md#events), which returns the batches the user joined and has not claimed or quit yet.
 
-While the transaction is pending, lock the form so the user cannot send twice. Show "Confirm in your wallet" until the `onJoinSubmitted` callback you pass to `useDeposit` or `useRedeem` fires, then "Waiting for the transaction".
+While the transaction is pending, lock the form so the user cannot send twice. Show "Confirm in your wallet" until the `onJoinSubmitted` callback you pass to `useDeposit` or `useRedeem` fires, then "Waiting for the transaction". An error thrown by that callback goes to the SDK logger as a warning and does not stop the join, so a callback that throws leaves the label stuck.
 
 After it is mined, say the amount is **queued**, not deposited. The user does not hold shares yet.
 

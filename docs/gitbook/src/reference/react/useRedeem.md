@@ -98,7 +98,7 @@ Default: `false`. Skips the share-balance pre-flight, for accounts whose balance
 
 `((txHash: Hex) => void) | undefined`
 
-Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction".
+Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction". An error thrown by the callback goes to the SDK logger as a warning and does not stop the join, so keep it to UI state.
 
 **Throws:**
 

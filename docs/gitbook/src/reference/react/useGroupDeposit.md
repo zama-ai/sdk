@@ -90,7 +90,7 @@ Default: `false`. Skips the confidential-balance pre-flight, for accounts whose 
 
 `((txHash: Hex) => void) | undefined`
 
-Called with the submission's transaction hash once the wallet has sent it, before the SDK waits for the receipt.
+Called with the submission's transaction hash once the wallet has sent it, before the SDK waits for the receipt. An error thrown by the callback goes to the SDK logger as a warning and does not stop the join, so keep it to UI state.
 
 **Throws:**
 
@@ -109,7 +109,7 @@ import { type VaultGroupJoinResult } from "@zama-fhe/sdk/vaults";
 
 `data` resolves to a `VaultGroupJoinResult`: the transaction's `txHash` and `receipt`, the chosen `vaultId`, and `joins` with one entry per member. See [`VaultGroup` → VaultGroupJoinResult](../sdk/VaultGroup.md#vaultgroupjoinresult).
 
-Once the transaction is mined the hook invalidates the asset token's balance, and the batch reads (`useCurrentBatchId`, `useBatchState`, `useTimeUntilDispatchable`) of every member's deposit batcher. This also runs when the mutation fails with `VaultGroupJoinUnconfirmedError`, since a mined transaction joined every leg.
+Once the transaction is mined the hook invalidates the asset token's balance, and the batch reads (`useCurrentBatchId`, `useBatchState`, `useBatchStatus`, `useTimeUntilDispatchable`) of every member's deposit batcher. This also runs when the mutation fails with `VaultGroupJoinUnconfirmedError`, since a mined transaction joined every leg.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

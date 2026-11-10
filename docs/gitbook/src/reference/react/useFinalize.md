@@ -84,7 +84,7 @@ The dispatched batch to settle.
 
 `data` is `{ txHash: Hex; receipt: TransactionReceipt }`.
 
-On success the hook invalidates the batcher's batch reads: the batch leaves `Dispatched` and gains an exchange rate, so `useBatchState` refetches.
+On success the hook invalidates the batcher's batch reads: the batch leaves `Dispatched` and gains an exchange rate, so `useBatchState` and `useBatchStatus` refetch.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

@@ -73,7 +73,7 @@ None. Call `mutate()` / `mutateAsync()` with no arguments — the batcher always
 
 `data` is `{ txHash: Hex; receipt: TransactionReceipt }`.
 
-On success the hook invalidates the batcher's batch reads: a new batch opens and the old one leaves `Pending`, so `useCurrentBatchId`, `useBatchState` and `useTimeUntilDispatchable` refetch.
+On success the hook invalidates the batcher's batch reads: a new batch opens and the old one leaves `Pending`, so `useCurrentBatchId`, `useBatchState`, `useBatchStatus` and `useTimeUntilDispatchable` refetch.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

@@ -2579,9 +2579,9 @@ New `VaultBatcher.batchStatus(batchId)` (`useBatchStatus` in React, `batchStatus
 
 ## Vault reads on another chain, and smaller vault additions
 
-`ReadContractConfig` gains an optional `chainId`, and `GenericProvider.getBlockTimestamp` an optional `chainId` argument. `WagmiProvider` reads that chain through wagmi; `ViemProvider` and `EthersProvider`, which are bound to one chain, throw `ConfigurationError` for a different one. `createVaultBatcher(sdk, address, { chainId })` and `useVaultBatcher(address, { chainId })` read a batcher on that chain, and the batcher read hooks (`useBatchStatus`, `useBatchState`, `useCurrentBatchId`, `useTimeUntilDispatchable`, `useTimeUntilCallbackDeadline`) take a `chainId`, which is part of their query keys. The batcher write hooks (`useJoin`, `useQuit`, `useClaim`, `useRecover`, `useDispatchBatch`, `useFinalize`) take the same `chainId`, and a chain-pinned batcher throws `ChainMismatchError` for a write while the signer is on another chain. Its `depositOf` and `prepareFinalize` throw `ConfigurationError` until the provider is on that chain, since decryption runs on the provider's chain. A custom `GenericProvider` should read the `chainId` it is given, or throw for a chain it cannot read: one that ignores it answers a pinned batcher from the wrong chain.
+`ReadContractConfig` gains an optional `chainId`, and `GenericProvider.getBlockTimestamp` an optional `chainId` argument. `WagmiProvider` reads that chain through wagmi; `ViemProvider` and `EthersProvider`, which are bound to one chain, throw `ConfigurationError` for a different one. `createVaultBatcher(sdk, address, { chainId })` and `useVaultBatcher(address, { chainId })` read a batcher on that chain, exposed as `VaultBatcher.chainId`, and the batcher read hooks (`useBatchStatus`, `useBatchState`, `useCurrentBatchId`, `useTimeUntilDispatchable`, `useTimeUntilCallbackDeadline`, `usePaused`, `useBatcherTokens`) take a `chainId`, which is part of their query keys. The batcher write hooks (`useJoin`, `useQuit`, `useClaim`, `useRecover`, `useDispatchBatch`, `useFinalize`) take the same `chainId`, and a chain-pinned batcher throws `ChainMismatchError` for a write while the signer is on another chain; the error's new `targetChainId` names the pinned chain. Its `depositOf` and `prepareFinalize` throw `ConfigurationError` until the provider is on that chain, since decryption runs on the provider's chain. A custom `GenericProvider` should read the `chainId` it is given, or throw for a chain it cannot read: one that ignores it answers a pinned batcher from the wrong chain.
 
-New `usePaused` (`pausedQueryOptions`) reads whether a batcher is paused, and `useBatcherTokens` (`batcherTokensQueryOptions`) its input and output token addresses. A new `onJoinSubmitted` option on `VaultBatcher.join`, `Vault.deposit` / `Vault.redeem`, `VaultGroup.deposit` / `VaultGroup.redeem` and their hooks reports the transaction hash once the wallet has sent the join. `VaultBatcher.batchState` now throws `ConfigurationError` for a state number it does not know.
+New `usePaused` (`pausedQueryOptions`) reads whether a batcher is paused, and `useBatcherTokens` (`batcherTokensQueryOptions`) its input and output token addresses. A new `onJoinSubmitted` option on `VaultBatcher.join`, `Vault.deposit` / `Vault.redeem`, `VaultGroup.deposit` / `VaultGroup.redeem` and their hooks reports the transaction hash once the wallet has sent the join; an error thrown by the callback goes to the SDK logger as a warning and does not stop the join. `VaultBatcher.batchState` now throws `ConfigurationError` for a state number it does not know.
 
 ## Vault groups for your own transaction layer
 
@@ -6267,7 +6267,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `SIGNER_NOT_CONFIGURED`                  | `SignerNotConfiguredError`                | SDK operation needs a signer but none is configured (subclass of `SignerRequiredError`)                        |
 | `WALLET_NOT_CONNECTED`                   | `WalletNotConnectedError`                 | Signer exists but has no connected wallet account (subclass of `SignerRequiredError`)                          |
 | `WALLET_ACCOUNT_NOT_READY`               | `WalletAccountNotReadyError`              | Async signer adapter hasn't resolved its account yet (subclass of `SignerRequiredError`, retryable)            |
-| `CHAIN_MISMATCH`                         | `ChainMismatchError`                      | Signer and provider are on different chains                                                                    |
+| `CHAIN_MISMATCH`                         | `ChainMismatchError`                      | Signer and provider are on different chains, or the signer is not on a chain-pinned `VaultBatcher`'s chain     |
 | `DELEGATION_CONTRACT_IS_SELF`            | `DelegationContractIsSelfError`           | Delegation contract address equals the caller                                                                  |
 | `DELEGATION_DELEGATE_EQUALS_CONTRACT`    | `DelegationDelegateEqualsContractError`   | Delegate equals the contract address                                                                           |
 | `DELEGATION_DELEGATE_CANNOT_BE_WILDCARD` | `DelegationDelegateCannotBeWildcardError` | Delegate address is the wildcard address                                                                       |
@@ -10188,6 +10188,7 @@ recover.mutate({ batchId, account: "0xDepositor" });
 
 ## Next steps
 
+- [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) — what to show and offer in every state of a deposit or redemption
 - [`Vault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) and [`VaultBatcher`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md) — full API reference, including the per-batch reads
 - [`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md), [`useRedeem`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRedeem.md), [`useBatchState`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md), [`useClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md) — the React hooks used above
 - [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault) — the protocol side: how batching, dispatch and settlement work
@@ -10310,6 +10311,11 @@ const { joins } = prepared.decodeJoins(receipt.logs);
 
 `"legs"` delivery sends one transfer per member straight to its batcher and needs no grant; it keeps the choice of vault private only when the wallet lands every leg atomically. `"router"` is the single transaction the SDK sends itself. A host that has already verified the group passes `skipPreflight`, which skips the config verification and the registry listing but not the `paused()` read. The balance check decrypts as the signer, so an `account` other than the signer's needs `skipBalanceCheck`. One that gates the amount on a balance it already shows passes `skipBalanceCheck`. See [`VaultGroup` → Prepare](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#prepare).
 
+## Next steps
+
+- [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) — what to show and offer in every state of a deposit or redemption
+- [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md) — the batch lifecycle behind each leg
+
 ## Building a vault UI
 
 - source_type: official-doc
@@ -10350,7 +10356,7 @@ A deposit or redemption has three parts:
 
 `useDeposit` and `useRedeem` return the `batchId` the amount joined. **Keep track of it**, so the user finds the batch again after a reload or on another device. Either store the id with the user's account, or rebuild the list from the chain: fetch the batcher's `Joined`, `Claimed` and `Quit` logs for the account and pass them to [`openBatchIds`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#events), which returns the batches the user joined and has not claimed or quit yet.
 
-While the transaction is pending, lock the form so the user cannot send twice. Show "Confirm in your wallet" until the `onJoinSubmitted` callback you pass to `useDeposit` or `useRedeem` fires, then "Waiting for the transaction".
+While the transaction is pending, lock the form so the user cannot send twice. Show "Confirm in your wallet" until the `onJoinSubmitted` callback you pass to `useDeposit` or `useRedeem` fires, then "Waiting for the transaction". An error thrown by that callback goes to the SDK logger as a warning and does not stop the join, so a callback that throws leaves the label stuck.
 
 After it is mined, say the amount is **queued**, not deposited. The user does not hold shares yet.
 
@@ -14957,7 +14963,7 @@ Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequ
 | `SignerNotConfiguredError`                | `SIGNER_NOT_CONFIGURED`                  | SDK operation needs a signer but none is configured                                                                               |
 | `WalletNotConnectedError`                 | `WALLET_NOT_CONNECTED`                   | Signer exists but has no connected wallet account                                                                                 |
 | `WalletAccountNotReadyError`              | `WALLET_ACCOUNT_NOT_READY`               | Async signer adapter has not resolved its account yet                                                                             |
-| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains                                                                                       |
+| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains, or the signer is not on a chain-pinned `VaultBatcher`'s chain                        |
 | `AclPausedError`                          | `ACL_PAUSED`                             | ACL contract is paused                                                                                                            |
 
 ## Error details
@@ -25024,7 +25030,7 @@ await deposit({ amount: 1_000_000n, skipBalanceCheck: true });
 
 `((txHash: Hex) => void) | undefined`
 
-Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction".
+Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction". An error thrown by the callback goes to the SDK logger as a warning and does not stop the join, so keep it to UI state.
 
 **Throws:**
 
@@ -25040,7 +25046,7 @@ import { type JoinResult } from "@zama-fhe/sdk/vaults";
 
 `data` resolves to a `JoinResult`: `{ txHash, receipt, batchId, beneficiary, confidentialJoinedAmount }`. See [`Vault` → JoinResult](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md#joinresult).
 
-On success the hook invalidates the asset token's balance cache, the deposit batcher's batch reads (`useCurrentBatchId`, `useBatchState`, `useTimeUntilDispatchable`), and the asset token's operator-status cache, since the mutation may have granted one.
+On success the hook invalidates the asset token's balance cache, the deposit batcher's batch reads (`useCurrentBatchId`, `useBatchState`, `useBatchStatus`, `useTimeUntilDispatchable`), and the asset token's operator-status cache, since the mutation may have granted one.
 
 ### `mutate`
 
@@ -25221,7 +25227,7 @@ Default: `false`. Skips the share-balance pre-flight, for accounts whose balance
 
 `((txHash: Hex) => void) | undefined`
 
-Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction".
+Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction". An error thrown by the callback goes to the SDK logger as a warning and does not stop the join, so keep it to UI state.
 
 **Throws:**
 
@@ -25414,7 +25420,7 @@ await join({ amount: 1_000_000n, beneficiary: "0xRecipient" });
 
 `((txHash: Hex) => void) | undefined`
 
-Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction".
+Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction". An error thrown by the callback goes to the SDK logger as a warning and does not stop the join, so keep it to UI state.
 
 **Throws:**
 
@@ -26087,7 +26093,7 @@ None. Call `mutate()` / `mutateAsync()` with no arguments — the batcher always
 
 `data` is `{ txHash: Hex; receipt: TransactionReceipt }`.
 
-On success the hook invalidates the batcher's batch reads: a new batch opens and the old one leaves `Pending`, so `useCurrentBatchId`, `useBatchState` and `useTimeUntilDispatchable` refetch.
+On success the hook invalidates the batcher's batch reads: a new batch opens and the old one leaves `Pending`, so `useCurrentBatchId`, `useBatchState`, `useBatchStatus` and `useTimeUntilDispatchable` refetch.
 
 ### `mutate`
 
@@ -26254,7 +26260,7 @@ The dispatched batch to settle.
 
 `data` is `{ txHash: Hex; receipt: TransactionReceipt }`.
 
-On success the hook invalidates the batcher's batch reads: the batch leaves `Dispatched` and gains an exchange rate, so `useBatchState` refetches.
+On success the hook invalidates the batcher's batch reads: the batch leaves `Dispatched` and gains an exchange rate, so `useBatchState` and `useBatchStatus` refetch.
 
 ### `mutate`
 
@@ -27706,7 +27712,7 @@ Default: `false`. Skips the confidential-balance pre-flight, for accounts whose 
 
 `((txHash: Hex) => void) | undefined`
 
-Called with the submission's transaction hash once the wallet has sent it, before the SDK waits for the receipt.
+Called with the submission's transaction hash once the wallet has sent it, before the SDK waits for the receipt. An error thrown by the callback goes to the SDK logger as a warning and does not stop the join, so keep it to UI state.
 
 **Throws:**
 
@@ -27725,7 +27731,7 @@ import { type VaultGroupJoinResult } from "@zama-fhe/sdk/vaults";
 
 `data` resolves to a `VaultGroupJoinResult`: the transaction's `txHash` and `receipt`, the chosen `vaultId`, and `joins` with one entry per member. See [`VaultGroup` → VaultGroupJoinResult](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#vaultgroupjoinresult).
 
-Once the transaction is mined the hook invalidates the asset token's balance, and the batch reads (`useCurrentBatchId`, `useBatchState`, `useTimeUntilDispatchable`) of every member's deposit batcher. This also runs when the mutation fails with `VaultGroupJoinUnconfirmedError`, since a mined transaction joined every leg.
+Once the transaction is mined the hook invalidates the asset token's balance, and the batch reads (`useCurrentBatchId`, `useBatchState`, `useBatchStatus`, `useTimeUntilDispatchable`) of every member's deposit batcher. This also runs when the mutation fails with `VaultGroupJoinUnconfirmedError`, since a mined transaction joined every leg.
 
 ### `mutate`
 
@@ -27896,7 +27902,7 @@ Default: `false`. As in [`useGroupDeposit`](https://raw.githubusercontent.com/za
 
 `((txHash: Hex) => void) | undefined`
 
-Called with the submission's transaction hash once the wallet has sent it, before the SDK waits for the receipt.
+Called with the submission's transaction hash once the wallet has sent it, before the SDK waits for the receipt. An error thrown by the callback goes to the SDK logger as a warning and does not stop the join, so keep it to UI state.
 
 **Throws:** the same errors as `useGroupDeposit`, including `VaultBatcherPausedError`, except `UnlistedConfidentialTokenError`, which only the deposit path raises.
 
