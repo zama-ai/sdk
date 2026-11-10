@@ -22,8 +22,8 @@ test.describe("tabs", () => {
     await expect(page.getByText("Delegation — as owner")).toHaveCount(0);
   });
 
-  test("moves delegation to the Advanced tab", async ({ page }) => {
-    await page.getByRole("tab", { name: "Advanced" }).click();
+  test("moves delegation to the Delegation tab", async ({ page }) => {
+    await page.getByRole("tab", { name: "Delegation" }).click();
     await expect(page.getByText("Delegation — as owner")).toBeVisible();
     await expect(page.getByText("Shield — ERC-20 → Confidential")).toHaveCount(0);
   });
