@@ -179,7 +179,10 @@ describe("WagmiProvider.waitForTransactionReceipt", () => {
     const request = walletAnswering({ eth_getTransactionReceipt: () => receipts.shift() });
     mockGetConnectorClient.mockResolvedValue(makeConnectorClient(request));
 
-    await expect(provider.waitForTransactionReceipt(HASH)).resolves.toBe(WALLET_RECEIPT);
+    await expect(provider.waitForTransactionReceipt(HASH)).resolves.toEqual({
+      logs: WALLET_RECEIPT.logs,
+      status: "success",
+    });
     expect(request).toHaveBeenCalledWith({ method: "eth_getTransactionReceipt", params: [HASH] });
   });
 
@@ -195,7 +198,10 @@ describe("WagmiProvider.waitForTransactionReceipt", () => {
     });
     mockGetConnectorClient.mockResolvedValue(makeConnectorClient(request));
 
-    await expect(provider.waitForTransactionReceipt(HASH)).resolves.toBe(WALLET_RECEIPT);
+    await expect(provider.waitForTransactionReceipt(HASH)).resolves.toEqual({
+      logs: WALLET_RECEIPT.logs,
+      status: "success",
+    });
     expect(request).toHaveBeenCalledWith({ method: "wallet_getCallsStatus", params: [HASH] });
   });
 

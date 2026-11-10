@@ -117,12 +117,15 @@ export class EthersProvider implements GenericProvider {
           "The transaction may have been dropped from the mempool, or the RPC's wait timeout elapsed.",
       );
     }
+    const status =
+      receipt.status === null ? undefined : receipt.status === 1 ? "success" : "reverted";
     return {
       logs: receipt.logs.map((log) => ({
         address: log.address as Hex,
         topics: log.topics.filter((t): t is Hex => t !== null),
         data: log.data as Hex,
       })),
+      ...(status && { status }),
     };
   }
 

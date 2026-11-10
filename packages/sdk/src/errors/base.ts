@@ -28,6 +28,10 @@ export const ZamaErrorCode = {
   EncryptOffloadUnavailable: "ENCRYPT_OFFLOAD_UNAVAILABLE",
   /** On-chain transaction reverted. */
   TransactionReverted: "TRANSACTION_REVERTED",
+  /** The block's FHE compute budget (HCU) is spent. Retryable: it resets every block. */
+  HcuBlockLimitExceeded: "HCU_BLOCK_LIMIT_EXCEEDED",
+  /** The transaction needs more FHE compute (HCU) than one transaction may use. */
+  HcuTransactionLimitExceeded: "HCU_TRANSACTION_LIMIT_EXCEEDED",
   /** Transport key pair has expired and needs regeneration. */
   TransportKeyPairExpired: "KEYPAIR_EXPIRED",
   /** Relayer rejected transport key pair (stale, expired, or malformed). */
@@ -128,6 +132,8 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.DecryptionFailed]: false,
   [ZamaErrorCode.EncryptOffloadUnavailable]: false, // the worker realm is unusable for this page; a retry hits the same environment
   [ZamaErrorCode.TransactionReverted]: false,
+  [ZamaErrorCode.HcuBlockLimitExceeded]: true, // the block budget resets every block
+  [ZamaErrorCode.HcuTransactionLimitExceeded]: false, // the same transaction costs the same HCU on every retry
   [ZamaErrorCode.TransportKeyPairExpired]: false,
   [ZamaErrorCode.InvalidTransportKeyPair]: false,
   [ZamaErrorCode.RevokedKmsContext]: false, // the retry already re-granted; a blind retry re-hits the stale validity cache

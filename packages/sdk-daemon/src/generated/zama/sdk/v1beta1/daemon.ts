@@ -1182,12 +1182,11 @@ export interface ChainAuth {
   credential:
     | { $case: "bearerToken"; bearerToken: string }
     | { $case: "apiKeyHeader"; apiKeyHeader: NamedCredential }
-    | { $case: "apiKeyCookie"; apiKeyCookie: NamedCredential }
     | undefined;
 }
 
 export interface NamedCredential {
-  /** Omission preserves the SDK's default header or cookie name. */
+  /** Omission preserves the SDK's default header name. */
   name?: string | undefined;
   value: string;
 }
@@ -7853,9 +7852,6 @@ export const ChainAuth: MessageFns<ChainAuth> = {
       case "apiKeyHeader":
         NamedCredential.encode(message.credential.apiKeyHeader, writer.uint32(18).fork()).join();
         break;
-      case "apiKeyCookie":
-        NamedCredential.encode(message.credential.apiKeyCookie, writer.uint32(26).fork()).join();
-        break;
     }
     return writer;
   },
@@ -7892,17 +7888,6 @@ export const ChainAuth: MessageFns<ChainAuth> = {
             };
             continue;
           }
-          case 3: {
-            if (tag !== 26) {
-              break;
-            }
-
-            message.credential = {
-              $case: "apiKeyCookie",
-              apiKeyCookie: NamedCredential.decode(reader, reader.uint32()),
-            };
-            continue;
-          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -7925,10 +7910,6 @@ export const ChainAuth: MessageFns<ChainAuth> = {
         ? { $case: "apiKeyHeader", apiKeyHeader: NamedCredential.fromJSON(object.apiKeyHeader) }
         : isSet(object.api_key_header)
         ? { $case: "apiKeyHeader", apiKeyHeader: NamedCredential.fromJSON(object.api_key_header) }
-        : isSet(object.apiKeyCookie)
-        ? { $case: "apiKeyCookie", apiKeyCookie: NamedCredential.fromJSON(object.apiKeyCookie) }
-        : isSet(object.api_key_cookie)
-        ? { $case: "apiKeyCookie", apiKeyCookie: NamedCredential.fromJSON(object.api_key_cookie) }
         : undefined,
     };
   },
@@ -7939,8 +7920,6 @@ export const ChainAuth: MessageFns<ChainAuth> = {
       obj.bearerToken = message.credential.bearerToken;
     } else if (message.credential?.$case === "apiKeyHeader") {
       obj.apiKeyHeader = NamedCredential.toJSON(message.credential.apiKeyHeader);
-    } else if (message.credential?.$case === "apiKeyCookie") {
-      obj.apiKeyCookie = NamedCredential.toJSON(message.credential.apiKeyCookie);
     }
     return obj;
   },
@@ -7962,15 +7941,6 @@ export const ChainAuth: MessageFns<ChainAuth> = {
           message.credential = {
             $case: "apiKeyHeader",
             apiKeyHeader: NamedCredential.fromPartial(object.credential.apiKeyHeader),
-          };
-        }
-        break;
-      }
-      case "apiKeyCookie": {
-        if (object.credential?.apiKeyCookie !== undefined && object.credential?.apiKeyCookie !== null) {
-          message.credential = {
-            $case: "apiKeyCookie",
-            apiKeyCookie: NamedCredential.fromPartial(object.credential.apiKeyCookie),
           };
         }
         break;

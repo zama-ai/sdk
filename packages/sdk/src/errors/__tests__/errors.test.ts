@@ -6,6 +6,8 @@ import {
   retryAfterSeconds,
   InvalidTransportKeyPairError,
   NoCiphertextError,
+  HcuBlockLimitExceededError,
+  HcuTransactionLimitExceededError,
   NotEntitledError,
   KeyWrappingError,
   RelayerRequestFailedError,
@@ -156,6 +158,18 @@ describe("ZamaError.retryable / isRetryable", () => {
     const err = new WalletAccountNotReadyError("decrypt");
     expect(err.retryable).toBe(true);
     expect(isRetryable(err)).toBe(true);
+  });
+
+  test("is true for HcuBlockLimitExceededError — the block budget resets next block", () => {
+    const err = new HcuBlockLimitExceededError("block budget spent");
+    expect(err.retryable).toBe(true);
+    expect(isRetryable(err)).toBe(true);
+  });
+
+  test("is false for HcuTransactionLimitExceededError — the transaction costs the same HCU every time", () => {
+    const err = new HcuTransactionLimitExceededError("too much HCU");
+    expect(err.retryable).toBe(false);
+    expect(isRetryable(err)).toBe(false);
   });
 
   test("tracks statusCode for RelayerRequestFailedError (true only on 429)", () => {
