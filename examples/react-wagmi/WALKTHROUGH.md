@@ -136,7 +136,7 @@ connection:
   created with, so the connector saves the wallet it connected in wagmi's storage and
   `wallet.tsx` lists that connector on load. A saved browser wallet that never announces itself
   gives up after 3 s, and a WalletConnect session that closed while the page was away leaves
-  wagmi disconnected, with a console warning.
+  wagmi disconnected.
 - **Follows the wallet.** Account and chain switches inside the wallet reach wagmi through
   Dynamic's provider events.
 - **Stays on the chains a WalletConnect session approved.** Dynamic sends a WalletConnect
