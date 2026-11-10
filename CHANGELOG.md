@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.8.0-beta.18](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.17...v3.8.0-beta.18) (2026-11-10)
+
+### Features
+
+- **examples:** replace Privy with Dynamic in react-wagmi ([#910](https://github.com/zama-ai/sdk/issues/910)) ([f7c728b]())
+
 ## [3.8.0-beta.17](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.16...v3.8.0-beta.17) (2026-11-10)
 
 ### Features
