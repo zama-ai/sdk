@@ -310,7 +310,7 @@ describe("prepareDeposit", () => {
     expect(structuredClone(prepared)).toEqual(prepared);
   });
 
-  test("refuses when any vault's batcher is paused, even with the balance check skipped", async ({
+  test("refuses when any vault's batcher is paused, without the balance check", async ({
     sdk,
     provider,
     relayer,
@@ -318,23 +318,30 @@ describe("prepareDeposit", () => {
     mockChain(provider, { paused: [BETA.depositBatcher] });
     mockEncryption(relayer);
     await expect(
-      createVaultClient(sdk).prepareDeposit(
-        STABLE,
-        { vaultId: "alpha", account: USER, amount: 10n },
-        { skipChecks: ["balance"] },
-      ),
-    ).rejects.toBeInstanceOf(VaultBatcherPausedError);
-  });
-
-  test("refuses a short balance", async ({ sdk, provider, relayer }) => {
-    mockChain(provider, { balance: 5n });
-    mockEncryption(relayer);
-    await expect(
       createVaultClient(sdk).prepareDeposit(STABLE, {
         vaultId: "alpha",
         account: USER,
         amount: 10n,
       }),
+    ).rejects.toBeInstanceOf(VaultBatcherPausedError);
+  });
+
+  test("refuses a short balance when asked to check it", async ({ sdk, provider, relayer }) => {
+    mockChain(provider, { balance: 5n });
+    mockEncryption(relayer);
+    const client = createVaultClient(sdk);
+    const input = { vaultId: "alpha", account: USER, amount: 10n } as const;
+    await expect(
+      client.prepareDeposit(STABLE, input, { checks: ["balance"] }),
+    ).rejects.toBeInstanceOf(InsufficientConfidentialBalanceError);
+    await expect(client.prepareDeposit(STABLE, input)).resolves.toMatchObject({ amount: 10n });
+  });
+
+  test("checks the balance before sending by default", async ({ sdk, provider, relayer }) => {
+    mockChain(provider, { balance: 5n });
+    mockEncryption(relayer);
+    await expect(
+      createVaultClient(sdk).deposit(STABLE, { vaultId: "alpha", amount: 10n }),
     ).rejects.toBeInstanceOf(InsufficientConfidentialBalanceError);
   });
 });
@@ -430,6 +437,8 @@ describe("prepareRedeem", () => {
       { token: BETA.share, operator: ROUTER, vaultId: "beta", until: NOW + YEAR },
     ]);
     expect(decode(prepared.calls[2] as VaultCall).functionName).toBe("join");
+    expect(prepared.grants).toStrictEqual(prepared.calls.slice(0, 2));
+    expect(prepared.joins).toStrictEqual(prepared.calls.slice(2));
   });
 
   test("sends only the join once the grants are in place", async ({ sdk, provider, relayer }) => {
@@ -454,10 +463,8 @@ describe("without a signer", () => {
     mockEncryption(relayer);
     const client = createVaultClient(createSDK({ signer: undefined }));
     const input = { vaultId: "beta", account: FRIEND, amount: 10n } as const;
-    const options = { skipChecks: ["balance"] } as const;
-
-    const deposit = await client.prepareDeposit(STABLE, input, options);
-    const redeem = await client.prepareRedeem(STABLE, input, options);
+    const deposit = await client.prepareDeposit(STABLE, input);
+    const redeem = await client.prepareRedeem(STABLE, input);
 
     expect(deposit.account).toBe(FRIEND);
     expect(roles(deposit.calls)).toStrictEqual(["join"]);
@@ -468,7 +475,9 @@ describe("without a signer", () => {
     expect(client.prepareDispatch(batch).to).toBe(ALPHA.depositBatcher);
 
     vi.mocked(Token.batchBalancesOf).mockRestore();
-    await expect(client.prepareDeposit(STABLE, input)).rejects.toThrow(SignerNotConfiguredError);
+    await expect(client.prepareDeposit(STABLE, input, { checks: ["balance"] })).rejects.toThrow(
+      SignerNotConfiguredError,
+    );
   });
 });
 
@@ -749,11 +758,11 @@ describe("chain checks", () => {
     mockEncryption(relayer);
     const elsewhere = defineVaultGroup({ ...STABLE, chainId: 1 });
     await expect(
-      createVaultClient(sdk).prepareDeposit(
-        elsewhere,
-        { vaultId: "alpha", account: USER, amount: 10n },
-        { skipChecks: ["balance"] },
-      ),
+      createVaultClient(sdk).prepareDeposit(elsewhere, {
+        vaultId: "alpha",
+        account: USER,
+        amount: 10n,
+      }),
     ).rejects.toMatchObject({ name: "ChainMismatchError", targetChainId: 1 });
   });
 
@@ -766,11 +775,11 @@ describe("chain checks", () => {
     mockEncryption(relayer);
     const elsewhere = defineVaultGroup({ ...STABLE, chainId: 1 });
     await expect(
-      createVaultClient(createSDK({ signer: undefined })).prepareDeposit(
-        elsewhere,
-        { vaultId: "alpha", account: USER, amount: 10n },
-        { skipChecks: ["balance"] },
-      ),
+      createVaultClient(createSDK({ signer: undefined })).prepareDeposit(elsewhere, {
+        vaultId: "alpha",
+        account: USER,
+        amount: 10n,
+      }),
     ).rejects.toBeInstanceOf(ConfigurationError);
   });
 

@@ -138,7 +138,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useDelegationStatus](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDelegationStatus.md): Query hook that checks whether a decryption delegation is active between two addresses.
 - [useDecryptBalanceAs](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDecryptBalanceAs.md): Mutation hook that decrypts another user's confidential balance as a delegate.
 - [useBatchDecryptBalancesAs](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchDecryptBalancesAs.md): Mutation hook that decrypts confidential balances across multiple tokens as a delegate.
-- [useVaultClient](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultClient.md): Returns the VaultClient of the SDK in context, memoized per SDK.
+- [useVaultClient](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultClient.md): Returns a VaultClient bound to the SDK in context.
 - [useDeposit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md): Mutation hook that deposits into a confidential vault group and returns the batch each leg landed in.
 - [useRedeem](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRedeem.md): Mutation hook that redeems confidential vault shares and returns the batch each leg landed in.
 - [useBatch](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatch.md): Query hook that reads one vault batch — its state, timings, and the actions you can send now.

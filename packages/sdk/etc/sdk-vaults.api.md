@@ -150,7 +150,7 @@ export type JoinInputFor<TTarget extends VaultTarget> = TTarget extends VaultGro
 
 // @public
 export interface JoinOptions {
-    readonly skipChecks?: readonly VaultCheck[];
+    readonly checks?: readonly VaultCheck[];
     readonly walletMode?: WalletMode;
 }
 
@@ -210,7 +210,9 @@ export interface PreparedJoin {
     readonly amount: bigint;
     readonly calls: readonly [VaultCall, ...VaultCall[]];
     readonly chainId: number;
+    readonly grants: readonly GrantCall[];
     readonly groupId: string;
+    readonly joins: readonly [JoinCall, ...JoinCall[]];
     readonly kind: Direction;
     readonly legs: readonly [VaultLeg, ...VaultLeg[]];
     readonly route: JoinRoute;
@@ -236,8 +238,9 @@ export type SendJoinInput<TVaultId extends string = string> = Omit<JoinInput<TVa
 export type SendJoinInputFor<TTarget extends VaultTarget> = Omit<JoinInputFor<TTarget>, "account">;
 
 // @public
-export interface SendJoinOptions extends Pick<JoinOptions, "skipChecks"> {
+export interface SendJoinOptions {
     readonly onJoinSubmitted?: (txHash: Hex) => void;
+    readonly skipChecks?: readonly VaultCheck[];
 }
 
 // @public

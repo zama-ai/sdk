@@ -170,7 +170,7 @@ import { createVaultClient } from "@zama-fhe/sdk/vaults";
 const vaults = createVaultClient(sdk);
 ```
 
-In React, use [`useVaultClient`](../react/useVaultClient.md), which memoizes the client per SDK.
+In React, use [`useVaultClient`](../react/useVaultClient.md), which returns the same client for as long as the SDK in context stays.
 
 ### sdk
 
@@ -180,7 +180,7 @@ The SDK the client reads, encrypts and sends through.
 
 ## Prepare a join
 
-`prepareDeposit` and `prepareRedeem` run every check and encryption and stop before sending. They return a [`PreparedJoin`](#preparedjoin): plain data, safe to store and send through any pipeline (a transaction queue, a bundler, a custody service, or an EIP-5792 `wallet_sendCalls` batch).
+`prepareDeposit` and `prepareRedeem` read the chain and encrypt, and stop before sending. They need no signer. They return a [`PreparedJoin`](#preparedjoin): plain data, safe to store and send through any pipeline (a transaction queue, a bundler, a custody service, or an EIP-5792 `wallet_sendCalls` batch).
 
 ```ts
 import { createVaultClient } from "@zama-fhe/sdk/vaults";
@@ -209,25 +209,25 @@ After you send, call [`invalidateAfterVaultAction`](#invalidateaftervaultaction)
 
 Builds a deposit of the group's asset into one vault: a leg for every vault, each amount encrypted, and the calls in send order. A deposit pushes the asset, so it needs no grant.
 
-| Parameter | Type                          | Description                               |
-| --------- | ----------------------------- | ----------------------------------------- |
-| `target`  | `VaultGroup \| Vault`         | The group, or the single vault, to join.  |
-| `input`   | [`JoinInput`](#joininput)     | The vault, account and amount.            |
-| `options` | [`JoinOptions`](#joinoptions) | How the wallet sends, and checks to skip. |
+| Parameter | Type                          | Description                              |
+| --------- | ----------------------------- | ---------------------------------------- |
+| `target`  | `VaultGroup \| Vault`         | The group, or the single vault, to join. |
+| `input`   | [`JoinInput`](#joininput)     | The vault, account and amount.           |
+| `options` | [`JoinOptions`](#joinoptions) | How the wallet sends, and checks to run. |
 
 **Throws:**
 
 - `ChainMismatchError` when the provider is not on the group's chain while a wallet is connected.
 - `ConfigurationError` when the vault is unknown, the join goes through the router and none is configured, or the provider is not on the group's chain with no wallet connected.
 - `VaultBatcherPausedError` when any vault's batcher is paused.
-- `InsufficientConfidentialBalanceError` when the balance is less than `amount`.
-- `BalanceCheckUnavailableError` when the balance check cannot decrypt the balance.
+- `InsufficientConfidentialBalanceError` when `checks` names `"balance"` and the balance is less than `amount`.
+- `BalanceCheckUnavailableError` when `checks` names `"balance"` and the balance cannot be decrypted.
 
 ### prepareRedeem
 
 `prepareRedeem(target, input, options?) => Promise<PreparedJoin>`
 
-Builds a redemption of one vault's shares. The amount is in shares, not assets. On the router route, the router pulls every leg's share token, so `calls` starts with an operator grant on each share token the account has not granted to the router yet. Throws as `prepareDeposit`.
+Builds a redemption of one vault's shares. The amount is in shares, not assets. On the router route, the router pulls every leg's share token, so `grants` holds an operator grant on each share token the account has not granted to the router yet. Throws as `prepareDeposit`.
 
 ### activeBatchers
 
@@ -316,7 +316,7 @@ The amount is in the asset's base units, so `1_000_000n` is one unit of a 6-deci
 | `target`                  | `VaultGroup \| Vault`      | The group, or the single vault, to join.                                                                                                                   |
 | `input.vaultId`           | `VaultIdOf<typeof target>` | The vault that gets the amount. Optional for a single vault.                                                                                               |
 | `input.amount`            | `bigint`                   | Plaintext, in base units. Encrypted before it leaves the SDK.                                                                                              |
-| `options.skipChecks`      | `"balance"[]`              | Optional. See [`JoinOptions`](#joinoptions).                                                                                                               |
+| `options.skipChecks`      | `"balance"[]`              | Optional. `"balance"` skips the balance check, which runs by default. The paused check is never skipped.                                                   |
 | `options.onJoinSubmitted` | `(txHash: Hex) => void`    | Optional. Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. If it throws, the SDK logs a warning. |
 
 **Throws:** as [`prepareDeposit`](#preparedeposit), and `VaultJoinUnconfirmedError` when the join is mined but the receipt does not confirm every leg.
@@ -410,9 +410,9 @@ Options for `prepareDeposit` and `prepareRedeem`.
 | Field        | Type                       | Default        | Description                                                                                                                                                                                                                                                                                   |
 | ------------ | -------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `walletMode` | `"sequential" \| "bundle"` | `"sequential"` | How the sender's wallet lands several calls. `"sequential"` sends them one at a time, so a multi-vault join goes through the router. `"bundle"` lands them together or not at all (EIP-5792, a Safe, a smart account), so a multi-vault join sends one transfer per vault and needs no grant. |
-| `skipChecks` | `"balance"[]`              | `[]`           | `"balance"` skips the balance check. The paused check is never skipped.                                                                                                                                                                                                                       |
+| `checks`     | `"balance"[]`              | `[]`           | `"balance"` checks the balance before encrypting. The paused check always runs.                                                                                                                                                                                                               |
 
-The balance check decrypts as the signer, so an `account` other than the signer's needs `skipChecks: ["balance"]`. It decrypts the balance of every token the legs spend, not only the chosen one, so the relayer cannot tell which vault you picked.
+The balance check decrypts as the signer, so it works only when `account` is the signer's. It decrypts the balance of every token the legs spend, not only the chosen one, so the relayer cannot tell which vault you picked.
 
 ### PreparedJoin
 
@@ -428,7 +428,9 @@ What `prepareDeposit` and `prepareRedeem` return. Plain data, safe to store.
 | `amount`  | `bigint`                | The amount: in the asset for a deposit, in shares for a redemption.                  |
 | `route`   | `"legs" \| "router"`    | How the calls reach the batchers. See [How a join is routed](#how-a-join-is-routed). |
 | `legs`    | `VaultLeg[]`            | Every vault of the group, in group order, decoys included.                           |
-| `calls`   | `VaultCall[]`           | One list in send order: the grants the account lacks, then the join calls.           |
+| `grants`  | `GrantCall[]`           | The grants the account lacks, in leg order. Send them before the joins.              |
+| `joins`   | `JoinCall[]`            | The join calls. With `route: "legs"` in a group of more than one, bundle them.       |
+| `calls`   | `VaultCall[]`           | `grants`, then `joins`: every call in send order.                                    |
 
 Each `VaultLeg` is `{ vaultId, batcher, token, amount }`: the vault, the batcher the leg joins (resolved when the join was prepared), the token it spends, and its amount (zero for every vault but the chosen one).
 

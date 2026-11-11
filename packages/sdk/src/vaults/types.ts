@@ -94,11 +94,14 @@ export interface PreparedJoin {
   readonly route: JoinRoute;
   /** Every vault of the group, in group order, decoys included. */
   readonly legs: readonly [VaultLeg, ...VaultLeg[]];
+  /** The grants the account lacks, in leg order. Send them before the joins. */
+  readonly grants: readonly GrantCall[];
   /**
-   * In send order: the grants the account lacks, then the join calls. With
-   * `route: "legs"` in a group of more than one, send the join calls as one
-   * atomic bundle.
+   * The join calls. With `route: "legs"` in a group of more than one, send
+   * them as one atomic bundle.
    */
+  readonly joins: readonly [JoinCall, ...JoinCall[]];
+  /** `grants`, then `joins`: every call in send order, for a host that sends them all at once. */
   readonly calls: readonly [VaultCall, ...VaultCall[]];
 }
 
@@ -112,7 +115,10 @@ export interface JoinInput<TVaultId extends string = string> {
   readonly amount: bigint;
 }
 
-/** Checks `prepareDeposit` and `prepareRedeem` may skip. A paused batcher is never skipped. */
+/**
+ * Optional checks of a join. `"balance"` decrypts the account's balance as
+ * the signer. A paused batcher is always checked.
+ */
 export type VaultCheck = "balance";
 
 /** Options for `prepareDeposit` and `prepareRedeem`. */
@@ -120,10 +126,11 @@ export interface JoinOptions {
   /** Defaults to `"sequential"`. */
   readonly walletMode?: WalletMode;
   /**
-   * `"balance"`: skip the balance check, which decrypts as the signer and so
-   * is required for any other `account`.
+   * Checks to run before encrypting. None by default, so preparing needs no
+   * signer. `"balance"` decrypts as the signer, so it works only when
+   * `account` is the signer's.
    */
-  readonly skipChecks?: readonly VaultCheck[];
+  readonly checks?: readonly VaultCheck[];
 }
 
 /** A batch on one batcher. Batchers rotate, so a batch is identified by its batcher, not its vault. */
@@ -151,7 +158,9 @@ export type JoinInputFor<TTarget extends VaultTarget> = TTarget extends VaultGro
 export type SendJoinInputFor<TTarget extends VaultTarget> = Omit<JoinInputFor<TTarget>, "account">;
 
 /** Options for `client.deposit` and `client.redeem`. */
-export interface SendJoinOptions extends Pick<JoinOptions, "skipChecks"> {
+export interface SendJoinOptions {
+  /** Checks to skip. The balance check runs by default: the signer sends, so it can decrypt. */
+  readonly skipChecks?: readonly VaultCheck[];
   /** Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. */
   readonly onJoinSubmitted?: (txHash: Hex) => void;
 }

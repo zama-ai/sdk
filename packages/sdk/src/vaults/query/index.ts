@@ -57,8 +57,10 @@ export interface BatchQueryConfig {
 
 /**
  * When to read a batch again: one second past its next chain-time edge, or
- * on a poll while it waits for someone else's transaction (a dispatch once it
- * is old enough, a settlement once dispatched), which no chain time predicts.
+ * on a poll while it waits for someone else's transaction, which no chain
+ * time predicts. A pending batch waits for a dispatch once it is old enough;
+ * a dispatched one waits for a settlement from the start, so it is polled
+ * even before its callback deadline.
  */
 function batchRefetchInterval(read: Batch | undefined): number | false {
   if (read === undefined || read.state === "finalized" || read.state === "canceled") {
@@ -67,7 +69,11 @@ function batchRefetchInterval(read: Batch | undefined): number | false {
   if (read.nextChangeAt === null) {
     return KEEPER_POLL_MS;
   }
-  return Math.min(Number(read.nextChangeAt - read.observedAt) * 1000 + 1000, MAX_REFETCH_MS);
+  const untilEdge = Math.min(
+    Number(read.nextChangeAt - read.observedAt) * 1000 + 1000,
+    MAX_REFETCH_MS,
+  );
+  return read.state === "dispatched" ? Math.min(untilEdge, KEEPER_POLL_MS) : untilEdge;
 }
 
 /**

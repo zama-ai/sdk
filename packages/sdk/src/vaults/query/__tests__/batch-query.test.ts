@@ -32,6 +32,18 @@ describe("batchQueryOptions refetch schedule", () => {
     expect(intervalFor(sdk, { ...BASE, state: "pending", nextChangeAt: null })).toBe(15_000);
   });
 
+  test("polls a dispatched batch for its settlement before the callback deadline", ({ sdk }) => {
+    const dispatched = {
+      ...BASE,
+      state: "dispatched",
+      dispatchedAt: 950n,
+      cancelsAt: 1_950n,
+      nextChangeAt: 1_950n,
+    } as const;
+    expect(intervalFor(sdk, dispatched)).toBe(15_000);
+    expect(intervalFor(sdk, { ...dispatched, observedAt: 1_945n })).toBe(6_000);
+  });
+
   test("stops once the batch settled", ({ sdk }) => {
     expect(
       intervalFor(sdk, {

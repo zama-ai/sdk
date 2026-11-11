@@ -121,11 +121,13 @@ When `prepared.route` is `"legs"` in a group of more than one, send the join cal
 
 ## Send through your own pipeline
 
-A host with its own transaction pipeline (a queue, a bundler, a custody service) uses the `prepare*` methods. They need no signer and no connected wallet: a join takes the `account` that will send its calls, and the SDK only reads the chain and encrypts for that account. The one exception is the balance check, which decrypts as the signer, so without a signer, or for another account, pass `skipChecks: ["balance"]`.
+A host with its own transaction pipeline (a queue, a bundler, a custody service) uses the `prepare*` methods. They need no signer and no connected wallet: a join takes the `account` that will send its calls, and the SDK only reads the chain and encrypts for that account. They do not check the balance unless you pass `checks: ["balance"]`, which decrypts as the signer and so works only when `account` is the signer's.
 
 `prepareDeposit` and `prepareRedeem` return a `PreparedJoin`, which is plain data:
 
-- `calls`: one list in send order. First the grants the account lacks (`role: "grant"`, with `vaultId`, `token`, `operator` and `until`), then the join calls (`role: "join"`, with the `leg` each one funds).
+- `grants`: the grants the account lacks (`role: "grant"`, with `vaultId`, `token`, `operator` and `until`), in leg order. Send them first.
+- `joins`: the join calls (`role: "join"`, with the `leg` each one funds).
+- `calls`: `grants`, then `joins`, in send order, for a pipeline that sends every call the same way.
 - `route`: `"legs"` or `"router"`. With `"legs"` in a group of more than one, the join calls must land as one atomic bundle.
 - `legs`: every vault of the group, in group order, with the batcher each leg joins.
 
@@ -137,11 +139,11 @@ import { STABLE } from "./vaults";
 
 const vaults = createVaultClient(sdk);
 
-const prepared = await vaults.prepareDeposit(
-  STABLE,
-  { vaultId: "beta", account: "0xUser", amount: 1_000_000n },
-  { skipChecks: ["balance"] },
-);
+const prepared = await vaults.prepareDeposit(STABLE, {
+  vaultId: "beta",
+  account: "0xUser",
+  amount: 1_000_000n,
+});
 for (const call of prepared.calls) {
   await sendTransaction(call);
 }
@@ -150,7 +152,7 @@ for (const call of prepared.calls) {
 `sendTransaction` stands in for your pipeline. The join methods take these options:
 
 - `walletMode`: `"sequential"` (default) or `"bundle"`. See [Bundling wallets](#bundling-wallets).
-- `skipChecks`: `"balance"` skips the balance check. The paused check always runs.
+- `checks`: `["balance"]` checks the balance before encrypting. None by default. The paused check always runs.
 
 The batch actions take one batch each, as a `BatchRef` (`{ chainId, batcher, batchId }`). Dispatch acts on a batcher's open batch, so it takes a `BatcherRef` (`{ chainId, batcher }`):
 

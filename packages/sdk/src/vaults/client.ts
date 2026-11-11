@@ -161,7 +161,8 @@ function memoize<T>(cache: Map<string, Promise<T>>, key: string, read: () => Pro
  * serves every chain and group.
  *
  * `prepare*` methods return plain calls for a host that sends through its own
- * pipeline. The methods named by the bare verb send through the SDK's signer.
+ * pipeline, and need no signer. The methods named by the bare verb send
+ * through the SDK's signer.
  *
  * Every join sends a leg to every vault of its group, the chosen one with the
  * amount and the rest with an encrypted zero, so the chain cannot tell which
@@ -197,7 +198,7 @@ export class VaultClient {
    * @throws if the provider is not on the group's chain while a wallet is connected. {@link ChainMismatchError}
    * @throws if the vault is unknown, or the provider is on another chain with no wallet connected. {@link ConfigurationError}
    * @throws if any vault's batcher is paused. {@link VaultBatcherPausedError}
-   * @throws if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
+   * @throws with `checks: ["balance"]`, if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
    */
   async prepareDeposit<TTarget extends VaultTarget>(
     target: TTarget,
@@ -306,7 +307,7 @@ export class VaultClient {
    * Deposit with the SDK's signer: prepare for the signer's account, send the
    * calls, and read the batch each leg landed in from the receipt.
    *
-   * @throws as {@link prepareDeposit}.
+   * @throws as {@link prepareDeposit}, checking the balance unless `skipChecks` names it.
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
    * @throws if the wallet is not on the group's chain. {@link ChainMismatchError}
    * @throws if the receipt does not confirm every leg. {@link VaultJoinUnconfirmedError}
@@ -469,7 +470,7 @@ export class VaultClient {
     if (chosen === undefined) {
       throw new ConfigurationError(`Vault group "${group.id}" has no vault "${input.vaultId}"`);
     }
-    const skip = new Set(options?.skipChecks);
+    const checks = new Set(options?.checks);
     const account = getAddress(input.account);
     const route: JoinRoute =
       group.vaults.length === 1 || options?.walletMode === "bundle" ? "legs" : "router";
@@ -490,7 +491,7 @@ export class VaultClient {
       })),
     );
     const target = at(legs, group.vaults.indexOf(chosen));
-    if (!skip.has("balance")) {
+    if (checks.has("balance")) {
       await this.#assertBalance(direction, legs, target, account);
     }
 
@@ -555,6 +556,8 @@ export class VaultClient {
         amount: input.amount,
         route,
         legs,
+        grants: grants.map(({ call }) => call),
+        joins: nonEmpty(joins.map(({ call }) => call)),
         calls: nonEmpty(planned.map(({ call }) => call)),
       },
       planned,
@@ -574,7 +577,7 @@ export class VaultClient {
       direction,
       target,
       { ...input, account },
-      { skipChecks: options?.skipChecks },
+      { checks: options?.skipChecks?.includes("balance") ? [] : ["balance"] },
     );
     // The SDK sends one call at a time and never bundles, so the calls are any grants, then a single join.
     const txHashes: Hex[] = [];
@@ -864,8 +867,9 @@ export class VaultClient {
 }
 
 /**
- * A {@link VaultClient} bound to `sdk`. Reads nothing until first used; a
- * group is checked against the chain once, on its first join.
+ * A {@link VaultClient} bound to `sdk`. Reads nothing until first used, and
+ * holds no state beyond a cache of each batcher's exchange-rate decimals, so
+ * creating one is cheap.
  *
  * @example
  * ```ts
