@@ -72,7 +72,7 @@ import type {
   BatcherRef,
   Call,
   Direction,
-  GrantCall,
+  OperatorApprovalCall,
   JoinCall,
   JoinInput,
   JoinInputFor,
@@ -88,8 +88,8 @@ import type {
   VaultLeg,
 } from "./types";
 
-/** A router pulls a share token only for a join its holder sends, so a year-long grant exposes nothing and saves a prompt on later redeems. */
-const GRANT_VALIDITY_SECONDS = 365n * 24n * 60n * 60n;
+/** A router pulls a share token only for a join its holder sends, so a year-long operator approval exposes nothing and saves a prompt on later redeems. */
+const OPERATOR_APPROVAL_VALIDITY_SECONDS = 365n * 24n * 60n * 60n;
 
 // The contract's uint8 enum, by index.
 const BATCH_STATES: readonly BatchState[] = ["pending", "dispatched", "finalized", "canceled"];
@@ -193,7 +193,7 @@ export class VaultClient {
   /**
    * Build a deposit of the group's asset into one vault: a leg for every
    * vault, encrypted, with the calls in send order. A deposit pushes the
-   * asset, so it needs no grant.
+   * asset, so it needs no operator approval.
    *
    * @throws if the provider is not on the group's chain while a wallet is connected. {@link ChainMismatchError}
    * @throws if the vault is unknown, or the provider is on another chain with no wallet connected. {@link ConfigurationError}
@@ -210,8 +210,8 @@ export class VaultClient {
 
   /**
    * Build a redemption of one vault's shares. On the router route the router
-   * pulls every leg's share token, so `calls` starts with a grant on each
-   * share token the account has not granted, valid for a year.
+   * pulls every leg's share token, so `calls` starts with an operator approval on each
+   * share token the account has not approved, valid for a year.
    *
    * @throws as {@link prepareDeposit}.
    */
@@ -322,7 +322,7 @@ export class VaultClient {
 
   /**
    * Redeem with the SDK's signer. In a group of more than one vault, a
-   * redemption first asks the wallet for each router grant the account lacks.
+   * redemption first asks the wallet for each operator approval of the router the account lacks.
    *
    * @throws as {@link deposit}.
    */
@@ -501,7 +501,7 @@ export class VaultClient {
       call: { ...toCall(config), role: "join", leg },
     });
     let joins: Planned<JoinCall>[];
-    let grants: Planned<GrantCall>[] = [];
+    let operatorApprovals: Planned<OperatorApprovalCall>[] = [];
     if (router !== undefined) {
       const amounts = legs.map((leg) => leg.amount);
       const allocationOf = (handles: readonly EncryptedValue[]) =>
@@ -514,9 +514,9 @@ export class VaultClient {
         // The router verifies the allocation, so its proof is bound to the router.
         const [[handles, routerProof], missing] = await Promise.all([
           this.#encrypt(router, account, amounts, operation),
-          this.#missingGrants(group.chainId, legs, account, router),
+          this.#missingOperatorApprovals(group.chainId, legs, account, router),
         ]);
-        grants = missing;
+        operatorApprovals = missing;
         joins = [join(routerJoinContract(router, allocationOf(handles), routerProof), target)];
       } else {
         // One proof per verifying contract: the router checks the allocation, the asset the
@@ -544,8 +544,8 @@ export class VaultClient {
       });
     }
 
-    // Grants first: the router or batcher pulls under them.
-    const planned: Planned<VaultCall>[] = [...grants, ...joins];
+    // Operator approvals first: the router or batcher pulls under them.
+    const planned: Planned<VaultCall>[] = [...operatorApprovals, ...joins];
     return {
       prepared: {
         kind: direction,
@@ -556,7 +556,7 @@ export class VaultClient {
         amount: input.amount,
         route,
         legs,
-        grants: grants.map(({ call }) => call),
+        operatorApprovals: operatorApprovals.map(({ call }) => call),
         joins: nonEmpty(joins.map(({ call }) => call)),
         calls: nonEmpty(planned.map(({ call }) => call)),
       },
@@ -579,12 +579,13 @@ export class VaultClient {
       { ...input, account },
       { checks: options?.skipChecks?.includes("balance") ? [] : ["balance"] },
     );
-    // The SDK sends one call at a time and never bundles, so the calls are any grants, then a single join.
+    // The SDK sends one call at a time and never bundles, so the calls are any operator approvals, then a single join.
     const txHashes: Hex[] = [];
     let last: TransactionResult | undefined;
     for (const [index, { call, config }] of planned.entries()) {
       last = await submitTransaction({
-        operation: call.role === "grant" ? "setOperator" : JOIN_OPERATION[prepared.route],
+        operation:
+          call.role === "operatorApproval" ? "setOperator" : JOIN_OPERATION[prepared.route],
         signer,
         provider: this.sdk.provider,
         config,
@@ -759,28 +760,29 @@ export class VaultClient {
     });
   }
 
-  async #missingGrants(
+  async #missingOperatorApprovals(
     chainId: number,
     legs: readonly VaultLeg[],
     account: Address,
     operator: Address,
-  ): Promise<Planned<GrantCall>[]> {
-    const granted = await Promise.all(
+  ): Promise<Planned<OperatorApprovalCall>[]> {
+    const approved = await Promise.all(
       legs.map((leg) => this.#read(chainId, isOperatorContract(leg.token, account, operator))),
     );
-    const missing = legs.filter((_leg, index) => !granted[index]);
+    const missing = legs.filter((_leg, index) => !approved[index]);
     if (missing.length === 0) {
       return [];
     }
     // The token compares the deadline against the block's time, not the local clock.
-    const until = (await this.sdk.provider.getBlockTimestamp(chainId)) + GRANT_VALIDITY_SECONDS;
+    const until =
+      (await this.sdk.provider.getBlockTimestamp(chainId)) + OPERATOR_APPROVAL_VALIDITY_SECONDS;
     return missing.map((leg) => {
       const config = setOperatorContract(leg.token, operator, Number(until));
       return {
         config,
         call: {
           ...toCall(config),
-          role: "grant",
+          role: "operatorApproval",
           vaultId: leg.vaultId,
           token: leg.token,
           operator,

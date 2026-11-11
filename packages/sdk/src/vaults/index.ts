@@ -29,7 +29,7 @@ export type {
   BatcherRef,
   Call,
   Direction,
-  GrantCall,
+  OperatorApprovalCall,
   JoinCall,
   JoinInput,
   JoinInputFor,

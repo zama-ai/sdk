@@ -116,15 +116,6 @@ export function dispatchMutationOptions(client: VaultClient): MutationFactoryOpt
 // @public
 export function finalizeMutationOptions(client: VaultClient): MutationFactoryOptions<readonly ["zama.vault.finalize"], BatchRef, TransactionResult>;
 
-// @public
-export interface GrantCall extends Call {
-    readonly operator: Address;
-    readonly role: "grant";
-    readonly token: Address;
-    readonly until: bigint;
-    readonly vaultId: string;
-}
-
 // Warning: (ae-forgotten-export) The symbol "QueryClientLike" needs to be exported by the entry point index.d.ts
 //
 // @public
@@ -198,6 +189,15 @@ export type OpenBatchesQueryConfig = VaultSelection & {
 export function openBatchesQueryOptions(client: VaultClient, config: OpenBatchesQueryConfig): QueryFactoryOptions<readonly OpenBatch[], Error, readonly OpenBatch[], ReturnType<typeof vaultQueryKeys.openBatches>>;
 
 // @public
+export interface OperatorApprovalCall extends Call {
+    readonly operator: Address;
+    readonly role: "operatorApproval";
+    readonly token: Address;
+    readonly until: bigint;
+    readonly vaultId: string;
+}
+
+// @public
 export interface PreparedFinalize extends BatchRef {
     readonly call: Call;
     readonly decryptionProof: Hex;
@@ -210,11 +210,11 @@ export interface PreparedJoin {
     readonly amount: bigint;
     readonly calls: readonly [VaultCall, ...VaultCall[]];
     readonly chainId: number;
-    readonly grants: readonly GrantCall[];
     readonly groupId: string;
     readonly joins: readonly [JoinCall, ...JoinCall[]];
     readonly kind: Direction;
     readonly legs: readonly [VaultLeg, ...VaultLeg[]];
+    readonly operatorApprovals: readonly OperatorApprovalCall[];
     readonly route: JoinRoute;
     readonly vaultId: string;
 }
@@ -257,7 +257,7 @@ export interface Vault<TVaultId extends string = string> extends VaultGroupVault
 }
 
 // @public
-export type VaultCall = GrantCall | JoinCall;
+export type VaultCall = OperatorApprovalCall | JoinCall;
 
 // @public
 export type VaultCheck = "balance";

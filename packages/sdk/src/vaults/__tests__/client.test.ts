@@ -419,7 +419,7 @@ describe("proof binding", () => {
 });
 
 describe("prepareRedeem", () => {
-  test("grants the router on every share token it lacks, for a year, then joins", async ({
+  test("approves the router as operator on every share token it lacks, for a year, then joins", async ({
     sdk,
     provider,
     relayer,
@@ -431,17 +431,21 @@ describe("prepareRedeem", () => {
       account: USER,
       amount: 10n,
     });
-    expect(roles(prepared.calls)).toStrictEqual(["grant", "grant", "join"]);
+    expect(roles(prepared.calls)).toStrictEqual(["operatorApproval", "operatorApproval", "join"]);
     expect(prepared.calls.slice(0, 2)).toMatchObject([
       { token: ALPHA.share, operator: ROUTER, vaultId: "alpha", until: NOW + YEAR },
       { token: BETA.share, operator: ROUTER, vaultId: "beta", until: NOW + YEAR },
     ]);
     expect(decode(prepared.calls[2] as VaultCall).functionName).toBe("join");
-    expect(prepared.grants).toStrictEqual(prepared.calls.slice(0, 2));
+    expect(prepared.operatorApprovals).toStrictEqual(prepared.calls.slice(0, 2));
     expect(prepared.joins).toStrictEqual(prepared.calls.slice(2));
   });
 
-  test("sends only the join once the grants are in place", async ({ sdk, provider, relayer }) => {
+  test("sends only the join once the operator approvals are in place", async ({
+    sdk,
+    provider,
+    relayer,
+  }) => {
     mockChain(provider);
     mockEncryption(relayer);
     const prepared = await createVaultClient(sdk).prepareRedeem(STABLE, {
@@ -468,7 +472,7 @@ describe("without a signer", () => {
 
     expect(deposit.account).toBe(FRIEND);
     expect(roles(deposit.calls)).toStrictEqual(["join"]);
-    expect(roles(redeem.calls)).toStrictEqual(["grant", "grant", "join"]);
+    expect(roles(redeem.calls)).toStrictEqual(["operatorApproval", "operatorApproval", "join"]);
     const batch = { chainId: CHAIN_ID, batcher: ALPHA.depositBatcher, batchId: 1n };
     expect(client.prepareClaim({ ...batch, account: FRIEND }).to).toBe(ALPHA.depositBatcher);
     expect(client.prepareQuit(batch).to).toBe(ALPHA.depositBatcher);
@@ -720,7 +724,12 @@ describe("deposit and redeem", () => {
     } satisfies Partial<VaultJoinUnconfirmedError>);
   });
 
-  test("redeem sends the grants before the join", async ({ sdk, provider, relayer, signer }) => {
+  test("redeem sends the operator approvals before the join", async ({
+    sdk,
+    provider,
+    relayer,
+    signer,
+  }) => {
     mockChain(provider, { operators: false });
     mockEncryption(relayer);
     mockReceipt(provider, [ALPHA.redeemBatcher, BETA.redeemBatcher]);

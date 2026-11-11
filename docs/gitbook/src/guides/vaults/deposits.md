@@ -253,7 +253,7 @@ redeem.mutate({ group: STABLE, vaultId: "beta", amount: 500n });
 {% endtabs %}
 
 {% hint style="warning" %}
-**A first redemption from a group of N vaults can take up to N + 1 wallet prompts**: one operator grant per share token, then the join. Tell users before they start. See [Wallet prompts](advanced.md#wallet-prompts).
+**A first redemption from a group of N vaults can take up to N + 1 wallet prompts**: one operator approval per share token, then the join. Tell users before they start. See [Wallet prompts](advanced.md#wallet-prompts).
 {% endhint %}
 
 ## Show when the next batch closes

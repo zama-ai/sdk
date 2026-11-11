@@ -33,37 +33,37 @@ export interface VaultLeg {
   readonly amount: bigint;
 }
 
-/** An ERC-7984 operator grant a join relies on. Present only when the account lacks it. */
-export interface GrantCall extends Call {
-  /** Tells a grant from a join without decoding the calldata. */
-  readonly role: "grant";
-  /** The vault whose token the grant is on. */
+/** An ERC-7984 operator approval a join relies on. Present only when the account lacks it. */
+export interface OperatorApprovalCall extends Call {
+  /** Tells an operator approval from a join without decoding the calldata. */
+  readonly role: "operatorApproval";
+  /** The vault whose token the approval is on. */
   readonly vaultId: string;
-  /** The token the grant is on. */
+  /** The token the approval is on. */
   readonly token: Address;
-  /** The contract granted: the router. */
+  /** The approved operator: the router. */
   readonly operator: Address;
-  /** When the grant expires, in chain seconds. */
+  /** When the approval expires, in chain seconds. */
   readonly until: bigint;
 }
 
 /** A join call, tagged with the leg it funds. A router call is tagged with the chosen leg. */
 export interface JoinCall extends Call {
-  /** Tells a join from a grant without decoding the calldata. */
+  /** Tells a join from an operator approval without decoding the calldata. */
   readonly role: "join";
   /** The leg this call funds. */
   readonly leg: VaultLeg;
 }
 
 /** A call of a prepared join. */
-export type VaultCall = GrantCall | JoinCall;
+export type VaultCall = OperatorApprovalCall | JoinCall;
 
 /**
  * How a join reaches the batchers, derived from the group size and the wallet mode.
  *
  * - `"legs"`: one call per leg, straight to each batcher. A group of one always
  *   takes it. In a larger group the calls must land together.
- * - `"router"`: one call through the router, after any grants it needs.
+ * - `"router"`: one call through the router, after any operator approvals it needs.
  */
 export type JoinRoute = "legs" | "router";
 
@@ -72,7 +72,7 @@ export type JoinRoute = "legs" | "router";
  *
  * - `"sequential"`: one at a time. A multi-vault join goes through the router.
  * - `"bundle"`: together or not at all (EIP-5792, a Safe, a smart account). A
- *   multi-vault join sends one transfer per vault, which needs no grant.
+ *   multi-vault join sends one transfer per vault, which needs no operator approval.
  */
 export type WalletMode = "sequential" | "bundle";
 
@@ -94,14 +94,14 @@ export interface PreparedJoin {
   readonly route: JoinRoute;
   /** Every vault of the group, in group order, decoys included. */
   readonly legs: readonly [VaultLeg, ...VaultLeg[]];
-  /** The grants the account lacks, in leg order. Send them before the joins. */
-  readonly grants: readonly GrantCall[];
+  /** The operator approvals the account lacks, in leg order. Send them before the joins. */
+  readonly operatorApprovals: readonly OperatorApprovalCall[];
   /**
    * The join calls. With `route: "legs"` in a group of more than one, send
    * them as one atomic bundle.
    */
   readonly joins: readonly [JoinCall, ...JoinCall[]];
-  /** `grants`, then `joins`: every call in send order, for a host that sends them all at once. */
+  /** `operatorApprovals`, then `joins`: every call in send order, for a host that sends them all at once. */
   readonly calls: readonly [VaultCall, ...VaultCall[]];
 }
 
@@ -238,6 +238,6 @@ export interface JoinOutcome {
   readonly prepared: PreparedJoin;
   /** The batch each leg landed in, in group order. */
   readonly batches: readonly (BatchRef & { readonly vaultId: string })[];
-  /** Every transaction sent, grants first. */
+  /** Every transaction sent, operator approvals first. */
   readonly txHashes: readonly Hex[];
 }

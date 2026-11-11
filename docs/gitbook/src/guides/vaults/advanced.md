@@ -41,15 +41,15 @@ The SDK's send methods send one transaction per call, so each call is one wallet
 | `claim`, `dispatch`, `finalize` | 1 per batch | 1 per batch       |
 | `quit` the whole join           | 1           | N                 |
 
-A multi-vault deposit is one transfer of the asset to the router, which splits it into legs. It needs no grant, but the router's registry must list the asset, or the router rejects the transfer.
+A multi-vault deposit is one transfer of the asset to the router, which splits it into legs. It needs no operator approval, but the router's registry must list the asset, or the router rejects the transfer.
 
-A multi-vault redemption is different. Each vault has its own share token, and the router pulls every one of them. So the account first grants the router an ERC-7984 operator approval on every share token it has not granted yet: one prompt each, then one prompt for the join.
+A multi-vault redemption is different. Each vault has its own share token, and the router pulls every one of them. So the account first approves the router as ERC-7984 operator on every share token it has not approved it on yet: one prompt each, then one prompt for the join.
 
 {% hint style="warning" %}
-**Make the N + 1 prompts visible to users.** The first redemption from a group of N vaults asks for up to N grants, then the join. Say so on the redeem form before the user starts, or use a [bundling wallet](#bundling-wallets).
+**Make the N + 1 prompts visible to users.** The first redemption from a group of N vaults asks for up to N operator approvals, then the join. Say so on the redeem form before the user starts, or use a [bundling wallet](#bundling-wallets).
 {% endhint %}
 
-A grant lasts a year, so later redemptions ask for none. A long grant is safe: the router only pulls a share token for a join that its holder sends, under an encryption proof bound to that holder. Nobody else can use the grant to move the shares.
+An operator approval lasts a year, so later redemptions ask for none. A long approval is safe: the router only pulls a share token for a join that its holder sends, under an encryption proof bound to that holder. Nobody else can use the approval to move the shares.
 
 ## Paused batchers
 
@@ -102,7 +102,7 @@ Never remove a retired entry, even after all its batches settled. `defineVaultGr
 
 ## Bundling wallets
 
-A wallet that lands several calls together or not at all, such as an EIP-5792 `wallet_sendCalls` batch, a Safe, or a smart account, can skip the router. Prepare the join with `walletMode: "bundle"`: you get one transfer per vault, straight to its batcher, and no grants.
+A wallet that lands several calls together or not at all, such as an EIP-5792 `wallet_sendCalls` batch, a Safe, or a smart account, can skip the router. Prepare the join with `walletMode: "bundle"`: you get one transfer per vault, straight to its batcher, and no operator approvals.
 
 ```ts
 const prepared = await vaults.prepareRedeem(
@@ -125,9 +125,9 @@ A host with its own transaction pipeline (a queue, a bundler, a custody service)
 
 `prepareDeposit` and `prepareRedeem` return a `PreparedJoin`, which is plain data:
 
-- `grants`: the grants the account lacks (`role: "grant"`, with `vaultId`, `token`, `operator` and `until`), in leg order. Send them first.
+- `operatorApprovals`: the operator approvals the account lacks (`role: "operatorApproval"`, with `vaultId`, `token`, `operator` and `until`), in leg order. Send them first.
 - `joins`: the join calls (`role: "join"`, with the `leg` each one funds).
-- `calls`: `grants`, then `joins`, in send order, for a pipeline that sends every call the same way.
+- `calls`: `operatorApprovals`, then `joins`, in send order, for a pipeline that sends every call the same way.
 - `route`: `"legs"` or `"router"`. With `"legs"` in a group of more than one, the join calls must land as one atomic bundle.
 - `legs`: every vault of the group, in group order, with the batcher each leg joins.
 

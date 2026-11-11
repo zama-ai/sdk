@@ -31,7 +31,7 @@ export type UseVaultMutationOptions<TData, TVariables, TContext = unknown> = Omi
 >;
 
 // Every vault mutation invalidates the vault reads and balances it may have changed, on error too:
-// a join that mined but could not be confirmed, or grants mined before a failed join, changed state.
+// a join that mined but could not be confirmed, or operator approvals mined before a failed join, changed state.
 function useVaultMutation<TData, TVariables, TContext>(
   factory: (client: VaultClient) => MutationFactoryOptions<readonly unknown[], TVariables, TData>,
   options: UseVaultMutationOptions<TData, TVariables, TContext> | undefined,
@@ -63,7 +63,7 @@ export function useDeposit<TContext = unknown>(
   return useVaultMutation(depositMutationOptions, options);
 }
 
-/** Redeem with the SDK's signer. In a group of more than one vault, the wallet is first asked for each router grant the account lacks. */
+/** Redeem with the SDK's signer. In a group of more than one vault, the wallet is first asked for each operator approval of the router the account lacks. */
 export function useRedeem<TContext = unknown>(
   options?: UseVaultMutationOptions<JoinOutcome, JoinVariables, TContext>,
 ) {

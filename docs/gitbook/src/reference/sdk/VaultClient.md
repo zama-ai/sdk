@@ -199,7 +199,7 @@ for (const call of prepared.calls) {
 }
 ```
 
-`sendTransaction` stands in for your own pipeline. Send each call to `call.to` with `call.data` and no value. Send the calls in order: the grants come first.
+`sendTransaction` stands in for your own pipeline. Send each call to `call.to` with `call.data` and no value. Send the calls in order: the operator approvals come first.
 
 After you send, call [`invalidateAfterVaultAction`](#invalidateaftervaultaction) to refresh cached reads.
 
@@ -207,7 +207,7 @@ After you send, call [`invalidateAfterVaultAction`](#invalidateaftervaultaction)
 
 `prepareDeposit(target, input, options?) => Promise<PreparedJoin>`
 
-Builds a deposit of the group's asset into one vault: a leg for every vault, each amount encrypted, and the calls in send order. A deposit pushes the asset, so it needs no grant.
+Builds a deposit of the group's asset into one vault: a leg for every vault, each amount encrypted, and the calls in send order. A deposit pushes the asset, so it needs no operator approval.
 
 | Parameter | Type                          | Description                              |
 | --------- | ----------------------------- | ---------------------------------------- |
@@ -227,7 +227,7 @@ Builds a deposit of the group's asset into one vault: a leg for every vault, eac
 
 `prepareRedeem(target, input, options?) => Promise<PreparedJoin>`
 
-Builds a redemption of one vault's shares. The amount is in shares, not assets. On the router route, the router pulls every leg's share token, so `grants` holds an operator grant on each share token the account has not granted to the router yet. Throws as `prepareDeposit`.
+Builds a redemption of one vault's shares. The amount is in shares, not assets. On the router route, the router pulls every leg's share token, so `operatorApprovals` holds an operator approval of the router on each share token the account has not approved it on yet. Throws as `prepareDeposit`.
 
 ### activeBatchers
 
@@ -239,20 +239,20 @@ Reads the batcher a join in `direction` (`"deposit"` or `"redeem"`) reaches righ
 
 `route` in the prepared join tells you how the calls reach the batchers. It depends on the group's size and the wallet mode:
 
-| Case                                    | `route`    | `calls`                                                                                                 |
-| --------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------- |
-| Group of one                            | `"legs"`   | One transfer to the batcher.                                                                            |
-| Several vaults, deposit, `"sequential"` | `"router"` | One transfer of the asset to the router, which splits it into one leg per vault. No grant.              |
-| Several vaults, redeem, `"sequential"`  | `"router"` | A grant to the router on each share token the account lacks, then one router call that pulls every leg. |
-| Several vaults, `"bundle"`              | `"legs"`   | One transfer per vault, straight to its batcher. No grant.                                              |
+| Case                                    | `route`    | `calls`                                                                                                              |
+| --------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------- |
+| Group of one                            | `"legs"`   | One transfer to the batcher.                                                                                         |
+| Several vaults, deposit, `"sequential"` | `"router"` | One transfer of the asset to the router, which splits it into one leg per vault. No operator approval.               |
+| Several vaults, redeem, `"sequential"`  | `"router"` | An operator approval of the router on each share token the account lacks, then one router call that pulls every leg. |
+| Several vaults, `"bundle"`              | `"legs"`   | One transfer per vault, straight to its batcher. No operator approval.                                               |
 
 {% hint style="danger" %}
 With `route: "legs"` in a group of more than one, send the join calls as one atomic bundle. If they go out one by one and the user stops partway, the vaults that were never joined show which vault the user picked.
 {% endhint %}
 
-### Why a grant lasts a year
+### Why an operator approval lasts a year
 
-A grant is valid for a year of chain time. This is safe: the router only pulls a share token for a join that its holder sends, under an encryption proof bound to that holder. Nobody else can use the grant to move the shares. A long grant spares the user a wallet prompt on every later redemption.
+An operator approval is valid for a year of chain time. This is safe: the router only pulls a share token for a join that its holder sends, under an encryption proof bound to that holder. Nobody else can use the approval to move the shares. A long approval spares the user a wallet prompt on every later redemption.
 
 ## Prepare a batch action
 
@@ -292,7 +292,7 @@ Builds the settlement of a dispatched batch. It reads the batch's unwrap request
 
 ## Send methods
 
-The send methods sign with the SDK's signer and wait for each receipt. A join sends one transaction per call, grants first, so each call is one wallet prompt. The SDK sends one call at a time, so it always prepares a join with `walletMode: "sequential"`.
+The send methods sign with the SDK's signer and wait for each receipt. A join sends one transaction per call, operator approvals first, so each call is one wallet prompt. The SDK sends one call at a time, so it always prepares a join with `walletMode: "sequential"`.
 
 All send methods throw:
 
@@ -332,7 +332,7 @@ const { batches } = await vaults.redeem(STABLE, { vaultId: "beta", amount: 500n 
 ```
 
 {% hint style="warning" %}
-**A first redemption from a group of N vaults can ask for up to N + 1 wallet prompts.** The router pulls each vault's share token, so the account first grants it an operator approval on every share token it has not granted yet, then sends the join. Later redemptions ask for no grant for a year. Tell users before they start.
+**A first redemption from a group of N vaults can ask for up to N + 1 wallet prompts.** The router pulls each vault's share token, so the account first approves it as operator on every share token it has not approved it on yet, then sends the join. Later redemptions ask for no operator approval for a year. Tell users before they start.
 {% endhint %}
 
 ### claim
@@ -407,10 +407,10 @@ What `prepareDeposit` and `prepareRedeem` take. `deposit` and `redeem` take the 
 
 Options for `prepareDeposit` and `prepareRedeem`.
 
-| Field        | Type                       | Default        | Description                                                                                                                                                                                                                                                                                   |
-| ------------ | -------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `walletMode` | `"sequential" \| "bundle"` | `"sequential"` | How the sender's wallet lands several calls. `"sequential"` sends them one at a time, so a multi-vault join goes through the router. `"bundle"` lands them together or not at all (EIP-5792, a Safe, a smart account), so a multi-vault join sends one transfer per vault and needs no grant. |
-| `checks`     | `"balance"[]`              | `[]`           | `"balance"` checks the balance before encrypting. The paused check always runs.                                                                                                                                                                                                               |
+| Field        | Type                       | Default        | Description                                                                                                                                                                                                                                                                                               |
+| ------------ | -------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `walletMode` | `"sequential" \| "bundle"` | `"sequential"` | How the sender's wallet lands several calls. `"sequential"` sends them one at a time, so a multi-vault join goes through the router. `"bundle"` lands them together or not at all (EIP-5792, a Safe, a smart account), so a multi-vault join sends one transfer per vault and needs no operator approval. |
+| `checks`     | `"balance"[]`              | `[]`           | `"balance"` checks the balance before encrypting. The paused check always runs.                                                                                                                                                                                                                           |
 
 The balance check decrypts as the signer, so it works only when `account` is the signer's. It decrypts the balance of every token the legs spend, not only the chosen one, so the relayer cannot tell which vault you picked.
 
@@ -418,40 +418,40 @@ The balance check decrypts as the signer, so it works only when `account` is the
 
 What `prepareDeposit` and `prepareRedeem` return. Plain data, safe to store.
 
-| Field     | Type                    | Description                                                                          |
-| --------- | ----------------------- | ------------------------------------------------------------------------------------ |
-| `kind`    | `"deposit" \| "redeem"` | Whether it deposits or redeems.                                                      |
-| `chainId` | `number`                | The chain to send the calls on.                                                      |
-| `groupId` | `string`                | The group joined, or the single vault's id.                                          |
-| `vaultId` | `string`                | The vault that gets the amount.                                                      |
-| `account` | `Address`               | The account the calls come from.                                                     |
-| `amount`  | `bigint`                | The amount: in the asset for a deposit, in shares for a redemption.                  |
-| `route`   | `"legs" \| "router"`    | How the calls reach the batchers. See [How a join is routed](#how-a-join-is-routed). |
-| `legs`    | `VaultLeg[]`            | Every vault of the group, in group order, decoys included.                           |
-| `grants`  | `GrantCall[]`           | The grants the account lacks, in leg order. Send them before the joins.              |
-| `joins`   | `JoinCall[]`            | The join calls. With `route: "legs"` in a group of more than one, bundle them.       |
-| `calls`   | `VaultCall[]`           | `grants`, then `joins`: every call in send order.                                    |
+| Field               | Type                     | Description                                                                          |
+| ------------------- | ------------------------ | ------------------------------------------------------------------------------------ |
+| `kind`              | `"deposit" \| "redeem"`  | Whether it deposits or redeems.                                                      |
+| `chainId`           | `number`                 | The chain to send the calls on.                                                      |
+| `groupId`           | `string`                 | The group joined, or the single vault's id.                                          |
+| `vaultId`           | `string`                 | The vault that gets the amount.                                                      |
+| `account`           | `Address`                | The account the calls come from.                                                     |
+| `amount`            | `bigint`                 | The amount: in the asset for a deposit, in shares for a redemption.                  |
+| `route`             | `"legs" \| "router"`     | How the calls reach the batchers. See [How a join is routed](#how-a-join-is-routed). |
+| `legs`              | `VaultLeg[]`             | Every vault of the group, in group order, decoys included.                           |
+| `operatorApprovals` | `OperatorApprovalCall[]` | The operator approvals the account lacks, in leg order. Send them before the joins.  |
+| `joins`             | `JoinCall[]`             | The join calls. With `route: "legs"` in a group of more than one, bundle them.       |
+| `calls`             | `VaultCall[]`            | `operatorApprovals`, then `joins`: every call in send order.                         |
 
 Each `VaultLeg` is `{ vaultId, batcher, token, amount }`: the vault, the batcher the leg joins (resolved when the join was prepared), the token it spends, and its amount (zero for every vault but the chosen one).
 
 ### VaultCall
 
-A `Call` (`{ to: Address; data: Hex; value: 0n }`) tagged with its `role`, so you can tell grants from joins without decoding the calldata:
+A `Call` (`{ to: Address; data: Hex; value: 0n }`) tagged with its `role`, so you can tell operator approvals from joins without decoding the calldata:
 
-| `role`    | Extra fields                            | Meaning                                                                                                            |
-| --------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `"grant"` | `vaultId`, `token`, `operator`, `until` | An ERC-7984 operator grant the join relies on: `operator` (the router) on `token`, until `until` in chain seconds. |
-| `"join"`  | `leg`                                   | A join call, with the leg it funds. A router call carries the chosen leg.                                          |
+| `role`               | Extra fields                            | Meaning                                                                                                               |
+| -------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `"operatorApproval"` | `vaultId`, `token`, `operator`, `until` | An ERC-7984 operator approval the join relies on: `operator` (the router) on `token`, until `until` in chain seconds. |
+| `"join"`             | `leg`                                   | A join call, with the leg it funds. A router call carries the chosen leg.                                             |
 
 ### JoinOutcome
 
 What `deposit` and `redeem` return.
 
-| Field      | Type                                 | Description                                   |
-| ---------- | ------------------------------------ | --------------------------------------------- |
-| `prepared` | `PreparedJoin`                       | What was sent.                                |
-| `batches`  | `(BatchRef & { vaultId: string })[]` | The batch each leg landed in, in group order. |
-| `txHashes` | `Hex[]`                              | Every transaction sent, grants first.         |
+| Field      | Type                                 | Description                                       |
+| ---------- | ------------------------------------ | ------------------------------------------------- |
+| `prepared` | `PreparedJoin`                       | What was sent.                                    |
+| `batches`  | `(BatchRef & { vaultId: string })[]` | The batch each leg landed in, in group order.     |
+| `txHashes` | `Hex[]`                              | Every transaction sent, operator approvals first. |
 
 ### BatchRef
 

@@ -136,7 +136,7 @@ The `data` property (after a successful mutation) is a `JoinOutcome`:
 
 - **`batches`**: the batch each leg landed in, in group order, as `{ vaultId, chainId, batcher, batchId }`. Store them to read, claim or quit later.
 - **`prepared`**: the `PreparedJoin` that was sent.
-- **`txHashes`**: every transaction sent, grants first.
+- **`txHashes`**: every transaction sent, operator approvals first.
 
 On success, the hook invalidates every vault read and every confidential balance.
 
