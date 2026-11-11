@@ -66,19 +66,9 @@ export function depositsContract(batcher: Address, batchId: bigint, account: Add
   } as const;
 }
 
-/** Returns the contract config to read the underlying ERC-4626 vault address. */
-export function vaultContract(batcher: Address) {
-  return { address: batcher, abi: vaultBatcherAbi, functionName: "vault", args: [] } as const;
-}
-
 /** Returns the contract config to read the confidential token this batcher accepts as input. */
 export function fromTokenContract(batcher: Address) {
   return { address: batcher, abi: vaultBatcherAbi, functionName: "fromToken", args: [] } as const;
-}
-
-/** Returns the contract config to read the confidential token this batcher pays out. */
-export function toTokenContract(batcher: Address) {
-  return { address: batcher, abi: vaultBatcherAbi, functionName: "toToken", args: [] } as const;
 }
 
 /** Returns the contract config to read the minimum age pinned to one batch when it opened. */

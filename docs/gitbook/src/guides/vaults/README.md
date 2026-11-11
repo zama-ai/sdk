@@ -21,7 +21,7 @@ A vault deposit is not done when the transaction is mined. The amount joins a **
 
 The SDK gives you one client for all of it:
 
-1. **Describe each group once** with `defineVaultGroup`. Vaults that take deposits in the same confidential asset form a **group**. A single vault is a group of one.
+1. **Describe each group once** with `defineVaultGroup`. Vaults that take deposits in the same confidential asset form a **group**. For one vault on its own, use `defineVault`.
 2. **Create a client** with `createVaultClient(sdk)`, or `useVaultClient()` in React. It holds no config, so one client serves every group and chain.
 3. **Join**: `deposit` or `redeem` returns the batch each leg landed in. Store them.
 4. **Follow each batch**: `readBatch(batchRef)` returns the batch's `state` and the `actions` you can send now.

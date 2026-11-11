@@ -78,9 +78,15 @@ Passed to `mutate` / `mutateAsync` at call time.
 
 ### group
 
-`VaultGroup`
+`VaultGroup | undefined`
 
-The group to join, as returned by [`defineVaultGroup`](../sdk/VaultClient.md#definevaultgroup).
+The group to join, as returned by [`defineVaultGroup`](../sdk/VaultClient.md#definevaultgroup). Pass `group` and `vaultId`, or `vault`.
+
+### vault
+
+`Vault | undefined`
+
+A single vault to join instead of a group, as returned by [`defineVault`](../sdk/VaultClient.md#definevault). It needs no `vaultId`.
 
 ### vaultId
 
@@ -96,9 +102,9 @@ The amount, in the asset's base units. Encrypted before it leaves the SDK.
 
 ### skipChecks
 
-`("balance" | "config")[] | undefined`
+`"balance"[] | undefined`
 
-Skip the balance check, or the one-time check of the group against the chain. The paused check always runs.
+Skip the balance check. The paused check always runs.
 
 ### onJoinSubmitted
 
@@ -118,7 +124,6 @@ deposit.mutate({
 **Throws:**
 
 - `VaultBatcherPausedError`: a batcher of the group is paused
-- `UnlistedConfidentialTokenError`: the router's registry does not list the asset (multi-vault groups)
 - `InsufficientConfidentialBalanceError`: the balance is less than `amount`
 - `BalanceCheckUnavailableError`: the balance check cannot decrypt the balance
 - `VaultJoinUnconfirmedError`: the join was mined, but the SDK could not read every batch id from the receipt

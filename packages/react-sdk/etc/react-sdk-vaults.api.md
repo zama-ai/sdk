@@ -18,7 +18,7 @@ import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
 import { UseQueryResult } from '@tanstack/react-query';
 import { VaultClient } from '@zama-fhe/sdk/vaults';
-import { VaultGroup } from '@zama-fhe/sdk/vaults';
+import { VaultTarget } from '@zama-fhe/sdk/vaults';
 
 // @public
 export function useBatch(batch: BatchRef | undefined, options?: UseBatchOptions): UseQueryResult<Batch, Error>;
@@ -37,7 +37,7 @@ export function useClaim<TContext = unknown>(options?: UseVaultMutationOptions<T
 }, TContext>;
 
 // @public
-export function useDeposit<TContext = unknown>(options?: UseVaultMutationOptions<JoinOutcome, JoinVariables, TContext>): UseMutationResult<JoinOutcome, Error, JoinVariables<VaultGroup<string, string>>, TContext>;
+export function useDeposit<TContext = unknown>(options?: UseVaultMutationOptions<JoinOutcome, JoinVariables, TContext>): UseMutationResult<JoinOutcome, Error, JoinVariables, TContext>;
 
 // @public
 export function useDispatch<TContext = unknown>(options?: UseVaultMutationOptions<TransactionResult, BatcherRef, TContext>): UseMutationResult<TransactionResult, Error, BatcherRef, TContext>;
@@ -46,13 +46,13 @@ export function useDispatch<TContext = unknown>(options?: UseVaultMutationOption
 export function useFinalize<TContext = unknown>(options?: UseVaultMutationOptions<TransactionResult, BatchRef, TContext>): UseMutationResult<TransactionResult, Error, BatchRef, TContext>;
 
 // @public
-export function useOpenBatches(group: VaultGroup, direction: Direction, options?: Omit<UseQueryOptions<readonly OpenBatch[]>, "queryKey" | "queryFn">): UseQueryResult<readonly OpenBatch[], Error>;
+export function useOpenBatches(target: VaultTarget, direction: Direction, options?: Omit<UseQueryOptions<readonly OpenBatch[]>, "queryKey" | "queryFn">): UseQueryResult<readonly OpenBatch[], Error>;
 
 // @public
 export function useQuit<TContext = unknown>(options?: UseVaultMutationOptions<TransactionResult, BatchRef, TContext>): UseMutationResult<TransactionResult, Error, BatchRef, TContext>;
 
 // @public
-export function useRedeem<TContext = unknown>(options?: UseVaultMutationOptions<JoinOutcome, JoinVariables, TContext>): UseMutationResult<JoinOutcome, Error, JoinVariables<VaultGroup<string, string>>, TContext>;
+export function useRedeem<TContext = unknown>(options?: UseVaultMutationOptions<JoinOutcome, JoinVariables, TContext>): UseMutationResult<JoinOutcome, Error, JoinVariables, TContext>;
 
 // @public
 export function useVaultClient(): VaultClient;

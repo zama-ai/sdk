@@ -26,7 +26,7 @@ These follow the [rules for clients](https://docs.zama.org/protocol/confidential
 
 ## Group size and the router
 
-A group holds from one vault up to `MAX_GROUP_VAULTS`. A join's FHE compute grows with its number of legs, and `MAX_GROUP_VAULTS` is what fits in one transaction. A group of one has nothing to hide a leg among, so it joins its batcher directly, without the router.
+A group holds from one vault up to `MAX_GROUP_VAULTS`. A join's FHE compute grows with its number of legs, and `MAX_GROUP_VAULTS` is what fits in one transaction. A group of one, or a single vault from `defineVault`, has nothing to hide a leg among, so it joins its batcher directly, without the router.
 
 A multi-vault join sent one call at a time goes through the chain's router, `vaultRouterAddress` in the chain preset. Set `router` in `defineVaultGroup` only for a chain whose preset names none. When the preset names a router, a different `router` throws `ConfigurationError`.
 
@@ -34,14 +34,14 @@ A multi-vault join sent one call at a time goes through the chain's router, `vau
 
 The SDK's send methods send one transaction per call, so each call is one wallet prompt. The number depends on the action and the group's size:
 
-| Action                          | Group of one | Group of N vaults |
-| ------------------------------- | ------------ | ----------------- |
-| `deposit`                       | 1            | 1                 |
-| `redeem`                        | 1            | **up to N + 1**   |
-| `claim`, `dispatch`, `finalize` | 1 per batch  | 1 per batch       |
-| `quit` the whole join           | 1            | N                 |
+| Action                          | One vault   | Group of N vaults |
+| ------------------------------- | ----------- | ----------------- |
+| `deposit`                       | 1           | 1                 |
+| `redeem`                        | 1           | **up to N + 1**   |
+| `claim`, `dispatch`, `finalize` | 1 per batch | 1 per batch       |
+| `quit` the whole join           | 1           | N                 |
 
-A multi-vault deposit is one transfer of the asset to the router, which splits it into legs. It needs no grant, but the router's registry must list the asset. The SDK checks this and throws `UnlistedConfidentialTokenError` instead of paying for a revert.
+A multi-vault deposit is one transfer of the asset to the router, which splits it into legs. It needs no grant, but the router's registry must list the asset, or the router rejects the transfer.
 
 A multi-vault redemption is different. Each vault has its own share token, and the router pulls every one of them. So the account first grants the router an ERC-7984 operator approval on every share token it has not granted yet: one prompt each, then one prompt for the join.
 
@@ -92,12 +92,12 @@ How the client uses it:
 - **Joins switch on the batch, not the clock.** A join goes to the first retired batcher whose open batch is still at most its `lastBatchId`, and otherwise to `latest`. Joins keep landing on the old batcher until batch `lastBatchId` is dispatched, then go to the new one. You can ship the new group before the switch.
 - **Stored batches keep their batcher.** A `BatchRef` names the batcher the leg joined, so `readBatch`, `claim` and `quit` work on a retired batcher as before.
 - **`readOpenBatches` and `activeBatchers` report the active batcher**, so a form shows the batch the next join lands in.
-- **Every batcher of a vault must serve the same vault.** On the first join, the client checks that each batcher, retired ones included, trades the group's asset for the vault's `share` against the same ERC-4626 vault. A mismatch throws `ConfigurationError`.
+- **Every batcher of a vault must serve the same vault.** Each batcher, retired ones included, must trade the group's asset for the vault's `share` against the same ERC-4626 vault. The SDK does not check this against the chain.
 
 To upgrade again, append the current `latest` to the end of `retired` with its `lastBatchId`, and set the new `latest`. Keep `retired` oldest first.
 
 {% hint style="warning" %}
-Never remove a retired entry, even after all its batches settled. The client checks every batcher of the history against the chain, and a batcher used twice anywhere in the group throws `ConfigurationError`, so a removed address could later be reused by mistake.
+Never remove a retired entry, even after all its batches settled. `defineVaultGroup` refuses a batcher used twice anywhere in the group, so keeping every entry stops an old address from being reused by mistake.
 {% endhint %}
 
 ## Bundling wallets
@@ -150,7 +150,7 @@ for (const call of prepared.calls) {
 `sendTransaction` stands in for your pipeline. The join methods take these options:
 
 - `walletMode`: `"sequential"` (default) or `"bundle"`. See [Bundling wallets](#bundling-wallets).
-- `skipChecks`: `"balance"` skips the balance check. `"config"` skips the one-time check of the group against the chain and the router's registry listing, for a host that verified them itself. The paused check always runs.
+- `skipChecks`: `"balance"` skips the balance check. The paused check always runs.
 
 The batch actions take one batch each, as a `BatchRef` (`{ chainId, batcher, batchId }`). Dispatch acts on a batcher's open batch, so it takes a `BatcherRef` (`{ chainId, batcher }`):
 

@@ -55,11 +55,9 @@ export {
 } from "./balance";
 export { UnshieldAlreadyFinalizedError, type UnshieldAlreadyFinalizedDetails } from "./unshield";
 export {
-  UnlistedConfidentialTokenError,
   VaultBatcherPausedError,
   VaultBatchNotDispatchedError,
   VaultJoinUnconfirmedError,
-  type UnlistedConfidentialTokenDetails,
   type VaultBatcherPausedDetails,
   type VaultBatchNotDispatchedDetails,
   type VaultJoinUnconfirmedDetails,

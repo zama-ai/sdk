@@ -86,9 +86,54 @@ export interface VaultGroup<TGroupId extends string = string, TVaultId extends s
   readonly [defined]: true;
 }
 
-/** The vault ids of a group. */
-export type VaultIdOf<TGroup extends VaultGroup> =
-  TGroup extends VaultGroup<string, infer TVaultId> ? TVaultId : never;
+/** What {@link defineVault} takes: one vault, with its chain and asset. */
+export interface SingleVaultConfig<TVaultId extends string = string> extends VaultConfig<TVaultId> {
+  /** The chain the vault's batchers are on. */
+  readonly chainId: number;
+  /** The confidential asset its deposit batcher takes. */
+  readonly asset: Address;
+}
+
+/** What {@link defineVault} returns. Only it can make one. */
+export interface Vault<TVaultId extends string = string> extends VaultGroupVault<TVaultId> {
+  /** The chain the vault's batchers are on. */
+  readonly chainId: number;
+  /** The confidential asset its deposit batcher takes. */
+  readonly asset: Address;
+  /** Type-only brand: a hand-built object does not type-check as a vault. */
+  readonly [defined]: true;
+}
+
+/** What joins and open-batch reads act on: a group, or a single vault. */
+export type VaultTarget = VaultGroup | Vault;
+
+/** The vault ids of a group, or the id of a single vault. */
+export type VaultIdOf<TTarget extends VaultTarget> =
+  TTarget extends VaultGroup<string, infer TVaultId>
+    ? TVaultId
+    : TTarget extends Vault<infer TVaultId>
+      ? TVaultId
+      : never;
+
+/**
+ * The group a target joins. A single vault joins as a group of one, which
+ * reaches its batcher directly.
+ *
+ * @internal
+ */
+export function toGroup(target: VaultTarget): VaultGroup {
+  if ("vaults" in target) {
+    return target;
+  }
+  const { chainId, asset, ...vault } = target;
+  return {
+    id: vault.id,
+    chainId,
+    asset,
+    router: undefined,
+    vaults: [vault],
+  } as unknown as VaultGroup;
+}
 
 /** Every batcher of a history, oldest first. */
 export function batcherAddresses(history: BatcherHistory): Address[] {
@@ -104,9 +149,8 @@ function requireAddress(value: unknown, where: string): Address {
 
 /**
  * Validate a group of vaults that take deposits in one confidential asset,
- * and keep its ids as literal types. Pure: reads nothing from chain; the
- * client checks the group against the chain on its first join. A single
- * vault is a group of one.
+ * and keep its ids as literal types. Reads nothing from chain. For one vault
+ * on its own, use {@link defineVault}.
  *
  * @example
  * ```ts
@@ -191,4 +235,33 @@ export function defineVaultGroup<const TGroupId extends string, const TVaultId e
       config.router === undefined ? undefined : requireAddress(config.router, `${where} router`),
     vaults: [vault(first), ...rest.map(vault)],
   } as unknown as VaultGroup<TGroupId, TVaultId>;
+}
+
+/**
+ * Validate one vault on its own, and keep its id as a literal type. Reads
+ * nothing from chain. A join into it needs no `vaultId`.
+ *
+ * @example
+ * ```ts
+ * export const MAIN = defineVault({
+ *   id: "main",
+ *   chainId: 1,
+ *   asset: "0xConfidentialUSDC",
+ *   batchers: { deposit: "0xMainDeposit", redeem: "0xMainRedeem" },
+ *   share: "0xMainShare",
+ * });
+ * ```
+ *
+ * @throws as {@link defineVaultGroup}. {@link ConfigurationError}
+ */
+export function defineVault<const TVaultId extends string>(
+  config: SingleVaultConfig<TVaultId>,
+): Vault<TVaultId> {
+  const { chainId, asset, ...vault } = config;
+  const group = defineVaultGroup({ id: config.id, chainId, asset, vaults: [vault] });
+  return {
+    ...group.vaults[0],
+    chainId: group.chainId,
+    asset: group.asset,
+  } as unknown as Vault<TVaultId>;
 }

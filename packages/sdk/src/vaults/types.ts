@@ -1,5 +1,6 @@
 import type { Address, Hex } from "viem";
 import type { EncryptedValue } from "../relayer/types";
+import type { VaultGroup, VaultIdOf, VaultTarget } from "./config";
 
 /** Whether a join deposits the group's asset or redeems a vault's shares. */
 export type Direction = "deposit" | "redeem";
@@ -112,7 +113,7 @@ export interface JoinInput<TVaultId extends string = string> {
 }
 
 /** Checks `prepareDeposit` and `prepareRedeem` may skip. A paused batcher is never skipped. */
-export type VaultCheck = "balance" | "config";
+export type VaultCheck = "balance";
 
 /** Options for `prepareDeposit` and `prepareRedeem`. */
 export interface JoinOptions {
@@ -120,8 +121,7 @@ export interface JoinOptions {
   readonly walletMode?: WalletMode;
   /**
    * `"balance"`: skip the balance check, which decrypts as the signer and so
-   * is required for any other `account`. `"config"`: skip the one-time check
-   * of the group against the chain.
+   * is required for any other `account`.
    */
   readonly skipChecks?: readonly VaultCheck[];
 }
@@ -141,6 +141,14 @@ export type BatcherRef = Pick<BatchRef, "chainId" | "batcher">;
 
 /** What `client.deposit` and `client.redeem` take: a join input sent from the signer's account. */
 export type SendJoinInput<TVaultId extends string = string> = Omit<JoinInput<TVaultId>, "account">;
+
+/** A join input for `target`: a group needs `vaultId`, a single vault does not. */
+export type JoinInputFor<TTarget extends VaultTarget> = TTarget extends VaultGroup
+  ? JoinInput<VaultIdOf<TTarget>>
+  : Omit<JoinInput<VaultIdOf<TTarget>>, "vaultId"> & { readonly vaultId?: VaultIdOf<TTarget> };
+
+/** A send-join input for `target`: {@link JoinInputFor}, from the signer's account. */
+export type SendJoinInputFor<TTarget extends VaultTarget> = Omit<JoinInputFor<TTarget>, "account">;
 
 /** Options for `client.deposit` and `client.redeem`. */
 export interface SendJoinOptions extends Pick<JoinOptions, "skipChecks"> {

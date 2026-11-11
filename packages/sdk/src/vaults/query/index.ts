@@ -6,7 +6,7 @@ import { filterQueryOptions } from "../../query/utils";
 import type { TransactionResult } from "../../types";
 import { assertNonNullable } from "../../utils/assertions";
 import type { VaultClient } from "../client";
-import type { VaultGroup, VaultIdOf } from "../config";
+import type { Vault, VaultGroup, VaultIdOf, VaultTarget } from "../config";
 import type {
   Batch,
   BatchRef,
@@ -14,7 +14,7 @@ import type {
   Direction,
   JoinOutcome,
   OpenBatch,
-  SendJoinInput,
+  JoinInput,
   SendJoinOptions,
 } from "../types";
 
@@ -38,10 +38,10 @@ export const vaultQueryKeys = {
         account: account === undefined ? undefined : getAddress(account),
       },
     ] as const,
-  openBatches: (group: VaultGroup, direction: Direction) =>
+  openBatches: (target: VaultTarget, direction: Direction) =>
     [
       "zama.vault",
-      { kind: "openBatches", chainId: group.chainId, groupId: group.id, direction },
+      { kind: "openBatches", chainId: target.chainId, id: target.id, direction },
     ] as const,
 };
 
@@ -93,15 +93,22 @@ export function batchQueryOptions(
   };
 }
 
+/** Picks a group, or a single vault, in a config or in mutation variables. */
+export type VaultSelection =
+  | { readonly group: VaultGroup; readonly vault?: never }
+  | { readonly vault: Vault; readonly group?: never };
+
+function selected(selection: VaultSelection): VaultTarget {
+  return selection.vault ?? selection.group;
+}
+
 /** Configuration for {@link openBatchesQueryOptions}. */
-export interface OpenBatchesQueryConfig {
-  /** The group to read. */
-  group: VaultGroup;
+export type OpenBatchesQueryConfig = VaultSelection & {
   /** Whether to read the deposit or the redeem batchers. */
   direction: Direction;
   /** Additional TanStack Query options merged into the generated query. */
   query?: Record<string, unknown>;
-}
+};
 
 /** Query options over {@link VaultClient.readOpenBatches}. */
 export function openBatchesQueryOptions(
@@ -113,10 +120,11 @@ export function openBatchesQueryOptions(
   readonly OpenBatch[],
   ReturnType<typeof vaultQueryKeys.openBatches>
 > {
+  const target = selected(config);
   return {
     ...filterQueryOptions(config.query ?? {}),
-    queryKey: vaultQueryKeys.openBatches(config.group, config.direction),
-    queryFn: async () => client.readOpenBatches(config.group, config.direction),
+    queryKey: vaultQueryKeys.openBatches(target, config.direction),
+    queryFn: async () => client.readOpenBatches(target, config.direction),
   };
 }
 
@@ -131,18 +139,31 @@ export function invalidateAfterVaultAction(queryClient: QueryClientLike): void {
   void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalances.all });
 }
 
-/** Variables for {@link depositMutationOptions} and {@link redeemMutationOptions}. */
-export interface JoinVariables<TGroup extends VaultGroup = VaultGroup>
-  extends SendJoinInput<VaultIdOf<TGroup>>, SendJoinOptions {
-  /** The group to join. */
-  readonly group: TGroup;
-}
+/**
+ * Variables for {@link depositMutationOptions} and {@link redeemMutationOptions}:
+ * a group and the vault the amount goes to, or a single vault.
+ */
+export type JoinVariables<TGroup extends VaultGroup = VaultGroup> = Pick<JoinInput, "amount"> &
+  SendJoinOptions &
+  (
+    | { readonly group: TGroup; readonly vaultId: VaultIdOf<TGroup>; readonly vault?: never }
+    | { readonly vault: Vault; readonly vaultId?: string; readonly group?: never }
+  );
 
 function joinMutation(client: VaultClient, direction: Direction) {
   return {
     mutationKey: [`zama.vault.${direction}`] as const,
-    mutationFn: async ({ group, skipChecks, onJoinSubmitted, ...input }: JoinVariables) =>
-      client[direction](group, input, { skipChecks, onJoinSubmitted }),
+    mutationFn: async ({
+      skipChecks,
+      onJoinSubmitted,
+      amount,
+      vaultId,
+      ...selection
+    }: JoinVariables) =>
+      client[direction](selected(selection as VaultSelection), { amount, vaultId } as never, {
+        skipChecks,
+        onJoinSubmitted,
+      }),
   };
 }
 

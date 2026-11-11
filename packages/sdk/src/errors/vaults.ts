@@ -3,32 +3,6 @@ import type { TransactionReceipt } from "../types/transaction";
 import type { BatchState } from "../vaults/types";
 import { ZamaError, ZamaErrorCode } from "./base";
 
-/** What an {@link UnlistedConfidentialTokenError} carries. */
-export interface UnlistedConfidentialTokenDetails {
-  /** The confidential token the registry does not list. */
-  readonly token: Address;
-  /** The token wrapper registry the router checks. */
-  readonly registry: Address;
-}
-
-/**
- * A confidential token is not listed in the registry the vault router checks,
- * so the router would reject a transfer of it.
- */
-export class UnlistedConfidentialTokenError extends ZamaError {
-  /** The confidential token the registry does not list. */
-  readonly token: Address;
-  /** The token wrapper registry the router checks. */
-  readonly registry: Address;
-
-  constructor(message: string, details: UnlistedConfidentialTokenDetails, options?: ErrorOptions) {
-    super(ZamaErrorCode.UnlistedConfidentialToken, message, options);
-    this.name = "UnlistedConfidentialTokenError";
-    this.token = details.token;
-    this.registry = details.registry;
-  }
-}
-
 /** What a {@link VaultBatcherPausedError} carries. */
 export interface VaultBatcherPausedDetails {
   /** The batcher that reported `paused()`. */

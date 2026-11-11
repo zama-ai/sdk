@@ -6,15 +6,19 @@
 export { createVaultClient, VaultClient } from "./client";
 export {
   batcherAddresses,
+  defineVault,
   defineVaultGroup,
   MAX_GROUP_VAULTS,
   type BatcherHistory,
   type RetiredBatcher,
+  type SingleVaultConfig,
+  type Vault,
   type VaultConfig,
   type VaultGroup,
   type VaultGroupConfig,
   type VaultGroupVault,
   type VaultIdOf,
+  type VaultTarget,
 } from "./config";
 export type {
   ActiveBatchers,
@@ -28,6 +32,7 @@ export type {
   GrantCall,
   JoinCall,
   JoinInput,
+  JoinInputFor,
   JoinOptions,
   JoinOutcome,
   JoinRoute,
@@ -35,6 +40,7 @@ export type {
   PreparedFinalize,
   PreparedJoin,
   SendJoinInput,
+  SendJoinInputFor,
   SendJoinOptions,
   VaultCall,
   VaultCheck,

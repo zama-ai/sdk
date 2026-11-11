@@ -37,13 +37,3 @@ export function encodeAllocationData(
 ): Hex {
   return encodeAbiParameters(ALLOCATION_PARAMETERS, [legs.map((leg) => ({ ...leg })), inputProof]);
 }
-
-/** Returns the contract config to read the registry the router gates its push path on. */
-export function tokenWrapperRegistryContract(router: Address) {
-  return {
-    address: router,
-    abi: vaultRouterAbi,
-    functionName: "tokenWrapperRegistry",
-    args: [],
-  } as const;
-}

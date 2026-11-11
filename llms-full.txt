@@ -9880,7 +9880,7 @@ A vault deposit is not done when the transaction is mined. The amount joins a **
 
 The SDK gives you one client for all of it:
 
-1. **Describe each group once** with `defineVaultGroup`. Vaults that take deposits in the same confidential asset form a **group**. A single vault is a group of one.
+1. **Describe each group once** with `defineVaultGroup`. Vaults that take deposits in the same confidential asset form a **group**. For one vault on its own, use `defineVault`.
 2. **Create a client** with `createVaultClient(sdk)`, or `useVaultClient()` in React. It holds no config, so one client serves every group and chain.
 3. **Join**: `deposit` or `redeem` returns the batch each leg landed in. Store them.
 4. **Follow each batch**: `readBatch(batchRef)` returns the batch's `state` and the `actions` you can send now.
@@ -9972,7 +9972,7 @@ The examples use the SDK's signer. To send through your own transaction pipeline
 
 ```ts
 // vaults.ts
-import { defineVaultGroup } from "@zama-fhe/sdk/vaults";
+import { defineVault, defineVaultGroup } from "@zama-fhe/sdk/vaults";
 
 export const STABLE = defineVaultGroup({
   id: "stable",
@@ -9992,23 +9992,20 @@ export const STABLE = defineVaultGroup({
   ],
 });
 
-export const SOLO = defineVaultGroup({
-  id: "solo",
+export const MAIN = defineVault({
+  id: "main",
   chainId: 1,
   asset: "0xConfidentialUSDC2",
-  vaults: [
-    {
-      id: "main",
-      batchers: { deposit: "0xMainDeposit", redeem: "0xMainRedeem" },
-      share: "0xMainShare",
-    },
-  ],
+  batchers: { deposit: "0xMainDeposit", redeem: "0xMainRedeem" },
+  share: "0xMainShare",
 });
 ```
 
 Each vault has two batchers: one that deposits join, and one that redemptions join. `share` is the vault's confidential share token. When a batcher is upgraded, its entry becomes a history of batchers. See [Upgrade a batcher](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#upgrade-a-batcher). The group and vault ids are yours to choose, and the types keep them, so a typo in `vaultId` passed to a client method is a type error. The React mutation hooks take `vaultId` as a plain `string`.
 
-`defineVaultGroup` checks the shape of the group and throws `ConfigurationError` for an invalid address, an empty group, a group above `MAX_GROUP_VAULTS` (see [Group size and the router](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#group-size-and-the-router)), a repeated vault id, or a batcher named twice. On the first join of each group, the client also checks the group against the chain. See [`defineVaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#definevaultgroup).
+`defineVault` describes one vault on its own, like `MAIN`. Every method that takes a group also takes a single vault, and a join into it needs no `vaultId`.
+
+`defineVaultGroup` checks the shape of the group and throws `ConfigurationError` for an invalid address, an empty group, a group above `MAX_GROUP_VAULTS` (see [Group size and the router](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#group-size-and-the-router)), a repeated vault id, or a batcher named twice. See [`defineVaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#definevaultgroup).
 
 
 > [!WARNING]
@@ -10074,7 +10071,7 @@ function DepositButton() {
 ```
 
 
-The amount is in the asset's base units, so `1_000_000n` is one unit of a 6-decimal token.
+The amount is in the asset's base units, so `1_000_000n` is one unit of a 6-decimal token. For a single vault, leave out `vaultId`: `vaults.deposit(MAIN, { amount: 1_000_000n })`, or `deposit.mutate({ vault: MAIN, amount: 1_000_000n })` in React.
 
 The SDK checks your confidential balance before it sends, as `Token.confidentialTransfer` does. A confidential transfer above the balance moves zero instead of reverting, so without this check a too-large deposit would succeed on-chain and deposit nothing. For an account whose balance the signer cannot decrypt, pass `skipChecks: ["balance"]` in the options.
 
@@ -10263,7 +10260,7 @@ These follow the [rules for clients](https://docs.zama.org/protocol/confidential
 
 ## Group size and the router
 
-A group holds from one vault up to `MAX_GROUP_VAULTS`. A join's FHE compute grows with its number of legs, and `MAX_GROUP_VAULTS` is what fits in one transaction. A group of one has nothing to hide a leg among, so it joins its batcher directly, without the router.
+A group holds from one vault up to `MAX_GROUP_VAULTS`. A join's FHE compute grows with its number of legs, and `MAX_GROUP_VAULTS` is what fits in one transaction. A group of one, or a single vault from `defineVault`, has nothing to hide a leg among, so it joins its batcher directly, without the router.
 
 A multi-vault join sent one call at a time goes through the chain's router, `vaultRouterAddress` in the chain preset. Set `router` in `defineVaultGroup` only for a chain whose preset names none. When the preset names a router, a different `router` throws `ConfigurationError`.
 
@@ -10271,14 +10268,14 @@ A multi-vault join sent one call at a time goes through the chain's router, `vau
 
 The SDK's send methods send one transaction per call, so each call is one wallet prompt. The number depends on the action and the group's size:
 
-| Action                          | Group of one | Group of N vaults |
-| ------------------------------- | ------------ | ----------------- |
-| `deposit`                       | 1            | 1                 |
-| `redeem`                        | 1            | **up to N + 1**   |
-| `claim`, `dispatch`, `finalize` | 1 per batch  | 1 per batch       |
-| `quit` the whole join           | 1            | N                 |
+| Action                          | One vault   | Group of N vaults |
+| ------------------------------- | ----------- | ----------------- |
+| `deposit`                       | 1           | 1                 |
+| `redeem`                        | 1           | **up to N + 1**   |
+| `claim`, `dispatch`, `finalize` | 1 per batch | 1 per batch       |
+| `quit` the whole join           | 1           | N                 |
 
-A multi-vault deposit is one transfer of the asset to the router, which splits it into legs. It needs no grant, but the router's registry must list the asset. The SDK checks this and throws `UnlistedConfidentialTokenError` instead of paying for a revert.
+A multi-vault deposit is one transfer of the asset to the router, which splits it into legs. It needs no grant, but the router's registry must list the asset, or the router rejects the transfer.
 
 A multi-vault redemption is different. Each vault has its own share token, and the router pulls every one of them. So the account first grants the router an ERC-7984 operator approval on every share token it has not granted yet: one prompt each, then one prompt for the join.
 
@@ -10330,13 +10327,13 @@ How the client uses it:
 - **Joins switch on the batch, not the clock.** A join goes to the first retired batcher whose open batch is still at most its `lastBatchId`, and otherwise to `latest`. Joins keep landing on the old batcher until batch `lastBatchId` is dispatched, then go to the new one. You can ship the new group before the switch.
 - **Stored batches keep their batcher.** A `BatchRef` names the batcher the leg joined, so `readBatch`, `claim` and `quit` work on a retired batcher as before.
 - **`readOpenBatches` and `activeBatchers` report the active batcher**, so a form shows the batch the next join lands in.
-- **Every batcher of a vault must serve the same vault.** On the first join, the client checks that each batcher, retired ones included, trades the group's asset for the vault's `share` against the same ERC-4626 vault. A mismatch throws `ConfigurationError`.
+- **Every batcher of a vault must serve the same vault.** Each batcher, retired ones included, must trade the group's asset for the vault's `share` against the same ERC-4626 vault. The SDK does not check this against the chain.
 
 To upgrade again, append the current `latest` to the end of `retired` with its `lastBatchId`, and set the new `latest`. Keep `retired` oldest first.
 
 
 > [!WARNING]
-> Never remove a retired entry, even after all its batches settled. The client checks every batcher of the history against the chain, and a batcher used twice anywhere in the group throws `ConfigurationError`, so a removed address could later be reused by mistake.
+> Never remove a retired entry, even after all its batches settled. `defineVaultGroup` refuses a batcher used twice anywhere in the group, so keeping every entry stops an old address from being reused by mistake.
 
 
 ## Bundling wallets
@@ -10390,7 +10387,7 @@ for (const call of prepared.calls) {
 `sendTransaction` stands in for your pipeline. The join methods take these options:
 
 - `walletMode`: `"sequential"` (default) or `"bundle"`. See [Bundling wallets](#bundling-wallets).
-- `skipChecks`: `"balance"` skips the balance check. `"config"` skips the one-time check of the group against the chain and the router's registry listing, for a host that verified them itself. The paused check always runs.
+- `skipChecks`: `"balance"` skips the balance check. The paused check always runs.
 
 The batch actions take one batch each, as a `BatchRef` (`{ chainId, batcher, batchId }`). Dispatch acts on a batcher's open batch, so it takes a `BatcherRef` (`{ chainId, batcher }`):
 
@@ -12900,12 +12897,17 @@ The client has two kinds of methods:
 - A **`prepare*` method** returns the calls as plain data, for a host that sends transactions through its own pipeline.
 - A **send method** of the same verb (`deposit`, `redeem`, `claim`, `quit`, `dispatch`, `finalize`) sends them with the SDK's signer.
 
-Every join sends a leg to every vault of its group: the chosen vault gets the amount, and the others get an encrypted zero. This is what hides the choice. Batch actions (claim, quit, dispatch, finalize) act on one batch each. A single vault is a group of one.
+Every join sends a leg to every vault of its group: the chosen vault gets the amount, and the others get an encrypted zero. This is what hides the choice. Batch actions (claim, quit, dispatch, finalize) act on one batch each. A single vault from [`defineVault`](#definevault) joins as a group of one.
 
 ## Import
 
 ```ts
-import { createVaultClient, defineVaultGroup, VaultClient } from "@zama-fhe/sdk/vaults";
+import {
+  createVaultClient,
+  defineVault,
+  defineVaultGroup,
+  VaultClient,
+} from "@zama-fhe/sdk/vaults";
 ```
 
 The `vaults` subpath is separate from the root entry, so apps that do not use vaults do not bundle it.
@@ -13011,7 +13013,7 @@ export const STABLE = defineVaultGroup({
 
 
 > [!WARNING]
-> Never remove a retired entry. Batches on a retired batcher can still be read, claimed and quit, and the client checks every batcher of the history against the chain.
+> Never remove a retired entry. Batches on a retired batcher can still be read, claimed and quit.
 
 
 `batcherAddresses(history)` returns every batcher of a history, oldest first. See [Upgrade a batcher](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#upgrade-a-batcher).
@@ -13024,6 +13026,26 @@ export const STABLE = defineVaultGroup({
 
 The most vaults a group may hold. A join's FHE compute grows with its number of legs, and this is what fits in one transaction.
 
+## defineVault
+
+`defineVault(config)` checks one vault on its own and returns a `Vault`. It takes the fields of one entry of `vaults`, plus `chainId` and `asset`, and keeps the id as a literal type. Every client method that takes a group also takes a `Vault`, and a join into it needs no `vaultId`:
+
+```ts
+import { defineVault } from "@zama-fhe/sdk/vaults";
+
+export const MAIN = defineVault({
+  id: "main",
+  chainId: 1,
+  asset: "0xConfidentialUSDC",
+  batchers: { deposit: "0xMainDeposit", redeem: "0xMainRedeem" },
+  share: "0xMainShare",
+});
+
+await vaults.deposit(MAIN, { amount: 1_000_000n });
+```
+
+A single vault joins its batcher directly, like a group of one. **Throws:** as [`defineVaultGroup`](#definevaultgroup).
+
 ## createVaultClient
 
 `createVaultClient(sdk)` creates a client bound to a [`ZamaSDK`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md) instance. It reads nothing until first use.
@@ -13033,8 +13055,6 @@ import { createVaultClient } from "@zama-fhe/sdk/vaults";
 
 const vaults = createVaultClient(sdk);
 ```
-
-On the first join of each group, the client checks the group against the chain once: each deposit batcher takes the group's asset and pays the vault's `share`, each redeem batcher does the reverse, every batcher of a vault (retired ones included) points at the same ERC-4626 vault, and no two vaults of the group point at the same ERC-4626 vault. A mismatch throws `ConfigurationError` before anything is encrypted or sent.
 
 In React, use [`useVaultClient`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultClient.md), which memoizes the client per SDK.
 
@@ -13071,34 +13091,33 @@ After you send, call [`invalidateAfterVaultAction`](#invalidateaftervaultaction)
 
 ### prepareDeposit
 
-`prepareDeposit(group, input, options?) => Promise<PreparedJoin>`
+`prepareDeposit(target, input, options?) => Promise<PreparedJoin>`
 
 Builds a deposit of the group's asset into one vault: a leg for every vault, each amount encrypted, and the calls in send order. A deposit pushes the asset, so it needs no grant.
 
 | Parameter | Type                          | Description                               |
 | --------- | ----------------------------- | ----------------------------------------- |
-| `group`   | `VaultGroup`                  | The group to join.                        |
+| `target`  | `VaultGroup \| Vault`         | The group, or the single vault, to join.  |
 | `input`   | [`JoinInput`](#joininput)     | The vault, account and amount.            |
 | `options` | [`JoinOptions`](#joinoptions) | How the wallet sends, and checks to skip. |
 
 **Throws:**
 
 - `ChainMismatchError` when the provider is not on the group's chain while a wallet is connected.
-- `ConfigurationError` when the vault is unknown, the group does not match the chain, the join goes through the router and none is configured, or the provider is not on the group's chain with no wallet connected.
+- `ConfigurationError` when the vault is unknown, the join goes through the router and none is configured, or the provider is not on the group's chain with no wallet connected.
 - `VaultBatcherPausedError` when any vault's batcher is paused.
-- `UnlistedConfidentialTokenError` when a deposit goes through the router and the router's registry does not list the asset.
 - `InsufficientConfidentialBalanceError` when the balance is less than `amount`.
 - `BalanceCheckUnavailableError` when the balance check cannot decrypt the balance.
 
 ### prepareRedeem
 
-`prepareRedeem(group, input, options?) => Promise<PreparedJoin>`
+`prepareRedeem(target, input, options?) => Promise<PreparedJoin>`
 
-Builds a redemption of one vault's shares. The amount is in shares, not assets. On the router route, the router pulls every leg's share token, so `calls` starts with an operator grant on each share token the account has not granted to the router yet. Throws as `prepareDeposit`, except `UnlistedConfidentialTokenError`.
+Builds a redemption of one vault's shares. The amount is in shares, not assets. On the router route, the router pulls every leg's share token, so `calls` starts with an operator grant on each share token the account has not granted to the router yet. Throws as `prepareDeposit`.
 
 ### activeBatchers
 
-`activeBatchers(group, direction) => Promise<ActiveBatchers>`
+`activeBatchers(target, direction) => Promise<ActiveBatchers>`
 
 Reads the batcher a join in `direction` (`"deposit"` or `"redeem"`) reaches right now on each vault of the group. Returns a record keyed by vault id. Use it when your own code needs the batcher a join will land on, for example to watch its `Joined` events.
 
@@ -13179,13 +13198,13 @@ const { batches, txHashes } = await vaults.deposit(STABLE, { vaultId: "beta", am
 
 The amount is in the asset's base units, so `1_000_000n` is one unit of a 6-decimal token.
 
-| Parameter                 | Type                        | Description                                                                                                                                                |
-| ------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `group`                   | `VaultGroup`                | The group to join.                                                                                                                                         |
-| `input.vaultId`           | `VaultIdOf<typeof group>`   | The vault that gets the amount.                                                                                                                            |
-| `input.amount`            | `bigint`                    | Plaintext, in base units. Encrypted before it leaves the SDK.                                                                                              |
-| `options.skipChecks`      | `("balance" \| "config")[]` | Optional. See [`JoinOptions`](#joinoptions).                                                                                                               |
-| `options.onJoinSubmitted` | `(txHash: Hex) => void`     | Optional. Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. If it throws, the SDK logs a warning. |
+| Parameter                 | Type                       | Description                                                                                                                                                |
+| ------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `target`                  | `VaultGroup \| Vault`      | The group, or the single vault, to join.                                                                                                                   |
+| `input.vaultId`           | `VaultIdOf<typeof target>` | The vault that gets the amount. Optional for a single vault.                                                                                               |
+| `input.amount`            | `bigint`                   | Plaintext, in base units. Encrypted before it leaves the SDK.                                                                                              |
+| `options.skipChecks`      | `"balance"[]`              | Optional. See [`JoinOptions`](#joinoptions).                                                                                                               |
+| `options.onJoinSubmitted` | `(txHash: Hex) => void`    | Optional. Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. If it throws, the SDK logs a warning. |
 
 **Throws:** as [`prepareDeposit`](#preparedeposit), and `VaultJoinUnconfirmedError` when the join is mined but the receipt does not confirm every leg.
 
@@ -13249,7 +13268,7 @@ See [`Batch`](#batch).
 
 ### readOpenBatches
 
-`readOpenBatches(group, direction) => Promise<OpenBatch[]>`
+`readOpenBatches(target, direction) => Promise<OpenBatch[]>`
 
 Reads the open batch of every vault of a group, through each vault's active batcher. Use it on a form to show when the next batch closes, or that a vault is paused.
 
@@ -13266,20 +13285,20 @@ for (const batch of batches) {
 
 What `prepareDeposit` and `prepareRedeem` take. `deposit` and `redeem` take the same fields without `account`.
 
-| Field     | Type      | Description                                                                                |
-| --------- | --------- | ------------------------------------------------------------------------------------------ |
-| `vaultId` | `string`  | The vault that gets the amount. Typed to the group's vault ids.                            |
-| `account` | `Address` | The account the calls come from.                                                           |
-| `amount`  | `bigint`  | Plaintext, in base units. Encrypted before it leaves the SDK. For a redemption, in shares. |
+| Field     | Type      | Description                                                                                  |
+| --------- | --------- | -------------------------------------------------------------------------------------------- |
+| `vaultId` | `string`  | The vault that gets the amount. Typed to the group's vault ids. Optional for a single vault. |
+| `account` | `Address` | The account the calls come from.                                                             |
+| `amount`  | `bigint`  | Plaintext, in base units. Encrypted before it leaves the SDK. For a redemption, in shares.   |
 
 ### JoinOptions
 
 Options for `prepareDeposit` and `prepareRedeem`.
 
-| Field        | Type                        | Default        | Description                                                                                                                                                                                                                                                                                   |
-| ------------ | --------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `walletMode` | `"sequential" \| "bundle"`  | `"sequential"` | How the sender's wallet lands several calls. `"sequential"` sends them one at a time, so a multi-vault join goes through the router. `"bundle"` lands them together or not at all (EIP-5792, a Safe, a smart account), so a multi-vault join sends one transfer per vault and needs no grant. |
-| `skipChecks` | `("balance" \| "config")[]` | `[]`           | `"balance"` skips the balance check. `"config"` skips the one-time check of the group against the chain, and the router's registry listing. The paused check is never skipped.                                                                                                                |
+| Field        | Type                       | Default        | Description                                                                                                                                                                                                                                                                                   |
+| ------------ | -------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `walletMode` | `"sequential" \| "bundle"` | `"sequential"` | How the sender's wallet lands several calls. `"sequential"` sends them one at a time, so a multi-vault join goes through the router. `"bundle"` lands them together or not at all (EIP-5792, a Safe, a smart account), so a multi-vault join sends one transfer per vault and needs no grant. |
+| `skipChecks` | `"balance"[]`              | `[]`           | `"balance"` skips the balance check. The paused check is never skipped.                                                                                                                                                                                                                       |
 
 The balance check decrypts as the signer, so an `account` other than the signer's needs `skipChecks: ["balance"]`. It decrypts the balance of every token the legs spend, not only the chosen one, so the relayer cannot tell which vault you picked.
 
@@ -13291,7 +13310,7 @@ What `prepareDeposit` and `prepareRedeem` return. Plain data, safe to store.
 | --------- | ----------------------- | ------------------------------------------------------------------------------------ |
 | `kind`    | `"deposit" \| "redeem"` | Whether it deposits or redeems.                                                      |
 | `chainId` | `number`                | The chain to send the calls on.                                                      |
-| `groupId` | `string`                | The group joined.                                                                    |
+| `groupId` | `string`                | The group joined, or the single vault's id.                                          |
 | `vaultId` | `string`                | The vault that gets the amount.                                                      |
 | `account` | `Address`               | The account the calls come from.                                                     |
 | `amount`  | `bigint`                | The amount: in the asset for a deposit, in shares for a redemption.                  |
@@ -13376,8 +13395,8 @@ The `vaults` subpath also exports framework-agnostic query and mutation options 
 | Export                                                                                           | Wraps                                                                                                                                            |
 | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `batchQueryOptions(client, { batch?, account?, query? })`                                        | `readBatch`. Refetches when `nextChangeAt` passes and polls while the batch waits for a dispatch or a settlement. Disabled until `batch` is set. |
-| `openBatchesQueryOptions(client, { group, direction, query? })`                                  | `readOpenBatches`                                                                                                                                |
-| `depositMutationOptions(client)`, `redeemMutationOptions(client)`                                | `deposit`, `redeem`. Variables are `{ group, vaultId, amount, skipChecks?, onJoinSubmitted? }`.                                                  |
+| `openBatchesQueryOptions(client, { group \| vault, direction, query? })`                         | `readOpenBatches`                                                                                                                                |
+| `depositMutationOptions(client)`, `redeemMutationOptions(client)`                                | `deposit`, `redeem`. Variables are `{ group, vaultId }` or `{ vault }`, plus `{ amount, skipChecks?, onJoinSubmitted? }`.                        |
 | `claimMutationOptions(client)`, `quitMutationOptions(client)`, `finalizeMutationOptions(client)` | `claim`, `quit`, `finalize`. Variables are a `BatchRef`, plus an optional `account` for a claim.                                                 |
 | `dispatchMutationOptions(client)`                                                                | `dispatch`. Variables are `{ chainId, batcher }`.                                                                                                |
 
@@ -14501,7 +14520,6 @@ import {
   HcuBlockLimitExceededError,
   HcuTransactionLimitExceededError,
   UnshieldAlreadyFinalizedError,
-  UnlistedConfidentialTokenError,
   VaultBatcherPausedError,
   VaultBatchNotDispatchedError,
   VaultJoinUnconfirmedError,
@@ -14606,7 +14624,6 @@ Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequ
 | `HcuBlockLimitExceededError`              | `HCU_BLOCK_LIMIT_EXCEEDED`               | Gas estimation found too little FHE compute (HCU) left in the block; retry in the next block (retryable)                          |
 | `HcuTransactionLimitExceededError`        | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | The transaction needs more FHE compute (HCU), in total or in one sequential chain, than one transaction may use                   |
 | `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
-| `UnlistedConfidentialTokenError`          | `UNLISTED_CONFIDENTIAL_TOKEN`            | The vault router's registry does not list the confidential token, so the router would reject a transfer of it                     |
 | `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | A batcher one leg of a vault join would reach is paused, so the whole join would revert                                           |
 | `VaultBatchNotDispatchedError`            | `VAULT_BATCH_NOT_DISPATCHED`             | A vault batch cannot be finalized because it is not dispatched: it is still pending, or it was already finalized or canceled      |
 | `VaultJoinUnconfirmedError`               | `VAULT_JOIN_UNCONFIRMED`                 | A vault join was mined, but its receipt has no matching `Joined` event for at least one leg                                       |
@@ -14813,14 +14830,6 @@ matchZamaError(error, {
 ```
 
 **How to handle:** Treat it as completion, not a failure: dismiss the "resume unshield" prompt and refresh balances. `useResumeUnshield` invalidates the affected queries automatically. Do not retry; nothing is left to finalize.
-
-### UnlistedConfidentialTokenError
-
-**Code:** `UNLISTED_CONFIDENTIAL_TOKEN`
-
-Thrown by `VaultClient.deposit()` and `VaultClient.prepareDeposit()` for a multi-vault group sent through the router, when the router's registry does not list the group's asset. The router rejects a transfer of an unlisted token on chain, so the SDK refuses before the caller pays for a reverted transaction. The check is skipped with `skipChecks: ["config"]`. The error carries `token` and `registry`.
-
-**How to handle:** Not retryable. Listings are governed on chain and can be added or revoked at any time, so check the group's asset against the registry the router names.
 
 ### VaultBatcherPausedError
 
@@ -24636,9 +24645,15 @@ Passed to `mutate` / `mutateAsync` at call time.
 
 ### group
 
-`VaultGroup`
+`VaultGroup | undefined`
 
-The group to join, as returned by [`defineVaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#definevaultgroup).
+The group to join, as returned by [`defineVaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#definevaultgroup). Pass `group` and `vaultId`, or `vault`.
+
+### vault
+
+`Vault | undefined`
+
+A single vault to join instead of a group, as returned by [`defineVault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#definevault). It needs no `vaultId`.
 
 ### vaultId
 
@@ -24654,9 +24669,9 @@ The amount, in the asset's base units. Encrypted before it leaves the SDK.
 
 ### skipChecks
 
-`("balance" | "config")[] | undefined`
+`"balance"[] | undefined`
 
-Skip the balance check, or the one-time check of the group against the chain. The paused check always runs.
+Skip the balance check. The paused check always runs.
 
 ### onJoinSubmitted
 
@@ -24676,7 +24691,6 @@ deposit.mutate({
 **Throws:**
 
 - `VaultBatcherPausedError`: a batcher of the group is paused
-- `UnlistedConfidentialTokenError`: the router's registry does not list the asset (multi-vault groups)
 - `InsufficientConfidentialBalanceError`: the balance is less than `amount`
 - `BalanceCheckUnavailableError`: the balance check cannot decrypt the balance
 - `VaultJoinUnconfirmedError`: the join was mined, but the SDK could not read every batch id from the receipt
@@ -24828,9 +24842,9 @@ Callback fired before the mutation function runs. Return a context value to pass
 
 ## Mutation variables
 
-Same as [`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md#mutation-variables): `group`, `vaultId`, `amount`, `skipChecks` and `onJoinSubmitted`. The `amount` is in shares, not assets.
+Same as [`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md#mutation-variables): `group` and `vaultId` or `vault`, `amount`, `skipChecks` and `onJoinSubmitted`. The `amount` is in shares, not assets.
 
-**Throws:** as [`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md#mutation-variables), except `UnlistedConfidentialTokenError`, which only applies to deposits.
+**Throws:** as [`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md#mutation-variables).
 
 ## Return Type
 
@@ -25134,11 +25148,11 @@ function NextBatch() {
 
 ## Parameters
 
-### group
+### target
 
-`VaultGroup`
+`VaultGroup | Vault`
 
-The group to read, as returned by [`defineVaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#definevaultgroup).
+The group to read, as returned by [`defineVaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#definevaultgroup), or a single vault from [`defineVault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#definevault).
 
 ---
 

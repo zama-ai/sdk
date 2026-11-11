@@ -5,14 +5,14 @@ import {
   openBatchesQueryOptions,
   type Direction,
   type OpenBatch,
-  type VaultGroup,
+  type VaultTarget,
 } from "@zama-fhe/sdk/vaults";
 import { useQuery } from "../utils/query";
 import { useVaultClient } from "./use-vault-client";
 
 /**
  * The open batch of each vault's active batcher, with when it can be
- * dispatched.
+ * dispatched. Takes a group, or a single vault.
  *
  * @returns The query result; `data` holds one open batch per vault, in group order.
  *
@@ -22,12 +22,13 @@ import { useVaultClient } from "./use-vault-client";
  * ```
  */
 export function useOpenBatches(
-  group: VaultGroup,
+  target: VaultTarget,
   direction: Direction,
   options?: Omit<UseQueryOptions<readonly OpenBatch[]>, "queryKey" | "queryFn">,
 ) {
+  const selection = "vaults" in target ? { group: target } : { vault: target };
   return useQuery<readonly OpenBatch[]>({
-    ...openBatchesQueryOptions(useVaultClient(), { group, direction }),
+    ...openBatchesQueryOptions(useVaultClient(), { ...selection, direction }),
     ...options,
   });
 }

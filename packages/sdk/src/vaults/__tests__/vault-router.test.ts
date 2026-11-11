@@ -5,7 +5,6 @@ import { vaultRouterAbi } from "../abi/vault-router.abi";
 import {
   encodeAllocationData,
   routerJoinContract,
-  tokenWrapperRegistryContract,
   type EncryptedAllocationLeg,
 } from "../contracts/vault-router";
 
@@ -57,15 +56,6 @@ describe("router call builders", () => {
       abi: vaultRouterAbi,
       functionName: "join",
       args: [LEGS, PROOF],
-    });
-  });
-
-  test("tokenWrapperRegistryContract reads the router's registry", () => {
-    expect(tokenWrapperRegistryContract(ROUTER)).toStrictEqual({
-      address: ROUTER,
-      abi: vaultRouterAbi,
-      functionName: "tokenWrapperRegistry",
-      args: [],
     });
   });
 });

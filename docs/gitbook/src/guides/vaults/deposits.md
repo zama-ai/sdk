@@ -21,7 +21,7 @@ The examples use the SDK's signer. To send through your own transaction pipeline
 
 ```ts
 // vaults.ts
-import { defineVaultGroup } from "@zama-fhe/sdk/vaults";
+import { defineVault, defineVaultGroup } from "@zama-fhe/sdk/vaults";
 
 export const STABLE = defineVaultGroup({
   id: "stable",
@@ -41,23 +41,20 @@ export const STABLE = defineVaultGroup({
   ],
 });
 
-export const SOLO = defineVaultGroup({
-  id: "solo",
+export const MAIN = defineVault({
+  id: "main",
   chainId: 1,
   asset: "0xConfidentialUSDC2",
-  vaults: [
-    {
-      id: "main",
-      batchers: { deposit: "0xMainDeposit", redeem: "0xMainRedeem" },
-      share: "0xMainShare",
-    },
-  ],
+  batchers: { deposit: "0xMainDeposit", redeem: "0xMainRedeem" },
+  share: "0xMainShare",
 });
 ```
 
 Each vault has two batchers: one that deposits join, and one that redemptions join. `share` is the vault's confidential share token. When a batcher is upgraded, its entry becomes a history of batchers. See [Upgrade a batcher](advanced.md#upgrade-a-batcher). The group and vault ids are yours to choose, and the types keep them, so a typo in `vaultId` passed to a client method is a type error. The React mutation hooks take `vaultId` as a plain `string`.
 
-`defineVaultGroup` checks the shape of the group and throws `ConfigurationError` for an invalid address, an empty group, a group above `MAX_GROUP_VAULTS` (see [Group size and the router](advanced.md#group-size-and-the-router)), a repeated vault id, or a batcher named twice. On the first join of each group, the client also checks the group against the chain. See [`defineVaultGroup`](../../reference/sdk/VaultClient.md#definevaultgroup).
+`defineVault` describes one vault on its own, like `MAIN`. Every method that takes a group also takes a single vault, and a join into it needs no `vaultId`.
+
+`defineVaultGroup` checks the shape of the group and throws `ConfigurationError` for an invalid address, an empty group, a group above `MAX_GROUP_VAULTS` (see [Group size and the router](advanced.md#group-size-and-the-router)), a repeated vault id, or a batcher named twice. See [`defineVaultGroup`](../../reference/sdk/VaultClient.md#definevaultgroup).
 
 {% hint style="warning" %}
 The order of `vaults` is the leg order of every join. Never reorder, add or remove vaults in a group once users have joined it. To change a group, define a new group. See [Privacy rules](advanced.md#privacy-rules).
@@ -128,7 +125,7 @@ function DepositButton() {
 {% endtab %}
 {% endtabs %}
 
-The amount is in the asset's base units, so `1_000_000n` is one unit of a 6-decimal token.
+The amount is in the asset's base units, so `1_000_000n` is one unit of a 6-decimal token. For a single vault, leave out `vaultId`: `vaults.deposit(MAIN, { amount: 1_000_000n })`, or `deposit.mutate({ vault: MAIN, amount: 1_000_000n })` in React.
 
 The SDK checks your confidential balance before it sends, as `Token.confidentialTransfer` does. A confidential transfer above the balance moves zero instead of reverting, so without this check a too-large deposit would succeed on-chain and deposit nothing. For an account whose balance the signer cannot decrypt, pass `skipChecks: ["balance"]` in the options.
 

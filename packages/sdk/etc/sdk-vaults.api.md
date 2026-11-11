@@ -99,6 +99,9 @@ export function claimMutationOptions(client: VaultClient): MutationFactoryOption
 export function createVaultClient(sdk: ZamaSDK): VaultClient;
 
 // @public
+export function defineVault<const TVaultId extends string>(config: SingleVaultConfig<TVaultId>): Vault<TVaultId>;
+
+// @public
 export function defineVaultGroup<const TGroupId extends string, const TVaultId extends string>(config: VaultGroupConfig<TGroupId, TVaultId>): VaultGroup<TGroupId, TVaultId>;
 
 // @public
@@ -141,6 +144,11 @@ export interface JoinInput<TVaultId extends string = string> {
 }
 
 // @public
+export type JoinInputFor<TTarget extends VaultTarget> = TTarget extends VaultGroup ? JoinInput<VaultIdOf<TTarget>> : Omit<JoinInput<VaultIdOf<TTarget>>, "vaultId"> & {
+    readonly vaultId?: VaultIdOf<TTarget>;
+};
+
+// @public
 export interface JoinOptions {
     readonly skipChecks?: readonly VaultCheck[];
     readonly walletMode?: WalletMode;
@@ -159,9 +167,15 @@ export interface JoinOutcome {
 export type JoinRoute = "legs" | "router";
 
 // @public
-export interface JoinVariables<TGroup extends VaultGroup = VaultGroup> extends SendJoinInput<VaultIdOf<TGroup>>, SendJoinOptions {
+export type JoinVariables<TGroup extends VaultGroup = VaultGroup> = Pick<JoinInput, "amount"> & SendJoinOptions & ({
     readonly group: TGroup;
-}
+    readonly vaultId: VaultIdOf<TGroup>;
+    readonly vault?: never;
+} | {
+    readonly vault: Vault;
+    readonly vaultId?: string;
+    readonly group?: never;
+});
 
 // @public
 export const MAX_GROUP_VAULTS = 8;
@@ -175,11 +189,10 @@ export interface OpenBatch extends BatchRef {
 }
 
 // @public
-export interface OpenBatchesQueryConfig {
+export type OpenBatchesQueryConfig = VaultSelection & {
     direction: Direction;
-    group: VaultGroup;
     query?: Record<string, unknown>;
-}
+};
 
 // @public
 export function openBatchesQueryOptions(client: VaultClient, config: OpenBatchesQueryConfig): QueryFactoryOptions<readonly OpenBatch[], Error, readonly OpenBatch[], ReturnType<typeof vaultQueryKeys.openBatches>>;
@@ -220,40 +233,56 @@ export interface RetiredBatcher {
 export type SendJoinInput<TVaultId extends string = string> = Omit<JoinInput<TVaultId>, "account">;
 
 // @public
+export type SendJoinInputFor<TTarget extends VaultTarget> = Omit<JoinInputFor<TTarget>, "account">;
+
+// @public
 export interface SendJoinOptions extends Pick<JoinOptions, "skipChecks"> {
     readonly onJoinSubmitted?: (txHash: Hex) => void;
+}
+
+// @public
+export interface SingleVaultConfig<TVaultId extends string = string> extends VaultConfig<TVaultId> {
+    readonly asset: Address;
+    readonly chainId: number;
+}
+
+// @public
+export interface Vault<TVaultId extends string = string> extends VaultGroupVault<TVaultId> {
+    readonly [defined]: true;
+    readonly asset: Address;
+    readonly chainId: number;
 }
 
 // @public
 export type VaultCall = GrantCall | JoinCall;
 
 // @public
-export type VaultCheck = "balance" | "config";
+export type VaultCheck = "balance";
 
 // @public
 export class VaultClient {
     constructor(sdk: ZamaSDK);
-    activeBatchers(group: VaultGroup, direction: Direction): Promise<ActiveBatchers>;
+    activeBatchers(target: VaultTarget, direction: Direction): Promise<ActiveBatchers>;
     claim(batch: BatchRef & {
         readonly account?: Address;
     }): Promise<TransactionResult>;
-    deposit<TGroup extends VaultGroup>(group: TGroup, input: SendJoinInput<VaultIdOf<TGroup>>, options?: SendJoinOptions): Promise<JoinOutcome>;
+    deposit<TTarget extends VaultTarget>(target: TTarget, input: SendJoinInputFor<TTarget>, options?: SendJoinOptions): Promise<JoinOutcome>;
     dispatch(batch: BatcherRef): Promise<TransactionResult>;
     finalize(batch: BatchRef): Promise<TransactionResult>;
     prepareClaim(batch: BatchRef & {
         readonly account: Address;
     }): Call;
-    prepareDeposit<TGroup extends VaultGroup>(group: TGroup, input: JoinInput<VaultIdOf<TGroup>>, options?: JoinOptions): Promise<PreparedJoin>;
+    prepareDeposit<TTarget extends VaultTarget>(target: TTarget, input: JoinInputFor<TTarget>, options?: JoinOptions): Promise<PreparedJoin>;
     prepareDispatch(batch: BatcherRef): Call;
     prepareFinalize(batch: BatchRef): Promise<PreparedFinalize>;
     prepareQuit(batch: BatchRef): Call;
-    prepareRedeem<TGroup extends VaultGroup>(group: TGroup, input: JoinInput<VaultIdOf<TGroup>>, options?: JoinOptions): Promise<PreparedJoin>;
+    prepareRedeem<TTarget extends VaultTarget>(target: TTarget, input: JoinInputFor<TTarget>, options?: JoinOptions): Promise<PreparedJoin>;
     quit(batch: BatchRef): Promise<TransactionResult>;
     readBatch(batch: BatchRef & {
         readonly account?: Address;
     }): Promise<Batch>;
-    readOpenBatches(group: VaultGroup, direction: Direction): Promise<readonly OpenBatch[]>;
-    redeem<TGroup extends VaultGroup>(group: TGroup, input: SendJoinInput<VaultIdOf<TGroup>>, options?: SendJoinOptions): Promise<JoinOutcome>;
+    readOpenBatches(target: VaultTarget, direction: Direction): Promise<readonly OpenBatch[]>;
+    redeem<TTarget extends VaultTarget>(target: TTarget, input: SendJoinInputFor<TTarget>, options?: SendJoinOptions): Promise<JoinOutcome>;
     readonly sdk: ZamaSDK;
 }
 
@@ -291,7 +320,7 @@ export interface VaultGroupVault<TVaultId extends string = string> {
 }
 
 // @public
-export type VaultIdOf<TGroup extends VaultGroup> = TGroup extends VaultGroup<string, infer TVaultId> ? TVaultId : never;
+export type VaultIdOf<TTarget extends VaultTarget> = TTarget extends VaultGroup<string, infer TVaultId> ? TVaultId : TTarget extends Vault<infer TVaultId> ? TVaultId : never;
 
 // @public
 export interface VaultLeg {
@@ -311,13 +340,25 @@ export const vaultQueryKeys: {
         readonly batchId: bigint | undefined;
         readonly account: `0x${string}` | undefined;
     }];
-    openBatches: (group: VaultGroup, direction: Direction) => readonly ["zama.vault", {
+    openBatches: (target: VaultTarget, direction: Direction) => readonly ["zama.vault", {
         readonly kind: "openBatches";
         readonly chainId: number;
-        readonly groupId: string;
+        readonly id: string;
         readonly direction: Direction;
     }];
 };
+
+// @public
+export type VaultSelection = {
+    readonly group: VaultGroup;
+    readonly vault?: never;
+} | {
+    readonly vault: Vault;
+    readonly group?: never;
+};
+
+// @public
+export type VaultTarget = VaultGroup | Vault;
 
 // @public
 export type WalletMode = "sequential" | "bundle";
