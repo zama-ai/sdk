@@ -379,43 +379,6 @@ describe("prepareDeposit", () => {
       }),
     ).rejects.toThrow(/not the configured asset/);
   });
-
-  test("a beneficiary in a group of one pulls through the batcher, after a grant to it", async ({
-    sdk,
-    provider,
-    relayer,
-  }) => {
-    mockChain(provider, { operators: false });
-    mockEncryption(relayer);
-    const prepared = await createVaultClient(sdk).prepareDeposit(
-      SOLO,
-      { vaultId: "main", account: USER, amount: 10n, beneficiary: FRIEND },
-      { skipChecks: ["balance"] },
-    );
-    expect(roles(prepared.calls)).toStrictEqual(["grant", "join"]);
-    expect(prepared.calls[0]).toMatchObject({
-      role: "grant",
-      vaultId: "main",
-      token: ASSET,
-      operator: ALPHA.depositBatcher,
-      until: NOW + YEAR,
-    });
-    const join = decode(prepared.calls[1] as VaultCall);
-    expect([join.functionName, join.args?.[0]]).toStrictEqual(["join", FRIEND]);
-  });
-
-  test("refuses a beneficiary in a larger group", async ({ sdk, provider, relayer }) => {
-    mockChain(provider);
-    mockEncryption(relayer);
-    await expect(
-      createVaultClient(sdk).prepareDeposit(STABLE, {
-        vaultId: "alpha",
-        account: USER,
-        amount: 10n,
-        beneficiary: FRIEND,
-      }),
-    ).rejects.toThrow(/only a group of one/);
-  });
 });
 
 describe("proof binding", () => {
@@ -487,21 +450,6 @@ describe("proof binding", () => {
         [BETA.share, USER, [4n]],
       ].sort(([a], [b]) => String(a).localeCompare(String(b))),
     );
-  });
-
-  test("a join for a beneficiary binds the amount to the batcher that pulls it", async ({
-    sdk,
-    provider,
-    relayer,
-  }) => {
-    mockChain(provider);
-    mockEncryption(relayer);
-    await createVaultClient(sdk).prepareDeposit(
-      SOLO,
-      { vaultId: "main", account: USER, amount: 10n, beneficiary: FRIEND },
-      { skipChecks: ["balance"] },
-    );
-    expect(encryptedFor(relayer)).toStrictEqual([[ALPHA.depositBatcher, USER, [10n]]]);
   });
 });
 
@@ -810,7 +758,7 @@ describe("deposit and redeem", () => {
 });
 
 describe("chain checks", () => {
-  test("refuses to encrypt while the provider is on another chain", async ({
+  test("refuses to encrypt while the wallet is on another chain, as a send does", async ({
     sdk,
     provider,
     relayer,
@@ -824,7 +772,24 @@ describe("chain checks", () => {
         { vaultId: "alpha", account: USER, amount: 10n },
         { skipChecks: ["balance"] },
       ),
-    ).rejects.toThrow(/switch to chain 1/);
+    ).rejects.toMatchObject({ name: "ChainMismatchError", targetChainId: 1 });
+  });
+
+  test("without a wallet, refuses to encrypt while the provider is on another chain", async ({
+    createSDK,
+    provider,
+    relayer,
+  }) => {
+    mockChain(provider);
+    mockEncryption(relayer);
+    const elsewhere = defineVaultGroup({ ...STABLE, chainId: 1 });
+    await expect(
+      createVaultClient(createSDK({ signer: undefined })).prepareDeposit(
+        elsewhere,
+        { vaultId: "alpha", account: USER, amount: 10n },
+        { skipChecks: ["balance"] },
+      ),
+    ).rejects.toBeInstanceOf(ConfigurationError);
   });
 
   test("refuses to send while the wallet is on another chain", async ({ sdk, signer }) => {

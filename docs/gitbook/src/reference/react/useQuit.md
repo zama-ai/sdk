@@ -7,7 +7,7 @@ description: Mutation hook that takes the signer's deposit back from a pending o
 
 Mutation hook that takes the signer's deposit back from a pending batch, or from a canceled one. Same flow as [`VaultClient.quit`](../sdk/VaultClient.md#quit).
 
-The contract refunds the sender, so only the depositor can quit. The wallet must be the account that joined (or the `beneficiary` the join credited).
+The contract refunds the sender, so only the depositor can quit. The wallet must be the account that joined.
 
 {% hint style="warning" %}
 **Quit every leg of the join, not only the chosen one.** A join sends a leg to every vault of its group, which is what hides the choice. A quit is public, so quitting only the chosen vault's batch shows which vault the user picked. To cancel a join in a group, quit the batch of every leg in `batches`: one wallet prompt each. A canceled batch rarely needs a quit: a keeper recovers the deposit for every depositor anyway.

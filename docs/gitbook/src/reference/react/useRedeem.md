@@ -53,7 +53,7 @@ function RedeemButton() {
 
 ## Mutation variables
 
-Same as [`useDeposit`](./useDeposit.md#mutation-variables): `group`, `vaultId`, `amount`, `beneficiary` (group of one only), `skipChecks` and `onJoinSubmitted`. The `amount` is in shares, not assets.
+Same as [`useDeposit`](./useDeposit.md#mutation-variables): `group`, `vaultId`, `amount`, `skipChecks` and `onJoinSubmitted`. The `amount` is in shares, not assets.
 
 **Throws:** as [`useDeposit`](./useDeposit.md#mutation-variables), except `UnlistedConfidentialTokenError`, which only applies to deposits.
 

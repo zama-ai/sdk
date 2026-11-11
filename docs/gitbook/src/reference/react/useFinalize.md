@@ -56,7 +56,6 @@ A `BatchRef` (`{ chainId, batcher, batchId }`), passed to `mutate` / `mutateAsyn
 **Throws:**
 
 - `VaultBatchNotDispatchedError`: the batch is not dispatched, for example because a keeper already finalized it. The error's `state` says which state it is in.
-- `ConfigurationError`: the provider is not on the batch's chain. Finalizing decrypts on the provider's chain.
 - `ChainMismatchError`: the wallet is not on the batch's chain.
 
 ## Return Type

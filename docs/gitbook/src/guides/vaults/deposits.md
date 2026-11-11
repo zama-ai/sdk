@@ -132,18 +132,6 @@ The amount is in the asset's base units, so `1_000_000n` is one unit of a 6-deci
 
 The SDK checks your confidential balance before it sends, as `Token.confidentialTransfer` does. A confidential transfer above the balance moves zero instead of reverting, so without this check a too-large deposit would succeed on-chain and deposit nothing. For an account whose balance the signer cannot decrypt, pass `skipChecks: ["balance"]` in the options.
 
-#### Deposit for another account
-
-In a group of one, `beneficiary` credits another account:
-
-```ts
-import { SOLO } from "./vaults";
-
-await vaults.deposit(SOLO, { vaultId: "main", amount: 1_000_000n, beneficiary: "0xRecipient" });
-```
-
-The batcher then pulls the amount, so the SDK first grants it an operator approval if none is active: up to two wallet prompts. The beneficiary owns the deposit. Only they can quit it, and a claim pays them. A group of several vaults joins through the router, which always credits the sender, so `beneficiary` there throws `ConfigurationError`.
-
 ### 4. Store the batches
 
 `deposit` returns `batches`: the batch each leg landed in, decoys included, as `{ vaultId, chainId, batcher, batchId }`. **You need them to read, claim or quit the deposit later**, so store them where the user finds them again after a reload or on another device. Keep which vault was chosen in the user's own storage only, if you need it.
@@ -298,7 +286,7 @@ One paused batcher blocks every join of its group. See [Paused batchers](advance
 
 ## Reads on another chain
 
-Reads go to the group's or batch's `chainId`, whatever chain the wallet is on, so a vault page can render before the wallet connects. This needs a provider that can read another chain, such as `WagmiProvider`. Joins and `finalize` encrypt or decrypt on the provider's chain, so they throw `ConfigurationError` until the provider is on the group's chain. The send methods throw `ChainMismatchError` while the wallet is on another chain.
+Reads go to the group's or batch's `chainId`, whatever chain the wallet is on, so a vault page can render before the wallet connects. This needs a provider that can read another chain, such as `WagmiProvider`. While the wallet is on another chain, every write method throws `ChainMismatchError`, so prompt a network switch. Without a wallet, joins and `finalize` throw `ConfigurationError` until the provider is on the group's chain, because they encrypt or decrypt there.
 
 ## Next steps
 

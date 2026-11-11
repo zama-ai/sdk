@@ -40,7 +40,7 @@ export interface GrantCall extends Call {
   readonly vaultId: string;
   /** The token the grant is on. */
   readonly token: Address;
-  /** The contract granted: the router, or the batcher of a join for a beneficiary. */
+  /** The contract granted: the router. */
   readonly operator: Address;
   /** When the grant expires, in chain seconds. */
   readonly until: bigint;
@@ -109,11 +109,6 @@ export interface JoinInput<TVaultId extends string = string> {
   readonly account: Address;
   /** Plaintext; encrypted before it leaves the SDK. For a redeem, in shares. */
   readonly amount: bigint;
-  /**
-   * The account the batcher credits, when not `account`. Only a group of one
-   * accepts it: the router always credits the sender.
-   */
-  readonly beneficiary?: Address;
 }
 
 /** Checks `prepareDeposit` and `prepareRedeem` may skip. A paused batcher is never skipped. */

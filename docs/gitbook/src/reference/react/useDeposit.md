@@ -94,12 +94,6 @@ The vault that gets the amount.
 
 The amount, in the asset's base units. Encrypted before it leaves the SDK.
 
-### beneficiary
-
-`Address | undefined`
-
-Only in a group of one. The account the batcher credits instead of the signer. The batcher then pulls the amount, so the hook first grants it an operator approval if none is active. The beneficiary owns the deposit: only they can quit it, and a claim pays them.
-
 ### skipChecks
 
 `("balance" | "config")[] | undefined`
@@ -129,7 +123,7 @@ deposit.mutate({
 - `BalanceCheckUnavailableError`: the balance check cannot decrypt the balance
 - `VaultJoinUnconfirmedError`: the join was mined, but the SDK could not read every batch id from the receipt
 - `ChainMismatchError`: the wallet is not on the group's chain
-- `ConfigurationError`: the group does not match the chain, or the provider is not on the group's chain
+- `ConfigurationError`: the group does not match the chain
 
 ## Return Type
 

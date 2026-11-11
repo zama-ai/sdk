@@ -8,6 +8,7 @@ import {
 } from "../contracts";
 import {
   BalanceCheckUnavailableError,
+  ChainMismatchError,
   ConfigurationError,
   DecryptionFailedError,
   EncryptionFailedError,
@@ -58,7 +59,6 @@ import {
   exchangeRateContract,
   exchangeRateDecimalsContract,
   fromTokenContract,
-  joinContract,
   pausedContract,
   quitContract,
   routerJoinContract,
@@ -193,9 +193,10 @@ export class VaultClient {
   /**
    * Build a deposit of the group's asset into one vault: a leg for every
    * vault, encrypted, with the calls in send order. A deposit pushes the
-   * asset, so it needs no grant unless it credits a beneficiary.
+   * asset, so it needs no grant.
    *
-   * @throws if the vault is unknown, `beneficiary` is given in a group of more than one, the group does not match the chain, or the provider is on another chain. {@link ConfigurationError}
+   * @throws if the provider is not on the group's chain while a wallet is connected. {@link ChainMismatchError}
+   * @throws if the vault is unknown, the group does not match the chain, or the provider is on another chain with no wallet connected. {@link ConfigurationError}
    * @throws if any vault's batcher is paused. {@link VaultBatcherPausedError}
    * @throws if a router deposit's asset is not listed in the router's registry. {@link UnlistedConfidentialTokenError}
    * @throws if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
@@ -249,7 +250,8 @@ export class VaultClient {
    * cancels it instead.
    *
    * @throws if the batch is not dispatched. {@link VaultBatchNotDispatchedError}
-   * @throws if the provider is not on the batch's chain. {@link ConfigurationError}
+   * @throws if the provider is not on the batch's chain while a wallet is connected. {@link ChainMismatchError}
+   * @throws if the provider is not on the batch's chain with no wallet connected. {@link ConfigurationError}
    */
   async prepareFinalize(batch: BatchRef): Promise<PreparedFinalize> {
     return (await this.#planFinalize(batch)).call;
@@ -468,14 +470,8 @@ export class VaultClient {
     }
     const skip = new Set(options?.skipChecks);
     const account = getAddress(input.account);
-    const beneficiary = input.beneficiary === undefined ? account : getAddress(input.beneficiary);
-    const single = group.vaults.length === 1;
-    if (beneficiary !== account && !single) {
-      throw new ConfigurationError(
-        `Vault group "${group.id}" has ${group.vaults.length} vaults, and only a group of one can credit a beneficiary`,
-      );
-    }
-    const route: JoinRoute = single || options?.walletMode === "bundle" ? "legs" : "router";
+    const route: JoinRoute =
+      group.vaults.length === 1 || options?.walletMode === "bundle" ? "legs" : "router";
     const router = route === "router" ? this.#router(group) : undefined;
 
     // Encryption runs on the provider's chain, so check it before anything prompts.
@@ -539,16 +535,6 @@ export class VaultClient {
           ),
         ];
       }
-    } else if (beneficiary !== account) {
-      // The batcher pulls the amount from the sender, so the proof is bound to the batcher.
-      const [[handle], inputProof] = await this.#encrypt(
-        target.batcher,
-        account,
-        [input.amount],
-        operation,
-      );
-      grants = await this.#missingGrants(group.chainId, [target], account, target.batcher);
-      joins = [join(joinContract(target.batcher, beneficiary, handle, inputProof), target)];
     } else {
       const encrypted = await this.#encryptPerToken(legs, account, operation);
       joins = legs.map((leg, index) => {
@@ -608,12 +594,11 @@ export class VaultClient {
       txHashes.push(last.txHash);
     }
     assertNonNullable(last, `vault ${direction}: last transaction`);
-    const credited = getAddress(input.beneficiary ?? account);
     const logs = [...last.receipt.logs];
     const batches: (BatchRef & { vaultId: string })[] = [];
     const unconfirmed: string[] = [];
     for (const leg of prepared.legs) {
-      const batchId = takeJoinedBatchId(logs, leg.batcher, credited);
+      const batchId = takeJoinedBatchId(logs, leg.batcher, account);
       if (batchId === null) {
         unconfirmed.push(leg.vaultId);
       } else {
@@ -627,7 +612,7 @@ export class VaultClient {
     }
     if (unconfirmed.length > 0) {
       throw new VaultJoinUnconfirmedError(
-        `Transaction ${last.txHash} was mined, but its receipt has no Joined event for ${credited} from the batcher of ${unconfirmed.map((id) => `"${id}"`).join(", ")} in group "${group.id}"`,
+        `Transaction ${last.txHash} was mined, but its receipt has no Joined event for ${account} from the batcher of ${unconfirmed.map((id) => `"${id}"`).join(", ")} in group "${group.id}"`,
         { txHash: last.txHash, receipt: last.receipt, unconfirmedVaultIds: unconfirmed },
       );
     }
@@ -925,11 +910,22 @@ export class VaultClient {
 
   async #requireProviderChain(chainId: number, operation: string): Promise<void> {
     const providerChainId = await this.sdk.provider.getChainId();
-    if (providerChainId !== chainId) {
-      throw new ConfigurationError(
-        `Operation "${operation}" encrypts or decrypts on chain ${chainId}, but the provider is on chain ${providerChainId}; switch to chain ${chainId} first`,
-      );
+    if (providerChainId === chainId) {
+      return;
     }
+    // A connected wallet gets the same error as a send, so an app has one "switch chain" case.
+    const wallet = this.sdk.signer?.walletAccount.getSnapshot();
+    if (wallet !== undefined) {
+      throw new ChainMismatchError({
+        operation,
+        signerChainId: wallet.chainId,
+        providerChainId,
+        targetChainId: chainId,
+      });
+    }
+    throw new ConfigurationError(
+      `Operation "${operation}" encrypts or decrypts on chain ${chainId}, but the provider is on chain ${providerChainId}`,
+    );
   }
 
   #memo<T>(key: string, read: () => Promise<T>): Promise<T> {

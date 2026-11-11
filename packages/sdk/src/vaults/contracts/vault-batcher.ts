@@ -1,21 +1,5 @@
 import type { Address, Hex } from "viem";
-import type { EncryptedValue } from "../../relayer/types";
 import { vaultBatcherAbi } from "../abi/vault-batcher.abi";
-
-/** Returns the contract config to join the currently open batch with an encrypted amount. */
-export function joinContract(
-  batcher: Address,
-  beneficiary: Address,
-  encryptedAmount: EncryptedValue,
-  inputProof: Hex,
-) {
-  return {
-    address: batcher,
-    abi: vaultBatcherAbi,
-    functionName: "join",
-    args: [beneficiary, encryptedAmount, inputProof],
-  } as const;
-}
 
 /** Returns the contract config to claim a finalized batch's output on behalf of `account`. Permissionless. */
 export function claimContract(batcher: Address, batchId: bigint, account: Address) {

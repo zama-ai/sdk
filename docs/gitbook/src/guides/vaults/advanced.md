@@ -37,7 +37,6 @@ The SDK's send methods send one transaction per call, so each call is one wallet
 | Action                          | Group of one | Group of N vaults |
 | ------------------------------- | ------------ | ----------------- |
 | `deposit`                       | 1            | 1                 |
-| `deposit` with `beneficiary`    | up to 2      | not allowed       |
 | `redeem`                        | 1            | **up to N + 1**   |
 | `claim`, `dispatch`, `finalize` | 1 per batch  | 1 per batch       |
 | `quit` the whole join           | 1            | N                 |
@@ -169,7 +168,7 @@ After you send, call `invalidateAfterVaultAction(queryClient)` so the hooks read
 
 ### Find the batches of a join
 
-The `prepare*` methods do not return batch ids, because they are known only once the join is mined. A host gets them from its own indexer of the batchers' `Joined(batchId, account, amount)` events: one per leg, emitted by the batcher in `prepared.legs[i].batcher`. `account` is the account the batchers credited: the sender, or the `beneficiary` in a group of one. With the `BatchRef` of each leg, the host reads and acts on batches like any other app:
+The `prepare*` methods do not return batch ids, because they are known only once the join is mined. A host gets them from its own indexer of the batchers' `Joined(batchId, account, amount)` events: one per leg, emitted by the batcher in `prepared.legs[i].batcher`. `account` is the sender. With the `BatchRef` of each leg, the host reads and acts on batches like any other app:
 
 ```ts
 const batch = await vaults.readBatch({ chainId: 1, batcher, batchId, account: "0xUser" });

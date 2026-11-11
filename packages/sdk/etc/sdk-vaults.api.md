@@ -137,7 +137,6 @@ export interface JoinCall extends Call {
 export interface JoinInput<TVaultId extends string = string> {
     readonly account: Address;
     readonly amount: bigint;
-    readonly beneficiary?: Address;
     readonly vaultId: TVaultId;
 }
 

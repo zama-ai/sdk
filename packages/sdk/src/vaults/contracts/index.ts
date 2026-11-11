@@ -12,7 +12,6 @@ export {
   exchangeRateContract,
   exchangeRateDecimalsContract,
   fromTokenContract,
-  joinContract,
   pausedContract,
   quitContract,
   recoverContract,
