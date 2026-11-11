@@ -179,9 +179,7 @@ function decode(call: { data: Hex }) {
   for (const abi of [confidentialWrapperAbi, vaultBatcherAbi, vaultRouterAbi]) {
     try {
       return decodeFunctionData({ abi, data: call.data });
-    } catch {
-      // try the next ABI
-    }
+    } catch {}
   }
   throw new Error("Undecodable call");
 }
@@ -193,7 +191,7 @@ describe("defineVaultGroup", () => {
     expect(() => defineVaultGroup({ ...STABLE, vaults: [] })).toThrow(ConfigurationError);
   });
 
-  test("refuses more vaults than one transaction can carry", () => {
+  test("refuses more than MAX_GROUP_VAULTS vaults", () => {
     const vaults = Array.from({ length: MAX_GROUP_VAULTS + 1 }, (_unused, index) => ({
       id: `v${index}`,
       batchers: {
@@ -419,6 +417,113 @@ describe("prepareDeposit", () => {
   });
 });
 
+describe("proof binding", () => {
+  // A proof only verifies in the contract it was encrypted for, so a wrong binding reverts on chain.
+  function encryptedFor(relayer: RelayerSDK) {
+    return vi
+      .mocked(relayer.encryptValues)
+      .mock.calls.map(([params]) => {
+        const { contractAddress, userAddress, values } = params as unknown as {
+          contractAddress: Address;
+          userAddress: Address;
+          values: { value: bigint }[];
+        };
+        return [
+          getAddress(contractAddress),
+          getAddress(userAddress),
+          values.map((entry) => entry.value),
+        ];
+      })
+      .sort(([a], [b]) => String(a).localeCompare(String(b)));
+  }
+
+  test("a router deposit binds the total to the asset and the allocation to the router", async ({
+    sdk,
+    provider,
+    relayer,
+  }) => {
+    mockChain(provider);
+    mockEncryption(relayer);
+    await createVaultClient(sdk).prepareDeposit(STABLE, {
+      vaultId: "beta",
+      account: USER,
+      amount: 10n,
+    });
+    expect(encryptedFor(relayer)).toStrictEqual(
+      [
+        [ASSET, USER, [10n]],
+        [ROUTER, USER, [0n, 10n]],
+      ].sort(([a], [b]) => String(a).localeCompare(String(b))),
+    );
+  });
+
+  test("a router redeem binds the allocation to the router", async ({ sdk, provider, relayer }) => {
+    mockChain(provider);
+    mockEncryption(relayer);
+    await createVaultClient(sdk).prepareRedeem(STABLE, {
+      vaultId: "alpha",
+      account: USER,
+      amount: 4n,
+    });
+    expect(encryptedFor(relayer)).toStrictEqual([[ROUTER, USER, [4n, 0n]]]);
+  });
+
+  test("bundled redeem legs bind each amount to the share token it spends", async ({
+    sdk,
+    provider,
+    relayer,
+  }) => {
+    mockChain(provider);
+    mockEncryption(relayer);
+    await createVaultClient(sdk).prepareRedeem(
+      STABLE,
+      { vaultId: "beta", account: USER, amount: 4n },
+      { walletMode: "bundle" },
+    );
+    expect(encryptedFor(relayer)).toStrictEqual(
+      [
+        [ALPHA.share, USER, [0n]],
+        [BETA.share, USER, [4n]],
+      ].sort(([a], [b]) => String(a).localeCompare(String(b))),
+    );
+  });
+
+  test("a join for a beneficiary binds the amount to the batcher that pulls it", async ({
+    sdk,
+    provider,
+    relayer,
+  }) => {
+    mockChain(provider);
+    mockEncryption(relayer);
+    await createVaultClient(sdk).prepareDeposit(
+      SOLO,
+      { vaultId: "main", account: USER, amount: 10n, beneficiary: FRIEND },
+      { skipChecks: ["balance"] },
+    );
+    expect(encryptedFor(relayer)).toStrictEqual([[ALPHA.depositBatcher, USER, [10n]]]);
+  });
+});
+
+describe("group check", () => {
+  test("checks a second group with the same id against the chain again", async ({
+    sdk,
+    provider,
+    relayer,
+  }) => {
+    mockChain(provider);
+    mockEncryption(relayer);
+    const client = createVaultClient(sdk);
+    await client.prepareDeposit(STABLE, { vaultId: "alpha", account: USER, amount: 1n });
+    const sameId = defineVaultGroup({
+      ...STABLE,
+      vaults: [{ ...vault(ALPHA, "alpha"), share: BETA.share }, vault(BETA, "beta")],
+    });
+    await expect(
+      client.prepareDeposit(sameId, { vaultId: "alpha", account: USER, amount: 1n }),
+    ).rejects.toThrow(/not the configured asset/);
+  });
+});
+
 describe("prepareRedeem", () => {
   test("grants the router on every share token it lacks, for a year, then joins", async ({
     sdk,
@@ -491,7 +596,7 @@ describe("batcher upgrades", () => {
 describe("batch actions", () => {
   test("claim, quit and dispatch encode without reading the chain", ({ sdk, provider }) => {
     const client = createVaultClient(sdk);
-    const batch = { batcher: ALPHA.depositBatcher, batchId: 3n };
+    const batch = { chainId: CHAIN_ID, batcher: ALPHA.depositBatcher, batchId: 3n };
     expect(decode(client.prepareClaim({ ...batch, account: USER }))).toMatchObject({
       functionName: "claim",
       args: [3n, USER],

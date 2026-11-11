@@ -19,10 +19,11 @@ export interface UseBatchOptions extends Omit<
 
 /**
  * One batch's state, timings, and the actions that can be sent for it now.
- * Refetches when `nextChangeAt` passes and polls while the batch settles, so
- * a UI needs no timer of its own.
+ * Refetches when `nextChangeAt` passes and polls while the batch waits for a
+ * dispatch or a settlement, so a UI needs no timer of its own.
  *
  * @param batch - The batch to read. The query stays disabled while `undefined`.
+ * @returns The query result; `data` is the {@link Batch}.
  *
  * @example
  * ```tsx

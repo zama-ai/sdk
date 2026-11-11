@@ -175,13 +175,14 @@ for (const call of prepared.calls) {
 - `walletMode`: `"sequential"` (default) or `"bundle"`. See [Bundling wallets](#bundling-wallets).
 - `skipChecks`: `"balance"` skips the balance check, which decrypts as the signer: an `account` other than the signer's needs it. `"config"` skips the one-time check of the group against the chain and the router's registry listing, for a host that verified them itself. The paused check always runs.
 
-The batch actions take one batch each:
+The batch actions take one batch each, as a `BatchRef` (`{ chainId, batcher, batchId }`). Dispatch acts on a batcher's open batch, so it takes a `BatcherRef` (`{ chainId, batcher }`):
 
 ```ts
-const claim = vaults.prepareClaim({ batcher, batchId, account: "0xUser" });
-const quit = vaults.prepareQuit({ batcher, batchId });
-const dispatch = vaults.prepareDispatch({ batcher });
-const { call: finalize } = await vaults.prepareFinalize({ chainId: 1, batcher, batchId });
+const batch = { chainId: 1, batcher, batchId };
+const claim = vaults.prepareClaim({ ...batch, account: "0xUser" });
+const quit = vaults.prepareQuit(batch);
+const dispatch = vaults.prepareDispatch({ chainId: 1, batcher });
+const { call: finalize } = await vaults.prepareFinalize(batch);
 ```
 
 `prepareClaim`, `prepareQuit` and `prepareDispatch` read nothing, so read the batch with `readBatch` right before you send them. `prepareFinalize` throws `VaultBatchNotDispatchedError` when the batch is not dispatched.
@@ -195,7 +196,7 @@ The `prepare*` methods do not return batch ids, because they are known only once
 ```ts
 const batch = await vaults.readBatch({ chainId: 1, batcher, batchId, account: "0xUser" });
 if (batch.actions.includes("claim")) {
-  await sendTransaction(vaults.prepareClaim({ batcher, batchId, account: "0xUser" }));
+  await sendTransaction(vaults.prepareClaim({ chainId: 1, batcher, batchId, account: "0xUser" }));
 }
 ```
 

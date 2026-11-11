@@ -6,6 +6,7 @@
 
 import { Address } from 'viem';
 import { Batch } from '@zama-fhe/sdk/vaults';
+import { BatcherRef } from '@zama-fhe/sdk/vaults';
 import { BatchRef } from '@zama-fhe/sdk/vaults';
 import { Direction } from '@zama-fhe/sdk/vaults';
 import { JoinOutcome } from '@zama-fhe/sdk/vaults';
@@ -39,13 +40,7 @@ export function useClaim<TContext = unknown>(options?: UseVaultMutationOptions<T
 export function useDeposit<TContext = unknown>(options?: UseVaultMutationOptions<JoinOutcome, JoinVariables, TContext>): UseMutationResult<JoinOutcome, Error, JoinVariables<VaultGroup<string, string>>, TContext>;
 
 // @public
-export function useDispatch<TContext = unknown>(options?: UseVaultMutationOptions<TransactionResult, {
-    readonly chainId: number;
-    readonly batcher: Address;
-}, TContext>): UseMutationResult<TransactionResult, Error, {
-    readonly chainId: number;
-    readonly batcher: Address;
-}, TContext>;
+export function useDispatch<TContext = unknown>(options?: UseVaultMutationOptions<TransactionResult, BatcherRef, TContext>): UseMutationResult<TransactionResult, Error, BatcherRef, TContext>;
 
 // @public
 export function useFinalize<TContext = unknown>(options?: UseVaultMutationOptions<TransactionResult, BatchRef, TContext>): UseMutationResult<TransactionResult, Error, BatchRef, TContext>;

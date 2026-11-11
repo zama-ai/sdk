@@ -24,7 +24,7 @@ The `vaults` subpath is separate from the root entry, so apps that do not use va
 
 ## defineVaultGroup
 
-`defineVaultGroup(config)` checks one group of vaults that take deposits in the same confidential asset, and returns a `VaultGroup`. It keeps the group and vault ids as literal types, so a typo in `vaultId` is a type error. It reads nothing from chain. Call it once per group, at module level:
+`defineVaultGroup(config)` checks one group of vaults that take deposits in the same confidential asset, and returns a `VaultGroup`. It keeps the group and vault ids as literal types, so a typo in `vaultId` passed to a client method is a type error. The React mutation hooks take `vaultId` as a plain `string`. It reads nothing from chain. Call it once per group, at module level:
 
 ```ts
 import { defineVaultGroup } from "@zama-fhe/sdk/vaults";
@@ -194,7 +194,7 @@ Builds a deposit of the group's asset into one vault: a leg for every vault, eac
 
 **Throws:**
 
-- `ConfigurationError` when the vault is unknown, `beneficiary` is given in a group of more than one, the group does not match the chain, the group has more than one vault and no router, or the provider is not on the group's chain.
+- `ConfigurationError` when the vault is unknown, `beneficiary` is given in a group of more than one, the group does not match the chain, the join goes through the router and none is configured, or the provider is not on the group's chain.
 - `VaultBatcherPausedError` when any vault's batcher is paused.
 - `UnlistedConfidentialTokenError` when a deposit goes through the router and the router's registry does not list the asset.
 - `InsufficientConfidentialBalanceError` when the balance is less than `amount`.
@@ -238,19 +238,19 @@ Each batch action acts on one batch. A batch is identified by its batcher, not i
 
 ### prepareClaim
 
-`prepareClaim({ batcher, batchId, account }) => Call`
+`prepareClaim({ chainId, batcher, batchId, account }) => Call`
 
 Claims a finalized batch's output for `account`. Anyone may send it, and the output always goes to `account`. So a keeper or your backend can claim for users.
 
 ### prepareQuit
 
-`prepareQuit({ batcher, batchId }) => Call`
+`prepareQuit({ chainId, batcher, batchId }) => Call`
 
 Takes the sender's deposit back from a pending batch, or from a canceled one. The contract refunds the sender, so only the depositor may send it.
 
 ### prepareDispatch
 
-`prepareDispatch({ batcher }) => Call`
+`prepareDispatch({ chainId, batcher }) => Call`
 
 Closes the batcher's open batch and starts its decryption. Anyone may send it. It reverts while the batch is too young or the batcher is paused. A keeper (an off-chain service that watches batches) normally sends it.
 

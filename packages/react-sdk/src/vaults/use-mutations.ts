@@ -16,6 +16,7 @@ import {
   quitMutationOptions,
   redeemMutationOptions,
   type BatchRef,
+  type BatcherRef,
   type JoinOutcome,
   type JoinVariables,
   type VaultClient,
@@ -29,7 +30,8 @@ export type UseVaultMutationOptions<TData, TVariables, TContext = unknown> = Omi
   "mutationKey" | "mutationFn"
 >;
 
-// Every vault mutation invalidates the vault reads and confidential balances it may have changed.
+// Every vault mutation invalidates the vault reads and balances it may have changed, on error too:
+// a join that mined but could not be confirmed, or grants mined before a failed join, changed state.
 function useVaultMutation<TData, TVariables, TContext>(
   factory: (client: VaultClient) => MutationFactoryOptions<readonly unknown[], TVariables, TData>,
   options: UseVaultMutationOptions<TData, TVariables, TContext> | undefined,
@@ -38,9 +40,9 @@ function useVaultMutation<TData, TVariables, TContext>(
   return useMutation({
     ...factory(client),
     ...options,
-    onSuccess: (data, variables, onMutateResult, context) => {
+    onSettled: (data, error, variables, onMutateResult, context) => {
       invalidateAfterVaultAction(context.client);
-      return options?.onSuccess?.(data, variables, onMutateResult, context);
+      return options?.onSettled?.(data, error, variables, onMutateResult, context);
     },
   });
 }
@@ -61,7 +63,7 @@ export function useDeposit<TContext = unknown>(
   return useVaultMutation(depositMutationOptions, options);
 }
 
-/** Redeem with the SDK's signer. A first redemption from a group of N vaults asks for up to N grants first. */
+/** Redeem with the SDK's signer. In a group of more than one vault, the wallet is first asked for each router grant the account lacks. */
 export function useRedeem<TContext = unknown>(
   options?: UseVaultMutationOptions<JoinOutcome, JoinVariables, TContext>,
 ) {
@@ -88,11 +90,7 @@ export function useQuit<TContext = unknown>(
 
 /** Dispatch a batcher's open batch with the SDK's signer. A keeper normally does. */
 export function useDispatch<TContext = unknown>(
-  options?: UseVaultMutationOptions<
-    TransactionResult,
-    { readonly chainId: number; readonly batcher: Address },
-    TContext
-  >,
+  options?: UseVaultMutationOptions<TransactionResult, BatcherRef, TContext>,
 ) {
   return useVaultMutation(dispatchMutationOptions, options);
 }

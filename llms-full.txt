@@ -10006,7 +10006,7 @@ export const SOLO = defineVaultGroup({
 });
 ```
 
-Each vault has two batchers: one that deposits join, and one that redemptions join. `share` is the vault's confidential share token. When a batcher is upgraded, its entry becomes a history of batchers. See [Upgrade a batcher](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/groups.md#upgrade-a-batcher). The group and vault ids are yours to choose, and the types keep them, so a typo in `vaultId` is a type error.
+Each vault has two batchers: one that deposits join, and one that redemptions join. `share` is the vault's confidential share token. When a batcher is upgraded, its entry becomes a history of batchers. See [Upgrade a batcher](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/groups.md#upgrade-a-batcher). The group and vault ids are yours to choose, and the types keep them, so a typo in `vaultId` passed to a client method is a type error. The React mutation hooks take `vaultId` as a plain `string`.
 
 `defineVaultGroup` checks the shape of the group and throws `ConfigurationError` for an invalid address, an empty group, a group above `MAX_GROUP_VAULTS`, a repeated vault id, or a batcher named twice. On the first join of each group, the client also checks the group against the chain. See [`defineVaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#definevaultgroup).
 
@@ -10427,13 +10427,14 @@ for (const call of prepared.calls) {
 - `walletMode`: `"sequential"` (default) or `"bundle"`. See [Bundling wallets](#bundling-wallets).
 - `skipChecks`: `"balance"` skips the balance check, which decrypts as the signer: an `account` other than the signer's needs it. `"config"` skips the one-time check of the group against the chain and the router's registry listing, for a host that verified them itself. The paused check always runs.
 
-The batch actions take one batch each:
+The batch actions take one batch each, as a `BatchRef` (`{ chainId, batcher, batchId }`). Dispatch acts on a batcher's open batch, so it takes a `BatcherRef` (`{ chainId, batcher }`):
 
 ```ts
-const claim = vaults.prepareClaim({ batcher, batchId, account: "0xUser" });
-const quit = vaults.prepareQuit({ batcher, batchId });
-const dispatch = vaults.prepareDispatch({ batcher });
-const { call: finalize } = await vaults.prepareFinalize({ chainId: 1, batcher, batchId });
+const batch = { chainId: 1, batcher, batchId };
+const claim = vaults.prepareClaim({ ...batch, account: "0xUser" });
+const quit = vaults.prepareQuit(batch);
+const dispatch = vaults.prepareDispatch({ chainId: 1, batcher });
+const { call: finalize } = await vaults.prepareFinalize(batch);
 ```
 
 `prepareClaim`, `prepareQuit` and `prepareDispatch` read nothing, so read the batch with `readBatch` right before you send them. `prepareFinalize` throws `VaultBatchNotDispatchedError` when the batch is not dispatched.
@@ -10447,7 +10448,7 @@ The `prepare*` methods do not return batch ids, because they are known only once
 ```ts
 const batch = await vaults.readBatch({ chainId: 1, batcher, batchId, account: "0xUser" });
 if (batch.actions.includes("claim")) {
-  await sendTransaction(vaults.prepareClaim({ batcher, batchId, account: "0xUser" }));
+  await sendTransaction(vaults.prepareClaim({ chainId: 1, batcher, batchId, account: "0xUser" }));
 }
 ```
 
@@ -12946,7 +12947,7 @@ The `vaults` subpath is separate from the root entry, so apps that do not use va
 
 ## defineVaultGroup
 
-`defineVaultGroup(config)` checks one group of vaults that take deposits in the same confidential asset, and returns a `VaultGroup`. It keeps the group and vault ids as literal types, so a typo in `vaultId` is a type error. It reads nothing from chain. Call it once per group, at module level:
+`defineVaultGroup(config)` checks one group of vaults that take deposits in the same confidential asset, and returns a `VaultGroup`. It keeps the group and vault ids as literal types, so a typo in `vaultId` passed to a client method is a type error. The React mutation hooks take `vaultId` as a plain `string`. It reads nothing from chain. Call it once per group, at module level:
 
 ```ts
 import { defineVaultGroup } from "@zama-fhe/sdk/vaults";
@@ -13117,7 +13118,7 @@ Builds a deposit of the group's asset into one vault: a leg for every vault, eac
 
 **Throws:**
 
-- `ConfigurationError` when the vault is unknown, `beneficiary` is given in a group of more than one, the group does not match the chain, the group has more than one vault and no router, or the provider is not on the group's chain.
+- `ConfigurationError` when the vault is unknown, `beneficiary` is given in a group of more than one, the group does not match the chain, the join goes through the router and none is configured, or the provider is not on the group's chain.
 - `VaultBatcherPausedError` when any vault's batcher is paused.
 - `UnlistedConfidentialTokenError` when a deposit goes through the router and the router's registry does not list the asset.
 - `InsufficientConfidentialBalanceError` when the balance is less than `amount`.
@@ -13162,19 +13163,19 @@ Each batch action acts on one batch. A batch is identified by its batcher, not i
 
 ### prepareClaim
 
-`prepareClaim({ batcher, batchId, account }) => Call`
+`prepareClaim({ chainId, batcher, batchId, account }) => Call`
 
 Claims a finalized batch's output for `account`. Anyone may send it, and the output always goes to `account`. So a keeper or your backend can claim for users.
 
 ### prepareQuit
 
-`prepareQuit({ batcher, batchId }) => Call`
+`prepareQuit({ chainId, batcher, batchId }) => Call`
 
 Takes the sender's deposit back from a pending batch, or from a canceled one. The contract refunds the sender, so only the depositor may send it.
 
 ### prepareDispatch
 
-`prepareDispatch({ batcher }) => Call`
+`prepareDispatch({ chainId, batcher }) => Call`
 
 Closes the batcher's open batch and starts its decryption. Anyone may send it. It reverts while the batch is too young or the batcher is paused. A keeper (an off-chain service that watches batches) normally sends it.
 

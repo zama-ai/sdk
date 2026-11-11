@@ -9,8 +9,6 @@ const JOINED = eventTopic("Joined(uint256,address,bytes32)");
  * `batcher` to `account`, removed from `logs` so the next leg cannot match it.
  * A log without an emitter address still matches, since some adapters omit it;
  * walking the legs in order then pairs each leg with its own log.
- *
- * Internal on purpose: event decoding is not public API.
  */
 export function takeJoinedBatchId(
   logs: RawLog[],

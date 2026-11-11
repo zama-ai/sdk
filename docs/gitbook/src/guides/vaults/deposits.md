@@ -55,7 +55,7 @@ export const SOLO = defineVaultGroup({
 });
 ```
 
-Each vault has two batchers: one that deposits join, and one that redemptions join. `share` is the vault's confidential share token. When a batcher is upgraded, its entry becomes a history of batchers. See [Upgrade a batcher](groups.md#upgrade-a-batcher). The group and vault ids are yours to choose, and the types keep them, so a typo in `vaultId` is a type error.
+Each vault has two batchers: one that deposits join, and one that redemptions join. `share` is the vault's confidential share token. When a batcher is upgraded, its entry becomes a history of batchers. See [Upgrade a batcher](groups.md#upgrade-a-batcher). The group and vault ids are yours to choose, and the types keep them, so a typo in `vaultId` passed to a client method is a type error. The React mutation hooks take `vaultId` as a plain `string`.
 
 `defineVaultGroup` checks the shape of the group and throws `ConfigurationError` for an invalid address, an empty group, a group above `MAX_GROUP_VAULTS`, a repeated vault id, or a batcher named twice. On the first join of each group, the client also checks the group against the chain. See [`defineVaultGroup`](../../reference/sdk/VaultClient.md#definevaultgroup).
 

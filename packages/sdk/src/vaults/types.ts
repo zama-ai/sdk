@@ -75,7 +75,7 @@ export type JoinRoute = "legs" | "router";
  */
 export type WalletMode = "sequential" | "bundle";
 
-/** A join built but not sent. Plain data, safe to store. */
+/** A join built but not sent. Plain data: it survives `structuredClone`, but its bigints need a JSON replacer. */
 export interface PreparedJoin {
   /** Whether it deposits or redeems. */
   readonly kind: Direction;
@@ -141,6 +141,18 @@ export interface BatchRef {
   readonly batchId: bigint;
 }
 
+/** A batcher on one chain, for `dispatch`, which acts on the batcher's open batch. */
+export type BatcherRef = Pick<BatchRef, "chainId" | "batcher">;
+
+/** What `client.deposit` and `client.redeem` take: a join input sent from the signer's account. */
+export type SendJoinInput<TVaultId extends string = string> = Omit<JoinInput<TVaultId>, "account">;
+
+/** Options for `client.deposit` and `client.redeem`. */
+export interface SendJoinOptions extends Pick<JoinOptions, "skipChecks"> {
+  /** Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. */
+  readonly onJoinSubmitted?: (txHash: Hex) => void;
+}
+
 /** A settlement built but not sent. */
 export interface PreparedFinalize extends BatchRef {
   /** The publicly decrypted amount the batch's unwrap released. */
@@ -196,7 +208,7 @@ export type Batch =
         readonly exchangeRate: { readonly rate: bigint; readonly decimals: number };
       });
 
-/** The open batch of one vault, for a form that shows when the next batch closes. */
+/** The open batch of one vault's active batcher. */
 export interface OpenBatch extends BatchRef {
   /** The vault. */
   readonly vaultId: string;

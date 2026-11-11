@@ -54,6 +54,9 @@ export interface BatcherHistory {
 }
 
 // @public
+export type BatcherRef = Pick<BatchRef, "chainId" | "batcher">;
+
+// @public
 export interface BatchQueryConfig {
     account?: Address;
     batch?: BatchRef;
@@ -105,10 +108,7 @@ export function depositMutationOptions(client: VaultClient): MutationFactoryOpti
 export type Direction = "deposit" | "redeem";
 
 // @public
-export function dispatchMutationOptions(client: VaultClient): MutationFactoryOptions<readonly ["zama.vault.dispatch"], {
-    readonly chainId: number;
-    readonly batcher: Address;
-}, TransactionResult>;
+export function dispatchMutationOptions(client: VaultClient): MutationFactoryOptions<readonly ["zama.vault.dispatch"], BatcherRef, TransactionResult>;
 
 // @public
 export function finalizeMutationOptions(client: VaultClient): MutationFactoryOptions<readonly ["zama.vault.finalize"], BatchRef, TransactionResult>;
@@ -160,9 +160,8 @@ export interface JoinOutcome {
 export type JoinRoute = "legs" | "router";
 
 // @public
-export interface JoinVariables<TGroup extends VaultGroup = VaultGroup> extends Omit<JoinInput<VaultIdOf<TGroup>>, "account">, Pick<JoinOptions, "skipChecks"> {
+export interface JoinVariables<TGroup extends VaultGroup = VaultGroup> extends SendJoinInput<VaultIdOf<TGroup>>, SendJoinOptions {
     readonly group: TGroup;
-    readonly onJoinSubmitted?: (txHash: Hex) => void;
 }
 
 // @public
@@ -219,6 +218,14 @@ export interface RetiredBatcher {
 }
 
 // @public
+export type SendJoinInput<TVaultId extends string = string> = Omit<JoinInput<TVaultId>, "account">;
+
+// @public
+export interface SendJoinOptions extends Pick<JoinOptions, "skipChecks"> {
+    readonly onJoinSubmitted?: (txHash: Hex) => void;
+}
+
+// @public
 export type VaultCall = GrantCall | JoinCall;
 
 // @public
@@ -231,32 +238,23 @@ export class VaultClient {
     claim(batch: BatchRef & {
         readonly account?: Address;
     }): Promise<TransactionResult>;
-    deposit<TGroup extends VaultGroup>(group: TGroup, input: Omit<JoinInput<VaultIdOf<TGroup>>, "account">, options?: Pick<JoinOptions, "skipChecks"> & {
-        readonly onJoinSubmitted?: (txHash: Hex) => void;
-    }): Promise<JoinOutcome>;
-    dispatch(batch: {
-        readonly chainId: number;
-        readonly batcher: Address;
-    }): Promise<TransactionResult>;
+    deposit<TGroup extends VaultGroup>(group: TGroup, input: SendJoinInput<VaultIdOf<TGroup>>, options?: SendJoinOptions): Promise<JoinOutcome>;
+    dispatch(batch: BatcherRef): Promise<TransactionResult>;
     finalize(batch: BatchRef): Promise<TransactionResult>;
-    prepareClaim(batch: Omit<BatchRef, "chainId"> & {
+    prepareClaim(batch: BatchRef & {
         readonly account: Address;
     }): Call;
     prepareDeposit<TGroup extends VaultGroup>(group: TGroup, input: JoinInput<VaultIdOf<TGroup>>, options?: JoinOptions): Promise<PreparedJoin>;
-    prepareDispatch(batch: {
-        readonly batcher: Address;
-    }): Call;
+    prepareDispatch(batch: BatcherRef): Call;
     prepareFinalize(batch: BatchRef): Promise<PreparedFinalize>;
-    prepareQuit(batch: Omit<BatchRef, "chainId">): Call;
+    prepareQuit(batch: BatchRef): Call;
     prepareRedeem<TGroup extends VaultGroup>(group: TGroup, input: JoinInput<VaultIdOf<TGroup>>, options?: JoinOptions): Promise<PreparedJoin>;
     quit(batch: BatchRef): Promise<TransactionResult>;
     readBatch(batch: BatchRef & {
         readonly account?: Address;
     }): Promise<Batch>;
     readOpenBatches(group: VaultGroup, direction: Direction): Promise<readonly OpenBatch[]>;
-    redeem<TGroup extends VaultGroup>(group: TGroup, input: Omit<JoinInput<VaultIdOf<TGroup>>, "account">, options?: Pick<JoinOptions, "skipChecks"> & {
-        readonly onJoinSubmitted?: (txHash: Hex) => void;
-    }): Promise<JoinOutcome>;
+    redeem<TGroup extends VaultGroup>(group: TGroup, input: SendJoinInput<VaultIdOf<TGroup>>, options?: SendJoinOptions): Promise<JoinOutcome>;
     readonly sdk: ZamaSDK;
 }
 

@@ -1,4 +1,4 @@
-import { getAddress, type Address, type Hex } from "viem";
+import { getAddress, type Address } from "viem";
 import type { MutationFactoryOptions, QueryFactoryOptions } from "../../query/factory-types";
 import type { QueryClientLike } from "../../query/invalidation";
 import { zamaQueryKeys } from "../../query/query-keys";
@@ -10,15 +10,19 @@ import type { VaultGroup, VaultIdOf } from "../config";
 import type {
   Batch,
   BatchRef,
+  BatcherRef,
   Direction,
-  JoinInput,
-  JoinOptions,
   JoinOutcome,
   OpenBatch,
+  SendJoinInput,
+  SendJoinOptions,
 } from "../types";
 
 /** How often a batch waiting for a keeper is read again. */
 const KEEPER_POLL_MS = 15_000;
+
+/** The longest wait between reads. A timer delay above 2^31 - 1 ms overflows and fires at once. */
+const MAX_REFETCH_MS = 60 * 60 * 1000;
 
 /** Query keys for the vaults module. `all` is a prefix of every vault key. */
 export const vaultQueryKeys = {
@@ -63,7 +67,7 @@ function batchRefetchInterval(read: Batch | undefined): number | false {
   if (read.nextChangeAt === null) {
     return KEEPER_POLL_MS;
   }
-  return Number(read.nextChangeAt - read.observedAt) * 1000 + 1000;
+  return Math.min(Number(read.nextChangeAt - read.observedAt) * 1000 + 1000, MAX_REFETCH_MS);
 }
 
 /**
@@ -119,7 +123,7 @@ export function openBatchesQueryOptions(
 /**
  * Invalidates what a vault transaction changes: every vault read and every
  * confidential balance. Call it after sending prepared calls yourself; the
- * mutation options' hooks call it for you.
+ * React mutation hooks call it for you.
  */
 export function invalidateAfterVaultAction(queryClient: QueryClientLike): void {
   void queryClient.invalidateQueries({ queryKey: vaultQueryKeys.all });
@@ -129,11 +133,9 @@ export function invalidateAfterVaultAction(queryClient: QueryClientLike): void {
 
 /** Variables for {@link depositMutationOptions} and {@link redeemMutationOptions}. */
 export interface JoinVariables<TGroup extends VaultGroup = VaultGroup>
-  extends Omit<JoinInput<VaultIdOf<TGroup>>, "account">, Pick<JoinOptions, "skipChecks"> {
+  extends SendJoinInput<VaultIdOf<TGroup>>, SendJoinOptions {
   /** The group to join. */
   readonly group: TGroup;
-  /** Called with the join's transaction hash once the wallet has sent it. */
-  readonly onJoinSubmitted?: (txHash: Hex) => void;
 }
 
 function joinMutation(client: VaultClient, direction: Direction) {
@@ -193,11 +195,7 @@ export function quitMutationOptions(
 /** Mutation options over {@link VaultClient.dispatch}. */
 export function dispatchMutationOptions(
   client: VaultClient,
-): MutationFactoryOptions<
-  readonly ["zama.vault.dispatch"],
-  { readonly chainId: number; readonly batcher: Address },
-  TransactionResult
-> {
+): MutationFactoryOptions<readonly ["zama.vault.dispatch"], BatcherRef, TransactionResult> {
   return {
     mutationKey: ["zama.vault.dispatch"] as const,
     mutationFn: async (batch) => client.dispatch(batch),

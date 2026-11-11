@@ -2,7 +2,7 @@ import { getAddress, isAddress, type Address } from "viem";
 import { ConfigurationError } from "../errors";
 import type { Direction } from "./types";
 
-/** The most vaults a group may hold: a join's FHE compute grows with its leg count, and eight legs is what fits one transaction. */
+/** The most vaults a group may hold; every join sends a leg to each of them. */
 export const MAX_GROUP_VAULTS = 8;
 
 /** A batcher that took joins while its `currentBatchId` was at most `lastBatchId`. */
@@ -82,7 +82,7 @@ export interface VaultGroup<TGroupId extends string = string, TVaultId extends s
   readonly router: Address | undefined;
   /** The vaults, in leg order. */
   readonly vaults: readonly [VaultGroupVault<TVaultId>, ...VaultGroupVault<TVaultId>[]];
-  /** Marks a group made by {@link defineVaultGroup}, so a hand-built object is refused. */
+  /** Type-only brand: a hand-built object does not type-check as a group. */
   readonly [defined]: true;
 }
 

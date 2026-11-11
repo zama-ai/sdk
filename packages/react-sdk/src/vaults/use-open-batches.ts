@@ -11,8 +11,10 @@ import { useQuery } from "../utils/query";
 import { useVaultClient } from "./use-vault-client";
 
 /**
- * The open batch each vault of a group takes joins into, for a form that
- * shows when the next batch closes.
+ * The open batch of each vault's active batcher, with when it can be
+ * dispatched.
+ *
+ * @returns The query result; `data` holds one open batch per vault, in group order.
  *
  * @example
  * ```tsx
