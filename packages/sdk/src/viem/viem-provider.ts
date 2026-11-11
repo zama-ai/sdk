@@ -13,6 +13,7 @@ import { TransactionRevertedError } from "../errors";
 import type {
   ContractAbi,
   GenericProvider,
+  MulticallReturnType,
   ReadContractConfig,
   TransactionReceipt,
   WriteContractArgs,
@@ -20,6 +21,7 @@ import type {
   WriteFunctionName,
 } from "../types";
 import { requireReadChain } from "../utils/alignment";
+import { readEach } from "../utils/multicall";
 
 /** Configuration for {@link ViemProvider}. */
 export interface ViemProviderConfig {
@@ -63,6 +65,25 @@ export class ViemProvider implements GenericProvider {
     const { chainId, ...call } = config;
     await requireReadChain("ViemProvider", chainId, () => this.getChainId());
     return this.#publicClient.readContract(call as typeof config);
+  }
+
+  /**
+   * Run many reads in one Multicall3 call. Reads one call at a time on a chain
+   * whose viem definition names no Multicall3, such as a local Hardhat node.
+   */
+  async multicall<const TCalls extends readonly ReadContractConfig[]>(params: {
+    readonly calls: TCalls;
+    readonly chainId?: number;
+  }): Promise<MulticallReturnType<TCalls>> {
+    await requireReadChain("ViemProvider", params.chainId, () => this.getChainId());
+    if (this.#publicClient.chain?.contracts?.multicall3 === undefined) {
+      return readEach(this, params.calls);
+    }
+    const results = await this.#publicClient.multicall({
+      contracts: params.calls.map(({ chainId: _, ...call }) => call) as never,
+      allowFailure: false,
+    });
+    return results as MulticallReturnType<TCalls>;
   }
 
   /** Wait for a transaction to be mined and return its receipt. */

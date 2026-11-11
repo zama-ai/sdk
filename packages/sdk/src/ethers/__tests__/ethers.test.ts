@@ -64,6 +64,7 @@ vi.mock("ethers", async (importOriginal) => {
 
 import { EthersSigner } from "../ethers-signer";
 import { EthersProvider } from "../ethers-provider";
+import { multicall3Abi } from "../../abi/multicall3.abi";
 import {
   readConfidentialBalanceOfContract,
   readUnderlyingTokenContract,
@@ -349,6 +350,78 @@ describe("EthersProvider", () => {
       const chainId = await ethersProvider.getChainId();
       expect(mockProvider.getNetwork).toHaveBeenCalled();
       expect(chainId).toBe(8009);
+    });
+  });
+
+  describe("multicall", () => {
+    const MULTICALL3 = "0xcA11bde05977b3631167028862bE2a173976CA11";
+    const abi = [
+      {
+        type: "function",
+        name: "read",
+        stateMutability: "view",
+        inputs: [],
+        outputs: [{ type: "uint256" }],
+      },
+    ] as const;
+    const value = (result: bigint) => encodeFunctionResult({ abi, functionName: "read", result });
+
+    function chain(options: { code: Hex; aggregate: { success: boolean; returnData: Hex }[] }) {
+      const call = vi.fn(async (tx: { to: string }) =>
+        getAddress(tx.to) === MULTICALL3
+          ? encodeFunctionResult({
+              abi: multicall3Abi,
+              functionName: "aggregate3",
+              result: options.aggregate,
+            })
+          : value(7n),
+      );
+      const getCode = vi.fn().mockResolvedValue(options.code);
+      const getNetwork = vi.fn().mockResolvedValue({ chainId: 1n });
+      return {
+        call,
+        getCode,
+        provider: new EthersProvider({ provider: { call, getCode, getNetwork } as never }),
+      };
+    }
+
+    test("reads every call in one aggregate3 call, in order", async ({ tokenAddress }) => {
+      const { call, provider } = chain({
+        code: "0x6080",
+        aggregate: [
+          { success: true, returnData: value(1n) },
+          { success: true, returnData: value(2n) },
+        ],
+      });
+      const read = { address: tokenAddress, abi, functionName: "read", args: [] } as const;
+      expect(await provider.multicall({ calls: [read, read], chainId: 1 })).toStrictEqual([1n, 2n]);
+      expect(call).toHaveBeenCalledOnce();
+    });
+
+    test("runs a failed read again alone, so it fails or succeeds as a single read", async ({
+      tokenAddress,
+    }) => {
+      const { call, provider } = chain({
+        code: "0x6080",
+        aggregate: [
+          { success: true, returnData: value(1n) },
+          { success: false, returnData: "0x" },
+        ],
+      });
+      const read = { address: tokenAddress, abi, functionName: "read", args: [] } as const;
+      expect(await provider.multicall({ calls: [read, read] })).toStrictEqual([1n, 7n]);
+      expect(call).toHaveBeenCalledTimes(2);
+    });
+
+    test("reads one call at a time where Multicall3 is not deployed, and checks only once", async ({
+      tokenAddress,
+    }) => {
+      const { call, getCode, provider } = chain({ code: "0x", aggregate: [] });
+      const read = { address: tokenAddress, abi, functionName: "read", args: [] } as const;
+      expect(await provider.multicall({ calls: [read, read] })).toStrictEqual([7n, 7n]);
+      await provider.multicall({ calls: [read] });
+      expect(call).toHaveBeenCalledTimes(3);
+      expect(getCode).toHaveBeenCalledOnce();
     });
   });
 
