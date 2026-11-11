@@ -206,6 +206,7 @@ export type {
   ReadFunctionName,
   ReadContractArgs,
   ReadContractConfig,
+  MulticallReturnType,
   ReadContractReturnType,
 } from "../types";
 export type { ZamaError, ZamaErrorCode } from "../errors";
