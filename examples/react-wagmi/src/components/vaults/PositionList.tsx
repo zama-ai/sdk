@@ -1,49 +1,50 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { useHasPermit, useMetadata } from "@zama-fhe/react-sdk";
-import { useExit, useFinalize, usePosition } from "@zama-fhe/react-sdk/vaults";
+import { useDecryptValues, useHasPermit, useMetadata } from "@zama-fhe/react-sdk";
+import { useBatch, useClaim, useFinalize, useQuit } from "@zama-fhe/react-sdk/vaults";
 import type { Address } from "@zama-fhe/sdk";
+import type { BatchRef } from "@zama-fhe/sdk/vaults";
 import { formatUnits } from "viem";
 import { describeError } from "@/lib/errors";
-import { recordKey, type JoinRecord, type Vaults } from "@/lib/vaults";
+import { batchKey } from "@/lib/vaults";
 
 // A keeper normally settles a dispatched batch. After this long, offer the user to settle it.
 const FINALIZE_AFTER_SECONDS = 15 * 60;
 
 interface PositionListProps {
-  vaults: Vaults;
-  records: JoinRecord[];
+  account: Address;
+  batches: BatchRef[];
   /** The confidential token the joins sent, to show their amounts. */
   token: Address;
   permitContracts: Address[];
-  /** Called once a position is exited: its record is no longer needed. */
-  onExited: (record: JoinRecord) => void;
+  /** Called once a batch is claimed or taken back: it is no longer needed. */
+  onDone: (batch: BatchRef) => void;
 }
 
-/** The account's positions in one direction of the vault, one per stored join record. */
+/** The account's batches in one direction of the vault, one row per stored batch. */
 export function PositionList({
-  vaults,
-  records,
+  account,
+  batches,
   token,
   permitContracts,
-  onExited,
+  onDone,
 }: PositionListProps) {
   return (
     <div className="card-status">
       <h3 className="section-label">In progress</h3>
-      {records.length === 0 ? (
+      {batches.length === 0 ? (
         <p className="token-meta">Nothing in progress.</p>
       ) : (
         <ul className="batch-list">
-          {records.map((record) => (
-            <PositionRow
-              key={recordKey(record)}
-              vaults={vaults}
-              record={record}
+          {batches.map((batch) => (
+            <BatchRow
+              key={batchKey(batch)}
+              account={account}
+              batchRef={batch}
               token={token}
               permitContracts={permitContracts}
-              onExited={onExited}
+              onDone={onDone}
             />
           ))}
         </ul>
@@ -52,37 +53,33 @@ export function PositionList({
   );
 }
 
-interface PositionRowProps extends Omit<PositionListProps, "records"> {
-  record: JoinRecord;
+interface BatchRowProps extends Omit<PositionListProps, "batches"> {
+  batchRef: BatchRef;
 }
 
-function PositionRow({ vaults, record, token, permitContracts, onExited }: PositionRowProps) {
+function BatchRow({ account, batchRef, token, permitContracts, onDone }: BatchRowProps) {
   const now = useNow();
-  // Decrypts the amount only under an existing permit: the row never prompts the wallet.
-  const { data: hasPermit } = useHasPermit({ contractAddresses: permitContracts });
-  const { data: position, error } = usePosition(vaults, record, { decrypt: hasPermit === true });
-  const exit = useExit(vaults, { onSuccess: () => onExited(record) });
-  const finalize = useFinalize(vaults);
-  const busy = exit.isPending || finalize.isPending;
-  const actionError = exit.error ?? finalize.error;
-
-  // The SDK does not say when a batch was dispatched: count from when this page first saw it.
-  const [settlingSince, setSettlingSince] = useState<number>();
-  useEffect(() => {
-    if (position?.phase === "settling" && settlingSince === undefined) {
-      setSettlingSince(Math.floor(Date.now() / 1000));
-    }
-  }, [position?.phase, settlingSince]);
-
-  // The vaults config has a single vault, so every join has a single leg.
-  const leg = position?.legs[0];
+  const { data: batch, error } = useBatch(batchRef, { account });
+  const done = { onSuccess: () => onDone(batchRef) };
+  const claim = useClaim(done);
+  const quit = useQuit(done);
+  const finalize = useFinalize();
+  const busy = claim.isPending || quit.isPending || finalize.isPending;
+  const actionError = claim.error ?? quit.error ?? finalize.error;
 
   const row = (label: string, action?: { label: string; run: () => void }): ReactNode => (
     <li>
       <div>
         <span className="balance-label">
-          Batch #{record.legs[0]?.batchId.toString()}
-          {typeof leg?.amount === "bigint" && <Amount token={token} amount={leg.amount} />}
+          Batch #{batchRef.batchId.toString()}
+          {batch?.deposit && (
+            <Amount
+              token={token}
+              batcher={batchRef.batcher}
+              deposit={batch.deposit}
+              permitContracts={permitContracts}
+            />
+          )}
         </span>
         <p className="token-meta">{label}</p>
         {actionError && (
@@ -104,52 +101,69 @@ function PositionRow({ vaults, record, token, permitContracts, onExited }: Posit
     </li>
   );
 
-  if (!position || !leg) {
-    return row(error ? describeError(error, "Could not read the position") : "Loading…");
+  if (!batch) {
+    return row(error ? describeError(error, "Could not read the batch") : "Loading…");
   }
 
-  const exitAction = (label: string) =>
-    position.availableActions.includes("exit")
-      ? { label, run: () => exit.mutate(record) }
+  // `actions` lists what can be sent now, so a button only shows when it would go through.
+  const offer = (action: "claim" | "quit", label: string) =>
+    batch.actions.includes(action)
+      ? { label, run: () => (action === "claim" ? claim : quit).mutate(batchRef) }
       : undefined;
 
-  switch (position.phase) {
-    case "queued": {
-      const secondsLeft = position.nextChangeAt === null ? 0 : Number(position.nextChangeAt) - now;
+  switch (batch.state) {
+    case "pending": {
+      const secondsLeft = Number(batch.dispatchableAt) - now;
       return row(
         secondsLeft > 0
           ? `Queued, sent in ${formatSeconds(secondsLeft)} at the earliest`
           : "Queued, waiting to be sent",
-        exitAction("Cancel"),
+        offer("quit", "Cancel"),
       );
     }
-    case "settling": {
+    case "dispatched": {
       // Past the callback deadline, finalize cancels the batch instead of settling it.
-      const expired = leg.state === "dispatched" && now >= Number(leg.cancelsAt);
-      const late = settlingSince !== undefined && now >= settlingSince + FINALIZE_AFTER_SECONDS;
+      const expired = now >= Number(batch.cancelsAt);
+      const late = now >= Number(batch.dispatchedAt) + FINALIZE_AFTER_SECONDS;
       if (!expired && !late) {
         return row("Processing");
       }
       return row(expired ? "Processing timed out" : "Processing is taking longer than usual", {
         label: expired ? "Cancel and get it back" : "Settle now",
-        run: () => finalize.mutate(record),
+        run: () => finalize.mutate(batchRef),
       });
     }
-    case "ready":
-      // An exit pays out a settled batch and refunds a canceled one.
-      return leg.state === "finalized"
-        ? row("Ready to claim", exitAction("Claim"))
-        : row("Did not go through, the amount is available", exitAction("Get it back"));
-    case "closed":
-      return row("Done", { label: "Remove", run: () => onExited(record) });
+    case "finalized":
+      return row("Ready to claim", offer("claim", "Claim"));
+    case "canceled":
+      return row("Did not go through, the amount is available", offer("quit", "Get it back"));
     default:
-      return position.phase satisfies never;
+      return batch satisfies never;
   }
 }
 
-function Amount({ token, amount }: { token: Address; amount: bigint }) {
+/** The account's deposit in the batch, decrypted under an existing permit: the row never prompts the wallet. */
+function Amount({
+  token,
+  batcher,
+  deposit,
+  permitContracts,
+}: {
+  token: Address;
+  batcher: Address;
+  deposit: `0x${string}`;
+  permitContracts: Address[];
+}) {
   const { data: metadata } = useMetadata(token);
-  return metadata ? ` · ${formatUnits(amount, metadata.decimals)} ${metadata.symbol}` : null;
+  const { data: hasPermit } = useHasPermit({ contractAddresses: permitContracts });
+  const { data: values } = useDecryptValues(
+    [{ encryptedValue: deposit, contractAddress: batcher }],
+    { enabled: hasPermit === true },
+  );
+  const amount = values?.[deposit];
+  return metadata && typeof amount === "bigint"
+    ? ` · ${formatUnits(amount, metadata.decimals)} ${metadata.symbol}`
+    : null;
 }
 
 /** The current Unix time in seconds, updated every second, for local countdowns. */
