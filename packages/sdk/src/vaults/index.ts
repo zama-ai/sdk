@@ -3,40 +3,40 @@
  *
  * @packageDocumentation
  */
+export { createVaultClient, VaultClient } from "./client";
 export {
-  createVaultClient,
-  VaultClient,
-  type VaultJoinParams,
-  type VaultPosition,
-  type VaultRecord,
-} from "./client";
-export {
-  defineVaults,
-  type BatcherHistory,
+  batcherAddresses,
+  defineVaultGroup,
   MAX_GROUP_VAULTS,
-  type GroupId,
+  type BatcherHistory,
+  type RetiredBatcher,
   type VaultConfig,
+  type VaultGroup,
   type VaultGroupConfig,
-  type VaultId,
-  type VaultsConfig,
+  type VaultGroupVault,
+  type VaultIdOf,
 } from "./config";
 export type {
-  ActionOutcome,
+  ActiveBatchers,
+  Batch,
+  BatchAction,
+  BatchRef,
   BatchState,
+  Call,
   Direction,
-  JoinLeg,
+  GrantCall,
+  JoinCall,
+  JoinInput,
   JoinOptions,
   JoinOutcome,
-  JoinRecord,
-  Leg,
+  JoinRoute,
   OpenBatch,
-  Position,
-  PositionPhase,
-  PrepareJoinOptions,
-  PreparedVaultAction,
-  VaultAction,
+  PreparedFinalize,
+  PreparedJoin,
   VaultCall,
   VaultCheck,
+  VaultLeg,
+  WalletMode,
 } from "./types";
 
 // Importing this barrel does not require TanStack Query to be installed: the

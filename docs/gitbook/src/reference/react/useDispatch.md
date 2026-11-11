@@ -1,13 +1,13 @@
 ---
 title: useDispatch
-description: Mutation hook that dispatches every eligible batch of a vault join.
+description: Mutation hook that dispatches a vault batcher's open batch.
 ---
 
 # useDispatch
 
-Mutation hook that dispatches the batch of every leg that is pending, old enough, and on an unpaused batcher. Same flow as [`VaultClient.dispatch`](../sdk/VaultClient.md#dispatch).
+Mutation hook that dispatches a batcher's open batch with the SDK's signer: it closes the batch and starts its decryption. Same flow as [`VaultClient.dispatch`](../sdk/VaultClient.md#dispatch).
 
-Dispatch is permissionless, and a keeper (an off-chain service that watches batches) normally sends it. Most apps never need this hook. Use it as a fallback when a position stays `queued` with `dispatch` in `availableActions` longer than your app expects.
+Dispatch is permissionless, and a keeper (an off-chain service that watches batches) normally sends it. Most apps never need this hook. Use it as a fallback when a batch stays pending with `dispatch` in its `actions` longer than your app expects.
 
 ## Import
 
@@ -21,17 +21,23 @@ import { useDispatch } from "@zama-fhe/react-sdk/vaults";
 {% tab title="DispatchButton.tsx" %}
 
 ```tsx
-import { useDispatch, usePosition } from "@zama-fhe/react-sdk/vaults";
-import type { VaultRecord } from "@zama-fhe/sdk/vaults";
-import { VAULTS } from "./vaults";
+import { useBatch, useDispatch } from "@zama-fhe/react-sdk/vaults";
+import type { BatchRef } from "@zama-fhe/sdk/vaults";
 
-function DispatchButton({ record }: { record: VaultRecord<typeof VAULTS> }) {
-  const { data: position } = usePosition(VAULTS, record);
-  const dispatch = useDispatch(VAULTS);
+function DispatchButton({ batchRef }: { batchRef: BatchRef }) {
+  const { data: batch } = useBatch(batchRef);
+  const dispatch = useDispatch();
 
-  if (!position?.availableActions.includes("dispatch")) return null;
+  if (!batch?.actions.includes("dispatch")) return null;
 
-  return <button onClick={() => dispatch.mutate(record)}>Send the batch now</button>;
+  return (
+    <button
+      disabled={dispatch.isPending}
+      onClick={() => dispatch.mutate({ chainId: batchRef.chainId, batcher: batchRef.batcher })}
+    >
+      Send the batch now
+    </button>
+  );
 }
 ```
 
@@ -40,35 +46,27 @@ function DispatchButton({ record }: { record: VaultRecord<typeof VAULTS> }) {
 
 ## Parameters
 
-### config
-
-`VaultsConfig`
-
-The config returned by [`defineVaults`](../sdk/VaultClient.md#definevaults).
-
----
-
 {% include ".gitbook/includes/mutation-options.md" %}
 
 ## Mutation variables
 
-The join record, passed directly to `mutate` / `mutateAsync`. The hook sends one transaction per eligible leg, so it can take up to one wallet prompt per vault of the group. Any account may send it.
+`{ chainId, batcher }`, passed to `mutate` / `mutateAsync`. The hook dispatches the batcher's open batch, whatever its id. Any account may send it.
 
 **Throws:**
 
-- `VaultActionNotAllowedError` (reason `"nothing-to-dispatch"`): no leg can be dispatched now, for example because a keeper already did it.
-- `ChainMismatchError`: the wallet is not on the config's chain.
+- `ChainMismatchError`: the wallet is not on the batcher's chain.
+- `TransactionRevertedError`: the dispatch reverted, for example because the batch is too young, the batcher is paused, or a keeper dispatched it first.
 
 ## Return Type
 
-The `data` property (after a successful mutation) is `{ txHashes: Hex[] }`: every transaction sent, in order.
+The `data` property (after a successful mutation) is a `TransactionResult`: `{ txHash, receipt }`.
 
-On success, the hook invalidates every vault read of the group and every confidential balance.
+On success, the hook invalidates every vault read and every confidential balance.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 
 ## Related
 
 - [useFinalize](./useFinalize.md): the next step after dispatch
-- [usePosition](./usePosition.md): when `dispatch` is available
+- [useBatch](./useBatch.md): when `dispatch` is available
 - [VaultClient.dispatch](../sdk/VaultClient.md#dispatch)

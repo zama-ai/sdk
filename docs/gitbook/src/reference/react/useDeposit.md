@@ -1,13 +1,13 @@
 ---
 title: useDeposit
-description: Mutation hook that deposits into a confidential vault group and returns the join record to store.
+description: Mutation hook that deposits into a confidential vault group and returns the batch each leg landed in.
 ---
 
 # useDeposit
 
-Mutation hook that deposits a plaintext amount of a group's asset. It checks the balance, encrypts the amount, and joins the open batch of every vault of the group: the chosen vault with the amount, the others with an encrypted zero. Same flow as [`VaultClient.deposit`](../sdk/VaultClient.md#deposit).
+Mutation hook that deposits a plaintext amount of a group's asset with the SDK's signer. It checks the balance, encrypts the amount, and joins the open batch of every vault of the group: the chosen vault with the amount, the others with an encrypted zero. Same flow as [`VaultClient.deposit`](../sdk/VaultClient.md#deposit).
 
-The deposit is not settled when the mutation resolves: it has joined a batch. Store the returned `record` and follow it with [`usePosition`](./usePosition.md).
+The deposit is not settled when the mutation resolves: it has joined a batch. Store the returned `batches` and follow them with [`useBatch`](./useBatch.md).
 
 ## Import
 
@@ -22,15 +22,15 @@ import { useDeposit } from "@zama-fhe/react-sdk/vaults";
 
 ```tsx
 import { useDeposit } from "@zama-fhe/react-sdk/vaults";
-import { VAULTS } from "./vaults";
+import { STABLE } from "./vaults";
 
 function DepositButton() {
-  const deposit = useDeposit(VAULTS, { onSuccess: ({ record }) => saveRecord(record) });
+  const deposit = useDeposit({ onSuccess: ({ batches }) => saveBatches(batches) });
 
   return (
     <button
       disabled={deposit.isPending}
-      onClick={() => deposit.mutate({ groupId: "stable", vaultId: "beta", amount: 1_000_000n })}
+      onClick={() => deposit.mutate({ group: STABLE, vaultId: "beta", amount: 1_000_000n })}
     >
       {deposit.isPending ? "Depositing..." : "Deposit"}
     </button>
@@ -42,36 +42,33 @@ function DepositButton() {
 {% tab title="vaults.ts" %}
 
 ```ts
-import { defineVaults } from "@zama-fhe/sdk/vaults";
+import { defineVaultGroup } from "@zama-fhe/sdk/vaults";
 
-export const VAULTS = defineVaults({
+export const STABLE = defineVaultGroup({
+  id: "stable",
   chainId: 1,
-  groups: {
-    stable: {
-      asset: "0xConfidentialUSDC",
-      vaults: {
-        alpha: { depositBatcher: "0xAlphaDeposit", redeemBatcher: "0xAlphaRedeem" },
-        beta: { depositBatcher: "0xBetaDeposit", redeemBatcher: "0xBetaRedeem" },
-      },
+  asset: "0xConfidentialUSDC",
+  vaults: [
+    {
+      id: "alpha",
+      batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
+      share: "0xAlphaShare",
     },
-  },
+    {
+      id: "beta",
+      batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
+      share: "0xBetaShare",
+    },
+  ],
 });
 ```
 
 {% endtab %}
 {% endtabs %}
 
-`saveRecord` stands in for your own storage. See [Store the join record](../../guides/vaults/deposits.md#4-store-the-join-record).
+`saveBatches` stands in for your own storage. See [Store the batches](../../guides/vaults/deposits.md#4-store-the-batches).
 
 ## Parameters
-
-### config
-
-`VaultsConfig`
-
-The config returned by [`defineVaults`](../sdk/VaultClient.md#definevaults).
-
----
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
@@ -79,17 +76,17 @@ The config returned by [`defineVaults`](../sdk/VaultClient.md#definevaults).
 
 Passed to `mutate` / `mutateAsync` at call time.
 
-### groupId
+### group
 
-`string`
+`VaultGroup`
 
-The group to join. Typed to the config's group ids.
+The group to join, as returned by [`defineVaultGroup`](../sdk/VaultClient.md#definevaultgroup).
 
 ### vaultId
 
 `string`
 
-The vault that gets the amount. Required in a group of several vaults, optional in a group of one.
+The vault that gets the amount.
 
 ### amount
 
@@ -101,22 +98,26 @@ The amount, in the asset's base units. Encrypted before it leaves the SDK.
 
 `Address | undefined`
 
-Only in a group of one. The account the batcher credits instead of the sender. The batcher then pulls the amount, so the hook first grants it an operator approval if none is active. The beneficiary owns the position.
+Only in a group of one. The account the batcher credits instead of the signer. The batcher then pulls the amount, so the hook first grants it an operator approval if none is active. The beneficiary owns the deposit: only they can quit it, and a claim pays them.
 
-### options
+### skipChecks
 
-`JoinOptions | undefined`
+`("balance" | "config")[] | undefined`
 
-- `onJoinSubmitted: (txHash: Hex) => void`: called once the wallet has sent the join, before the SDK waits for the receipt. Use it to move the UI from "Confirm in your wallet" to "Waiting for the transaction".
-- `skipChecks: ("balance" | "config")[]`: skip the balance check, or the one-time check of the config against the chain.
-- `grantValiditySeconds: number`: how long an operator grant lasts. Defaults to `3600`.
+Skip the balance check, or the one-time check of the group against the chain. The paused check always runs.
+
+### onJoinSubmitted
+
+`((txHash: Hex) => void) | undefined`
+
+Called once the wallet has sent the join, before the SDK waits for the receipt. Use it to move the UI from "Confirm in your wallet" to "Waiting for the transaction".
 
 ```tsx
 deposit.mutate({
-  groupId: "stable",
+  group: STABLE,
   vaultId: "beta",
   amount: 1_000_000n,
-  options: { onJoinSubmitted: (txHash) => console.log("Sent", txHash) },
+  onJoinSubmitted: (txHash) => console.log("Sent", txHash),
 });
 ```
 
@@ -127,23 +128,24 @@ deposit.mutate({
 - `InsufficientConfidentialBalanceError`: the balance is less than `amount`
 - `BalanceCheckUnavailableError`: the balance check cannot decrypt the balance
 - `VaultJoinUnconfirmedError`: the join was mined, but the SDK could not read every batch id from the receipt
-- `ChainMismatchError`: the wallet is not on the config's chain
-- `ConfigurationError`: the config does not match the chain, or the provider is not on the config's chain
+- `ChainMismatchError`: the wallet is not on the group's chain
+- `ConfigurationError`: the group does not match the chain, or the provider is not on the group's chain
 
 ## Return Type
 
 The `data` property (after a successful mutation) is a `JoinOutcome`:
 
-- **`record`**: the `JoinRecord` to store. You need it to read and exit the position.
+- **`batches`**: the batch each leg landed in, in group order, as `{ vaultId, chainId, batcher, batchId }`. Store them to read, claim or quit later.
+- **`prepared`**: the `PreparedJoin` that was sent.
 - **`txHashes`**: every transaction sent, grants first.
 
-On success, the hook invalidates every vault read of the group and every confidential balance.
+On success, the hook invalidates every vault read and every confidential balance.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 
 ## Related
 
 - [useRedeem](./useRedeem.md): the redeem direction
-- [usePosition](./usePosition.md): follow the join
+- [useBatch](./useBatch.md): follow each batch
 - [VaultClient.deposit](../sdk/VaultClient.md#deposit)
 - [Vault deposits and redemptions](../../guides/vaults/deposits.md)

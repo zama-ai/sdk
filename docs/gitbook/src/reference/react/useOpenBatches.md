@@ -5,7 +5,7 @@ description: Query hook that reads the open batch of every vault in a group.
 
 # useOpenBatches
 
-Reads the open batch of every vault of a group: the batch the next join lands in, when it can be dispatched, and whether the batcher is paused. Same read as [`VaultClient.readOpenBatches`](../sdk/VaultClient.md#readopenbatches). It needs no join record, so use it on a deposit or redeem form.
+Reads the open batch of every vault of a group: the batch the next join lands in, when it can be dispatched, and whether the batcher is paused. Same read as [`VaultClient.readOpenBatches`](../sdk/VaultClient.md#readopenbatches). It needs no prior join, so use it on a deposit or redeem form.
 
 ## Import
 
@@ -20,10 +20,10 @@ import { useOpenBatches } from "@zama-fhe/react-sdk/vaults";
 
 ```tsx
 import { useOpenBatches } from "@zama-fhe/react-sdk/vaults";
-import { VAULTS } from "./vaults";
+import { STABLE } from "./vaults";
 
 function NextBatch() {
-  const { data: batches } = useOpenBatches(VAULTS, { groupId: "stable", direction: "deposit" });
+  const { data: batches } = useOpenBatches(STABLE, "deposit");
 
   if (!batches) return null;
 
@@ -43,25 +43,19 @@ function NextBatch() {
 {% endtab %}
 {% endtabs %}
 
+`STABLE` is the group from [`useDeposit`](./useDeposit.md#usage).
+
 ## Parameters
 
-### config
+### group
 
-`VaultsConfig`
+`VaultGroup`
 
-The config returned by [`defineVaults`](../sdk/VaultClient.md#definevaults).
-
----
-
-### params.groupId
-
-`string`
-
-The group to read. Typed to the config's group ids.
+The group to read, as returned by [`defineVaultGroup`](../sdk/VaultClient.md#definevaultgroup).
 
 ---
 
-### params.direction
+### direction
 
 `"deposit" | "redeem"`
 
@@ -77,15 +71,17 @@ The query does not refetch on its own. Pass `refetchInterval` to keep a countdow
 import { type OpenBatch } from "@zama-fhe/sdk/vaults";
 ```
 
-The `data` property is `OpenBatch[] | undefined`, one entry per vault of the group, in config order.
+The `data` property is `OpenBatch[] | undefined`, one entry per vault of the group, in group order.
 
 | Field            | Type      | Description                                                                       |
 | ---------------- | --------- | --------------------------------------------------------------------------------- |
 | `vaultId`        | `string`  | The vault.                                                                        |
-| `batcher`        | `Address` | Its batcher for the direction read.                                               |
+| `chainId`        | `number`  | The group's chain.                                                                |
+| `batcher`        | `Address` | The vault's active batcher for the direction read.                                |
 | `batchId`        | `bigint`  | The open batch.                                                                   |
 | `dispatchableAt` | `bigint`  | When anyone may dispatch the batch, in chain seconds.                             |
 | `paused`         | `boolean` | Whether the batcher is paused. One paused batcher blocks every join of the group. |
+| `observedAt`     | `bigint`  | The block timestamp of the read.                                                  |
 
 {% include ".gitbook/includes/query-result.md" %}
 

@@ -119,22 +119,21 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 ### `vaultQueryKeys`
 
-Reads of confidential ERC-4626 vaults, used by [`usePosition`](./usePosition.md) and [`useOpenBatches`](./useOpenBatches.md). Lives in the `vaults` subpath, not on `zamaQueryKeys`.
+Reads of confidential ERC-4626 vaults, used by [`useBatch`](./useBatch.md) and [`useOpenBatches`](./useOpenBatches.md). Lives in the `vaults` subpath, not on `zamaQueryKeys`.
 
 ```ts
 import { vaultQueryKeys, invalidateAfterVaultAction } from "@zama-fhe/sdk/vaults";
 ```
 
-| Key                                         | Scope                                                       |
-| ------------------------------------------- | ----------------------------------------------------------- |
-| `.all`                                      | Every vault read                                            |
-| `.group(chainId, groupId)`                  | Every read of one group                                     |
-| `.position(record, decrypt)`                | One join's position, read with or without decryption        |
-| `.openBatches(chainId, groupId, direction)` | The open batch of every vault of a group, for one direction |
+| Key                              | Scope                                                       |
+| -------------------------------- | ----------------------------------------------------------- |
+| `.all`                           | Every vault read                                            |
+| `.batch(batchRef, account)`      | One batch, read for one account or for none                 |
+| `.openBatches(group, direction)` | The open batch of every vault of a group, for one direction |
 
-A `group(...)` key is a prefix of every `position(...)` and `openBatches(...)` key of that group, so invalidating it clears all of them at once.
+`.all` is a prefix of every vault key, so invalidating it clears every vault read at once. `.batch` takes the `BatchRef` and the account as `undefined` when they are not set yet.
 
-`invalidateAfterVaultAction(queryClient, { chainId, groupId })` invalidates every read of the group and every confidential balance. The vault mutation hooks call it on success. Call it yourself after you send a prepared vault action through your own pipeline.
+`invalidateAfterVaultAction(queryClient)` invalidates every vault read and every confidential balance. The vault mutation hooks call it on success. Call it yourself after you send prepared vault calls through your own pipeline.
 
 ## Common patterns
 

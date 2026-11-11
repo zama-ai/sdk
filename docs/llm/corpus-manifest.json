@@ -541,7 +541,7 @@
       "source_type": "official-doc",
       "category": "guides",
       "logical_path": "guides/vaults/building-a-ui",
-      "description": "The phases a vault position goes through, and what your UI should show and offer in each one.",
+      "description": "The states a vault batch goes through, and what your UI should show and offer in each one.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -745,7 +745,7 @@
       "source_type": "official-doc",
       "category": "reference-sdk",
       "logical_path": "reference/sdk/VaultClient",
-      "description": "Deposit into and redeem from confidential ERC-4626 vaults with defineVaults and createVaultClient.",
+      "description": "Deposit into and redeem from confidential ERC-4626 vaults with defineVaultGroup and createVaultClient.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -1573,7 +1573,7 @@
       "source_type": "official-doc",
       "category": "reference-react",
       "logical_path": "reference/react/useVaultClient",
-      "description": "Returns the VaultClient for a defineVaults config, memoized per SDK and config.",
+      "description": "Returns the VaultClient of the SDK in context, memoized per SDK.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -1585,7 +1585,7 @@
       "source_type": "official-doc",
       "category": "reference-react",
       "logical_path": "reference/react/useDeposit",
-      "description": "Mutation hook that deposits into a confidential vault group and returns the join record to store.",
+      "description": "Mutation hook that deposits into a confidential vault group and returns the batch each leg landed in.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -1597,19 +1597,19 @@
       "source_type": "official-doc",
       "category": "reference-react",
       "logical_path": "reference/react/useRedeem",
-      "description": "Mutation hook that redeems confidential vault shares and returns the join record to store.",
+      "description": "Mutation hook that redeems confidential vault shares and returns the batch each leg landed in.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
     {
-      "id": "doc:reference/react/usePosition",
-      "title": "usePosition",
-      "source_path": "docs/gitbook/src/reference/react/usePosition.md",
-      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/usePosition.md",
+      "id": "doc:reference/react/useBatch",
+      "title": "useBatch",
+      "source_path": "docs/gitbook/src/reference/react/useBatch.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatch.md",
       "source_type": "official-doc",
       "category": "reference-react",
-      "logical_path": "reference/react/usePosition",
-      "description": "Query hook that reads a vault join's position — its phase, legs, and the actions you can send now.",
+      "logical_path": "reference/react/useBatch",
+      "description": "Query hook that reads one vault batch — its state, timings, and the actions you can send now.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -1626,14 +1626,26 @@
       "include_in_llms_full": true
     },
     {
-      "id": "doc:reference/react/useExit",
-      "title": "useExit",
-      "source_path": "docs/gitbook/src/reference/react/useExit.md",
-      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useExit.md",
+      "id": "doc:reference/react/useClaim",
+      "title": "useClaim",
+      "source_path": "docs/gitbook/src/reference/react/useClaim.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md",
       "source_type": "official-doc",
       "category": "reference-react",
-      "logical_path": "reference/react/useExit",
-      "description": "Mutation hook that exits every leg of a vault join — payout for settled batches, refund for the rest.",
+      "logical_path": "reference/react/useClaim",
+      "description": "Mutation hook that claims a finalized vault batch's output for an account.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:reference/react/useQuit",
+      "title": "useQuit",
+      "source_path": "docs/gitbook/src/reference/react/useQuit.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/useQuit",
+      "description": "Mutation hook that takes the signer's deposit back from a pending or canceled vault batch.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -1645,7 +1657,7 @@
       "source_type": "official-doc",
       "category": "reference-react",
       "logical_path": "reference/react/useDispatch",
-      "description": "Mutation hook that dispatches every eligible batch of a vault join.",
+      "description": "Mutation hook that dispatches a vault batcher's open batch.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -1657,7 +1669,7 @@
       "source_type": "official-doc",
       "category": "reference-react",
       "logical_path": "reference/react/useFinalize",
-      "description": "Mutation hook that settles every dispatched batch of a vault join.",
+      "description": "Mutation hook that settles a dispatched vault batch.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

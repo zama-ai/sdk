@@ -1,5 +1,6 @@
 import type { Address, Hex } from "viem";
 import type { TransactionReceipt } from "../types/transaction";
+import type { BatchState } from "../vaults/types";
 import { ZamaError, ZamaErrorCode } from "./base";
 
 /** What an {@link UnlistedConfidentialTokenError} carries. */
@@ -37,9 +38,8 @@ export interface VaultBatcherPausedDetails {
 }
 
 /**
- * A batcher a join needs is paused, so the join would revert. A dispatch
- * skips paused batchers instead. Pausing gates `join` and `dispatchBatch`; quitting
- * and claiming on it still work.
+ * A batcher a join needs is paused, so the join would revert. Pausing gates
+ * `join` and `dispatchBatch`; quitting and claiming on it still work.
  */
 export class VaultBatcherPausedError extends ZamaError {
   /** The batcher that reported `paused()`. */
@@ -55,38 +55,34 @@ export class VaultBatcherPausedError extends ZamaError {
   }
 }
 
-/** Why a vault action cannot be sent now. */
-export type VaultActionNotAllowedReason =
-  /** An exit was asked for while a leg is dispatched; only `finalize` applies until it settles. */
-  | "leg-dispatched"
-  /** A dispatch was asked for, but no leg is pending, old enough, and on an unpaused batcher. */
-  | "nothing-to-dispatch"
-  /** A finalize was asked for, but no leg is dispatched. */
-  | "nothing-to-finalize";
-
-/** What a {@link VaultActionNotAllowedError} carries. */
-export interface VaultActionNotAllowedDetails {
-  /** The action asked for. */
-  readonly action: "exit" | "dispatch" | "finalize";
-  /** Why the position does not allow it now. */
-  readonly reason: VaultActionNotAllowedReason;
+/** What a {@link VaultBatchNotDispatchedError} carries. */
+export interface VaultBatchNotDispatchedDetails {
+  /** The batcher the batch belongs to. */
+  readonly batcher: Address;
+  /** The batch that was to be finalized. */
+  readonly batchId: bigint;
+  /** The state the batch is in instead. */
+  readonly state: BatchState;
 }
 
 /**
- * The position's batches do not allow the action now, usually because their
- * state moved since the position was read. Read the position again.
+ * A batch cannot be finalized because it is not dispatched: it is still
+ * pending, or a keeper or anyone else already settled or canceled it.
  */
-export class VaultActionNotAllowedError extends ZamaError {
-  /** The action asked for. */
-  readonly action: VaultActionNotAllowedDetails["action"];
-  /** Why the position does not allow it now. */
-  readonly reason: VaultActionNotAllowedReason;
+export class VaultBatchNotDispatchedError extends ZamaError {
+  /** The batcher the batch belongs to. */
+  readonly batcher: Address;
+  /** The batch that was to be finalized. */
+  readonly batchId: bigint;
+  /** The state the batch is in instead. */
+  readonly state: BatchState;
 
-  constructor(message: string, details: VaultActionNotAllowedDetails, options?: ErrorOptions) {
-    super(ZamaErrorCode.VaultActionNotAllowed, message, options);
-    this.name = "VaultActionNotAllowedError";
-    this.action = details.action;
-    this.reason = details.reason;
+  constructor(message: string, details: VaultBatchNotDispatchedDetails, options?: ErrorOptions) {
+    super(ZamaErrorCode.VaultBatchNotDispatched, message, options);
+    this.name = "VaultBatchNotDispatchedError";
+    this.batcher = details.batcher;
+    this.batchId = details.batchId;
+    this.state = details.state;
   }
 }
 
@@ -102,7 +98,7 @@ export interface VaultJoinUnconfirmedDetails {
 
 /**
  * A join was mined, but the SDK could not match a `Joined` log to every leg,
- * so it cannot build the join record. A router join is all-or-nothing, so
+ * so it cannot tell which batch each leg landed in. A router join is all-or-nothing, so
  * every leg most likely joined; look the transaction up before joining again.
  */
 export class VaultJoinUnconfirmedError extends ZamaError {

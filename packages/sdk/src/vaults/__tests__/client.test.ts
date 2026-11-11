@@ -5,8 +5,8 @@ import {
   ConfigurationError,
   InsufficientConfidentialBalanceError,
   UnlistedConfidentialTokenError,
-  VaultActionNotAllowedError,
   VaultBatcherPausedError,
+  type VaultBatchNotDispatchedError,
   type VaultJoinUnconfirmedError,
 } from "../../errors";
 import type { RelayerSDK } from "../../relayer/types";
@@ -14,12 +14,11 @@ import { USER } from "../../test-fixtures/constants";
 import { describe, expect, joinedLog, test, VALID_INPUT_PROOF } from "../../test-fixtures";
 import { Token } from "../../token";
 import type { GenericProvider } from "../../types";
-import type { ZamaSDK } from "../../zama-sdk";
 import { vaultBatcherAbi } from "../abi/vault-batcher.abi";
 import { vaultRouterAbi } from "../abi/vault-router.abi";
 import { createVaultClient } from "../client";
-import { defineVaults } from "../config";
-import type { JoinRecord } from "../types";
+import { defineVaultGroup, MAX_GROUP_VAULTS } from "../config";
+import type { VaultCall } from "../types";
 
 // Every fixture address has hex letters, so a missing `getAddress` shows up as a casing mismatch.
 const ROUTER = getAddress("0x4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e");
@@ -38,60 +37,57 @@ const BETA = {
   depositBatcher: getAddress("0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC"),
   redeemBatcher: getAddress("0xdDdDddDdDdddDDddDdDdDDDDdDdDDdDDdDDDDDDd"),
 };
-
-const VAULTS = defineVaults({
-  chainId: 31337,
-  router: ROUTER,
-  groups: {
-    stable: {
-      asset: ASSET,
-      vaults: {
-        alpha: { depositBatcher: ALPHA.depositBatcher, redeemBatcher: ALPHA.redeemBatcher },
-        beta: { depositBatcher: BETA.depositBatcher, redeemBatcher: BETA.redeemBatcher },
-      },
-    },
-  },
-});
-
-const SOLO = defineVaults({
-  chainId: 31337,
-  groups: {
-    solo: {
-      asset: ASSET,
-      vaults: {
-        main: { depositBatcher: ALPHA.depositBatcher, redeemBatcher: ALPHA.redeemBatcher },
-      },
-    },
-  },
-});
-
-const NOW = 1_000_000n;
-
-// Alpha's deposit batcher was upgraded: the retired one takes joins up to batch 7.
+// Alpha's deposit batcher was upgraded: the retired one takes joins up to a batch id.
 const RETIRED_ALPHA_DEPOSIT = getAddress("0x7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a");
-function upgradedVaults(lastBatchId: bigint) {
-  return defineVaults({
-    ...VAULTS,
-    groups: {
-      stable: {
-        ...VAULTS.groups.stable,
-        vaults: {
-          ...VAULTS.groups.stable.vaults,
-          alpha: {
-            depositBatcher: {
-              retired: [{ address: RETIRED_ALPHA_DEPOSIT, lastBatchId }],
-              latest: ALPHA.depositBatcher,
-            },
-            redeemBatcher: ALPHA.redeemBatcher,
+
+const CHAIN_ID = 31337;
+const NOW = 1_000_000n;
+const YEAR = 365n * 24n * 60n * 60n;
+
+function vault(entry: typeof ALPHA, id: string) {
+  return {
+    id,
+    batchers: { deposit: entry.depositBatcher, redeem: entry.redeemBatcher },
+    share: entry.share,
+  };
+}
+
+const STABLE = defineVaultGroup({
+  id: "stable",
+  chainId: CHAIN_ID,
+  asset: ASSET,
+  router: ROUTER,
+  vaults: [vault(ALPHA, "alpha"), vault(BETA, "beta")],
+});
+
+const SOLO = defineVaultGroup({
+  id: "solo",
+  chainId: CHAIN_ID,
+  asset: ASSET,
+  vaults: [vault(ALPHA, "main")],
+});
+
+function upgraded(lastBatchId: bigint) {
+  return defineVaultGroup({
+    ...STABLE,
+    vaults: [
+      {
+        ...vault(ALPHA, "alpha"),
+        batchers: {
+          deposit: {
+            retired: [{ address: RETIRED_ALPHA_DEPOSIT, lastBatchId }],
+            latest: ALPHA.depositBatcher,
           },
+          redeem: ALPHA.redeemBatcher,
         },
       },
-    },
+      vault(BETA, "beta"),
+    ],
   });
 }
 
 interface BatchFacts {
-  state: number;
+  state?: number;
   createdAt?: bigint;
   minAge?: bigint;
   dispatchedAt?: bigint;
@@ -99,7 +95,7 @@ interface BatchFacts {
   deposit?: Hex;
 }
 
-/** What each batcher reports, and the batches a position read asks about. */
+/** What each batcher reports, and the batches a read asks about. Every batcher's current batch is 7. */
 function mockChain(
   provider: GenericProvider,
   answers: {
@@ -156,8 +152,7 @@ function mockChain(
       case "unwrapRequestId":
         return `0x${"cd".repeat(32)}`;
       case "unwrapAmount":
-        // One handle per batcher, so each callback can be checked against its own decrypt.
-        return `0x${batcher.slice(2, 4).repeat(32)}`;
+        return `0x${"ef".repeat(32)}`;
       default:
         throw new Error(`Unexpected read of ${functionName}`);
     }
@@ -180,134 +175,147 @@ function mockEncryption(relayer: RelayerSDK) {
   );
 }
 
-function record(
-  direction: "deposit" | "redeem" = "deposit",
-): JoinRecord<"stable", "alpha" | "beta"> {
-  const side = direction === "deposit" ? "depositBatcher" : "redeemBatcher";
-  return {
-    v: 1,
-    chainId: 31337,
-    groupId: "stable",
-    direction,
-    account: USER,
-    legs: [
-      { vaultId: "alpha", batcher: ALPHA[side], batchId: 3n },
-      { vaultId: "beta", batcher: BETA[side], batchId: 5n },
-    ],
-  };
+function decode(call: { data: Hex }) {
+  for (const abi of [confidentialWrapperAbi, vaultBatcherAbi, vaultRouterAbi]) {
+    try {
+      return decodeFunctionData({ abi, data: call.data });
+    } catch {
+      // try the next ABI
+    }
+  }
+  throw new Error("Undecodable call");
 }
 
-function decodeCall(
-  abi: typeof vaultBatcherAbi | typeof vaultRouterAbi | typeof confidentialWrapperAbi,
-  data: Hex,
-) {
-  return decodeFunctionData({ abi, data });
-}
+const roles = (calls: readonly VaultCall[]) => calls.map((call) => call.role);
 
-describe("defineVaults", () => {
+describe("defineVaultGroup", () => {
   test("refuses a group with no vault", () => {
-    expect(() =>
-      defineVaults({ chainId: 1, groups: { empty: { asset: ASSET, vaults: {} } } }),
-    ).toThrow(ConfigurationError);
+    expect(() => defineVaultGroup({ ...STABLE, vaults: [] })).toThrow(ConfigurationError);
   });
 
-  test("refuses a batcher named twice", () => {
+  test("refuses more vaults than one transaction can carry", () => {
+    const vaults = Array.from({ length: MAX_GROUP_VAULTS + 1 }, (_unused, index) => ({
+      id: `v${index}`,
+      batchers: {
+        deposit: `0x${(index + 16).toString(16).repeat(20)}` as Address,
+        redeem: `0x${(index + 48).toString(16).repeat(20)}` as Address,
+      },
+      share: ALPHA.share,
+    }));
+    expect(() => defineVaultGroup({ ...STABLE, vaults })).toThrow(/more than 8/);
+  });
+
+  test("refuses a vault id twice", () => {
     expect(() =>
-      defineVaults({
-        chainId: 1,
-        groups: {
-          a: {
-            asset: ASSET,
-            vaults: {
-              x: { depositBatcher: ALPHA.depositBatcher, redeemBatcher: ALPHA.depositBatcher },
+      defineVaultGroup({ ...STABLE, vaults: [vault(ALPHA, "alpha"), vault(BETA, "alpha")] }),
+    ).toThrow(/twice/);
+  });
+
+  test("refuses a batcher used twice, a retired one included", () => {
+    expect(() =>
+      defineVaultGroup({
+        ...STABLE,
+        vaults: [
+          {
+            ...vault(ALPHA, "alpha"),
+            batchers: {
+              deposit: {
+                retired: [{ address: BETA.depositBatcher, lastBatchId: 1n }],
+                latest: ALPHA.depositBatcher,
+              },
+              redeem: ALPHA.redeemBatcher,
             },
           },
-        },
+          vault(BETA, "beta"),
+        ],
       }),
     ).toThrow(/more than once/);
   });
 
   test("refuses an invalid address", () => {
-    expect(() =>
-      defineVaults({
-        chainId: 1,
-        groups: { a: { asset: "0x12" as Address, vaults: { x: ALPHA } } },
-      }),
-    ).toThrow(/not an address/);
+    expect(() => defineVaultGroup({ ...STABLE, asset: "0x12" as Address })).toThrow(
+      /not an address/,
+    );
   });
 });
 
 describe("prepareDeposit", () => {
-  test("a group of one sends one transfer-and-call to the batcher, with no grants", async ({
+  test("a group of one sends one transfer-and-call to its batcher, tagged with its leg", async ({
     sdk,
     provider,
     relayer,
   }) => {
     mockChain(provider);
     mockEncryption(relayer);
-    const prepared = await createVaultClient(sdk, SOLO).prepareDeposit({
-      groupId: "solo",
+    const prepared = await createVaultClient(sdk).prepareDeposit(SOLO, {
+      vaultId: "main",
+      account: USER,
       amount: 10n,
     });
-    expect(prepared.grants).toStrictEqual([]);
-    expect(prepared.calls).toHaveLength(1);
-    expect(prepared.calls[0]!.to).toBe(ASSET);
-    const call = decodeCall(confidentialWrapperAbi, prepared.calls[0]!.data);
-    expect(call.functionName).toBe("confidentialTransferAndCall");
-    expect(call.args?.[0]).toBe(ALPHA.depositBatcher);
-    expect(prepared.atomic).toBe(false);
-    expect(prepared.sender).toBe(USER);
+    expect(prepared).toMatchObject({
+      kind: "deposit",
+      vaultId: "main",
+      account: USER,
+      amount: 10n,
+      route: "legs",
+    });
+    expect(roles(prepared.calls)).toStrictEqual(["join"]);
+    const [call] = prepared.calls;
+    expect(call).toMatchObject({
+      to: ASSET,
+      value: 0n,
+      leg: { batcher: ALPHA.depositBatcher, amount: 10n },
+    });
+    expect(decode(call).args?.[0]).toBe(ALPHA.depositBatcher);
   });
 
-  test("a multi-vault sequential deposit pushes through the router with every leg", async ({
+  test("a sequential multi-vault deposit pushes through the router with a leg per vault", async ({
     sdk,
     provider,
     relayer,
   }) => {
     mockChain(provider);
     mockEncryption(relayer);
-    const prepared = await createVaultClient(sdk, VAULTS).prepareDeposit({
-      groupId: "stable",
+    const prepared = await createVaultClient(sdk).prepareDeposit(STABLE, {
       vaultId: "beta",
+      account: USER,
       amount: 10n,
     });
-    expect(prepared.calls).toHaveLength(1);
-    const call = decodeCall(confidentialWrapperAbi, prepared.calls[0]!.data);
-    expect(call.args?.[0]).toBe(ROUTER);
-    // The router encryption carries one amount per vault: the chosen one's and a zero.
-    const routerEncrypt = vi
-      .mocked(relayer.encryptValues)
-      .mock.calls.map(
-        ([params]) =>
-          params as unknown as { contractAddress: Address; values: { value: bigint }[] },
-      )
-      .find((params) => getAddress(params.contractAddress) === ROUTER);
-    expect(routerEncrypt?.values.map((entry) => entry.value)).toStrictEqual([0n, 10n]);
+    expect(prepared.route).toBe("router");
+    expect(prepared.legs.map((leg) => [leg.vaultId, leg.amount])).toStrictEqual([
+      ["alpha", 0n],
+      ["beta", 10n],
+    ]);
+    expect(roles(prepared.calls)).toStrictEqual(["join"]);
+    expect(decode(prepared.calls[0]).args?.[0]).toBe(ROUTER);
+    expect(prepared.calls[0]).toMatchObject({ leg: { vaultId: "beta" } });
   });
 
-  test("an atomic wallet gets one transfer per vault, marked atomic", async ({
+  test("a bundling wallet gets one transfer per vault and no router", async ({
     sdk,
     provider,
     relayer,
   }) => {
     mockChain(provider);
     mockEncryption(relayer);
-    const prepared = await createVaultClient(sdk, VAULTS).prepareDeposit(
-      { groupId: "stable", vaultId: "alpha", amount: 10n },
-      { walletMode: "atomic" },
+    const prepared = await createVaultClient(sdk).prepareDeposit(
+      STABLE,
+      { vaultId: "alpha", account: USER, amount: 10n },
+      { walletMode: "bundle" },
     );
-    expect(
-      prepared.calls.map((call) => decodeCall(confidentialWrapperAbi, call.data).args?.[0]),
-    ).toStrictEqual([ALPHA.depositBatcher, BETA.depositBatcher]);
-    expect(prepared.atomic).toBe(true);
+    expect(prepared.route).toBe("legs");
+    expect(prepared.calls.map((call) => decode(call).args?.[0])).toStrictEqual([
+      ALPHA.depositBatcher,
+      BETA.depositBatcher,
+    ]);
   });
 
   test("is plain data that survives structuredClone", async ({ sdk, provider, relayer }) => {
     mockChain(provider);
     mockEncryption(relayer);
-    const prepared = await createVaultClient(sdk, VAULTS).prepareDeposit({
-      groupId: "stable",
+    const prepared = await createVaultClient(sdk).prepareDeposit(STABLE, {
       vaultId: "alpha",
+      account: USER,
       amount: 10n,
     });
     expect(structuredClone(prepared)).toEqual(prepared);
@@ -321,8 +329,9 @@ describe("prepareDeposit", () => {
     mockChain(provider, { paused: [BETA.depositBatcher] });
     mockEncryption(relayer);
     await expect(
-      createVaultClient(sdk, VAULTS).prepareDeposit(
-        { groupId: "stable", vaultId: "alpha", amount: 10n },
+      createVaultClient(sdk).prepareDeposit(
+        STABLE,
+        { vaultId: "alpha", account: USER, amount: 10n },
         { skipChecks: ["balance", "config"] },
       ),
     ).rejects.toBeInstanceOf(VaultBatcherPausedError);
@@ -332,9 +341,9 @@ describe("prepareDeposit", () => {
     mockChain(provider, { listed: false });
     mockEncryption(relayer);
     await expect(
-      createVaultClient(sdk, VAULTS).prepareDeposit({
-        groupId: "stable",
+      createVaultClient(sdk).prepareDeposit(STABLE, {
         vaultId: "alpha",
+        account: USER,
         amount: 10n,
       }),
     ).rejects.toBeInstanceOf(UnlistedConfidentialTokenError);
@@ -344,165 +353,106 @@ describe("prepareDeposit", () => {
     mockChain(provider, { balance: 5n });
     mockEncryption(relayer);
     await expect(
-      createVaultClient(sdk, VAULTS).prepareDeposit({
-        groupId: "stable",
+      createVaultClient(sdk).prepareDeposit(STABLE, {
         vaultId: "alpha",
+        account: USER,
         amount: 10n,
       }),
     ).rejects.toBeInstanceOf(InsufficientConfidentialBalanceError);
   });
 
-  test("needs skipChecks balance to prepare for another account", async ({
+  test("refuses a group whose batchers trade another share token than configured", async ({
     sdk,
     provider,
     relayer,
   }) => {
     mockChain(provider);
     mockEncryption(relayer);
-    const client = createVaultClient(sdk, VAULTS);
+    const wrong = defineVaultGroup({
+      ...STABLE,
+      vaults: [{ ...vault(ALPHA, "alpha"), share: BETA.share }, vault(BETA, "beta")],
+    });
     await expect(
-      client.prepareDeposit(
-        { groupId: "stable", vaultId: "alpha", amount: 10n },
-        { account: FRIEND },
-      ),
-    ).rejects.toThrow(/skipChecks/);
-    const prepared = await client.prepareDeposit(
-      { groupId: "stable", vaultId: "alpha", amount: 10n },
-      { account: FRIEND, skipChecks: ["balance"] },
-    );
-    expect(prepared.sender).toBe(FRIEND);
+      createVaultClient(sdk).prepareDeposit(wrong, {
+        vaultId: "alpha",
+        account: USER,
+        amount: 10n,
+      }),
+    ).rejects.toThrow(/not the configured asset/);
   });
 
-  test("a beneficiary in a group of one pulls through the batcher and grants it first", async ({
+  test("a beneficiary in a group of one pulls through the batcher, after a grant to it", async ({
     sdk,
     provider,
     relayer,
   }) => {
     mockChain(provider, { operators: false });
     mockEncryption(relayer);
-    const prepared = await createVaultClient(sdk, SOLO).prepareDeposit({
-      groupId: "solo",
-      amount: 10n,
-      beneficiary: FRIEND,
-    });
-    expect(prepared.grants).toHaveLength(1);
-    expect(decodeCall(confidentialWrapperAbi, prepared.grants[0]!.data).args?.[0]).toBe(
-      ALPHA.depositBatcher,
+    const prepared = await createVaultClient(sdk).prepareDeposit(
+      SOLO,
+      { vaultId: "main", account: USER, amount: 10n, beneficiary: FRIEND },
+      { skipChecks: ["balance"] },
     );
-    expect(prepared.expiresAt).toBe(NOW + 3600n);
-    const join = decodeCall(vaultBatcherAbi, prepared.calls[0]!.data);
-    expect(join.functionName).toBe("join");
-    expect(join.args?.[0]).toBe(FRIEND);
+    expect(roles(prepared.calls)).toStrictEqual(["grant", "join"]);
+    expect(prepared.calls[0]).toMatchObject({
+      role: "grant",
+      vaultId: "main",
+      token: ASSET,
+      operator: ALPHA.depositBatcher,
+      until: NOW + YEAR,
+    });
+    const join = decode(prepared.calls[1] as VaultCall);
+    expect([join.functionName, join.args?.[0]]).toStrictEqual(["join", FRIEND]);
   });
 
-  test("refuses a beneficiary in a larger group at runtime too", async ({
-    sdk,
-    provider,
-    relayer,
-  }) => {
+  test("refuses a beneficiary in a larger group", async ({ sdk, provider, relayer }) => {
     mockChain(provider);
     mockEncryption(relayer);
-    const client = createVaultClient(
-      sdk,
-      VAULTS as typeof VAULTS & { groups: Record<string, never> },
-    );
     await expect(
-      client.prepareDeposit({
-        groupId: "stable",
+      createVaultClient(sdk).prepareDeposit(STABLE, {
         vaultId: "alpha",
+        account: USER,
         amount: 10n,
         beneficiary: FRIEND,
-      } as never),
+      }),
     ).rejects.toThrow(/only a group of one/);
   });
 });
 
 describe("prepareRedeem", () => {
-  test("goes through the router and grants it on every share token it lacks", async ({
+  test("grants the router on every share token it lacks, for a year, then joins", async ({
     sdk,
     provider,
     relayer,
   }) => {
     mockChain(provider, { operators: false });
     mockEncryption(relayer);
-    const prepared = await createVaultClient(sdk, VAULTS).prepareRedeem({
-      groupId: "stable",
+    const prepared = await createVaultClient(sdk).prepareRedeem(STABLE, {
       vaultId: "alpha",
+      account: USER,
       amount: 10n,
     });
-    expect(prepared.grants.map((grant) => grant.to)).toStrictEqual([ALPHA.share, BETA.share]);
-    expect(decodeCall(vaultRouterAbi, prepared.calls[0]!.data).functionName).toBe("join");
-  });
-});
-
-describe("prepareExit", () => {
-  test("quits a pending leg, claims a finalized one, and needs the account to send", async ({
-    sdk,
-    provider,
-  }) => {
-    mockChain(provider, {
-      batches: { [ALPHA.depositBatcher]: { state: 0 }, [BETA.depositBatcher]: { state: 2 } },
-    });
-    const prepared = await createVaultClient(sdk, VAULTS).prepareExit(record());
-    expect(
-      prepared.calls.map((call) => decodeCall(vaultBatcherAbi, call.data).functionName),
-    ).toStrictEqual(["quit", "claim"]);
-    expect(prepared.sender).toBe(USER);
-  });
-
-  test("recovers canceled legs, which anyone may send", async ({ sdk, provider }) => {
-    mockChain(provider, {
-      batches: { [ALPHA.depositBatcher]: { state: 3 }, [BETA.depositBatcher]: { state: 2 } },
-    });
-    const prepared = await createVaultClient(sdk, VAULTS).prepareExit(record());
-    expect(
-      prepared.calls.map((call) => decodeCall(vaultBatcherAbi, call.data).functionName),
-    ).toStrictEqual(["recover", "claim"]);
-    expect(prepared.sender).toBeNull();
-  });
-
-  test("refuses while a leg is dispatched", async ({ sdk, provider }) => {
-    mockChain(provider, { batches: { [ALPHA.depositBatcher]: { state: 1 } } });
-    await expect(createVaultClient(sdk, VAULTS).prepareExit(record())).rejects.toMatchObject({
-      reason: "leg-dispatched",
-    });
-  });
-
-  test("refuses a record that leaves out a vault", async ({ sdk, provider }) => {
-    mockChain(provider);
-    const partial = { ...record(), legs: [record().legs[0]!] };
-    await expect(createVaultClient(sdk, VAULTS).prepareExit(partial)).rejects.toThrow(
-      /one leg per vault/,
-    );
-  });
-});
-
-describe("prepareDispatch", () => {
-  test("dispatches every pending leg that is old enough", async ({ sdk, provider }) => {
-    mockChain(provider, {
-      batches: {
-        [ALPHA.depositBatcher]: { state: 0, createdAt: NOW - 200n, minAge: 100n },
-        [BETA.depositBatcher]: { state: 0, createdAt: NOW - 200n, minAge: 100n },
-      },
-    });
-    const prepared = await createVaultClient(sdk, VAULTS).prepareDispatch(record());
-    expect(prepared.calls.map((call) => call.to)).toStrictEqual([
-      ALPHA.depositBatcher,
-      BETA.depositBatcher,
+    expect(roles(prepared.calls)).toStrictEqual(["grant", "grant", "join"]);
+    expect(prepared.calls.slice(0, 2)).toMatchObject([
+      { token: ALPHA.share, operator: ROUTER, vaultId: "alpha", until: NOW + YEAR },
+      { token: BETA.share, operator: ROUTER, vaultId: "beta", until: NOW + YEAR },
     ]);
-    expect(prepared.sender).toBeNull();
+    expect(decode(prepared.calls[2] as VaultCall).functionName).toBe("join");
   });
 
-  test("refuses when no leg is old enough", async ({ sdk, provider }) => {
+  test("sends only the join once the grants are in place", async ({ sdk, provider, relayer }) => {
     mockChain(provider);
-    await expect(createVaultClient(sdk, VAULTS).prepareDispatch(record())).rejects.toBeInstanceOf(
-      VaultActionNotAllowedError,
-    );
+    mockEncryption(relayer);
+    const prepared = await createVaultClient(sdk).prepareRedeem(STABLE, {
+      vaultId: "alpha",
+      account: USER,
+      amount: 10n,
+    });
+    expect(roles(prepared.calls)).toStrictEqual(["join"]);
   });
 });
 
 describe("batcher upgrades", () => {
-  // Every batcher reports currentBatchId 7 in mockChain.
   test("joins the retired batcher while its current batch is at most lastBatchId", async ({
     sdk,
     provider,
@@ -510,134 +460,178 @@ describe("batcher upgrades", () => {
   }) => {
     mockChain(provider);
     mockEncryption(relayer);
-    const prepared = await createVaultClient(sdk, upgradedVaults(7n)).prepareDeposit(
-      { groupId: "stable", vaultId: "alpha", amount: 10n },
-      { walletMode: "atomic" },
+    const client = createVaultClient(sdk);
+    expect(await client.activeBatchers(upgraded(7n), "deposit")).toStrictEqual({
+      alpha: RETIRED_ALPHA_DEPOSIT,
+      beta: BETA.depositBatcher,
+    });
+    const prepared = await client.prepareDeposit(
+      upgraded(7n),
+      { vaultId: "alpha", account: USER, amount: 10n },
+      { walletMode: "bundle" },
     );
-    expect(
-      prepared.calls.map((call) => decodeCall(confidentialWrapperAbi, call.data).args?.[0]),
-    ).toStrictEqual([RETIRED_ALPHA_DEPOSIT, BETA.depositBatcher]);
-  });
-
-  test("joins the latest batcher once the retired one has passed lastBatchId", async ({
-    sdk,
-    provider,
-    relayer,
-  }) => {
-    mockChain(provider);
-    mockEncryption(relayer);
-    const prepared = await createVaultClient(sdk, upgradedVaults(6n)).prepareDeposit(
-      { groupId: "stable", vaultId: "alpha", amount: 10n },
-      { walletMode: "atomic" },
-    );
-    expect(
-      prepared.calls.map((call) => decodeCall(confidentialWrapperAbi, call.data).args?.[0]),
-    ).toStrictEqual([ALPHA.depositBatcher, BETA.depositBatcher]);
-  });
-
-  test("still exits a leg that joined the retired batcher", async ({ sdk, provider }) => {
-    mockChain(provider, { batches: { [RETIRED_ALPHA_DEPOSIT]: { state: 2 } } });
-    const old = {
-      ...record(),
-      legs: [{ vaultId: "alpha", batcher: RETIRED_ALPHA_DEPOSIT, batchId: 3n }, record().legs[1]!],
-    } as const;
-    const prepared = await createVaultClient(sdk, upgradedVaults(6n)).prepareExit(old);
-    expect(prepared.calls.map((call) => call.to)).toStrictEqual([
+    expect(prepared.legs.map((leg) => leg.batcher)).toStrictEqual([
       RETIRED_ALPHA_DEPOSIT,
       BETA.depositBatcher,
     ]);
   });
 
-  test("refuses a batcher listed both as retired and as another vault's", () => {
-    expect(() =>
-      defineVaults({
-        chainId: 1,
-        groups: {
-          a: {
-            asset: ASSET,
-            vaults: {
-              x: {
-                depositBatcher: {
-                  retired: [{ address: BETA.depositBatcher, lastBatchId: 1n }],
-                  latest: ALPHA.depositBatcher,
-                },
-                redeemBatcher: ALPHA.redeemBatcher,
-              },
-              y: { depositBatcher: BETA.depositBatcher, redeemBatcher: BETA.redeemBatcher },
-            },
-          },
-        },
-      }),
-    ).toThrow(/more than once/);
-  });
-});
-
-describe("readPosition", () => {
-  test("queued, with dispatch time as the next change", async ({ sdk, provider }) => {
-    mockChain(provider);
-    const position = await createVaultClient(sdk, VAULTS).readPosition(record());
-    expect(position.phase).toBe("queued");
-    expect(position.availableActions).toStrictEqual(["exit"]);
-    expect(position.nextChangeAt).toBe(NOW + 90n);
-    expect(position.chosenVaultId).toBeNull();
-  });
-
-  test("settling while a leg is dispatched, with only finalize", async ({ sdk, provider }) => {
-    mockChain(provider, {
-      batches: { [BETA.depositBatcher]: { state: 1, dispatchedAt: NOW - 10n, deadline: 60n } },
-    });
-    const position = await createVaultClient(sdk, VAULTS).readPosition(record());
-    expect(position.phase).toBe("settling");
-    expect(position.availableActions).toStrictEqual(["finalize"]);
-  });
-
-  test("with decrypt, names the chosen vault, and closes once every deposit is zero", async ({
+  test("joins the latest batcher once the retired one passed lastBatchId", async ({
     sdk,
     provider,
   }) => {
-    const alphaDeposit = `0x${"11".repeat(32)}` as Hex;
-    const betaDeposit = `0x${"22".repeat(32)}` as Hex;
-    mockChain(provider, {
-      batches: {
-        [ALPHA.depositBatcher]: { state: 2, deposit: alphaDeposit },
-        [BETA.depositBatcher]: { state: 2, deposit: betaDeposit },
-      },
+    mockChain(provider);
+    expect(await createVaultClient(sdk).activeBatchers(upgraded(6n), "deposit")).toStrictEqual({
+      alpha: ALPHA.depositBatcher,
+      beta: BETA.depositBatcher,
     });
-    const decrypt = vi.spyOn(sdk.decryption, "decryptValues");
-    decrypt.mockResolvedValueOnce({ [alphaDeposit]: 0n, [betaDeposit]: 10n } as never);
-    const client = createVaultClient(sdk, VAULTS);
-    const position = await client.readPosition(record(), { decrypt: true });
-    expect(position.phase).toBe("ready");
-    expect(position.chosenVaultId).toBe("beta");
-    // One decrypt for every leg, so the relayer cannot tell which one matters.
-    expect(decrypt.mock.calls[0]![0]).toHaveLength(2);
-
-    decrypt.mockResolvedValueOnce({ [alphaDeposit]: 0n, [betaDeposit]: 0n } as never);
-    const closed = await client.readPosition(record(), { decrypt: true });
-    expect(closed.phase).toBe("closed");
-    expect(closed.availableActions).toStrictEqual([]);
   });
 });
 
-describe("deposit", () => {
+describe("batch actions", () => {
+  test("claim, quit and dispatch encode without reading the chain", ({ sdk, provider }) => {
+    const client = createVaultClient(sdk);
+    const batch = { batcher: ALPHA.depositBatcher, batchId: 3n };
+    expect(decode(client.prepareClaim({ ...batch, account: USER }))).toMatchObject({
+      functionName: "claim",
+      args: [3n, USER],
+    });
+    expect(decode(client.prepareQuit(batch))).toMatchObject({ functionName: "quit", args: [3n] });
+    expect(client.prepareDispatch(batch)).toMatchObject({ to: ALPHA.depositBatcher, value: 0n });
+    expect(provider.readContract).not.toHaveBeenCalled();
+  });
+
+  test("prepareFinalize settles a dispatched batch with its public decryption", async ({
+    sdk,
+    provider,
+  }) => {
+    mockChain(provider, { batches: { [ALPHA.depositBatcher]: { state: 1 } } });
+    const handle = `0x${"ef".repeat(32)}` as Hex;
+    vi.spyOn(sdk.decryption, "decryptPublicValues").mockResolvedValue({
+      clearValues: { [handle]: 42n },
+      decryptionProof: "0x1234",
+    } as never);
+    const prepared = await createVaultClient(sdk).prepareFinalize({
+      chainId: CHAIN_ID,
+      batcher: ALPHA.depositBatcher,
+      batchId: 3n,
+    });
+    expect(prepared).toMatchObject({ unwrapAmountCleartext: 42n, decryptionProof: "0x1234" });
+    expect(decode(prepared.call)).toMatchObject({
+      functionName: "dispatchBatchCallback",
+      args: [3n, 42n, "0x1234"],
+    });
+  });
+
+  test("prepareFinalize refuses a batch that is not dispatched", async ({ sdk, provider }) => {
+    mockChain(provider, { batches: { [ALPHA.depositBatcher]: { state: 2 } } });
+    await expect(
+      createVaultClient(sdk).prepareFinalize({
+        chainId: CHAIN_ID,
+        batcher: ALPHA.depositBatcher,
+        batchId: 3n,
+      }),
+    ).rejects.toMatchObject({ state: "finalized" } satisfies Partial<VaultBatchNotDispatchedError>);
+  });
+});
+
+describe("readBatch", () => {
+  const ref = { chainId: CHAIN_ID, batcher: ALPHA.depositBatcher, batchId: 3n };
+
+  test("a young pending batch: quit for its depositor, and when it becomes dispatchable", async ({
+    sdk,
+    provider,
+  }) => {
+    mockChain(provider);
+    const batch = await createVaultClient(sdk).readBatch({ ...ref, account: USER });
+    expect(batch).toMatchObject({
+      state: "pending",
+      dispatchableAt: NOW + 90n,
+      actions: ["quit"],
+      nextChangeAt: NOW + 90n,
+    });
+    expect(batch).not.toHaveProperty("dispatchedAt");
+  });
+
+  test("an old enough pending batch can be dispatched by anyone", async ({ sdk, provider }) => {
+    mockChain(provider, { batches: { [ALPHA.depositBatcher]: { createdAt: NOW - 200n } } });
+    const batch = await createVaultClient(sdk).readBatch(ref);
+    expect(batch.actions).toStrictEqual(["dispatch"]);
+    expect(batch.deposit).toBeNull();
+  });
+
+  test("a finalized batch can be claimed, with its exchange rate", async ({ sdk, provider }) => {
+    mockChain(provider, {
+      batches: { [ALPHA.depositBatcher]: { state: 2, dispatchedAt: NOW - 50n } },
+    });
+    const batch = await createVaultClient(sdk).readBatch({ ...ref, account: USER });
+    expect(batch).toMatchObject({
+      actions: ["claim"],
+      exchangeRate: { rate: 2n, decimals: 0 },
+      dispatchedAt: NOW - 50n,
+    });
+  });
+
+  test("lists nothing for an account that never joined", async ({ sdk, provider }) => {
+    mockChain(provider, {
+      batches: { [ALPHA.depositBatcher]: { state: 2, deposit: `0x${"00".repeat(32)}` } },
+    });
+    expect(
+      (await createVaultClient(sdk).readBatch({ ...ref, account: USER })).actions,
+    ).toStrictEqual([]);
+  });
+
+  test("a dispatched batch can be finalized until its deadline", async ({ sdk, provider }) => {
+    mockChain(provider, {
+      batches: { [ALPHA.depositBatcher]: { state: 1, dispatchedAt: NOW - 10n, deadline: 60n } },
+    });
+    const batch = await createVaultClient(sdk).readBatch(ref);
+    expect(batch).toMatchObject({
+      actions: ["finalize"],
+      cancelsAt: NOW + 50n,
+      nextChangeAt: NOW + 50n,
+    });
+  });
+});
+
+describe("readOpenBatches", () => {
+  test("reads each vault's active batcher's open batch", async ({ sdk, provider }) => {
+    mockChain(provider);
+    const batches = await createVaultClient(sdk).readOpenBatches(upgraded(7n), "deposit");
+    expect(batches).toMatchObject([
+      { vaultId: "alpha", batcher: RETIRED_ALPHA_DEPOSIT, batchId: 7n, observedAt: NOW },
+      { vaultId: "beta", batcher: BETA.depositBatcher, batchId: 7n, observedAt: NOW },
+    ]);
+  });
+});
+
+describe("deposit and redeem", () => {
   function mockReceipt(provider: GenericProvider, batchers: readonly Address[]) {
     vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
       logs: batchers.map((batcher, index) =>
-        joinedLog({ batcher, account: USER, batchId: [3n, 5n][index]! }),
+        joinedLog({ batcher, account: USER, batchId: [3n, 5n][index] ?? 9n }),
       ),
     });
   }
 
-  test("returns the record, read from the receipt", async ({ sdk, provider, relayer, signer }) => {
+  test("deposit returns the batch every leg landed in", async ({
+    sdk,
+    provider,
+    relayer,
+    signer,
+  }) => {
     mockChain(provider);
     mockEncryption(relayer);
     mockReceipt(provider, [ALPHA.depositBatcher, BETA.depositBatcher]);
-    const { record: saved, txHashes } = await createVaultClient(sdk, VAULTS).deposit({
-      groupId: "stable",
+    const { batches, txHashes, prepared } = await createVaultClient(sdk).deposit(STABLE, {
       vaultId: "beta",
       amount: 10n,
     });
-    expect(saved).toStrictEqual(record());
+    expect(batches).toStrictEqual([
+      { vaultId: "alpha", chainId: CHAIN_ID, batcher: ALPHA.depositBatcher, batchId: 3n },
+      { vaultId: "beta", chainId: CHAIN_ID, batcher: BETA.depositBatcher, batchId: 5n },
+    ]);
+    expect(prepared.account).toBe(USER);
     expect(txHashes).toHaveLength(1);
     expect(signer.writeContract).toHaveBeenCalledTimes(1);
   });
@@ -647,22 +641,17 @@ describe("deposit", () => {
     mockEncryption(relayer);
     mockReceipt(provider, [ALPHA.depositBatcher]);
     await expect(
-      createVaultClient(sdk, VAULTS).deposit({ groupId: "stable", vaultId: "beta", amount: 10n }),
+      createVaultClient(sdk).deposit(STABLE, { vaultId: "beta", amount: 10n }),
     ).rejects.toMatchObject({
       unconfirmedVaultIds: ["beta"],
     } satisfies Partial<VaultJoinUnconfirmedError>);
   });
 
-  test("sends the grants before the redeem", async ({ sdk, provider, relayer, signer }) => {
+  test("redeem sends the grants before the join", async ({ sdk, provider, relayer, signer }) => {
     mockChain(provider, { operators: false });
     mockEncryption(relayer);
-    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
-      logs: [ALPHA.redeemBatcher, BETA.redeemBatcher].map((batcher) =>
-        joinedLog({ batcher, account: USER, batchId: 1n }),
-      ),
-    });
-    const { txHashes } = await createVaultClient(sdk, VAULTS).redeem({
-      groupId: "stable",
+    mockReceipt(provider, [ALPHA.redeemBatcher, BETA.redeemBatcher]);
+    const { txHashes } = await createVaultClient(sdk).redeem(STABLE, {
       vaultId: "alpha",
       amount: 1n,
     });
@@ -671,44 +660,17 @@ describe("deposit", () => {
       vi.mocked(signer.writeContract).mock.calls.map(([call]) => call.functionName),
     ).toStrictEqual(["setOperator", "setOperator", "join"]);
   });
-});
 
-describe("prepareFinalize", () => {
-  test("settles every dispatched leg with its own public decrypt and proof", async ({
-    sdk,
-    provider,
-  }) => {
-    mockChain(provider, {
-      batches: { [ALPHA.depositBatcher]: { state: 1 }, [BETA.depositBatcher]: { state: 1 } },
-    });
-    const publicDecrypt = vi
-      .spyOn(sdk.decryption, "decryptPublicValues")
-      .mockImplementation(
-        async ([handle]) =>
-          ({
-            clearValues: { [handle as Hex]: 42n },
-            decryptionProof: "0x1234",
-            abiEncodedClearValues: "0x",
-          }) as never,
-      );
-    const prepared = await createVaultClient(sdk, VAULTS).prepareFinalize(record());
-    expect(publicDecrypt).toHaveBeenCalledTimes(2);
-    expect(prepared.sender).toBeNull();
-    expect(
-      prepared.calls.map((call) => {
-        const decoded = decodeCall(vaultBatcherAbi, call.data);
-        return [call.to, decoded.functionName, decoded.args?.[1]];
-      }),
-    ).toStrictEqual([
-      [ALPHA.depositBatcher, "dispatchBatchCallback", 42n],
-      [BETA.depositBatcher, "dispatchBatchCallback", 42n],
-    ]);
-  });
-
-  test("refuses when no leg is dispatched", async ({ sdk, provider }) => {
+  test("claim targets the signer by default", async ({ sdk, provider, signer }) => {
     mockChain(provider);
-    await expect(createVaultClient(sdk, VAULTS).prepareFinalize(record())).rejects.toMatchObject({
-      reason: "nothing-to-finalize",
+    await createVaultClient(sdk).claim({
+      chainId: CHAIN_ID,
+      batcher: ALPHA.depositBatcher,
+      batchId: 3n,
+    });
+    expect(vi.mocked(signer.writeContract).mock.calls[0]?.[0]).toMatchObject({
+      functionName: "claim",
+      args: [3n, USER],
     });
   });
 });
@@ -721,12 +683,20 @@ describe("chain checks", () => {
   }) => {
     mockChain(provider);
     mockEncryption(relayer);
-    const client = createVaultClient(sdk as ZamaSDK, { ...VAULTS, chainId: 1 });
+    const elsewhere = defineVaultGroup({ ...STABLE, chainId: 1 });
     await expect(
-      client.prepareDeposit(
-        { groupId: "stable", vaultId: "alpha", amount: 10n },
-        { account: USER, skipChecks: ["balance"] },
+      createVaultClient(sdk).prepareDeposit(
+        elsewhere,
+        { vaultId: "alpha", account: USER, amount: 10n },
+        { skipChecks: ["balance"] },
       ),
     ).rejects.toThrow(/switch to chain 1/);
+  });
+
+  test("refuses to send while the wallet is on another chain", async ({ sdk, signer }) => {
+    await expect(
+      createVaultClient(sdk).claim({ chainId: 1, batcher: ALPHA.depositBatcher, batchId: 3n }),
+    ).rejects.toMatchObject({ name: "ChainMismatchError", targetChainId: 1 });
+    expect(signer.writeContract).not.toHaveBeenCalled();
   });
 });

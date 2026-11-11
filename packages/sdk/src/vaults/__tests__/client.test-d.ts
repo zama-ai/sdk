@@ -1,53 +1,42 @@
-import type { Address } from "viem";
 import { describe, expectTypeOf, test } from "vitest";
-import type { VaultJoinParams, VaultRecord } from "../client";
-import { defineVaults, type GroupId, type VaultId } from "../config";
+import type { VaultClient } from "../client";
+import { defineVaultGroup, type VaultIdOf } from "../config";
+import type { JoinInput } from "../types";
 
-const VAULTS = defineVaults({
+const STABLE = defineVaultGroup({
+  id: "stable",
   chainId: 1,
-  groups: {
-    stable: {
-      asset: "0x2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a",
-      vaults: {
-        alpha: {
-          depositBatcher: "0xAaaAaAAaAaAAaAaAAaaAaaAaAaAAaAaAaAAAAaaA",
-          redeemBatcher: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB",
-        },
-        beta: {
-          depositBatcher: "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
-          redeemBatcher: "0xdDdDddDdDdddDDddDdDdDDDDdDdDDdDDdDDDDDDd",
-        },
+  asset: "0x2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a",
+  vaults: [
+    {
+      id: "alpha",
+      batchers: {
+        deposit: "0xAaaAaAAaAaAAaAaAAaaAaaAaAaAAaAaAaAAAAaaA",
+        redeem: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB",
       },
+      share: "0x1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c",
     },
-    solo: {
-      asset: "0x2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a",
-      vaults: {
-        main: {
-          depositBatcher: "0x1111111111111111111111111111111111111111",
-          redeemBatcher: "0x2222222222222222222222222222222222222222",
-        },
+    {
+      id: "beta",
+      batchers: {
+        deposit: "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
+        redeem: "0xdDdDddDdDdddDDddDdDdDDDDdDdDDdDDdDDDDDDd",
       },
+      share: "0x3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e",
     },
-  },
+  ],
 });
-type Config = typeof VAULTS;
 
-describe("vault config types", () => {
-  test("keeps group and vault ids as literals", () => {
-    expectTypeOf<GroupId<Config>>().toEqualTypeOf<"stable" | "solo">();
-    expectTypeOf<VaultId<Config, "stable">>().toEqualTypeOf<"alpha" | "beta">();
-    expectTypeOf<VaultRecord<Config>["groupId"]>().toEqualTypeOf<"stable" | "solo">();
+describe("vault group types", () => {
+  test("keeps the group and vault ids as literals", () => {
+    expectTypeOf(STABLE.id).toEqualTypeOf<"stable">();
+    expectTypeOf<VaultIdOf<typeof STABLE>>().toEqualTypeOf<"alpha" | "beta">();
   });
 
-  test("a larger group needs vaultId and takes no beneficiary", () => {
-    type Stable = Extract<VaultJoinParams<Config>, { groupId: "stable" }>;
-    expectTypeOf<Stable["vaultId"]>().toEqualTypeOf<"alpha" | "beta">();
-    expectTypeOf<Stable["beneficiary"]>().toEqualTypeOf<undefined>();
-  });
-
-  test("a group of one may leave out vaultId and name a beneficiary", () => {
-    type Solo = Extract<VaultJoinParams<Config>, { groupId: "solo" }>;
-    expectTypeOf<Solo["vaultId"]>().toEqualTypeOf<"main" | undefined>();
-    expectTypeOf<Solo["beneficiary"]>().toEqualTypeOf<Address | undefined>();
+  test("a join input only takes the group's vault ids", () => {
+    const client = {} as VaultClient;
+    expectTypeOf(client.prepareDeposit<typeof STABLE>)
+      .parameter(1)
+      .toEqualTypeOf<JoinInput<"alpha" | "beta">>();
   });
 });

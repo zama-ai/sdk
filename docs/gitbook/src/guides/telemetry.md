@@ -45,7 +45,6 @@ Each public method that reaches the relayer sends its own value. When a method m
 | `finalize-unwrap`                     | `WrappedToken.finalizeUnwrap`                         |
 | `vault-deposit`                       | `VaultClient.deposit`, `VaultClient.prepareDeposit`   |
 | `vault-redeem`                        | `VaultClient.redeem`, `VaultClient.prepareRedeem`     |
-| `vault-deposit-of`                    | `VaultClient.readPosition` with `decrypt: true`       |
 | `vault-finalize`                      | `VaultClient.finalize`, `VaultClient.prepareFinalize` |
 | `encrypt`                             | `sdk.encrypt`                                         |
 | `decrypt-values`                      | `sdk.decryption.decryptValues`                        |

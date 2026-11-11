@@ -5,23 +5,22 @@ import {
   type UseMutationOptions,
   type UseMutationResult,
 } from "@tanstack/react-query";
+import type { MutationFactoryOptions } from "@zama-fhe/sdk/query";
+import type { TransactionResult } from "@zama-fhe/sdk";
 import {
-  invalidateAfterVaultAction,
+  claimMutationOptions,
   depositMutationOptions,
   dispatchMutationOptions,
-  exitMutationOptions,
   finalizeMutationOptions,
+  invalidateAfterVaultAction,
+  quitMutationOptions,
   redeemMutationOptions,
-  type ActionOutcome,
-  type GroupId,
+  type BatchRef,
   type JoinOutcome,
+  type JoinVariables,
   type VaultClient,
-  type VaultId,
-  type VaultJoinVariables,
-  type VaultRecord,
-  type VaultsConfig,
 } from "@zama-fhe/sdk/vaults";
-import type { MutationFactoryOptions } from "@zama-fhe/sdk/query";
+import type { Address } from "viem";
 import { useVaultClient } from "./use-vault-client";
 
 /** Mutation options accepted by the vault mutation hooks. */
@@ -30,78 +29,77 @@ export type UseVaultMutationOptions<TData, TVariables, TContext = unknown> = Omi
   "mutationKey" | "mutationFn"
 >;
 
-// Every vault mutation invalidates the reads of the group it touched.
-function useVaultMutation<TConfig extends VaultsConfig, TData, TVariables, TContext>(
-  config: TConfig,
-  factory: (
-    client: VaultClient<TConfig>,
-  ) => MutationFactoryOptions<readonly unknown[], TVariables, TData>,
+// Every vault mutation invalidates the vault reads and confidential balances it may have changed.
+function useVaultMutation<TData, TVariables, TContext>(
+  factory: (client: VaultClient) => MutationFactoryOptions<readonly unknown[], TVariables, TData>,
   options: UseVaultMutationOptions<TData, TVariables, TContext> | undefined,
 ): UseMutationResult<TData, Error, TVariables, TContext> {
-  const client = useVaultClient(config);
+  const client = useVaultClient();
   return useMutation({
     ...factory(client),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
-      const { groupId } = variables as { groupId: string };
-      invalidateAfterVaultAction(context.client, { chainId: client.chainId, groupId });
+      invalidateAfterVaultAction(context.client);
       return options?.onSuccess?.(data, variables, onMutateResult, context);
     },
   });
 }
 
 /**
- * Deposit with the SDK's signer. Returns the join record to store.
+ * Deposit with the SDK's signer: every vault of the group gets a leg.
+ * Returns the batch each leg landed in.
  *
  * @example
  * ```tsx
- * const deposit = useDeposit(VAULTS, { onSuccess: ({ record }) => save(record) });
- * deposit.mutate({ groupId: "stable", vaultId: "beta", amount: 1_000_000n });
+ * const deposit = useDeposit({ onSuccess: ({ batches }) => save(batches) });
+ * deposit.mutate({ group: STABLE, vaultId: "beta", amount: 1_000_000n });
  * ```
  */
-export function useDeposit<const TConfig extends VaultsConfig, TContext = unknown>(
-  config: TConfig,
-  options?: UseVaultMutationOptions<
-    JoinOutcome<GroupId<TConfig>, VaultId<TConfig>>,
-    VaultJoinVariables<TConfig>,
-    TContext
-  >,
+export function useDeposit<TContext = unknown>(
+  options?: UseVaultMutationOptions<JoinOutcome, JoinVariables, TContext>,
 ) {
-  return useVaultMutation(config, depositMutationOptions, options);
+  return useVaultMutation(depositMutationOptions, options);
 }
 
 /** Redeem with the SDK's signer. A first redemption from a group of N vaults asks for up to N grants first. */
-export function useRedeem<const TConfig extends VaultsConfig, TContext = unknown>(
-  config: TConfig,
+export function useRedeem<TContext = unknown>(
+  options?: UseVaultMutationOptions<JoinOutcome, JoinVariables, TContext>,
+) {
+  return useVaultMutation(redeemMutationOptions, options);
+}
+
+/** Claim a finalized batch with the SDK's signer, for `account` (default: the signer). A keeper normally does. */
+export function useClaim<TContext = unknown>(
   options?: UseVaultMutationOptions<
-    JoinOutcome<GroupId<TConfig>, VaultId<TConfig>>,
-    VaultJoinVariables<TConfig>,
+    TransactionResult,
+    BatchRef & { readonly account?: Address },
     TContext
   >,
 ) {
-  return useVaultMutation(config, redeemMutationOptions, options);
+  return useVaultMutation(claimMutationOptions, options);
 }
 
-/** Exit every leg of a join with the SDK's signer. Takes the join record. */
-export function useExit<const TConfig extends VaultsConfig, TContext = unknown>(
-  config: TConfig,
-  options?: UseVaultMutationOptions<ActionOutcome, VaultRecord<TConfig>, TContext>,
+/** Quit a pending or canceled batch with the SDK's signer, which must be the depositor. */
+export function useQuit<TContext = unknown>(
+  options?: UseVaultMutationOptions<TransactionResult, BatchRef, TContext>,
 ) {
-  return useVaultMutation(config, exitMutationOptions, options);
+  return useVaultMutation(quitMutationOptions, options);
 }
 
-/** Dispatch every eligible leg's batch with the SDK's signer. A keeper normally does. */
-export function useDispatch<const TConfig extends VaultsConfig, TContext = unknown>(
-  config: TConfig,
-  options?: UseVaultMutationOptions<ActionOutcome, VaultRecord<TConfig>, TContext>,
+/** Dispatch a batcher's open batch with the SDK's signer. A keeper normally does. */
+export function useDispatch<TContext = unknown>(
+  options?: UseVaultMutationOptions<
+    TransactionResult,
+    { readonly chainId: number; readonly batcher: Address },
+    TContext
+  >,
 ) {
-  return useVaultMutation(config, dispatchMutationOptions, options);
+  return useVaultMutation(dispatchMutationOptions, options);
 }
 
-/** Finalize every dispatched leg's batch with the SDK's signer. A keeper normally does. */
-export function useFinalize<const TConfig extends VaultsConfig, TContext = unknown>(
-  config: TConfig,
-  options?: UseVaultMutationOptions<ActionOutcome, VaultRecord<TConfig>, TContext>,
+/** Finalize a dispatched batch with the SDK's signer. A keeper normally does. */
+export function useFinalize<TContext = unknown>(
+  options?: UseVaultMutationOptions<TransactionResult, BatchRef, TContext>,
 ) {
-  return useVaultMutation(config, finalizeMutationOptions, options);
+  return useVaultMutation(finalizeMutationOptions, options);
 }

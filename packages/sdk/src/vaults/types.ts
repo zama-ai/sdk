@@ -10,200 +10,210 @@ export type Direction = "deposit" | "redeem";
  */
 export type BatchState = "pending" | "dispatched" | "finalized" | "canceled";
 
-/** One vault's share of a join: the batcher it joined and the batch it landed in. */
-export interface JoinLeg<TVaultId extends string = string> {
-  /** The vault this leg joined. */
-  readonly vaultId: TVaultId;
-  /** The batcher it joined: the vault's deposit or redeem batcher. */
+/** One EVM call, encoded. Vault calls never carry value. */
+export interface Call {
+  /** The contract called. */
+  readonly to: Address;
+  /** The encoded calldata. */
+  readonly data: Hex;
+  /** Always zero. */
+  readonly value: 0n;
+}
+
+/** One vault's share of a join. Every vault of the group gets one, the unchosen ones with zero. */
+export interface VaultLeg {
+  /** The vault. */
+  readonly vaultId: string;
+  /** The batcher the leg joins: the vault's active one, resolved when the join was prepared. */
   readonly batcher: Address;
-  /** The batch it landed in. */
+  /** What the leg spends: the asset for a deposit, the vault's share token for a redeem. */
+  readonly token: Address;
+  /** The chosen vault's amount, zero for every other leg. */
+  readonly amount: bigint;
+}
+
+/** An ERC-7984 operator grant a join relies on. Present only when the account lacks it. */
+export interface GrantCall extends Call {
+  /** Tells a grant from a join without decoding the calldata. */
+  readonly role: "grant";
+  /** The vault whose token the grant is on. */
+  readonly vaultId: string;
+  /** The token the grant is on. */
+  readonly token: Address;
+  /** The contract granted: the router, or the batcher of a join for a beneficiary. */
+  readonly operator: Address;
+  /** When the grant expires, in chain seconds. */
+  readonly until: bigint;
+}
+
+/** A join call, tagged with the leg it funds. A router call is tagged with the chosen leg. */
+export interface JoinCall extends Call {
+  /** Tells a join from a grant without decoding the calldata. */
+  readonly role: "join";
+  /** The leg this call funds. */
+  readonly leg: VaultLeg;
+}
+
+/** A call of a prepared join. */
+export type VaultCall = GrantCall | JoinCall;
+
+/**
+ * How a join reaches the batchers, derived from the group size and the wallet mode.
+ *
+ * - `"legs"`: one call per leg, straight to each batcher. A group of one always
+ *   takes it. In a larger group the calls must land together.
+ * - `"router"`: one call through the router, after any grants it needs.
+ */
+export type JoinRoute = "legs" | "router";
+
+/**
+ * How the sender's wallet lands several calls.
+ *
+ * - `"sequential"`: one at a time. A multi-vault join goes through the router.
+ * - `"bundle"`: together or not at all (EIP-5792, a Safe, a smart account). A
+ *   multi-vault join sends one transfer per vault, which needs no grant.
+ */
+export type WalletMode = "sequential" | "bundle";
+
+/** A join built but not sent. Plain data, safe to store. */
+export interface PreparedJoin {
+  /** Whether it deposits or redeems. */
+  readonly kind: Direction;
+  /** The chain to send the calls on. */
+  readonly chainId: number;
+  /** The group joined. */
+  readonly groupId: string;
+  /** The vault that receives the amount. */
+  readonly vaultId: string;
+  /** The account the calls come from. */
+  readonly account: Address;
+  /** The amount, in the asset for a deposit and in shares for a redeem. */
+  readonly amount: bigint;
+  /** How the calls reach the batchers. */
+  readonly route: JoinRoute;
+  /** Every vault of the group, in group order, decoys included. */
+  readonly legs: readonly [VaultLeg, ...VaultLeg[]];
+  /**
+   * In send order: the grants the account lacks, then the join calls. With
+   * `route: "legs"` in a group of more than one, send the join calls as one
+   * atomic bundle.
+   */
+  readonly calls: readonly [VaultCall, ...VaultCall[]];
+}
+
+/** What `prepareDeposit` and `prepareRedeem` take. */
+export interface JoinInput<TVaultId extends string = string> {
+  /** The vault the amount goes to. */
+  readonly vaultId: TVaultId;
+  /** The account the calls come from. */
+  readonly account: Address;
+  /** Plaintext; encrypted before it leaves the SDK. For a redeem, in shares. */
+  readonly amount: bigint;
+  /**
+   * The account the batcher credits, when not `account`. Only a group of one
+   * accepts it: the router always credits the sender.
+   */
+  readonly beneficiary?: Address;
+}
+
+/** Checks `prepareDeposit` and `prepareRedeem` may skip. A paused batcher is never skipped. */
+export type VaultCheck = "balance" | "config";
+
+/** Options for `prepareDeposit` and `prepareRedeem`. */
+export interface JoinOptions {
+  /** Defaults to `"sequential"`. */
+  readonly walletMode?: WalletMode;
+  /**
+   * `"balance"`: skip the balance check, which decrypts as the signer and so
+   * is required for any other `account`. `"config"`: skip the one-time check
+   * of the group against the chain.
+   */
+  readonly skipChecks?: readonly VaultCheck[];
+}
+
+/** A batch on one batcher. Batchers rotate, so a batch is identified by its batcher, not its vault. */
+export interface BatchRef {
+  /** The chain the batcher is on. */
+  readonly chainId: number;
+  /** The batcher. */
+  readonly batcher: Address;
+  /** The batch. */
   readonly batchId: bigint;
 }
 
-/**
- * Every leg of one join, decoys included. The value a host stores to read and
- * exit a position later. It never names the chosen vault or the amount.
- *
- * `client.deposit` and `client.redeem` return it. A host that sends the calls
- * itself builds it from its indexer's `Joined` events: one leg per vault of
- * the group, in config order.
- */
-export interface JoinRecord<TGroupId extends string = string, TVaultId extends string = string> {
-  /** The format version. */
-  readonly v: 1;
-  /** The chain the batchers are on. */
-  readonly chainId: number;
-  /** The group joined. */
-  readonly groupId: TGroupId;
-  /** Whether the join deposited or redeemed. */
-  readonly direction: Direction;
-  /** The account the batchers credited. */
-  readonly account: Address;
-  /** One leg per vault of the group, in config order. */
-  readonly legs: readonly JoinLeg<TVaultId>[];
+/** A settlement built but not sent. */
+export interface PreparedFinalize extends BatchRef {
+  /** The publicly decrypted amount the batch's unwrap released. */
+  readonly unwrapAmountCleartext: bigint;
+  /** The proof of that decryption, which the batcher verifies. */
+  readonly decryptionProof: Hex;
+  /** The `dispatchBatchCallback` call. */
+  readonly call: Call;
 }
 
-interface LegBase<TVaultId extends string> extends JoinLeg<TVaultId> {
-  /** The account's encrypted deposit in this batch. An exit leaves an encrypted zero. */
-  readonly deposit: EncryptedValue;
-  /** The decrypted deposit, or `null` when the position was read without `decrypt`. */
-  readonly amount: bigint | null;
-}
+/** The batcher a join reaches right now on each vault, keyed by vault id. */
+export type ActiveBatchers = Readonly<Record<string, Address>>;
 
-/** One leg as read from chain, with what its state allows. Timestamps are chain seconds. */
-export type Leg<TVaultId extends string = string> = LegBase<TVaultId> &
-  (
-    | {
-        readonly state: "pending";
-        /** When anyone may dispatch the batch. */
-        readonly dispatchableAt: bigint;
-        /** A paused batcher cannot dispatch. */
-        readonly paused: boolean;
-      }
-    | {
-        readonly state: "dispatched";
-        /** From then on, finalizing cancels the batch instead of settling it. */
-        readonly cancelsAt: bigint;
-      }
-    | {
-        readonly state: "finalized";
-        /** A claim pays `deposit * rate / 10 ** decimals`, rounded down. */
-        readonly exchangeRate: { readonly rate: bigint; readonly decimals: number };
-      }
-    | { readonly state: "canceled" }
-  );
+/** What can be sent for a batch now. */
+export type BatchAction = "claim" | "quit" | "dispatch" | "finalize";
 
-/**
- * Where a join is, taken over all its legs.
- *
- * - `queued`: every leg is pending.
- * - `settling`: some leg is dispatched. Only `finalize` applies.
- * - `ready`: no leg is dispatched and some leg is finalized or canceled. `exit` pays out or refunds.
- * - `closed`: read with `decrypt`, and every deposit is zero: the position was exited.
- *
- * Without `decrypt`, an exited position still reads `ready` (or `queued`), and
- * `exit` stays available. Exits are idempotent on chain, so sending it again
- * moves nothing.
- */
-export type PositionPhase = "queued" | "settling" | "ready" | "closed";
-
-/** What can be sent for a position right now. Each maps to a client method that takes the record. */
-export type VaultAction = "exit" | "dispatch" | "finalize";
-
-/** A join record read from chain. */
-export interface Position<TGroupId extends string = string, TVaultId extends string = string> {
-  /** The join read. */
-  readonly record: JoinRecord<TGroupId, TVaultId>;
-  /** Where the join is, over all its legs. */
-  readonly phase: PositionPhase;
-  /** One per record leg, in the same order. */
-  readonly legs: readonly Leg<TVaultId>[];
-  /** The actions legal now. */
-  readonly availableActions: readonly VaultAction[];
-  /** The leg with a non-zero deposit, after a read with `decrypt`. Never stored in the record. */
-  readonly chosenVaultId: TVaultId | null;
+interface BatchBase extends BatchRef {
+  /** When the batch opened. */
+  readonly createdAt: bigint;
+  /** When anyone may dispatch it, pinned when it opened. */
+  readonly dispatchableAt: bigint;
+  /** Whether the batcher is paused. A paused batcher takes no join and no dispatch. */
+  readonly paused: boolean;
+  /** `account`'s encrypted deposit in the batch, when the read named an account. A claim or quit leaves an encrypted zero. */
+  readonly deposit: EncryptedValue | null;
+  /**
+   * What can be sent now. `quit` needs the depositor as sender; the others are
+   * permissionless, and a keeper normally sends them. Without an account, only
+   * `dispatch` and `finalize` are listed.
+   */
+  readonly actions: readonly BatchAction[];
   /** The block timestamp the read was made at. */
   readonly observedAt: bigint;
-  /** The next chain time at which `availableActions` can change on its own, or `null`. */
+  /** The next chain time at which `actions` can change on its own, or `null`. */
   readonly nextChangeAt: bigint | null;
 }
 
+interface DispatchedTimes {
+  /** When it was dispatched. */
+  readonly dispatchedAt: bigint;
+  /** From then on, finalizing cancels it instead of settling it. */
+  readonly cancelsAt: bigint;
+}
+
+/** One batch as read from chain, with the fields its state has. Timestamps are chain seconds. */
+export type Batch =
+  | (BatchBase & { readonly state: "pending" })
+  | (BatchBase & DispatchedTimes & { readonly state: "dispatched" | "canceled" })
+  | (BatchBase &
+      DispatchedTimes & {
+        readonly state: "finalized";
+        /** A claim pays `deposit * rate / 10 ** decimals`, rounded down. */
+        readonly exchangeRate: { readonly rate: bigint; readonly decimals: number };
+      });
+
 /** The open batch of one vault, for a form that shows when the next batch closes. */
-export interface OpenBatch<TVaultId extends string = string> {
+export interface OpenBatch extends BatchRef {
   /** The vault. */
-  readonly vaultId: TVaultId;
-  /** Its batcher for the direction read. */
-  readonly batcher: Address;
-  /** The open batch, which the next join lands in. */
-  readonly batchId: bigint;
+  readonly vaultId: string;
   /** When anyone may dispatch the batch. */
   readonly dispatchableAt: bigint;
   /** A paused batcher takes no join and no dispatch. */
   readonly paused: boolean;
-}
-
-/** A call ready for any transaction pipeline. */
-export interface VaultCall {
-  /** The contract called. */
-  readonly to: Address;
-  /** The encoded calldata. Send it with no value. */
-  readonly data: Hex;
-}
-
-/**
- * What a `prepare*` method returns: plain data, safe to store and to send
- * through a host's own pipeline. Send every grant before the calls.
- */
-export interface PreparedVaultAction<TGroupId extends string = string> {
-  /** The format version. */
-  readonly v: 1;
-  /** The client method that prepared it. */
-  readonly kind: "deposit" | "redeem" | "exit" | "dispatch" | "finalize";
-  /** The chain to send the calls on. */
-  readonly chainId: number;
-  /** The group acted on. */
-  readonly groupId: TGroupId;
-  /** The account that must send the calls, or `null` when anyone may. */
-  readonly sender: Address | null;
-  /** ERC-7984 operator grants the account lacks. Idempotent; send them first, in any order. */
-  readonly grants: readonly VaultCall[];
-  /** At least one call. */
-  readonly calls: readonly VaultCall[];
-  /**
-   * `true` when the calls must land in one atomic bundle: the per-vault legs
-   * of an `"atomic"` join. Sent one by one, a user who stops partway reveals
-   * the vaults the rest would have named.
-   */
-  readonly atomic: boolean;
-  /** When the earliest grant expires, in chain seconds. Prepare again after it. `null` without grants. */
-  readonly expiresAt: bigint | null;
-}
-
-/** Checks a `prepare*` method may skip. A paused batcher is never skipped. */
-export type VaultCheck = "balance" | "config";
-
-/** Options for `prepareDeposit` and `prepareRedeem`. */
-export interface PrepareJoinOptions {
-  /** The account the join comes from. Defaults to the signer's. */
-  readonly account?: Address;
-  /**
-   * `"sequential"` (default): one router call in a multi-vault group, for a
-   * wallet that sends calls one by one. `"atomic"`: one transfer per vault and
-   * no grants, for a wallet that bundles them atomically.
-   */
-  readonly walletMode?: "sequential" | "atomic";
-  /**
-   * `"balance"`: skip the balance check, which decrypts as the signer, so it
-   * is required for any other `account`. `"config"`: skip the one-time check
-   * of the config against the chain.
-   */
-  readonly skipChecks?: readonly VaultCheck[];
-  /** How long a grant lasts. Defaults to 3600 seconds. */
-  readonly grantValiditySeconds?: number;
-}
-
-/** Options for `client.deposit` and `client.redeem`. */
-export interface JoinOptions extends Pick<
-  PrepareJoinOptions,
-  "skipChecks" | "grantValiditySeconds"
-> {
-  /**
-   * Called with the join's transaction hash once the wallet has sent it,
-   * before the SDK waits for the receipt.
-   */
-  readonly onJoinSubmitted?: (txHash: Hex) => void;
+  /** The block timestamp the read was made at. */
+  readonly observedAt: bigint;
 }
 
 /** What `client.deposit` and `client.redeem` return. */
-export interface JoinOutcome<TGroupId extends string = string, TVaultId extends string = string> {
-  /** Store it to read and exit the position later. */
-  readonly record: JoinRecord<TGroupId, TVaultId>;
+export interface JoinOutcome {
+  /** What was sent. */
+  readonly prepared: PreparedJoin;
+  /** The batch each leg landed in, in group order. */
+  readonly batches: readonly (BatchRef & { readonly vaultId: string })[];
   /** Every transaction sent, grants first. */
-  readonly txHashes: readonly Hex[];
-}
-
-/** What `client.exit`, `client.dispatch` and `client.finalize` return. */
-export interface ActionOutcome {
-  /** Every transaction sent, in order. */
   readonly txHashes: readonly Hex[];
 }

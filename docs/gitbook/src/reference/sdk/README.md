@@ -12,7 +12,7 @@ API reference for the core `@zama-fhe/sdk` package. Each page documents a single
 
 🟨 Go to [**WrappedToken**](WrappedToken.md) for ERC-7984 ERC-20 wrapper operations — shield, unshield, allowance.
 
-🟨 Go to [**VaultClient**](VaultClient.md) for confidential ERC-4626 vaults: `defineVaults`, `createVaultClient`, batched deposits and redemptions, positions, and exits, for a single vault or a group that hides which vault you chose.
+🟨 Go to [**VaultClient**](VaultClient.md) for confidential ERC-4626 vaults: `defineVaultGroup`, `createVaultClient`, batched deposits and redemptions, batch reads, claims and quits, for a single vault or a group that hides which vault you chose.
 
 🟨 Go to [**web() transport**](RelayerWeb.md) for browser-side FHE encryption via bundled WASM.
 

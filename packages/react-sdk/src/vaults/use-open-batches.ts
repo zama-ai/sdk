@@ -4,36 +4,28 @@ import type { UseQueryOptions } from "@tanstack/react-query";
 import {
   openBatchesQueryOptions,
   type Direction,
-  type GroupId,
   type OpenBatch,
-  type VaultId,
-  type VaultsConfig,
+  type VaultGroup,
 } from "@zama-fhe/sdk/vaults";
 import { useQuery } from "../utils/query";
 import { useVaultClient } from "./use-vault-client";
 
 /**
- * The open batch of every vault of a group, for a form that shows when the
- * next batch closes. Needs no join record.
+ * The open batch each vault of a group takes joins into, for a form that
+ * shows when the next batch closes.
  *
  * @example
  * ```tsx
- * const { data: batches } = useOpenBatches(VAULTS, { groupId: "stable", direction: "deposit" });
+ * const { data: batches } = useOpenBatches(STABLE, "deposit");
  * ```
  */
-export function useOpenBatches<
-  const TConfig extends VaultsConfig,
-  TGroupId extends GroupId<TConfig>,
->(
-  config: TConfig,
-  params: { readonly groupId: TGroupId; readonly direction: Direction },
-  options?: Omit<
-    UseQueryOptions<readonly OpenBatch<VaultId<TConfig, TGroupId>>[]>,
-    "queryKey" | "queryFn"
-  >,
+export function useOpenBatches(
+  group: VaultGroup,
+  direction: Direction,
+  options?: Omit<UseQueryOptions<readonly OpenBatch[]>, "queryKey" | "queryFn">,
 ) {
-  return useQuery<readonly OpenBatch<VaultId<TConfig, TGroupId>>[]>({
-    ...openBatchesQueryOptions(useVaultClient(config), params),
+  return useQuery<readonly OpenBatch[]>({
+    ...openBatchesQueryOptions(useVaultClient(), { group, direction }),
     ...options,
   });
 }

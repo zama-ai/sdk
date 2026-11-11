@@ -4,13 +4,14 @@
  * @packageDocumentation
  */
 export { useVaultClient } from "./use-vault-client";
-export { usePosition, type UsePositionOptions } from "./use-position";
+export { useBatch, type UseBatchOptions } from "./use-batch";
 export { useOpenBatches } from "./use-open-batches";
 export {
+  useClaim,
   useDeposit,
   useDispatch,
-  useExit,
   useFinalize,
+  useQuit,
   useRedeem,
   type UseVaultMutationOptions,
 } from "./use-mutations";

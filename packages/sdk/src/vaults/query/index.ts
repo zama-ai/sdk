@@ -1,93 +1,98 @@
-import { getAddress } from "viem";
+import { getAddress, type Address, type Hex } from "viem";
 import type { MutationFactoryOptions, QueryFactoryOptions } from "../../query/factory-types";
 import type { QueryClientLike } from "../../query/invalidation";
 import { zamaQueryKeys } from "../../query/query-keys";
 import { filterQueryOptions } from "../../query/utils";
+import type { TransactionResult } from "../../types";
 import { assertNonNullable } from "../../utils/assertions";
-import type { VaultClient, VaultJoinParams, VaultPosition, VaultRecord } from "../client";
-import type { GroupId, VaultId, VaultsConfig } from "../config";
-import type { ActionOutcome, Direction, JoinOptions, JoinOutcome, OpenBatch } from "../types";
+import type { VaultClient } from "../client";
+import type { VaultGroup, VaultIdOf } from "../config";
+import type {
+  Batch,
+  BatchRef,
+  Direction,
+  JoinInput,
+  JoinOptions,
+  JoinOutcome,
+  OpenBatch,
+} from "../types";
 
-/** How often a position is read again while a batch settles, which no chain time predicts. */
-const SETTLING_POLL_MS = 15_000;
+/** How often a batch waiting for a keeper is read again. */
+const KEEPER_POLL_MS = 15_000;
 
-/**
- * Query keys for the vaults module. A `group(...)` key is a prefix of every
- * key of that group, so invalidating it clears all of them.
- */
+/** Query keys for the vaults module. `all` is a prefix of every vault key. */
 export const vaultQueryKeys = {
   all: ["zama.vault"] as const,
-  group: (chainId: number, groupId: string) => ["zama.vault", { chainId, groupId }] as const,
-  position: (record: VaultRecord<VaultsConfig> | undefined, decrypt: boolean) =>
+  batch: (batch: BatchRef | undefined, account: Address | undefined) =>
     [
       "zama.vault",
       {
-        chainId: record?.chainId,
-        groupId: record?.groupId,
-        kind: "position",
-        direction: record?.direction,
-        account: record ? getAddress(record.account) : undefined,
-        batchIds: record?.legs.map((leg) => leg.batchId),
-        decrypt,
+        kind: "batch",
+        chainId: batch?.chainId,
+        batcher: batch === undefined ? undefined : getAddress(batch.batcher),
+        batchId: batch?.batchId,
+        account: account === undefined ? undefined : getAddress(account),
       },
     ] as const,
-  openBatches: (chainId: number, groupId: string, direction: Direction) =>
-    ["zama.vault", { chainId, groupId, kind: "openBatches", direction }] as const,
+  openBatches: (group: VaultGroup, direction: Direction) =>
+    [
+      "zama.vault",
+      { kind: "openBatches", chainId: group.chainId, groupId: group.id, direction },
+    ] as const,
 };
 
-/** Configuration for {@link positionQueryOptions}. */
-export interface PositionQueryConfig<TConfig extends VaultsConfig> {
-  /** The join to read. The query stays disabled until it is set. */
-  record?: VaultRecord<TConfig>;
-  /** Decrypt every leg's deposit, as the signer. */
-  decrypt?: boolean;
+/** Configuration for {@link batchQueryOptions}. */
+export interface BatchQueryConfig {
+  /** The batch to read. The query stays disabled until it is set. */
+  batch?: BatchRef;
+  /** Read this account's deposit, and list `claim` and `quit` for it. */
+  account?: Address;
   /** Additional TanStack Query options merged into the generated query. */
   query?: Record<string, unknown>;
 }
 
 /**
- * Query options over {@link VaultClient.readPosition}. Refetches when the
- * position's `nextChangeAt` passes, and polls while a leg settles.
+ * When to read a batch again: one second past its next chain-time edge, or
+ * on a poll while it waits for someone else's transaction (a dispatch once it
+ * is old enough, a settlement once dispatched), which no chain time predicts.
  */
-export function positionQueryOptions<TConfig extends VaultsConfig>(
-  client: VaultClient<TConfig>,
-  config: PositionQueryConfig<TConfig> = {},
-): QueryFactoryOptions<
-  VaultPosition<TConfig>,
-  Error,
-  VaultPosition<TConfig>,
-  ReturnType<typeof vaultQueryKeys.position>
-> {
+function batchRefetchInterval(read: Batch | undefined): number | false {
+  if (read === undefined || read.state === "finalized" || read.state === "canceled") {
+    return false;
+  }
+  if (read.nextChangeAt === null) {
+    return KEEPER_POLL_MS;
+  }
+  return Number(read.nextChangeAt - read.observedAt) * 1000 + 1000;
+}
+
+/**
+ * Query options over {@link VaultClient.readBatch}. Refetches when the
+ * batch's `nextChangeAt` passes, and polls while it waits for a dispatch or a
+ * settlement. Pass your own `refetchInterval` to `useQuery` to replace it.
+ */
+export function batchQueryOptions(
+  client: VaultClient,
+  config: BatchQueryConfig = {},
+): QueryFactoryOptions<Batch, Error, Batch, ReturnType<typeof vaultQueryKeys.batch>> {
   const queryOpts = config.query ?? {};
-  const record = config.record;
+  const { batch, account } = config;
   return {
+    refetchInterval: (query) => batchRefetchInterval(query.state.data),
     ...filterQueryOptions(queryOpts),
-    queryKey: vaultQueryKeys.position(record, config.decrypt ?? false),
+    queryKey: vaultQueryKeys.batch(batch, account),
     queryFn: async () => {
-      assertNonNullable(record, "positionQueryOptions: record");
-      return client.readPosition(record, { decrypt: config.decrypt });
+      assertNonNullable(batch, "batchQueryOptions: batch");
+      return client.readBatch({ ...batch, account });
     },
-    refetchInterval: (query) => {
-      const position = query.state.data;
-      if (position === undefined) {
-        return false;
-      }
-      if (position.phase === "settling") {
-        return SETTLING_POLL_MS;
-      }
-      // One second past the edge, so the read lands in a block at or after it.
-      return position.nextChangeAt === null
-        ? false
-        : Number(position.nextChangeAt - position.observedAt) * 1000 + 1000;
-    },
-    enabled: record !== undefined && queryOpts.enabled !== false,
+    enabled: batch !== undefined && queryOpts.enabled !== false,
   };
 }
 
 /** Configuration for {@link openBatchesQueryOptions}. */
-export interface OpenBatchesQueryConfig<TGroupId extends string> {
+export interface OpenBatchesQueryConfig {
   /** The group to read. */
-  groupId: TGroupId;
+  group: VaultGroup;
   /** Whether to read the deposit or the redeem batchers. */
   direction: Direction;
   /** Additional TanStack Query options merged into the generated query. */
@@ -95,115 +100,116 @@ export interface OpenBatchesQueryConfig<TGroupId extends string> {
 }
 
 /** Query options over {@link VaultClient.readOpenBatches}. */
-export function openBatchesQueryOptions<
-  TConfig extends VaultsConfig,
-  TGroupId extends GroupId<TConfig>,
->(
-  client: VaultClient<TConfig>,
-  config: OpenBatchesQueryConfig<TGroupId>,
+export function openBatchesQueryOptions(
+  client: VaultClient,
+  config: OpenBatchesQueryConfig,
 ): QueryFactoryOptions<
-  readonly OpenBatch<VaultId<TConfig, TGroupId>>[],
+  readonly OpenBatch[],
   Error,
-  readonly OpenBatch<VaultId<TConfig, TGroupId>>[],
+  readonly OpenBatch[],
   ReturnType<typeof vaultQueryKeys.openBatches>
 > {
-  const queryOpts = config.query ?? {};
   return {
-    ...filterQueryOptions(queryOpts),
-    queryKey: vaultQueryKeys.openBatches(client.chainId, config.groupId, config.direction),
-    queryFn: async () => client.readOpenBatches(config.groupId, config.direction),
+    ...filterQueryOptions(config.query ?? {}),
+    queryKey: vaultQueryKeys.openBatches(config.group, config.direction),
+    queryFn: async () => client.readOpenBatches(config.group, config.direction),
   };
 }
 
 /**
- * Invalidates what a vault action changes: every read of the group and every
- * confidential balance. Call it after sending a prepared action yourself; the
- * mutation options call it for you.
+ * Invalidates what a vault transaction changes: every vault read and every
+ * confidential balance. Call it after sending prepared calls yourself; the
+ * mutation options' hooks call it for you.
  */
-export function invalidateAfterVaultAction(
-  queryClient: QueryClientLike,
-  params: { readonly chainId: number; readonly groupId: string },
-): void {
-  void queryClient.invalidateQueries({
-    queryKey: vaultQueryKeys.group(params.chainId, params.groupId),
-  });
+export function invalidateAfterVaultAction(queryClient: QueryClientLike): void {
+  void queryClient.invalidateQueries({ queryKey: vaultQueryKeys.all });
   void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
   void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalances.all });
 }
 
 /** Variables for {@link depositMutationOptions} and {@link redeemMutationOptions}. */
-export type VaultJoinVariables<TConfig extends VaultsConfig> = VaultJoinParams<TConfig> & {
-  readonly options?: JoinOptions;
-};
+export interface JoinVariables<TGroup extends VaultGroup = VaultGroup>
+  extends Omit<JoinInput<VaultIdOf<TGroup>>, "account">, Pick<JoinOptions, "skipChecks"> {
+  /** The group to join. */
+  readonly group: TGroup;
+  /** Called with the join's transaction hash once the wallet has sent it. */
+  readonly onJoinSubmitted?: (txHash: Hex) => void;
+}
+
+function joinMutation(client: VaultClient, direction: Direction) {
+  return {
+    mutationKey: [`zama.vault.${direction}`] as const,
+    mutationFn: async ({ group, skipChecks, onJoinSubmitted, ...input }: JoinVariables) =>
+      client[direction](group, input, { skipChecks, onJoinSubmitted }),
+  };
+}
 
 /** Mutation options over {@link VaultClient.deposit}. */
-export function depositMutationOptions<TConfig extends VaultsConfig>(
-  client: VaultClient<TConfig>,
-): MutationFactoryOptions<
-  readonly ["zama.vault.deposit", number],
-  VaultJoinVariables<TConfig>,
-  JoinOutcome<GroupId<TConfig>, VaultId<TConfig>>
-> {
-  return {
-    mutationKey: ["zama.vault.deposit", client.chainId] as const,
-    mutationFn: async ({ options, ...params }) =>
-      client.deposit(params as VaultJoinParams<TConfig>, options),
-  };
+export function depositMutationOptions(
+  client: VaultClient,
+): MutationFactoryOptions<readonly ["zama.vault.deposit"], JoinVariables, JoinOutcome> {
+  return joinMutation(client, "deposit") as MutationFactoryOptions<
+    readonly ["zama.vault.deposit"],
+    JoinVariables,
+    JoinOutcome
+  >;
 }
 
 /** Mutation options over {@link VaultClient.redeem}. */
-export function redeemMutationOptions<TConfig extends VaultsConfig>(
-  client: VaultClient<TConfig>,
+export function redeemMutationOptions(
+  client: VaultClient,
+): MutationFactoryOptions<readonly ["zama.vault.redeem"], JoinVariables, JoinOutcome> {
+  return joinMutation(client, "redeem") as MutationFactoryOptions<
+    readonly ["zama.vault.redeem"],
+    JoinVariables,
+    JoinOutcome
+  >;
+}
+
+/** Mutation options over {@link VaultClient.claim}. */
+export function claimMutationOptions(
+  client: VaultClient,
 ): MutationFactoryOptions<
-  readonly ["zama.vault.redeem", number],
-  VaultJoinVariables<TConfig>,
-  JoinOutcome<GroupId<TConfig>, VaultId<TConfig>>
+  readonly ["zama.vault.claim"],
+  BatchRef & { readonly account?: Address },
+  TransactionResult
 > {
   return {
-    mutationKey: ["zama.vault.redeem", client.chainId] as const,
-    mutationFn: async ({ options, ...params }) =>
-      client.redeem(params as VaultJoinParams<TConfig>, options),
+    mutationKey: ["zama.vault.claim"] as const,
+    mutationFn: async (batch) => client.claim(batch),
   };
 }
 
-/** Mutation options over {@link VaultClient.exit}. */
-export function exitMutationOptions<TConfig extends VaultsConfig>(
-  client: VaultClient<TConfig>,
-): MutationFactoryOptions<
-  readonly ["zama.vault.exit", number],
-  VaultRecord<TConfig>,
-  ActionOutcome
-> {
+/** Mutation options over {@link VaultClient.quit}. */
+export function quitMutationOptions(
+  client: VaultClient,
+): MutationFactoryOptions<readonly ["zama.vault.quit"], BatchRef, TransactionResult> {
   return {
-    mutationKey: ["zama.vault.exit", client.chainId] as const,
-    mutationFn: async (record) => client.exit(record),
+    mutationKey: ["zama.vault.quit"] as const,
+    mutationFn: async (batch) => client.quit(batch),
   };
 }
 
 /** Mutation options over {@link VaultClient.dispatch}. */
-export function dispatchMutationOptions<TConfig extends VaultsConfig>(
-  client: VaultClient<TConfig>,
+export function dispatchMutationOptions(
+  client: VaultClient,
 ): MutationFactoryOptions<
-  readonly ["zama.vault.dispatch", number],
-  VaultRecord<TConfig>,
-  ActionOutcome
+  readonly ["zama.vault.dispatch"],
+  { readonly chainId: number; readonly batcher: Address },
+  TransactionResult
 > {
   return {
-    mutationKey: ["zama.vault.dispatch", client.chainId] as const,
-    mutationFn: async (record) => client.dispatch(record),
+    mutationKey: ["zama.vault.dispatch"] as const,
+    mutationFn: async (batch) => client.dispatch(batch),
   };
 }
 
 /** Mutation options over {@link VaultClient.finalize}. */
-export function finalizeMutationOptions<TConfig extends VaultsConfig>(
-  client: VaultClient<TConfig>,
-): MutationFactoryOptions<
-  readonly ["zama.vault.finalize", number],
-  VaultRecord<TConfig>,
-  ActionOutcome
-> {
+export function finalizeMutationOptions(
+  client: VaultClient,
+): MutationFactoryOptions<readonly ["zama.vault.finalize"], BatchRef, TransactionResult> {
   return {
-    mutationKey: ["zama.vault.finalize", client.chainId] as const,
-    mutationFn: async (record) => client.finalize(record),
+    mutationKey: ["zama.vault.finalize"] as const,
+    mutationFn: async (batch) => client.finalize(batch),
   };
 }

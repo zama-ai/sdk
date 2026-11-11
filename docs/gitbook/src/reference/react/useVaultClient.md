@@ -1,11 +1,11 @@
 ---
 title: useVaultClient
-description: Returns the VaultClient for a defineVaults config, memoized per SDK and config.
+description: Returns the VaultClient of the SDK in context, memoized per SDK.
 ---
 
 # useVaultClient
 
-Returns the [`VaultClient`](../sdk/VaultClient.md) for a `defineVaults` config, created with the SDK from [`ZamaProvider`](ZamaProvider.md). The client is memoized per SDK and config, so define the config once at module level to keep its identity across renders.
+Returns the [`VaultClient`](../sdk/VaultClient.md) of the SDK from [`ZamaProvider`](ZamaProvider.md). The client is memoized per SDK. It holds no config: its methods take the group or the batch they act on, so one client serves every group and chain.
 
 The other vault hooks call it for you. Use it directly when you need a method no hook wraps, such as a `prepare*` method for your own transaction pipeline.
 
@@ -22,18 +22,19 @@ import { useVaultClient } from "@zama-fhe/react-sdk/vaults";
 
 ```tsx
 import { useVaultClient } from "@zama-fhe/react-sdk/vaults";
-import { VAULTS } from "./vaults";
+import type { Address } from "viem";
+import { STABLE } from "./vaults";
 
-function PrepareButton() {
-  const client = useVaultClient(VAULTS);
+function PrepareButton({ account }: { account: Address }) {
+  const vaults = useVaultClient();
 
   async function handleClick() {
-    const prepared = await client.prepareDeposit({
-      groupId: "stable",
+    const prepared = await vaults.prepareDeposit(STABLE, {
       vaultId: "beta",
+      account,
       amount: 1_000_000n,
     });
-    await sendPrepared(prepared);
+    await sendCalls(prepared.calls);
   }
 
   return <button onClick={handleClick}>Deposit</button>;
@@ -44,41 +45,42 @@ function PrepareButton() {
 {% tab title="vaults.ts" %}
 
 ```ts
-import { defineVaults } from "@zama-fhe/sdk/vaults";
+import { defineVaultGroup } from "@zama-fhe/sdk/vaults";
 
-export const VAULTS = defineVaults({
+export const STABLE = defineVaultGroup({
+  id: "stable",
   chainId: 1,
-  groups: {
-    stable: {
-      asset: "0xConfidentialUSDC",
-      vaults: {
-        alpha: { depositBatcher: "0xAlphaDeposit", redeemBatcher: "0xAlphaRedeem" },
-        beta: { depositBatcher: "0xBetaDeposit", redeemBatcher: "0xBetaRedeem" },
-      },
+  asset: "0xConfidentialUSDC",
+  vaults: [
+    {
+      id: "alpha",
+      batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
+      share: "0xAlphaShare",
     },
-  },
+    {
+      id: "beta",
+      batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
+      share: "0xBetaShare",
+    },
+  ],
 });
 ```
 
 {% endtab %}
 {% endtabs %}
 
-`sendPrepared` stands in for your own pipeline. See [Send through your own pipeline](../../guides/vaults/groups.md#send-through-your-own-pipeline).
+`sendCalls` stands in for your own pipeline. See [Send through your own pipeline](../../guides/vaults/groups.md#send-through-your-own-pipeline).
 
 ## Parameters
 
-### config
-
-`VaultsConfig`
-
-The config returned by [`defineVaults`](../sdk/VaultClient.md#definevaults). Pass the same object on every render: a new object creates a new client.
+None.
 
 ## Return Type
 
-`VaultClient<typeof config>`. See [`VaultClient`](../sdk/VaultClient.md).
+`VaultClient`. See [`VaultClient`](../sdk/VaultClient.md).
 
 ## Related
 
 - [VaultClient](../sdk/VaultClient.md): every method of the client
-- [usePosition](./usePosition.md), [useDeposit](./useDeposit.md): the hooks built on it
+- [useDeposit](./useDeposit.md), [useBatch](./useBatch.md): hooks built on it
 - [Vaults overview](../../guides/vaults/README.md)

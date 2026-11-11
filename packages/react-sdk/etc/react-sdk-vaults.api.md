@@ -4,54 +4,63 @@
 
 ```ts
 
-import { ActionOutcome } from '@zama-fhe/sdk/vaults';
+import { Address } from 'viem';
+import { Batch } from '@zama-fhe/sdk/vaults';
+import { BatchRef } from '@zama-fhe/sdk/vaults';
 import { Direction } from '@zama-fhe/sdk/vaults';
-import { GroupId } from '@zama-fhe/sdk/vaults';
 import { JoinOutcome } from '@zama-fhe/sdk/vaults';
+import { JoinVariables } from '@zama-fhe/sdk/vaults';
 import { OpenBatch } from '@zama-fhe/sdk/vaults';
+import { TransactionResult } from '@zama-fhe/sdk';
 import { UseMutationOptions } from '@tanstack/react-query';
 import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
 import { UseQueryResult } from '@tanstack/react-query';
 import { VaultClient } from '@zama-fhe/sdk/vaults';
-import { VaultId } from '@zama-fhe/sdk/vaults';
-import { VaultJoinVariables } from '@zama-fhe/sdk/vaults';
-import { VaultPosition } from '@zama-fhe/sdk/vaults';
-import { VaultRecord } from '@zama-fhe/sdk/vaults';
-import { VaultsConfig } from '@zama-fhe/sdk/vaults';
+import { VaultGroup } from '@zama-fhe/sdk/vaults';
 
 // @public
-export function useDeposit<const TConfig extends VaultsConfig, TContext = unknown>(config: TConfig, options?: UseVaultMutationOptions<JoinOutcome<GroupId<TConfig>, VaultId<TConfig>>, VaultJoinVariables<TConfig>, TContext>): UseMutationResult<JoinOutcome<GroupId<TConfig>, VaultId<TConfig, GroupId<TConfig>>>, Error, VaultJoinVariables<TConfig>, TContext>;
+export function useBatch(batch: BatchRef | undefined, options?: UseBatchOptions): UseQueryResult<Batch, Error>;
 
 // @public
-export function useDispatch<const TConfig extends VaultsConfig, TContext = unknown>(config: TConfig, options?: UseVaultMutationOptions<ActionOutcome, VaultRecord<TConfig>, TContext>): UseMutationResult<ActionOutcome, Error, VaultRecord<TConfig>, TContext>;
-
-// @public
-export function useExit<const TConfig extends VaultsConfig, TContext = unknown>(config: TConfig, options?: UseVaultMutationOptions<ActionOutcome, VaultRecord<TConfig>, TContext>): UseMutationResult<ActionOutcome, Error, VaultRecord<TConfig>, TContext>;
-
-// @public
-export function useFinalize<const TConfig extends VaultsConfig, TContext = unknown>(config: TConfig, options?: UseVaultMutationOptions<ActionOutcome, VaultRecord<TConfig>, TContext>): UseMutationResult<ActionOutcome, Error, VaultRecord<TConfig>, TContext>;
-
-// @public
-export function useOpenBatches<const TConfig extends VaultsConfig, TGroupId extends GroupId<TConfig>>(config: TConfig, params: {
-    readonly groupId: TGroupId;
-    readonly direction: Direction;
-}, options?: Omit<UseQueryOptions<readonly OpenBatch<VaultId<TConfig, TGroupId>>[]>, "queryKey" | "queryFn">): UseQueryResult<readonly OpenBatch<VaultId<TConfig, TGroupId>>[], Error>;
-
-// @public
-export function usePosition<const TConfig extends VaultsConfig>(config: TConfig, record: VaultRecord<TConfig> | undefined, options?: UsePositionOptions<TConfig>): UseQueryResult<VaultPosition<TConfig>, Error>;
-
-// @public
-export interface UsePositionOptions<TConfig extends VaultsConfig> extends Omit<UseQueryOptions<VaultPosition<TConfig>>, "queryKey" | "queryFn" | "enabled"> {
-    decrypt?: boolean;
+export interface UseBatchOptions extends Omit<UseQueryOptions<Batch>, "queryKey" | "queryFn" | "enabled"> {
+    account?: Address;
     enabled?: boolean;
 }
 
 // @public
-export function useRedeem<const TConfig extends VaultsConfig, TContext = unknown>(config: TConfig, options?: UseVaultMutationOptions<JoinOutcome<GroupId<TConfig>, VaultId<TConfig>>, VaultJoinVariables<TConfig>, TContext>): UseMutationResult<JoinOutcome<GroupId<TConfig>, VaultId<TConfig, GroupId<TConfig>>>, Error, VaultJoinVariables<TConfig>, TContext>;
+export function useClaim<TContext = unknown>(options?: UseVaultMutationOptions<TransactionResult, BatchRef & {
+    readonly account?: Address;
+}, TContext>): UseMutationResult<TransactionResult, Error, BatchRef & {
+    readonly account?: Address;
+}, TContext>;
 
 // @public
-export function useVaultClient<const TConfig extends VaultsConfig>(config: TConfig): VaultClient<TConfig>;
+export function useDeposit<TContext = unknown>(options?: UseVaultMutationOptions<JoinOutcome, JoinVariables, TContext>): UseMutationResult<JoinOutcome, Error, JoinVariables<VaultGroup<string, string>>, TContext>;
+
+// @public
+export function useDispatch<TContext = unknown>(options?: UseVaultMutationOptions<TransactionResult, {
+    readonly chainId: number;
+    readonly batcher: Address;
+}, TContext>): UseMutationResult<TransactionResult, Error, {
+    readonly chainId: number;
+    readonly batcher: Address;
+}, TContext>;
+
+// @public
+export function useFinalize<TContext = unknown>(options?: UseVaultMutationOptions<TransactionResult, BatchRef, TContext>): UseMutationResult<TransactionResult, Error, BatchRef, TContext>;
+
+// @public
+export function useOpenBatches(group: VaultGroup, direction: Direction, options?: Omit<UseQueryOptions<readonly OpenBatch[]>, "queryKey" | "queryFn">): UseQueryResult<readonly OpenBatch[], Error>;
+
+// @public
+export function useQuit<TContext = unknown>(options?: UseVaultMutationOptions<TransactionResult, BatchRef, TContext>): UseMutationResult<TransactionResult, Error, BatchRef, TContext>;
+
+// @public
+export function useRedeem<TContext = unknown>(options?: UseVaultMutationOptions<JoinOutcome, JoinVariables, TContext>): UseMutationResult<JoinOutcome, Error, JoinVariables<VaultGroup<string, string>>, TContext>;
+
+// @public
+export function useVaultClient(): VaultClient;
 
 // @public
 export type UseVaultMutationOptions<TData, TVariables, TContext = unknown> = Omit<UseMutationOptions<TData, Error, TVariables, TContext>, "mutationKey" | "mutationFn">;

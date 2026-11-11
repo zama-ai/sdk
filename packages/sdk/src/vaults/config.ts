@@ -1,164 +1,194 @@
 import { getAddress, isAddress, type Address } from "viem";
 import { ConfigurationError } from "../errors";
+import type { Direction } from "./types";
 
-/** The most vaults a group may name: the router's per-call leg limit. */
-export const MAX_GROUP_VAULTS = 10;
+/** The most vaults a group may hold: a join's FHE compute grows with its leg count, and eight legs is what fits one transaction. */
+export const MAX_GROUP_VAULTS = 8;
+
+/** A batcher that took joins while its `currentBatchId` was at most `lastBatchId`. */
+export interface RetiredBatcher {
+  /** The retired batcher. */
+  readonly address: Address;
+  /** The last batch it took joins into. */
+  readonly lastBatchId: bigint;
+}
 
 /**
- * Every batcher a vault has had in one direction, for a batcher upgrade.
- * A retired batcher takes joins while its `currentBatchId` is at most
- * `lastBatchId`; after that, joins go to the next one, and finally to
- * `latest`. So the switch happens when the last configured batch is
- * dispatched, never on the clock. A retired batcher's batches can still be
- * read and exited, so never remove an entry.
+ * Every batcher a vault has had in one direction, for a batcher upgrade. A
+ * join goes to the first retired batcher whose `currentBatchId` is still at
+ * most its `lastBatchId`, else to `latest`, so the switch happens when the
+ * last configured batch is dispatched, never on the clock. A retired
+ * batcher's batches can still be read, claimed and quit, so never remove an
+ * entry.
  */
 export interface BatcherHistory {
   /** Oldest first. */
-  readonly retired: readonly { readonly address: Address; readonly lastBatchId: bigint }[];
+  readonly retired: readonly RetiredBatcher[];
   /** The batcher joins reach once every retired one has passed its `lastBatchId`. */
   readonly latest: Address;
 }
 
-/**
- * One vault: the batcher joined to deposit the group's asset, and the one
- * joined to redeem its shares. Each is an address, or a {@link BatcherHistory}
- * once the vault's batcher has been upgraded.
- */
-export interface VaultConfig {
-  /** The batcher a deposit of the group's asset joins. */
-  readonly depositBatcher: Address | BatcherHistory;
-  /** The batcher a redemption of the vault's shares joins. */
-  readonly redeemBatcher: Address | BatcherHistory;
+/** One vault of a group. */
+export interface VaultConfig<TVaultId extends string = string> {
+  /** What callers pass as `vaultId`. */
+  readonly id: TVaultId;
+  /** The batcher each direction joins: an address, or a history once it has been upgraded. */
+  readonly batchers: Readonly<Record<Direction, Address | BatcherHistory>>;
+  /** The vault's confidential share token, which its redeem batchers take. */
+  readonly share: Address;
 }
 
-/**
- * The history of a batcher config, checksummed. A plain address is a history
- * with nothing retired.
- *
- * @internal
- */
-export function toBatcherHistory(batcher: Address | BatcherHistory): BatcherHistory {
-  return typeof batcher === "string"
-    ? { retired: [], latest: getAddress(batcher) }
-    : {
-        retired: batcher.retired.map((entry) => ({ ...entry, address: getAddress(entry.address) })),
-        latest: getAddress(batcher.latest),
-      };
+/** What {@link defineVaultGroup} takes. */
+export interface VaultGroupConfig<
+  TGroupId extends string = string,
+  TVaultId extends string = string,
+> {
+  /** Names the group in errors and query keys. */
+  readonly id: TGroupId;
+  /** The chain every batcher of the group is on. */
+  readonly chainId: number;
+  /** The confidential asset every deposit batcher takes. */
+  readonly asset: Address;
+  /**
+   * The router a multi-vault join goes through. Defaults to the chain
+   * preset's `vaultRouterAddress`, and must match it when the preset sets one.
+   */
+  readonly router?: Address;
+  /** The vaults, in leg order. Never reorder them once users have joined. */
+  readonly vaults: readonly VaultConfig<TVaultId>[];
 }
 
-/** Every batcher of a history, oldest first. @internal */
+declare const defined: unique symbol;
+
+/** A vault of a {@link VaultGroup}: addresses checksummed, batchers as histories. */
+export interface VaultGroupVault<TVaultId extends string = string> {
+  /** What callers pass as `vaultId`. */
+  readonly id: TVaultId;
+  /** Every batcher of each direction, a plain address turned into a history. */
+  readonly batchers: Readonly<Record<Direction, BatcherHistory>>;
+  /** The vault's confidential share token. */
+  readonly share: Address;
+}
+
+/** What {@link defineVaultGroup} returns. Only it can make one. */
+export interface VaultGroup<TGroupId extends string = string, TVaultId extends string = string> {
+  /** Names the group in errors and query keys. */
+  readonly id: TGroupId;
+  /** The chain every batcher of the group is on. */
+  readonly chainId: number;
+  /** The confidential asset every deposit batcher takes. */
+  readonly asset: Address;
+  /** The configured router, or `undefined` to use the chain preset's. */
+  readonly router: Address | undefined;
+  /** The vaults, in leg order. */
+  readonly vaults: readonly [VaultGroupVault<TVaultId>, ...VaultGroupVault<TVaultId>[]];
+  /** Marks a group made by {@link defineVaultGroup}, so a hand-built object is refused. */
+  readonly [defined]: true;
+}
+
+/** The vault ids of a group. */
+export type VaultIdOf<TGroup extends VaultGroup> =
+  TGroup extends VaultGroup<string, infer TVaultId> ? TVaultId : never;
+
+/** Every batcher of a history, oldest first. */
 export function batcherAddresses(history: BatcherHistory): Address[] {
   return [...history.retired.map((entry) => entry.address), history.latest];
 }
 
-/** Vaults that take deposits in the same confidential asset. A join sends a leg to every one of them. */
-export interface VaultGroupConfig {
-  /** The confidential asset every vault in the group takes deposits in. */
-  readonly asset: Address;
-  /** The vaults, keyed by id. Key order is the leg order, so never reorder it after launch. */
-  readonly vaults: Readonly<Record<string, VaultConfig>>;
-}
-
-/** What {@link defineVaults} takes. */
-export interface VaultsConfig {
-  /** The chain every batcher is on. Reads go to it whatever chain the wallet is on. */
-  readonly chainId: number;
-  /**
-   * The router a multi-vault join goes through. Defaults to the chain's
-   * `vaultRouterAddress`; when the chain has one, this must match it.
-   */
-  readonly router?: Address;
-  /** The groups, keyed by id. */
-  readonly groups: Readonly<Record<string, VaultGroupConfig>>;
-}
-
-/** The group ids of a config. */
-export type GroupId<TConfig extends VaultsConfig> = keyof TConfig["groups"] & string;
-
-/** The vault ids of one group of a config. */
-export type VaultId<
-  TConfig extends VaultsConfig,
-  TGroupId extends GroupId<TConfig> = GroupId<TConfig>,
-> = keyof TConfig["groups"][TGroupId]["vaults"] & string;
-
-function requireAddress(value: unknown, where: string): void {
+function requireAddress(value: unknown, where: string): Address {
   if (typeof value !== "string" || !isAddress(value, { strict: false })) {
     throw new ConfigurationError(`${where} is not an address: ${String(value)}`);
   }
+  return getAddress(value);
 }
 
 /**
- * Validate a vaults config and keep its group and vault ids as literal types.
- * Pure: reads nothing from chain. {@link createVaultClient} checks the config
- * against the chain on first use.
+ * Validate a group of vaults that take deposits in one confidential asset,
+ * and keep its ids as literal types. Pure: reads nothing from chain; the
+ * client checks the group against the chain on its first join. A single
+ * vault is a group of one.
  *
  * @example
  * ```ts
- * export const VAULTS = defineVaults({
+ * export const STABLE = defineVaultGroup({
+ *   id: "stable",
  *   chainId: 1,
- *   groups: {
- *     stable: {
- *       asset: "0xConfidentialUSDC",
- *       vaults: {
- *         alpha: { depositBatcher: "0xAlphaDeposit", redeemBatcher: "0xAlphaRedeem" },
- *         beta: { depositBatcher: "0xBetaDeposit", redeemBatcher: "0xBetaRedeem" },
- *       },
- *     },
- *   },
+ *   asset: "0xConfidentialUSDC",
+ *   vaults: [
+ *     { id: "alpha", batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" }, share: "0xAlphaShare" },
+ *     { id: "beta", batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" }, share: "0xBetaShare" },
+ *   ],
  * });
  * ```
  *
- * @throws if a group names no vault or more than {@link MAX_GROUP_VAULTS}, an address is invalid, or a batcher appears twice. {@link ConfigurationError}
+ * @throws if the group has no vault or more than {@link MAX_GROUP_VAULTS}, a vault id repeats, a batcher appears twice, or an address or `lastBatchId` is invalid. {@link ConfigurationError}
  */
-export function defineVaults<const TConfig extends VaultsConfig>(config: TConfig): TConfig {
+export function defineVaultGroup<const TGroupId extends string, const TVaultId extends string>(
+  config: VaultGroupConfig<TGroupId, TVaultId>,
+): VaultGroup<TGroupId, TVaultId> {
+  const where = `Vault group "${config.id}"`;
   if (!Number.isSafeInteger(config.chainId) || config.chainId <= 0) {
-    throw new ConfigurationError(`Vaults config has an invalid chainId: ${config.chainId}`);
+    throw new ConfigurationError(`${where} has an invalid chainId: ${config.chainId}`);
   }
-  if (config.router !== undefined) {
-    requireAddress(config.router, "Vaults config router");
+  const [first, ...rest] = config.vaults;
+  if (first === undefined) {
+    throw new ConfigurationError(`${where} has no vault`);
   }
+  if (config.vaults.length > MAX_GROUP_VAULTS) {
+    throw new ConfigurationError(
+      `${where} has ${config.vaults.length} vaults, more than ${MAX_GROUP_VAULTS}`,
+    );
+  }
+  const vaultIds = new Set<string>();
   const batchers = new Set<Address>();
-  for (const [groupId, group] of Object.entries(config.groups)) {
-    requireAddress(group.asset, `Group "${groupId}" asset`);
-    const vaults = Object.entries(group.vaults);
-    if (vaults.length === 0) {
-      throw new ConfigurationError(`Group "${groupId}" names no vault`);
-    }
-    if (vaults.length > MAX_GROUP_VAULTS) {
-      throw new ConfigurationError(
-        `Group "${groupId}" names ${vaults.length} vaults, above the ${MAX_GROUP_VAULTS} a join can carry`,
-      );
-    }
-    for (const [vaultId, vault] of vaults) {
-      for (const side of ["depositBatcher", "redeemBatcher"] as const) {
-        const where = `Vault "${vaultId}" of group "${groupId}" ${side}`;
-        const declared = vault[side];
-        const entries =
-          typeof declared === "string"
-            ? [declared]
-            : [...declared.retired.map((entry) => entry.address), declared.latest];
-        for (const entry of entries) {
-          requireAddress(entry, where);
-        }
-        if (typeof declared !== "string") {
-          for (const { lastBatchId } of declared.retired) {
-            if (typeof lastBatchId !== "bigint" || lastBatchId < 0n) {
-              throw new ConfigurationError(
-                `${where} has a retired batcher with an invalid lastBatchId`,
-              );
-            }
-          }
-        }
-        for (const entry of entries) {
-          const batcher = getAddress(entry);
-          // A batcher serves one vault in one direction, so the same address anywhere twice is a mistake.
-          if (batchers.has(batcher)) {
-            throw new ConfigurationError(`Vaults config names batcher ${batcher} more than once`);
-          }
-          batchers.add(batcher);
-        }
+
+  const history = (declared: Address | BatcherHistory, at: string): BatcherHistory => {
+    const normalized =
+      typeof declared === "string"
+        ? { retired: [], latest: requireAddress(declared, at) }
+        : {
+            retired: declared.retired.map((entry) => {
+              if (typeof entry.lastBatchId !== "bigint" || entry.lastBatchId < 0n) {
+                throw new ConfigurationError(
+                  `${at} has a retired batcher with an invalid lastBatchId`,
+                );
+              }
+              return { address: requireAddress(entry.address, at), lastBatchId: entry.lastBatchId };
+            }),
+            latest: requireAddress(declared.latest, at),
+          };
+    // A batcher serves one vault in one direction, so the same address anywhere twice is a mistake.
+    for (const address of batcherAddresses(normalized)) {
+      if (batchers.has(address)) {
+        throw new ConfigurationError(`${where} uses batcher ${address} more than once`);
       }
+      batchers.add(address);
     }
-  }
-  return config;
+    return normalized;
+  };
+
+  const vault = (entry: VaultConfig<TVaultId>): VaultGroupVault<TVaultId> => {
+    if (vaultIds.has(entry.id)) {
+      throw new ConfigurationError(`${where} names vault "${entry.id}" twice`);
+    }
+    vaultIds.add(entry.id);
+    const at = `Vault "${entry.id}" of group "${config.id}"`;
+    return {
+      id: entry.id,
+      batchers: {
+        deposit: history(entry.batchers.deposit, `${at} deposit batcher`),
+        redeem: history(entry.batchers.redeem, `${at} redeem batcher`),
+      },
+      share: requireAddress(entry.share, `${at} share`),
+    };
+  };
+
+  return {
+    id: config.id,
+    chainId: config.chainId,
+    asset: requireAddress(config.asset, `${where} asset`),
+    router:
+      config.router === undefined ? undefined : requireAddress(config.router, `${where} router`),
+    vaults: [vault(first), ...rest.map(vault)],
+  } as unknown as VaultGroup<TGroupId, TVaultId>;
 }

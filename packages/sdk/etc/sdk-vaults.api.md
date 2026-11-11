@@ -23,283 +23,306 @@ import { skipToken } from '@tanstack/query-core';
 import { TypedValue } from '@fhevm/sdk/types';
 
 // @public
-export interface ActionOutcome {
-    readonly txHashes: readonly Hex[];
-}
+export type ActiveBatchers = Readonly<Record<string, Address>>;
 
-// @public
-export interface BatcherHistory {
-    readonly latest: Address;
-    readonly retired: readonly {
-        readonly address: Address;
-        readonly lastBatchId: bigint;
-    }[];
-}
-
-// @public
-export type BatchState = "pending" | "dispatched" | "finalized" | "canceled";
-
-// Warning: (ae-forgotten-export) The symbol "ZamaSDK" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "BatchBase" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "DispatchedTimes" needs to be exported by the entry point index.d.ts
 //
 // @public
-export function createVaultClient<const TConfig extends VaultsConfig>(sdk: ZamaSDK, config: TConfig): VaultClient<TConfig>;
-
-// @public
-export function defineVaults<const TConfig extends VaultsConfig>(config: TConfig): TConfig;
-
-// Warning: (ae-forgotten-export) The symbol "MutationFactoryOptions" needs to be exported by the entry point index.d.ts
-//
-// @public
-export function depositMutationOptions<TConfig extends VaultsConfig>(client: VaultClient<TConfig>): MutationFactoryOptions<readonly ["zama.vault.deposit", number], VaultJoinVariables<TConfig>, JoinOutcome<GroupId<TConfig>, VaultId<TConfig>>>;
-
-// @public
-export type Direction = "deposit" | "redeem";
-
-// @public
-export function dispatchMutationOptions<TConfig extends VaultsConfig>(client: VaultClient<TConfig>): MutationFactoryOptions<readonly ["zama.vault.dispatch", number], VaultRecord<TConfig>, ActionOutcome>;
-
-// @public
-export function exitMutationOptions<TConfig extends VaultsConfig>(client: VaultClient<TConfig>): MutationFactoryOptions<readonly ["zama.vault.exit", number], VaultRecord<TConfig>, ActionOutcome>;
-
-// @public
-export function finalizeMutationOptions<TConfig extends VaultsConfig>(client: VaultClient<TConfig>): MutationFactoryOptions<readonly ["zama.vault.finalize", number], VaultRecord<TConfig>, ActionOutcome>;
-
-// @public
-export type GroupId<TConfig extends VaultsConfig> = keyof TConfig["groups"] & string;
-
-// Warning: (ae-forgotten-export) The symbol "QueryClientLike" needs to be exported by the entry point index.d.ts
-//
-// @public
-export function invalidateAfterVaultAction(queryClient: QueryClientLike, params: {
-    readonly chainId: number;
-    readonly groupId: string;
-}): void;
-
-// @public
-export interface JoinLeg<TVaultId extends string = string> {
-    readonly batcher: Address;
-    readonly batchId: bigint;
-    readonly vaultId: TVaultId;
-}
-
-// @public
-export interface JoinOptions extends Pick<PrepareJoinOptions, "skipChecks" | "grantValiditySeconds"> {
-    readonly onJoinSubmitted?: (txHash: Hex) => void;
-}
-
-// @public
-export interface JoinOutcome<TGroupId extends string = string, TVaultId extends string = string> {
-    readonly record: JoinRecord<TGroupId, TVaultId>;
-    readonly txHashes: readonly Hex[];
-}
-
-// @public
-export interface JoinRecord<TGroupId extends string = string, TVaultId extends string = string> {
-    readonly account: Address;
-    readonly chainId: number;
-    readonly direction: Direction;
-    readonly groupId: TGroupId;
-    readonly legs: readonly JoinLeg<TVaultId>[];
-    readonly v: 1;
-}
-
-// Warning: (ae-forgotten-export) The symbol "LegBase" needs to be exported by the entry point index.d.ts
-//
-// @public
-export type Leg<TVaultId extends string = string> = LegBase<TVaultId> & ({
+export type Batch = (BatchBase & {
     readonly state: "pending";
-    readonly dispatchableAt: bigint;
-    readonly paused: boolean;
-} | {
-    readonly state: "dispatched";
-    readonly cancelsAt: bigint;
-} | {
+}) | (BatchBase & DispatchedTimes & {
+    readonly state: "dispatched" | "canceled";
+}) | (BatchBase & DispatchedTimes & {
     readonly state: "finalized";
     readonly exchangeRate: {
         readonly rate: bigint;
         readonly decimals: number;
     };
-} | {
-    readonly state: "canceled";
 });
 
 // @public
-export const MAX_GROUP_VAULTS = 10;
+export type BatchAction = "claim" | "quit" | "dispatch" | "finalize";
 
 // @public
-export interface OpenBatch<TVaultId extends string = string> {
-    readonly batcher: Address;
-    readonly batchId: bigint;
-    readonly dispatchableAt: bigint;
-    readonly paused: boolean;
-    readonly vaultId: TVaultId;
+export function batcherAddresses(history: BatcherHistory): Address[];
+
+// @public
+export interface BatcherHistory {
+    readonly latest: Address;
+    readonly retired: readonly RetiredBatcher[];
 }
 
 // @public
-export interface OpenBatchesQueryConfig<TGroupId extends string> {
-    direction: Direction;
-    groupId: TGroupId;
+export interface BatchQueryConfig {
+    account?: Address;
+    batch?: BatchRef;
     query?: Record<string, unknown>;
 }
 
 // Warning: (ae-forgotten-export) The symbol "QueryFactoryOptions" needs to be exported by the entry point index.d.ts
 //
 // @public
-export function openBatchesQueryOptions<TConfig extends VaultsConfig, TGroupId extends GroupId<TConfig>>(client: VaultClient<TConfig>, config: OpenBatchesQueryConfig<TGroupId>): QueryFactoryOptions<readonly OpenBatch<VaultId<TConfig, TGroupId>>[], Error, readonly OpenBatch<VaultId<TConfig, TGroupId>>[], ReturnType<typeof vaultQueryKeys.openBatches>>;
+export function batchQueryOptions(client: VaultClient, config?: BatchQueryConfig): QueryFactoryOptions<Batch, Error, Batch, ReturnType<typeof vaultQueryKeys.batch>>;
 
 // @public
-export interface Position<TGroupId extends string = string, TVaultId extends string = string> {
-    readonly availableActions: readonly VaultAction[];
-    readonly chosenVaultId: TVaultId | null;
-    readonly legs: readonly Leg<TVaultId>[];
-    readonly nextChangeAt: bigint | null;
-    readonly observedAt: bigint;
-    readonly phase: PositionPhase;
-    readonly record: JoinRecord<TGroupId, TVaultId>;
-}
-
-// @public
-export type PositionPhase = "queued" | "settling" | "ready" | "closed";
-
-// @public
-export interface PositionQueryConfig<TConfig extends VaultsConfig> {
-    decrypt?: boolean;
-    query?: Record<string, unknown>;
-    record?: VaultRecord<TConfig>;
-}
-
-// @public
-export function positionQueryOptions<TConfig extends VaultsConfig>(client: VaultClient<TConfig>, config?: PositionQueryConfig<TConfig>): QueryFactoryOptions<VaultPosition<TConfig>, Error, VaultPosition<TConfig>, ReturnType<typeof vaultQueryKeys.position>>;
-
-// @public
-export interface PreparedVaultAction<TGroupId extends string = string> {
-    readonly atomic: boolean;
-    readonly calls: readonly VaultCall[];
+export interface BatchRef {
+    readonly batcher: Address;
+    readonly batchId: bigint;
     readonly chainId: number;
-    readonly expiresAt: bigint | null;
-    readonly grants: readonly VaultCall[];
-    readonly groupId: TGroupId;
-    readonly kind: "deposit" | "redeem" | "exit" | "dispatch" | "finalize";
-    readonly sender: Address | null;
-    readonly v: 1;
 }
 
 // @public
-export interface PrepareJoinOptions {
-    readonly account?: Address;
-    readonly grantValiditySeconds?: number;
-    readonly skipChecks?: readonly VaultCheck[];
-    readonly walletMode?: "sequential" | "atomic";
-}
+export type BatchState = "pending" | "dispatched" | "finalized" | "canceled";
 
 // @public
-export function redeemMutationOptions<TConfig extends VaultsConfig>(client: VaultClient<TConfig>): MutationFactoryOptions<readonly ["zama.vault.redeem", number], VaultJoinVariables<TConfig>, JoinOutcome<GroupId<TConfig>, VaultId<TConfig>>>;
-
-// @public
-export type VaultAction = "exit" | "dispatch" | "finalize";
-
-// @public
-export interface VaultCall {
+export interface Call {
     readonly data: Hex;
     readonly to: Address;
+    readonly value: 0n;
 }
+
+// Warning: (ae-forgotten-export) The symbol "MutationFactoryOptions" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "TransactionResult" needs to be exported by the entry point index.d.ts
+//
+// @public
+export function claimMutationOptions(client: VaultClient): MutationFactoryOptions<readonly ["zama.vault.claim"], BatchRef & {
+    readonly account?: Address;
+}, TransactionResult>;
+
+// Warning: (ae-forgotten-export) The symbol "ZamaSDK" needs to be exported by the entry point index.d.ts
+//
+// @public
+export function createVaultClient(sdk: ZamaSDK): VaultClient;
+
+// @public
+export function defineVaultGroup<const TGroupId extends string, const TVaultId extends string>(config: VaultGroupConfig<TGroupId, TVaultId>): VaultGroup<TGroupId, TVaultId>;
+
+// @public
+export function depositMutationOptions(client: VaultClient): MutationFactoryOptions<readonly ["zama.vault.deposit"], JoinVariables, JoinOutcome>;
+
+// @public
+export type Direction = "deposit" | "redeem";
+
+// @public
+export function dispatchMutationOptions(client: VaultClient): MutationFactoryOptions<readonly ["zama.vault.dispatch"], {
+    readonly chainId: number;
+    readonly batcher: Address;
+}, TransactionResult>;
+
+// @public
+export function finalizeMutationOptions(client: VaultClient): MutationFactoryOptions<readonly ["zama.vault.finalize"], BatchRef, TransactionResult>;
+
+// @public
+export interface GrantCall extends Call {
+    readonly operator: Address;
+    readonly role: "grant";
+    readonly token: Address;
+    readonly until: bigint;
+    readonly vaultId: string;
+}
+
+// Warning: (ae-forgotten-export) The symbol "QueryClientLike" needs to be exported by the entry point index.d.ts
+//
+// @public
+export function invalidateAfterVaultAction(queryClient: QueryClientLike): void;
+
+// @public
+export interface JoinCall extends Call {
+    readonly leg: VaultLeg;
+    readonly role: "join";
+}
+
+// @public
+export interface JoinInput<TVaultId extends string = string> {
+    readonly account: Address;
+    readonly amount: bigint;
+    readonly beneficiary?: Address;
+    readonly vaultId: TVaultId;
+}
+
+// @public
+export interface JoinOptions {
+    readonly skipChecks?: readonly VaultCheck[];
+    readonly walletMode?: WalletMode;
+}
+
+// @public
+export interface JoinOutcome {
+    readonly batches: readonly (BatchRef & {
+        readonly vaultId: string;
+    })[];
+    readonly prepared: PreparedJoin;
+    readonly txHashes: readonly Hex[];
+}
+
+// @public
+export type JoinRoute = "legs" | "router";
+
+// @public
+export interface JoinVariables<TGroup extends VaultGroup = VaultGroup> extends Omit<JoinInput<VaultIdOf<TGroup>>, "account">, Pick<JoinOptions, "skipChecks"> {
+    readonly group: TGroup;
+    readonly onJoinSubmitted?: (txHash: Hex) => void;
+}
+
+// @public
+export const MAX_GROUP_VAULTS = 8;
+
+// @public
+export interface OpenBatch extends BatchRef {
+    readonly dispatchableAt: bigint;
+    readonly observedAt: bigint;
+    readonly paused: boolean;
+    readonly vaultId: string;
+}
+
+// @public
+export interface OpenBatchesQueryConfig {
+    direction: Direction;
+    group: VaultGroup;
+    query?: Record<string, unknown>;
+}
+
+// @public
+export function openBatchesQueryOptions(client: VaultClient, config: OpenBatchesQueryConfig): QueryFactoryOptions<readonly OpenBatch[], Error, readonly OpenBatch[], ReturnType<typeof vaultQueryKeys.openBatches>>;
+
+// @public
+export interface PreparedFinalize extends BatchRef {
+    readonly call: Call;
+    readonly decryptionProof: Hex;
+    readonly unwrapAmountCleartext: bigint;
+}
+
+// @public
+export interface PreparedJoin {
+    readonly account: Address;
+    readonly amount: bigint;
+    readonly calls: readonly [VaultCall, ...VaultCall[]];
+    readonly chainId: number;
+    readonly groupId: string;
+    readonly kind: Direction;
+    readonly legs: readonly [VaultLeg, ...VaultLeg[]];
+    readonly route: JoinRoute;
+    readonly vaultId: string;
+}
+
+// @public
+export function quitMutationOptions(client: VaultClient): MutationFactoryOptions<readonly ["zama.vault.quit"], BatchRef, TransactionResult>;
+
+// @public
+export function redeemMutationOptions(client: VaultClient): MutationFactoryOptions<readonly ["zama.vault.redeem"], JoinVariables, JoinOutcome>;
+
+// @public
+export interface RetiredBatcher {
+    readonly address: Address;
+    readonly lastBatchId: bigint;
+}
+
+// @public
+export type VaultCall = GrantCall | JoinCall;
 
 // @public
 export type VaultCheck = "balance" | "config";
 
 // @public
-export class VaultClient<const TConfig extends VaultsConfig = VaultsConfig> {
-    constructor(sdk: ZamaSDK, config: TConfig);
-    readonly chainId: number;
-    readonly config: TConfig;
-    deposit(params: VaultJoinParams<TConfig>, options?: JoinOptions): Promise<JoinOutcome<GroupId<TConfig>, VaultId<TConfig>>>;
-    dispatch(record: VaultRecord<TConfig>): Promise<ActionOutcome>;
-    exit(record: VaultRecord<TConfig>): Promise<ActionOutcome>;
-    finalize(record: VaultRecord<TConfig>): Promise<ActionOutcome>;
-    prepareDeposit(params: VaultJoinParams<TConfig>, options?: PrepareJoinOptions): Promise<PreparedVaultAction<GroupId<TConfig>>>;
-    prepareDispatch(record: VaultRecord<TConfig>): Promise<PreparedVaultAction<GroupId<TConfig>>>;
-    prepareExit(record: VaultRecord<TConfig>): Promise<PreparedVaultAction<GroupId<TConfig>>>;
-    prepareFinalize(record: VaultRecord<TConfig>): Promise<PreparedVaultAction<GroupId<TConfig>>>;
-    prepareRedeem(params: VaultJoinParams<TConfig>, options?: PrepareJoinOptions): Promise<PreparedVaultAction<GroupId<TConfig>>>;
-    readOpenBatches<TGroupId extends GroupId<TConfig>>(groupId: TGroupId, direction: Direction): Promise<readonly OpenBatch<VaultId<TConfig, TGroupId>>[]>;
-    readPosition(record: VaultRecord<TConfig>, options?: {
-        readonly decrypt?: boolean;
-    }): Promise<VaultPosition<TConfig>>;
-    redeem(params: VaultJoinParams<TConfig>, options?: JoinOptions): Promise<JoinOutcome<GroupId<TConfig>, VaultId<TConfig>>>;
+export class VaultClient {
+    constructor(sdk: ZamaSDK);
+    activeBatchers(group: VaultGroup, direction: Direction): Promise<ActiveBatchers>;
+    claim(batch: BatchRef & {
+        readonly account?: Address;
+    }): Promise<TransactionResult>;
+    deposit<TGroup extends VaultGroup>(group: TGroup, input: Omit<JoinInput<VaultIdOf<TGroup>>, "account">, options?: Pick<JoinOptions, "skipChecks"> & {
+        readonly onJoinSubmitted?: (txHash: Hex) => void;
+    }): Promise<JoinOutcome>;
+    dispatch(batch: {
+        readonly chainId: number;
+        readonly batcher: Address;
+    }): Promise<TransactionResult>;
+    finalize(batch: BatchRef): Promise<TransactionResult>;
+    prepareClaim(batch: Omit<BatchRef, "chainId"> & {
+        readonly account: Address;
+    }): Call;
+    prepareDeposit<TGroup extends VaultGroup>(group: TGroup, input: JoinInput<VaultIdOf<TGroup>>, options?: JoinOptions): Promise<PreparedJoin>;
+    prepareDispatch(batch: {
+        readonly batcher: Address;
+    }): Call;
+    prepareFinalize(batch: BatchRef): Promise<PreparedFinalize>;
+    prepareQuit(batch: Omit<BatchRef, "chainId">): Call;
+    prepareRedeem<TGroup extends VaultGroup>(group: TGroup, input: JoinInput<VaultIdOf<TGroup>>, options?: JoinOptions): Promise<PreparedJoin>;
+    quit(batch: BatchRef): Promise<TransactionResult>;
+    readBatch(batch: BatchRef & {
+        readonly account?: Address;
+    }): Promise<Batch>;
+    readOpenBatches(group: VaultGroup, direction: Direction): Promise<readonly OpenBatch[]>;
+    redeem<TGroup extends VaultGroup>(group: TGroup, input: Omit<JoinInput<VaultIdOf<TGroup>>, "account">, options?: Pick<JoinOptions, "skipChecks"> & {
+        readonly onJoinSubmitted?: (txHash: Hex) => void;
+    }): Promise<JoinOutcome>;
     readonly sdk: ZamaSDK;
 }
 
 // @public
-export interface VaultConfig {
-    readonly depositBatcher: Address | BatcherHistory;
-    readonly redeemBatcher: Address | BatcherHistory;
+export interface VaultConfig<TVaultId extends string = string> {
+    readonly batchers: Readonly<Record<Direction, Address | BatcherHistory>>;
+    readonly id: TVaultId;
+    readonly share: Address;
 }
 
 // @public
-export interface VaultGroupConfig {
+export interface VaultGroup<TGroupId extends string = string, TVaultId extends string = string> {
+    readonly [defined]: true;
     readonly asset: Address;
-    readonly vaults: Readonly<Record<string, VaultConfig>>;
+    readonly chainId: number;
+    readonly id: TGroupId;
+    readonly router: Address | undefined;
+    readonly vaults: readonly [VaultGroupVault<TVaultId>, ...VaultGroupVault<TVaultId>[]];
 }
 
 // @public
-export type VaultId<TConfig extends VaultsConfig, TGroupId extends GroupId<TConfig> = GroupId<TConfig>> = keyof TConfig["groups"][TGroupId]["vaults"] & string;
-
-// Warning: (ae-forgotten-export) The symbol "IsSingle" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "Vaults" needs to be exported by the entry point index.d.ts
-//
-// @public
-export type VaultJoinParams<TConfig extends VaultsConfig, TGroupId extends GroupId<TConfig> = GroupId<TConfig>> = { [G in TGroupId]: IsSingle<keyof Vaults<TConfig, G>> extends true ? {
-        readonly groupId: G;
-        readonly vaultId?: VaultId<TConfig, G>;
-        readonly amount: bigint;
-        readonly beneficiary?: Address;
-    } : {
-        readonly groupId: G;
-        readonly vaultId: VaultId<TConfig, G>;
-        readonly amount: bigint;
-        readonly beneficiary?: never;
-    }; }[TGroupId];
+export interface VaultGroupConfig<TGroupId extends string = string, TVaultId extends string = string> {
+    readonly asset: Address;
+    readonly chainId: number;
+    readonly id: TGroupId;
+    readonly router?: Address;
+    readonly vaults: readonly VaultConfig<TVaultId>[];
+}
 
 // @public
-export type VaultJoinVariables<TConfig extends VaultsConfig> = VaultJoinParams<TConfig> & {
-    readonly options?: JoinOptions;
-};
+export interface VaultGroupVault<TVaultId extends string = string> {
+    readonly batchers: Readonly<Record<Direction, BatcherHistory>>;
+    readonly id: TVaultId;
+    readonly share: Address;
+}
 
 // @public
-export type VaultPosition<TConfig extends VaultsConfig> = { [G in GroupId<TConfig>]: Position<G, VaultId<TConfig, G>>; }[GroupId<TConfig>];
+export type VaultIdOf<TGroup extends VaultGroup> = TGroup extends VaultGroup<string, infer TVaultId> ? TVaultId : never;
+
+// @public
+export interface VaultLeg {
+    readonly amount: bigint;
+    readonly batcher: Address;
+    readonly token: Address;
+    readonly vaultId: string;
+}
 
 // @public
 export const vaultQueryKeys: {
     all: readonly ["zama.vault"];
-    group: (chainId: number, groupId: string) => readonly ["zama.vault", {
-        readonly chainId: number;
-        readonly groupId: string;
-    }];
-    position: (record: VaultRecord<VaultsConfig> | undefined, decrypt: boolean) => readonly ["zama.vault", {
+    batch: (batch: BatchRef | undefined, account: Address | undefined) => readonly ["zama.vault", {
+        readonly kind: "batch";
         readonly chainId: number | undefined;
-        readonly groupId: string | undefined;
-        readonly kind: "position";
-        readonly direction: Direction | undefined;
+        readonly batcher: `0x${string}` | undefined;
+        readonly batchId: bigint | undefined;
         readonly account: `0x${string}` | undefined;
-        readonly batchIds: bigint[] | undefined;
-        readonly decrypt: boolean;
     }];
-    openBatches: (chainId: number, groupId: string, direction: Direction) => readonly ["zama.vault", {
+    openBatches: (group: VaultGroup, direction: Direction) => readonly ["zama.vault", {
+        readonly kind: "openBatches";
         readonly chainId: number;
         readonly groupId: string;
-        readonly kind: "openBatches";
         readonly direction: Direction;
     }];
 };
 
 // @public
-export type VaultRecord<TConfig extends VaultsConfig> = { [G in GroupId<TConfig>]: JoinRecord<G, VaultId<TConfig, G>>; }[GroupId<TConfig>];
-
-// @public
-export interface VaultsConfig {
-    readonly chainId: number;
-    readonly groups: Readonly<Record<string, VaultGroupConfig>>;
-    readonly router?: Address;
-}
+export type WalletMode = "sequential" | "bundle";
 
 ```
