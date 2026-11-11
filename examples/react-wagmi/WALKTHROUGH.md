@@ -419,11 +419,11 @@ a batch, the batch is sent to the vault, and the user claims the result once it 
 Vaults tab shows each of those steps, following the
 [Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide.
 
-- **Group.** `src/lib/vaults.ts` builds the vault with `defineVaultGroup`: a group of one, so
-  a join has a single leg and lands in a single batch. `VaultsTab.tsx` reads the vault's asset
-  and share from the deposit batcher, so the only configuration is the two batcher addresses (the
+- **Vault.** `src/lib/vaults.ts` builds the vault with `defineVault`: a single vault, so a join
+  has a single leg and lands in a single batch. `VaultsTab.tsx` reads the vault's asset and share
+  from the deposit batcher, so the only configuration is the two batcher addresses (the
   `batchVault` field of the Sepolia row in `src/lib/networks.ts`).
-- **Pinned chain.** Reads go to the group's `chainId`, and the write hooks throw
+- **Pinned chain.** Reads go to the vault's `chainId`, and the write hooks throw
   `ChainMismatchError` when the wallet is on another chain instead of sending the transaction
   there.
 - **Decrypt on click.** One `useGrantPermit` call covers both tokens and both batchers, so the
@@ -438,6 +438,54 @@ Vaults tab shows each of those steps, following the
   `actions` it allows now, and `PositionList.tsx` switches on `state` exhaustively: cancel
   while pending, settle a late batch with `useFinalize`, claim a finalized one with `useClaim`,
   take a canceled amount back with `useQuit`.
+
+### One vault, or a group of vaults
+
+The app configures one vault, so it uses `defineVault` and joins with `{ vault }`:
+
+```ts
+const MAIN = defineVault({
+  id: "main",
+  chainId: sepolia.id,
+  asset: "0xConfidentialUSDC",
+  batchers: { deposit: "0xMainDeposit", redeem: "0xMainRedeem" },
+  share: "0xMainShare",
+});
+
+deposit.mutate({ vault: MAIN, amount });
+```
+
+Several vaults that take the same asset form a group. Every join then sends a leg to each vault
+of the group, the chosen one with the amount and the others with an encrypted zero, so nobody can
+tell which vault the user picked. Name the chosen vault with `vaultId`:
+
+```ts
+const STABLE = defineVaultGroup({
+  id: "stable",
+  chainId: sepolia.id,
+  asset: "0xConfidentialUSDC",
+  vaults: [
+    {
+      id: "alpha",
+      batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
+      share: "0xAlphaShare",
+    },
+    {
+      id: "beta",
+      batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
+      share: "0xBetaShare",
+    },
+  ],
+});
+
+deposit.mutate({ group: STABLE, vaultId: "beta", amount });
+```
+
+A group join returns one batch per vault, decoys included. Store every one of them, and quit every
+one to take a deposit back, or the quits show which vault was picked. The read hooks, such as
+`useOpenBatches`, take either a vault or a group. See
+[Advanced vault integration](../../docs/gitbook/src/guides/vaults/advanced.md) for the privacy
+rules and the wallet prompts of a group.
 
 ---
 
