@@ -87,6 +87,7 @@ function VaultPanel({ vault, account }: { vault: BatchVault; account: Address })
   return (
     <>
       <PositionCard
+        chainId={vault.chainId}
         account={account}
         permitContracts={permitContracts}
         vault={erc4626}
@@ -102,6 +103,7 @@ function VaultPanel({ vault, account }: { vault: BatchVault; account: Address })
 }
 
 interface PositionCardProps {
+  chainId: number;
   account: Address;
   permitContracts: Address[];
   /** The ERC-4626 vault. */
@@ -110,8 +112,8 @@ interface PositionCardProps {
   shareToken: Address;
 }
 
-/** The account's vault shares and what they are worth now in the vault's asset. */
 function PositionCard({
+  chainId,
   vault,
   account,
   permitContracts,
@@ -129,16 +131,18 @@ function PositionCard({
     { enabled: hasPermit === true },
   );
   const { data: value, error: valueError } = useQuery({
-    queryKey: ["vault-position-value", shareToken, shares.data?.toString()],
+    queryKey: ["vault-position-value", chainId, shareToken, shares.data?.toString()],
     queryFn: async () => {
       const [shareRate, assetRate] = await Promise.all([
         sdk.provider.readContract({
+          chainId,
           address: shareToken,
           abi: VALUE_ABI,
           functionName: "rate",
           args: [],
         }),
         sdk.provider.readContract({
+          chainId,
           address: assetToken,
           abi: VALUE_ABI,
           functionName: "rate",
@@ -146,6 +150,7 @@ function PositionCard({
         }),
       ]);
       const assets = await sdk.provider.readContract({
+        chainId,
         address: vault,
         abi: VALUE_ABI,
         functionName: "convertToAssets",

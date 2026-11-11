@@ -22,7 +22,6 @@ interface PositionListProps {
   onDone: (batch: BatchRef) => void;
 }
 
-/** The account's batches in one direction of the vault, one row per stored batch. */
 export function PositionList({
   account,
   batches,
@@ -58,8 +57,8 @@ interface BatchRowProps extends Omit<PositionListProps, "batches"> {
 }
 
 function BatchRow({ account, batchRef, token, permitContracts, onDone }: BatchRowProps) {
-  const now = useNow();
-  const { data: batch, error } = useBatch(batchRef, { account });
+  const wallNow = useWallClock();
+  const { data: batch, error, dataUpdatedAt } = useBatch(batchRef, { account });
   const done = { onSuccess: () => onDone(batchRef) };
   const claim = useClaim(done);
   const quit = useQuit(done);
@@ -104,6 +103,10 @@ function BatchRow({ account, batchRef, token, permitContracts, onDone }: BatchRo
   if (!batch) {
     return row(error ? describeError(error, "Could not read the batch") : "Loading…");
   }
+
+  // Chain time now: the read's block time plus the wall time since the read, so a skewed browser
+  // clock does not matter.
+  const now = Number(batch.observedAt) + Math.max(0, wallNow - Math.floor(dataUpdatedAt / 1000));
 
   // `actions` lists what can be sent now, so a button only shows when it would go through.
   const offer = (action: "claim" | "quit", label: string) =>
@@ -166,8 +169,8 @@ function Amount({
     : null;
 }
 
-/** The current Unix time in seconds, updated every second, for local countdowns. */
-function useNow() {
+/** The browser's Unix time in seconds, ticking every second to advance chain time between reads. */
+function useWallClock() {
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
   useEffect(() => {
     const id = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
