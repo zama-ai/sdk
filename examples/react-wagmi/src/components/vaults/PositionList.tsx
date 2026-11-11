@@ -59,6 +59,15 @@ interface BatchRowProps extends Omit<PositionListProps, "batches"> {
 function BatchRow({ account, batchRef, token, permitContracts, onDone }: BatchRowProps) {
   const wallNow = useWallClock();
   const { data: batch, error, dataUpdatedAt } = useBatch(batchRef, { account });
+  const amount = useDepositAmount(batchRef.batcher, batch?.deposit, permitContracts);
+  // A claim, by the user or a keeper, leaves an encrypted zero that only decrypting tells from a
+  // deposit. A settled batch that holds nothing has been paid out, so it leaves the list.
+  const paidOut = amount === 0n && (batch?.state === "finalized" || batch?.state === "canceled");
+  useEffect(() => {
+    if (paidOut) {
+      onDone(batchRef);
+    }
+  }, [paidOut, onDone, batchRef]);
   const done = { onSuccess: () => onDone(batchRef) };
   const claim = useClaim(done);
   const quit = useQuit(done);
@@ -71,14 +80,7 @@ function BatchRow({ account, batchRef, token, permitContracts, onDone }: BatchRo
       <div>
         <span className="balance-label">
           Batch #{batchRef.batchId.toString()}
-          {batch?.deposit && (
-            <Amount
-              token={token}
-              batcher={batchRef.batcher}
-              deposit={batch.deposit}
-              permitContracts={permitContracts}
-            />
-          )}
+          {amount !== undefined && <Amount token={token} amount={amount} />}
         </span>
         <p className="token-meta">{label}</p>
         {actionError && (
@@ -146,27 +148,23 @@ function BatchRow({ account, batchRef, token, permitContracts, onDone }: BatchRo
 }
 
 /** The account's deposit in the batch, decrypted under an existing permit: the row never prompts the wallet. */
-function Amount({
-  token,
-  batcher,
-  deposit,
-  permitContracts,
-}: {
-  token: Address;
-  batcher: Address;
-  deposit: `0x${string}`;
-  permitContracts: Address[];
-}) {
-  const { data: metadata } = useMetadata(token);
+function useDepositAmount(
+  batcher: Address,
+  deposit: `0x${string}` | null | undefined,
+  permitContracts: Address[],
+): bigint | undefined {
   const { data: hasPermit } = useHasPermit({ contractAddresses: permitContracts });
   const { data: values } = useDecryptValues(
-    [{ encryptedValue: deposit, contractAddress: batcher }],
-    { enabled: hasPermit === true },
+    deposit ? [{ encryptedValue: deposit, contractAddress: batcher }] : [],
+    { enabled: hasPermit === true && Boolean(deposit) },
   );
-  const amount = values?.[deposit];
-  return metadata && typeof amount === "bigint"
-    ? ` · ${formatUnits(amount, metadata.decimals)} ${metadata.symbol}`
-    : null;
+  const amount = deposit ? values?.[deposit] : undefined;
+  return typeof amount === "bigint" ? amount : undefined;
+}
+
+function Amount({ token, amount }: { token: Address; amount: bigint }) {
+  const { data: metadata } = useMetadata(token);
+  return metadata ? ` · ${formatUnits(amount, metadata.decimals)} ${metadata.symbol}` : null;
 }
 
 /** The browser's Unix time in seconds, ticking every second to advance chain time between reads. */
