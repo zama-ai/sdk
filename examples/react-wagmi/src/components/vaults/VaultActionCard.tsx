@@ -52,7 +52,7 @@ export function VaultActionCard({
   const { batches, add, remove } = useJoinedBatches(
     vault.chainId,
     account,
-    vault.vaults[0].batchers[copy.direction].latest,
+    vault.batchers[copy.direction].latest,
   );
   const [amount, setAmount] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -68,7 +68,7 @@ export function VaultActionCard({
   );
 
   // Store the batch the join landed in: the position list reads it, now and after a reload. A
-  // group of one has a single leg, so a join lands in a single batch.
+  // single vault has a single leg, so a join lands in a single batch.
   const callbacks = {
     onSuccess: ({ batches: [joined] }: { batches: readonly BatchRef[] }) => {
       if (joined) {
@@ -125,12 +125,7 @@ export function VaultActionCard({
           event.preventDefault();
           if (reason === null) {
             setSubmitted(false);
-            send.mutate({
-              group: vault,
-              vaultId: "main",
-              amount: parsed,
-              onJoinSubmitted: () => setSubmitted(true),
-            });
+            send.mutate({ vault, amount: parsed, onJoinSubmitted: () => setSubmitted(true) });
           }
         }}
       >

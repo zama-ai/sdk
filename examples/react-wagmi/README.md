@@ -42,7 +42,7 @@ Token pairs on every network come from the on-chain `WrappersRegistry` at runtim
 - **Dynamic** (optional) — `@dynamic-labs-sdk/client` and `@dynamic-labs-sdk/evm`, Dynamic's headless SDK in connect-only mode: it supplies the wallet catalogue and the connect step (browser wallets + WalletConnect, which is how a Safe pairs from the Safe web app). A wagmi connector of the app's own wraps the authorized wallet, so wagmi alone owns the session
 - **TanStack Query v5** for async state
 - **@zama-fhe/react-sdk** — `ZamaProvider`, `useConfidentialBalance`, `useShield`, `useUnshield`, `useDelegateDecryption`, etc.
-- **@zama-fhe/react-sdk/vaults** — `useDeposit`, `useRedeem`, `useOpenBatches`, `useBatch`, `useClaim`, `useQuit`, `useFinalize`; `defineVaultGroup` from `@zama-fhe/sdk/vaults` describes the vault
+- **@zama-fhe/react-sdk/vaults** — `useDeposit`, `useRedeem`, `useOpenBatches`, `useBatch`, `useClaim`, `useQuit`, `useFinalize`; `defineVault` from `@zama-fhe/sdk/vaults` describes the vault (`defineVaultGroup` describes a group of several, see the walkthrough)
 - **@zama-fhe/react-sdk/wagmi** — `createConfig` adapter for wagmi signer/provider wiring
 - **@zama-fhe/sdk/web** — browser FHE worker transport via `web()`, routed through the local Next.js proxy (`/api/relayer/<network>`)
 - **@zama-fhe/sdk** `cleartext()` — transport for the cleartext deployments, no relayer involved

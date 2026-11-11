@@ -3,26 +3,21 @@
 import { useEffect, useState } from "react";
 import type { Address } from "@zama-fhe/sdk";
 import { getAddress, isAddress } from "viem";
-import { defineVaultGroup, type BatchRef } from "@zama-fhe/sdk/vaults";
+import { defineVault, type BatchRef } from "@zama-fhe/sdk/vaults";
 import type { BatchVault } from "@/lib/networks";
 
-/** The vault as a group of one: every join has a single leg, so it lands in a single batch. */
-export function vaultGroup(vault: BatchVault, asset: Address, share: Address) {
-  return defineVaultGroup({
+/** The configured vault, on its own: every join has a single leg, so it lands in a single batch. */
+export function singleVault(vault: BatchVault, asset: Address, share: Address) {
+  return defineVault({
     id: "main",
     chainId: vault.chainId,
     asset,
-    vaults: [
-      {
-        id: "main",
-        batchers: { deposit: vault.depositBatcher, redeem: vault.redeemBatcher },
-        share,
-      },
-    ],
+    batchers: { deposit: vault.depositBatcher, redeem: vault.redeemBatcher },
+    share,
   });
 }
 
-export type Vault = ReturnType<typeof vaultGroup>;
+export type Vault = ReturnType<typeof singleVault>;
 
 // Each deposit or withdrawal returns the batch it landed in, and the app needs it to read and act
 // on that batch later. This app keeps them in localStorage. A production app would rather read
