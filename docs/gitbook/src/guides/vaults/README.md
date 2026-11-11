@@ -62,18 +62,18 @@ if (beta !== undefined) {
 
 Every join sends a leg to every vault of its group. The vault you chose gets the amount, and the others get an encrypted zero. An observer sees the same transactions whichever vault you picked. This is what hides the choice.
 
-Claims, quits, dispatches and settlements act on one batch each. A keeper claims and recovers for every depositor anyway, so these rarely reveal anything. A quit is the exception: the user sends it. To keep the choice private when you take a deposit back from a pending batch, quit every leg of the join, not only the chosen one. See [Privacy rules](groups.md#privacy-rules).
+The rest is up to you, most of all: to take a deposit back, quit every leg of the join, not only the chosen one. See [Privacy rules](advanced.md#privacy-rules).
 
 ## Two ways to send
 
 - **Your app sends with the SDK's signer.** Call `deposit`, `redeem`, `claim`, `quit`, `dispatch` and `finalize`, or the React hooks. The SDK signs, waits for receipts, and returns the batch each leg landed in. Most dapps use this.
-- **Your app has its own transaction pipeline.** Call `prepareDeposit`, `prepareRedeem`, `prepareClaim`, `prepareQuit`, `prepareDispatch` or `prepareFinalize`. Each returns plain calls as `{ to, data, value }`. You send them. See [Send through your own pipeline](groups.md#send-through-your-own-pipeline).
+- **Your app has its own transaction pipeline.** Call `prepareDeposit`, `prepareRedeem`, `prepareClaim`, `prepareQuit`, `prepareDispatch` or `prepareFinalize`. Each returns plain calls as `{ to, data, value }`. You send them. See [Send through your own pipeline](advanced.md#send-through-your-own-pipeline).
 
 ## Where to go next
 
 🟨 Go to [**Vault deposits and redemptions**](deposits.md) for the full flow: define a group, deposit, store the batches, follow them, and get the money out.
 
-🟨 Go to [**Vault groups**](groups.md) for groups of several vaults, privacy rules, wallet prompts, batcher upgrades, bundling wallets, and sending through your own pipeline.
+🟨 Go to [**Advanced vault integration**](advanced.md) for privacy rules, wallet prompts, batcher upgrades, bundling wallets, and sending through your own pipeline.
 
 🟨 Go to [**Building a vault UI**](building-a-ui.md) for what to show for each batch state, and what to offer.
 

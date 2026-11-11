@@ -58,7 +58,7 @@
 
 - [Vaults overview](guides/vaults/README.md)
 - [Deposits and redemptions](guides/vaults/deposits.md)
-- [Vault groups](guides/vaults/groups.md)
+- [Advanced vault integration](guides/vaults/advanced.md)
 - [Building a vault UI](guides/vaults/building-a-ui.md)
 
 ## Go & Rust guide

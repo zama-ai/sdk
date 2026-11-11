@@ -11,7 +11,7 @@ Available in the Core SDK and React SDK.
 
 This guide walks through the full life of a vault deposit: define a group, deposit, store the batches, follow them, and get the money out. For how batching and settlement work on-chain, see the [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault), in particular its [deposit guide](https://docs.zama.org/protocol/confidential-vault/guides/deposit).
 
-The examples use the SDK's signer. To send through your own transaction pipeline instead, see [Send through your own pipeline](groups.md#send-through-your-own-pipeline).
+The examples use the SDK's signer. To send through your own transaction pipeline instead, see [Send through your own pipeline](advanced.md#send-through-your-own-pipeline).
 
 ## Steps
 
@@ -55,12 +55,12 @@ export const SOLO = defineVaultGroup({
 });
 ```
 
-Each vault has two batchers: one that deposits join, and one that redemptions join. `share` is the vault's confidential share token. When a batcher is upgraded, its entry becomes a history of batchers. See [Upgrade a batcher](groups.md#upgrade-a-batcher). The group and vault ids are yours to choose, and the types keep them, so a typo in `vaultId` passed to a client method is a type error. The React mutation hooks take `vaultId` as a plain `string`.
+Each vault has two batchers: one that deposits join, and one that redemptions join. `share` is the vault's confidential share token. When a batcher is upgraded, its entry becomes a history of batchers. See [Upgrade a batcher](advanced.md#upgrade-a-batcher). The group and vault ids are yours to choose, and the types keep them, so a typo in `vaultId` passed to a client method is a type error. The React mutation hooks take `vaultId` as a plain `string`.
 
-`defineVaultGroup` checks the shape of the group and throws `ConfigurationError` for an invalid address, an empty group, a group above `MAX_GROUP_VAULTS`, a repeated vault id, or a batcher named twice. On the first join of each group, the client also checks the group against the chain. See [`defineVaultGroup`](../../reference/sdk/VaultClient.md#definevaultgroup).
+`defineVaultGroup` checks the shape of the group and throws `ConfigurationError` for an invalid address, an empty group, a group above `MAX_GROUP_VAULTS` (see [Group size and the router](advanced.md#group-size-and-the-router)), a repeated vault id, or a batcher named twice. On the first join of each group, the client also checks the group against the chain. See [`defineVaultGroup`](../../reference/sdk/VaultClient.md#definevaultgroup).
 
 {% hint style="warning" %}
-The order of `vaults` is the leg order of every join. Never reorder, add or remove vaults in a group once users have joined it: every user of a group should join the same vaults in the same order, so their transactions look alike. To change a group, define a new group.
+The order of `vaults` is the leg order of every join. Never reorder, add or remove vaults in a group once users have joined it. To change a group, define a new group. See [Privacy rules](advanced.md#privacy-rules).
 {% endhint %}
 
 ### 2. Create the client
@@ -232,7 +232,7 @@ claim.mutate({ ...batchRef, account: "0xUser" });
 {% endtab %}
 {% endtabs %}
 
-To take a deposit back before the batch is dispatched, quit it. Only the depositor can quit. In a group, quit the batch of every leg, not only the chosen one, or the quits show which vault the user picked:
+To take a deposit back before the batch is dispatched, quit it. Only the depositor can quit. In a group, quit the batch of every leg, not only the chosen one (see [Privacy rules](advanced.md#privacy-rules)):
 
 ```ts
 for (const batch of batches) {
@@ -268,7 +268,7 @@ redeem.mutate({ group: STABLE, vaultId: "beta", amount: 500n });
 {% endtabs %}
 
 {% hint style="warning" %}
-**A first redemption from a group of N vaults can take up to N + 1 wallet prompts.** The router pulls each vault's share token, so the account first grants the router an operator approval on every share token it has not granted yet, then sends the join. Tell users before they start. See [Wallet prompts](groups.md#wallet-prompts).
+**A first redemption from a group of N vaults can take up to N + 1 wallet prompts**: one operator grant per share token, then the join. Tell users before they start. See [Wallet prompts](advanced.md#wallet-prompts).
 {% endhint %}
 
 ## Show when the next batch closes
@@ -294,7 +294,7 @@ const { data: open } = useOpenBatches(STABLE, "deposit");
 {% endtab %}
 {% endtabs %}
 
-A paused batcher in a group blocks every join of the group, because every join sends a leg to every vault. `deposit` and `redeem` throw `VaultBatcherPausedError`, naming the paused vault, before anything is sent. Claims and quits still work on a paused batcher.
+One paused batcher blocks every join of its group. See [Paused batchers](advanced.md#paused-batchers).
 
 ## Reads on another chain
 
@@ -303,7 +303,7 @@ Reads go to the group's or batch's `chainId`, whatever chain the wallet is on, s
 ## Next steps
 
 - [Building a vault UI](building-a-ui.md): what to show and offer in each batch state
-- [Vault groups](groups.md): groups of several vaults, privacy rules, wallet prompts, and your own pipeline
+- [Advanced vault integration](advanced.md): privacy rules, wallet prompts, batcher upgrades, and your own pipeline
 - [`VaultClient`](../../reference/sdk/VaultClient.md): the full API reference
 - [`useDeposit`](../../reference/react/useDeposit.md), [`useBatch`](../../reference/react/useBatch.md), [`useClaim`](../../reference/react/useClaim.md), [`useQuit`](../../reference/react/useQuit.md): the React hooks used above
 - [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault): how batching, dispatch and settlement work on-chain

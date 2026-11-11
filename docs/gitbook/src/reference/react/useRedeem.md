@@ -10,7 +10,7 @@ Mutation hook that redeems a plaintext amount of a vault's shares with the SDK's
 Store the returned `batches` and follow them with [`useBatch`](./useBatch.md). Claiming a finalized redemption pays out the asset.
 
 {% hint style="warning" %}
-**In a group of N vaults, a first redemption can take up to N + 1 wallet prompts.** The router pulls each vault's share token, so the account first grants it an operator approval on every share token it has not granted yet, then sends the join. A grant lasts a year, so later redemptions ask for none. Tell users before they start. See [Wallet prompts](../../guides/vaults/groups.md#wallet-prompts).
+**In a group of N vaults, a first redemption can take up to N + 1 wallet prompts.** The router pulls each vault's share token, so the account first grants it an operator approval on every share token it has not granted yet, then sends the join. A grant lasts a year, so later redemptions ask for none. Tell users before they start. See [Wallet prompts](../../guides/vaults/advanced.md#wallet-prompts).
 {% endhint %}
 
 ## Import
@@ -74,4 +74,4 @@ On success, the hook invalidates every vault read and every confidential balance
 - [useDeposit](./useDeposit.md): the deposit direction
 - [useBatch](./useBatch.md): follow each batch
 - [VaultClient.redeem](../sdk/VaultClient.md#redeem)
-- [Vault groups](../../guides/vaults/groups.md)
+- [Advanced vault integration](../../guides/vaults/advanced.md)

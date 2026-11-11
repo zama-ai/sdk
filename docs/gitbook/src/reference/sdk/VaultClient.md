@@ -125,7 +125,7 @@ export const STABLE = defineVaultGroup({
 Never remove a retired entry. Batches on a retired batcher can still be read, claimed and quit, and the client checks every batcher of the history against the chain.
 {% endhint %}
 
-`batcherAddresses(history)` returns every batcher of a history, oldest first. See [Upgrade a batcher](../../guides/vaults/groups.md#upgrade-a-batcher).
+`batcherAddresses(history)` returns every batcher of a history, oldest first. See [Upgrade a batcher](../../guides/vaults/advanced.md#upgrade-a-batcher).
 
 **Throws:** `ConfigurationError` when `chainId` is not a positive integer, an address is invalid, a `lastBatchId` is not a non-negative `bigint`, the group names no vault or more than `MAX_GROUP_VAULTS`, a vault id repeats, or the same batcher appears twice anywhere in the group, retired batchers included.
 
@@ -509,6 +509,6 @@ invalidateAfterVaultAction(queryClient);
 
 - [Vaults overview](../../guides/vaults/README.md)
 - [Vault deposits and redemptions](../../guides/vaults/deposits.md)
-- [Vault groups](../../guides/vaults/groups.md)
+- [Advanced vault integration](../../guides/vaults/advanced.md)
 - [Building a vault UI](../../guides/vaults/building-a-ui.md)
 - [Errors](errors.md#vaultbatchnotdispatchederror) — the vault errors

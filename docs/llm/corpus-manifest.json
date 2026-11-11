@@ -522,14 +522,14 @@
       "include_in_llms_full": true
     },
     {
-      "id": "doc:guides/vaults/groups",
-      "title": "Vault groups",
-      "source_path": "docs/gitbook/src/guides/vaults/groups.md",
-      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/groups.md",
+      "id": "doc:guides/vaults/advanced",
+      "title": "Advanced vault integration",
+      "source_path": "docs/gitbook/src/guides/vaults/advanced.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md",
       "source_type": "official-doc",
       "category": "guides",
-      "logical_path": "guides/vaults/groups",
-      "description": "Deposit into one of several vaults without revealing which one, and send vault calls through your own pipeline.",
+      "logical_path": "guides/vaults/advanced",
+      "description": "Privacy rules, wallet prompts, batcher upgrades, bundling wallets, and sending vault calls through your own pipeline.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

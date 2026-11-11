@@ -30,7 +30,7 @@ The examples use the `STABLE` group from [Vault deposits and redemptions](deposi
 | A batcher of the group is paused                  | [`useOpenBatches`](../../reference/react/useOpenBatches.md) returns `paused` for each vault. One paused batcher blocks every join of the group, so disable the button and say joins are paused. Claims and quits still work.                                                                    |
 | The user waits to know when the batch closes      | `useOpenBatches` returns each vault's `dispatchableAt`: the earliest time the open batch can be sent.                                                                                                                                                                                           |
 | A redemption                                      | The amount is in shares, not assets. Label the field so the user knows which one they type.                                                                                                                                                                                                     |
-| A first redemption from a group of N vaults       | Say that the wallet may ask for up to N approvals, then the redemption. See [Wallet prompts](groups.md#wallet-prompts).                                                                                                                                                                         |
+| A first redemption from a group of N vaults       | Say that the wallet may ask for up to N approvals, then the redemption. See [Wallet prompts](advanced.md#wallet-prompts).                                                                                                                                                                       |
 | The user has public tokens, not confidential ones | Shield first with [`useShield`](../../reference/react/useShield.md), then deposit.                                                                                                                                                                                                              |
 
 ## 2. The send
@@ -183,5 +183,5 @@ A join in a group of N vaults has N legs: the chosen vault with the amount, the 
 ## Next steps
 
 - [Vault deposits and redemptions](deposits.md) for the SDK calls behind each step
-- [Vault groups](groups.md) for wallet prompts and privacy rules in a group
+- [Advanced vault integration](advanced.md) for wallet prompts and privacy rules in a group
 - [`useBatch`](../../reference/react/useBatch.md) for the full batch type

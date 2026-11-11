@@ -1,58 +1,34 @@
 ---
-title: Vault groups
-description: Deposit into one of several vaults without revealing which one, and send vault calls through your own pipeline.
+title: Advanced vault integration
+description: Privacy rules, wallet prompts, batcher upgrades, bundling wallets, and sending vault calls through your own pipeline.
 ---
 
-# Vault groups
+# Advanced vault integration
 
 {% hint style="info" %}
 Available in the Core SDK and React SDK.
 {% endhint %}
 
-A **vault group** is a set of confidential ERC-4626 vaults that take deposits in the same confidential asset. Every join sends a leg to every vault of the group: the vault you chose gets the amount, and the others get an encrypted zero. An observer cannot tell which vault received the money.
+This page covers what [Vault deposits and redemptions](deposits.md) leaves out: the privacy rules of a group, the wallet prompts each action takes, batcher upgrades, bundling wallets, and sending through your own transaction pipeline. It uses the `STABLE` group defined in [step 1](deposits.md#1-define-a-group) of that guide.
 
 For how the on-chain router fans one transaction out across several batchers, see the [Multi-Vault Router](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router) concept page and the [router interface](https://docs.zama.org/protocol/confidential-vault/reference/router-interface).
 
-## Configure a group
-
-A group names its chain, its asset and its vaults, in leg order:
-
-```ts
-import { defineVaultGroup } from "@zama-fhe/sdk/vaults";
-
-export const STABLE = defineVaultGroup({
-  id: "stable",
-  chainId: 1,
-  asset: "0xConfidentialUSDC",
-  vaults: [
-    {
-      id: "alpha",
-      batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
-      share: "0xAlphaShare",
-    },
-    {
-      id: "beta",
-      batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
-      share: "0xBetaShare",
-    },
-  ],
-});
-```
-
-A group holds from one vault up to `MAX_GROUP_VAULTS`. A join's FHE compute grows with its number of legs, and `MAX_GROUP_VAULTS` is what fits in one transaction. A group of one has nothing to hide a leg among, so it joins its batcher directly, without the router.
-
-A multi-vault join sent one call at a time goes through the chain's router, `vaultRouterAddress` in the chain preset. Set `router` only for a chain whose preset names none. When the preset names a router, a different `router` throws `ConfigurationError`.
-
 ## Privacy rules
 
-Every join covers the whole group. That is what hides the choice, and the client always does it. The rest is up to you:
+Every join sends a leg to every vault of its group: the vault you chose gets the amount, and the others get an encrypted zero. An observer cannot tell which vault received the money. The client always does this. The rest is up to you:
 
 - **Every join covers every vault.** `deposit` and `redeem` send a leg to each vault, in group order, and never drop a zero leg.
 - **Every balance check covers every leg.** The balance check decrypts every token the legs spend, not only the chosen one. A lone decryption would tell the relayer which vault you care about.
-- **Every user gets the same leg list.** All users of a group join the same vaults in the same order, so their transactions look alike. Do not reorder or change a group's vaults once users have joined it.
+- **Every user gets the same leg list.** All users of a group join the same vaults in the same order, so their transactions look alike. Do not reorder or change a group's vaults once users have joined it. To change a group, define a new group.
 - **Quit every leg, or none.** Claims, quits, dispatches and settlements act on one batch each. A keeper dispatches, finalizes, claims and recovers for every depositor, so these reveal nothing about one user. A quit is different: the user sends it, and it is public. To take a deposit back from a pending batch, quit the batch of every leg of the join, not only the chosen one. The client does not enforce this.
 
 These follow the [rules for clients](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#rules-for-clients) of the router.
+
+## Group size and the router
+
+A group holds from one vault up to `MAX_GROUP_VAULTS`. A join's FHE compute grows with its number of legs, and `MAX_GROUP_VAULTS` is what fits in one transaction. A group of one has nothing to hide a leg among, so it joins its batcher directly, without the router.
+
+A multi-vault join sent one call at a time goes through the chain's router, `vaultRouterAddress` in the chain preset. Set `router` in `defineVaultGroup` only for a chain whose preset names none. When the preset names a router, a different `router` throws `ConfigurationError`.
 
 ## Wallet prompts
 
@@ -78,7 +54,7 @@ A grant lasts a year, so later redemptions ask for none. A long grant is safe: t
 
 ## Paused batchers
 
-Every join sends a leg to every vault, and one paused batcher reverts the whole join. So `deposit` and `redeem` read `paused()` on each batcher first and throw `VaultBatcherPausedError`, naming the paused vault. This check cannot be skipped. Claims and quits still work on a paused batcher, so existing deposits are never stuck.
+Every join sends a leg to every vault, and one paused batcher reverts the whole join. So `deposit` and `redeem` read `paused()` on each batcher first and throw `VaultBatcherPausedError`, naming the paused vault. This check cannot be skipped. Claims and quits still work on a paused batcher, so existing deposits are never stuck. To show a paused vault before the user submits, read the group with [`readOpenBatches`](deposits.md#show-when-the-next-batch-closes).
 
 ## Upgrade a batcher
 
@@ -202,6 +178,6 @@ if (batch.actions.includes("claim")) {
 
 ## Next steps
 
-- [Building a vault UI](building-a-ui.md): what to show and offer in each batch state
 - [Vault deposits and redemptions](deposits.md): the full flow with the SDK's signer
+- [Building a vault UI](building-a-ui.md): what to show and offer in each batch state
 - [`VaultClient`](../../reference/sdk/VaultClient.md#prepare-a-join): the prepare methods in full

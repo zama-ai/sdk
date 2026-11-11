@@ -69,7 +69,7 @@ export const STABLE = defineVaultGroup({
 {% endtab %}
 {% endtabs %}
 
-`sendCalls` stands in for your own pipeline. See [Send through your own pipeline](../../guides/vaults/groups.md#send-through-your-own-pipeline).
+`sendCalls` stands in for your own pipeline. See [Send through your own pipeline](../../guides/vaults/advanced.md#send-through-your-own-pipeline).
 
 ## Parameters
 
