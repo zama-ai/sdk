@@ -16,10 +16,10 @@ import { VaultActionCard } from "@/components/vaults/VaultActionCard";
 import { describeError } from "@/lib/errors";
 import { useNetwork } from "@/lib/hooks";
 import type { BatchVault } from "@/lib/networks";
-import { vaultsConfig } from "@/lib/vaults";
+import { vaultGroup } from "@/lib/vaults";
 
-// The vaults config names the asset, and the share token is the app's to know. This app reads
-// both from the deposit batcher, so only the two batchers need to be set.
+// The vault group names the asset and the share token. This app reads both from the deposit
+// batcher, so only the two batchers need to be set.
 const BATCHER_ABI = parseAbi([
   "function fromToken() view returns (address)",
   "function toToken() view returns (address)",
@@ -61,12 +61,12 @@ function VaultPanel({ vault, account }: { vault: BatchVault; account: Address })
     allowFailure: false,
   });
   const [assetToken, shareToken, erc4626] = data ?? [];
-  // Built once per vault: the vault hooks key their client on the config's identity.
-  const vaults = useMemo(
-    () => (assetToken ? vaultsConfig(vault, assetToken) : undefined),
-    [vault, assetToken],
+  // Built once per vault, so the read hooks see the same group on every render.
+  const group = useMemo(
+    () => (assetToken && shareToken ? vaultGroup(vault, assetToken, shareToken) : undefined),
+    [vault, assetToken, shareToken],
   );
-  if (!vaults || !assetToken || !shareToken || !erc4626) {
+  if (!group || !assetToken || !shareToken || !erc4626) {
     return (
       <section className="card">
         {error ? (
@@ -83,7 +83,7 @@ function VaultPanel({ vault, account }: { vault: BatchVault; account: Address })
   // One permit covers both tokens and both batchers (for the amounts in the positions),
   // so the first decrypt is the only signature the tab asks for.
   const permitContracts = [assetToken, shareToken, vault.depositBatcher, vault.redeemBatcher];
-  const props = { vaults, account, permitContracts };
+  const props = { vault: group, account, permitContracts };
   return (
     <>
       <PositionCard

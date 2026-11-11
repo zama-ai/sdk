@@ -10,7 +10,7 @@ The connected app has three tabs:
 
 - **Tokens**: balances, shield, confidential transfer, unshield and pending unshield recovery for the selected token. The core of the SDK.
 - **Delegation**: grant, revoke and use decryption delegation for the selected token.
-- **Vaults**: deposit into and withdraw from a confidential ERC-4626 vault with `@zama-fhe/react-sdk/vaults`. The Deposit and Withdraw boxes each hold their form and the positions still in progress, with one view per position phase: cancel, settle a late batch, claim, take a canceled amount back. The join records live in localStorage. It implements the [Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide. Set the vault's batchers in `.env.local` to use it.
+- **Vaults**: deposit into and withdraw from a confidential ERC-4626 vault with `@zama-fhe/react-sdk/vaults`. The Deposit and Withdraw boxes each hold their form and the positions still in progress, with one view per batch state: cancel, settle a late batch, claim, take a canceled amount back. The joined batches live in localStorage. It implements the [Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide. Set the vault's batchers in `.env.local` to use it.
 
 This app replaces the former `example-bnb`, `example-hoodi`, `example-polygon-amoy` and `example-zenith` apps, which were copies of it pinned to one chain each.
 
@@ -42,7 +42,7 @@ Token pairs on every network come from the on-chain `WrappersRegistry` at runtim
 - **Dynamic** (optional) — `@dynamic-labs-sdk/client` and `@dynamic-labs-sdk/evm`, Dynamic's headless SDK in connect-only mode: it supplies the wallet catalogue and the connect step (browser wallets + WalletConnect, which is how a Safe pairs from the Safe web app). A wagmi connector of the app's own wraps the authorized wallet, so wagmi alone owns the session
 - **TanStack Query v5** for async state
 - **@zama-fhe/react-sdk** — `ZamaProvider`, `useConfidentialBalance`, `useShield`, `useUnshield`, `useDelegateDecryption`, etc.
-- **@zama-fhe/react-sdk/vaults** — `useDeposit`, `useRedeem`, `useOpenBatches`, `usePosition`, `useExit`, `useFinalize`; `defineVaults` from `@zama-fhe/sdk/vaults` describes the vault
+- **@zama-fhe/react-sdk/vaults** — `useDeposit`, `useRedeem`, `useOpenBatches`, `useBatch`, `useClaim`, `useQuit`, `useFinalize`; `defineVaultGroup` from `@zama-fhe/sdk/vaults` describes the vault
 - **@zama-fhe/react-sdk/wagmi** — `createConfig` adapter for wagmi signer/provider wiring
 - **@zama-fhe/sdk/web** — browser FHE worker transport via `web()`, routed through the local Next.js proxy (`/api/relayer/<network>`)
 - **@zama-fhe/sdk** `cleartext()` — transport for the cleartext deployments, no relayer involved

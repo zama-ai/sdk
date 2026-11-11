@@ -12,12 +12,13 @@ import {
 } from "@zama-fhe/react-sdk";
 import { useDeposit, useOpenBatches, useRedeem } from "@zama-fhe/react-sdk/vaults";
 import type { Address } from "@zama-fhe/sdk";
+import type { BatchRef } from "@zama-fhe/sdk/vaults";
 import { formatUnits, parseAbi, parseUnits } from "viem";
 import { PositionList } from "@/components/vaults/PositionList";
 import { describeError } from "@/lib/errors";
 import { MINT_ABI, useNetwork } from "@/lib/hooks";
 import { minAmount, parseAmount } from "@/lib/parseAmount";
-import { useJoinRecords, type Vaults } from "@/lib/vaults";
+import { useJoinedBatches, type Vault } from "@/lib/vaults";
 
 const COPY = {
   deposit: {
@@ -38,7 +39,7 @@ const COPY = {
 
 interface VaultActionCardProps {
   kind: keyof typeof COPY;
-  vaults: Vaults;
+  vault: Vault;
   account: Address;
   permitContracts: Address[];
   /** The confidential token the action spends: the asset to deposit, the share to withdraw. */
@@ -48,22 +49,19 @@ interface VaultActionCardProps {
 /** One direction of the vault: its balance, its form, and the batches it has in progress. */
 export function VaultActionCard({
   kind,
-  vaults,
+  vault,
   account,
   permitContracts,
   token,
 }: VaultActionCardProps) {
   const { canMint } = useNetwork();
   const copy = COPY[kind];
-  const { records, add, remove } = useJoinRecords(vaults.chainId, account, copy.direction);
+  const { batches, add, remove } = useJoinedBatches(vault.chainId, account, copy.direction);
   const [amount, setAmount] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
   const { data: metadata } = useMetadata(token);
-  const { data: openBatches, error: pausedError } = useOpenBatches(vaults, {
-    groupId: "main",
-    direction: copy.direction,
-  });
+  const { data: openBatches, error: pausedError } = useOpenBatches(vault, copy.direction);
   const paused = openBatches?.some((batch) => batch.paused);
   // Decrypts only under an existing permit: this card never prompts the wallet on its own.
   const { data: hasPermit } = useHasPermit({ contractAddresses: permitContracts });
@@ -72,15 +70,18 @@ export function VaultActionCard({
     { enabled: hasPermit === true },
   );
 
-  // Store the returned join record: the position list reads it, now and after a reload.
+  // Store the batch the join landed in: the position list reads it, now and after a reload. A
+  // group of one has a single leg, so a join lands in a single batch.
   const callbacks = {
-    onSuccess: ({ record }: { record: (typeof records)[number] }) => {
-      add(record);
+    onSuccess: ({ batches: [joined] }: { batches: readonly BatchRef[] }) => {
+      if (joined) {
+        add(joined);
+      }
       setAmount("");
     },
   };
-  const deposit = useDeposit(vaults, callbacks);
-  const redeem = useRedeem(vaults, callbacks);
+  const deposit = useDeposit(callbacks);
+  const redeem = useRedeem(callbacks);
   const send = kind === "deposit" ? deposit : redeem;
 
   const parsed = metadata ? parseAmount(amount, metadata.decimals) : 0n;
@@ -128,9 +129,10 @@ export function VaultActionCard({
           if (reason === null) {
             setSubmitted(false);
             send.mutate({
-              groupId: "main",
+              group: vault,
+              vaultId: "main",
               amount: parsed,
-              options: { onJoinSubmitted: () => setSubmitted(true) },
+              onJoinSubmitted: () => setSubmitted(true),
             });
           }
         }}
@@ -168,7 +170,7 @@ export function VaultActionCard({
 
       {send.data && (
         <output className="alert alert-success card-status">
-          Queued in batch #{send.data.record.legs[0]?.batchId.toString()}. You receive your{" "}
+          Queued in batch #{send.data.batches[0]?.batchId.toString()}. You receive your{" "}
           {copy.receive} once the batch is processed and you withdraw them below.
         </output>
       )}
@@ -179,11 +181,11 @@ export function VaultActionCard({
       ))}
 
       <PositionList
-        vaults={vaults}
-        records={records}
+        account={account}
+        batches={batches}
         token={token}
         permitContracts={permitContracts}
-        onExited={remove}
+        onDone={remove}
       />
     </section>
   );
