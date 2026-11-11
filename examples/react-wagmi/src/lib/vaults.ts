@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Address } from "@zama-fhe/sdk";
-import { defineVaultGroup, type BatchRef, type Direction } from "@zama-fhe/sdk/vaults";
+import { getAddress, isAddress } from "viem";
+import { defineVaultGroup, type BatchRef } from "@zama-fhe/sdk/vaults";
 import type { BatchVault } from "@/lib/networks";
 
 /** The vault as a group of one: every join has a single leg, so it lands in a single batch. */
@@ -30,15 +31,24 @@ export type Vault = ReturnType<typeof vaultGroup>;
 /** One key per batch: joining the same open batch twice gives the same batch. */
 export const batchKey = (batch: BatchRef) => `${batch.batcher}:${batch.batchId}`;
 
-// Batch ids are bigints, which JSON cannot hold: store them as strings.
-function load(key: string): BatchRef[] {
+// Batch ids are bigints, which JSON cannot hold: store them as strings. Anything else in storage
+// (an older format, a hand edit, another batcher than the configured one) is dropped.
+function load(key: string, chainId: number, batcher: Address): BatchRef[] {
   try {
-    const json = localStorage.getItem(key);
-    return json
-      ? (JSON.parse(json, (name, value: unknown) =>
-          name === "batchId" && typeof value === "string" ? BigInt(value) : value,
-        ) as BatchRef[])
-      : [];
+    const stored: unknown = JSON.parse(localStorage.getItem(key) ?? "[]");
+    if (!Array.isArray(stored)) {
+      return [];
+    }
+    return stored.flatMap((entry: unknown): BatchRef[] => {
+      const { batcher: stored, batchId } = (entry ?? {}) as Record<string, unknown>;
+      return typeof stored === "string" &&
+        isAddress(stored) &&
+        getAddress(stored) === getAddress(batcher) &&
+        typeof batchId === "string" &&
+        /^\d+$/.test(batchId)
+        ? [{ chainId, batcher: getAddress(stored), batchId: BigInt(batchId) }]
+        : [];
+    });
   } catch {
     return [];
   }
@@ -57,25 +67,20 @@ function save(key: string, batches: BatchRef[]) {
   }
 }
 
-/** The batches `account` joined and has not claimed or taken back yet, for one direction of the vault. */
-export function useJoinedBatches(chainId: number, account: Address, direction: Direction) {
-  const key = `vault-batches:${chainId}:${account.toLowerCase()}:${direction}`;
-  const [batches, setBatches] = useState(() => load(key));
-  const update = (next: (batches: BatchRef[]) => BatchRef[]) =>
-    setBatches((current) => {
-      const updated = next(current);
-      save(key, updated);
-      return updated;
-    });
+/** The batches `account` joined on `batcher` and has not claimed or taken back yet. */
+export function useJoinedBatches(chainId: number, account: Address, batcher: Address) {
+  const key = `vault-batches:${chainId}:${account.toLowerCase()}:${batcher.toLowerCase()}`;
+  const [batches, setBatches] = useState(() => load(key, chainId, batcher));
+  useEffect(() => save(key, batches), [key, batches]);
   return {
     batches,
     add: (batch: BatchRef) =>
-      update((current) =>
+      setBatches((current) =>
         current.some((stored) => batchKey(stored) === batchKey(batch))
           ? current
           : [...current, batch],
       ),
     remove: (batch: BatchRef) =>
-      update((current) => current.filter((stored) => batchKey(stored) !== batchKey(batch))),
+      setBatches((current) => current.filter((stored) => batchKey(stored) !== batchKey(batch))),
   };
 }

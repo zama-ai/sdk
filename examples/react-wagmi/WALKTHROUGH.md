@@ -28,6 +28,7 @@ page.tsx                         — wallet connect, network picker, tabs, token
 ├── DelegateDecryptionCard.tsx   — grant another wallet the right to decrypt your balance
 ├── RevokeDelegationCard.tsx     — revoke that right
 ├── DecryptAsCard.tsx            — decrypt another wallet's balance (as a delegate)
+├── MintAndShieldButton.tsx     — mint a test ERC-20 and shield it, on the Vaults tab
 └── vaults/                      — the Vaults tab
     ├── VaultsTab.tsx            — the vault's tokens, the decrypt click, and the position
     ├── VaultActionCard.tsx      — the Deposit or Withdraw box: balance, form, positions

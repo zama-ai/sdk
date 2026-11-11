@@ -1,22 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import {
-  useConfidentialBalance,
-  useHasPermit,
-  useMetadata,
-  useShield,
-  useWrappedToken,
-  useZamaSDK,
-} from "@zama-fhe/react-sdk";
+import { useConfidentialBalance, useHasPermit, useMetadata } from "@zama-fhe/react-sdk";
 import { useDeposit, useOpenBatches, useRedeem } from "@zama-fhe/react-sdk/vaults";
 import type { Address } from "@zama-fhe/sdk";
 import type { BatchRef } from "@zama-fhe/sdk/vaults";
-import { formatUnits, parseAbi, parseUnits } from "viem";
+import { formatUnits } from "viem";
+import { MintAndShieldButton } from "@/components/MintAndShieldButton";
 import { PositionList } from "@/components/vaults/PositionList";
 import { describeError } from "@/lib/errors";
-import { MINT_ABI, useNetwork } from "@/lib/hooks";
+import { useNetwork } from "@/lib/hooks";
 import { minAmount, parseAmount } from "@/lib/parseAmount";
 import { useJoinedBatches, type Vault } from "@/lib/vaults";
 
@@ -56,7 +49,11 @@ export function VaultActionCard({
 }: VaultActionCardProps) {
   const { canMint } = useNetwork();
   const copy = COPY[kind];
-  const { batches, add, remove } = useJoinedBatches(vault.chainId, account, copy.direction);
+  const { batches, add, remove } = useJoinedBatches(
+    vault.chainId,
+    account,
+    vault.vaults[0].batchers[copy.direction].latest,
+  );
   const [amount, setAmount] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
@@ -171,7 +168,7 @@ export function VaultActionCard({
       {send.data && (
         <output className="alert alert-success card-status">
           Queued in batch #{send.data.batches[0]?.batchId.toString()}. You receive your{" "}
-          {copy.receive} once the batch is processed and you withdraw them below.
+          {copy.receive} once the batch is processed and you claim them below.
         </output>
       )}
       {errors.map((error, index) => (
@@ -188,70 +185,5 @@ export function VaultActionCard({
         onDone={remove}
       />
     </section>
-  );
-}
-
-const DECIMALS_ABI = parseAbi(["function decimals() view returns (uint8)"]);
-const MINT_AMOUNT = "10";
-
-/** Mints the test ERC-20 behind `token`, then shields it into `token`. */
-function MintAndShieldButton({
-  account,
-  token,
-  symbol,
-}: {
-  account: Address;
-  token: Address;
-  symbol: string;
-}) {
-  const sdk = useZamaSDK();
-  const wrapped = useWrappedToken(token);
-  const shield = useShield({ address: token });
-  const mint = useMutation({
-    mutationFn: async () => {
-      const signer = sdk.signer;
-      if (!signer) {
-        throw new Error("Connect a wallet before minting tokens.");
-      }
-      const underlying = await wrapped.underlying();
-      // Mint and shield both take the ERC-20's units, which can differ from the confidential token's.
-      const decimals = await sdk.provider.readContract({
-        address: underlying,
-        abi: DECIMALS_ABI,
-        functionName: "decimals",
-        args: [],
-      });
-      const amount = parseUnits(MINT_AMOUNT, decimals);
-      const txHash = await signer.writeContract({
-        address: underlying,
-        abi: MINT_ABI,
-        functionName: "mint",
-        args: [account, amount],
-      });
-      await sdk.provider.waitForTransactionReceipt(txHash);
-      await shield.mutateAsync({ amount });
-    },
-  });
-
-  return (
-    <>
-      <button
-        type="button"
-        className="btn btn-sm btn-secondary"
-        disabled={mint.isPending}
-        onClick={() => mint.mutate()}
-      >
-        {mint.isPending
-          ? shield.isPending
-            ? "Shielding…"
-            : "Minting…"
-          : `Mint ${MINT_AMOUNT} ${symbol}`}
-      </button>
-      {mint.error && (
-        <span className="token-meta token-meta-error">
-          {describeError(mint.error, "Mint failed")}
-        </span>
-      )}
-    </>
   );
 }
