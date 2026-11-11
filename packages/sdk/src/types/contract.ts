@@ -64,6 +64,17 @@ export interface ReadContractConfig<
   readonly chainId?: number;
 }
 
+/** The decoded results of a multicall, one per call, in call order. */
+export type MulticallReturnType<TCalls extends readonly ReadContractConfig[]> = {
+  -readonly [K in keyof TCalls]: TCalls[K] extends ReadContractConfig<
+    infer TAbi,
+    infer TFunctionName,
+    infer TArgs
+  >
+    ? ReadContractReturnType<TAbi, TFunctionName, TArgs>
+    : never;
+};
+
 /**
  * Typed write-contract configuration.
  * Matches the shape returned by write contract builders in `src/contracts/`.

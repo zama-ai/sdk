@@ -233,6 +233,11 @@ export interface GenericLogger {
 export interface GenericProvider {
     getBlockTimestamp(chainId?: number): Promise<bigint>;
     getChainId(): Promise<number>;
+    // Warning: (ae-forgotten-export) The symbol "MulticallReturnType" needs to be exported by the entry point index.d.ts
+    multicall?<const TCalls extends readonly ReadContractConfig[]>(params: {
+        readonly calls: TCalls;
+        readonly chainId?: number;
+    }): Promise<MulticallReturnType<TCalls>>;
     prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
         from: Address;
         calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
