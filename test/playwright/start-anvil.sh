@@ -12,6 +12,10 @@ PORT="${1:?Usage: start-anvil.sh <port>}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONTRACTS_DIR="$(cd "$SCRIPT_DIR/../../contracts" && pwd)"
 FHEVM_CONTRACTS_DIR="$CONTRACTS_DIR/lib/fhevm/sdk/js-sdk/contracts"
+[ -f "$FHEVM_CONTRACTS_DIR/foundry.toml" ] || {
+  echo "contracts/lib/fhevm is not checked out; Playwright E2E needs it (run pnpm submodule:install)" >&2
+  exit 1
+}
 
 # Anvil default account #0
 DEPLOYER_PK="${DEPLOYER_PRIVATE_KEY:-0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80}"

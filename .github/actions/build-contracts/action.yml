@@ -58,8 +58,8 @@ runs:
 
     # Key includes every soldeer.lock so a dependency bump busts the cache —
     # building stale deps is the failure mode a lockfile is meant to prevent.
-    # fhevm outputs are deliberately excluded: Actions caches are readable from
-    # fork PR runs, which would bypass the token gate above.
+    # fhevm outputs are deliberately excluded: fork PR runs can restore this
+    # cache, and they must not get fhevm contents without the App token.
     - name: Restore Forge build cache
       id: forge-build-cache
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
