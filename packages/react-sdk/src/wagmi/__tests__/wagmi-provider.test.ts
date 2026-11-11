@@ -327,17 +327,20 @@ describe("WagmiProvider.multicall", () => {
       contracts: [read, read],
       allowFailure: false,
       chainId: 11155111,
+      deployless: false,
     });
     expect(actions.readContract).not.toHaveBeenCalled();
   });
 
-  test("reads one call at a time on a chain with no Multicall3", async () => {
+  test("sends Multicall3's code with the call on a chain that names no Multicall3", async () => {
     const actions = await import("wagmi/actions");
     mockGetPublicClient.mockReturnValue({ chain: {} });
-    vi.mocked(actions.readContract).mockResolvedValue(true as never);
-    const results = await provider.multicall({ calls: [read, read], chainId: 11155111 });
-    expect(results).toStrictEqual([true, true]);
-    expect(actions.readContract).toHaveBeenCalledWith(CONFIG, { ...read, chainId: 11155111 });
-    expect(actions.multicall).not.toHaveBeenCalled();
+    vi.mocked(actions.multicall).mockResolvedValue([true, true] as never);
+    await provider.multicall({ calls: [read, read], chainId: 11155111 });
+    expect(actions.multicall).toHaveBeenCalledWith(
+      CONFIG,
+      expect.objectContaining({ deployless: true }),
+    );
+    expect(actions.readContract).not.toHaveBeenCalled();
   });
 });

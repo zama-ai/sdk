@@ -1,7 +1,7 @@
 import { ethers, BrowserProvider, Transaction } from "ethers";
 import {
-  decodeFunctionResult,
-  encodeFunctionData,
+  createClient,
+  custom,
   type Abi,
   type Address,
   type ContractFunctionArgs,
@@ -10,7 +10,7 @@ import {
   type EIP1193Provider,
   type Hex,
 } from "viem";
-import { multicall3Abi } from "../abi/multicall3.abi";
+import { multicall as viemMulticall } from "viem/actions";
 import { ConfigurationError, TransactionRevertedError } from "../errors";
 import type {
   ContractAbi,
@@ -24,7 +24,6 @@ import type {
 } from "../types";
 import { assertHex } from "../utils/assertions";
 import { requireReadChain } from "../utils/alignment";
-import { MULTICALL3_ADDRESS, readEach } from "../utils/multicall";
 import { ethersRead } from "./contracts";
 
 /**
@@ -59,8 +58,18 @@ export type EthersProviderConfig = { ethereum: EIP1193Provider } | { provider: e
  */
 export class EthersProvider implements GenericProvider {
   readonly #readProvider: ethers.Provider;
-  // Per chain: an injected provider follows the wallet across chains.
-  readonly #multicall3 = new Map<number, Promise<boolean>>();
+  // viem builds and decodes the multicall; ethers only carries its one `eth_call`.
+  readonly #multicallClient = createClient({
+    transport: custom({
+      request: async ({ method, params }) => {
+        if (method !== "eth_call") {
+          throw new Error(`EthersProvider.multicall does not send ${method}`);
+        }
+        const [call, blockTag] = params as [{ to?: Address; data: Hex }, string | undefined];
+        return this.#readProvider.call({ to: call.to, data: call.data, blockTag });
+      },
+    }),
+  });
 
   constructor(config: EthersProviderConfig) {
     if ("ethereum" in config) {
@@ -102,61 +111,29 @@ export class EthersProvider implements GenericProvider {
   }
 
   /**
-   * Run many reads in one Multicall3 `aggregate3` call. Reads one call at a
-   * time on a chain where Multicall3 is not deployed, such as a local node.
+   * Run many reads in one Multicall3 call. The call carries Multicall3's code,
+   * so it works on any chain, whether Multicall3 is deployed there or not.
    */
   async multicall<const TCalls extends readonly ReadContractConfig[]>(params: {
     readonly calls: TCalls;
     readonly chainId?: number;
   }): Promise<MulticallReturnType<TCalls>> {
     await requireReadChain("EthersProvider", params.chainId, () => this.getChainId());
-    if (!(await this.#hasMulticall3(await this.getChainId()))) {
-      return readEach(this, params.calls);
-    }
-    const results = await ethersRead<readonly { success: boolean; returnData: Hex }[]>(
-      this.#readProvider,
-      {
-        address: MULTICALL3_ADDRESS,
-        abi: multicall3Abi,
-        functionName: "aggregate3",
-        args: [
-          params.calls.map((call) => ({
-            target: call.address,
-            allowFailure: true,
-            callData: encodeFunctionData({
-              abi: call.abi as Abi,
-              functionName: call.functionName as never,
-              args: call.args as never,
-            }),
-          })),
-        ],
-      },
-    );
+    const results: readonly { status: "success" | "failure"; result?: unknown }[] =
+      await viemMulticall(this.#multicallClient, {
+        contracts: params.calls.map(({ chainId: _, ...call }) => call) as never,
+        deployless: true,
+      });
     const decoded = await Promise.all(
       params.calls.map((call, index) => {
         const result = results[index];
         // A failed read runs again alone, so it fails with the same error a single read gives.
-        if (result === undefined || !result.success) {
-          return this.readContract({ ...call, chainId: undefined });
-        }
-        return decodeFunctionResult({
-          abi: call.abi as Abi,
-          functionName: call.functionName as never,
-          data: result.returnData,
-        });
+        return result?.status === "success"
+          ? result.result
+          : this.readContract({ ...call, chainId: undefined });
       }),
     );
     return decoded as MulticallReturnType<TCalls>;
-  }
-
-  #hasMulticall3(chainId: number): Promise<boolean> {
-    let deployed = this.#multicall3.get(chainId);
-    if (deployed === undefined) {
-      deployed = this.#readProvider.getCode(MULTICALL3_ADDRESS).then((code) => code !== "0x");
-      deployed.catch(() => this.#multicall3.delete(chainId));
-      this.#multicall3.set(chainId, deployed);
-    }
-    return deployed;
   }
 
   /** Return the latest block timestamp in seconds. */

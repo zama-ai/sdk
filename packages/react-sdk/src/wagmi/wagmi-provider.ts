@@ -87,25 +87,21 @@ export class WagmiProvider implements GenericProvider {
   }
 
   /**
-   * Run many reads in one Multicall3 call, on `chainId`'s client. Reads one
-   * call at a time on a chain whose definition names no Multicall3, such as a
-   * local Hardhat node.
+   * Run many reads in one Multicall3 call, on `chainId`'s client. On a chain
+   * whose definition names no Multicall3, such as a local Hardhat node, the
+   * call carries its code.
    */
   async multicall<const TCalls extends readonly ReadContractConfig[]>(params: {
     readonly calls: TCalls;
     readonly chainId?: number;
   }): Promise<MulticallReturnType<TCalls>> {
     const { calls, chainId } = params;
-    if (getPublicClient(this.#config, { chainId })?.chain.contracts?.multicall3 === undefined) {
-      const results = await Promise.all(
-        calls.map((call) => readContract(this.#config, { ...call, chainId } as never)),
-      );
-      return results as MulticallReturnType<TCalls>;
-    }
     const results = await multicall(this.#config, {
       contracts: calls.map(({ chainId: _, ...call }) => call) as never,
       allowFailure: false,
       chainId,
+      deployless:
+        getPublicClient(this.#config, { chainId })?.chain.contracts?.multicall3 === undefined,
     });
     return results as MulticallReturnType<TCalls>;
   }

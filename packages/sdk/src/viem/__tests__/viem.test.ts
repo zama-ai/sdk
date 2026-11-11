@@ -365,18 +365,21 @@ describe("ViemProvider", () => {
       expect(multicall).toHaveBeenCalledWith({
         contracts: [calls[0], { address: SPENDER, abi: [], functionName: "b", args: [] }],
         allowFailure: false,
+        deployless: false,
       });
       expect(client.readContract).not.toHaveBeenCalled();
     });
 
-    vit("reads one call at a time on a chain with no Multicall3", async ({ publicClient }) => {
-      vi.mocked(publicClient.readContract)
-        .mockResolvedValueOnce(1n as never)
-        .mockResolvedValueOnce(2n as never);
-      const results = await new ViemProvider({ publicClient }).multicall({ calls });
-      expect(results).toStrictEqual([1n, 2n]);
-      expect(publicClient.readContract).toHaveBeenCalledTimes(2);
-    });
+    vit(
+      "sends Multicall3's code with the call on a chain that names no Multicall3",
+      async ({ publicClient }) => {
+        const multicall = vi.fn().mockResolvedValue([1n, 2n]);
+        const client = { ...publicClient, chain: { id: 1 }, multicall } as unknown as PublicClient;
+        await new ViemProvider({ publicClient: client }).multicall({ calls });
+        expect(multicall).toHaveBeenCalledWith(expect.objectContaining({ deployless: true }));
+        expect(client.readContract).not.toHaveBeenCalled();
+      },
+    );
 
     vit("refuses a chainId the client is not on", async ({ publicClient }) => {
       await expect(
