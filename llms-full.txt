@@ -616,7 +616,7 @@ See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/git
 Create a module and add the client:
 
 ```sh
-export ZAMA_SDK_VERSION=3.8.0-beta.16
+export ZAMA_SDK_VERSION=3.8.0-beta.19
 mkdir encrypt-input
 cd encrypt-input
 go mod init example.com/encrypt-input
@@ -794,7 +794,7 @@ See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/git
 Create a binary project and add the client with the runtime this example uses:
 
 ```sh
-export ZAMA_SDK_VERSION=3.8.0-beta.16
+export ZAMA_SDK_VERSION=3.8.0-beta.19
 cargo new encrypt-input
 cd encrypt-input
 cargo add zama_sdk@=$ZAMA_SDK_VERSION
@@ -2103,10 +2103,12 @@ URL and auth are configured on the `FheChain` object (`network`, `relayerUrl`,
 
 
 > [!INFO]
-> **Relayer auth (`FheChain.auth`).** Still `ApiKeyHeader | ApiKeyCookie | BearerToken`.
-> The **Zama-hosted relayer requires `ApiKeyHeader`** (sent as `x-api-key`; Bearer
-> and cookie are rejected at the edge). The `__type` discriminator is unchanged;
-> `ApiKeyHeader` uses `value`, while `BearerToken` uses `token`. See
+> **Relayer auth (`FheChain.auth`).** `ApiKeyHeader | BearerToken`. The
+> **Zama-hosted relayer requires `ApiKeyHeader`** (sent as `x-api-key`; Bearer is
+> rejected at the edge). The `__type` discriminator is unchanged;
+> `ApiKeyHeader` uses `value`, while `BearerToken` uses `token`. `ApiKeyCookie`,
+> which v2 documented, is removed: use `ApiKeyHeader` with a `header` name if your
+> proxy reads its credential from another header. See
 > [Relayer API keys](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/relayer-api-keys.md).
 
 
@@ -2545,6 +2547,8 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 - **Deployment:** [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md), [Monitor and troubleshoot](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md), and [Upgrade the daemon](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/upgrade-and-recover.md).
 - **Signed, scanned image:** the daemon image is built on Docker Hardened Images, every release digest is scanned with Trivy before it is tagged, and the image carries signed build provenance and an SBOM. Verify a release with `gh attestation verify` or cosign and pin it by digest with `ZAMA_SDK_DAEMON_DIGEST`; see [Verify and pin the image](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md#verify-and-pin-the-image). Published images are re-scanned daily.
 
+**HCU limit errors for native clients.** A write whose gas estimation hits one of the protocol's FHE compute (HCU) limits now fails with `HCU_BLOCK_LIMIT_EXCEEDED` (retryable) or `HCU_TRANSACTION_LIMIT_EXCEEDED` instead of `TRANSACTION_REVERTED`. A write whose broadcast outcome is uncertain still fails with `TRANSACTION_OUTCOME_UNKNOWN`.
+
 Start with the [Go quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/go-quick-start.md) or the [Rust quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/rust-quick-start.md).
 
 ## Vault groups over the multi-vault router
@@ -2557,9 +2561,45 @@ If the SDK cannot match a `Joined` event in the mined transaction's receipt to e
 
 See [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/groups.md).
 
+## Typed errors for the protocol's FHE compute limits
+
+The protocol caps the FHE compute, measured in HCU, that a transaction and a block can use. A write whose gas estimation hits one of them now throws a typed error instead of a bare `TransactionRevertedError`, from `submitTransaction`-backed methods and from `sdk.offline.prepare` alike: `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`) when the block has too little left, which is retryable in the next block, and `HcuTransactionLimitExceededError` (`HCU_TRANSACTION_LIMIT_EXCEEDED`) when the transaction needs more HCU, in total or in one sequential chain, than one transaction may use, which a retry cannot fix.
+
+A transaction that is mined and then reverts now throws `TransactionRevertedError` instead of returning a result. `TransactionReceipt` gained an optional `status` (`"success"` or `"reverted"`); the viem, ethers and wagmi providers fill it.
+
+See [Errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#hcublocklimitexceedederror).
+
 ## Settle a dispatched batch yourself
 
-New `VaultBatcher.finalize(batchId)` (`useFinalize` in React, `finalizeMutationOptions` for TanStack Query). A keeper, an off-chain service that watches batches, normally finalizes a dispatched batch; when it has not, any account can now settle the batch from the SDK: `finalize` reads the batch's unwrap request, publicly decrypts the amount it released, and submits `dispatchBatchCallback` with the cleartext and its proof. Past the batch's callback deadline the same call cancels the batch. The submission surfaces as a `VaultSubmitted` event with `vaultOperation: "finalize"`. `VaultBatcher.unwrapRequestId(batchId)` exposes the underlying read. `finalize` and `prepareFinalize` read the batch state first and throw the new `VaultBatchNotDispatchedError` when the batch is not `Dispatched`, for example because a keeper already finalized it, before any decryption. New `VaultBatcher.timeUntilCallbackDeadline(batchId)` (`useTimeUntilCallbackDeadline`, `timeUntilCallbackDeadlineQueryOptions`) reads the seconds until a dispatched batch reaches its callback deadline: `0` once it has, when `finalize` cancels instead of settling, and `null` outside `Dispatched`.
+A keeper normally finalizes a dispatched batch. When it has not, any account can now settle it with `VaultBatcher.finalize(batchId)` (`useFinalize` in React, `finalizeMutationOptions` for TanStack Query). After the batch's callback deadline the same call cancels the batch instead, except on an asynchronous redeem batcher that has already placed its redemption request.
+
+- `VaultBatcher.timeUntilCallbackDeadline(batchId)` (`useTimeUntilCallbackDeadline`, `timeUntilCallbackDeadlineQueryOptions`) returns the seconds left until the deadline: `0` once it has passed, `null` when the batch is not `Dispatched`.
+- `finalize` and `prepareFinalize` throw the new `VaultBatchNotDispatchedError` when the batch is not `Dispatched`, for example because a keeper got there first.
+- `VaultBatcher.unwrapRequestId(batchId)` returns the unwrap request `finalize` reads.
+- The submission emits a `VaultSubmitted` event with `vaultOperation: "finalize"`.
+
+## Batch status for vault UIs
+
+`VaultBatcher.batchStatus(batchId)` (`useBatchStatus`, `batchStatusQueryOptions`) returns a batch's state and the timestamps a UI needs for it, such as `secondsUntilDispatchable` while `Pending` and `secondsUntilCallbackDeadline` while `Dispatched`. The result is a union on `state`, so an exhaustive `switch` catches a state the UI does not handle.
+
+`openBatchIds(logs, batcher, account)` lists the batches an account joined and has not claimed or quit, from the batcher's `Joined`, `Claimed` and `Quit` logs. `VaultTopics` adds `Claimed` and `Quit`.
+
+The new [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) guide covers what to show and offer at each step of a deposit or redemption.
+
+## Vaults on another chain
+
+Pass a `chainId` to work with a vault while the wallet is not on its chain, for example on a page that renders before the wallet connects.
+
+- **Reads:** `createVaultBatcher(sdk, address, { chainId })`, `useVaultBatcher` and the batcher read hooks (`useBatchStatus`, `useBatchState`, `useCurrentBatchId`, `useTimeUntilDispatchable`, `useTimeUntilCallbackDeadline`, `usePaused`, `useBatcherTokens`) take a `chainId`, exposed as `VaultBatcher.chainId`. `WagmiProvider` reads that chain through wagmi. `ViemProvider` and `EthersProvider` are bound to one chain and throw `ConfigurationError` for another.
+- **Writes:** `createVault`, `useVault`, `useDeposit`, `useRedeem` and the batcher write hooks (`useJoin`, `useQuit`, `useClaim`, `useRecover`, `useDispatchBatch`, `useFinalize`) take the same `chainId`. A write while the wallet is on another chain throws `ChainMismatchError` before anything is sent; its new `targetChainId` is the vault's chain.
+- **Decryption:** `depositOf` and `prepareFinalize` decrypt on the provider's chain, so they throw `ConfigurationError` until the provider is on the vault's chain.
+- **Custom providers:** `ReadContractConfig` and `GenericProvider.getBlockTimestamp` gain an optional `chainId`. A custom `GenericProvider` must read that chain or throw; one that ignores it returns data from the wrong chain.
+
+## Smaller vault additions
+
+- `usePaused` (`pausedQueryOptions`) reads whether a batcher is paused, and `useBatcherTokens` (`batcherTokensQueryOptions`) its input and output tokens.
+- A new `onJoinSubmitted` option on `VaultBatcher.join`, `Vault.deposit` / `Vault.redeem`, `VaultGroup.deposit` / `VaultGroup.redeem` and their hooks receives the transaction hash once the wallet has sent the join. If the callback throws, the SDK logs a warning and the join continues.
+- `VaultBatcher.batchState` throws `ConfigurationError` for a state number it does not know.
 
 ## Vault groups for your own transaction layer
 
@@ -2603,6 +2643,15 @@ The mock wrappers registry and mock confidential tokens on Polygon Amoy are no l
 ## InGen testnet removed
 
 The SDK no longer supports the T-Rex InGen testnet (chain ID `364301`). The `ingenTestnet` preset is removed from `@zama-fhe/sdk/chains`, from the built-in `chains` map and from the deprecated `DefaultRegistryAddresses`, and the `example-ingen` app is removed. Use `zenithTrexTestnet`, `hoodi` or `bscTestnet` for a cleartext testnet.
+
+## `ApiKeyCookie` relayer auth removed
+
+`ApiKeyCookie` is removed from relayer authentication, so `FheChain.auth` is now `ApiKeyHeader | BearerToken`. The Zama-hosted relayer only accepts the `x-api-key` header, and in a browser the cookie never reached a server: it was written with `document.cookie` and marked `HttpOnly`, which browsers ignore when a script sets it. It was only ever sent, as a real `Cookie` header, from Node.js, which includes the daemon behind the Go and Rust clients. A setup that authenticated to its own proxy that way needs to change.
+
+- **TypeScript:** remove `{ __type: "ApiKeyCookie" }` from `FheChain.auth`. It no longer type-checks, and a config that still carries it (from untyped code, say) throws `ConfigurationError` with `Unknown auth type: ApiKeyCookie` when the SDK builds the relayer, rather than going out without credentials.
+- **Go and Rust clients:** `zama.APIKeyCookie` and `RelayerAuth::ApiKeyCookie` are removed, so code that uses them no longer compiles.
+- **Daemon protocol:** `api_key_cookie` is removed from `ChainAuth` and its field number (3) is reserved. A client that still sends it is rejected with `FAILED_PRECONDITION`; run the client and the daemon at exactly the same version.
+- **Migrate:** have your proxy read its credential from a header and use `ApiKeyHeader` with the optional `header` name (the default is `x-api-key`). See [Auth methods reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md#5-auth-methods-reference).
 
 ## 3.x
 
@@ -4559,17 +4608,16 @@ The `auth` field supports multiple methods depending on how your relayer is conf
 
 ### 5. Auth methods reference
 
-The `auth` field accepts three formats. **Which one to use depends on where your relayer lives** — the transport has to match what your relayer (or the auth layer in front of it) expects.
+The `auth` field accepts two formats. **Which one to use depends on where your relayer lives** — the transport has to match what your relayer (or the auth layer in front of it) expects.
 
 | Method         | How it's sent                   | Use it when                                                                                                              |
 | -------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `ApiKeyHeader` | `x-api-key: key` header         | **Zama-hosted relayer** — required; it only accepts the key in the `x-api-key` header. Also the default for most setups. |
-| `ApiKeyCookie` | `x-api-key=key` cookie          | **Behind your own proxy** — authenticate the SDK→proxy hop with a cookie; your proxy then injects `x-api-key` upstream.  |
 | `BearerToken`  | `Authorization: Bearer <token>` | **Self-hosted relayer** — only if your own auth layer expects a bearer token.                                            |
 
 
 > [!WARNING]
-> Against the **Zama-hosted relayer**, only `ApiKeyHeader` works — requests without the `x-api-key` header are rejected. `BearerToken` and `ApiKeyCookie` are for self-hosted relayers or proxied setups where you control the auth layer.
+> Against the **Zama-hosted relayer**, only `ApiKeyHeader` works — requests without the `x-api-key` header are rejected. `BearerToken` is for self-hosted relayers or proxied setups where you control the auth layer.
 
 
 
@@ -4579,8 +4627,8 @@ The `auth` field accepts three formats. **Which one to use depends on where your
 // Zama-hosted relayer — API key in the x-api-key header (required)
 auth: { __type: "ApiKeyHeader", value: "your-api-key" }
 
-// Behind your own proxy — credential carried as a cookie to your proxy
-auth: { __type: "ApiKeyCookie", value: "your-api-key" }
+// Behind your own proxy — a credential for your proxy, in the header it reads
+auth: { __type: "ApiKeyHeader", header: "x-proxy-key", value: "your-proxy-credential" }
 
 // Self-hosted relayer — only if your auth layer expects a bearer token
 auth: { __type: "BearerToken", token: "your-token" }
@@ -4592,8 +4640,9 @@ auth: { __type: "BearerToken", token: "your-token" }
 // Zama-hosted relayer -- API key in the x-api-key header (required)
 config.Auth = zama.APIKeyHeader{Value: "your-api-key"}
 
-// Behind your own proxy -- credential carried as a cookie to your proxy
-config.Auth = zama.APIKeyCookie{Value: "your-api-key"}
+// Behind your own proxy -- a credential for your proxy, in the header it reads
+header := "x-proxy-key"
+config.Auth = zama.APIKeyHeader{Value: "your-proxy-credential", Header: &header}
 
 // Self-hosted relayer -- only if your auth layer expects a bearer token
 config.Auth = zama.BearerToken{Token: "your-token"}
@@ -4605,13 +4654,18 @@ config.Auth = zama.BearerToken{Token: "your-token"}
 // Zama-hosted relayer -- API key in the x-api-key header (required)
 let auth = RelayerAuth::api_key("your-api-key");
 
-// Behind your own proxy -- credential carried as a cookie to your proxy
-let auth = RelayerAuth::ApiKeyCookie { value: "your-api-key".into(), cookie: None };
+// Behind your own proxy -- a credential for your proxy, in the header it reads
+let auth = RelayerAuth::ApiKeyHeader {
+    value: "your-proxy-credential".into(),
+    header: Some("x-proxy-key".into()),
+};
 
 // Self-hosted relayer -- only if your auth layer expects a bearer token
 let auth = RelayerAuth::BearerToken { token: "your-token".into() };
 ```
 
+
+`ApiKeyHeader` takes an optional `header` name (the default is `x-api-key`). Behind your own proxy, set it to the header your proxy reads to authenticate the SDK; the proxy then adds the real `x-api-key` upstream, so the Zama API key stays server-side.
 
 When a browser relayer is routed through your own proxy, enforce CSRF protection
 at the proxy/application boundary (for example, with same-site cookies and your
@@ -4692,7 +4746,7 @@ let chain = ChainConfig::new(11_155_111, "https://sepolia.infura.io/v3/YOUR_KEY"
 ```
 
 
-For the Zama-hosted relayer, `ApiKeyHeader` is the supported `auth` method — the hosted endpoint accepts the key only in the `x-api-key` header. (`BearerToken` and `ApiKeyCookie` apply to self-hosted relayers or proxied setups.)
+For the Zama-hosted relayer, `ApiKeyHeader` is the supported `auth` method — the hosted endpoint accepts the key only in the `x-api-key` header. (`BearerToken` applies to self-hosted relayers or proxied setups.)
 
 The Authentication guide includes copy-paste examples for both, an Express proxy reference implementation, and the full table of supported `auth` methods.
 
@@ -6207,6 +6261,8 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `ENCRYPTION_FAILED`                      | `EncryptionFailedError`                   | FHE encryption failed in the WASM runtime                                                                      |
 | `DECRYPTION_FAILED`                      | `DecryptionFailedError`                   | FHE decryption failed                                                                                          |
 | `TRANSACTION_REVERTED`                   | `TransactionRevertedError`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                 |
+| `HCU_BLOCK_LIMIT_EXCEEDED`               | `HcuBlockLimitExceededError`              | Gas estimation found too little FHE compute (HCU) left in the block (retryable)                                |
+| `HCU_TRANSACTION_LIMIT_EXCEEDED`         | `HcuTransactionLimitExceededError`        | The transaction needs more FHE compute (HCU) than one transaction may use                                      |
 | `UNSHIELD_ALREADY_FINALIZED`             | `UnshieldAlreadyFinalizedError`           | `resumeUnshield()` called for an unwrap that was already finalized -- funds already arrived, nothing to resume |
 | `INVALID_KEYPAIR`                        | `InvalidTransportKeyPairError`            | Relayer rejected transport key pair (stale or malformed)                                                       |
 | `KEYPAIR_EXPIRED`                        | `TransportKeyPairExpiredError`            | Transport key pair expired -- user needs to re-sign                                                            |
@@ -6229,7 +6285,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `SIGNER_NOT_CONFIGURED`                  | `SignerNotConfiguredError`                | SDK operation needs a signer but none is configured (subclass of `SignerRequiredError`)                        |
 | `WALLET_NOT_CONNECTED`                   | `WalletNotConnectedError`                 | Signer exists but has no connected wallet account (subclass of `SignerRequiredError`)                          |
 | `WALLET_ACCOUNT_NOT_READY`               | `WalletAccountNotReadyError`              | Async signer adapter hasn't resolved its account yet (subclass of `SignerRequiredError`, retryable)            |
-| `CHAIN_MISMATCH`                         | `ChainMismatchError`                      | Signer and provider are on different chains                                                                    |
+| `CHAIN_MISMATCH`                         | `ChainMismatchError`                      | Signer and provider are on different chains, or the signer is not on a pinned vault or batcher's `chainId`     |
 | `DELEGATION_CONTRACT_IS_SELF`            | `DelegationContractIsSelfError`           | Delegation contract address equals the caller                                                                  |
 | `DELEGATION_DELEGATE_EQUALS_CONTRACT`    | `DelegationDelegateEqualsContractError`   | Delegate equals the contract address                                                                           |
 | `DELEGATION_DELEGATE_CANNOT_BE_WILDCARD` | `DelegationDelegateCannotBeWildcardError` | Delegate address is the wildcard address                                                                       |
@@ -6480,7 +6536,7 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 
 ### 8. Retry transient failures
 
-Five causes are transient — the operation can simply be retried, ideally with backoff: `RpcRateLimitError` (`RPC_RATE_LIMITED`), `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`, only on a 429, or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`), `DelegationCooldownError` (`DELEGATION_COOLDOWN`), and `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`). Rather than hardcoding that set of codes, use `isRetryable(error)` and `retryAfterSeconds(error)` — they stay correct as the taxonomy grows, since every `ZamaError` declares its own `.retryable`.
+Six causes are transient — the operation can simply be retried, ideally with backoff: `RpcRateLimitError` (`RPC_RATE_LIMITED`), `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`, only on a 429, or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`), `DelegationCooldownError` (`DELEGATION_COOLDOWN`), `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`), and `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`). Rather than hardcoding that set of codes, use `isRetryable(error)` and `retryAfterSeconds(error)` — they stay correct as the taxonomy grows, since every `ZamaError` declares its own `.retryable`.
 
 | Cause                                                        | `retryAfterSeconds`                               | Notes                                                                                                   |
 | ------------------------------------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -6489,6 +6545,7 @@ Five causes are transient — the operation can simply be retried, ideally with 
 | `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`) | `undefined`                                       | The SDK already rides out the propagation window internally; only surfaces if it's exceeded.            |
 | `DelegationCooldownError` (`DELEGATION_COOLDOWN`)            | `undefined`                                       | Per-block timing gate; resolves on the next block.                                                      |
 | `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`)    | `undefined`                                       | Async signer adapters (e.g. `EthersSigner`) refresh once internally; only surfaces if still unresolved. |
+| `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`)    | `undefined`                                       | Too little FHE compute left in the block at estimation; resolves on the next block.                     |
 
 
 ### Tab: Core SDK
@@ -6735,13 +6792,14 @@ const mySepolia = {
 } as const satisfies FheChain;
 ```
 
-The `auth` field supports three modes. For the **Zama-hosted relayer, use `ApiKeyHeader`** — it's the only mode the hosted endpoint accepts. `BearerToken` and `ApiKeyCookie` are for self-hosted relayers or proxied setups where you control the auth layer (see the [Authentication guide](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md)).
+The `auth` field supports two modes. For the **Zama-hosted relayer, use `ApiKeyHeader`** — it's the only mode the hosted endpoint accepts. `BearerToken` is for self-hosted relayers or proxied setups where you control the auth layer (see the [Authentication guide](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md)).
 
 | Mode           | Shape                                            | Use it when                                  |
 | -------------- | ------------------------------------------------ | -------------------------------------------- |
 | API key header | `{ __type: "ApiKeyHeader", value: "your-key" }`  | Zama-hosted relayer (required), or default   |
-| API key cookie | `{ __type: "ApiKeyCookie", value: "your-key" }`  | Behind your own proxy (SDK→proxy hop)        |
 | Bearer token   | `{ __type: "BearerToken", token: "your-token" }` | Self-hosted relayer with a bearer auth layer |
+
+Behind your own proxy, `ApiKeyHeader` also takes an optional `header` naming the header your proxy reads to authenticate the SDK.
 
 ### 7. Clean up on shutdown
 
@@ -9849,6 +9907,8 @@ Core SDK usage imports from `@zama-fhe/sdk/vaults`; React hooks import from `@za
 
 🟨 Go to [**Vault groups**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/groups.md) to deposit into one of several vaults without revealing which one.
 
+🟨 Go to [**Building a vault UI**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) for every state your UI must show after a deposit, and what to offer in each one.
+
 For the API surface, see [**Vault**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md), [**VaultBatcher**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md), and [**VaultGroup**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md) in the SDK reference, and the vault hooks in the [React reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/README.md).
 
 ## Help center
@@ -10071,7 +10131,7 @@ const { data: balance } = useConfidentialBalance({ address: cShareAddress, accou
 ```
 
 
-The share token is an ordinary confidential token, so `useConfidentialBalance` reads it directly — there is no vault-specific balance hook, and none that resolves the share token's address. Configure `cShareAddress` alongside the batcher addresses, as above, or read it once with `(await vault.cShare()).address` — in a `useEffect`, or a `useQuery` keyed on the vault — and keep it in state. The address is fixed at deploy time, so one read is enough.
+The share token is an ordinary confidential token, so `useConfidentialBalance` reads it directly — there is no vault-specific balance hook. Configure `cShareAddress` alongside the batcher addresses, as above, or read it with [`useBatcherTokens`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatcherTokens.md): for the deposit batcher, `toToken` is the share and `fromToken` the asset. The addresses are fixed at deploy time, so the hook reads them once.
 
 ## Redemptions
 
@@ -10146,6 +10206,7 @@ recover.mutate({ batchId, account: "0xDepositor" });
 
 ## Next steps
 
+- [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) — what to show and offer in every state of a deposit or redemption
 - [`Vault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) and [`VaultBatcher`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md) — full API reference, including the per-batch reads
 - [`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md), [`useRedeem`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRedeem.md), [`useBatchState`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md), [`useClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md) — the React hooks used above
 - [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault) — the protocol side: how batching, dispatch and settlement work
@@ -10267,6 +10328,166 @@ const { joins } = prepared.decodeJoins(receipt.logs);
 `group.missingOperators(prepared)` returns the grants the account still lacks; give each an `until` that outlasts the time the writes take. After a reload, `decodeVaultGroupJoins({ legs, account }, logs)` does what `decodeJoins` does from the saved `legs` and `account`. When you send the writes yourself, call `invalidateAfterGroupJoin(queryClient, prepared.legs)` to refresh balances and batch reads.
 
 `"legs"` delivery sends one transfer per member straight to its batcher and needs no grant; it keeps the choice of vault private only when the wallet lands every leg atomically. `"router"` is the single transaction the SDK sends itself. A host that has already verified the group passes `skipPreflight`, which skips the config verification and the registry listing but not the `paused()` read. The balance check decrypts as the signer, so an `account` other than the signer's needs `skipBalanceCheck`. One that gates the amount on a balance it already shows passes `skipBalanceCheck`. See [`VaultGroup` → Prepare](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#prepare).
+
+## Next steps
+
+- [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) — what to show and offer in every state of a deposit or redemption
+- [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md) — the batch lifecycle behind each leg
+
+## Building a vault UI
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/guides/vaults/building-a-ui.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md
+- logical_path: guides/vaults/building-a-ui
+
+# Building a vault UI
+
+A vault deposit is not done when the transaction is mined. The amount joins a **batch**, the batch is sent to the vault later, and the user claims their shares after that. A UI that only covers the deposit form leaves users with funds they cannot see or move.
+
+This guide lists every state your UI must handle and what to show in each one. It does not prescribe a layout: put the form in a modal, a page or a sidebar, and show batches in a list, a toast or a notification center. What matters is that no state is missing.
+
+
+> [!INFO]
+> Redemptions follow the same states with the redeem batcher. Read "shares" for "assets" below and the other way around.
+
+
+## The journey
+
+A deposit or redemption has three parts:
+
+1. **The form.** The user picks an amount. Your UI checks it before sending.
+2. **The send.** One transaction joins the open batch and returns its `batchId`.
+3. **The batch.** The batch moves through its states until the user claims or takes the amount back.
+
+## 1. The form
+
+| Situation                                         | What to do                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The balance is encrypted                          | Show it as hidden with a button to decrypt it. The first decryption asks the wallet for a signature, so start it from a click. See [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useConfidentialBalance.md); [`useBatcherTokens`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatcherTokens.md) gives the token addresses. |
+| The amount is above the balance                   | Disable the button and say why. A confidential transfer above the balance moves zero instead of reverting; the SDK checks this before sending, but the user should not have to find out from an error.                                                                                                     |
+| The batcher is paused                             | Read it with [`usePaused`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/usePaused.md), disable the button and say deposits are paused. Quit and claim still work while paused.                                                                                                                                                    |
+| A redemption                                      | The amount is in shares, not assets. Label the field so the user knows which one they type.                                                                                                                                                                                                                |
+| The user has public tokens, not confidential ones | Shield first with [`useShield`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useShield.md), then deposit.                                                                                                                                                                                                                         |
+
+## 2. The send
+
+`useDeposit` and `useRedeem` return the `batchId` the amount joined. **Keep track of it**, so the user finds the batch again after a reload or on another device. Either store the id with the user's account, or rebuild the list from the chain: fetch the batcher's `Joined`, `Claimed` and `Quit` logs for the account and pass them to [`openBatchIds`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#events), which returns the batches the user joined and has not claimed or quit yet.
+
+While the transaction is pending, lock the form so the user cannot send twice. Show "Confirm in your wallet" until the `onJoinSubmitted` callback you pass to `useDeposit` or `useRedeem` fires, then "Waiting for the transaction". If the callback throws, the SDK only logs a warning, so the label stays on "Confirm in your wallet".
+
+After it is mined, say the amount is **queued**, not deposited. The user does not hold shares yet.
+
+A vault page can render before the wallet is on the vault's chain, for example before it connects. Pass the vault's `chainId` to:
+
+- The read hooks (`useBatchStatus`, `useCurrentBatchId`, `usePaused`, `useBatcherTokens`, …), so they read the vault's chain. This needs a provider that can read other chains, such as `WagmiProvider`.
+- `useDeposit`, `useRedeem` and the batcher write hooks (`useClaim`, `useQuit`, `useFinalize`, …), so a wallet on another chain gets `ChainMismatchError` instead of sending there.
+
+## 3. The batch
+
+Read the batch with [`useBatchStatus`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchStatus.md). It returns the state and the timestamps that state needs in one call. The `secondsUntil*` values are correct at read time; for a live countdown, tick from the `*At` timestamps between refetches:
+
+| State        | What the user sees                                    | What the user can do                              | Hooks                                                 |
+| ------------ | ----------------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------- |
+| `Pending`    | Queued, with the time until the batch can be sent     | Cancel, to get the amount back                    | [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md)         |
+| `Dispatched` | Processing                                            | Wait. If the batch stays here too long, settle it | [`useFinalize`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useFinalize.md) |
+| `Finalized`  | Ready to claim                                        | Claim the shares                                  | [`useClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md)       |
+| `Canceled`   | The batch did not go through, the amount is available | Take the amount back                              | [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md)         |
+
+Switch on `status.state` and handle every case. With an exhaustive `switch`, TypeScript flags a state your UI forgets:
+
+```tsx
+import { useBatchStatus, useClaim, useQuit } from "@zama-fhe/react-sdk/vaults";
+import type { Address } from "@zama-fhe/sdk";
+import { BatchState } from "@zama-fhe/sdk/vaults";
+
+// `Row` and `formatSeconds` stand in for your own components and helpers.
+
+function BatchRow({ batcher, batchId }: { batcher: Address; batchId: bigint }) {
+  const { data: status } = useBatchStatus(
+    { address: batcher, batchId },
+    { refetchInterval: 10_000 },
+  );
+  const claim = useClaim({ address: batcher });
+  const quit = useQuit({ address: batcher });
+
+  if (!status) return <Row label="Loading…" />;
+
+  switch (status.state) {
+    case BatchState.Pending:
+      return (
+        <Row
+          label={`Queued, sent in ${formatSeconds(status.secondsUntilDispatchable)} at the earliest`}
+          action={{ label: "Cancel", onClick: () => quit.mutate({ batchId }) }}
+        />
+      );
+    case BatchState.Dispatched:
+      return <Row label="Processing" />;
+    case BatchState.Finalized:
+      return (
+        <Row
+          label="Ready to claim"
+          action={{ label: "Claim", onClick: () => claim.mutate({ batchId }) }}
+        />
+      );
+    case BatchState.Canceled:
+      return (
+        <Row
+          label="Did not go through"
+          action={{ label: "Get it back", onClick: () => quit.mutate({ batchId }) }}
+        />
+      );
+    default:
+      return status satisfies never;
+  }
+}
+```
+
+### Pending
+
+The countdown is the earliest moment anyone may send the batch, not a promise. Word it as "at the earliest". When it reaches `0` the batch waits for someone to send it; anyone may call [`useDispatchBatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDispatchBatch.md), but you do not have to offer it.
+
+### Dispatched
+
+A keeper, an off-chain service that watches batches, normally settles the batch and the user only waits. If it stays `Dispatched` longer than your app expects, offer a button that calls `useFinalize`. Pick the delay yourself; the SDK does not decide when a keeper is late.
+
+`status.secondsUntilCallbackDeadline` says how long settling remains possible. Once it reaches `0`, `useFinalize` **cancels** the batch instead of settling it, and the user then takes the amount back from `Canceled`. Label the button accordingly, for example "Cancel and get it back" rather than "Settle".
+
+A redeem batcher whose vault settles redemptions asynchronously is the exception. Once it has placed the redemption request with the vault, `useFinalize` keeps settling past the deadline, or leaves the batch `Dispatched` until the vault pays out. For such a batcher, keep the "Settle" label after the deadline.
+
+### Finalized
+
+Claiming is a separate transaction. Show it clearly: until the user claims, the shares are not in their balance. Claiming is permissionless and pays the depositor, never the caller, so your backend may also claim on the user's behalf.
+
+A claim or quit does not change the batch's state, and it replaces the user's encrypted deposit with an encrypted zero, so neither `useBatchStatus` nor the deposit shows that the user already claimed. The public `Claimed` and `Quit` events do, and [`openBatchIds`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#events) drops a batch once either is emitted for the user. If you store ids yourself, mark the batch done once the claim or quit is mined.
+
+### Canceled
+
+A canceled batch never reached the vault. `useQuit` returns the original amount. Claiming reverts.
+
+## Vault groups
+
+A group deposit joins one batch per member: the chosen vault with the amount, the others with an encrypted zero. Store every `join` the deposit returns, not only the chosen one.
+
+Show the user one entry for the vault they chose, but **claim or quit every join**, the zero legs included. A claim or quit is public, so acting on the chosen vault alone shows which vault the user picked. Read the state of each join's batch with `useBatchStatus`, and offer the action once every leg allows it.
+
+## Checklist
+
+- [ ] The encrypted balance is decrypted only after a click.
+- [ ] The send button explains why it is disabled: no amount, above balance, paused.
+- [ ] The user's open batches survive a reload: stored ids, or `openBatchIds` over the batcher's logs.
+- [ ] After sending, the UI says "queued", not "deposited".
+- [ ] Every `BatchState` has a view, enforced by an exhaustive `switch`.
+- [ ] Pending batches offer a cancel.
+- [ ] Dispatched batches offer `finalize` after a delay you choose, and say when it cancels instead (not on an asynchronous redeem batcher).
+- [ ] Finalized batches offer a claim.
+- [ ] Canceled batches offer to take the amount back.
+- [ ] Claimed and quit batches leave the list.
+
+## Next steps
+
+- [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md) for the SDK calls behind each step.
+- [Vault groups](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/groups.md) when one form deposits into one of several vaults.
 
 ## Go & Rust overview
 
@@ -10439,7 +10660,7 @@ For a custom wallet:
 
 Wallet callbacks can run concurrently. Each built-in adapter instance sends one write at a time, so its concurrent writes do not reuse a nonce, and a stalled broadcast delays the next write by up to the broadcast timeout. A custom wallet must coordinate nonces across concurrent writes itself.
 
-Report a rejection or failure as an SDK error. Report a revert detected before broadcast with Go `ExecutionRevertError` or Rust `SdkError::execution_reverted`; the operation then fails with `TRANSACTION_REVERTED`.
+Report a rejection or failure as an SDK error. Report a revert detected before broadcast with Go `ExecutionRevertError` or Rust `SdkError::execution_reverted`; the operation then fails with `TRANSACTION_REVERTED`, or with `HCU_BLOCK_LIMIT_EXCEEDED` or `HCU_TRANSACTION_LIMIT_EXCEEDED` when the revert is one of the protocol's FHE compute (HCU) limits.
 
 If a write ends without a clear result, follow [Resolve uncertain transaction outcomes](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/uncertain-transaction-outcomes.md).
 
@@ -10834,6 +11055,8 @@ Record every transaction hash in your wallet's write path, together with the acc
 | `SIGNING_REJECTED`                                                                     | Request another wallet action only after user approval                       |
 | `SIGNING_FAILED` or `CHAIN_MISMATCH` before broadcast                                  | Correct the wallet or provider configuration                                 |
 | `TRANSACTION_REVERTED`                                                                 | Inspect the revert and fix its cause before submitting another write         |
+| `HCU_BLOCK_LIMIT_EXCEEDED`                                                             | Nothing was sent; submit again in a later block                              |
+| `HCU_TRANSACTION_LIMIT_EXCEEDED`                                                       | Nothing was sent; split the work into smaller transactions                   |
 | `TRANSACTION_OUTCOME_UNKNOWN`                                                          | Reconcile the recorded hash and account transactions before submitting again |
 | Transport failure or cancellation after the wallet received the write                  | Treat the outcome as uncertain, whatever the error code                      |
 | Cancellation, deadline, account change, or context close before the wallet received it | The operation fails with `CANCELLED`; nothing was sent                       |
@@ -10908,7 +11131,7 @@ Each release signs the image in the release workflow and stores the signature, b
 Resolve the tag first, so the digest you verify is the digest you pin:
 
 ```bash
-export ZAMA_SDK_VERSION=3.8.0-beta.16
+export ZAMA_SDK_VERSION=3.8.0-beta.19
 export ZAMA_SDK_DAEMON_DIGEST="$(docker buildx imagetools inspect "ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION}" --format '{{ .Manifest.Digest }}')"
 ```
 
@@ -10968,7 +11191,7 @@ services:
 Download the daemon file next to it, then start both:
 
 ```bash
-export ZAMA_SDK_VERSION=3.8.0-beta.16
+export ZAMA_SDK_VERSION=3.8.0-beta.19
 curl -fsSL -o zama-sdk-daemon.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.yaml"
 docker compose up -d --wait
 ```
@@ -10982,7 +11205,7 @@ When your application runs directly on a Linux host rather than in a container, 
 From the directory that will hold the daemon's files, replace `myapp` with the user your application runs as:
 
 ```bash
-export ZAMA_SDK_VERSION=3.8.0-beta.16
+export ZAMA_SDK_VERSION=3.8.0-beta.19
 curl -fsSL -o compose.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.host.yaml"
 sudo install -d -m 700 -o myapp -g myapp socket storage
 ZAMA_SDK_DAEMON_UID="$(id -u myapp)" ZAMA_SDK_DAEMON_GID="$(id -g myapp)" docker compose up -d --wait
@@ -11370,7 +11593,7 @@ Every event extends a common shape (an optional `tokenAddress`, a `timestamp`, a
 | `EncryptStart` / `EncryptEnd` / `EncryptError`                                                                                                                                       | An FHE encryption begins, succeeds, or fails.                                                                                                                                                                                                                                                                                                                         |
 | `DecryptStart` / `DecryptEnd` / `DecryptError`                                                                                                                                       | A decryption begins, succeeds, or fails — `DecryptEnd`/`DecryptError` carry decrypted cleartext values; see [`decryption.decryptValues`](#decryption-decryptvalues) for the full walkthrough and code samples.                                                                                                                                                        |
 | `PermitError`                                                                                                                                                                        | `grantPermit`, `grantDelegationPermit`, or `registerPermit` fails — but not every failure of these methods: transport-key-pair issues (`TransportKeyPairChangedError`, `KeyWrappingError`) are deliberately excluded from this event.                                                                                                                                 |
-| `TransactionError`                                                                                                                                                                   | `submitTransaction` itself rejects — before broadcast (estimation/validation) or while waiting for the receipt. It does **not** fire for a transaction that broadcasts successfully but reverts on execution: the SDK doesn't currently inspect `receipt.status`, so a mined-but-reverted transaction resolves as a success with no error and no event.               |
+| `TransactionError`                                                                                                                                                                   | `submitTransaction` itself rejects — before broadcast (estimation/validation), while waiting for the receipt, or when the mined receipt reports a revert (`receipt.status === "reverted"`).                                                                                                                                                                           |
 | `ShieldSubmitted`, `TransferSubmitted`, `TransferFromSubmitted`, `SetOperatorSubmitted`, `ApproveUnderlyingSubmitted`, `WrapSubmitted`, `UnwrapSubmitted`, `FinalizeUnwrapSubmitted` | The corresponding write transaction is submitted — each carries the transaction's `txHash`.                                                                                                                                                                                                                                                                           |
 | `VaultSubmitted`                                                                                                                                                                     | A vault batcher or router write is submitted — carries the `txHash`, the batcher's address as `tokenAddress` (the router's for `routerJoin`, which only a router submission carries), and `vaultOperation` (`join`, `quit`, `claim`, `recover`, `dispatchBatch`, `finalize`, or `routerJoin`). See [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md). |
 | `DelegationSubmitted` / `RevokeDelegationSubmitted`                                                                                                                                  | A delegation grant or revoke transaction is submitted — see [Delegation events](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/delegation.md#events).                                                                                                                                                                                                                                                              |
@@ -12559,7 +12782,7 @@ The `vaults` subpath is separate from the root entry, so apps that don't use vau
 
 ## Construction
 
-Use `createVault(sdk, addresses)`:
+Use `createVault(sdk, addresses, options?)`:
 
 ```ts
 import { createVault } from "@zama-fhe/sdk/vaults";
@@ -12574,7 +12797,9 @@ const { batchId } = await vault.deposit(1_000_000n);
 await vault.depositBatcher.claim(batchId);
 ```
 
-`createVault` is a thin factory over `new Vault(sdk, addresses)`; both take the same arguments.
+`createVault` is a thin factory over `new Vault(sdk, addresses, options)`; both take the same arguments.
+
+Pass `{ chainId }` for a vault on another chain than the provider's, for example on a vault page shown before the wallet connects. Both batchers get it (see [`VaultBatcher` → Construction](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#construction)), and `deposit` and `redeem` throw `ChainMismatchError` while the wallet is on another chain, before sending anything.
 
 ### VaultAddresses
 
@@ -12612,6 +12837,12 @@ The batcher joined by share redemptions. Same API as `depositBatcher`, for the r
 const state = await vault.depositBatcher.batchState(batchId);
 await vault.redeemBatcher.claim(batchId);
 ```
+
+### chainId
+
+`number | undefined`
+
+The chain both batchers are on, or `undefined` for the provider's current chain.
 
 ## Reads
 
@@ -12673,11 +12904,12 @@ const { txHash, batchId, confidentialJoinedAmount } = await vault.deposit(1_000_
 
 Options (`VaultJoinOptions`):
 
-| Option             | Type      | Default          | Description                                                                                                                                                                                                  |
-| ------------------ | --------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `beneficiary`      | `Address` | connected wallet | Account credited in the batch. The beneficiary owns the position: only they can `quit` it, and `claim` always pays out to them.                                                                              |
-| `operatorUntil`    | `number`  | now + 1 hour     | Unix timestamp (seconds) until which the batcher's operator grant is valid. Only used for another `beneficiary`, and only when a grant isn't already active. Same default as `Token.setOperator`.            |
-| `skipBalanceCheck` | `boolean` | `false`          | Skip the confidential-balance pre-flight. For accounts whose balance the connected signer can't decrypt, such as smart wallets. The on-chain transfer then moves zero, not reverts, if the balance is short. |
+| Option             | Type                    | Default          | Description                                                                                                                                                                                                  |
+| ------------------ | ----------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `beneficiary`      | `Address`               | connected wallet | Account credited in the batch. The beneficiary owns the position: only they can `quit` it, and `claim` always pays out to them.                                                                              |
+| `operatorUntil`    | `number`                | now + 1 hour     | Unix timestamp (seconds) until which the batcher's operator grant is valid. Only used for another `beneficiary`, and only when a grant isn't already active. Same default as `Token.setOperator`.            |
+| `skipBalanceCheck` | `boolean`               | `false`          | Skip the confidential-balance pre-flight. For accounts whose balance the connected signer can't decrypt, such as smart wallets. The on-chain transfer then moves zero, not reverts, if the balance is short. |
+| `onJoinSubmitted`  | `(txHash: Hex) => void` | —                | Called once the wallet has sent the join, before the SDK waits for the receipt. Use it to switch the UI from "confirm in your wallet" to "waiting for the transaction".                                      |
 
 **Throws:**
 
@@ -12747,7 +12979,7 @@ import { createVaultBatcher, VaultBatcher, BatchState } from "@zama-fhe/sdk/vaul
 
 ## Construction
 
-Use `createVaultBatcher(sdk, address)`, or take one from a `Vault`:
+Use `createVaultBatcher(sdk, address, options?)`, or take one from a `Vault`:
 
 ```ts
 import { createVaultBatcher } from "@zama-fhe/sdk/vaults";
@@ -12756,6 +12988,16 @@ const depositBatcher = createVaultBatcher(sdk, "0xDepositBatcher");
 const { batchId } = await depositBatcher.join(1_000_000n);
 
 const sameBatcher = vault.depositBatcher;
+```
+
+Pass `chainId` to use a batcher on another chain than the provider's, for example on a vault page shown before the wallet connects:
+
+- **Reads** go to that chain. This needs a provider that can read other chains, such as `WagmiProvider`.
+- **Writes** throw [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) while the signer is on another chain.
+- **Decryption** runs on the provider's chain, so `depositOf` and `prepareFinalize` throw `ConfigurationError` until the provider is on `chainId`.
+
+```ts
+const sepoliaBatcher = createVaultBatcher(sdk, "0xDepositBatcher", { chainId: 11155111 });
 ```
 
 ## Properties
@@ -12771,6 +13013,12 @@ The SDK instance this batcher reads and writes through.
 `Address`
 
 Checksummed address of the batcher contract.
+
+### chainId
+
+`number | undefined`
+
+The chain reads go to, or `undefined` for the provider's current chain.
 
 ## BatchState
 
@@ -12831,11 +13079,31 @@ The id of the currently open (not-yet-dispatched) batch. Batch ids start at `1`.
 
 `(batchId: bigint) => Promise<BatchState>`
 
-A batch's lifecycle state — see [BatchState](#batchstate). Reverts on-chain with `BatchNonexistent` for an id above `currentBatchId()`.
+A batch's lifecycle state — see [BatchState](#batchstate). Reverts on-chain with `BatchNonexistent` for an id above `currentBatchId()`. Throws `ConfigurationError` if the contract returns a state the SDK does not know, which means the address is not a vault batcher.
 
 ```ts
 if ((await batcher.batchState(batchId)) === BatchState.Finalized) {
   await batcher.claim(batchId);
+}
+```
+
+### batchStatus
+
+`(batchId: bigint) => Promise<BatchStatus>`
+
+A batch's state with the timestamps that state needs:
+
+- Every state carries `createdAt` and `dispatchableAt`.
+- `Pending` adds `secondsUntilDispatchable`.
+- `Dispatched` adds `dispatchedAt`, `callbackDeadlineAt` and `secondsUntilCallbackDeadline`.
+- `Finalized` and `Canceled` add `dispatchedAt`.
+
+Timestamps are Unix seconds on chain. The `secondsUntil*` values are measured against the block timestamp at read time, so for a live countdown tick from the `*At` timestamps. See [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) for what to show in each state.
+
+```ts
+const status = await batcher.batchStatus(batchId);
+if (status.state === BatchState.Pending && status.secondsUntilDispatchable === 0n) {
+  await batcher.dispatchBatch();
 }
 ```
 
@@ -12856,7 +13124,7 @@ if (secondsLeft === 0n) await batcher.dispatchBatch();
 
 `(batchId: bigint) => Promise<bigint | null>`
 
-Seconds until the dispatched batch `batchId` reaches its callback deadline, `0` once it has. From then on `finalize` cancels the batch instead of settling it. Returns `null` outside `Dispatched`.
+Seconds until the dispatched batch `batchId` reaches its callback deadline: `0` once it has, `null` if the batch is not `Dispatched`. After the deadline `finalize` cancels the batch instead of settling it, except on an asynchronous redeem batcher that has already placed the redemption request.
 
 Measured against the chain's block timestamp (`batchDispatchedAt + batchCallbackDeadline`), not the local clock.
 
@@ -12971,9 +13239,10 @@ const { txHash, batchId, beneficiary, confidentialJoinedAmount } = await batcher
 
 Options (`JoinOptions`):
 
-| Option             | Type      | Default | Description                                                                                              |
-| ------------------ | --------- | ------- | -------------------------------------------------------------------------------------------------------- |
-| `skipBalanceCheck` | `boolean` | `false` | Skip the confidential-balance pre-flight, for accounts whose balance the connected signer can't decrypt. |
+| Option             | Type                    | Default | Description                                                                                              |
+| ------------------ | ----------------------- | ------- | -------------------------------------------------------------------------------------------------------- |
+| `skipBalanceCheck` | `boolean`               | `false` | Skip the confidential-balance pre-flight, for accounts whose balance the connected signer can't decrypt. |
+| `onJoinSubmitted`  | `(txHash: Hex) => void` | —       | Called once the wallet has sent the join, before the SDK waits for the receipt.                          |
 
 Returns a `JoinResult` — `TransactionResult` plus `batchId`, `beneficiary` and `confidentialJoinedAmount`, decoded from the `Joined` event. See [`Vault` → JoinResult](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md#joinresult) for the field table.
 
@@ -12997,9 +13266,11 @@ await batcher.dispatchBatch();
 
 `(batchId: bigint) => Promise<TransactionResult>`
 
-Settles a dispatched batch yourself: reads the batch's `unwrapRequestId`, publicly decrypts the amount that unwrap released, and submits `dispatchBatchCallback` with the cleartext and its proof, which executes the route. Permissionless, like `dispatchBatch`. A keeper normally does this, so reach for it when a batch has sat in `BatchState.Dispatched` longer than expected. Past the batch's callback deadline (`batchDispatchedAt + batchCallbackDeadline`) the same call cancels the batch instead of settling it.
+Settles a dispatched batch. A keeper normally does this; call it when a batch has stayed `BatchState.Dispatched` longer than expected. Anyone may call it, like `dispatchBatch`. It reads the batch's `unwrapRequestId`, publicly decrypts the amount that unwrap released, and submits `dispatchBatchCallback` with the cleartext and its proof.
 
-Only legal while the batch is `BatchState.Dispatched`. Read [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline) to see whether the call will settle or cancel.
+After the callback deadline (`batchDispatchedAt + batchCallbackDeadline`) the same call cancels the batch instead. The exception is a redeem batcher whose vault settles redemptions asynchronously: once it has placed the redemption request, `finalize` keeps settling after the deadline.
+
+Only legal while the batch is `BatchState.Dispatched`. Read [`timeUntilCallbackDeadline`](#timeuntilcallbackdeadline) to see whether the deadline has passed.
 
 ```ts
 await batcher.finalize(batchId);
@@ -13083,14 +13354,39 @@ A builder encodes a call; it does not check balances, encrypt, or grant anything
 ## Events
 
 ```ts
-import { VaultTopics, decodeJoined, findJoined, type JoinedEvent } from "@zama-fhe/sdk/vaults";
+import {
+  VaultTopics,
+  decodeJoined,
+  findJoined,
+  openBatchIds,
+  type JoinedEvent,
+} from "@zama-fhe/sdk/vaults";
 ```
 
 `join` decodes its own receipt, but the helpers are exported for apps that index logs themselves.
 
-- `VaultTopics.Joined` — topic0 of `Joined(uint256 indexed batchId, address indexed account, euint64 amount)`.
+- `VaultTopics.Joined`, `VaultTopics.Claimed`, `VaultTopics.Quit` — topic0 of `Joined`, `Claimed` and `Quit`, each `(uint256 indexed batchId, address indexed account, euint64 amount)`.
 - `decodeJoined(log)` — decodes one raw log into `{ batchId, account, confidentialAmount }`, or `null` if it isn't a `Joined` event.
 - `findJoined(logs, batcher, account?)` — the first `Joined` log emitted by `batcher` (and crediting `account`, when given). Filters by emitter and account because one transaction can join several batchers and credit several beneficiaries.
+- `openBatchIds(logs, batcher, account)` — the batches `account` joined on `batcher` and has not claimed or quit, by ascending batch id. Pass that batcher's `Joined`, `Claimed` and `Quit` logs for the account in chain order, as `getLogs` returns them. A quit followed by a new join in the same batch opens it again.
+
+```ts
+import { pad, toHex } from "viem";
+
+// Raw eth_getLogs: the three events share the account topic, which viem's typed
+// getLogs only filters for a single event.
+const logs = await publicClient.request({
+  method: "eth_getLogs",
+  params: [
+    {
+      address: batcher,
+      topics: [[VaultTopics.Joined, VaultTopics.Claimed, VaultTopics.Quit], null, pad(account)],
+      fromBlock: toHex(deployBlock),
+    },
+  ],
+});
+const open = openBatchIds(logs, batcher, account);
+```
 
 ## TanStack Query helpers
 
@@ -13098,6 +13394,9 @@ import { VaultTopics, decodeJoined, findJoined, type JoinedEvent } from "@zama-f
 import {
   vaultQueryKeys,
   batchStateQueryOptions,
+  batchStatusQueryOptions,
+  batcherTokensQueryOptions,
+  pausedQueryOptions,
   currentBatchIdQueryOptions,
   timeUntilDispatchableQueryOptions,
   timeUntilCallbackDeadlineQueryOptions,
@@ -13118,6 +13417,9 @@ The React hooks are built on these query and mutation option builders; they are 
 - [Vault](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) — pairs two batchers behind `deposit()` / `redeem()`
 - [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md) — the full flow, including when each write is legal
 - [Errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md) — the error classes thrown above
+- [useBatchStatus](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchStatus.md) — React hook for `batchStatus`
+- [usePaused](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/usePaused.md) — React hook for `paused`
+- [useBatcherTokens](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatcherTokens.md) — React hook for `fromToken` and `toToken`
 - [useTimeUntilCallbackDeadline](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md) — React hook for `timeUntilCallbackDeadline`
 - [useVaultBatcher](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultBatcher.md) — React hook returning a `VaultBatcher`
 
@@ -13297,10 +13599,11 @@ import { type JoinOptions, type VaultGroupRedeemOptions } from "@zama-fhe/sdk/va
 
 `deposit` takes `JoinOptions`; `redeem` takes `VaultGroupRedeemOptions`, which adds `operatorUntil`.
 
-| Option             | Type      | Default             | Description                                                                                                                                                                                                                     |
-| ------------------ | --------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `skipBalanceCheck` | `boolean` | `false`             | Skip the confidential-balance pre-flight. A short balance then joins every batch with an encrypted zero rather than reverting.                                                                                                  |
-| `operatorUntil`    | `number`  | chain time + 1 hour | Redeem only. Unix timestamp (seconds) until which the router's operator grant on each share token is valid, for a grant the redemption has to make. The default is the chain's current time plus one hour, not the local clock. |
+| Option             | Type                    | Default             | Description                                                                                                                                                                                                                     |
+| ------------------ | ----------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `skipBalanceCheck` | `boolean`               | `false`             | Skip the confidential-balance pre-flight. A short balance then joins every batch with an encrypted zero rather than reverting.                                                                                                  |
+| `onJoinSubmitted`  | `(txHash: Hex) => void` | —                   | Called once the wallet has sent the submission, before the SDK waits for the receipt. Not called for the operator grants a redemption may send first.                                                                           |
+| `operatorUntil`    | `number`                | chain time + 1 hour | Redeem only. Unix timestamp (seconds) until which the router's operator grant on each share token is valid, for a grant the redemption has to make. The default is the chain's current time plus one hour, not the local clock. |
 
 ## VaultGroupJoinResult
 
@@ -13780,7 +14083,7 @@ interface GenericProvider {
   getChainId(): Promise<number>;
   readContract(config: ReadContractConfig): Promise<unknown>;
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-  getBlockTimestamp(): Promise<bigint>;
+  getBlockTimestamp(chainId?: number): Promise<bigint>;
   prepareTransaction(args: {
     from: Address;
     calldata: WriteContractConfig;
@@ -13824,7 +14127,7 @@ class MyProvider implements GenericProvider {
   async waitForTransactionReceipt(hash) {
     /* ... */
   }
-  async getBlockTimestamp() {
+  async getBlockTimestamp(chainId) {
     /* ... */
   }
   async prepareTransaction(args) {
@@ -13849,7 +14152,7 @@ Return the chain ID this provider is connected to.
 readContract(config: ReadContractConfig): Promise<unknown>
 ```
 
-Execute a read-only contract call. `ReadContractConfig` contains `address`, `abi`, `functionName`, and `args`.
+Execute a read-only contract call. `ReadContractConfig` contains `address`, `abi`, `functionName`, `args`, and an optional `chainId`. Without `chainId`, read the provider's current chain. With one, `WagmiProvider` reads that chain through wagmi. `ViemProvider` and `EthersProvider` are bound to one chain and throw `ConfigurationError` for another. A custom provider must do one or the other, never answer from the wrong chain.
 
 ### waitForTransactionReceipt
 
@@ -13862,10 +14165,10 @@ Poll for a transaction receipt by hash.
 ### getBlockTimestamp
 
 ```ts
-getBlockTimestamp(): Promise<bigint>
+getBlockTimestamp(chainId?: number): Promise<bigint>
 ```
 
-Return the timestamp of the latest block.
+Return the timestamp of the latest block, on `chainId` when given, with the same rules as `readContract`.
 
 ### prepareTransaction
 
@@ -14561,6 +14864,8 @@ import {
   EncryptOffloadUnavailableError,
   DecryptionFailedError,
   TransactionRevertedError,
+  HcuBlockLimitExceededError,
+  HcuTransactionLimitExceededError,
   UnshieldAlreadyFinalizedError,
   UnlistedConfidentialTokenError,
   VaultBatcherPausedError,
@@ -14652,7 +14957,7 @@ try {
 | `isRetryable`       | `(error: unknown) => error is ZamaError & { retryable: true }` | `true` only for a `ZamaError` instance whose `.retryable` is `true`; `false` for anything else, including non-SDK errors.                                                                                                                            |
 | `retryAfterSeconds` | `(error: unknown) => number \| undefined`                      | Reads the error's own `retryAfter` field when the error is retryable and carries one. Only `RelayerRequestFailedError` and `RpcRateLimitError` currently carry `retryAfter` — treat `undefined` as "retry with your own backoff," not "don't retry." |
 
-Exactly five error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, and `WalletAccountNotReadyError`. See [Retry transient failures](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
+Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, `WalletAccountNotReadyError`, and `HcuBlockLimitExceededError`. See [Retry transient failures](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
 
 ## Error summary
 
@@ -14664,6 +14969,8 @@ Exactly five error classes are retryable today: `RpcRateLimitError`, `RelayerReq
 | `EncryptOffloadUnavailableError`          | `ENCRYPT_OFFLOAD_UNAVAILABLE`            | `offloadEncrypt: true` required the encrypt worker, which is unavailable                                                          |
 | `DecryptionFailedError`                   | `DECRYPTION_FAILED`                      | FHE decryption failed                                                                                                             |
 | `TransactionRevertedError`                | `TRANSACTION_REVERTED`                   | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
+| `HcuBlockLimitExceededError`              | `HCU_BLOCK_LIMIT_EXCEEDED`               | Gas estimation found too little FHE compute (HCU) left in the block; retry in the next block (retryable)                          |
+| `HcuTransactionLimitExceededError`        | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | The transaction needs more FHE compute (HCU), in total or in one sequential chain, than one transaction may use                   |
 | `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
 | `UnlistedConfidentialTokenError`          | `UNLISTED_CONFIDENTIAL_TOKEN`            | The vault router's registry does not list the confidential token, so the router would reject a transfer of it                     |
 | `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | A batcher one leg of a group submission would join is paused, so the whole submission would revert                                |
@@ -14699,7 +15006,7 @@ Exactly five error classes are retryable today: `RpcRateLimitError`, `RelayerReq
 | `SignerNotConfiguredError`                | `SIGNER_NOT_CONFIGURED`                  | SDK operation needs a signer but none is configured                                                                               |
 | `WalletNotConnectedError`                 | `WALLET_NOT_CONNECTED`                   | Signer exists but has no connected wallet account                                                                                 |
 | `WalletAccountNotReadyError`              | `WALLET_ACCOUNT_NOT_READY`               | Async signer adapter has not resolved its account yet                                                                             |
-| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains                                                                                       |
+| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains, or the signer is not on a pinned vault or batcher's `chainId`                        |
 | `AclPausedError`                          | `ACL_PAUSED`                             | ACL contract is paused                                                                                                            |
 
 ## Error details
@@ -14736,7 +15043,7 @@ Thrown when a signer adapter is configured but does not currently have a connect
 
 **Code:** `CHAIN_MISMATCH`
 
-Thrown when the signer and provider resolve to different chains during an operation. The error carries `operation`, `signerChainId`, and `providerChainId`.
+Thrown when the signer and provider resolve to different chains during an operation, or when the signer is not on the `chainId` a `Vault` or `VaultBatcher` was created with. The error carries `operation`, `signerChainId`, `providerChainId`, and `targetChainId` (the pinned chain, or `undefined`).
 
 ```ts
 matchZamaError(error, {
@@ -14820,7 +15127,7 @@ matchZamaError(error, { DECRYPTION_FAILED: () => showError("Decryption failed �
 
 **Code:** `TRANSACTION_REVERTED`
 
-An on-chain transaction reverted. The error `.message` includes the revert reason when available.
+An on-chain transaction reverted, either before submission or in the block it was mined in. The error `.message` includes the revert reason when available; a receipt reports no reason, only the transaction hash.
 
 ```ts
 matchZamaError(error, {
@@ -14828,7 +15135,36 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Inspect the revert reason. Common causes: insufficient balance or an expired operator approval. Finalizing an already-finalized unwrap through `resumeUnshield()` or `unshield()` throws the more specific `UnshieldAlreadyFinalizedError` instead.
+**How to handle:** Inspect the revert reason. Common causes: insufficient balance or an expired operator approval. Finalizing an already-finalized unwrap through `resumeUnshield()` or `unshield()` throws the more specific `UnshieldAlreadyFinalizedError` instead, and a revert from the protocol's FHE compute limits throws `HcuBlockLimitExceededError` or `HcuTransactionLimitExceededError`.
+
+### HcuBlockLimitExceededError
+
+**Code:** `HCU_BLOCK_LIMIT_EXCEEDED`
+
+The protocol caps the FHE compute, measured in HCU, that a block can use. Gas estimation found too little left in the current block for this transaction. The cap is checked again when the transaction is mined, so a transaction that passed estimation can still revert in the block it lands in; that case surfaces as `TransactionRevertedError`.
+
+```ts
+matchZamaError(error, {
+  HCU_BLOCK_LIMIT_EXCEEDED: () => showError("The network is busy. Retrying in the next block…"),
+});
+```
+
+**How to handle:** Retry in the next block. The error is retryable, so `isRetryable(error)` is `true`; `retryAfterSeconds(error)` is `undefined`, so use your own backoff of about one block time.
+
+### HcuTransactionLimitExceededError
+
+**Code:** `HCU_TRANSACTION_LIMIT_EXCEEDED`
+
+The protocol caps the FHE compute, measured in HCU, that one transaction can use: a total, and a limit on one sequential chain of operations (depth). The transaction needs more than that; the `.message` says which cap was hit.
+
+```ts
+matchZamaError(error, {
+  HCU_TRANSACTION_LIMIT_EXCEEDED: () =>
+    showError("This operation is too large for one transaction"),
+});
+```
+
+**How to handle:** Do not retry: the same transaction costs the same HCU every time. Do less FHE work per transaction.
 
 ### UnshieldAlreadyFinalizedError
 
@@ -16174,6 +16510,7 @@ Returns a `PreparedTransaction`. All three fields are JSON-safe, so the object c
 - `DecryptionFailedError` - fallback for an unclassified public-decryption failure (`FinalizeUnwrap`); classified failures preserve their specific [SDK error](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md)
 - `DelegationExpirationTooSoonError` / `DelegationSelfNotAllowedError` / `DelegationDelegateEqualsContractError` - delegation guards (`DelegateDecryption`)
 - `TransactionRevertedError` - gas estimation reverted, for example when `Wrap` is prepared before its approval mines
+- `HcuBlockLimitExceededError` / `HcuTransactionLimitExceededError` - gas estimation hit the protocol's FHE compute (HCU) limits; see [Errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#hcublocklimitexceedederror)
 
 ### preparePermit
 
@@ -24483,7 +24820,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useVault
 
-Returns a memoized [`Vault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) bound to the SDK in the current `ZamaProvider`. The instance is recreated only when the SDK or one of the addresses changes, so its cached reads (`vaultAddress()`, `cAsset()`, `cShare()`) survive re-renders.
+Returns a memoized [`Vault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md) bound to the SDK in the current `ZamaProvider`. The instance is recreated only when the SDK, one of the addresses or `chainId` changes, so its cached reads (`vaultAddress()`, `cAsset()`, `cShare()`) survive re-renders.
 
 Most apps should use this — together with [`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md) / [`useRedeem`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRedeem.md) — and reach for [`useVaultBatcher`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultBatcher.md) only for direct single-direction access.
 
@@ -24498,7 +24835,7 @@ The `vaults` subpath is separate from the root entry, so apps that don't use vau
 ## Signature
 
 ```ts
-function useVault(addresses: VaultAddresses): Vault;
+function useVault(addresses: VaultAddresses, options?: VaultBatcherOptions): Vault;
 ```
 
 ### addresses
@@ -24506,6 +24843,12 @@ function useVault(addresses: VaultAddresses): Vault;
 `VaultAddresses`
 
 The vault's `depositBatcher` and `redeemBatcher` addresses, and optionally the `vault` contract itself. Passing `vault` doesn't skip the on-chain read: the SDK verifies it against what both batchers report and throws a `ConfigurationError` on a mismatch. See [`Vault` → VaultAddresses](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md#vaultaddresses).
+
+### options.chainId
+
+`number | undefined`
+
+Chain the vault is on, if it is not the connected one. Both batchers read from it, and a deposit or redemption throws `ChainMismatchError` while the wallet is on another chain. See [`Vault` → Construction](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md#construction).
 
 ## Example
 
@@ -24548,7 +24891,7 @@ Define `addresses` outside the component, or memoize it, so its identity is stab
 
 # useVaultBatcher
 
-Returns a memoized [`VaultBatcher`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md) bound to the SDK in the current `ZamaProvider`. The instance is recreated only when the SDK or the address changes, so its cached address reads survive re-renders.
+Returns a memoized [`VaultBatcher`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md) bound to the SDK in the current `ZamaProvider`. The instance is recreated only when the SDK, the address or `chainId` changes, so its cached address reads survive re-renders.
 
 This is the low-level entry point — the batch hooks ([`useBatchState`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md), [`useClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md), …) call it internally. Most apps should use [`useVault`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVault.md), which pairs both directions and grants the operator approval a join for another `beneficiary` needs.
 
@@ -24561,7 +24904,7 @@ import { useVaultBatcher } from "@zama-fhe/react-sdk/vaults";
 ## Signature
 
 ```ts
-function useVaultBatcher(address: Address): VaultBatcher;
+function useVaultBatcher(address: Address, options?: VaultBatcherOptions): VaultBatcher;
 ```
 
 ### address
@@ -24569,6 +24912,12 @@ function useVaultBatcher(address: Address): VaultBatcher;
 `Address`
 
 The batcher contract address — the deposit or the redeem direction of a vault.
+
+### options.chainId
+
+`number | undefined`
+
+Chain to read the batcher from, if it is not the connected one. See [`VaultBatcher` → Construction](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#construction).
 
 ## Example
 
@@ -24657,6 +25006,14 @@ const { mutateAsync: deposit } = useDeposit({ addresses });
 
 ---
 
+### chainId
+
+`number | undefined`
+
+Chain the vault is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) before sending anything.
+
+---
+
 ### `onSuccess`
 
 **Type:** `(data: TData, variables: TVariables, context: TContext) => void`
@@ -24726,6 +25083,12 @@ Default: `false`. Skips the confidential-balance pre-flight, for accounts whose 
 await deposit({ amount: 1_000_000n, skipBalanceCheck: true });
 ```
 
+### onJoinSubmitted
+
+`((txHash: Hex) => void) | undefined`
+
+Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction". If the callback throws, the SDK logs a warning and the join continues.
+
 **Throws:**
 
 - `ConfigurationError` — the two batchers report different vaults, or disagree with a configured `vault` address
@@ -24740,7 +25103,7 @@ import { type JoinResult } from "@zama-fhe/sdk/vaults";
 
 `data` resolves to a `JoinResult`: `{ txHash, receipt, batchId, beneficiary, confidentialJoinedAmount }`. See [`Vault` → JoinResult](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Vault.md#joinresult).
 
-On success the hook invalidates the asset token's balance cache, the deposit batcher's batch reads (`useCurrentBatchId`, `useBatchState`, `useTimeUntilDispatchable`), and the asset token's operator-status cache, since the mutation may have granted one.
+On success the hook invalidates the asset token's balance cache, the deposit batcher's batch reads (`useCurrentBatchId`, `useBatchState`, `useBatchStatus`, `useTimeUntilDispatchable`), and the asset token's operator-status cache, since the mutation may have granted one.
 
 ### `mutate`
 
@@ -24858,6 +25221,14 @@ The vault's `depositBatcher` and `redeemBatcher` addresses, and optionally the `
 
 ---
 
+### chainId
+
+`number | undefined`
+
+Chain the vault is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) before sending anything.
+
+---
+
 ### `onSuccess`
 
 **Type:** `(data: TData, variables: TVariables, context: TContext) => void`
@@ -24916,6 +25287,12 @@ Default: now + 1 hour. Unix timestamp (seconds) until which the batcher's operat
 `boolean | undefined`
 
 Default: `false`. Skips the share-balance pre-flight, for accounts whose balance the connected signer can't decrypt.
+
+### onJoinSubmitted
+
+`((txHash: Hex) => void) | undefined`
+
+Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction". If the callback throws, the SDK logs a warning and the join continues.
 
 **Throws:**
 
@@ -25043,6 +25420,14 @@ The batcher contract address (deposit or redeem direction).
 
 ---
 
+### chainId
+
+`number | undefined`
+
+Chain the batcher is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending.
+
+---
+
 ### `onSuccess`
 
 **Type:** `(data: TData, variables: TVariables, context: TContext) => void`
@@ -25095,6 +25480,12 @@ Default: `false`. Skips the confidential-balance pre-flight.
 ```ts
 await join({ amount: 1_000_000n, beneficiary: "0xRecipient" });
 ```
+
+### onJoinSubmitted
+
+`((txHash: Hex) => void) | undefined`
+
+Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction". If the callback throws, the SDK logs a warning and the join continues.
 
 **Throws:**
 
@@ -25217,6 +25608,14 @@ import { type UseClaimConfig } from "@zama-fhe/react-sdk/vaults";
 `Address`
 
 The batcher contract address (deposit or redeem direction).
+
+---
+
+### chainId
+
+`number | undefined`
+
+Chain the batcher is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending.
 
 ---
 
@@ -25382,6 +25781,14 @@ The batcher contract address (deposit or redeem direction).
 
 ---
 
+### chainId
+
+`number | undefined`
+
+Chain the batcher is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending.
+
+---
+
 ### `onSuccess`
 
 **Type:** `(data: TData, variables: TVariables, context: TContext) => void`
@@ -25534,6 +25941,14 @@ import { type UseRecoverConfig } from "@zama-fhe/react-sdk/vaults";
 `Address`
 
 The batcher contract address (deposit or redeem direction).
+
+---
+
+### chainId
+
+`number | undefined`
+
+Chain the batcher is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending.
 
 ---
 
@@ -25702,6 +26117,14 @@ The batcher contract address (deposit or redeem direction).
 
 ---
 
+### chainId
+
+`number | undefined`
+
+Chain the batcher is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending.
+
+---
+
 ### `onSuccess`
 
 **Type:** `(data: TData, variables: TVariables, context: TContext) => void`
@@ -25735,7 +26158,7 @@ None. Call `mutate()` / `mutateAsync()` with no arguments — the batcher always
 
 `data` is `{ txHash: Hex; receipt: TransactionReceipt }`.
 
-On success the hook invalidates the batcher's batch reads: a new batch opens and the old one leaves `Pending`, so `useCurrentBatchId`, `useBatchState` and `useTimeUntilDispatchable` refetch.
+On success the hook invalidates the batcher's batch reads: a new batch opens and the old one leaves `Pending`, so `useCurrentBatchId`, `useBatchState`, `useBatchStatus` and `useTimeUntilDispatchable` refetch.
 
 ### `mutate`
 
@@ -25804,7 +26227,9 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 Mutation hook that settles a dispatched batch yourself. Same call as [`VaultBatcher.finalize`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#finalize): it publicly decrypts the batch's aggregate amount and hands the cleartext and its proof to the batcher, which executes the route.
 
-A keeper, an off-chain service that watches batches, normally finalizes a batch after dispatch, so this is for a batch that has sat in `BatchState.Dispatched` longer than expected. Finalizing is permissionless. Past the batch's callback deadline (see [`useTimeUntilCallbackDeadline`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md)) the same call cancels the batch instead of settling it, and its participants take their deposits back with [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md).
+A keeper, an off-chain service that watches batches, normally finalizes a batch after dispatch. Use this hook when a batch has stayed `BatchState.Dispatched` longer than expected. Anyone may call it.
+
+After the batch's callback deadline (see [`useTimeUntilCallbackDeadline`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md)) the same call cancels the batch instead of settling it, and its participants take their deposits back with [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md). A redeem batcher whose vault settles redemptions asynchronously is the exception: once it has placed the redemption request, `finalize` keeps settling the batch past the deadline.
 
 The call reads the batch state first and rejects with [`VaultBatchNotDispatchedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultbatchnotdispatchederror) when the batch is not `Dispatched`, for example because a keeper already finalized it.
 
@@ -25853,6 +26278,14 @@ The batcher contract address (deposit or redeem direction).
 
 ---
 
+### chainId
+
+`number | undefined`
+
+Chain the batcher is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) instead of sending.
+
+---
+
 ### `onSuccess`
 
 **Type:** `(data: TData, variables: TVariables, context: TContext) => void`
@@ -25894,7 +26327,7 @@ The dispatched batch to settle.
 
 `data` is `{ txHash: Hex; receipt: TransactionReceipt }`.
 
-On success the hook invalidates the batcher's batch reads: the batch leaves `Dispatched` and gains an exchange rate, so `useBatchState` refetches.
+On success the hook invalidates the batcher's batch reads: the batch leaves `Dispatched` and gains an exchange rate, so `useBatchState` and `useBatchStatus` refetch.
 
 ### `mutate`
 
@@ -26007,6 +26440,14 @@ import { type UseCurrentBatchIdConfig } from "@zama-fhe/react-sdk/vaults";
 `Address`
 
 The batcher contract address (deposit or redeem direction).
+
+---
+
+### chainId
+
+`number | undefined`
+
+Chain to read from, if it is not the connected one. Needs a provider that can read other chains, such as `WagmiProvider`.
 
 ### `enabled`
 
@@ -26197,6 +26638,14 @@ const { data: state } = useBatchState({
 });
 ```
 
+---
+
+### chainId
+
+`number | undefined`
+
+Chain to read from, if it is not the connected one. Needs a provider that can read other chains, such as `WagmiProvider`.
+
 ### `enabled`
 
 **Type:** `boolean`
@@ -26298,6 +26747,512 @@ The current status of the query. Prefer the boolean flags above for conditional 
 - [useTimeUntilCallbackDeadline](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md) — countdown while `Dispatched`
 - [VaultBatcher → BatchState](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#batchstate)
 
+## useBatchStatus
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/useBatchStatus.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchStatus.md
+- logical_path: reference/react/useBatchStatus
+
+# useBatchStatus
+
+Reads a batch's state together with the timestamps that state needs. Same read as [`VaultBatcher.batchStatus`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#batchstatus).
+
+- Every state carries `createdAt` and `dispatchableAt`.
+- `Pending` adds `secondsUntilDispatchable`.
+- `Dispatched` adds `dispatchedAt`, `callbackDeadlineAt` and `secondsUntilCallbackDeadline`.
+- `Finalized` and `Canceled` add `dispatchedAt`.
+
+Timestamps are Unix seconds on chain. The `secondsUntil*` values are correct at read time; to show a live countdown between refetches, tick from the `*At` timestamps.
+
+Switch on `data.state` to render each step after a deposit or redemption. See [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) for what to show in each state.
+
+## Import
+
+```ts
+import { useBatchStatus } from "@zama-fhe/react-sdk/vaults";
+```
+
+## Usage
+
+
+### Tab: BatchRow.tsx
+
+```tsx
+import { useBatchStatus } from "@zama-fhe/react-sdk/vaults";
+import { BatchState } from "@zama-fhe/sdk/vaults";
+
+function BatchRow({ batchId }: { batchId: bigint }) {
+  const { data: status } = useBatchStatus(
+    { address: "0xDepositBatcher", batchId },
+    { refetchInterval: 10_000 },
+  );
+
+  if (!status) return <span>Loading…</span>;
+
+  switch (status.state) {
+    case BatchState.Pending:
+      return (
+        <span>Queued, sent in {status.secondsUntilDispatchable.toString()}s at the earliest</span>
+      );
+    case BatchState.Dispatched:
+      return <span>Processing</span>;
+    case BatchState.Finalized:
+      return <span>Ready to claim</span>;
+    case BatchState.Canceled:
+      return <span>Did not go through</span>;
+    default:
+      return status satisfies never;
+  }
+}
+```
+
+
+## Parameters
+
+```ts
+import { type UseBatchStatusConfig } from "@zama-fhe/react-sdk/vaults";
+```
+
+### address
+
+`Address`
+
+The batcher contract address (deposit or redeem direction).
+
+---
+
+### batchId
+
+`bigint | undefined`
+
+The batch to read. The query is disabled while `undefined`.
+
+---
+
+### chainId
+
+`number | undefined`
+
+Chain to read from, if it is not the connected one. Needs a provider that can read other chains, such as `WagmiProvider`.
+
+### `enabled`
+
+**Type:** `boolean`
+
+Set to `false` to prevent the query from running automatically. The query will only execute when `refetch` is called or when `enabled` changes to `true`.
+
+### `staleTime`
+
+**Type:** `number` (milliseconds)
+
+How long fetched data is considered fresh. While fresh, the query will not re-fetch on mount or window focus. Defaults to `0` (always stale).
+
+### `gcTime`
+
+**Type:** `number` (milliseconds)
+
+How long inactive query data stays in the cache before garbage collection. Defaults to `300000` (5 minutes).
+
+### `refetchInterval`
+
+**Type:** `number | false` (milliseconds)
+
+Poll at a fixed interval. Set to `false` or omit to disable polling.
+
+### `refetchOnWindowFocus`
+
+**Type:** `boolean`
+
+Re-fetch when the browser tab regains focus. Defaults to `true`.
+
+
+## Return Type
+
+```ts
+import { type UseBatchStatusOptions } from "@zama-fhe/react-sdk/vaults";
+```
+
+The `data` property is `BatchStatus | undefined`, `undefined` while loading or disabled. Seconds are measured against the chain's block timestamp at read time and stop at `0n`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
+
+
+## Related
+
+- [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) — what to show and offer in each state
+- [useBatchState](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md) — the state alone
+- [useTimeUntilDispatchable](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md) and [useTimeUntilCallbackDeadline](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md) — each countdown alone
+- [VaultBatcher.batchStatus](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#batchstatus)
+
+## usePaused
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/usePaused.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/usePaused.md
+- logical_path: reference/react/usePaused
+
+# usePaused
+
+Reads whether a batcher is paused. Same read as [`VaultBatcher.paused`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#paused). While a batcher is paused, joins and dispatches revert, so disable the deposit or redeem form and say why. Quit and claim still work.
+
+## Import
+
+```ts
+import { usePaused } from "@zama-fhe/react-sdk/vaults";
+```
+
+## Usage
+
+
+### Tab: DepositButton.tsx
+
+```tsx
+import { usePaused } from "@zama-fhe/react-sdk/vaults";
+
+function DepositButton({ onDeposit }: { onDeposit: () => void }) {
+  const { data: paused } = usePaused({ address: "0xDepositBatcher" });
+
+  return (
+    <button disabled={paused !== false} onClick={onDeposit}>
+      {paused ? "Deposits are paused" : "Deposit"}
+    </button>
+  );
+}
+```
+
+
+## Parameters
+
+```ts
+import { type UsePausedConfig } from "@zama-fhe/react-sdk/vaults";
+```
+
+### address
+
+`Address`
+
+The batcher contract address (deposit or redeem direction).
+
+---
+
+### chainId
+
+`number | undefined`
+
+Chain to read from, if it is not the connected one. Needs a provider that can read other chains, such as `WagmiProvider`.
+
+### `enabled`
+
+**Type:** `boolean`
+
+Set to `false` to prevent the query from running automatically. The query will only execute when `refetch` is called or when `enabled` changes to `true`.
+
+### `staleTime`
+
+**Type:** `number` (milliseconds)
+
+How long fetched data is considered fresh. While fresh, the query will not re-fetch on mount or window focus. Defaults to `0` (always stale).
+
+### `gcTime`
+
+**Type:** `number` (milliseconds)
+
+How long inactive query data stays in the cache before garbage collection. Defaults to `300000` (5 minutes).
+
+### `refetchInterval`
+
+**Type:** `number | false` (milliseconds)
+
+Poll at a fixed interval. Set to `false` or omit to disable polling.
+
+### `refetchOnWindowFocus`
+
+**Type:** `boolean`
+
+Re-fetch when the browser tab regains focus. Defaults to `true`.
+
+
+## Return Type
+
+```ts
+import { type UsePausedOptions } from "@zama-fhe/react-sdk/vaults";
+```
+
+The `data` property is `boolean | undefined`, `undefined` while loading.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
+
+
+## Related
+
+- [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) — what the form should do while paused
+- [VaultBatcher.paused](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#paused)
+
+## useBatcherTokens
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/useBatcherTokens.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatcherTokens.md
+- logical_path: reference/react/useBatcherTokens
+
+# useBatcherTokens
+
+Reads a batcher's input and output token addresses: [`VaultBatcher.fromToken`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#fromtoken) and [`VaultBatcher.toToken`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#totoken). For a deposit batcher, `fromToken` is the vault's confidential asset and `toToken` its confidential share, the addresses [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useConfidentialBalance.md) needs. The redeem batcher has them the other way around.
+
+The addresses are fixed when the batcher is deployed, so the hook reads them once and never refetches.
+
+## Import
+
+```ts
+import { useBatcherTokens } from "@zama-fhe/react-sdk/vaults";
+```
+
+## Usage
+
+
+### Tab: VaultTokens.tsx
+
+```tsx
+import { useBatcherTokens } from "@zama-fhe/react-sdk/vaults";
+
+function VaultTokens() {
+  const { data: tokens } = useBatcherTokens({ address: "0xDepositBatcher" });
+
+  if (!tokens) return <span>Loading…</span>;
+  return (
+    <span>
+      Asset {tokens.fromToken}, share {tokens.toToken}
+    </span>
+  );
+}
+```
+
+
+## Parameters
+
+```ts
+import { type UseBatcherTokensConfig } from "@zama-fhe/react-sdk/vaults";
+```
+
+### address
+
+`Address`
+
+The batcher contract address (deposit or redeem direction).
+
+---
+
+### chainId
+
+`number | undefined`
+
+Chain to read from, if it is not the connected one. Needs a provider that can read other chains, such as `WagmiProvider`.
+
+### `enabled`
+
+**Type:** `boolean`
+
+Set to `false` to prevent the query from running automatically. The query will only execute when `refetch` is called or when `enabled` changes to `true`.
+
+### `staleTime`
+
+**Type:** `number` (milliseconds)
+
+How long fetched data is considered fresh. While fresh, the query will not re-fetch on mount or window focus. Defaults to `0` (always stale).
+
+### `gcTime`
+
+**Type:** `number` (milliseconds)
+
+How long inactive query data stays in the cache before garbage collection. Defaults to `300000` (5 minutes).
+
+### `refetchInterval`
+
+**Type:** `number | false` (milliseconds)
+
+Poll at a fixed interval. Set to `false` or omit to disable polling.
+
+### `refetchOnWindowFocus`
+
+**Type:** `boolean`
+
+Re-fetch when the browser tab regains focus. Defaults to `true`.
+
+
+## Return Type
+
+```ts
+import { type UseBatcherTokensOptions } from "@zama-fhe/react-sdk/vaults";
+import { type BatcherTokens } from "@zama-fhe/sdk/vaults";
+```
+
+The `data` property is `{ fromToken: Address; toToken: Address } | undefined`, `undefined` while loading.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
+
+
+## Related
+
+- [useConfidentialBalance](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useConfidentialBalance.md) — reads either token's balance
+- [VaultBatcher.fromToken](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#fromtoken)
+
 ## useTimeUntilDispatchable
 
 - source_type: official-doc
@@ -26363,6 +27318,14 @@ The batcher contract address (deposit or redeem direction).
 `bigint | undefined`
 
 The batch to check. The query is disabled while `undefined`.
+
+---
+
+### chainId
+
+`number | undefined`
+
+Chain to read from, if it is not the connected one. Needs a provider that can read other chains, such as `WagmiProvider`.
 
 ### `enabled`
 
@@ -26476,7 +27439,7 @@ The current status of the query. Prefer the boolean flags above for conditional 
 Reads how many seconds remain until a dispatched batch reaches its callback deadline. Same read as [`VaultBatcher.timeUntilCallbackDeadline`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultBatcher.md#timeuntilcallbackdeadline).
 
 - A positive value is the countdown. Pass `refetchInterval` to keep it live.
-- `0` means the deadline has passed. From then on [`useFinalize`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useFinalize.md) cancels the batch instead of settling it.
+- `0` means the deadline has passed. From then on [`useFinalize`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useFinalize.md) cancels the batch instead of settling it, except on a redeem batcher whose vault settles redemptions asynchronously and that has already placed the redemption request.
 - `null` means the batch is not `Dispatched`, so there is no deadline to wait for.
 
 The value is measured against the chain's block timestamp, not the local clock.
@@ -26528,6 +27491,14 @@ The batcher contract address (deposit or redeem direction).
 `bigint | undefined`
 
 The batch to check. The query is disabled while `undefined`.
+
+---
+
+### chainId
+
+`number | undefined`
+
+Chain to read from, if it is not the connected one. Needs a provider that can read other chains, such as `WagmiProvider`.
 
 ### `enabled`
 
@@ -26804,6 +27775,12 @@ Amount to deposit, in the shared asset token's base units.
 
 Default: `false`. Skips the confidential-balance pre-flight, for accounts whose balance the connected signer can't decrypt (smart wallets). Without the check, a too-large deposit joins every batch with nothing.
 
+### onJoinSubmitted
+
+`((txHash: Hex) => void) | undefined`
+
+Called with the submission's transaction hash once the wallet has sent it, before the SDK waits for the receipt. If the callback throws, the SDK logs a warning and the join continues.
+
 **Throws:**
 
 - `ConfigurationError` — unknown `vaultId`, a member whose batchers disagree with its config or are not paired with `cAsset`, two members whose batchers report the same vault, or a router other than the configured chain's `vaultRouterAddress` without `allowCustomRouter`
@@ -26821,7 +27798,7 @@ import { type VaultGroupJoinResult } from "@zama-fhe/sdk/vaults";
 
 `data` resolves to a `VaultGroupJoinResult`: the transaction's `txHash` and `receipt`, the chosen `vaultId`, and `joins` with one entry per member. See [`VaultGroup` → VaultGroupJoinResult](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultGroup.md#vaultgroupjoinresult).
 
-Once the transaction is mined the hook invalidates the asset token's balance, and the batch reads (`useCurrentBatchId`, `useBatchState`, `useTimeUntilDispatchable`) of every member's deposit batcher. This also runs when the mutation fails with `VaultGroupJoinUnconfirmedError`, since a mined transaction joined every leg.
+Once the transaction is mined the hook invalidates the asset token's balance, and the batch reads (`useCurrentBatchId`, `useBatchState`, `useBatchStatus`, `useTimeUntilDispatchable`) of every member's deposit batcher. This also runs when the mutation fails with `VaultGroupJoinUnconfirmedError`, since a mined transaction joined every leg.
 
 ### `mutate`
 
@@ -26987,6 +27964,12 @@ Default: now + 1 hour. Unix timestamp (seconds) until which the router's operato
 `boolean | undefined`
 
 Default: `false`. As in [`useGroupDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useGroupDeposit.md#skipbalancecheck). The check decrypts every member's share balance and compares the chosen member's.
+
+### onJoinSubmitted
+
+`((txHash: Hex) => void) | undefined`
+
+Called with the submission's transaction hash once the wallet has sent it, before the SDK waits for the receipt. If the callback throws, the SDK logs a warning and the join continues.
 
 **Throws:** the same errors as `useGroupDeposit`, including `VaultBatcherPausedError`, except `UnlistedConfidentialTokenError`, which only the deposit path raises.
 
@@ -27175,7 +28158,7 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 ### `vaultQueryKeys`
 
-Batch reads for confidential ERC-4626 vaults, used by [`useCurrentBatchId`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useCurrentBatchId.md), [`useBatchState`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md), [`useTimeUntilDispatchable`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md) and [`useTimeUntilCallbackDeadline`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md). Lives in the `vaults` subpath, not on `zamaQueryKeys`.
+Batch reads for confidential ERC-4626 vaults, used by [`useCurrentBatchId`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useCurrentBatchId.md), [`useBatchState`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchState.md), [`useBatchStatus`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchStatus.md), [`usePaused`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/usePaused.md), [`useBatcherTokens`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatcherTokens.md), [`useTimeUntilDispatchable`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md) and [`useTimeUntilCallbackDeadline`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useTimeUntilCallbackDeadline.md). Lives in the `vaults` subpath, not on `zamaQueryKeys`.
 
 ```ts
 import { vaultQueryKeys, invalidateBatchQueries } from "@zama-fhe/sdk/vaults";
@@ -27184,14 +28167,18 @@ import { vaultQueryKeys, invalidateBatchQueries } from "@zama-fhe/sdk/vaults";
 | Key                                                 | Scope                                            |
 | --------------------------------------------------- | ------------------------------------------------ |
 | `.currentBatchId.batcher(batcherAddr)`              | One batcher's open batch id                      |
+| `.paused.batcher(batcherAddr)`                      | Whether one batcher is paused                    |
+| `.batcherTokens.batcher(batcherAddr)`               | One batcher's input and output tokens            |
 | `.batchState.batcher(batcherAddr)`                  | All batch states for one batcher                 |
 | `.batchState.batch(batcherAddr, batchId)`           | One batch's state                                |
+| `.batchStatus.batcher(batcherAddr)`                 | All batch statuses for one batcher               |
+| `.batchStatus.batch(batcherAddr, batchId)`          | One batch's state with its timestamps            |
 | `.timeUntilDispatchable.batcher(batcherAddr)`       | All dispatch countdowns for one batcher          |
 | `.timeUntilDispatchable.batch(batcherAddr, id)`     | One batch's dispatch countdown                   |
 | `.timeUntilCallbackDeadline.batcher(batcherAddr)`   | All callback-deadline countdowns for one batcher |
 | `.timeUntilCallbackDeadline.batch(batcherAddr, id)` | One batch's callback-deadline countdown          |
 
-A `batcher(...)` key is a prefix of every `batch(...)` key for that batcher, so invalidating it clears all of them at once. `invalidateBatchQueries(queryClient, batcherAddr)` invalidates all four namespaces for a batcher — this is what the vault mutation hooks call after a join, quit, recover, dispatch or finalize. Balances on the batcher's input and output tokens go through the regular [`invalidateBalanceQueries`](#invalidatebalancequeries).
+A `batcher(...)` key is a prefix of every `batch(...)` key for that batcher, so invalidating it clears all of them at once. The `batch(...)` builders and the `currentBatchId`, `paused` and `batcherTokens` builders also take an optional `chainId`, set for a batcher that reads another chain than the connected one; the prefix `batcher(...)` builders leave it out, so they match pinned keys too. `invalidateBatchQueries(queryClient, batcherAddr)` invalidates all five namespaces for a batcher — this is what the vault mutation hooks call after a join, quit, recover, dispatch or finalize. Balances on the batcher's input and output tokens go through the regular [`invalidateBalanceQueries`](#invalidatebalancequeries).
 
 `useGroupDeposit` / `useGroupRedeem` invalidate, once the transaction is mined, the balance of each token the legs spent and every member's batch reads — on success and on `VaultGroupJoinUnconfirmedError` alike. `useGroupRedeem` additionally invalidates operator status for each share token.
 
@@ -29849,7 +30836,7 @@ Next.js 16 example app demonstrating how to integrate `@zama-fhe/react-sdk` with
 [wagmi v3](https://wagmi.sh/) on every network the SDK ships a chain preset for. A network
 picker switches the wallet between them; nothing else in the app changes per chain.
 
-Covers: connect wallet (browser wallet, or Privy's wallet modal with WalletConnect for a Safe), pick a network, shield ERC-20 → confidential, confidential transfer, unshield, grant/revoke/use delegation, pending unshield recovery, deposit into a reacting contract (`confidentialTransferAndCall`, Sepolia only).
+Covers: connect wallet (browser wallet, or a Dynamic-backed connect dialog with WalletConnect for a Safe), pick a network, shield ERC-20 → confidential, confidential transfer, unshield, grant/revoke/use delegation, pending unshield recovery, deposit into a reacting contract (`confidentialTransferAndCall`, Sepolia only).
 
 This app replaces the former `example-bnb`, `example-hoodi`, `example-polygon-amoy` and `example-zenith` apps, which were copies of it pinned to one chain each.
 
@@ -29878,7 +30865,7 @@ Token pairs on every network come from the on-chain `WrappersRegistry` at runtim
 
 - **Next.js 16** (App Router, Webpack — Turbopack not yet supported with WASM)
 - **React 19** + **wagmi v3** + **viem v2**
-- **Privy** (optional) — `@privy-io/react-auth` wallet modal (injected wallets + WalletConnect, which is how a Safe pairs from the Safe web app) and `@privy-io/wagmi` to mirror the active Privy wallet into wagmi
+- **Dynamic** (optional) — `@dynamic-labs-sdk/client` and `@dynamic-labs-sdk/evm`, Dynamic's headless SDK in connect-only mode: it supplies the wallet catalogue and the connect step (browser wallets + WalletConnect, which is how a Safe pairs from the Safe web app). A wagmi connector of the app's own wraps the authorized wallet, so wagmi alone owns the session
 - **TanStack Query v5** for async state
 - **@zama-fhe/react-sdk** — `ZamaProvider`, `useConfidentialBalance`, `useUnshield`, `useConfidentialTransferAndCall`, `useDelegateDecryption`, etc.
 - **@zama-fhe/react-sdk/wagmi** — `createConfig` adapter for wagmi signer/provider wiring
@@ -29890,7 +30877,7 @@ Token pairs on every network come from the on-chain `WrappersRegistry` at runtim
 ```bash
 cp .env.example .env.local
 # No changes needed for the testnets — defaults are pre-configured.
-# For Privy's wallet modal (WalletConnect, Safe), set NEXT_PUBLIC_PRIVY_APP_ID.
+# For the Dynamic connect dialog (WalletConnect, Safe), set NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID.
 
 npm install
 npm run dev
@@ -29898,9 +30885,11 @@ npm run dev
 
 Open [http://localhost:3004](http://localhost:3004) and connect a wallet.
 
-- With `NEXT_PUBLIC_PRIVY_APP_ID` set, **Connect Wallet** opens Privy's wallet modal. Pick a
-  browser wallet, or **WalletConnect** to pair a Safe from the Safe web app. The connection is
-  wallet-only (no Privy login or SIWE signature).
+- With `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` set, **Connect Wallet** opens a connect dialog that
+  lists the wallets in Dynamic's catalogue. Pick a browser wallet, or **WalletConnect** and paste
+  the pairing code into the Safe web app to connect a Safe. The connection is wallet-only (no
+  Dynamic sign-in or SIWE signature). In the Dynamic dashboard, set the environment to
+  connect-only, allow this app's origin, and keep a WalletConnect project ID.
 - Without it, the app connects MetaMask (or any EIP-1193 browser wallet) through wagmi's
   injected connector.
 
@@ -29939,7 +30928,7 @@ All server-side variables are read by the proxy only and never reach the browser
 | `NEXT_PUBLIC_ZAMA_ENV`                 | No                                   | `custom` swaps the Sepolia row's protocol contracts for the `NEXT_PUBLIC_ZAMA_*` values. Unset = SDK preset.                                                                     |
 | `NEXT_PUBLIC_ZAMA_*`                   | Custom                               | Gateway chain ID and protocol contract addresses of the custom environment. See `.env.example`.                                                                                  |
 | `NEXT_PUBLIC_REGISTRY_ADDRESS`         | Custom                               | Wrapper registry of the custom environment, which usually has no registry deployment.                                                                                            |
-| `NEXT_PUBLIC_PRIVY_APP_ID`             | No                                   | Privy app ID from the Privy dashboard. Enables the Privy wallet modal; unset = injected connector only.                                                                          |
+| `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID`   | No                                   | Environment ID from the Dynamic dashboard. Enables the Dynamic connect dialog; unset = injected connector only.                                                                  |
 | `NEXT_PUBLIC_COMMIT_SHA`               | No                                   | Commit shown in the footer. Vercel's `VERCEL_GIT_COMMIT_SHA` is used when this is unset.                                                                                         |
 | `NEXT_PUBLIC_SOURCE_REPO_URL`          | No                                   | Repository the footer links to. Defaults to `https://github.com/zama-ai/sdk`; a fork must set its own.                                                                           |
 | `NEXT_PUBLIC_<NETWORK>_RPC_URL`        | No                                   | RPC override per network: `SEPOLIA`, `BNB_TESTNET`, `HOODI`, `ZENITH`, `MAINNET`, `POLYGON`.                                                                                     |
@@ -29964,7 +30953,7 @@ Rate limiting belongs at the hosting layer; a public deployment that adds its ow
 
 The app is built to be hosted as-is, with the user's browser wallet doing all signing and the proxy the only server-side code. What a deployment gets:
 
-- **Security headers.** `src/proxy.ts` sets a per-request Content Security Policy on every page: scripts need the request's nonce, `connect-src` is limited to this origin, the RPCs of the networks in the table and the relayers' key storage, `worker-src 'self' blob:` and `'wasm-unsafe-eval'` are what the FHE runtime needs, and `frame-ancestors 'none'` blocks framing. The policy governs the page and the workers it spawns; the SDK downloads the FHE key on the page thread, so the key storage of every relayer you serve has to be in `connect-src` (see [Mainnet access](#mainnet-access)). `next.config.ts` adds `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` and HSTS. There are no third-party scripts, fonts or analytics unless Privy is enabled: with `NEXT_PUBLIC_PRIVY_APP_ID` set, the policy additionally allows Privy's iframe and API, WalletConnect's relay and verification iframes, inline wallet icons, and inline styles (Privy's modal injects its own), following [Privy's CSP guidance](https://docs.privy.io/security/implementation-guide/content-security-policy). HSTS covers the app's own host only, so a copy on an apex domain does not pin its subdomains, and the policy does not upgrade `http://` requests, so an RPC override on a private `http://` node keeps working.
+- **Security headers.** `src/proxy.ts` sets a per-request Content Security Policy on every page: scripts need the request's nonce, `connect-src` is limited to this origin, the RPCs of the networks in the table and the relayers' key storage, `worker-src 'self' blob:` and `'wasm-unsafe-eval'` are what the FHE runtime needs, and `frame-ancestors 'none'` blocks framing. The policy governs the page and the workers it spawns; the SDK downloads the FHE key on the page thread, so the key storage of every relayer you serve has to be in `connect-src` (see [Mainnet access](#mainnet-access)). `next.config.ts` adds `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` and HSTS. There are no third-party scripts, fonts or analytics. With `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` set, the policy additionally allows Dynamic's API and wallet catalogue, WalletConnect's relay and verification iframes, and wallet icons from Dynamic's icon host. Dynamic's headless SDK renders no UI, so styles stay nonce-only in production either way. HSTS covers the app's own host only, so a copy on an apex domain does not pin its subdomains, and the policy does not upgrade `http://` requests, so an RPC override on a private `http://` node keeps working.
 - **Mainnet banner.** A wallet on Ethereum or Polygon mainnet sees a banner saying transactions move real funds.
 - **Deployed commit in the footer.** The footer links the source repository (`NEXT_PUBLIC_SOURCE_REPO_URL`) and the commit the build was made from (`NEXT_PUBLIC_COMMIT_SHA`, filled from `VERCEL_GIT_COMMIT_SHA` on Vercel), so anyone can check what they are running.
 - **Pinned dependencies.** `package.json` pins exact versions and the lockfile is committed; `npm ci` installs exactly what was reviewed.
@@ -29986,7 +30975,7 @@ A `.env.local` on your own machine is enough to run the same app yourself (see [
 npm run test:e2e        # runs Playwright (starts its own dev server; port 3004 must be free)
 ```
 
-Tests mock `window.ethereum` and the RPC of the network under test, and abort every relayer request — no wallet or real network required. The suite forces the injected-wallet stack (`NEXT_PUBLIC_PRIVY_APP_ID` cleared), since Privy's modal cannot be driven by a mocked provider. The config enables the Ethereum mainnet row with an unreachable relayer URL so the picker and the mainnet feature flags are covered.
+Tests mock `window.ethereum` and the RPC of the network under test, and abort every relayer request — no wallet or real network required. The suite forces the injected-wallet stack (`NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` cleared), since the Dynamic connect dialog needs Dynamic's API. `dynamicConnector.spec.ts` covers the Dynamic path below the dialog: it drives the connector in the test process with a fake WalletConnect wallet (the chains a session approved, a wallet's own chain switch, a closed session), so it needs no page, Dynamic account or paired phone. The config enables the Ethereum mainnet row with an unreachable relayer URL so the picker and the mainnet feature flags are covered.
 
 With `CI` set, Playwright builds the app and runs the suite against `next start` instead of the dev server, because the production CSP is stricter than the development one (no `'unsafe-eval'`, no inline styles). `security.spec.ts` checks the headers and that the app loads without a CSP violation; encryption is not exercised, since every relayer call is aborted. `allowlist.spec.ts` covers `ENABLED_NETWORKS` by loading the relayer table in the test process, since the server under test runs with it unset, and with `CI` set it also checks that `next start` refuses to boot on an unknown key.
 
@@ -30013,7 +31002,11 @@ A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using wagm
 page.tsx                         — wallet connect, network picker, token selector
 ├── lib/networks.ts              — the network table: one row per chain (viem chain, FHE preset, flags)
 ├── lib/relayers.ts              — server-side: upstream relayer URL + API key per network
-├── lib/wallet.tsx               — wallet stack: Privy modal or wagmi injected connector, built from the table
+├── lib/wallet.tsx               — wallet stack: Dynamic connect dialog or wagmi injected connector, built from the table
+├── lib/dynamic.ts               — Dynamic headless client: wallet catalogue and connect step
+├── lib/dynamicConnector.ts      — wagmi connector over a Dynamic-authorized wallet
+├── lib/zodJitless.ts            — turns off zod's eval probe, which the page CSP blocks
+├── ConnectWalletDialog.tsx      — wallet picker and WalletConnect pairing
 ├── providers.tsx                — wallet providers + ZamaProvider config, built from the network table
 │   ├── /api/networks            — which networks the server can serve (drives the picker)
 │   └── /api/relayer/[network]/[...path] — Next.js proxy (keeps API keys server-side)
@@ -30056,12 +31049,17 @@ export const networks = {
   // ...
 };
 
-// src/lib/wallet.tsx — the Privy-managed or plain wagmi config (see section 1a)
+// src/lib/wallet.tsx — one wagmi config for both wallet stacks (see section 1a)
 const chains = NETWORK_KEYS.map((key) => networks[key].chain);
 const transports = Object.fromEntries(chains.map((c) => [c.id, http(c.rpcUrls.default.http[0])]));
-export const wagmiConfig = PRIVY_APP_ID
-  ? createPrivyWagmiConfig({ chains, transports, ssr: true }) // @privy-io/wagmi
-  : createConfig({ chains, connectors: [injected()], transports, ssr: true }); // wagmi
+export const wagmiConfig = createConfig({
+  chains,
+  transports,
+  storage,
+  // Dynamic: the saved wallet's connector, so wagmi can restore it. Injected: `injected()`.
+  connectors,
+  ssr: true,
+});
 
 // src/providers.tsx
 // The relayer requires an absolute URL, so resolve the same-origin proxy at runtime.
@@ -30103,30 +31101,50 @@ the transport key pair and signed permits survive page reloads during local deve
 ### 1a. Wallet stack (`lib/wallet.tsx`)
 
 `WalletProviders` picks one of two wallet stacks at build time and exposes both through the
-same `useWalletConnection()` hook (`ready`, `connect`, `disconnect`, `isConnecting`,
-`isDisconnecting`, `connectError`):
+same `useWalletConnection()` hook (`connect`, `disconnect`, `isConnecting`, `isDisconnecting`,
+`connectError`). The provider tree is `WagmiProvider` > `QueryClientProvider` in both:
 
-| `NEXT_PUBLIC_PRIVY_APP_ID` | Stack                                                                                |
-| -------------------------- | ------------------------------------------------------------------------------------ |
-| set                        | `PrivyProvider` > `QueryClientProvider` > `WagmiProvider` from `@privy-io/wagmi`     |
-| unset                      | `WagmiProvider` from `wagmi` with the `injected()` connector > `QueryClientProvider` |
+| `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` | `connect()`                                                     |
+| ------------------------------------ | --------------------------------------------------------------- |
+| set                                  | Opens the connect dialog (`components/ConnectWalletDialog.tsx`) |
+| unset                                | Prompts the browser wallet through wagmi's `injected()`         |
 
-With Privy, `connect` calls `useConnectWallet().connectWallet()`, which opens Privy's wallet
-modal: detected browser wallets, MetaMask, Rabby, Rainbow, Coinbase, and WalletConnect. It is
-connect-only — no Privy login or SIWE signature — so a Safe paired over WalletConnect from the
-Safe web app works like any other wallet. `@privy-io/wagmi`'s `WagmiProvider` mirrors the
-active Privy wallet into wagmi, so `useConnection()` and the SDK's wagmi adapter see the same
-connection in both modes. Privy's `walletChainType: "ethereum-only"` keeps its Solana code
-paths unused; `next.config.ts` aliases the optional Solana peer packages to an empty module so
-Turbopack does not try to resolve them, and `src/proxy.ts` widens the Content Security Policy
-for Privy's iframe, API and WalletConnect's relay only when the app ID is set.
+With Dynamic, **wagmi owns the wallet session; Dynamic only connects the wallet.** Dynamic's
+headless SDK (`lib/dynamic.ts`) runs connect-only — no sign-in, no embedded wallet — and
+supplies the wallet catalogue, the connect step (extension prompt, WalletConnect pairing) and
+each wallet's EIP-1193 provider. The dialog lists every EVM wallet in the catalogue, installed
+ones first. WalletConnect shows its pairing code to copy into the wallet (the Safe web app
+accepts a pasted code) or to open as a link. Going back, closing or picking another wallet
+aborts the attempt, and a wallet that approves afterwards is released.
 
-Disconnecting under Privy calls `wallet.disconnect()` on every Privy wallet and wagmi's
-`disconnect()`, because wagmi alone cannot release an injected wallet Privy owns.
+Once Dynamic authorizes a wallet, a wagmi connector of the app's own
+(`lib/dynamicConnector.ts`) wraps its provider, and wagmi persists, restores and follows the
+connection:
+
+- **One connector per wallet, and it never prompts.** Its id is Dynamic's wallet provider key,
+  such as `metamaskevm:browserExtension`, with no address in it. `connect()` reads the accounts
+  the wallet already shares.
+- **Restore reads a saved-wallet record.** wagmi only reconnects the connectors its config was
+  created with, so the connector saves the wallet it connected in wagmi's storage and
+  `wallet.tsx` lists that connector on load. A saved browser wallet that never announces itself
+  gives up after 3 s, and a WalletConnect session that closed while the page was away leaves
+  wagmi disconnected.
+- **Follows the wallet.** Account and chain switches inside the wallet reach wagmi through
+  Dynamic's provider events.
+- **Stays on the chains a WalletConnect session approved.** Dynamic sends a WalletConnect
+  wallet's requests on the chain it last recorded for it, which starts as the first network in
+  the table. The connector moves that record onto a chain the session approved, keeps it in
+  step with the wallet's own switches, and rejects a switch to any other chain.
+- **Disconnect** removes the wallet's Dynamic account, which also ends a WalletConnect session
+  (if that fails, it logs a warning and wagmi disconnects anyway). It never calls Dynamic's
+  `logout()`, which strips every listener from the shared `window.ethereum`.
+
+`src/proxy.ts` widens the Content Security Policy for Dynamic's API and WalletConnect only when
+the environment ID is set.
 
 The injected stack is what the Playwright suite runs against (`playwright.config.ts` clears
-`NEXT_PUBLIC_PRIVY_APP_ID`): Privy replaces wagmi's connector list, so a mocked
-`window.ethereum` cannot drive it.
+`NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID`), since the dialog needs Dynamic's API. The connector has its
+own spec (`e2e/dynamicConnector.spec.ts`), which runs it against a fake WalletConnect wallet.
 
 ---
 
@@ -30164,15 +31182,14 @@ until a deployment configures `MAINNET_RELAYER_URL`.
 
 Because wagmi does not auto-connect without stored connector state, the connect flow is
 explicit. `page.tsx` never talks to a connector directly: it goes through the
-`useWalletConnection()` context from `lib/wallet.tsx`, which hides whether Privy or the
+`useWalletConnection()` context from `lib/wallet.tsx`, which hides whether Dynamic or the
 injected connector sits behind it (section 1a):
 
 ```ts
-const { ready, connect, disconnect, isConnecting, connectError } = useWalletConnection();
+const { connect, disconnect, isConnecting, connectError } = useWalletConnection();
 const { switchChain, isPending: isSwitching } = useSwitchChain();
 
-// Screen 1: !isConnected — the button stays disabled until `ready`
-// (Privy has loaded; immediately true on the injected stack)
+// Screen 1: !isConnected — opens the Dynamic dialog or prompts the injected wallet
 connect();
 
 // Screen 2 (and the picker on screen 3): the user picked a row of the table
@@ -30898,7 +31915,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 ## Installation
 
 ```sh
-go get github.com/zama-ai/sdk/clients/go/v3@v3.8.0-beta.16
+go get github.com/zama-ai/sdk/clients/go/v3@v3.8.0-beta.19
 ```
 
 Run the `ghcr.io/zama-ai/sdk-daemon` image at exactly the same version as the client.
@@ -30927,7 +31944,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 ## Installation
 
 ```sh
-cargo add zama_sdk@=3.8.0-beta.16
+cargo add zama_sdk@=3.8.0-beta.19
 ```
 
 Run the `ghcr.io/zama-ai/sdk-daemon` image at exactly the same version as the client. Enable the `alloy` feature for the Alloy signing and transaction adapters.

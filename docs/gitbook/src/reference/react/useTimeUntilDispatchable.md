@@ -64,6 +64,14 @@ The batcher contract address (deposit or redeem direction).
 
 The batch to check. The query is disabled while `undefined`.
 
+---
+
+### chainId
+
+`number | undefined`
+
+Chain to read from, if it is not the connected one. Needs a provider that can read other chains, such as `WagmiProvider`.
+
 {% include ".gitbook/includes/query-options.md" %}
 
 ## Return Type

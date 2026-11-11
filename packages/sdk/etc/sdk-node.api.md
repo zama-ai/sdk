@@ -124,10 +124,6 @@ export type FheChainAuth = {
     __type: "ApiKeyHeader";
     header?: string;
     value: string;
-} | {
-    __type: "ApiKeyCookie";
-    cookie?: string;
-    value: string;
 };
 
 // @public
@@ -285,7 +281,5 @@ export const zenithTrexTestnet: Readonly<{
     readonly registryAddress: "0xde2e3948d35ef9C406A7317eAF332F3c2786a566";
     readonly executorAddress: "0x6C5036A4ad55DBA8007ae82c4e9C123F143e53ab";
 }>;
-
-// (No @packageDocumentation comment for this package)
 
 ```

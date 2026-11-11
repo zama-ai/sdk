@@ -1,6 +1,8 @@
 import type { EncryptValuesReturnType } from "@fhevm/sdk/actions/encrypt";
 import type { Address } from "viem";
 import {
+  ChainMismatchError,
+  ConfigurationError,
   InsufficientConfidentialBalanceError,
   SignerNotConfiguredError,
   VaultBatchNotDispatchedError,
@@ -318,6 +320,35 @@ describe("VaultBatcher", () => {
       });
     });
 
+    test("prepareFinalize refuses to decrypt a pinned chain's value on another chain", async ({
+      createSDK,
+      provider,
+      relayer,
+    }) => {
+      mockDispatchedBatch(provider);
+      const batcher = new VaultBatcher(createSDK({ signer: undefined }), BATCHER_ADDRESS, {
+        chainId: 11155111,
+      });
+
+      await expect(batcher.prepareFinalize(7n)).rejects.toBeInstanceOf(ConfigurationError);
+      expect(relayer.decryptPublicValuesWithSignatures).not.toHaveBeenCalled();
+    });
+
+    test("refuses a pinned batcher on another chain before reading anything", async ({
+      sdk,
+      provider,
+      relayer,
+    }) => {
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS, { chainId: 11155111 });
+
+      await expect(batcher.finalize(7n)).rejects.toMatchObject({
+        name: "ChainMismatchError",
+        operation: "finalize",
+      });
+      expect(provider.readContract).not.toHaveBeenCalled();
+      expect(relayer.decryptPublicValuesWithSignatures).not.toHaveBeenCalled();
+    });
+
     test.for([BatchState.Pending, BatchState.Finalized, BatchState.Canceled])(
       "refuses a batch in state %s before decrypting anything",
       async (state, { sdk, provider, relayer, signer }) => {
@@ -372,6 +403,133 @@ describe("VaultBatcher", () => {
 
         const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
         await expect(batcher.timeUntilCallbackDeadline(58n)).resolves.toBeNull();
+      },
+    );
+  });
+
+  describe("join progress", () => {
+    test("reports the join's hash once sent, before the receipt", async ({
+      sdk,
+      provider,
+      userAddress,
+    }) => {
+      mockJoinBalance(provider, { fromToken: FROM_TOKEN });
+      mockJoinReceipt(provider, { batcher: BATCHER_ADDRESS, account: userAddress });
+      const onJoinSubmitted = vi.fn();
+
+      const result = await new VaultBatcher(sdk, BATCHER_ADDRESS).join(1_000n, undefined, {
+        onJoinSubmitted,
+      });
+
+      expect(onJoinSubmitted).toHaveBeenCalledWith(result.txHash);
+    });
+  });
+
+  describe("chainId", () => {
+    test("reads every value and the block time on the given chain", async ({ sdk, provider }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(BatchState.Finalized);
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS, { chainId: 11155111 });
+
+      await batcher.batchStatus(58n);
+
+      for (const [call] of vi.mocked(provider.readContract).mock.calls) {
+        expect(call).toMatchObject({ chainId: 11155111 });
+      }
+      expect(provider.getBlockTimestamp).toHaveBeenCalledWith(11155111);
+    });
+
+    test("refuses a write while the signer is on another chain", async ({ sdk, signer }) => {
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS, { chainId: 11155111 });
+
+      await expect(batcher.claim(7n)).rejects.toMatchObject({
+        name: "ChainMismatchError",
+        operation: "claim",
+        targetChainId: 11155111,
+        message: expect.stringContaining("targets chain 11155111"),
+      });
+      expect(signer.writeContract).not.toHaveBeenCalled();
+    });
+
+    test("refuses a join on another chain before reading the balance or encrypting", async ({
+      sdk,
+      provider,
+      relayer,
+    }) => {
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS, { chainId: 11155111 });
+
+      await expect(batcher.join(100n)).rejects.toBeInstanceOf(ChainMismatchError);
+      expect(provider.readContract).not.toHaveBeenCalled();
+      expect(relayer.encryptValues).not.toHaveBeenCalled();
+    });
+  });
+
+  test("batchState refuses a state the SDK does not know", async ({ sdk, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValueOnce(7);
+    await expect(new VaultBatcher(sdk, BATCHER_ADDRESS).batchState(58n)).rejects.toBeInstanceOf(
+      ConfigurationError,
+    );
+  });
+
+  describe("batchStatus", () => {
+    function mockBatch(
+      provider: GenericProvider,
+      state: BatchState,
+      reads: { createdAt: bigint; dispatchedAt: bigint; now: bigint },
+    ) {
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(state) // batchState
+        .mockResolvedValueOnce(reads.createdAt) // batchCreatedAt
+        .mockResolvedValueOnce(reads.dispatchedAt) // batchDispatchedAt
+        .mockResolvedValueOnce(600n) // batchMinBatchAge
+        .mockResolvedValueOnce(600n); // batchCallbackDeadline
+      vi.mocked(provider.getBlockTimestamp).mockResolvedValueOnce(reads.now);
+    }
+
+    test("gives a pending batch when it becomes dispatchable", async ({ sdk, provider }) => {
+      mockBatch(provider, BatchState.Pending, { createdAt: 1_000n, dispatchedAt: 0n, now: 1_200n });
+
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+      await expect(batcher.batchStatus(58n)).resolves.toEqual({
+        state: BatchState.Pending,
+        createdAt: 1_000n,
+        dispatchableAt: 1_600n,
+        secondsUntilDispatchable: 400n,
+      });
+    });
+
+    test("gives a dispatched batch its callback deadline, 0 seconds once passed", async ({
+      sdk,
+      provider,
+    }) => {
+      mockBatch(provider, BatchState.Dispatched, {
+        createdAt: 900n,
+        dispatchedAt: 1_000n,
+        now: 1_700n,
+      });
+
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+      await expect(batcher.batchStatus(58n)).resolves.toEqual({
+        state: BatchState.Dispatched,
+        createdAt: 900n,
+        dispatchableAt: 1_500n,
+        dispatchedAt: 1_000n,
+        callbackDeadlineAt: 1_600n,
+        secondsUntilCallbackDeadline: 0n,
+      });
+    });
+
+    test.for([BatchState.Finalized, BatchState.Canceled])(
+      "gives a batch in state %s its timestamps",
+      async (state, { sdk, provider }) => {
+        mockBatch(provider, state, { createdAt: 900n, dispatchedAt: 1_000n, now: 2_000n });
+
+        const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS);
+        await expect(batcher.batchStatus(58n)).resolves.toEqual({
+          state,
+          createdAt: 900n,
+          dispatchableAt: 1_500n,
+          dispatchedAt: 1_000n,
+        });
       },
     );
   });
@@ -525,6 +683,20 @@ describe("VaultBatcher", () => {
       expect(relayer.decryptValues).toHaveBeenCalledWith(
         expect.objectContaining({ options: { operation: "vault-deposit-of" } }),
       );
+    });
+
+    test("refuses to decrypt a pinned chain's deposit on another chain", async ({
+      sdk,
+      provider,
+      relayer,
+      userAddress,
+      handle,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
+      const batcher = new VaultBatcher(sdk, BATCHER_ADDRESS, { chainId: 11155111 });
+
+      await expect(batcher.depositOf(1n, userAddress)).rejects.toBeInstanceOf(ConfigurationError);
+      expect(relayer.decryptValues).not.toHaveBeenCalled();
     });
   });
 });

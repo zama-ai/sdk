@@ -10,7 +10,11 @@ A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using wagm
 page.tsx                         — wallet connect, network picker, token selector
 ├── lib/networks.ts              — the network table: one row per chain (viem chain, FHE preset, flags)
 ├── lib/relayers.ts              — server-side: upstream relayer URL + API key per network
-├── lib/wallet.tsx               — wallet stack: Privy modal or wagmi injected connector, built from the table
+├── lib/wallet.tsx               — wallet stack: Dynamic connect dialog or wagmi injected connector, built from the table
+├── lib/dynamic.ts               — Dynamic headless client: wallet catalogue and connect step
+├── lib/dynamicConnector.ts      — wagmi connector over a Dynamic-authorized wallet
+├── lib/zodJitless.ts            — turns off zod's eval probe, which the page CSP blocks
+├── ConnectWalletDialog.tsx      — wallet picker and WalletConnect pairing
 ├── providers.tsx                — wallet providers + ZamaProvider config, built from the network table
 │   ├── /api/networks            — which networks the server can serve (drives the picker)
 │   └── /api/relayer/[network]/[...path] — Next.js proxy (keeps API keys server-side)
@@ -53,12 +57,17 @@ export const networks = {
   // ...
 };
 
-// src/lib/wallet.tsx — the Privy-managed or plain wagmi config (see section 1a)
+// src/lib/wallet.tsx — one wagmi config for both wallet stacks (see section 1a)
 const chains = NETWORK_KEYS.map((key) => networks[key].chain);
 const transports = Object.fromEntries(chains.map((c) => [c.id, http(c.rpcUrls.default.http[0])]));
-export const wagmiConfig = PRIVY_APP_ID
-  ? createPrivyWagmiConfig({ chains, transports, ssr: true }) // @privy-io/wagmi
-  : createConfig({ chains, connectors: [injected()], transports, ssr: true }); // wagmi
+export const wagmiConfig = createConfig({
+  chains,
+  transports,
+  storage,
+  // Dynamic: the saved wallet's connector, so wagmi can restore it. Injected: `injected()`.
+  connectors,
+  ssr: true,
+});
 
 // src/providers.tsx
 // The relayer requires an absolute URL, so resolve the same-origin proxy at runtime.
@@ -100,30 +109,50 @@ the transport key pair and signed permits survive page reloads during local deve
 ### 1a. Wallet stack (`lib/wallet.tsx`)
 
 `WalletProviders` picks one of two wallet stacks at build time and exposes both through the
-same `useWalletConnection()` hook (`ready`, `connect`, `disconnect`, `isConnecting`,
-`isDisconnecting`, `connectError`):
+same `useWalletConnection()` hook (`connect`, `disconnect`, `isConnecting`, `isDisconnecting`,
+`connectError`). The provider tree is `WagmiProvider` > `QueryClientProvider` in both:
 
-| `NEXT_PUBLIC_PRIVY_APP_ID` | Stack                                                                                |
-| -------------------------- | ------------------------------------------------------------------------------------ |
-| set                        | `PrivyProvider` > `QueryClientProvider` > `WagmiProvider` from `@privy-io/wagmi`     |
-| unset                      | `WagmiProvider` from `wagmi` with the `injected()` connector > `QueryClientProvider` |
+| `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` | `connect()`                                                     |
+| ------------------------------------ | --------------------------------------------------------------- |
+| set                                  | Opens the connect dialog (`components/ConnectWalletDialog.tsx`) |
+| unset                                | Prompts the browser wallet through wagmi's `injected()`         |
 
-With Privy, `connect` calls `useConnectWallet().connectWallet()`, which opens Privy's wallet
-modal: detected browser wallets, MetaMask, Rabby, Rainbow, Coinbase, and WalletConnect. It is
-connect-only — no Privy login or SIWE signature — so a Safe paired over WalletConnect from the
-Safe web app works like any other wallet. `@privy-io/wagmi`'s `WagmiProvider` mirrors the
-active Privy wallet into wagmi, so `useConnection()` and the SDK's wagmi adapter see the same
-connection in both modes. Privy's `walletChainType: "ethereum-only"` keeps its Solana code
-paths unused; `next.config.ts` aliases the optional Solana peer packages to an empty module so
-Turbopack does not try to resolve them, and `src/proxy.ts` widens the Content Security Policy
-for Privy's iframe, API and WalletConnect's relay only when the app ID is set.
+With Dynamic, **wagmi owns the wallet session; Dynamic only connects the wallet.** Dynamic's
+headless SDK (`lib/dynamic.ts`) runs connect-only — no sign-in, no embedded wallet — and
+supplies the wallet catalogue, the connect step (extension prompt, WalletConnect pairing) and
+each wallet's EIP-1193 provider. The dialog lists every EVM wallet in the catalogue, installed
+ones first. WalletConnect shows its pairing code to copy into the wallet (the Safe web app
+accepts a pasted code) or to open as a link. Going back, closing or picking another wallet
+aborts the attempt, and a wallet that approves afterwards is released.
 
-Disconnecting under Privy calls `wallet.disconnect()` on every Privy wallet and wagmi's
-`disconnect()`, because wagmi alone cannot release an injected wallet Privy owns.
+Once Dynamic authorizes a wallet, a wagmi connector of the app's own
+(`lib/dynamicConnector.ts`) wraps its provider, and wagmi persists, restores and follows the
+connection:
+
+- **One connector per wallet, and it never prompts.** Its id is Dynamic's wallet provider key,
+  such as `metamaskevm:browserExtension`, with no address in it. `connect()` reads the accounts
+  the wallet already shares.
+- **Restore reads a saved-wallet record.** wagmi only reconnects the connectors its config was
+  created with, so the connector saves the wallet it connected in wagmi's storage and
+  `wallet.tsx` lists that connector on load. A saved browser wallet that never announces itself
+  gives up after 3 s, and a WalletConnect session that closed while the page was away leaves
+  wagmi disconnected.
+- **Follows the wallet.** Account and chain switches inside the wallet reach wagmi through
+  Dynamic's provider events.
+- **Stays on the chains a WalletConnect session approved.** Dynamic sends a WalletConnect
+  wallet's requests on the chain it last recorded for it, which starts as the first network in
+  the table. The connector moves that record onto a chain the session approved, keeps it in
+  step with the wallet's own switches, and rejects a switch to any other chain.
+- **Disconnect** removes the wallet's Dynamic account, which also ends a WalletConnect session
+  (if that fails, it logs a warning and wagmi disconnects anyway). It never calls Dynamic's
+  `logout()`, which strips every listener from the shared `window.ethereum`.
+
+`src/proxy.ts` widens the Content Security Policy for Dynamic's API and WalletConnect only when
+the environment ID is set.
 
 The injected stack is what the Playwright suite runs against (`playwright.config.ts` clears
-`NEXT_PUBLIC_PRIVY_APP_ID`): Privy replaces wagmi's connector list, so a mocked
-`window.ethereum` cannot drive it.
+`NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID`), since the dialog needs Dynamic's API. The connector has its
+own spec (`e2e/dynamicConnector.spec.ts`), which runs it against a fake WalletConnect wallet.
 
 ---
 
@@ -161,15 +190,14 @@ until a deployment configures `MAINNET_RELAYER_URL`.
 
 Because wagmi does not auto-connect without stored connector state, the connect flow is
 explicit. `page.tsx` never talks to a connector directly: it goes through the
-`useWalletConnection()` context from `lib/wallet.tsx`, which hides whether Privy or the
+`useWalletConnection()` context from `lib/wallet.tsx`, which hides whether Dynamic or the
 injected connector sits behind it (section 1a):
 
 ```ts
-const { ready, connect, disconnect, isConnecting, connectError } = useWalletConnection();
+const { connect, disconnect, isConnecting, connectError } = useWalletConnection();
 const { switchChain, isPending: isSwitching } = useSwitchChain();
 
-// Screen 1: !isConnected — the button stays disabled until `ready`
-// (Privy has loaded; immediately true on the injected stack)
+// Screen 1: !isConnected — opens the Dynamic dialog or prompts the injected wallet
 connect();
 
 // Screen 2 (and the picker on screen 3): the user picked a row of the table

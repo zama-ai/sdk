@@ -55,6 +55,14 @@ The batcher contract address (deposit or redeem direction).
 
 ---
 
+### chainId
+
+`number | undefined`
+
+Chain the batcher is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](../sdk/errors.md#chainmismatcherror) instead of sending.
+
+---
+
 {% include ".gitbook/includes/mutation-options.md" %}
 
 ## Mutation variables
@@ -65,7 +73,7 @@ None. Call `mutate()` / `mutateAsync()` with no arguments — the batcher always
 
 `data` is `{ txHash: Hex; receipt: TransactionReceipt }`.
 
-On success the hook invalidates the batcher's batch reads: a new batch opens and the old one leaves `Pending`, so `useCurrentBatchId`, `useBatchState` and `useTimeUntilDispatchable` refetch.
+On success the hook invalidates the batcher's batch reads: a new batch opens and the old one leaves `Pending`, so `useCurrentBatchId`, `useBatchState`, `useBatchStatus` and `useTimeUntilDispatchable` refetch.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

@@ -404,14 +404,15 @@ message ChainConfig {
   HttpProviderConfig provider = 100;
 }
 message ChainAuth {
+  reserved 3;
+  reserved "api_key_cookie";
   oneof credential {
     string bearer_token = 1;
     NamedCredential api_key_header = 2;
-    NamedCredential api_key_cookie = 3;
   }
 }
 message NamedCredential {
-  // Omission preserves the SDK's default header or cookie name.
+  // Omission preserves the SDK's default header name.
   optional string name = 1;
   string value = 2;
 }

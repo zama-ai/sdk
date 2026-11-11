@@ -19,6 +19,7 @@ import type {
   WriteFunctionName,
 } from "../types";
 import { assertHex } from "../utils/assertions";
+import { requireReadChain } from "../utils/alignment";
 import { ethersRead } from "./contracts";
 
 /**
@@ -84,6 +85,7 @@ export class EthersProvider implements GenericProvider {
   >(
     config: ReadContractConfig<TAbi, TFunctionName, TArgs>,
   ): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>> {
+    await requireReadChain("EthersProvider", config.chainId, () => this.getChainId());
     return ethersRead(this.#readProvider, {
       address: config.address,
       abi: config.abi as readonly unknown[],
@@ -93,7 +95,8 @@ export class EthersProvider implements GenericProvider {
   }
 
   /** Return the latest block timestamp in seconds. */
-  async getBlockTimestamp(): Promise<bigint> {
+  async getBlockTimestamp(chainId?: number): Promise<bigint> {
+    await requireReadChain("EthersProvider", chainId, () => this.getChainId());
     const block = await this.#readProvider.getBlock("latest");
     if (!block) {
       throw new ConfigurationError(
@@ -117,12 +120,15 @@ export class EthersProvider implements GenericProvider {
           "The transaction may have been dropped from the mempool, or the RPC's wait timeout elapsed.",
       );
     }
+    const status =
+      receipt.status === null ? undefined : receipt.status === 1 ? "success" : "reverted";
     return {
       logs: receipt.logs.map((log) => ({
         address: log.address as Hex,
         topics: log.topics.filter((t): t is Hex => t !== null),
         data: log.data as Hex,
       })),
+      ...(status && { status }),
     };
   }
 

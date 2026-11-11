@@ -534,6 +534,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:guides/vaults/building-a-ui",
+      "title": "Building a vault UI",
+      "source_path": "docs/gitbook/src/guides/vaults/building-a-ui.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md",
+      "source_type": "official-doc",
+      "category": "guides",
+      "logical_path": "guides/vaults/building-a-ui",
+      "description": "The states a vault deposit or redemption goes through, and what your UI should show and offer in each one.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:native/README",
       "title": "Go & Rust overview",
       "source_path": "docs/gitbook/src/native/README.md",
@@ -1718,6 +1730,42 @@
       "category": "reference-react",
       "logical_path": "reference/react/useBatchState",
       "description": "Query hook for a vault batch's lifecycle state, which decides what the user can do next.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:reference/react/useBatchStatus",
+      "title": "useBatchStatus",
+      "source_path": "docs/gitbook/src/reference/react/useBatchStatus.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatchStatus.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/useBatchStatus",
+      "description": "Query hook for a vault batch's state together with its timestamps.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:reference/react/usePaused",
+      "title": "usePaused",
+      "source_path": "docs/gitbook/src/reference/react/usePaused.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/usePaused.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/usePaused",
+      "description": "Query hook for whether a vault batcher is paused.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:reference/react/useBatcherTokens",
+      "title": "useBatcherTokens",
+      "source_path": "docs/gitbook/src/reference/react/useBatcherTokens.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatcherTokens.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/useBatcherTokens",
+      "description": "Query hook for a vault batcher's input and output token addresses.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

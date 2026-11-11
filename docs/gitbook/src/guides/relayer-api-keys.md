@@ -66,7 +66,7 @@ let chain = ChainConfig::new(11_155_111, "https://sepolia.infura.io/v3/YOUR_KEY"
 {% endtab %}
 {% endtabs %}
 
-For the Zama-hosted relayer, `ApiKeyHeader` is the supported `auth` method — the hosted endpoint accepts the key only in the `x-api-key` header. (`BearerToken` and `ApiKeyCookie` apply to self-hosted relayers or proxied setups.)
+For the Zama-hosted relayer, `ApiKeyHeader` is the supported `auth` method — the hosted endpoint accepts the key only in the `x-api-key` header. (`BearerToken` applies to self-hosted relayers or proxied setups.)
 
 The Authentication guide includes copy-paste examples for both, an Express proxy reference implementation, and the full table of supported `auth` methods.
 

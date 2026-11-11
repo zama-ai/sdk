@@ -451,10 +451,6 @@ export type FheChainAuth = {
     __type: "ApiKeyHeader";
     header?: string;
     value: string;
-} | {
-    __type: "ApiKeyCookie";
-    cookie?: string;
-    value: string;
 };
 
 // @public
@@ -510,7 +506,7 @@ export interface GenericLogger {
 
 // @public
 export interface GenericProvider {
-    getBlockTimestamp(): Promise<bigint>;
+    getBlockTimestamp(chainId?: number): Promise<bigint>;
     getChainId(): Promise<number>;
     prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
         from: Address;
@@ -772,6 +768,7 @@ export interface ReadContractConfig<TAbi extends ContractAbi = ContractAbi, TFun
     readonly abi: TAbi;
     readonly address: Address;
     readonly args: TArgs;
+    readonly chainId?: number;
     readonly functionName: TFunctionName;
 }
 
@@ -1025,6 +1022,7 @@ export type TransactionOperation = "approveUnderlying" | "approveUnderlying:rese
 // @public
 export interface TransactionReceipt {
     readonly logs: readonly RawLog[];
+    readonly status?: "success" | "reverted";
 }
 
 // @public
@@ -1354,6 +1352,8 @@ export const ZamaErrorCode: {
     readonly DecryptionFailed: "DECRYPTION_FAILED";
     readonly EncryptOffloadUnavailable: "ENCRYPT_OFFLOAD_UNAVAILABLE";
     readonly TransactionReverted: "TRANSACTION_REVERTED";
+    readonly HcuBlockLimitExceeded: "HCU_BLOCK_LIMIT_EXCEEDED";
+    readonly HcuTransactionLimitExceeded: "HCU_TRANSACTION_LIMIT_EXCEEDED";
     readonly TransportKeyPairExpired: "KEYPAIR_EXPIRED";
     readonly InvalidTransportKeyPair: "INVALID_KEYPAIR";
     readonly RevokedKmsContext: "REVOKED_KMS_CONTEXT";
@@ -1649,7 +1649,5 @@ export const ZamaSDKEvents: {
 export interface ZamaSDKOptions {
     transportKeyPairDerivationSecret?: string | Uint8Array;
 }
-
-// (No @packageDocumentation comment for this package)
 
 ```

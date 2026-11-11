@@ -80,6 +80,7 @@ export class WagmiProvider implements GenericProvider {
   >(
     config: ReadContractConfig<TAbi, TFunctionName, TArgs>,
   ): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>> {
+    // wagmi routes a `chainId` to that chain's client, so the read need not be on the connected chain.
     return readContract(this.#config, config);
   }
 
@@ -137,8 +138,9 @@ export class WagmiProvider implements GenericProvider {
     return new Promise<never>(() => {});
   }
 
-  async getBlockTimestamp(): Promise<bigint> {
-    const block = await getBlock(this.#config);
+  /** Reads `chainId` through wagmi's client for it, so it need not be the connected chain. */
+  async getBlockTimestamp(chainId?: number): Promise<bigint> {
+    const block = await getBlock(this.#config, { chainId });
     return block.timestamp;
   }
 
@@ -224,7 +226,7 @@ async function walletReceipt(
     if (receipt.status !== "0x1") {
       throw new TransactionRevertedError(`Transaction ${hash} reverted.`);
     }
-    return receipt;
+    return { logs: receipt.logs, status: "success" };
   }
   const calls = await client
     .request({ method: "wallet_getCallsStatus", params: [hash] })
@@ -233,7 +235,8 @@ async function walletReceipt(
   if (calls && calls.status >= 300) {
     throw new TransactionRevertedError(`Transaction ${hash} failed (status ${calls.status}).`);
   }
-  return calls && calls.status >= 200 ? calls.receipts?.[0] : undefined;
+  const callReceipt = calls && calls.status >= 200 ? calls.receipts?.[0] : undefined;
+  return callReceipt && { logs: callReceipt.logs, status: "success" };
 }
 
 function ignoreUnsupported(method: string, logger: GenericLogger | undefined) {

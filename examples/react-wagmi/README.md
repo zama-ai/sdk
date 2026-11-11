@@ -4,7 +4,7 @@ Next.js 16 example app demonstrating how to integrate `@zama-fhe/react-sdk` with
 [wagmi v3](https://wagmi.sh/) on every network the SDK ships a chain preset for. A network
 picker switches the wallet between them; nothing else in the app changes per chain.
 
-Covers: connect wallet (browser wallet, or Privy's wallet modal with WalletConnect for a Safe), pick a network, shield ERC-20 → confidential, confidential transfer, unshield, grant/revoke/use delegation, pending unshield recovery, deposit into a reacting contract (`confidentialTransferAndCall`, Sepolia only).
+Covers: connect wallet (browser wallet, or a Dynamic-backed connect dialog with WalletConnect for a Safe), pick a network, shield ERC-20 → confidential, confidential transfer, unshield, grant/revoke/use delegation, pending unshield recovery, deposit into a reacting contract (`confidentialTransferAndCall`, Sepolia only).
 
 This app replaces the former `example-bnb`, `example-hoodi`, `example-polygon-amoy` and `example-zenith` apps, which were copies of it pinned to one chain each.
 
@@ -33,7 +33,7 @@ Token pairs on every network come from the on-chain `WrappersRegistry` at runtim
 
 - **Next.js 16** (App Router, Webpack — Turbopack not yet supported with WASM)
 - **React 19** + **wagmi v3** + **viem v2**
-- **Privy** (optional) — `@privy-io/react-auth` wallet modal (injected wallets + WalletConnect, which is how a Safe pairs from the Safe web app) and `@privy-io/wagmi` to mirror the active Privy wallet into wagmi
+- **Dynamic** (optional) — `@dynamic-labs-sdk/client` and `@dynamic-labs-sdk/evm`, Dynamic's headless SDK in connect-only mode: it supplies the wallet catalogue and the connect step (browser wallets + WalletConnect, which is how a Safe pairs from the Safe web app). A wagmi connector of the app's own wraps the authorized wallet, so wagmi alone owns the session
 - **TanStack Query v5** for async state
 - **@zama-fhe/react-sdk** — `ZamaProvider`, `useConfidentialBalance`, `useUnshield`, `useConfidentialTransferAndCall`, `useDelegateDecryption`, etc.
 - **@zama-fhe/react-sdk/wagmi** — `createConfig` adapter for wagmi signer/provider wiring
@@ -45,7 +45,7 @@ Token pairs on every network come from the on-chain `WrappersRegistry` at runtim
 ```bash
 cp .env.example .env.local
 # No changes needed for the testnets — defaults are pre-configured.
-# For Privy's wallet modal (WalletConnect, Safe), set NEXT_PUBLIC_PRIVY_APP_ID.
+# For the Dynamic connect dialog (WalletConnect, Safe), set NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID.
 
 npm install
 npm run dev
@@ -53,9 +53,11 @@ npm run dev
 
 Open [http://localhost:3004](http://localhost:3004) and connect a wallet.
 
-- With `NEXT_PUBLIC_PRIVY_APP_ID` set, **Connect Wallet** opens Privy's wallet modal. Pick a
-  browser wallet, or **WalletConnect** to pair a Safe from the Safe web app. The connection is
-  wallet-only (no Privy login or SIWE signature).
+- With `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` set, **Connect Wallet** opens a connect dialog that
+  lists the wallets in Dynamic's catalogue. Pick a browser wallet, or **WalletConnect** and paste
+  the pairing code into the Safe web app to connect a Safe. The connection is wallet-only (no
+  Dynamic sign-in or SIWE signature). In the Dynamic dashboard, set the environment to
+  connect-only, allow this app's origin, and keep a WalletConnect project ID.
 - Without it, the app connects MetaMask (or any EIP-1193 browser wallet) through wagmi's
   injected connector.
 
@@ -94,7 +96,7 @@ All server-side variables are read by the proxy only and never reach the browser
 | `NEXT_PUBLIC_ZAMA_ENV`                 | No                                   | `custom` swaps the Sepolia row's protocol contracts for the `NEXT_PUBLIC_ZAMA_*` values. Unset = SDK preset.                                                                     |
 | `NEXT_PUBLIC_ZAMA_*`                   | Custom                               | Gateway chain ID and protocol contract addresses of the custom environment. See `.env.example`.                                                                                  |
 | `NEXT_PUBLIC_REGISTRY_ADDRESS`         | Custom                               | Wrapper registry of the custom environment, which usually has no registry deployment.                                                                                            |
-| `NEXT_PUBLIC_PRIVY_APP_ID`             | No                                   | Privy app ID from the Privy dashboard. Enables the Privy wallet modal; unset = injected connector only.                                                                          |
+| `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID`   | No                                   | Environment ID from the Dynamic dashboard. Enables the Dynamic connect dialog; unset = injected connector only.                                                                  |
 | `NEXT_PUBLIC_COMMIT_SHA`               | No                                   | Commit shown in the footer. Vercel's `VERCEL_GIT_COMMIT_SHA` is used when this is unset.                                                                                         |
 | `NEXT_PUBLIC_SOURCE_REPO_URL`          | No                                   | Repository the footer links to. Defaults to `https://github.com/zama-ai/sdk`; a fork must set its own.                                                                           |
 | `NEXT_PUBLIC_<NETWORK>_RPC_URL`        | No                                   | RPC override per network: `SEPOLIA`, `BNB_TESTNET`, `HOODI`, `ZENITH`, `MAINNET`, `POLYGON`.                                                                                     |
@@ -119,7 +121,7 @@ Rate limiting belongs at the hosting layer; a public deployment that adds its ow
 
 The app is built to be hosted as-is, with the user's browser wallet doing all signing and the proxy the only server-side code. What a deployment gets:
 
-- **Security headers.** `src/proxy.ts` sets a per-request Content Security Policy on every page: scripts need the request's nonce, `connect-src` is limited to this origin, the RPCs of the networks in the table and the relayers' key storage, `worker-src 'self' blob:` and `'wasm-unsafe-eval'` are what the FHE runtime needs, and `frame-ancestors 'none'` blocks framing. The policy governs the page and the workers it spawns; the SDK downloads the FHE key on the page thread, so the key storage of every relayer you serve has to be in `connect-src` (see [Mainnet access](#mainnet-access)). `next.config.ts` adds `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` and HSTS. There are no third-party scripts, fonts or analytics unless Privy is enabled: with `NEXT_PUBLIC_PRIVY_APP_ID` set, the policy additionally allows Privy's iframe and API, WalletConnect's relay and verification iframes, inline wallet icons, and inline styles (Privy's modal injects its own), following [Privy's CSP guidance](https://docs.privy.io/security/implementation-guide/content-security-policy). HSTS covers the app's own host only, so a copy on an apex domain does not pin its subdomains, and the policy does not upgrade `http://` requests, so an RPC override on a private `http://` node keeps working.
+- **Security headers.** `src/proxy.ts` sets a per-request Content Security Policy on every page: scripts need the request's nonce, `connect-src` is limited to this origin, the RPCs of the networks in the table and the relayers' key storage, `worker-src 'self' blob:` and `'wasm-unsafe-eval'` are what the FHE runtime needs, and `frame-ancestors 'none'` blocks framing. The policy governs the page and the workers it spawns; the SDK downloads the FHE key on the page thread, so the key storage of every relayer you serve has to be in `connect-src` (see [Mainnet access](#mainnet-access)). `next.config.ts` adds `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` and HSTS. There are no third-party scripts, fonts or analytics. With `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` set, the policy additionally allows Dynamic's API and wallet catalogue, WalletConnect's relay and verification iframes, and wallet icons from Dynamic's icon host. Dynamic's headless SDK renders no UI, so styles stay nonce-only in production either way. HSTS covers the app's own host only, so a copy on an apex domain does not pin its subdomains, and the policy does not upgrade `http://` requests, so an RPC override on a private `http://` node keeps working.
 - **Mainnet banner.** A wallet on Ethereum or Polygon mainnet sees a banner saying transactions move real funds.
 - **Deployed commit in the footer.** The footer links the source repository (`NEXT_PUBLIC_SOURCE_REPO_URL`) and the commit the build was made from (`NEXT_PUBLIC_COMMIT_SHA`, filled from `VERCEL_GIT_COMMIT_SHA` on Vercel), so anyone can check what they are running.
 - **Pinned dependencies.** `package.json` pins exact versions and the lockfile is committed; `npm ci` installs exactly what was reviewed.
@@ -141,7 +143,7 @@ A `.env.local` on your own machine is enough to run the same app yourself (see [
 npm run test:e2e        # runs Playwright (starts its own dev server; port 3004 must be free)
 ```
 
-Tests mock `window.ethereum` and the RPC of the network under test, and abort every relayer request — no wallet or real network required. The suite forces the injected-wallet stack (`NEXT_PUBLIC_PRIVY_APP_ID` cleared), since Privy's modal cannot be driven by a mocked provider. The config enables the Ethereum mainnet row with an unreachable relayer URL so the picker and the mainnet feature flags are covered.
+Tests mock `window.ethereum` and the RPC of the network under test, and abort every relayer request — no wallet or real network required. The suite forces the injected-wallet stack (`NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` cleared), since the Dynamic connect dialog needs Dynamic's API. `dynamicConnector.spec.ts` covers the Dynamic path below the dialog: it drives the connector in the test process with a fake WalletConnect wallet (the chains a session approved, a wallet's own chain switch, a closed session), so it needs no page, Dynamic account or paired phone. The config enables the Ethereum mainnet row with an unreachable relayer URL so the picker and the mainnet feature flags are covered.
 
 With `CI` set, Playwright builds the app and runs the suite against `next start` instead of the dev server, because the production CSP is stricter than the development one (no `'unsafe-eval'`, no inline styles). `security.spec.ts` checks the headers and that the app loads without a CSP violation; encryption is not exercised, since every relayer call is aborted. `allowlist.spec.ts` covers `ENABLED_NETWORKS` by loading the relayer table in the test process, since the server under test runs with it unset, and with `CI` set it also checks that `next start` refuses to boot on an unknown key.
 

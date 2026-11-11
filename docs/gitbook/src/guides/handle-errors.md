@@ -20,6 +20,8 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `ENCRYPTION_FAILED`                      | `EncryptionFailedError`                   | FHE encryption failed in the WASM runtime                                                                      |
 | `DECRYPTION_FAILED`                      | `DecryptionFailedError`                   | FHE decryption failed                                                                                          |
 | `TRANSACTION_REVERTED`                   | `TransactionRevertedError`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                 |
+| `HCU_BLOCK_LIMIT_EXCEEDED`               | `HcuBlockLimitExceededError`              | Gas estimation found too little FHE compute (HCU) left in the block (retryable)                                |
+| `HCU_TRANSACTION_LIMIT_EXCEEDED`         | `HcuTransactionLimitExceededError`        | The transaction needs more FHE compute (HCU) than one transaction may use                                      |
 | `UNSHIELD_ALREADY_FINALIZED`             | `UnshieldAlreadyFinalizedError`           | `resumeUnshield()` called for an unwrap that was already finalized -- funds already arrived, nothing to resume |
 | `INVALID_KEYPAIR`                        | `InvalidTransportKeyPairError`            | Relayer rejected transport key pair (stale or malformed)                                                       |
 | `KEYPAIR_EXPIRED`                        | `TransportKeyPairExpiredError`            | Transport key pair expired -- user needs to re-sign                                                            |
@@ -42,7 +44,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `SIGNER_NOT_CONFIGURED`                  | `SignerNotConfiguredError`                | SDK operation needs a signer but none is configured (subclass of `SignerRequiredError`)                        |
 | `WALLET_NOT_CONNECTED`                   | `WalletNotConnectedError`                 | Signer exists but has no connected wallet account (subclass of `SignerRequiredError`)                          |
 | `WALLET_ACCOUNT_NOT_READY`               | `WalletAccountNotReadyError`              | Async signer adapter hasn't resolved its account yet (subclass of `SignerRequiredError`, retryable)            |
-| `CHAIN_MISMATCH`                         | `ChainMismatchError`                      | Signer and provider are on different chains                                                                    |
+| `CHAIN_MISMATCH`                         | `ChainMismatchError`                      | Signer and provider are on different chains, or the signer is not on a pinned vault or batcher's `chainId`     |
 | `DELEGATION_CONTRACT_IS_SELF`            | `DelegationContractIsSelfError`           | Delegation contract address equals the caller                                                                  |
 | `DELEGATION_DELEGATE_EQUALS_CONTRACT`    | `DelegationDelegateEqualsContractError`   | Delegate equals the contract address                                                                           |
 | `DELEGATION_DELEGATE_CANNOT_BE_WILDCARD` | `DelegationDelegateCannotBeWildcardError` | Delegate address is the wildcard address                                                                       |
@@ -298,7 +300,7 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 
 ### 8. Retry transient failures
 
-Five causes are transient — the operation can simply be retried, ideally with backoff: `RpcRateLimitError` (`RPC_RATE_LIMITED`), `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`, only on a 429, or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`), `DelegationCooldownError` (`DELEGATION_COOLDOWN`), and `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`). Rather than hardcoding that set of codes, use `isRetryable(error)` and `retryAfterSeconds(error)` — they stay correct as the taxonomy grows, since every `ZamaError` declares its own `.retryable`.
+Six causes are transient — the operation can simply be retried, ideally with backoff: `RpcRateLimitError` (`RPC_RATE_LIMITED`), `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`, only on a 429, or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`), `DelegationCooldownError` (`DELEGATION_COOLDOWN`), `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`), and `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`). Rather than hardcoding that set of codes, use `isRetryable(error)` and `retryAfterSeconds(error)` — they stay correct as the taxonomy grows, since every `ZamaError` declares its own `.retryable`.
 
 | Cause                                                        | `retryAfterSeconds`                               | Notes                                                                                                   |
 | ------------------------------------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -307,6 +309,7 @@ Five causes are transient — the operation can simply be retried, ideally with 
 | `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`) | `undefined`                                       | The SDK already rides out the propagation window internally; only surfaces if it's exceeded.            |
 | `DelegationCooldownError` (`DELEGATION_COOLDOWN`)            | `undefined`                                       | Per-block timing gate; resolves on the next block.                                                      |
 | `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`)    | `undefined`                                       | Async signer adapters (e.g. `EthersSigner`) refresh once internally; only surfaces if still unresolved. |
+| `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`)    | `undefined`                                       | Too little FHE compute left in the block at estimation; resolves on the next block.                     |
 
 {% tabs %}
 {% tab title="Core SDK" %}

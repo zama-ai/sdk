@@ -27,6 +27,8 @@ Core SDK usage imports from `@zama-fhe/sdk/vaults`; React hooks import from `@za
 
 🟨 Go to [**Vault groups**](groups.md) to deposit into one of several vaults without revealing which one.
 
+🟨 Go to [**Building a vault UI**](building-a-ui.md) for every state your UI must show after a deposit, and what to offer in each one.
+
 For the API surface, see [**Vault**](../../reference/sdk/Vault.md), [**VaultBatcher**](../../reference/sdk/VaultBatcher.md), and [**VaultGroup**](../../reference/sdk/VaultGroup.md) in the SDK reference, and the vault hooks in the [React reference](../../reference/react/README.md).
 
 ## Help center

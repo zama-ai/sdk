@@ -11,6 +11,7 @@ import {
   DelegationExpiryUnchangedError,
   DelegationNotFoundError,
   DelegationSelfNotAllowedError,
+  HcuBlockLimitExceededError,
   revokeDelegationContract,
   SignerNotConfiguredError,
   SigningRejectedError,
@@ -695,6 +696,47 @@ test("a pre-broadcast ACL revert reports TRANSACTION_REVERTED with the selector,
     // Nothing was broadcast, so neither side waits for a receipt.
     expect(env.remote().provider.waitForTransactionReceipt).not.toHaveBeenCalled();
     expect(env.direct.provider.waitForTransactionReceipt).not.toHaveBeenCalled();
+  } finally {
+    await env.close();
+  }
+});
+
+test("a pre-broadcast HCU block-limit revert reports HCU_BLOCK_LIMIT_EXCEEDED as retryable on both sides", async () => {
+  const HCU_BLOCK_LIMIT_SELECTOR = toFunctionSelector("HCUBlockLimitExceeded()");
+  const env = await setup();
+  try {
+    expiry(env, MAX_UINT64);
+    env.wallet.reply = () => ({
+      $case: "executionRevert",
+      executionRevert: {
+        data: Buffer.from(HCU_BLOCK_LIMIT_SELECTOR.slice(2), "hex"),
+        message: "execution reverted",
+      },
+    });
+    env.directSigner.write.mockRejectedValue(
+      Object.assign(new Error(`Execution reverted (${HCU_BLOCK_LIMIT_SELECTOR})`), {
+        cause: {
+          data: undefined,
+          raw: HCU_BLOCK_LIMIT_SELECTOR,
+          signature: HCU_BLOCK_LIMIT_SELECTOR,
+        },
+      }),
+    );
+    const directError = await failure(
+      env.direct.sdk.delegations.revokeDelegation({
+        contractAddress: TOKEN,
+        delegateAddress: DELEGATE,
+      }),
+    );
+    const remoteError = await failure(
+      revoke(env, { contractAddress: bytes(TOKEN), delegateAddress: bytes(DELEGATE) }),
+    );
+    expect(directError).toBeInstanceOf(HcuBlockLimitExceededError);
+    expect(errorCode(remoteError)).toBe(errorCode(directError));
+    expect(errorCode(remoteError)).toBe("HCU_BLOCK_LIMIT_EXCEEDED");
+    expect((remoteError as ServiceError).metadata.get("zama-error-retryable")[0]?.toString()).toBe(
+      "true",
+    );
   } finally {
     await env.close();
   }

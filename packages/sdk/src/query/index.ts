@@ -1,3 +1,15 @@
+/**
+ * Framework-agnostic TanStack Query building blocks for `@zama-fhe/sdk` —
+ * `*QueryOptions` and `*MutationOptions` factories, the {@link zamaQueryKeys}
+ * key factory, and the `invalidateAfter*` cache helpers.
+ *
+ * The hooks in `@zama-fhe/react-sdk` are thin wrappers over these factories.
+ * Import from `@zama-fhe/sdk/query` to build your own bindings without a
+ * dependency on React.
+ *
+ * @packageDocumentation
+ */
+
 export { filterQueryOptions, hashFn } from "./utils";
 export type { StrippedQueryOptionKeys } from "./utils";
 export type { QueryFactoryOptions, MutationFactoryOptions } from "./factory-types";

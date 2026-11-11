@@ -112,3 +112,8 @@ const { joins } = prepared.decodeJoins(receipt.logs);
 `group.missingOperators(prepared)` returns the grants the account still lacks; give each an `until` that outlasts the time the writes take. After a reload, `decodeVaultGroupJoins({ legs, account }, logs)` does what `decodeJoins` does from the saved `legs` and `account`. When you send the writes yourself, call `invalidateAfterGroupJoin(queryClient, prepared.legs)` to refresh balances and batch reads.
 
 `"legs"` delivery sends one transfer per member straight to its batcher and needs no grant; it keeps the choice of vault private only when the wallet lands every leg atomically. `"router"` is the single transaction the SDK sends itself. A host that has already verified the group passes `skipPreflight`, which skips the config verification and the registry listing but not the `paused()` read. The balance check decrypts as the signer, so an `account` other than the signer's needs `skipBalanceCheck`. One that gates the amount on a balance it already shows passes `skipBalanceCheck`. See [`VaultGroup` → Prepare](../../reference/sdk/VaultGroup.md#prepare).
+
+## Next steps
+
+- [Building a vault UI](building-a-ui.md) — what to show and offer in every state of a deposit or redemption
+- [Vault deposits and redemptions](deposits.md) — the batch lifecycle behind each leg

@@ -132,10 +132,6 @@ export type FheChainAuth = {
     __type: "ApiKeyHeader";
     header?: string;
     value: string;
-} | {
-    __type: "ApiKeyCookie";
-    cookie?: string;
-    value: string;
 };
 
 // @public
@@ -157,7 +153,7 @@ export interface GenericLogger {
 
 // @public
 export interface GenericProvider {
-    getBlockTimestamp(): Promise<bigint>;
+    getBlockTimestamp(chainId?: number): Promise<bigint>;
     getChainId(): Promise<number>;
     prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
         from: Address;
@@ -232,6 +228,7 @@ export interface ReadContractConfig<TAbi extends ContractAbi = ContractAbi, TFun
     readonly abi: TAbi;
     readonly address: Address;
     readonly args: TArgs;
+    readonly chainId?: number;
     readonly functionName: TFunctionName;
 }
 
@@ -317,6 +314,7 @@ export type TransactionOperation = "approveUnderlying" | "approveUnderlying:rese
 // @public
 export interface TransactionReceipt {
     readonly logs: readonly RawLog[];
+    readonly status?: "success" | "reverted";
 }
 
 // @public
@@ -357,7 +355,7 @@ export interface UnwrapSubmittedEvent extends BaseEvent {
 // @public
 export class ViemProvider implements GenericProvider {
     constructor(config: ViemProviderConfig);
-    getBlockTimestamp(): Promise<bigint>;
+    getBlockTimestamp(chainId?: number): Promise<bigint>;
     getChainId(): Promise<number>;
     prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
         from: Address;
@@ -532,7 +530,5 @@ export const ZamaSDKEvents: {
 
 // @public
 export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents];
-
-// (No @packageDocumentation comment for this package)
 
 ```

@@ -12,6 +12,8 @@ export interface UseTimeUntilCallbackDeadlineConfig {
   address: Address;
   /** Batch to check. The query is disabled while `undefined`. */
   batchId: bigint | undefined;
+  /** Chain to read from, when it is not the connected one. Needs a provider that can route reads, such as `WagmiProvider`. */
+  chainId?: number;
 }
 
 /** TanStack Query options accepted by {@link useTimeUntilCallbackDeadline} (excluding `queryKey`/`queryFn`). */
@@ -25,7 +27,9 @@ export interface UseTimeUntilCallbackDeadlineOptions extends Omit<
 
 /**
  * Seconds until a dispatched batch reaches its callback deadline, `0` once it
- * has: from then on `useFinalize` cancels the batch instead of settling it.
+ * has: from then on `useFinalize` cancels the batch instead of settling it,
+ * except on an asynchronous redeem batcher that has already placed the
+ * redemption request.
  * Measured against the chain's block timestamp, not the caller's wall clock.
  *
  * `null` outside `Dispatched`, where there is nothing to finalize.
@@ -47,7 +51,7 @@ export function useTimeUntilCallbackDeadline(
   options?: UseTimeUntilCallbackDeadlineOptions,
 ) {
   const { enabled = true } = options ?? {};
-  const batcher = useVaultBatcher(config.address);
+  const batcher = useVaultBatcher(config.address, { chainId: config.chainId });
   const baseOptions = timeUntilCallbackDeadlineQueryOptions(batcher, { batchId: config.batchId });
 
   return useQuery<bigint | null>({

@@ -23,9 +23,10 @@ export default defineConfig({
       NEXT_PUBLIC_SEPOLIA_RPC_URL: "",
       NEXT_PUBLIC_MAINNET_RPC_URL: "",
       NEXT_PUBLIC_BNB_TESTNET_RPC_URL: "",
-      // Force the injected-wallet stack: the suite drives a mocked window.ethereum, which
-      // Privy's modal cannot use, and a dev's .env.local may enable Privy.
-      NEXT_PUBLIC_PRIVY_APP_ID: "",
+      // Force the injected-wallet stack: the suite drives a mocked window.ethereum through
+      // wagmi's injected connector, Dynamic's dialog needs its live API, and a dev's .env.local
+      // may enable Dynamic.
+      NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: "",
       // Force the stock Sepolia preset: a dev's .env.local may select a custom environment,
       // whose registry address would not match the mocked one.
       NEXT_PUBLIC_ZAMA_ENV: "",

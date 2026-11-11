@@ -8,35 +8,31 @@ import { NextResponse, type NextRequest } from "next/server";
 import { NETWORK_KEYS, networks } from "@/lib/networks";
 import { keyStorageOrigins } from "@/lib/relayers";
 
+// Dynamic (opt-in through NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID) talks to its API and wallet
+// catalogue and pairs over WalletConnect's relay. It renders no UI, so styles stay nonce-only.
+const dynamicEnabled = Boolean(process.env.NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID);
+const dynamicConnectSrc = [
+  "https://app.dynamicauth.com",
+  "https://dynamic-static-assets.com",
+  "https://*.walletconnect.com",
+  "https://*.walletconnect.org",
+  "wss://*.walletconnect.com",
+  "wss://*.walletconnect.org",
+];
+// WalletConnect's domain verification runs in an iframe.
+const dynamicFrameSrc = ["https://verify.walletconnect.com", "https://verify.walletconnect.org"];
+
 // Everything the page connects to: this origin (relayer proxy, /api/networks, WASM and
 // worker files), the RPC of every network in the table (the SDK probes the wallet's chain
 // on connect, served or not), the storage the relayers' `keyurl` names for the FHE public
 // key and CRS, and data: URLs, which the FHE runtime fetches to compile its WASM when
 // encryption runs in the page instead of the encrypt worker.
-// Privy's wallet modal (opt-in through NEXT_PUBLIC_PRIVY_APP_ID, see src/lib/wallet.tsx) runs
-// in an iframe, talks to its API and to WalletConnect's relay, and styles its components
-// inline. Sources per https://docs.privy.io/security/implementation-guide/content-security-policy.
-const privyEnabled = Boolean(process.env.NEXT_PUBLIC_PRIVY_APP_ID);
-const privyFrameSrc = [
-  "https://auth.privy.io",
-  "https://verify.walletconnect.com",
-  "https://verify.walletconnect.org",
-];
-const privyConnectSrc = [
-  "https://auth.privy.io",
-  "wss://relay.walletconnect.com",
-  "wss://relay.walletconnect.org",
-  "wss://www.walletlink.org",
-  "https://*.rpc.privy.systems",
-  "https://explorer-api.walletconnect.com",
-];
-
 const connectSrc = new Set([
   "'self'",
   ...NETWORK_KEYS.map((key) => new URL(networks[key].chain.rpcUrls.default.http[0]).origin),
   ...keyStorageOrigins,
   "data:",
-  ...(privyEnabled ? privyConnectSrc : []),
+  ...(dynamicEnabled ? dynamicConnectSrc : []),
 ]);
 
 const isDev = process.env.NODE_ENV === "development";
@@ -47,20 +43,19 @@ function contentSecurityPolicy(nonce: string): string {
     // 'wasm-unsafe-eval': the FHE runtime compiles WASM. 'unsafe-eval': only `next dev`,
     // which uses eval to rebuild server stack traces in the browser.
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ""}`,
-    // `next dev` injects stylesheets inline; a production build links them. Privy's modal
-    // injects its own, so enabling it keeps inline styles allowed in production too.
-    `style-src 'self' ${isDev || privyEnabled ? "'unsafe-inline'" : `'nonce-${nonce}'`}`,
+    // `next dev` injects stylesheets inline; a production build links them.
+    `style-src 'self' ${isDev ? "'unsafe-inline'" : `'nonce-${nonce}'`}`,
     // ws: is the dev server's hot-reload socket.
     `connect-src ${[...connectSrc].join(" ")}${isDev ? " ws:" : ""}`,
     // The SDK's encrypt worker is a bundled file; the FHE runtime compiles WASM in blob workers.
     "worker-src 'self' blob:",
-    // Privy's modal: its iframe, WalletConnect's verification iframes, and the wallet icons
-    // (inline, or fetched from WalletConnect's explorer API for its wallet list).
-    ...(privyEnabled
+    // WalletConnect's verification iframes, and wallet icons: the catalogue's come from Dynamic's
+    // icon sprite, and EIP-6963 wallets announce theirs as data: URLs.
+    ...(dynamicEnabled
       ? [
-          `frame-src ${privyFrameSrc.join(" ")}`,
-          `child-src ${privyFrameSrc.join(" ")}`,
-          "img-src 'self' data: blob: https://explorer-api.walletconnect.com",
+          `frame-src ${dynamicFrameSrc.join(" ")}`,
+          `child-src ${dynamicFrameSrc.join(" ")}`,
+          "img-src 'self' data: blob: https://iconic.dynamic-static-assets.com",
         ]
       : []),
     "object-src 'none'",

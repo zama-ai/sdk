@@ -62,6 +62,14 @@ const { mutateAsync: deposit } = useDeposit({ addresses });
 
 ---
 
+### chainId
+
+`number | undefined`
+
+Chain the vault is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](../sdk/errors.md#chainmismatcherror) before sending anything.
+
+---
+
 {% include ".gitbook/includes/mutation-options.md" %}
 
 ## Mutation variables
@@ -108,6 +116,12 @@ Default: `false`. Skips the confidential-balance pre-flight, for accounts whose 
 await deposit({ amount: 1_000_000n, skipBalanceCheck: true });
 ```
 
+### onJoinSubmitted
+
+`((txHash: Hex) => void) | undefined`
+
+Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction". If the callback throws, the SDK logs a warning and the join continues.
+
 **Throws:**
 
 - `ConfigurationError` — the two batchers report different vaults, or disagree with a configured `vault` address
@@ -122,7 +136,7 @@ import { type JoinResult } from "@zama-fhe/sdk/vaults";
 
 `data` resolves to a `JoinResult`: `{ txHash, receipt, batchId, beneficiary, confidentialJoinedAmount }`. See [`Vault` → JoinResult](../sdk/Vault.md#joinresult).
 
-On success the hook invalidates the asset token's balance cache, the deposit batcher's batch reads (`useCurrentBatchId`, `useBatchState`, `useTimeUntilDispatchable`), and the asset token's operator-status cache, since the mutation may have granted one.
+On success the hook invalidates the asset token's balance cache, the deposit batcher's batch reads (`useCurrentBatchId`, `useBatchState`, `useBatchStatus`, `useTimeUntilDispatchable`), and the asset token's operator-status cache, since the mutation may have granted one.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

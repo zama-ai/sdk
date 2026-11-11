@@ -1,3 +1,4 @@
+import { QueryClient } from "@tanstack/react-query";
 import type { Address } from "viem";
 import { describe, expect, test, vi } from "../../../test-fixtures";
 import type { TransactionResult } from "../../../types";
@@ -10,7 +11,8 @@ import { dispatchBatchMutationOptions } from "../dispatch-batch";
 import { finalizeMutationOptions } from "../finalize";
 import { groupDepositMutationOptions } from "../group-deposit";
 import { groupRedeemMutationOptions } from "../group-redeem";
-import { invalidateAfterGroupJoin } from "../invalidation";
+import { invalidateAfterGroupJoin, invalidateBatchQueries } from "../invalidation";
+import { hashFn } from "../../../query/utils";
 import { vaultQueryKeys } from "../query-keys";
 import { joinMutationOptions } from "../join";
 import { quitMutationOptions } from "../quit";
@@ -169,6 +171,27 @@ describe("invalidateAfterGroupJoin", () => {
       expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
         queryKey: vaultQueryKeys.batchState.batcher(batcher),
       });
+    }
+  });
+});
+
+describe("invalidateBatchQueries", () => {
+  test("invalidates the reads of a batcher pinned to a chain", () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { queryKeyHashFn: hashFn } },
+    });
+    const keys = [
+      vaultQueryKeys.currentBatchId.batcher(DEPOSIT_BATCHER, 11155111),
+      vaultQueryKeys.batchStatus.batch(DEPOSIT_BATCHER, 1n, 11155111),
+    ];
+    for (const key of keys) {
+      queryClient.setQueryData(key, 1n);
+    }
+
+    invalidateBatchQueries(queryClient, DEPOSIT_BATCHER);
+
+    for (const key of keys) {
+      expect(queryClient.getQueryState(key)?.isInvalidated).toBe(true);
     }
   });
 });

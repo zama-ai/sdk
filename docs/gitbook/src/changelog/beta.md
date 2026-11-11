@@ -18,6 +18,8 @@ description: Unreleased changes on the prerelease (beta) line — not yet in a s
 - **Deployment:** [Deploy in production](../native/operations/run-in-production.md), [Monitor and troubleshoot](../native/operations/monitor-and-troubleshoot.md), and [Upgrade the daemon](../native/operations/upgrade-and-recover.md).
 - **Signed, scanned image:** the daemon image is built on Docker Hardened Images, every release digest is scanned with Trivy before it is tagged, and the image carries signed build provenance and an SBOM. Verify a release with `gh attestation verify` or cosign and pin it by digest with `ZAMA_SDK_DAEMON_DIGEST`; see [Verify and pin the image](../native/operations/run-in-production.md#verify-and-pin-the-image). Published images are re-scanned daily.
 
+**HCU limit errors for native clients.** A write whose gas estimation hits one of the protocol's FHE compute (HCU) limits now fails with `HCU_BLOCK_LIMIT_EXCEEDED` (retryable) or `HCU_TRANSACTION_LIMIT_EXCEEDED` instead of `TRANSACTION_REVERTED`. A write whose broadcast outcome is uncertain still fails with `TRANSACTION_OUTCOME_UNKNOWN`.
+
 Start with the [Go quick start](../native/tutorials/go-quick-start.md) or the [Rust quick start](../native/tutorials/rust-quick-start.md).
 
 ## Vault groups over the multi-vault router
@@ -30,9 +32,45 @@ If the SDK cannot match a `Joined` event in the mined transaction's receipt to e
 
 See [Vault groups](../guides/vaults/groups.md).
 
+## Typed errors for the protocol's FHE compute limits
+
+The protocol caps the FHE compute, measured in HCU, that a transaction and a block can use. A write whose gas estimation hits one of them now throws a typed error instead of a bare `TransactionRevertedError`, from `submitTransaction`-backed methods and from `sdk.offline.prepare` alike: `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`) when the block has too little left, which is retryable in the next block, and `HcuTransactionLimitExceededError` (`HCU_TRANSACTION_LIMIT_EXCEEDED`) when the transaction needs more HCU, in total or in one sequential chain, than one transaction may use, which a retry cannot fix.
+
+A transaction that is mined and then reverts now throws `TransactionRevertedError` instead of returning a result. `TransactionReceipt` gained an optional `status` (`"success"` or `"reverted"`); the viem, ethers and wagmi providers fill it.
+
+See [Errors](../reference/sdk/errors.md#hcublocklimitexceedederror).
+
 ## Settle a dispatched batch yourself
 
-New `VaultBatcher.finalize(batchId)` (`useFinalize` in React, `finalizeMutationOptions` for TanStack Query). A keeper, an off-chain service that watches batches, normally finalizes a dispatched batch; when it has not, any account can now settle the batch from the SDK: `finalize` reads the batch's unwrap request, publicly decrypts the amount it released, and submits `dispatchBatchCallback` with the cleartext and its proof. Past the batch's callback deadline the same call cancels the batch. The submission surfaces as a `VaultSubmitted` event with `vaultOperation: "finalize"`. `VaultBatcher.unwrapRequestId(batchId)` exposes the underlying read. `finalize` and `prepareFinalize` read the batch state first and throw the new `VaultBatchNotDispatchedError` when the batch is not `Dispatched`, for example because a keeper already finalized it, before any decryption. New `VaultBatcher.timeUntilCallbackDeadline(batchId)` (`useTimeUntilCallbackDeadline`, `timeUntilCallbackDeadlineQueryOptions`) reads the seconds until a dispatched batch reaches its callback deadline: `0` once it has, when `finalize` cancels instead of settling, and `null` outside `Dispatched`.
+A keeper normally finalizes a dispatched batch. When it has not, any account can now settle it with `VaultBatcher.finalize(batchId)` (`useFinalize` in React, `finalizeMutationOptions` for TanStack Query). After the batch's callback deadline the same call cancels the batch instead, except on an asynchronous redeem batcher that has already placed its redemption request.
+
+- `VaultBatcher.timeUntilCallbackDeadline(batchId)` (`useTimeUntilCallbackDeadline`, `timeUntilCallbackDeadlineQueryOptions`) returns the seconds left until the deadline: `0` once it has passed, `null` when the batch is not `Dispatched`.
+- `finalize` and `prepareFinalize` throw the new `VaultBatchNotDispatchedError` when the batch is not `Dispatched`, for example because a keeper got there first.
+- `VaultBatcher.unwrapRequestId(batchId)` returns the unwrap request `finalize` reads.
+- The submission emits a `VaultSubmitted` event with `vaultOperation: "finalize"`.
+
+## Batch status for vault UIs
+
+`VaultBatcher.batchStatus(batchId)` (`useBatchStatus`, `batchStatusQueryOptions`) returns a batch's state and the timestamps a UI needs for it, such as `secondsUntilDispatchable` while `Pending` and `secondsUntilCallbackDeadline` while `Dispatched`. The result is a union on `state`, so an exhaustive `switch` catches a state the UI does not handle.
+
+`openBatchIds(logs, batcher, account)` lists the batches an account joined and has not claimed or quit, from the batcher's `Joined`, `Claimed` and `Quit` logs. `VaultTopics` adds `Claimed` and `Quit`.
+
+The new [Building a vault UI](../guides/vaults/building-a-ui.md) guide covers what to show and offer at each step of a deposit or redemption.
+
+## Vaults on another chain
+
+Pass a `chainId` to work with a vault while the wallet is not on its chain, for example on a page that renders before the wallet connects.
+
+- **Reads:** `createVaultBatcher(sdk, address, { chainId })`, `useVaultBatcher` and the batcher read hooks (`useBatchStatus`, `useBatchState`, `useCurrentBatchId`, `useTimeUntilDispatchable`, `useTimeUntilCallbackDeadline`, `usePaused`, `useBatcherTokens`) take a `chainId`, exposed as `VaultBatcher.chainId`. `WagmiProvider` reads that chain through wagmi. `ViemProvider` and `EthersProvider` are bound to one chain and throw `ConfigurationError` for another.
+- **Writes:** `createVault`, `useVault`, `useDeposit`, `useRedeem` and the batcher write hooks (`useJoin`, `useQuit`, `useClaim`, `useRecover`, `useDispatchBatch`, `useFinalize`) take the same `chainId`. A write while the wallet is on another chain throws `ChainMismatchError` before anything is sent; its new `targetChainId` is the vault's chain.
+- **Decryption:** `depositOf` and `prepareFinalize` decrypt on the provider's chain, so they throw `ConfigurationError` until the provider is on the vault's chain.
+- **Custom providers:** `ReadContractConfig` and `GenericProvider.getBlockTimestamp` gain an optional `chainId`. A custom `GenericProvider` must read that chain or throw; one that ignores it returns data from the wrong chain.
+
+## Smaller vault additions
+
+- `usePaused` (`pausedQueryOptions`) reads whether a batcher is paused, and `useBatcherTokens` (`batcherTokensQueryOptions`) its input and output tokens.
+- A new `onJoinSubmitted` option on `VaultBatcher.join`, `Vault.deposit` / `Vault.redeem`, `VaultGroup.deposit` / `VaultGroup.redeem` and their hooks receives the transaction hash once the wallet has sent the join. If the callback throws, the SDK logs a warning and the join continues.
+- `VaultBatcher.batchState` throws `ConfigurationError` for a state number it does not know.
 
 ## Vault groups for your own transaction layer
 
@@ -76,3 +114,12 @@ The mock wrappers registry and mock confidential tokens on Polygon Amoy are no l
 ## InGen testnet removed
 
 The SDK no longer supports the T-Rex InGen testnet (chain ID `364301`). The `ingenTestnet` preset is removed from `@zama-fhe/sdk/chains`, from the built-in `chains` map and from the deprecated `DefaultRegistryAddresses`, and the `example-ingen` app is removed. Use `zenithTrexTestnet`, `hoodi` or `bscTestnet` for a cleartext testnet.
+
+## `ApiKeyCookie` relayer auth removed
+
+`ApiKeyCookie` is removed from relayer authentication, so `FheChain.auth` is now `ApiKeyHeader | BearerToken`. The Zama-hosted relayer only accepts the `x-api-key` header, and in a browser the cookie never reached a server: it was written with `document.cookie` and marked `HttpOnly`, which browsers ignore when a script sets it. It was only ever sent, as a real `Cookie` header, from Node.js, which includes the daemon behind the Go and Rust clients. A setup that authenticated to its own proxy that way needs to change.
+
+- **TypeScript:** remove `{ __type: "ApiKeyCookie" }` from `FheChain.auth`. It no longer type-checks, and a config that still carries it (from untyped code, say) throws `ConfigurationError` with `Unknown auth type: ApiKeyCookie` when the SDK builds the relayer, rather than going out without credentials.
+- **Go and Rust clients:** `zama.APIKeyCookie` and `RelayerAuth::ApiKeyCookie` are removed, so code that uses them no longer compiles.
+- **Daemon protocol:** `api_key_cookie` is removed from `ChainAuth` and its field number (3) is reserved. A client that still sends it is rejected with `FAILED_PRECONDITION`; run the client and the daemon at exactly the same version.
+- **Migrate:** have your proxy read its credential from a header and use `ApiKeyHeader` with the optional `header` name (the default is `x-api-key`). See [Auth methods reference](../guides/authentication.md#5-auth-methods-reference).

@@ -179,7 +179,10 @@ describe("WagmiProvider.waitForTransactionReceipt", () => {
     const request = walletAnswering({ eth_getTransactionReceipt: () => receipts.shift() });
     mockGetConnectorClient.mockResolvedValue(makeConnectorClient(request));
 
-    await expect(provider.waitForTransactionReceipt(HASH)).resolves.toBe(WALLET_RECEIPT);
+    await expect(provider.waitForTransactionReceipt(HASH)).resolves.toEqual({
+      logs: WALLET_RECEIPT.logs,
+      status: "success",
+    });
     expect(request).toHaveBeenCalledWith({ method: "eth_getTransactionReceipt", params: [HASH] });
   });
 
@@ -195,7 +198,10 @@ describe("WagmiProvider.waitForTransactionReceipt", () => {
     });
     mockGetConnectorClient.mockResolvedValue(makeConnectorClient(request));
 
-    await expect(provider.waitForTransactionReceipt(HASH)).resolves.toBe(WALLET_RECEIPT);
+    await expect(provider.waitForTransactionReceipt(HASH)).resolves.toEqual({
+      logs: WALLET_RECEIPT.logs,
+      status: "success",
+    });
     expect(request).toHaveBeenCalledWith({ method: "wallet_getCallsStatus", params: [HASH] });
   });
 
@@ -277,5 +283,22 @@ describe("WagmiProvider.waitForTransactionReceipt", () => {
     expect((err as Error).message).toContain("outcome is unknown");
     expect((err as Error).message).toContain("Safe");
     expect((err as Error).cause).toBeInstanceOf(WaitForTransactionReceiptTimeoutError);
+  });
+});
+
+describe("WagmiProvider reads on another chain", () => {
+  test("routes a read and the block timestamp to the requested chain", async () => {
+    const actions = await import("wagmi/actions");
+    const call = {
+      address: TO,
+      abi: [],
+      functionName: "paused",
+      args: [],
+      chainId: 11155111,
+    } as const;
+    await provider.readContract(call as never);
+    await provider.getBlockTimestamp(11155111);
+    expect(actions.readContract).toHaveBeenCalledWith(CONFIG, call);
+    expect(actions.getBlock).toHaveBeenCalledWith(CONFIG, { chainId: 11155111 });
   });
 });
