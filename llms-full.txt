@@ -10582,15 +10582,17 @@ If the batch stays here longer than your app expects, offer a button that calls 
 
 The batch settled at `exchangeRate`. A claim pays `deposit * rate / 10 ** decimals`, rounded down. A keeper normally claims for every depositor, so the shares arrive in the user's balance without any action. Offer "Claim now" as a fallback when `claim` is in `actions`. Anyone may claim, and the output always goes to the account, so your backend can also claim for users with [`prepareClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#prepareclaim).
 
-After a claim, the deposit becomes an encrypted zero, which the SDK cannot tell from a non-zero one without decrypting. So `claim` stays in `actions`. Claiming again is harmless: it moves nothing. To show the deposit as done, watch the share balance, or mark it done in your own storage once the claim is mined.
+After a claim, the deposit becomes an encrypted zero, which the SDK cannot tell from a non-zero one without decrypting. So `claim` stays in `actions`. Claiming again is harmless: it moves nothing. Since a keeper may claim without the user doing anything, decrypt the deposit to tell: once the batch is finalized, a deposit that decrypts to zero has been paid out, so remove it from the list. See [Vault groups](#vault-groups) for a group.
 
 ### Canceled
 
-The batch did not go through. A keeper normally recovers the deposit for every depositor. The user can also quit to get it back. As with a pending batch, quit every leg of the join.
+The batch did not go through. A keeper normally recovers the deposit for every depositor. The user can also quit to get it back. As with a pending batch, quit every leg of the join. A recovery also leaves an encrypted zero, so a canceled batch whose deposit decrypts to zero has been paid back.
 
 ## Vault groups
 
 A join in a group of N vaults has N legs: the chosen vault with the amount, the others with an encrypted zero. Show the user one entry for the vault they chose, and read that leg's batch. Store every leg's batch anyway: a quit must cover them all.
+
+The decoy legs decrypt to zero from the start, so a zero only means "paid out" for the chosen leg. To check it, decrypt the deposit of every leg in one request, not only the chosen one: a lone decryption would tell the relayer which vault the user picked.
 
 ## Checklist
 
@@ -10603,7 +10605,7 @@ A join in a group of N vaults has N legs: the chosen vault with the amount, the 
 - [ ] Actions are offered only when `actions` includes them.
 - [ ] A cancel quits every leg of the join, not only the chosen one.
 - [ ] Dispatched batches offer `finalize` after a delay you choose, and say when it cancels instead.
-- [ ] Claimed deposits leave the list once the claim is mined or the shares arrive.
+- [ ] Finalized or canceled batches leave the list once their deposit decrypts to zero, whoever claimed or recovered them.
 
 ## Next steps
 
