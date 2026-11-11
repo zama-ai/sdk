@@ -4,6 +4,7 @@ import { confidentialWrapperAbi } from "../../abi/confidential-wrapper.abi";
 import {
   ConfigurationError,
   InsufficientConfidentialBalanceError,
+  SignerNotConfiguredError,
   UnlistedConfidentialTokenError,
   VaultBatcherPausedError,
   type VaultBatchNotDispatchedError,
@@ -554,6 +555,34 @@ describe("prepareRedeem", () => {
       amount: 10n,
     });
     expect(roles(prepared.calls)).toStrictEqual(["join"]);
+  });
+});
+
+describe("without a signer", () => {
+  test("prepares joins and batch actions for any account", async ({
+    createSDK,
+    provider,
+    relayer,
+  }) => {
+    mockChain(provider, { operators: false });
+    mockEncryption(relayer);
+    const client = createVaultClient(createSDK({ signer: undefined }));
+    const input = { vaultId: "beta", account: FRIEND, amount: 10n } as const;
+    const options = { skipChecks: ["balance"] } as const;
+
+    const deposit = await client.prepareDeposit(STABLE, input, options);
+    const redeem = await client.prepareRedeem(STABLE, input, options);
+
+    expect(deposit.account).toBe(FRIEND);
+    expect(roles(deposit.calls)).toStrictEqual(["join"]);
+    expect(roles(redeem.calls)).toStrictEqual(["grant", "grant", "join"]);
+    const batch = { chainId: CHAIN_ID, batcher: ALPHA.depositBatcher, batchId: 1n };
+    expect(client.prepareClaim({ ...batch, account: FRIEND }).to).toBe(ALPHA.depositBatcher);
+    expect(client.prepareQuit(batch).to).toBe(ALPHA.depositBatcher);
+    expect(client.prepareDispatch(batch).to).toBe(ALPHA.depositBatcher);
+
+    vi.mocked(Token.batchBalancesOf).mockRestore();
+    await expect(client.prepareDeposit(STABLE, input)).rejects.toThrow(SignerNotConfiguredError);
   });
 });
 

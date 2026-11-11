@@ -122,7 +122,9 @@ When `prepared.route` is `"legs"` in a group of more than one, send the join cal
 
 ## Send through your own pipeline
 
-A host with its own transaction pipeline (a queue, a bundler, a custody service) uses the `prepare*` methods. `prepareDeposit` and `prepareRedeem` return a `PreparedJoin`, which is plain data:
+A host with its own transaction pipeline (a queue, a bundler, a custody service) uses the `prepare*` methods. They need no signer and no connected wallet: a join takes the `account` that will send its calls, and the SDK only reads the chain and encrypts for that account. The one exception is the balance check, which decrypts as the signer, so without a signer, or for another account, pass `skipChecks: ["balance"]`.
+
+`prepareDeposit` and `prepareRedeem` return a `PreparedJoin`, which is plain data:
 
 - `calls`: one list in send order. First the grants the account lacks (`role: "grant"`, with `vaultId`, `token`, `operator` and `until`), then the join calls (`role: "join"`, with the `leg` each one funds).
 - `route`: `"legs"` or `"router"`. With `"legs"` in a group of more than one, the join calls must land as one atomic bundle.
@@ -149,7 +151,7 @@ for (const call of prepared.calls) {
 `sendTransaction` stands in for your pipeline. The join methods take these options:
 
 - `walletMode`: `"sequential"` (default) or `"bundle"`. See [Bundling wallets](#bundling-wallets).
-- `skipChecks`: `"balance"` skips the balance check, which decrypts as the signer: an `account` other than the signer's needs it. `"config"` skips the one-time check of the group against the chain and the router's registry listing, for a host that verified them itself. The paused check always runs.
+- `skipChecks`: `"balance"` skips the balance check. `"config"` skips the one-time check of the group against the chain and the router's registry listing, for a host that verified them itself. The paused check always runs.
 
 The batch actions take one batch each, as a `BatchRef` (`{ chainId, batcher, batchId }`). Dispatch acts on a batcher's open batch, so it takes a `BatcherRef` (`{ chainId, batcher }`):
 
