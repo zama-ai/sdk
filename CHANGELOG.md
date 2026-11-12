@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.8.0-beta.20](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.19...v3.8.0-beta.20) (2026-11-12)
+
+### Build System
+
+- update Node to 24.22.3 ([#928](https://github.com/zama-ai/sdk/issues/928)) ([d6f96b1]())
+
 ## [3.8.0-beta.19](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.18...v3.8.0-beta.19) (2026-11-10)
 
 ### Features
