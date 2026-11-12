@@ -5,9 +5,9 @@ description: Returns a VaultClient bound to the SDK in context.
 
 # useVaultClient
 
-Returns a [`VaultClient`](../sdk/VaultClient.md) bound to the SDK from [`ZamaProvider`](ZamaProvider.md), the same one for as long as that SDK stays. It holds no config: its methods take the vault, the group or the batch they act on, so one client serves every group and chain.
+Returns a [`VaultClient`](../sdk/VaultClient.md) bound to the SDK from [`ZamaProvider`](ZamaProvider.md), the same one for as long as that SDK stays.
 
-The other vault hooks call it for you. Use it directly when you need a method no hook wraps, such as a `prepare*` method for your own transaction pipeline.
+The other vault hooks call it for you. Use it for a method no hook wraps, such as a `prepare*` method for your own pipeline.
 
 ## Import
 
@@ -42,30 +42,9 @@ function PrepareButton({ account }: { account: Address }) {
 ```
 
 {% endtab %}
-{% tab title="vaults.ts" %}
-
-```ts
-import { defineVault, defineVaultGroup } from "@zama-fhe/sdk/vaults";
-
-export const ALPHA = defineVault({
-  id: "alpha",
-  chainId: 1,
-  batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
-});
-
-export const BETA = defineVault({
-  id: "beta",
-  chainId: 1,
-  batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
-});
-
-export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
-```
-
-{% endtab %}
 {% endtabs %}
 
-`sendCalls` stands in for your own pipeline. See [Send through your own pipeline](../../guides/vaults/advanced.md#send-through-your-own-pipeline).
+`STABLE` is the group from [`useDeposit`](./useDeposit.md#usage), and `sendCalls` stands in for your own pipeline. See [Send through your own pipeline](../../guides/vaults/advanced.md#send-through-your-own-pipeline).
 
 ## Parameters
 

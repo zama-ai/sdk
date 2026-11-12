@@ -5,9 +5,9 @@ description: Mutation hook that deposits into a confidential vault group and ret
 
 # useDeposit
 
-Mutation hook that deposits a plaintext amount of a group's asset with the SDK's signer. It checks the balance, encrypts the amount, and joins the open batch of every vault of the group: the chosen vault with the amount, the others with an encrypted zero. Same flow as [`VaultClient.deposit`](../sdk/VaultClient.md#deposit).
+Mutation hook that deposits into a vault group, or a vault on its own, with the SDK's signer. Wraps [`VaultClient.deposit`](../sdk/VaultClient.md#send-methods).
 
-The deposit is not settled when the mutation resolves: it has joined a batch. Store the returned `batches` and follow them with [`useBatch`](./useBatch.md).
+The mutation resolves once the deposit has joined a batch, not once it has settled. Store the returned `batches` and follow them with [`useBatch`](./useBatch.md).
 
 ## Import
 
@@ -100,40 +100,28 @@ The amount, in the asset's base units. Encrypted before it leaves the SDK.
 
 `boolean | undefined`
 
-Skip the balance check, which runs by default. The paused check always runs.
+Skips the balance check, which runs by default.
 
 ### onJoinSubmitted
 
 `((txHash: Hex) => void) | undefined`
 
-Called once the wallet has sent the join, before the SDK waits for the receipt. Use it to move the UI from "Confirm in your wallet" to "Waiting for the transaction".
-
-```tsx
-deposit.mutate({
-  group: STABLE,
-  vaultId: "beta",
-  amount: 1_000_000n,
-  onJoinSubmitted: (txHash) => console.log("Sent", txHash),
-});
-```
+Called once the wallet has sent the join, before the SDK waits for the receipt. See [The send](../../guides/vaults/building-a-ui.md#the-send).
 
 **Throws:**
 
-- `VaultBatcherPausedError`: a batcher of the group is paused
-- `InsufficientConfidentialBalanceError`: the balance is less than `amount`
-- `BalanceCheckUnavailableError`: the balance check cannot decrypt the balance
-- `VaultJoinUnconfirmedError`: the join was mined, but the SDK could not read every batch id from the receipt
-- `ChainMismatchError`: the wallet is not on the group's chain
-- `ConfigurationError`: the group does not match the chain
+As [`VaultClient.deposit`](../sdk/VaultClient.md#send-methods). The ones a UI handles most:
+
+- `VaultBatcherPausedError`: a batcher of the group is paused.
+- `InsufficientConfidentialBalanceError`: the balance is below `amount`.
+- `ChainMismatchError`: the wallet is not on the group's chain.
+- `VaultJoinUnconfirmedError`: the join was mined, but the SDK could not read every batch from the receipt.
 
 ## Return Type
 
-The `data` property (after a successful mutation) is a `JoinOutcome`:
+The `data` property (after a successful mutation) is a [`JoinOutcome`](../sdk/VaultClient.md#joinoutcome): `batches`, the batch each leg landed in, and `txHashes`.
 
-- **`batches`**: the batch each leg landed in, in group order, as `{ vaultId, chainId, batcher, batchId }`. Store them to read, claim or quit later.
-- **`txHashes`**: every transaction sent, operator approvals first.
-
-On success, the hook invalidates every vault read and every confidential balance.
+When the mutation settles, successful or not, the hook invalidates every vault read and every confidential balance.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 
@@ -141,5 +129,4 @@ On success, the hook invalidates every vault read and every confidential balance
 
 - [useRedeem](./useRedeem.md): the redeem direction
 - [useBatch](./useBatch.md): follow each batch
-- [VaultClient.deposit](../sdk/VaultClient.md#deposit)
 - [Vault deposits and redemptions](../../guides/vaults/deposits.md)

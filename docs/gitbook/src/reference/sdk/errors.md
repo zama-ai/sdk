@@ -337,15 +337,15 @@ matchZamaError(error, {
 
 **Code:** `VAULT_BATCHER_PAUSED`
 
-Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()` and `prepareRedeem()` when the batcher one leg would join reports `paused()`. Every join sends a leg to every vault of the group, and a paused batcher rejects joins, so the whole join would revert. The SDK refuses before the caller pays for it. This check cannot be skipped. The error carries the paused `batcher` and the `vaultId` of the vault it serves.
+Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()` and `prepareRedeem()` when a batcher the join reaches is paused, before anything is sent. One paused batcher blocks every join of its group. The error carries the paused `batcher` and its `vaultId`.
 
-**How to handle:** Not retryable until the batcher's owner unpauses it. Claims and quits still work on a paused batcher, so existing deposits are not stuck; only new joins are. Show the user which vault is paused rather than a generic failure.
+**How to handle:** Not retryable until the batcher is unpaused. Claims and quits still work. Show which vault is paused. See [Paused batchers](../../guides/vaults/advanced.md#paused-batchers).
 
 ### VaultBatchNotDispatchedError
 
 **Code:** `VAULT_BATCH_NOT_DISPATCHED`
 
-Thrown by `VaultClient.finalize()` and `VaultClient.prepareFinalize()` when the batch is not dispatched. Only a dispatched batch has an amount to decrypt and settle, so the SDK refuses before the public decryption. The error carries the `batcher`, the `batchId`, and the batch's `state` instead: `"pending"`, `"finalized"` or `"canceled"`.
+Thrown by `VaultClient.finalize()` and `VaultClient.prepareFinalize()` when the batch is not dispatched, before the public decryption. The error carries the `batcher`, the `batchId`, and the batch's `state` instead: `"pending"`, `"finalized"` or `"canceled"`.
 
 ```ts
 matchZamaError(error, {
@@ -359,7 +359,7 @@ matchZamaError(error, {
 
 **Code:** `VAULT_JOIN_UNCONFIRMED`
 
-Thrown by `VaultClient.deposit()` and `VaultClient.redeem()` after the join transaction is mined, when the SDK could not match a `Joined` event in its receipt to every leg. Without every batch id, the SDK cannot return the batch each leg landed in. The error carries the `txHash`, the `receipt`, and `unconfirmedVaultIds`: the vaults whose log the SDK could not match. It does not mean those legs did not join.
+Thrown by `VaultClient.deposit()` and `VaultClient.redeem()` when the join was mined but the SDK could not match a `Joined` event in its receipt to every leg, so it cannot return every batch. The error carries the `txHash`, the `receipt`, and `unconfirmedVaultIds`: the vaults whose log the SDK could not match. It does not mean those legs did not join.
 
 ```ts
 matchZamaError(error, {

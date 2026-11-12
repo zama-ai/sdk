@@ -505,7 +505,7 @@
       "source_type": "official-doc",
       "category": "guides",
       "logical_path": "guides/vaults/README",
-      "description": "Integrate confidential ERC-4626 vaults with the Zama SDK — one client for vaults on their own and multi-vault groups.",
+      "description": "How confidential ERC-4626 vaults work from the SDK — batches, keepers, and the privacy of a vault group.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -517,7 +517,7 @@
       "source_type": "official-doc",
       "category": "guides",
       "logical_path": "guides/vaults/deposits",
-      "description": "How to deposit into and redeem from confidential ERC-4626 vaults with the Zama SDK vault client.",
+      "description": "Define a vault group, deposit or redeem with the Zama SDK vault client, and follow each batch to the payout.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -529,7 +529,7 @@
       "source_type": "official-doc",
       "category": "guides",
       "logical_path": "guides/vaults/advanced",
-      "description": "Privacy rules, wallet prompts, batcher upgrades, bundling wallets, and sending vault calls through your own pipeline.",
+      "description": "Wallet prompts, paused batchers, batcher upgrades, bundling wallets, and sending vault calls through your own pipeline.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -541,7 +541,7 @@
       "source_type": "official-doc",
       "category": "guides",
       "logical_path": "guides/vaults/building-a-ui",
-      "description": "The states a vault batch goes through, and what your UI should show and offer in each one.",
+      "description": "What a vault UI should show and offer on the form, during the send, and in each batch state.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -745,7 +745,7 @@
       "source_type": "official-doc",
       "category": "reference-sdk",
       "logical_path": "reference/sdk/VaultClient",
-      "description": "Deposit into and redeem from confidential ERC-4626 vaults with defineVaultGroup and createVaultClient.",
+      "description": "Reference for defineVault, defineVaultGroup, createVaultClient and the VaultClient methods and types.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

@@ -5,9 +5,9 @@ description: Mutation hook that claims a finalized vault batch's output for an a
 
 # useClaim
 
-Mutation hook that claims a finalized batch with the SDK's signer. The batch pays the account's deposit at the batch's exchange rate: shares for a deposit batch, the asset for a redeem batch. Same flow as [`VaultClient.claim`](../sdk/VaultClient.md#claim).
+Mutation hook that claims a finalized batch with the SDK's signer: shares for a deposit batch, the asset for a redeem batch. Wraps [`VaultClient.claim`](../sdk/VaultClient.md#send-methods).
 
-Anyone may claim, and the output always goes to `account`, never to the sender. A keeper (an off-chain service that watches batches) normally claims for every depositor, so the user only waits. Offer this hook as a fallback when `claim` stays in a batch's `actions` longer than your app expects.
+A [keeper](../../guides/vaults/README.md#a-keeper-moves-batches-forward) normally claims for every depositor. Offer this hook as a fallback. Anyone may claim, and the output always goes to `account`.
 
 ## Import
 
@@ -62,8 +62,6 @@ The batch to claim.
 
 The account to claim for. Defaults to the signer.
 
-A claimed deposit becomes an encrypted zero, and the batch still lists `claim` afterwards. Claiming again moves nothing.
-
 **Throws:**
 
 - `ChainMismatchError`: the wallet is not on the batch's chain.
@@ -73,7 +71,7 @@ A claimed deposit becomes an encrypted zero, and the batch still lists `claim` a
 
 The `data` property (after a successful mutation) is a `TransactionResult`: `{ txHash, receipt }`.
 
-On success, the hook invalidates every vault read and every confidential balance.
+When the mutation settles, successful or not, the hook invalidates every vault read and every confidential balance.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 
@@ -81,4 +79,3 @@ On success, the hook invalidates every vault read and every confidential balance
 
 - [useBatch](./useBatch.md): when `claim` is available
 - [useQuit](./useQuit.md): take a deposit back instead
-- [VaultClient.claim](../sdk/VaultClient.md#claim)

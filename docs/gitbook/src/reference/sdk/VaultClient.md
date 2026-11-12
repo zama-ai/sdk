@@ -1,18 +1,11 @@
 ---
 title: VaultClient
-description: Deposit into and redeem from confidential ERC-4626 vaults with defineVaultGroup and createVaultClient.
+description: Reference for defineVault, defineVaultGroup, createVaultClient and the VaultClient methods and types.
 ---
 
 # VaultClient
 
-`VaultClient` is the interface for confidential ERC-4626 vaults. You create one client per SDK instance with `createVaultClient`. The client holds no config: every method takes the vault, the group or the batch it acts on, so one client serves every chain and every group.
-
-The client has two kinds of methods:
-
-- A **`prepare*` method** returns the calls as plain data, for a host that sends transactions through its own pipeline.
-- A **send method** of the same verb (`deposit`, `redeem`, `claim`, `quit`, `dispatch`, `finalize`) sends them with the SDK's signer.
-
-You describe each vault once with [`defineVault`](#definevault), and group vaults with [`defineVaultGroup`](#definevaultgroup). A join into a group sends a leg to every vault of the group: the chosen vault gets the amount, and the others get an encrypted zero. This is what hides the choice. A join into a vault on its own goes straight to its batcher. Batch actions (claim, quit, dispatch, finalize) act on one batch each.
+The client for confidential ERC-4626 vaults. For how batches, keepers and groups work, see the [Vaults overview](../../guides/vaults/README.md).
 
 ## Import
 
@@ -25,15 +18,13 @@ import {
 } from "@zama-fhe/sdk/vaults";
 ```
 
-The `vaults` subpath is separate from the root entry, so apps that do not use vaults do not bundle it.
-
 ## defineVault
 
-`defineVault(vault)` returns the vault it is given, and keeps its id as a literal type. Like viem's `defineChain`, it checks nothing and reads nothing from chain: the client checks what each join or read relies on when it runs. Call it once per vault, at module level:
+`defineVault(vault) => Vault`
+
+Returns `vault` unchanged, with its `id` kept as a literal type. Like viem's `defineChain`, it checks nothing and reads nothing. The SDK ships no vault, so use your own addresses.
 
 ```ts
-import { defineVault } from "@zama-fhe/sdk/vaults";
-
 export const ALPHA = defineVault({
   id: "alpha",
   chainId: 1,
@@ -41,471 +32,275 @@ export const ALPHA = defineVault({
 });
 ```
 
-Replace the placeholder addresses with your own. The SDK ships no vault.
-
-A vault can be joined on its own, or put in a [group](#definevaultgroup). Joined on its own, it takes no `vaultId` and its join goes straight to its batcher:
-
-```ts
-await vaults.deposit(ALPHA, { amount: 1_000_000n });
-```
-
-{% hint style="warning" %}
-A join into a vault on its own shows on-chain which vault was chosen. To hide the choice, join through a group.
-{% endhint %}
-
 ### Vault
 
-```ts
-import { type Vault } from "@zama-fhe/sdk/vaults";
-```
+| Field      | Type                                                                        | Description                                                                 |
+| ---------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `id`       | `string`                                                                    | Names the vault in `vaultId`, errors and query keys.                        |
+| `chainId`  | `number`                                                                    | The chain the vault's batchers are on. Reads go to it, whatever the wallet. |
+| `batchers` | `{ deposit: Address \| BatcherHistory; redeem: Address \| BatcherHistory }` | The batcher each direction joins: an address, or a history once upgraded.   |
 
-| Field      | Type                                                                        | Required | Description                                                                                     |
-| ---------- | --------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------- |
-| `id`       | `string`                                                                    | yes      | Names the vault in errors and query keys. A group join passes it as `vaultId`.                  |
-| `chainId`  | `number`                                                                    | yes      | The chain the vault's batchers are on. Reads go to this chain, whatever chain the wallet is on. |
-| `batchers` | `{ deposit: Address \| BatcherHistory; redeem: Address \| BatcherHistory }` | yes      | The batcher a deposit joins, and the batcher a redemption joins.                                |
-
-Use a plain address until a batcher is upgraded. After an upgrade, use a `BatcherHistory`.
-
-A vault names no token and no router:
-
-- **Tokens.** The client reads each batcher's `fromToken()`: the confidential asset for a deposit batcher, the vault's confidential share for a redeem batcher. A token is fixed when its batcher is deployed, so the client reads it once.
-- **Router.** A multi-vault join goes through the chain's router, `vaultRouterAddress` in the [chain preset](network-presets.md). For a chain whose preset names none, set `vaultRouterAddress` on the chain you pass to the SDK.
+A vault names no token: the client reads each batcher's `fromToken()`. A join or read throws `ConfigurationError` for an invalid batcher address or `lastBatchId`.
 
 ### BatcherHistory
 
-```ts
-import { type BatcherHistory } from "@zama-fhe/sdk/vaults";
-```
-
-Every batcher a vault has had in one direction.
-
-| Field     | Type                                          | Description                                                                                              |
-| --------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `retired` | `{ address: Address; lastBatchId: bigint }[]` | The replaced batchers, oldest first. `lastBatchId` is the last batch a join may land in on that batcher. |
-| `latest`  | `Address`                                     | The current batcher.                                                                                     |
-
-A join goes to the first retired batcher whose on-chain `currentBatchId` is still at most its `lastBatchId`, and otherwise to `latest`. The switch happens when batch `lastBatchId` is dispatched, never at a time on the clock. The client reads this on every join, so it needs no restart.
-
-```ts
-import { defineVault } from "@zama-fhe/sdk/vaults";
-
-export const ALPHA = defineVault({
-  id: "alpha",
-  chainId: 1,
-  batchers: {
-    deposit: {
-      retired: [{ address: "0xAlphaDepositV1", lastBatchId: 41n }],
-      latest: "0xAlphaDepositV2",
-    },
-    redeem: "0xAlphaRedeem",
-  },
-});
-```
-
-{% hint style="warning" %}
-Never remove a retired entry. Batches on a retired batcher can still be read, claimed and quit.
-{% endhint %}
+| Field     | Type                                          | Description                                                                               |
+| --------- | --------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `retired` | `{ address: Address; lastBatchId: bigint }[]` | Replaced batchers, oldest first. `lastBatchId` is the last batch joins may land in there. |
+| `latest`  | `Address`                                     | The batcher joins reach once every retired one is past its `lastBatchId`.                 |
 
 See [Upgrade a batcher](../../guides/vaults/advanced.md#upgrade-a-batcher).
 
-A join or read of a vault with an invalid batcher address throws `ConfigurationError`.
-
 ## defineVaultGroup
 
-`defineVaultGroup(group)` returns the group it is given, a `VaultGroup` of vaults that take deposits in the same confidential asset. It checks nothing. A join into a group sends a leg to every vault of it, which hides the chosen one. It keeps the group and vault ids as literal types, so a typo in `vaultId` passed to a client method is a type error. The React mutation hooks take `vaultId` as a plain `string`.
+`defineVaultGroup(group) => VaultGroup`
+
+Returns `group` unchanged, with its ids kept as literal types, so a typo in `vaultId` is a type error. It checks nothing. A vault can be in several groups and still be joined on its own.
 
 ```ts
-import { defineVaultGroup } from "@zama-fhe/sdk/vaults";
-import { ALPHA, BETA } from "./vaults";
-
 export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
-
-await vaults.deposit(STABLE, { vaultId: "beta", amount: 1_000_000n });
 ```
-
-A vault can be in several groups, and stays joinable on its own.
 
 ### VaultGroup
 
-```ts
-import { type VaultGroup } from "@zama-fhe/sdk/vaults";
-```
+| Field    | Type      | Description                                                                         |
+| -------- | --------- | ----------------------------------------------------------------------------------- |
+| `id`     | `string`  | Names the group in errors and query keys.                                           |
+| `vaults` | `Vault[]` | The vaults, in leg order: at least two (a type error otherwise), up to `MAX_GROUP_VAULTS`. |
 
-| Field    | Type      | Required | Description                                                                                                                                                      |
-| -------- | --------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`     | `string`  | yes      | Names the group in errors and query keys.                                                                                                                        |
-| `vaults` | `Vault[]` | yes      | The vaults, in leg order. From two vaults up to `MAX_GROUP_VAULTS`; fewer is a type error. Never reorder, add or remove vaults once users have joined the group. |
+The vaults must be on one chain, and their deposit batchers must take the same asset. A join or read throws `ConfigurationError` when a group has more than `MAX_GROUP_VAULTS` vaults, mixes chains, or names a vault twice. A deposit also throws it when the deposit batchers take different assets.
 
-The vaults of a group must be on the same chain, and their deposit batchers must take the same confidential asset. `VaultIdOf<typeof STABLE>` is the union of the group's vault ids.
-
-A join or read of a group throws `ConfigurationError` when it has more than `MAX_GROUP_VAULTS` vaults, mixes chains, or names a vault twice. A deposit also throws it when the deposit batchers take different assets.
+`VaultIdOf<typeof STABLE>` is the union of a group's vault ids.
 
 ### MAX_GROUP_VAULTS
 
-`number`
-
-The most vaults a group may hold. A join's FHE compute grows with its number of legs, and this is what fits in one transaction.
+`number`. The most vaults a group may hold: the FHE compute of a join grows with its legs, and this many fit in one transaction.
 
 ## createVaultClient
 
-`createVaultClient(sdk)` creates a client bound to a [`ZamaSDK`](ZamaSDK.md) instance. It reads nothing until first use. It is the only way to make a client: `VaultClient` is exported as a type.
+`createVaultClient(sdk: ZamaSDK) => VaultClient`
 
-```ts
-import { createVaultClient } from "@zama-fhe/sdk/vaults";
-
-const vaults = createVaultClient(sdk);
-```
-
-In React, use [`useVaultClient`](../react/useVaultClient.md), which returns the same client for as long as the SDK in context stays.
+Returns a client bound to the [`ZamaSDK`](ZamaSDK.md). It reads nothing until first used and holds no config, so one client serves every group and chain. `VaultClient` is exported as a type only. In React, use [`useVaultClient`](../react/useVaultClient.md).
 
 ## Prepare a join
 
-`prepareDeposit` and `prepareRedeem` read the chain and encrypt, and stop before sending. They check the balance by default, which needs the signer to be `account`; for any other account, pass `skipBalanceCheck: true` and they need no signer. They return a [`PreparedJoin`](#preparedjoin): plain data, safe to store and send through any pipeline (a transaction queue, a bundler, a custody service, or an EIP-5792 `wallet_sendCalls` batch).
-
-```ts
-import { createVaultClient } from "@zama-fhe/sdk/vaults";
-import { STABLE } from "./vaults";
-
-const vaults = createVaultClient(sdk);
-
-const prepared = await vaults.prepareDeposit(STABLE, {
-  vaultId: "beta",
-  account: "0xUser",
-  amount: 1_000_000n,
-});
-
-for (const call of prepared.calls) {
-  await sendTransaction(call);
-}
-```
-
-`sendTransaction` stands in for your own pipeline. Send each call to `call.to` with `call.data` and no value. Send the calls in order: the operator approvals come first.
-
-After you send, call [`invalidateAfterVaultAction`](#invalidateaftervaultaction) to refresh cached reads.
+The `prepare*` join methods read the chain, check the join, and encrypt, then return the calls without sending them. See [Send through your own pipeline](../../guides/vaults/advanced.md#send-through-your-own-pipeline).
 
 ### prepareDeposit
 
 `prepareDeposit(target, input, options?) => Promise<PreparedJoin>`
 
-Builds a deposit of the group's asset into one vault: a leg for every vault, each amount encrypted, and the calls in send order. A deposit pushes the asset, so it needs no operator approval.
+Builds a deposit of the asset into one vault: a leg for every vault of a group, or one call for a vault on its own. Only `input.account` can send the calls.
 
-| Parameter | Type                          | Description                                             |
-| --------- | ----------------------------- | ------------------------------------------------------- |
-| `target`  | `Vault \| VaultGroup`         | The vault to join on its own, or the group.             |
-| `input`   | [`JoinInput`](#joininput)     | The account and amount, with the `vaultId` for a group. |
-| `options` | [`JoinOptions`](#joinoptions) | The balance check, and for a group the route.           |
+| Parameter | Type                          | Description                                 |
+| --------- | ----------------------------- | ------------------------------------------- |
+| `target`  | `Vault \| VaultGroup`         | The group, or a vault to join on its own.   |
+| `input`   | [`JoinInput`](#joininput)     | The account, the amount, and for a group the `vaultId`. |
+| `options` | [`JoinOptions`](#joinoptions) | The balance check, and for a group the route. |
 
 **Throws:**
 
-- `ChainMismatchError` when the provider is not on the group's chain while a wallet is connected.
-- `ConfigurationError` when the vault is unknown, the deposit batchers of the group take different assets, the join goes through the router and the chain has none, or the provider is not on the group's chain with no wallet connected.
-- `VaultBatcherPausedError` when any vault's batcher is paused.
-- `InsufficientConfidentialBalanceError` when the balance is less than `amount`.
-- `BalanceCheckUnavailableError` when the balance cannot be decrypted: no signer is connected, or `account` is not the signer's. Check the balance yourself and pass `skipBalanceCheck: true`.
+- `ChainMismatchError` when a wallet is connected and the provider is not on the target's chain.
+- `ConfigurationError` when the provider is not on the target's chain with no wallet connected, the vault is not in the group, the group is invalid (see [`VaultGroup`](#vaultgroup)), or the join uses the router and the chain has none.
+- `VaultBatcherPausedError` when a batcher the join reaches is paused. This check always runs.
+- `InsufficientConfidentialBalanceError` when the balance is below `amount`.
+- `BalanceCheckUnavailableError` when the balance cannot be decrypted: no signer is connected, or `account` is not the signer. Pass `skipBalanceCheck: true`.
 
 ### prepareRedeem
 
 `prepareRedeem(target, input, options?) => Promise<PreparedJoin>`
 
-Builds a redemption of one vault's shares. The amount is in shares, not assets. On the router route, the router pulls every leg's share token, so `calls` starts with an operator approval of the router on each share token the account has not approved it on yet. Throws as `prepareDeposit`.
+Builds a redemption of one vault's shares. Same parameters and errors as `prepareDeposit`, with `amount` in shares. On the router route, `calls` starts with an operator approval of the router on each share token the account has not approved, valid for a year.
 
 ### How a join is routed
 
-`route` in the prepared join tells you how the calls reach the batchers. It depends on whether you join a vault or a group, and on the `route` option:
-
-| Case                                | `route`    | `calls`                                                                                                              |
-| ----------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------- |
-| Vault on its own                    | `"direct"` | One transfer to the batcher.                                                                                         |
-| Several vaults, deposit, `"router"` | `"router"` | One transfer of the asset to the router, which splits it into one leg per vault. No operator approval.               |
-| Several vaults, redeem, `"router"`  | `"router"` | An operator approval of the router on each share token the account lacks, then one router call that pulls every leg. |
-| Several vaults, `"direct"`          | `"direct"` | One transfer per vault, straight to its batcher. No operator approval.                                               |
-
-{% hint style="danger" %}
-With `route: "direct"` in a group of more than one, send the join calls as one atomic bundle. If they go out one by one and the user stops partway, the vaults that were never joined show which vault the user picked.
-{% endhint %}
-
-### Why an operator approval lasts a year
-
-An operator approval is valid for a year of chain time. This is safe: the router only pulls a share token for a join that its holder sends, under an encryption proof bound to that holder. Nobody else can use the approval to move the shares. A long approval spares the user a wallet prompt on every later redemption.
+| Target                           | `route`    | `calls`                                                                                   |
+| -------------------------------- | ---------- | ----------------------------------------------------------------------------------------- |
+| A vault on its own               | `"direct"` | One transfer to its batcher.                                                              |
+| A group, deposit, `"router"`     | `"router"` | One transfer of the asset to the router, which funds every leg.                           |
+| A group, redeem, `"router"`      | `"router"` | The missing operator approvals, then one router call that pulls every leg's share token. |
+| A group, `"direct"`              | `"direct"` | One transfer per vault, straight to its batcher. Send them as one atomic bundle.          |
 
 ## Prepare a batch action
 
-Each batch action acts on one batch. A batch is identified by its batcher, not its vault, because batchers can be upgraded. See [`BatchRef`](#batchref).
+Each batch action takes the batch as a [`BatchRef`](#batchref), which names its batcher rather than its vault, so it survives a batcher upgrade. `prepareClaim`, `prepareQuit` and `prepareDispatch` read nothing: read the batch with [`readBatch`](#readbatch) before you send them.
 
-### prepareClaim
+| Method                       | Returns                     | Builds                                                                                                  | Who may send it |
+| ---------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------- | --------------- |
+| `prepareClaim(batch, account)` | `Call`                    | The claim of a finalized batch. It pays `account`, whoever sends it.                                    | Anyone          |
+| `prepareQuit(batch)`         | `Call`                      | The refund of the sender's deposit from a pending or canceled batch.                                   | The depositor   |
+| `prepareDispatch({ chainId, batcher })` | `Call`           | The dispatch of the batcher's open batch. It reverts while the batch is too young or the batcher is paused. | Anyone   |
+| `prepareFinalize(batch)`     | `Promise<PreparedFinalize>` | The settlement of a dispatched batch, with its publicly decrypted amount. Past `cancelsAt`, it cancels the batch instead. | Anyone |
 
-`prepareClaim(batchRef, account) => Call`
-
-Claims a finalized batch's output for `account`. Anyone may send it, and the output always goes to `account`. So a keeper or your backend can claim for users.
-
-### prepareQuit
-
-`prepareQuit({ chainId, batcher, batchId }) => Call`
-
-Takes the sender's deposit back from a pending batch, or from a canceled one. The contract refunds the sender, so only the depositor may send it.
-
-### prepareDispatch
-
-`prepareDispatch({ chainId, batcher }) => Call`
-
-Closes the batcher's open batch and starts its decryption. Anyone may send it. It reverts while the batch is too young or the batcher is paused. A keeper (an off-chain service that watches batches) normally sends it.
-
-### prepareFinalize
-
-`prepareFinalize(batchRef) => Promise<PreparedFinalize>`
-
-Builds the settlement of a dispatched batch. It reads the batch's unwrap request, decrypts the amount publicly, and returns the call with the decryption proof. Anyone may send it. Past the batch's callback deadline (`Batch.cancelsAt`), the same call cancels the batch instead of settling it.
-
-**Throws:**
+`prepareFinalize` throws:
 
 - `VaultBatchNotDispatchedError` when the batch is not dispatched. The error carries the batch's `state`.
-- `ChainMismatchError` when the provider is not on the batch's chain while a wallet is connected.
-- `ConfigurationError` when the provider is not on the batch's chain with no wallet connected. Finalizing decrypts on the provider's chain.
-
-`prepareClaim`, `prepareQuit` and `prepareDispatch` are synchronous and read nothing. A batch can change state before your pipeline sends the call, so read it with [`readBatch`](#readbatch) right before you send.
+- `ChainMismatchError` when a wallet is connected and the provider is not on the batch's chain.
+- `ConfigurationError` when the provider is not on the batch's chain with no wallet connected.
 
 ## Send methods
 
-The send methods sign with the SDK's signer and wait for each receipt. A join sends one transaction per call, operator approvals first, so each call is one wallet prompt. The SDK sends one call at a time, so it always prepares a join with `route: "router"`.
-
-All send methods throw:
+Each send method prepares the same calls as its `prepare*` counterpart, signs them with the SDK's signer, and waits for the receipts. All of them throw:
 
 - `SignerNotConfiguredError` when the SDK has no signer.
-- `ChainMismatchError` when the wallet is not on the group's or batch's chain.
+- `ChainMismatchError` when the wallet is not on the target's or batch's chain.
 
-### deposit
+| Method                                 | Returns                      | Notes                                                            |
+| -------------------------------------- | ---------------------------- | ---------------------------------------------------------------- |
+| `deposit(target, input, options?)`     | `Promise<JoinOutcome>`       | Throws as `prepareDeposit`, and `VaultJoinUnconfirmedError`      |
+| `redeem(target, input, options?)`      | `Promise<JoinOutcome>`       | Throws as `prepareRedeem`, and `VaultJoinUnconfirmedError`       |
+| `claim(batch, account?)`               | `Promise<TransactionResult>` | `account` defaults to the signer.                                |
+| `quit(batch)`                          | `Promise<TransactionResult>` | The signer must be the depositor.                                |
+| `dispatch({ chainId, batcher })`       | `Promise<TransactionResult>` |                                                                  |
+| `finalize(batch)`                      | `Promise<TransactionResult>` | Throws as `prepareFinalize`                                      |
 
-`deposit(target, input, options?) => Promise<JoinOutcome>`
+`deposit` and `redeem` take the input without `account`, which is the signer, and these options:
 
-Deposits with the SDK's signer: it prepares the join for the signer's account, sends the calls, and reads from the receipt the batch each leg landed in.
+| Option             | Type                    | Description                                                                                         |
+| ------------------ | ----------------------- | --------------------------------------------------------------------------------------------------- |
+| `skipBalanceCheck` | `boolean`               | Skips the balance check. Default `false`.                                                           |
+| `onJoinSubmitted`  | `(txHash: Hex) => void` | Called once the wallet has sent the join, before the receipt. If it throws, the SDK logs a warning. |
 
-```ts
-const { batches, txHashes } = await vaults.deposit(STABLE, { vaultId: "beta", amount: 1_000_000n });
-```
-
-The amount is in the asset's base units, so `1_000_000n` is one unit of a 6-decimal token.
-
-| Parameter                  | Type                      | Description                                                                                                                                                |
-| -------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `target`                   | `Vault \| VaultGroup`     | The vault to join on its own, or the group.                                                                                                                |
-| `input.vaultId`            | `VaultIdOf<typeof group>` | For a group only: the vault that gets the amount. A vault on its own takes none.                                                                           |
-| `input.amount`             | `bigint`                  | Plaintext, in base units. Encrypted before it leaves the SDK.                                                                                              |
-| `options.skipBalanceCheck` | `boolean`                 | Optional. Skips the balance check, which runs by default. The paused check is never skipped.                                                               |
-| `options.onJoinSubmitted`  | `(txHash: Hex) => void`   | Optional. Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. If it throws, the SDK logs a warning. |
-
-**Throws:** as [`prepareDeposit`](#preparedeposit), and `VaultJoinUnconfirmedError` when the join is mined but the receipt does not confirm every leg.
-
-### redeem
-
-`redeem(target, input, options?) => Promise<JoinOutcome>`
-
-Redeems a vault's shares with the SDK's signer. Same parameters as `deposit`. The amount is in shares.
-
-```ts
-const { batches } = await vaults.redeem(STABLE, { vaultId: "beta", amount: 500n });
-```
-
-{% hint style="warning" %}
-**A first redemption from a group of N vaults can ask for up to N + 1 wallet prompts.** The router pulls each vault's share token, so the account first approves it as operator on every share token it has not approved it on yet, then sends the join. Later redemptions ask for no operator approval for a year. Tell users before they start.
-{% endhint %}
-
-### claim
-
-`claim(batchRef, account?) => Promise<TransactionResult>`
-
-Claims a finalized batch for `account`, which defaults to the signer. The output goes to `account`, whoever sends it. A keeper normally claims for every depositor.
-
-### quit
-
-`quit({ chainId, batcher, batchId }) => Promise<TransactionResult>`
-
-Takes the signer's deposit back from a pending or canceled batch. The signer must be the depositor.
-
-### dispatch
-
-`dispatch({ chainId, batcher }) => Promise<TransactionResult>`
-
-Dispatches the batcher's open batch. A keeper normally does.
-
-### finalize
-
-`finalize(batchRef) => Promise<TransactionResult>`
-
-Settles a dispatched batch with its publicly decrypted amount. A keeper normally does. Throws as [`prepareFinalize`](#preparefinalize).
+They always use the router route. `VaultJoinUnconfirmedError` means the join was mined but the SDK could not match a `Joined` event to every leg.
 
 ## Reads
 
-Reads go to the group's or batch's chain, whatever chain the wallet is on. This needs a provider that can read another chain, such as `WagmiProvider`. `ViemProvider` and `EthersProvider` are bound to one chain and throw `ConfigurationError` for another.
+Reads go to the target's or batch's chain, whatever chain the wallet is on. This needs a provider that can read another chain, such as `WagmiProvider`. `ViemProvider` and `EthersProvider` are bound to one chain and throw `ConfigurationError` for another.
 
 ### readBatch
 
-`readBatch(batchRef, account?) => Promise<Batch>`
+`readBatch(batch, account?) => Promise<Batch>`
 
-Reads one batch's state and timings in one round of reads, and works out what can be sent for it now. Pass `account` to read its encrypted deposit and to list `claim` and `quit`.
+Reads one batch and the actions that can be sent for it now. Pass `account` to read its deposit and to list `claim` and `quit`.
 
 ```ts
-const batch = await vaults.readBatch(ref, "0xUser");
+const batch = await vaults.readBatch(batchRef, "0xUser");
 if (batch.actions.includes("claim")) {
-  await vaults.claim(ref, "0xUser");
+  await vaults.claim(batchRef, "0xUser");
 }
 ```
-
-See [`Batch`](#batch).
 
 ### readOpenBatches
 
 `readOpenBatches(target, direction) => Promise<OpenBatch[]>`
 
-Reads the open batch of every vault of a group, through each vault's active batcher. Use it on a form to show when the next batch closes, or that a vault is paused.
-
-```ts
-const batches = await vaults.readOpenBatches(STABLE, "deposit");
-for (const batch of batches) {
-  console.log(batch.vaultId, batch.dispatchableAt, batch.paused);
-}
-```
+Reads the open batch of every vault of the target, in group order, on each vault's active batcher.
 
 ## Types
 
 ### JoinInput
 
-What `prepareDeposit` and `prepareRedeem` take. For a group, the input is a `GroupJoinInput`, which adds `vaultId`. `deposit` and `redeem` take the same fields without `account`.
-
-| Field     | Type      | Description                                                                                |
-| --------- | --------- | ------------------------------------------------------------------------------------------ |
-| `vaultId` | `string`  | For a group only: the vault that gets the amount. Typed to the group's vault ids.          |
-| `account` | `Address` | The account the calls come from.                                                           |
-| `amount`  | `bigint`  | Plaintext, in base units. Encrypted before it leaves the SDK. For a redemption, in shares. |
+| Field     | Type      | Description                                                                         |
+| --------- | --------- | ----------------------------------------------------------------------------------- |
+| `vaultId` | `string`  | Group joins only (`GroupJoinInput`): the vault that gets the amount.                 |
+| `account` | `Address` | The account that will send the calls.                                               |
+| `amount`  | `bigint`  | Plaintext, in base units: the asset for a deposit, shares for a redemption.         |
 
 ### JoinOptions
 
-Options for `prepareDeposit` and `prepareRedeem`. For a group, the options are a `GroupJoinOptions`, which adds `route`. A vault on its own always joins directly.
-
-| Field              | Type                   | Default    | Description                                                                                                                                                                                                                               |
-| ------------------ | ---------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `route`            | `"router" \| "direct"` | `"router"` | How a multi-vault join reaches the batchers. `"router"` sends one call through the router. `"direct"` sends one transfer per vault, straight to its batcher, with no operator approval; send them in one atomic bundle. Group joins only. |
-| `skipBalanceCheck` | `boolean`              | `false`    | Skips the balance check. The paused check always runs.                                                                                                                                                                                    |
-
-The balance check decrypts as the signer, so it runs only when `account` is the signer's. For any other account, or with no signer, the join throws `BalanceCheckUnavailableError` until you pass `skipBalanceCheck: true`. See [Send through your own pipeline](../../guides/vaults/advanced.md#send-through-your-own-pipeline) for what to check yourself.
+| Field              | Type                   | Default    | Description                                                                         |
+| ------------------ | ---------------------- | ---------- | ----------------------------------------------------------------------------------- |
+| `route`            | `"router" \| "direct"` | `"router"` | Group joins only (`GroupJoinOptions`). See [How a join is routed](#how-a-join-is-routed). |
+| `skipBalanceCheck` | `boolean`              | `false`    | Skips the balance check.                                                            |
 
 ### PreparedJoin
 
-What `prepareDeposit` and `prepareRedeem` return. Plain data, safe to store.
+Plain data. Its bigints need a replacer to go through `JSON.stringify`, and it holds the chosen vault and amount in cleartext, so store only what you need.
 
-| Field       | Type                    | Description                                                                                                                                                             |
-| ----------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `direction` | `"deposit" \| "redeem"` | Whether it deposits or redeems.                                                                                                                                         |
-| `chainId`   | `number`                | The chain to send the calls on.                                                                                                                                         |
-| `groupId`   | `string \| undefined`   | The group joined, or `undefined` for a vault joined on its own.                                                                                                         |
-| `vaultId`   | `string`                | The vault that gets the amount.                                                                                                                                         |
-| `account`   | `Address`               | The account the calls come from.                                                                                                                                        |
-| `amount`    | `bigint`                | The amount: in the asset for a deposit, in shares for a redemption.                                                                                                     |
-| `route`     | `"direct" \| "router"`  | How the calls reach the batchers. See [How a join is routed](#how-a-join-is-routed).                                                                                    |
-| `legs`      | `VaultLeg[]`            | Every vault of the group, in group order, decoys included.                                                                                                              |
-| `calls`     | `VaultCall[]`           | Every call in send order: the operator approvals the account lacks, in leg order, then the joins. With `route: "direct"` in a group of more than one, bundle the joins. |
+| Field       | Type                    | Description                                                                         |
+| ----------- | ----------------------- | ----------------------------------------------------------------------------------- |
+| `direction` | `"deposit" \| "redeem"` |                                                                                     |
+| `chainId`   | `number`                | The chain to send the calls on.                                                     |
+| `groupId`   | `string \| undefined`   | The group joined, or `undefined` for a vault on its own.                            |
+| `vaultId`   | `string`                | The vault that gets the amount.                                                     |
+| `account`   | `Address`               | The account that must send the calls.                                               |
+| `amount`    | `bigint`                | In the asset for a deposit, in shares for a redemption.                             |
+| `route`     | `"direct" \| "router"`  |                                                                                     |
+| `legs`      | `VaultLeg[]`            | Every vault joined, in group order, the zero legs included.                         |
+| `calls`     | `VaultCall[]`           | Every call in send order: the missing operator approvals, then the joins.           |
 
-A prepared join holds the chosen vault and the amount in cleartext, and its bigints need a replacer to go through `JSON.stringify`. Store only what your pipeline needs.
-
-Each `VaultLeg` is `{ vaultId, batcher, token, amount }`: the vault, the batcher the leg joins (resolved when the join was prepared), the token it spends (read from that batcher), and its amount (zero for every vault but the chosen one).
+A `VaultLeg` is `{ vaultId, batcher, token, amount }`: the batcher the leg joins, the token it spends, and its amount, zero for every leg but the chosen one.
 
 ### VaultCall
 
-A `Call` (`{ to: Address; data: Hex; value: 0n }`) tagged with its `kind`, so you can tell operator approvals from joins without decoding the calldata:
+A `Call` (`{ to, data, value: 0n }`) tagged with its `kind`:
 
-| `kind`               | Extra fields                   | Meaning                                                                                                                                       |
-| -------------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `"operatorApproval"` | `vaultId`, `operator`, `until` | An ERC-7984 operator approval the join relies on: `operator` (the router) on the token the call is sent `to`, until `until` in chain seconds. |
-| `"join"`             | `leg`                          | A join call, with the leg it funds. A router call carries the chosen leg.                                                                     |
+| `kind`               | Extra fields                   | Meaning                                                                                       |
+| -------------------- | ------------------------------ | --------------------------------------------------------------------------------------------- |
+| `"operatorApproval"` | `vaultId`, `operator`, `until` | An ERC-7984 approval of `operator` (the router) on the token at `to`, until `until` in chain seconds. |
+| `"join"`             | `leg`                          | A join. A router call carries the chosen vault's leg.                                         |
 
 ### JoinOutcome
 
-What `deposit` and `redeem` return. It does not hold the calls that were sent: to keep them, call `prepareDeposit` or `prepareRedeem` and send the calls yourself.
-
-| Field      | Type                                 | Description                                       |
-| ---------- | ------------------------------------ | ------------------------------------------------- |
-| `batches`  | `(BatchRef & { vaultId: string })[]` | The batch each leg landed in, in group order.     |
-| `txHashes` | `Hex[]`                              | Every transaction sent, operator approvals first. |
+| Field      | Type                                 | Description                                   |
+| ---------- | ------------------------------------ | --------------------------------------------- |
+| `batches`  | `(BatchRef & { vaultId: string })[]` | The batch each leg landed in, in group order. |
+| `txHashes` | `Hex[]`                              | Every transaction sent, approvals first.      |
 
 ### BatchRef
 
-`{ chainId: number; batcher: Address; batchId: bigint }`. One batch on one batcher. Store the `batches` of a `JoinOutcome` to read, claim or quit them later.
+`{ chainId: number; batcher: Address; batchId: bigint }`: one batch on one batcher. `BatcherRef` is the same without `batchId`.
 
 ### PreparedFinalize
 
-A `BatchRef` plus `unwrapAmountCleartext` (the publicly decrypted amount), `decryptionProof` (which the batcher verifies) and `call` (the `dispatchBatchCallback` call to send).
+A `BatchRef` plus `unwrapAmountCleartext` (the publicly decrypted amount), `decryptionProof`, and `call`, the `dispatchBatchCallback` call to send.
 
 ### Batch
 
-One batch as read from chain, with its `BatchRef` fields. Timestamps are chain seconds. `Batch` is a union keyed on `state`: check `state` before you read a field that only some states have.
+A `BatchRef` plus the fields below. Times are in chain seconds. `Batch` is a union keyed on `state`: narrow on `state` before reading the fields only some states have.
 
-| Field            | Type                                                | Description                                                                                                                                   |
-| ---------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `state`          | `BatchState`                                        | `"pending"`, `"dispatched"`, `"finalized"` or `"canceled"`.                                                                                   |
-| `createdAt`      | `bigint`                                            | When the batch opened.                                                                                                                        |
-| `dispatchableAt` | `bigint`                                            | When anyone may dispatch it.                                                                                                                  |
-| `dispatchedAt`   | `bigint`                                            | Every state but `pending`. When it was dispatched.                                                                                            |
-| `cancelsAt`      | `bigint`                                            | Every state but `pending`. From this time, finalizing cancels the batch instead of settling it.                                               |
-| `exchangeRate`   | `{ rate: bigint; decimals: number }`                | `finalized` only. A claim pays `deposit * rate / 10 ** decimals`, rounded down.                                                               |
-| `paused`         | `boolean`                                           | Whether the batcher is paused. A paused batcher takes no join and no dispatch.                                                                |
-| `deposit`        | `EncryptedValue \| null`                            | The account's encrypted deposit in the batch, when the read named an account. A claim or quit leaves an encrypted zero.                       |
-| `actions`        | `("claim" \| "quit" \| "dispatch" \| "finalize")[]` | What can be sent now. Without an account, only `dispatch` and `finalize` are listed.                                                          |
-| `observedAt`     | `bigint`                                            | The block timestamp the read was made at.                                                                                                     |
-| `nextChangeAt`   | `bigint \| null`                                    | The next chain time at which `actions` can change on its own: `dispatchableAt` while pending, `cancelsAt` while dispatched. `null` otherwise. |
+| Field            | Type                                                | Description                                                                         |
+| ---------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `state`          | `"pending" \| "dispatched" \| "finalized" \| "canceled"` |                                                                                |
+| `createdAt`      | `bigint`                                            | When the batch opened.                                                              |
+| `dispatchableAt` | `bigint`                                            | When anyone may dispatch it.                                                        |
+| `dispatchedAt`   | `bigint`                                            | Not `pending`. When it was dispatched.                                              |
+| `cancelsAt`      | `bigint`                                            | Not `pending`. The time after which finalizing cancels the batch instead of settling it. |
+| `exchangeRate`   | `{ rate: bigint; decimals: number }`                | `finalized` only. A claim pays `deposit * rate / 10 ** decimals`, rounded down.     |
+| `paused`         | `boolean`                                           | Whether the batcher is paused. A paused batcher takes no join and no dispatch.      |
+| `deposit`        | `EncryptedValue \| null`                            | The account's encrypted deposit, or `null` when no account was given.               |
+| `actions`        | `("claim" \| "quit" \| "dispatch" \| "finalize")[]` | What can be sent at `observedAt`.                                                   |
+| `observedAt`     | `bigint`                                            | The block timestamp of the read.                                                    |
+| `nextChangeAt`   | `bigint \| null`                                    | When `actions` can next change on its own: `dispatchableAt` while pending, `cancelsAt` while dispatched, otherwise `null`. |
 
 When each action is listed:
 
-| Action     | Listed when                                                                       | Who sends it                    |
-| ---------- | --------------------------------------------------------------------------------- | ------------------------------- |
-| `claim`    | The account joined the batch, and the batch is finalized.                         | Anyone; a keeper normally does. |
-| `quit`     | The account joined the batch, and the batch is pending or canceled.               | The depositor only.             |
-| `dispatch` | The batch is pending, the batcher is not paused, and `dispatchableAt` has passed. | Anyone; a keeper normally does. |
-| `finalize` | The batch is dispatched.                                                          | Anyone; a keeper normally does. |
+| Action     | Listed when                                                                      |
+| ---------- | -------------------------------------------------------------------------------- |
+| `claim`    | The account joined the batch, and the batch is finalized.                        |
+| `quit`     | The account joined the batch, and the batch is pending or canceled.              |
+| `dispatch` | The batch is pending, the batcher is not paused, and `dispatchableAt` has passed. |
+| `finalize` | The batch is dispatched.                                                         |
 
-`claim` and `quit` are listed from the deposit's encrypted value, without decrypting it. After a claim or quit, the deposit is an encrypted zero that the SDK cannot tell from a non-zero one, so the action stays listed. Sending it again moves nothing.
+`claim` and `quit` are listed without decrypting the deposit. A deposit that was paid out reads as an encrypted zero, so they stay listed after the payout. Sending them again moves nothing.
 
 ### OpenBatch
 
-| Field            | Type      | Description                                                                                            |
-| ---------------- | --------- | ------------------------------------------------------------------------------------------------------ |
-| `vaultId`        | `string`  | The vault.                                                                                             |
-| `chainId`        | `number`  | The group's chain.                                                                                     |
-| `batcher`        | `Address` | The batcher the next join reaches: a retired one until its `lastBatchId` is dispatched, then `latest`. |
-| `batchId`        | `bigint`  | The open batch, which the next join lands in.                                                          |
-| `dispatchableAt` | `bigint`  | When anyone may dispatch the batch, in chain seconds.                                                  |
-| `paused`         | `boolean` | A paused batcher takes no join and no dispatch.                                                        |
-| `observedAt`     | `bigint`  | The block timestamp the read was made at.                                                              |
+A `BatchRef` for the batch the next join lands in, plus:
+
+| Field            | Type      | Description                                                         |
+| ---------------- | --------- | ------------------------------------------------------------------- |
+| `vaultId`        | `string`  |                                                                     |
+| `dispatchableAt` | `bigint`  | When anyone may dispatch the batch, in chain seconds.               |
+| `paused`         | `boolean` | Whether the batcher is paused. One paused batcher blocks every join of its group. |
+| `observedAt`     | `bigint`  | The block timestamp of the read.                                    |
 
 ## TanStack Query
 
-The `vaults` subpath also exports framework-agnostic query and mutation options over the client. The [React hooks](../react/README.md) are built on them.
+The `vaults` subpath exports framework-agnostic query and mutation options over the client. The [React hooks](../react/README.md) are built on them.
 
-| Export                                                                                           | Wraps                                                                                                                                            |
-| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `batchQueryOptions(client, { batch?, account?, query? })`                                        | `readBatch`. Refetches when `nextChangeAt` passes and polls while the batch waits for a dispatch or a settlement. Disabled until `batch` is set. |
-| `openBatchesQueryOptions(client, { group \| vault, direction, query? })`                         | `readOpenBatches`                                                                                                                                |
-| `depositMutationOptions(client)`, `redeemMutationOptions(client)`                                | `deposit`, `redeem`. Variables are `{ group, vaultId }` or `{ vault }`, plus `{ amount, skipBalanceCheck?, onJoinSubmitted? }`.                  |
-| `claimMutationOptions(client)`, `quitMutationOptions(client)`, `finalizeMutationOptions(client)` | `claim`, `quit`, `finalize`. Variables are a `BatchRef`, plus an optional `account` for a claim.                                                 |
-| `dispatchMutationOptions(client)`                                                                | `dispatch`. Variables are `{ chainId, batcher }`.                                                                                                |
+| Export                                                                                           | Wraps                                                                                                             |
+| ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `batchQueryOptions(client, { batch?, account?, query? })`                                        | `readBatch`. Refetches when `nextChangeAt` passes, and polls while the batch waits for a keeper. Disabled until `batch` is set. |
+| `openBatchesQueryOptions(client, { group \| vault, direction, query? })`                         | `readOpenBatches`. Does not refetch on its own.                                                                   |
+| `depositMutationOptions(client)`, `redeemMutationOptions(client)`                                | `deposit`, `redeem`. Variables are `{ group, vaultId }` or `{ vault }`, plus `amount` and the send options.        |
+| `claimMutationOptions(client)`, `quitMutationOptions(client)`, `finalizeMutationOptions(client)` | `claim`, `quit`, `finalize`. Variables are a `BatchRef`, plus an optional `account` for a claim.                   |
+| `dispatchMutationOptions(client)`                                                                | `dispatch`. Variables are a `BatcherRef`.                                                                          |
 
-The mutation options do not invalidate anything by themselves. Call `invalidateAfterVaultAction` in `onSuccess`, as the React hooks do. For the query keys, see [`vaultQueryKeys`](../react/query-keys.md#vaultquerykeys).
-
-### invalidateAfterVaultAction
-
-`invalidateAfterVaultAction(queryClient) => void`
-
-Invalidates every vault read and every confidential balance. Call it after you send prepared calls yourself:
-
-```ts
-import { invalidateAfterVaultAction } from "@zama-fhe/sdk/vaults";
-
-invalidateAfterVaultAction(queryClient);
-```
+The mutation options invalidate nothing. Call `invalidateAfterVaultAction(queryClient)` when a mutation settles, as the React hooks do, or after you send prepared calls yourself. It invalidates every vault read and every confidential balance. For the keys, see [`vaultQueryKeys`](../react/query-keys.md#vaultquerykeys).
 
 ## Related
 
 - [Vaults overview](../../guides/vaults/README.md)
 - [Vault deposits and redemptions](../../guides/vaults/deposits.md)
-- [Advanced vault integration](../../guides/vaults/advanced.md)
-- [Building a vault UI](../../guides/vaults/building-a-ui.md)
-- [Errors](errors.md#vaultbatchnotdispatchederror) — the vault errors
+- [Errors](errors.md#vaultbatcherpausederror): the vault errors

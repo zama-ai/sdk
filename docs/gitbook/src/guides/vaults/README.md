@@ -1,79 +1,66 @@
 ---
 title: Vaults
-description: Integrate confidential ERC-4626 vaults with the Zama SDK — one client for vaults on their own and multi-vault groups.
+description: How confidential ERC-4626 vaults work from the SDK — batches, keepers, and the privacy of a vault group.
 ---
 
 # Vaults overview
 
-**Welcome to the vault guides!**
-
-These guides cover **integrating** confidential ERC-4626 vaults from the SDK: depositing, redeeming, following a batch, and getting the money out. For what a confidential vault is, how batching and settlement work on-chain, and the contracts themselves, see the [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault).
+The vault client deposits into and redeems from confidential ERC-4626 vaults. This page explains the three ideas the rest of the vault guides rely on: a deposit settles in a batch, a keeper moves batches forward, and a group hides which vault you chose. For the contracts themselves, see the [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault).
 
 {% hint style="info" %}
-Available in the Core SDK and React SDK.
+Available in the Core SDK (`@zama-fhe/sdk/vaults`) and the React SDK (`@zama-fhe/react-sdk/vaults`). Both are separate subpaths, so apps that do not use vaults do not bundle them.
 {% endhint %}
 
-Core SDK usage imports from `@zama-fhe/sdk/vaults`. React hooks import from `@zama-fhe/react-sdk/vaults`. Both are separate subpaths, so this module is only bundled for apps that use it.
+## A deposit settles in a batch, not in its transaction
 
-## How it works
+A deposit is not done when its transaction is mined. The amount **joins** the open batch of a vault's batcher, and the batch then moves through four states:
 
-A vault deposit is not done when the transaction is mined. The amount joins a **batch**. Later, the batch is **dispatched** to the vault and **finalized** with the vault's exchange rate. The deposit is then **claimed**, which pays out the shares.
+| `state`      | What happened                                              | What the depositor can do          |
+| ------------ | ---------------------------------------------------------- | ---------------------------------- |
+| `pending`    | The batch is open and collects deposits.                   | `quit`, to take the deposit back   |
+| `dispatched` | The batch was sent to the vault and waits for its result.  | Wait                               |
+| `finalized`  | The batch settled at the vault's exchange rate.            | `claim`, to receive the shares     |
+| `canceled`   | The batch did not go through.                             | `quit`, to take the deposit back   |
 
-The SDK gives you one client for all of it:
+A redemption goes through the same states with the roles swapped: it joins with shares, and its claim pays out the asset.
 
-1. **Describe each vault once** with `defineVault`, and group vaults that take deposits in the same confidential asset with `defineVaultGroup`. A join takes a group, or a vault on its own.
-2. **Create a client** with `createVaultClient(sdk)`, or `useVaultClient()` in React. It holds no config, so one client serves every group and chain.
-3. **Join**: `deposit` or `redeem` returns the batch each leg landed in. Store them.
-4. **Follow each batch**: `readBatch(batchRef)` returns the batch's `state` and the `actions` you can send now.
-5. **Get the money out**: a keeper claims a finalized batch for every depositor. `claim` is the fallback, and `quit` takes a deposit back from a batch that is still pending.
+So a join returns the **batch** each amount landed in, not a result. Your app stores those batches and reads them later to show progress and offer the next action.
 
-```ts
-import { createVaultClient, defineVault, defineVaultGroup } from "@zama-fhe/sdk/vaults";
+## A keeper moves batches forward
 
-export const ALPHA = defineVault({
-  id: "alpha",
-  chainId: 1,
-  batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
-});
+A keeper is an off-chain service that watches the batchers. It dispatches each batch once it is old enough, finalizes it once the vault answers, and then claims for every depositor, or recovers their deposits from a canceled batch. In the normal flow the user only deposits and waits.
 
-export const BETA = defineVault({
-  id: "beta",
-  chainId: 1,
-  batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
-});
+`dispatch`, `finalize` and `claim` are permissionless, so the SDK exposes them too. Offer them as a fallback when a keeper is late, not as steps of the normal flow.
 
-export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
+## A group hides which vault you chose
 
-const vaults = createVaultClient(sdk);
+A **vault group** is a set of vaults that take deposits in the same confidential asset. A join into a group sends a leg to every vault of the group: the vault you chose gets the amount, and the others get an encrypted zero. An observer sees the same transactions whichever vault you picked.
 
-const { batches } = await vaults.deposit(STABLE, { vaultId: "beta", amount: 1_000_000n });
-const beta = batches.find((batch) => batch.vaultId === "beta");
-if (beta !== undefined) {
-  const batch = await vaults.readBatch(beta, "0xUser");
-  console.log(batch.state, batch.actions);
-}
-```
+The SDK builds every group join this way. What it cannot enforce is up to your app:
 
-## Privacy: a group join covers the whole group
+- **Join through the group.** A vault can also be joined on its own, which is simpler but shows on-chain which vault was chosen.
+- **Never change a group once users have joined it.** All users of a group must join the same vaults in the same order, or their transactions stop looking alike. To change the vaults, define a new group.
+- **Quit every leg, or none.** A quit is sent by the user and is public. Quitting only the chosen vault's batch shows which vault it was.
+- **Decrypt every leg together.** Decrypting only the chosen vault's balance or deposit tells the relayer which vault the user cares about.
 
-A join into a group sends a leg to every vault of the group. The vault you chose gets the amount, and the others get an encrypted zero. An observer sees the same transactions whichever vault you picked. A join into a vault on its own has no other leg, so it shows the choice.
+These follow the router's [rules for clients](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#rules-for-clients).
 
-The rest is up to you, most of all: to take a deposit back, quit every leg of the join, not only the chosen one. See [Privacy rules](advanced.md#privacy-rules).
+## Send with the SDK, or build calls for your own pipeline
 
-## Two ways to send
+Every action exists in two forms:
 
-- **Your app sends with the SDK's signer.** Call `deposit`, `redeem`, `claim`, `quit`, `dispatch` and `finalize`, or the React hooks. The SDK signs, waits for receipts, and returns the batch each leg landed in. Most dapps use this.
-- **Your app has its own transaction pipeline.** Call `prepareDeposit`, `prepareRedeem`, `prepareClaim`, `prepareQuit`, `prepareDispatch` or `prepareFinalize`. Each returns plain calls as `{ to, data, value }`. You send them. See [Send through your own pipeline](advanced.md#send-through-your-own-pipeline).
+- **A send method** — `deposit`, `redeem`, `claim`, `quit`, `dispatch`, `finalize`, or the matching React hook — signs with the SDK's signer and waits for the receipt. Most apps use these.
+- **A `prepare*` method** — `prepareDeposit`, `prepareClaim`, and so on — returns plain `{ to, data, value }` calls for an app that sends transactions through its own pipeline: a queue, a custody service, or a wallet that bundles calls.
 
 ## Where to go next
 
-🟨 Go to [**Vault deposits and redemptions**](deposits.md) for the full flow: define a group, deposit, store the batches, follow them, and get the money out.
+🟨 Go to [**Vault deposits and redemptions**](deposits.md) to define a group, deposit, and follow the batches to the payout.
 
-🟨 Go to [**Advanced vault integration**](advanced.md) for privacy rules, wallet prompts, batcher upgrades, bundling wallets, and sending through your own pipeline.
+🟨 Go to [**Building a vault UI**](building-a-ui.md) for what to show and offer in each batch state.
 
-🟨 Go to [**Building a vault UI**](building-a-ui.md) for what to show for each batch state, and what to offer.
+🟨 Go to [**Advanced vault integration**](advanced.md) for wallet prompts, batcher upgrades, bundling wallets and your own pipeline.
 
-For the API surface, see [**VaultClient**](../../reference/sdk/VaultClient.md) in the SDK reference, and [`useVaultClient`](../../reference/react/useVaultClient.md), [`useBatch`](../../reference/react/useBatch.md) and the other vault hooks in the [React reference](../../reference/react/README.md).
+For the API, see [**VaultClient**](../../reference/sdk/VaultClient.md) and the vault hooks in the [React reference](../../reference/react/README.md).
 
 ## Help center
 

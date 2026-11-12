@@ -5,7 +5,7 @@ description: Query hook that reads the open batch of every vault in a group.
 
 # useOpenBatches
 
-Reads the open batch of every vault of a group: the batch the next join lands in, when it can be dispatched, and whether the batcher is paused. Same read as [`VaultClient.readOpenBatches`](../sdk/VaultClient.md#readopenbatches). It needs no prior join, so use it on a deposit or redeem form.
+Query hook that reads the batch the next join lands in, for every vault of a group: when it can be dispatched, and whether its batcher is paused. Wraps [`VaultClient.readOpenBatches`](../sdk/VaultClient.md#readopenbatches). Use it on a deposit or redeem form.
 
 ## Import
 
@@ -71,22 +71,11 @@ The query does not refetch on its own. Pass `refetchInterval` to keep a countdow
 import { type OpenBatch } from "@zama-fhe/sdk/vaults";
 ```
 
-The `data` property is `OpenBatch[] | undefined`, one entry per vault of the group, in group order.
-
-| Field            | Type      | Description                                                                       |
-| ---------------- | --------- | --------------------------------------------------------------------------------- |
-| `vaultId`        | `string`  | The vault.                                                                        |
-| `chainId`        | `number`  | The group's chain.                                                                |
-| `batcher`        | `Address` | The vault's active batcher for the direction read.                                |
-| `batchId`        | `bigint`  | The open batch.                                                                   |
-| `dispatchableAt` | `bigint`  | When anyone may dispatch the batch, in chain seconds.                             |
-| `paused`         | `boolean` | Whether the batcher is paused. One paused batcher blocks every join of the group. |
-| `observedAt`     | `bigint`  | The block timestamp of the read.                                                  |
+The `data` property is an [`OpenBatch`](../sdk/VaultClient.md#openbatch) array, one per vault in group order, or `undefined` while loading.
 
 {% include ".gitbook/includes/query-result.md" %}
 
 ## Related
 
-- [Building a vault UI](../../guides/vaults/building-a-ui.md#1-the-form): what the form shows
+- [Building a vault UI](../../guides/vaults/building-a-ui.md#the-form): what the form shows
 - [useDeposit](./useDeposit.md), [useRedeem](./useRedeem.md)
-- [VaultClient.readOpenBatches](../sdk/VaultClient.md#readopenbatches)

@@ -158,7 +158,7 @@ function memoize<T>(cache: Map<string, Promise<T>>, key: string, read: () => Pro
   return pending;
 }
 
-/** Builds and sends confidential vault transactions. */
+/** Reads confidential vault batches, and builds and sends vault transactions. */
 export class VaultClient {
   readonly #sdk: ZamaSDK;
 
@@ -170,10 +170,8 @@ export class VaultClient {
   }
 
   /**
-   * Build a deposit into a vault on its own: one call, straight to its
-   * deposit batcher, with the amount encrypted. The result is plain data, but
-   * its bigints need a replacer to be JSON-encoded. Only `input.account` can
-   * send the calls.
+   * Build a deposit into a vault on its own: one call to its deposit batcher.
+   * Only `input.account` can send it.
    *
    * @throws if the provider is not on the vault's chain while a wallet is connected. {@link ChainMismatchError}
    * @throws if the provider is on another chain with no wallet connected, or a batcher address is invalid. For a group: if the vault is unknown, the group has more than `MAX_GROUP_VAULTS` vaults, mixes chains or names a vault twice, the deposit batchers take different assets, or, on the router route, the chain has no router. {@link ConfigurationError}
@@ -183,10 +181,9 @@ export class VaultClient {
    */
   prepareDeposit(vault: Vault, input: JoinInput, options?: JoinOptions): Promise<PreparedJoin>;
   /**
-   * Build a deposit of the group's asset into one of its vaults: a leg for
-   * every vault, encrypted, with the calls in send order. The calls hold no
-   * operator approval. With `route: "direct"`, send the joins as one atomic
-   * bundle: sending only some shows which vault was chosen.
+   * Build a deposit into one vault of a group, with a leg for every vault.
+   * Only `input.account` can send the calls. With `route: "direct"`, send them
+   * as one atomic bundle: sending only some shows which vault was chosen.
    *
    * @throws as the single-vault overload.
    */
@@ -204,18 +201,18 @@ export class VaultClient {
   }
 
   /**
-   * Build a redemption of a vault's shares on its own: one call, straight to
-   * its redeem batcher. The result is plain data, but its bigints need a
-   * replacer to be JSON-encoded. Only `input.account` can send the calls.
+   * Build a redemption of a vault's shares on its own: one call to its redeem
+   * batcher. Only `input.account` can send it.
    *
    * @throws as {@link prepareDeposit}.
    */
   prepareRedeem(vault: Vault, input: JoinInput, options?: JoinOptions): Promise<PreparedJoin>;
   /**
-   * Build a redemption of the shares of one vault of a group. On the router
-   * route, `calls` starts with an operator approval, valid for a year, on each
-   * share token the account has not approved. With `route: "direct"`, send the
-   * joins as one atomic bundle: sending only some shows which vault was chosen.
+   * Build a redemption of the shares of one vault of a group, with a leg for
+   * every vault. On the router route, `calls` starts with a year-long operator
+   * approval on each share token the account has not approved. With
+   * `route: "direct"`, send the calls as one atomic bundle: sending only some
+   * shows which vault was chosen.
    *
    * @throws as {@link prepareDeposit}.
    */

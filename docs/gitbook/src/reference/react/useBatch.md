@@ -5,9 +5,9 @@ description: Query hook that reads one vault batch — its state, timings, and t
 
 # useBatch
 
-Reads one batch: its `state`, its timings, the account's encrypted deposit, and the `actions` you can send now. Same read as [`VaultClient.readBatch`](../sdk/VaultClient.md#readbatch).
+Query hook that reads one batch: its `state`, its timings, the account's deposit, and the `actions` you can send now. Wraps [`VaultClient.readBatch`](../sdk/VaultClient.md#readbatch).
 
-The hook refetches when `nextChangeAt` passes and polls while the batch waits for a dispatch or a settlement, so a UI needs no timer of its own. See [Building a vault UI](../../guides/vaults/building-a-ui.md) for what to show in each state.
+It refetches when `nextChangeAt` passes, and polls while the batch waits for a keeper, so a UI needs no timer of its own.
 
 ## Import
 
@@ -79,21 +79,7 @@ Passing `refetchInterval` replaces the automatic refetch on `nextChangeAt`.
 import { type Batch } from "@zama-fhe/sdk/vaults";
 ```
 
-The `data` property is `Batch | undefined`, `undefined` while loading or disabled. `Batch` is a union keyed on `state`, so check `state` before you read `cancelsAt` or `exchangeRate`.
-
-| Field            | Type                                                     | Description                                                                                                                                                         |
-| ---------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `state`          | `"pending" \| "dispatched" \| "finalized" \| "canceled"` | The batch's state.                                                                                                                                                  |
-| `dispatchableAt` | `bigint`                                                 | When anyone may dispatch it.                                                                                                                                        |
-| `cancelsAt`      | `bigint`                                                 | Every state but `pending`. From this time, finalizing cancels the batch instead of settling it.                                                                     |
-| `exchangeRate`   | `{ rate: bigint; decimals: number }`                     | `finalized` only. The batch's exchange rate.                                                                                                                        |
-| `paused`         | `boolean`                                                | Whether the batcher is paused.                                                                                                                                      |
-| `deposit`        | `EncryptedValue \| null`                                 | The account's encrypted deposit, when you passed `account`.                                                                                                         |
-| `actions`        | `("claim" \| "quit" \| "dispatch" \| "finalize")[]`      | What you can send now. Each maps to [`useClaim`](./useClaim.md), [`useQuit`](./useQuit.md), [`useDispatch`](./useDispatch.md) or [`useFinalize`](./useFinalize.md). |
-| `observedAt`     | `bigint`                                                 | The block timestamp of the read.                                                                                                                                    |
-| `nextChangeAt`   | `bigint \| null`                                         | The next chain time at which `actions` can change on its own.                                                                                                       |
-
-See [`Batch`](../sdk/VaultClient.md#batch) for every field and when each action is listed.
+The `data` property is a [`Batch`](../sdk/VaultClient.md#batch), or `undefined` while loading or disabled. `Batch` is a union keyed on `state`: narrow on it before reading `cancelsAt` or `exchangeRate`. Each action in `actions` maps to [`useClaim`](./useClaim.md), [`useQuit`](./useQuit.md), [`useDispatch`](./useDispatch.md) or [`useFinalize`](./useFinalize.md).
 
 {% include ".gitbook/includes/query-result.md" %}
 
@@ -101,4 +87,3 @@ See [`Batch`](../sdk/VaultClient.md#batch) for every field and when each action 
 
 - [Building a vault UI](../../guides/vaults/building-a-ui.md): what to show and offer in each state
 - [useClaim](./useClaim.md), [useQuit](./useQuit.md): get the money out
-- [VaultClient.readBatch](../sdk/VaultClient.md#readbatch)

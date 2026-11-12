@@ -77,9 +77,9 @@ function batchRefetchInterval(read: Batch | undefined): number | false {
 }
 
 /**
- * Refetches when the batch's `nextChangeAt` passes, and polls while it waits for a dispatch or a
- * settlement. Pass your own `refetchInterval` to `useQuery` to replace it. Pass `account` to read
- * its deposit and list `claim` and `quit` for it.
+ * Query options that read one batch with {@link VaultClient.readBatch}. They refetch when the
+ * batch's `nextChangeAt` passes, and poll while it waits for a keeper; a `refetchInterval` passed
+ * to `useQuery` replaces both.
  */
 export function batchQueryOptions(
   client: VaultClient,
@@ -114,6 +114,7 @@ export type OpenBatchesQueryConfig = VaultSelection & {
   query?: Record<string, unknown>;
 };
 
+/** Query options that read the open batch of every vault of a group, or of a vault on its own. */
 export function openBatchesQueryOptions(
   client: VaultClient,
   config: OpenBatchesQueryConfig,
