@@ -50,8 +50,9 @@ export interface BatcherHistory {
 // @public
 export type BatcherRef = Pick<BatchRef, "chainId" | "batcher">;
 
-// @public
+// @public (undocumented)
 export interface BatchQueryConfig {
+    // (undocumented)
     account?: Address;
     batch?: BatchRef;
     query?: Record<string, unknown>;
@@ -82,7 +83,7 @@ export interface Call {
 // Warning: (ae-forgotten-export) The symbol "MutationFactoryOptions" needs to be exported by the entry point index.d.ts
 // Warning: (ae-forgotten-export) The symbol "TransactionResult" needs to be exported by the entry point index.d.ts
 //
-// @public
+// @public (undocumented)
 export function claimMutationOptions(client: VaultClient): MutationFactoryOptions<readonly ["zama.vault.claim"], BatchRef & {
     readonly account?: Address;
 }, TransactionResult>;
@@ -98,21 +99,21 @@ export function defineVault<const TVaultId extends string>(vault: Vault<TVaultId
 // @public
 export function defineVaultGroup<const TGroupId extends string, const TVaultId extends string>(group: VaultGroup<TGroupId, TVaultId>): VaultGroup<TGroupId, TVaultId>;
 
-// @public
+// @public (undocumented)
 export function depositMutationOptions(client: VaultClient): MutationFactoryOptions<readonly ["zama.vault.deposit"], JoinVariables, JoinOutcome>;
 
-// @public
+// @public (undocumented)
 export function dispatchMutationOptions(client: VaultClient): MutationFactoryOptions<readonly ["zama.vault.dispatch"], BatcherRef, TransactionResult>;
 
-// @public
+// @public (undocumented)
 export function finalizeMutationOptions(client: VaultClient): MutationFactoryOptions<readonly ["zama.vault.finalize"], BatchRef, TransactionResult>;
 
-// @public
+// @public (undocumented)
 export interface GroupJoinInput<TVaultId extends string = string> extends JoinInput {
     readonly vaultId: TVaultId;
 }
 
-// @public
+// @public (undocumented)
 export interface GroupJoinOptions extends JoinOptions {
     readonly route?: JoinRoute;
 }
@@ -122,7 +123,7 @@ export interface GroupJoinOptions extends JoinOptions {
 // @public
 export function invalidateAfterVaultAction(queryClient: QueryClientLike): void;
 
-// @public
+// @public (undocumented)
 export interface JoinCall extends Call {
     readonly kind: "join";
     readonly leg: VaultLeg;
@@ -131,18 +132,19 @@ export interface JoinCall extends Call {
 // @public
 export type JoinDirection = "deposit" | "redeem";
 
-// @public
+// @public (undocumented)
 export interface JoinInput {
     readonly account: Address;
     readonly amount: bigint;
 }
 
-// @public
+// @public (undocumented)
 export interface JoinOptions {
+    // (undocumented)
     readonly skipBalanceCheck?: boolean;
 }
 
-// @public
+// @public (undocumented)
 export interface JoinOutcome {
     readonly batches: readonly (BatchRef & {
         readonly vaultId: string;
@@ -169,19 +171,20 @@ export const MAX_GROUP_VAULTS = 8;
 
 // @public
 export interface OpenBatch extends BatchRef {
+    // (undocumented)
     readonly dispatchableAt: bigint;
     readonly observedAt: bigint;
     readonly paused: boolean;
     readonly vaultId: string;
 }
 
-// @public
+// @public (undocumented)
 export type OpenBatchesQueryConfig = VaultSelection & {
     direction: JoinDirection;
     query?: Record<string, unknown>;
 };
 
-// @public
+// @public (undocumented)
 export function openBatchesQueryOptions(client: VaultClient, config: OpenBatchesQueryConfig): QueryFactoryOptions<readonly OpenBatch[], Error, readonly OpenBatch[], ReturnType<typeof vaultQueryKeys.openBatches>>;
 
 // @public
@@ -201,6 +204,7 @@ export interface PreparedFinalize extends BatchRef {
 
 // @public
 export interface PreparedJoin {
+    // (undocumented)
     readonly account: Address;
     readonly amount: bigint;
     readonly calls: readonly [VaultCall, ...VaultCall[]];
@@ -212,10 +216,10 @@ export interface PreparedJoin {
     readonly vaultId: string;
 }
 
-// @public
+// @public (undocumented)
 export function quitMutationOptions(client: VaultClient): MutationFactoryOptions<readonly ["zama.vault.quit"], BatchRef, TransactionResult>;
 
-// @public
+// @public (undocumented)
 export function redeemMutationOptions(client: VaultClient): MutationFactoryOptions<readonly ["zama.vault.redeem"], JoinVariables, JoinOutcome>;
 
 // @public
@@ -224,9 +228,10 @@ export interface RetiredBatcher {
     readonly lastBatchId: bigint;
 }
 
-// @public
+// @public (undocumented)
 export interface SendJoinOptions {
     readonly onJoinSubmitted?: (txHash: Hex) => void;
+    // (undocumented)
     readonly skipBalanceCheck?: boolean;
 }
 
@@ -234,6 +239,7 @@ export interface SendJoinOptions {
 export interface Vault<TVaultId extends string = string> {
     readonly batchers: Readonly<Record<JoinDirection, Address | BatcherHistory>>;
     readonly chainId: number;
+    // (undocumented)
     readonly id: TVaultId;
 }
 
@@ -264,11 +270,12 @@ export class VaultClient {
 
 // @public
 export interface VaultGroup<TGroupId extends string = string, TVaultId extends string = string> {
+    // (undocumented)
     readonly id: TGroupId;
     readonly vaults: readonly [Vault<TVaultId>, Vault<TVaultId>, ...Vault<TVaultId>[]];
 }
 
-// @public
+// @public (undocumented)
 export type VaultIdOf<TGroup extends VaultGroup> = TGroup extends VaultGroup<string, infer TVaultId> ? TVaultId : never;
 
 // @public
@@ -279,7 +286,7 @@ export interface VaultLeg {
     readonly vaultId: string;
 }
 
-// @public
+// @public (undocumented)
 export const vaultQueryKeys: {
     all: readonly ["zama.vault"];
     batch: (batch: BatchRef | undefined, account: Address | undefined) => readonly ["zama.vault", {
@@ -298,7 +305,7 @@ export const vaultQueryKeys: {
     }];
 };
 
-// @public
+// @public (undocumented)
 export type VaultSelection = {
     readonly group: VaultGroup;
     readonly vault?: never;

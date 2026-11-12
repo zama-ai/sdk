@@ -21,11 +21,11 @@ import type {
 /** How often a batch waiting for a keeper is read again. */
 const KEEPER_POLL_MS = 15_000;
 
-/** The longest wait between reads. A timer delay above 2^31 - 1 ms overflows and fires at once. */
+// A timer delay above 2^31 - 1 ms overflows and fires at once.
 const MAX_REFETCH_MS = 60 * 60 * 1000;
 
-/** Query keys for the vaults module. `all` is a prefix of every vault key. */
 export const vaultQueryKeys = {
+  /** A prefix of every vault key. */
   all: ["zama.vault"] as const,
   batch: (batch: BatchRef | undefined, account: Address | undefined) =>
     [
@@ -52,23 +52,15 @@ export const vaultQueryKeys = {
     ] as const,
 };
 
-/** Configuration for {@link batchQueryOptions}. */
 export interface BatchQueryConfig {
-  /** The batch to read. The query stays disabled until it is set. */
+  /** The query is disabled while this is `undefined`. */
   batch?: BatchRef;
-  /** Read this account's deposit, and list `claim` and `quit` for it. */
   account?: Address;
-  /** Additional TanStack Query options merged into the generated query. */
+  /** TanStack Query options; only `enabled` takes effect. */
   query?: Record<string, unknown>;
 }
 
-/**
- * When to read a batch again: one second past its next chain-time edge, or
- * on a poll while it waits for someone else's transaction, which no chain
- * time predicts. A pending batch waits for a dispatch once it is old enough;
- * a dispatched one waits for a settlement from the start, so it is polled
- * even before its callback deadline.
- */
+/** How long to wait before reading a batch again, or `false` once it is finalized or canceled. */
 function batchRefetchInterval(read: Batch | undefined): number | false {
   if (read === undefined || read.state === "finalized" || read.state === "canceled") {
     return false;
@@ -80,13 +72,14 @@ function batchRefetchInterval(read: Batch | undefined): number | false {
     Number(read.nextChangeAt - read.observedAt) * 1000 + 1000,
     MAX_REFETCH_MS,
   );
+  // A dispatched batch waits for a settlement from the start, so it polls before its deadline too.
   return read.state === "dispatched" ? Math.min(untilEdge, KEEPER_POLL_MS) : untilEdge;
 }
 
 /**
- * Query options over {@link VaultClient.readBatch}. Refetches when the
- * batch's `nextChangeAt` passes, and polls while it waits for a dispatch or a
- * settlement. Pass your own `refetchInterval` to `useQuery` to replace it.
+ * Refetches when the batch's `nextChangeAt` passes, and polls while it waits for a dispatch or a
+ * settlement. Pass your own `refetchInterval` to `useQuery` to replace it. Pass `account` to read
+ * its deposit and list `claim` and `quit` for it.
  */
 export function batchQueryOptions(
   client: VaultClient,
@@ -106,7 +99,6 @@ export function batchQueryOptions(
   };
 }
 
-/** Picks a group, or a vault on its own, in a config or in mutation variables. */
 export type VaultSelection =
   | { readonly group: VaultGroup; readonly vault?: never }
   | { readonly vault: Vault; readonly group?: never };
@@ -115,15 +107,13 @@ function selected(selection: VaultSelection): Vault | VaultGroup {
   return selection.vault ?? selection.group;
 }
 
-/** Configuration for {@link openBatchesQueryOptions}. */
 export type OpenBatchesQueryConfig = VaultSelection & {
-  /** Whether to read the deposit or the redeem batchers. */
+  /** Whether the deposit or the redeem batchers are read. */
   direction: JoinDirection;
-  /** Additional TanStack Query options merged into the generated query. */
+  /** TanStack Query options; none takes effect. */
   query?: Record<string, unknown>;
 };
 
-/** Query options over {@link VaultClient.readOpenBatches}. */
 export function openBatchesQueryOptions(
   client: VaultClient,
   config: OpenBatchesQueryConfig,
@@ -141,21 +131,14 @@ export function openBatchesQueryOptions(
   };
 }
 
-/**
- * Invalidates what a vault transaction changes: every vault read and every
- * confidential balance. Call it after sending prepared calls yourself; the
- * React mutation hooks call it for you.
- */
+/** Invalidates every vault read and every confidential balance. */
 export function invalidateAfterVaultAction(queryClient: QueryClientLike): void {
   void queryClient.invalidateQueries({ queryKey: vaultQueryKeys.all });
   void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
   void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalances.all });
 }
 
-/**
- * Variables for {@link depositMutationOptions} and {@link redeemMutationOptions}:
- * a group and the vault of it the amount goes to, or a vault on its own.
- */
+/** A vault of a group, picked by id, or a vault on its own. */
 export type JoinVariables<TGroup extends VaultGroup = VaultGroup> = Pick<JoinInput, "amount"> &
   SendJoinOptions &
   (
@@ -175,7 +158,6 @@ function joinMutation(client: VaultClient, direction: JoinDirection) {
   };
 }
 
-/** Mutation options over {@link VaultClient.deposit}. */
 export function depositMutationOptions(
   client: VaultClient,
 ): MutationFactoryOptions<readonly ["zama.vault.deposit"], JoinVariables, JoinOutcome> {
@@ -186,7 +168,6 @@ export function depositMutationOptions(
   >;
 }
 
-/** Mutation options over {@link VaultClient.redeem}. */
 export function redeemMutationOptions(
   client: VaultClient,
 ): MutationFactoryOptions<readonly ["zama.vault.redeem"], JoinVariables, JoinOutcome> {
@@ -197,7 +178,6 @@ export function redeemMutationOptions(
   >;
 }
 
-/** Mutation options over {@link VaultClient.claim}. */
 export function claimMutationOptions(
   client: VaultClient,
 ): MutationFactoryOptions<
@@ -211,7 +191,6 @@ export function claimMutationOptions(
   };
 }
 
-/** Mutation options over {@link VaultClient.quit}. */
 export function quitMutationOptions(
   client: VaultClient,
 ): MutationFactoryOptions<readonly ["zama.vault.quit"], BatchRef, TransactionResult> {
@@ -221,7 +200,6 @@ export function quitMutationOptions(
   };
 }
 
-/** Mutation options over {@link VaultClient.dispatch}. */
 export function dispatchMutationOptions(
   client: VaultClient,
 ): MutationFactoryOptions<readonly ["zama.vault.dispatch"], BatcherRef, TransactionResult> {
@@ -231,7 +209,6 @@ export function dispatchMutationOptions(
   };
 }
 
-/** Mutation options over {@link VaultClient.finalize}. */
 export function finalizeMutationOptions(
   client: VaultClient,
 ): MutationFactoryOptions<readonly ["zama.vault.finalize"], BatchRef, TransactionResult> {

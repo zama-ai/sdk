@@ -5,10 +5,8 @@ import type { RawLog } from "../types/transaction";
 const JOINED = eventTopic("Joined(uint256,address,bytes32)");
 
 /**
- * The batch id of the first `Joined(batchId, account, amount)` log from
- * `batcher` to `account`, removed from `logs` so the next leg cannot match it.
- * A log without an emitter address still matches, since some adapters omit it;
- * walking the legs in order then pairs each leg with its own log.
+ * The batch id of the first `Joined` log of `batcher` for `account`, or `null` if there is none.
+ * Removes that log from `logs`. A log with no emitter address matches any `batcher`.
  */
 export function takeJoinedBatchId(
   logs: RawLog[],
@@ -21,6 +19,7 @@ export function takeJoinedBatchId(
       topic !== JOINED ||
       batchId === undefined ||
       accountTopic === undefined ||
+      // Some adapters omit the emitter address.
       (log.address !== undefined && getAddress(log.address) !== batcher) ||
       topicToAddress(accountTopic) !== account
     ) {

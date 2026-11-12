@@ -12,15 +12,9 @@ import { useQuery } from "../utils/query";
 import { useVaultClient } from "./use-vault-client";
 
 /**
- * The open batch of each vault's active batcher, with when it can be
- * dispatched. Takes a group, or a vault on its own.
+ * The open batch of each vault's active batcher, with when it can be dispatched.
  *
- * @returns The query result; `data` holds one open batch per vault, in group order.
- *
- * @example
- * ```tsx
- * const { data: batches } = useOpenBatches(STABLE, "deposit");
- * ```
+ * @returns `data` holds one open batch per vault, in group order.
  */
 export function useOpenBatches(
   target: Vault | VaultGroup,

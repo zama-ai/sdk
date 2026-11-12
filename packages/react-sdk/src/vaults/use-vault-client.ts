@@ -5,16 +5,9 @@ import { useMemo } from "react";
 import { useZamaSDK } from "../provider";
 
 /**
- * A {@link VaultClient} for the SDK in context. One client serves every group
- * and chain; its methods take the group or batch they act on.
+ * A {@link VaultClient} for the SDK in context.
  *
- * @returns A vault client bound to the SDK in context, the same one while that SDK stays.
- *
- * @example
- * ```tsx
- * const vaults = useVaultClient();
- * const prepared = await vaults.prepareDeposit(STABLE, { vaultId: "beta", account, amount });
- * ```
+ * @returns The same client while the SDK in context stays.
  */
 export function useVaultClient(): VaultClient {
   const sdk = useZamaSDK();
