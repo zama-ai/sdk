@@ -9863,76 +9863,70 @@ let result = sdk
 
 # Vaults overview
 
-**Welcome to the vault guides!**
-
-These guides cover **integrating** confidential ERC-4626 vaults from the SDK: depositing, redeeming, following a batch, and getting the money out. For what a confidential vault is, how batching and settlement work on-chain, and the contracts themselves, see the [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault).
+The vault client deposits into and redeems from confidential ERC-4626 vaults. This page explains the ideas the rest of the vault guides rely on: a deposit settles in a batch, a keeper moves batches forward, a group hides which vault you chose, and a group join goes through the vault router. For the contracts themselves, see the [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault).
 
 
 > [!INFO]
-> Available in the Core SDK and React SDK.
+> Available in the Core SDK (`@zama-fhe/sdk/vaults`) and the React SDK (`@zama-fhe/react-sdk/vaults`). Both are separate subpaths, so apps that do not use vaults do not bundle them.
 
 
-Core SDK usage imports from `@zama-fhe/sdk/vaults`. React hooks import from `@zama-fhe/react-sdk/vaults`. Both are separate subpaths, so this module is only bundled for apps that use it.
+## A deposit settles in a batch, not in its transaction
 
-## How it works
+A deposit is not done when its transaction is mined. The amount **joins** the open batch of a vault's batcher, and the batch then moves through four states:
 
-A vault deposit is not done when the transaction is mined. The amount joins a **batch**. Later, the batch is **dispatched** to the vault and **finalized** with the vault's exchange rate. The deposit is then **claimed**, which pays out the shares.
+| `state`      | What happened                                             | What the depositor can do        |
+| ------------ | --------------------------------------------------------- | -------------------------------- |
+| `pending`    | The batch is open and collects deposits.                  | `quit`, to take the deposit back |
+| `dispatched` | The batch was sent to the vault and waits for its result. | Wait                             |
+| `finalized`  | The batch settled at the vault's exchange rate.           | `claim`, to receive the shares   |
+| `canceled`   | The batch did not go through.                             | `quit`, to take the deposit back |
 
-The SDK gives you one client for all of it:
+A redemption goes through the same states with the roles swapped: it joins with shares, and its claim pays out the asset.
 
-1. **Describe each vault once** with `defineVault`, and group vaults that take deposits in the same confidential asset with `defineVaultGroup`. A join takes a group, or a vault on its own.
-2. **Create a client** with `createVaultClient(sdk)`, or `useVaultClient()` in React. It holds no config, so one client serves every group and chain.
-3. **Join**: `deposit` or `redeem` returns the batch each leg landed in. Store them.
-4. **Follow each batch**: `readBatch(batchRef)` returns the batch's `state` and the `actions` you can send now.
-5. **Get the money out**: a keeper claims a finalized batch for every depositor. `claim` is the fallback, and `quit` takes a deposit back from a batch that is still pending.
+So a join returns the **batch** each amount landed in, not a result. Your app stores those batches and reads them later to show progress and offer the next action.
 
-```ts
-import { createVaultClient, defineVault, defineVaultGroup } from "@zama-fhe/sdk/vaults";
+## A keeper moves batches forward
 
-export const ALPHA = defineVault({
-  id: "alpha",
-  chainId: 1,
-  batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
-});
+A keeper is an off-chain service that watches the batchers. It dispatches each batch once it is old enough, finalizes it once the vault answers, and then claims for every depositor, or recovers their deposits from a canceled batch. In the normal flow the user only deposits and waits.
 
-export const BETA = defineVault({
-  id: "beta",
-  chainId: 1,
-  batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
-});
+`dispatch`, `finalize` and `claim` are permissionless, so the SDK exposes them too. Offer them as a fallback when a keeper is late, not as steps of the normal flow.
 
-export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
+## A group hides which vault you chose
 
-const vaults = createVaultClient(sdk);
+A **vault group** is a set of vaults that take deposits in the same confidential asset. A join into a group sends a leg to every vault of the group: the vault you chose gets the amount, and the others get an encrypted zero. An observer sees the same transactions whichever vault you picked.
 
-const { batches } = await vaults.deposit(STABLE, { vaultId: "beta", amount: 1_000_000n });
-const beta = batches.find((batch) => batch.vaultId === "beta");
-if (beta !== undefined) {
-  const batch = await vaults.readBatch(beta, "0xUser");
-  console.log(batch.state, batch.actions);
-}
-```
+The SDK builds every group join this way. What it cannot enforce is up to your app:
 
-## Privacy: a group join covers the whole group
+- **Join through the group.** A vault can also be joined on its own, which is simpler but shows on-chain which vault was chosen.
+- **Never change a group once users have joined it.** All users of a group must join the same vaults in the same order, or their transactions stop looking alike. To change the vaults, define a new group.
+- **Quit every leg, or none.** A quit is sent by the user and is public. Quitting only the chosen vault's batch shows which vault it was.
+- **Decrypt every leg together.** Decrypting only the chosen vault's balance or deposit tells the relayer which vault the user cares about.
+- **Keep the chosen vault in the user's own storage.** The batches of a join name every vault of the group, so they reveal nothing. A record of the chosen vault does, and so does a `PreparedJoin`, which holds the chosen vault and the amount in cleartext.
 
-A join into a group sends a leg to every vault of the group. The vault you chose gets the amount, and the others get an encrypted zero. An observer sees the same transactions whichever vault you picked. A join into a vault on its own has no other leg, so it shows the choice.
+These follow the router's [rules for clients](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#rules-for-clients).
 
-The rest is up to you, most of all: to take a deposit back, quit every leg of the join, not only the chosen one. See [Privacy rules](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#privacy-rules).
+## A group join goes through the vault router
 
-## Two ways to send
+Each chain has a vault router, which takes one join and splits it into the legs. A deposit pushes the asset to the router, so it needs no approval. A redemption is different: each vault has its own share token, and the router pulls every one of them. So the account first approves the router as ERC-7984 operator on each share token, valid for 365 days. A long approval is safe: the router only pulls a share token for a join its holder sends, under an encryption proof bound to that holder.
 
-- **Your app sends with the SDK's signer.** Call `deposit`, `redeem`, `claim`, `quit`, `dispatch` and `finalize`, or the React hooks. The SDK signs, waits for receipts, and returns the batch each leg landed in. Most dapps use this.
-- **Your app has its own transaction pipeline.** Call `prepareDeposit`, `prepareRedeem`, `prepareClaim`, `prepareQuit`, `prepareDispatch` or `prepareFinalize`. Each returns plain calls as `{ to, data, value }`. You send them. See [Send through your own pipeline](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#send-through-your-own-pipeline).
+A wallet that lands several calls together or not at all can skip the router and its approvals: the direct route sends one transfer per vault, straight to its batcher. Those transfers hide the chosen vault only if they land together. If they go out one by one and the user stops partway, the vaults that were never joined show which vault the user picked. The send methods send one transaction at a time, so they always join a group through the router.
+
+## Send with the SDK, or build calls for your own pipeline
+
+Every action exists in two forms:
+
+- **A send method** signs with the SDK's signer and waits for the receipt. These are `deposit`, `redeem`, `claim`, `quit`, `dispatch`, `finalize` and the matching React hooks. Most apps use them.
+- **A `prepare*` method**, such as `prepareDeposit` or `prepareClaim`, returns plain `{ to, data, value }` calls. It serves an app that sends transactions through its own pipeline: a queue, a custody service, or a wallet that bundles calls.
 
 ## Where to go next
 
-🟨 Go to [**Vault deposits and redemptions**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md) for the full flow: define a group, deposit, store the batches, follow them, and get the money out.
+🟨 Go to [**Vault deposits and redemptions**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md) to define a group, deposit, and follow the batches to the payout.
 
-🟨 Go to [**Advanced vault integration**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md) for privacy rules, wallet prompts, batcher upgrades, bundling wallets, and sending through your own pipeline.
+🟨 Go to [**Building a vault UI**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) for what to show and offer in each batch state.
 
-🟨 Go to [**Building a vault UI**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) for what to show for each batch state, and what to offer.
+🟨 Go to [**Handle wallet prompts, upgrades and custom sending**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md) for wallet prompts, paused and upgraded batchers, bundling wallets and your own pipeline.
 
-For the API surface, see [**VaultClient**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md) in the SDK reference, and [`useVaultClient`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultClient.md), [`useBatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatch.md) and the other vault hooks in the [React reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/README.md).
+For the API, see [**VaultClient**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md) and the vault hooks in the [React reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/README.md).
 
 ## Help center
 
@@ -9956,15 +9950,15 @@ Ask technical questions, discuss with the community, or report a bug.
 > Available in the Core SDK and React SDK.
 
 
-This guide walks through the full life of a vault deposit: define a group, deposit, store the batches, follow them, and get the money out. For how batching and settlement work on-chain, see the [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault), in particular its [deposit guide](https://docs.zama.org/protocol/confidential-vault/guides/deposit).
+This guide takes a deposit from the form to the payout: define a group, deposit, store the batches, follow them, and get the money out. It assumes the ideas in the [Vaults overview](https://raw.githubusercontent.com/zama-ai/sdk/beta/README.md): batches, keepers and groups.
 
-The examples use the SDK's signer. To send through your own transaction pipeline instead, see [Send through your own pipeline](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#send-through-your-own-pipeline).
+The examples send with the SDK's signer. To send through your own pipeline, see [Send through your own pipeline](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#send-through-your-own-pipeline).
 
 ## Steps
 
 ### 1. Define a group
 
-`defineVault` describes one vault. `defineVaultGroup` groups vaults that take deposits in the same confidential asset. Define each once, at module level:
+Describe each of your vaults once with `defineVault`, and group the vaults that take the same asset with `defineVaultGroup`. The SDK ships no vault, so use your own batcher addresses. Do it at module level:
 
 ```ts
 // vaults.ts
@@ -9985,15 +9979,13 @@ export const BETA = defineVault({
 export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
 ```
 
-Each vault has two batchers: one that deposits join, and one that redemptions join. A vault names no token: the client reads the confidential asset and each vault's confidential share from the batchers. When a batcher is upgraded, its entry becomes a history of batchers. See [Upgrade a batcher](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#upgrade-a-batcher). The group and vault ids are yours to choose, and the types keep them, so a typo in `vaultId` passed to a client method is a type error. The React mutation hooks take `vaultId` as a plain `string`.
+A vault names its two batchers: the one deposits join, and the one redemptions join. The ids are yours to choose. See [`defineVaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#definevaultgroup) for how the types check `vaultId`.
 
-Every method that takes a group also takes a vault on its own, like `ALPHA`. A join into it needs no `vaultId` and goes straight to its batcher, which shows on-chain which vault was chosen. To hide the choice, join through the group.
-
-`defineVault` throws `ConfigurationError` for an invalid address or chain. `defineVaultGroup` throws it for an empty group, a group above `MAX_GROUP_VAULTS` (see [Group size and the router](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#group-size-and-the-router)), vaults on different chains, a repeated vault id, or a batcher named twice. See [`defineVaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#definevaultgroup).
+Every method that takes a group also takes a vault on its own, such as `ALPHA`, with no `vaultId`. Join through the group, as the [privacy rules](https://raw.githubusercontent.com/zama-ai/sdk/beta/README.md#a-group-hides-which-vault-you-chose) say.
 
 
 > [!WARNING]
-> The order of `vaults` is the leg order of every join. Never reorder, add or remove vaults in a group once users have joined it. To change a group, define a new group. See [Privacy rules](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#privacy-rules).
+> The order of `vaults` is the leg order of every join. Never change a group once users have joined it: define a new one. See [A group hides which vault you chose](https://raw.githubusercontent.com/zama-ai/sdk/beta/README.md#a-group-hides-which-vault-you-chose).
 
 
 ### 2. Create the client
@@ -10009,20 +10001,12 @@ const vaults = createVaultClient(sdk);
 
 ### Tab: React SDK
 
-The hooks create the client for you. Use `useVaultClient` when you need the client itself:
-
-```tsx
-import { useVaultClient } from "@zama-fhe/react-sdk/vaults";
-
-const vaults = useVaultClient();
-```
+The hooks create the client for you. Call `useVaultClient()` only when you need the client itself.
 
 
-The client holds no config. Every method takes the vault, the group or the batch it acts on, so one client serves every group and chain.
+Create one client for the app. See [`createVaultClient`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#createvaultclient).
 
 ### 3. Deposit
-
-A deposit checks the balance, encrypts the amount, and joins the open batch of every vault of the group:
 
 
 ### Tab: Core SDK
@@ -10030,7 +10014,7 @@ A deposit checks the balance, encrypts the amount, and joins the open batch of e
 ```ts
 import { STABLE } from "./vaults";
 
-const { batches, txHashes } = await vaults.deposit(STABLE, { vaultId: "beta", amount: 1_000_000n });
+const { batches } = await vaults.deposit(STABLE, { vaultId: "beta", amount: 1_000_000n });
 await saveBatches(batches);
 ```
 
@@ -10055,13 +10039,13 @@ function DepositButton() {
 ```
 
 
-The amount is in the asset's base units, so `1_000_000n` is one unit of a 6-decimal token. To join a vault on its own, pass the vault and no `vaultId`: `vaults.deposit(ALPHA, { amount: 1_000_000n })`, or `deposit.mutate({ vault: ALPHA, amount: 1_000_000n })` in React.
+The amount is in the asset's base units, so `1_000_000n` is one unit of a 6-decimal token. To join a vault on its own, pass it with no `vaultId`: `vaults.deposit(ALPHA, { amount })`, or `deposit.mutate({ vault: ALPHA, amount })`.
 
-The SDK checks your confidential balance before it sends, as `Token.confidentialTransfer` does. A confidential transfer above the balance moves zero instead of reverting, so without this check a too-large deposit would succeed on-chain and deposit nothing. To send without the check, pass `skipBalanceCheck: true` in the options.
+Before sending, the SDK checks the confidential balance. A confidential transfer above the balance moves zero instead of reverting, so a too-large deposit would otherwise succeed and deposit nothing. Pass `skipBalanceCheck: true` to send without it.
 
 ### 4. Store the batches
 
-`deposit` returns `batches`: the batch each leg landed in, decoys included, as `{ vaultId, chainId, batcher, batchId }`. **You need them to read, claim or quit the deposit later**, so store them where the user finds them again after a reload or on another device. Keep which vault was chosen in the user's own storage only, if you need it.
+`batches` holds the batch every leg landed in, the zero legs included, as `{ vaultId, chainId, batcher, batchId }`. **Without them, your app cannot read, claim or quit the deposit.** Store them where the user finds them again after a reload or on another device. Store the chosen vault as the [privacy rules](https://raw.githubusercontent.com/zama-ai/sdk/beta/README.md#a-group-hides-which-vault-you-chose) say.
 
 `batchId` is a `bigint`, which `JSON.stringify` cannot serialize. Convert it to a string and back:
 
@@ -10083,11 +10067,11 @@ function fromJson(json: string): StoredBatch[] {
 }
 ```
 
-If the join is mined but the SDK cannot match a `Joined` event in the receipt to every leg, `deposit` throws `VaultJoinUnconfirmedError` instead of returning. The deposit most likely went through. Look the transaction up before you deposit again. See [`VaultJoinUnconfirmedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultjoinunconfirmederror).
+If the deposit throws [`VaultJoinUnconfirmedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultjoinunconfirmederror), do not deposit again. Handle it as its reference says.
 
 ### 5. Follow a batch
 
-`readBatch` reads one batch and returns its `state` and the `actions` you can send now. Pass the account to read its deposit and to list `claim` and `quit`:
+`readBatch` returns the batch's `state` and the `actions` you can send now. Pass the account to read its deposit and to list `claim` and `quit`:
 
 
 ### Tab: Core SDK
@@ -10095,9 +10079,8 @@ If the join is mined but the SDK cannot match a `Joined` event in the receipt to
 ```ts
 const batch = await vaults.readBatch(batchRef, "0xUser");
 
-console.log(batch.state); // "pending" | "dispatched" | "finalized" | "canceled"
-console.log(batch.actions); // for example ["quit", "dispatch"]
-console.log(batch.nextChangeAt); // chain time at which the actions can change, or null
+batch.state; // "pending" | "dispatched" | "finalized" | "canceled"
+batch.actions; // for example ["quit", "dispatch"]
 ```
 
 ### Tab: React SDK
@@ -10108,21 +10091,14 @@ import { useBatch } from "@zama-fhe/react-sdk/vaults";
 const { data: batch } = useBatch(batchRef, { account: "0xUser" });
 ```
 
-`useBatch` refetches when `nextChangeAt` passes, and polls while the batch waits for a dispatch or a settlement, so you need no timer of your own.
+`useBatch` refetches on its own while the batch is pending or dispatched, so you need no timer. It stops polling once the batch is finalized or canceled, so it does not see a keeper's payout. Refetch the batch before you decrypt its deposit, for example when the list opens.
 
 
-| `state`      | What it means                                        | What the user can send      |
-| ------------ | ---------------------------------------------------- | --------------------------- |
-| `pending`    | The batch is open, and waits for dispatch.           | `quit`, for a refund        |
-| `dispatched` | The batch was sent to the vault and waits to settle. | nothing; a keeper finalizes |
-| `finalized`  | The batch settled at the vault's exchange rate.      | `claim`, for the payout     |
-| `canceled`   | The batch did not go through.                        | `quit`, for a refund        |
-
-A keeper (an off-chain service that watches batches) normally dispatches, finalizes and claims every batch, so the user only waits. `actions` lists `dispatch`, `finalize` and `claim` when they apply, so your app can offer them as a fallback. See [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) for what to show in each state.
+For what to show and offer in each state, see [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md).
 
 ### 6. Get the money out
 
-Once the batch is finalized, a claim pays the deposit out at the batch's exchange rate. A keeper normally claims for every depositor. `claim` is the fallback, and anyone may send it: the output always goes to the account.
+To claim a finalized batch yourself, for example when the keeper is late:
 
 
 ### Tab: Core SDK
@@ -10141,7 +10117,9 @@ claim.mutate({ ...batchRef, account: "0xUser" });
 ```
 
 
-To take a deposit back before the batch is dispatched, quit it. Only the depositor can quit. In a group, quit the batch of every leg, not only the chosen one (see [Privacy rules](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#privacy-rules)):
+The shares land in the vault's share token, an ordinary confidential token. Read them with [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useConfidentialBalance.md) or `Token.balanceOf`.
+
+To take a deposit back while the batch is pending, quit the batch of every leg of the join:
 
 ```ts
 for (const batch of batches) {
@@ -10149,11 +10127,9 @@ for (const batch of batches) {
 }
 ```
 
-The claimed shares land in the vault's share token, an ordinary confidential token. Read it with [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useConfidentialBalance.md) or `Token.balanceOf`. The vault hooks invalidate every confidential balance after an action.
+## Redeem
 
-## Redemptions
-
-A redemption is the mirror image: it joins the redeem batchers, and the amount is in shares, not assets (ERC-4626 `redeem`, not `withdraw`). Claiming a finalized redemption pays out the asset.
+A redemption is the mirror image. Its amount is in shares, not assets (ERC-4626 `redeem`, not `withdraw`), and its claim pays out the asset.
 
 
 ### Tab: Core SDK
@@ -10166,21 +10142,17 @@ const { batches } = await vaults.redeem(STABLE, { vaultId: "beta", amount: 500n 
 
 ```tsx
 import { useRedeem } from "@zama-fhe/react-sdk/vaults";
-import { STABLE } from "./vaults";
 
 const redeem = useRedeem({ onSuccess: ({ batches }) => saveBatches(batches) });
 redeem.mutate({ group: STABLE, vaultId: "beta", amount: 500n });
 ```
 
 
+See [Wallet prompts](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#wallet-prompts) for how many prompts a group redemption takes.
 
-> [!WARNING]
-> **A first redemption from a group of N vaults can take up to N + 1 wallet prompts**: one operator approval per share token, then the join. Tell users before they start. See [Wallet prompts](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#wallet-prompts).
+## Show the open batches
 
-
-## Show when the next batch closes
-
-`readOpenBatches` reads the open batch of every vault of a group. Use it on a deposit form to show when the next batch can be dispatched, or that a vault is paused:
+`readOpenBatches` reads the batch the next join lands in, for every vault of a group. Use it on a form to show when that batch can be dispatched, or that a vault is [paused](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#paused-batchers):
 
 
 ### Tab: Core SDK
@@ -10198,59 +10170,37 @@ const { data: open } = useOpenBatches(STABLE, "deposit");
 ```
 
 
-One paused batcher blocks every join of its group. See [Paused batchers](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#paused-batchers).
+## Read before the wallet is on the right chain
 
-## Reads on another chain
+Render the vault page before the wallet connects or switches: reads do not need the wallet's chain. See [Reads](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#reads) for the provider they need.
 
-Reads go to the group's or batch's `chainId`, whatever chain the wallet is on, so a vault page can render before the wallet connects. This needs a provider that can read another chain, such as `WagmiProvider`. While the wallet is on another chain, every write method throws `ChainMismatchError`, so prompt a network switch. Without a wallet, joins and `finalize` throw `ConfigurationError` until the provider is on the group's chain, because they encrypt or decrypt there.
+Writes need the vault's chain. While the wallet is on another chain, they throw `ChainMismatchError`: prompt a network switch.
 
 ## Next steps
 
 - [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md): what to show and offer in each batch state
-- [Advanced vault integration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md): privacy rules, wallet prompts, batcher upgrades, and your own pipeline
-- [`VaultClient`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md): the full API reference
-- [`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md), [`useBatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatch.md), [`useClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md), [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md): the React hooks used above
-- [Confidential Vault documentation](https://docs.zama.org/protocol/confidential-vault): how batching, dispatch and settlement work on-chain
-- [Check balances](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/check-balances.md): reading the asset and share balances
+- [Handle wallet prompts, upgrades and custom sending](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md): wallet prompts, batcher upgrades and your own pipeline
+- [`VaultClient`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md): the API reference
 
-## Advanced vault integration
+## Handle wallet prompts, upgrades and custom sending
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/guides/vaults/advanced.md
 - source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md
 - logical_path: guides/vaults/advanced
 
-# Advanced vault integration
+# Handle wallet prompts, upgrades and custom sending
 
 
 > [!INFO]
 > Available in the Core SDK and React SDK.
 
 
-This page covers what [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md) leaves out: the privacy rules of a group, the wallet prompts each action takes, batcher upgrades, bundling wallets, and sending through your own transaction pipeline. It uses the `STABLE` group defined in [step 1](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md#1-define-a-group) of that guide.
-
-For how the on-chain router fans one transaction out across several batchers, see the [Multi-Vault Router](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router) concept page and the [router interface](https://docs.zama.org/protocol/confidential-vault/reference/router-interface).
-
-## Privacy rules
-
-A join into a group sends a leg to every vault of the group: the vault you chose gets the amount, and the others get an encrypted zero. An observer cannot tell which vault received the money. The client always does this for a group. The rest is up to you:
-
-- **Join through the group.** A join into a vault on its own has no other leg, so it shows which vault was chosen.
-- **Every balance check covers every leg.** The balance check decrypts every token the legs spend, not only the chosen one. A lone decryption would tell the relayer which vault you care about.
-- **Every user gets the same leg list.** All users of a group join the same vaults in the same order, so their transactions look alike. Do not reorder or change a group's vaults once users have joined it. To change a group, define a new group.
-- **Quit every leg, or none.** Claims, quits, dispatches and settlements act on one batch each. A keeper dispatches, finalizes, claims and recovers for every depositor, so these reveal nothing about one user. A quit is different: the user sends it, and it is public. To take a deposit back from a pending batch, quit the batch of every leg of the join, not only the chosen one. The client does not enforce this.
-
-These follow the [rules for clients](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#rules-for-clients) of the router.
-
-## Group size and the router
-
-A group holds from two vaults up to `MAX_GROUP_VAULTS`. A join's FHE compute grows with its number of legs, and `MAX_GROUP_VAULTS` is what fits in one transaction. A lone vault has nothing to hide a leg among, so it is joined on its own, straight to its batcher, without the router.
-
-A multi-vault join sent one call at a time goes through the chain's router, `vaultRouterAddress` in the chain preset. A group names no router. For a chain whose preset names none, set `vaultRouterAddress` on the chain you pass to the SDK; without it, a multi-vault join through the router throws `ConfigurationError`.
+This page covers what an integration needs beyond [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md): planning wallet prompts, handling paused and upgraded batchers, and sending calls yourself. It uses the `STABLE` group from [step 1](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md#1-define-a-group) of that guide.
 
 ## Wallet prompts
 
-The SDK's send methods send one transaction per call, so each call is one wallet prompt. The number depends on the action and the group's size:
+Each transaction is one wallet prompt. Most actions send one transaction. A group redemption can send several:
 
 | Action                          | One vault   | Group of N vaults |
 | ------------------------------- | ----------- | ----------------- |
@@ -10259,24 +10209,19 @@ The SDK's send methods send one transaction per call, so each call is one wallet
 | `claim`, `dispatch`, `finalize` | 1 per batch | 1 per batch       |
 | `quit` the whole join           | 1           | N                 |
 
-A multi-vault deposit is one transfer of the asset to the router, which splits it into legs. It needs no operator approval, but the router's registry must list the asset, or the router rejects the transfer.
+A group redemption first approves the router as operator on each share token the account has not approved yet, one prompt each, then sends the join. An approval lasts 365 days, so redemptions within that time ask for none. To skip the approvals, use a [bundling wallet](#bundling-wallets). For why the router needs them, see [A group join goes through the vault router](https://raw.githubusercontent.com/zama-ai/sdk/beta/README.md#a-group-join-goes-through-the-vault-router).
 
-A multi-vault redemption is different. Each vault has its own share token, and the router pulls every one of them. So the account first approves the router as ERC-7984 operator on every share token it has not approved it on yet: one prompt each, then one prompt for the join.
-
-
-> [!WARNING]
-> **Make the N + 1 prompts visible to users.** The first redemption from a group of N vaults asks for up to N operator approvals, then the join. Say so on the redeem form before the user starts, or use a [bundling wallet](#bundling-wallets).
-
-
-An operator approval lasts a year, so later redemptions ask for none. A long approval is safe: the router only pulls a share token for a join that its holder sends, under an encryption proof bound to that holder. Nobody else can use the approval to move the shares.
+The router's address comes from `vaultRouterAddress` in the [chain preset](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/network-presets.md). For a chain whose preset names none, set it on the chain you pass to the SDK, or group joins through the router throw `ConfigurationError`.
 
 ## Paused batchers
 
-A group join sends a leg to every vault, and one paused batcher reverts the whole join. So `deposit` and `redeem` read `paused()` on each batcher first and throw `VaultBatcherPausedError`, naming the paused vault. This check cannot be skipped. Claims and quits still work on a paused batcher, so existing deposits are never stuck. To show a paused vault before the user submits, read the group with [`readOpenBatches`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md#show-when-the-next-batch-closes).
+A paused batcher rejects joins. A group join sends a leg to every vault, so one paused batcher blocks every join of its group. `deposit` and `redeem` check this first and throw `VaultBatcherPausedError`, naming the paused vault. Claims and quits still work, so existing deposits are never stuck.
+
+To disable the form before the user submits, read `paused` from [`readOpenBatches`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md#show-the-open-batches).
 
 ## Upgrade a batcher
 
-A vault's batcher can be replaced by a new one, for example to pick up a contract fix. Users with batches on the old batcher must still be able to read, claim and quit them, so the vault keeps the old batcher as a retired entry. Replace the plain address with a `BatcherHistory`:
+When a vault's batcher is replaced, batches on the old one must stay readable, claimable and quittable. Replace the plain address with a `BatcherHistory` that keeps the old batcher as retired:
 
 ```ts
 import { defineVault } from "@zama-fhe/sdk/vaults";
@@ -10294,23 +10239,18 @@ export const ALPHA = defineVault({
 });
 ```
 
-How the client uses it:
+Joins keep landing on the old batcher until its batch `lastBatchId` is dispatched, then go to `latest`. The switch follows the chain, not the clock, so you can ship the new definition before it happens. Stored batches name their own batcher, so they keep working.
 
-- **Joins switch on the batch, not the clock.** A join goes to the first retired batcher whose open batch is still at most its `lastBatchId`, and otherwise to `latest`. Joins keep landing on the old batcher until batch `lastBatchId` is dispatched, then go to the new one. You can ship the new vault definition before the switch.
-- **Stored batches keep their batcher.** A `BatchRef` names the batcher the leg joined, so `readBatch`, `claim` and `quit` work on a retired batcher as before.
-- **`readOpenBatches` reports the active batcher**, so a form shows the batch the next join lands in.
-- **Every batcher of a vault must serve the same vault.** Each batcher, retired ones included, must trade the group's confidential asset for the vault's confidential share against the same ERC-4626 vault. The SDK reads each leg's token from its active batcher and checks only that every deposit batcher takes the same asset.
-
-To upgrade again, append the current `latest` to the end of `retired` with its `lastBatchId`, and set the new `latest`. Keep `retired` oldest first.
+To upgrade again, move the current `latest` to the end of `retired` with its `lastBatchId`, and set the new `latest`.
 
 
 > [!WARNING]
-> Never remove a retired entry, even after all its batches settled: batches on a retired batcher can still be read, claimed and quit.
+> Never remove a retired entry, even once its batches settled. Every batcher of a vault, retired ones included, must serve the same ERC-4626 vault with the same asset and share token.
 
 
 ## Bundling wallets
 
-A wallet that lands several calls together or not at all, such as an EIP-5792 `wallet_sendCalls` batch, a Safe, or a smart account, can skip the router. Prepare the join with `route: "direct"`: you get one transfer per vault, straight to its batcher, and no operator approvals.
+A wallet that lands several calls together or not at all, such as an EIP-5792 `wallet_sendCalls` batch, a Safe, or a smart account, can skip the router and its approvals. Prepare the join with `route: "direct"`, which returns one transfer per vault, straight to its batcher:
 
 ```ts
 const prepared = await vaults.prepareRedeem(
@@ -10325,82 +10265,60 @@ await sendBundle(prepared.calls);
 
 
 > [!DANGER]
-> When `prepared.route` is `"direct"` in a group of more than one, send the join calls in one atomic bundle. If they go out one by one and the user stops partway, the vaults that were never joined show which vault the user picked. The SDK's send methods never send a bundle, so the `route` option is only on the `prepare*` methods.
+> Send the direct calls of a group as one atomic bundle. Sent one by one, they can show which vault the user picked. See [A group join goes through the vault router](https://raw.githubusercontent.com/zama-ai/sdk/beta/README.md#a-group-join-goes-through-the-vault-router).
 
 
 ## Send through your own pipeline
 
-A host with its own transaction pipeline (a queue, a bundler, a custody service) uses the `prepare*` methods. A join takes the `account` that will send its calls, and the SDK reads the chain and encrypts for that account.
-
-The `prepare*` join methods check the balance by default, like the send methods. The check decrypts as the signer, so it runs only when `account` is the signer's. For any other account, or with no signer, the join throws `BalanceCheckUnavailableError` until you pass `skipBalanceCheck: true`. With it, the methods need no signer and no connected wallet.
-
-
-> [!WARNING]
-> **If you skip the balance check, check the balance yourself.** A join with a short balance does not revert: it joins every batch with nothing and still costs the transaction. Decrypt the balance of every token the legs spend, not only the chosen one. A lone decryption tells the relayer which vault was picked.
-
-
-`prepareDeposit` and `prepareRedeem` return a `PreparedJoin`, which is plain data:
-
-- `calls`: every call in send order. The operator approvals the account lacks come first (`kind: "operatorApproval"`, with `vaultId`, `operator` and `until`, sent to the token the approval is on), in leg order. The join calls follow (`kind: "join"`, with the `leg` each one funds).
-- `route`: `"direct"` or `"router"`. With `"direct"` in a group of more than one, the join calls must land as one atomic bundle.
-- `legs`: every vault of the group, in group order, with the batcher each leg joins and the token it spends.
-
-Each call is `{ to, data, value: 0n }`.
-
-A prepared join also holds the chosen `vaultId` and the `amount` in cleartext, so an approval screen can show them. If you store it, keep only what your pipeline needs, and give `JSON.stringify` a replacer for its bigints.
+An app with its own transaction pipeline, such as a queue or a custody service, uses the `prepare*` methods. They read the chain and encrypt, and return plain calls for you to send:
 
 ```ts
-import { createVaultClient } from "@zama-fhe/sdk/vaults";
-import { STABLE } from "./vaults";
+import { invalidateAfterVaultAction } from "@zama-fhe/sdk/vaults";
 
-const vaults = createVaultClient(sdk);
-
-const prepared = await vaults.prepareDeposit(
-  STABLE,
-  { vaultId: "beta", account: "0xUser", amount: 1_000_000n },
-  { skipBalanceCheck: true },
-);
+const prepared = await vaults.prepareDeposit(STABLE, {
+  vaultId: "beta",
+  account: "0xUser",
+  amount: 1_000_000n,
+});
 for (const call of prepared.calls) {
   await sendTransaction(call);
 }
+invalidateAfterVaultAction(queryClient);
 ```
 
-`sendTransaction` stands in for your pipeline. The join methods take these options:
+`sendTransaction` stands in for your pipeline. Send the calls in order, from `account`: the encryption proofs are bound to it. Then call `invalidateAfterVaultAction` so the React hooks read fresh data. Store a prepared join only in the user's own storage, as [the privacy rules](https://raw.githubusercontent.com/zama-ai/sdk/beta/README.md#a-group-hides-which-vault-you-chose) say. See [`PreparedJoin`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#preparedjoin) for its fields.
 
-- `route`: for a group, `"router"` (default) or `"direct"`. A vault joined on its own takes no `route` and always goes direct. See [Bundling wallets](#bundling-wallets).
-- `skipBalanceCheck`: `true` skips the balance check. The paused check always runs.
+### Check the balance
 
-The batch actions take one batch each, as a `BatchRef` (`{ chainId, batcher, batchId }`). Dispatch acts on a batcher's open batch, so it takes a `BatcherRef` (`{ chainId, batcher }`):
+`prepareDeposit` and `prepareRedeem` check the balance by default. The check decrypts as the SDK's signer, so it only works when `account` is the signer. For any other account, or with no signer, they throw `BalanceCheckUnavailableError` until you pass `skipBalanceCheck: true`.
+
+
+> [!WARNING]
+> **If you skip the check, check the balance yourself.** A join above the balance does not revert: it joins every batch with nothing and still costs the transaction. Follow [Decrypt every leg together](https://raw.githubusercontent.com/zama-ai/sdk/beta/README.md#a-group-hides-which-vault-you-chose).
+
+
+### Act on a batch
+
+The batch actions take a `BatchRef`, except `prepareDispatch`, which acts on whatever batch is open on a batcher:
 
 ```ts
-const batch = { chainId: 1, batcher, batchId };
-const claim = vaults.prepareClaim(batch, "0xUser");
-const quit = vaults.prepareQuit(batch);
+const claim = vaults.prepareClaim(batchRef, "0xUser");
+const quit = vaults.prepareQuit(batchRef);
 const dispatch = vaults.prepareDispatch({ chainId: 1, batcher });
-const { call: finalize } = await vaults.prepareFinalize(batch);
+const { call: finalize } = await vaults.prepareFinalize(batchRef);
 ```
 
-`prepareClaim`, `prepareQuit` and `prepareDispatch` read nothing, so read the batch with `readBatch` right before you send them. `prepareFinalize` throws `VaultBatchNotDispatchedError` when the batch is not dispatched.
-
-After you send, call `invalidateAfterVaultAction(queryClient)` so the hooks read fresh data.
+`prepareClaim`, `prepareQuit` and `prepareDispatch` read nothing, so a batch may have changed state by the time you send. Read it with `readBatch` first and send only what its `actions` lists.
 
 ### Find the batches of a join
 
-The `prepare*` methods do not return batch ids, because they are known only once the join is mined. A host gets them from its own indexer of the batchers' `Joined(batchId, account, amount)` events: one per leg, emitted by the batcher in `prepared.legs[i].batcher`. `account` is the sender. With the `BatchRef` of each leg, the host reads and acts on batches like any other app:
-
-```ts
-const ref = { chainId: 1, batcher, batchId };
-const batch = await vaults.readBatch(ref, "0xUser");
-if (batch.actions.includes("claim")) {
-  await sendTransaction(vaults.prepareClaim(ref, "0xUser"));
-}
-```
+A prepared join cannot know its batch ids: they exist once the join is mined. Read them from the `Joined(batchId, account, amount)` events in the receipt, one per leg, emitted by the batcher in `prepared.legs[i].batcher`. With a `BatchRef` per leg, read and act on batches as any other app does.
 
 ## Next steps
 
-- [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md): the full flow with the SDK's signer
 - [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md): what to show and offer in each batch state
-- [`VaultClient`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#prepare-a-join): the prepare methods in full
+- [`VaultClient`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#prepare-a-join): the `prepare*` methods in full
+- [Multi-Vault Router](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router): how the router fans one transaction out on-chain
 
 ## Building a vault UI
 
@@ -10411,40 +10329,25 @@ if (batch.actions.includes("claim")) {
 
 # Building a vault UI
 
-A vault deposit is not done when the transaction is mined. The amount joins a **batch**, the batch is sent to the vault later, and the deposit is claimed after that to pay out the shares. A UI that only covers the deposit form leaves users with funds they cannot see or move.
+A vault deposit lives on after its transaction: it sits in a batch until a keeper settles and claims it (see the [Vaults overview](https://raw.githubusercontent.com/zama-ai/sdk/beta/README.md)). A UI that only covers the form leaves users with funds they cannot see or move. This guide lists what to show and offer at each step, so that no state is missing. The layout is yours.
 
-This guide maps every state of a batch to what your UI shows and offers. It does not prescribe a layout: put the form in a modal, a page or a sidebar, and show deposits in a list, a toast or a notification center. What matters is that no state is missing.
+Redemptions go through the same steps: read "shares" for "assets" and the other way around. The examples use the `STABLE` group from [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md#1-define-a-group).
 
+## The form
 
-> [!INFO]
-> Redemptions go through the same states. Read "shares" for "assets" below, and the other way around.
+| Situation                                      | What to do                                                                                                                                                                                            |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The balance is encrypted                       | Show it as hidden, with a button to decrypt it. The first decryption asks for a signature, so start it from a click. See [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useConfidentialBalance.md). |
+| The amount is above the balance                | Disable the button and say why. The SDK checks too, but the user should not learn it from an error.                                                                                                   |
+| A batcher of the group is paused               | [`useOpenBatches`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useOpenBatches.md) returns `paused` for each vault. Disable the button and say joins are paused. See [Paused batchers](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#paused-batchers).         |
+| The user wants to know when the batch closes   | `useOpenBatches` returns each vault's `dispatchableAt`: the earliest time the open batch can be dispatched.                                                                                           |
+| A redemption                                   | Label the amount as shares, not assets.                                                                                                                                                               |
+| A first redemption from a group of N vaults    | Before the user starts, say the wallet may ask for up to N approvals, then the redemption. See [Wallet prompts](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#wallet-prompts).                                                          |
+| The user holds public tokens, not confidential | Shield first with [`useShield`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useShield.md).                                                                                                                                  |
 
+## The send
 
-The examples use the `STABLE` group from [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md#1-define-a-group).
-
-## The journey
-
-1. **The form.** The user picks a vault and an amount. Your UI checks them before sending.
-2. **The send.** One join covers every vault of the group and returns the batch each leg landed in. Your app stores them.
-3. **The batch.** `useBatch` reads the chosen vault's batch and returns its `state`, its `actions`, and `nextChangeAt`. Your UI renders the state and offers the actions.
-
-## 1. The form
-
-| Situation                                         | What to do                                                                                                                                                                                                                                                                                                                      |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The balance is encrypted                          | Show it as hidden, with a button to decrypt it. The first decryption asks the wallet for a signature, so start it from a click. See [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useConfidentialBalance.md), with the confidential asset's address for a deposit and the vault's confidential share token for a redemption. |
-| The amount is above the balance                   | Disable the button and say why. A confidential transfer above the balance moves zero instead of reverting. The SDK checks this before sending, but the user should not find out from an error.                                                                                                                                  |
-| A batcher of the group is paused                  | [`useOpenBatches`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useOpenBatches.md) returns `paused` for each vault. One paused batcher blocks every join of the group, so disable the button and say joins are paused. Claims and quits still work.                                                                                                    |
-| The user waits to know when the batch closes      | `useOpenBatches` returns each vault's `dispatchableAt`: the earliest time the open batch can be sent.                                                                                                                                                                                                                           |
-| A redemption                                      | The amount is in shares, not assets. Label the field so the user knows which one they type.                                                                                                                                                                                                                                     |
-| A first redemption from a group of N vaults       | Say that the wallet may ask for up to N approvals, then the redemption. See [Wallet prompts](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#wallet-prompts).                                                                                                                                                                                                       |
-| The user has public tokens, not confidential ones | Shield first with [`useShield`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useShield.md), then deposit.                                                                                                                                                                                                                                              |
-
-## 2. The send
-
-[`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md) and [`useRedeem`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRedeem.md) return `batches`: the batch of every leg, decoys included. **Store them** where the user finds them again after a reload or on another device. Without them, your app cannot read, claim or quit the deposit. See [Store the batches](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md#4-store-the-batches).
-
-While the transaction is pending, lock the form so the user cannot send twice. Show "Confirm in your wallet" until the `onJoinSubmitted` callback fires, then "Waiting for the transaction":
+Lock the form while the mutation is pending, so the user cannot send twice. Show "Confirm in your wallet" until `onJoinSubmitted` fires, then "Waiting for the transaction":
 
 ```tsx
 deposit.mutate({
@@ -10455,26 +10358,25 @@ deposit.mutate({
 });
 ```
 
-If the callback throws, the SDK only logs a warning, so the label stays on "Confirm in your wallet".
+When the mutation succeeds, [store the batches](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md#4-store-the-batches) and say the amount is **queued**, not deposited: the user holds no shares yet.
 
-After the join is mined, say the amount is **queued**, not deposited. The user does not hold shares yet.
+Two errors need their own handling:
 
-If the mutation fails with `VaultJoinUnconfirmedError`, the transaction was mined but the SDK could not read every batch id from it. Do not offer a plain retry: the deposit most likely went through. Show the transaction hash and ask the user to check it.
+- `ChainMismatchError`: the wallet is on another chain. Prompt a network switch.
+- [`VaultJoinUnconfirmedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultjoinunconfirmederror): do not offer a plain retry. Handle it as its reference says.
 
-The mutation hooks throw `ChainMismatchError` while the wallet is on another chain, so prompt a network switch before sending. See [Reads on another chain](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md#reads-on-another-chain).
+## The batch
 
-## 3. The batch
+Show one entry per join, for the vault the user chose, and read that leg's batch with [`useBatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatch.md). Pass the account, so the batch lists `claim` and `quit`. Keep every leg's batch anyway: a cancel must quit them all.
 
-Read the chosen vault's batch with [`useBatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatch.md), and pass the account so the batch lists `claim` and `quit`. It refetches when `nextChangeAt` passes and polls while the batch waits for a dispatch or a settlement, so you need no timer of your own.
+| `state`      | What the user sees                     | What the user can do                         | Hook                                                        |
+| ------------ | -------------------------------------- | -------------------------------------------- | ----------------------------------------------------------- |
+| `pending`    | Queued, with when it can be dispatched | Cancel, to get the amount back               | [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md), on every leg |
+| `dispatched` | Processing                             | Wait. If it stays too long, settle it        | [`useFinalize`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useFinalize.md)       |
+| `finalized`  | Ready                                  | Wait for the keeper's claim, or claim now    | [`useClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md)             |
+| `canceled`   | Did not go through                     | Wait for the keeper's refund, or get it back | [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md), on every leg |
 
-| `state`      | What the user sees                                | What the user can do                         | Hook                                                        |
-| ------------ | ------------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------- |
-| `pending`    | Queued, with the time until the batch can be sent | Cancel, to get the amount back               | [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md), on every leg |
-| `dispatched` | Processing                                        | Wait. If it stays here too long, settle it   | [`useFinalize`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useFinalize.md)       |
-| `finalized`  | Ready                                             | Wait for the keeper's claim, or claim now    | [`useClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md)             |
-| `canceled`   | Did not go through                                | Wait for the keeper's refund, or get it back | [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md)               |
-
-Offer an action only when `batch.actions` includes it. Switch on `batch.state` and handle every case. With an exhaustive `switch`, TypeScript flags a state your UI forgets:
+Offer an action only when `batch.actions` includes it. Switch on `batch.state` exhaustively, so TypeScript flags a state your UI forgets. In the component below, `legs` are the stored `batches` of the join, and `chosen` is the one the user picked:
 
 ```tsx
 import { useBatch, useClaim, useQuit } from "@zama-fhe/react-sdk/vaults";
@@ -10542,58 +10444,41 @@ function DepositRow({ chosen, legs, account }: DepositRowProps) {
 }
 ```
 
-`legs` are the `batches` of the join, and `chosen` is the one whose `vaultId` the user picked. Keep that choice in the user's own storage only.
-
 ### Pending
 
-The batch is open. `dispatchableAt` (and `nextChangeAt` until it passes) is the earliest moment anyone may dispatch it: a lower bound, not a promise. Word it as "at the earliest".
-
-Once that time passes, `actions` includes `dispatch`. A keeper (an off-chain service that watches batches) normally dispatches, so you do not have to offer it. If you do, [`useDispatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDispatch.md) dispatches the batcher's open batch.
-
-`quit` cancels the deposit and refunds the amount. In a group, quit the batch of every leg, one wallet prompt each. Quitting only the chosen leg shows which vault the user picked.
+`dispatchableAt` is the earliest time anyone may dispatch the batch, not a promise: word it as "at the earliest". After it, a keeper normally dispatches. You can offer [`useDispatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDispatch.md) as a fallback once `actions` includes `dispatch`.
 
 ### Dispatched
 
-The batch was sent to the vault and waits for settlement. A keeper normally settles it and the user only waits. `actions` is `["finalize"]`.
+A keeper normally settles the batch. If it stays dispatched longer than your app expects, offer `useFinalize`. The delay is yours to pick: the SDK does not decide when a keeper is late.
 
-If the batch stays here longer than your app expects, offer a button that calls `useFinalize`. Pick the delay yourself; the SDK does not decide when a keeper is late.
+Past `cancelsAt`, the same `finalize` call **cancels** the batch instead of settling it, so label the button "Cancel and get it back" rather than "Settle". The exception is a redeem batcher whose vault settles redemptions asynchronously: once it has placed its request, `finalize` keeps settling.
 
-`cancelsAt` is the batch's callback deadline, and `nextChangeAt` is set to it while it is in the future. Past it, `finalize` **cancels** the batch instead of settling it, and the user gets the amount back. Label the button accordingly, for example "Cancel and get it back" rather than "Settle". A redeem batcher whose vault settles redemptions asynchronously is an exception: once it has placed its redemption request with the vault, `finalize` keeps settling past the deadline.
+### Finalized and canceled
 
-### Finalized
+A keeper normally pays the user, so the user often does nothing. `claim` or `quit` stays in `actions` after the payout (see [`Batch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#batch)), so decide from the deposit whether to keep the entry:
 
-The batch settled at `exchangeRate`. A claim pays `deposit * rate / 10 ** decimals`, rounded down. A keeper normally claims for every depositor, so the shares arrive in the user's balance without any action. Offer "Claim now" as a fallback when `claim` is in `actions`. Anyone may claim, and the output always goes to the account, so your backend can also claim for users with [`prepareClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#prepareclaim).
-
-After a claim, the deposit becomes an encrypted zero, which the SDK cannot tell from a non-zero one without decrypting. So `claim` stays in `actions`. Claiming again is harmless: it moves nothing. Since a keeper may claim without the user doing anything, decrypt the deposit to tell: once the batch is finalized, a deposit that decrypts to zero has been paid out, so remove it from the list. See [Vault groups](#vault-groups) for a group.
-
-### Canceled
-
-The batch did not go through. A keeper normally recovers the deposit for every depositor. The user can also quit to get it back. As with a pending batch, quit every leg of the join. A recovery also leaves an encrypted zero, so a canceled batch whose deposit decrypts to zero has been paid back.
-
-## Vault groups
-
-A join in a group of N vaults has N legs: the chosen vault with the amount, the others with an encrypted zero. Show the user one entry for the vault they chose, and read that leg's batch. Store every leg's batch anyway: a quit must cover them all.
-
-The decoy legs decrypt to zero from the start, so a zero only means "paid out" for the chosen leg. To check it, decrypt the deposit of every leg in one request, not only the chosen one: a lone decryption would tell the relayer which vault the user picked.
+1. Refetch the batch, for example when the list opens. `useBatch` stops polling once the batch is finalized or canceled, so it does not see a keeper's payout.
+2. Decrypt the deposit, together with every other leg's deposit, as the [privacy rules](https://raw.githubusercontent.com/zama-ai/sdk/beta/README.md#a-group-hides-which-vault-you-chose) say.
+3. A zero on the chosen leg means paid out: remove the entry.
 
 ## Checklist
 
 - [ ] The encrypted balance is decrypted only after a click.
-- [ ] The send button explains why it is disabled: no amount, above balance, paused.
+- [ ] The send button says why it is disabled: no amount, above balance, paused.
 - [ ] A first multi-vault redemption says how many wallet prompts to expect.
 - [ ] Every leg's batch is stored and survives a reload.
 - [ ] After sending, the UI says "queued", not "deposited".
 - [ ] Every `state` has a view, enforced by an exhaustive `switch`.
 - [ ] Actions are offered only when `actions` includes them.
-- [ ] A cancel quits every leg of the join, not only the chosen one.
-- [ ] Dispatched batches offer `finalize` after a delay you choose, and say when it cancels instead.
-- [ ] Finalized or canceled batches leave the list once their deposit decrypts to zero, whoever claimed or recovered them.
+- [ ] A cancel quits every leg of the join.
+- [ ] A dispatched batch offers `finalize` after a delay you choose, and says when that cancels.
+- [ ] A finalized or canceled entry is refetched, and leaves the list once its deposit decrypts to zero.
 
 ## Next steps
 
-- [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md) for the SDK calls behind each step
-- [Advanced vault integration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md) for wallet prompts and privacy rules in a group
-- [`useBatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatch.md) for the full batch type
+- [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md): the SDK calls behind each step
+- [`useBatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatch.md) and [`Batch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#batch): every field of a batch
 
 ## Go & Rust overview
 
@@ -12874,14 +12759,7 @@ console.log(sepolia.registryAddress); // "0x2f0750Bb..."
 
 # VaultClient
 
-`VaultClient` is the interface for confidential ERC-4626 vaults. You create one client per SDK instance with `createVaultClient`. The client holds no config: every method takes the vault, the group or the batch it acts on, so one client serves every chain and every group.
-
-The client has two kinds of methods:
-
-- A **`prepare*` method** returns the calls as plain data, for a host that sends transactions through its own pipeline.
-- A **send method** of the same verb (`deposit`, `redeem`, `claim`, `quit`, `dispatch`, `finalize`) sends them with the SDK's signer.
-
-You describe each vault once with [`defineVault`](#definevault), and group vaults with [`defineVaultGroup`](#definevaultgroup). A join into a group sends a leg to every vault of the group: the chosen vault gets the amount, and the others get an encrypted zero. This is what hides the choice. A join into a vault on its own goes straight to its batcher. Batch actions (claim, quit, dispatch, finalize) act on one batch each.
+The client for confidential ERC-4626 vaults. For how batches, keepers and groups work, see the [Vaults overview](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/README.md).
 
 ## Import
 
@@ -12894,15 +12772,13 @@ import {
 } from "@zama-fhe/sdk/vaults";
 ```
 
-The `vaults` subpath is separate from the root entry, so apps that do not use vaults do not bundle it.
-
 ## defineVault
 
-`defineVault(vault)` returns the vault it is given, and keeps its id as a literal type. Like viem's `defineChain`, it checks nothing and reads nothing from chain: the client checks what each join or read relies on when it runs. Call it once per vault, at module level:
+`defineVault(vault) => Vault`
+
+Returns `vault` unchanged, with its `id` kept as a literal type. Like viem's `defineChain`, it checks nothing and reads nothing.
 
 ```ts
-import { defineVault } from "@zama-fhe/sdk/vaults";
-
 export const ALPHA = defineVault({
   id: "alpha",
   chainId: 1,
@@ -12910,478 +12786,386 @@ export const ALPHA = defineVault({
 });
 ```
 
-Replace the placeholder addresses with your own. The SDK ships no vault.
-
-A vault can be joined on its own, or put in a [group](#definevaultgroup). Joined on its own, it takes no `vaultId` and its join goes straight to its batcher:
-
-```ts
-await vaults.deposit(ALPHA, { amount: 1_000_000n });
-```
-
-
-> [!WARNING]
-> A join into a vault on its own shows on-chain which vault was chosen. To hide the choice, join through a group.
-
-
 ### Vault
 
-```ts
-import { type Vault } from "@zama-fhe/sdk/vaults";
-```
+| Field      | Type                                                                        | Description                                                               |
+| ---------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `id`       | `string`                                                                    | Names the vault in `vaultId`, errors and query keys.                      |
+| `chainId`  | `number`                                                                    | The chain the vault's batchers are on.                                    |
+| `batchers` | `{ deposit: Address \| BatcherHistory; redeem: Address \| BatcherHistory }` | The batcher each direction joins: an address, or a history once upgraded. |
 
-| Field      | Type                                                                        | Required | Description                                                                                     |
-| ---------- | --------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------- |
-| `id`       | `string`                                                                    | yes      | Names the vault in errors and query keys. A group join passes it as `vaultId`.                  |
-| `chainId`  | `number`                                                                    | yes      | The chain the vault's batchers are on. Reads go to this chain, whatever chain the wallet is on. |
-| `batchers` | `{ deposit: Address \| BatcherHistory; redeem: Address \| BatcherHistory }` | yes      | The batcher a deposit joins, and the batcher a redemption joins.                                |
-
-Use a plain address until a batcher is upgraded. After an upgrade, use a `BatcherHistory`.
-
-A vault names no token and no router:
-
-- **Tokens.** The client reads each batcher's `fromToken()`: the confidential asset for a deposit batcher, the vault's confidential share for a redeem batcher. A token is fixed when its batcher is deployed, so the client reads it once.
-- **Router.** A multi-vault join goes through the chain's router, `vaultRouterAddress` in the [chain preset](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/network-presets.md). For a chain whose preset names none, set `vaultRouterAddress` on the chain you pass to the SDK.
+A vault names no token: the client reads each batcher's `fromToken()`. A join or read throws `ConfigurationError` for an invalid batcher address or `lastBatchId`.
 
 ### BatcherHistory
 
-```ts
-import { type BatcherHistory } from "@zama-fhe/sdk/vaults";
-```
-
-Every batcher a vault has had in one direction.
-
-| Field     | Type                                          | Description                                                                                              |
-| --------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `retired` | `{ address: Address; lastBatchId: bigint }[]` | The replaced batchers, oldest first. `lastBatchId` is the last batch a join may land in on that batcher. |
-| `latest`  | `Address`                                     | The current batcher.                                                                                     |
-
-A join goes to the first retired batcher whose on-chain `currentBatchId` is still at most its `lastBatchId`, and otherwise to `latest`. The switch happens when batch `lastBatchId` is dispatched, never at a time on the clock. The client reads this on every join, so it needs no restart.
-
-```ts
-import { defineVault } from "@zama-fhe/sdk/vaults";
-
-export const ALPHA = defineVault({
-  id: "alpha",
-  chainId: 1,
-  batchers: {
-    deposit: {
-      retired: [{ address: "0xAlphaDepositV1", lastBatchId: 41n }],
-      latest: "0xAlphaDepositV2",
-    },
-    redeem: "0xAlphaRedeem",
-  },
-});
-```
-
-
-> [!WARNING]
-> Never remove a retired entry. Batches on a retired batcher can still be read, claimed and quit.
-
+| Field     | Type                                          | Description                                                                               |
+| --------- | --------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `retired` | `{ address: Address; lastBatchId: bigint }[]` | Replaced batchers, oldest first. `lastBatchId` is the last batch joins may land in there. |
+| `latest`  | `Address`                                     | The batcher joins reach once every retired one is past its `lastBatchId`.                 |
 
 See [Upgrade a batcher](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#upgrade-a-batcher).
 
-A join or read of a vault with an invalid batcher address throws `ConfigurationError`.
-
 ## defineVaultGroup
 
-`defineVaultGroup(group)` returns the group it is given, a `VaultGroup` of vaults that take deposits in the same confidential asset. It checks nothing. A join into a group sends a leg to every vault of it, which hides the chosen one. It keeps the group and vault ids as literal types, so a typo in `vaultId` passed to a client method is a type error. The React mutation hooks take `vaultId` as a plain `string`.
+`defineVaultGroup(group) => VaultGroup`
+
+Returns `group` unchanged, with its ids kept as literal types. It checks nothing. On the `VaultClient` methods, a `vaultId` that is not in the group is a type error. The React hooks type `vaultId` as `string`. A vault can be in several groups and still be joined on its own.
 
 ```ts
-import { defineVaultGroup } from "@zama-fhe/sdk/vaults";
-import { ALPHA, BETA } from "./vaults";
-
 export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
-
-await vaults.deposit(STABLE, { vaultId: "beta", amount: 1_000_000n });
 ```
-
-A vault can be in several groups, and stays joinable on its own.
 
 ### VaultGroup
 
-```ts
-import { type VaultGroup } from "@zama-fhe/sdk/vaults";
-```
+| Field    | Type      | Description                                                                                                     |
+| -------- | --------- | --------------------------------------------------------------------------------------------------------------- |
+| `id`     | `string`  | Names the group in errors and query keys.                                                                       |
+| `vaults` | `Vault[]` | The vaults, in leg order: at least two (a type error otherwise), up to [`MAX_GROUP_VAULTS`](#max_group_vaults). |
 
-| Field    | Type      | Required | Description                                                                                                                                                      |
-| -------- | --------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`     | `string`  | yes      | Names the group in errors and query keys.                                                                                                                        |
-| `vaults` | `Vault[]` | yes      | The vaults, in leg order. From two vaults up to `MAX_GROUP_VAULTS`; fewer is a type error. Never reorder, add or remove vaults once users have joined the group. |
+The vaults must be on one chain, and their deposit batchers must take the same asset. A join or read throws `ConfigurationError` when a group has more than `MAX_GROUP_VAULTS` vaults, mixes chains, or names a vault twice. A deposit also throws it when the deposit batchers take different assets.
 
-The vaults of a group must be on the same chain, and their deposit batchers must take the same confidential asset. `VaultIdOf<typeof STABLE>` is the union of the group's vault ids.
-
-A join or read of a group throws `ConfigurationError` when it has more than `MAX_GROUP_VAULTS` vaults, mixes chains, or names a vault twice. A deposit also throws it when the deposit batchers take different assets.
+`VaultIdOf<typeof STABLE>` is the union of a group's vault ids.
 
 ### MAX_GROUP_VAULTS
 
-`number`
-
-The most vaults a group may hold. A join's FHE compute grows with its number of legs, and this is what fits in one transaction.
+`8`. The most vaults a group may hold.
 
 ## createVaultClient
 
-`createVaultClient(sdk)` creates a client bound to a [`ZamaSDK`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md) instance. It reads nothing until first use. It is the only way to make a client: `VaultClient` is exported as a type.
+`createVaultClient(sdk: ZamaSDK) => VaultClient`
 
-```ts
-import { createVaultClient } from "@zama-fhe/sdk/vaults";
-
-const vaults = createVaultClient(sdk);
-```
-
-In React, use [`useVaultClient`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultClient.md), which returns the same client for as long as the SDK in context stays.
+Returns a client bound to the [`ZamaSDK`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md). It reads nothing until first used and holds no config, so one client serves every group and chain. `VaultClient` is exported as a type only. In React, use [`useVaultClient`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useVaultClient.md).
 
 ## Prepare a join
 
-`prepareDeposit` and `prepareRedeem` read the chain and encrypt, and stop before sending. They check the balance by default, which needs the signer to be `account`; for any other account, pass `skipBalanceCheck: true` and they need no signer. They return a [`PreparedJoin`](#preparedjoin): plain data, safe to store and send through any pipeline (a transaction queue, a bundler, a custody service, or an EIP-5792 `wallet_sendCalls` batch).
-
-```ts
-import { createVaultClient } from "@zama-fhe/sdk/vaults";
-import { STABLE } from "./vaults";
-
-const vaults = createVaultClient(sdk);
-
-const prepared = await vaults.prepareDeposit(STABLE, {
-  vaultId: "beta",
-  account: "0xUser",
-  amount: 1_000_000n,
-});
-
-for (const call of prepared.calls) {
-  await sendTransaction(call);
-}
-```
-
-`sendTransaction` stands in for your own pipeline. Send each call to `call.to` with `call.data` and no value. Send the calls in order: the operator approvals come first.
-
-After you send, call [`invalidateAfterVaultAction`](#invalidateaftervaultaction) to refresh cached reads.
+The `prepare*` join methods read the chain, check the join, and encrypt, then return the calls without sending them. See [Send through your own pipeline](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#send-through-your-own-pipeline).
 
 ### prepareDeposit
 
 `prepareDeposit(target, input, options?) => Promise<PreparedJoin>`
 
-Builds a deposit of the group's asset into one vault: a leg for every vault, each amount encrypted, and the calls in send order. A deposit pushes the asset, so it needs no operator approval.
+Builds a deposit of the asset into one vault: a leg for every vault of a group, or one call for a vault on its own. Only `input.account` can send the calls.
 
 | Parameter | Type                          | Description                                             |
 | --------- | ----------------------------- | ------------------------------------------------------- |
-| `target`  | `Vault \| VaultGroup`         | The vault to join on its own, or the group.             |
-| `input`   | [`JoinInput`](#joininput)     | The account and amount, with the `vaultId` for a group. |
+| `target`  | `Vault \| VaultGroup`         | The group, or a vault to join on its own.               |
+| `input`   | [`JoinInput`](#joininput)     | The account, the amount, and for a group the `vaultId`. |
 | `options` | [`JoinOptions`](#joinoptions) | The balance check, and for a group the route.           |
+
+```ts
+const prepared = await vaults.prepareDeposit(STABLE, {
+  vaultId: "beta",
+  account: "0xUser",
+  amount: 1_000_000n,
+});
+```
 
 **Throws:**
 
-- `ChainMismatchError` when the provider is not on the group's chain while a wallet is connected.
-- `ConfigurationError` when the vault is unknown, the deposit batchers of the group take different assets, the join goes through the router and the chain has none, or the provider is not on the group's chain with no wallet connected.
-- `VaultBatcherPausedError` when any vault's batcher is paused.
-- `InsufficientConfidentialBalanceError` when the balance is less than `amount`.
-- `BalanceCheckUnavailableError` when the balance cannot be decrypted: no signer is connected, or `account` is not the signer's. Check the balance yourself and pass `skipBalanceCheck: true`.
+- `ChainMismatchError` when a wallet is connected and the provider is not on the target's chain.
+- `ConfigurationError` when the provider is not on the target's chain with no wallet connected, the vault is not in the group, the group is invalid (see [`VaultGroup`](#vaultgroup)), or the join uses the router and the chain has none.
+- `VaultBatcherPausedError` when a batcher the join reaches is paused. This check always runs.
+- `InsufficientConfidentialBalanceError` when the balance is below `amount`.
+- `BalanceCheckUnavailableError` when the balance cannot be decrypted: no signer is connected, or `account` is not the signer. Pass `skipBalanceCheck: true`.
 
 ### prepareRedeem
 
 `prepareRedeem(target, input, options?) => Promise<PreparedJoin>`
 
-Builds a redemption of one vault's shares. The amount is in shares, not assets. On the router route, the router pulls every leg's share token, so `calls` starts with an operator approval of the router on each share token the account has not approved it on yet. Throws as `prepareDeposit`.
+Builds a redemption of one vault's shares. Same parameters and errors as [`prepareDeposit`](#preparedeposit), with `amount` in shares. On the router route, `calls` starts with an operator approval of the router on each share token the account has not approved, valid for 365 days.
+
+```ts
+const prepared = await vaults.prepareRedeem(STABLE, {
+  vaultId: "beta",
+  account: "0xUser",
+  amount: 500n,
+});
+```
 
 ### How a join is routed
 
-`route` in the prepared join tells you how the calls reach the batchers. It depends on whether you join a vault or a group, and on the `route` option:
-
-| Case                                | `route`    | `calls`                                                                                                              |
-| ----------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------- |
-| Vault on its own                    | `"direct"` | One transfer to the batcher.                                                                                         |
-| Several vaults, deposit, `"router"` | `"router"` | One transfer of the asset to the router, which splits it into one leg per vault. No operator approval.               |
-| Several vaults, redeem, `"router"`  | `"router"` | An operator approval of the router on each share token the account lacks, then one router call that pulls every leg. |
-| Several vaults, `"direct"`          | `"direct"` | One transfer per vault, straight to its batcher. No operator approval.                                               |
-
-
-> [!DANGER]
-> With `route: "direct"` in a group of more than one, send the join calls as one atomic bundle. If they go out one by one and the user stops partway, the vaults that were never joined show which vault the user picked.
-
-
-### Why an operator approval lasts a year
-
-An operator approval is valid for a year of chain time. This is safe: the router only pulls a share token for a join that its holder sends, under an encryption proof bound to that holder. Nobody else can use the approval to move the shares. A long approval spares the user a wallet prompt on every later redemption.
+| Target                       | `route`    | `calls`                                                                                  |
+| ---------------------------- | ---------- | ---------------------------------------------------------------------------------------- |
+| A vault on its own           | `"direct"` | One transfer to its batcher.                                                             |
+| A group, deposit, `"router"` | `"router"` | One transfer of the asset to the router, which funds every leg.                          |
+| A group, redeem, `"router"`  | `"router"` | The missing operator approvals, then one router call that pulls every leg's share token. |
+| A group, `"direct"`          | `"direct"` | One transfer per vault, straight to its batcher.                                         |
 
 ## Prepare a batch action
 
-Each batch action acts on one batch. A batch is identified by its batcher, not its vault, because batchers can be upgraded. See [`BatchRef`](#batchref).
+Each batch action takes the batch as a [`BatchRef`](#batchref), which names its batcher rather than its vault.
 
 ### prepareClaim
 
-`prepareClaim(batchRef, account) => Call`
+`prepareClaim(batch: BatchRef, account: Address) => Call`
 
-Claims a finalized batch's output for `account`. Anyone may send it, and the output always goes to `account`. So a keeper or your backend can claim for users.
+Builds the claim of a finalized batch. Anyone may send it. It pays `account`, whoever sends it. Reads nothing.
+
+```ts
+const call = vaults.prepareClaim(batchRef, "0xUser");
+```
 
 ### prepareQuit
 
-`prepareQuit({ chainId, batcher, batchId }) => Call`
+`prepareQuit(batch: BatchRef) => Call`
 
-Takes the sender's deposit back from a pending batch, or from a canceled one. The contract refunds the sender, so only the depositor may send it.
+Builds the refund of the sender's deposit from a pending or canceled batch. Only the depositor may send it. Reads nothing.
+
+```ts
+const call = vaults.prepareQuit(batchRef);
+```
 
 ### prepareDispatch
 
-`prepareDispatch({ chainId, batcher }) => Call`
+`prepareDispatch(batcher: BatcherRef) => Call`
 
-Closes the batcher's open batch and starts its decryption. Anyone may send it. It reverts while the batch is too young or the batcher is paused. A keeper (an off-chain service that watches batches) normally sends it.
+Builds the dispatch of the batcher's open batch. Anyone may send it. It reverts while the batch is younger than its minimum age or the batcher is paused. Reads nothing.
+
+```ts
+const call = vaults.prepareDispatch({ chainId: 1, batcher: "0xBetaDeposit" });
+```
 
 ### prepareFinalize
 
-`prepareFinalize(batchRef) => Promise<PreparedFinalize>`
+`prepareFinalize(batch: BatchRef) => Promise<PreparedFinalize>`
 
-Builds the settlement of a dispatched batch. It reads the batch's unwrap request, decrypts the amount publicly, and returns the call with the decryption proof. Anyone may send it. Past the batch's callback deadline (`Batch.cancelsAt`), the same call cancels the batch instead of settling it.
+Builds the settlement of a dispatched batch, with its publicly decrypted amount. Anyone may send it. Past `cancelsAt`, it cancels the batch instead.
+
+```ts
+const { call } = await vaults.prepareFinalize(batchRef);
+```
 
 **Throws:**
 
 - `VaultBatchNotDispatchedError` when the batch is not dispatched. The error carries the batch's `state`.
-- `ChainMismatchError` when the provider is not on the batch's chain while a wallet is connected.
-- `ConfigurationError` when the provider is not on the batch's chain with no wallet connected. Finalizing decrypts on the provider's chain.
-
-`prepareClaim`, `prepareQuit` and `prepareDispatch` are synchronous and read nothing. A batch can change state before your pipeline sends the call, so read it with [`readBatch`](#readbatch) right before you send.
+- `ChainMismatchError` when a wallet is connected and the provider is not on the batch's chain.
+- `ConfigurationError` when the provider is not on the batch's chain with no wallet connected, or the batcher reports an unknown batch state.
+- `DecryptionFailedError` when the public decryption returns no value.
 
 ## Send methods
 
-The send methods sign with the SDK's signer and wait for each receipt. A join sends one transaction per call, operator approvals first, so each call is one wallet prompt. The SDK sends one call at a time, so it always prepares a join with `route: "router"`.
-
-All send methods throw:
+Each send method prepares the same calls as its `prepare*` counterpart, signs them with the SDK's signer, and waits for each receipt. Every send method throws:
 
 - `SignerNotConfiguredError` when the SDK has no signer.
-- `ChainMismatchError` when the wallet is not on the group's or batch's chain.
+- `ChainMismatchError` when the wallet is not on the target's or batch's chain.
+- `TransactionRevertedError` when a transaction reverts or fails to send.
 
 ### deposit
 
 `deposit(target, input, options?) => Promise<JoinOutcome>`
 
-Deposits with the SDK's signer: it prepares the join for the signer's account, sends the calls, and reads from the receipt the batch each leg landed in.
+Deposits with the signer's account. `input` is [`JoinInput`](#joininput) without `account`. A group join uses the router route. A vault on its own is joined directly.
+
+| Option             | Type                    | Description                                                                                         |
+| ------------------ | ----------------------- | --------------------------------------------------------------------------------------------------- |
+| `skipBalanceCheck` | `boolean`               | Skips the balance check. Default `false`.                                                           |
+| `onJoinSubmitted`  | `(txHash: Hex) => void` | Called once the wallet has sent the join, before the receipt. If it throws, the SDK logs a warning. |
 
 ```ts
-const { batches, txHashes } = await vaults.deposit(STABLE, { vaultId: "beta", amount: 1_000_000n });
+const { batches } = await vaults.deposit(STABLE, { vaultId: "beta", amount: 1_000_000n });
 ```
 
-The amount is in the asset's base units, so `1_000_000n` is one unit of a 6-decimal token.
-
-| Parameter                  | Type                      | Description                                                                                                                                                |
-| -------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `target`                   | `Vault \| VaultGroup`     | The vault to join on its own, or the group.                                                                                                                |
-| `input.vaultId`            | `VaultIdOf<typeof group>` | For a group only: the vault that gets the amount. A vault on its own takes none.                                                                           |
-| `input.amount`             | `bigint`                  | Plaintext, in base units. Encrypted before it leaves the SDK.                                                                                              |
-| `options.skipBalanceCheck` | `boolean`                 | Optional. Skips the balance check, which runs by default. The paused check is never skipped.                                                               |
-| `options.onJoinSubmitted`  | `(txHash: Hex) => void`   | Optional. Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. If it throws, the SDK logs a warning. |
-
-**Throws:** as [`prepareDeposit`](#preparedeposit), and `VaultJoinUnconfirmedError` when the join is mined but the receipt does not confirm every leg.
+**Throws:** as [`prepareDeposit`](#preparedeposit), and `VaultJoinUnconfirmedError` when the join was mined but the SDK could not match a `Joined` event to every leg.
 
 ### redeem
 
 `redeem(target, input, options?) => Promise<JoinOutcome>`
 
-Redeems a vault's shares with the SDK's signer. Same parameters as `deposit`. The amount is in shares.
+Redeems shares with the signer's account. Same input and options as [`deposit`](#deposit). In a group, it first sends each missing operator approval, one transaction each.
 
 ```ts
 const { batches } = await vaults.redeem(STABLE, { vaultId: "beta", amount: 500n });
 ```
 
-
-> [!WARNING]
-> **A first redemption from a group of N vaults can ask for up to N + 1 wallet prompts.** The router pulls each vault's share token, so the account first approves it as operator on every share token it has not approved it on yet, then sends the join. Later redemptions ask for no operator approval for a year. Tell users before they start.
-
+**Throws:** as [`prepareRedeem`](#prepareredeem), and `VaultJoinUnconfirmedError`.
 
 ### claim
 
-`claim(batchRef, account?) => Promise<TransactionResult>`
+`claim(batch: BatchRef, account?: Address) => Promise<TransactionResult>`
 
-Claims a finalized batch for `account`, which defaults to the signer. The output goes to `account`, whoever sends it. A keeper normally claims for every depositor.
+Claims a finalized batch for `account`. `account` defaults to the signer.
+
+```ts
+await vaults.claim(batchRef, "0xUser");
+```
 
 ### quit
 
-`quit({ chainId, batcher, batchId }) => Promise<TransactionResult>`
+`quit(batch: BatchRef) => Promise<TransactionResult>`
 
 Takes the signer's deposit back from a pending or canceled batch. The signer must be the depositor.
 
+```ts
+await vaults.quit(batchRef);
+```
+
 ### dispatch
 
-`dispatch({ chainId, batcher }) => Promise<TransactionResult>`
+`dispatch(batcher: BatcherRef) => Promise<TransactionResult>`
 
-Dispatches the batcher's open batch. A keeper normally does.
+Dispatches the batcher's open batch.
+
+```ts
+await vaults.dispatch({ chainId: 1, batcher: "0xBetaDeposit" });
+```
 
 ### finalize
 
-`finalize(batchRef) => Promise<TransactionResult>`
+`finalize(batch: BatchRef) => Promise<TransactionResult>`
 
-Settles a dispatched batch with its publicly decrypted amount. A keeper normally does. Throws as [`prepareFinalize`](#preparefinalize).
+Settles a dispatched batch, or cancels it past `cancelsAt`.
+
+```ts
+await vaults.finalize(batchRef);
+```
+
+**Throws:** as [`prepareFinalize`](#preparefinalize).
 
 ## Reads
 
-Reads go to the group's or batch's chain, whatever chain the wallet is on. This needs a provider that can read another chain, such as `WagmiProvider`. `ViemProvider` and `EthersProvider` are bound to one chain and throw `ConfigurationError` for another.
+Reads go to the target's or batch's chain, whatever chain the wallet is on. This needs a provider that can read another chain, such as `WagmiProvider`. `ViemProvider` and `EthersProvider` are bound to one chain and throw `ConfigurationError` for another.
 
 ### readBatch
 
-`readBatch(batchRef, account?) => Promise<Batch>`
+`readBatch(batch, account?) => Promise<Batch>`
 
-Reads one batch's state and timings in one round of reads, and works out what can be sent for it now. Pass `account` to read its encrypted deposit and to list `claim` and `quit`.
+Reads one batch and the actions that can be sent for it now. Pass `account` to read its deposit and to list `claim` and `quit`.
 
 ```ts
-const batch = await vaults.readBatch(ref, "0xUser");
+const batch = await vaults.readBatch(batchRef, "0xUser");
 if (batch.actions.includes("claim")) {
-  await vaults.claim(ref, "0xUser");
+  await vaults.claim(batchRef, "0xUser");
 }
 ```
-
-See [`Batch`](#batch).
 
 ### readOpenBatches
 
 `readOpenBatches(target, direction) => Promise<OpenBatch[]>`
 
-Reads the open batch of every vault of a group, through each vault's active batcher. Use it on a form to show when the next batch closes, or that a vault is paused.
+Reads the open batch of every vault of the target, in group order, on each vault's active batcher.
 
 ```ts
-const batches = await vaults.readOpenBatches(STABLE, "deposit");
-for (const batch of batches) {
-  console.log(batch.vaultId, batch.dispatchableAt, batch.paused);
-}
+const open = await vaults.readOpenBatches(STABLE, "deposit");
 ```
 
 ## Types
 
 ### JoinInput
 
-What `prepareDeposit` and `prepareRedeem` take. For a group, the input is a `GroupJoinInput`, which adds `vaultId`. `deposit` and `redeem` take the same fields without `account`.
-
-| Field     | Type      | Description                                                                                |
-| --------- | --------- | ------------------------------------------------------------------------------------------ |
-| `vaultId` | `string`  | For a group only: the vault that gets the amount. Typed to the group's vault ids.          |
-| `account` | `Address` | The account the calls come from.                                                           |
-| `amount`  | `bigint`  | Plaintext, in base units. Encrypted before it leaves the SDK. For a redemption, in shares. |
+| Field     | Type      | Description                                                                 |
+| --------- | --------- | --------------------------------------------------------------------------- |
+| `vaultId` | `string`  | Group joins only (`GroupJoinInput`): the vault that gets the amount.        |
+| `account` | `Address` | The account that will send the calls.                                       |
+| `amount`  | `bigint`  | Plaintext, in base units: the asset for a deposit, shares for a redemption. |
 
 ### JoinOptions
 
-Options for `prepareDeposit` and `prepareRedeem`. For a group, the options are a `GroupJoinOptions`, which adds `route`. A vault on its own always joins directly.
-
-| Field              | Type                   | Default    | Description                                                                                                                                                                                                                               |
-| ------------------ | ---------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `route`            | `"router" \| "direct"` | `"router"` | How a multi-vault join reaches the batchers. `"router"` sends one call through the router. `"direct"` sends one transfer per vault, straight to its batcher, with no operator approval; send them in one atomic bundle. Group joins only. |
-| `skipBalanceCheck` | `boolean`              | `false`    | Skips the balance check. The paused check always runs.                                                                                                                                                                                    |
-
-The balance check decrypts as the signer, so it runs only when `account` is the signer's. For any other account, or with no signer, the join throws `BalanceCheckUnavailableError` until you pass `skipBalanceCheck: true`. See [Send through your own pipeline](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#send-through-your-own-pipeline) for what to check yourself.
+| Field              | Type                   | Default    | Description                                                                               |
+| ------------------ | ---------------------- | ---------- | ----------------------------------------------------------------------------------------- |
+| `route`            | `"router" \| "direct"` | `"router"` | Group joins only (`GroupJoinOptions`). See [How a join is routed](#how-a-join-is-routed). |
+| `skipBalanceCheck` | `boolean`              | `false`    | Skips the balance check.                                                                  |
 
 ### PreparedJoin
 
-What `prepareDeposit` and `prepareRedeem` return. Plain data, safe to store.
+Plain data. Its bigints need a replacer to go through `JSON.stringify`. It holds the chosen vault and the amount in cleartext.
 
-| Field       | Type                    | Description                                                                                                                                                             |
-| ----------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `direction` | `"deposit" \| "redeem"` | Whether it deposits or redeems.                                                                                                                                         |
-| `chainId`   | `number`                | The chain to send the calls on.                                                                                                                                         |
-| `groupId`   | `string \| undefined`   | The group joined, or `undefined` for a vault joined on its own.                                                                                                         |
-| `vaultId`   | `string`                | The vault that gets the amount.                                                                                                                                         |
-| `account`   | `Address`               | The account the calls come from.                                                                                                                                        |
-| `amount`    | `bigint`                | The amount: in the asset for a deposit, in shares for a redemption.                                                                                                     |
-| `route`     | `"direct" \| "router"`  | How the calls reach the batchers. See [How a join is routed](#how-a-join-is-routed).                                                                                    |
-| `legs`      | `VaultLeg[]`            | Every vault of the group, in group order, decoys included.                                                                                                              |
-| `calls`     | `VaultCall[]`           | Every call in send order: the operator approvals the account lacks, in leg order, then the joins. With `route: "direct"` in a group of more than one, bundle the joins. |
+| Field       | Type                    | Description                                                               |
+| ----------- | ----------------------- | ------------------------------------------------------------------------- |
+| `direction` | `"deposit" \| "redeem"` |                                                                           |
+| `chainId`   | `number`                | The chain to send the calls on.                                           |
+| `groupId`   | `string \| undefined`   | The group joined, or `undefined` for a vault on its own.                  |
+| `vaultId`   | `string`                | The vault that gets the amount.                                           |
+| `account`   | `Address`               | The account that must send the calls.                                     |
+| `amount`    | `bigint`                | In the asset for a deposit, in shares for a redemption.                   |
+| `route`     | `"direct" \| "router"`  |                                                                           |
+| `legs`      | `VaultLeg[]`            | Every vault joined, in group order, the zero legs included.               |
+| `calls`     | `VaultCall[]`           | Every call in send order: the missing operator approvals, then the joins. |
 
-A prepared join holds the chosen vault and the amount in cleartext, and its bigints need a replacer to go through `JSON.stringify`. Store only what your pipeline needs.
-
-Each `VaultLeg` is `{ vaultId, batcher, token, amount }`: the vault, the batcher the leg joins (resolved when the join was prepared), the token it spends (read from that batcher), and its amount (zero for every vault but the chosen one).
+A `VaultLeg` is `{ vaultId, batcher, token, amount }`: the batcher the leg joins, the token it spends, and its amount, zero for every leg but the chosen one.
 
 ### VaultCall
 
-A `Call` (`{ to: Address; data: Hex; value: 0n }`) tagged with its `kind`, so you can tell operator approvals from joins without decoding the calldata:
+A `Call` (`{ to, data, value: 0n }`) tagged with its `kind`:
 
-| `kind`               | Extra fields                   | Meaning                                                                                                                                       |
-| -------------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `"operatorApproval"` | `vaultId`, `operator`, `until` | An ERC-7984 operator approval the join relies on: `operator` (the router) on the token the call is sent `to`, until `until` in chain seconds. |
-| `"join"`             | `leg`                          | A join call, with the leg it funds. A router call carries the chosen leg.                                                                     |
+| `kind`               | Extra fields                   | Meaning                                                                                               |
+| -------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `"operatorApproval"` | `vaultId`, `operator`, `until` | An ERC-7984 approval of `operator` (the router) on the token at `to`, until `until` in chain seconds. |
+| `"join"`             | `leg`                          | A join. A router call carries the chosen vault's leg.                                                 |
 
 ### JoinOutcome
 
-What `deposit` and `redeem` return. It does not hold the calls that were sent: to keep them, call `prepareDeposit` or `prepareRedeem` and send the calls yourself.
-
-| Field      | Type                                 | Description                                       |
-| ---------- | ------------------------------------ | ------------------------------------------------- |
-| `batches`  | `(BatchRef & { vaultId: string })[]` | The batch each leg landed in, in group order.     |
-| `txHashes` | `Hex[]`                              | Every transaction sent, operator approvals first. |
+| Field      | Type                                 | Description                                   |
+| ---------- | ------------------------------------ | --------------------------------------------- |
+| `batches`  | `(BatchRef & { vaultId: string })[]` | The batch each leg landed in, in group order. |
+| `txHashes` | `Hex[]`                              | Every transaction sent, approvals first.      |
 
 ### BatchRef
 
-`{ chainId: number; batcher: Address; batchId: bigint }`. One batch on one batcher. Store the `batches` of a `JoinOutcome` to read, claim or quit them later.
+`{ chainId: number; batcher: Address; batchId: bigint }`: one batch on one batcher. `BatcherRef` is the same without `batchId`.
 
 ### PreparedFinalize
 
-A `BatchRef` plus `unwrapAmountCleartext` (the publicly decrypted amount), `decryptionProof` (which the batcher verifies) and `call` (the `dispatchBatchCallback` call to send).
+A `BatchRef` plus `unwrapAmountCleartext` (the publicly decrypted amount), `decryptionProof`, and `call`, the `dispatchBatchCallback` call to send.
 
 ### Batch
 
-One batch as read from chain, with its `BatchRef` fields. Timestamps are chain seconds. `Batch` is a union keyed on `state`: check `state` before you read a field that only some states have.
+A `BatchRef` plus the fields below. Times are in chain seconds. `Batch` is a union keyed on `state`: narrow on `state` before reading the fields only some states have.
 
-| Field            | Type                                                | Description                                                                                                                                   |
-| ---------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `state`          | `BatchState`                                        | `"pending"`, `"dispatched"`, `"finalized"` or `"canceled"`.                                                                                   |
-| `createdAt`      | `bigint`                                            | When the batch opened.                                                                                                                        |
-| `dispatchableAt` | `bigint`                                            | When anyone may dispatch it.                                                                                                                  |
-| `dispatchedAt`   | `bigint`                                            | Every state but `pending`. When it was dispatched.                                                                                            |
-| `cancelsAt`      | `bigint`                                            | Every state but `pending`. From this time, finalizing cancels the batch instead of settling it.                                               |
-| `exchangeRate`   | `{ rate: bigint; decimals: number }`                | `finalized` only. A claim pays `deposit * rate / 10 ** decimals`, rounded down.                                                               |
-| `paused`         | `boolean`                                           | Whether the batcher is paused. A paused batcher takes no join and no dispatch.                                                                |
-| `deposit`        | `EncryptedValue \| null`                            | The account's encrypted deposit in the batch, when the read named an account. A claim or quit leaves an encrypted zero.                       |
-| `actions`        | `("claim" \| "quit" \| "dispatch" \| "finalize")[]` | What can be sent now. Without an account, only `dispatch` and `finalize` are listed.                                                          |
-| `observedAt`     | `bigint`                                            | The block timestamp the read was made at.                                                                                                     |
-| `nextChangeAt`   | `bigint \| null`                                    | The next chain time at which `actions` can change on its own: `dispatchableAt` while pending, `cancelsAt` while dispatched. `null` otherwise. |
+| Field            | Type                                                     | Description                                                                                                                |
+| ---------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `state`          | `"pending" \| "dispatched" \| "finalized" \| "canceled"` |                                                                                                                            |
+| `createdAt`      | `bigint`                                                 | When the batch opened.                                                                                                     |
+| `dispatchableAt` | `bigint`                                                 | When anyone may dispatch it.                                                                                               |
+| `dispatchedAt`   | `bigint`                                                 | Not `pending`. When it was dispatched.                                                                                     |
+| `cancelsAt`      | `bigint`                                                 | Not `pending`. The time after which finalizing cancels the batch instead of settling it.                                   |
+| `exchangeRate`   | `{ rate: bigint; decimals: number }`                     | `finalized` only. A claim pays `deposit * rate / 10 ** decimals`, rounded down.                                            |
+| `paused`         | `boolean`                                                | Whether the batcher is paused. A paused batcher takes no join and no dispatch.                                             |
+| `deposit`        | `EncryptedValue \| null`                                 | The account's encrypted deposit, or `null` when no account was given.                                                      |
+| `actions`        | `("claim" \| "quit" \| "dispatch" \| "finalize")[]`      | What can be sent at `observedAt`.                                                                                          |
+| `observedAt`     | `bigint`                                                 | The block timestamp of the read.                                                                                           |
+| `nextChangeAt`   | `bigint \| null`                                         | When `actions` can next change on its own: `dispatchableAt` while pending, `cancelsAt` while dispatched, otherwise `null`. |
 
 When each action is listed:
 
-| Action     | Listed when                                                                       | Who sends it                    |
-| ---------- | --------------------------------------------------------------------------------- | ------------------------------- |
-| `claim`    | The account joined the batch, and the batch is finalized.                         | Anyone; a keeper normally does. |
-| `quit`     | The account joined the batch, and the batch is pending or canceled.               | The depositor only.             |
-| `dispatch` | The batch is pending, the batcher is not paused, and `dispatchableAt` has passed. | Anyone; a keeper normally does. |
-| `finalize` | The batch is dispatched.                                                          | Anyone; a keeper normally does. |
+| Action     | Listed when                                                                       |
+| ---------- | --------------------------------------------------------------------------------- |
+| `claim`    | The account joined the batch, and the batch is finalized.                         |
+| `quit`     | The account joined the batch, and the batch is pending or canceled.               |
+| `dispatch` | The batch is pending, the batcher is not paused, and `dispatchableAt` has passed. |
+| `finalize` | The batch is dispatched.                                                          |
 
-`claim` and `quit` are listed from the deposit's encrypted value, without decrypting it. After a claim or quit, the deposit is an encrypted zero that the SDK cannot tell from a non-zero one, so the action stays listed. Sending it again moves nothing.
+`claim` and `quit` are listed without decrypting the deposit. A deposit that was paid out reads as an encrypted zero, so they stay listed after the payout. Sending them again moves nothing.
 
 ### OpenBatch
 
-| Field            | Type      | Description                                                                                            |
-| ---------------- | --------- | ------------------------------------------------------------------------------------------------------ |
-| `vaultId`        | `string`  | The vault.                                                                                             |
-| `chainId`        | `number`  | The group's chain.                                                                                     |
-| `batcher`        | `Address` | The batcher the next join reaches: a retired one until its `lastBatchId` is dispatched, then `latest`. |
-| `batchId`        | `bigint`  | The open batch, which the next join lands in.                                                          |
-| `dispatchableAt` | `bigint`  | When anyone may dispatch the batch, in chain seconds.                                                  |
-| `paused`         | `boolean` | A paused batcher takes no join and no dispatch.                                                        |
-| `observedAt`     | `bigint`  | The block timestamp the read was made at.                                                              |
+A `BatchRef` for the batch the next join lands in, plus:
+
+| Field            | Type      | Description                                           |
+| ---------------- | --------- | ----------------------------------------------------- |
+| `vaultId`        | `string`  |                                                       |
+| `dispatchableAt` | `bigint`  | When anyone may dispatch the batch, in chain seconds. |
+| `paused`         | `boolean` | Whether the batcher is paused.                        |
+| `observedAt`     | `bigint`  | The block timestamp of the read.                      |
 
 ## TanStack Query
 
-The `vaults` subpath also exports framework-agnostic query and mutation options over the client. The [React hooks](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/README.md) are built on them.
+The `vaults` subpath exports framework-agnostic query and mutation options over the client. The [React hooks](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/README.md) are built on them.
 
-| Export                                                                                           | Wraps                                                                                                                                            |
-| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `batchQueryOptions(client, { batch?, account?, query? })`                                        | `readBatch`. Refetches when `nextChangeAt` passes and polls while the batch waits for a dispatch or a settlement. Disabled until `batch` is set. |
-| `openBatchesQueryOptions(client, { group \| vault, direction, query? })`                         | `readOpenBatches`                                                                                                                                |
-| `depositMutationOptions(client)`, `redeemMutationOptions(client)`                                | `deposit`, `redeem`. Variables are `{ group, vaultId }` or `{ vault }`, plus `{ amount, skipBalanceCheck?, onJoinSubmitted? }`.                  |
-| `claimMutationOptions(client)`, `quitMutationOptions(client)`, `finalizeMutationOptions(client)` | `claim`, `quit`, `finalize`. Variables are a `BatchRef`, plus an optional `account` for a claim.                                                 |
-| `dispatchMutationOptions(client)`                                                                | `dispatch`. Variables are `{ chainId, batcher }`.                                                                                                |
+| Export                                                                                           | Wraps                                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `batchQueryOptions(client, { batch?, account?, query? })`                                        | `readBatch`. Refetches when `nextChangeAt` passes, and polls while the batch waits for a keeper. Stops polling once the batch is finalized or canceled. Disabled until `batch` is set. |
+| `openBatchesQueryOptions(client, { group \| vault, direction })`                                 | `readOpenBatches`. Does not refetch on its own.                                                                                                                                        |
+| `depositMutationOptions(client)`, `redeemMutationOptions(client)`                                | `deposit`, `redeem`. Variables are `{ group, vaultId }` or `{ vault }`, plus `amount` and the send options.                                                                            |
+| `claimMutationOptions(client)`, `quitMutationOptions(client)`, `finalizeMutationOptions(client)` | `claim`, `quit`, `finalize`. Variables are a `BatchRef`, plus an optional `account` for a claim.                                                                                       |
+| `dispatchMutationOptions(client)`                                                                | `dispatch`. Variables are a `BatcherRef`.                                                                                                                                              |
 
-The mutation options do not invalidate anything by themselves. Call `invalidateAfterVaultAction` in `onSuccess`, as the React hooks do. For the query keys, see [`vaultQueryKeys`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/query-keys.md#vaultquerykeys).
-
-### invalidateAfterVaultAction
-
-`invalidateAfterVaultAction(queryClient) => void`
-
-Invalidates every vault read and every confidential balance. Call it after you send prepared calls yourself:
-
-```ts
-import { invalidateAfterVaultAction } from "@zama-fhe/sdk/vaults";
-
-invalidateAfterVaultAction(queryClient);
-```
+The mutation options invalidate nothing. Call `invalidateAfterVaultAction(queryClient)` when a mutation settles, as the React hooks do, or after you send prepared calls yourself. It invalidates every vault read and every confidential balance. For the keys, see [`vaultQueryKeys`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/query-keys.md#vaultquerykeys).
 
 ## Related
 
 - [Vaults overview](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/README.md)
 - [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md)
-- [Advanced vault integration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md)
-- [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md)
-- [Errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultbatchnotdispatchederror) — the vault errors
+- [Errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultbatcherpausederror): the vault errors
 
 ## `web()` transport
 
@@ -14796,15 +14580,15 @@ matchZamaError(error, {
 
 **Code:** `VAULT_BATCHER_PAUSED`
 
-Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()` and `prepareRedeem()` when the batcher one leg would join reports `paused()`. Every join sends a leg to every vault of the group, and a paused batcher rejects joins, so the whole join would revert. The SDK refuses before the caller pays for it. This check cannot be skipped. The error carries the paused `batcher` and the `vaultId` of the vault it serves.
+Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()` and `prepareRedeem()` when a batcher the join reaches is paused, before anything is sent. The error carries the paused `batcher` and its `vaultId`.
 
-**How to handle:** Not retryable until the batcher's owner unpauses it. Claims and quits still work on a paused batcher, so existing deposits are not stuck; only new joins are. Show the user which vault is paused rather than a generic failure.
+**How to handle:** Not retryable until the batcher is unpaused. Claims and quits still work. Show which vault is paused. See [Paused batchers](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#paused-batchers).
 
 ### VaultBatchNotDispatchedError
 
 **Code:** `VAULT_BATCH_NOT_DISPATCHED`
 
-Thrown by `VaultClient.finalize()` and `VaultClient.prepareFinalize()` when the batch is not dispatched. Only a dispatched batch has an amount to decrypt and settle, so the SDK refuses before the public decryption. The error carries the `batcher`, the `batchId`, and the batch's `state` instead: `"pending"`, `"finalized"` or `"canceled"`.
+Thrown by `VaultClient.finalize()` and `VaultClient.prepareFinalize()` when the batch is not dispatched, before the public decryption. The error carries the `batcher`, the `batchId`, and the batch's `state` instead: `"pending"`, `"finalized"` or `"canceled"`.
 
 ```ts
 matchZamaError(error, {
@@ -14818,7 +14602,7 @@ matchZamaError(error, {
 
 **Code:** `VAULT_JOIN_UNCONFIRMED`
 
-Thrown by `VaultClient.deposit()` and `VaultClient.redeem()` after the join transaction is mined, when the SDK could not match a `Joined` event in its receipt to every leg. Without every batch id, the SDK cannot return the batch each leg landed in. The error carries the `txHash`, the `receipt`, and `unconfirmedVaultIds`: the vaults whose log the SDK could not match. It does not mean those legs did not join.
+Thrown by `VaultClient.deposit()` and `VaultClient.redeem()` when the join was mined but the SDK could not match a `Joined` event in its receipt to every leg, so it cannot return every batch. The error carries the `txHash`, the `receipt`, and `unconfirmedVaultIds`: the vaults whose log the SDK could not match. It does not mean those legs did not join.
 
 ```ts
 matchZamaError(error, {
@@ -14826,7 +14610,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Do not resubmit. A join is all-or-nothing, and a reverted transaction throws `TransactionRevertedError` instead, so every leg most likely joined. Resubmitting would deposit twice. Look the transaction up, and read the batch ids from the `Joined` events in `receipt` or from your indexer.
+**How to handle:** Do not resubmit. A join is all-or-nothing, and a reverted transaction throws `TransactionRevertedError` instead, so every leg most likely joined. Resubmitting would deposit twice. Show the user `txHash` and look the transaction up. Read the batch ids from the `Joined` events in `receipt` or from your indexer.
 
 ### InvalidTransportKeyPairError
 
@@ -24427,9 +24211,9 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useVaultClient
 
-Returns a [`VaultClient`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md) bound to the SDK from [`ZamaProvider`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/ZamaProvider.md), the same one for as long as that SDK stays. It holds no config: its methods take the vault, the group or the batch they act on, so one client serves every group and chain.
+Returns a [`VaultClient`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md) bound to the SDK from [`ZamaProvider`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/ZamaProvider.md), the same one for as long as that SDK stays.
 
-The other vault hooks call it for you. Use it directly when you need a method no hook wraps, such as a `prepare*` method for your own transaction pipeline.
+Every other vault hook reads its client from this hook.
 
 ## Import
 
@@ -24463,7 +24247,8 @@ function PrepareButton({ account }: { account: Address }) {
 }
 ```
 
-### Tab: vaults.ts
+
+{% code title="vaults.ts" %}
 
 ```ts
 import { defineVault, defineVaultGroup } from "@zama-fhe/sdk/vaults";
@@ -24482,6 +24267,8 @@ export const BETA = defineVault({
 
 export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
 ```
+
+{% endcode %}
 
 
 `sendCalls` stands in for your own pipeline. See [Send through your own pipeline](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#send-through-your-own-pipeline).
@@ -24509,9 +24296,9 @@ None.
 
 # useDeposit
 
-Mutation hook that deposits a plaintext amount of a group's asset with the SDK's signer. It checks the balance, encrypts the amount, and joins the open batch of every vault of the group: the chosen vault with the amount, the others with an encrypted zero. Same flow as [`VaultClient.deposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#deposit).
+Mutation hook that deposits into a vault group, or a vault on its own, with the SDK's signer. Wraps [`VaultClient.deposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#deposit).
 
-The deposit is not settled when the mutation resolves: it has joined a batch. Store the returned `batches` and follow them with [`useBatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatch.md).
+The mutation resolves once the deposit has joined a batch, not once it has settled. [`useBatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatch.md) reads each returned batch.
 
 ## Import
 
@@ -24542,7 +24329,8 @@ function DepositButton() {
 }
 ```
 
-### Tab: vaults.ts
+
+{% code title="vaults.ts" %}
 
 ```ts
 import { defineVault, defineVaultGroup } from "@zama-fhe/sdk/vaults";
@@ -24562,10 +24350,16 @@ export const BETA = defineVault({
 export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
 ```
 
+{% endcode %}
+
 
 `saveBatches` stands in for your own storage. See [Store the batches](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md#4-store-the-batches).
 
 ## Parameters
+
+```ts
+import { type UseVaultMutationOptions } from "@zama-fhe/react-sdk/vaults";
+```
 
 ### `onSuccess`
 
@@ -24594,6 +24388,10 @@ Callback fired before the mutation function runs. Return a context value to pass
 
 ## Mutation variables
 
+```ts
+import { type JoinVariables } from "@zama-fhe/sdk/vaults";
+```
+
 Passed to `mutate` / `mutateAsync` at call time.
 
 ### group
@@ -24610,9 +24408,11 @@ A vault to join on its own instead of a group, as returned by [`defineVault`](ht
 
 ### vaultId
 
-`string`
+`string | undefined`
 
-The vault that gets the amount.
+The vault of `group` that gets the amount. Required with `group`. Omit it with `vault`.
+
+The hook types `vaultId` as `string`, not as the ids of `group`. An id outside the group compiles, and the mutation throws `ConfigurationError`.
 
 ### amount
 
@@ -24624,40 +24424,28 @@ The amount, in the asset's base units. Encrypted before it leaves the SDK.
 
 `boolean | undefined`
 
-Skip the balance check, which runs by default. The paused check always runs.
+Skips the balance check, which runs by default.
 
 ### onJoinSubmitted
 
 `((txHash: Hex) => void) | undefined`
 
-Called once the wallet has sent the join, before the SDK waits for the receipt. Use it to move the UI from "Confirm in your wallet" to "Waiting for the transaction".
-
-```tsx
-deposit.mutate({
-  group: STABLE,
-  vaultId: "beta",
-  amount: 1_000_000n,
-  onJoinSubmitted: (txHash) => console.log("Sent", txHash),
-});
-```
+Called once the wallet has sent the join, before the SDK waits for the receipt. See [The send](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md#the-send).
 
 **Throws:**
 
-- `VaultBatcherPausedError`: a batcher of the group is paused
-- `InsufficientConfidentialBalanceError`: the balance is less than `amount`
-- `BalanceCheckUnavailableError`: the balance check cannot decrypt the balance
-- `VaultJoinUnconfirmedError`: the join was mined, but the SDK could not read every batch id from the receipt
-- `ChainMismatchError`: the wallet is not on the group's chain
-- `ConfigurationError`: the group does not match the chain
+As [`VaultClient.deposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#deposit). The ones a UI handles most:
+
+- `VaultBatcherPausedError`: a batcher of the group is paused.
+- `InsufficientConfidentialBalanceError`: the balance is below `amount`.
+- `ChainMismatchError`: the wallet is not on the group's chain.
+- `VaultJoinUnconfirmedError`: the join was mined, but the SDK could not read every batch from the receipt.
 
 ## Return Type
 
-The `data` property (after a successful mutation) is a `JoinOutcome`:
+The `data` property (after a successful mutation) is a [`JoinOutcome`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#joinoutcome): `batches`, the batch each leg landed in, and `txHashes`.
 
-- **`batches`**: the batch each leg landed in, in group order, as `{ vaultId, chainId, batcher, batchId }`. Store them to read, claim or quit later.
-- **`txHashes`**: every transaction sent, operator approvals first.
-
-On success, the hook invalidates every vault read and every confidential balance.
+When the mutation settles, successful or not, the hook invalidates every vault read and every confidential balance.
 
 ### `mutate`
 
@@ -24712,7 +24500,6 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 - [useRedeem](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRedeem.md): the redeem direction
 - [useBatch](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatch.md): follow each batch
-- [VaultClient.deposit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#deposit)
 - [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md)
 
 ## useRedeem
@@ -24724,14 +24511,9 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useRedeem
 
-Mutation hook that redeems a plaintext amount of a vault's shares with the SDK's signer. It checks the share balance, encrypts the amount, and joins the open redeem batch of every vault of the group: the chosen vault with the amount, the others with an encrypted zero. Same flow as [`VaultClient.redeem`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#redeem).
+Mutation hook that redeems a vault's shares with the SDK's signer. Wraps [`VaultClient.redeem`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#redeem). [`useBatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatch.md) reads each returned batch.
 
-Store the returned `batches` and follow them with [`useBatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatch.md). Claiming a finalized redemption pays out the asset.
-
-
-> [!WARNING]
-> **In a group of N vaults, a first redemption can take up to N + 1 wallet prompts.** The router pulls each vault's share token, so the account first approves it as operator on every share token it has not approved it on yet, then sends the join. An operator approval lasts a year, so later redemptions ask for none. Tell users before they start. See [Wallet prompts](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#wallet-prompts).
-
+In a group, the mutation first asks the wallet for each operator approval of the router that the account lacks. See [Wallet prompts](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#wallet-prompts).
 
 ## Import
 
@@ -24763,9 +24545,36 @@ function RedeemButton() {
 ```
 
 
-`STABLE` is the group from [`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md#usage).
+{% code title="vaults.ts" %}
+
+```ts
+import { defineVault, defineVaultGroup } from "@zama-fhe/sdk/vaults";
+
+export const ALPHA = defineVault({
+  id: "alpha",
+  chainId: 1,
+  batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
+});
+
+export const BETA = defineVault({
+  id: "beta",
+  chainId: 1,
+  batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
+});
+
+export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
+```
+
+{% endcode %}
+
+
+`saveBatches` stands in for your own storage. See [Store the batches](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md#4-store-the-batches).
 
 ## Parameters
+
+```ts
+import { type UseVaultMutationOptions } from "@zama-fhe/react-sdk/vaults";
+```
 
 ### `onSuccess`
 
@@ -24794,18 +24603,15 @@ Callback fired before the mutation function runs. Return a context value to pass
 
 ## Mutation variables
 
-Same as [`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md#mutation-variables): `group` and `vaultId` or `vault`, `amount`, `skipBalanceCheck` and `onJoinSubmitted`. The `amount` is in shares, not assets.
+Same as [`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md#mutation-variables): `group` and `vaultId` or `vault`, `amount`, `skipBalanceCheck` and `onJoinSubmitted`. The `amount` is in shares, not assets. As in `useDeposit`, `vaultId` is typed as `string`.
 
 **Throws:** as [`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md#mutation-variables).
 
 ## Return Type
 
-The `data` property (after a successful mutation) is a `JoinOutcome`:
+The `data` property (after a successful mutation) is a [`JoinOutcome`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#joinoutcome): `batches`, the batch each leg landed in, and `txHashes`, approvals first.
 
-- **`batches`**: the batch each leg landed in, in group order.
-- **`txHashes`**: every transaction sent, operator approvals first.
-
-On success, the hook invalidates every vault read and every confidential balance.
+When the mutation settles, successful or not, the hook invalidates every vault read and every confidential balance.
 
 ### `mutate`
 
@@ -24860,8 +24666,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 - [useDeposit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md): the deposit direction
 - [useBatch](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatch.md): follow each batch
-- [VaultClient.redeem](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#redeem)
-- [Advanced vault integration](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md)
+- [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md#redeem)
 
 ## useBatch
 
@@ -24872,9 +24677,9 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useBatch
 
-Reads one batch: its `state`, its timings, the account's encrypted deposit, and the `actions` you can send now. Same read as [`VaultClient.readBatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#readbatch).
+Query hook that reads one batch: its `state`, its timings, the account's deposit, and the `actions` you can send now. Wraps [`VaultClient.readBatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#readbatch).
 
-The hook refetches when `nextChangeAt` passes and polls while the batch waits for a dispatch or a settlement, so a UI needs no timer of its own. See [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md) for what to show in each state.
+The query refetches when `nextChangeAt` passes. While the batch waits for a keeper, it polls every 15 seconds. It stops refetching once the batch is finalized or canceled.
 
 ## Import
 
@@ -24915,6 +24720,11 @@ function BatchRow({ batchRef, account }: { batchRef: BatchRef; account: Address 
 
 
 ## Parameters
+
+```ts
+import { type UseBatchOptions } from "@zama-fhe/react-sdk/vaults";
+import { type BatchRef } from "@zama-fhe/sdk/vaults";
+```
 
 ### batch
 
@@ -24965,7 +24775,7 @@ Poll at a fixed interval. Set to `false` or omit to disable polling.
 Re-fetch when the browser tab regains focus. Defaults to `true`.
 
 
-Passing `refetchInterval` replaces the automatic refetch on `nextChangeAt`.
+Passing `refetchInterval` replaces both the refetch on `nextChangeAt` and the polling while the batch waits for a keeper.
 
 ## Return Type
 
@@ -24973,21 +24783,7 @@ Passing `refetchInterval` replaces the automatic refetch on `nextChangeAt`.
 import { type Batch } from "@zama-fhe/sdk/vaults";
 ```
 
-The `data` property is `Batch | undefined`, `undefined` while loading or disabled. `Batch` is a union keyed on `state`, so check `state` before you read `cancelsAt` or `exchangeRate`.
-
-| Field            | Type                                                     | Description                                                                                                                                                         |
-| ---------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `state`          | `"pending" \| "dispatched" \| "finalized" \| "canceled"` | The batch's state.                                                                                                                                                  |
-| `dispatchableAt` | `bigint`                                                 | When anyone may dispatch it.                                                                                                                                        |
-| `cancelsAt`      | `bigint`                                                 | Every state but `pending`. From this time, finalizing cancels the batch instead of settling it.                                                                     |
-| `exchangeRate`   | `{ rate: bigint; decimals: number }`                     | `finalized` only. The batch's exchange rate.                                                                                                                        |
-| `paused`         | `boolean`                                                | Whether the batcher is paused.                                                                                                                                      |
-| `deposit`        | `EncryptedValue \| null`                                 | The account's encrypted deposit, when you passed `account`.                                                                                                         |
-| `actions`        | `("claim" \| "quit" \| "dispatch" \| "finalize")[]`      | What you can send now. Each maps to [`useClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md), [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md), [`useDispatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDispatch.md) or [`useFinalize`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useFinalize.md). |
-| `observedAt`     | `bigint`                                                 | The block timestamp of the read.                                                                                                                                    |
-| `nextChangeAt`   | `bigint \| null`                                         | The next chain time at which `actions` can change on its own.                                                                                                       |
-
-See [`Batch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#batch) for every field and when each action is listed.
+The `data` property is a [`Batch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#batch), or `undefined` while loading or disabled. `Batch` is a union keyed on `state`: narrow on it before reading `cancelsAt` or `exchangeRate`. Each action in `actions` maps to [`useClaim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md), [`useQuit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md), [`useDispatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDispatch.md) or [`useFinalize`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useFinalize.md).
 
 ### `data`
 
@@ -25048,7 +24844,6 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 - [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md): what to show and offer in each state
 - [useClaim](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md), [useQuit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md): get the money out
-- [VaultClient.readBatch](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#readbatch)
 
 ## useOpenBatches
 
@@ -25059,7 +24854,7 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 # useOpenBatches
 
-Reads the open batch of every vault of a group: the batch the next join lands in, when it can be dispatched, and whether the batcher is paused. Same read as [`VaultClient.readOpenBatches`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#readopenbatches). It needs no prior join, so use it on a deposit or redeem form.
+Query hook that reads the batch the next join lands in, for every vault of a group: when it can be dispatched, and whether its batcher is paused. Wraps [`VaultClient.readOpenBatches`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#readopenbatches).
 
 ## Import
 
@@ -25095,9 +24890,34 @@ function NextBatch() {
 ```
 
 
-`STABLE` is the group from [`useDeposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md#usage).
+{% code title="vaults.ts" %}
+
+```ts
+import { defineVault, defineVaultGroup } from "@zama-fhe/sdk/vaults";
+
+export const ALPHA = defineVault({
+  id: "alpha",
+  chainId: 1,
+  batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
+});
+
+export const BETA = defineVault({
+  id: "beta",
+  chainId: 1,
+  batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
+});
+
+export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
+```
+
+{% endcode %}
+
 
 ## Parameters
+
+```ts
+import { type JoinDirection, type Vault, type VaultGroup } from "@zama-fhe/sdk/vaults";
+```
 
 ### target
 
@@ -25144,7 +24964,7 @@ Poll at a fixed interval. Set to `false` or omit to disable polling.
 Re-fetch when the browser tab regains focus. Defaults to `true`.
 
 
-The query does not refetch on its own. Pass `refetchInterval` to keep a countdown fresh.
+The hook sets no `refetchInterval`.
 
 ## Return Type
 
@@ -25152,17 +24972,7 @@ The query does not refetch on its own. Pass `refetchInterval` to keep a countdow
 import { type OpenBatch } from "@zama-fhe/sdk/vaults";
 ```
 
-The `data` property is `OpenBatch[] | undefined`, one entry per vault of the group, in group order.
-
-| Field            | Type      | Description                                                                       |
-| ---------------- | --------- | --------------------------------------------------------------------------------- |
-| `vaultId`        | `string`  | The vault.                                                                        |
-| `chainId`        | `number`  | The group's chain.                                                                |
-| `batcher`        | `Address` | The vault's active batcher for the direction read.                                |
-| `batchId`        | `bigint`  | The open batch.                                                                   |
-| `dispatchableAt` | `bigint`  | When anyone may dispatch the batch, in chain seconds.                             |
-| `paused`         | `boolean` | Whether the batcher is paused. One paused batcher blocks every join of the group. |
-| `observedAt`     | `bigint`  | The block timestamp of the read.                                                  |
+The `data` property is an [`OpenBatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#openbatch) array, one per vault in group order, or `undefined` while loading.
 
 ### `data`
 
@@ -25221,9 +25031,8 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 ## Related
 
-- [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md#1-the-form): what the form shows
+- [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md#the-form): what the form shows
 - [useDeposit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useDeposit.md), [useRedeem](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useRedeem.md)
-- [VaultClient.readOpenBatches](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#readopenbatches)
 
 ## useClaim
 
@@ -25234,9 +25043,9 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 # useClaim
 
-Mutation hook that claims a finalized batch with the SDK's signer. The batch pays the account's deposit at the batch's exchange rate: shares for a deposit batch, the asset for a redeem batch. Same flow as [`VaultClient.claim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#claim).
+Mutation hook that claims a finalized batch with the SDK's signer: shares for a deposit batch, the asset for a redeem batch. Wraps [`VaultClient.claim`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#claim).
 
-Anyone may claim, and the output always goes to `account`, never to the sender. A keeper (an off-chain service that watches batches) normally claims for every depositor, so the user only waits. Offer this hook as a fallback when `claim` stays in a batch's `actions` longer than your app expects.
+Any account may send the claim. The output goes to `account`.
 
 ## Import
 
@@ -25271,6 +25080,10 @@ function ClaimButton({ batchRef, account }: { batchRef: BatchRef; account: Addre
 
 ## Parameters
 
+```ts
+import { type UseVaultMutationOptions } from "@zama-fhe/react-sdk/vaults";
+```
+
 ### `onSuccess`
 
 **Type:** `(data: TData, variables: TVariables, context: TContext) => void`
@@ -25298,11 +25111,23 @@ Callback fired before the mutation function runs. Return a context value to pass
 
 ## Mutation variables
 
-A `BatchRef` plus an optional `account`, passed to `mutate` / `mutateAsync`.
+A [`BatchRef`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#batchref) plus an optional `account`, passed to `mutate` / `mutateAsync`.
 
-### chainId, batcher, batchId
+### chainId
 
-`number`, `Address`, `bigint`
+`number`
+
+The chain of the batch to claim.
+
+### batcher
+
+`Address`
+
+The batcher of the batch to claim.
+
+### batchId
+
+`bigint`
 
 The batch to claim.
 
@@ -25312,18 +25137,16 @@ The batch to claim.
 
 The account to claim for. Defaults to the signer.
 
-A claimed deposit becomes an encrypted zero, and the batch still lists `claim` afterwards. Claiming again moves nothing.
-
 **Throws:**
 
 - `ChainMismatchError`: the wallet is not on the batch's chain.
-- `TransactionRevertedError`: the claim reverted, for example because the batch is not finalized yet. Check `actions` before you send.
+- `TransactionRevertedError`: the claim reverted, for example because the batch is not finalized yet.
 
 ## Return Type
 
 The `data` property (after a successful mutation) is a `TransactionResult`: `{ txHash, receipt }`.
 
-On success, the hook invalidates every vault read and every confidential balance.
+When the mutation settles, successful or not, the hook invalidates every vault read and every confidential balance.
 
 ### `mutate`
 
@@ -25378,7 +25201,6 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 - [useBatch](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatch.md): when `claim` is available
 - [useQuit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useQuit.md): take a deposit back instead
-- [VaultClient.claim](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#claim)
 
 ## useQuit
 
@@ -25389,13 +25211,11 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useQuit
 
-Mutation hook that takes the signer's deposit back from a pending batch, or from a canceled one. Same flow as [`VaultClient.quit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#quit).
-
-The contract refunds the sender, so only the depositor can quit. The wallet must be the account that joined.
+Mutation hook that takes the signer's deposit back from a pending or canceled batch. Wraps [`VaultClient.quit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#quit). The signer must be the account that joined.
 
 
 > [!WARNING]
-> **Quit every leg of the join, not only the chosen one.** A join sends a leg to every vault of its group, which is what hides the choice. A quit is public, so quitting only the chosen vault's batch shows which vault the user picked. To cancel a join in a group, quit the batch of every leg in `batches`: one wallet prompt each. A canceled batch rarely needs a quit: a keeper recovers the deposit for every depositor anyway.
+> **Quit every leg of a group join, not only the chosen one.** Quitting one leg shows which vault the user picked. See [A group hides which vault you chose](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/README.md#a-group-hides-which-vault-you-chose).
 
 
 ## Import
@@ -25435,6 +25255,10 @@ function CancelJoinButton({ batches }: { batches: readonly BatchRef[] }) {
 
 ## Parameters
 
+```ts
+import { type UseVaultMutationOptions } from "@zama-fhe/react-sdk/vaults";
+```
+
 ### `onSuccess`
 
 **Type:** `(data: TData, variables: TVariables, context: TContext) => void`
@@ -25462,26 +25286,36 @@ Callback fired before the mutation function runs. Return a context value to pass
 
 ## Mutation variables
 
-A `BatchRef`, passed to `mutate` / `mutateAsync`.
+A [`BatchRef`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#batchref), passed to `mutate` / `mutateAsync`.
 
-### chainId, batcher, batchId
+### chainId
 
-`number`, `Address`, `bigint`
+`number`
+
+The chain of the batch to quit.
+
+### batcher
+
+`Address`
+
+The batcher of the batch to quit.
+
+### batchId
+
+`bigint`
 
 The batch to quit.
-
-A quit deposit becomes an encrypted zero, and the batch still lists `quit` afterwards. Quitting again moves nothing.
 
 **Throws:**
 
 - `ChainMismatchError`: the wallet is not on the batch's chain.
-- `TransactionRevertedError`: the quit reverted, for example because the batch was dispatched in the meantime. Check `actions` before you send.
+- `TransactionRevertedError`: the quit reverted, for example because the batch was dispatched in the meantime.
 
 ## Return Type
 
 The `data` property (after a successful mutation) is a `TransactionResult`: `{ txHash, receipt }`.
 
-On success, the hook invalidates every vault read and every confidential balance.
+When the mutation settles, successful or not, the hook invalidates every vault read and every confidential balance.
 
 ### `mutate`
 
@@ -25536,7 +25370,6 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 - [useBatch](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatch.md): when `quit` is available
 - [useClaim](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md): claim a finalized batch instead
-- [VaultClient.quit](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#quit)
 
 ## useDispatch
 
@@ -25547,9 +25380,9 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useDispatch
 
-Mutation hook that dispatches a batcher's open batch with the SDK's signer: it closes the batch and starts its decryption. Same flow as [`VaultClient.dispatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#dispatch).
+Mutation hook that dispatches a batcher's open batch with the SDK's signer. Wraps [`VaultClient.dispatch`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#dispatch).
 
-Dispatch is permissionless, and a keeper (an off-chain service that watches batches) normally sends it. Most apps never need this hook. Use it as a fallback when a batch stays pending with `dispatch` in its `actions` longer than your app expects.
+It dispatches whatever batch is open on the batcher. Any account may send it.
 
 ## Import
 
@@ -25586,6 +25419,10 @@ function DispatchButton({ batchRef }: { batchRef: BatchRef }) {
 
 ## Parameters
 
+```ts
+import { type UseVaultMutationOptions } from "@zama-fhe/react-sdk/vaults";
+```
+
 ### `onSuccess`
 
 **Type:** `(data: TData, variables: TVariables, context: TContext) => void`
@@ -25613,7 +25450,23 @@ Callback fired before the mutation function runs. Return a context value to pass
 
 ## Mutation variables
 
-`{ chainId, batcher }`, passed to `mutate` / `mutateAsync`. The hook dispatches the batcher's open batch, whatever its id. Any account may send it.
+A `BatcherRef`, passed to `mutate` / `mutateAsync`.
+
+### chainId
+
+`number`
+
+The batcher's chain.
+
+### batcher
+
+`Address`
+
+The batcher whose open batch is dispatched.
+
+```tsx
+dispatch.mutate({ chainId: batchRef.chainId, batcher: batchRef.batcher });
+```
 
 **Throws:**
 
@@ -25624,7 +25477,7 @@ Callback fired before the mutation function runs. Return a context value to pass
 
 The `data` property (after a successful mutation) is a `TransactionResult`: `{ txHash, receipt }`.
 
-On success, the hook invalidates every vault read and every confidential balance.
+When the mutation settles, successful or not, the hook invalidates every vault read and every confidential balance.
 
 ### `mutate`
 
@@ -25679,7 +25532,6 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 - [useFinalize](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useFinalize.md): the next step after dispatch
 - [useBatch](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useBatch.md): when `dispatch` is available
-- [VaultClient.dispatch](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#dispatch)
 
 ## useFinalize
 
@@ -25690,11 +25542,9 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useFinalize
 
-Mutation hook that settles a dispatched batch with its publicly decrypted amount, using the SDK's signer. Same flow as [`VaultClient.finalize`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#finalize).
+Mutation hook that settles a dispatched batch with the SDK's signer. Wraps [`VaultClient.finalize`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#finalize).
 
-Finalizing is permissionless, and a keeper (an off-chain service that watches batches) normally sends it. Use this hook as a fallback when a batch stays dispatched longer than your app expects. Pick the delay yourself; the SDK does not decide when a keeper is late.
-
-Past the batch's callback deadline (`cancelsAt`), the same call **cancels** the batch instead of settling it. The user then gets the amount back with a quit. Label the button accordingly. A redeem batcher whose vault settles redemptions asynchronously is the exception: once it has placed its redemption request, it keeps settling past the deadline.
+Any account may send it. Past the batch's `cancelsAt`, the same call cancels the batch instead of settling it.
 
 ## Import
 
@@ -25730,6 +25580,10 @@ function SettleButton({ batchRef }: { batchRef: BatchRef }) {
 
 ## Parameters
 
+```ts
+import { type UseVaultMutationOptions } from "@zama-fhe/react-sdk/vaults";
+```
+
 ### `onSuccess`
 
 **Type:** `(data: TData, variables: TVariables, context: TContext) => void`
@@ -25757,7 +25611,29 @@ Callback fired before the mutation function runs. Return a context value to pass
 
 ## Mutation variables
 
-A `BatchRef` (`{ chainId, batcher, batchId }`), passed to `mutate` / `mutateAsync`. Any account may send it.
+A [`BatchRef`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#batchref), passed to `mutate` / `mutateAsync`.
+
+### chainId
+
+`number`
+
+The chain of the batch to finalize.
+
+### batcher
+
+`Address`
+
+The batcher of the batch to finalize.
+
+### batchId
+
+`bigint`
+
+The batch to finalize.
+
+```tsx
+finalize.mutate({ chainId: 1, batcher: "0xAlphaDeposit", batchId: 7n });
+```
 
 **Throws:**
 
@@ -25768,7 +25644,7 @@ A `BatchRef` (`{ chainId, batcher, batchId }`), passed to `mutate` / `mutateAsyn
 
 The `data` property (after a successful mutation) is a `TransactionResult`: `{ txHash, receipt }`.
 
-On success, the hook invalidates every vault read and every confidential balance.
+When the mutation settles, successful or not, the hook invalidates every vault read and every confidential balance.
 
 ### `mutate`
 
@@ -25823,7 +25699,6 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 - [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/building-a-ui.md#dispatched): when to offer it
 - [useClaim](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useClaim.md): claim once the batch is finalized
-- [VaultClient.finalize](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#finalize)
 
 ## Query keys
 
@@ -25963,7 +25838,7 @@ import { vaultQueryKeys, invalidateAfterVaultAction } from "@zama-fhe/sdk/vaults
 
 `.all` is a prefix of every vault key, so invalidating it clears every vault read at once. `.batch` takes the `BatchRef` and the account as `undefined` when they are not set yet.
 
-`invalidateAfterVaultAction(queryClient)` invalidates every vault read and every confidential balance. The vault mutation hooks call it on success. Call it yourself after you send prepared vault calls through your own pipeline.
+`invalidateAfterVaultAction(queryClient)` invalidates every vault read and every confidential balance. The vault mutation hooks call it when a mutation settles, successful or not. Call it yourself after you send prepared vault calls through your own pipeline.
 
 ## Common patterns
 

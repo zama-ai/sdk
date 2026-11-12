@@ -16,7 +16,7 @@ export function quitContract(batcher: Address, batchId: bigint) {
   return { address: batcher, abi: vaultBatcherAbi, functionName: "quit", args: [batchId] } as const;
 }
 
-/** Returns the contract config to refund `account`'s deposit in a canceled batch. Permissionless — the refund goes to `account`, not the caller. */
+/** Returns the contract config to refund `account`'s deposit in a canceled batch. Permissionless. */
 export function recoverContract(batcher: Address, batchId: bigint, account: Address) {
   return {
     address: batcher,

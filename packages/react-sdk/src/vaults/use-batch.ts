@@ -18,19 +18,11 @@ export interface UseBatchOptions extends Omit<
 }
 
 /**
- * One batch's state, timings, and the actions that can be sent for it now.
- * Refetches when `nextChangeAt` passes and polls while the batch waits for a
- * dispatch or a settlement, so a UI needs no timer of its own.
+ * One batch's state, timings, and the actions that can be sent for it now. Refetches when
+ * `nextChangeAt` passes and polls while the batch waits for a dispatch or a settlement. Pass
+ * `account` to read its deposit and list `claim` and `quit` for it.
  *
- * @param batch - The batch to read. The query stays disabled while `undefined`.
- * @returns The query result; `data` is the {@link Batch}.
- *
- * @example
- * ```tsx
- * const { data: batch } = useBatch(ref, { account });
- * const claim = useClaim();
- * {batch?.actions.includes("claim") && <Button onClick={() => claim.mutate(ref)}>Claim</Button>}
- * ```
+ * @param batch - The query stays disabled while this is `undefined`.
  */
 export function useBatch(batch: BatchRef | undefined, options?: UseBatchOptions) {
   const { account, enabled = true, ...rest } = options ?? {};

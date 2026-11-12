@@ -1,8 +1,8 @@
 import { getAddress, type Address } from "viem";
+// Keep the TanStack imports type-only, so the vaults barrel runs without TanStack Query.
 import type { MutationFactoryOptions, QueryFactoryOptions } from "../../query/factory-types";
 import type { QueryClientLike } from "../../query/invalidation";
 import { zamaQueryKeys } from "../../query/query-keys";
-import { filterQueryOptions } from "../../query/utils";
 import type { TransactionResult } from "../../types";
 import { assertNonNullable } from "../../utils/assertions";
 import type { VaultClient } from "../client";
@@ -21,11 +21,12 @@ import type {
 /** How often a batch waiting for a keeper is read again. */
 const KEEPER_POLL_MS = 15_000;
 
-/** The longest wait between reads. A timer delay above 2^31 - 1 ms overflows and fires at once. */
+// A timer delay above 2^31 - 1 ms overflows and fires at once.
 const MAX_REFETCH_MS = 60 * 60 * 1000;
 
-/** Query keys for the vaults module. `all` is a prefix of every vault key. */
+/** Query keys for the vaults module. */
 export const vaultQueryKeys = {
+  /** A prefix of every vault key. */
   all: ["zama.vault"] as const,
   batch: (batch: BatchRef | undefined, account: Address | undefined) =>
     [
@@ -54,21 +55,15 @@ export const vaultQueryKeys = {
 
 /** Configuration for {@link batchQueryOptions}. */
 export interface BatchQueryConfig {
-  /** The batch to read. The query stays disabled until it is set. */
+  /** The query is disabled while this is `undefined`. */
   batch?: BatchRef;
   /** Read this account's deposit, and list `claim` and `quit` for it. */
   account?: Address;
-  /** Additional TanStack Query options merged into the generated query. */
-  query?: Record<string, unknown>;
+  /** Set `enabled` to `false` to keep the query from running. */
+  query?: { readonly enabled?: boolean };
 }
 
-/**
- * When to read a batch again: one second past its next chain-time edge, or
- * on a poll while it waits for someone else's transaction, which no chain
- * time predicts. A pending batch waits for a dispatch once it is old enough;
- * a dispatched one waits for a settlement from the start, so it is polled
- * even before its callback deadline.
- */
+/** How long to wait before reading a batch again, or `false` once it is finalized or canceled. */
 function batchRefetchInterval(read: Batch | undefined): number | false {
   if (read === undefined || read.state === "finalized" || read.state === "canceled") {
     return false;
@@ -80,33 +75,32 @@ function batchRefetchInterval(read: Batch | undefined): number | false {
     Number(read.nextChangeAt - read.observedAt) * 1000 + 1000,
     MAX_REFETCH_MS,
   );
+  // A dispatched batch waits for a settlement from the start, so it polls before its deadline too.
   return read.state === "dispatched" ? Math.min(untilEdge, KEEPER_POLL_MS) : untilEdge;
 }
 
 /**
- * Query options over {@link VaultClient.readBatch}. Refetches when the
- * batch's `nextChangeAt` passes, and polls while it waits for a dispatch or a
- * settlement. Pass your own `refetchInterval` to `useQuery` to replace it.
+ * Query options that read one batch with {@link VaultClient.readBatch}. They refetch when the
+ * batch's `nextChangeAt` passes, and poll while it waits for a keeper; a `refetchInterval` passed
+ * to `useQuery` replaces both.
  */
 export function batchQueryOptions(
   client: VaultClient,
   config: BatchQueryConfig = {},
 ): QueryFactoryOptions<Batch, Error, Batch, ReturnType<typeof vaultQueryKeys.batch>> {
-  const queryOpts = config.query ?? {};
   const { batch, account } = config;
   return {
     refetchInterval: (query) => batchRefetchInterval(query.state.data),
-    ...filterQueryOptions(queryOpts),
     queryKey: vaultQueryKeys.batch(batch, account),
     queryFn: async () => {
       assertNonNullable(batch, "batchQueryOptions: batch");
       return client.readBatch(batch, account);
     },
-    enabled: batch !== undefined && queryOpts.enabled !== false,
+    enabled: batch !== undefined && config.query?.enabled !== false,
   };
 }
 
-/** Picks a group, or a vault on its own, in a config or in mutation variables. */
+/** Picks a group, or a vault on its own. */
 export type VaultSelection =
   | { readonly group: VaultGroup; readonly vault?: never }
   | { readonly vault: Vault; readonly group?: never };
@@ -117,13 +111,11 @@ function selected(selection: VaultSelection): Vault | VaultGroup {
 
 /** Configuration for {@link openBatchesQueryOptions}. */
 export type OpenBatchesQueryConfig = VaultSelection & {
-  /** Whether to read the deposit or the redeem batchers. */
+  /** Whether the deposit or the redeem batchers are read. */
   direction: JoinDirection;
-  /** Additional TanStack Query options merged into the generated query. */
-  query?: Record<string, unknown>;
 };
 
-/** Query options over {@link VaultClient.readOpenBatches}. */
+/** Query options that read the open batch of every vault of a group, or of a vault on its own. */
 export function openBatchesQueryOptions(
   client: VaultClient,
   config: OpenBatchesQueryConfig,
@@ -135,27 +127,19 @@ export function openBatchesQueryOptions(
 > {
   const target = selected(config);
   return {
-    ...filterQueryOptions(config.query ?? {}),
     queryKey: vaultQueryKeys.openBatches(target, config.direction),
     queryFn: async () => client.readOpenBatches(target, config.direction),
   };
 }
 
-/**
- * Invalidates what a vault transaction changes: every vault read and every
- * confidential balance. Call it after sending prepared calls yourself; the
- * React mutation hooks call it for you.
- */
+/** Invalidates every vault read and every confidential balance. */
 export function invalidateAfterVaultAction(queryClient: QueryClientLike): void {
   void queryClient.invalidateQueries({ queryKey: vaultQueryKeys.all });
   void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
   void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalances.all });
 }
 
-/**
- * Variables for {@link depositMutationOptions} and {@link redeemMutationOptions}:
- * a group and the vault of it the amount goes to, or a vault on its own.
- */
+/** An amount for a vault of a group, picked by id, or for a vault on its own. */
 export type JoinVariables<TGroup extends VaultGroup = VaultGroup> = Pick<JoinInput, "amount"> &
   SendJoinOptions &
   (

@@ -5,11 +5,9 @@ description: Mutation hook that settles a dispatched vault batch.
 
 # useFinalize
 
-Mutation hook that settles a dispatched batch with its publicly decrypted amount, using the SDK's signer. Same flow as [`VaultClient.finalize`](../sdk/VaultClient.md#finalize).
+Mutation hook that settles a dispatched batch with the SDK's signer. Wraps [`VaultClient.finalize`](../sdk/VaultClient.md#finalize).
 
-Finalizing is permissionless, and a keeper (an off-chain service that watches batches) normally sends it. Use this hook as a fallback when a batch stays dispatched longer than your app expects. Pick the delay yourself; the SDK does not decide when a keeper is late.
-
-Past the batch's callback deadline (`cancelsAt`), the same call **cancels** the batch instead of settling it. The user then gets the amount back with a quit. Label the button accordingly. A redeem batcher whose vault settles redemptions asynchronously is the exception: once it has placed its redemption request, it keeps settling past the deadline.
+Any account may send it. Past the batch's `cancelsAt`, the same call cancels the batch instead of settling it.
 
 ## Import
 
@@ -47,11 +45,37 @@ function SettleButton({ batchRef }: { batchRef: BatchRef }) {
 
 ## Parameters
 
+```ts
+import { type UseVaultMutationOptions } from "@zama-fhe/react-sdk/vaults";
+```
+
 {% include ".gitbook/includes/mutation-options.md" %}
 
 ## Mutation variables
 
-A `BatchRef` (`{ chainId, batcher, batchId }`), passed to `mutate` / `mutateAsync`. Any account may send it.
+A [`BatchRef`](../sdk/VaultClient.md#batchref), passed to `mutate` / `mutateAsync`.
+
+### chainId
+
+`number`
+
+The chain of the batch to finalize.
+
+### batcher
+
+`Address`
+
+The batcher of the batch to finalize.
+
+### batchId
+
+`bigint`
+
+The batch to finalize.
+
+```tsx
+finalize.mutate({ chainId: 1, batcher: "0xAlphaDeposit", batchId: 7n });
+```
 
 **Throws:**
 
@@ -62,7 +86,7 @@ A `BatchRef` (`{ chainId, batcher, batchId }`), passed to `mutate` / `mutateAsyn
 
 The `data` property (after a successful mutation) is a `TransactionResult`: `{ txHash, receipt }`.
 
-On success, the hook invalidates every vault read and every confidential balance.
+When the mutation settles, successful or not, the hook invalidates every vault read and every confidential balance.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 
@@ -70,4 +94,3 @@ On success, the hook invalidates every vault read and every confidential balance
 
 - [Building a vault UI](../../guides/vaults/building-a-ui.md#dispatched): when to offer it
 - [useClaim](./useClaim.md): claim once the batch is finalized
-- [VaultClient.finalize](../sdk/VaultClient.md#finalize)

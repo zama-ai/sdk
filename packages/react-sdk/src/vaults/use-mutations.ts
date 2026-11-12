@@ -30,8 +30,6 @@ export type UseVaultMutationOptions<TData, TVariables, TContext = unknown> = Omi
   "mutationKey" | "mutationFn"
 >;
 
-// Every vault mutation invalidates the vault reads and balances it may have changed, on error too:
-// a join that mined but could not be confirmed, or operator approvals mined before a failed join, changed state.
 function useVaultMutation<TData, TVariables, TContext>(
   factory: (client: VaultClient) => MutationFactoryOptions<readonly unknown[], TVariables, TData>,
   options: UseVaultMutationOptions<TData, TVariables, TContext> | undefined,
@@ -40,6 +38,7 @@ function useVaultMutation<TData, TVariables, TContext>(
   return useMutation({
     ...factory(client),
     ...options,
+    // Invalidates on error too: a failed join may still have mined its approvals or the join itself.
     onSettled: (data, error, variables, onMutateResult, context) => {
       invalidateAfterVaultAction(context.client);
       return options?.onSettled?.(data, error, variables, onMutateResult, context);
@@ -47,23 +46,17 @@ function useVaultMutation<TData, TVariables, TContext>(
   });
 }
 
-/**
- * Deposit with the SDK's signer, into a group or a vault on its own. Returns
- * the batch each leg landed in.
- *
- * @example
- * ```tsx
- * const deposit = useDeposit({ onSuccess: ({ batches }) => save(batches) });
- * deposit.mutate({ group: STABLE, vaultId: "beta", amount: 1_000_000n });
- * ```
- */
+/** Deposit with the SDK's signer, into a group or a vault on its own. */
 export function useDeposit<TContext = unknown>(
   options?: UseVaultMutationOptions<JoinOutcome, JoinVariables, TContext>,
 ) {
   return useVaultMutation(depositMutationOptions, options);
 }
 
-/** Redeem with the SDK's signer. In a group of several vaults, the wallet is first asked for each operator approval the account lacks. */
+/**
+ * Redeem with the SDK's signer. For a group, the wallet is first asked for each operator approval
+ * the account lacks.
+ */
 export function useRedeem<TContext = unknown>(
   options?: UseVaultMutationOptions<JoinOutcome, JoinVariables, TContext>,
 ) {
@@ -81,7 +74,10 @@ export function useClaim<TContext = unknown>(
   return useVaultMutation(claimMutationOptions, options);
 }
 
-/** Quit a pending or canceled batch with the SDK's signer, which must be the depositor. */
+/**
+ * Quit a pending or canceled batch with the SDK's signer, which must be the depositor. After a
+ * group join, quit every leg of it: quitting only the chosen one shows which vault was chosen.
+ */
 export function useQuit<TContext = unknown>(
   options?: UseVaultMutationOptions<TransactionResult, BatchRef, TContext>,
 ) {

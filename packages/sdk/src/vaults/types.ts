@@ -4,25 +4,22 @@ import type { EncryptedValue } from "../relayer/types";
 /** Whether a join deposits the confidential asset or redeems a vault's confidential shares. */
 export type JoinDirection = "deposit" | "redeem";
 
-/**
- * A batch's lifecycle state, in the contract's own words:
- * `pending` → `dispatched` → `finalized`, or `canceled`.
- */
+/** A batch's state, named as the batcher contract names it. */
 export type BatchState = "pending" | "dispatched" | "finalized" | "canceled";
 
-/** One EVM call, encoded. Vault calls never carry value. */
+/** One EVM call, encoded. */
 export interface Call {
   /** The contract called. */
   readonly to: Address;
   /** The encoded calldata. */
   readonly data: Hex;
-  /** Always zero. */
+  /** Vault calls never carry value. */
   readonly value: 0n;
 }
 
-/** One vault's part of a join. Every vault of a group gets one, the unchosen ones with zero. */
+/** One vault's part of a join. */
 export interface VaultLeg {
-  /** The vault. */
+  /** The vault this leg joins. */
   readonly vaultId: string;
   /** The vault's active batcher when the join was prepared. */
   readonly batcher: Address;
@@ -32,13 +29,13 @@ export interface VaultLeg {
   readonly amount: bigint;
 }
 
-/** An ERC-7984 operator approval a join relies on, sent to the token it is on. Present only when the account lacks it. */
+/** An ERC-7984 operator approval a join relies on, sent to the token it is on. */
 export interface OperatorApprovalCall extends Call {
   /** Tells an operator approval from a join without decoding the calldata. */
   readonly kind: "operatorApproval";
   /** The vault whose token the approval is on. */
   readonly vaultId: string;
-  /** The approved operator: the router. */
+  /** The router. */
   readonly operator: Address;
   /** When the approval expires, in chain seconds. */
   readonly until: bigint;
@@ -48,24 +45,22 @@ export interface OperatorApprovalCall extends Call {
 export interface JoinCall extends Call {
   /** Tells a join from an operator approval without decoding the calldata. */
   readonly kind: "join";
-  /** The leg this call funds. A router call funds every leg, and names the chosen one. */
+  /** The leg this call funds; for a router call, the chosen vault's leg. */
   readonly leg: VaultLeg;
 }
 
-/** A call of a prepared join. `kind` tells an operator approval from a join without decoding the calldata. */
+/** A call of a prepared join. */
 export type VaultCall = OperatorApprovalCall | JoinCall;
 
 /**
  * How a join reaches the batchers.
  *
- * - `"router"`: one call through the router, after any operator approvals it needs.
+ * - `"router"`: one call through the router.
  * - `"direct"`: one call per leg, straight to each batcher, with no operator approval.
- *   A vault joined on its own always takes it. In a group, send the calls in one
- *   atomic bundle: joining some vaults and not others shows which vault was chosen.
  */
 export type JoinRoute = "direct" | "router";
 
-/** A join built but not sent. Plain data: it survives `structuredClone`, but its bigints need a JSON replacer. */
+/** A join built but not sent. */
 export interface PreparedJoin {
   /** Whether it deposits or redeems. */
   readonly direction: JoinDirection;
@@ -84,9 +79,8 @@ export interface PreparedJoin {
   /** Every vault joined, in group order, the zero legs included. */
   readonly legs: readonly [VaultLeg, ...VaultLeg[]];
   /**
-   * Every call in send order: the operator approvals the account lacks, in
-   * leg order, then the joins. With `route: "direct"` in a group of more than
-   * one, send the joins as one atomic bundle.
+   * Every call in send order: the operator approvals the account lacks, in leg
+   * order, then the joins.
    */
   readonly calls: readonly [VaultCall, ...VaultCall[]];
 }
@@ -95,7 +89,7 @@ export interface PreparedJoin {
 export interface JoinInput {
   /** The account that will send the calls. */
   readonly account: Address;
-  /** Plaintext; encrypted before it leaves the SDK. For a redeem, in shares. */
+  /** Plaintext, in the asset for a deposit and in shares for a redeem. */
   readonly amount: bigint;
 }
 
@@ -107,11 +101,7 @@ export interface GroupJoinInput<TVaultId extends string = string> extends JoinIn
 
 /** Options for `prepareDeposit` and `prepareRedeem`. */
 export interface JoinOptions {
-  /**
-   * Skip the balance check. It runs by default and decrypts as the signer, so
-   * a join prepared for another account, or with no signer, must skip it and
-   * check the balance itself. A paused batcher is always checked.
-   */
+  /** Skip the balance check, which decrypts as the signer. A paused batcher is always checked. */
   readonly skipBalanceCheck?: boolean;
 }
 
@@ -121,22 +111,22 @@ export interface GroupJoinOptions extends JoinOptions {
   readonly route?: JoinRoute;
 }
 
-/** A batch on one batcher. Batchers rotate, so a batch is identified by its batcher, not its vault. */
+/** A batch on one batcher. */
 export interface BatchRef {
   /** The chain the batcher is on. */
   readonly chainId: number;
-  /** The batcher. */
+  /** The batcher the batch is on. */
   readonly batcher: Address;
-  /** The batch. */
+  /** The batch's id on that batcher. */
   readonly batchId: bigint;
 }
 
-/** A batcher on one chain. A dispatch takes it, because it acts on the batcher's open batch. */
+/** A batcher on one chain. */
 export type BatcherRef = Pick<BatchRef, "chainId" | "batcher">;
 
 /** Options for `deposit` and `redeem`. */
 export interface SendJoinOptions {
-  /** Skip the balance check, which runs by default. A paused batcher is always checked. */
+  /** Skip the balance check. A paused batcher is always checked. */
   readonly skipBalanceCheck?: boolean;
   /** Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. */
   readonly onJoinSubmitted?: (txHash: Hex) => void;
@@ -146,29 +136,25 @@ export interface SendJoinOptions {
 export interface PreparedFinalize extends BatchRef {
   /** The publicly decrypted amount the batch's unwrap released. */
   readonly unwrapAmountCleartext: bigint;
-  /** The proof of that decryption, which the batcher verifies. */
+  /** The proof of that decryption. */
   readonly decryptionProof: Hex;
   /** The `dispatchBatchCallback` call. */
   readonly call: Call;
 }
 
-/** What can be sent for a batch now. */
+/** An operation that can be sent for a batch. */
 export type BatchAction = "claim" | "quit" | "dispatch" | "finalize";
 
 interface BatchBase extends BatchRef {
-  /** When the batch opened. */
+  /** The time the batch opened, in chain seconds. */
   readonly createdAt: bigint;
-  /** When anyone may dispatch it, pinned when it opened. */
+  /** The time from which anyone may dispatch it, in chain seconds, fixed when it opened. */
   readonly dispatchableAt: bigint;
-  /** Whether the batcher is paused. A paused batcher takes no join and no dispatch. */
+  /** Whether the batcher is paused. */
   readonly paused: boolean;
-  /** The account's encrypted deposit, or `null` when the read named no account. A claim or quit leaves an encrypted zero. */
+  /** The account's encrypted deposit, or `null` when no account was given. */
   readonly deposit: EncryptedValue | null;
-  /**
-   * What can be sent now. `quit` needs the depositor as sender; the others are
-   * permissionless, and a keeper normally sends them. Without an account, only
-   * `dispatch` and `finalize` are listed.
-   */
+  /** What can be sent at `observedAt`. */
   readonly actions: readonly BatchAction[];
   /** The block timestamp the read was made at. */
   readonly observedAt: bigint;
@@ -177,30 +163,30 @@ interface BatchBase extends BatchRef {
 }
 
 interface DispatchedTimes {
-  /** When it was dispatched. */
+  /** When it was dispatched, in chain seconds. */
   readonly dispatchedAt: bigint;
-  /** From then on, finalizing cancels it instead of settling it. */
+  /** The time after which the batch can no longer settle, in chain seconds. */
   readonly cancelsAt: bigint;
 }
 
-/** One batch as read from chain, with the fields its state has. Timestamps are chain seconds. */
+/** One batch as read from chain. */
 export type Batch =
   | (BatchBase & { readonly state: "pending" })
   | (BatchBase & DispatchedTimes & { readonly state: "dispatched" | "canceled" })
   | (BatchBase &
       DispatchedTimes & {
         readonly state: "finalized";
-        /** A claim pays `deposit * rate / 10 ** decimals`, rounded down. */
+        /** The rate as a fixed-point number: `rate / 10 ** decimals`. */
         readonly exchangeRate: { readonly rate: bigint; readonly decimals: number };
       });
 
 /** The open batch of one vault's active batcher. */
 export interface OpenBatch extends BatchRef {
-  /** The vault. */
+  /** The vault whose open batch this is. */
   readonly vaultId: string;
-  /** When anyone may dispatch the batch. */
+  /** The time from which anyone may dispatch the batch, in chain seconds. */
   readonly dispatchableAt: bigint;
-  /** A paused batcher takes no join and no dispatch. */
+  /** Whether the batcher is paused. */
   readonly paused: boolean;
   /** The block timestamp the read was made at. */
   readonly observedAt: bigint;

@@ -2,7 +2,7 @@ import { getAddress, isAddress, type Address } from "viem";
 import { ConfigurationError } from "../errors";
 import type { JoinDirection } from "./types";
 
-/** The most vaults a group may hold; every join sends a leg to each of them. */
+/** The most vaults a group may hold. */
 export const MAX_GROUP_VAULTS = 8;
 
 /** A batcher that took joins while its `currentBatchId` was at most `lastBatchId`. */
@@ -13,14 +13,7 @@ export interface RetiredBatcher {
   readonly lastBatchId: bigint;
 }
 
-/**
- * Every batcher a vault has had in one direction, for a batcher upgrade. A
- * join goes to the first retired batcher whose `currentBatchId` is still at
- * most its `lastBatchId`, else to `latest`, so the switch happens when the
- * last configured batch is dispatched, never on the clock. A retired
- * batcher's batches can still be read, claimed and quit, so never remove an
- * entry.
- */
+/** Every batcher a vault has had in one direction. */
 export interface BatcherHistory {
   /** Oldest first. */
   readonly retired: readonly RetiredBatcher[];
@@ -28,12 +21,7 @@ export interface BatcherHistory {
   readonly latest: Address;
 }
 
-/**
- * One vault: its chain and the batcher each direction joins. Plain data,
- * written once and joined on its own or put in any number of groups. Nothing
- * is checked when it is defined: the client checks what a join or a read
- * relies on when it runs, and reads each batcher's token from chain.
- */
+/** One vault: its chain and the batcher each direction joins. */
 export interface Vault<TVaultId extends string = string> {
   /** Names the vault in errors and query keys, and is what a group join passes as `vaultId`. */
   readonly id: TVaultId;
@@ -43,18 +31,13 @@ export interface Vault<TVaultId extends string = string> {
   readonly batchers: Readonly<Record<JoinDirection, Address | BatcherHistory>>;
 }
 
-/**
- * Vaults that take deposits in one confidential asset, joined together so
- * the chain cannot tell which one was chosen. Two vaults at least: a lone
- * vault has nothing to hide its leg among, so it is joined on its own.
- */
+/** Vaults that take deposits in one confidential asset, joined together. */
 export interface VaultGroup<TGroupId extends string = string, TVaultId extends string = string> {
   /** Names the group in errors and query keys. */
   readonly id: TGroupId;
   /**
-   * The vaults, in leg order, up to {@link MAX_GROUP_VAULTS}. Never reorder
-   * them once users have joined. They must be on one chain, and their deposit
-   * batchers must take the same confidential asset.
+   * The vaults, in leg order, up to {@link MAX_GROUP_VAULTS}. They must be on one
+   * chain, and their deposit batchers must take the same confidential asset.
    */
   readonly vaults: readonly [Vault<TVaultId>, Vault<TVaultId>, ...Vault<TVaultId>[]];
 }
@@ -65,7 +48,7 @@ export type VaultIdOf<TGroup extends VaultGroup> =
 
 /**
  * Define a vault, keeping its id as a literal type. Returns `vault` as is and
- * checks nothing, like viem's `defineChain`.
+ * checks nothing.
  *
  * @example
  * ```ts
@@ -88,6 +71,16 @@ export function defineVault<const TVaultId extends string>(
  *
  * @example
  * ```ts
+ * const ALPHA = defineVault({
+ *   id: "alpha",
+ *   chainId: 1,
+ *   batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
+ * });
+ * const BETA = defineVault({
+ *   id: "beta",
+ *   chainId: 1,
+ *   batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
+ * });
  * export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
  * ```
  */

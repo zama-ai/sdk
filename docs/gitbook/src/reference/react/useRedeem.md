@@ -5,13 +5,9 @@ description: Mutation hook that redeems confidential vault shares and returns th
 
 # useRedeem
 
-Mutation hook that redeems a plaintext amount of a vault's shares with the SDK's signer. It checks the share balance, encrypts the amount, and joins the open redeem batch of every vault of the group: the chosen vault with the amount, the others with an encrypted zero. Same flow as [`VaultClient.redeem`](../sdk/VaultClient.md#redeem).
+Mutation hook that redeems a vault's shares with the SDK's signer. Wraps [`VaultClient.redeem`](../sdk/VaultClient.md#redeem). [`useBatch`](./useBatch.md) reads each returned batch.
 
-Store the returned `batches` and follow them with [`useBatch`](./useBatch.md). Claiming a finalized redemption pays out the asset.
-
-{% hint style="warning" %}
-**In a group of N vaults, a first redemption can take up to N + 1 wallet prompts.** The router pulls each vault's share token, so the account first approves it as operator on every share token it has not approved it on yet, then sends the join. An operator approval lasts a year, so later redemptions ask for none. Tell users before they start. See [Wallet prompts](../../guides/vaults/advanced.md#wallet-prompts).
-{% endhint %}
+In a group, the mutation first asks the wallet for each operator approval of the router that the account lacks. See [Wallet prompts](../../guides/vaults/advanced.md#wallet-prompts).
 
 ## Import
 
@@ -45,26 +41,29 @@ function RedeemButton() {
 {% endtab %}
 {% endtabs %}
 
-`STABLE` is the group from [`useDeposit`](./useDeposit.md#usage).
+{% include ".gitbook/includes/vaults-config.md" %}
+
+`saveBatches` stands in for your own storage. See [Store the batches](../../guides/vaults/deposits.md#4-store-the-batches).
 
 ## Parameters
+
+```ts
+import { type UseVaultMutationOptions } from "@zama-fhe/react-sdk/vaults";
+```
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
 ## Mutation variables
 
-Same as [`useDeposit`](./useDeposit.md#mutation-variables): `group` and `vaultId` or `vault`, `amount`, `skipBalanceCheck` and `onJoinSubmitted`. The `amount` is in shares, not assets.
+Same as [`useDeposit`](./useDeposit.md#mutation-variables): `group` and `vaultId` or `vault`, `amount`, `skipBalanceCheck` and `onJoinSubmitted`. The `amount` is in shares, not assets. As in `useDeposit`, `vaultId` is typed as `string`.
 
 **Throws:** as [`useDeposit`](./useDeposit.md#mutation-variables).
 
 ## Return Type
 
-The `data` property (after a successful mutation) is a `JoinOutcome`:
+The `data` property (after a successful mutation) is a [`JoinOutcome`](../sdk/VaultClient.md#joinoutcome): `batches`, the batch each leg landed in, and `txHashes`, approvals first.
 
-- **`batches`**: the batch each leg landed in, in group order.
-- **`txHashes`**: every transaction sent, operator approvals first.
-
-On success, the hook invalidates every vault read and every confidential balance.
+When the mutation settles, successful or not, the hook invalidates every vault read and every confidential balance.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 
@@ -72,5 +71,4 @@ On success, the hook invalidates every vault read and every confidential balance
 
 - [useDeposit](./useDeposit.md): the deposit direction
 - [useBatch](./useBatch.md): follow each batch
-- [VaultClient.redeem](../sdk/VaultClient.md#redeem)
-- [Advanced vault integration](../../guides/vaults/advanced.md)
+- [Vault deposits and redemptions](../../guides/vaults/deposits.md#redeem)

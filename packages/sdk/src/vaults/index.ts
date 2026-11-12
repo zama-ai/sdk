@@ -38,6 +38,4 @@ export type {
   VaultLeg,
 } from "./types";
 
-// Importing this barrel does not require TanStack Query to be installed: the
-// TanStack types below are type-only imports, erased at compile time.
 export * from "./query";

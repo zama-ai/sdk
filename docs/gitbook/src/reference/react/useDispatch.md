@@ -5,9 +5,9 @@ description: Mutation hook that dispatches a vault batcher's open batch.
 
 # useDispatch
 
-Mutation hook that dispatches a batcher's open batch with the SDK's signer: it closes the batch and starts its decryption. Same flow as [`VaultClient.dispatch`](../sdk/VaultClient.md#dispatch).
+Mutation hook that dispatches a batcher's open batch with the SDK's signer. Wraps [`VaultClient.dispatch`](../sdk/VaultClient.md#dispatch).
 
-Dispatch is permissionless, and a keeper (an off-chain service that watches batches) normally sends it. Most apps never need this hook. Use it as a fallback when a batch stays pending with `dispatch` in its `actions` longer than your app expects.
+It dispatches whatever batch is open on the batcher. Any account may send it.
 
 ## Import
 
@@ -46,11 +46,31 @@ function DispatchButton({ batchRef }: { batchRef: BatchRef }) {
 
 ## Parameters
 
+```ts
+import { type UseVaultMutationOptions } from "@zama-fhe/react-sdk/vaults";
+```
+
 {% include ".gitbook/includes/mutation-options.md" %}
 
 ## Mutation variables
 
-`{ chainId, batcher }`, passed to `mutate` / `mutateAsync`. The hook dispatches the batcher's open batch, whatever its id. Any account may send it.
+A `BatcherRef`, passed to `mutate` / `mutateAsync`.
+
+### chainId
+
+`number`
+
+The batcher's chain.
+
+### batcher
+
+`Address`
+
+The batcher whose open batch is dispatched.
+
+```tsx
+dispatch.mutate({ chainId: batchRef.chainId, batcher: batchRef.batcher });
+```
 
 **Throws:**
 
@@ -61,7 +81,7 @@ function DispatchButton({ batchRef }: { batchRef: BatchRef }) {
 
 The `data` property (after a successful mutation) is a `TransactionResult`: `{ txHash, receipt }`.
 
-On success, the hook invalidates every vault read and every confidential balance.
+When the mutation settles, successful or not, the hook invalidates every vault read and every confidential balance.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 
@@ -69,4 +89,3 @@ On success, the hook invalidates every vault read and every confidential balance
 
 - [useFinalize](./useFinalize.md): the next step after dispatch
 - [useBatch](./useBatch.md): when `dispatch` is available
-- [VaultClient.dispatch](../sdk/VaultClient.md#dispatch)

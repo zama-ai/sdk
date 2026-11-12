@@ -7,18 +7,15 @@ import { ZamaError, ZamaErrorCode } from "./base";
 export interface VaultBatcherPausedDetails {
   /** The batcher that reported `paused()`. */
   readonly batcher: Address;
-  /** The vault whose leg needs it. */
+  /** The vault whose leg needs the batcher. */
   readonly vaultId: string;
 }
 
-/**
- * A batcher a join needs is paused, so the join would revert. Pausing gates
- * `join` and `dispatchBatch`; quitting and claiming on it still work.
- */
+/** A batcher that a join needs is paused. */
 export class VaultBatcherPausedError extends ZamaError {
   /** The batcher that reported `paused()`. */
   readonly batcher: Address;
-  /** The vault whose leg needs it. */
+  /** The vault whose leg needs the batcher. */
   readonly vaultId: string;
 
   constructor(message: string, details: VaultBatcherPausedDetails, options?: ErrorOptions) {
@@ -39,10 +36,7 @@ export interface VaultBatchNotDispatchedDetails {
   readonly state: BatchState;
 }
 
-/**
- * A batch cannot be finalized because it is not dispatched: it is still
- * pending, or a keeper or anyone else already settled or canceled it.
- */
+/** The batch to finalize is not dispatched. */
 export class VaultBatchNotDispatchedError extends ZamaError {
   /** The batcher the batch belongs to. */
   readonly batcher: Address;
@@ -71,9 +65,7 @@ export interface VaultJoinUnconfirmedDetails {
 }
 
 /**
- * A join was mined, but the SDK could not match a `Joined` log to every leg,
- * so it cannot tell which batch each leg landed in. A router join is all-or-nothing, so
- * every leg most likely joined; look the transaction up before joining again.
+ * A join was mined, but the SDK could not match a `Joined` log to every leg.
  */
 export class VaultJoinUnconfirmedError extends ZamaError {
   /** The mined join transaction. */

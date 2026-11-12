@@ -54,7 +54,9 @@ export type BatcherRef = Pick<BatchRef, "chainId" | "batcher">;
 export interface BatchQueryConfig {
     account?: Address;
     batch?: BatchRef;
-    query?: Record<string, unknown>;
+    query?: {
+        readonly enabled?: boolean;
+    };
 }
 
 // Warning: (ae-forgotten-export) The symbol "QueryFactoryOptions" needs to be exported by the entry point index.d.ts
@@ -178,7 +180,6 @@ export interface OpenBatch extends BatchRef {
 // @public
 export type OpenBatchesQueryConfig = VaultSelection & {
     direction: JoinDirection;
-    query?: Record<string, unknown>;
 };
 
 // @public

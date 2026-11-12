@@ -2,13 +2,12 @@ import { encodeAbiParameters, getAbiItem, type Address, type Hex } from "viem";
 import type { EncryptedValue } from "../../relayer/types";
 import { vaultRouterAbi } from "../abi/vault-router.abi";
 
-/** One vault's share of a fan-out, its amount encrypted against the router. */
+/** One vault's share of a fan-out. */
 export interface EncryptedAllocationLeg {
-  /** The batcher this leg joins. */
   readonly batcher: Address;
   /** The confidential token this leg spends. */
   readonly token: Address;
-  /** The leg's amount, encrypted with the router as the verifying contract. */
+  /** Encrypted with the router as the verifying contract. */
   readonly amount: EncryptedValue;
 }
 
@@ -26,8 +25,7 @@ export function routerJoinContract(
   } as const;
 }
 
-// The push path decodes its `data` into the same pair `join` takes, so reading
-// the parameters off the ABI keeps the encoding from drifting from the call.
+// The push path decodes `data` into `join`'s parameters, so take them from the ABI.
 const ALLOCATION_PARAMETERS = getAbiItem({ abi: vaultRouterAbi, name: "join" }).inputs;
 
 /** The payload that lets one confidential transfer of the shared asset fund every leg. */
