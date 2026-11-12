@@ -207,6 +207,24 @@ describe("config checks, where the config is used", () => {
     await expect(client.readOpenBatches(broken, "deposit")).rejects.toThrow(/not an address/);
   });
 
+  test("refuses an invalid lastBatchId", async ({ sdk, provider }) => {
+    mockChain(provider);
+    const broken = defineVault({
+      id: "broken",
+      chainId: CHAIN_ID,
+      batchers: {
+        deposit: {
+          retired: [{ address: RETIRED_ALPHA_DEPOSIT, lastBatchId: undefined as never }],
+          latest: ALPHA.depositBatcher,
+        },
+        redeem: ALPHA.redeemBatcher,
+      },
+    });
+    await expect(createVaultClient(sdk).readOpenBatches(broken, "deposit")).rejects.toThrow(
+      /invalid lastBatchId: undefined/,
+    );
+  });
+
   test("refuses more than MAX_GROUP_VAULTS vaults", async ({ sdk }) => {
     const extra = Array.from({ length: MAX_GROUP_VAULTS - 1 }, (_unused, index) =>
       defineVault({

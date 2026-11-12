@@ -12,13 +12,17 @@ export type BatchState = "pending" | "dispatched" | "finalized" | "canceled";
 
 /** One EVM call, encoded. Vault calls never carry value. */
 export interface Call {
+  /** The contract called. */
   readonly to: Address;
+  /** The encoded calldata. */
   readonly data: Hex;
+  /** Always zero. */
   readonly value: 0n;
 }
 
 /** One vault's part of a join. Every vault of a group gets one, the unchosen ones with zero. */
 export interface VaultLeg {
+  /** The vault. */
   readonly vaultId: string;
   /** The vault's active batcher when the join was prepared. */
   readonly batcher: Address;
@@ -30,6 +34,7 @@ export interface VaultLeg {
 
 /** An ERC-7984 operator approval a join relies on, sent to the token it is on. Present only when the account lacks it. */
 export interface OperatorApprovalCall extends Call {
+  /** Tells an operator approval from a join without decoding the calldata. */
   readonly kind: "operatorApproval";
   /** The vault whose token the approval is on. */
   readonly vaultId: string;
@@ -41,6 +46,7 @@ export interface OperatorApprovalCall extends Call {
 
 /** A join call. */
 export interface JoinCall extends Call {
+  /** Tells a join from an operator approval without decoding the calldata. */
   readonly kind: "join";
   /** The leg this call funds. A router call funds every leg, and names the chosen one. */
   readonly leg: VaultLeg;
@@ -61,6 +67,7 @@ export type JoinRoute = "direct" | "router";
 
 /** A join built but not sent. Plain data: it survives `structuredClone`, but its bigints need a JSON replacer. */
 export interface PreparedJoin {
+  /** Whether it deposits or redeems. */
   readonly direction: JoinDirection;
   /** The chain to send the calls on. */
   readonly chainId: number;
@@ -72,6 +79,7 @@ export interface PreparedJoin {
   readonly account: Address;
   /** The amount, in the asset for a deposit and in shares for a redeem. */
   readonly amount: bigint;
+  /** How the calls reach the batchers. */
   readonly route: JoinRoute;
   /** Every vault joined, in group order, the zero legs included. */
   readonly legs: readonly [VaultLeg, ...VaultLeg[]];
@@ -115,8 +123,11 @@ export interface GroupJoinOptions extends JoinOptions {
 
 /** A batch on one batcher. Batchers rotate, so a batch is identified by its batcher, not its vault. */
 export interface BatchRef {
+  /** The chain the batcher is on. */
   readonly chainId: number;
+  /** The batcher. */
   readonly batcher: Address;
+  /** The batch. */
   readonly batchId: bigint;
 }
 
@@ -185,6 +196,7 @@ export type Batch =
 
 /** The open batch of one vault's active batcher. */
 export interface OpenBatch extends BatchRef {
+  /** The vault. */
   readonly vaultId: string;
   /** When anyone may dispatch the batch. */
   readonly dispatchableAt: bigint;

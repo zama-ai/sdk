@@ -7,6 +7,7 @@ export const MAX_GROUP_VAULTS = 8;
 
 /** A batcher that took joins while its `currentBatchId` was at most `lastBatchId`. */
 export interface RetiredBatcher {
+  /** The retired batcher. */
   readonly address: Address;
   /** The last batch it took joins into. */
   readonly lastBatchId: bigint;
@@ -146,7 +147,7 @@ export function scopeOf(target: Vault | VaultGroup): {
  * Every batcher of `vault` in `direction`, checksummed: a plain address is a history with nothing retired.
  *
  * @internal
- * @throws if an address is invalid. {@link ConfigurationError}
+ * @throws if an address or a `lastBatchId` is invalid. {@link ConfigurationError}
  */
 export function historyOf(vault: Vault, direction: JoinDirection): BatcherHistory {
   const declared = vault.batchers[direction];
@@ -155,10 +156,15 @@ export function historyOf(vault: Vault, direction: JoinDirection): BatcherHistor
     return { retired: [], latest: requireAddress(declared, where) };
   }
   return {
-    retired: declared.retired.map((entry) => ({
-      address: requireAddress(entry.address, where),
-      lastBatchId: entry.lastBatchId,
-    })),
+    retired: declared.retired.map((entry) => {
+      // Anything but a non-negative bigint compares false, so the join would silently skip the retired batcher.
+      if (typeof entry.lastBatchId !== "bigint" || entry.lastBatchId < 0n) {
+        throw new ConfigurationError(
+          `${where} has a retired batcher with an invalid lastBatchId: ${String(entry.lastBatchId)}`,
+        );
+      }
+      return { address: requireAddress(entry.address, where), lastBatchId: entry.lastBatchId };
+    }),
     latest: requireAddress(declared.latest, where),
   };
 }

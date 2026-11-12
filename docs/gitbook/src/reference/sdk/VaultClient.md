@@ -190,11 +190,11 @@ After you send, call [`invalidateAfterVaultAction`](#invalidateaftervaultaction)
 
 Builds a deposit of the group's asset into one vault: a leg for every vault, each amount encrypted, and the calls in send order. A deposit pushes the asset, so it needs no operator approval.
 
-| Parameter | Type                          | Description                                             |
-| --------- | ----------------------------- | ------------------------------------------------------- |
-| `target`  | `Vault \| VaultGroup`         | The vault to join on its own, or the group.             |
-| `input`   | [`JoinInput`](#joininput)     | The account and amount, with the `vaultId` for a group. |
-| `options` | [`JoinOptions`](#joinoptions) | The balance check, and for a group the route.           |
+| Parameter | Type                          | Description                                                                                                                   |
+| --------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `target`  | `Vault \| VaultGroup`         | The vault to join on its own, or the group. These are two overloads, so a value typed `Vault \| VaultGroup` does not compile. |
+| `input`   | [`JoinInput`](#joininput)     | The account and amount, with the `vaultId` for a group.                                                                       |
+| `options` | [`JoinOptions`](#joinoptions) | The balance check, and for a group the route.                                                                                 |
 
 **Throws:**
 
@@ -212,11 +212,11 @@ Builds a redemption of one vault's shares. The amount is in shares, not assets. 
 
 ### How a join is routed
 
-`route` in the prepared join tells you how the calls reach the batchers. It depends on the group's size and the `route` option:
+`route` in the prepared join tells you how the calls reach the batchers. It depends on whether you join a vault or a group, and on the `route` option:
 
 | Case                                | `route`    | `calls`                                                                                                              |
 | ----------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------- |
-| Group of one                        | `"direct"` | One transfer to the batcher.                                                                                         |
+| Vault on its own                    | `"direct"` | One transfer to the batcher.                                                                                         |
 | Several vaults, deposit, `"router"` | `"router"` | One transfer of the asset to the router, which splits it into one leg per vault. No operator approval.               |
 | Several vaults, redeem, `"router"`  | `"router"` | An operator approval of the router on each share token the account lacks, then one router call that pulls every leg. |
 | Several vaults, `"direct"`          | `"direct"` | One transfer per vault, straight to its batcher. No operator approval.                                               |
@@ -288,7 +288,7 @@ The amount is in the asset's base units, so `1_000_000n` is one unit of a 6-deci
 
 | Parameter                  | Type                      | Description                                                                                                                                                |
 | -------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `target`                   | `Vault \| VaultGroup`     | The vault to join on its own, or the group.                                                                                                                |
+| `target`                   | `Vault \| VaultGroup`     | The vault to join on its own, or the group. These are two overloads, so a value typed `Vault \| VaultGroup` does not compile.                              |
 | `input.vaultId`            | `VaultIdOf<typeof group>` | For a group only: the vault that gets the amount. A vault on its own takes none.                                                                           |
 | `input.amount`             | `bigint`                  | Plaintext, in base units. Encrypted before it leaves the SDK.                                                                                              |
 | `options.skipBalanceCheck` | `boolean`                 | Optional. Skips the balance check, which runs by default. The paused check is never skipped.                                                               |

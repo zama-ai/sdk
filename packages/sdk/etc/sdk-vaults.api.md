@@ -64,11 +64,8 @@ export function batchQueryOptions(client: VaultClient, config?: BatchQueryConfig
 
 // @public
 export interface BatchRef {
-    // (undocumented)
     readonly batcher: Address;
-    // (undocumented)
     readonly batchId: bigint;
-    // (undocumented)
     readonly chainId: number;
 }
 
@@ -77,11 +74,8 @@ export type BatchState = "pending" | "dispatched" | "finalized" | "canceled";
 
 // @public
 export interface Call {
-    // (undocumented)
     readonly data: Hex;
-    // (undocumented)
     readonly to: Address;
-    // (undocumented)
     readonly value: 0n;
 }
 
@@ -130,7 +124,6 @@ export function invalidateAfterVaultAction(queryClient: QueryClientLike): void;
 
 // @public
 export interface JoinCall extends Call {
-    // (undocumented)
     readonly kind: "join";
     readonly leg: VaultLeg;
 }
@@ -179,7 +172,6 @@ export interface OpenBatch extends BatchRef {
     readonly dispatchableAt: bigint;
     readonly observedAt: bigint;
     readonly paused: boolean;
-    // (undocumented)
     readonly vaultId: string;
 }
 
@@ -194,7 +186,6 @@ export function openBatchesQueryOptions(client: VaultClient, config: OpenBatches
 
 // @public
 export interface OperatorApprovalCall extends Call {
-    // (undocumented)
     readonly kind: "operatorApproval";
     readonly operator: Address;
     readonly until: bigint;
@@ -214,11 +205,9 @@ export interface PreparedJoin {
     readonly amount: bigint;
     readonly calls: readonly [VaultCall, ...VaultCall[]];
     readonly chainId: number;
-    // (undocumented)
     readonly direction: JoinDirection;
     readonly groupId: string | undefined;
     readonly legs: readonly [VaultLeg, ...VaultLeg[]];
-    // (undocumented)
     readonly route: JoinRoute;
     readonly vaultId: string;
 }
@@ -231,7 +220,6 @@ export function redeemMutationOptions(client: VaultClient): MutationFactoryOptio
 
 // @public
 export interface RetiredBatcher {
-    // (undocumented)
     readonly address: Address;
     readonly lastBatchId: bigint;
 }
@@ -288,7 +276,6 @@ export interface VaultLeg {
     readonly amount: bigint;
     readonly batcher: Address;
     readonly token: Address;
-    // (undocumented)
     readonly vaultId: string;
 }
 
