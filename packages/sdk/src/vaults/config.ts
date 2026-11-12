@@ -114,11 +114,6 @@ export function toGroup(target: VaultTarget): VaultGroup {
   return { id: vault.id, chainId, vaults: [vault] } as unknown as VaultGroup;
 }
 
-/** Every batcher of a history, oldest first. */
-export function batcherAddresses(history: BatcherHistory): Address[] {
-  return [...history.retired.map((entry) => entry.address), history.latest];
-}
-
 function requireAddress(value: unknown, where: string): Address {
   if (typeof value !== "string" || !isAddress(value, { strict: false })) {
     throw new ConfigurationError(`${where} is not an address: ${String(value)}`);
@@ -181,7 +176,10 @@ export function defineVaultGroup<const TGroupId extends string, const TVaultId e
             latest: requireAddress(declared.latest, at),
           };
     // A batcher serves one vault in one direction, so the same address anywhere twice is a mistake.
-    for (const address of batcherAddresses(normalized)) {
+    for (const address of [
+      ...normalized.retired.map((entry) => entry.address),
+      normalized.latest,
+    ]) {
       if (batchers.has(address)) {
         throw new ConfigurationError(`${where} uses batcher ${address} more than once`);
       }

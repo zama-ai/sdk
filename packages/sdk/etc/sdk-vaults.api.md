@@ -42,9 +42,6 @@ export type Batch = (BatchBase & {
 export type BatchAction = "claim" | "quit" | "dispatch" | "finalize";
 
 // @public
-export function batcherAddresses(history: BatcherHistory): Address[];
-
-// @public
 export interface BatcherHistory {
     readonly latest: Address;
     readonly retired: readonly RetiredBatcher[];

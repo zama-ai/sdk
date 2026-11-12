@@ -5,7 +5,6 @@
  */
 export { createVaultClient, type VaultClient } from "./client";
 export {
-  batcherAddresses,
   defineVault,
   defineVaultGroup,
   MAX_GROUP_VAULTS,
