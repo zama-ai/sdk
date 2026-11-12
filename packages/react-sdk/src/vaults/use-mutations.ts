@@ -24,6 +24,7 @@ import {
 import type { Address } from "viem";
 import { useVaultClient } from "./use-vault-client";
 
+/** Mutation options accepted by the vault mutation hooks. */
 export type UseVaultMutationOptions<TData, TVariables, TContext = unknown> = Omit<
   UseMutationOptions<TData, Error, TVariables, TContext>,
   "mutationKey" | "mutationFn"

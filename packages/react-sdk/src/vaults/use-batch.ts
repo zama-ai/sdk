@@ -6,11 +6,14 @@ import type { Address } from "viem";
 import { useQuery } from "../utils/query";
 import { useVaultClient } from "./use-vault-client";
 
+/** TanStack Query options accepted by {@link useBatch}. */
 export interface UseBatchOptions extends Omit<
   UseQueryOptions<Batch>,
   "queryKey" | "queryFn" | "enabled"
 > {
+  /** Read this account's deposit, and list `claim` and `quit` for it. */
   account?: Address;
+  /** Set this to `false` to disable this query from automatically running. */
   enabled?: boolean;
 }
 

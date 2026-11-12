@@ -3,13 +3,17 @@ import type { TransactionReceipt } from "../types/transaction";
 import type { BatchState } from "../vaults/types";
 import { ZamaError, ZamaErrorCode } from "./base";
 
+/** What a {@link VaultBatcherPausedError} carries. */
 export interface VaultBatcherPausedDetails {
+  /** The batcher that reported `paused()`. */
   readonly batcher: Address;
+  /** The vault whose leg needs the batcher. */
   readonly vaultId: string;
 }
 
 /** A batcher that a join needs is paused. */
 export class VaultBatcherPausedError extends ZamaError {
+  /** The batcher that reported `paused()`. */
   readonly batcher: Address;
   /** The vault whose leg needs the batcher. */
   readonly vaultId: string;
@@ -22,15 +26,21 @@ export class VaultBatcherPausedError extends ZamaError {
   }
 }
 
+/** What a {@link VaultBatchNotDispatchedError} carries. */
 export interface VaultBatchNotDispatchedDetails {
+  /** The batcher the batch belongs to. */
   readonly batcher: Address;
+  /** The batch that was to be finalized. */
   readonly batchId: bigint;
+  /** The state the batch is in instead. */
   readonly state: BatchState;
 }
 
 /** The batch to finalize is not dispatched. */
 export class VaultBatchNotDispatchedError extends ZamaError {
+  /** The batcher the batch belongs to. */
   readonly batcher: Address;
+  /** The batch that was to be finalized. */
   readonly batchId: bigint;
   /** The state the batch is in instead. */
   readonly state: BatchState;
@@ -44,9 +54,13 @@ export class VaultBatchNotDispatchedError extends ZamaError {
   }
 }
 
+/** What a {@link VaultJoinUnconfirmedError} carries. */
 export interface VaultJoinUnconfirmedDetails {
+  /** The mined join transaction. */
   readonly txHash: Hex;
+  /** Its receipt, to inspect the logs. */
   readonly receipt: TransactionReceipt;
+  /** The vaults whose `Joined` log the SDK could not match. Not a list of legs that did not join. */
   readonly unconfirmedVaultIds: readonly string[];
 }
 
@@ -56,6 +70,7 @@ export interface VaultJoinUnconfirmedDetails {
 export class VaultJoinUnconfirmedError extends ZamaError {
   /** The mined join transaction. */
   readonly txHash: Hex;
+  /** Its receipt, to inspect the logs. */
   readonly receipt: TransactionReceipt;
   /** The vaults whose `Joined` log the SDK could not match. Not a list of legs that did not join. */
   readonly unconfirmedVaultIds: readonly string[];

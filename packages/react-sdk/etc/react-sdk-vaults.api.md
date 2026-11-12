@@ -24,11 +24,9 @@ import { VaultGroup } from '@zama-fhe/sdk/vaults';
 // @public
 export function useBatch(batch: BatchRef | undefined, options?: UseBatchOptions): UseQueryResult<Batch, Error>;
 
-// @public (undocumented)
+// @public
 export interface UseBatchOptions extends Omit<UseQueryOptions<Batch>, "queryKey" | "queryFn" | "enabled"> {
-    // (undocumented)
     account?: Address;
-    // (undocumented)
     enabled?: boolean;
 }
 
@@ -60,7 +58,7 @@ export function useRedeem<TContext = unknown>(options?: UseVaultMutationOptions<
 // @public
 export function useVaultClient(): VaultClient;
 
-// @public (undocumented)
+// @public
 export type UseVaultMutationOptions<TData, TVariables, TContext = unknown> = Omit<UseMutationOptions<TData, Error, TVariables, TContext>, "mutationKey" | "mutationFn">;
 
 ```

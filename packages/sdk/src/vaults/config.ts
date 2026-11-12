@@ -7,6 +7,7 @@ export const MAX_GROUP_VAULTS = 8;
 
 /** A batcher that took joins while its `currentBatchId` was at most `lastBatchId`. */
 export interface RetiredBatcher {
+  /** The retired batcher. */
   readonly address: Address;
   /** The last batch it took joins into. */
   readonly lastBatchId: bigint;
@@ -22,6 +23,7 @@ export interface BatcherHistory {
 
 /** One vault: its chain and the batcher each direction joins. */
 export interface Vault<TVaultId extends string = string> {
+  /** Names the vault in errors and query keys, and is what a group join passes as `vaultId`. */
   readonly id: TVaultId;
   /** The chain the vault's batchers are on. */
   readonly chainId: number;
@@ -31,6 +33,7 @@ export interface Vault<TVaultId extends string = string> {
 
 /** Vaults that take deposits in one confidential asset, joined together. */
 export interface VaultGroup<TGroupId extends string = string, TVaultId extends string = string> {
+  /** Names the group in errors and query keys. */
   readonly id: TGroupId;
   /**
    * The vaults, in leg order, up to {@link MAX_GROUP_VAULTS}. They must be on one
@@ -39,6 +42,7 @@ export interface VaultGroup<TGroupId extends string = string, TVaultId extends s
   readonly vaults: readonly [Vault<TVaultId>, Vault<TVaultId>, ...Vault<TVaultId>[]];
 }
 
+/** The vault ids of a group. */
 export type VaultIdOf<TGroup extends VaultGroup> =
   TGroup extends VaultGroup<string, infer TVaultId> ? TVaultId : never;
 

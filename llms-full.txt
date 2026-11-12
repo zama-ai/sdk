@@ -25838,7 +25838,7 @@ import { vaultQueryKeys, invalidateAfterVaultAction } from "@zama-fhe/sdk/vaults
 
 `.all` is a prefix of every vault key, so invalidating it clears every vault read at once. `.batch` takes the `BatchRef` and the account as `undefined` when they are not set yet.
 
-`invalidateAfterVaultAction(queryClient)` invalidates every vault read and every confidential balance. The vault mutation hooks call it on success. Call it yourself after you send prepared vault calls through your own pipeline.
+`invalidateAfterVaultAction(queryClient)` invalidates every vault read and every confidential balance. The vault mutation hooks call it when a mutation settles, successful or not. Call it yourself after you send prepared vault calls through your own pipeline.
 
 ## Common patterns
 

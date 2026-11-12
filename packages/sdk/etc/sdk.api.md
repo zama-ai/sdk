@@ -22934,58 +22934,45 @@ export interface UnwrapSubmittedEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.UnwrapSubmitted;
 }
 
-// @public (undocumented)
+// @public
 export interface VaultBatcherPausedDetails {
-    // (undocumented)
     readonly batcher: Address;
-    // (undocumented)
     readonly vaultId: string;
 }
 
 // @public
 export class VaultBatcherPausedError extends ZamaError {
     constructor(message: string, details: VaultBatcherPausedDetails, options?: ErrorOptions);
-    // (undocumented)
     readonly batcher: Address;
     readonly vaultId: string;
 }
 
-// @public (undocumented)
+// @public
 export interface VaultBatchNotDispatchedDetails {
-    // (undocumented)
     readonly batcher: Address;
-    // (undocumented)
     readonly batchId: bigint;
     // Warning: (ae-forgotten-export) The symbol "BatchState" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
     readonly state: BatchState;
 }
 
 // @public
 export class VaultBatchNotDispatchedError extends ZamaError {
     constructor(message: string, details: VaultBatchNotDispatchedDetails, options?: ErrorOptions);
-    // (undocumented)
     readonly batcher: Address;
-    // (undocumented)
     readonly batchId: bigint;
     readonly state: BatchState;
 }
 
-// @public (undocumented)
+// @public
 export interface VaultJoinUnconfirmedDetails {
-    // (undocumented)
     readonly receipt: TransactionReceipt;
-    // (undocumented)
     readonly txHash: Hex;
-    // (undocumented)
     readonly unconfirmedVaultIds: readonly string[];
 }
 
 // @public
 export class VaultJoinUnconfirmedError extends ZamaError {
     constructor(message: string, details: VaultJoinUnconfirmedDetails, options?: ErrorOptions);
-    // (undocumented)
     readonly receipt: TransactionReceipt;
     readonly txHash: Hex;
     readonly unconfirmedVaultIds: readonly string[];

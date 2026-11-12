@@ -24,6 +24,7 @@ const KEEPER_POLL_MS = 15_000;
 // A timer delay above 2^31 - 1 ms overflows and fires at once.
 const MAX_REFETCH_MS = 60 * 60 * 1000;
 
+/** Query keys for the vaults module. */
 export const vaultQueryKeys = {
   /** A prefix of every vault key. */
   all: ["zama.vault"] as const,
@@ -52,10 +53,13 @@ export const vaultQueryKeys = {
     ] as const,
 };
 
+/** Configuration for {@link batchQueryOptions}. */
 export interface BatchQueryConfig {
   /** The query is disabled while this is `undefined`. */
   batch?: BatchRef;
+  /** Read this account's deposit, and list `claim` and `quit` for it. */
   account?: Address;
+  /** Set `enabled` to `false` to keep the query from running. */
   query?: { readonly enabled?: boolean };
 }
 
@@ -96,6 +100,7 @@ export function batchQueryOptions(
   };
 }
 
+/** Picks a group, or a vault on its own. */
 export type VaultSelection =
   | { readonly group: VaultGroup; readonly vault?: never }
   | { readonly vault: Vault; readonly group?: never };
@@ -104,6 +109,7 @@ function selected(selection: VaultSelection): Vault | VaultGroup {
   return selection.vault ?? selection.group;
 }
 
+/** Configuration for {@link openBatchesQueryOptions}. */
 export type OpenBatchesQueryConfig = VaultSelection & {
   /** Whether the deposit or the redeem batchers are read. */
   direction: JoinDirection;
@@ -153,6 +159,7 @@ function joinMutation(client: VaultClient, direction: JoinDirection) {
   };
 }
 
+/** Mutation options over {@link VaultClient.deposit}. */
 export function depositMutationOptions(
   client: VaultClient,
 ): MutationFactoryOptions<readonly ["zama.vault.deposit"], JoinVariables, JoinOutcome> {
@@ -163,6 +170,7 @@ export function depositMutationOptions(
   >;
 }
 
+/** Mutation options over {@link VaultClient.redeem}. */
 export function redeemMutationOptions(
   client: VaultClient,
 ): MutationFactoryOptions<readonly ["zama.vault.redeem"], JoinVariables, JoinOutcome> {
@@ -173,6 +181,7 @@ export function redeemMutationOptions(
   >;
 }
 
+/** Mutation options over {@link VaultClient.claim}. */
 export function claimMutationOptions(
   client: VaultClient,
 ): MutationFactoryOptions<
@@ -186,6 +195,7 @@ export function claimMutationOptions(
   };
 }
 
+/** Mutation options over {@link VaultClient.quit}. */
 export function quitMutationOptions(
   client: VaultClient,
 ): MutationFactoryOptions<readonly ["zama.vault.quit"], BatchRef, TransactionResult> {
@@ -195,6 +205,7 @@ export function quitMutationOptions(
   };
 }
 
+/** Mutation options over {@link VaultClient.dispatch}. */
 export function dispatchMutationOptions(
   client: VaultClient,
 ): MutationFactoryOptions<readonly ["zama.vault.dispatch"], BatcherRef, TransactionResult> {
@@ -204,6 +215,7 @@ export function dispatchMutationOptions(
   };
 }
 
+/** Mutation options over {@link VaultClient.finalize}. */
 export function finalizeMutationOptions(
   client: VaultClient,
 ): MutationFactoryOptions<readonly ["zama.vault.finalize"], BatchRef, TransactionResult> {
