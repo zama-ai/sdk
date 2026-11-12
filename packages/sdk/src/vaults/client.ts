@@ -64,7 +64,6 @@ import {
 } from "./contracts";
 import { takeJoinedBatchId } from "./joined";
 import type {
-  ActiveBatchers,
   Batch,
   BatchAction,
   BatchRef,
@@ -177,17 +176,6 @@ export class VaultClient {
   /** @internal Use {@link createVaultClient}. */
   constructor(sdk: ZamaSDK) {
     this.#sdk = sdk;
-  }
-
-  /** The batcher a join in `direction` reaches right now on each vault of the target. */
-  async activeBatchers(target: VaultTarget, direction: JoinDirection): Promise<ActiveBatchers> {
-    const group = toGroup(target);
-    const entries = await Promise.all(
-      group.vaults.map(
-        async (vault) => [vault.id, await this.#activeBatcher(group, vault, direction)] as const,
-      ),
-    );
-    return Object.fromEntries(entries);
   }
 
   /**

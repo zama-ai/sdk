@@ -21,7 +21,6 @@ export {
   type VaultTarget,
 } from "./config";
 export type {
-  ActiveBatchers,
   Batch,
   BatchAction,
   BatchRef,

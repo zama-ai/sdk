@@ -156,9 +156,6 @@ export interface PreparedFinalize extends BatchRef {
   readonly call: Call;
 }
 
-/** The batcher a join reaches right now on each vault, keyed by vault id. */
-export type ActiveBatchers = Readonly<Record<string, Address>>;
-
 /** What can be sent for a batch now. */
 export type BatchAction = "claim" | "quit" | "dispatch" | "finalize";
 

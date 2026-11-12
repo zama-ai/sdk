@@ -563,12 +563,7 @@ describe("batcher upgrades", () => {
   }) => {
     mockChain(provider);
     mockEncryption(relayer);
-    const client = createVaultClient(sdk);
-    expect(await client.activeBatchers(upgraded(7n), "deposit")).toStrictEqual({
-      alpha: RETIRED_ALPHA_DEPOSIT,
-      beta: BETA.depositBatcher,
-    });
-    const prepared = await client.prepareDeposit(
+    const prepared = await createVaultClient(sdk).prepareDeposit(
       upgraded(7n),
       { vaultId: "alpha", account: USER, amount: 10n },
       { route: "direct" },
@@ -584,10 +579,11 @@ describe("batcher upgrades", () => {
     provider,
   }) => {
     mockChain(provider);
-    expect(await createVaultClient(sdk).activeBatchers(upgraded(6n), "deposit")).toStrictEqual({
-      alpha: ALPHA.depositBatcher,
-      beta: BETA.depositBatcher,
-    });
+    const batches = await createVaultClient(sdk).readOpenBatches(upgraded(6n), "deposit");
+    expect(batches.map((batch) => batch.batcher)).toStrictEqual([
+      ALPHA.depositBatcher,
+      BETA.depositBatcher,
+    ]);
   });
 });
 
@@ -721,15 +717,15 @@ describe("a single vault", () => {
     expect(decode(prepared.calls[0]).args?.[0]).toBe(ALPHA.depositBatcher);
   });
 
-  test("reads its open batch and active batcher", async ({ sdk, provider }) => {
+  test("reads its open batch in each direction", async ({ sdk, provider }) => {
     mockChain(provider);
     const client = createVaultClient(sdk);
     expect(await client.readOpenBatches(MAIN, "deposit")).toMatchObject([
       { vaultId: "main", batcher: ALPHA.depositBatcher, batchId: 7n },
     ]);
-    expect(await client.activeBatchers(MAIN, "redeem")).toStrictEqual({
-      main: ALPHA.redeemBatcher,
-    });
+    expect(await client.readOpenBatches(MAIN, "redeem")).toMatchObject([
+      { vaultId: "main", batcher: ALPHA.redeemBatcher },
+    ]);
   });
 
   test("is joined through the mutation options with { vault }", async ({ sdk }) => {

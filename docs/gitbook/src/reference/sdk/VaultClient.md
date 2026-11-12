@@ -208,12 +208,6 @@ Builds a deposit of the group's asset into one vault: a leg for every vault, eac
 
 Builds a redemption of one vault's shares. The amount is in shares, not assets. On the router route, the router pulls every leg's share token, so `calls` starts with an operator approval of the router on each share token the account has not approved it on yet. Throws as `prepareDeposit`.
 
-### activeBatchers
-
-`activeBatchers(target, direction) => Promise<ActiveBatchers>`
-
-Reads the batcher a join in `direction` (`"deposit"` or `"redeem"`) reaches right now on each vault of the group. Returns a record keyed by vault id. Use it when your own code needs the batcher a join will land on, for example to watch its `Joined` events.
-
 ### How a join is routed
 
 `route` in the prepared join tells you how the calls reach the batchers. It depends on the group's size and the `route` option:

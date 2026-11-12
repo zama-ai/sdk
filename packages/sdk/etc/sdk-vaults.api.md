@@ -22,9 +22,6 @@ import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 import { skipToken } from '@tanstack/query-core';
 import { TypedValue } from '@fhevm/sdk/types';
 
-// @public
-export type ActiveBatchers = Readonly<Record<string, Address>>;
-
 // Warning: (ae-forgotten-export) The symbol "BatchBase" needs to be exported by the entry point index.d.ts
 // Warning: (ae-forgotten-export) The symbol "DispatchedTimes" needs to be exported by the entry point index.d.ts
 //
@@ -256,7 +253,6 @@ export type VaultCall = OperatorApprovalCall | JoinCall;
 
 // @public
 export class VaultClient {
-    activeBatchers(target: VaultTarget, direction: JoinDirection): Promise<ActiveBatchers>;
     claim(batch: BatchRef, account?: Address): Promise<TransactionResult>;
     deposit<TTarget extends VaultTarget>(target: TTarget, input: SendJoinInputFor<TTarget>, options?: SendJoinOptions): Promise<JoinOutcome>;
     dispatch(batch: BatcherRef): Promise<TransactionResult>;

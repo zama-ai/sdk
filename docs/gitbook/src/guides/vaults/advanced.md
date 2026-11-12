@@ -85,7 +85,7 @@ How the client uses it:
 
 - **Joins switch on the batch, not the clock.** A join goes to the first retired batcher whose open batch is still at most its `lastBatchId`, and otherwise to `latest`. Joins keep landing on the old batcher until batch `lastBatchId` is dispatched, then go to the new one. You can ship the new group before the switch.
 - **Stored batches keep their batcher.** A `BatchRef` names the batcher the leg joined, so `readBatch`, `claim` and `quit` work on a retired batcher as before.
-- **`readOpenBatches` and `activeBatchers` report the active batcher**, so a form shows the batch the next join lands in.
+- **`readOpenBatches` reports the active batcher**, so a form shows the batch the next join lands in.
 - **Every batcher of a vault must serve the same vault.** Each batcher, retired ones included, must trade the group's confidential asset for the vault's confidential share against the same ERC-4626 vault. The SDK reads each leg's token from its active batcher and checks only that every deposit batcher takes the same asset.
 
 To upgrade again, append the current `latest` to the end of `retired` with its `lastBatchId`, and set the new `latest`. Keep `retired` oldest first.
