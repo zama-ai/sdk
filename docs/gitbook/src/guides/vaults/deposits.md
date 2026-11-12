@@ -73,7 +73,7 @@ const vaults = useVaultClient();
 {% endtab %}
 {% endtabs %}
 
-The client holds no config. Every method takes the group or the batch it acts on, so one client serves every group and chain.
+The client holds no config. Every method takes the vault, the group or the batch it acts on, so one client serves every group and chain.
 
 ### 3. Deposit
 

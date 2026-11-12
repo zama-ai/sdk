@@ -6,7 +6,7 @@ import { filterQueryOptions } from "../../query/utils";
 import type { TransactionResult } from "../../types";
 import { assertNonNullable } from "../../utils/assertions";
 import type { VaultClient } from "../client";
-import type { Vault, VaultGroup, VaultIdOf } from "../config";
+import { chainIdOf, type Vault, type VaultGroup, type VaultIdOf } from "../config";
 import type {
   Batch,
   BatchRef,
@@ -41,7 +41,14 @@ export const vaultQueryKeys = {
   openBatches: (target: Vault | VaultGroup, direction: JoinDirection) =>
     [
       "zama.vault",
-      { kind: "openBatches", chainId: target.chainId, id: target.id, direction },
+      {
+        kind: "openBatches",
+        chainId: chainIdOf(target),
+        // A vault and a group may share an id, and read different batchers.
+        scope: "vaults" in target ? "group" : "vault",
+        id: target.id,
+        direction,
+      },
     ] as const,
 };
 

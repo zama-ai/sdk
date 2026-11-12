@@ -54,9 +54,9 @@ if (beta !== undefined) {
 }
 ```
 
-## Privacy: every join covers the whole group
+## Privacy: a group join covers the whole group
 
-Every join sends a leg to every vault of its group. The vault you chose gets the amount, and the others get an encrypted zero. An observer sees the same transactions whichever vault you picked. This is what hides the choice.
+A join into a group sends a leg to every vault of the group. The vault you chose gets the amount, and the others get an encrypted zero. An observer sees the same transactions whichever vault you picked. A join into a vault on its own has no other leg, so it shows the choice.
 
 The rest is up to you, most of all: to take a deposit back, quit every leg of the join, not only the chosen one. See [Privacy rules](advanced.md#privacy-rules).
 

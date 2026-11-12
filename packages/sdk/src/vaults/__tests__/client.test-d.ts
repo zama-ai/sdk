@@ -1,6 +1,12 @@
 import { describe, expectTypeOf, test } from "vitest";
 import type { VaultClient } from "../client";
-import { defineVault, defineVaultGroup, type Vault, type VaultIdOf } from "../config";
+import {
+  defineVault,
+  defineVaultGroup,
+  type Vault,
+  type VaultGroup,
+  type VaultIdOf,
+} from "../config";
 import type { GroupJoinInput, JoinInput } from "../types";
 
 const ALPHA = defineVault({
@@ -28,6 +34,11 @@ describe("vault types", () => {
     expectTypeOf(ALPHA).toEqualTypeOf<Vault<"alpha">>();
     expectTypeOf(STABLE.id).toEqualTypeOf<"stable">();
     expectTypeOf<VaultIdOf<typeof STABLE>>().toEqualTypeOf<"alpha" | "beta">();
+  });
+
+  test("a group holds two vaults at least", () => {
+    // A lone vault is joined on its own, not as a group.
+    expectTypeOf<{ id: "solo"; vaults: readonly [typeof ALPHA] }>().not.toExtend<VaultGroup>();
   });
 
   test("a group join takes one of the group's vault ids", () => {

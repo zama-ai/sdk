@@ -11,9 +11,7 @@ export {
   type BatcherHistory,
   type RetiredBatcher,
   type Vault,
-  type VaultConfig,
   type VaultGroup,
-  type VaultGroupConfig,
   type VaultIdOf,
 } from "./config";
 export type {

@@ -36,7 +36,8 @@ import { isEncryptedValueZero } from "../utils/handles";
 import { submitTransaction } from "../utils/submit-transaction";
 import type { ZamaSDK } from "../zama-sdk";
 import {
-  toGroup,
+  historyOf,
+  scopeOf,
   type BatcherHistory,
   type Vault,
   type VaultGroup,
@@ -125,6 +126,14 @@ function toCall(config: WriteContractConfig): Call {
 /** A join as the client plans it: a vault on its own has no `vaultId` and no route to choose. */
 type AnyJoinInput = JoinInput & { readonly vaultId?: string };
 
+function memberOf(group: VaultGroup, vaultId: string | undefined): Vault {
+  const vault = group.vaults.find((candidate) => candidate.id === vaultId);
+  if (vault === undefined) {
+    throw new ConfigurationError(`Vault group "${group.id}" has no vault "${vaultId}"`);
+  }
+  return vault;
+}
+
 function nonEmpty<T>(values: readonly T[]): readonly [T, ...T[]] {
   const [first, ...rest] = values;
   assertNonNullable(first, "vault calls");
@@ -151,18 +160,15 @@ function memoize<T>(cache: Map<string, Promise<T>>, key: string, read: () => Pro
 
 /**
  * Builds and sends confidential vault transactions. Holds no config: every
- * method takes the vault, the group or the batch it acts on, so one client
- * serves every chain and group.
+ * method takes the vault, the group or the batch it acts on.
  *
- * `prepare*` methods return plain calls for a host that sends through its own
- * pipeline. They need no signer, except to check the balance of a join. The
+ * `prepare*` methods return calls for a host that sends them itself. The
  * methods named by the bare verb send through the SDK's signer.
  *
  * A join into a group sends a leg to every vault of the group, the chosen one
  * with the amount and the rest with an encrypted zero, so the chain cannot
- * tell which vault was chosen. A join into a vault on its own goes straight to
- * its batcher, and shows the choice. Batch actions act on one batch: to keep the choice private
- * when quitting, quit every leg of the join, not only the chosen one.
+ * tell which vault was chosen. A join into a vault on its own shows the
+ * choice. To keep it private when quitting, quit every leg of the join.
  */
 export class VaultClient {
   readonly #sdk: ZamaSDK;
@@ -178,9 +184,9 @@ export class VaultClient {
    * Build a deposit into a vault on its own: one call, straight to its
    * deposit batcher, with the amount encrypted.
    *
-   * @throws if the provider is not on the group's chain while a wallet is connected. {@link ChainMismatchError}
-   * @throws if the vault is unknown, the deposit batchers take different assets, a multi-vault group's chain has no router, or the provider is on another chain with no wallet connected. {@link ConfigurationError}
-   * @throws if any vault's batcher is paused. {@link VaultBatcherPausedError}
+   * @throws if the provider is not on the vault's chain while a wallet is connected. {@link ChainMismatchError}
+   * @throws if the provider is on another chain with no wallet connected. For a group: if the vault is unknown, the deposit batchers take different assets, or the chain has no router. {@link ConfigurationError}
+   * @throws if a batcher the join reaches is paused. {@link VaultBatcherPausedError}
    * @throws if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
    * @throws if `account` is not the signer's, so its balance cannot be decrypted; pass `skipBalanceCheck: true`. {@link BalanceCheckUnavailableError}
    */
@@ -315,7 +321,7 @@ export class VaultClient {
    *
    * @throws as {@link prepareDeposit}.
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
-   * @throws if the wallet is not on the group's chain. {@link ChainMismatchError}
+   * @throws if the wallet is not on the vault's chain. {@link ChainMismatchError}
    * @throws if the receipt does not confirm every leg. {@link VaultJoinUnconfirmedError}
    */
   deposit(
@@ -468,13 +474,12 @@ export class VaultClient {
     target: Vault | VaultGroup,
     direction: JoinDirection,
   ): Promise<readonly OpenBatch[]> {
-    const group = toGroup(target);
-    const { chainId } = group;
+    const { vaults, chainId } = scopeOf(target);
     const [now, batches] = await Promise.all([
       this.#sdk.provider.getBlockTimestamp(chainId),
       Promise.all(
-        group.vaults.map(async (vault) => {
-          const batcher = await this.#activeBatcher(group, vault, direction);
+        vaults.map(async (vault) => {
+          const batcher = await this.#activeBatcher(vault, direction);
           const [batchId, paused] = await Promise.all([
             this.#read(chainId, currentBatchIdContract(batcher)),
             this.#read(chainId, pausedContract(batcher)),
@@ -505,39 +510,35 @@ export class VaultClient {
     input: AnyJoinInput,
     options: GroupJoinOptions | undefined,
   ): Promise<{ readonly prepared: PreparedJoin; readonly planned: readonly Planned<VaultCall>[] }> {
-    const group = toGroup(joinTarget);
-    const vaultId = "vaults" in joinTarget ? input.vaultId : joinTarget.id;
-    const chosen = group.vaults.find((vault) => vault.id === vaultId);
-    if (chosen === undefined) {
-      throw new ConfigurationError(`Vault group "${group.id}" has no vault "${vaultId}"`);
-    }
+    const { group, vaults, chainId } = scopeOf(joinTarget);
+    const chosen = group === undefined ? vaults[0] : memberOf(group, input.vaultId);
     const account = getAddress(input.account);
-    const route: JoinRoute = group.vaults.length === 1 ? "direct" : (options?.route ?? "router");
+    const route: JoinRoute = group === undefined ? "direct" : (options?.route ?? "router");
 
     // Encryption runs on the provider's chain, so check it before anything prompts.
-    await this.#requireProviderChain(group.chainId, `vault ${direction}`);
-    const router = route === "router" ? this.#router(group) : undefined;
+    await this.#requireProviderChain(chainId, `vault ${direction}`);
+    const router = group !== undefined && route === "router" ? this.#router(group) : undefined;
     const batchers = await Promise.all(
-      group.vaults.map((vault) => this.#activeBatcher(group, vault, direction)),
+      vaults.map((vault) => this.#activeBatcher(vault, direction)),
     );
     const [tokens] = await Promise.all([
-      Promise.all(batchers.map((batcher) => this.#fromToken(group.chainId, batcher))),
-      this.#assertNotPaused(group, batchers),
+      Promise.all(batchers.map((batcher) => this.#fromToken(chainId, batcher))),
+      this.#assertNotPaused(chainId, group, vaults, batchers),
     ]);
     const legs = nonEmpty(
-      group.vaults.map((vault, index): VaultLeg => ({
+      vaults.map((vault, index): VaultLeg => ({
         vaultId: vault.id,
         batcher: at(batchers, index),
         token: at(tokens, index),
         amount: vault === chosen ? input.amount : 0n,
       })),
     );
-    const target = at(legs, group.vaults.indexOf(chosen));
+    const target = at(legs, vaults.indexOf(chosen));
     // A group deposits one asset: the router transfers it once and splits it into the legs.
     const stray = legs.find((leg) => direction === "deposit" && leg.token !== target.token);
     if (stray !== undefined) {
       throw new ConfigurationError(
-        `Vault group "${group.id}" mixes deposit assets: vault "${stray.vaultId}" takes ${stray.token}, vault "${target.vaultId}" takes ${target.token}`,
+        `Vault group "${joinTarget.id}" mixes deposit assets: vault "${stray.vaultId}" takes ${stray.token}, vault "${target.vaultId}" takes ${target.token}`,
       );
     }
     if (options?.skipBalanceCheck !== true) {
@@ -563,7 +564,7 @@ export class VaultClient {
         // The router verifies the allocation, so its proof is bound to the router.
         const [[handles, routerProof], missing] = await Promise.all([
           this.#encrypt(router, account, amounts, operation),
-          this.#missingOperatorApprovals(group.chainId, legs, account, router),
+          this.#missingOperatorApprovals(chainId, legs, account, router),
         ]);
         operatorApprovals = missing;
         joins = [join(routerJoinContract(router, allocationOf(handles), routerProof), target)];
@@ -591,13 +592,13 @@ export class VaultClient {
       });
     }
 
-    // Operator approvals first: the router or batcher pulls under them.
+    // Operator approvals first: the router pulls under them.
     const planned: Planned<VaultCall>[] = [...operatorApprovals, ...joins];
     return {
       prepared: {
         direction,
-        chainId: group.chainId,
-        groupId: group.id,
+        chainId,
+        groupId: group?.id,
         vaultId: chosen.id,
         account,
         amount: input.amount,
@@ -615,9 +616,9 @@ export class VaultClient {
     input: Omit<AnyJoinInput, "account">,
     options: SendJoinOptions | undefined,
   ): Promise<JoinOutcome> {
-    const group = toGroup(target);
     const signer = this.#signer(direction);
-    const account = await this.#writeAccount(group.chainId, direction);
+    const { chainId } = scopeOf(target);
+    const account = await this.#writeAccount(chainId, direction);
     const { prepared, planned } = await this.#planJoin(
       direction,
       target,
@@ -649,17 +650,12 @@ export class VaultClient {
       if (batchId === null) {
         unconfirmed.push(leg.vaultId);
       } else {
-        batches.push({
-          vaultId: leg.vaultId,
-          chainId: group.chainId,
-          batcher: leg.batcher,
-          batchId,
-        });
+        batches.push({ vaultId: leg.vaultId, chainId, batcher: leg.batcher, batchId });
       }
     }
     if (unconfirmed.length > 0) {
       throw new VaultJoinUnconfirmedError(
-        `Transaction ${last.txHash} was mined, but its receipt has no Joined event for ${account} from the batcher of ${unconfirmed.map((id) => `"${id}"`).join(", ")} in group "${group.id}"`,
+        `Transaction ${last.txHash} was mined, but its receipt has no Joined event for ${account} from the batcher of ${unconfirmed.map((id) => `vault "${id}"`).join(", ")}${"vaults" in target ? ` in group "${target.id}"` : ""}`,
         { txHash: last.txHash, receipt: last.receipt, unconfirmedVaultIds: unconfirmed },
       );
     }
@@ -671,15 +667,11 @@ export class VaultClient {
    * its `lastBatchId`, else the latest. Read on every join, never cached: the switch happens when
    * the last configured batch is dispatched.
    */
-  async #activeBatcher(
-    group: VaultGroup,
-    vault: Vault,
-    direction: JoinDirection,
-  ): Promise<Address> {
-    const history: BatcherHistory = vault.batchers[direction];
+  async #activeBatcher(vault: Vault, direction: JoinDirection): Promise<Address> {
+    const history: BatcherHistory = historyOf(vault, direction);
     const current = await Promise.all(
       history.retired.map((entry) =>
-        this.#read(group.chainId, currentBatchIdContract(entry.address)),
+        this.#read(vault.chainId, currentBatchIdContract(entry.address)),
       ),
     );
     return (
@@ -689,35 +681,42 @@ export class VaultClient {
   }
 
   #router(group: VaultGroup): Address {
-    const router = this.#sdk.chains.find((chain) => chain.id === group.chainId)?.vaultRouterAddress;
+    const { chainId } = scopeOf(group);
+    const router = this.#sdk.chains.find((chain) => chain.id === chainId)?.vaultRouterAddress;
     if (router === undefined) {
       throw new ConfigurationError(
-        `Vault group "${group.id}" has ${group.vaults.length} vaults, but chain ${group.chainId} has no router; set vaultRouterAddress on the chain`,
+        `Vault group "${group.id}" has ${group.vaults.length} vaults, but chain ${chainId} has no router; set vaultRouterAddress on the chain`,
       );
     }
     return getAddress(router);
   }
 
-  // The batcher's `fromToken()`: the confidential token a join into it spends. That is the confidential
-  // asset for a deposit batcher and the vault's confidential share for a redeem batcher. Fixed at
-  // deployment, so read once.
+  // The confidential token a join into `batcher` spends: the asset for a deposit batcher, the vault's
+  // share for a redeem batcher. Fixed at deployment, so read once.
   #fromToken(chainId: number, batcher: Address): Promise<Address> {
     return this.#memo(`fromToken:${chainId}:${batcher}`, async () =>
       getAddress(await this.#read(chainId, fromTokenContract(batcher))),
     );
   }
 
-  // One paused batcher reverts the whole join, so every leg's batcher is read. Never skipped.
-  async #assertNotPaused(group: VaultGroup, batchers: readonly Address[]): Promise<void> {
+  // One paused batcher reverts the whole join, so every leg's batcher is read.
+  async #assertNotPaused(
+    chainId: number,
+    group: VaultGroup | undefined,
+    vaults: readonly Vault[],
+    batchers: readonly Address[],
+  ): Promise<void> {
     const paused = await Promise.all(
-      batchers.map((batcher) => this.#read(group.chainId, pausedContract(batcher))),
+      batchers.map((batcher) => this.#read(chainId, pausedContract(batcher))),
     );
     const index = paused.indexOf(true);
     if (index !== -1) {
-      const vault = at(group.vaults, index);
+      const vault = at(vaults, index);
       const batcher = at(batchers, index);
       throw new VaultBatcherPausedError(
-        `Batcher ${batcher} of vault "${vault.id}" in group "${group.id}" is paused, so no vault of the group can be joined until it resumes`,
+        group !== undefined
+          ? `Batcher ${batcher} of vault "${vault.id}" in group "${group.id}" is paused, so no vault of the group can be joined until it resumes`
+          : `Batcher ${batcher} of vault "${vault.id}" is paused, so the vault cannot be joined until it resumes`,
         { batcher, vaultId: vault.id },
       );
     }
@@ -730,8 +729,7 @@ export class VaultClient {
     target: VaultLeg,
     account: Address,
   ): Promise<void> {
-    // Only the signer can decrypt, and only its own balance. Failing here keeps an unchecked join a
-    // decision the caller wrote down, never a check that quietly did not run.
+    // Only the signer can decrypt its own balance. Throwing keeps an unchecked join an explicit choice.
     const signerAccount = this.#sdk.signer?.walletAccount.getSnapshot()?.address;
     if (signerAccount === undefined || getAddress(signerAccount) !== account) {
       throw new BalanceCheckUnavailableError(
@@ -925,8 +923,7 @@ export class VaultClient {
 
 /**
  * A {@link VaultClient} bound to `sdk`. Reads nothing until first used, and
- * holds no state beyond a cache of each batcher's exchange-rate decimals, so
- * creating one is cheap.
+ * caches only what a batcher fixes at deployment, so creating one is cheap.
  *
  * @example
  * ```ts

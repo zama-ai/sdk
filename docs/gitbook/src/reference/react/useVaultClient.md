@@ -5,7 +5,7 @@ description: Returns a VaultClient bound to the SDK in context.
 
 # useVaultClient
 
-Returns a [`VaultClient`](../sdk/VaultClient.md) bound to the SDK from [`ZamaProvider`](ZamaProvider.md), the same one for as long as that SDK stays. It holds no config: its methods take the group or the batch they act on, so one client serves every group and chain.
+Returns a [`VaultClient`](../sdk/VaultClient.md) bound to the SDK from [`ZamaProvider`](ZamaProvider.md), the same one for as long as that SDK stays. It holds no config: its methods take the vault, the group or the batch they act on, so one client serves every group and chain.
 
 The other vault hooks call it for you. Use it directly when you need a method no hook wraps, such as a `prepare*` method for your own transaction pipeline.
 

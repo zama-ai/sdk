@@ -29,7 +29,7 @@ The `vaults` subpath is separate from the root entry, so apps that do not use va
 
 ## defineVault
 
-`defineVault(config)` checks one vault and returns a `Vault`. It keeps the id as a literal type and reads nothing from chain: the client reads each batcher's token on the first join. Call it once per vault, at module level:
+`defineVault(vault)` returns the vault it is given, and keeps its id as a literal type. Like viem's `defineChain`, it checks nothing and reads nothing from chain: the client checks what each join or read relies on when it runs. Call it once per vault, at module level:
 
 ```ts
 import { defineVault } from "@zama-fhe/sdk/vaults";
@@ -53,10 +53,10 @@ await vaults.deposit(ALPHA, { amount: 1_000_000n });
 A join into a vault on its own shows on-chain which vault was chosen. To hide the choice, join through a group.
 {% endhint %}
 
-### VaultConfig
+### Vault
 
 ```ts
-import { type VaultConfig } from "@zama-fhe/sdk/vaults";
+import { type Vault } from "@zama-fhe/sdk/vaults";
 ```
 
 | Field      | Type                                                                        | Required | Description                                                                                     |
@@ -71,10 +71,6 @@ A vault names no token and no router:
 
 - **Tokens.** The client reads each batcher's `fromToken()`: the confidential asset for a deposit batcher, the vault's confidential share for a redeem batcher. A token is fixed when its batcher is deployed, so the client reads it once.
 - **Router.** A multi-vault join goes through the chain's router, `vaultRouterAddress` in the [chain preset](network-presets.md). For a chain whose preset names none, set `vaultRouterAddress` on the chain you pass to the SDK.
-
-### Vault
-
-What `defineVault` returns. It has the same fields as the config, with every address checksummed and each batcher turned into a `BatcherHistory`. Only `defineVault` can make one.
 
 ### BatcherHistory
 
@@ -113,11 +109,11 @@ Never remove a retired entry. Batches on a retired batcher can still be read, cl
 
 See [Upgrade a batcher](../../guides/vaults/advanced.md#upgrade-a-batcher).
 
-**Throws:** `ConfigurationError` when `chainId` is not a positive integer, an address is invalid, a `lastBatchId` is not a non-negative `bigint`, or the same batcher appears twice in the vault, retired batchers included.
+A join or read of a vault with an invalid batcher address throws `ConfigurationError`.
 
 ## defineVaultGroup
 
-`defineVaultGroup(config)` groups vaults that take deposits in the same confidential asset, and returns a `VaultGroup`. A join into a group sends a leg to every vault of it, which hides the chosen one. It keeps the group and vault ids as literal types, so a typo in `vaultId` passed to a client method is a type error. The React mutation hooks take `vaultId` as a plain `string`.
+`defineVaultGroup(group)` returns the group it is given, a `VaultGroup` of vaults that take deposits in the same confidential asset. It checks nothing. A join into a group sends a leg to every vault of it, which hides the chosen one. It keeps the group and vault ids as literal types, so a typo in `vaultId` passed to a client method is a type error. The React mutation hooks take `vaultId` as a plain `string`.
 
 ```ts
 import { defineVaultGroup } from "@zama-fhe/sdk/vaults";
@@ -130,24 +126,20 @@ await vaults.deposit(STABLE, { vaultId: "beta", amount: 1_000_000n });
 
 A vault can be in several groups, and stays joinable on its own.
 
-### VaultGroupConfig
-
-```ts
-import { type VaultGroupConfig } from "@zama-fhe/sdk/vaults";
-```
-
-| Field    | Type      | Required | Description                                                                                                                                                  |
-| -------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `id`     | `string`  | yes      | Names the group in errors and query keys.                                                                                                                    |
-| `vaults` | `Vault[]` | yes      | The vaults, from `defineVault`, in leg order. From one vault up to `MAX_GROUP_VAULTS`. Never reorder, add or remove vaults once users have joined the group. |
-
-The vaults of a group must be on the same chain, and their deposit batchers must take the same confidential asset. The first is checked here; the second on the first deposit, which throws `ConfigurationError`.
-
 ### VaultGroup
 
-What `defineVaultGroup` returns: the group's `id`, the `chainId` of its vaults, and its `vaults`. Only `defineVaultGroup` can make one. `VaultIdOf<typeof STABLE>` is the union of the group's vault ids.
+```ts
+import { type VaultGroup } from "@zama-fhe/sdk/vaults";
+```
 
-**Throws:** `ConfigurationError` when the group names no vault or more than `MAX_GROUP_VAULTS`, its vaults are on different chains, a vault id repeats, or the same batcher appears twice anywhere in the group, retired batchers included.
+| Field    | Type      | Required | Description                                                                                                                                                      |
+| -------- | --------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`     | `string`  | yes      | Names the group in errors and query keys.                                                                                                                        |
+| `vaults` | `Vault[]` | yes      | The vaults, in leg order. From two vaults up to `MAX_GROUP_VAULTS`; fewer is a type error. Never reorder, add or remove vaults once users have joined the group. |
+
+The vaults of a group must be on the same chain, and their deposit batchers must take the same confidential asset. `VaultIdOf<typeof STABLE>` is the union of the group's vault ids.
+
+A join or read of a group throws `ConfigurationError` when it has more than `MAX_GROUP_VAULTS` vaults, mixes chains, or names a vault twice. A deposit also throws it when the deposit batchers take different assets.
 
 ### MAX_GROUP_VAULTS
 
@@ -284,7 +276,7 @@ All send methods throw:
 
 ### deposit
 
-`deposit(group, input, options?) => Promise<JoinOutcome>`
+`deposit(target, input, options?) => Promise<JoinOutcome>`
 
 Deposits with the SDK's signer: it prepares the join for the signer's account, sends the calls, and reads from the receipt the batch each leg landed in.
 
@@ -306,7 +298,7 @@ The amount is in the asset's base units, so `1_000_000n` is one unit of a 6-deci
 
 ### redeem
 
-`redeem(group, input, options?) => Promise<JoinOutcome>`
+`redeem(target, input, options?) => Promise<JoinOutcome>`
 
 Redeems a vault's shares with the SDK's signer. Same parameters as `deposit`. The amount is in shares.
 
@@ -390,12 +382,12 @@ What `prepareDeposit` and `prepareRedeem` take. For a group, the input is a `Gro
 
 Options for `prepareDeposit` and `prepareRedeem`. For a group, the options are a `GroupJoinOptions`, which adds `route`. A vault on its own always joins directly.
 
-| Field              | Type                   | Default    | Description                                                                                                                                                                                                                                                     |
-| ------------------ | ---------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `route`            | `"router" \| "direct"` | `"router"` | How a multi-vault join reaches the batchers. `"router"` sends one call through the router. `"direct"` sends one transfer per vault, straight to its batcher, with no operator approval; send them in one atomic bundle. A group of one always takes `"direct"`. |
-| `skipBalanceCheck` | `boolean`              | `false`    | Skips the balance check. The paused check always runs.                                                                                                                                                                                                          |
+| Field              | Type                   | Default    | Description                                                                                                                                                                                                                               |
+| ------------------ | ---------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `route`            | `"router" \| "direct"` | `"router"` | How a multi-vault join reaches the batchers. `"router"` sends one call through the router. `"direct"` sends one transfer per vault, straight to its batcher, with no operator approval; send them in one atomic bundle. Group joins only. |
+| `skipBalanceCheck` | `boolean`              | `false`    | Skips the balance check. The paused check always runs.                                                                                                                                                                                    |
 
-The balance check runs by default, because a join with a short balance does not revert: it joins every batch with nothing and still costs the transaction. The check decrypts as the signer, so it works only when `account` is the signer's. For any other account, or with no signer, the join throws `BalanceCheckUnavailableError` until you pass `skipBalanceCheck: true`. If you skip it, check the balance yourself, and decrypt the balance of every token the legs spend, not only the chosen one, so the relayer cannot tell which vault was picked. The SDK's own check does this.
+The balance check decrypts as the signer, so it runs only when `account` is the signer's. For any other account, or with no signer, the join throws `BalanceCheckUnavailableError` until you pass `skipBalanceCheck: true`. See [Send through your own pipeline](../../guides/vaults/advanced.md#send-through-your-own-pipeline) for what to check yourself.
 
 ### PreparedJoin
 
@@ -405,7 +397,7 @@ What `prepareDeposit` and `prepareRedeem` return. Plain data, safe to store.
 | ----------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `direction` | `"deposit" \| "redeem"` | Whether it deposits or redeems.                                                                                                                                         |
 | `chainId`   | `number`                | The chain to send the calls on.                                                                                                                                         |
-| `groupId`   | `string`                | The group joined, or the vault's id when joined on its own.                                                                                                             |
+| `groupId`   | `string \| undefined`   | The group joined, or `undefined` for a vault joined on its own.                                                                                                         |
 | `vaultId`   | `string`                | The vault that gets the amount.                                                                                                                                         |
 | `account`   | `Address`               | The account the calls come from.                                                                                                                                        |
 | `amount`    | `bigint`                | The amount: in the asset for a deposit, in shares for a redemption.                                                                                                     |

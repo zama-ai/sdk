@@ -15,9 +15,9 @@ For how the on-chain router fans one transaction out across several batchers, se
 
 ## Privacy rules
 
-Every join sends a leg to every vault of its group: the vault you chose gets the amount, and the others get an encrypted zero. An observer cannot tell which vault received the money. The client always does this. The rest is up to you:
+A join into a group sends a leg to every vault of the group: the vault you chose gets the amount, and the others get an encrypted zero. An observer cannot tell which vault received the money. The client always does this for a group. The rest is up to you:
 
-- **Every join covers every vault.** `deposit` and `redeem` send a leg to each vault, in group order, and never drop a zero leg.
+- **Join through the group.** A join into a vault on its own has no other leg, so it shows which vault was chosen.
 - **Every balance check covers every leg.** The balance check decrypts every token the legs spend, not only the chosen one. A lone decryption would tell the relayer which vault you care about.
 - **Every user gets the same leg list.** All users of a group join the same vaults in the same order, so their transactions look alike. Do not reorder or change a group's vaults once users have joined it. To change a group, define a new group.
 - **Quit every leg, or none.** Claims, quits, dispatches and settlements act on one batch each. A keeper dispatches, finalizes, claims and recovers for every depositor, so these reveal nothing about one user. A quit is different: the user sends it, and it is public. To take a deposit back from a pending batch, quit the batch of every leg of the join, not only the chosen one. The client does not enforce this.
@@ -26,7 +26,7 @@ These follow the [rules for clients](https://docs.zama.org/protocol/confidential
 
 ## Group size and the router
 
-A group holds from one vault up to `MAX_GROUP_VAULTS`. A join's FHE compute grows with its number of legs, and `MAX_GROUP_VAULTS` is what fits in one transaction. A group of one, or a vault joined on its own, has nothing to hide a leg among, so it joins its batcher directly, without the router.
+A group holds from two vaults up to `MAX_GROUP_VAULTS`. A join's FHE compute grows with its number of legs, and `MAX_GROUP_VAULTS` is what fits in one transaction. A lone vault has nothing to hide a leg among, so it is joined on its own, straight to its batcher, without the router.
 
 A multi-vault join sent one call at a time goes through the chain's router, `vaultRouterAddress` in the chain preset. A group names no router. For a chain whose preset names none, set `vaultRouterAddress` on the chain you pass to the SDK; without it, a multi-vault join through the router throws `ConfigurationError`.
 
@@ -53,7 +53,7 @@ An operator approval lasts a year, so later redemptions ask for none. A long app
 
 ## Paused batchers
 
-Every join sends a leg to every vault, and one paused batcher reverts the whole join. So `deposit` and `redeem` read `paused()` on each batcher first and throw `VaultBatcherPausedError`, naming the paused vault. This check cannot be skipped. Claims and quits still work on a paused batcher, so existing deposits are never stuck. To show a paused vault before the user submits, read the group with [`readOpenBatches`](deposits.md#show-when-the-next-batch-closes).
+A group join sends a leg to every vault, and one paused batcher reverts the whole join. So `deposit` and `redeem` read `paused()` on each batcher first and throw `VaultBatcherPausedError`, naming the paused vault. This check cannot be skipped. Claims and quits still work on a paused batcher, so existing deposits are never stuck. To show a paused vault before the user submits, read the group with [`readOpenBatches`](deposits.md#show-when-the-next-batch-closes).
 
 ## Upgrade a batcher
 
@@ -85,7 +85,7 @@ How the client uses it:
 To upgrade again, append the current `latest` to the end of `retired` with its `lastBatchId`, and set the new `latest`. Keep `retired` oldest first.
 
 {% hint style="warning" %}
-Never remove a retired entry, even after all its batches settled. `defineVault` and `defineVaultGroup` refuse a batcher used twice, so keeping every entry stops an old address from being reused by mistake.
+Never remove a retired entry, even after all its batches settled: batches on a retired batcher can still be read, claimed and quit.
 {% endhint %}
 
 ## Bundling wallets
@@ -145,7 +145,7 @@ for (const call of prepared.calls) {
 
 `sendTransaction` stands in for your pipeline. The join methods take these options:
 
-- `route`: `"router"` (default) or `"direct"`. A group of one always takes `"direct"`. See [Bundling wallets](#bundling-wallets).
+- `route`: for a group, `"router"` (default) or `"direct"`. A vault joined on its own takes no `route` and always goes direct. See [Bundling wallets](#bundling-wallets).
 - `skipBalanceCheck`: `true` skips the balance check. The paused check always runs.
 
 The batch actions take one batch each, as a `BatchRef` (`{ chainId, batcher, batchId }`). Dispatch acts on a batcher's open batch, so it takes a `BatcherRef` (`{ chainId, batcher }`):

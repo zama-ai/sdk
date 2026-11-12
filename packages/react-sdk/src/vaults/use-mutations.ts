@@ -48,8 +48,8 @@ function useVaultMutation<TData, TVariables, TContext>(
 }
 
 /**
- * Deposit with the SDK's signer: every vault of the group gets a leg.
- * Returns the batch each leg landed in.
+ * Deposit with the SDK's signer, into a group or a vault on its own. Returns
+ * the batch each leg landed in.
  *
  * @example
  * ```tsx
@@ -63,7 +63,7 @@ export function useDeposit<TContext = unknown>(
   return useVaultMutation(depositMutationOptions, options);
 }
 
-/** Redeem with the SDK's signer. In a group of more than one vault, the wallet is first asked for each operator approval of the router the account lacks. */
+/** Redeem with the SDK's signer. In a group of several vaults, the wallet is first asked for each operator approval the account lacks. */
 export function useRedeem<TContext = unknown>(
   options?: UseVaultMutationOptions<JoinOutcome, JoinVariables, TContext>,
 ) {

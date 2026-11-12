@@ -64,8 +64,11 @@ export function batchQueryOptions(client: VaultClient, config?: BatchQueryConfig
 
 // @public
 export interface BatchRef {
+    // (undocumented)
     readonly batcher: Address;
+    // (undocumented)
     readonly batchId: bigint;
+    // (undocumented)
     readonly chainId: number;
 }
 
@@ -74,8 +77,11 @@ export type BatchState = "pending" | "dispatched" | "finalized" | "canceled";
 
 // @public
 export interface Call {
+    // (undocumented)
     readonly data: Hex;
+    // (undocumented)
     readonly to: Address;
+    // (undocumented)
     readonly value: 0n;
 }
 
@@ -93,10 +99,10 @@ export function claimMutationOptions(client: VaultClient): MutationFactoryOption
 export function createVaultClient(sdk: ZamaSDK): VaultClient;
 
 // @public
-export function defineVault<const TVaultId extends string>(config: VaultConfig<TVaultId>): Vault<TVaultId>;
+export function defineVault<const TVaultId extends string>(vault: Vault<TVaultId>): Vault<TVaultId>;
 
 // @public
-export function defineVaultGroup<const TGroupId extends string, const TVaultId extends string>(config: VaultGroupConfig<TGroupId, TVaultId>): VaultGroup<TGroupId, TVaultId>;
+export function defineVaultGroup<const TGroupId extends string, const TVaultId extends string>(group: VaultGroup<TGroupId, TVaultId>): VaultGroup<TGroupId, TVaultId>;
 
 // @public
 export function depositMutationOptions(client: VaultClient): MutationFactoryOptions<readonly ["zama.vault.deposit"], JoinVariables, JoinOutcome>;
@@ -124,6 +130,7 @@ export function invalidateAfterVaultAction(queryClient: QueryClientLike): void;
 
 // @public
 export interface JoinCall extends Call {
+    // (undocumented)
     readonly kind: "join";
     readonly leg: VaultLeg;
 }
@@ -172,6 +179,7 @@ export interface OpenBatch extends BatchRef {
     readonly dispatchableAt: bigint;
     readonly observedAt: bigint;
     readonly paused: boolean;
+    // (undocumented)
     readonly vaultId: string;
 }
 
@@ -186,6 +194,7 @@ export function openBatchesQueryOptions(client: VaultClient, config: OpenBatches
 
 // @public
 export interface OperatorApprovalCall extends Call {
+    // (undocumented)
     readonly kind: "operatorApproval";
     readonly operator: Address;
     readonly until: bigint;
@@ -205,9 +214,11 @@ export interface PreparedJoin {
     readonly amount: bigint;
     readonly calls: readonly [VaultCall, ...VaultCall[]];
     readonly chainId: number;
+    // (undocumented)
     readonly direction: JoinDirection;
-    readonly groupId: string;
+    readonly groupId: string | undefined;
     readonly legs: readonly [VaultLeg, ...VaultLeg[]];
+    // (undocumented)
     readonly route: JoinRoute;
     readonly vaultId: string;
 }
@@ -220,6 +231,7 @@ export function redeemMutationOptions(client: VaultClient): MutationFactoryOptio
 
 // @public
 export interface RetiredBatcher {
+    // (undocumented)
     readonly address: Address;
     readonly lastBatchId: bigint;
 }
@@ -232,8 +244,7 @@ export interface SendJoinOptions {
 
 // @public
 export interface Vault<TVaultId extends string = string> {
-    readonly [defined]: true;
-    readonly batchers: Readonly<Record<JoinDirection, BatcherHistory>>;
+    readonly batchers: Readonly<Record<JoinDirection, Address | BatcherHistory>>;
     readonly chainId: number;
     readonly id: TVaultId;
 }
@@ -264,24 +275,9 @@ export class VaultClient {
 }
 
 // @public
-export interface VaultConfig<TVaultId extends string = string> {
-    readonly batchers: Readonly<Record<JoinDirection, Address | BatcherHistory>>;
-    readonly chainId: number;
-    readonly id: TVaultId;
-}
-
-// @public
 export interface VaultGroup<TGroupId extends string = string, TVaultId extends string = string> {
-    readonly [defined]: true;
-    readonly chainId: number;
     readonly id: TGroupId;
-    readonly vaults: readonly [Vault<TVaultId>, ...Vault<TVaultId>[]];
-}
-
-// @public
-export interface VaultGroupConfig<TGroupId extends string = string, TVaultId extends string = string> {
-    readonly id: TGroupId;
-    readonly vaults: readonly Vault<TVaultId>[];
+    readonly vaults: readonly [Vault<TVaultId>, Vault<TVaultId>, ...Vault<TVaultId>[]];
 }
 
 // @public
@@ -292,6 +288,7 @@ export interface VaultLeg {
     readonly amount: bigint;
     readonly batcher: Address;
     readonly token: Address;
+    // (undocumented)
     readonly vaultId: string;
 }
 
@@ -308,6 +305,7 @@ export const vaultQueryKeys: {
     openBatches: (target: Vault | VaultGroup, direction: JoinDirection) => readonly ["zama.vault", {
         readonly kind: "openBatches";
         readonly chainId: number;
+        readonly scope: "group" | "vault";
         readonly id: string;
         readonly direction: JoinDirection;
     }];
