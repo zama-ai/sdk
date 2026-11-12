@@ -184,7 +184,7 @@ export type OpenBatchesQueryConfig = VaultSelection & {
     query?: Record<string, unknown>;
 };
 
-// @public (undocumented)
+// @public
 export function openBatchesQueryOptions(client: VaultClient, config: OpenBatchesQueryConfig): QueryFactoryOptions<readonly OpenBatch[], Error, readonly OpenBatch[], ReturnType<typeof vaultQueryKeys.openBatches>>;
 
 // @public
