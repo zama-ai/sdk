@@ -26,31 +26,20 @@ import { defineVault, defineVaultGroup } from "@zama-fhe/sdk/vaults";
 export const STABLE = defineVaultGroup({
   id: "stable",
   chainId: 1,
-  asset: "0xConfidentialUSDC",
   vaults: [
-    {
-      id: "alpha",
-      batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
-      share: "0xAlphaShare",
-    },
-    {
-      id: "beta",
-      batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
-      share: "0xBetaShare",
-    },
+    { id: "alpha", batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" } },
+    { id: "beta", batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" } },
   ],
 });
 
 export const MAIN = defineVault({
   id: "main",
   chainId: 1,
-  asset: "0xConfidentialUSDC2",
   batchers: { deposit: "0xMainDeposit", redeem: "0xMainRedeem" },
-  share: "0xMainShare",
 });
 ```
 
-Each vault has two batchers: one that deposits join, and one that redemptions join. `share` is the vault's confidential share token. When a batcher is upgraded, its entry becomes a history of batchers. See [Upgrade a batcher](advanced.md#upgrade-a-batcher). The group and vault ids are yours to choose, and the types keep them, so a typo in `vaultId` passed to a client method is a type error. The React mutation hooks take `vaultId` as a plain `string`.
+Each vault has two batchers: one that deposits join, and one that redemptions join. The group names no token: the client reads the confidential asset and each vault's confidential share from the batchers. When a batcher is upgraded, its entry becomes a history of batchers. See [Upgrade a batcher](advanced.md#upgrade-a-batcher). The group and vault ids are yours to choose, and the types keep them, so a typo in `vaultId` passed to a client method is a type error. The React mutation hooks take `vaultId` as a plain `string`.
 
 `defineVault` describes one vault on its own, like `MAIN`. Every method that takes a group also takes a single vault, and a join into it needs no `vaultId`.
 
@@ -127,7 +116,7 @@ function DepositButton() {
 
 The amount is in the asset's base units, so `1_000_000n` is one unit of a 6-decimal token. For a single vault, leave out `vaultId`: `vaults.deposit(MAIN, { amount: 1_000_000n })`, or `deposit.mutate({ vault: MAIN, amount: 1_000_000n })` in React.
 
-The SDK checks your confidential balance before it sends, as `Token.confidentialTransfer` does. A confidential transfer above the balance moves zero instead of reverting, so without this check a too-large deposit would succeed on-chain and deposit nothing. For an account whose balance the signer cannot decrypt, pass `skipChecks: ["balance"]` in the options.
+The SDK checks your confidential balance before it sends, as `Token.confidentialTransfer` does. A confidential transfer above the balance moves zero instead of reverting, so without this check a too-large deposit would succeed on-chain and deposit nothing. To send without the check, pass `skipBalanceCheck: true` in the options.
 
 ### 4. Store the batches
 
@@ -163,7 +152,7 @@ If the join is mined but the SDK cannot match a `Joined` event in the receipt to
 {% tab title="Core SDK" %}
 
 ```ts
-const batch = await vaults.readBatch({ ...batchRef, account: "0xUser" });
+const batch = await vaults.readBatch(batchRef, "0xUser");
 
 console.log(batch.state); // "pending" | "dispatched" | "finalized" | "canceled"
 console.log(batch.actions); // for example ["quit", "dispatch"]
@@ -201,7 +190,7 @@ Once the batch is finalized, a claim pays the deposit out at the batch's exchang
 {% tab title="Core SDK" %}
 
 ```ts
-await vaults.claim({ ...batchRef, account: "0xUser" });
+await vaults.claim(batchRef, "0xUser");
 ```
 
 {% endtab %}

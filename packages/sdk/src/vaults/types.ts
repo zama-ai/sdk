@@ -3,7 +3,7 @@ import type { EncryptedValue } from "../relayer/types";
 import type { VaultGroup, VaultIdOf, VaultTarget } from "./config";
 
 /** Whether a join deposits the group's asset or redeems a vault's shares. */
-export type Direction = "deposit" | "redeem";
+export type JoinDirection = "deposit" | "redeem";
 
 /**
  * A batch's lifecycle state, in the contract's own words:
@@ -27,20 +27,18 @@ export interface VaultLeg {
   readonly vaultId: string;
   /** The batcher the leg joins: the vault's active one, resolved when the join was prepared. */
   readonly batcher: Address;
-  /** What the leg spends: the asset for a deposit, the vault's share token for a redeem. */
+  /** What the leg spends, read from its batcher: the confidential asset for a deposit, the vault's confidential share for a redeem. */
   readonly token: Address;
   /** The chosen vault's amount, zero for every other leg. */
   readonly amount: bigint;
 }
 
-/** An ERC-7984 operator approval a join relies on. Present only when the account lacks it. */
+/** An ERC-7984 operator approval a join relies on, sent to the token it is on. Present only when the account lacks it. */
 export interface OperatorApprovalCall extends Call {
   /** Tells an operator approval from a join without decoding the calldata. */
-  readonly role: "operatorApproval";
+  readonly kind: "operatorApproval";
   /** The vault whose token the approval is on. */
   readonly vaultId: string;
-  /** The token the approval is on. */
-  readonly token: Address;
   /** The approved operator: the router. */
   readonly operator: Address;
   /** When the approval expires, in chain seconds. */
@@ -50,7 +48,7 @@ export interface OperatorApprovalCall extends Call {
 /** A join call, tagged with the leg it funds. A router call is tagged with the chosen leg. */
 export interface JoinCall extends Call {
   /** Tells a join from an operator approval without decoding the calldata. */
-  readonly role: "join";
+  readonly kind: "join";
   /** The leg this call funds. */
   readonly leg: VaultLeg;
 }
@@ -62,16 +60,16 @@ export type VaultCall = OperatorApprovalCall | JoinCall;
  * How a join reaches the batchers.
  *
  * - `"router"`: one call through the router, after any operator approvals it needs.
- * - `"legs"`: one call per leg, straight to each batcher, with no operator approval.
+ * - `"direct"`: one call per leg, straight to each batcher, with no operator approval.
  *   A group of one always takes it. In a larger group, send the calls in one
  *   atomic bundle: joining some vaults and not others shows which vault was chosen.
  */
-export type JoinRoute = "legs" | "router";
+export type JoinRoute = "direct" | "router";
 
 /** A join built but not sent. Plain data: it survives `structuredClone`, but its bigints need a JSON replacer. */
 export interface PreparedJoin {
   /** Whether it deposits or redeems. */
-  readonly kind: Direction;
+  readonly direction: JoinDirection;
   /** The chain to send the calls on. */
   readonly chainId: number;
   /** The group joined. */
@@ -86,14 +84,11 @@ export interface PreparedJoin {
   readonly route: JoinRoute;
   /** Every vault of the group, in group order, decoys included. */
   readonly legs: readonly [VaultLeg, ...VaultLeg[]];
-  /** The operator approvals the account lacks, in leg order. Send them before the joins. */
-  readonly operatorApprovals: readonly OperatorApprovalCall[];
   /**
-   * The join calls. With `route: "legs"` in a group of more than one, send
-   * them as one atomic bundle.
+   * Every call in send order: the operator approvals the account lacks, in
+   * leg order, then the joins. With `route: "direct"` in a group of more than
+   * one, send the joins as one atomic bundle.
    */
-  readonly joins: readonly [JoinCall, ...JoinCall[]];
-  /** `operatorApprovals`, then `joins`: every call in send order, for a host that sends them all at once. */
   readonly calls: readonly [VaultCall, ...VaultCall[]];
 }
 
@@ -107,22 +102,16 @@ export interface JoinInput<TVaultId extends string = string> {
   readonly amount: bigint;
 }
 
-/**
- * Optional checks of a join. `"balance"` decrypts the account's balance as
- * the signer. A paused batcher is always checked.
- */
-export type VaultCheck = "balance";
-
 /** Options for `prepareDeposit` and `prepareRedeem`. */
 export interface JoinOptions {
-  /** Defaults to `"router"`. Ignored for a group of one, which always takes `"legs"`. */
+  /** Defaults to `"router"`. A group of one always takes `"direct"`. */
   readonly route?: JoinRoute;
   /**
-   * Checks to run before encrypting. None by default, so preparing needs no
-   * signer. `"balance"` decrypts as the signer, so it works only when
-   * `account` is the signer's.
+   * Skip the balance check. It runs by default and decrypts as the signer, so
+   * a join prepared for another account, or with no signer, must skip it and
+   * check the balance itself. A paused batcher is always checked.
    */
-  readonly checks?: readonly VaultCheck[];
+  readonly skipBalanceCheck?: boolean;
 }
 
 /** A batch on one batcher. Batchers rotate, so a batch is identified by its batcher, not its vault. */
@@ -151,8 +140,8 @@ export type SendJoinInputFor<TTarget extends VaultTarget> = Omit<JoinInputFor<TT
 
 /** Options for `client.deposit` and `client.redeem`. */
 export interface SendJoinOptions {
-  /** Checks to skip. The balance check runs by default: the signer sends, so it can decrypt. */
-  readonly skipChecks?: readonly VaultCheck[];
+  /** Skip the balance check, which runs by default. A paused batcher is always checked. */
+  readonly skipBalanceCheck?: boolean;
   /** Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. */
   readonly onJoinSubmitted?: (txHash: Hex) => void;
 }

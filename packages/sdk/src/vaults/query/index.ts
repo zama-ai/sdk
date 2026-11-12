@@ -11,7 +11,7 @@ import type {
   Batch,
   BatchRef,
   BatcherRef,
-  Direction,
+  JoinDirection,
   JoinOutcome,
   OpenBatch,
   JoinInput,
@@ -38,7 +38,7 @@ export const vaultQueryKeys = {
         account: account === undefined ? undefined : getAddress(account),
       },
     ] as const,
-  openBatches: (target: VaultTarget, direction: Direction) =>
+  openBatches: (target: VaultTarget, direction: JoinDirection) =>
     [
       "zama.vault",
       { kind: "openBatches", chainId: target.chainId, id: target.id, direction },
@@ -93,7 +93,7 @@ export function batchQueryOptions(
     queryKey: vaultQueryKeys.batch(batch, account),
     queryFn: async () => {
       assertNonNullable(batch, "batchQueryOptions: batch");
-      return client.readBatch({ ...batch, account });
+      return client.readBatch(batch, account);
     },
     enabled: batch !== undefined && queryOpts.enabled !== false,
   };
@@ -111,7 +111,7 @@ function selected(selection: VaultSelection): VaultTarget {
 /** Configuration for {@link openBatchesQueryOptions}. */
 export type OpenBatchesQueryConfig = VaultSelection & {
   /** Whether to read the deposit or the redeem batchers. */
-  direction: Direction;
+  direction: JoinDirection;
   /** Additional TanStack Query options merged into the generated query. */
   query?: Record<string, unknown>;
 };
@@ -156,18 +156,18 @@ export type JoinVariables<TGroup extends VaultGroup = VaultGroup> = Pick<JoinInp
     | { readonly vault: Vault; readonly vaultId?: string; readonly group?: never }
   );
 
-function joinMutation(client: VaultClient, direction: Direction) {
+function joinMutation(client: VaultClient, direction: JoinDirection) {
   return {
     mutationKey: [`zama.vault.${direction}`] as const,
     mutationFn: async ({
-      skipChecks,
+      skipBalanceCheck,
       onJoinSubmitted,
       amount,
       vaultId,
       ...selection
     }: JoinVariables) =>
       client[direction](selected(selection as VaultSelection), { amount, vaultId } as never, {
-        skipChecks,
+        skipBalanceCheck,
         onJoinSubmitted,
       }),
   };
@@ -205,7 +205,7 @@ export function claimMutationOptions(
 > {
   return {
     mutationKey: ["zama.vault.claim"] as const,
-    mutationFn: async (batch) => client.claim(batch),
+    mutationFn: async ({ account, ...batch }) => client.claim(batch, account),
   };
 }
 

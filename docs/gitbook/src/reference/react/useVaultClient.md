@@ -50,18 +50,9 @@ import { defineVaultGroup } from "@zama-fhe/sdk/vaults";
 export const STABLE = defineVaultGroup({
   id: "stable",
   chainId: 1,
-  asset: "0xConfidentialUSDC",
   vaults: [
-    {
-      id: "alpha",
-      batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
-      share: "0xAlphaShare",
-    },
-    {
-      id: "beta",
-      batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
-      share: "0xBetaShare",
-    },
+    { id: "alpha", batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" } },
+    { id: "beta", batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" } },
   ],
 });
 ```

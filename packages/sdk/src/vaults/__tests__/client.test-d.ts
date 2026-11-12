@@ -6,7 +6,6 @@ import type { JoinInput } from "../types";
 const STABLE = defineVaultGroup({
   id: "stable",
   chainId: 1,
-  asset: "0x2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a",
   vaults: [
     {
       id: "alpha",
@@ -14,7 +13,6 @@ const STABLE = defineVaultGroup({
         deposit: "0xAaaAaAAaAaAAaAaAAaaAaaAaAaAAaAaAaAAAAaaA",
         redeem: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB",
       },
-      share: "0x1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c",
     },
     {
       id: "beta",
@@ -22,7 +20,6 @@ const STABLE = defineVaultGroup({
         deposit: "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
         redeem: "0xdDdDddDdDdddDDddDdDdDDDDdDdDDdDDdDDDDDDd",
       },
-      share: "0x3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e",
     },
   ],
 });
@@ -44,12 +41,10 @@ describe("vault group types", () => {
     const MAIN = defineVault({
       id: "main",
       chainId: 1,
-      asset: "0x2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a",
       batchers: {
         deposit: "0xAaaAaAAaAaAAaAaAAaaAaaAaAaAAaAaAaAAAAaaA",
         redeem: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB",
       },
-      share: "0x1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c",
     });
     const client = {} as VaultClient;
     const account = "0x6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a";

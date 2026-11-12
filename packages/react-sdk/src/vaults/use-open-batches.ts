@@ -3,7 +3,7 @@
 import type { UseQueryOptions } from "@tanstack/react-query";
 import {
   openBatchesQueryOptions,
-  type Direction,
+  type JoinDirection,
   type OpenBatch,
   type VaultTarget,
 } from "@zama-fhe/sdk/vaults";
@@ -23,7 +23,7 @@ import { useVaultClient } from "./use-vault-client";
  */
 export function useOpenBatches(
   target: VaultTarget,
-  direction: Direction,
+  direction: JoinDirection,
   options?: Omit<UseQueryOptions<readonly OpenBatch[]>, "queryKey" | "queryFn">,
 ) {
   const selection = "vaults" in target ? { group: target } : { vault: target };

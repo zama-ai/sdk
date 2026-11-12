@@ -8,7 +8,7 @@ import { Address } from 'viem';
 import { Batch } from '@zama-fhe/sdk/vaults';
 import { BatcherRef } from '@zama-fhe/sdk/vaults';
 import { BatchRef } from '@zama-fhe/sdk/vaults';
-import { Direction } from '@zama-fhe/sdk/vaults';
+import { JoinDirection } from '@zama-fhe/sdk/vaults';
 import { JoinOutcome } from '@zama-fhe/sdk/vaults';
 import { JoinVariables } from '@zama-fhe/sdk/vaults';
 import { OpenBatch } from '@zama-fhe/sdk/vaults';
@@ -46,7 +46,7 @@ export function useDispatch<TContext = unknown>(options?: UseVaultMutationOption
 export function useFinalize<TContext = unknown>(options?: UseVaultMutationOptions<TransactionResult, BatchRef, TContext>): UseMutationResult<TransactionResult, Error, BatchRef, TContext>;
 
 // @public
-export function useOpenBatches(target: VaultTarget, direction: Direction, options?: Omit<UseQueryOptions<readonly OpenBatch[]>, "queryKey" | "queryFn">): UseQueryResult<readonly OpenBatch[], Error>;
+export function useOpenBatches(target: VaultTarget, direction: JoinDirection, options?: Omit<UseQueryOptions<readonly OpenBatch[]>, "queryKey" | "queryFn">): UseQueryResult<readonly OpenBatch[], Error>;
 
 // @public
 export function useQuit<TContext = unknown>(options?: UseVaultMutationOptions<TransactionResult, BatchRef, TContext>): UseMutationResult<TransactionResult, Error, BatchRef, TContext>;

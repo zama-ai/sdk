@@ -3,7 +3,7 @@
  *
  * @packageDocumentation
  */
-export { createVaultClient, VaultClient } from "./client";
+export { createVaultClient, type VaultClient } from "./client";
 export {
   batcherAddresses,
   defineVault,
@@ -28,9 +28,9 @@ export type {
   BatchState,
   BatcherRef,
   Call,
-  Direction,
   OperatorApprovalCall,
   JoinCall,
+  JoinDirection,
   JoinInput,
   JoinInputFor,
   JoinOptions,
@@ -43,7 +43,6 @@ export type {
   SendJoinInputFor,
   SendJoinOptions,
   VaultCall,
-  VaultCheck,
   VaultLeg,
 } from "./types";
 

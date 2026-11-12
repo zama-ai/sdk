@@ -33,18 +33,9 @@ import { createVaultClient, defineVaultGroup } from "@zama-fhe/sdk/vaults";
 export const STABLE = defineVaultGroup({
   id: "stable",
   chainId: 1,
-  asset: "0xConfidentialUSDC",
   vaults: [
-    {
-      id: "alpha",
-      batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
-      share: "0xAlphaShare",
-    },
-    {
-      id: "beta",
-      batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
-      share: "0xBetaShare",
-    },
+    { id: "alpha", batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" } },
+    { id: "beta", batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" } },
   ],
 });
 
@@ -53,7 +44,7 @@ const vaults = createVaultClient(sdk);
 const { batches } = await vaults.deposit(STABLE, { vaultId: "beta", amount: 1_000_000n });
 const beta = batches.find((batch) => batch.vaultId === "beta");
 if (beta !== undefined) {
-  const batch = await vaults.readBatch({ ...beta, account: "0xUser" });
+  const batch = await vaults.readBatch(beta, "0xUser");
   console.log(batch.state, batch.actions);
 }
 ```

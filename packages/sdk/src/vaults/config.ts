@@ -1,6 +1,6 @@
 import { getAddress, isAddress, type Address } from "viem";
 import { ConfigurationError } from "../errors";
-import type { Direction } from "./types";
+import type { JoinDirection } from "./types";
 
 /** The most vaults a group may hold; every join sends a leg to each of them. */
 export const MAX_GROUP_VAULTS = 8;
@@ -32,10 +32,12 @@ export interface BatcherHistory {
 export interface VaultConfig<TVaultId extends string = string> {
   /** What callers pass as `vaultId`. */
   readonly id: TVaultId;
-  /** The batcher each direction joins: an address, or a history once it has been upgraded. */
-  readonly batchers: Readonly<Record<Direction, Address | BatcherHistory>>;
-  /** The vault's confidential share token, which its redeem batchers take. */
-  readonly share: Address;
+  /**
+   * The batcher each direction joins: an address, or a history once it has
+   * been upgraded. The tokens are read from the batchers, so every deposit
+   * batcher of a group must take the same confidential asset.
+   */
+  readonly batchers: Readonly<Record<JoinDirection, Address | BatcherHistory>>;
 }
 
 /** What {@link defineVaultGroup} takes. */
@@ -47,13 +49,6 @@ export interface VaultGroupConfig<
   readonly id: TGroupId;
   /** The chain every batcher of the group is on. */
   readonly chainId: number;
-  /** The confidential asset every deposit batcher takes. */
-  readonly asset: Address;
-  /**
-   * The router a multi-vault join goes through. Defaults to the chain
-   * preset's `vaultRouterAddress`, and must match it when the preset sets one.
-   */
-  readonly router?: Address;
   /** The vaults, in leg order. Never reorder them once users have joined. */
   readonly vaults: readonly VaultConfig<TVaultId>[];
 }
@@ -65,9 +60,7 @@ export interface VaultGroupVault<TVaultId extends string = string> {
   /** What callers pass as `vaultId`. */
   readonly id: TVaultId;
   /** Every batcher of each direction, a plain address turned into a history. */
-  readonly batchers: Readonly<Record<Direction, BatcherHistory>>;
-  /** The vault's confidential share token. */
-  readonly share: Address;
+  readonly batchers: Readonly<Record<JoinDirection, BatcherHistory>>;
 }
 
 /** What {@link defineVaultGroup} returns. Only it can make one. */
@@ -76,30 +69,22 @@ export interface VaultGroup<TGroupId extends string = string, TVaultId extends s
   readonly id: TGroupId;
   /** The chain every batcher of the group is on. */
   readonly chainId: number;
-  /** The confidential asset every deposit batcher takes. */
-  readonly asset: Address;
-  /** The configured router, or `undefined` to use the chain preset's. */
-  readonly router: Address | undefined;
   /** The vaults, in leg order. */
   readonly vaults: readonly [VaultGroupVault<TVaultId>, ...VaultGroupVault<TVaultId>[]];
   /** Type-only brand: a hand-built object does not type-check as a group. */
   readonly [defined]: true;
 }
 
-/** What {@link defineVault} takes: one vault, with its chain and asset. */
+/** What {@link defineVault} takes: one vault, with its chain. */
 export interface SingleVaultConfig<TVaultId extends string = string> extends VaultConfig<TVaultId> {
   /** The chain the vault's batchers are on. */
   readonly chainId: number;
-  /** The confidential asset its deposit batcher takes. */
-  readonly asset: Address;
 }
 
 /** What {@link defineVault} returns. Only it can make one. */
 export interface Vault<TVaultId extends string = string> extends VaultGroupVault<TVaultId> {
   /** The chain the vault's batchers are on. */
   readonly chainId: number;
-  /** The confidential asset its deposit batcher takes. */
-  readonly asset: Address;
   /** Type-only brand: a hand-built object does not type-check as a vault. */
   readonly [defined]: true;
 }
@@ -125,14 +110,8 @@ export function toGroup(target: VaultTarget): VaultGroup {
   if ("vaults" in target) {
     return target;
   }
-  const { chainId, asset, ...vault } = target;
-  return {
-    id: vault.id,
-    chainId,
-    asset,
-    router: undefined,
-    vaults: [vault],
-  } as unknown as VaultGroup;
+  const { chainId, ...vault } = target;
+  return { id: vault.id, chainId, vaults: [vault] } as unknown as VaultGroup;
 }
 
 /** Every batcher of a history, oldest first. */
@@ -149,7 +128,8 @@ function requireAddress(value: unknown, where: string): Address {
 
 /**
  * Validate a group of vaults that take deposits in one confidential asset,
- * and keep its ids as literal types. Reads nothing from chain. For one vault
+ * and keep its ids as literal types. Reads nothing from chain: the client
+ * reads each batcher's token on the first join. For one vault
  * on its own, use {@link defineVault}.
  *
  * @example
@@ -157,10 +137,9 @@ function requireAddress(value: unknown, where: string): Address {
  * export const STABLE = defineVaultGroup({
  *   id: "stable",
  *   chainId: 1,
- *   asset: "0xConfidentialUSDC",
  *   vaults: [
- *     { id: "alpha", batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" }, share: "0xAlphaShare" },
- *     { id: "beta", batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" }, share: "0xBetaShare" },
+ *     { id: "alpha", batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" } },
+ *     { id: "beta", batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" } },
  *   ],
  * });
  * ```
@@ -223,16 +202,12 @@ export function defineVaultGroup<const TGroupId extends string, const TVaultId e
         deposit: history(entry.batchers.deposit, `${at} deposit batcher`),
         redeem: history(entry.batchers.redeem, `${at} redeem batcher`),
       },
-      share: requireAddress(entry.share, `${at} share`),
     };
   };
 
   return {
     id: config.id,
     chainId: config.chainId,
-    asset: requireAddress(config.asset, `${where} asset`),
-    router:
-      config.router === undefined ? undefined : requireAddress(config.router, `${where} router`),
     vaults: [vault(first), ...rest.map(vault)],
   } as unknown as VaultGroup<TGroupId, TVaultId>;
 }
@@ -246,9 +221,7 @@ export function defineVaultGroup<const TGroupId extends string, const TVaultId e
  * export const MAIN = defineVault({
  *   id: "main",
  *   chainId: 1,
- *   asset: "0xConfidentialUSDC",
  *   batchers: { deposit: "0xMainDeposit", redeem: "0xMainRedeem" },
- *   share: "0xMainShare",
  * });
  * ```
  *
@@ -257,11 +230,7 @@ export function defineVaultGroup<const TGroupId extends string, const TVaultId e
 export function defineVault<const TVaultId extends string>(
   config: SingleVaultConfig<TVaultId>,
 ): Vault<TVaultId> {
-  const { chainId, asset, ...vault } = config;
-  const group = defineVaultGroup({ id: config.id, chainId, asset, vaults: [vault] });
-  return {
-    ...group.vaults[0],
-    chainId: group.chainId,
-    asset: group.asset,
-  } as unknown as Vault<TVaultId>;
+  const { chainId, ...vault } = config;
+  const group = defineVaultGroup({ id: config.id, chainId, vaults: [vault] });
+  return { ...group.vaults[0], chainId: group.chainId } as unknown as Vault<TVaultId>;
 }

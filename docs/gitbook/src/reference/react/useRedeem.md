@@ -53,7 +53,7 @@ function RedeemButton() {
 
 ## Mutation variables
 
-Same as [`useDeposit`](./useDeposit.md#mutation-variables): `group` and `vaultId` or `vault`, `amount`, `skipChecks` and `onJoinSubmitted`. The `amount` is in shares, not assets.
+Same as [`useDeposit`](./useDeposit.md#mutation-variables): `group` and `vaultId` or `vault`, `amount`, `skipBalanceCheck` and `onJoinSubmitted`. The `amount` is in shares, not assets.
 
 **Throws:** as [`useDeposit`](./useDeposit.md#mutation-variables).
 

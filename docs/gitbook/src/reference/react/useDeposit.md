@@ -47,18 +47,9 @@ import { defineVaultGroup } from "@zama-fhe/sdk/vaults";
 export const STABLE = defineVaultGroup({
   id: "stable",
   chainId: 1,
-  asset: "0xConfidentialUSDC",
   vaults: [
-    {
-      id: "alpha",
-      batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
-      share: "0xAlphaShare",
-    },
-    {
-      id: "beta",
-      batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
-      share: "0xBetaShare",
-    },
+    { id: "alpha", batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" } },
+    { id: "beta", batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" } },
   ],
 });
 ```
@@ -100,11 +91,11 @@ The vault that gets the amount.
 
 The amount, in the asset's base units. Encrypted before it leaves the SDK.
 
-### skipChecks
+### skipBalanceCheck
 
-`"balance"[] | undefined`
+`boolean | undefined`
 
-Skip the balance check. The paused check always runs.
+Skip the balance check, which runs by default. The paused check always runs.
 
 ### onJoinSubmitted
 
