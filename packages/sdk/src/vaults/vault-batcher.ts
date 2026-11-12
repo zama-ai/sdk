@@ -1,6 +1,7 @@
 import { getAddress, type Address, type Hex } from "viem";
 import { confidentialTransferAndCallContract, unwrapAmountContract } from "../contracts";
 import {
+  ConfigurationError,
   DecryptionFailedError,
   EncryptionFailedError,
   SignerNotConfiguredError,
@@ -11,8 +12,16 @@ import type { TransactionOperation } from "../events/sdk-events";
 import type { EncryptedValue } from "../relayer/types";
 import { type TelemetryOperation, withOperation } from "../telemetry";
 import { Token } from "../token";
-import type { GenericSigner, TransactionResult, WriteContractConfig } from "../types";
-import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
+import type {
+  ContractAbi,
+  GenericSigner,
+  ReadContractArgs,
+  ReadContractConfig,
+  ReadFunctionName,
+  TransactionResult,
+  WriteContractConfig,
+} from "../types";
+import { requireWriteChain } from "../utils/alignment";
 import { assertConfidentialBalance } from "../utils/assert-balance";
 import { assertBigint } from "../utils/assertions";
 import { isEncryptedValueZero } from "../utils/handles";
@@ -45,7 +54,25 @@ import {
   vaultContract,
 } from "./contracts";
 import { findJoined } from "./events";
-import { BatchState, type JoinOptions, type JoinResult } from "./types";
+import { BatchState, type BatchStatus, type JoinOptions, type JoinResult } from "./types";
+
+const BATCH_STATES: ReadonlySet<number> = new Set(Object.values(BatchState));
+
+/** Options for {@link VaultBatcher}. */
+export interface VaultBatcherOptions {
+  /**
+   * Chain to read the batcher from, when it is not the provider's current
+   * chain — for example a vault page shown before the wallet connects. Needs a
+   * provider that can route reads, such as `WagmiProvider`. Writes still go
+   * through the signer, which must then be on this chain.
+   */
+  chainId?: number;
+}
+
+/** Seconds from `now` until `at`, `0` once reached. */
+function secondsUntil(at: bigint, now: bigint): bigint {
+  return at > now ? at - now : 0n;
+}
 
 /** A settlement built but not sent: what {@link VaultBatcher.prepareFinalize} returns. */
 export interface PreparedFinalize {
@@ -76,6 +103,8 @@ export class VaultBatcher {
   readonly sdk: ZamaSDK;
   /** Checksummed address of the batcher contract. */
   readonly address: Address;
+  /** The chain reads go to; `undefined` for the provider's current chain. */
+  readonly chainId: number | undefined;
 
   readonly #vault: () => Promise<Address>;
   readonly #fromToken: () => Promise<Address>;
@@ -84,16 +113,13 @@ export class VaultBatcher {
   // One instance, so repeated joins reuse the token's decrypted-balance cache.
   #fromTokenInstance: Promise<Token> | null = null;
 
-  constructor(sdk: ZamaSDK, address: Address) {
+  constructor(sdk: ZamaSDK, address: Address, options?: VaultBatcherOptions) {
     this.sdk = sdk;
     this.address = getAddress(address);
-    this.#vault = memoizeAddressRead(() => sdk.provider.readContract(vaultContract(this.address)));
-    this.#fromToken = memoizeAddressRead(() =>
-      sdk.provider.readContract(fromTokenContract(this.address)),
-    );
-    this.#toToken = memoizeAddressRead(() =>
-      sdk.provider.readContract(toTokenContract(this.address)),
-    );
+    this.chainId = options?.chainId;
+    this.#vault = memoizeAddressRead(() => this.#read(vaultContract(this.address)));
+    this.#fromToken = memoizeAddressRead(() => this.#read(fromTokenContract(this.address)));
+    this.#toToken = memoizeAddressRead(() => this.#read(toTokenContract(this.address)));
   }
 
   // READS
@@ -125,7 +151,7 @@ export class VaultBatcher {
 
   /** The id of the currently open (not-yet-dispatched) batch. */
   async currentBatchId(): Promise<bigint> {
-    return this.sdk.provider.readContract(currentBatchIdContract(this.address));
+    return this.#read(currentBatchIdContract(this.address));
   }
 
   /**
@@ -134,16 +160,22 @@ export class VaultBatcher {
    *
    * @throws Reverts on chain with `BatchNonexistent` for an id above
    *   {@link currentBatchId} — batch ids start at 1.
+   * @throws if the contract returns a state the SDK does not know. {@link ConfigurationError}
    */
   async batchState(batchId: bigint): Promise<BatchState> {
     // The ABI types this uint8 enum as a plain `number`.
-    const state = await this.sdk.provider.readContract(batchStateContract(this.address, batchId));
+    const state = await this.#read(batchStateContract(this.address, batchId));
+    if (!BATCH_STATES.has(state)) {
+      throw new ConfigurationError(
+        `Batcher ${this.address} returned unknown batch state ${state} for batch ${batchId}; is it a vault batcher?`,
+      );
+    }
     return state as BatchState;
   }
 
   /** Whether the batcher is paused. While paused, `join` and `dispatchBatch` revert; `quit` and `claim` still work. */
   async paused(): Promise<boolean> {
-    return this.sdk.provider.readContract(pausedContract(this.address));
+    return this.#read(pausedContract(this.address));
   }
 
   /**
@@ -151,12 +183,12 @@ export class VaultBatcher {
    * is gated on {@link batchMinBatchAge} instead.
    */
   async minBatchAge(): Promise<bigint> {
-    return this.sdk.provider.readContract(minBatchAgeContract(this.address));
+    return this.#read(minBatchAgeContract(this.address));
   }
 
   /** The minimum age in seconds pinned to `batchId` when it opened — the value dispatch enforces. */
   async batchMinBatchAge(batchId: bigint): Promise<bigint> {
-    return this.sdk.provider.readContract(batchMinBatchAgeContract(this.address, batchId));
+    return this.#read(batchMinBatchAgeContract(this.address, batchId));
   }
 
   /**
@@ -166,7 +198,7 @@ export class VaultBatcher {
    * {@link batchCallbackDeadline}.
    */
   async callbackDeadline(): Promise<bigint> {
-    return this.sdk.provider.readContract(callbackDeadlineContract(this.address));
+    return this.#read(callbackDeadlineContract(this.address));
   }
 
   /**
@@ -174,17 +206,17 @@ export class VaultBatcher {
    * {@link batchDispatchedAt} for the timestamp that batch must finalize by.
    */
   async batchCallbackDeadline(batchId: bigint): Promise<bigint> {
-    return this.sdk.provider.readContract(batchCallbackDeadlineContract(this.address, batchId));
+    return this.#read(batchCallbackDeadlineContract(this.address, batchId));
   }
 
   /** The Unix timestamp (seconds) at which a batch was opened. */
   async batchCreatedAt(batchId: bigint): Promise<bigint> {
-    return this.sdk.provider.readContract(batchCreatedAtContract(this.address, batchId));
+    return this.#read(batchCreatedAtContract(this.address, batchId));
   }
 
   /** The Unix timestamp (seconds) at which a batch was dispatched, or `0` if it hasn't been yet. */
   async batchDispatchedAt(batchId: bigint): Promise<bigint> {
-    return this.sdk.provider.readContract(batchDispatchedAtContract(this.address, batchId));
+    return this.#read(batchDispatchedAtContract(this.address, batchId));
   }
 
   /**
@@ -193,12 +225,12 @@ export class VaultBatcher {
    * out `deposit * exchangeRate / 10 ** exchangeRateDecimals`, rounded down.
    */
   async exchangeRate(batchId: bigint): Promise<bigint> {
-    return this.sdk.provider.readContract(exchangeRateContract(this.address, batchId));
+    return this.#read(exchangeRateContract(this.address, batchId));
   }
 
   /** The number of decimals {@link exchangeRate} is scaled by. */
   async exchangeRateDecimals(): Promise<number> {
-    return this.sdk.provider.readContract(exchangeRateDecimalsContract(this.address));
+    return this.#read(exchangeRateDecimalsContract(this.address));
   }
 
   /**
@@ -216,19 +248,20 @@ export class VaultBatcher {
       this.batchState(batchId),
       this.batchCreatedAt(batchId),
       this.batchMinBatchAge(batchId),
-      this.sdk.provider.getBlockTimestamp(),
+      this.sdk.provider.getBlockTimestamp(this.chainId),
     ]);
     if (state !== BatchState.Pending) {
       return null;
     }
     const eligibleAt = createdAt + minAge;
-    return eligibleAt > now ? eligibleAt - now : 0n;
+    return secondsUntil(eligibleAt, now);
   }
 
   /**
    * Seconds until a dispatched batch reaches its callback deadline, `0` once
    * it has. From then on {@link finalize} cancels the batch instead of
-   * settling it. `null` outside {@link BatchState.Dispatched}, where there is
+   * settling it, except on an asynchronous redeem batcher that has already
+   * placed the redemption request. `null` outside {@link BatchState.Dispatched}, where there is
    * nothing to finalize.
    *
    * Measured against the chain's block timestamp and the batch's own pinned
@@ -239,25 +272,65 @@ export class VaultBatcher {
       this.batchState(batchId),
       this.batchDispatchedAt(batchId),
       this.batchCallbackDeadline(batchId),
-      this.sdk.provider.getBlockTimestamp(),
+      this.sdk.provider.getBlockTimestamp(this.chainId),
     ]);
     if (state !== BatchState.Dispatched) {
       return null;
     }
     const cancelsAt = dispatchedAt + deadline;
-    return cancelsAt > now ? cancelsAt - now : 0n;
+    return secondsUntil(cancelsAt, now);
+  }
+
+  /**
+   * A batch's state with the timestamps that state needs: when it becomes
+   * dispatchable while `Pending`, when its callback deadline passes while
+   * `Dispatched`. Switch on `state` to decide what to show and offer; see
+   * {@link BatchState}.
+   */
+  async batchStatus(batchId: bigint): Promise<BatchStatus> {
+    // Read every field whatever the state, so a poll costs the same each time.
+    const [state, createdAt, dispatchedAt, minAge, deadline, now] = await Promise.all([
+      this.batchState(batchId),
+      this.batchCreatedAt(batchId),
+      this.batchDispatchedAt(batchId),
+      this.batchMinBatchAge(batchId),
+      this.batchCallbackDeadline(batchId),
+      this.sdk.provider.getBlockTimestamp(this.chainId),
+    ]);
+    const dispatchableAt = createdAt + minAge;
+    switch (state) {
+      case BatchState.Pending: {
+        return {
+          state,
+          createdAt,
+          dispatchableAt,
+          secondsUntilDispatchable: secondsUntil(dispatchableAt, now),
+        };
+      }
+      case BatchState.Dispatched: {
+        const callbackDeadlineAt = dispatchedAt + deadline;
+        return {
+          state,
+          createdAt,
+          dispatchableAt,
+          dispatchedAt,
+          callbackDeadlineAt,
+          secondsUntilCallbackDeadline: secondsUntil(callbackDeadlineAt, now),
+        };
+      }
+      default:
+        return { state, createdAt, dispatchableAt, dispatchedAt };
+    }
   }
 
   /** The encrypted aggregate amount joined into a batch, without decrypting it. */
   async confidentialTotalDeposits(batchId: bigint): Promise<EncryptedValue> {
-    return this.sdk.provider.readContract(totalDepositsContract(this.address, batchId));
+    return this.#read(totalDepositsContract(this.address, batchId));
   }
 
   /** The encrypted amount `account` joined into a batch, without decrypting it. */
   async confidentialDepositOf(batchId: bigint, account: Address): Promise<EncryptedValue> {
-    return this.sdk.provider.readContract(
-      depositsContract(this.address, batchId, getAddress(account)),
-    );
+    return this.#read(depositsContract(this.address, batchId, getAddress(account)));
   }
 
   /**
@@ -265,7 +338,7 @@ export class VaultBatcher {
    * once its amount is publicly decrypted. Zero until the batch is dispatched.
    */
   async unwrapRequestId(batchId: bigint): Promise<EncryptedValue> {
-    return this.sdk.provider.readContract(unwrapRequestIdContract(this.address, batchId));
+    return this.#read(unwrapRequestIdContract(this.address, batchId));
   }
 
   /**
@@ -278,6 +351,7 @@ export class VaultBatcher {
     if (isEncryptedValueZero(encryptedValue)) {
       return 0n;
     }
+    await this.#requireDecryptChain("depositOf");
     const result = await this.sdk.decryption.decryptValues(
       [{ encryptedValue, contractAddress: this.address }],
       { operation: "vault-deposit-of" },
@@ -316,8 +390,8 @@ export class VaultBatcher {
    */
   async join(amount: bigint, beneficiary?: Address, options?: JoinOptions): Promise<JoinResult> {
     const { operation } = withOperation(options, "vault-join");
-    this.#requireSigner("join");
-    const account = await requireAlignedWalletAccount("join", this.sdk.signer, this.sdk.provider);
+    // Before the balance check and encryption, so a wrong chain fails before any wallet prompt.
+    const account = await this.#requireWriteAccount("join");
     const userAddress = getAddress(account.address);
     const resolvedBeneficiary = beneficiary ? getAddress(beneficiary) : userAddress;
 
@@ -356,6 +430,7 @@ export class VaultBatcher {
             "0x",
           )
         : joinContract(this.address, resolvedBeneficiary, encryptedAmount, inputProof),
+      options?.onJoinSubmitted,
     );
 
     const joined = findJoined(result.receipt.logs, this.address, resolvedBeneficiary);
@@ -384,8 +459,7 @@ export class VaultBatcher {
    * batch, use {@link recover}.
    */
   async quit(batchId: bigint): Promise<TransactionResult> {
-    this.#requireSigner("quit");
-    await requireChainAlignment("quit", this.sdk.signer, this.sdk.provider);
+    await this.#requireWriteAccount("quit");
     return this.#submitTransaction("vault:quit", quitContract(this.address, batchId));
   }
 
@@ -427,8 +501,7 @@ export class VaultBatcher {
    * Reverts while the batcher is {@link paused}.
    */
   async dispatchBatch(): Promise<TransactionResult> {
-    this.#requireSigner("dispatchBatch");
-    await requireChainAlignment("dispatchBatch", this.sdk.signer, this.sdk.provider);
+    await this.#requireWriteAccount("dispatchBatch");
     return this.#submitTransaction("vault:dispatchBatch", dispatchBatchContract(this.address));
   }
 
@@ -439,16 +512,17 @@ export class VaultBatcher {
    * {@link dispatchBatch}. A keeper normally does this, so reach for it
    * when a batch has sat in {@link BatchState.Dispatched} longer than
    * expected. Past the batch's callback deadline the same call cancels the
-   * batch instead of settling it; {@link timeUntilCallbackDeadline} says
-   * which one a call now does.
+   * batch instead of settling it, except on an asynchronous redeem batcher
+   * that has already placed the redemption request, which keeps settling.
+   * {@link timeUntilCallbackDeadline} says whether the deadline has passed.
    *
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
    * @throws if the batch is not {@link BatchState.Dispatched}, for example because a keeper already finalized it. {@link VaultBatchNotDispatchedError}
    * @throws if the public decryption returns no cleartext for the amount. {@link DecryptionFailedError}
    */
   async finalize(batchId: bigint): Promise<TransactionResult> {
-    this.#requireSigner("finalize");
-    await requireChainAlignment("finalize", this.sdk.signer, this.sdk.provider);
+    // Before the public decryption, so a wrong chain fails before the relayer round trip.
+    await this.#requireWriteAccount("finalize");
     const { call } = await this.prepareFinalize(batchId);
     return this.#submitTransaction("vault:finalize", call);
   }
@@ -460,6 +534,7 @@ export class VaultBatcher {
    * signer.
    *
    * @throws if the batch is not {@link BatchState.Dispatched}, for example because a keeper already finalized it. {@link VaultBatchNotDispatchedError}
+   * @throws if the batcher is pinned to a chain the provider is not on, since decryption runs on the provider's chain. {@link ConfigurationError}
    * @throws if the public decryption returns no cleartext for the amount. {@link DecryptionFailedError}
    */
   async prepareFinalize(batchId: bigint): Promise<PreparedFinalize> {
@@ -477,9 +552,8 @@ export class VaultBatcher {
         { batcher: this.address, batchId, state },
       );
     }
-    const encryptedAmount = await this.sdk.provider.readContract(
-      unwrapAmountContract(wrapper, unwrapRequestId),
-    );
+    const encryptedAmount = await this.#read(unwrapAmountContract(wrapper, unwrapRequestId));
+    await this.#requireDecryptChain("prepareFinalize");
     const { clearValues, decryptionProof } = await this.sdk.decryption.decryptPublicValues(
       [encryptedAmount],
       { operation: "vault-finalize" },
@@ -536,28 +610,53 @@ export class VaultBatcher {
    * connected signer still submits the transaction.
    */
   async #resolveTarget(operation: string, account: Address | undefined): Promise<Address> {
-    this.#requireSigner(operation);
-    if (account) {
-      await requireChainAlignment(operation, this.sdk.signer, this.sdk.provider);
-      return getAddress(account);
-    }
-    const aligned = await requireAlignedWalletAccount(
+    const aligned = await this.#requireWriteAccount(operation);
+    return getAddress(account ?? aligned.address);
+  }
+
+  async #requireWriteAccount(operation: string): Promise<{ address: Address; chainId: number }> {
+    // Reads go to `chainId`; a write must not land on another chain.
+    return requireWriteChain(
       operation,
-      this.sdk.signer,
+      this.#requireSigner(operation),
       this.sdk.provider,
+      this.chainId,
     );
-    return getAddress(aligned.address);
+  }
+
+  // Decryption goes to the relayer of the provider's current chain, which must
+  // then be the chain the handle was read from.
+  async #requireDecryptChain(operation: string): Promise<void> {
+    if (this.chainId === undefined) {
+      return;
+    }
+    const providerChainId = await this.sdk.provider.getChainId();
+    if (providerChainId !== this.chainId) {
+      throw new ConfigurationError(
+        `Operation "${operation}" decrypts a value from chain ${this.chainId}, but the provider is on chain ${providerChainId}; switch to chain ${this.chainId} first`,
+      );
+    }
+  }
+
+  #read<
+    const TAbi extends ContractAbi,
+    TFunctionName extends ReadFunctionName<TAbi>,
+    const TArgs extends ReadContractArgs<TAbi, TFunctionName>,
+  >(config: ReadContractConfig<TAbi, TFunctionName, TArgs>) {
+    return this.sdk.provider.readContract({ ...config, chainId: this.chainId });
   }
 
   async #submitTransaction(
     operation: TransactionOperation,
     config: WriteContractConfig,
+    onSubmitted?: (txHash: Hex) => void,
   ): Promise<TransactionResult> {
     return submitSdkTransaction({
       operation,
       signer: this.#requireSigner(operation),
       provider: this.sdk.provider,
       config,
+      onSubmitted,
       emit: (input) => this.sdk.emitEvent(input, this.address),
       logger: this.sdk.logger,
     });
@@ -575,6 +674,10 @@ export class VaultBatcher {
  * const { batchId } = await depositBatcher.join(1_000_000n);
  * ```
  */
-export function createVaultBatcher(sdk: ZamaSDK, address: Address): VaultBatcher {
-  return new VaultBatcher(sdk, address);
+export function createVaultBatcher(
+  sdk: ZamaSDK,
+  address: Address,
+  options?: VaultBatcherOptions,
+): VaultBatcher {
+  return new VaultBatcher(sdk, address, options);
 }

@@ -585,10 +585,12 @@ export class ChainMismatchError extends ZamaError {
         operation: string;
         signerChainId: number;
         providerChainId: number;
+        targetChainId?: number;
     }, options?: ErrorOptions);
     readonly operation: string;
     readonly providerChainId: number;
     readonly signerChainId: number;
+    readonly targetChainId: number | undefined;
 }
 
 // @public
@@ -9377,7 +9379,7 @@ export interface GenericLogger {
 
 // @public
 export interface GenericProvider {
-    getBlockTimestamp(): Promise<bigint>;
+    getBlockTimestamp(chainId?: number): Promise<bigint>;
     getChainId(): Promise<number>;
     prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
         from: Address;
@@ -15025,6 +15027,7 @@ export interface ReadContractConfig<TAbi extends ContractAbi = ContractAbi, TFun
     readonly abi: TAbi;
     readonly address: Address;
     readonly args: TArgs;
+    readonly chainId?: number;
     readonly functionName: TFunctionName;
 }
 

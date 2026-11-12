@@ -1,4 +1,4 @@
-import type { Address } from "viem";
+import type { Address, Hex } from "viem";
 import type { EncryptedValue } from "../relayer/types";
 import type { TelemetryOperation } from "../telemetry";
 import type { TransactionResult } from "../types";
@@ -21,6 +21,50 @@ export const BatchState = {
 /** Union of all {@link BatchState} values. */
 export type BatchState = (typeof BatchState)[keyof typeof BatchState];
 
+/**
+ * A batch's state with the timestamps that state needs, so a UI can switch on
+ * `state` and handle every case. Timestamps are Unix seconds on chain. The
+ * `secondsUntil*` fields are measured against the block timestamp at read
+ * time and stop at `0`; tick a live countdown from the `*At` timestamps.
+ */
+export type BatchStatus =
+  | {
+      state: typeof BatchState.Pending;
+      /** When the batch opened. */
+      createdAt: bigint;
+      /** When anyone may dispatch the batch, pinned when it opened. */
+      dispatchableAt: bigint;
+      /** Seconds until `dispatchableAt`; `0` once reached. */
+      secondsUntilDispatchable: bigint;
+    }
+  | {
+      state: typeof BatchState.Dispatched;
+      createdAt: bigint;
+      dispatchableAt: bigint;
+      dispatchedAt: bigint;
+      /**
+       * From then on `finalize` cancels the batch instead of settling it. A
+       * redeem batcher whose vault settles redemptions asynchronously is the
+       * exception: once it has placed the redemption request, it keeps
+       * settling past this deadline.
+       */
+      callbackDeadlineAt: bigint;
+      /** Seconds until `callbackDeadlineAt`; `0` once reached. */
+      secondsUntilCallbackDeadline: bigint;
+    }
+  | {
+      state: typeof BatchState.Finalized;
+      createdAt: bigint;
+      dispatchableAt: bigint;
+      dispatchedAt: bigint;
+    }
+  | {
+      state: typeof BatchState.Canceled;
+      createdAt: bigint;
+      dispatchableAt: bigint;
+      dispatchedAt: bigint;
+    };
+
 /** Addresses that make up one confidential vault. */
 export interface VaultAddresses {
   /**
@@ -42,6 +86,12 @@ export interface JoinOptions {
    * whose balance the connected signer cannot decrypt, such as smart wallets.
    */
   skipBalanceCheck?: boolean;
+  /**
+   * Called with the join's transaction hash once the wallet has signed and
+   * sent it, before the SDK waits for the receipt — the moment a UI moves
+   * from "confirm in your wallet" to "waiting for the transaction".
+   */
+  onJoinSubmitted?: (txHash: Hex) => void;
   /** @internal */
   readonly operation?: TelemetryOperation;
 }

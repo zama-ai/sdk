@@ -19,7 +19,7 @@ The `vaults` subpath is separate from the root entry, so apps that don't use vau
 
 ## Construction
 
-Use `createVault(sdk, addresses)`:
+Use `createVault(sdk, addresses, options?)`:
 
 ```ts
 import { createVault } from "@zama-fhe/sdk/vaults";
@@ -34,7 +34,9 @@ const { batchId } = await vault.deposit(1_000_000n);
 await vault.depositBatcher.claim(batchId);
 ```
 
-`createVault` is a thin factory over `new Vault(sdk, addresses)`; both take the same arguments.
+`createVault` is a thin factory over `new Vault(sdk, addresses, options)`; both take the same arguments.
+
+Pass `{ chainId }` for a vault on another chain than the provider's, for example on a vault page shown before the wallet connects. Both batchers get it (see [`VaultBatcher` → Construction](VaultBatcher.md#construction)), and `deposit` and `redeem` throw `ChainMismatchError` while the wallet is on another chain, before sending anything.
 
 ### VaultAddresses
 
@@ -72,6 +74,12 @@ The batcher joined by share redemptions. Same API as `depositBatcher`, for the r
 const state = await vault.depositBatcher.batchState(batchId);
 await vault.redeemBatcher.claim(batchId);
 ```
+
+### chainId
+
+`number | undefined`
+
+The chain both batchers are on, or `undefined` for the provider's current chain.
 
 ## Reads
 
@@ -133,11 +141,12 @@ const { txHash, batchId, confidentialJoinedAmount } = await vault.deposit(1_000_
 
 Options (`VaultJoinOptions`):
 
-| Option             | Type      | Default          | Description                                                                                                                                                                                                  |
-| ------------------ | --------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `beneficiary`      | `Address` | connected wallet | Account credited in the batch. The beneficiary owns the position: only they can `quit` it, and `claim` always pays out to them.                                                                              |
-| `operatorUntil`    | `number`  | now + 1 hour     | Unix timestamp (seconds) until which the batcher's operator grant is valid. Only used for another `beneficiary`, and only when a grant isn't already active. Same default as `Token.setOperator`.            |
-| `skipBalanceCheck` | `boolean` | `false`          | Skip the confidential-balance pre-flight. For accounts whose balance the connected signer can't decrypt, such as smart wallets. The on-chain transfer then moves zero, not reverts, if the balance is short. |
+| Option             | Type                    | Default          | Description                                                                                                                                                                                                  |
+| ------------------ | ----------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `beneficiary`      | `Address`               | connected wallet | Account credited in the batch. The beneficiary owns the position: only they can `quit` it, and `claim` always pays out to them.                                                                              |
+| `operatorUntil`    | `number`                | now + 1 hour     | Unix timestamp (seconds) until which the batcher's operator grant is valid. Only used for another `beneficiary`, and only when a grant isn't already active. Same default as `Token.setOperator`.            |
+| `skipBalanceCheck` | `boolean`               | `false`          | Skip the confidential-balance pre-flight. For accounts whose balance the connected signer can't decrypt, such as smart wallets. The on-chain transfer then moves zero, not reverts, if the balance is short. |
+| `onJoinSubmitted`  | `(txHash: Hex) => void` | —                | Called once the wallet has sent the join, before the SDK waits for the receipt. Use it to switch the UI from "confirm in your wallet" to "waiting for the transaction".                                      |
 
 **Throws:**
 

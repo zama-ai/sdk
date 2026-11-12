@@ -28,24 +28,35 @@ export class ChainMismatchError extends ZamaError {
   readonly signerChainId: number;
   /** Chain ID the provider is connected to. */
   readonly providerChainId: number;
+  /** Chain ID the operation's contract is pinned to, when it differs from the provider's. */
+  readonly targetChainId: number | undefined;
 
   constructor(
     {
       operation,
       signerChainId,
       providerChainId,
-    }: { operation: string; signerChainId: number; providerChainId: number },
+      targetChainId,
+    }: {
+      operation: string;
+      signerChainId: number;
+      providerChainId: number;
+      targetChainId?: number;
+    },
     options?: ErrorOptions,
   ) {
     super(
       ZamaErrorCode.ChainMismatch,
-      `Operation "${operation}" requires signer and provider to be on the same chain, ` +
-        `but signer is on chain ${signerChainId} and provider is on chain ${providerChainId}.`,
+      targetChainId === undefined
+        ? `Operation "${operation}" requires signer and provider to be on the same chain, ` +
+            `but signer is on chain ${signerChainId} and provider is on chain ${providerChainId}.`
+        : `Operation "${operation}" targets chain ${targetChainId}, but signer is on chain ${signerChainId}.`,
       options,
     );
     this.name = "ChainMismatchError";
     this.operation = operation;
     this.signerChainId = signerChainId;
     this.providerChainId = providerChainId;
+    this.targetChainId = targetChainId;
   }
 }

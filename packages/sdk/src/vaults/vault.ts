@@ -1,9 +1,10 @@
 import { getAddress, type Address } from "viem";
-import { ConfigurationError, SignerNotConfiguredError } from "../errors";
+import { ConfigurationError } from "../errors";
 import { WrappedToken } from "../token";
+import { requireWriteChain } from "../utils/alignment";
 import type { ZamaSDK } from "../zama-sdk";
 import type { JoinResult, VaultAddresses, VaultJoinOptions } from "./types";
-import { VaultBatcher } from "./vault-batcher";
+import { VaultBatcher, type VaultBatcherOptions } from "./vault-batcher";
 
 /**
  * A confidential ERC-4626 vault: one deposit batcher and one redeem batcher
@@ -19,6 +20,8 @@ export class Vault {
   readonly depositBatcher: VaultBatcher;
   /** Joined by share redemptions. */
   readonly redeemBatcher: VaultBatcher;
+  /** The chain both batchers are on; `undefined` for the provider's current chain. */
+  readonly chainId: number | undefined;
 
   // The promise is cached, not just the resolved value, so concurrent callers
   // share one lookup and end up with the same instance.
@@ -28,11 +31,12 @@ export class Vault {
 
   readonly #expectedVaultAddress: Address | undefined;
 
-  constructor(sdk: ZamaSDK, addresses: VaultAddresses) {
+  constructor(sdk: ZamaSDK, addresses: VaultAddresses, options?: VaultBatcherOptions) {
     this.sdk = sdk;
+    this.chainId = options?.chainId;
     this.#expectedVaultAddress = addresses.vault ? getAddress(addresses.vault) : undefined;
-    this.depositBatcher = new VaultBatcher(sdk, addresses.depositBatcher);
-    this.redeemBatcher = new VaultBatcher(sdk, addresses.redeemBatcher);
+    this.depositBatcher = new VaultBatcher(sdk, addresses.depositBatcher, options);
+    this.redeemBatcher = new VaultBatcher(sdk, addresses.redeemBatcher, options);
   }
 
   /**
@@ -100,6 +104,7 @@ export class Vault {
     await this.#ensureOperator("deposit", token, this.depositBatcher.address, options);
     return this.depositBatcher.join(amount, options?.beneficiary, {
       skipBalanceCheck: options?.skipBalanceCheck,
+      onJoinSubmitted: options?.onJoinSubmitted,
       operation: "vault-deposit",
     });
   }
@@ -121,6 +126,7 @@ export class Vault {
     await this.#ensureOperator("redeem", token, this.redeemBatcher.address, options);
     return this.redeemBatcher.join(amount, options?.beneficiary, {
       skipBalanceCheck: options?.skipBalanceCheck,
+      onJoinSubmitted: options?.onJoinSubmitted,
       operation: "vault-redeem",
     });
   }
@@ -155,10 +161,14 @@ export class Vault {
     operator: Address,
     options: VaultJoinOptions | undefined,
   ): Promise<void> {
-    if (!this.sdk.signer) {
-      throw new SignerNotConfiguredError(operation);
-    }
-    const account = getAddress(this.sdk.signer.requireWalletAccount(operation).address);
+    // Checked before the grant below, which is sent before the join checks the chain.
+    const { address } = await requireWriteChain(
+      operation,
+      this.sdk.signer,
+      this.sdk.provider,
+      this.chainId,
+    );
+    const account = getAddress(address);
     if (options?.beneficiary === undefined || getAddress(options.beneficiary) === account) {
       return;
     }
@@ -170,7 +180,10 @@ export class Vault {
 }
 
 /**
- * Create a {@link Vault} bound to `sdk` for the deposit/redeem batchers at `addresses`.
+ * Create a {@link Vault} bound to `sdk` for the deposit/redeem batchers at
+ * `addresses`. Pass `chainId` to read both batchers on that chain; a deposit
+ * or redemption then throws `ChainMismatchError` while the wallet is on
+ * another chain.
  *
  * @example
  * ```ts
@@ -185,6 +198,10 @@ export class Vault {
  * await vault.depositBatcher.claim(batchId);
  * ```
  */
-export function createVault(sdk: ZamaSDK, addresses: VaultAddresses): Vault {
-  return new Vault(sdk, addresses);
+export function createVault(
+  sdk: ZamaSDK,
+  addresses: VaultAddresses,
+  options?: VaultBatcherOptions,
+): Vault {
+  return new Vault(sdk, addresses, options);
 }

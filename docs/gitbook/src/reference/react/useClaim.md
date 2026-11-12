@@ -56,6 +56,14 @@ The batcher contract address (deposit or redeem direction).
 
 ---
 
+### chainId
+
+`number | undefined`
+
+Chain the batcher is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](../sdk/errors.md#chainmismatcherror) instead of sending.
+
+---
+
 {% include ".gitbook/includes/mutation-options.md" %}
 
 ## Mutation variables

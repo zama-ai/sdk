@@ -58,6 +58,14 @@ The vault's `depositBatcher` and `redeemBatcher` addresses, and optionally the `
 
 ---
 
+### chainId
+
+`number | undefined`
+
+Chain the vault is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](../sdk/errors.md#chainmismatcherror) before sending anything.
+
+---
+
 {% include ".gitbook/includes/mutation-options.md" %}
 
 ## Mutation variables
@@ -93,6 +101,12 @@ Default: now + 1 hour. Unix timestamp (seconds) until which the batcher's operat
 `boolean | undefined`
 
 Default: `false`. Skips the share-balance pre-flight, for accounts whose balance the connected signer can't decrypt.
+
+### onJoinSubmitted
+
+`((txHash: Hex) => void) | undefined`
+
+Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction". If the callback throws, the SDK logs a warning and the join continues.
 
 **Throws:**
 

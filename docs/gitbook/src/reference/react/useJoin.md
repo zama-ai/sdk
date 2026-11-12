@@ -56,6 +56,14 @@ The batcher contract address (deposit or redeem direction).
 
 ---
 
+### chainId
+
+`number | undefined`
+
+Chain the batcher is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](../sdk/errors.md#chainmismatcherror) instead of sending.
+
+---
+
 {% include ".gitbook/includes/mutation-options.md" %}
 
 ## Mutation variables
@@ -85,6 +93,12 @@ Default: `false`. Skips the confidential-balance pre-flight.
 ```ts
 await join({ amount: 1_000_000n, beneficiary: "0xRecipient" });
 ```
+
+### onJoinSubmitted
+
+`((txHash: Hex) => void) | undefined`
+
+Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction". If the callback throws, the SDK logs a warning and the join continues.
 
 **Throws:**
 
