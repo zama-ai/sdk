@@ -53,7 +53,7 @@ function RedeemButton() {
 
 ## Mutation variables
 
-Same as [`useDeposit`](./useDeposit.md#mutation-variables): `group` and `vaultId` or `vault`, `amount`, `skipChecks` and `onJoinSubmitted`. The `amount` is in shares, not assets.
+Same as [`useDeposit`](./useDeposit.md#mutation-variables): `group` and `vaultId` or `vault`, `amount`, `skipBalanceCheck` and `onJoinSubmitted`. The `amount` is in shares, not assets.
 
 **Throws:** as [`useDeposit`](./useDeposit.md#mutation-variables).
 
@@ -62,7 +62,6 @@ Same as [`useDeposit`](./useDeposit.md#mutation-variables): `group` and `vaultId
 The `data` property (after a successful mutation) is a `JoinOutcome`:
 
 - **`batches`**: the batch each leg landed in, in group order.
-- **`prepared`**: the `PreparedJoin` that was sent.
 - **`txHashes`**: every transaction sent, operator approvals first.
 
 On success, the hook invalidates every vault read and every confidential balance.

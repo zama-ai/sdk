@@ -1,9 +1,8 @@
 import type { Address, Hex } from "viem";
 import type { EncryptedValue } from "../relayer/types";
-import type { VaultGroup, VaultIdOf, VaultTarget } from "./config";
 
-/** Whether a join deposits the group's asset or redeems a vault's shares. */
-export type Direction = "deposit" | "redeem";
+/** Whether a join deposits the confidential asset or redeems a vault's confidential shares. */
+export type JoinDirection = "deposit" | "redeem";
 
 /**
  * A batch's lifecycle state, in the contract's own words:
@@ -21,108 +20,105 @@ export interface Call {
   readonly value: 0n;
 }
 
-/** One vault's share of a join. Every vault of the group gets one, the unchosen ones with zero. */
+/** One vault's part of a join. Every vault of a group gets one, the unchosen ones with zero. */
 export interface VaultLeg {
   /** The vault. */
   readonly vaultId: string;
-  /** The batcher the leg joins: the vault's active one, resolved when the join was prepared. */
+  /** The vault's active batcher when the join was prepared. */
   readonly batcher: Address;
-  /** What the leg spends: the asset for a deposit, the vault's share token for a redeem. */
+  /** The confidential token the leg spends: the asset for a deposit, the vault's share for a redeem. */
   readonly token: Address;
   /** The chosen vault's amount, zero for every other leg. */
   readonly amount: bigint;
 }
 
-/** An ERC-7984 operator approval a join relies on. Present only when the account lacks it. */
+/** An ERC-7984 operator approval a join relies on, sent to the token it is on. Present only when the account lacks it. */
 export interface OperatorApprovalCall extends Call {
   /** Tells an operator approval from a join without decoding the calldata. */
-  readonly role: "operatorApproval";
+  readonly kind: "operatorApproval";
   /** The vault whose token the approval is on. */
   readonly vaultId: string;
-  /** The token the approval is on. */
-  readonly token: Address;
   /** The approved operator: the router. */
   readonly operator: Address;
   /** When the approval expires, in chain seconds. */
   readonly until: bigint;
 }
 
-/** A join call, tagged with the leg it funds. A router call is tagged with the chosen leg. */
+/** A join call. */
 export interface JoinCall extends Call {
   /** Tells a join from an operator approval without decoding the calldata. */
-  readonly role: "join";
-  /** The leg this call funds. */
+  readonly kind: "join";
+  /** The leg this call funds. A router call funds every leg, and names the chosen one. */
   readonly leg: VaultLeg;
 }
 
-/** A call of a prepared join. */
+/** A call of a prepared join. `kind` tells an operator approval from a join without decoding the calldata. */
 export type VaultCall = OperatorApprovalCall | JoinCall;
 
 /**
  * How a join reaches the batchers.
  *
  * - `"router"`: one call through the router, after any operator approvals it needs.
- * - `"legs"`: one call per leg, straight to each batcher, with no operator approval.
- *   A group of one always takes it. In a larger group, send the calls in one
+ * - `"direct"`: one call per leg, straight to each batcher, with no operator approval.
+ *   A vault joined on its own always takes it. In a group, send the calls in one
  *   atomic bundle: joining some vaults and not others shows which vault was chosen.
  */
-export type JoinRoute = "legs" | "router";
+export type JoinRoute = "direct" | "router";
 
 /** A join built but not sent. Plain data: it survives `structuredClone`, but its bigints need a JSON replacer. */
 export interface PreparedJoin {
   /** Whether it deposits or redeems. */
-  readonly kind: Direction;
+  readonly direction: JoinDirection;
   /** The chain to send the calls on. */
   readonly chainId: number;
-  /** The group joined. */
-  readonly groupId: string;
+  /** The group joined, or `undefined` for a vault joined on its own. */
+  readonly groupId: string | undefined;
   /** The vault that receives the amount. */
   readonly vaultId: string;
-  /** The account the calls come from. */
+  /** The account that must send the calls: their encryption proofs are bound to it. */
   readonly account: Address;
   /** The amount, in the asset for a deposit and in shares for a redeem. */
   readonly amount: bigint;
   /** How the calls reach the batchers. */
   readonly route: JoinRoute;
-  /** Every vault of the group, in group order, decoys included. */
+  /** Every vault joined, in group order, the zero legs included. */
   readonly legs: readonly [VaultLeg, ...VaultLeg[]];
-  /** The operator approvals the account lacks, in leg order. Send them before the joins. */
-  readonly operatorApprovals: readonly OperatorApprovalCall[];
   /**
-   * The join calls. With `route: "legs"` in a group of more than one, send
-   * them as one atomic bundle.
+   * Every call in send order: the operator approvals the account lacks, in
+   * leg order, then the joins. With `route: "direct"` in a group of more than
+   * one, send the joins as one atomic bundle.
    */
-  readonly joins: readonly [JoinCall, ...JoinCall[]];
-  /** `operatorApprovals`, then `joins`: every call in send order, for a host that sends them all at once. */
   readonly calls: readonly [VaultCall, ...VaultCall[]];
 }
 
-/** What `prepareDeposit` and `prepareRedeem` take. */
-export interface JoinInput<TVaultId extends string = string> {
-  /** The vault the amount goes to. */
-  readonly vaultId: TVaultId;
-  /** The account the calls come from. */
+/** What `prepareDeposit` and `prepareRedeem` take for a vault on its own. */
+export interface JoinInput {
+  /** The account that will send the calls. */
   readonly account: Address;
   /** Plaintext; encrypted before it leaves the SDK. For a redeem, in shares. */
   readonly amount: bigint;
 }
 
-/**
- * Optional checks of a join. `"balance"` decrypts the account's balance as
- * the signer. A paused batcher is always checked.
- */
-export type VaultCheck = "balance";
+/** What `prepareDeposit` and `prepareRedeem` take for a group. */
+export interface GroupJoinInput<TVaultId extends string = string> extends JoinInput {
+  /** The vault of the group the amount goes to. */
+  readonly vaultId: TVaultId;
+}
 
 /** Options for `prepareDeposit` and `prepareRedeem`. */
 export interface JoinOptions {
-  /** Defaults to `"router"`. Ignored for a group of one, which always takes `"legs"`. */
-  readonly route?: JoinRoute;
   /**
-   * Checks to run before encrypting. None by default, so preparing needs no
-   * signer. `"balance"` decrypts as the signer, so it works only when
-   * `account` is the signer's.
+   * Skip the balance check. It runs by default and decrypts as the signer, so
+   * a join prepared for another account, or with no signer, must skip it and
+   * check the balance itself. A paused batcher is always checked.
    */
-  readonly checks?: readonly VaultCheck[];
+  readonly skipBalanceCheck?: boolean;
+}
+
+/** Options for `prepareDeposit` and `prepareRedeem` into a group. */
+export interface GroupJoinOptions extends JoinOptions {
+  /** Defaults to `"router"`. */
+  readonly route?: JoinRoute;
 }
 
 /** A batch on one batcher. Batchers rotate, so a batch is identified by its batcher, not its vault. */
@@ -135,24 +131,13 @@ export interface BatchRef {
   readonly batchId: bigint;
 }
 
-/** A batcher on one chain, for `dispatch`, which acts on the batcher's open batch. */
+/** A batcher on one chain. A dispatch takes it, because it acts on the batcher's open batch. */
 export type BatcherRef = Pick<BatchRef, "chainId" | "batcher">;
 
-/** What `client.deposit` and `client.redeem` take: a join input sent from the signer's account. */
-export type SendJoinInput<TVaultId extends string = string> = Omit<JoinInput<TVaultId>, "account">;
-
-/** A join input for `target`: a group needs `vaultId`, a single vault does not. */
-export type JoinInputFor<TTarget extends VaultTarget> = TTarget extends VaultGroup
-  ? JoinInput<VaultIdOf<TTarget>>
-  : Omit<JoinInput<VaultIdOf<TTarget>>, "vaultId"> & { readonly vaultId?: VaultIdOf<TTarget> };
-
-/** A send-join input for `target`: {@link JoinInputFor}, from the signer's account. */
-export type SendJoinInputFor<TTarget extends VaultTarget> = Omit<JoinInputFor<TTarget>, "account">;
-
-/** Options for `client.deposit` and `client.redeem`. */
+/** Options for `deposit` and `redeem`. */
 export interface SendJoinOptions {
-  /** Checks to skip. The balance check runs by default: the signer sends, so it can decrypt. */
-  readonly skipChecks?: readonly VaultCheck[];
+  /** Skip the balance check, which runs by default. A paused batcher is always checked. */
+  readonly skipBalanceCheck?: boolean;
   /** Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. */
   readonly onJoinSubmitted?: (txHash: Hex) => void;
 }
@@ -167,9 +152,6 @@ export interface PreparedFinalize extends BatchRef {
   readonly call: Call;
 }
 
-/** The batcher a join reaches right now on each vault, keyed by vault id. */
-export type ActiveBatchers = Readonly<Record<string, Address>>;
-
 /** What can be sent for a batch now. */
 export type BatchAction = "claim" | "quit" | "dispatch" | "finalize";
 
@@ -180,7 +162,7 @@ interface BatchBase extends BatchRef {
   readonly dispatchableAt: bigint;
   /** Whether the batcher is paused. A paused batcher takes no join and no dispatch. */
   readonly paused: boolean;
-  /** `account`'s encrypted deposit in the batch, when the read named an account. A claim or quit leaves an encrypted zero. */
+  /** The account's encrypted deposit, or `null` when the read named no account. A claim or quit leaves an encrypted zero. */
   readonly deposit: EncryptedValue | null;
   /**
    * What can be sent now. `quit` needs the depositor as sender; the others are
@@ -224,10 +206,8 @@ export interface OpenBatch extends BatchRef {
   readonly observedAt: bigint;
 }
 
-/** What `client.deposit` and `client.redeem` return. */
+/** What `deposit` and `redeem` return. */
 export interface JoinOutcome {
-  /** What was sent. */
-  readonly prepared: PreparedJoin;
   /** The batch each leg landed in, in group order. */
   readonly batches: readonly (BatchRef & { readonly vaultId: string })[];
   /** Every transaction sent, operator approvals first. */

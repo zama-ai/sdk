@@ -17,44 +17,32 @@ The examples use the SDK's signer. To send through your own transaction pipeline
 
 ### 1. Define a group
 
-`defineVaultGroup` describes one group of vaults that take deposits in the same confidential asset. Define each group once, at module level:
+`defineVault` describes one vault. `defineVaultGroup` groups vaults that take deposits in the same confidential asset. Define each once, at module level:
 
 ```ts
 // vaults.ts
 import { defineVault, defineVaultGroup } from "@zama-fhe/sdk/vaults";
 
-export const STABLE = defineVaultGroup({
-  id: "stable",
+export const ALPHA = defineVault({
+  id: "alpha",
   chainId: 1,
-  asset: "0xConfidentialUSDC",
-  vaults: [
-    {
-      id: "alpha",
-      batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
-      share: "0xAlphaShare",
-    },
-    {
-      id: "beta",
-      batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
-      share: "0xBetaShare",
-    },
-  ],
+  batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
 });
 
-export const MAIN = defineVault({
-  id: "main",
+export const BETA = defineVault({
+  id: "beta",
   chainId: 1,
-  asset: "0xConfidentialUSDC2",
-  batchers: { deposit: "0xMainDeposit", redeem: "0xMainRedeem" },
-  share: "0xMainShare",
+  batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
 });
+
+export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
 ```
 
-Each vault has two batchers: one that deposits join, and one that redemptions join. `share` is the vault's confidential share token. When a batcher is upgraded, its entry becomes a history of batchers. See [Upgrade a batcher](advanced.md#upgrade-a-batcher). The group and vault ids are yours to choose, and the types keep them, so a typo in `vaultId` passed to a client method is a type error. The React mutation hooks take `vaultId` as a plain `string`.
+Each vault has two batchers: one that deposits join, and one that redemptions join. A vault names no token: the client reads the confidential asset and each vault's confidential share from the batchers. When a batcher is upgraded, its entry becomes a history of batchers. See [Upgrade a batcher](advanced.md#upgrade-a-batcher). The group and vault ids are yours to choose, and the types keep them, so a typo in `vaultId` passed to a client method is a type error. The React mutation hooks take `vaultId` as a plain `string`.
 
-`defineVault` describes one vault on its own, like `MAIN`. Every method that takes a group also takes a single vault, and a join into it needs no `vaultId`.
+Every method that takes a group also takes a vault on its own, like `ALPHA`. A join into it needs no `vaultId` and goes straight to its batcher, which shows on-chain which vault was chosen. To hide the choice, join through the group.
 
-`defineVaultGroup` checks the shape of the group and throws `ConfigurationError` for an invalid address, an empty group, a group above `MAX_GROUP_VAULTS` (see [Group size and the router](advanced.md#group-size-and-the-router)), a repeated vault id, or a batcher named twice. See [`defineVaultGroup`](../../reference/sdk/VaultClient.md#definevaultgroup).
+`defineVault` throws `ConfigurationError` for an invalid address or chain. `defineVaultGroup` throws it for an empty group, a group above `MAX_GROUP_VAULTS` (see [Group size and the router](advanced.md#group-size-and-the-router)), vaults on different chains, a repeated vault id, or a batcher named twice. See [`defineVaultGroup`](../../reference/sdk/VaultClient.md#definevaultgroup).
 
 {% hint style="warning" %}
 The order of `vaults` is the leg order of every join. Never reorder, add or remove vaults in a group once users have joined it. To change a group, define a new group. See [Privacy rules](advanced.md#privacy-rules).
@@ -85,7 +73,7 @@ const vaults = useVaultClient();
 {% endtab %}
 {% endtabs %}
 
-The client holds no config. Every method takes the group or the batch it acts on, so one client serves every group and chain.
+The client holds no config. Every method takes the vault, the group or the batch it acts on, so one client serves every group and chain.
 
 ### 3. Deposit
 
@@ -125,9 +113,9 @@ function DepositButton() {
 {% endtab %}
 {% endtabs %}
 
-The amount is in the asset's base units, so `1_000_000n` is one unit of a 6-decimal token. For a single vault, leave out `vaultId`: `vaults.deposit(MAIN, { amount: 1_000_000n })`, or `deposit.mutate({ vault: MAIN, amount: 1_000_000n })` in React.
+The amount is in the asset's base units, so `1_000_000n` is one unit of a 6-decimal token. To join a vault on its own, pass the vault and no `vaultId`: `vaults.deposit(ALPHA, { amount: 1_000_000n })`, or `deposit.mutate({ vault: ALPHA, amount: 1_000_000n })` in React.
 
-The SDK checks your confidential balance before it sends, as `Token.confidentialTransfer` does. A confidential transfer above the balance moves zero instead of reverting, so without this check a too-large deposit would succeed on-chain and deposit nothing. For an account whose balance the signer cannot decrypt, pass `skipChecks: ["balance"]` in the options.
+The SDK checks your confidential balance before it sends, as `Token.confidentialTransfer` does. A confidential transfer above the balance moves zero instead of reverting, so without this check a too-large deposit would succeed on-chain and deposit nothing. To send without the check, pass `skipBalanceCheck: true` in the options.
 
 ### 4. Store the batches
 
@@ -163,7 +151,7 @@ If the join is mined but the SDK cannot match a `Joined` event in the receipt to
 {% tab title="Core SDK" %}
 
 ```ts
-const batch = await vaults.readBatch({ ...batchRef, account: "0xUser" });
+const batch = await vaults.readBatch(batchRef, "0xUser");
 
 console.log(batch.state); // "pending" | "dispatched" | "finalized" | "canceled"
 console.log(batch.actions); // for example ["quit", "dispatch"]
@@ -201,7 +189,7 @@ Once the batch is finalized, a claim pays the deposit out at the batch's exchang
 {% tab title="Core SDK" %}
 
 ```ts
-await vaults.claim({ ...batchRef, account: "0xUser" });
+await vaults.claim(batchRef, "0xUser");
 ```
 
 {% endtab %}

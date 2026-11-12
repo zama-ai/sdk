@@ -6,12 +6,12 @@ import { filterQueryOptions } from "../../query/utils";
 import type { TransactionResult } from "../../types";
 import { assertNonNullable } from "../../utils/assertions";
 import type { VaultClient } from "../client";
-import type { Vault, VaultGroup, VaultIdOf, VaultTarget } from "../config";
+import { chainIdOf, type Vault, type VaultGroup, type VaultIdOf } from "../config";
 import type {
   Batch,
   BatchRef,
   BatcherRef,
-  Direction,
+  JoinDirection,
   JoinOutcome,
   OpenBatch,
   JoinInput,
@@ -38,10 +38,17 @@ export const vaultQueryKeys = {
         account: account === undefined ? undefined : getAddress(account),
       },
     ] as const,
-  openBatches: (target: VaultTarget, direction: Direction) =>
+  openBatches: (target: Vault | VaultGroup, direction: JoinDirection) =>
     [
       "zama.vault",
-      { kind: "openBatches", chainId: target.chainId, id: target.id, direction },
+      {
+        kind: "openBatches",
+        chainId: chainIdOf(target),
+        // A vault and a group may share an id, and read different batchers.
+        scope: "vaults" in target ? "group" : "vault",
+        id: target.id,
+        direction,
+      },
     ] as const,
 };
 
@@ -93,25 +100,25 @@ export function batchQueryOptions(
     queryKey: vaultQueryKeys.batch(batch, account),
     queryFn: async () => {
       assertNonNullable(batch, "batchQueryOptions: batch");
-      return client.readBatch({ ...batch, account });
+      return client.readBatch(batch, account);
     },
     enabled: batch !== undefined && queryOpts.enabled !== false,
   };
 }
 
-/** Picks a group, or a single vault, in a config or in mutation variables. */
+/** Picks a group, or a vault on its own, in a config or in mutation variables. */
 export type VaultSelection =
   | { readonly group: VaultGroup; readonly vault?: never }
   | { readonly vault: Vault; readonly group?: never };
 
-function selected(selection: VaultSelection): VaultTarget {
+function selected(selection: VaultSelection): Vault | VaultGroup {
   return selection.vault ?? selection.group;
 }
 
 /** Configuration for {@link openBatchesQueryOptions}. */
 export type OpenBatchesQueryConfig = VaultSelection & {
   /** Whether to read the deposit or the redeem batchers. */
-  direction: Direction;
+  direction: JoinDirection;
   /** Additional TanStack Query options merged into the generated query. */
   query?: Record<string, unknown>;
 };
@@ -147,29 +154,24 @@ export function invalidateAfterVaultAction(queryClient: QueryClientLike): void {
 
 /**
  * Variables for {@link depositMutationOptions} and {@link redeemMutationOptions}:
- * a group and the vault the amount goes to, or a single vault.
+ * a group and the vault of it the amount goes to, or a vault on its own.
  */
 export type JoinVariables<TGroup extends VaultGroup = VaultGroup> = Pick<JoinInput, "amount"> &
   SendJoinOptions &
   (
     | { readonly group: TGroup; readonly vaultId: VaultIdOf<TGroup>; readonly vault?: never }
-    | { readonly vault: Vault; readonly vaultId?: string; readonly group?: never }
+    | { readonly vault: Vault; readonly vaultId?: never; readonly group?: never }
   );
 
-function joinMutation(client: VaultClient, direction: Direction) {
+function joinMutation(client: VaultClient, direction: JoinDirection) {
   return {
     mutationKey: [`zama.vault.${direction}`] as const,
-    mutationFn: async ({
-      skipChecks,
-      onJoinSubmitted,
-      amount,
-      vaultId,
-      ...selection
-    }: JoinVariables) =>
-      client[direction](selected(selection as VaultSelection), { amount, vaultId } as never, {
-        skipChecks,
-        onJoinSubmitted,
-      }),
+    mutationFn: async ({ skipBalanceCheck, onJoinSubmitted, amount, ...target }: JoinVariables) => {
+      const options = { skipBalanceCheck, onJoinSubmitted };
+      return target.vault === undefined
+        ? client[direction](target.group, { vaultId: target.vaultId, amount }, options)
+        : client[direction](target.vault, { amount }, options);
+    },
   };
 }
 
@@ -205,7 +207,7 @@ export function claimMutationOptions(
 > {
   return {
     mutationKey: ["zama.vault.claim"] as const,
-    mutationFn: async (batch) => client.claim(batch),
+    mutationFn: async ({ account, ...batch }) => client.claim(batch, account),
   };
 }
 

@@ -5,7 +5,7 @@ description: Returns a VaultClient bound to the SDK in context.
 
 # useVaultClient
 
-Returns a [`VaultClient`](../sdk/VaultClient.md) bound to the SDK from [`ZamaProvider`](ZamaProvider.md), the same one for as long as that SDK stays. It holds no config: its methods take the group or the batch they act on, so one client serves every group and chain.
+Returns a [`VaultClient`](../sdk/VaultClient.md) bound to the SDK from [`ZamaProvider`](ZamaProvider.md), the same one for as long as that SDK stays. It holds no config: its methods take the vault, the group or the batch they act on, so one client serves every group and chain.
 
 The other vault hooks call it for you. Use it directly when you need a method no hook wraps, such as a `prepare*` method for your own transaction pipeline.
 
@@ -45,25 +45,21 @@ function PrepareButton({ account }: { account: Address }) {
 {% tab title="vaults.ts" %}
 
 ```ts
-import { defineVaultGroup } from "@zama-fhe/sdk/vaults";
+import { defineVault, defineVaultGroup } from "@zama-fhe/sdk/vaults";
 
-export const STABLE = defineVaultGroup({
-  id: "stable",
+export const ALPHA = defineVault({
+  id: "alpha",
   chainId: 1,
-  asset: "0xConfidentialUSDC",
-  vaults: [
-    {
-      id: "alpha",
-      batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
-      share: "0xAlphaShare",
-    },
-    {
-      id: "beta",
-      batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
-      share: "0xBetaShare",
-    },
-  ],
+  batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
 });
+
+export const BETA = defineVault({
+  id: "beta",
+  chainId: 1,
+  batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
+});
+
+export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
 ```
 
 {% endtab %}

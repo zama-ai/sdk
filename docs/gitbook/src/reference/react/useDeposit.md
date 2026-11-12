@@ -42,25 +42,21 @@ function DepositButton() {
 {% tab title="vaults.ts" %}
 
 ```ts
-import { defineVaultGroup } from "@zama-fhe/sdk/vaults";
+import { defineVault, defineVaultGroup } from "@zama-fhe/sdk/vaults";
 
-export const STABLE = defineVaultGroup({
-  id: "stable",
+export const ALPHA = defineVault({
+  id: "alpha",
   chainId: 1,
-  asset: "0xConfidentialUSDC",
-  vaults: [
-    {
-      id: "alpha",
-      batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
-      share: "0xAlphaShare",
-    },
-    {
-      id: "beta",
-      batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
-      share: "0xBetaShare",
-    },
-  ],
+  batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
 });
+
+export const BETA = defineVault({
+  id: "beta",
+  chainId: 1,
+  batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
+});
+
+export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
 ```
 
 {% endtab %}
@@ -86,7 +82,7 @@ The group to join, as returned by [`defineVaultGroup`](../sdk/VaultClient.md#def
 
 `Vault | undefined`
 
-A single vault to join instead of a group, as returned by [`defineVault`](../sdk/VaultClient.md#definevault). It needs no `vaultId`.
+A vault to join on its own instead of a group, as returned by [`defineVault`](../sdk/VaultClient.md#definevault). It takes no `vaultId`.
 
 ### vaultId
 
@@ -100,11 +96,11 @@ The vault that gets the amount.
 
 The amount, in the asset's base units. Encrypted before it leaves the SDK.
 
-### skipChecks
+### skipBalanceCheck
 
-`"balance"[] | undefined`
+`boolean | undefined`
 
-Skip the balance check. The paused check always runs.
+Skip the balance check, which runs by default. The paused check always runs.
 
 ### onJoinSubmitted
 
@@ -135,7 +131,6 @@ deposit.mutate({
 The `data` property (after a successful mutation) is a `JoinOutcome`:
 
 - **`batches`**: the batch each leg landed in, in group order, as `{ vaultId, chainId, batcher, batchId }`. Store them to read, claim or quit later.
-- **`prepared`**: the `PreparedJoin` that was sent.
 - **`txHashes`**: every transaction sent, operator approvals first.
 
 On success, the hook invalidates every vault read and every confidential balance.

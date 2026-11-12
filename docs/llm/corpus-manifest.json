@@ -505,7 +505,7 @@
       "source_type": "official-doc",
       "category": "guides",
       "logical_path": "guides/vaults/README",
-      "description": "Integrate confidential ERC-4626 vaults with the Zama SDK — one client for single vaults and multi-vault groups.",
+      "description": "Integrate confidential ERC-4626 vaults with the Zama SDK — one client for vaults on their own and multi-vault groups.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

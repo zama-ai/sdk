@@ -51,7 +51,7 @@ function NextBatch() {
 
 `VaultGroup | Vault`
 
-The group to read, as returned by [`defineVaultGroup`](../sdk/VaultClient.md#definevaultgroup), or a single vault from [`defineVault`](../sdk/VaultClient.md#definevault).
+The group to read, as returned by [`defineVaultGroup`](../sdk/VaultClient.md#definevaultgroup), or a vault on its own from [`defineVault`](../sdk/VaultClient.md#definevault).
 
 ---
 

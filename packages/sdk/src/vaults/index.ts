@@ -3,47 +3,38 @@
  *
  * @packageDocumentation
  */
-export { createVaultClient, VaultClient } from "./client";
+export { createVaultClient, type VaultClient } from "./client";
 export {
-  batcherAddresses,
   defineVault,
   defineVaultGroup,
   MAX_GROUP_VAULTS,
   type BatcherHistory,
   type RetiredBatcher,
-  type SingleVaultConfig,
   type Vault,
-  type VaultConfig,
   type VaultGroup,
-  type VaultGroupConfig,
-  type VaultGroupVault,
   type VaultIdOf,
-  type VaultTarget,
 } from "./config";
 export type {
-  ActiveBatchers,
   Batch,
   BatchAction,
   BatchRef,
   BatchState,
   BatcherRef,
   Call,
-  Direction,
+  GroupJoinInput,
+  GroupJoinOptions,
   OperatorApprovalCall,
   JoinCall,
+  JoinDirection,
   JoinInput,
-  JoinInputFor,
   JoinOptions,
   JoinOutcome,
   JoinRoute,
   OpenBatch,
   PreparedFinalize,
   PreparedJoin,
-  SendJoinInput,
-  SendJoinInputFor,
   SendJoinOptions,
   VaultCall,
-  VaultCheck,
   VaultLeg,
 } from "./types";
 

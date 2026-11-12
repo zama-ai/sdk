@@ -1,6 +1,6 @@
 import { getAddress, isAddress, type Address } from "viem";
 import { ConfigurationError } from "../errors";
-import type { Direction } from "./types";
+import type { JoinDirection } from "./types";
 
 /** The most vaults a group may hold; every join sends a leg to each of them. */
 export const MAX_GROUP_VAULTS = 8;
@@ -28,116 +28,145 @@ export interface BatcherHistory {
   readonly latest: Address;
 }
 
-/** One vault of a group. */
-export interface VaultConfig<TVaultId extends string = string> {
-  /** What callers pass as `vaultId`. */
+/**
+ * One vault: its chain and the batcher each direction joins. Plain data,
+ * written once and joined on its own or put in any number of groups. Nothing
+ * is checked when it is defined: the client checks what a join or a read
+ * relies on when it runs, and reads each batcher's token from chain.
+ */
+export interface Vault<TVaultId extends string = string> {
+  /** Names the vault in errors and query keys, and is what a group join passes as `vaultId`. */
   readonly id: TVaultId;
-  /** The batcher each direction joins: an address, or a history once it has been upgraded. */
-  readonly batchers: Readonly<Record<Direction, Address | BatcherHistory>>;
-  /** The vault's confidential share token, which its redeem batchers take. */
-  readonly share: Address;
-}
-
-/** What {@link defineVaultGroup} takes. */
-export interface VaultGroupConfig<
-  TGroupId extends string = string,
-  TVaultId extends string = string,
-> {
-  /** Names the group in errors and query keys. */
-  readonly id: TGroupId;
-  /** The chain every batcher of the group is on. */
+  /** The chain the vault's batchers are on. */
   readonly chainId: number;
-  /** The confidential asset every deposit batcher takes. */
-  readonly asset: Address;
-  /**
-   * The router a multi-vault join goes through. Defaults to the chain
-   * preset's `vaultRouterAddress`, and must match it when the preset sets one.
-   */
-  readonly router?: Address;
-  /** The vaults, in leg order. Never reorder them once users have joined. */
-  readonly vaults: readonly VaultConfig<TVaultId>[];
+  /** The batcher each direction joins: an address, or a history once it has been upgraded. */
+  readonly batchers: Readonly<Record<JoinDirection, Address | BatcherHistory>>;
 }
 
-declare const defined: unique symbol;
-
-/** A vault of a {@link VaultGroup}: addresses checksummed, batchers as histories. */
-export interface VaultGroupVault<TVaultId extends string = string> {
-  /** What callers pass as `vaultId`. */
-  readonly id: TVaultId;
-  /** Every batcher of each direction, a plain address turned into a history. */
-  readonly batchers: Readonly<Record<Direction, BatcherHistory>>;
-  /** The vault's confidential share token. */
-  readonly share: Address;
-}
-
-/** What {@link defineVaultGroup} returns. Only it can make one. */
+/**
+ * Vaults that take deposits in one confidential asset, joined together so
+ * the chain cannot tell which one was chosen. Two vaults at least: a lone
+ * vault has nothing to hide its leg among, so it is joined on its own.
+ */
 export interface VaultGroup<TGroupId extends string = string, TVaultId extends string = string> {
   /** Names the group in errors and query keys. */
   readonly id: TGroupId;
-  /** The chain every batcher of the group is on. */
-  readonly chainId: number;
-  /** The confidential asset every deposit batcher takes. */
-  readonly asset: Address;
-  /** The configured router, or `undefined` to use the chain preset's. */
-  readonly router: Address | undefined;
-  /** The vaults, in leg order. */
-  readonly vaults: readonly [VaultGroupVault<TVaultId>, ...VaultGroupVault<TVaultId>[]];
-  /** Type-only brand: a hand-built object does not type-check as a group. */
-  readonly [defined]: true;
+  /**
+   * The vaults, in leg order, up to {@link MAX_GROUP_VAULTS}. Never reorder
+   * them once users have joined. They must be on one chain, and their deposit
+   * batchers must take the same confidential asset.
+   */
+  readonly vaults: readonly [Vault<TVaultId>, Vault<TVaultId>, ...Vault<TVaultId>[]];
 }
 
-/** What {@link defineVault} takes: one vault, with its chain and asset. */
-export interface SingleVaultConfig<TVaultId extends string = string> extends VaultConfig<TVaultId> {
-  /** The chain the vault's batchers are on. */
-  readonly chainId: number;
-  /** The confidential asset its deposit batcher takes. */
-  readonly asset: Address;
-}
-
-/** What {@link defineVault} returns. Only it can make one. */
-export interface Vault<TVaultId extends string = string> extends VaultGroupVault<TVaultId> {
-  /** The chain the vault's batchers are on. */
-  readonly chainId: number;
-  /** The confidential asset its deposit batcher takes. */
-  readonly asset: Address;
-  /** Type-only brand: a hand-built object does not type-check as a vault. */
-  readonly [defined]: true;
-}
-
-/** What joins and open-batch reads act on: a group, or a single vault. */
-export type VaultTarget = VaultGroup | Vault;
-
-/** The vault ids of a group, or the id of a single vault. */
-export type VaultIdOf<TTarget extends VaultTarget> =
-  TTarget extends VaultGroup<string, infer TVaultId>
-    ? TVaultId
-    : TTarget extends Vault<infer TVaultId>
-      ? TVaultId
-      : never;
+/** The vault ids of a group. */
+export type VaultIdOf<TGroup extends VaultGroup> =
+  TGroup extends VaultGroup<string, infer TVaultId> ? TVaultId : never;
 
 /**
- * The group a target joins. A single vault joins as a group of one, which
- * reaches its batcher directly.
+ * Define a vault, keeping its id as a literal type. Returns `vault` as is and
+ * checks nothing, like viem's `defineChain`.
+ *
+ * @example
+ * ```ts
+ * export const ALPHA = defineVault({
+ *   id: "alpha",
+ *   chainId: 1,
+ *   batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
+ * });
+ * ```
+ */
+export function defineVault<const TVaultId extends string>(
+  vault: Vault<TVaultId>,
+): Vault<TVaultId> {
+  return vault;
+}
+
+/**
+ * Define a group of vaults, keeping its ids as literal types, so a typo in
+ * `vaultId` is a type error. Returns `group` as is and checks nothing.
+ *
+ * @example
+ * ```ts
+ * export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
+ * ```
+ */
+export function defineVaultGroup<const TGroupId extends string, const TVaultId extends string>(
+  group: VaultGroup<TGroupId, TVaultId>,
+): VaultGroup<TGroupId, TVaultId> {
+  return group;
+}
+
+/**
+ * The chain a vault, or every vault of a group, is on.
  *
  * @internal
  */
-export function toGroup(target: VaultTarget): VaultGroup {
-  if ("vaults" in target) {
-    return target;
-  }
-  const { chainId, asset, ...vault } = target;
-  return {
-    id: vault.id,
-    chainId,
-    asset,
-    router: undefined,
-    vaults: [vault],
-  } as unknown as VaultGroup;
+export function chainIdOf(target: Vault | VaultGroup): number {
+  return "vaults" in target ? target.vaults[0].chainId : target.chainId;
 }
 
-/** Every batcher of a history, oldest first. */
-export function batcherAddresses(history: BatcherHistory): Address[] {
-  return [...history.retired.map((entry) => entry.address), history.latest];
+/**
+ * What a join or a read of `target` covers: every vault of a group, or a
+ * vault on its own and no group.
+ *
+ * @internal
+ * @throws if a group has more than {@link MAX_GROUP_VAULTS} vaults, mixes chains, or names a vault twice. {@link ConfigurationError}
+ */
+export function scopeOf(target: Vault | VaultGroup): {
+  readonly group: VaultGroup | undefined;
+  readonly vaults: readonly [Vault, ...Vault[]];
+  readonly chainId: number;
+} {
+  if (!("vaults" in target)) {
+    return { group: undefined, vaults: [target], chainId: target.chainId };
+  }
+  const where = `Vault group "${target.id}"`;
+  const [first] = target.vaults;
+  if (target.vaults.length > MAX_GROUP_VAULTS) {
+    throw new ConfigurationError(
+      `${where} has ${target.vaults.length} vaults, more than ${MAX_GROUP_VAULTS}`,
+    );
+  }
+  const vaultIds = new Set<string>();
+  for (const vault of target.vaults) {
+    if (vault.chainId !== first.chainId) {
+      throw new ConfigurationError(
+        `${where} mixes chains: vault "${vault.id}" is on chain ${vault.chainId}, vault "${first.id}" on chain ${first.chainId}`,
+      );
+    }
+    if (vaultIds.has(vault.id)) {
+      throw new ConfigurationError(`${where} names vault "${vault.id}" twice`);
+    }
+    vaultIds.add(vault.id);
+  }
+  return { group: target, vaults: target.vaults, chainId: first.chainId };
+}
+
+/**
+ * Every batcher of `vault` in `direction`, checksummed: a plain address is a history with nothing retired.
+ *
+ * @internal
+ * @throws if an address or a `lastBatchId` is invalid. {@link ConfigurationError}
+ */
+export function historyOf(vault: Vault, direction: JoinDirection): BatcherHistory {
+  const declared = vault.batchers[direction];
+  const where = `Vault "${vault.id}" ${direction} batcher`;
+  if (typeof declared === "string") {
+    return { retired: [], latest: requireAddress(declared, where) };
+  }
+  return {
+    retired: declared.retired.map((entry) => {
+      // Anything but a non-negative bigint compares false, so the join would silently skip the retired batcher.
+      if (typeof entry.lastBatchId !== "bigint" || entry.lastBatchId < 0n) {
+        throw new ConfigurationError(
+          `${where} has a retired batcher with an invalid lastBatchId: ${String(entry.lastBatchId)}`,
+        );
+      }
+      return { address: requireAddress(entry.address, where), lastBatchId: entry.lastBatchId };
+    }),
+    latest: requireAddress(declared.latest, where),
+  };
 }
 
 function requireAddress(value: unknown, where: string): Address {
@@ -145,123 +174,4 @@ function requireAddress(value: unknown, where: string): Address {
     throw new ConfigurationError(`${where} is not an address: ${String(value)}`);
   }
   return getAddress(value);
-}
-
-/**
- * Validate a group of vaults that take deposits in one confidential asset,
- * and keep its ids as literal types. Reads nothing from chain. For one vault
- * on its own, use {@link defineVault}.
- *
- * @example
- * ```ts
- * export const STABLE = defineVaultGroup({
- *   id: "stable",
- *   chainId: 1,
- *   asset: "0xConfidentialUSDC",
- *   vaults: [
- *     { id: "alpha", batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" }, share: "0xAlphaShare" },
- *     { id: "beta", batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" }, share: "0xBetaShare" },
- *   ],
- * });
- * ```
- *
- * @throws if the group has no vault or more than {@link MAX_GROUP_VAULTS}, a vault id repeats, a batcher appears twice, or an address or `lastBatchId` is invalid. {@link ConfigurationError}
- */
-export function defineVaultGroup<const TGroupId extends string, const TVaultId extends string>(
-  config: VaultGroupConfig<TGroupId, TVaultId>,
-): VaultGroup<TGroupId, TVaultId> {
-  const where = `Vault group "${config.id}"`;
-  if (!Number.isSafeInteger(config.chainId) || config.chainId <= 0) {
-    throw new ConfigurationError(`${where} has an invalid chainId: ${config.chainId}`);
-  }
-  const [first, ...rest] = config.vaults;
-  if (first === undefined) {
-    throw new ConfigurationError(`${where} has no vault`);
-  }
-  if (config.vaults.length > MAX_GROUP_VAULTS) {
-    throw new ConfigurationError(
-      `${where} has ${config.vaults.length} vaults, more than ${MAX_GROUP_VAULTS}`,
-    );
-  }
-  const vaultIds = new Set<string>();
-  const batchers = new Set<Address>();
-
-  const history = (declared: Address | BatcherHistory, at: string): BatcherHistory => {
-    const normalized =
-      typeof declared === "string"
-        ? { retired: [], latest: requireAddress(declared, at) }
-        : {
-            retired: declared.retired.map((entry) => {
-              if (typeof entry.lastBatchId !== "bigint" || entry.lastBatchId < 0n) {
-                throw new ConfigurationError(
-                  `${at} has a retired batcher with an invalid lastBatchId`,
-                );
-              }
-              return { address: requireAddress(entry.address, at), lastBatchId: entry.lastBatchId };
-            }),
-            latest: requireAddress(declared.latest, at),
-          };
-    // A batcher serves one vault in one direction, so the same address anywhere twice is a mistake.
-    for (const address of batcherAddresses(normalized)) {
-      if (batchers.has(address)) {
-        throw new ConfigurationError(`${where} uses batcher ${address} more than once`);
-      }
-      batchers.add(address);
-    }
-    return normalized;
-  };
-
-  const vault = (entry: VaultConfig<TVaultId>): VaultGroupVault<TVaultId> => {
-    if (vaultIds.has(entry.id)) {
-      throw new ConfigurationError(`${where} names vault "${entry.id}" twice`);
-    }
-    vaultIds.add(entry.id);
-    const at = `Vault "${entry.id}" of group "${config.id}"`;
-    return {
-      id: entry.id,
-      batchers: {
-        deposit: history(entry.batchers.deposit, `${at} deposit batcher`),
-        redeem: history(entry.batchers.redeem, `${at} redeem batcher`),
-      },
-      share: requireAddress(entry.share, `${at} share`),
-    };
-  };
-
-  return {
-    id: config.id,
-    chainId: config.chainId,
-    asset: requireAddress(config.asset, `${where} asset`),
-    router:
-      config.router === undefined ? undefined : requireAddress(config.router, `${where} router`),
-    vaults: [vault(first), ...rest.map(vault)],
-  } as unknown as VaultGroup<TGroupId, TVaultId>;
-}
-
-/**
- * Validate one vault on its own, and keep its id as a literal type. Reads
- * nothing from chain. A join into it needs no `vaultId`.
- *
- * @example
- * ```ts
- * export const MAIN = defineVault({
- *   id: "main",
- *   chainId: 1,
- *   asset: "0xConfidentialUSDC",
- *   batchers: { deposit: "0xMainDeposit", redeem: "0xMainRedeem" },
- *   share: "0xMainShare",
- * });
- * ```
- *
- * @throws as {@link defineVaultGroup}. {@link ConfigurationError}
- */
-export function defineVault<const TVaultId extends string>(
-  config: SingleVaultConfig<TVaultId>,
-): Vault<TVaultId> {
-  const { chainId, asset, ...vault } = config;
-  const group = defineVaultGroup({ id: config.id, chainId, asset, vaults: [vault] });
-  return {
-    ...group.vaults[0],
-    chainId: group.chainId,
-    asset: group.asset,
-  } as unknown as Vault<TVaultId>;
 }
