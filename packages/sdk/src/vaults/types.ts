@@ -1,6 +1,5 @@
 import type { Address, Hex } from "viem";
 import type { EncryptedValue } from "../relayer/types";
-import type { VaultGroup, VaultIdOf, VaultTarget } from "./config";
 
 /** Whether a join deposits the group's asset or redeems a vault's shares. */
 export type JoinDirection = "deposit" | "redeem";
@@ -92,26 +91,34 @@ export interface PreparedJoin {
   readonly calls: readonly [VaultCall, ...VaultCall[]];
 }
 
-/** What `prepareDeposit` and `prepareRedeem` take. */
-export interface JoinInput<TVaultId extends string = string> {
-  /** The vault the amount goes to. */
-  readonly vaultId: TVaultId;
+/** What `prepareDeposit` and `prepareRedeem` take for a vault on its own. */
+export interface JoinInput {
   /** The account the calls come from. */
   readonly account: Address;
   /** Plaintext; encrypted before it leaves the SDK. For a redeem, in shares. */
   readonly amount: bigint;
 }
 
+/** What `prepareDeposit` and `prepareRedeem` take for a group. */
+export interface GroupJoinInput<TVaultId extends string = string> extends JoinInput {
+  /** The vault of the group the amount goes to. */
+  readonly vaultId: TVaultId;
+}
+
 /** Options for `prepareDeposit` and `prepareRedeem`. */
 export interface JoinOptions {
-  /** Defaults to `"router"`. A group of one always takes `"direct"`. */
-  readonly route?: JoinRoute;
   /**
    * Skip the balance check. It runs by default and decrypts as the signer, so
    * a join prepared for another account, or with no signer, must skip it and
    * check the balance itself. A paused batcher is always checked.
    */
   readonly skipBalanceCheck?: boolean;
+}
+
+/** Options for `prepareDeposit` and `prepareRedeem` into a group. */
+export interface GroupJoinOptions extends JoinOptions {
+  /** Defaults to `"router"`. A group of one always takes `"direct"`. */
+  readonly route?: JoinRoute;
 }
 
 /** A batch on one batcher. Batchers rotate, so a batch is identified by its batcher, not its vault. */
@@ -126,17 +133,6 @@ export interface BatchRef {
 
 /** A batcher on one chain, for `dispatch`, which acts on the batcher's open batch. */
 export type BatcherRef = Pick<BatchRef, "chainId" | "batcher">;
-
-/** What `client.deposit` and `client.redeem` take: a join input sent from the signer's account. */
-export type SendJoinInput<TVaultId extends string = string> = Omit<JoinInput<TVaultId>, "account">;
-
-/** A join input for `target`: a group needs `vaultId`, a single vault does not. */
-export type JoinInputFor<TTarget extends VaultTarget> = TTarget extends VaultGroup
-  ? JoinInput<VaultIdOf<TTarget>>
-  : Omit<JoinInput<VaultIdOf<TTarget>>, "vaultId"> & { readonly vaultId?: VaultIdOf<TTarget> };
-
-/** A send-join input for `target`: {@link JoinInputFor}, from the signer's account. */
-export type SendJoinInputFor<TTarget extends VaultTarget> = Omit<JoinInputFor<TTarget>, "account">;
 
 /** Options for `client.deposit` and `client.redeem`. */
 export interface SendJoinOptions {

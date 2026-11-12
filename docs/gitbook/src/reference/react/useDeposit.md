@@ -42,16 +42,21 @@ function DepositButton() {
 {% tab title="vaults.ts" %}
 
 ```ts
-import { defineVaultGroup } from "@zama-fhe/sdk/vaults";
+import { defineVault, defineVaultGroup } from "@zama-fhe/sdk/vaults";
 
-export const STABLE = defineVaultGroup({
-  id: "stable",
+export const ALPHA = defineVault({
+  id: "alpha",
   chainId: 1,
-  vaults: [
-    { id: "alpha", batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" } },
-    { id: "beta", batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" } },
-  ],
+  batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
 });
+
+export const BETA = defineVault({
+  id: "beta",
+  chainId: 1,
+  batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
+});
+
+export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
 ```
 
 {% endtab %}
@@ -77,7 +82,7 @@ The group to join, as returned by [`defineVaultGroup`](../sdk/VaultClient.md#def
 
 `Vault | undefined`
 
-A single vault to join instead of a group, as returned by [`defineVault`](../sdk/VaultClient.md#definevault). It needs no `vaultId`.
+A vault to join on its own instead of a group, as returned by [`defineVault`](../sdk/VaultClient.md#definevault). It takes no `vaultId`.
 
 ### vaultId
 

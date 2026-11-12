@@ -1,6 +1,6 @@
 ---
 title: Vaults
-description: Integrate confidential ERC-4626 vaults with the Zama SDK — one client for single vaults and multi-vault groups.
+description: Integrate confidential ERC-4626 vaults with the Zama SDK — one client for vaults on their own and multi-vault groups.
 ---
 
 # Vaults overview
@@ -21,23 +21,28 @@ A vault deposit is not done when the transaction is mined. The amount joins a **
 
 The SDK gives you one client for all of it:
 
-1. **Describe each group once** with `defineVaultGroup`. Vaults that take deposits in the same confidential asset form a **group**. For one vault on its own, use `defineVault`.
+1. **Describe each vault once** with `defineVault`, and group vaults that take deposits in the same confidential asset with `defineVaultGroup`. A join takes a group, or a vault on its own.
 2. **Create a client** with `createVaultClient(sdk)`, or `useVaultClient()` in React. It holds no config, so one client serves every group and chain.
 3. **Join**: `deposit` or `redeem` returns the batch each leg landed in. Store them.
 4. **Follow each batch**: `readBatch(batchRef)` returns the batch's `state` and the `actions` you can send now.
 5. **Get the money out**: a keeper claims a finalized batch for every depositor. `claim` is the fallback, and `quit` takes a deposit back from a batch that is still pending.
 
 ```ts
-import { createVaultClient, defineVaultGroup } from "@zama-fhe/sdk/vaults";
+import { createVaultClient, defineVault, defineVaultGroup } from "@zama-fhe/sdk/vaults";
 
-export const STABLE = defineVaultGroup({
-  id: "stable",
+export const ALPHA = defineVault({
+  id: "alpha",
   chainId: 1,
-  vaults: [
-    { id: "alpha", batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" } },
-    { id: "beta", batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" } },
-  ],
+  batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
 });
+
+export const BETA = defineVault({
+  id: "beta",
+  chainId: 1,
+  batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
+});
+
+export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
 
 const vaults = createVaultClient(sdk);
 

@@ -38,9 +38,9 @@ import type { ZamaSDK } from "../zama-sdk";
 import {
   toGroup,
   type BatcherHistory,
+  type Vault,
   type VaultGroup,
-  type VaultGroupVault,
-  type VaultTarget,
+  type VaultIdOf,
 } from "./config";
 import {
   batchCallbackDeadlineContract,
@@ -72,8 +72,9 @@ import type {
   Call,
   JoinCall,
   JoinDirection,
+  GroupJoinInput,
+  GroupJoinOptions,
   JoinInput,
-  JoinInputFor,
   JoinOptions,
   JoinOutcome,
   JoinRoute,
@@ -81,7 +82,6 @@ import type {
   OperatorApprovalCall,
   PreparedFinalize,
   PreparedJoin,
-  SendJoinInputFor,
   SendJoinOptions,
   VaultCall,
   VaultLeg,
@@ -122,13 +122,8 @@ function toCall(config: WriteContractConfig): Call {
   };
 }
 
-// A single vault is the only vault of its group, so a join into it needs no `vaultId`.
-function withVaultId<TInput extends { readonly vaultId?: string }>(
-  target: VaultTarget,
-  input: TInput,
-): TInput & { readonly vaultId: string | undefined } {
-  return { ...input, vaultId: input.vaultId ?? ("vaults" in target ? undefined : target.id) };
-}
+/** A join as the client plans it: a vault on its own has no `vaultId` and no route to choose. */
+type AnyJoinInput = JoinInput & { readonly vaultId?: string };
 
 function nonEmpty<T>(values: readonly T[]): readonly [T, ...T[]] {
   const [first, ...rest] = values;
@@ -156,16 +151,17 @@ function memoize<T>(cache: Map<string, Promise<T>>, key: string, read: () => Pro
 
 /**
  * Builds and sends confidential vault transactions. Holds no config: every
- * method takes the group, the single vault or the batch it acts on, so one client
+ * method takes the vault, the group or the batch it acts on, so one client
  * serves every chain and group.
  *
  * `prepare*` methods return plain calls for a host that sends through its own
  * pipeline. They need no signer, except to check the balance of a join. The
  * methods named by the bare verb send through the SDK's signer.
  *
- * Every join sends a leg to every vault of its group, the chosen one with the
- * amount and the rest with an encrypted zero, so the chain cannot tell which
- * vault was chosen. Batch actions act on one batch: to keep the choice private
+ * A join into a group sends a leg to every vault of the group, the chosen one
+ * with the amount and the rest with an encrypted zero, so the chain cannot
+ * tell which vault was chosen. A join into a vault on its own goes straight to
+ * its batcher, and shows the choice. Batch actions act on one batch: to keep the choice private
  * when quitting, quit every leg of the join, not only the chosen one.
  */
 export class VaultClient {
@@ -179,9 +175,8 @@ export class VaultClient {
   }
 
   /**
-   * Build a deposit of the group's asset into one vault: a leg for every
-   * vault, encrypted, with the calls in send order. A deposit pushes the
-   * asset, so it needs no operator approval.
+   * Build a deposit into a vault on its own: one call, straight to its
+   * deposit batcher, with the amount encrypted.
    *
    * @throws if the provider is not on the group's chain while a wallet is connected. {@link ChainMismatchError}
    * @throws if the vault is unknown, the deposit batchers take different assets, a multi-vault group's chain has no router, or the provider is on another chain with no wallet connected. {@link ConfigurationError}
@@ -189,25 +184,51 @@ export class VaultClient {
    * @throws if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
    * @throws if `account` is not the signer's, so its balance cannot be decrypted; pass `skipBalanceCheck: true`. {@link BalanceCheckUnavailableError}
    */
-  async prepareDeposit<TTarget extends VaultTarget>(
-    target: TTarget,
-    input: JoinInputFor<TTarget>,
-    options?: JoinOptions,
+  prepareDeposit(vault: Vault, input: JoinInput, options?: JoinOptions): Promise<PreparedJoin>;
+  /**
+   * Build a deposit of the group's asset into one of its vaults: a leg for
+   * every vault, encrypted, with the calls in send order. A deposit pushes
+   * the asset, so it needs no operator approval.
+   *
+   * @throws as the single-vault overload.
+   */
+  prepareDeposit<TGroup extends VaultGroup>(
+    group: TGroup,
+    input: GroupJoinInput<VaultIdOf<TGroup>>,
+    options?: GroupJoinOptions,
+  ): Promise<PreparedJoin>;
+  async prepareDeposit(
+    target: Vault | VaultGroup,
+    input: AnyJoinInput,
+    options?: GroupJoinOptions,
   ): Promise<PreparedJoin> {
     return (await this.#planJoin("deposit", target, input, options)).prepared;
   }
 
   /**
-   * Build a redemption of one vault's shares. On the router route the router
-   * pulls every leg's share token, so `calls` starts with an operator approval on each
-   * share token the account has not approved, valid for a year.
+   * Build a redemption of a vault's shares on its own: one call, straight to
+   * its redeem batcher.
    *
    * @throws as {@link prepareDeposit}.
    */
-  async prepareRedeem<TTarget extends VaultTarget>(
-    target: TTarget,
-    input: JoinInputFor<TTarget>,
-    options?: JoinOptions,
+  prepareRedeem(vault: Vault, input: JoinInput, options?: JoinOptions): Promise<PreparedJoin>;
+  /**
+   * Build a redemption of the shares of one vault of a group. On the router
+   * route the router pulls every leg's share token, so `calls` starts with an
+   * operator approval on each share token the account has not approved, valid
+   * for a year.
+   *
+   * @throws as {@link prepareDeposit}.
+   */
+  prepareRedeem<TGroup extends VaultGroup>(
+    group: TGroup,
+    input: GroupJoinInput<VaultIdOf<TGroup>>,
+    options?: GroupJoinOptions,
+  ): Promise<PreparedJoin>;
+  async prepareRedeem(
+    target: Vault | VaultGroup,
+    input: AnyJoinInput,
+    options?: GroupJoinOptions,
   ): Promise<PreparedJoin> {
     return (await this.#planJoin("redeem", target, input, options)).prepared;
   }
@@ -288,31 +309,64 @@ export class VaultClient {
   }
 
   /**
-   * Deposit with the SDK's signer: prepare for the signer's account, send the
-   * calls, and read the batch each leg landed in from the receipt.
+   * Deposit into a vault on its own with the SDK's signer: prepare for the
+   * signer's account, send the call, and read the batch it landed in from the
+   * receipt.
    *
    * @throws as {@link prepareDeposit}.
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
    * @throws if the wallet is not on the group's chain. {@link ChainMismatchError}
    * @throws if the receipt does not confirm every leg. {@link VaultJoinUnconfirmedError}
    */
-  async deposit<TTarget extends VaultTarget>(
-    target: TTarget,
-    input: SendJoinInputFor<TTarget>,
+  deposit(
+    vault: Vault,
+    input: Omit<JoinInput, "account">,
+    options?: SendJoinOptions,
+  ): Promise<JoinOutcome>;
+  /**
+   * Deposit into one vault of a group with the SDK's signer: every vault of
+   * the group gets a leg, and the result holds the batch each leg landed in.
+   *
+   * @throws as the single-vault overload.
+   */
+  deposit<TGroup extends VaultGroup>(
+    group: TGroup,
+    input: Omit<GroupJoinInput<VaultIdOf<TGroup>>, "account">,
+    options?: SendJoinOptions,
+  ): Promise<JoinOutcome>;
+  async deposit(
+    target: Vault | VaultGroup,
+    input: Omit<AnyJoinInput, "account">,
     options?: SendJoinOptions,
   ): Promise<JoinOutcome> {
     return this.#join("deposit", target, input, options);
   }
 
   /**
-   * Redeem with the SDK's signer. In a group of more than one vault, a
-   * redemption first asks the wallet for each operator approval of the router the account lacks.
+   * Redeem a vault's shares on its own with the SDK's signer.
    *
    * @throws as {@link deposit}.
    */
-  async redeem<TTarget extends VaultTarget>(
-    target: TTarget,
-    input: SendJoinInputFor<TTarget>,
+  redeem(
+    vault: Vault,
+    input: Omit<JoinInput, "account">,
+    options?: SendJoinOptions,
+  ): Promise<JoinOutcome>;
+  /**
+   * Redeem the shares of one vault of a group with the SDK's signer. In a
+   * group of more than one vault, a redemption first asks the wallet for each
+   * operator approval of the router the account lacks.
+   *
+   * @throws as {@link deposit}.
+   */
+  redeem<TGroup extends VaultGroup>(
+    group: TGroup,
+    input: Omit<GroupJoinInput<VaultIdOf<TGroup>>, "account">,
+    options?: SendJoinOptions,
+  ): Promise<JoinOutcome>;
+  async redeem(
+    target: Vault | VaultGroup,
+    input: Omit<AnyJoinInput, "account">,
     options?: SendJoinOptions,
   ): Promise<JoinOutcome> {
     return this.#join("redeem", target, input, options);
@@ -409,9 +463,9 @@ export class VaultClient {
     }
   }
 
-  /** The open batch of each vault's active batcher, with when it can be dispatched. */
+  /** The open batch of a vault's active batcher, or of each vault of a group, with when it can be dispatched. */
   async readOpenBatches(
-    target: VaultTarget,
+    target: Vault | VaultGroup,
     direction: JoinDirection,
   ): Promise<readonly OpenBatch[]> {
     const group = toGroup(target);
@@ -447,15 +501,15 @@ export class VaultClient {
   // host sends the encoded calls.
   async #planJoin(
     direction: JoinDirection,
-    joinTarget: VaultTarget,
-    joinInput: Omit<JoinInput, "vaultId"> & { readonly vaultId?: string },
-    options: JoinOptions | undefined,
+    joinTarget: Vault | VaultGroup,
+    input: AnyJoinInput,
+    options: GroupJoinOptions | undefined,
   ): Promise<{ readonly prepared: PreparedJoin; readonly planned: readonly Planned<VaultCall>[] }> {
     const group = toGroup(joinTarget);
-    const input = withVaultId(joinTarget, joinInput);
-    const chosen = group.vaults.find((vault) => vault.id === input.vaultId);
+    const vaultId = "vaults" in joinTarget ? input.vaultId : joinTarget.id;
+    const chosen = group.vaults.find((vault) => vault.id === vaultId);
     if (chosen === undefined) {
-      throw new ConfigurationError(`Vault group "${group.id}" has no vault "${input.vaultId}"`);
+      throw new ConfigurationError(`Vault group "${group.id}" has no vault "${vaultId}"`);
     }
     const account = getAddress(input.account);
     const route: JoinRoute = group.vaults.length === 1 ? "direct" : (options?.route ?? "router");
@@ -557,8 +611,8 @@ export class VaultClient {
 
   async #join(
     direction: JoinDirection,
-    target: VaultTarget,
-    input: Omit<JoinInput, "vaultId" | "account"> & { readonly vaultId?: string },
+    target: Vault | VaultGroup,
+    input: Omit<AnyJoinInput, "account">,
     options: SendJoinOptions | undefined,
   ): Promise<JoinOutcome> {
     const group = toGroup(target);
@@ -619,7 +673,7 @@ export class VaultClient {
    */
   async #activeBatcher(
     group: VaultGroup,
-    vault: VaultGroupVault,
+    vault: Vault,
     direction: JoinDirection,
   ): Promise<Address> {
     const history: BatcherHistory = vault.batchers[direction];

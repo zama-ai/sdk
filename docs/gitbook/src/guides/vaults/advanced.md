@@ -26,7 +26,7 @@ These follow the [rules for clients](https://docs.zama.org/protocol/confidential
 
 ## Group size and the router
 
-A group holds from one vault up to `MAX_GROUP_VAULTS`. A join's FHE compute grows with its number of legs, and `MAX_GROUP_VAULTS` is what fits in one transaction. A group of one, or a single vault from `defineVault`, has nothing to hide a leg among, so it joins its batcher directly, without the router.
+A group holds from one vault up to `MAX_GROUP_VAULTS`. A join's FHE compute grows with its number of legs, and `MAX_GROUP_VAULTS` is what fits in one transaction. A group of one, or a vault joined on its own, has nothing to hide a leg among, so it joins its batcher directly, without the router.
 
 A multi-vault join sent one call at a time goes through the chain's router, `vaultRouterAddress` in the chain preset. A group names no router. For a chain whose preset names none, set `vaultRouterAddress` on the chain you pass to the SDK; without it, a multi-vault join through the router throws `ConfigurationError`.
 
@@ -57,33 +57,27 @@ Every join sends a leg to every vault, and one paused batcher reverts the whole 
 
 ## Upgrade a batcher
 
-A vault's batcher can be replaced by a new one, for example to pick up a contract fix. Users with batches on the old batcher must still be able to read, claim and quit them, so your group keeps the old batcher as a retired entry. Replace the plain address with a `BatcherHistory`:
+A vault's batcher can be replaced by a new one, for example to pick up a contract fix. Users with batches on the old batcher must still be able to read, claim and quit them, so the vault keeps the old batcher as a retired entry. Replace the plain address with a `BatcherHistory`:
 
 ```ts
-import { defineVaultGroup } from "@zama-fhe/sdk/vaults";
+import { defineVault } from "@zama-fhe/sdk/vaults";
 
-export const STABLE = defineVaultGroup({
-  id: "stable",
+export const ALPHA = defineVault({
+  id: "alpha",
   chainId: 1,
-  vaults: [
-    {
-      id: "alpha",
-      batchers: {
-        deposit: {
-          retired: [{ address: "0xAlphaDepositV1", lastBatchId: 41n }],
-          latest: "0xAlphaDepositV2",
-        },
-        redeem: "0xAlphaRedeem",
-      },
+  batchers: {
+    deposit: {
+      retired: [{ address: "0xAlphaDepositV1", lastBatchId: 41n }],
+      latest: "0xAlphaDepositV2",
     },
-    { id: "beta", batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" } },
-  ],
+    redeem: "0xAlphaRedeem",
+  },
 });
 ```
 
 How the client uses it:
 
-- **Joins switch on the batch, not the clock.** A join goes to the first retired batcher whose open batch is still at most its `lastBatchId`, and otherwise to `latest`. Joins keep landing on the old batcher until batch `lastBatchId` is dispatched, then go to the new one. You can ship the new group before the switch.
+- **Joins switch on the batch, not the clock.** A join goes to the first retired batcher whose open batch is still at most its `lastBatchId`, and otherwise to `latest`. Joins keep landing on the old batcher until batch `lastBatchId` is dispatched, then go to the new one. You can ship the new vault definition before the switch.
 - **Stored batches keep their batcher.** A `BatchRef` names the batcher the leg joined, so `readBatch`, `claim` and `quit` work on a retired batcher as before.
 - **`readOpenBatches` reports the active batcher**, so a form shows the batch the next join lands in.
 - **Every batcher of a vault must serve the same vault.** Each batcher, retired ones included, must trade the group's confidential asset for the vault's confidential share against the same ERC-4626 vault. The SDK reads each leg's token from its active batcher and checks only that every deposit batcher takes the same asset.
@@ -91,7 +85,7 @@ How the client uses it:
 To upgrade again, append the current `latest` to the end of `retired` with its `lastBatchId`, and set the new `latest`. Keep `retired` oldest first.
 
 {% hint style="warning" %}
-Never remove a retired entry, even after all its batches settled. `defineVaultGroup` refuses a batcher used twice anywhere in the group, so keeping every entry stops an old address from being reused by mistake.
+Never remove a retired entry, even after all its batches settled. `defineVault` and `defineVaultGroup` refuse a batcher used twice, so keeping every entry stops an old address from being reused by mistake.
 {% endhint %}
 
 ## Bundling wallets
