@@ -4,6 +4,11 @@ on:
   pull_request:
     branches: [main, beta, alpha]
   workflow_call:
+    secrets:
+      FHEVM_APP_CLIENT_ID:
+        required: true
+      FHEVM_APP_PRIVATE_KEY:
+        required: true
 
 concurrency:
   group: playwright-${{ github.ref }}
@@ -20,14 +25,22 @@ env:
 
 jobs:
   test-nextjs:
+    # Fork PRs get no secrets, so the GitHub App token can't be minted there.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Build contracts
         uses: ./.github/actions/build-contracts
+        with:
+          fhevm: "true"
+          fhevm-app-client-id: ${{ secrets.FHEVM_APP_CLIENT_ID }}
+          fhevm-app-private-key: ${{ secrets.FHEVM_APP_PRIVATE_KEY }}
 
       - name: Install dependencies
         uses: ./.github/actions/install-deps
@@ -98,14 +111,22 @@ jobs:
           retention-days: 7
 
   test-vite:
+    # Fork PRs get no secrets, so the GitHub App token can't be minted there.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Build contracts
         uses: ./.github/actions/build-contracts
+        with:
+          fhevm: "true"
+          fhevm-app-client-id: ${{ secrets.FHEVM_APP_CLIENT_ID }}
+          fhevm-app-private-key: ${{ secrets.FHEVM_APP_PRIVATE_KEY }}
 
       - name: Install dependencies
         uses: ./.github/actions/install-deps
@@ -160,14 +181,22 @@ jobs:
           retention-days: 7
 
   test-node:
+    # Fork PRs get no secrets, so the GitHub App token can't be minted there.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Build contracts
         uses: ./.github/actions/build-contracts
+        with:
+          fhevm: "true"
+          fhevm-app-client-id: ${{ secrets.FHEVM_APP_CLIENT_ID }}
+          fhevm-app-private-key: ${{ secrets.FHEVM_APP_PRIVATE_KEY }}
 
       - name: Install dependencies
         uses: ./.github/actions/install-deps

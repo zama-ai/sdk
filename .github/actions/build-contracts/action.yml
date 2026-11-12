@@ -2,17 +2,54 @@ name: Build contracts
 description: >-
   Initialise the forge-fhevm submodule, install the pinned Foundry toolchain,
   and materialise the contracts build (contracts/out + dependencies) through a
-  keyed cache. On a cache miss it installs Soldeer deps, builds forge-fhevm, the
-  fhevm cleartext host contracts, and the project contracts, then saves the
-  cache. Assumes the repo is already checked out — local composite actions only
-  resolve after checkout.
+  keyed cache. On a cache miss it installs Soldeer deps, builds forge-fhevm and
+  the project contracts, then saves the cache. With `fhevm: "true"` it also
+  fetches the fhevm submodule and builds the fhevm cleartext host contracts on
+  every run (never cached); the caller must then check out with
+  `persist-credentials: false`. Assumes the repo is already checked out — local
+  composite actions only resolve after checkout.
+
+inputs:
+  fhevm:
+    description: Fetch and build the fhevm host contracts (needed only by the Playwright E2E deploy).
+    default: "false"
+  fhevm-app-client-id:
+    description: Client ID of the GitHub App used to fetch the fhevm submodule. Required when `fhevm` is "true".
+    default: ""
+  fhevm-app-private-key:
+    description: Private key of the GitHub App used to fetch the fhevm submodule. Required when `fhevm` is "true".
+    default: ""
 
 runs:
   using: composite
   steps:
-    - name: Init submodules
+    - name: Init forge-fhevm submodule
       shell: bash
-      run: git submodule update --init --recursive
+      run: git submodule update --init --recursive contracts/lib/forge-fhevm
+
+    # Short-lived installation token, read-only and scoped to zama-ai/fhevm.
+    # It is revoked automatically when the job ends.
+    - name: Create fhevm read token
+      if: inputs.fhevm == 'true'
+      id: fhevm-token
+      uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+      with:
+        client-id: ${{ inputs.fhevm-app-client-id }}
+        private-key: ${{ inputs.fhevm-app-private-key }}
+        owner: zama-ai
+        repositories: fhevm
+        permission-contents: read
+
+    # The rewrite lives only in this command's config, so the token is never
+    # written to .git/config or the submodule's remote URL.
+    - name: Init fhevm submodule
+      if: inputs.fhevm == 'true'
+      shell: bash
+      env:
+        FHEVM_TOKEN: ${{ steps.fhevm-token.outputs.token }}
+      run: |
+        git -c "url.https://x-access-token:${FHEVM_TOKEN}@github.com/zama-ai/fhevm.insteadOf=https://github.com/zama-ai/fhevm" \
+          submodule update --init --recursive contracts/lib/fhevm
 
     - name: Install Foundry
       uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
@@ -21,6 +58,8 @@ runs:
 
     # Key includes every soldeer.lock so a dependency bump busts the cache —
     # building stale deps is the failure mode a lockfile is meant to prevent.
+    # fhevm outputs are deliberately excluded: fork PR runs can restore this
+    # cache, and they must not get fhevm contents without the App token.
     - name: Restore Forge build cache
       id: forge-build-cache
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -32,17 +71,13 @@ runs:
           contracts/lib/forge-fhevm/out
           contracts/lib/forge-fhevm/cache
           contracts/lib/forge-fhevm/dependencies
-          contracts/lib/fhevm/sdk/js-sdk/contracts/out
-          contracts/lib/fhevm/sdk/js-sdk/contracts/cache
-          contracts/lib/fhevm/sdk/js-sdk/contracts/dependencies
-        key: forge-build-v2-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/soldeer.lock', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/forge-fhevm/soldeer.lock', 'contracts/lib/fhevm/sdk/js-sdk/contracts/foundry.toml', 'contracts/lib/fhevm/sdk/js-sdk/contracts/soldeer.lock') }}
+        key: forge-build-v3-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/soldeer.lock', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/forge-fhevm/soldeer.lock') }}
 
     - name: Install Soldeer dependencies
       if: steps.forge-build-cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
         cd contracts/lib/forge-fhevm && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
-        cd "$GITHUB_WORKSPACE/contracts/lib/fhevm/sdk/js-sdk/contracts" && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
         cd "$GITHUB_WORKSPACE/contracts" && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
 
     - name: Build forge-fhevm contracts
@@ -50,12 +85,16 @@ runs:
       shell: bash
       run: cd contracts/lib/forge-fhevm && forge build
 
-    # Mirrors the `fhevm:build` package.json script — the cleartext FHEVM host
-    # contracts the e2e cleartext deploy depends on.
+    # Mirrors the `fhevm:install` + `fhevm:build` package.json scripts — the
+    # cleartext FHEVM host contracts the e2e cleartext deploy depends on. Rebuilt
+    # on every run because its outputs are not cached (see above).
     - name: Build fhevm host contracts
-      if: steps.forge-build-cache.outputs.cache-hit != 'true'
+      if: inputs.fhevm == 'true'
       shell: bash
-      run: cd contracts/lib/fhevm/sdk/js-sdk/contracts && FOUNDRY_PROFILE=v13 forge build scripts/v0.13.0/DeployCleartextFHEVMHost.s.sol
+      run: |
+        cd contracts/lib/fhevm/sdk/js-sdk/contracts
+        GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
+        FOUNDRY_PROFILE=v13 forge build scripts/v0.13.0/DeployCleartextFHEVMHost.s.sol
 
     - name: Build contracts
       if: steps.forge-build-cache.outputs.cache-hit != 'true'
@@ -73,7 +112,4 @@ runs:
           contracts/lib/forge-fhevm/out
           contracts/lib/forge-fhevm/cache
           contracts/lib/forge-fhevm/dependencies
-          contracts/lib/fhevm/sdk/js-sdk/contracts/out
-          contracts/lib/fhevm/sdk/js-sdk/contracts/cache
-          contracts/lib/fhevm/sdk/js-sdk/contracts/dependencies
-        key: forge-build-v2-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/soldeer.lock', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/forge-fhevm/soldeer.lock', 'contracts/lib/fhevm/sdk/js-sdk/contracts/foundry.toml', 'contracts/lib/fhevm/sdk/js-sdk/contracts/soldeer.lock') }}
+        key: forge-build-v3-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/soldeer.lock', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/forge-fhevm/soldeer.lock') }}
