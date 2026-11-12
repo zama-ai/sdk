@@ -609,7 +609,7 @@ export class VaultClient {
         { txHash: last.txHash, receipt: last.receipt, unconfirmedVaultIds: unconfirmed },
       );
     }
-    return { prepared, batches, txHashes };
+    return { batches, txHashes };
   }
 
   /**

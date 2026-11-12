@@ -768,16 +768,14 @@ describe("deposit and redeem", () => {
     mockChain(provider);
     mockEncryption(relayer);
     mockReceipt(provider, [ALPHA.depositBatcher, BETA.depositBatcher]);
-    const { batches, txHashes, prepared } = await createVaultClient(sdk).deposit(STABLE, {
-      vaultId: "beta",
-      amount: 10n,
+    const outcome = await createVaultClient(sdk).deposit(STABLE, { vaultId: "beta", amount: 10n });
+    expect(outcome).toStrictEqual({
+      batches: [
+        { vaultId: "alpha", chainId: CHAIN_ID, batcher: ALPHA.depositBatcher, batchId: 3n },
+        { vaultId: "beta", chainId: CHAIN_ID, batcher: BETA.depositBatcher, batchId: 5n },
+      ],
+      txHashes: [expect.any(String)],
     });
-    expect(batches).toStrictEqual([
-      { vaultId: "alpha", chainId: CHAIN_ID, batcher: ALPHA.depositBatcher, batchId: 3n },
-      { vaultId: "beta", chainId: CHAIN_ID, batcher: BETA.depositBatcher, batchId: 5n },
-    ]);
-    expect(prepared.account).toBe(USER);
-    expect(txHashes).toHaveLength(1);
     expect(signer.writeContract).toHaveBeenCalledTimes(1);
   });
 

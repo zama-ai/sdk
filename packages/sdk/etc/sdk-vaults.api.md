@@ -144,7 +144,6 @@ export interface JoinOutcome {
     readonly batches: readonly (BatchRef & {
         readonly vaultId: string;
     })[];
-    readonly prepared: PreparedJoin;
     readonly txHashes: readonly Hex[];
 }
 

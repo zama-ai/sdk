@@ -13292,11 +13292,10 @@ A `Call` (`{ to: Address; data: Hex; value: 0n }`) tagged with its `kind`, so yo
 
 ### JoinOutcome
 
-What `deposit` and `redeem` return.
+What `deposit` and `redeem` return. It does not hold the calls that were sent: to keep them, call `prepareDeposit` or `prepareRedeem` and send the calls yourself.
 
 | Field      | Type                                 | Description                                       |
 | ---------- | ------------------------------------ | ------------------------------------------------- |
-| `prepared` | `PreparedJoin`                       | What was sent.                                    |
 | `batches`  | `(BatchRef & { vaultId: string })[]` | The batch each leg landed in, in group order.     |
 | `txHashes` | `Hex[]`                              | Every transaction sent, operator approvals first. |
 

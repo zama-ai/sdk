@@ -212,8 +212,6 @@ export interface OpenBatch extends BatchRef {
 
 /** What `client.deposit` and `client.redeem` return. */
 export interface JoinOutcome {
-  /** What was sent. */
-  readonly prepared: PreparedJoin;
   /** The batch each leg landed in, in group order. */
   readonly batches: readonly (BatchRef & { readonly vaultId: string })[];
   /** Every transaction sent, operator approvals first. */
