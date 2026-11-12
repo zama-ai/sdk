@@ -1,19 +1,19 @@
 ---
-title: Advanced vault integration
+title: Handle wallet prompts, upgrades and custom sending
 description: Wallet prompts, paused batchers, batcher upgrades, bundling wallets, and sending vault calls through your own pipeline.
 ---
 
-# Advanced vault integration
+# Handle wallet prompts, upgrades and custom sending
 
 {% hint style="info" %}
 Available in the Core SDK and React SDK.
 {% endhint %}
 
-This page covers what an integration needs beyond [Vault deposits and redemptions](deposits.md): how many wallet prompts each action takes, paused and upgraded batchers, and sending calls yourself. It uses the `STABLE` group from [step 1](deposits.md#1-define-a-group) of that guide.
+This page covers what an integration needs beyond [Vault deposits and redemptions](deposits.md): planning wallet prompts, handling paused and upgraded batchers, and sending calls yourself. It uses the `STABLE` group from [step 1](deposits.md#1-define-a-group) of that guide.
 
 ## Wallet prompts
 
-The SDK sends one transaction per call, so each call is one wallet prompt:
+Each transaction is one wallet prompt. Most actions send one transaction. A group redemption can send several:
 
 | Action                          | One vault   | Group of N vaults |
 | ------------------------------- | ----------- | ----------------- |
@@ -22,19 +22,13 @@ The SDK sends one transaction per call, so each call is one wallet prompt:
 | `claim`, `dispatch`, `finalize` | 1 per batch | 1 per batch       |
 | `quit` the whole join           | 1           | N                 |
 
-A group join goes through the chain's vault router, which splits it into legs. A deposit pushes the asset to the router, so it needs no approval. A redemption is different: each vault has its own share token, and the router pulls every one of them. So the account first approves the router as ERC-7984 operator on each share token it has not approved yet, one prompt each, then sends the join.
+A group redemption first approves the router as operator on each share token the account has not approved yet, one prompt each, then sends the join. An approval lasts 365 days, so redemptions within that time ask for none. To skip the approvals, use a [bundling wallet](#bundling-wallets). For why the router needs them, see [A group join goes through the vault router](README.md#a-group-join-goes-through-the-vault-router).
 
-{% hint style="warning" %}
-**Tell users about the N + 1 prompts on the redeem form, before they start**, or use a [bundling wallet](#bundling-wallets), which needs no approval.
-{% endhint %}
-
-An approval lasts a year, so later redemptions ask for none. A long approval is safe: the router only pulls a share token for a join its holder sends, under an encryption proof bound to that holder.
-
-The router's address comes from `vaultRouterAddress` in the [chain preset](../../reference/sdk/network-presets.md). For a chain whose preset names none, set it on the chain you pass to the SDK, or group joins throw `ConfigurationError`.
+The router's address comes from `vaultRouterAddress` in the [chain preset](../../reference/sdk/network-presets.md). For a chain whose preset names none, set it on the chain you pass to the SDK, or group joins through the router throw `ConfigurationError`.
 
 ## Paused batchers
 
-A paused batcher rejects joins, and a group join sends a leg to every vault, so one paused batcher blocks every join of its group. `deposit` and `redeem` check this first and throw `VaultBatcherPausedError`, naming the paused vault. Claims and quits still work, so existing deposits are never stuck.
+A paused batcher rejects joins. A group join sends a leg to every vault, so one paused batcher blocks every join of its group. `deposit` and `redeem` check this first and throw `VaultBatcherPausedError`, naming the paused vault. Claims and quits still work, so existing deposits are never stuck.
 
 To disable the form before the user submits, read `paused` from [`readOpenBatches`](deposits.md#show-the-open-batches).
 
@@ -82,7 +76,7 @@ await sendBundle(prepared.calls);
 `sendBundle` stands in for your wallet's atomic batch call.
 
 {% hint style="danger" %}
-Send the direct calls of a group as one atomic bundle. If they go out one by one and the user stops partway, the vaults that were never joined show which vault the user picked. This is why the send methods, which send one call at a time, have no `route` option.
+Send the direct calls of a group as one atomic bundle. Sent one by one, they can show which vault the user picked. See [A group join goes through the vault router](README.md#a-group-join-goes-through-the-vault-router).
 {% endhint %}
 
 ## Send through your own pipeline
@@ -103,14 +97,14 @@ for (const call of prepared.calls) {
 invalidateAfterVaultAction(queryClient);
 ```
 
-`sendTransaction` stands in for your pipeline. Send the calls in order, from `account`: the encryption proofs are bound to it. Then call `invalidateAfterVaultAction` so the React hooks read fresh data. See [`PreparedJoin`](../../reference/sdk/VaultClient.md#preparedjoin) for what else a prepared join holds.
+`sendTransaction` stands in for your pipeline. Send the calls in order, from `account`: the encryption proofs are bound to it. Then call `invalidateAfterVaultAction` so the React hooks read fresh data. Store a prepared join only in the user's own storage, as [the privacy rules](README.md#a-group-hides-which-vault-you-chose) say. See [`PreparedJoin`](../../reference/sdk/VaultClient.md#preparedjoin) for its fields.
 
 ### Check the balance
 
 `prepareDeposit` and `prepareRedeem` check the balance by default. The check decrypts as the SDK's signer, so it only works when `account` is the signer. For any other account, or with no signer, they throw `BalanceCheckUnavailableError` until you pass `skipBalanceCheck: true`.
 
 {% hint style="warning" %}
-**If you skip the check, check the balance yourself.** A join above the balance does not revert: it joins every batch with nothing and still costs the transaction. Decrypt the token of every leg together, not only the chosen one.
+**If you skip the check, check the balance yourself.** A join above the balance does not revert: it joins every batch with nothing and still costs the transaction. Follow [Decrypt every leg together](README.md#a-group-hides-which-vault-you-chose).
 {% endhint %}
 
 ### Act on a batch

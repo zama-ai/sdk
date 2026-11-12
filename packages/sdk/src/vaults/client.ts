@@ -171,21 +171,25 @@ export class VaultClient {
 
   /**
    * Build a deposit into a vault on its own: one call to its deposit batcher.
-   * Only `input.account` can send it.
+   * Only `input.account` can send it. With `skipBalanceCheck`, check the
+   * account's balance before sending.
    *
    * @throws if the provider is not on the vault's chain while a wallet is connected. {@link ChainMismatchError}
-   * @throws if the provider is on another chain with no wallet connected, or a batcher address is invalid. For a group: if the vault is unknown, the group has more than `MAX_GROUP_VAULTS` vaults, mixes chains or names a vault twice, the deposit batchers take different assets, or, on the router route, the chain has no router. {@link ConfigurationError}
+   * @throws if the provider is on another chain with no wallet connected, or a batcher address or `lastBatchId` is invalid. {@link ConfigurationError}
    * @throws if a batcher the join reaches is paused, even with `skipBalanceCheck`. {@link VaultBatcherPausedError}
    * @throws if the balance is less than `amount` and `skipBalanceCheck` is not set. {@link InsufficientConfidentialBalanceError}
-   * @throws if no signer is connected or `account` is not the signer's, so its balance cannot be decrypted; pass `skipBalanceCheck: true`. {@link BalanceCheckUnavailableError}
+   * @throws if `skipBalanceCheck` is not set and no signer is connected, `account` is not the signer's, or the balance cannot be read. {@link BalanceCheckUnavailableError}
+   * @throws if encryption returns a different number of values than the join has legs. {@link EncryptionFailedError}
    */
   prepareDeposit(vault: Vault, input: JoinInput, options?: JoinOptions): Promise<PreparedJoin>;
   /**
    * Build a deposit into one vault of a group, with a leg for every vault.
-   * Only `input.account` can send the calls. With `route: "direct"`, send them
-   * as one atomic bundle: sending only some shows which vault was chosen.
+   * With `route: "direct"`, send the calls as one atomic bundle, and with
+   * `skipBalanceCheck`, decrypt every leg's token together: doing either for
+   * only some legs shows which vault was chosen.
    *
    * @throws as the single-vault overload.
+   * @throws also if the vault is not in the group, the group has more than `MAX_GROUP_VAULTS` vaults, mixes chains or names a vault twice, the deposit batchers take different assets, or, on the router route, the chain has no router. {@link ConfigurationError}
    */
   prepareDeposit<TGroup extends VaultGroup>(
     group: TGroup,
@@ -202,7 +206,8 @@ export class VaultClient {
 
   /**
    * Build a redemption of a vault's shares on its own: one call to its redeem
-   * batcher. Only `input.account` can send it.
+   * batcher. Only `input.account` can send it. With `skipBalanceCheck`, check
+   * the account's share balance before sending.
    *
    * @throws as {@link prepareDeposit}.
    */
@@ -211,10 +216,11 @@ export class VaultClient {
    * Build a redemption of the shares of one vault of a group, with a leg for
    * every vault. On the router route, `calls` starts with a year-long operator
    * approval on each share token the account has not approved. With
-   * `route: "direct"`, send the calls as one atomic bundle: sending only some
-   * shows which vault was chosen.
+   * `route: "direct"`, send the calls as one atomic bundle, and with
+   * `skipBalanceCheck`, decrypt every leg's token together: doing either for
+   * only some legs shows which vault was chosen.
    *
-   * @throws as {@link prepareDeposit}.
+   * @throws as {@link prepareDeposit} for a group, except that the batchers may take different tokens.
    */
   prepareRedeem<TGroup extends VaultGroup>(
     group: TGroup,
@@ -317,9 +323,10 @@ export class VaultClient {
    *
    * @throws as {@link prepareDeposit}.
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
-   * @throws if the wallet is not on the vault's chain. {@link ChainMismatchError}
-   * @throws if the join was mined but its receipt does not confirm every leg. The join most likely
-   *   went through: look the transaction up before joining again. {@link VaultJoinUnconfirmedError}
+   * @throws if the wallet is not on the provider's chain or on the vault's chain. {@link ChainMismatchError}
+   * @throws if a transaction fails or reverts. {@link TransactionRevertedError}
+   * @throws if the join was mined but its receipt does not confirm every leg; the join most likely
+   *   went through. {@link VaultJoinUnconfirmedError}
    */
   deposit(
     vault: Vault,
@@ -330,7 +337,7 @@ export class VaultClient {
    * Deposit into one vault of a group with the SDK's signer, with a leg for
    * every vault.
    *
-   * @throws as the single-vault overload.
+   * @throws as the single-vault overload, and as {@link prepareDeposit} for a group.
    */
   deposit<TGroup extends VaultGroup>(
     group: TGroup,
@@ -359,7 +366,7 @@ export class VaultClient {
    * Redeem the shares of one vault of a group with the SDK's signer. It first
    * asks the wallet for each operator approval of the router the account lacks.
    *
-   * @throws as {@link deposit}.
+   * @throws as {@link deposit} for a group, except that the batchers may take different tokens.
    */
   redeem<TGroup extends VaultGroup>(
     group: TGroup,
@@ -378,6 +385,10 @@ export class VaultClient {
    * Claim a finalized batch with the SDK's signer, for `account` (default: the signer).
    * The output is the account's deposit times the batch's exchange rate, rounded down;
    * the deposit then reads as an encrypted zero.
+   *
+   * @throws if no signer is configured. {@link SignerNotConfiguredError}
+   * @throws if the wallet is not on the provider's chain or on the batch's chain. {@link ChainMismatchError}
+   * @throws if the transaction fails or reverts. {@link TransactionRevertedError}
    */
   async claim(batch: BatchRef, account?: Address): Promise<TransactionResult> {
     const signer = await this.#writeAccount(batch.chainId, "claim");
@@ -393,19 +404,36 @@ export class VaultClient {
    * Quit a pending or canceled batch with the SDK's signer, which must be the depositor.
    * It leaves the deposit as an encrypted zero. After a group join, quit every leg of it:
    * quitting only the chosen one shows which vault was chosen.
+   *
+   * @throws if no signer is configured. {@link SignerNotConfiguredError}
+   * @throws if the wallet is not on the provider's chain or on the batch's chain. {@link ChainMismatchError}
+   * @throws if the transaction fails or reverts. {@link TransactionRevertedError}
    */
   async quit(batch: BatchRef): Promise<TransactionResult> {
     await this.#writeAccount(batch.chainId, "quit");
     return this.#send(quitContract(getAddress(batch.batcher), batch.batchId), "vault:quit");
   }
 
-  /** Dispatch the batcher's open batch with the SDK's signer. */
+  /**
+   * Dispatch the batcher's open batch with the SDK's signer.
+   *
+   * @throws if no signer is configured. {@link SignerNotConfiguredError}
+   * @throws if the wallet is not on the provider's chain or on the batcher's chain. {@link ChainMismatchError}
+   * @throws if the transaction fails or reverts. {@link TransactionRevertedError}
+   */
   async dispatch(batch: BatcherRef): Promise<TransactionResult> {
     await this.#writeAccount(batch.chainId, "dispatch");
     return this.#send(dispatchBatchContract(getAddress(batch.batcher)), "vault:dispatchBatch");
   }
 
-  /** Finalize a dispatched batch with the SDK's signer. */
+  /**
+   * Finalize a dispatched batch with the SDK's signer.
+   *
+   * @throws as {@link prepareFinalize}.
+   * @throws if no signer is configured. {@link SignerNotConfiguredError}
+   * @throws if the wallet is not on the provider's chain or on the batch's chain. {@link ChainMismatchError}
+   * @throws if the transaction fails or reverts. {@link TransactionRevertedError}
+   */
   async finalize(batch: BatchRef): Promise<TransactionResult> {
     // Before the public decryption, so a wrong chain fails before the relayer round trip.
     await this.#writeAccount(batch.chainId, "finalize");
@@ -625,7 +653,6 @@ export class VaultClient {
       { ...input, account },
       { skipBalanceCheck: options?.skipBalanceCheck },
     );
-    // The calls are any operator approvals, then a single join: the SDK never bundles.
     const txHashes: Hex[] = [];
     let last: TransactionResult | undefined;
     for (const [index, { call, config }] of planned.entries()) {
@@ -642,6 +669,7 @@ export class VaultClient {
       txHashes.push(last.txHash);
     }
     assertNonNullable(last, `vault ${direction}: last transaction`);
+    // The join is the last call, so only its receipt holds the Joined logs.
     const logs = [...last.receipt.logs];
     const batches: (BatchRef & { vaultId: string })[] = [];
     const unconfirmed: string[] = [];
@@ -858,7 +886,6 @@ export class VaultClient {
     return this.#sdk.signer;
   }
 
-  // A write must not land on a chain other than the batcher's.
   async #writeAccount(chainId: number, operation: string): Promise<Address> {
     const account = await requireWriteChain(
       `vault ${operation}`,

@@ -5,9 +5,9 @@ description: Mutation hook that settles a dispatched vault batch.
 
 # useFinalize
 
-Mutation hook that settles a dispatched batch with the SDK's signer. Wraps [`VaultClient.finalize`](../sdk/VaultClient.md#send-methods).
+Mutation hook that settles a dispatched batch with the SDK's signer. Wraps [`VaultClient.finalize`](../sdk/VaultClient.md#finalize).
 
-A [keeper](../../guides/vaults/README.md#a-keeper-moves-batches-forward) normally finalizes. Offer this hook as a fallback when a batch stays dispatched longer than your app expects. Past the batch's `cancelsAt`, the same call cancels the batch instead of settling it. See [Dispatched](../../guides/vaults/building-a-ui.md#dispatched).
+Any account may send it. Past the batch's `cancelsAt`, the same call cancels the batch instead of settling it.
 
 ## Import
 
@@ -45,11 +45,37 @@ function SettleButton({ batchRef }: { batchRef: BatchRef }) {
 
 ## Parameters
 
+```ts
+import { type UseVaultMutationOptions } from "@zama-fhe/react-sdk/vaults";
+```
+
 {% include ".gitbook/includes/mutation-options.md" %}
 
 ## Mutation variables
 
-A `BatchRef` (`{ chainId, batcher, batchId }`), passed to `mutate` / `mutateAsync`. Any account may send it.
+A [`BatchRef`](../sdk/VaultClient.md#batchref), passed to `mutate` / `mutateAsync`.
+
+### chainId
+
+`number`
+
+The chain of the batch to finalize.
+
+### batcher
+
+`Address`
+
+The batcher of the batch to finalize.
+
+### batchId
+
+`bigint`
+
+The batch to finalize.
+
+```tsx
+finalize.mutate({ chainId: 1, batcher: "0xAlphaDeposit", batchId: 7n });
+```
 
 **Throws:**
 

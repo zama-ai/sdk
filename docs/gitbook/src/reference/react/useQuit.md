@@ -5,7 +5,7 @@ description: Mutation hook that takes the signer's deposit back from a pending o
 
 # useQuit
 
-Mutation hook that takes the signer's deposit back from a pending or canceled batch. Wraps [`VaultClient.quit`](../sdk/VaultClient.md#send-methods). The signer must be the account that joined.
+Mutation hook that takes the signer's deposit back from a pending or canceled batch. Wraps [`VaultClient.quit`](../sdk/VaultClient.md#quit). The signer must be the account that joined.
 
 {% hint style="warning" %}
 **Quit every leg of a group join, not only the chosen one.** Quitting one leg shows which vault the user picked. See [A group hides which vault you chose](../../guides/vaults/README.md#a-group-hides-which-vault-you-chose).
@@ -50,22 +50,38 @@ function CancelJoinButton({ batches }: { batches: readonly BatchRef[] }) {
 
 ## Parameters
 
+```ts
+import { type UseVaultMutationOptions } from "@zama-fhe/react-sdk/vaults";
+```
+
 {% include ".gitbook/includes/mutation-options.md" %}
 
 ## Mutation variables
 
-A `BatchRef`, passed to `mutate` / `mutateAsync`.
+A [`BatchRef`](../sdk/VaultClient.md#batchref), passed to `mutate` / `mutateAsync`.
 
-### chainId, batcher, batchId
+### chainId
 
-`number`, `Address`, `bigint`
+`number`
+
+The chain of the batch to quit.
+
+### batcher
+
+`Address`
+
+The batcher of the batch to quit.
+
+### batchId
+
+`bigint`
 
 The batch to quit.
 
 **Throws:**
 
 - `ChainMismatchError`: the wallet is not on the batch's chain.
-- `TransactionRevertedError`: the quit reverted, for example because the batch was dispatched in the meantime. Check `actions` before you send.
+- `TransactionRevertedError`: the quit reverted, for example because the batch was dispatched in the meantime.
 
 ## Return Type
 

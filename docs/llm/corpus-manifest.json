@@ -505,7 +505,7 @@
       "source_type": "official-doc",
       "category": "guides",
       "logical_path": "guides/vaults/README",
-      "description": "How confidential ERC-4626 vaults work from the SDK — batches, keepers, and the privacy of a vault group.",
+      "description": "How confidential ERC-4626 vaults work from the SDK. Batches, keepers, the vault router, and the privacy of a vault group.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -523,7 +523,7 @@
     },
     {
       "id": "doc:guides/vaults/advanced",
-      "title": "Advanced vault integration",
+      "title": "Handle wallet prompts, upgrades and custom sending",
       "source_path": "docs/gitbook/src/guides/vaults/advanced.md",
       "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md",
       "source_type": "official-doc",
@@ -1609,7 +1609,7 @@
       "source_type": "official-doc",
       "category": "reference-react",
       "logical_path": "reference/react/useBatch",
-      "description": "Query hook that reads one vault batch — its state, timings, and the actions you can send now.",
+      "description": "Query hook that reads one vault batch with its state, its timings, and the actions you can send now.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

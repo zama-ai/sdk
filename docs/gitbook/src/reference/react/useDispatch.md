@@ -5,9 +5,9 @@ description: Mutation hook that dispatches a vault batcher's open batch.
 
 # useDispatch
 
-Mutation hook that dispatches a batcher's open batch with the SDK's signer. Wraps [`VaultClient.dispatch`](../sdk/VaultClient.md#send-methods).
+Mutation hook that dispatches a batcher's open batch with the SDK's signer. Wraps [`VaultClient.dispatch`](../sdk/VaultClient.md#dispatch).
 
-A [keeper](../../guides/vaults/README.md#a-keeper-moves-batches-forward) normally dispatches, so most apps never need this hook. Offer it as a fallback once `dispatch` is in a batch's `actions`.
+It dispatches whatever batch is open on the batcher. Any account may send it.
 
 ## Import
 
@@ -46,11 +46,31 @@ function DispatchButton({ batchRef }: { batchRef: BatchRef }) {
 
 ## Parameters
 
+```ts
+import { type UseVaultMutationOptions } from "@zama-fhe/react-sdk/vaults";
+```
+
 {% include ".gitbook/includes/mutation-options.md" %}
 
 ## Mutation variables
 
-A `BatcherRef` (`{ chainId, batcher }`), passed to `mutate` / `mutateAsync`. The hook dispatches whatever batch is open on the batcher. Any account may send it.
+A `BatcherRef`, passed to `mutate` / `mutateAsync`.
+
+### chainId
+
+`number`
+
+The batcher's chain.
+
+### batcher
+
+`Address`
+
+The batcher whose open batch is dispatched.
+
+```tsx
+dispatch.mutate({ chainId: batchRef.chainId, batcher: batchRef.batcher });
+```
 
 **Throws:**
 

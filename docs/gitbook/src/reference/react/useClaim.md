@@ -5,9 +5,9 @@ description: Mutation hook that claims a finalized vault batch's output for an a
 
 # useClaim
 
-Mutation hook that claims a finalized batch with the SDK's signer: shares for a deposit batch, the asset for a redeem batch. Wraps [`VaultClient.claim`](../sdk/VaultClient.md#send-methods).
+Mutation hook that claims a finalized batch with the SDK's signer: shares for a deposit batch, the asset for a redeem batch. Wraps [`VaultClient.claim`](../sdk/VaultClient.md#claim).
 
-A [keeper](../../guides/vaults/README.md#a-keeper-moves-batches-forward) normally claims for every depositor. Offer this hook as a fallback. Anyone may claim, and the output always goes to `account`.
+Any account may send the claim. The output goes to `account`.
 
 ## Import
 
@@ -44,15 +44,31 @@ function ClaimButton({ batchRef, account }: { batchRef: BatchRef; account: Addre
 
 ## Parameters
 
+```ts
+import { type UseVaultMutationOptions } from "@zama-fhe/react-sdk/vaults";
+```
+
 {% include ".gitbook/includes/mutation-options.md" %}
 
 ## Mutation variables
 
-A `BatchRef` plus an optional `account`, passed to `mutate` / `mutateAsync`.
+A [`BatchRef`](../sdk/VaultClient.md#batchref) plus an optional `account`, passed to `mutate` / `mutateAsync`.
 
-### chainId, batcher, batchId
+### chainId
 
-`number`, `Address`, `bigint`
+`number`
+
+The chain of the batch to claim.
+
+### batcher
+
+`Address`
+
+The batcher of the batch to claim.
+
+### batchId
+
+`bigint`
 
 The batch to claim.
 
@@ -65,7 +81,7 @@ The account to claim for. Defaults to the signer.
 **Throws:**
 
 - `ChainMismatchError`: the wallet is not on the batch's chain.
-- `TransactionRevertedError`: the claim reverted, for example because the batch is not finalized yet. Check `actions` before you send.
+- `TransactionRevertedError`: the claim reverted, for example because the batch is not finalized yet.
 
 ## Return Type
 

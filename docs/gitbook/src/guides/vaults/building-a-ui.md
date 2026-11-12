@@ -11,15 +11,15 @@ Redemptions go through the same steps: read "shares" for "assets" and the other 
 
 ## The form
 
-| Situation                                         | What to do                                                                                                                                                                                                                                    |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The balance is encrypted                          | Show it as hidden, with a button to decrypt it. The first decryption asks for a signature, so start it from a click. See [`useConfidentialBalance`](../../reference/react/useConfidentialBalance.md).                                          |
-| The amount is above the balance                   | Disable the button and say why. The SDK checks too, but the user should not learn it from an error.                                                                                                                                           |
-| A batcher of the group is paused                  | [`useOpenBatches`](../../reference/react/useOpenBatches.md) returns `paused` for each vault. One paused batcher blocks the whole group: disable the button and say joins are paused.                                                          |
-| The user wants to know when the batch closes      | `useOpenBatches` returns each vault's `dispatchableAt`: the earliest time the open batch can be dispatched.                                                                                                                                   |
-| A redemption                                      | Label the amount as shares, not assets.                                                                                                                                                                                                       |
-| A first redemption from a group of N vaults       | Say the wallet may ask for up to N approvals, then the redemption. See [Wallet prompts](advanced.md#wallet-prompts).                                                                                                                          |
-| The user holds public tokens, not confidential    | Shield first with [`useShield`](../../reference/react/useShield.md).                                                                                                                                                                          |
+| Situation                                      | What to do                                                                                                                                                                                            |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The balance is encrypted                       | Show it as hidden, with a button to decrypt it. The first decryption asks for a signature, so start it from a click. See [`useConfidentialBalance`](../../reference/react/useConfidentialBalance.md). |
+| The amount is above the balance                | Disable the button and say why. The SDK checks too, but the user should not learn it from an error.                                                                                                   |
+| A batcher of the group is paused               | [`useOpenBatches`](../../reference/react/useOpenBatches.md) returns `paused` for each vault. Disable the button and say joins are paused. See [Paused batchers](advanced.md#paused-batchers).         |
+| The user wants to know when the batch closes   | `useOpenBatches` returns each vault's `dispatchableAt`: the earliest time the open batch can be dispatched.                                                                                           |
+| A redemption                                   | Label the amount as shares, not assets.                                                                                                                                                               |
+| A first redemption from a group of N vaults    | Before the user starts, say the wallet may ask for up to N approvals, then the redemption. See [Wallet prompts](advanced.md#wallet-prompts).                                                          |
+| The user holds public tokens, not confidential | Shield first with [`useShield`](../../reference/react/useShield.md).                                                                                                                                  |
 
 ## The send
 
@@ -39,20 +39,20 @@ When the mutation succeeds, [store the batches](deposits.md#4-store-the-batches)
 Two errors need their own handling:
 
 - `ChainMismatchError`: the wallet is on another chain. Prompt a network switch.
-- `VaultJoinUnconfirmedError`: the join was mined, but the SDK could not read every batch from it. Do not offer a plain retry, since the deposit most likely went through. Show the transaction hash.
+- [`VaultJoinUnconfirmedError`](../../reference/sdk/errors.md#vaultjoinunconfirmederror): do not offer a plain retry. Handle it as its reference says.
 
 ## The batch
 
 Show one entry per join, for the vault the user chose, and read that leg's batch with [`useBatch`](../../reference/react/useBatch.md). Pass the account, so the batch lists `claim` and `quit`. Keep every leg's batch anyway: a cancel must quit them all.
 
-| `state`      | What the user sees                     | What the user can do                         | Hook                                                         |
-| ------------ | -------------------------------------- | -------------------------------------------- | ------------------------------------------------------------ |
-| `pending`    | Queued, with when it can be dispatched | Cancel, to get the amount back               | [`useQuit`](../../reference/react/useQuit.md), on every leg  |
-| `dispatched` | Processing                             | Wait. If it stays too long, settle it        | [`useFinalize`](../../reference/react/useFinalize.md)        |
-| `finalized`  | Ready                                  | Wait for the keeper's claim, or claim now    | [`useClaim`](../../reference/react/useClaim.md)              |
-| `canceled`   | Did not go through                     | Wait for the keeper's refund, or get it back | [`useQuit`](../../reference/react/useQuit.md), on every leg  |
+| `state`      | What the user sees                     | What the user can do                         | Hook                                                        |
+| ------------ | -------------------------------------- | -------------------------------------------- | ----------------------------------------------------------- |
+| `pending`    | Queued, with when it can be dispatched | Cancel, to get the amount back               | [`useQuit`](../../reference/react/useQuit.md), on every leg |
+| `dispatched` | Processing                             | Wait. If it stays too long, settle it        | [`useFinalize`](../../reference/react/useFinalize.md)       |
+| `finalized`  | Ready                                  | Wait for the keeper's claim, or claim now    | [`useClaim`](../../reference/react/useClaim.md)             |
+| `canceled`   | Did not go through                     | Wait for the keeper's refund, or get it back | [`useQuit`](../../reference/react/useQuit.md), on every leg |
 
-Offer an action only when `batch.actions` includes it. Switch on `batch.state` exhaustively, so TypeScript flags a state your UI forgets:
+Offer an action only when `batch.actions` includes it. Switch on `batch.state` exhaustively, so TypeScript flags a state your UI forgets. In the component below, `legs` are the stored `batches` of the join, and `chosen` is the one the user picked:
 
 ```tsx
 import { useBatch, useClaim, useQuit } from "@zama-fhe/react-sdk/vaults";
@@ -120,8 +120,6 @@ function DepositRow({ chosen, legs, account }: DepositRowProps) {
 }
 ```
 
-`legs` are the stored `batches` of the join, and `chosen` is the one the user picked.
-
 ### Pending
 
 `dispatchableAt` is the earliest time anyone may dispatch the batch, not a promise: word it as "at the earliest". After it, a keeper normally dispatches. You can offer [`useDispatch`](../../reference/react/useDispatch.md) as a fallback once `actions` includes `dispatch`.
@@ -134,9 +132,11 @@ Past `cancelsAt`, the same `finalize` call **cancels** the batch instead of sett
 
 ### Finalized and canceled
 
-A claim pays `deposit * rate / 10 ** decimals` from `exchangeRate`, rounded down. A canceled batch pays the deposit back. Either way a keeper normally pays every depositor, so the user often does nothing.
+A keeper normally pays the user, so the user often does nothing. `claim` or `quit` stays in `actions` after the payout (see [`Batch`](../../reference/sdk/VaultClient.md#batch)), so decide from the deposit whether to keep the entry:
 
-A paid-out deposit reads as an encrypted zero, which the SDK cannot tell from a non-zero one without decrypting. So `claim` or `quit` stays in `actions` after the payout. Sending it again is harmless, but to know whether to keep the entry, decrypt the deposit: a zero on the chosen leg means paid out, so remove the entry. Decrypt every leg's deposit in one request, since a lone decryption shows the relayer which vault the user picked.
+1. Refetch the batch, for example when the list opens. `useBatch` stops polling once the batch is finalized or canceled, so it does not see a keeper's payout.
+2. Decrypt the deposit, together with every other leg's deposit, as the [privacy rules](README.md#a-group-hides-which-vault-you-chose) say.
+3. A zero on the chosen leg means paid out: remove the entry.
 
 ## Checklist
 
@@ -149,7 +149,7 @@ A paid-out deposit reads as an encrypted zero, which the SDK cannot tell from a 
 - [ ] Actions are offered only when `actions` includes them.
 - [ ] A cancel quits every leg of the join.
 - [ ] A dispatched batch offers `finalize` after a delay you choose, and says when that cancels.
-- [ ] A finalized or canceled entry leaves the list once its deposit decrypts to zero.
+- [ ] A finalized or canceled entry is refetched, and leaves the list once its deposit decrypts to zero.
 
 ## Next steps
 

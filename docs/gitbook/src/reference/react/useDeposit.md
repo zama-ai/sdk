@@ -5,9 +5,9 @@ description: Mutation hook that deposits into a confidential vault group and ret
 
 # useDeposit
 
-Mutation hook that deposits into a vault group, or a vault on its own, with the SDK's signer. Wraps [`VaultClient.deposit`](../sdk/VaultClient.md#send-methods).
+Mutation hook that deposits into a vault group, or a vault on its own, with the SDK's signer. Wraps [`VaultClient.deposit`](../sdk/VaultClient.md#deposit).
 
-The mutation resolves once the deposit has joined a batch, not once it has settled. Store the returned `batches` and follow them with [`useBatch`](./useBatch.md).
+The mutation resolves once the deposit has joined a batch, not once it has settled. [`useBatch`](./useBatch.md) reads each returned batch.
 
 ## Import
 
@@ -39,36 +39,25 @@ function DepositButton() {
 ```
 
 {% endtab %}
-{% tab title="vaults.ts" %}
-
-```ts
-import { defineVault, defineVaultGroup } from "@zama-fhe/sdk/vaults";
-
-export const ALPHA = defineVault({
-  id: "alpha",
-  chainId: 1,
-  batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
-});
-
-export const BETA = defineVault({
-  id: "beta",
-  chainId: 1,
-  batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
-});
-
-export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
-```
-
-{% endtab %}
 {% endtabs %}
+
+{% include ".gitbook/includes/vaults-config.md" %}
 
 `saveBatches` stands in for your own storage. See [Store the batches](../../guides/vaults/deposits.md#4-store-the-batches).
 
 ## Parameters
 
+```ts
+import { type UseVaultMutationOptions } from "@zama-fhe/react-sdk/vaults";
+```
+
 {% include ".gitbook/includes/mutation-options.md" %}
 
 ## Mutation variables
+
+```ts
+import { type JoinVariables } from "@zama-fhe/sdk/vaults";
+```
 
 Passed to `mutate` / `mutateAsync` at call time.
 
@@ -86,9 +75,11 @@ A vault to join on its own instead of a group, as returned by [`defineVault`](..
 
 ### vaultId
 
-`string`
+`string | undefined`
 
-The vault that gets the amount.
+The vault of `group` that gets the amount. Required with `group`. Omit it with `vault`.
+
+The hook types `vaultId` as `string`, not as the ids of `group`. An id outside the group compiles, and the mutation throws `ConfigurationError`.
 
 ### amount
 
@@ -110,7 +101,7 @@ Called once the wallet has sent the join, before the SDK waits for the receipt. 
 
 **Throws:**
 
-As [`VaultClient.deposit`](../sdk/VaultClient.md#send-methods). The ones a UI handles most:
+As [`VaultClient.deposit`](../sdk/VaultClient.md#deposit). The ones a UI handles most:
 
 - `VaultBatcherPausedError`: a batcher of the group is paused.
 - `InsufficientConfidentialBalanceError`: the balance is below `amount`.

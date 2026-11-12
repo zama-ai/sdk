@@ -337,7 +337,7 @@ matchZamaError(error, {
 
 **Code:** `VAULT_BATCHER_PAUSED`
 
-Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()` and `prepareRedeem()` when a batcher the join reaches is paused, before anything is sent. One paused batcher blocks every join of its group. The error carries the paused `batcher` and its `vaultId`.
+Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()` and `prepareRedeem()` when a batcher the join reaches is paused, before anything is sent. The error carries the paused `batcher` and its `vaultId`.
 
 **How to handle:** Not retryable until the batcher is unpaused. Claims and quits still work. Show which vault is paused. See [Paused batchers](../../guides/vaults/advanced.md#paused-batchers).
 
@@ -367,7 +367,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Do not resubmit. A join is all-or-nothing, and a reverted transaction throws `TransactionRevertedError` instead, so every leg most likely joined. Resubmitting would deposit twice. Look the transaction up, and read the batch ids from the `Joined` events in `receipt` or from your indexer.
+**How to handle:** Do not resubmit. A join is all-or-nothing, and a reverted transaction throws `TransactionRevertedError` instead, so every leg most likely joined. Resubmitting would deposit twice. Show the user `txHash` and look the transaction up. Read the batch ids from the `Joined` events in `receipt` or from your indexer.
 
 ### InvalidTransportKeyPairError
 

@@ -17,7 +17,7 @@ The examples send with the SDK's signer. To send through your own pipeline, see 
 
 ### 1. Define a group
 
-Describe each vault once with `defineVault`, and group the vaults that take the same asset with `defineVaultGroup`. Do it at module level:
+Describe each of your vaults once with `defineVault`, and group the vaults that take the same asset with `defineVaultGroup`. The SDK ships no vault, so use your own batcher addresses. Do it at module level:
 
 ```ts
 // vaults.ts
@@ -38,9 +38,9 @@ export const BETA = defineVault({
 export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
 ```
 
-A vault names its two batchers: the one deposits join, and the one redemptions join. It names no token: the client reads the asset and the share token from the batchers. The ids are yours to choose. The types keep them, so a typo in `vaultId` is a type error.
+A vault names its two batchers: the one deposits join, and the one redemptions join. The ids are yours to choose. See [`defineVaultGroup`](../../reference/sdk/VaultClient.md#definevaultgroup) for how the types check `vaultId`.
 
-Every method that takes a group also takes a vault on its own, such as `ALPHA`, with no `vaultId`. That join shows which vault was chosen.
+Every method that takes a group also takes a vault on its own, such as `ALPHA`, with no `vaultId`. Join through the group, as the [privacy rules](README.md#a-group-hides-which-vault-you-chose) say.
 
 {% hint style="warning" %}
 The order of `vaults` is the leg order of every join. Never change a group once users have joined it: define a new one. See [A group hides which vault you chose](README.md#a-group-hides-which-vault-you-chose).
@@ -65,7 +65,7 @@ The hooks create the client for you. Call `useVaultClient()` only when you need 
 {% endtab %}
 {% endtabs %}
 
-The client holds no config, so one client serves every group and chain.
+Create one client for the app. See [`createVaultClient`](../../reference/sdk/VaultClient.md#createvaultclient).
 
 ### 3. Deposit
 
@@ -109,7 +109,7 @@ Before sending, the SDK checks the confidential balance. A confidential transfer
 
 ### 4. Store the batches
 
-`batches` holds the batch every leg landed in, decoys included, as `{ vaultId, chainId, batcher, batchId }`. **Without them, your app cannot read, claim or quit the deposit.** Store them where the user finds them again after a reload or on another device. If you record which vault the user chose, keep it in the user's own storage only.
+`batches` holds the batch every leg landed in, the zero legs included, as `{ vaultId, chainId, batcher, batchId }`. **Without them, your app cannot read, claim or quit the deposit.** Store them where the user finds them again after a reload or on another device. Store the chosen vault as the [privacy rules](README.md#a-group-hides-which-vault-you-chose) say.
 
 `batchId` is a `bigint`, which `JSON.stringify` cannot serialize. Convert it to a string and back:
 
@@ -131,7 +131,7 @@ function fromJson(json: string): StoredBatch[] {
 }
 ```
 
-If the deposit throws [`VaultJoinUnconfirmedError`](../../reference/sdk/errors.md#vaultjoinunconfirmederror), the join was mined but the SDK could not read every batch from its receipt. The deposit most likely went through, so look the transaction up before depositing again.
+If the deposit throws [`VaultJoinUnconfirmedError`](../../reference/sdk/errors.md#vaultjoinunconfirmederror), do not deposit again. Handle it as its reference says.
 
 ### 5. Follow a batch
 
@@ -156,7 +156,7 @@ import { useBatch } from "@zama-fhe/react-sdk/vaults";
 const { data: batch } = useBatch(batchRef, { account: "0xUser" });
 ```
 
-`useBatch` refetches on its own as the batch moves, so you need no timer.
+`useBatch` refetches on its own while the batch is pending or dispatched, so you need no timer. It stops polling once the batch is finalized or canceled, so it does not see a keeper's payout. Refetch the batch before you decrypt its deposit, for example when the list opens.
 
 {% endtab %}
 {% endtabs %}
@@ -165,7 +165,7 @@ For what to show and offer in each state, see [Building a vault UI](building-a-u
 
 ### 6. Get the money out
 
-Once the batch is finalized, a keeper claims for every depositor. To claim yourself, for example when the keeper is late:
+To claim a finalized batch yourself, for example when the keeper is late:
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -221,11 +221,11 @@ redeem.mutate({ group: STABLE, vaultId: "beta", amount: 500n });
 {% endtab %}
 {% endtabs %}
 
-The first redemption from a group of N vaults can take up to N + 1 wallet prompts. See [Wallet prompts](advanced.md#wallet-prompts).
+See [Wallet prompts](advanced.md#wallet-prompts) for how many prompts a group redemption takes.
 
 ## Show the open batches
 
-`readOpenBatches` reads the batch the next join lands in, for every vault of a group. Use it on a form to show when that batch can be dispatched, or that a vault is paused, which blocks every join of its group:
+`readOpenBatches` reads the batch the next join lands in, for every vault of a group. Use it on a form to show when that batch can be dispatched, or that a vault is [paused](advanced.md#paused-batchers):
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -248,12 +248,12 @@ const { data: open } = useOpenBatches(STABLE, "deposit");
 
 ## Read before the wallet is on the right chain
 
-Reads go to the group's or batch's chain, whatever chain the wallet is on, so a vault page can render before the wallet connects or switches. This needs a provider that can read another chain, such as `WagmiProvider`.
+Render the vault page before the wallet connects or switches: reads do not need the wallet's chain. See [Reads](../../reference/sdk/VaultClient.md#reads) for the provider they need.
 
 Writes need the vault's chain. While the wallet is on another chain, they throw `ChainMismatchError`: prompt a network switch.
 
 ## Next steps
 
 - [Building a vault UI](building-a-ui.md): what to show and offer in each batch state
-- [Advanced vault integration](advanced.md): wallet prompts, batcher upgrades and your own pipeline
+- [Handle wallet prompts, upgrades and custom sending](advanced.md): wallet prompts, batcher upgrades and your own pipeline
 - [`VaultClient`](../../reference/sdk/VaultClient.md): the API reference

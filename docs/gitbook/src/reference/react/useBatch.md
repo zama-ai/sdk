@@ -1,13 +1,13 @@
 ---
 title: useBatch
-description: Query hook that reads one vault batch — its state, timings, and the actions you can send now.
+description: Query hook that reads one vault batch with its state, its timings, and the actions you can send now.
 ---
 
 # useBatch
 
 Query hook that reads one batch: its `state`, its timings, the account's deposit, and the `actions` you can send now. Wraps [`VaultClient.readBatch`](../sdk/VaultClient.md#readbatch).
 
-It refetches when `nextChangeAt` passes, and polls while the batch waits for a keeper, so a UI needs no timer of its own.
+The query refetches when `nextChangeAt` passes. While the batch waits for a keeper, it polls every 15 seconds. It stops refetching once the batch is finalized or canceled.
 
 ## Import
 
@@ -51,6 +51,11 @@ function BatchRow({ batchRef, account }: { batchRef: BatchRef; account: Address 
 
 ## Parameters
 
+```ts
+import { type UseBatchOptions } from "@zama-fhe/react-sdk/vaults";
+import { type BatchRef } from "@zama-fhe/sdk/vaults";
+```
+
 ### batch
 
 `BatchRef | undefined`
@@ -71,7 +76,7 @@ const { data: batch } = useBatch(batchRef, { account: "0xUser" });
 
 {% include ".gitbook/includes/query-options.md" %}
 
-Passing `refetchInterval` replaces the automatic refetch on `nextChangeAt`.
+Passing `refetchInterval` replaces both the refetch on `nextChangeAt` and the polling while the batch waits for a keeper.
 
 ## Return Type
 

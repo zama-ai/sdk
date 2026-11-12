@@ -7,7 +7,7 @@ description: Returns a VaultClient bound to the SDK in context.
 
 Returns a [`VaultClient`](../sdk/VaultClient.md) bound to the SDK from [`ZamaProvider`](ZamaProvider.md), the same one for as long as that SDK stays.
 
-The other vault hooks call it for you. Use it for a method no hook wraps, such as a `prepare*` method for your own pipeline.
+Every other vault hook reads its client from this hook.
 
 ## Import
 
@@ -44,7 +44,9 @@ function PrepareButton({ account }: { account: Address }) {
 {% endtab %}
 {% endtabs %}
 
-`STABLE` is the group from [`useDeposit`](./useDeposit.md#usage), and `sendCalls` stands in for your own pipeline. See [Send through your own pipeline](../../guides/vaults/advanced.md#send-through-your-own-pipeline).
+{% include ".gitbook/includes/vaults-config.md" %}
+
+`sendCalls` stands in for your own pipeline. See [Send through your own pipeline](../../guides/vaults/advanced.md#send-through-your-own-pipeline).
 
 ## Parameters
 

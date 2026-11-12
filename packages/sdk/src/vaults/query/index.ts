@@ -1,8 +1,8 @@
 import { getAddress, type Address } from "viem";
+// Keep the TanStack imports type-only, so the vaults barrel runs without TanStack Query.
 import type { MutationFactoryOptions, QueryFactoryOptions } from "../../query/factory-types";
 import type { QueryClientLike } from "../../query/invalidation";
 import { zamaQueryKeys } from "../../query/query-keys";
-import { filterQueryOptions } from "../../query/utils";
 import type { TransactionResult } from "../../types";
 import { assertNonNullable } from "../../utils/assertions";
 import type { VaultClient } from "../client";
@@ -56,8 +56,7 @@ export interface BatchQueryConfig {
   /** The query is disabled while this is `undefined`. */
   batch?: BatchRef;
   account?: Address;
-  /** TanStack Query options; only `enabled` takes effect. */
-  query?: Record<string, unknown>;
+  query?: { readonly enabled?: boolean };
 }
 
 /** How long to wait before reading a batch again, or `false` once it is finalized or canceled. */
@@ -85,17 +84,15 @@ export function batchQueryOptions(
   client: VaultClient,
   config: BatchQueryConfig = {},
 ): QueryFactoryOptions<Batch, Error, Batch, ReturnType<typeof vaultQueryKeys.batch>> {
-  const queryOpts = config.query ?? {};
   const { batch, account } = config;
   return {
     refetchInterval: (query) => batchRefetchInterval(query.state.data),
-    ...filterQueryOptions(queryOpts),
     queryKey: vaultQueryKeys.batch(batch, account),
     queryFn: async () => {
       assertNonNullable(batch, "batchQueryOptions: batch");
       return client.readBatch(batch, account);
     },
-    enabled: batch !== undefined && queryOpts.enabled !== false,
+    enabled: batch !== undefined && config.query?.enabled !== false,
   };
 }
 
@@ -110,8 +107,6 @@ function selected(selection: VaultSelection): Vault | VaultGroup {
 export type OpenBatchesQueryConfig = VaultSelection & {
   /** Whether the deposit or the redeem batchers are read. */
   direction: JoinDirection;
-  /** TanStack Query options; none takes effect. */
-  query?: Record<string, unknown>;
 };
 
 /** Query options that read the open batch of every vault of a group, or of a vault on its own. */
@@ -126,7 +121,6 @@ export function openBatchesQueryOptions(
 > {
   const target = selected(config);
   return {
-    ...filterQueryOptions(config.query ?? {}),
     queryKey: vaultQueryKeys.openBatches(target, config.direction),
     queryFn: async () => client.readOpenBatches(target, config.direction),
   };
@@ -139,7 +133,7 @@ export function invalidateAfterVaultAction(queryClient: QueryClientLike): void {
   void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalances.all });
 }
 
-/** A vault of a group, picked by id, or a vault on its own. */
+/** An amount for a vault of a group, picked by id, or for a vault on its own. */
 export type JoinVariables<TGroup extends VaultGroup = VaultGroup> = Pick<JoinInput, "amount"> &
   SendJoinOptions &
   (

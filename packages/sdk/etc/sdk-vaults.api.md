@@ -55,7 +55,10 @@ export interface BatchQueryConfig {
     // (undocumented)
     account?: Address;
     batch?: BatchRef;
-    query?: Record<string, unknown>;
+    // (undocumented)
+    query?: {
+        readonly enabled?: boolean;
+    };
 }
 
 // Warning: (ae-forgotten-export) The symbol "QueryFactoryOptions" needs to be exported by the entry point index.d.ts
@@ -65,7 +68,9 @@ export function batchQueryOptions(client: VaultClient, config?: BatchQueryConfig
 
 // @public
 export interface BatchRef {
+    // (undocumented)
     readonly batcher: Address;
+    // (undocumented)
     readonly batchId: bigint;
     readonly chainId: number;
 }
@@ -76,7 +81,9 @@ export type BatchState = "pending" | "dispatched" | "finalized" | "canceled";
 // @public
 export interface Call {
     readonly data: Hex;
+    // (undocumented)
     readonly to: Address;
+    // (undocumented)
     readonly value: 0n;
 }
 
@@ -125,6 +132,7 @@ export function invalidateAfterVaultAction(queryClient: QueryClientLike): void;
 
 // @public (undocumented)
 export interface JoinCall extends Call {
+    // (undocumented)
     readonly kind: "join";
     readonly leg: VaultLeg;
 }
@@ -171,17 +179,16 @@ export const MAX_GROUP_VAULTS = 8;
 
 // @public
 export interface OpenBatch extends BatchRef {
-    // (undocumented)
     readonly dispatchableAt: bigint;
     readonly observedAt: bigint;
     readonly paused: boolean;
+    // (undocumented)
     readonly vaultId: string;
 }
 
 // @public (undocumented)
 export type OpenBatchesQueryConfig = VaultSelection & {
     direction: JoinDirection;
-    query?: Record<string, unknown>;
 };
 
 // @public
@@ -189,6 +196,7 @@ export function openBatchesQueryOptions(client: VaultClient, config: OpenBatches
 
 // @public
 export interface OperatorApprovalCall extends Call {
+    // (undocumented)
     readonly kind: "operatorApproval";
     readonly operator: Address;
     readonly until: bigint;
@@ -209,9 +217,11 @@ export interface PreparedJoin {
     readonly amount: bigint;
     readonly calls: readonly [VaultCall, ...VaultCall[]];
     readonly chainId: number;
+    // (undocumented)
     readonly direction: JoinDirection;
     readonly groupId: string | undefined;
     readonly legs: readonly [VaultLeg, ...VaultLeg[]];
+    // (undocumented)
     readonly route: JoinRoute;
     readonly vaultId: string;
 }
@@ -224,6 +234,7 @@ export function redeemMutationOptions(client: VaultClient): MutationFactoryOptio
 
 // @public
 export interface RetiredBatcher {
+    // (undocumented)
     readonly address: Address;
     readonly lastBatchId: bigint;
 }
@@ -283,6 +294,7 @@ export interface VaultLeg {
     readonly amount: bigint;
     readonly batcher: Address;
     readonly token: Address;
+    // (undocumented)
     readonly vaultId: string;
 }
 

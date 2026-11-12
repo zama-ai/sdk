@@ -58,7 +58,7 @@
 
 - [Vaults overview](guides/vaults/README.md)
 - [Deposits and redemptions](guides/vaults/deposits.md)
-- [Advanced vault integration](guides/vaults/advanced.md)
+- [Handle wallet prompts, upgrades and custom sending](guides/vaults/advanced.md)
 - [Building a vault UI](guides/vaults/building-a-ui.md)
 
 ## Go & Rust guide

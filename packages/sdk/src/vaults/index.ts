@@ -38,5 +38,4 @@ export type {
   VaultLeg,
 } from "./types";
 
-// ./query must keep its TanStack imports type-only, so this barrel runs without TanStack Query.
 export * from "./query";

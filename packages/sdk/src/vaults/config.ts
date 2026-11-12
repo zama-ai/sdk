@@ -7,7 +7,6 @@ export const MAX_GROUP_VAULTS = 8;
 
 /** A batcher that took joins while its `currentBatchId` was at most `lastBatchId`. */
 export interface RetiredBatcher {
-  /** The retired batcher. */
   readonly address: Address;
   /** The last batch it took joins into. */
   readonly lastBatchId: bigint;

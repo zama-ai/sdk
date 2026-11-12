@@ -5,7 +5,7 @@ description: Query hook that reads the open batch of every vault in a group.
 
 # useOpenBatches
 
-Query hook that reads the batch the next join lands in, for every vault of a group: when it can be dispatched, and whether its batcher is paused. Wraps [`VaultClient.readOpenBatches`](../sdk/VaultClient.md#readopenbatches). Use it on a deposit or redeem form.
+Query hook that reads the batch the next join lands in, for every vault of a group: when it can be dispatched, and whether its batcher is paused. Wraps [`VaultClient.readOpenBatches`](../sdk/VaultClient.md#readopenbatches).
 
 ## Import
 
@@ -43,9 +43,13 @@ function NextBatch() {
 {% endtab %}
 {% endtabs %}
 
-`STABLE` is the group from [`useDeposit`](./useDeposit.md#usage).
+{% include ".gitbook/includes/vaults-config.md" %}
 
 ## Parameters
+
+```ts
+import { type JoinDirection, type Vault, type VaultGroup } from "@zama-fhe/sdk/vaults";
+```
 
 ### target
 
@@ -63,7 +67,7 @@ Whether to read the deposit batchers or the redeem batchers.
 
 {% include ".gitbook/includes/query-options.md" %}
 
-The query does not refetch on its own. Pass `refetchInterval` to keep a countdown fresh.
+The hook sets no `refetchInterval`.
 
 ## Return Type
 
