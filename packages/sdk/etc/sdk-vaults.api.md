@@ -142,7 +142,7 @@ export type JoinInputFor<TTarget extends VaultTarget> = TTarget extends VaultGro
 // @public
 export interface JoinOptions {
     readonly checks?: readonly VaultCheck[];
-    readonly walletMode?: WalletMode;
+    readonly route?: JoinRoute;
 }
 
 // @public
@@ -362,8 +362,5 @@ export type VaultSelection = {
 
 // @public
 export type VaultTarget = VaultGroup | Vault;
-
-// @public
-export type WalletMode = "sequential" | "bundle";
 
 ```

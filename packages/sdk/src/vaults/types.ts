@@ -59,22 +59,14 @@ export interface JoinCall extends Call {
 export type VaultCall = OperatorApprovalCall | JoinCall;
 
 /**
- * How a join reaches the batchers, derived from the group size and the wallet mode.
+ * How a join reaches the batchers.
  *
- * - `"legs"`: one call per leg, straight to each batcher. A group of one always
- *   takes it. In a larger group the calls must land together.
  * - `"router"`: one call through the router, after any operator approvals it needs.
+ * - `"legs"`: one call per leg, straight to each batcher, with no operator approval.
+ *   A group of one always takes it. In a larger group, send the calls in one
+ *   atomic bundle: joining some vaults and not others shows which vault was chosen.
  */
 export type JoinRoute = "legs" | "router";
-
-/**
- * How the sender's wallet lands several calls.
- *
- * - `"sequential"`: one at a time. A multi-vault join goes through the router.
- * - `"bundle"`: together or not at all (EIP-5792, a Safe, a smart account). A
- *   multi-vault join sends one transfer per vault, which needs no operator approval.
- */
-export type WalletMode = "sequential" | "bundle";
 
 /** A join built but not sent. Plain data: it survives `structuredClone`, but its bigints need a JSON replacer. */
 export interface PreparedJoin {
@@ -123,8 +115,8 @@ export type VaultCheck = "balance";
 
 /** Options for `prepareDeposit` and `prepareRedeem`. */
 export interface JoinOptions {
-  /** Defaults to `"sequential"`. */
-  readonly walletMode?: WalletMode;
+  /** Defaults to `"router"`. Ignored for a group of one, which always takes `"legs"`. */
+  readonly route?: JoinRoute;
   /**
    * Checks to run before encrypting. None by default, so preparing needs no
    * signer. `"balance"` decrypts as the signer, so it works only when

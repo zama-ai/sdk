@@ -70,7 +70,7 @@ export function useRedeem<TContext = unknown>(
   return useVaultMutation(redeemMutationOptions, options);
 }
 
-/** Claim a finalized batch with the SDK's signer, for `account` (default: the signer). A keeper normally does. */
+/** Claim a finalized batch with the SDK's signer, for `account` (default: the signer). */
 export function useClaim<TContext = unknown>(
   options?: UseVaultMutationOptions<
     TransactionResult,
@@ -88,14 +88,14 @@ export function useQuit<TContext = unknown>(
   return useVaultMutation(quitMutationOptions, options);
 }
 
-/** Dispatch a batcher's open batch with the SDK's signer. A keeper normally does. */
+/** Dispatch a batcher's open batch with the SDK's signer. */
 export function useDispatch<TContext = unknown>(
   options?: UseVaultMutationOptions<TransactionResult, BatcherRef, TContext>,
 ) {
   return useVaultMutation(dispatchMutationOptions, options);
 }
 
-/** Finalize a dispatched batch with the SDK's signer. A keeper normally does. */
+/** Finalize a dispatched batch with the SDK's signer. */
 export function useFinalize<TContext = unknown>(
   options?: UseVaultMutationOptions<TransactionResult, BatchRef, TContext>,
 ) {

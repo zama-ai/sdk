@@ -280,7 +280,7 @@ describe("prepareDeposit", () => {
     expect(prepared.calls[0]).toMatchObject({ leg: { vaultId: "beta" } });
   });
 
-  test("a bundling wallet gets one transfer per vault and no router", async ({
+  test("the legs route sends one transfer per vault and no router", async ({
     sdk,
     provider,
     relayer,
@@ -290,7 +290,7 @@ describe("prepareDeposit", () => {
     const prepared = await createVaultClient(sdk).prepareDeposit(
       STABLE,
       { vaultId: "alpha", account: USER, amount: 10n },
-      { walletMode: "bundle" },
+      { route: "legs" },
     );
     expect(prepared.route).toBe("legs");
     expect(prepared.calls.map((call) => decode(call).args?.[0])).toStrictEqual([
@@ -407,7 +407,7 @@ describe("proof binding", () => {
     await createVaultClient(sdk).prepareRedeem(
       STABLE,
       { vaultId: "beta", account: USER, amount: 4n },
-      { walletMode: "bundle" },
+      { route: "legs" },
     );
     expect(encryptedFor(relayer)).toStrictEqual(
       [
@@ -501,7 +501,7 @@ describe("batcher upgrades", () => {
     const prepared = await client.prepareDeposit(
       upgraded(7n),
       { vaultId: "alpha", account: USER, amount: 10n },
-      { walletMode: "bundle" },
+      { route: "legs" },
     );
     expect(prepared.legs.map((leg) => leg.batcher)).toStrictEqual([
       RETIRED_ALPHA_DEPOSIT,

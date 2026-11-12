@@ -237,14 +237,14 @@ Reads the batcher a join in `direction` (`"deposit"` or `"redeem"`) reaches righ
 
 ### How a join is routed
 
-`route` in the prepared join tells you how the calls reach the batchers. It depends on the group's size and the wallet mode:
+`route` in the prepared join tells you how the calls reach the batchers. It depends on the group's size and the `route` option:
 
-| Case                                    | `route`    | `calls`                                                                                                              |
-| --------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------- |
-| Group of one                            | `"legs"`   | One transfer to the batcher.                                                                                         |
-| Several vaults, deposit, `"sequential"` | `"router"` | One transfer of the asset to the router, which splits it into one leg per vault. No operator approval.               |
-| Several vaults, redeem, `"sequential"`  | `"router"` | An operator approval of the router on each share token the account lacks, then one router call that pulls every leg. |
-| Several vaults, `"bundle"`              | `"legs"`   | One transfer per vault, straight to its batcher. No operator approval.                                               |
+| Case                                | `route`    | `calls`                                                                                                              |
+| ----------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------- |
+| Group of one                        | `"legs"`   | One transfer to the batcher.                                                                                         |
+| Several vaults, deposit, `"router"` | `"router"` | One transfer of the asset to the router, which splits it into one leg per vault. No operator approval.               |
+| Several vaults, redeem, `"router"`  | `"router"` | An operator approval of the router on each share token the account lacks, then one router call that pulls every leg. |
+| Several vaults, `"legs"`            | `"legs"`   | One transfer per vault, straight to its batcher. No operator approval.                                               |
 
 {% hint style="danger" %}
 With `route: "legs"` in a group of more than one, send the join calls as one atomic bundle. If they go out one by one and the user stops partway, the vaults that were never joined show which vault the user picked.
@@ -292,7 +292,7 @@ Builds the settlement of a dispatched batch. It reads the batch's unwrap request
 
 ## Send methods
 
-The send methods sign with the SDK's signer and wait for each receipt. A join sends one transaction per call, operator approvals first, so each call is one wallet prompt. The SDK sends one call at a time, so it always prepares a join with `walletMode: "sequential"`.
+The send methods sign with the SDK's signer and wait for each receipt. A join sends one transaction per call, operator approvals first, so each call is one wallet prompt. The SDK sends one call at a time, so it always prepares a join with `route: "router"`.
 
 All send methods throw:
 
@@ -407,10 +407,10 @@ What `prepareDeposit` and `prepareRedeem` take. `deposit` and `redeem` take the 
 
 Options for `prepareDeposit` and `prepareRedeem`.
 
-| Field        | Type                       | Default        | Description                                                                                                                                                                                                                                                                                               |
-| ------------ | -------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `walletMode` | `"sequential" \| "bundle"` | `"sequential"` | How the sender's wallet lands several calls. `"sequential"` sends them one at a time, so a multi-vault join goes through the router. `"bundle"` lands them together or not at all (EIP-5792, a Safe, a smart account), so a multi-vault join sends one transfer per vault and needs no operator approval. |
-| `checks`     | `"balance"[]`              | `[]`           | `"balance"` checks the balance before encrypting. The paused check always runs.                                                                                                                                                                                                                           |
+| Field    | Type                 | Default    | Description                                                                                                                                                                                                                                                 |
+| -------- | -------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `route`  | `"router" \| "legs"` | `"router"` | How a multi-vault join reaches the batchers. `"router"` sends one call through the router. `"legs"` sends one transfer per vault, straight to its batcher, with no operator approval; send them in one atomic bundle. A group of one always takes `"legs"`. |
+| `checks` | `"balance"[]`        | `[]`       | `"balance"` checks the balance before encrypting. The paused check always runs.                                                                                                                                                                             |
 
 The balance check decrypts as the signer, so it works only when `account` is the signer's. It decrypts the balance of every token the legs spend, not only the chosen one, so the relayer cannot tell which vault you picked.
 

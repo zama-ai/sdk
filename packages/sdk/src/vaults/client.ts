@@ -351,13 +351,13 @@ export class VaultClient {
     return this.#send(quitContract(getAddress(batch.batcher), batch.batchId), "vault:quit");
   }
 
-  /** Dispatch the batcher's open batch with the SDK's signer. A keeper normally does. */
+  /** Dispatch the batcher's open batch with the SDK's signer. */
   async dispatch(batch: BatcherRef): Promise<TransactionResult> {
     await this.#writeAccount(batch.chainId, "dispatch");
     return this.#send(dispatchBatchContract(getAddress(batch.batcher)), "vault:dispatchBatch");
   }
 
-  /** Finalize a dispatched batch with the SDK's signer. A keeper normally does. */
+  /** Finalize a dispatched batch with the SDK's signer. */
   async finalize(batch: BatchRef): Promise<TransactionResult> {
     // Before the public decryption, so a wrong chain fails before the relayer round trip.
     await this.#writeAccount(batch.chainId, "finalize");
@@ -472,8 +472,7 @@ export class VaultClient {
     }
     const checks = new Set(options?.checks);
     const account = getAddress(input.account);
-    const route: JoinRoute =
-      group.vaults.length === 1 || options?.walletMode === "bundle" ? "legs" : "router";
+    const route: JoinRoute = group.vaults.length === 1 ? "legs" : (options?.route ?? "router");
     const router = route === "router" ? this.#router(group) : undefined;
 
     // Encryption runs on the provider's chain, so check it before anything prompts.

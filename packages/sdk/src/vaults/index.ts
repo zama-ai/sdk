@@ -45,7 +45,6 @@ export type {
   VaultCall,
   VaultCheck,
   VaultLeg,
-  WalletMode,
 } from "./types";
 
 // Importing this barrel does not require TanStack Query to be installed: the

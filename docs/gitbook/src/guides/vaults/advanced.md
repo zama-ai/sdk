@@ -102,13 +102,13 @@ Never remove a retired entry, even after all its batches settled. `defineVaultGr
 
 ## Bundling wallets
 
-A wallet that lands several calls together or not at all, such as an EIP-5792 `wallet_sendCalls` batch, a Safe, or a smart account, can skip the router. Prepare the join with `walletMode: "bundle"`: you get one transfer per vault, straight to its batcher, and no operator approvals.
+A wallet that lands several calls together or not at all, such as an EIP-5792 `wallet_sendCalls` batch, a Safe, or a smart account, can skip the router. Prepare the join with `route: "legs"`: you get one transfer per vault, straight to its batcher, and no operator approvals.
 
 ```ts
 const prepared = await vaults.prepareRedeem(
   STABLE,
   { vaultId: "beta", account: "0xUser", amount: 500n },
-  { walletMode: "bundle" },
+  { route: "legs" },
 );
 await sendBundle(prepared.calls);
 ```
@@ -116,7 +116,7 @@ await sendBundle(prepared.calls);
 `sendBundle` stands in for your wallet's atomic batch call.
 
 {% hint style="danger" %}
-When `prepared.route` is `"legs"` in a group of more than one, send the join calls in one atomic bundle. If they go out one by one and the user stops partway, the vaults that were never joined show which vault the user picked. The SDK's send methods never send a bundle, so `walletMode` is only on the `prepare*` methods.
+When `prepared.route` is `"legs"` in a group of more than one, send the join calls in one atomic bundle. If they go out one by one and the user stops partway, the vaults that were never joined show which vault the user picked. The SDK's send methods never send a bundle, so the `route` option is only on the `prepare*` methods.
 {% endhint %}
 
 ## Send through your own pipeline
@@ -151,7 +151,7 @@ for (const call of prepared.calls) {
 
 `sendTransaction` stands in for your pipeline. The join methods take these options:
 
-- `walletMode`: `"sequential"` (default) or `"bundle"`. See [Bundling wallets](#bundling-wallets).
+- `route`: `"router"` (default) or `"legs"`. A group of one always takes `"legs"`. See [Bundling wallets](#bundling-wallets).
 - `checks`: `["balance"]` checks the balance before encrypting. None by default. The paused check always runs.
 
 The batch actions take one batch each, as a `BatchRef` (`{ chainId, batcher, batchId }`). Dispatch acts on a batcher's open batch, so it takes a `BatcherRef` (`{ chainId, batcher }`):
