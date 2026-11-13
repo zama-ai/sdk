@@ -1,17 +1,13 @@
 ---
 title: useFinalize
-description: Mutation hook that settles a dispatched vault batch when its keeper has not.
+description: Mutation hook that settles a dispatched vault batch.
 ---
 
 # useFinalize
 
-Mutation hook that settles a dispatched batch yourself. Same call as [`VaultBatcher.finalize`](../sdk/VaultBatcher.md#finalize): it publicly decrypts the batch's aggregate amount and hands the cleartext and its proof to the batcher, which executes the route.
+Mutation hook that settles a dispatched batch with the SDK's signer. Wraps [`VaultClient.finalize`](../sdk/VaultClient.md#finalize).
 
-A keeper, an off-chain service that watches batches, normally finalizes a batch after dispatch. Use this hook when a batch has stayed `BatchState.Dispatched` longer than expected. Anyone may call it.
-
-After the batch's callback deadline (see [`useTimeUntilCallbackDeadline`](./useTimeUntilCallbackDeadline.md)) the same call cancels the batch instead of settling it, and its participants take their deposits back with [`useQuit`](./useQuit.md). A redeem batcher whose vault settles redemptions asynchronously is the exception: once it has placed the redemption request, `finalize` keeps settling the batch past the deadline.
-
-The call reads the batch state first and rejects with [`VaultBatchNotDispatchedError`](../sdk/errors.md#vaultbatchnotdispatchederror) when the batch is not `Dispatched`, for example because a keeper already finalized it.
+Any account may send it. Past the batch's `cancelsAt`, the same call cancels the batch instead of settling it.
 
 ## Import
 
@@ -22,22 +18,23 @@ import { useFinalize } from "@zama-fhe/react-sdk/vaults";
 ## Usage
 
 {% tabs %}
-{% tab title="FinalizeButton.tsx" %}
+{% tab title="SettleButton.tsx" %}
 
 ```tsx
-import { BatchState } from "@zama-fhe/sdk/vaults";
-import { useBatchState, useFinalize } from "@zama-fhe/react-sdk/vaults";
+import { useBatch, useFinalize } from "@zama-fhe/react-sdk/vaults";
+import type { BatchRef } from "@zama-fhe/sdk/vaults";
 
-function FinalizeButton({ batchId }: { batchId: bigint }) {
-  const { data: state } = useBatchState({ address: "0xDepositBatcher", batchId });
-  const { mutate: finalize, isPending } = useFinalize({ address: "0xDepositBatcher" });
+function SettleButton({ batchRef }: { batchRef: BatchRef }) {
+  const { data: batch } = useBatch(batchRef);
+  const finalize = useFinalize();
+
+  if (batch?.state !== "dispatched") return null;
+
+  const pastDeadline = batch.cancelsAt <= batch.observedAt;
 
   return (
-    <button
-      onClick={() => finalize({ batchId })}
-      disabled={isPending || state !== BatchState.Dispatched}
-    >
-      {isPending ? "Finalizing..." : "Finalize batch"}
+    <button disabled={finalize.isPending} onClick={() => finalize.mutate(batchRef)}>
+      {pastDeadline ? "Cancel and get it back" : "Settle"}
     </button>
   );
 }
@@ -49,50 +46,51 @@ function FinalizeButton({ batchId }: { batchId: bigint }) {
 ## Parameters
 
 ```ts
-import { type UseFinalizeConfig } from "@zama-fhe/react-sdk/vaults";
+import { type UseVaultMutationOptions } from "@zama-fhe/react-sdk/vaults";
 ```
-
-### address
-
-`Address`
-
-The batcher contract address (deposit or redeem direction).
-
----
-
-### chainId
-
-`number | undefined`
-
-Chain the batcher is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](../sdk/errors.md#chainmismatcherror) instead of sending.
-
----
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
 ## Mutation variables
 
-```ts
-import { type FinalizeParams } from "@zama-fhe/sdk/vaults";
-```
+A [`BatchRef`](../sdk/VaultClient.md#batchref), passed to `mutate` / `mutateAsync`.
+
+### chainId
+
+`number`
+
+The chain of the batch to finalize.
+
+### batcher
+
+`Address`
+
+The batcher of the batch to finalize.
 
 ### batchId
 
 `bigint`
 
-The dispatched batch to settle.
+The batch to finalize.
+
+```tsx
+finalize.mutate({ chainId: 1, batcher: "0xAlphaDeposit", batchId: 7n });
+```
+
+**Throws:**
+
+- `VaultBatchNotDispatchedError`: the batch is not dispatched, for example because a keeper already finalized it. The error's `state` says which state it is in.
+- `ChainMismatchError`: the wallet is not on the batch's chain.
 
 ## Return Type
 
-`data` is `{ txHash: Hex; receipt: TransactionReceipt }`.
+The `data` property (after a successful mutation) is a `TransactionResult`: `{ txHash, receipt }`.
 
-On success the hook invalidates the batcher's batch reads: the batch leaves `Dispatched` and gains an exchange rate, so `useBatchState` and `useBatchStatus` refetch.
+When the mutation settles, successful or not, the hook invalidates every vault read and every confidential balance.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 
 ## Related
 
-- [useBatchState](./useBatchState.md) — only a `Dispatched` batch can be finalized
-- [useTimeUntilCallbackDeadline](./useTimeUntilCallbackDeadline.md) — whether finalizing still settles the batch
-- [useClaim](./useClaim.md) — the step after a batch is `Finalized`
-- [VaultBatcher.finalize](../sdk/VaultBatcher.md#finalize) — imperative equivalent
+- [Building a vault UI](../../guides/vaults/building-a-ui.md#dispatched): when to offer it
+- [useClaim](./useClaim.md): claim once the batch is finalized

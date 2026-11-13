@@ -1,13 +1,13 @@
 ---
 title: useRedeem
-description: Mutation hook that redeems confidential vault shares by joining the current redeem batch.
+description: Mutation hook that redeems confidential vault shares and returns the batch each leg landed in.
 ---
 
 # useRedeem
 
-Mutation hook that redeems a plaintext amount of shares from a confidential vault. It checks the caller's share balance, encrypts the amount, and sends the shares to the redeem batcher, which joins them into the currently open redeem batch. Only a redemption for another `beneficiary` needs an ERC-7984 operator approval, which it grants first if none is active — the same flow as [`Vault.redeem`](../sdk/Vault.md#redeem).
+Mutation hook that redeems a vault's shares with the SDK's signer. Wraps [`VaultClient.redeem`](../sdk/VaultClient.md#redeem). [`useBatch`](./useBatch.md) reads each returned batch.
 
-The amount is denominated in **shares**, never in assets — ERC-4626 `redeem`, not `withdraw`. The vault settles the batch into the underlying asset at the batch's exchange rate; claim the proceeds with [`useClaim`](./useClaim.md) on the redeem batcher once the batch is `Finalized`.
+In a group, the mutation first asks the wallet for each operator approval of the router that the account lacks. See [Wallet prompts](../../guides/vaults/advanced.md#wallet-prompts).
 
 ## Import
 
@@ -22,20 +22,17 @@ import { useRedeem } from "@zama-fhe/react-sdk/vaults";
 
 ```tsx
 import { useRedeem } from "@zama-fhe/react-sdk/vaults";
-
-const addresses = { depositBatcher: "0xDepositBatcher", redeemBatcher: "0xRedeemBatcher" } as const;
+import { STABLE } from "./vaults";
 
 function RedeemButton() {
-  const { mutateAsync: redeem, isPending } = useRedeem({ addresses });
-
-  async function handleRedeem() {
-    const { batchId } = await redeem({ amount: 500n });
-    console.log("Joined redeem batch", batchId);
-  }
+  const redeem = useRedeem({ onSuccess: ({ batches }) => saveBatches(batches) });
 
   return (
-    <button onClick={handleRedeem} disabled={isPending}>
-      {isPending ? "Redeeming..." : "Redeem"}
+    <button
+      disabled={redeem.isPending}
+      onClick={() => redeem.mutate({ group: STABLE, vaultId: "beta", amount: 500n })}
+    >
+      {redeem.isPending ? "Redeeming..." : "Redeem"}
     </button>
   );
 }
@@ -44,87 +41,34 @@ function RedeemButton() {
 {% endtab %}
 {% endtabs %}
 
+{% include ".gitbook/includes/vaults-config.md" %}
+
+`saveBatches` stands in for your own storage. See [Store the batches](../../guides/vaults/deposits.md#4-store-the-batches).
+
 ## Parameters
 
 ```ts
-import { type UseRedeemConfig } from "@zama-fhe/react-sdk/vaults";
+import { type UseVaultMutationOptions } from "@zama-fhe/react-sdk/vaults";
 ```
-
-### addresses
-
-`VaultAddresses`
-
-The vault's `depositBatcher` and `redeemBatcher` addresses, and optionally the `vault` contract for cross-checking. Same shape as [`useVault`](./useVault.md) takes.
-
----
-
-### chainId
-
-`number | undefined`
-
-Chain the vault is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](../sdk/errors.md#chainmismatcherror) before sending anything.
-
----
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
 ## Mutation variables
 
-```ts
-import { type RedeemParams } from "@zama-fhe/sdk/vaults";
-```
+Same as [`useDeposit`](./useDeposit.md#mutation-variables): `group` and `vaultId` or `vault`, `amount`, `skipBalanceCheck` and `onJoinSubmitted`. The `amount` is in shares, not assets. As in `useDeposit`, `vaultId` is typed as `string`.
 
-### amount
-
-`bigint`
-
-Number of shares to redeem, in the share token's base units (`vault.cShare().decimals()`).
-
-```ts
-await redeem({ amount: 500n });
-```
-
-### beneficiary
-
-`Address | undefined`
-
-Default: the connected wallet. The account credited in the batch; it owns the position and receives the claimed assets.
-
-### operatorUntil
-
-`number | undefined`
-
-Default: now + 1 hour. Unix timestamp (seconds) until which the batcher's operator grant on the share token is valid. Only used for another `beneficiary`, and only when a grant isn't already active.
-
-### skipBalanceCheck
-
-`boolean | undefined`
-
-Default: `false`. Skips the share-balance pre-flight, for accounts whose balance the connected signer can't decrypt.
-
-### onJoinSubmitted
-
-`((txHash: Hex) => void) | undefined`
-
-Called with the join's transaction hash once the wallet has sent it, before the SDK waits for the receipt. Use it to move the UI from "confirm in your wallet" to "waiting for the transaction". If the callback throws, the SDK logs a warning and the join continues.
-
-**Throws:**
-
-- `ConfigurationError` — the two batchers report different vaults, or disagree with a configured `vault` address
-- `InsufficientConfidentialBalanceError` — the share balance is less than `amount`
-- `BalanceCheckUnavailableError` — the balance check needs a decryption the signer can't perform
+**Throws:** as [`useDeposit`](./useDeposit.md#mutation-variables).
 
 ## Return Type
 
-`data` resolves to a `JoinResult`: `{ txHash, receipt, batchId, beneficiary, confidentialJoinedAmount }`. See [`Vault` → JoinResult](../sdk/Vault.md#joinresult).
+The `data` property (after a successful mutation) is a [`JoinOutcome`](../sdk/VaultClient.md#joinoutcome): `batches`, the batch each leg landed in, and `txHashes`, approvals first.
 
-On success the hook invalidates the share token's balance cache, the redeem batcher's batch reads, and the share token's operator-status cache.
+When the mutation settles, successful or not, the hook invalidates every vault read and every confidential balance.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 
 ## Related
 
-- [useDeposit](./useDeposit.md) — the deposit direction
-- [useClaim](./useClaim.md) — claim the assets once the batch is finalized
-- [Vault.redeem](../sdk/Vault.md#redeem) — imperative equivalent on the `Vault` class
-- [Vault deposits and redemptions](../../guides/vaults/deposits.md#redemptions)
+- [useDeposit](./useDeposit.md): the deposit direction
+- [useBatch](./useBatch.md): follow each batch
+- [Vault deposits and redemptions](../../guides/vaults/deposits.md#redeem)

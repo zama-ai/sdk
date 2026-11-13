@@ -22,15 +22,47 @@ description: Unreleased changes on the prerelease (beta) line — not yet in a s
 
 Start with the [Go quick start](../native/tutorials/go-quick-start.md) or the [Rust quick start](../native/tutorials/rust-quick-start.md).
 
-## Vault groups over the multi-vault router
+## New vaults API: `defineVaultGroup` and `createVaultClient`
 
-`VaultGroup` (`createVaultGroup`, or `useVaultGroup` in React) joins several confidential vaults that share one `cAsset` as a single leg list: `deposit` and `redeem` join _every_ member's batch, the chosen vault with the amount and the rest with an encrypted zero, so the choice of vault stays private. A group of several vaults submits through the on-chain `VaultBatcherConfidentialRouter` in one transaction — pushed for a deposit, pulled for a redemption. The React hooks are `useGroupDeposit` and `useGroupRedeem`.
+{% hint style="warning" %}
+**Breaking change.** The vaults API of 3.7 is removed and replaced. Code that imports from `@zama-fhe/sdk/vaults` or `@zama-fhe/react-sdk/vaults` must move to the new client.
+{% endhint %}
 
-A group deposit throws the new `UnlistedConfidentialTokenError` when the router's registry does not list the asset; `VaultGroup.isAssetListed()` gives the same answer without throwing. Both directions throw the new `VaultBatcherPausedError`, naming the member, when any batcher a leg would join is paused. Every submission through the router, deposit or redemption, surfaces as a `VaultSubmitted` event with `vaultOperation: "routerJoin"` tagged with the router's address; a group of one joins its batcher directly and surfaces as `vaultOperation: "join"` tagged with the batcher.
+You now describe each vault once with `defineVault`, group vaults with `defineVaultGroup`, and create one client per SDK with `createVaultClient(sdk)` (`useVaultClient()` in React). The client holds no config: every method takes the vault, the group or the batch it acts on, so one client serves every chain and group. Vaults that take deposits in the same confidential asset form a group.
 
-If the SDK cannot match a `Joined` event in the mined transaction's receipt to every leg, the new `VaultGroupJoinUnconfirmedError` carries the transaction hash, the receipt, the batch ids it could read and the members it could not match. The router is all-or-nothing, so the transaction either reverted or joined every leg; look it up before resubmitting.
+- **Vaults and groups.** `defineVault({ id, chainId, batchers: { deposit, redeem } })` describes one vault. `defineVaultGroup({ id, vaults })` takes vaults from `defineVault` as an array in leg order; they must be on one chain. The client reads the confidential asset and each vault's confidential share from the batchers, so a vault names no token. `deposit`, `redeem` and their `prepare*` methods take a group with a `vaultId`, or a vault on its own, which joins its batcher directly and shows the choice. A group holds at most `MAX_GROUP_VAULTS` vaults: what one transaction's FHE compute fits.
+- **Every join covers the whole group.** `deposit` and `redeem` send a leg to every vault of the group: the chosen vault gets the amount, the others an encrypted zero. This is what hides the chosen vault. They return `JoinOutcome`, with the batch each leg landed in as a `BatchRef` (`{ chainId, batcher, batchId }`).
+- **Batch actions act on one batch.** `claim`, `quit`, `dispatch` and `finalize` take one batch each. A keeper normally dispatches, finalizes and claims for every depositor. To keep the choice private when taking a deposit back from a pending batch, quit every leg of the join.
+- **Batch reads.** `readBatch(batchRef, account?)` returns the batch's `state` (`pending`, `dispatched`, `finalized` or `canceled`), its timings, the account's encrypted deposit, the `actions` you can send now (`claim`, `quit`, `dispatch`, `finalize`), and `nextChangeAt`. `readOpenBatches(group, direction)` reads each vault's open batch for a form, with the batcher a join reaches on each vault.
+- **Two ways to send.** The send methods (`deposit`, `redeem`, `claim`, `quit`, `dispatch`, `finalize`) sign with the SDK's signer. The `prepare*` methods return plain calls (`{ to, data, value }`) for a host with its own transaction pipeline. `prepareDeposit` and `prepareRedeem` return a `PreparedJoin` whose `calls` are in send order: the operator approvals the account lacks, then the joins, each tagged with its `kind`. `route: "direct"` prepares one transfer per vault instead of one router call, for a wallet that lands calls atomically. Every join checks the balance by default, on the `prepare*` methods too; `skipBalanceCheck: true` skips it. The check decrypts as the signer, so a join prepared for another account, or with no signer, throws `BalanceCheckUnavailableError` until it is skipped.
+- **Wallet prompts.** A first redemption from a group of N vaults sent one call at a time can take up to N + 1 wallet prompts: one operator approval of the router per share token the account has not approved it on yet, then the join. An operator approval lasts a year.
+- **Batcher upgrades.** A vault's batcher can be a `BatcherHistory`, so joins move to a new batcher once the last configured batch of the old one is dispatched. Batches on the old batcher can still be read, claimed and quit.
+- **React hooks:** `useVaultClient`, `useBatch`, `useOpenBatches`, `useDeposit`, `useRedeem`, `useClaim`, `useQuit`, `useDispatch` and `useFinalize`. `useBatch` refetches when `nextChangeAt` passes and polls while the batch waits for a dispatch or a settlement.
+- **TanStack Query:** `vaultQueryKeys` (`all`, `batch`, `openBatches`), `batchQueryOptions`, `openBatchesQueryOptions`, `depositMutationOptions`, `redeemMutationOptions`, `claimMutationOptions`, `quitMutationOptions`, `dispatchMutationOptions`, `finalizeMutationOptions`, and `invalidateAfterVaultAction(queryClient)` for a host that sends prepared calls itself.
+- **Errors:** `VaultBatcherPausedError` when a batcher of the group is paused, `UnlistedConfidentialTokenError` when the router's registry does not list a multi-vault deposit's asset, `VaultBatchNotDispatchedError` (whose `state` is now the string state) when a batch to finalize is not dispatched, and `VaultJoinUnconfirmedError` when a mined join's receipt does not confirm every leg.
+- **Reads on another chain.** Reads go to the group's or batch's `chainId` whatever chain the wallet is on, which needs a provider that can read another chain, such as `WagmiProvider`. A send while the wallet is on another chain throws `ChainMismatchError`, whose new `targetChainId` is the group's or batch's chain. `ReadContractConfig` and `GenericProvider.getBlockTimestamp` gain an optional `chainId`: a custom `GenericProvider` must read that chain or throw.
+- **Router presets.** Chain presets gain `vaultRouterAddress`, the router a multi-vault join goes through. A group names no router; set `vaultRouterAddress` on a custom chain.
 
-See [Vault groups](../guides/vaults/groups.md).
+**Removed** from `@zama-fhe/sdk/vaults`, with what replaces them:
+
+| Removed                                                                                                                                                                                    | Use instead                                                                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Vault`, `createVault`, `VaultBatcher`, `createVaultBatcher`, the `VaultGroup` class, `createVaultGroup`, `VaultAddresses`, `VaultMemberConfig`                                            | `defineVaultGroup` (which returns the new `VaultGroup` data type), `createVaultClient`, the `VaultClient` type                                                                    |
+| `Vault.deposit`, `Vault.redeem`, `VaultBatcher.join`, `VaultGroup.deposit`, `VaultGroup.redeem` and their `prepare*` methods                                                               | `client.deposit`, `client.redeem`, `client.prepareDeposit`, `client.prepareRedeem`, each taking the group                                                                         |
+| `VaultBatcher.claim`, `quit`, `recover`                                                                                                                                                    | `client.claim`, `client.quit` and their `prepare*` methods, each taking one batch. `quit` also takes a deposit back from a canceled batch.                                        |
+| `VaultBatcher.dispatchBatch`, `finalize`, `prepareFinalize`                                                                                                                                | `client.dispatch`, `client.finalize` and their `prepare*` methods, each taking one batch                                                                                          |
+| `batchState`, `batchStatus`, `currentBatchId`, `paused`, `timeUntilDispatchable`, `timeUntilCallbackDeadline`, `depositOf`, the numeric `BatchState` enum, `BatchStatus`                   | `client.readBatch`, `client.readOpenBatches`, the string union `BatchState`                                                                                                       |
+| `decodeJoined`, `findJoined`, `openBatchIds`, `VaultTopics`, `JoinedEvent`, `decodeVaultGroupJoins`                                                                                        | No replacement. `deposit` and `redeem` return the batch each leg landed in. A host that sends its own calls gets batch ids from its own indexer.                                  |
+| The `*Contract` call builders (`joinContract`, `claimContract`, `routerJoinContract`, `encodeAllocationData`, …)                                                                           | No replacement. Use the `prepare*` methods, which return the calls.                                                                                                               |
+| The per-batcher query options, `invalidateBatchQueries` and the `invalidateAfter*` helpers                                                                                                 | `batchQueryOptions`, `openBatchesQueryOptions`, the new mutation options, `invalidateAfterVaultAction`                                                                            |
+| `VaultGroupJoinUnconfirmedError`                                                                                                                                                           | `VaultJoinUnconfirmedError`                                                                                                                                                       |
+| From earlier beta builds: `defineVaults`, `VaultsConfig`, `JoinRecord`, `readPosition`, `exit`, `prepareExit`, `positionQueryOptions`, `exitMutationOptions`, `VaultActionNotAllowedError` | `defineVaultGroup`, `JoinOutcome.batches`, `readBatch`, `claim` and `quit`, `batchQueryOptions`, `claimMutationOptions` and `quitMutationOptions`, `VaultBatchNotDispatchedError` |
+
+**Removed** from `@zama-fhe/react-sdk/vaults`: `useVault`, `useVaultBatcher`, `useVaultGroup`, `useJoin`, `useRecover`, `useDispatchBatch`, `useGroupDeposit`, `useGroupRedeem`, `useBatchState`, `useBatchStatus`, `useCurrentBatchId`, `usePaused`, `useBatcherTokens`, `useTimeUntilDispatchable` and `useTimeUntilCallbackDeadline`, and, from earlier beta builds, `usePosition` and `useExit`. `useDeposit`, `useRedeem`, `useClaim`, `useQuit` and `useFinalize` keep their names but take new variables: the group with the join for `useDeposit` and `useRedeem`, and a `BatchRef` for the others. Use `useBatch` and `useOpenBatches` for reads.
+
+The root entry now exports `confidentialTransferAndCallContract`, `confidentialTransferFromAndCallContract` and `unwrapAmountContract`.
+
+See [Vaults overview](../guides/vaults/README.md) and [`VaultClient`](../reference/sdk/VaultClient.md).
 
 ## Typed errors for the protocol's FHE compute limits
 
@@ -39,56 +71,6 @@ The protocol caps the FHE compute, measured in HCU, that a transaction and a blo
 A transaction that is mined and then reverts now throws `TransactionRevertedError` instead of returning a result. `TransactionReceipt` gained an optional `status` (`"success"` or `"reverted"`); the viem, ethers and wagmi providers fill it.
 
 See [Errors](../reference/sdk/errors.md#hcublocklimitexceedederror).
-
-## Settle a dispatched batch yourself
-
-A keeper normally finalizes a dispatched batch. When it has not, any account can now settle it with `VaultBatcher.finalize(batchId)` (`useFinalize` in React, `finalizeMutationOptions` for TanStack Query). After the batch's callback deadline the same call cancels the batch instead, except on an asynchronous redeem batcher that has already placed its redemption request.
-
-- `VaultBatcher.timeUntilCallbackDeadline(batchId)` (`useTimeUntilCallbackDeadline`, `timeUntilCallbackDeadlineQueryOptions`) returns the seconds left until the deadline: `0` once it has passed, `null` when the batch is not `Dispatched`.
-- `finalize` and `prepareFinalize` throw the new `VaultBatchNotDispatchedError` when the batch is not `Dispatched`, for example because a keeper got there first.
-- `VaultBatcher.unwrapRequestId(batchId)` returns the unwrap request `finalize` reads.
-- The submission emits a `VaultSubmitted` event with `vaultOperation: "finalize"`.
-
-## Batch status for vault UIs
-
-`VaultBatcher.batchStatus(batchId)` (`useBatchStatus`, `batchStatusQueryOptions`) returns a batch's state and the timestamps a UI needs for it, such as `secondsUntilDispatchable` while `Pending` and `secondsUntilCallbackDeadline` while `Dispatched`. The result is a union on `state`, so an exhaustive `switch` catches a state the UI does not handle.
-
-`openBatchIds(logs, batcher, account)` lists the batches an account joined and has not claimed or quit, from the batcher's `Joined`, `Claimed` and `Quit` logs. `VaultTopics` adds `Claimed` and `Quit`.
-
-The new [Building a vault UI](../guides/vaults/building-a-ui.md) guide covers what to show and offer at each step of a deposit or redemption.
-
-## Vaults on another chain
-
-Pass a `chainId` to work with a vault while the wallet is not on its chain, for example on a page that renders before the wallet connects.
-
-- **Reads:** `createVaultBatcher(sdk, address, { chainId })`, `useVaultBatcher` and the batcher read hooks (`useBatchStatus`, `useBatchState`, `useCurrentBatchId`, `useTimeUntilDispatchable`, `useTimeUntilCallbackDeadline`, `usePaused`, `useBatcherTokens`) take a `chainId`, exposed as `VaultBatcher.chainId`. `WagmiProvider` reads that chain through wagmi. `ViemProvider` and `EthersProvider` are bound to one chain and throw `ConfigurationError` for another.
-- **Writes:** `createVault`, `useVault`, `useDeposit`, `useRedeem` and the batcher write hooks (`useJoin`, `useQuit`, `useClaim`, `useRecover`, `useDispatchBatch`, `useFinalize`) take the same `chainId`. A write while the wallet is on another chain throws `ChainMismatchError` before anything is sent; its new `targetChainId` is the vault's chain.
-- **Decryption:** `depositOf` and `prepareFinalize` decrypt on the provider's chain, so they throw `ConfigurationError` until the provider is on the vault's chain.
-- **Custom providers:** `ReadContractConfig` and `GenericProvider.getBlockTimestamp` gain an optional `chainId`. A custom `GenericProvider` must read that chain or throw; one that ignores it returns data from the wrong chain.
-
-## Smaller vault additions
-
-- `usePaused` (`pausedQueryOptions`) reads whether a batcher is paused, and `useBatcherTokens` (`batcherTokensQueryOptions`) its input and output tokens.
-- A new `onJoinSubmitted` option on `VaultBatcher.join`, `Vault.deposit` / `Vault.redeem`, `VaultGroup.deposit` / `VaultGroup.redeem` and their hooks receives the transaction hash once the wallet has sent the join. If the callback throws, the SDK logs a warning and the join continues.
-- `VaultBatcher.batchState` throws `ConfigurationError` for a state number it does not know.
-
-## Vault groups for your own transaction layer
-
-`VaultGroup.prepareDeposit` and `VaultGroup.prepareRedeem` do everything `deposit` and `redeem` do up to the send — the pre-flight, the balance check, the encryptions — and return the calls, the legs, the operator grants a router redemption relies on, and a `decodeJoins` helper for the mined receipt. An app that signs through its own pipeline (a transaction queue, a bundler, an EIP-5792 batch) sends them itself. The new `delivery` option picks between one transaction through the router and one transfer per member straight to its batcher, the shape an atomic bundle can land privately; `account` prepares for a given account without a signer; `skipPreflight` trusts a group the host verified, though `paused()` is always read. The balance check decrypts as the signer, so an `account` other than the signer's throws `ConfigurationError` unless `skipBalanceCheck` is passed. `VaultBatcher.prepareFinalize` does the same for a settlement.
-
-`VaultGroup.missingOperators(prepared)` returns the grants in `requiredOperators` the account lacks at the current block, and `redeem` uses it; its default `operatorUntil` is the chain's current time plus one hour. The pure `decodeVaultGroupJoins({ legs, account }, logs)` does what `prepared.decodeJoins` does from saved data, so a host can decode after a reload. `invalidateAfterGroupJoin(queryClient, legs)` invalidates each leg's token balance and batch reads, as the group hooks do.
-
-A group may now hold a single vault, which joins its batcher directly, so `router` is optional. A member's config can give its `cShare`, which spares a read and feeds the new `VaultGroup.redeemOperators()` and its config-only counterpart `vaultGroupRedeemOperators(config)`, for code that has the config but no SDK instance.
-
-The `vaults` subpath also exports the pure call builders these are built on — `routerJoinContract`, `encodeAllocationData` and `tokenWrapperRegistryContract`, with the `EncryptedAllocationLeg` type — plus `dispatchBatchCallbackContract`, and `unwrapRequestIdContract`. The root entry now exports `confidentialTransferAndCallContract`, `confidentialTransferFromAndCallContract` and `unwrapAmountContract`. See [Vault groups](../guides/vaults/groups.md#using-your-own-transaction-layer).
-
-## Vault joins without an operator grant
-
-`Vault.deposit`, `Vault.redeem`, `VaultBatcher.join` and their hooks (`useDeposit`, `useRedeem`, `useJoin`) now send the amount to the batcher with `confidentialTransferAndCall` when they credit the caller. They no longer grant the batcher an ERC-7984 operator approval first, so a deposit takes one wallet prompt instead of two. A join for another `beneficiary` still goes through the batcher's `join`, which pulls the amount, so `Vault` still grants the approval in that case, and `operatorUntil` applies only there. The transaction now goes to the token rather than the batcher, so a host that allowlists call targets (a session-key or custody policy, for example) needs to allow the token. Existing operator approvals are left in place. Revoke one with `Token.setOperator(batcher, 0)` if you no longer need it.
-
-## Vault groups only submit through the chain's router
-
-The Ethereum mainnet and Sepolia presets gain `vaultRouterAddress`, the one multi-vault router on each chain. A `VaultGroup` `"router"` submission now throws `ConfigurationError` when the group's `router` is a different address, before it encrypts or asks for a signature, and also with `skipPreflight`. Set `allowCustomRouter: true` in the group config for a router you deployed yourself. The check uses the `vaultRouterAddress` of the chain the SDK is configured with, so a chain config that sets its own takes precedence. `"legs"` deliveries, which never touch the router, and chains whose config names no router are not checked.
 
 ## Opt out of clearing credentials on wallet account changes
 

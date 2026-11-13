@@ -1,13 +1,15 @@
 ---
 title: useQuit
-description: Mutation hook that withdraws the caller's own deposit from a pending or canceled vault batch.
+description: Mutation hook that takes the signer's deposit back from a pending or canceled vault batch.
 ---
 
 # useQuit
 
-Mutation hook that returns the caller's own deposit from a batch to their confidential balance on the batcher's input token. Same call as [`VaultBatcher.quit`](../sdk/VaultBatcher.md#quit).
+Mutation hook that takes the signer's deposit back from a pending or canceled batch. Wraps [`VaultClient.quit`](../sdk/VaultClient.md#quit). The signer must be the account that joined.
 
-It is legal in two states: `Pending` (undo a join before dispatch) and `Canceled` (take the deposit back after a batch failed to finalize). It refunds the caller only — to refund someone else's deposit in a canceled batch, use [`useRecover`](./useRecover.md).
+{% hint style="warning" %}
+**Quit every leg of a group join, not only the chosen one.** Quitting one leg shows which vault the user picked. See [A group hides which vault you chose](../../guides/vaults/README.md#a-group-hides-which-vault-you-chose).
+{% endhint %}
 
 ## Import
 
@@ -18,17 +20,24 @@ import { useQuit } from "@zama-fhe/react-sdk/vaults";
 ## Usage
 
 {% tabs %}
-{% tab title="QuitButton.tsx" %}
+{% tab title="CancelJoinButton.tsx" %}
 
 ```tsx
 import { useQuit } from "@zama-fhe/react-sdk/vaults";
+import type { BatchRef } from "@zama-fhe/sdk/vaults";
 
-function QuitButton({ batchId }: { batchId: bigint }) {
-  const { mutate: quit, isPending } = useQuit({ address: "0xDepositBatcher" });
+function CancelJoinButton({ batches }: { batches: readonly BatchRef[] }) {
+  const quit = useQuit();
+
+  async function handleClick() {
+    for (const batch of batches) {
+      await quit.mutateAsync(batch);
+    }
+  }
 
   return (
-    <button onClick={() => quit({ batchId })} disabled={isPending}>
-      {isPending ? "Withdrawing..." : "Withdraw deposit"}
+    <button disabled={quit.isPending} onClick={handleClick}>
+      {quit.isPending ? "Cancelling..." : "Cancel and get it back"}
     </button>
   );
 }
@@ -37,56 +46,52 @@ function QuitButton({ batchId }: { batchId: bigint }) {
 {% endtab %}
 {% endtabs %}
 
+`batches` are the batches of every leg of one join, as returned by [`useDeposit`](./useDeposit.md) or [`useRedeem`](./useRedeem.md).
+
 ## Parameters
 
 ```ts
-import { type UseQuitConfig } from "@zama-fhe/react-sdk/vaults";
+import { type UseVaultMutationOptions } from "@zama-fhe/react-sdk/vaults";
 ```
-
-### address
-
-`Address`
-
-The batcher contract address (deposit or redeem direction).
-
----
-
-### chainId
-
-`number | undefined`
-
-Chain the batcher is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](../sdk/errors.md#chainmismatcherror) instead of sending.
-
----
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
 ## Mutation variables
 
-```ts
-import { type QuitParams } from "@zama-fhe/sdk/vaults";
-```
+A [`BatchRef`](../sdk/VaultClient.md#batchref), passed to `mutate` / `mutateAsync`.
+
+### chainId
+
+`number`
+
+The chain of the batch to quit.
+
+### batcher
+
+`Address`
+
+The batcher of the batch to quit.
 
 ### batchId
 
 `bigint`
 
-The pending or canceled batch to withdraw the caller's own deposit from.
+The batch to quit.
 
-```ts
-quit({ batchId });
-```
+**Throws:**
+
+- `ChainMismatchError`: the wallet is not on the batch's chain.
+- `TransactionRevertedError`: the quit reverted, for example because the batch was dispatched in the meantime.
 
 ## Return Type
 
-`data` is `{ txHash: Hex; receipt: TransactionReceipt }`.
+The `data` property (after a successful mutation) is a `TransactionResult`: `{ txHash, receipt }`.
 
-On success the hook invalidates the input token's balance cache and the batcher's batch reads.
+When the mutation settles, successful or not, the hook invalidates every vault read and every confidential balance.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 
 ## Related
 
-- [useRecover](./useRecover.md) — refund another account's deposit in a canceled batch
-- [useBatchState](./useBatchState.md) — check the batch is `Pending` or `Canceled` first
-- [VaultBatcher.quit](../sdk/VaultBatcher.md#quit) — imperative equivalent
+- [useBatch](./useBatch.md): when `quit` is available
+- [useClaim](./useClaim.md): claim a finalized batch instead

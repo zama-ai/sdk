@@ -5,9 +5,9 @@ description: Mutation hook that claims a finalized vault batch's output for an a
 
 # useClaim
 
-Mutation hook that claims a finalized batch's output — shares for a deposit batcher, assets for a redeem batcher. Same call as [`VaultBatcher.claim`](../sdk/VaultBatcher.md#claim).
+Mutation hook that claims a finalized batch with the SDK's signer: shares for a deposit batch, the asset for a redeem batch. Wraps [`VaultClient.claim`](../sdk/VaultClient.md#claim).
 
-Claiming is permissionless: anyone can call it on another account's behalf, and the output always goes to that account, never to the caller. It is only legal once the batch reaches `BatchState.Finalized`; claiming a canceled batch reverts, use [`useQuit`](./useQuit.md) or [`useRecover`](./useRecover.md) instead.
+Any account may send the claim. The output goes to `account`.
 
 ## Import
 
@@ -21,19 +21,19 @@ import { useClaim } from "@zama-fhe/react-sdk/vaults";
 {% tab title="ClaimButton.tsx" %}
 
 ```tsx
-import { BatchState } from "@zama-fhe/sdk/vaults";
-import { useBatchState, useClaim } from "@zama-fhe/react-sdk/vaults";
+import { useBatch, useClaim } from "@zama-fhe/react-sdk/vaults";
+import type { BatchRef } from "@zama-fhe/sdk/vaults";
+import type { Address } from "viem";
 
-function ClaimButton({ batchId }: { batchId: bigint }) {
-  const { data: state } = useBatchState({ address: "0xDepositBatcher", batchId });
-  const { mutate: claim, isPending } = useClaim({ address: "0xDepositBatcher" });
+function ClaimButton({ batchRef, account }: { batchRef: BatchRef; account: Address }) {
+  const { data: batch } = useBatch(batchRef, { account });
+  const claim = useClaim();
+
+  if (!batch?.actions.includes("claim")) return null;
 
   return (
-    <button
-      onClick={() => claim({ batchId })}
-      disabled={isPending || state !== BatchState.Finalized}
-    >
-      {isPending ? "Claiming..." : "Claim"}
+    <button disabled={claim.isPending} onClick={() => claim.mutate({ ...batchRef, account })}>
+      {claim.isPending ? "Claiming..." : "Claim"}
     </button>
   );
 }
@@ -45,60 +45,53 @@ function ClaimButton({ batchId }: { batchId: bigint }) {
 ## Parameters
 
 ```ts
-import { type UseClaimConfig } from "@zama-fhe/react-sdk/vaults";
+import { type UseVaultMutationOptions } from "@zama-fhe/react-sdk/vaults";
 ```
-
-### address
-
-`Address`
-
-The batcher contract address (deposit or redeem direction).
-
----
-
-### chainId
-
-`number | undefined`
-
-Chain the batcher is on. If the wallet is on another chain, the mutation throws [`ChainMismatchError`](../sdk/errors.md#chainmismatcherror) instead of sending.
-
----
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
 ## Mutation variables
 
-```ts
-import { type ClaimParams } from "@zama-fhe/sdk/vaults";
-```
+A [`BatchRef`](../sdk/VaultClient.md#batchref) plus an optional `account`, passed to `mutate` / `mutateAsync`.
+
+### chainId
+
+`number`
+
+The chain of the batch to claim.
+
+### batcher
+
+`Address`
+
+The batcher of the batch to claim.
 
 ### batchId
 
 `bigint`
 
-The finalized batch to claim from.
+The batch to claim.
 
 ### account
 
 `Address | undefined`
 
-Default: the connected wallet. The account to claim for. The output goes to this account regardless of who submits the transaction.
+The account to claim for. Defaults to the signer.
 
-```ts
-claim({ batchId });
-claim({ batchId, account: "0xSomeoneElse" });
-```
+**Throws:**
+
+- `ChainMismatchError`: the wallet is not on the batch's chain.
+- `TransactionRevertedError`: the claim reverted, for example because the batch is not finalized yet.
 
 ## Return Type
 
-`data` is `{ txHash: Hex; receipt: TransactionReceipt }`. The claimed amount is not returned — read it as a balance on the batcher's output token with [`useConfidentialBalance`](./useConfidentialBalance.md).
+The `data` property (after a successful mutation) is a `TransactionResult`: `{ txHash, receipt }`.
 
-On success the hook invalidates the output token's balance cache.
+When the mutation settles, successful or not, the hook invalidates every vault read and every confidential balance.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 
 ## Related
 
-- [useBatchState](./useBatchState.md) — gate the button on `Finalized`
-- [useQuit](./useQuit.md) / [useRecover](./useRecover.md) — what to do with a canceled batch instead
-- [VaultBatcher.claim](../sdk/VaultBatcher.md#claim) — imperative equivalent
+- [useBatch](./useBatch.md): when `claim` is available
+- [useQuit](./useQuit.md): take a deposit back instead

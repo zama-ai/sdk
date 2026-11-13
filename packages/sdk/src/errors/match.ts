@@ -52,10 +52,9 @@ import type {
 } from "./transaction";
 import type { UnshieldAlreadyFinalizedError } from "./unshield";
 import type {
-  UnlistedConfidentialTokenError,
   VaultBatcherPausedError,
   VaultBatchNotDispatchedError,
-  VaultGroupJoinUnconfirmedError,
+  VaultJoinUnconfirmedError,
 } from "./vaults";
 
 /**
@@ -146,14 +145,12 @@ export interface ErrorForCode {
   [ZamaErrorCode.PreparedPermitExpired]: PreparedPermitExpiredError;
   /** Thrown for {@link ZamaErrorCode.UnshieldAlreadyFinalized}. */
   [ZamaErrorCode.UnshieldAlreadyFinalized]: UnshieldAlreadyFinalizedError;
-  /** Thrown for {@link ZamaErrorCode.UnlistedConfidentialToken}. */
-  [ZamaErrorCode.UnlistedConfidentialToken]: UnlistedConfidentialTokenError;
   /** Thrown for {@link ZamaErrorCode.VaultBatcherPaused}. */
   [ZamaErrorCode.VaultBatcherPaused]: VaultBatcherPausedError;
   /** Thrown for {@link ZamaErrorCode.VaultBatchNotDispatched}. */
   [ZamaErrorCode.VaultBatchNotDispatched]: VaultBatchNotDispatchedError;
-  /** Thrown for {@link ZamaErrorCode.VaultGroupJoinUnconfirmed}. */
-  [ZamaErrorCode.VaultGroupJoinUnconfirmed]: VaultGroupJoinUnconfirmedError;
+  /** Thrown for {@link ZamaErrorCode.VaultJoinUnconfirmed}. */
+  [ZamaErrorCode.VaultJoinUnconfirmed]: VaultJoinUnconfirmedError;
 }
 
 /**

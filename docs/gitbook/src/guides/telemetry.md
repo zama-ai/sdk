@@ -28,37 +28,33 @@ With `telemetry: "query"` (see [below](#sending-query-parameters-instead-of-head
 
 Each public method that reaches the relayer sends its own value. When a method makes several relayer requests, such as the balance check, encryption and decryption of an unshield, all of them carry that method's value. React hooks send the value of the method they call.
 
-| `x-zama-sdk-operation`                | Sent by                                                 |
-| ------------------------------------- | ------------------------------------------------------- |
-| `balance-of`                          | `Token.balanceOf`                                       |
-| `decrypt-balance-as`                  | `Token.decryptBalanceAs`                                |
-| `batch-balances-of`                   | `Token.batchBalancesOf`                                 |
-| `batch-decrypt-balances-as`           | `Token.batchDecryptBalancesAs`                          |
-| `confidential-transfer`               | `Token.confidentialTransfer`                            |
-| `confidential-transfer-from`          | `Token.confidentialTransferFrom`                        |
-| `confidential-transfer-and-call`      | `Token.confidentialTransferAndCall`                     |
-| `confidential-transfer-from-and-call` | `Token.confidentialTransferFromAndCall`                 |
-| `unshield`                            | `WrappedToken.unshield`                                 |
-| `unshield-all`                        | `WrappedToken.unshieldAll`                              |
-| `resume-unshield`                     | `WrappedToken.resumeUnshield`                           |
-| `unwrap`                              | `WrappedToken.unwrap`                                   |
-| `finalize-unwrap`                     | `WrappedToken.finalizeUnwrap`                           |
-| `vault-deposit`                       | `Vault.deposit`                                         |
-| `vault-redeem`                        | `Vault.redeem`                                          |
-| `vault-join`                          | `VaultBatcher.join`                                     |
-| `vault-deposit-of`                    | `VaultBatcher.depositOf`                                |
-| `vault-group-deposit`                 | `VaultGroup.deposit`, `VaultGroup.prepareDeposit`       |
-| `vault-group-redeem`                  | `VaultGroup.redeem`, `VaultGroup.prepareRedeem`         |
-| `vault-finalize`                      | `VaultBatcher.finalize`, `VaultBatcher.prepareFinalize` |
-| `encrypt`                             | `sdk.encrypt`                                           |
-| `decrypt-values`                      | `sdk.decryption.decryptValues`                          |
-| `delegated-decrypt-values`            | `sdk.decryption.delegatedDecryptValues`                 |
-| `delegated-batch-decrypt-values`      | `sdk.decryption.delegatedBatchDecryptValues`            |
-| `decrypt-public-values`               | `sdk.decryption.decryptPublicValues`                    |
-| `offline-confidential-transfer`       | `sdk.offline.prepare`, `ConfidentialTransfer`           |
-| `offline-confidential-transfer-from`  | `sdk.offline.prepare`, `ConfidentialTransferFrom`       |
-| `offline-unwrap`                      | `sdk.offline.prepare`, `Unwrap`                         |
-| `offline-finalize-unwrap`             | `sdk.offline.prepare`, `FinalizeUnwrap`                 |
+| `x-zama-sdk-operation`                | Sent by                                               |
+| ------------------------------------- | ----------------------------------------------------- |
+| `balance-of`                          | `Token.balanceOf`                                     |
+| `decrypt-balance-as`                  | `Token.decryptBalanceAs`                              |
+| `batch-balances-of`                   | `Token.batchBalancesOf`                               |
+| `batch-decrypt-balances-as`           | `Token.batchDecryptBalancesAs`                        |
+| `confidential-transfer`               | `Token.confidentialTransfer`                          |
+| `confidential-transfer-from`          | `Token.confidentialTransferFrom`                      |
+| `confidential-transfer-and-call`      | `Token.confidentialTransferAndCall`                   |
+| `confidential-transfer-from-and-call` | `Token.confidentialTransferFromAndCall`               |
+| `unshield`                            | `WrappedToken.unshield`                               |
+| `unshield-all`                        | `WrappedToken.unshieldAll`                            |
+| `resume-unshield`                     | `WrappedToken.resumeUnshield`                         |
+| `unwrap`                              | `WrappedToken.unwrap`                                 |
+| `finalize-unwrap`                     | `WrappedToken.finalizeUnwrap`                         |
+| `vault-deposit`                       | `VaultClient.deposit`, `VaultClient.prepareDeposit`   |
+| `vault-redeem`                        | `VaultClient.redeem`, `VaultClient.prepareRedeem`     |
+| `vault-finalize`                      | `VaultClient.finalize`, `VaultClient.prepareFinalize` |
+| `encrypt`                             | `sdk.encrypt`                                         |
+| `decrypt-values`                      | `sdk.decryption.decryptValues`                        |
+| `delegated-decrypt-values`            | `sdk.decryption.delegatedDecryptValues`               |
+| `delegated-batch-decrypt-values`      | `sdk.decryption.delegatedBatchDecryptValues`          |
+| `decrypt-public-values`               | `sdk.decryption.decryptPublicValues`                  |
+| `offline-confidential-transfer`       | `sdk.offline.prepare`, `ConfidentialTransfer`         |
+| `offline-confidential-transfer-from`  | `sdk.offline.prepare`, `ConfidentialTransferFrom`     |
+| `offline-unwrap`                      | `sdk.offline.prepare`, `Unwrap`                       |
+| `offline-finalize-unwrap`             | `sdk.offline.prepare`, `FinalizeUnwrap`               |
 
 Calls made directly on `sdk.relayer` carry the version, layer and runtime headers but no operation.
 

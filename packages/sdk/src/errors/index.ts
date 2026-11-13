@@ -55,14 +55,12 @@ export {
 } from "./balance";
 export { UnshieldAlreadyFinalizedError, type UnshieldAlreadyFinalizedDetails } from "./unshield";
 export {
-  UnlistedConfidentialTokenError,
   VaultBatcherPausedError,
   VaultBatchNotDispatchedError,
-  VaultGroupJoinUnconfirmedError,
-  type UnlistedConfidentialTokenDetails,
+  VaultJoinUnconfirmedError,
   type VaultBatcherPausedDetails,
   type VaultBatchNotDispatchedDetails,
-  type VaultGroupJoinUnconfirmedDetails,
+  type VaultJoinUnconfirmedDetails,
 } from "./vaults";
 export { wrapDecryptError, type DecryptErrorContext } from "./decrypt";
 export { wrapEncryptError } from "./encrypt";

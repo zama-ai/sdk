@@ -8150,11 +8150,10 @@ export interface ErrorForCode {
     [ZamaErrorCode.SigningRejected]: SigningRejectedError;
     [ZamaErrorCode.TransactionReverted]: TransactionRevertedError;
     [ZamaErrorCode.TransportKeyPairChanged]: TransportKeyPairChangedError;
-    [ZamaErrorCode.UnlistedConfidentialToken]: UnlistedConfidentialTokenError;
     [ZamaErrorCode.UnshieldAlreadyFinalized]: UnshieldAlreadyFinalizedError;
     [ZamaErrorCode.VaultBatchNotDispatched]: VaultBatchNotDispatchedError;
     [ZamaErrorCode.VaultBatcherPaused]: VaultBatcherPausedError;
-    [ZamaErrorCode.VaultGroupJoinUnconfirmed]: VaultGroupJoinUnconfirmedError;
+    [ZamaErrorCode.VaultJoinUnconfirmed]: VaultJoinUnconfirmedError;
     [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
     [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
 }
@@ -18305,19 +18304,6 @@ export function underlyingContract(wrapperAddress: Address): {
 };
 
 // @public
-export interface UnlistedConfidentialTokenDetails {
-    readonly registry: Address;
-    readonly token: Address;
-}
-
-// @public
-export class UnlistedConfidentialTokenError extends ZamaError {
-    constructor(message: string, details: UnlistedConfidentialTokenDetails, options?: ErrorOptions);
-    readonly registry: Address;
-    readonly token: Address;
-}
-
-// @public
 export interface UnshieldAlreadyFinalizedDetails {
     readonly unwrapRequestId: EncryptedValue;
     readonly unwrapTxHash: Hex;
@@ -22978,29 +22964,18 @@ export class VaultBatchNotDispatchedError extends ZamaError {
 }
 
 // @public
-export interface VaultGroupJoin {
-    batcher: Address;
-    batchId: bigint;
-    confidentialJoinedAmount: EncryptedValue;
-    token: Address;
-    vaultId: string;
+export interface VaultJoinUnconfirmedDetails {
+    readonly receipt: TransactionReceipt;
+    readonly txHash: Hex;
+    readonly unconfirmedVaultIds: readonly string[];
 }
 
 // @public
-export interface VaultGroupJoinUnconfirmedDetails {
-    readonly joins: readonly VaultGroupJoin[];
+export class VaultJoinUnconfirmedError extends ZamaError {
+    constructor(message: string, details: VaultJoinUnconfirmedDetails, options?: ErrorOptions);
     readonly receipt: TransactionReceipt;
     readonly txHash: Hex;
-    readonly unconfirmed: readonly string[];
-}
-
-// @public
-export class VaultGroupJoinUnconfirmedError extends ZamaError {
-    constructor(message: string, details: VaultGroupJoinUnconfirmedDetails, options?: ErrorOptions);
-    readonly joins: readonly VaultGroupJoin[];
-    readonly receipt: TransactionReceipt;
-    readonly txHash: Hex;
-    readonly unconfirmed: readonly string[];
+    readonly unconfirmedVaultIds: readonly string[];
 }
 
 // @public
@@ -24397,10 +24372,9 @@ export const ZamaErrorCode: {
     readonly PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH";
     readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
     readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
-    readonly UnlistedConfidentialToken: "UNLISTED_CONFIDENTIAL_TOKEN";
     readonly VaultBatcherPaused: "VAULT_BATCHER_PAUSED";
     readonly VaultBatchNotDispatched: "VAULT_BATCH_NOT_DISPATCHED";
-    readonly VaultGroupJoinUnconfirmed: "VAULT_GROUP_JOIN_UNCONFIRMED";
+    readonly VaultJoinUnconfirmed: "VAULT_JOIN_UNCONFIRMED";
 };
 
 // @public

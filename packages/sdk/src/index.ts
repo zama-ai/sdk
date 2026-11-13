@@ -123,11 +123,10 @@ export {
   HcuTransactionLimitExceededError,
   TransportKeyPairChangedError,
   TransportKeyPairExpiredError,
-  UnlistedConfidentialTokenError,
   UnshieldAlreadyFinalizedError,
   VaultBatcherPausedError,
   VaultBatchNotDispatchedError,
-  VaultGroupJoinUnconfirmedError,
+  VaultJoinUnconfirmedError,
   WalletAccountNotReadyError,
   WalletNotConnectedError,
   ZamaError,
@@ -135,14 +134,12 @@ export {
   type BalanceErrorDetails,
   type ErrorForCode,
   type SigningErrorMetadata,
-  type UnlistedConfidentialTokenDetails,
   type UnshieldAlreadyFinalizedDetails,
   type VaultBatcherPausedDetails,
   type VaultBatchNotDispatchedDetails,
-  type VaultGroupJoinUnconfirmedDetails,
+  type VaultJoinUnconfirmedDetails,
 } from "./errors";
 // Type-only: the root entry bundles no vault code.
-export type { VaultGroupJoin } from "./vaults/vault-group-types";
 export { ZamaSDKEvents } from "./events";
 export type {
   ApproveUnderlyingSubmittedEvent,
