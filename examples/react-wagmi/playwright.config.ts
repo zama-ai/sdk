@@ -36,10 +36,9 @@ export default defineConfig({
       MAINNET_RELAYER_URL: "http://127.0.0.1:9",
       POLYGON_RELAYER_URL: "",
       ENABLED_NETWORKS: "",
-      // Bind the vault demo to the mocked cUSDC pair (MOCK_CTOKEN1_ADDRESS) so the
-      // ConfidentialVault cards render when that token is selected on Sepolia.
-      NEXT_PUBLIC_VAULT_ADDRESS: "0x5555555555555555555555555555555555555555",
-      NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN: "0x2222222222222222222222222222222222222222",
+      // No batch vault, so the Vaults tab shows its setup hint whatever a dev's .env.local says.
+      NEXT_PUBLIC_VAULT_DEPOSIT_BATCHER: "",
+      NEXT_PUBLIC_VAULT_REDEEM_BATCHER: "",
       // Pin a commit so the footer test can check the commit link.
       NEXT_PUBLIC_COMMIT_SHA: "0123456789abcdef0123456789abcdef01234567",
       NEXT_PUBLIC_SOURCE_REPO_URL: "",

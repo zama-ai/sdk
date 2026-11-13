@@ -10,11 +10,15 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import {
   ActionScreen,
   AppHeader,
+  AppTabs,
   MainnetBanner,
   NetworkPicker,
   TokenSelector,
+  type AppTab,
+  type TokenView,
 } from "@/components/PageChrome";
 import { NoTokenPanel, SelectedTokenPanel } from "@/components/SelectedTokenPanel";
+import { VaultsTab } from "@/components/vaults/VaultsTab";
 import { useEnabledNetworks } from "@/lib/hooks";
 import { networkForChain, networks } from "@/lib/networks";
 import { useWalletConnection } from "@/lib/wallet";
@@ -32,6 +36,9 @@ export default function Home() {
   const { connect, disconnect, isConnecting, isDisconnecting, connectError } =
     useWalletConnection();
   const { mutate: switchChain, isPending: isSwitching, error: switchError } = useSwitchChain();
+  const [tab, setTab] = useState<AppTab>("tokens");
+  // Held here so the selected token survives a visit to the Vaults tab.
+  const [selectedTokenAddress, setSelectedTokenAddress] = useState<Address | null>(null);
 
   // Networks the server can serve: cleartext rows always, relayer rows only when it has a
   // relayer URL for them. Mainnet stays hidden until a deployment opts in.
@@ -158,16 +165,40 @@ export default function Home() {
         disconnecting={isDisconnecting}
       />
       {picker}
-      <TokenScreen chainId={chainId} address={address} />
+      <AppTabs value={tab} onChange={setTab} />
+      <div role="tabpanel" id={`tabpanel-${tab}`} aria-labelledby={`tab-${tab}`}>
+        {tab === "vaults" ? (
+          // Remounts on an account or chain switch, so no typed amount or result carries over.
+          <VaultsTab key={`${chainId}-${address}`} account={address} />
+        ) : (
+          <TokenScreen
+            chainId={chainId}
+            address={address}
+            view={tab}
+            selectedTokenAddress={selectedTokenAddress}
+            onSelectToken={setSelectedTokenAddress}
+          />
+        )}
+      </div>
     </main>
   );
 }
 
 // Mounted only on the connected screen, so the token list is never read from a chain this
 // deployment does not serve.
-function TokenScreen({ chainId, address }: { chainId: number | undefined; address: Address }) {
-  const [selectedTokenAddress, setSelectedTokenAddress] = useState<Address | null>(null);
-
+function TokenScreen({
+  chainId,
+  address,
+  view,
+  selectedTokenAddress,
+  onSelectToken,
+}: {
+  chainId: number | undefined;
+  address: Address;
+  view: TokenView;
+  selectedTokenAddress: Address | null;
+  onSelectToken: (address: Address) => void;
+}) {
   // Fetch all valid token pairs from the on-chain WrappersRegistry. The registry address
   // comes from the connected chain's FHE config — no configuration required.
   // metadata: true fetches name/symbol/decimals on-chain for both tokens in each pair.
@@ -205,7 +236,7 @@ function TokenScreen({ chainId, address }: { chainId: number | undefined; addres
         }))}
         pending={isRegistryPending}
         error={isRegistryError}
-        onChange={(event) => setSelectedTokenAddress(event.currentTarget.value as Address)}
+        onChange={(event) => onSelectToken(event.currentTarget.value as Address)}
       />
 
       {token && (
@@ -213,9 +244,10 @@ function TokenScreen({ chainId, address }: { chainId: number | undefined; addres
           key={`${chainId}-${address}-${token.confidentialTokenAddress}`}
           token={token}
           validPairs={validPairs}
+          view={view}
         />
       )}
-      {!token && !isRegistryPending && <NoTokenPanel />}
+      {!token && !isRegistryPending && view === "tokens" && <NoTokenPanel />}
     </>
   );
 }

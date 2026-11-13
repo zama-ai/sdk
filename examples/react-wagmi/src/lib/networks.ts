@@ -12,7 +12,7 @@ import {
   zenithTrexTestnet as fheZenith,
   type FheChain,
 } from "@zama-fhe/sdk/chains";
-import { defineChain, isAddress, type Chain } from "viem";
+import { defineChain, getAddress, isAddress, type Chain } from "viem";
 import { bscTestnet, hoodi, mainnet, polygon, sepolia } from "viem/chains";
 
 export interface Network {
@@ -27,8 +27,15 @@ export interface Network {
   explorerUrl: string;
   /** The test tokens expose `mint(address,uint256)`; real tokens do not. */
   canMint: boolean;
-  /** ConfidentialVault demo (`confidentialTransferAndCall`). Deployed on Sepolia only. */
-  vault?: { address: Address; confidentialToken: Address };
+  /** Confidential ERC-4626 vault for the Vaults tab: its two batchers. */
+  batchVault?: BatchVault;
+}
+
+export interface BatchVault {
+  /** The chain the vault is on: the vault hooks read it and refuse writes from another chain. */
+  chainId: number;
+  depositBatcher: Address;
+  redeemBatcher: Address;
 }
 
 interface NetworkInput extends Omit<Network, "chain" | "fhe"> {
@@ -142,6 +149,27 @@ function customSepolia(): FheChain & { network: string } {
   };
 }
 
+function batchVaultFromEnv(chainId: number): BatchVault | undefined {
+  const depositBatcher = process.env.NEXT_PUBLIC_VAULT_DEPOSIT_BATCHER;
+  const redeemBatcher = process.env.NEXT_PUBLIC_VAULT_REDEEM_BATCHER;
+  if (!depositBatcher || !redeemBatcher) {
+    return undefined;
+  }
+  return {
+    chainId,
+    depositBatcher: envAddress("NEXT_PUBLIC_VAULT_DEPOSIT_BATCHER", depositBatcher),
+    redeemBatcher: envAddress("NEXT_PUBLIC_VAULT_REDEEM_BATCHER", redeemBatcher),
+  };
+}
+
+// Checksummed, so query keys built from it match addresses the SDK returns.
+function envAddress(name: string, value: string): Address {
+  if (!isAddress(value)) {
+    throw new Error(`${name} is not a valid address: ${value}`);
+  }
+  return getAddress(value);
+}
+
 export const networks = {
   sepolia: defineNetwork({
     label: ZAMA_ENV === "custom" ? "Sepolia · Custom environment" : "Sepolia",
@@ -151,14 +179,7 @@ export const networks = {
     transport: "relayer",
     explorerUrl: "https://eth-sepolia.blockscout.com",
     canMint: true,
-    // A minimal confidential escrow bound to one confidential token (cUSDC). The vault
-    // cards only render when that token is selected. See contracts/src/ConfidentialVault.sol.
-    vault: {
-      address: (process.env.NEXT_PUBLIC_VAULT_ADDRESS ||
-        "0xb13720bec167A576D715F5aA7C7d68b3dB0A4Ad7") as Address,
-      confidentialToken: (process.env.NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN ||
-        "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639") as Address,
-    },
+    batchVault: batchVaultFromEnv(sepolia.id),
   }),
   // Cleartext rows are development deployments: "encrypted" values are stored in cleartext
   // on-chain and there is no relayer or KMS. They exist to integrate against the SDK on

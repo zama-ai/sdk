@@ -1,4 +1,4 @@
-import type { ChangeEventHandler, ReactNode } from "react";
+import type { ChangeEventHandler, KeyboardEvent, ReactNode } from "react";
 import { networks, type NetworkKey } from "@/lib/networks";
 
 interface ActionScreenProps {
@@ -220,5 +220,49 @@ export function TokenSelector({ value, options, pending, error, onChange }: Toke
         {tokenSelectorStatus({ options, pending, error })}
       </p>
     </section>
+  );
+}
+
+export const APP_TABS = [
+  { id: "tokens", label: "Tokens" },
+  { id: "delegation", label: "Delegation" },
+  { id: "vaults", label: "Vaults" },
+] as const;
+
+export type AppTab = (typeof APP_TABS)[number]["id"];
+/** The tabs that show the selected token's operations. */
+export type TokenView = Exclude<AppTab, "vaults">;
+
+export function AppTabs({ value, onChange }: { value: AppTab; onChange: (tab: AppTab) => void }) {
+  // Arrow keys move between tabs and only the selected tab is in the Tab order, as the
+  // ARIA tabs pattern expects.
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+    if (step === undefined) return;
+    event.preventDefault();
+    const index = APP_TABS.findIndex((tab) => tab.id === value);
+    const next = APP_TABS[(index + step + APP_TABS.length) % APP_TABS.length].id;
+    onChange(next);
+    document.getElementById(`tab-${next}`)?.focus();
+  };
+  return (
+    <div className="tabs" role="tablist" aria-label="Sections" onKeyDown={onKeyDown}>
+      {APP_TABS.map(({ id, label }) => (
+        <button
+          key={id}
+          type="button"
+          role="tab"
+          id={`tab-${id}`}
+          aria-selected={value === id}
+          // Only the selected tab's panel is rendered.
+          aria-controls={value === id ? `tabpanel-${id}` : undefined}
+          tabIndex={value === id ? 0 : -1}
+          className="tab"
+          onClick={() => onChange(id)}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
   );
 }

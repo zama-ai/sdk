@@ -28494,7 +28494,13 @@ Next.js 16 example app demonstrating how to integrate `@zama-fhe/react-sdk` with
 [wagmi v3](https://wagmi.sh/) on every network the SDK ships a chain preset for. A network
 picker switches the wallet between them; nothing else in the app changes per chain.
 
-Covers: connect wallet (browser wallet, or a Dynamic-backed connect dialog with WalletConnect for a Safe), pick a network, shield ERC-20 → confidential, confidential transfer, unshield, grant/revoke/use delegation, pending unshield recovery, deposit into a reacting contract (`confidentialTransferAndCall`, Sepolia only).
+Covers: connect wallet (browser wallet, or a Dynamic-backed connect dialog with WalletConnect for a Safe), pick a network, shield ERC-20 → confidential, confidential transfer, unshield, grant/revoke/use delegation, pending unshield recovery, confidential vault deposits and withdrawals.
+
+The connected app has three tabs:
+
+- **Tokens**: balances, shield, confidential transfer, unshield and pending unshield recovery for the selected token. The core of the SDK.
+- **Delegation**: grant, revoke and use decryption delegation for the selected token.
+- **Vaults**: deposit into and withdraw from a confidential ERC-4626 vault with `@zama-fhe/react-sdk/vaults`. The Deposit and Withdraw boxes each hold their form and the positions still in progress, with one view per batch state: cancel, settle a late batch, claim, take a canceled amount back. The joined batches live in localStorage. It implements the [Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide. Set the vault's batchers in `.env.local` to use it.
 
 This app replaces the former `example-bnb`, `example-hoodi`, `example-polygon-amoy` and `example-zenith` apps, which were copies of it pinned to one chain each.
 
@@ -28509,7 +28515,7 @@ This app replaces the former `example-bnb`, `example-hoodi`, `example-polygon-am
 | Ethereum                 | `1`        | `web()` via proxy | ETH                                                                | `MAINNET_RELAYER_URL` is set |
 | Polygon                  | `137`      | `web()` via proxy | POL                                                                | `POLYGON_RELAYER_URL` is set |
 
-The table lives in [`src/lib/networks.ts`](src/lib/networks.ts). Each row pairs a viem chain with the matching preset from `@zama-fhe/sdk/chains` (protocol addresses, registry, public RPC) and a few flags: the transport, the explorer, whether the test tokens can be minted from the app, and the ConfidentialVault demo binding.
+The table lives in [`src/lib/networks.ts`](src/lib/networks.ts). Each row pairs a viem chain with the matching preset from `@zama-fhe/sdk/chains` (protocol addresses, registry, public RPC) and a few flags: the transport, the explorer, whether the test tokens can be minted from the app, and the Vaults tab's batchers.
 
 **Cleartext rows** run against a _cleartext_ FHEVM deployment: a stand-in for the full FHE stack where the "encrypted" values are stored in cleartext on-chain and there is no relayer or KMS. They exist to integrate and test the SDK on chains without the full protocol. Do not use them for anything real.
 
@@ -28525,7 +28531,8 @@ Token pairs on every network come from the on-chain `WrappersRegistry` at runtim
 - **React 19** + **wagmi v3** + **viem v2**
 - **Dynamic** (optional) — `@dynamic-labs-sdk/client` and `@dynamic-labs-sdk/evm`, Dynamic's headless SDK in connect-only mode: it supplies the wallet catalogue and the connect step (browser wallets + WalletConnect, which is how a Safe pairs from the Safe web app). A wagmi connector of the app's own wraps the authorized wallet, so wagmi alone owns the session
 - **TanStack Query v5** for async state
-- **@zama-fhe/react-sdk** — `ZamaProvider`, `useConfidentialBalance`, `useUnshield`, `useConfidentialTransferAndCall`, `useDelegateDecryption`, etc.
+- **@zama-fhe/react-sdk** — `ZamaProvider`, `useConfidentialBalance`, `useShield`, `useUnshield`, `useDelegateDecryption`, etc.
+- **@zama-fhe/react-sdk/vaults** — `useDeposit`, `useRedeem`, `useOpenBatches`, `useBatch`, `useClaim`, `useQuit`, `useFinalize`; `defineVault` from `@zama-fhe/sdk/vaults` describes the vault (`defineVaultGroup` describes a group of several, see the walkthrough)
 - **@zama-fhe/react-sdk/wagmi** — `createConfig` adapter for wagmi signer/provider wiring
 - **@zama-fhe/sdk/web** — browser FHE worker transport via `web()`, routed through the local Next.js proxy (`/api/relayer/<network>`)
 - **@zama-fhe/sdk** `cleartext()` — transport for the cleartext deployments, no relayer involved
@@ -28572,26 +28579,26 @@ curl -H "x-api-key: $MAINNET_RELAYER_API_KEY" https://relayer.mainnet.zama.org/v
 
 All server-side variables are read by the proxy only and never reach the browser.
 
-| Variable                               | Required                             | Description                                                                                                                                                                      |
-| -------------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MAINNET_RELAYER_URL`                  | No                                   | Enables Ethereum mainnet. Bare relayer host, no `/v2` suffix. Unset hides the network; there is no fallback.                                                                     |
-| `MAINNET_RELAYER_API_KEY`              | No                                   | Added as `x-api-key` by the proxy. Needed for the Zama-hosted mainnet relayer, not for a self-hosted one.                                                                        |
-| `POLYGON_RELAYER_URL`                  | No                                   | Same for Polygon mainnet.                                                                                                                                                        |
-| `POLYGON_RELAYER_API_KEY`              | No                                   | Same for Polygon mainnet.                                                                                                                                                        |
-| `SEPOLIA_RELAYER_URL`                  | No                                   | Defaults to the public testnet relayer `https://relayer.testnet.zama.org`, which needs no key.                                                                                   |
-| `SEPOLIA_RELAYER_API_KEY`              | No                                   | Only for a private Sepolia relayer.                                                                                                                                              |
-| `RELAYER_PROXY_ALLOWED_ORIGINS`        | No                                   | Comma-separated origins allowed to call the proxy. Replaces the default, the app's own origin, so list that too.                                                                 |
-| `ENABLED_NETWORKS`                     | No                                   | Comma-separated table keys to offer, e.g. `mainnet,sepolia`. Unset offers every network the server can serve.                                                                    |
-| `CSP_CONNECT_SRC`                      | For mainnet or a self-hosted relayer | Comma-separated origins the browser downloads the FHE keys from (each relayer's `keyurl`). The public testnet bucket is built in. Each entry must be an origin, checked at boot. |
-| `NEXT_PUBLIC_ZAMA_ENV`                 | No                                   | `custom` swaps the Sepolia row's protocol contracts for the `NEXT_PUBLIC_ZAMA_*` values. Unset = SDK preset.                                                                     |
-| `NEXT_PUBLIC_ZAMA_*`                   | Custom                               | Gateway chain ID and protocol contract addresses of the custom environment. See `.env.example`.                                                                                  |
-| `NEXT_PUBLIC_REGISTRY_ADDRESS`         | Custom                               | Wrapper registry of the custom environment, which usually has no registry deployment.                                                                                            |
-| `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID`   | No                                   | Environment ID from the Dynamic dashboard. Enables the Dynamic connect dialog; unset = injected connector only.                                                                  |
-| `NEXT_PUBLIC_COMMIT_SHA`               | No                                   | Commit shown in the footer. Vercel's `VERCEL_GIT_COMMIT_SHA` is used when this is unset.                                                                                         |
-| `NEXT_PUBLIC_SOURCE_REPO_URL`          | No                                   | Repository the footer links to. Defaults to `https://github.com/zama-ai/sdk`; a fork must set its own.                                                                           |
-| `NEXT_PUBLIC_<NETWORK>_RPC_URL`        | No                                   | RPC override per network: `SEPOLIA`, `BNB_TESTNET`, `HOODI`, `ZENITH`, `MAINNET`, `POLYGON`.                                                                                     |
-| `NEXT_PUBLIC_VAULT_ADDRESS`            | No                                   | `ConfidentialVault` demo address on Sepolia (`confidentialTransferAndCall`).                                                                                                     |
-| `NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN` | No                                   | Confidential token the vault is bound to (cUSDC). Vault cards render only when it is selected on Sepolia.                                                                        |
+| Variable                             | Required                             | Description                                                                                                                                                                      |
+| ------------------------------------ | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MAINNET_RELAYER_URL`                | No                                   | Enables Ethereum mainnet. Bare relayer host, no `/v2` suffix. Unset hides the network; there is no fallback.                                                                     |
+| `MAINNET_RELAYER_API_KEY`            | No                                   | Added as `x-api-key` by the proxy. Needed for the Zama-hosted mainnet relayer, not for a self-hosted one.                                                                        |
+| `POLYGON_RELAYER_URL`                | No                                   | Same for Polygon mainnet.                                                                                                                                                        |
+| `POLYGON_RELAYER_API_KEY`            | No                                   | Same for Polygon mainnet.                                                                                                                                                        |
+| `SEPOLIA_RELAYER_URL`                | No                                   | Defaults to the public testnet relayer `https://relayer.testnet.zama.org`, which needs no key.                                                                                   |
+| `SEPOLIA_RELAYER_API_KEY`            | No                                   | Only for a private Sepolia relayer.                                                                                                                                              |
+| `RELAYER_PROXY_ALLOWED_ORIGINS`      | No                                   | Comma-separated origins allowed to call the proxy. Replaces the default, the app's own origin, so list that too.                                                                 |
+| `ENABLED_NETWORKS`                   | No                                   | Comma-separated table keys to offer, e.g. `mainnet,sepolia`. Unset offers every network the server can serve.                                                                    |
+| `CSP_CONNECT_SRC`                    | For mainnet or a self-hosted relayer | Comma-separated origins the browser downloads the FHE keys from (each relayer's `keyurl`). The public testnet bucket is built in. Each entry must be an origin, checked at boot. |
+| `NEXT_PUBLIC_ZAMA_ENV`               | No                                   | `custom` swaps the Sepolia row's protocol contracts for the `NEXT_PUBLIC_ZAMA_*` values. Unset = SDK preset.                                                                     |
+| `NEXT_PUBLIC_ZAMA_*`                 | Custom                               | Gateway chain ID and protocol contract addresses of the custom environment. See `.env.example`.                                                                                  |
+| `NEXT_PUBLIC_REGISTRY_ADDRESS`       | Custom                               | Wrapper registry of the custom environment, which usually has no registry deployment.                                                                                            |
+| `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` | No                                   | Environment ID from the Dynamic dashboard. Enables the Dynamic connect dialog; unset = injected connector only.                                                                  |
+| `NEXT_PUBLIC_COMMIT_SHA`             | No                                   | Commit shown in the footer. Vercel's `VERCEL_GIT_COMMIT_SHA` is used when this is unset.                                                                                         |
+| `NEXT_PUBLIC_SOURCE_REPO_URL`        | No                                   | Repository the footer links to. Defaults to `https://github.com/zama-ai/sdk`; a fork must set its own.                                                                           |
+| `NEXT_PUBLIC_<NETWORK>_RPC_URL`      | No                                   | RPC override per network: `SEPOLIA`, `BNB_TESTNET`, `HOODI`, `ZENITH`, `MAINNET`, `POLYGON`.                                                                                     |
+| `NEXT_PUBLIC_VAULT_DEPOSIT_BATCHER`  | For the Vaults tab                   | Deposit batcher of the confidential vault on Sepolia. The Vaults tab shows a setup hint until both batchers are set.                                                             |
+| `NEXT_PUBLIC_VAULT_REDEEM_BATCHER`   | For the Vaults tab                   | Redeem batcher of the same vault.                                                                                                                                                |
 
 Earlier versions of this app, and the per-chain apps it replaces, read `RELAYER_URL`, `RELAYER_API_KEY`, `NEXT_PUBLIC_AMOY_RPC_URL` and `NEXT_PUBLIC_BSC_TESTNET_RPC_URL`. Those names are no longer read: a stale `.env.local` silently falls back to the public testnet relayer, so rename them to the per-network names above.
 
@@ -28657,7 +28664,7 @@ A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using wagm
 ## Architecture at a glance
 
 ```
-page.tsx                         — wallet connect, network picker, token selector
+page.tsx                         — wallet connect, network picker, tabs, token selector
 ├── lib/networks.ts              — the network table: one row per chain (viem chain, FHE preset, flags)
 ├── lib/relayers.ts              — server-side: upstream relayer URL + API key per network
 ├── lib/wallet.tsx               — wallet stack: Dynamic connect dialog or wagmi injected connector, built from the table
@@ -28677,7 +28684,12 @@ page.tsx                         — wallet connect, network picker, token selec
 ├── PendingUnshieldCard.tsx      — recover an interrupted unshield from IndexedDB
 ├── DelegateDecryptionCard.tsx   — grant another wallet the right to decrypt your balance
 ├── RevokeDelegationCard.tsx     — revoke that right
-└── DecryptAsCard.tsx            — decrypt another wallet's balance (as a delegate)
+├── DecryptAsCard.tsx            — decrypt another wallet's balance (as a delegate)
+├── MintAndShieldButton.tsx     — mint a test ERC-20 and shield it, on the Vaults tab
+└── vaults/                      — the Vaults tab
+    ├── VaultsTab.tsx            — the vault's tokens, the decrypt click, and the position
+    ├── VaultActionCard.tsx      — the Deposit or Withdraw box: balance, form, positions
+    └── PositionList.tsx         — one row per joined batch, an exhaustive switch on its state
 ```
 
 ---
@@ -28700,7 +28712,7 @@ export const networks = {
     transport: "relayer",
     explorerUrl: "https://eth-sepolia.blockscout.com",
     canMint: true,
-    vault: { address, confidentialToken },
+    batchVault: batchVaultFromEnv(sepolia.id),
   }),
   "bnb-testnet": defineNetwork({ label: "BNB Testnet · Cleartext", transport: "cleartext", ... }),
   mainnet: defineNetwork({ label: "Ethereum", transport: "relayer", canMint: false, ... }),
@@ -28861,7 +28873,7 @@ override from `NEXT_PUBLIC_<NETWORK>_RPC_URL` is applied to the viem chain too, 
 "add network" prompt shows the same RPC the app uses.
 
 Everything that depends on the active network — explorer links, the native balance label,
-the Mint button, the vault demo — reads its row through `useNetwork()` (`src/lib/hooks.ts`)
+the Mint button, the Vaults tab's batchers — reads its row through `useNetwork()` (`src/lib/hooks.ts`)
 rather than a hardcoded constant.
 
 **Screen 2 is passive**: there is no `isInitializing` guard (unlike the ethers/viem examples)
@@ -29057,55 +29069,80 @@ If the user closes the tab between phases, `PendingUnshieldCard` recovers the st
 
 ---
 
-## 10. Deposit into a reacting contract (`confidentialTransferAndCall`)
+## 10. Confidential vault deposits and withdrawals (Vaults tab)
 
-The `Reacting contract — ConfidentialVault` section demonstrates the ERC-7984
-`confidentialTransferAndCall` pattern: a confidential transfer that also invokes the
-recipient contract's `onConfidentialTransferReceived` hook **in the same transaction**, so
-value moves and the receiver reacts atomically — no two-step transfer-then-notify race.
+A vault deposit or withdrawal does not settle when its transaction is mined. The amount joins
+a batch, the batch is sent to the vault, and the user claims the result once it settles. The
+Vaults tab shows each of those steps, following the
+[Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide.
 
-The receiver is a minimal confidential escrow, [`contracts/src/ConfidentialVault.sol`](../../contracts/src/ConfidentialVault.sol),
-deployed on Sepolia and bound to one confidential token (cUSDC). The cards only render when
-that token is selected on Sepolia: the binding is the `vault` field of the Sepolia row in
-`src/lib/networks.ts`, configurable via `NEXT_PUBLIC_VAULT_ADDRESS` and
-`NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN`. Deploy your own with
-[`contracts/script/DeployVault.s.sol`](../../contracts/script/DeployVault.s.sol).
+- **Vault.** `src/lib/vaults.ts` builds the vault with `defineVault`: a single vault, so a join
+  has a single leg and lands in a single batch. `VaultsTab.tsx` reads the vault's asset and share
+  from the deposit batcher, so the only configuration is the two batcher addresses (the
+  `batchVault` field of the Sepolia row in `src/lib/networks.ts`).
+- **Pinned chain.** Reads go to the vault's `chainId`, and the write hooks throw
+  `ChainMismatchError` when the wallet is on another chain instead of sending the transaction
+  there.
+- **Decrypt on click.** One `useGrantPermit` call covers both tokens and both batchers, so the
+  position card's "Decrypt balances" button is the only signature the tab asks for.
+- **Send.** `useDeposit` and `useRedeem` return the batch the join landed in. The button
+  explains why it is disabled (a paused batcher from `useOpenBatches`, no amount, above balance),
+  and `onJoinSubmitted` tells "confirm in your wallet" from "waiting for the transaction".
+- **Joined batches.** The app needs each batch to read and act on it later, so
+  `src/lib/vaults.ts` keeps them in localStorage, with the bigint batch ids stored as strings. A
+  claim or a quit removes the batch.
+- **One row per batch.** `useBatch` reads a batch with the fields its state has and the
+  `actions` it allows now, and `PositionList.tsx` switches on `state` exhaustively: cancel
+  while pending, settle a late batch with `useFinalize`, claim a finalized one with `useClaim`,
+  take a canceled amount back with `useQuit`.
 
-**Deposit (`VaultDepositCard.tsx`).** The `data` payload carries a real domain message — the
-beneficiary to credit — not an opaque blob. The contract decodes and routes the credit on it:
+### One vault, or a group of vaults
+
+The app configures one vault, so it uses `defineVault` and joins with `{ vault }`:
 
 ```ts
-const deposit = useConfidentialTransferAndCall({ address: tokenAddress }, { onSuccess });
-
-// The vault decodes `data` as the beneficiary address to credit.
-const data = encodeAbiParameters([{ type: "address" }], [beneficiary]);
-deposit.mutate({ to: vaultAddress, amount: parsedAmount, data });
-```
-
-**Position + withdraw (`VaultPositionCard.tsx`).** The vault stores an `euint64` share per
-beneficiary and grants that beneficiary FHE decrypt rights. Reading the position needs a
-permit scoped to the **vault** address — distinct from the confidential-token permits the main
-page grants:
-
-```ts
-const { data: handle } = useReadContract({
-  address: vaultAddress,
-  abi: VAULT_ABI,
-  functionName: "sharesOf",
-  args: [connectedAddress],
+const MAIN = defineVault({
+  id: "main",
+  chainId: sepolia.id,
+  asset: "0xConfidentialUSDC",
+  batchers: { deposit: "0xMainDeposit", redeem: "0xMainRedeem" },
+  share: "0xMainShare",
 });
 
-await grantPermit.mutateAsync([vaultAddress]); // permit scoped to the vault
-const shares = useDecryptValues([{ encryptedValue: handle, contractAddress: vaultAddress }]);
+deposit.mutate({ vault: MAIN, amount });
 ```
 
-Withdraw calls the vault's `withdraw()` directly (`signer.writeContract`) — it is a custom
-contract method, not part of the `Token` surface. The vault transfers the caller's full
-confidential balance back via `confidentialTransfer`.
+Several vaults that take the same asset form a group. Every join then sends a leg to each vault
+of the group, the chosen one with the amount and the others with an encrypted zero, so nobody can
+tell which vault the user picked. Name the chosen vault with `vaultId`:
 
-> Depositing with `beneficiary == address(0)` makes the vault return an encrypted `false` from
-> the hook, and the token **refunds the transfer atomically** — a useful safety property of the
-> receiver-callback pattern.
+```ts
+const STABLE = defineVaultGroup({
+  id: "stable",
+  chainId: sepolia.id,
+  asset: "0xConfidentialUSDC",
+  vaults: [
+    {
+      id: "alpha",
+      batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
+      share: "0xAlphaShare",
+    },
+    {
+      id: "beta",
+      batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
+      share: "0xBetaShare",
+    },
+  ],
+});
+
+deposit.mutate({ group: STABLE, vaultId: "beta", amount });
+```
+
+A group join returns one batch per vault, decoys included. Store every one of them, and quit every
+one to take a deposit back, or the quits show which vault was picked. The read hooks, such as
+`useOpenBatches`, take either a vault or a group. See
+[Advanced vault integration](../../docs/gitbook/src/guides/vaults/advanced.md) for the privacy
+rules and the wallet prompts of a group.
 
 ---
 
