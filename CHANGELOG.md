@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.8.0-beta.21](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.20...v3.8.0-beta.21) (2026-11-13)
+
+### Features
+
+- **sdk:** add an optional multicall read to GenericProvider ([#926](https://github.com/zama-ai/sdk/issues/926)) ([0c9f830]())
+- **vaults:** replace the vault classes with a vault client ([#924](https://github.com/zama-ai/sdk/issues/924)) ([58bf7c4]())
+
 ## [3.8.0-beta.20](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.19...v3.8.0-beta.20) (2026-11-12)
 
 ### Build System
