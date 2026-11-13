@@ -1,17 +1,21 @@
 import { ethers, BrowserProvider, Transaction } from "ethers";
-import type {
-  Abi,
-  Address,
-  ContractFunctionArgs,
-  ContractFunctionName,
-  ContractFunctionReturnType,
-  EIP1193Provider,
-  Hex,
+import {
+  createClient,
+  custom,
+  type Abi,
+  type Address,
+  type ContractFunctionArgs,
+  type ContractFunctionName,
+  type ContractFunctionReturnType,
+  type EIP1193Provider,
+  type Hex,
 } from "viem";
+import { multicall as viemMulticall } from "viem/actions";
 import { ConfigurationError, TransactionRevertedError } from "../errors";
 import type {
   ContractAbi,
   GenericProvider,
+  MulticallReturnType,
   ReadContractConfig,
   TransactionReceipt,
   WriteContractArgs,
@@ -54,6 +58,18 @@ export type EthersProviderConfig = { ethereum: EIP1193Provider } | { provider: e
  */
 export class EthersProvider implements GenericProvider {
   readonly #readProvider: ethers.Provider;
+  // viem builds and decodes the multicall; ethers only carries its one `eth_call`.
+  readonly #multicallClient = createClient({
+    transport: custom({
+      request: async ({ method, params }) => {
+        if (method !== "eth_call") {
+          throw new Error(`EthersProvider.multicall does not send ${method}`);
+        }
+        const [call, blockTag] = params as [{ to?: Address; data: Hex }, string | undefined];
+        return this.#readProvider.call({ to: call.to, data: call.data, blockTag });
+      },
+    }),
+  });
 
   constructor(config: EthersProviderConfig) {
     if ("ethereum" in config) {
@@ -92,6 +108,32 @@ export class EthersProvider implements GenericProvider {
       functionName: config.functionName,
       args: config.args as readonly unknown[],
     });
+  }
+
+  /**
+   * Run many reads in one Multicall3 call. The call carries Multicall3's code,
+   * so it works on any chain, whether Multicall3 is deployed there or not.
+   */
+  async multicall<const TCalls extends readonly ReadContractConfig[]>(params: {
+    readonly calls: TCalls;
+    readonly chainId?: number;
+  }): Promise<MulticallReturnType<TCalls>> {
+    await requireReadChain("EthersProvider", params.chainId, () => this.getChainId());
+    const results: readonly { status: "success" | "failure"; result?: unknown }[] =
+      await viemMulticall(this.#multicallClient, {
+        contracts: params.calls.map(({ chainId: _, ...call }) => call) as never,
+        deployless: true,
+      });
+    const decoded = await Promise.all(
+      params.calls.map((call, index) => {
+        const result = results[index];
+        // A failed read runs again alone, so it fails with the same error a single read gives.
+        return result?.status === "success"
+          ? result.result
+          : this.readContract({ ...call, chainId: undefined });
+      }),
+    );
+    return decoded as MulticallReturnType<TCalls>;
   }
 
   /** Return the latest block timestamp in seconds. */

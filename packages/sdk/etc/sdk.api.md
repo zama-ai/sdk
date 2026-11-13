@@ -9381,6 +9381,10 @@ export interface GenericLogger {
 export interface GenericProvider {
     getBlockTimestamp(chainId?: number): Promise<bigint>;
     getChainId(): Promise<number>;
+    multicall?<const TCalls extends readonly ReadContractConfig[]>(params: {
+        readonly calls: TCalls;
+        readonly chainId?: number;
+    }): Promise<MulticallReturnType<TCalls>>;
     prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
         from: Address;
         calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
@@ -13564,6 +13568,9 @@ export class MemoryStorage implements GenericStorage {
 
 // @public
 export const memoryStorage: MemoryStorage;
+
+// @public
+export type MulticallReturnType<TCalls extends readonly ReadContractConfig[]> = { -readonly [K in keyof TCalls]: TCalls[K] extends ReadContractConfig<infer TAbi, infer TFunctionName, infer TArgs> ? ReadContractReturnType<TAbi, TFunctionName, TArgs> : never; };
 
 // @public
 export class MutableWalletAccountStore implements WalletAccountStore {

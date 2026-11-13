@@ -49,6 +49,7 @@ vi.mock(import("wagmi/actions"), () => ({
   getChainId: vi.fn().mockReturnValue(31337),
   getBlock: vi.fn().mockResolvedValue({ timestamp: 1_700_000_000n }),
   getPublicClient: mockGetPublicClient,
+  multicall: vi.fn(),
   readContract: vi.fn(),
   waitForTransactionReceipt: mockWaitForReceipt,
   getConnectorClient: mockGetConnectorClient,
@@ -300,5 +301,46 @@ describe("WagmiProvider reads on another chain", () => {
     await provider.getBlockTimestamp(11155111);
     expect(actions.readContract).toHaveBeenCalledWith(CONFIG, call);
     expect(actions.getBlock).toHaveBeenCalledWith(CONFIG, { chainId: 11155111 });
+  });
+});
+
+describe("WagmiProvider.multicall", () => {
+  const read = { address: TO, abi: [], functionName: "paused", args: [] } as const;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test("reads every call in one multicall on the requested chain", async () => {
+    const actions = await import("wagmi/actions");
+    mockGetPublicClient.mockReturnValue({
+      chain: { contracts: { multicall3: { address: "0xca11" } } },
+    });
+    vi.mocked(actions.multicall).mockResolvedValue([true, false] as never);
+    const results = await provider.multicall({
+      calls: [read, { ...read, chainId: 1 }],
+      chainId: 11155111,
+    });
+    expect(results).toStrictEqual([true, false]);
+    expect(mockGetPublicClient).toHaveBeenCalledWith(CONFIG, { chainId: 11155111 });
+    expect(actions.multicall).toHaveBeenCalledWith(CONFIG, {
+      contracts: [read, read],
+      allowFailure: false,
+      chainId: 11155111,
+      deployless: false,
+    });
+    expect(actions.readContract).not.toHaveBeenCalled();
+  });
+
+  test("sends Multicall3's code with the call on a chain that names no Multicall3", async () => {
+    const actions = await import("wagmi/actions");
+    mockGetPublicClient.mockReturnValue({ chain: {} });
+    vi.mocked(actions.multicall).mockResolvedValue([true, true] as never);
+    await provider.multicall({ calls: [read, read], chainId: 11155111 });
+    expect(actions.multicall).toHaveBeenCalledWith(
+      CONFIG,
+      expect.objectContaining({ deployless: true }),
+    );
+    expect(actions.readContract).not.toHaveBeenCalled();
   });
 });

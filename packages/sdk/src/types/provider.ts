@@ -1,6 +1,7 @@
 import type { Address, Hex } from "viem";
 import type {
   ContractAbi,
+  MulticallReturnType,
   ReadContractArgs,
   ReadContractConfig,
   ReadContractReturnType,
@@ -35,6 +36,16 @@ export interface GenericProvider {
   >(
     config: ReadContractConfig<TAbi, TFunctionName, TArgs>,
   ): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
+  /**
+   * Run many reads in one Multicall3 call, on `chainId` when given, and return
+   * the results in call order. One reverted read rejects the whole call. Each
+   * call's own `chainId` is ignored. Optional: without it, the SDK reads one
+   * call at a time.
+   */
+  multicall?<const TCalls extends readonly ReadContractConfig[]>(params: {
+    readonly calls: TCalls;
+    readonly chainId?: number;
+  }): Promise<MulticallReturnType<TCalls>>;
   /** Wait for a transaction to be mined and return its receipt. */
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
   /**

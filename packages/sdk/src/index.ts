@@ -212,6 +212,7 @@ export type {
   PrepareTransactionRequest,
   ReadContractArgs,
   ReadContractConfig,
+  MulticallReturnType,
   ReadContractReturnType,
   ReadFunctionName,
   RevokeDelegationRequest,

@@ -4,6 +4,7 @@ import type {
   GenericLogger,
   GenericProvider,
   Hex,
+  MulticallReturnType,
   ReadContractArgs,
   ReadContractConfig,
   ReadContractReturnType,
@@ -26,6 +27,7 @@ import {
   getChainId,
   getConnectorClient,
   getPublicClient,
+  multicall,
   readContract,
   waitForTransactionReceipt,
 } from "wagmi/actions";
@@ -82,6 +84,26 @@ export class WagmiProvider implements GenericProvider {
   ): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>> {
     // wagmi routes a `chainId` to that chain's client, so the read need not be on the connected chain.
     return readContract(this.#config, config);
+  }
+
+  /**
+   * Run many reads in one Multicall3 call, on `chainId`'s client. On a chain
+   * whose definition names no Multicall3, such as a local Hardhat node, the
+   * call carries its code.
+   */
+  async multicall<const TCalls extends readonly ReadContractConfig[]>(params: {
+    readonly calls: TCalls;
+    readonly chainId?: number;
+  }): Promise<MulticallReturnType<TCalls>> {
+    const { calls, chainId } = params;
+    const results = await multicall(this.#config, {
+      contracts: calls.map(({ chainId: _, ...call }) => call) as never,
+      allowFailure: false,
+      chainId,
+      deployless:
+        getPublicClient(this.#config, { chainId })?.chain.contracts?.multicall3 === undefined,
+    });
+    return results as MulticallReturnType<TCalls>;
   }
 
   /**

@@ -40,6 +40,7 @@ export type {
   ContractAbi,
   ReadFunctionName,
   ReadContractArgs,
+  MulticallReturnType,
   ReadContractReturnType,
   ReadContractConfig,
   WriteFunctionName,
