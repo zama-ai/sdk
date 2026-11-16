@@ -177,7 +177,27 @@ function useWallClock() {
   return now;
 }
 
+const UNITS = [
+  ["d", 86_400],
+  ["h", 3_600],
+  ["m", 60],
+  ["s", 1],
+] as const;
+
+/** The two largest units: `2d 3h`, `4h 23m`, `12m 5s`, `45s`. */
 function formatSeconds(seconds: number) {
-  const minutes = Math.floor(seconds / 60);
-  return minutes > 0 ? `${minutes}m ${seconds % 60}s` : `${seconds}s`;
+  const parts: string[] = [];
+  let rest = Math.floor(seconds);
+  for (const [unit, size] of UNITS) {
+    const count = Math.floor(rest / size);
+    rest -= count * size;
+    if (count > 0 || parts.length > 0) {
+      parts.push(`${count}${unit}`);
+    }
+    if (parts.length === 2) {
+      break;
+    }
+  }
+  // `1m`, not `1m 0s`.
+  return parts.filter((part, index) => index === 0 || !part.startsWith("0")).join(" ") || "0s";
 }

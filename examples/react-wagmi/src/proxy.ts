@@ -24,20 +24,20 @@ const dynamicFrameSrc = ["https://verify.walletconnect.com", "https://verify.wal
 
 // Everything the page connects to: this origin (relayer proxy, /api/networks, WASM and
 // worker files), the RPC of every network in the table (the SDK probes the wallet's chain
-// on connect, served or not), the storage the relayers' `keyurl` names for the FHE public
-// key and CRS, and data: URLs, which the FHE runtime fetches to compile its WASM when
-// encryption runs in the page instead of the encrypt worker.
-const connectSrc = new Set([
+// on connect, served or not), data: URLs, which the FHE runtime fetches to compile its WASM
+// when encryption runs in the page instead of the encrypt worker, and, added per request,
+// the storage the relayers' `keyurl` names for the FHE public key and CRS.
+const staticConnectSrc = [
   "'self'",
   ...NETWORK_KEYS.map((key) => new URL(networks[key].chain.rpcUrls.default.http[0]).origin),
-  ...keyStorageOrigins,
   "data:",
   ...(dynamicEnabled ? dynamicConnectSrc : []),
-]);
+];
 
 const isDev = process.env.NODE_ENV === "development";
 
-function contentSecurityPolicy(nonce: string): string {
+function contentSecurityPolicy(nonce: string, keyOrigins: readonly string[]): string {
+  const connectSrc = new Set([...staticConnectSrc, ...keyOrigins]);
   return [
     "default-src 'self'",
     // 'wasm-unsafe-eval': the FHE runtime compiles WASM. 'unsafe-eval': only `next dev`,
@@ -65,9 +65,10 @@ function contentSecurityPolicy(nonce: string): string {
   ].join("; ");
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
-  const csp = contentSecurityPolicy(nonce);
+  // Cached: only the first page load after a start, or after an hour, waits for the relayers.
+  const csp = contentSecurityPolicy(nonce, await keyStorageOrigins());
 
   // On the request so Next.js picks the nonce up while rendering, on the response so the
   // browser enforces it.
