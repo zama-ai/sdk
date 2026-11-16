@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { Address } from "@zama-fhe/sdk";
+import {
+  decimalsContract,
+  nameContract,
+  rateContract,
+  symbolContract,
+  type Address,
+} from "@zama-fhe/sdk";
 import { getAddress, isAddress, parseAbi } from "viem";
 import { useReadContracts } from "wagmi";
 import { defineVault, type BatchRef } from "@zama-fhe/sdk/vaults";
@@ -18,19 +24,11 @@ export function singleVault(vault: BatchVault) {
 
 export type Vault = ReturnType<typeof singleVault>;
 
-/** What a batcher exposes about the vault it joins. */
-export const BATCHER_ABI = parseAbi([
+// What a batcher exposes about the vault it joins.
+const BATCHER_ABI = parseAbi([
   "function fromToken() view returns (address)",
   "function toToken() view returns (address)",
   "function vault() view returns (address)",
-]);
-
-const DETAILS_ABI = parseAbi([
-  "function name() view returns (string)",
-  "function symbol() view returns (string)",
-  "function decimals() view returns (uint8)",
-  // On each confidential wrapper: underlying units per confidential unit.
-  "function rate() view returns (uint256)",
 ]);
 
 export interface VaultDetails {
@@ -38,17 +36,21 @@ export interface VaultDetails {
   name: string;
   /** The ERC-4626 vault. */
   erc4626: Address;
+  /** `rate` is the wrapper's underlying units per confidential unit. */
   asset: { address: Address; symbol: string; decimals: number; rate: bigint };
   share: { address: Address; symbol: string; decimals: number; rate: bigint };
 }
 
 /**
  * What each vault's deposit batcher points at, by vault index: the asset it takes, the share it
- * pays out, and the ERC-4626 vault, with their names, decimals and wrapper rates. `undefined`
- * for a vault while its reads are loading or if they failed.
+ * pays out, and the ERC-4626 vault, with their names, decimals and wrapper rates. A vault's
+ * details are `undefined` while its reads load, and its error is set if one of them failed.
  */
-export function useVaultDetails(vaults: BatchVault[]): (VaultDetails | undefined)[] {
-  const { data: targets } = useReadContracts({
+export function useVaultDetails(vaults: BatchVault[]): {
+  details: (VaultDetails | undefined)[];
+  errors: (Error | undefined)[];
+} {
+  const { data: targets, error: targetsError } = useReadContracts({
     contracts: vaults.flatMap((vault) =>
       (["fromToken", "toToken", "vault"] as const).map((functionName) => ({
         address: vault.depositBatcher,
@@ -69,23 +71,16 @@ export function useVaultDetails(vaults: BatchVault[]): (VaultDetails | undefined
       }),
     [vaults, targets],
   );
-  const { data: reads } = useReadContracts({
-    contracts: resolved.flatMap(({ chainId, asset, share, erc4626 }) =>
-      [
-        [erc4626, "name"],
-        [asset, "symbol"],
-        [asset, "decimals"],
-        [asset, "rate"],
-        [share, "symbol"],
-        [share, "decimals"],
-        [share, "rate"],
-      ].map(([address, functionName]) => ({
-        address: address as Address,
-        abi: DETAILS_ABI,
-        functionName: functionName as "name" | "symbol" | "decimals" | "rate",
-        chainId,
-      })),
-    ),
+  const { data: reads, error: readsError } = useReadContracts({
+    contracts: resolved.flatMap(({ chainId, asset, share, erc4626 }) => [
+      { ...nameContract(erc4626), chainId },
+      { ...symbolContract(asset), chainId },
+      { ...decimalsContract(asset), chainId },
+      { ...rateContract(asset), chainId },
+      { ...symbolContract(share), chainId },
+      { ...decimalsContract(share), chainId },
+      { ...rateContract(share), chainId },
+    ]),
     query: { enabled: resolved.length > 0 },
   });
 
@@ -93,13 +88,32 @@ export function useVaultDetails(vaults: BatchVault[]): (VaultDetails | undefined
   // when a read changes, and callers can key memos and queries on it.
   return useMemo(() => {
     const details: (VaultDetails | undefined)[] = vaults.map(() => undefined);
+    const errors = vaults.map(
+      (_, index) =>
+        targetsError ??
+        targets?.slice(3 * index, 3 * index + 3).find((read) => read.status === "failure")?.error,
+    );
     resolved.forEach(({ index, asset, share, erc4626 }, k) => {
-      const values = reads?.slice(7 * k, 7 * k + 7).map((read) => read.result);
-      if (!values || values.some((value) => value === undefined)) {
+      const results = reads?.slice(7 * k, 7 * k + 7);
+      const error = readsError ?? results?.find((read) => read.status === "failure")?.error;
+      if (error) {
+        errors[index] = error;
         return;
       }
+      if (results?.length !== 7) {
+        return;
+      }
+      // One vault's seven reads, in the order they were listed above.
       const [name, assetSymbol, assetDecimals, assetRate, shareSymbol, shareDecimals, shareRate] =
-        values as [string, string, number, bigint, string, number, bigint];
+        results.map((read) => read.result) as [
+          string,
+          string,
+          number,
+          bigint,
+          string,
+          number,
+          bigint,
+        ];
       details[index] = {
         name,
         erc4626,
@@ -107,8 +121,8 @@ export function useVaultDetails(vaults: BatchVault[]): (VaultDetails | undefined
         share: { address: share, symbol: shareSymbol, decimals: shareDecimals, rate: shareRate },
       };
     });
-    return details;
-  }, [vaults, resolved, reads]);
+    return { details, errors };
+  }, [vaults, targets, targetsError, resolved, reads, readsError]);
 }
 
 // Each deposit or withdrawal returns the batch it landed in, and the app needs it to read and act

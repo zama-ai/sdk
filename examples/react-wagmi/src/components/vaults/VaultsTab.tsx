@@ -2,13 +2,12 @@
 
 import { useMemo, useState } from "react";
 import type { Address } from "@zama-fhe/sdk";
-import { useReadContracts } from "wagmi";
 import { PositionsOverview } from "@/components/vaults/PositionsOverview";
 import { VaultActionCard } from "@/components/vaults/VaultActionCard";
 import { describeError } from "@/lib/errors";
 import { useNetwork } from "@/lib/hooks";
 import type { BatchVault } from "@/lib/networks";
-import { BATCHER_ABI, singleVault, useVaultDetails, type VaultDetails } from "@/lib/vaults";
+import { singleVault, useVaultDetails, type VaultDetails } from "@/lib/vaults";
 
 export function VaultsTab({ account }: { account: Address }) {
   const { vaults } = useNetwork();
@@ -29,7 +28,7 @@ export function VaultsTab({ account }: { account: Address }) {
 // The vault is set by its two batchers. The app reads everything else through the deposit
 // batcher: the asset, the share token, and the ERC-4626 vault.
 function VaultsView({ vaults, account }: { vaults: BatchVault[]; account: Address }) {
-  const details = useVaultDetails(vaults);
+  const { details, errors } = useVaultDetails(vaults);
   const [selected, setSelected] = useState(0);
   // Another network can list fewer vaults: fall back to its first one.
   const index = selected < vaults.length ? selected : 0;
@@ -49,6 +48,8 @@ function VaultsView({ vaults, account }: { vaults: BatchVault[]; account: Addres
       <VaultPanel
         key={`${vault.chainId}:${vault.depositBatcher}`}
         vault={vault}
+        detail={details[index]}
+        error={errors[index]}
         account={account}
       />
     </>
@@ -111,21 +112,18 @@ function VaultPicker({ vaults, details, value, onChange }: VaultPickerProps) {
   );
 }
 
-function VaultPanel({ vault, account }: { vault: BatchVault; account: Address }) {
-  // The deposit batcher takes the vault's asset and pays out its shares.
-  const { data, error } = useReadContracts({
-    contracts: (["fromToken", "toToken"] as const).map((functionName) => ({
-      address: vault.depositBatcher,
-      abi: BATCHER_ABI,
-      functionName,
-      chainId: vault.chainId,
-    })),
-    allowFailure: false,
-  });
-  const [assetToken, shareToken] = data ?? [];
+interface VaultPanelProps {
+  vault: BatchVault;
+  /** From `useVaultDetails`: the vault's asset and share tokens. */
+  detail: VaultDetails | undefined;
+  error: Error | undefined;
+  account: Address;
+}
+
+function VaultPanel({ vault, detail, error, account }: VaultPanelProps) {
   // Built once per vault, so the read hooks see the same vault on every render.
   const defined = useMemo(() => singleVault(vault), [vault]);
-  if (!assetToken || !shareToken) {
+  if (!detail) {
     return (
       <section className="card">
         {error ? (
@@ -139,6 +137,8 @@ function VaultPanel({ vault, account }: { vault: BatchVault; account: Address })
     );
   }
 
+  const assetToken = detail.asset.address;
+  const shareToken = detail.share.address;
   // One permit covers both tokens and both batchers (for the amounts of the batches in progress).
   const permitContracts = [assetToken, shareToken, vault.depositBatcher, vault.redeemBatcher];
   const props = { vault: defined, account, permitContracts };
