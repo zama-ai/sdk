@@ -9,3 +9,5 @@
 /.github/workflows/daemon.yml @zama-ai/infosec
 /.github/workflows/release.yml @zama-ai/infosec
 /.github/workflows/daemon-image-scan.yml @zama-ai/infosec
+/.github/workflows/sbom.yml @zama-ai/infosec
+/scripts/sbom/ @zama-ai/infosec

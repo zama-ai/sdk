@@ -22,6 +22,7 @@ on:
       - ".github/actions/install-deps/**"
       - ".github/workflows/daemon.yml"
       - ".trivyignore"
+      - "scripts/sbom/**"
   workflow_dispatch:
   workflow_call:
     secrets:
@@ -203,6 +204,16 @@ jobs:
           severity: CRITICAL,HIGH
           trivyignores: .trivyignore
           version: v0.76.0
+      # The release SBOM step, run on the CI image, so a change that breaks it fails here and not at release.
+      - uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
+        with:
+          version: v0.76.0
+      - name: Generate and check the image SBOM
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: >-
+          node scripts/sbom/generate.mjs sdk-daemon --version 0.0.0-ci --out "${RUNNER_TEMP}/sbom"
+          --image ghcr.io/zama-ai/sdk-daemon:ci --arch "${ARCH}"
       - name: Start the daemon with the deployment Compose file
         env:
           ZAMA_SDK_VERSION: ci
