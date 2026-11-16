@@ -28,6 +28,9 @@
     "typescript": "7.0.2"
   },
   "overrides": {
+    "@coinbase/cdp-sdk": {
+      "zod": "$zod"
+    },
     "@dynamic-labs-sdk/client": {
       "zod": "$zod"
     },
