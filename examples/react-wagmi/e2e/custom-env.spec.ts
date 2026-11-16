@@ -12,6 +12,7 @@ const validEnv = {
   NEXT_PUBLIC_ZAMA_INPUT_VERIFIER_ADDRESS: "0x3333333333333333333333333333333333333333",
   NEXT_PUBLIC_ZAMA_DECRYPTION_ADDRESS: "0x4444444444444444444444444444444444444444",
   NEXT_PUBLIC_ZAMA_INPUT_VERIFICATION_ADDRESS: "0x5555555555555555555555555555555555555555",
+  NEXT_PUBLIC_ZAMA_KMS_GENERATION_ADDRESS: "0x8888888888888888888888888888888888888888",
   NEXT_PUBLIC_ZAMA_PROTOCOL_CONFIG_ADDRESS: "",
   NEXT_PUBLIC_REGISTRY_ADDRESS: "",
 };
@@ -43,6 +44,9 @@ test.describe("NEXT_PUBLIC_ZAMA_ENV=custom", () => {
     expect(networks.sepolia.label).toBe("Sepolia · Custom environment");
     expect(networks.sepolia.fhe.gatewayChainId).toBe(10901);
     expect(networks.sepolia.fhe.aclContractAddress).toBe(validEnv.NEXT_PUBLIC_ZAMA_ACL_ADDRESS);
+    expect(networks.sepolia.fhe.kmsGenerationContractAddress).toBe(
+      validEnv.NEXT_PUBLIC_ZAMA_KMS_GENERATION_ADDRESS,
+    );
     expect(networks.sepolia.fhe.registryAddress).toBeUndefined();
   });
 
