@@ -483,9 +483,7 @@ The app configures one vault, so it uses `defineVault` and joins with `{ vault }
 const MAIN = defineVault({
   id: "main",
   chainId: sepolia.id,
-  asset: "0xConfidentialUSDC",
   batchers: { deposit: "0xMainDeposit", redeem: "0xMainRedeem" },
-  share: "0xMainShare",
 });
 
 deposit.mutate({ vault: MAIN, amount });
@@ -496,23 +494,17 @@ of the group, the chosen one with the amount and the others with an encrypted ze
 tell which vault the user picked. Name the chosen vault with `vaultId`:
 
 ```ts
-const STABLE = defineVaultGroup({
-  id: "stable",
+const ALPHA = defineVault({
+  id: "alpha",
   chainId: sepolia.id,
-  asset: "0xConfidentialUSDC",
-  vaults: [
-    {
-      id: "alpha",
-      batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
-      share: "0xAlphaShare",
-    },
-    {
-      id: "beta",
-      batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
-      share: "0xBetaShare",
-    },
-  ],
+  batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
 });
+const BETA = defineVault({
+  id: "beta",
+  chainId: sepolia.id,
+  batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
+});
+const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
 
 deposit.mutate({ group: STABLE, vaultId: "beta", amount });
 ```

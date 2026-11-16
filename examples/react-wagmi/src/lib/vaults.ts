@@ -7,13 +7,11 @@ import { defineVault, type BatchRef } from "@zama-fhe/sdk/vaults";
 import type { BatchVault } from "@/lib/networks";
 
 /** The configured vault, on its own: every join has a single leg, so it lands in a single batch. */
-export function singleVault(vault: BatchVault, asset: Address, share: Address) {
+export function singleVault(vault: BatchVault) {
   return defineVault({
     id: "main",
     chainId: vault.chainId,
-    asset,
     batchers: { deposit: vault.depositBatcher, redeem: vault.redeemBatcher },
-    share,
   });
 }
 

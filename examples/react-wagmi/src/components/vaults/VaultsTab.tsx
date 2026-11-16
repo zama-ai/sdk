@@ -18,8 +18,8 @@ import { useNetwork } from "@/lib/hooks";
 import type { BatchVault } from "@/lib/networks";
 import { singleVault } from "@/lib/vaults";
 
-// The vault names the asset and the share token. This app reads both from the deposit
-// batcher, so only the two batchers need to be set.
+// The vault is set by its two batchers. This app reads the asset and the share token from the
+// deposit batcher, so nothing else needs to be set.
 const BATCHER_ABI = parseAbi([
   "function fromToken() view returns (address)",
   "function toToken() view returns (address)",
@@ -62,11 +62,8 @@ function VaultPanel({ vault, account }: { vault: BatchVault; account: Address })
   });
   const [assetToken, shareToken, erc4626] = data ?? [];
   // Built once per vault, so the read hooks see the same vault on every render.
-  const defined = useMemo(
-    () => (assetToken && shareToken ? singleVault(vault, assetToken, shareToken) : undefined),
-    [vault, assetToken, shareToken],
-  );
-  if (!defined || !assetToken || !shareToken || !erc4626) {
+  const defined = useMemo(() => singleVault(vault), [vault]);
+  if (!assetToken || !shareToken || !erc4626) {
     return (
       <section className="card">
         {error ? (
