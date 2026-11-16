@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.8.0-beta.22](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.21...v3.8.0-beta.22) (2026-11-16)
+
+### Bug Fixes
+
+- **deps:** raise the uuid floor in the react-wagmi example ([#923](https://github.com/zama-ai/sdk/issues/923)) ([80ba309]())
+
 ## [3.8.0-beta.21](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.20...v3.8.0-beta.21) (2026-11-13)
 
 ### Features
