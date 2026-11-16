@@ -12,14 +12,12 @@ import { parseContextConfig } from "./sdk-config.js";
 import type { ContextFactory } from "./runtime.js";
 import { diagnosticsLogger } from "./diagnostics.js";
 
-/** The published typings strip the internal `telemetry` field. */
-type MarkableConfig = ZamaConfig & {
-  telemetry:
-    | { runtime?: "web" | "node" | "daemon"; client?: "go" | "rust" | "unknown" }
-    | undefined;
-};
+type TelemetryClient = "go" | "rust" | "unknown";
 
-function telemetryClient(language: ClientLanguage): "go" | "rust" | "unknown" {
+/** The daemon typechecks against the built typings, which strip the internal `telemetry` field. */
+type MarkableConfig = ZamaConfig & { telemetry: { daemonClient?: TelemetryClient } | undefined };
+
+function telemetryClient(language: ClientLanguage): TelemetryClient {
   switch (language) {
     case ClientLanguage.CLIENT_LANGUAGE_GO:
       return "go";
@@ -36,8 +34,7 @@ function telemetryClient(language: ClientLanguage): "go" | "rust" | "unknown" {
 export function markDaemonTelemetry(config: ZamaConfig, language: ClientLanguage): void {
   const { telemetry } = config as MarkableConfig;
   if (telemetry) {
-    telemetry.runtime = "daemon";
-    telemetry.client = telemetryClient(language);
+    telemetry.daemonClient = telemetryClient(language);
   }
 }
 

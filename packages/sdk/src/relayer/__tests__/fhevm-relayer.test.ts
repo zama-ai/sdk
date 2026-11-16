@@ -793,8 +793,7 @@ describe("FhevmRelayer usage telemetry", () => {
   test("node() reports the daemon runtime and client set after creation", async () => {
     const state: TelemetryState = { layer: "core", mode: "header" };
     const relayer = node().createRelayer(hostedChain, new LoggerService(), state);
-    state.runtime = "daemon";
-    state.client = "go";
+    state.daemonClient = "go";
     await relayer.fetchFheEncryptionKeyBytes();
 
     expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
@@ -812,8 +811,7 @@ describe("FhevmRelayer usage telemetry", () => {
   test("node() reports the daemon runtime and client in query mode", async () => {
     const state: TelemetryState = { layer: "core", mode: "query" };
     const relayer = node().createRelayer(hostedChain, new LoggerService(), state);
-    state.runtime = "daemon";
-    state.client = "go";
+    state.daemonClient = "go";
     await relayer.fetchFheEncryptionKeyBytes();
 
     expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({

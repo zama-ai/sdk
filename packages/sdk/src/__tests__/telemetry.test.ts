@@ -47,12 +47,9 @@ describe("telemetryRequestOptions", () => {
     );
   });
 
-  test("lets the state runtime override the relayer runtime and adds the client", () => {
+  test("reports the daemon runtime and client when the state names a daemon client", () => {
     const base = telemetry("header");
-    const marked = {
-      ...base,
-      state: { ...base.state, runtime: "daemon" as const, client: "go" as const },
-    };
+    const marked = { ...base, state: { ...base.state, daemonClient: "go" as const } };
     expect(telemetryRequestOptions(marked, "unshield").headers).toEqual({
       "x-zama-sdk-version": SDK_VERSION,
       "x-zama-sdk-layer": "core",

@@ -41,7 +41,7 @@ describe("markDaemonTelemetry", () => {
     const { config, telemetry } = fakeConfig({ layer: "core", mode: "header" });
     markDaemonTelemetry(config, language);
 
-    expect(telemetry).toEqual({ layer: "core", mode: "header", runtime: "daemon", client });
+    expect(telemetry).toEqual({ layer: "core", mode: "header", daemonClient: client });
   });
 
   test("is a no-op when telemetry is off", () => {
