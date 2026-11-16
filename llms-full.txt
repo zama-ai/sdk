@@ -2076,7 +2076,7 @@ Relayers are no longer classes you instantiate; they are factories placed in a
 
 `cleartext()` is **new in v3** — the relayer for cleartext-mode chains (no FHE,
 KMS, or gateway): local dev (`hardhat`) and the cleartext testnets (`hoodi`,
-`zenithTrexTestnet`, `bscTestnet`).
+`zenithTrexTestnet`).
 
 ```ts
 // Before
@@ -2538,7 +2538,11 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 > **Unreleased.** The changes on this page are on the prerelease (`beta`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
 
 
-_Nothing is staged for the next release yet._
+## `bscTestnet` targets the real protocol
+
+The `bscTestnet` preset (chain ID `97`) now targets the Zama protocol on BNB Smart Chain testnet through the hosted testnet relayer, like `sepolia`. Use it with `web()` or `node()` instead of `cleartext()`. The preset includes the wrappers registry address, so token discovery needs no extra configuration.
+
+**Breaking change for the BSC cleartext deployment:** the preset no longer carries that deployment's contract addresses or `executorAddress`. To keep using it, define a custom `FheChain` with its addresses and use `cleartext()`. See [What each chain includes](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/network-presets.md#what-each-chain-includes).
 
 ## 3.x
 
@@ -3695,7 +3699,7 @@ let config = SdkConfig::new(11_155_111, rpc_url); // Sepolia preset
 
 
 > [!INFO]
-> The shared Zama testnet relayer needs **no API key**: presets like `sepolia` and `polygonAmoy` work as-is, so leave `auth` unset. Only the Zama-hosted **mainnet** relayer (used by `mainnet` and `polygon`) requires a key; see [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md).
+> The shared Zama testnet relayer needs **no API key**: presets like `sepolia`, `polygonAmoy` and `bscTestnet` work as-is, so leave `auth` unset. Only the Zama-hosted **mainnet** relayer (used by `mainnet` and `polygon`) requires a key; see [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md).
 
 
 ### 2. Pick a relayer

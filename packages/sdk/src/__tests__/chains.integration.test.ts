@@ -22,11 +22,10 @@
  * Each entry runs its own single-chain `ZamaSDK` rather than one shared
  * multi-chain instance: reads are bound to a single RPC (`ViemProvider` wraps
  * one `PublicClient`) and the relayer transport differs per chain. Mainnet,
- * Polygon and Sepolia have full FHE infrastructure and use the `node()`
- * relayer; the cleartext testnets (hoodi / bsc / zenith) have no hosted relayer
- * and drive the
- * FHE backend through `cleartext()`. `hardhat` needs a local node and is out of
- * scope.
+ * Polygon, Sepolia and BSC testnet have full FHE infrastructure and use the
+ * `node()` relayer; the cleartext testnets (hoodi / zenith) have no hosted relayer
+ * and drive the FHE backend through `cleartext()`. `hardhat` needs a local node
+ * and is out of scope.
  *
  * The hosted mainnet relayer requires a Zama API key (`x-api-key` header), so
  * the Ethereum mainnet and Polygon entries only wire relayer `auth` when
@@ -99,16 +98,17 @@ const entries: readonly ChainEntry[] = [
     underlyingTokenAddress: "0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF",
   },
   {
+    chain: bscTestnet,
+    relayer: node(),
+    // TODO(SDK-413): a real wrapper pair from the BSC testnet registry.
+    confidentialTokenAddress: "0x0000000000000000000000000000000000041302",
+    underlyingTokenAddress: "0x0000000000000000000000000000000000041303",
+  },
+  {
     chain: hoodi,
     relayer: cleartext(),
     confidentialTokenAddress: "0x2dEBbe0487Ef921dF4457F9E36eD05Be2df1AC75",
     underlyingTokenAddress: "0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b",
-  },
-  {
-    chain: bscTestnet,
-    relayer: cleartext(),
-    confidentialTokenAddress: "0xbb9Ac1000B79a035B7Aa933cf6E44B51a2f6222a",
-    underlyingTokenAddress: "0x1b3BC224c233D38Db8A92DA3fC44d01A9232b64c",
   },
   {
     chain: zenithTrexTestnet,
