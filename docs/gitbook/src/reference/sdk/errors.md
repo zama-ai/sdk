@@ -19,7 +19,12 @@ import {
   EncryptOffloadUnavailableError,
   DecryptionFailedError,
   TransactionRevertedError,
+  HcuBlockLimitExceededError,
+  HcuTransactionLimitExceededError,
   UnshieldAlreadyFinalizedError,
+  VaultBatcherPausedError,
+  VaultBatchNotDispatchedError,
+  VaultJoinUnconfirmedError,
   InvalidTransportKeyPairError,
   TransportKeyPairExpiredError,
   RevokedKmsContextError,
@@ -106,7 +111,7 @@ try {
 | `isRetryable`       | `(error: unknown) => error is ZamaError & { retryable: true }` | `true` only for a `ZamaError` instance whose `.retryable` is `true`; `false` for anything else, including non-SDK errors.                                                                                                                            |
 | `retryAfterSeconds` | `(error: unknown) => number \| undefined`                      | Reads the error's own `retryAfter` field when the error is retryable and carries one. Only `RelayerRequestFailedError` and `RpcRateLimitError` currently carry `retryAfter` — treat `undefined` as "retry with your own backoff," not "don't retry." |
 
-Exactly five error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, and `WalletAccountNotReadyError`. See [Retry transient failures](../../guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
+Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, `WalletAccountNotReadyError`, and `HcuBlockLimitExceededError`. See [Retry transient failures](../../guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
 
 ## Error summary
 
@@ -118,7 +123,12 @@ Exactly five error classes are retryable today: `RpcRateLimitError`, `RelayerReq
 | `EncryptOffloadUnavailableError`          | `ENCRYPT_OFFLOAD_UNAVAILABLE`            | `offloadEncrypt: true` required the encrypt worker, which is unavailable                                                          |
 | `DecryptionFailedError`                   | `DECRYPTION_FAILED`                      | FHE decryption failed                                                                                                             |
 | `TransactionRevertedError`                | `TRANSACTION_REVERTED`                   | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
+| `HcuBlockLimitExceededError`              | `HCU_BLOCK_LIMIT_EXCEEDED`               | Gas estimation found too little FHE compute (HCU) left in the block; retry in the next block (retryable)                          |
+| `HcuTransactionLimitExceededError`        | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | The transaction needs more FHE compute (HCU), in total or in one sequential chain, than one transaction may use                   |
 | `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
+| `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | A batcher one leg of a vault join would reach is paused, so the whole join would revert                                           |
+| `VaultBatchNotDispatchedError`            | `VAULT_BATCH_NOT_DISPATCHED`             | A vault batch cannot be finalized because it is not dispatched: it is still pending, or it was already finalized or canceled      |
+| `VaultJoinUnconfirmedError`               | `VAULT_JOIN_UNCONFIRMED`                 | A vault join was mined, but its receipt has no matching `Joined` event for at least one leg                                       |
 | `InvalidTransportKeyPairError`            | `INVALID_KEYPAIR`                        | Relayer rejected transport key pair (stale or malformed)                                                                          |
 | `TransportKeyPairExpiredError`            | `KEYPAIR_EXPIRED`                        | Transport key pair expired — user must re-sign                                                                                    |
 | `RevokedKmsContextError`                  | `REVOKED_KMS_CONTEXT`                    | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                                   |
@@ -149,7 +159,7 @@ Exactly five error classes are retryable today: `RpcRateLimitError`, `RelayerReq
 | `SignerNotConfiguredError`                | `SIGNER_NOT_CONFIGURED`                  | SDK operation needs a signer but none is configured                                                                               |
 | `WalletNotConnectedError`                 | `WALLET_NOT_CONNECTED`                   | Signer exists but has no connected wallet account                                                                                 |
 | `WalletAccountNotReadyError`              | `WALLET_ACCOUNT_NOT_READY`               | Async signer adapter has not resolved its account yet                                                                             |
-| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains                                                                                       |
+| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains, or the signer is not on the vault group's or batch's `chainId`                       |
 | `AclPausedError`                          | `ACL_PAUSED`                             | ACL contract is paused                                                                                                            |
 
 ## Error details
@@ -186,7 +196,7 @@ Thrown when a signer adapter is configured but does not currently have a connect
 
 **Code:** `CHAIN_MISMATCH`
 
-Thrown when the signer and provider resolve to different chains during an operation. The error carries `operation`, `signerChainId`, and `providerChainId`.
+Thrown when the signer and provider resolve to different chains during an operation, or when a vault action is sent while the signer is not on the chain of the vault group or batch it acts on. The error carries `operation`, `signerChainId`, `providerChainId`, and `targetChainId` (the group's or batch's chain, or `undefined`).
 
 ```ts
 matchZamaError(error, {
@@ -270,7 +280,7 @@ matchZamaError(error, { DECRYPTION_FAILED: () => showError("Decryption failed �
 
 **Code:** `TRANSACTION_REVERTED`
 
-An on-chain transaction reverted. The error `.message` includes the revert reason when available.
+An on-chain transaction reverted, either before submission or in the block it was mined in. The error `.message` includes the revert reason when available; a receipt reports no reason, only the transaction hash.
 
 ```ts
 matchZamaError(error, {
@@ -278,7 +288,36 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Inspect the revert reason. Common causes: insufficient balance or an expired operator approval. Finalizing an already-finalized unwrap through `resumeUnshield()` or `unshield()` throws the more specific `UnshieldAlreadyFinalizedError` instead.
+**How to handle:** Inspect the revert reason. Common causes: insufficient balance or an expired operator approval. Finalizing an already-finalized unwrap through `resumeUnshield()` or `unshield()` throws the more specific `UnshieldAlreadyFinalizedError` instead, and a revert from the protocol's FHE compute limits throws `HcuBlockLimitExceededError` or `HcuTransactionLimitExceededError`.
+
+### HcuBlockLimitExceededError
+
+**Code:** `HCU_BLOCK_LIMIT_EXCEEDED`
+
+The protocol caps the FHE compute, measured in HCU, that a block can use. Gas estimation found too little left in the current block for this transaction. The cap is checked again when the transaction is mined, so a transaction that passed estimation can still revert in the block it lands in; that case surfaces as `TransactionRevertedError`.
+
+```ts
+matchZamaError(error, {
+  HCU_BLOCK_LIMIT_EXCEEDED: () => showError("The network is busy. Retrying in the next block…"),
+});
+```
+
+**How to handle:** Retry in the next block. The error is retryable, so `isRetryable(error)` is `true`; `retryAfterSeconds(error)` is `undefined`, so use your own backoff of about one block time.
+
+### HcuTransactionLimitExceededError
+
+**Code:** `HCU_TRANSACTION_LIMIT_EXCEEDED`
+
+The protocol caps the FHE compute, measured in HCU, that one transaction can use: a total, and a limit on one sequential chain of operations (depth). The transaction needs more than that; the `.message` says which cap was hit.
+
+```ts
+matchZamaError(error, {
+  HCU_TRANSACTION_LIMIT_EXCEEDED: () =>
+    showError("This operation is too large for one transaction"),
+});
+```
+
+**How to handle:** Do not retry: the same transaction costs the same HCU every time. Do less FHE work per transaction.
 
 ### UnshieldAlreadyFinalizedError
 
@@ -293,6 +332,42 @@ matchZamaError(error, {
 ```
 
 **How to handle:** Treat it as completion, not a failure: dismiss the "resume unshield" prompt and refresh balances. `useResumeUnshield` invalidates the affected queries automatically. Do not retry; nothing is left to finalize.
+
+### VaultBatcherPausedError
+
+**Code:** `VAULT_BATCHER_PAUSED`
+
+Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()` and `prepareRedeem()` when a batcher the join reaches is paused, before anything is sent. The error carries the paused `batcher` and its `vaultId`.
+
+**How to handle:** Not retryable until the batcher is unpaused. Claims and quits still work. Show which vault is paused. See [Paused batchers](../../guides/vaults/advanced.md#paused-batchers).
+
+### VaultBatchNotDispatchedError
+
+**Code:** `VAULT_BATCH_NOT_DISPATCHED`
+
+Thrown by `VaultClient.finalize()` and `VaultClient.prepareFinalize()` when the batch is not dispatched, before the public decryption. The error carries the `batcher`, the `batchId`, and the batch's `state` instead: `"pending"`, `"finalized"` or `"canceled"`.
+
+```ts
+matchZamaError(error, {
+  VAULT_BATCH_NOT_DISPATCHED: (e) => (e.state === "pending" ? waitForDispatch() : refreshBatch()),
+});
+```
+
+**How to handle:** Not retryable as is. A `"finalized"` or `"canceled"` batch was usually settled by a keeper first: read the batch again with `readBatch` and offer the actions in its `actions`. A `"pending"` batch must be dispatched first.
+
+### VaultJoinUnconfirmedError
+
+**Code:** `VAULT_JOIN_UNCONFIRMED`
+
+Thrown by `VaultClient.deposit()` and `VaultClient.redeem()` when the join was mined but the SDK could not match a `Joined` event in its receipt to every leg, so it cannot return every batch. The error carries the `txHash`, the `receipt`, and `unconfirmedVaultIds`: the vaults whose log the SDK could not match. It does not mean those legs did not join.
+
+```ts
+matchZamaError(error, {
+  VAULT_JOIN_UNCONFIRMED: (e) => showUnconfirmedJoin(e.txHash, e.unconfirmedVaultIds),
+});
+```
+
+**How to handle:** Do not resubmit. A join is all-or-nothing, and a reverted transaction throws `TransactionRevertedError` instead, so every leg most likely joined. Resubmitting would deposit twice. Show the user `txHash` and look the transaction up. Read the batch ids from the `Joined` events in `receipt` or from your indexer.
 
 ### InvalidTransportKeyPairError
 

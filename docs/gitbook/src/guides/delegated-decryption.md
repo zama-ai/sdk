@@ -1,6 +1,6 @@
 ---
 title: Delegated decryption
-description: Grant another address the right to decrypt confidential balances, then read those balances as a delegate.
+description: Grant another address the right to decrypt confidential balances, then read those balances as a delegate, in TypeScript, React, Go, or Rust.
 ---
 
 # Delegated decryption
@@ -15,6 +15,10 @@ Common use cases:
 This guide uses `sdk.delegations` and `token.decryptBalanceAs` in the core SDK, or the `useDelegateDecryption` and `useDecryptBalanceAs` hooks in React. Before starting, make sure your project is set up following the [Configuration](./configuration.md) guide.
 
 ## Example
+
+{% hint style="info" %}
+Available in the Core SDK and React SDK.
+{% endhint %}
 
 A complete delegation flow — grant, then decrypt as delegate (the SDK rides out ACL propagation for you):
 
@@ -100,10 +104,57 @@ await delegate({ delegateAddress: "0xDelegate", expirationDate: new Date("2027-1
 ```
 
 {% endtab %}
+{% tab title="Go" %}
+
+```go
+// Permanent delegation (no expiration)
+_, err := sdk.DelegateDecryption(ctx, zama.DelegateDecryptionParams{
+	ContractAddress: token,
+	DelegateAddress: delegate,
+})
+if err != nil {
+	return err
+}
+
+// Delegation with an expiration date
+expiry := time.Date(2027, time.December, 31, 0, 0, 0, 0, time.UTC)
+_, err = sdk.DelegateDecryption(ctx, zama.DelegateDecryptionParams{
+	ContractAddress: token,
+	DelegateAddress: delegate,
+	ExpirationDate:  &expiry,
+})
+if err != nil {
+	return err
+}
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+use std::time::{Duration, UNIX_EPOCH};
+use zama_sdk::DelegateDecryptionParams;
+
+// Permanent delegation (no expiration)
+sdk.delegations()
+    .delegate_decryption(DelegateDecryptionParams {
+        contract_address: token,
+        delegate_address: delegate,
+        expiration_date_ms: None,
+    })
+    .await?;
+
+// Delegation with an expiration date (2027-12-31T00:00:00Z)
+let expiry = UNIX_EPOCH + Duration::from_secs(1_830_211_200);
+let params = DelegateDecryptionParams::expiring_at(token, delegate, expiry)?;
+sdk.delegations().delegate_decryption(params).await?;
+```
+
+{% endtab %}
 {% endtabs %}
 
 {% hint style="warning" %}
-The expiration date must be **at least 1 hour in the future**. Passing a closer date throws `DelegationExpirationTooSoonError` before the transaction is sent.
+The expiration date must be **at least 1 hour in the future**. Passing a closer date throws `DelegationExpirationTooSoonError` (`DELEGATION_EXPIRATION_TOO_SOON`) before the transaction is sent.
 {% endhint %}
 
 ### 2. ACL propagation (handled for you)
@@ -111,7 +162,7 @@ The expiration date must be **at least 1 hour in the future**. Passing a closer 
 After the delegation transaction is mined, the Zama Gateway (on Arbitrum) syncs the ACL state via cross-chain event propagation — usually within ~10 blocks (a few seconds). You don't need to wait or poll: the delegated-decrypt path rides out that window with a bounded internal retry (~30s), so a decrypt issued right after granting simply waits for sync.
 
 {% hint style="info" %}
-`DelegationNotPropagatedError` only surfaces if propagation outlasts the retry budget (rare) — or if you opt out of the wait with `waitForPropagation: false` on `sdk.decryption.delegatedDecryptValues` to fail fast instead.
+`DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`) only surfaces if propagation outlasts the retry budget (rare) — or if you opt out of the wait with `waitForPropagation: false` on `sdk.decryption.delegatedDecryptValues` to fail fast instead.
 {% endhint %}
 
 ### 3. Decrypt as delegate
@@ -143,6 +194,60 @@ await decryptAs({ delegatorAddress: "0xDelegator" });
 
 // When the balance holder differs from the delegator, pass accountAddress explicitly:
 await decryptAs({ delegatorAddress: "0xDelegator", accountAddress: "0xBalanceHolder" });
+```
+
+{% endtab %}
+{% tab title="Go" %}
+
+Pass the encrypted balance your application read from the token contract.
+
+```go
+inputs := []zama.EncryptedInput{{EncryptedValue: encryptedBalance, ContractAddress: token}}
+balances, err := sdk.DelegatedDecryptValues(ctx, inputs, delegator, zama.DelegatedDecryptOptions{})
+if err != nil {
+	return err
+}
+balance := balances[encryptedBalance].Integer
+
+// When the balance holder differs from the delegator, pass AccountAddress explicitly:
+other, err := sdk.DelegatedDecryptValues(ctx, inputs, delegator, zama.DelegatedDecryptOptions{
+	AccountAddress: &balanceHolder,
+})
+if err != nil {
+	return err
+}
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+Pass the encrypted balance your application read from the token contract.
+
+```rust
+use zama_sdk::{ClearValue, DelegatedOptions, EncryptedInput};
+
+let inputs = [EncryptedInput {
+    encrypted_value: encrypted_balance,
+    contract_address: token,
+}];
+let balances = sdk
+    .decryption()
+    .delegated_decrypt_values(&inputs, delegator, DelegatedOptions::default())
+    .await?;
+let balance = balances.get(&encrypted_balance);
+
+// When the balance holder differs from the delegator, pass account_address explicitly:
+let other = sdk
+    .decryption()
+    .delegated_decrypt_values(
+        &inputs,
+        delegator,
+        DelegatedOptions {
+            account_address: Some(balance_holder),
+            ..Default::default()
+        },
+    )
+    .await?;
 ```
 
 {% endtab %}
@@ -178,6 +283,40 @@ const { data } = useDelegationStatus({
 });
 
 // data?.isActive, data?.expiryTimestamp
+```
+
+{% endtab %}
+{% tab title="Go" %}
+
+```go
+status, err := sdk.GetDelegationStatus(ctx, zama.DelegationQuery{
+	ContractAddress:  token,
+	DelegatorAddress: delegator,
+	DelegateAddress:  delegate,
+})
+if err != nil {
+	return err
+}
+
+// status.IsActive, status.ExpiryTimestamp
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+use zama_sdk::DelegationQuery;
+
+let status = sdk
+    .delegations()
+    .get_status(DelegationQuery {
+        contract_address: token,
+        delegator_address: delegator,
+        delegate_address: delegate,
+    })
+    .await?;
+
+// status.is_active, status.expiry_timestamp
 ```
 
 {% endtab %}
@@ -234,6 +373,58 @@ try {
 ```
 
 {% endtab %}
+{% tab title="Go" %}
+
+Pass one encrypted balance per token. Each item carries its own value or error, so one failing token does not reject the batch.
+
+```go
+maxConcurrency := uint32(3)
+items, err := sdk.DelegatedBatchDecryptValues(ctx, inputs, delegator, zama.DelegatedBatchOptions{
+	MaxConcurrency: &maxConcurrency,
+})
+if err != nil {
+	return err
+}
+
+for _, item := range items {
+	if item.Error != nil {
+		fmt.Println(item.ContractAddress, item.Error)
+		continue
+	}
+	fmt.Printf("%s: %s\n", item.ContractAddress, item.Value.Integer)
+}
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+Pass one encrypted balance per token. Each item carries its own value or error, so one failing token does not reject the batch.
+
+```rust
+use zama_sdk::{ClearValue, DelegatedBatchOptions};
+
+let items = sdk
+    .decryption()
+    .delegated_batch_decrypt_values(
+        &inputs,
+        delegator,
+        DelegatedBatchOptions {
+            max_concurrency: Some(3),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+for item in items {
+    match item.result {
+        Ok(ClearValue::BigInt(balance)) => println!("{}: {balance}", item.contract_address),
+        Ok(other) => println!("{}: {other:?}", item.contract_address),
+        Err(error) => eprintln!("{}: {}", item.contract_address, error.code),
+    }
+}
+```
+
+{% endtab %}
 {% endtabs %}
 
 ### 6. Delegate for all contracts with the wildcard address (optional)
@@ -264,6 +455,34 @@ await delegate({ delegateAddress: "0xDelegate" });
 ```
 
 {% endtab %}
+{% tab title="Go" %}
+
+```go
+_, err := sdk.DelegateDecryption(ctx, zama.DelegateDecryptionParams{
+	ContractAddress: zama.WildcardContract,
+	DelegateAddress: delegate,
+})
+if err != nil {
+	return err
+}
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+use zama_sdk::{DelegateDecryptionParams, WILDCARD_CONTRACT};
+
+sdk.delegations()
+    .delegate_decryption(DelegateDecryptionParams {
+        contract_address: WILDCARD_CONTRACT,
+        delegate_address: delegate,
+        expiration_date_ms: None,
+    })
+    .await?;
+```
+
+{% endtab %}
 {% endtabs %}
 
 {% hint style="info" %}
@@ -291,6 +510,33 @@ import { useRevokeDelegation } from "@zama-fhe/react-sdk";
 const { mutateAsync: revoke } = useRevokeDelegation("0xConfidentialToken");
 
 await revoke({ delegateAddress: "0xDelegate" });
+```
+
+{% endtab %}
+{% tab title="Go" %}
+
+```go
+_, err := sdk.RevokeDelegation(ctx, zama.RevokeDelegationParams{
+	ContractAddress: token,
+	DelegateAddress: delegate,
+})
+if err != nil {
+	return err
+}
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+use zama_sdk::RevokeDelegationParams;
+
+sdk.delegations()
+    .revoke_delegation(RevokeDelegationParams {
+        contract_address: token,
+        delegate_address: delegate,
+    })
+    .await?;
 ```
 
 {% endtab %}
@@ -356,6 +602,84 @@ if (error instanceof SigningRejectedError) {
 ```
 
 {% endtab %}
+{% tab title="Go" %}
+
+```go
+var sdkErr *zama.SDKError
+
+_, err := sdk.DelegateDecryption(ctx, zama.DelegateDecryptionParams{
+	ContractAddress: token,
+	DelegateAddress: delegate,
+})
+if errors.As(err, &sdkErr) {
+	switch sdkErr.Code {
+	case "DELEGATION_EXPIRATION_TOO_SOON":
+		// expiration date is less than 1 hour in the future
+	case "TRANSACTION_REVERTED":
+		// on-chain transaction failed
+	}
+}
+
+_, err = sdk.DelegatedDecryptValues(ctx, inputs, delegator, zama.DelegatedDecryptOptions{})
+if errors.As(err, &sdkErr) {
+	switch sdkErr.Code {
+	case zama.CodeSigningRejected:
+		// user cancelled the wallet prompt: do not retry automatically
+	case "DELEGATION_NOT_PROPAGATED":
+		// delegation still hadn't synced after the SDK's internal retry: rare, retry shortly
+	case "DECRYPTION_FAILED":
+		// delegated decryption failed
+	}
+}
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+use zama_sdk::{DelegateDecryptionParams, DelegatedOptions};
+
+let granted = sdk
+    .delegations()
+    .delegate_decryption(DelegateDecryptionParams {
+        contract_address: token,
+        delegate_address: delegate,
+        expiration_date_ms: None,
+    })
+    .await;
+if let Err(error) = granted {
+    match error.sdk_error().map(|details| details.code.as_str()) {
+        Some("DELEGATION_EXPIRATION_TOO_SOON") => {
+            // expiration date is less than 1 hour in the future
+        }
+        Some("TRANSACTION_REVERTED") => {
+            // on-chain transaction failed
+        }
+        _ => {}
+    }
+}
+
+let decrypted = sdk
+    .decryption()
+    .delegated_decrypt_values(&inputs, delegator, DelegatedOptions::default())
+    .await;
+if let Err(error) = decrypted {
+    match error.sdk_error().map(|details| details.code.as_str()) {
+        Some("SIGNING_REJECTED") => {
+            // user cancelled the wallet prompt: do not retry automatically
+        }
+        Some("DELEGATION_NOT_PROPAGATED") => {
+            // delegation still hadn't synced after the SDK's internal retry: rare, retry shortly
+        }
+        Some("DECRYPTION_FAILED") => {
+            // delegated decryption failed
+        }
+        _ => {}
+    }
+}
+```
+
+{% endtab %}
 {% endtabs %}
 
 See [Handle errors](./handle-errors.md) for full error-handling patterns and [Error types](../reference/sdk/errors.md) for the complete list.
@@ -366,3 +690,4 @@ See [Handle errors](./handle-errors.md) for full error-handling patterns and [Er
 - [useDelegateDecryption](../reference/react/useDelegateDecryption.md) — React hook to grant delegation
 - [useDecryptBalanceAs](../reference/react/useDecryptBalanceAs.md) — React hook to decrypt as a delegate
 - [useDelegationStatus](../reference/react/useDelegationStatus.md) — React hook to query delegation status
+- [Go client API](../native/reference/go-client.md) and [Rust client API](../native/reference/rust-client.md)

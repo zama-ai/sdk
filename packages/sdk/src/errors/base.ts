@@ -28,6 +28,10 @@ export const ZamaErrorCode = {
   EncryptOffloadUnavailable: "ENCRYPT_OFFLOAD_UNAVAILABLE",
   /** On-chain transaction reverted. */
   TransactionReverted: "TRANSACTION_REVERTED",
+  /** The block's FHE compute budget (HCU) is spent. Retryable: it resets every block. */
+  HcuBlockLimitExceeded: "HCU_BLOCK_LIMIT_EXCEEDED",
+  /** The transaction needs more FHE compute (HCU) than one transaction may use. */
+  HcuTransactionLimitExceeded: "HCU_TRANSACTION_LIMIT_EXCEEDED",
   /** Transport key pair has expired and needs regeneration. */
   TransportKeyPairExpired: "KEYPAIR_EXPIRED",
   /** Relayer rejected transport key pair (stale, expired, or malformed). */
@@ -94,6 +98,12 @@ export const ZamaErrorCode = {
   PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED",
   /** The unwrap request was already finalized on-chain; there is nothing left to resume. */
   UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED",
+  /** A batcher a vault join needs is paused. */
+  VaultBatcherPaused: "VAULT_BATCHER_PAUSED",
+  /** A batch to be finalized is not dispatched. */
+  VaultBatchNotDispatched: "VAULT_BATCH_NOT_DISPATCHED",
+  /** A vault join was mined, but its receipt does not confirm every leg. */
+  VaultJoinUnconfirmed: "VAULT_JOIN_UNCONFIRMED",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
@@ -120,6 +130,8 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.DecryptionFailed]: false,
   [ZamaErrorCode.EncryptOffloadUnavailable]: false, // the worker realm is unusable for this page; a retry hits the same environment
   [ZamaErrorCode.TransactionReverted]: false,
+  [ZamaErrorCode.HcuBlockLimitExceeded]: true, // the block budget resets every block
+  [ZamaErrorCode.HcuTransactionLimitExceeded]: false, // the same transaction costs the same HCU on every retry
   [ZamaErrorCode.TransportKeyPairExpired]: false,
   [ZamaErrorCode.InvalidTransportKeyPair]: false,
   [ZamaErrorCode.RevokedKmsContext]: false, // the retry already re-granted; a blind retry re-hits the stale validity cache
@@ -153,6 +165,9 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.PreparedPermitChainMismatch]: false, // caller must register against the chain the permit was prepared for
   [ZamaErrorCode.PreparedPermitExpired]: false, // caller must prepare the permit again for a fresh validity window
   [ZamaErrorCode.UnshieldAlreadyFinalized]: false, // the funds already arrived; the stale pointer is cleared
+  [ZamaErrorCode.VaultBatcherPaused]: false, // stays paused until the batcher is unpaused, not on retry
+  [ZamaErrorCode.VaultBatchNotDispatched]: false, // a settled batch stays settled; a pending one waits for its dispatch
+  [ZamaErrorCode.VaultJoinUnconfirmed]: false, // the transaction is mined; a retry would submit another
 };
 
 /**

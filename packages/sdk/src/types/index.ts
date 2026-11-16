@@ -4,6 +4,7 @@ export type {
   WriteFunctionName,
   ReadContractArgs,
   WriteContractArgs,
+  MulticallReturnType,
   ReadContractReturnType,
   ReadContractConfig,
   WriteContractConfig,

@@ -15,22 +15,14 @@ import {
   symbolContract,
 } from "./contracts";
 import { ConfigurationError } from "./errors/relayer";
-import {
-  mainnet,
-  polygon,
-  sepolia,
-  polygonAmoy,
-  hoodi,
-  zenithTrexTestnet,
-  bscTestnet,
-} from "./chains";
+import { mainnet, polygon, sepolia, hoodi, zenithTrexTestnet, bscTestnet } from "./chains";
 import { checksummedAddress, nonNegativeSeconds } from "./schemas/primitives";
 import type { GenericProvider } from "./types/provider";
 import { parseSchema } from "./validation";
 
 /**
  * Default wrappers registry addresses for known chains.
- * Only includes chains where a registry is deployed (excludes Hardhat).
+ * Only includes chains where a registry is deployed.
  *
  * @deprecated Read `registryAddress` from the chain presets instead (e.g.
  * `sepolia.registryAddress`). Will be removed in the next major version.
@@ -39,7 +31,6 @@ export const DefaultRegistryAddresses: Record<number, Address> = {
   [mainnet.id]: mainnet.registryAddress,
   [polygon.id]: polygon.registryAddress,
   [sepolia.id]: sepolia.registryAddress,
-  [polygonAmoy.id]: polygonAmoy.registryAddress,
   [hoodi.id]: hoodi.registryAddress,
   [zenithTrexTestnet.id]: zenithTrexTestnet.registryAddress,
   [bscTestnet.id]: bscTestnet.registryAddress,

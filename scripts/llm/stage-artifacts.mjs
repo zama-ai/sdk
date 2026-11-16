@@ -24,6 +24,7 @@ function runInherit(command, args) {
 const corpusSourcePatterns = [
   /^README\.md$/u,
   /^packages\/(?:sdk|react-sdk)\/README\.md$/u,
+  /^clients\/(?:go|rust)\/README\.md$/u,
   /^docs\/gitbook\/src\/.+\.md$/u,
   /^docs\/gitbook\/\.gitbook\/includes\/.+\.md$/u,
   /^docs\/llm\/corpus\.config\.json$/u,

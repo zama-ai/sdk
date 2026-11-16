@@ -16,7 +16,7 @@ import type { FheChain } from "../chains/types";
 import { ConfigurationError } from "../errors";
 import { getAppliedWireRuntime, hasAppliedLocateFile } from "./applied-runtime";
 import type { LoggerService } from "../services/logger-service";
-import { type RelayerTelemetry, telemetryHeaders } from "../telemetry";
+import { type RelayerTelemetry, telemetryRequestOptions } from "../telemetry";
 import {
   DEFAULT_ENCRYPT_WORKER_TIMEOUTS,
   EncryptWorkerClient,
@@ -213,7 +213,7 @@ export class FhevmRelayer implements RelayerSDK {
     return this.#chain;
   }
 
-  // `operation` becomes a header here and must never reach `@fhevm/sdk`.
+  // `operation` is the SDK's own label and must never reach `@fhevm/sdk`.
   #requestOptions<T extends Partial<FhevmRelayerOptions> | undefined>(
     options: T,
   ): Omit<Partial<FhevmRelayerOptions> & NonNullable<T>, "operation"> {
@@ -224,9 +224,11 @@ export class FhevmRelayer implements RelayerSDK {
     if (this.#telemetry === undefined) {
       return merged;
     }
+    const { headers, query } = telemetryRequestOptions(this.#telemetry, operation);
     return {
       ...merged,
-      headers: { ...merged.headers, ...telemetryHeaders(this.#telemetry, operation) },
+      ...(headers && { headers: { ...merged.headers, ...headers } }),
+      ...(query && { query: { ...merged.query, ...query } }),
     };
   }
 
@@ -638,15 +640,13 @@ function encryptOffloadBlocker(runtime: WireRuntimeConfig | undefined): string |
  *
  * @throws if the auth discriminator is not one of the supported kinds.
  */
-function toFhevmAuth(
+export function toFhevmAuth(
   auth: NonNullable<FheChain["auth"]>,
 ): NonNullable<FhevmRelayerOptions["auth"]> {
   const type = auth["__type"];
   switch (type) {
     case "ApiKeyHeader":
       return { type, value: auth.value, header: auth.header };
-    case "ApiKeyCookie":
-      return { type, value: auth.value, cookie: auth.cookie };
     case "BearerToken":
       return { type, token: auth.token };
     default:

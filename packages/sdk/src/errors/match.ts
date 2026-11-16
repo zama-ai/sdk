@@ -45,8 +45,17 @@ import type {
   WalletNotConnectedError,
 } from "./signer";
 import type { SigningFailedError, SigningRejectedError } from "./signing";
-import type { TransactionRevertedError } from "./transaction";
+import type {
+  HcuBlockLimitExceededError,
+  HcuTransactionLimitExceededError,
+  TransactionRevertedError,
+} from "./transaction";
 import type { UnshieldAlreadyFinalizedError } from "./unshield";
+import type {
+  VaultBatcherPausedError,
+  VaultBatchNotDispatchedError,
+  VaultJoinUnconfirmedError,
+} from "./vaults";
 
 /**
  * Maps each {@link ZamaErrorCode} to the error class thrown with that code, so
@@ -66,6 +75,10 @@ export interface ErrorForCode {
   [ZamaErrorCode.EncryptOffloadUnavailable]: EncryptOffloadUnavailableError;
   /** Thrown for {@link ZamaErrorCode.TransactionReverted}. */
   [ZamaErrorCode.TransactionReverted]: TransactionRevertedError;
+  /** Thrown for {@link ZamaErrorCode.HcuBlockLimitExceeded}. */
+  [ZamaErrorCode.HcuBlockLimitExceeded]: HcuBlockLimitExceededError;
+  /** Thrown for {@link ZamaErrorCode.HcuTransactionLimitExceeded}. */
+  [ZamaErrorCode.HcuTransactionLimitExceeded]: HcuTransactionLimitExceededError;
   /** Thrown for {@link ZamaErrorCode.TransportKeyPairExpired}. */
   [ZamaErrorCode.TransportKeyPairExpired]: TransportKeyPairExpiredError;
   /** Thrown for {@link ZamaErrorCode.InvalidTransportKeyPair}. */
@@ -132,6 +145,12 @@ export interface ErrorForCode {
   [ZamaErrorCode.PreparedPermitExpired]: PreparedPermitExpiredError;
   /** Thrown for {@link ZamaErrorCode.UnshieldAlreadyFinalized}. */
   [ZamaErrorCode.UnshieldAlreadyFinalized]: UnshieldAlreadyFinalizedError;
+  /** Thrown for {@link ZamaErrorCode.VaultBatcherPaused}. */
+  [ZamaErrorCode.VaultBatcherPaused]: VaultBatcherPausedError;
+  /** Thrown for {@link ZamaErrorCode.VaultBatchNotDispatched}. */
+  [ZamaErrorCode.VaultBatchNotDispatched]: VaultBatchNotDispatchedError;
+  /** Thrown for {@link ZamaErrorCode.VaultJoinUnconfirmed}. */
+  [ZamaErrorCode.VaultJoinUnconfirmed]: VaultJoinUnconfirmedError;
 }
 
 /**

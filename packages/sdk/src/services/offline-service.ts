@@ -24,6 +24,7 @@ import {
   EncryptionFailedError,
   wrapDecryptError,
 } from "../errors";
+import { matchHcuRevert } from "../errors/hcu-revert";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import {
   approveUnderlyingRequest,
@@ -143,7 +144,9 @@ export class OfflineService {
       fees: options?.fees,
     };
     const parsed = parseSchema(prepareTransactionParams, params);
-    const unsignedTx = await this.#provider.prepareTransaction(parsed);
+    const unsignedTx = await this.#provider.prepareTransaction(parsed).catch((error: unknown) => {
+      throw matchHcuRevert(error, `prepare ${request.kind}`) ?? error;
+    });
     return { kind: request.kind, unsignedTx, from: parsed.from } satisfies PreparedFor<K>;
   }
 

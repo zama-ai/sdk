@@ -1,0 +1,6 @@
+**
+!clients
+!clients/go
+!clients/go/**
+**/.tools
+**/.env*

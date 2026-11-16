@@ -48,6 +48,7 @@ export type CreateLifecycleServiceFn = (overrides?: {
   cachingService?: CachingService;
   router?: ChainRouter;
   credentialService?: CredentialService;
+  clearCredentialsOnWalletChange?: boolean;
 }) => LifecycleService;
 
 export interface ServiceFixtures {
@@ -136,6 +137,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
         cachingService: overrides.cachingService ?? cachingService,
         router: overrides.router ?? createMockRouter({ relayer }),
         credentialService: overrides.credentialService,
+        clearCredentialsOnWalletChange: overrides.clearCredentialsOnWalletChange ?? true,
         logger: new LoggerService(),
       });
     await use(factory);

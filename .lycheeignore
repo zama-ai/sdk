@@ -7,3 +7,10 @@ localhost
 # Placeholder API key in infura sample URLs (sepolia/mainnet.infura.io/v3/YOUR_KEY) —
 # matches the key, not the host, so real infura links would still be checked.
 YOUR_KEY
+
+# Daemon links that resolve only once released (SDK-375).
+# Remove the next two after the first beta release that ships the daemon:
+pkg\.go\.dev/github\.com/zama-ai/sdk/clients/go
+docs\.zama\.org/protocol/sdk/(beta/)?native/
+# Remove after the first stable release that ships the daemon:
+raw\.githubusercontent\.com/zama-ai/sdk/[^/]+/packages/sdk-daemon/deploy/

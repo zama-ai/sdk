@@ -4,7 +4,9 @@
 
 ## Getting Started
 
-- [Quick start](tutorials/quick-start.md)
+- [TypeScript quick start](tutorials/quick-start.md)
+- [Go quick start](native/tutorials/go-quick-start.md)
+- [Rust quick start](native/tutorials/rust-quick-start.md)
 - [First confidential dApp](tutorials/first-confidential-dapp.md)
 - [Wallet & exchange integration](tutorials/wallet-exchange-integration.md)
 - [Build with an LLM](tutorials/build-with-an-llm.md)
@@ -51,7 +53,27 @@
 - [Operator approvals](guides/operator-approvals.md)
 - [Delegated decryption](guides/delegated-decryption.md)
 - [Encrypt & decrypt](guides/encrypt-decrypt.md)
-- [Vault deposits and redemptions](guides/vault-deposits.md)
+
+## Vaults
+
+- [Vaults overview](guides/vaults/README.md)
+- [Deposits and redemptions](guides/vaults/deposits.md)
+- [Handle wallet prompts, upgrades and custom sending](guides/vaults/advanced.md)
+- [Building a vault UI](guides/vaults/building-a-ui.md)
+
+## Go & Rust guide
+
+- [Go & Rust overview](native/README.md)
+- [Clients](native/guides/README.md)
+  - [Attach a wallet](native/guides/attach-wallet.md)
+  - [Store credentials](native/guides/credential-storage.md)
+  - [Observe events](native/guides/observe-events.md)
+  - [Recover from disconnections](native/guides/recover-from-disconnections.md)
+  - [Resolve uncertain transaction outcomes](native/guides/uncertain-transaction-outcomes.md)
+- [Daemon deployment](native/operations/README.md)
+  - [Deploy in production](native/operations/run-in-production.md)
+  - [Monitor and troubleshoot](native/operations/monitor-and-troubleshoot.md)
+  - [Upgrade the daemon](native/operations/upgrade-and-recover.md)
 
 ## API References
 
@@ -60,8 +82,7 @@
   - [Token](reference/sdk/Token.md)
   - [WrappedToken](reference/sdk/WrappedToken.md)
   - [WrappersRegistry](reference/sdk/WrappersRegistry.md)
-  - [Vault](reference/sdk/Vault.md)
-  - [VaultBatcher](reference/sdk/VaultBatcher.md)
+  - [VaultClient](reference/sdk/VaultClient.md)
   - [web() transport](reference/sdk/RelayerWeb.md)
   - [node() transport](reference/sdk/RelayerNode.md)
   - [cleartext() transport](reference/sdk/RelayerCleartext.md)
@@ -130,22 +151,27 @@
   - [useDelegationStatus](reference/react/useDelegationStatus.md)
   - [useDecryptBalanceAs](reference/react/useDecryptBalanceAs.md)
   - [useBatchDecryptBalancesAs](reference/react/useBatchDecryptBalancesAs.md)
-  - [useVault](reference/react/useVault.md)
-  - [useVaultBatcher](reference/react/useVaultBatcher.md)
+  - [useVaultClient](reference/react/useVaultClient.md)
   - [useDeposit](reference/react/useDeposit.md)
   - [useRedeem](reference/react/useRedeem.md)
-  - [useJoin](reference/react/useJoin.md)
+  - [useBatch](reference/react/useBatch.md)
+  - [useOpenBatches](reference/react/useOpenBatches.md)
   - [useClaim](reference/react/useClaim.md)
   - [useQuit](reference/react/useQuit.md)
-  - [useRecover](reference/react/useRecover.md)
-  - [useDispatchBatch](reference/react/useDispatchBatch.md)
-  - [useCurrentBatchId](reference/react/useCurrentBatchId.md)
-  - [useBatchState](reference/react/useBatchState.md)
-  - [useTimeUntilDispatchable](reference/react/useTimeUntilDispatchable.md)
+  - [useDispatch](reference/react/useDispatch.md)
+  - [useFinalize](reference/react/useFinalize.md)
   - [Query keys](reference/react/query-keys.md)
+
+- [Go client](native/reference/go-client.md)
+- [Rust client](native/reference/rust-client.md)
+- [Daemon configuration](native/reference/daemon-configuration.md)
+- [Daemon error codes](native/reference/error-codes.md)
+- [Client and daemon compatibility](native/reference/client-and-daemon-compatibility.md)
 
 ## Concepts
 
 - [Architecture](concepts/architecture.md)
 - [Permit model](concepts/permit-model.md)
 - [Security model](concepts/security-model.md)
+- [Daemon architecture](native/concepts/architecture.md)
+- [Daemon trust model](native/concepts/trust-boundary.md)

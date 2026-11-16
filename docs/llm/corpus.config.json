@@ -3,14 +3,7 @@
   "rawGithubBaseUrl": "https://raw.githubusercontent.com/zama-ai/sdk/main",
   "docs": { "root": "docs/gitbook/src", "summary": "docs/gitbook/src/SUMMARY.md" },
   "examples": {
-    "approved": [
-      "example-hoodi",
-      "node-ethers",
-      "node-viem",
-      "react-ethers",
-      "react-viem",
-      "react-wagmi"
-    ],
+    "approved": ["node-ethers", "node-viem", "react-ethers", "react-viem", "react-wagmi"],
     "excluded": ["react-ledger"],
     "docFiles": ["README.md", "WALKTHROUGH.md"]
   },
@@ -29,6 +22,16 @@
       "path": "packages/react-sdk/README.md",
       "title": "@zama-fhe/react-sdk",
       "description": "React SDK with ZamaProvider, confidential token hooks, and TanStack Query integration on top of the core SDK."
+    },
+    {
+      "path": "clients/go/README.md",
+      "title": "Go client",
+      "description": "Go client installation and entry points for using the Zama SDK daemon."
+    },
+    {
+      "path": "clients/rust/README.md",
+      "title": "Rust client",
+      "description": "Rust client installation and entry points for using the Zama SDK daemon."
     }
   ],
   "apiReports": [

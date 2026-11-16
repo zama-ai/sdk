@@ -1,6 +1,6 @@
 ---
 title: Authentication
-description: How to authenticate with the relayer using a backend proxy or a direct API key.
+description: How to authenticate with the relayer using a backend proxy or a direct API key, from TypeScript, Go, or Rust.
 ---
 
 # Authentication
@@ -86,7 +86,7 @@ You can adapt this pattern to any server framework (Fastify, Hono, Next.js API r
 
 - Forward the HTTP method, path, and body to the upstream relayer URL
 - Inject the `x-api-key` header before forwarding
-- Forward the `x-zama-sdk-*` request headers so [SDK usage telemetry](./telemetry.md) still reaches the relayer
+- Forward the `x-zama-sdk-*` request headers so [SDK usage telemetry](./telemetry.md) still reaches the relayer. If your proxy cannot pass custom headers through, set `telemetry: "query"` in the SDK config and forward the request URL's query string instead
 - Return the upstream response status and body to the client
 
 ### 3. Configure the SDK to use your proxy
@@ -128,6 +128,9 @@ No `auth` field is needed on the client side — the proxy handles authenticatio
 
 When the SDK runs in a trusted environment (Node.js script, backend service), you can pass the API key directly on the chain definition:
 
+{% tabs %}
+{% tab title="Core SDK" %}
+
 ```ts
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
@@ -140,32 +143,95 @@ const mySepolia = {
 
 Then pass `mySepolia` to `createConfig` — the `auth` field is picked up automatically by the relayer. See the [Node.js backend guide](./node-js-backend.md) for a complete example.
 
+{% endtab %}
+{% tab title="Go" %}
+
+```go
+config := zama.NewSDKConfig(11155111, "https://sepolia.infura.io/v3/YOUR_KEY")
+config.Auth = zama.APIKeyHeader{Value: os.Getenv("RELAYER_API_KEY")}
+```
+
+Pass `config` to `client.CreateContext`; see [Configuration](./configuration.md#4-create-the-config).
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+let chain = ChainConfig::new(11_155_111, "https://sepolia.infura.io/v3/YOUR_KEY")
+    .with_auth(RelayerAuth::api_key(env::var("RELAYER_API_KEY")?));
+let config = SdkConfig::from_chains(11_155_111, vec![chain]);
+```
+
+Pass `config` to `client.sdk(config)`; see [Configuration](./configuration.md#4-create-the-config).
+
+{% endtab %}
+{% endtabs %}
+
 The `auth` field supports multiple methods depending on how your relayer is configured.
 
 ### 5. Auth methods reference
 
-The `auth` field accepts three formats. **Which one to use depends on where your relayer lives** — the transport has to match what your relayer (or the auth layer in front of it) expects.
+The `auth` field accepts two formats. **Which one to use depends on where your relayer lives** — the transport has to match what your relayer (or the auth layer in front of it) expects.
 
 | Method         | How it's sent                   | Use it when                                                                                                              |
 | -------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `ApiKeyHeader` | `x-api-key: key` header         | **Zama-hosted relayer** — required; it only accepts the key in the `x-api-key` header. Also the default for most setups. |
-| `ApiKeyCookie` | `x-api-key=key` cookie          | **Behind your own proxy** — authenticate the SDK→proxy hop with a cookie; your proxy then injects `x-api-key` upstream.  |
 | `BearerToken`  | `Authorization: Bearer <token>` | **Self-hosted relayer** — only if your own auth layer expects a bearer token.                                            |
 
 {% hint style="warning" %}
-Against the **Zama-hosted relayer**, only `ApiKeyHeader` works — requests without the `x-api-key` header are rejected. `BearerToken` and `ApiKeyCookie` are for self-hosted relayers or proxied setups where you control the auth layer.
+Against the **Zama-hosted relayer**, only `ApiKeyHeader` works — requests without the `x-api-key` header are rejected. `BearerToken` is for self-hosted relayers or proxied setups where you control the auth layer.
 {% endhint %}
+
+{% tabs %}
+{% tab title="Core SDK" %}
 
 ```ts
 // Zama-hosted relayer — API key in the x-api-key header (required)
 auth: { __type: "ApiKeyHeader", value: "your-api-key" }
 
-// Behind your own proxy — credential carried as a cookie to your proxy
-auth: { __type: "ApiKeyCookie", value: "your-api-key" }
+// Behind your own proxy — a credential for your proxy, in the header it reads
+auth: { __type: "ApiKeyHeader", header: "x-proxy-key", value: "your-proxy-credential" }
 
 // Self-hosted relayer — only if your auth layer expects a bearer token
 auth: { __type: "BearerToken", token: "your-token" }
 ```
+
+{% endtab %}
+{% tab title="Go" %}
+
+```go
+// Zama-hosted relayer -- API key in the x-api-key header (required)
+config.Auth = zama.APIKeyHeader{Value: "your-api-key"}
+
+// Behind your own proxy -- a credential for your proxy, in the header it reads
+header := "x-proxy-key"
+config.Auth = zama.APIKeyHeader{Value: "your-proxy-credential", Header: &header}
+
+// Self-hosted relayer -- only if your auth layer expects a bearer token
+config.Auth = zama.BearerToken{Token: "your-token"}
+```
+
+{% endtab %}
+{% tab title="Rust" %}
+
+```rust
+// Zama-hosted relayer -- API key in the x-api-key header (required)
+let auth = RelayerAuth::api_key("your-api-key");
+
+// Behind your own proxy -- a credential for your proxy, in the header it reads
+let auth = RelayerAuth::ApiKeyHeader {
+    value: "your-proxy-credential".into(),
+    header: Some("x-proxy-key".into()),
+};
+
+// Self-hosted relayer -- only if your auth layer expects a bearer token
+let auth = RelayerAuth::BearerToken { token: "your-token".into() };
+```
+
+{% endtab %}
+{% endtabs %}
+
+`ApiKeyHeader` takes an optional `header` name (the default is `x-api-key`). Behind your own proxy, set it to the header your proxy reads to authenticate the SDK; the proxy then adds the real `x-api-key` upstream, so the Zama API key stays server-side.
 
 When a browser relayer is routed through your own proxy, enforce CSRF protection
 at the proxy/application boundary (for example, with same-site cookies and your

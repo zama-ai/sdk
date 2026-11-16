@@ -1,0 +1,129 @@
+use crate::{
+    Client, ClientError, Result, Sdk, SdkConfig, Signer, Storage, WalletAccount,
+    operations::Operations, signer::attach_signer, storage_channel::attach_storage,
+    types::SignerConfig,
+};
+use std::{collections::HashMap, sync::Arc};
+
+pub struct SdkBuilder {
+    client: Client,
+    config: SdkConfig,
+    signer: Option<(Option<WalletAccount>, Arc<dyn Signer>)>,
+    storage: Storage,
+    permit_storage: Option<Storage>,
+    derivation_secret: Option<crate::DerivationSecret>,
+    events: Option<Arc<dyn crate::EventHandler>>,
+}
+impl SdkBuilder {
+    pub(crate) fn new(client: Client, config: SdkConfig) -> Self {
+        Self {
+            client,
+            config,
+            signer: None,
+            storage: Storage::Memory,
+            permit_storage: None,
+            derivation_secret: None,
+            events: None,
+        }
+    }
+    pub fn signer(mut self, account: Option<WalletAccount>, signer: impl Signer + 'static) -> Self {
+        self.signer = Some((account, Arc::new(signer)));
+        self
+    }
+    pub fn storage(mut self, storage: impl Into<Storage>) -> Self {
+        self.storage = storage.into();
+        self
+    }
+    pub fn permit_storage(mut self, storage: impl Into<Storage>) -> Self {
+        self.permit_storage = Some(storage.into());
+        self
+    }
+    pub fn transport_key_pair_derivation_secret(mut self, secret: crate::DerivationSecret) -> Self {
+        self.derivation_secret = Some(secret);
+        self
+    }
+    /// Subscribes to lifecycle, wallet, and progress notifications before build returns.
+    pub fn events(mut self, handler: impl crate::EventHandler + 'static) -> Self {
+        self.events = Some(Arc::new(handler));
+        self
+    }
+    pub async fn build(self) -> Result<Sdk> {
+        let config = self.config.try_into()?;
+        let signer = self
+            .signer
+            .as_ref()
+            .map_or(SignerConfig::Disabled, |(account, _)| {
+                SignerConfig::Enabled(*account)
+            });
+        let mut backends = HashMap::new();
+        for storage in std::iter::once(&self.storage).chain(self.permit_storage.as_ref()) {
+            if let Storage::Application(storage) = storage
+                && let Some(previous) = backends.insert(storage.id.clone(), storage.backend.clone())
+                && !Arc::ptr_eq(&previous, &storage.backend)
+            {
+                return Err(ClientError::invalid_input(
+                    "application storage identity refers to different backends",
+                ));
+            }
+        }
+        let context_id = self
+            .client
+            .create_context_with_storage(
+                config,
+                signer,
+                Some(self.storage.wire()),
+                self.permit_storage.as_ref().map(Storage::wire),
+                self.derivation_secret.map(crate::DerivationSecret::wire),
+            )
+            .await?;
+        let operations = Arc::new(Operations::new());
+        let mut resources =
+            crate::lifetime::Resources::new(self.client.clone(), context_id.clone(), None, None);
+        let result = async {
+            if let Some(handler) = self.events {
+                resources.events = Some(
+                    crate::event_channel::attach_events(
+                        self.client.service(),
+                        &context_id,
+                        handler,
+                    )
+                    .await?,
+                );
+            }
+            if !backends.is_empty() {
+                resources.storage =
+                    Some(attach_storage(self.client.service(), &context_id, backends).await?);
+            }
+            if let Some((_, signer)) = self.signer {
+                resources.signer = Some(
+                    attach_signer(
+                        self.client.service(),
+                        &context_id,
+                        operations.clone(),
+                        signer,
+                    )
+                    .await?,
+                );
+            }
+            Ok::<_, ClientError>(())
+        }
+        .await;
+        if let Err(error) = result {
+            let _ = resources
+                .close(
+                    &self
+                        .client
+                        .clone()
+                        .with_timeout(std::time::Duration::from_secs(5)),
+                )
+                .await;
+            return Err(error);
+        }
+        Ok(Sdk::from_context(
+            self.client,
+            context_id,
+            operations,
+            resources,
+        ))
+    }
+}

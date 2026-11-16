@@ -55,6 +55,13 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   /** Permit lifetime in days. Default: 30. Clamped to `transportKeyPairTTL / 86400`. */
   permitTTL?: number;
   /**
+   * Wipe the previous account's transport key pair, permits, and decrypt cache
+   * whenever the connected account changes or disconnects. Default: `true`.
+   * Set to `false` to keep them until permits expire or `sdk.permits.clear()`
+   * runs, so a user switching A → B → A does not sign a new permit each time.
+   */
+  clearCredentialsOnWalletChange?: boolean;
+  /**
    * Opt-in shared-tenant scope (B2B2C/WaaS operators) — an opaque identifier such
    * as a tenant ID. Every signer configured with the same scope shares one
    * transport key pair instead of one per signer address. Permits stay per-signer
@@ -67,8 +74,14 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   registryTTL?: number;
   /** SDK lifecycle event listener. */
   onEvent?: ZamaSDKEventListener;
-  /** Attach `x-zama-sdk-*` usage headers (SDK version, layer, runtime, operation) to every relayer request. Default: `true`. */
-  telemetry?: boolean;
+  /**
+   * How the SDK usage labels (SDK version, layer, runtime, operation) travel on
+   * relayer requests: `"header"` sends `x-zama-sdk-*` headers (default),
+   * `"query"` sends `zama_sdk_*` query parameters instead, for proxies that
+   * rebuild the request headers, and `"off"` sends nothing. `true` and `false`
+   * are accepted as `"header"` and `"off"`.
+   */
+  telemetry?: "header" | "query" | "off" | boolean;
   /**
    * Global `@fhevm/sdk` runtime config — WASM load mode, threads, logger, auth,
    * module versions. `runtime.auth` is the process-wide fallback; each chain's
@@ -115,6 +128,7 @@ export type ZamaConfig = {
   readonly permitStorage: GenericStorage;
   readonly transportKeyPairTTL: number;
   readonly permitTTL: number;
+  readonly clearCredentialsOnWalletChange: boolean;
   readonly transportKeyPairScope: string | undefined;
   readonly registryTTL: number;
   readonly onEvent: ZamaSDKEventListener | undefined;

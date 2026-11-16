@@ -250,10 +250,10 @@ export const INVALID_KMS_CONTEXT_SELECTOR = "0x77ddbe81";
 /** Revert-data fields across clients: viem's `raw`/`signature`, ethers' `data`. */
 const REVERT_DATA_KEYS = ["data", "raw", "signature"] as const;
 
-function nodeHasInvalidKmsContextRevert(node: Record<string, unknown>): boolean {
+function nodeHasRevert(node: Record<string, unknown>, selector: string, name: string): boolean {
   for (const key of REVERT_DATA_KEYS) {
     const value = node[key];
-    if (typeof value === "string" && value.toLowerCase().startsWith(INVALID_KMS_CONTEXT_SELECTOR)) {
+    if (typeof value === "string" && value.toLowerCase().startsWith(selector)) {
       return true;
     }
   }
@@ -261,9 +261,22 @@ function nodeHasInvalidKmsContextRevert(node: Record<string, unknown>): boolean 
   // carrying the data fields above.
   if (typeof node.message === "string") {
     const msg = node.message.toLowerCase();
-    return msg.includes(INVALID_KMS_CONTEXT_SELECTOR) || msg.includes("invalidkmscontext");
+    return msg.includes(selector) || msg.includes(name);
   }
   return false;
+}
+
+/**
+ * True when `error` or any nested cause reverts with the custom error
+ * `selector`, or names the error in its message for providers that only
+ * stringify the revert. Needs no ABI.
+ */
+export function hasRevert(error: unknown, selector: string, name: string): boolean {
+  const lowerSelector = selector.toLowerCase();
+  const lowerName = name.toLowerCase();
+  return (
+    findInErrorChain(error, (node) => nodeHasRevert(node, lowerSelector, lowerName)) !== undefined
+  );
 }
 
 /**
@@ -277,7 +290,7 @@ function nodeHasInvalidKmsContextRevert(node: Record<string, unknown>): boolean 
  * cause chain, with a message fallback for text-only providers.
  */
 export function isRevokedKmsContextError(error: unknown): boolean {
-  return findInErrorChain(error, nodeHasInvalidKmsContextRevert) !== undefined;
+  return hasRevert(error, INVALID_KMS_CONTEXT_SELECTOR, "InvalidKmsContext");
 }
 
 /** Parse the on-chain handle out of the not-entitled message. */

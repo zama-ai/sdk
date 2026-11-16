@@ -72,6 +72,7 @@ export { MAX_UINT64, WILDCARD_CONTRACT } from "./contracts";
 // Token abstraction layer
 export type { Address, Hex } from "viem";
 export type { ChecksummedAddress, Permission, SerializedTransportKeyPair } from "./credentials";
+export { parsePreparedPermit } from "./credentials";
 export type {
   PreparedPermit,
   PreparePermitRequest,
@@ -118,9 +119,14 @@ export {
   SigningFailedError,
   SigningRejectedError,
   TransactionRevertedError,
+  HcuBlockLimitExceededError,
+  HcuTransactionLimitExceededError,
   TransportKeyPairChangedError,
   TransportKeyPairExpiredError,
   UnshieldAlreadyFinalizedError,
+  VaultBatcherPausedError,
+  VaultBatchNotDispatchedError,
+  VaultJoinUnconfirmedError,
   WalletAccountNotReadyError,
   WalletNotConnectedError,
   ZamaError,
@@ -129,7 +135,11 @@ export {
   type ErrorForCode,
   type SigningErrorMetadata,
   type UnshieldAlreadyFinalizedDetails,
+  type VaultBatcherPausedDetails,
+  type VaultBatchNotDispatchedDetails,
+  type VaultJoinUnconfirmedDetails,
 } from "./errors";
+// Type-only: the root entry bundles no vault code.
 export { ZamaSDKEvents } from "./events";
 export type {
   ApproveUnderlyingSubmittedEvent,
@@ -199,6 +209,7 @@ export type {
   PrepareTransactionRequest,
   ReadContractArgs,
   ReadContractConfig,
+  MulticallReturnType,
   ReadContractReturnType,
   ReadFunctionName,
   RevokeDelegationRequest,
@@ -273,7 +284,9 @@ export {
   balanceOfContract,
   confidentialBalanceOfContract,
   confidentialTotalSupplyContract,
+  confidentialTransferAndCallContract,
   confidentialTransferContract,
+  confidentialTransferFromAndCallContract,
   confidentialTransferFromContract,
   decimalsContract,
   delegateForUserDecryptionContract,
@@ -299,6 +312,7 @@ export {
   symbolContract,
   transferAndCallContract,
   underlyingContract,
+  unwrapAmountContract,
   unwrapContract,
   unwrapFromBalanceContract,
   unwrapRequesterContract,

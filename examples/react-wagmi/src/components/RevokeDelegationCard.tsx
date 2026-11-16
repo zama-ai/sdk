@@ -3,7 +3,7 @@
 import { getAddress } from "viem";
 import { useRevokeDelegation } from "@zama-fhe/react-sdk";
 import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
-import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
+import { useNetwork } from "@/lib/hooks";
 
 interface RevokeDelegationCardProps {
   token: TokenWrapperPairWithMetadata;
@@ -11,6 +11,7 @@ interface RevokeDelegationCardProps {
 }
 
 export function RevokeDelegationCard({ token, disabled = false }: RevokeDelegationCardProps) {
+  const { explorerUrl } = useNetwork();
   const revoke = useRevokeDelegation(token.confidentialTokenAddress);
 
   function submitRevoke(formData: FormData) {
@@ -53,11 +54,7 @@ export function RevokeDelegationCard({ token, disabled = false }: RevokeDelegati
       {revoke.isSuccess && revoke.data?.txHash && (
         <output className="alert alert-success card-status">
           Access revoked!{" "}
-          <a
-            href={`${SEPOLIA_EXPLORER_URL}/tx/${revoke.data.txHash}`}
-            target="_blank"
-            rel="noreferrer"
-          >
+          <a href={`${explorerUrl}/tx/${revoke.data.txHash}`} target="_blank" rel="noreferrer">
             {revoke.data.txHash.slice(0, 10)}…
           </a>
         </output>

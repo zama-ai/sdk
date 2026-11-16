@@ -23,26 +23,63 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
 
 describe("node() telemetry", () => {
   test("tags the relayer as the node runtime", () => {
-    const telemetry: TelemetryState = { layer: "core" };
+    const telemetry: TelemetryState = { layer: "core", mode: "header" };
     node().createRelayer(anvil, new LoggerService(), telemetry);
 
-    expect(relayerConfig().telemetry).toEqual({ state: telemetry, runtime: "node" });
+    expect(relayerConfig().telemetry).toEqual({
+      state: telemetry,
+      runtime: "node",
+      mode: "header",
+    });
   });
 
-  test("ZAMA_SDK_TELEMETRY=0 turns telemetry off for the process", () => {
-    vi.stubEnv("ZAMA_SDK_TELEMETRY", "0");
-    node().createRelayer(anvil, new LoggerService(), { layer: "core" });
+  test.each(["0", "off"])("ZAMA_SDK_TELEMETRY=%s turns telemetry off for the process", (value) => {
+    vi.stubEnv("ZAMA_SDK_TELEMETRY", value);
+    node().createRelayer(anvil, new LoggerService(), { layer: "core", mode: "header" });
 
     expect(relayerConfig().telemetry).toBeUndefined();
   });
 
-  test("sends no telemetry without a config-wide context", () => {
-    node().createRelayer(anvil, new LoggerService());
+  test.each([
+    { env: undefined, config: "query", mode: "query" },
+    { env: "query", config: "header", mode: "query" },
+    { env: "header", config: "query", mode: "header" },
+    { env: "yes", config: "query", mode: "query" },
+  ] as const)(
+    "ZAMA_SDK_TELEMETRY=$env with telemetry: $config sends $mode",
+    ({ env, config, mode }) => {
+      if (env !== undefined) {
+        vi.stubEnv("ZAMA_SDK_TELEMETRY", env);
+      }
+      const telemetry: TelemetryState = { layer: "core", mode: config };
+      node().createRelayer(anvil, new LoggerService(), telemetry);
 
-    expect(relayerConfig().telemetry).toBeUndefined();
+      expect(relayerConfig().telemetry).toEqual({ state: telemetry, runtime: "node", mode });
+    },
+  );
+
+  test("keeps the config's mode when `process` has no env, as some bundler shims define it", () => {
+    vi.stubGlobal("process", { ...process, env: undefined });
+    const telemetry: TelemetryState = { layer: "core", mode: "query" };
+
+    expect(() => node().createRelayer(anvil, new LoggerService(), telemetry)).not.toThrow();
+    expect(relayerConfig().telemetry).toEqual({ state: telemetry, runtime: "node", mode: "query" });
   });
+
+  test.each([undefined, "query"])(
+    "sends no telemetry without a config-wide context, even with ZAMA_SDK_TELEMETRY=%j",
+    (env) => {
+      if (env !== undefined) {
+        vi.stubEnv("ZAMA_SDK_TELEMETRY", env);
+      }
+      node().createRelayer(anvil, new LoggerService());
+
+      expect(relayerConfig().telemetry).toBeUndefined();
+    },
+  );
 });

@@ -7,11 +7,7 @@
   padding: 0;
 }
 body {
-  font-family:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   background: #f8fafc;
   color: #0f172a;
   line-height: 1.5;
@@ -36,6 +32,19 @@ body {
   padding: 40px 20px;
 }
 
+/* Footer */
+.site-footer {
+  max-width: 580px;
+  margin: 0 auto;
+  padding: 0 20px 40px;
+  font-size: 12px;
+  color: #64748b;
+  text-align: center;
+}
+.site-footer a {
+  color: inherit;
+}
+
 /* Header */
 .app-header {
   margin-bottom: 28px;
@@ -50,6 +59,9 @@ body {
   margin-top: 4px;
   font-family: monospace;
   word-break: break-all;
+}
+.app-header .header-action {
+  margin-top: 10px;
 }
 
 /* Connect screen */
@@ -246,6 +258,11 @@ body {
   border: 1px solid #bbf7d0;
   color: #166534;
 }
+.alert-warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
 .alert a {
   color: inherit;
   font-weight: 600;
@@ -298,4 +315,60 @@ body {
   content: "";
   flex: 1;
   border-top: 1px solid #e2e8f0;
+}
+
+/* Connect dialog (Dynamic stack) */
+.connect-dialog {
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(640px, calc(100vh - 32px));
+  margin: auto;
+  overflow-y: auto;
+}
+.connect-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.connect-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.4);
+}
+.connect-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.connect-dialog-header .card-title {
+  margin-bottom: 0;
+}
+.connect-dialog .btn-full {
+  text-align: center;
+  text-decoration: none;
+}
+.wallet-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.wallet-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.wallet-option:hover {
+  background: #f1f5f9;
+}
+.wallet-option img {
+  border-radius: 6px;
+}
+.wallet-option span:first-of-type {
+  flex: 1;
 }

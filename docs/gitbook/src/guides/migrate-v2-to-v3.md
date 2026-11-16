@@ -356,10 +356,12 @@ pass supported client/request defaults directly to `web()` or `node()`.
 {% endhint %}
 
 {% hint style="info" %}
-**Relayer auth (`FheChain.auth`).** Still `ApiKeyHeader | ApiKeyCookie | BearerToken`.
-The **Zama-hosted relayer requires `ApiKeyHeader`** (sent as `x-api-key`; Bearer
-and cookie are rejected at the edge). The `__type` discriminator is unchanged;
-`ApiKeyHeader` uses `value`, while `BearerToken` uses `token`. See
+**Relayer auth (`FheChain.auth`).** `ApiKeyHeader | BearerToken`. The
+**Zama-hosted relayer requires `ApiKeyHeader`** (sent as `x-api-key`; Bearer is
+rejected at the edge). The `__type` discriminator is unchanged;
+`ApiKeyHeader` uses `value`, while `BearerToken` uses `token`. `ApiKeyCookie`,
+which v2 documented, is removed: use `ApiKeyHeader` with a `header` name if your
+proxy reads its credential from another header. See
 [Relayer API keys](./relayer-api-keys.md).
 {% endhint %}
 
@@ -626,9 +628,10 @@ says **who** reads — `decryptValues` (you, via your permit) vs `decryptPublicV
 {% hint style="warning" %}
 **Cache ownership changed.** `DecryptCache` and `applyDecryptedValues` were public
 in 2.x; in 3.x the cache is internal and invalidates automatically (on
-`permits.revokePermits()`, `permits.clear()`, wallet account/chain change, and
-disconnect). There is **no** public API to populate or evict it — remove any 2.x
-logic that did, as there's no compile-time signal for its loss.
+`permits.revokePermits()`, `permits.clear()`, and on wallet account change
+and disconnect unless `clearCredentialsOnWalletChange` is `false`). There is
+**no** public API to populate or evict it — remove any 2.x logic that did, as
+there's no compile-time signal for its loss.
 {% endhint %}
 
 ### Key glossary: transport key pair & FHE encryption key

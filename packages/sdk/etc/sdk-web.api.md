@@ -23,6 +23,7 @@ export interface FhevmRelayerOptions {
     readonly fetchRetries?: number;
     readonly fetchRetryDelayInMilliseconds?: number;
     readonly headers?: Record<string, string>;
+    readonly query?: Record<string, string>;
     readonly signal?: AbortSignal;
     readonly timeout?: number;
 }
@@ -56,7 +57,5 @@ export interface WebRelayerOptions extends RelayerOptions {
     readonly offloadTimeouts?: Partial<EncryptWorkerTimeouts>;
     readonly offloadWorker?: string | URL | (() => Worker);
 }
-
-// (No @packageDocumentation comment for this package)
 
 ```

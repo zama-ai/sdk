@@ -1,7 +1,7 @@
 "use client";
 
 import { anvil as anvilFheChain, ZamaSDK, type Address, type FheChain } from "@zama-fhe/sdk";
-import { polygonAmoy, sepolia } from "@zama-fhe/sdk/chains";
+import { sepolia } from "@zama-fhe/sdk/chains";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { web } from "@zama-fhe/sdk/web";
 import { useState } from "react";
@@ -15,7 +15,7 @@ const STUB_ACCOUNT = privateKeyToAccount(
 );
 
 /** Open testnets whose hosted relayer needs no API key. */
-export const LIVE_CHAIN_NAMES = ["sepolia", "polygonAmoy"] as const;
+export const LIVE_CHAIN_NAMES = ["sepolia"] as const;
 
 export type LiveChainName = (typeof LIVE_CHAIN_NAMES)[number];
 
@@ -26,10 +26,6 @@ export function isLiveChainName(value: string | undefined): value is LiveChainNa
 /** A confidential token registered on each live chain, used as the proof's contract binding. */
 const LIVE_CHAINS: Record<LiveChainName, { chain: FheChain; contractAddress: Address }> = {
   sepolia: { chain: sepolia, contractAddress: "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639" },
-  polygonAmoy: {
-    chain: polygonAmoy,
-    contractAddress: "0x7a1728f2A07cE4D62167dE1348af168509011b7b",
-  },
 };
 
 /** Parameters passed through to `web()`; identical in both scenarios. */

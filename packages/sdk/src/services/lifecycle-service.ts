@@ -14,14 +14,16 @@ export type LifecycleServiceOptions = {
   router: ChainRouter;
   cachingService: CachingService;
   credentialService?: CredentialService;
+  clearCredentialsOnWalletChange: boolean;
   logger: GenericLogger;
 };
 
 /**
  * Owns signer-lifecycle wiring for {@link ZamaSDK}: subscribes to the signer's
- * wallet-account store on construction, runs the SDK-side cleanup (credential
- * rotation, decrypt-cache invalidation, relayer chain switch) on every change,
- * then fans out to external listeners. Unsubscribes on {@link dispose}.
+ * wallet-account store on construction, runs the SDK-side handling on every
+ * change (relayer chain switch, then credential rotation and decrypt-cache
+ * invalidation unless `clearCredentialsOnWalletChange` is `false`), then fans
+ * out to external listeners. Unsubscribes on {@link dispose}.
  *
  * @internal — consumed by ZamaSDK; not part of the public surface.
  */
@@ -30,6 +32,7 @@ export class LifecycleService {
   readonly #router: ChainRouter;
   readonly #cachingService: CachingService;
   readonly #credentialService: CredentialService | undefined;
+  readonly #clearCredentialsOnWalletChange: boolean;
   readonly #logger: GenericLogger;
   readonly #walletAccountListeners = new Set<WalletAccountListener>();
   #unsubscribeSigner?: () => void;
@@ -39,6 +42,7 @@ export class LifecycleService {
     this.#router = opts.router;
     this.#cachingService = opts.cachingService;
     this.#credentialService = opts.credentialService;
+    this.#clearCredentialsOnWalletChange = opts.clearCredentialsOnWalletChange;
     this.#logger = opts.logger;
     if (this.#signer) {
       this.#unsubscribeSigner = this.#signer.walletAccount.subscribe((change) => {
@@ -65,14 +69,9 @@ export class LifecycleService {
   async #handleWalletAccountChange(change: WalletAccountChange): Promise<void> {
     const prev = change.previous;
     const next = change.next;
-    // switchChain runs first so credential cleanup, decrypt-cache invalidation,
-    // and external listeners observe the router on next.chainId. Downstream
-    // keypair warming (driven by listeners — see ZamaProvider) therefore
-    // dispatches against the wallet chain rather than chains[0]. Switching to a
-    // chain with no configured backend does not throw here — the router tracks
-    // it and the next relayer op surfaces a ConfigurationError — so `swallow`
-    // is defensive only. It suspends one microtask for error containment, not
-    // for I/O; ChainRouter.switchChain is synchronous.
+    // Switch the relayer chain first so cleanup and listeners (keypair warming)
+    // see next.chainId rather than chains[0]. An unconfigured chain does not
+    // throw here; the next relayer op reports a ConfigurationError.
     const nextChainId = next?.chainId;
     if (nextChainId !== undefined) {
       await swallow(
@@ -81,6 +80,23 @@ export class LifecycleService {
         this.#logger,
       );
     }
+    // Apps opt out with clearCredentialsOnWalletChange: false. Permits, key pairs,
+    // and cached decrypts are keyed by account address, so keeping them never
+    // exposes one account's entries to another.
+    if (this.#clearCredentialsOnWalletChange) {
+      await this.#clearPreviousAccount(prev, next);
+    }
+    await Promise.all(
+      Array.from(this.#walletAccountListeners, (listener) =>
+        swallow("wallet account listener", () => listener(change), this.#logger),
+      ),
+    );
+  }
+
+  async #clearPreviousAccount(
+    prev: WalletAccountChange["previous"],
+    next: WalletAccountChange["next"],
+  ): Promise<void> {
     const credentialService = this.#credentialService;
     if (credentialService) {
       await swallow(
@@ -96,10 +112,5 @@ export class LifecycleService {
         this.#logger,
       );
     }
-    await Promise.all(
-      Array.from(this.#walletAccountListeners, (listener) =>
-        swallow("wallet account listener", () => listener(change), this.#logger),
-      ),
-    );
   }
 }

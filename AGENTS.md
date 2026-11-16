@@ -6,6 +6,8 @@ Guidance for AI coding agents (Claude Code, Cursor, Codex, etc.) working in this
 
 **Design principle: clear-text in, clear-text out.** Callers work with familiar primitives (ERC-20-style for tokens) while the SDK hides the FHE protocol details. When designing or extending APIs, accept plaintext, return plaintext, and push everything FHE-related down into the SDK.
 
+The daemon system spans `packages/sdk-daemon`, `clients/go`, `clients/rust`, and `proto`.
+
 **Package manager:** pnpm 10+ (Node 22+). Install with `pnpm install` — it also auto-initializes git submodules and runs `forge soldeer install` for contracts.
 
 **Agent setup:** run `pnpm setup:claude`. It copies `claude-setup/` → `.claude/` (which is gitignored and unpublished for security, so never commit it) and installs the Zama marketplace plugins and skills. Post-edit hooks then auto-run typecheck, lint, and format after every file change.
@@ -30,6 +32,7 @@ Load these on demand during planning — they are not preloaded:
 
 - [`docs/agents/vision.md`](docs/agents/vision.md) — fuller product framing (scope, target users, framework-agnostic core, React-first hooks)
 - [`docs/agents/architecture.md`](docs/agents/architecture.md) — repo layout, how operations flow through the system (balance, transfer, shield, unshield, routing)
+- [`docs/agents/daemon.md`](docs/agents/daemon.md) — native client documentation, supported daemon topology, and API boundaries
 - [`docs/agents/conventions.md`](docs/agents/conventions.md) — shared naming rules and design decisions (contracts-vs-tokens, Solidity-mirror params, pure contract call builders, stage-gate docs language, …)
 - [`docs/agents/gotchas.md`](docs/agents/gotchas.md) — shared footguns: address normalization in query keys, PR base branch, shared-branch safety
 - [`docs/agents/changelog.md`](docs/agents/changelog.md) — the GitBook changelog convention: mainline-only pages, the Beta unreleased tip, per-minor vs. frozen-major pagination, nav wiring, and the `docs:changelog` automation

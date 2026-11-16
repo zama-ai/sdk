@@ -54,6 +54,7 @@ function buildSDK(
     permitStorage: storage,
     transportKeyPairTTL: 2592000,
     permitTTL: 1,
+    clearCredentialsOnWalletChange: true,
     registryTTL: 86400,
     onEvent: undefined,
     // Resolved configs always carry a LoggerService (buildZamaConfig guarantees

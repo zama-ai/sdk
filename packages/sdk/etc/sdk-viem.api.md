@@ -119,6 +119,7 @@ export interface FheChain<TId extends number = number> {
     readonly network: EIP1193Provider | string;
     readonly registryAddress: Address | undefined;
     readonly relayerUrl: string;
+    readonly vaultRouterAddress?: Address;
     readonly verifyingContractAddressDecryption: Address;
     readonly verifyingContractAddressInputVerification: Address;
 }
@@ -130,10 +131,6 @@ export type FheChainAuth = {
 } | {
     __type: "ApiKeyHeader";
     header?: string;
-    value: string;
-} | {
-    __type: "ApiKeyCookie";
-    cookie?: string;
     value: string;
 };
 
@@ -156,8 +153,12 @@ export interface GenericLogger {
 
 // @public
 export interface GenericProvider {
-    getBlockTimestamp(): Promise<bigint>;
+    getBlockTimestamp(chainId?: number): Promise<bigint>;
     getChainId(): Promise<number>;
+    multicall?<const TCalls extends readonly ReadContractConfig[]>(params: {
+        readonly calls: TCalls;
+        readonly chainId?: number;
+    }): Promise<MulticallReturnType<TCalls>>;
     prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
         from: Address;
         calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
@@ -190,6 +191,9 @@ export interface GenericStorage {
 }
 
 export { Hex }
+
+// @public
+export type MulticallReturnType<TCalls extends readonly ReadContractConfig[]> = { -readonly [K in keyof TCalls]: TCalls[K] extends ReadContractConfig<infer TAbi, infer TFunctionName, infer TArgs> ? ReadContractReturnType<TAbi, TFunctionName, TArgs> : never; };
 
 // @public
 export class MutableWalletAccountStore implements WalletAccountStore {
@@ -231,6 +235,7 @@ export interface ReadContractConfig<TAbi extends ContractAbi = ContractAbi, TFun
     readonly abi: TAbi;
     readonly address: Address;
     readonly args: TArgs;
+    readonly chainId?: number;
     readonly functionName: TFunctionName;
 }
 
@@ -311,11 +316,12 @@ export interface TransactionErrorEvent extends BaseEvent {
 }
 
 // @public
-export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll" | "vault:join" | "vault:quit" | "vault:claim" | "vault:recover" | "vault:dispatchBatch";
+export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll" | "vault:join" | "vault:quit" | "vault:claim" | "vault:recover" | "vault:dispatchBatch" | "vault:finalize" | "vault:routerJoin";
 
 // @public
 export interface TransactionReceipt {
     readonly logs: readonly RawLog[];
+    readonly status?: "success" | "reverted";
 }
 
 // @public
@@ -356,8 +362,12 @@ export interface UnwrapSubmittedEvent extends BaseEvent {
 // @public
 export class ViemProvider implements GenericProvider {
     constructor(config: ViemProviderConfig);
-    getBlockTimestamp(): Promise<bigint>;
+    getBlockTimestamp(chainId?: number): Promise<bigint>;
     getChainId(): Promise<number>;
+    multicall<const TCalls extends readonly ReadContractConfig[]>(params: {
+        readonly calls: TCalls;
+        readonly chainId?: number;
+    }): Promise<MulticallReturnType<TCalls>>;
     prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
         from: Address;
         calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
@@ -462,6 +472,7 @@ export type ZamaConfig = {
     readonly permitStorage: GenericStorage;
     readonly transportKeyPairTTL: number;
     readonly permitTTL: number;
+    readonly clearCredentialsOnWalletChange: boolean;
     readonly transportKeyPairScope: string | undefined;
     readonly registryTTL: number;
     readonly onEvent: ZamaSDKEventListener | undefined;
@@ -473,6 +484,7 @@ export type ZamaConfig = {
 // @public
 export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
     chains: TChains;
+    clearCredentialsOnWalletChange?: boolean;
     logger?: GenericLogger;
     onEvent?: ZamaSDKEventListener;
     permitStorage?: GenericStorage;
@@ -481,7 +493,7 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
     relayers: { [K in TChains[number]["id"]]: RelayerConfig; };
     runtime?: FhevmRuntimeConfig;
     storage?: GenericStorage;
-    telemetry?: boolean;
+    telemetry?: "header" | "query" | "off" | boolean;
     transportKeyPairScope?: string;
     transportKeyPairTTL?: number;
 }
@@ -529,7 +541,5 @@ export const ZamaSDKEvents: {
 
 // @public
 export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents];
-
-// (No @packageDocumentation comment for this package)
 
 ```

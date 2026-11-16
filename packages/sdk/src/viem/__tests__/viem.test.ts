@@ -17,6 +17,7 @@ import {
 } from "../contracts";
 import { ViemSigner } from "../viem-signer";
 import { ViemProvider } from "../viem-provider";
+import { ConfigurationError } from "../../errors";
 
 // ── Constants ────────────────────────────────────────────
 
@@ -176,7 +177,7 @@ describe("ViemSigner", () => {
         message: {
           publicKey: "0xkey",
           contractAddresses: ["0x1" as Address],
-          startTimestamp: "1000",
+          startTimestamp: 1000n,
           durationDays: "1",
           extraData: "0x",
         },
@@ -197,9 +198,31 @@ describe("ViemSigner", () => {
               typedData.types as { UserDecryptRequestVerification: unknown }
             ).UserDecryptRequestVerification,
           },
-          domain: typedData.domain,
-          message: { ...typedData.message, startTimestamp: 1000n, durationDays: 1n },
+          domain: { ...typedData.domain, chainId: 1 },
+          message: { ...typedData.message, startTimestamp: "1000" },
         });
+      },
+    );
+
+    vit(
+      "hands viem a payload a hijacked BigInt.prototype.toJSON cannot corrupt",
+      async ({ tokenAddress, viemSigner, walletClient }) => {
+        const bigintPrototype = BigInt.prototype as { toJSON?: () => string };
+        const originalToJSON = bigintPrototype.toJSON;
+        bigintPrototype.toJSON = function (this: bigint) {
+          return `${this}n`;
+        };
+        try {
+          await viemSigner.signTypedData(createTypedData(tokenAddress));
+          const [params] = vi.mocked(walletClient.signTypedData).mock.calls[0]!;
+          expect(JSON.stringify(params)).not.toMatch(/\d+n"/);
+        } finally {
+          if (originalToJSON) {
+            bigintPrototype.toJSON = originalToJSON;
+          } else {
+            delete bigintPrototype.toJSON;
+          }
+        }
       },
     );
 
@@ -286,6 +309,84 @@ describe("ViemProvider", () => {
         expect(publicClient.readContract).toHaveBeenCalledWith(config);
       },
     );
+
+    vit(
+      "reads with a chainId that matches the client, without passing it on",
+      async ({ tokenAddress, userAddress, publicClient }) => {
+        const viemProvider = new ViemProvider({ publicClient });
+        const call = {
+          address: tokenAddress,
+          abi: [{ name: "balanceOf" }],
+          functionName: "balanceOf",
+          args: [userAddress],
+        };
+        await viemProvider.readContract({ ...call, chainId: 1 });
+        expect(publicClient.readContract).toHaveBeenCalledWith(call);
+      },
+    );
+
+    vit(
+      "refuses a chainId the client is not on",
+      async ({ tokenAddress, userAddress, publicClient }) => {
+        const viemProvider = new ViemProvider({ publicClient });
+        await expect(
+          viemProvider.readContract({
+            address: tokenAddress,
+            abi: [{ name: "balanceOf" }],
+            functionName: "balanceOf",
+            args: [userAddress],
+            chainId: 11155111,
+          }),
+        ).rejects.toThrow(ConfigurationError);
+        await expect(viemProvider.getBlockTimestamp(11155111)).rejects.toThrow(ConfigurationError);
+        expect(publicClient.readContract).not.toHaveBeenCalled();
+      },
+    );
+  });
+
+  describe("multicall", () => {
+    const calls = [
+      { address: SPENDER, abi: [], functionName: "a", args: [] },
+      { address: SPENDER, abi: [], functionName: "b", args: [], chainId: 1 },
+    ] as const;
+
+    vit("reads every call in one multicall, in order", async ({ publicClient }) => {
+      const multicall = vi.fn().mockResolvedValue([1n, 2n]);
+      const client = {
+        ...publicClient,
+        chain: { id: 1, contracts: { multicall3: { address: "0xca11" } } },
+        multicall,
+      } as unknown as PublicClient;
+      const results = await new ViemProvider({ publicClient: client }).multicall({
+        calls,
+        chainId: 1,
+      });
+      expect(results).toStrictEqual([1n, 2n]);
+      expect(multicall).toHaveBeenCalledWith({
+        contracts: [calls[0], { address: SPENDER, abi: [], functionName: "b", args: [] }],
+        allowFailure: false,
+        deployless: false,
+      });
+      expect(client.readContract).not.toHaveBeenCalled();
+    });
+
+    vit(
+      "sends Multicall3's code with the call on a chain that names no Multicall3",
+      async ({ publicClient }) => {
+        const multicall = vi.fn().mockResolvedValue([1n, 2n]);
+        const client = { ...publicClient, chain: { id: 1 }, multicall } as unknown as PublicClient;
+        await new ViemProvider({ publicClient: client }).multicall({ calls });
+        expect(multicall).toHaveBeenCalledWith(expect.objectContaining({ deployless: true }));
+        expect(client.readContract).not.toHaveBeenCalled();
+      },
+    );
+
+    vit("refuses a chainId the client is not on", async ({ publicClient }) => {
+      await expect(
+        new ViemProvider({ publicClient }).multicall({ calls, chainId: 11155111 }),
+      ).rejects.toThrow(ConfigurationError);
+      expect(publicClient.readContract).not.toHaveBeenCalled();
+    });
   });
 
   describe("waitForTransactionReceipt", () => {

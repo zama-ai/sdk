@@ -5,6 +5,10 @@ description: Decrypt and read confidential token balances using the SDK and Reac
 
 # Check balances
 
+{% hint style="info" %}
+Available in the Core SDK and React SDK.
+{% endhint %}
+
 Confidential balances are stored on-chain as encrypted values. To display a human-readable number, the SDK decrypts them using FHE permits tied to the user's wallet. This guide walks through reading balances, understanding the caching layer, and working with multiple tokens.
 
 ## Steps

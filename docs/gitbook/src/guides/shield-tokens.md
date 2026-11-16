@@ -5,6 +5,10 @@ description: How to convert public ERC-20 tokens into their confidential form.
 
 # Shield tokens
 
+{% hint style="info" %}
+Available in the Core SDK and React SDK.
+{% endhint %}
+
 Shielding converts public ERC-20 tokens into confidential tokens. The SDK handles the ERC-20 approval and the shield transaction in a single call via `wrappedToken.shield()`. In React, use the `useShield` hook.
 
 ## Shielding paths

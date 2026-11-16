@@ -125,6 +125,7 @@ const assertWorkerIsSelfContained: Plugin = {
 
 const entryPoints = {
   index: "src/index.ts",
+  "internal/index": "src/internal/index.ts",
   "chains/index": "src/chains/index.ts",
   "cleartext/index": "src/cleartext/index.ts",
   "query/index": "src/query/index.ts",

@@ -101,7 +101,7 @@ Pass `{ enabled: false }` as the second argument to disable the query.
 
 Returns a standard `useQuery` result. `data` resolves to `Record<EncryptedValue, ClearValue>` — a map from each encrypted value to its decrypted plaintext value (`bigint`, `boolean`, or `string`).
 
-When all requested inputs are already cached, `data` contains the cached values immediately (no relayer call). Freshly decrypted results are written through the SDK's internal CachingService — scoped by `(signer, contract, encryptedValue)` — so that subsequent renders return instantly, even after a page reload. The cache is cleared automatically on `permits.revokePermits()`, `permits.clear()`, or wallet lifecycle events (disconnect, account change, chain change).
+When all requested inputs are already cached, `data` contains the cached values immediately (no relayer call). Freshly decrypted results are written through the SDK's internal CachingService — scoped by `(signer, contract, encryptedValue)` — so that subsequent renders return instantly, even after a page reload. The cache is cleared on `permits.revokePermits()`, `permits.clear()`, and, by default, on wallet account changes and disconnects. Set `clearCredentialsOnWalletChange: false` on `createConfig` to keep it across account changes: entries are keyed per signer, so switching back to an account serves its cached values again.
 
 {% include ".gitbook/includes/query-result.md" %}
 

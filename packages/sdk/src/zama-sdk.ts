@@ -1,5 +1,6 @@
 import type { Address } from "viem";
 import type { ChainRouter } from "./chains/router";
+import type { FheChain } from "./chains/types";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
 import { DerivationSecretHolder } from "./credentials/keypair-wrapping";
@@ -209,6 +210,7 @@ export class ZamaSDK {
       router: config.router,
       cachingService: this.#cachingService,
       credentialService: this.#credentialService,
+      clearCredentialsOnWalletChange: config.clearCredentialsOnWalletChange,
       logger: this.#logger,
     });
     this.#offlineService = new OfflineService({
@@ -270,6 +272,15 @@ export class ZamaSDK {
    */
   get relayer(): RelayerSDK {
     return this.#router.relayer;
+  }
+
+  /**
+   * The chains this SDK was configured with.
+   *
+   * @internal
+   */
+  get chains(): readonly FheChain[] {
+    return this.#router.chains;
   }
 
   /**
