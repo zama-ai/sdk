@@ -226,6 +226,9 @@ jobs:
     needs: [validate-branch]
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     uses: ./.github/workflows/playwright.yml
+    secrets:
+      FHEVM_APP_CLIENT_ID: ${{ secrets.FHEVM_APP_CLIENT_ID }}
+      FHEVM_APP_PRIVATE_KEY: ${{ secrets.FHEVM_APP_PRIVATE_KEY }}
 
   docs:
     needs: [validate-branch]
