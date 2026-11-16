@@ -4,7 +4,10 @@ import { SDK_VERSION } from "./version";
 
 export type TelemetryLayer = "core" | "react";
 
-export type TelemetryRuntime = "web" | "node";
+export type TelemetryRuntime = "web" | "node" | "daemon";
+
+/** Values are frozen once shipped, so that dashboards keyed on them survive renames. */
+export type TelemetryClient = "go" | "rust" | "unknown";
 
 export type TelemetryMode = "header" | "query" | "off";
 
@@ -40,12 +43,15 @@ export type TelemetryOperation =
 
 /**
  * Shared by every relayer of a config. `layer` flips to `react` once
- * `ZamaProvider` marks the config, after the relayers exist.
+ * `ZamaProvider` marks the config, and the daemon likewise sets `runtime` and
+ * `client`, after the relayers exist.
  *
  * @internal
  */
 export interface TelemetryState {
   layer: TelemetryLayer;
+  runtime?: TelemetryRuntime;
+  client?: TelemetryClient;
   readonly mode: Exclude<TelemetryMode, "off">;
 }
 
@@ -63,7 +69,8 @@ export function telemetryRequestOptions(
   const fields = Object.entries({
     version: SDK_VERSION,
     layer: telemetry.state.layer,
-    runtime: telemetry.runtime,
+    runtime: telemetry.state.runtime ?? telemetry.runtime,
+    ...(telemetry.state.client !== undefined && { client: telemetry.state.client }),
     ...(operation !== undefined && { operation }),
   });
   const prefixed = (prefix: string) =>

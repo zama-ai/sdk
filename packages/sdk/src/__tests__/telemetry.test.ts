@@ -46,6 +46,37 @@ describe("telemetryRequestOptions", () => {
       "zama_sdk_operation",
     );
   });
+
+  test("lets the state runtime override the relayer runtime and adds the client", () => {
+    const base = telemetry("header");
+    const marked = {
+      ...base,
+      state: { ...base.state, runtime: "daemon" as const, client: "go" as const },
+    };
+    expect(telemetryRequestOptions(marked, "unshield").headers).toEqual({
+      "x-zama-sdk-version": SDK_VERSION,
+      "x-zama-sdk-layer": "core",
+      "x-zama-sdk-runtime": "daemon",
+      "x-zama-sdk-client": "go",
+      "x-zama-sdk-operation": "unshield",
+    });
+    const query = { ...marked, mode: "query" as const };
+    expect(telemetryRequestOptions(query, undefined).query).toEqual({
+      zama_sdk_version: SDK_VERSION,
+      zama_sdk_layer: "core",
+      zama_sdk_runtime: "daemon",
+      zama_sdk_client: "go",
+    });
+  });
+
+  test("omits the client when the state does not set one", () => {
+    expect(telemetryRequestOptions(telemetry("header"), "unshield").headers).not.toHaveProperty(
+      "x-zama-sdk-client",
+    );
+    expect(telemetryRequestOptions(telemetry("query"), "unshield").query).not.toHaveProperty(
+      "zama_sdk_client",
+    );
+  });
 });
 
 describe("parseTelemetryMode", () => {

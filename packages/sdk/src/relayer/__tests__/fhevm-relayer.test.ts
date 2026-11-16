@@ -89,6 +89,7 @@ import {
   type EncryptWorkerTimeouts,
 } from "../../worker/encrypt-worker-client";
 import { web } from "../../config/web";
+import { node } from "../../node/config";
 import { LoggerService } from "../../services/logger-service";
 import { recordAppliedRuntimeConfig, resetAppliedRuntimeConfig } from "../applied-runtime";
 import { ConfigurationError } from "../../errors";
@@ -786,6 +787,56 @@ describe("FhevmRelayer usage telemetry", () => {
 
     expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
       options: { headers: { ...staticHeaders, "x-zama-sdk-layer": "react" } },
+    });
+  });
+
+  test("node() reports the daemon runtime and client set after creation", async () => {
+    const state: TelemetryState = { layer: "core", mode: "header" };
+    const relayer = node().createRelayer(hostedChain, new LoggerService(), state);
+    state.runtime = "daemon";
+    state.client = "go";
+    await relayer.fetchFheEncryptionKeyBytes();
+
+    expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
+      options: {
+        headers: {
+          "x-zama-sdk-version": SDK_VERSION,
+          "x-zama-sdk-layer": "core",
+          "x-zama-sdk-runtime": "daemon",
+          "x-zama-sdk-client": "go",
+        },
+      },
+    });
+  });
+
+  test("node() reports the daemon runtime and client in query mode", async () => {
+    const state: TelemetryState = { layer: "core", mode: "query" };
+    const relayer = node().createRelayer(hostedChain, new LoggerService(), state);
+    state.runtime = "daemon";
+    state.client = "go";
+    await relayer.fetchFheEncryptionKeyBytes();
+
+    expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
+      options: {
+        query: {
+          zama_sdk_version: SDK_VERSION,
+          zama_sdk_layer: "core",
+          zama_sdk_runtime: "daemon",
+          zama_sdk_client: "go",
+        },
+      },
+    });
+  });
+
+  test("node() sends no client header unless the state sets one", async () => {
+    const relayer = node().createRelayer(hostedChain, new LoggerService(), {
+      layer: "core",
+      mode: "header",
+    });
+    await relayer.fetchFheEncryptionKeyBytes();
+
+    expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
+      options: { headers: { ...staticHeaders, "x-zama-sdk-runtime": "node" } },
     });
   });
 
