@@ -131,6 +131,18 @@ To restore, copy the backup into a private volume for one stopped daemon, check 
 
 For application-owned storage, use your backend's own backup and restore procedure while its writers are stopped.
 
+## Telemetry
+
+Relayer requests the daemon makes carry the SDK's [usage telemetry](../../guides/telemetry.md) headers, with `x-zama-sdk-runtime: daemon` and `x-zama-sdk-client` set to the client language (`go`, `rust`, or `unknown` for a custom client). The values carry no identifiers. Because the client and daemon must run the same version ([compatibility](../reference/client-and-daemon-compatibility.md)), `x-zama-sdk-version` also gives the client version.
+
+Set `ZAMA_SDK_TELEMETRY` on the daemon process, not the application. `query` sends every field as a `zama_sdk_*` query parameter (`zama_sdk_runtime`, `zama_sdk_client`, ...) instead of a header, and `off` disables telemetry entirely:
+
+```bash
+ZAMA_SDK_TELEMETRY=off
+```
+
+Contexts on the cleartext transport send no telemetry.
+
 ## Verify the deployment
 
 1. Confirm the daemon log contains `Daemon ready.` and the container keeps running.
