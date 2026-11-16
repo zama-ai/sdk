@@ -22,10 +22,10 @@ export const NETWORKS = {
     registry: "0xc8908569868758dAF814B5a8b96bBc44D1653d54",
   },
   // A cleartext row: no relayer, every read still goes through the RPC mock.
-  "bnb-testnet": {
-    chainIdHex: "0x61", // 97
-    rpc: "**/bsc-testnet.bnbchain.org**",
-    registry: "0xc0E8B73b1C58D846e1d4f8fAE2E1466C85BCeAeC",
+  hoodi: {
+    chainIdHex: "0x88bb0", // 560048
+    rpc: "**/rpc.hoodi.ethpandaops.io**",
+    registry: "0x1807aE2f693F8530DFB126D0eF98F2F2518F292f",
   },
 } as const;
 export type MockNetwork = keyof typeof NETWORKS;
