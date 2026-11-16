@@ -1,5 +1,95 @@
 # Changelog
 
+## [3.8.0](https://github.com/zama-ai/sdk/compare/v3.7.2...v3.8.0) (2026-11-16)
+
+### ⚠ BREAKING CHANGES
+
+- **deps-dev:** Disables CSS and IFrame loading by default (<a
+href="https://redirect.github.com/capricorn86/happy-dom/issues/2502">#2502</a>)</li>
+<li><a
+href="https://github.com/capricorn86/happy-dom/commit/f21dbd7d0a0c63cdd41954ba5d0f05def4e0f2b3"><code>f21dbd7</code></a>
+fix: Fixes cookie scope forgery vulnerability (<a
+href="https://redirect.github.com/capricorn86/happy-dom/issues/2477">#2477</a>)</li>
+<li><a
+href="https://github.com/capricorn86/happy-dom/commit/0d4cdbe7442af49d16b49ddf1acf7cc9684ed318"><code>0d4cdbe</code></a>
+fix: <a
+href="https://redirect.github.com/capricorn86/happy-dom/issues/2409">#2409</a>
+Preserve character references in comment data (<a
+href="https://redirect.github.com/capricorn86/happy-dom/issues/2410">#2410</a>)</li>
+<li><a
+href="https://github.com/capricorn86/happy-dom/commit/9c920a414a0e27a9c8f279a2be59beaaefd754e0"><code>9c920a4</code></a>
+fix: <a
+href="https://redirect.github.com/capricorn86/happy-dom/issues/2407">#2407</a>
+End comments at the first comment end tag when it overlaps a com...</li>
+<li><a
+href="https://github.com/capricorn86/happy-dom/commit/5fb1df3df8fcbd037341e848bfd33e5a35c6d910"><code>5fb1df3</code></a>
+fix: <a
+href="https://redirect.github.com/capricorn86/happy-dom/issues/2363">#2363</a>
+Avoids cloning all properties in CSSPropertyManager.toString() (...</li>
+<li><a
+href="https://github.com/capricorn86/happy-dom/commit/de0a1e9107f75dc089cf72853257c83818e1874b"><code>de0a1e9</code></a>
+fix: <a
+href="https://redirect.github.com/capricorn86/happy-dom/issues/2344">#2344</a>
+Resolve every var() in a value, not only the first one (<a
+href="https://redirect.github.com/capricorn86/happy-dom/issues/2395">#2395</a>)</li>
+<li>Additional commits viewable in <a
+href="https://github.com/capricorn86/happy-dom/compare/v20.14.0...v21.0.3">compare
+view</a></li>
+</ul>
+</details>
+<br />
+
+
+[![Dependabot compatibility
+score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=happy-dom&package-manager=npm_and_yarn&previous-version=20.14.0&new-version=21.0.3)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+
+Dependabot will resolve any conflicts with this PR as long as you don't
+alter it yourself. You can also trigger a rebase manually by commenting
+`@dependabot rebase`.
+
+[//]: # (dependabot-automerge-start)
+[//]: # (dependabot-automerge-end)
+
+- **deps-dev:** bump happy-dom from 20.14.0 to 21.0.3 ([#850](https://github.com/zama-ai/sdk/issues/850)) ([035114c]())
+
+### Features
+
+- **daemon:** add the SDK daemon with Rust and Go clients ([#813](https://github.com/zama-ai/sdk/issues/813)) ([a52315f]())
+- **errors:** typed errors for HCU limit reverts ([#885](https://github.com/zama-ai/sdk/issues/885)) ([145adbf]())
+- **examples:** add Privy wallet modal to react-wagmi ([#882](https://github.com/zama-ai/sdk/issues/882)) ([5651f50]())
+- **examples:** consolidate the per-chain example apps behind a network picker ([#873](https://github.com/zama-ai/sdk/issues/873)) ([9982fd5]())
+- **examples:** harden react-wagmi for public hosting ([#878](https://github.com/zama-ai/sdk/issues/878)) ([4b16f16]())
+- **examples:** replace Privy with Dynamic in react-wagmi ([#910](https://github.com/zama-ai/sdk/issues/910)) ([f7c728b]())
+- **examples:** wallet modal and custom environment in react-wagmi ([#881](https://github.com/zama-ai/sdk/issues/881)) ([7bb84fe]()), closes [#882]() [#873]() [#878]() [#880]() [#882]()
+- **sdk:** add an optional multicall read to GenericProvider ([#926](https://github.com/zama-ai/sdk/issues/926)) ([0c9f830]())
+- stop-auto-clearing-credentials-and-decrypt-cache-on-wallet ([#859](https://github.com/zama-ai/sdk/issues/859)) ([17db9c5]())
+- telemetry-query-params ([#858](https://github.com/zama-ai/sdk/issues/858)) ([f642cfb]())
+- **vaults:** batch status, open batches, and reads on another chain ([#911](https://github.com/zama-ai/sdk/issues/911)) ([e38322f]()), closes [#915]()
+- **vaults:** join batchers with confidentialTransferAndCall and check group routers against the configured chain ([#902](https://github.com/zama-ai/sdk/issues/902)) ([1ac7e64]())
+- **vaults:** multi-vault groups over the batcher router ([#781](https://github.com/zama-ai/sdk/issues/781)) ([998f941]()), closes [#748]()
+- **vaults:** prepare seam for group joins, user-driven finalize, and router call builders ([#898](https://github.com/zama-ai/sdk/issues/898)) ([57f4240]()), closes [#781]() [#748]()
+- **vaults:** replace the vault classes with a vault client ([#924](https://github.com/zama-ai/sdk/issues/924)) ([58bf7c4]())
+
+### Bug Fixes
+
+- bigint free permit signing ([#834](https://github.com/zama-ai/sdk/issues/834)) ([825f6bc]()), closes [#701]()
+- **daemon:** risk-accept CVE-2026-76844 in the image scan ([#906](https://github.com/zama-ai/sdk/issues/906)) ([13418ba]())
+- **deps:** raise the uuid floor in the react-wagmi example ([#923](https://github.com/zama-ai/sdk/issues/923)) ([80ba309]())
+- **deps:** update dev tooling advisories and pin the CI Safe Chain installer ([#886](https://github.com/zama-ai/sdk/issues/886)) ([4c5ea28]())
+- drop-amoy-mock-registry ([#883](https://github.com/zama-ai/sdk/issues/883)) ([2fd030a]())
+- **react-sdk:** refetch the registry chain id when a wallet connects on another chain ([#872](https://github.com/zama-ai/sdk/issues/872)) ([ea0ce57]()), closes [#873]() [#873]() [#873]()
+- **react-sdk:** resolve Safe and EIP-5792 wallet hashes to receipts in WagmiProvider ([#880](https://github.com/zama-ai/sdk/issues/880)) ([95ef735]())
+- remove ApiKeyCookie relayer auth ([#913](https://github.com/zama-ai/sdk/issues/913)) ([0fd0350]())
+- remove the InGen testnet preset and example ([#854](https://github.com/zama-ai/sdk/issues/854)) ([4136b52]())
+- **sdk:** freeze exported chain presets at runtime ([#900](https://github.com/zama-ai/sdk/issues/900)) ([38457f7]())
+
+### Build System
+
+- **daemon:** scan the daemon image with Trivy and bump dependencies ([#835](https://github.com/zama-ai/sdk/issues/835)) ([7fb932b]())
+- **deps:** bump turbo from 2.11.2 to 2.11.10 ([#871](https://github.com/zama-ai/sdk/issues/871)) ([25c5dfa]())
+- **security:** refresh container base images and toolchains ([#865](https://github.com/zama-ai/sdk/issues/865)) ([18ff429]())
+- update Node to 24.22.3 ([#928](https://github.com/zama-ai/sdk/issues/928)) ([d6f96b1]())
+
 ## [3.8.0-beta.22](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.21...v3.8.0-beta.22) (2026-11-16)
 
 ### Bug Fixes
@@ -40,6 +130,12 @@
 ### Bug Fixes
 
 - remove ApiKeyCookie relayer auth ([#913](https://github.com/zama-ai/sdk/issues/913)) ([0fd0350]())
+
+## [3.7.2](https://github.com/zama-ai/sdk/compare/v3.7.1...v3.7.2) (2026-11-09)
+
+### Bug Fixes
+
+- revoked wrapper discovery ([#912](https://github.com/zama-ai/sdk/issues/912)) ([86270d9]())
 
 ## [3.8.0-beta.16](https://github.com/zama-ai/sdk/compare/v3.8.0-beta.15...v3.8.0-beta.16) (2026-11-05)
 
@@ -165,6 +261,7 @@ alter it yourself. You can also trigger a rebase manually by commenting
 ### Build System
 
 - **security:** update Node to 24.22.1 and Next to 16.4 and remove InGen testnet ([#864](https://github.com/zama-ai/sdk/issues/864)) ([7ab9a07]())
+
 
 ## [3.7.1](https://github.com/zama-ai/sdk/compare/v3.7.0...v3.7.1) (2026-10-22)
 

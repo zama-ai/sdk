@@ -29,7 +29,7 @@ export interface WrapperDiscoveryQueryConfig {
   query?: Record<string, unknown>;
 }
 
-/** Builds TanStack Query options for discovering the confidential wrapper address for a given ERC-20 token (resolves to `null` when none is registered). */
+/** Builds TanStack Query options for discovering the confidential wrapper address for a given ERC-20 token (resolves to `null` when none is registered or the registered wrapper has been revoked). */
 export function wrapperDiscoveryQueryOptions(
   registry: WrappersRegistry,
   config: WrapperDiscoveryQueryConfig,
@@ -52,9 +52,10 @@ export function wrapperDiscoveryQueryOptions(
       const [, { erc20Address }] = context.queryKey;
       assertNonNullable(erc20Address, "wrapperDiscoveryQueryOptions: erc20Address");
       const result = await registry.getConfidentialToken(erc20Address);
-      return result ? result.confidentialTokenAddress : null;
+      // A revoked pair keeps its non-zero wrapper address with `isValid: false`.
+      return result?.isValid ? result.confidentialTokenAddress : null;
     },
-    staleTime: Infinity,
+    staleTime: registry.ttlMs,
     enabled:
       Boolean(config.tokenAddress && config.erc20Address && config.registryAddress) &&
       config.query?.enabled !== false,

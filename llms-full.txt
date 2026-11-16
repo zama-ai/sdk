@@ -616,7 +616,7 @@ See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/git
 Create a module and add the client:
 
 ```sh
-export ZAMA_SDK_VERSION=3.8.0-beta.22
+export ZAMA_SDK_VERSION=3.8.0
 mkdir encrypt-input
 cd encrypt-input
 go mod init example.com/encrypt-input
@@ -794,7 +794,7 @@ See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/git
 Create a binary project and add the client with the runtime this example uses:
 
 ```sh
-export ZAMA_SDK_VERSION=3.8.0-beta.22
+export ZAMA_SDK_VERSION=3.8.0
 cargo new encrypt-input
 cd encrypt-input
 cargo add zama_sdk@=$ZAMA_SDK_VERSION
@@ -2538,7 +2538,47 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 > **Unreleased.** The changes on this page are on the prerelease (`beta`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
 
 
-## Daemon
+_Nothing is staged for the next release yet._
+
+## 3.x
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/v3.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3.md
+- logical_path: changelog/v3
+
+# 3.x
+
+Plain-language release notes for the `3.x` line — the current, actively-maintained release line. Here's what changed in each minor version, and why it matters. This complements the auto-generated [`CHANGELOG.md`](https://github.com/zama-ai/sdk/blob/main/CHANGELOG.md) (the full commit-level list) and the [migration guide](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/migrate-v2-to-v3.md) (for moving across a major version).
+
+## Versions
+
+- [**3.8.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-8.md) — Experimental Go and Rust clients through the SDK daemon, a new vault client API that replaces the 3.7 vault classes, typed errors for FHE compute limits, batched reads with multicall, and the removal of ApiKeyCookie relayer auth.
+- [**3.7.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-7.md) — Confidential ERC-4626 vaults, wildcard delegation, offline permits for more than 10 contracts, SDK usage telemetry headers, a T-Rex Zenith testnet preset, and permit signatures with a 0/1 recovery byte.
+- [**3.6.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-6.md) — Web Worker encryption offload, structured wallet-signing/permit-failure events, an interrupted-unshield resume fix, and orphaned relayer entries that warn instead of throwing.
+- [**3.5.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-5.md) — Polygon presets, offline signing and decryption permits, at-rest transport-key encryption, and automatic KMS-context recovery.
+- [**3.4.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-4.md) — An internal FHE backend migration to `@fhevm/sdk` (no API changes for `Token`/hooks apps), FHE runtime and client tuning knobs, shared transport key pairs for B2B2C, automatic decrypt-batch chunking, and a two-signature shield via `wrap()`.
+- [**3.3.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-3.md) — `confidentialTransferAndCall`, automatic pending-unshield recovery, and typed decryption errors.
+- [**3.2.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-2.md) — configurable, silent-by-default logging; upgrade codemods; and a `Wrap` event decoding fix.
+- [**3.1.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-1.md) — `createConfig`, transport factories, the provider/signer split, the `Token` / `WrappedToken` hierarchy, and top-level FHE primitives.
+- [**3.0.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-0.md) — the first stable v3 line: the high-level clear-text-in, clear-text-out SDK, plus upgraded wrapper and registry contract support.
+
+## 3.8.x
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/v3-8.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-8.md
+- logical_path: changelog/v3-8
+
+# 3.8.x
+
+This page covers the `3.8.x` line.
+
+## 3.8.0
+
+_Released 2026-11-16._
+
+### Daemon
 
 **Experimental Go and Rust clients.** Go and Rust services can use the SDK through native clients that talk to a local SDK daemon over a private Unix socket. The clients encrypt inputs, decrypt values (including public and delegated decryption), manage permits, prepare unsigned transactions for external signing, and grant or revoke on-chain decryption delegation through your wallet. Token workflows are not available in the clients yet.
 
@@ -2551,11 +2591,11 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 
 Start with the [Go quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/go-quick-start.md) or the [Rust quick start](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/tutorials/rust-quick-start.md).
 
-## New vaults API: `defineVaultGroup` and `createVaultClient`
+### New vaults API: `defineVaultGroup` and `createVaultClient`
 
 
 > [!WARNING]
-> **Breaking change.** The vaults API of 3.7 is removed and replaced. Code that imports from `@zama-fhe/sdk/vaults` or `@zama-fhe/react-sdk/vaults` must move to the new client.
+> **Breaking change in a minor release.** The vaults API that shipped in stable 3.7.0 is removed and replaced. Code that imports from `@zama-fhe/sdk/vaults` or `@zama-fhe/react-sdk/vaults` must move to the new client; the tables below map each removed API to its replacement.
 
 
 You now describe each vault once with `defineVault`, group vaults with `defineVaultGroup`, and create one client per SDK with `createVaultClient(sdk)` (`useVaultClient()` in React). The client holds no config: every method takes the vault, the group or the batch it acts on, so one client serves every chain and group. Vaults that take deposits in the same confidential asset form a group.
@@ -2588,21 +2628,37 @@ You now describe each vault once with `defineVault`, group vaults with `defineVa
 | `VaultGroupJoinUnconfirmedError`                                                                                                                                                           | `VaultJoinUnconfirmedError`                                                                                                                                                       |
 | From earlier beta builds: `defineVaults`, `VaultsConfig`, `JoinRecord`, `readPosition`, `exit`, `prepareExit`, `positionQueryOptions`, `exitMutationOptions`, `VaultActionNotAllowedError` | `defineVaultGroup`, `JoinOutcome.batches`, `readBatch`, `claim` and `quit`, `batchQueryOptions`, `claimMutationOptions` and `quitMutationOptions`, `VaultBatchNotDispatchedError` |
 
-**Removed** from `@zama-fhe/react-sdk/vaults`: `useVault`, `useVaultBatcher`, `useVaultGroup`, `useJoin`, `useRecover`, `useDispatchBatch`, `useGroupDeposit`, `useGroupRedeem`, `useBatchState`, `useBatchStatus`, `useCurrentBatchId`, `usePaused`, `useBatcherTokens`, `useTimeUntilDispatchable` and `useTimeUntilCallbackDeadline`, and, from earlier beta builds, `usePosition` and `useExit`. `useDeposit`, `useRedeem`, `useClaim`, `useQuit` and `useFinalize` keep their names but take new variables: the group with the join for `useDeposit` and `useRedeem`, and a `BatchRef` for the others. Use `useBatch` and `useOpenBatches` for reads.
+**Removed** from `@zama-fhe/react-sdk/vaults`: `useVault`, `useVaultBatcher`, `useVaultGroup`, `useJoin`, `useRecover`, `useDispatchBatch`, `useGroupDeposit`, `useGroupRedeem`, `useBatchState`, `useBatchStatus`, `useCurrentBatchId`, `usePaused`, `useBatcherTokens`, `useTimeUntilDispatchable` and `useTimeUntilCallbackDeadline`, and, from earlier beta builds, `usePosition` and `useExit`. `useDeposit`, `useRedeem`, `useClaim` and `useQuit` keep their 3.7.0 names but take new variables: the group with the join for `useDeposit` and `useRedeem`, and a `BatchRef` for `useClaim` and `useQuit`. `useDispatch` and `useFinalize` are new and also take a `BatchRef`. Use `useBatch` and `useOpenBatches` for reads.
 
 The root entry now exports `confidentialTransferAndCallContract`, `confidentialTransferFromAndCallContract` and `unwrapAmountContract`.
 
 See [Vaults overview](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/README.md) and [`VaultClient`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md).
 
-## Typed errors for the protocol's FHE compute limits
+### Typed errors for the protocol's FHE compute limits
 
 The protocol caps the FHE compute, measured in HCU, that a transaction and a block can use. A write whose gas estimation hits one of them now throws a typed error instead of a bare `TransactionRevertedError`, from `submitTransaction`-backed methods and from `sdk.offline.prepare` alike: `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`) when the block has too little left, which is retryable in the next block, and `HcuTransactionLimitExceededError` (`HCU_TRANSACTION_LIMIT_EXCEEDED`) when the transaction needs more HCU, in total or in one sequential chain, than one transaction may use, which a retry cannot fix.
 
-A transaction that is mined and then reverts now throws `TransactionRevertedError` instead of returning a result. `TransactionReceipt` gained an optional `status` (`"success"` or `"reverted"`); the viem, ethers and wagmi providers fill it.
+**Behavior change: mined reverts now throw.** A transaction that is mined and then reverts now throws `TransactionRevertedError` instead of returning a result, so code that inspected the returned result to detect a revert now gets an exception instead. `TransactionReceipt` gained an optional `status` (`"success"` or `"reverted"`); the viem, ethers and wagmi providers fill it.
 
 See [Errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#hcublocklimitexceedederror).
 
-## Opt out of clearing credentials on wallet account changes
+### Batched reads with `GenericProvider.multicall`
+
+`GenericProvider` gains an optional `multicall({ calls, chainId? })` that runs many reads in one Multicall3 call and returns the results in call order; one reverted read rejects the whole call. `ViemProvider`, `EthersProvider` and `WagmiProvider` implement it, including on chains with no deployed Multicall3. A custom provider can leave it out, and the SDK then reads one call at a time. The result type is exported as `MulticallReturnType`. See [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/GenericProvider.md#multicall).
+
+### Safe and EIP-5792 transactions resolve in `WagmiProvider`
+
+`WagmiProvider.waitForTransactionReceipt` now also asks the connected wallet for the receipt, through `eth_getTransactionReceipt` and then `wallet_getCallsStatus`. Smart-account wallets such as Safe over WalletConnect return a hash the chain doesn't know, so shield and approve flows used to wait forever. The wait is now bounded at 3 minutes and then throws `TransactionRevertedError` saying the outcome is unknown; a revert reported by either the chain or the wallet counts as a failure.
+
+### Registry chain refetches when a wallet connects
+
+`useWrappersRegistryAddress`, and the hooks built on it, now refetch when a wallet connects on a different chain, instead of showing the previous chain's registry for up to 30 seconds. The hook can briefly return `undefined` after a connect or a chain switch. `zamaQueryKeys.wrappersRegistry.chainId` takes an optional `walletChainId`, so exact-match `getQueryData` or `setQueryData` calls on `chainId()` no longer match once a wallet is connected.
+
+### Chain presets are frozen
+
+The built-in chain presets and the `chains` map are now frozen with `Object.freeze`. Writing to a preset directly, such as `sepolia.registryAddress = …`, throws a `TypeError` in strict mode instead of silently changing the preset for the whole app. Spread a preset to customize it: `{ ...sepolia, registryAddress }`.
+
+### Opt out of clearing credentials on wallet account changes
 
 New `clearCredentialsOnWalletChange` option on `createConfig`. By default (`true`) the SDK keeps its existing behavior: switching wallet accounts, locking the wallet, or disconnecting wipes the previous account's transport key pair, permits, and decrypt cache. Set it to `false` to keep them. Storage is keyed per signer address and a permit is only accepted from the address that signed it, so one account can never use another's entries; keeping them lets a multi-wallet user switch A → B → A without signing a new permit or re-decrypting, and stops wallets that emit an empty account list on auto-lock (Rabby, Brave) from wiping credentials on every lock.
 
@@ -2611,23 +2667,24 @@ New `clearCredentialsOnWalletChange` option on `createConfig`. By default (`true
 
 See [Wallet account changes](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/concepts/permit-model.md#wallet-account-changes) in the Permit Model.
 
-## Permit signing with browser extensions that patch `BigInt`
+### Permit signing with browser extensions that patch `BigInt`
 
 `ViemSigner` and `WagmiSigner` now convert the typed-data domain `chainId` to a number and every `bigint` value in the message to a decimal string before calling viem. Browser extensions that patch how `bigint` is JSON-serialized made viem send the permit's `chainId` as `"1n"`, and the wallet rejected the signature with `chainId should be same as current chainId`; with no `bigint` left in the request, such a patch has nothing to act on. Signatures are unchanged, and `EthersSigner` was never affected.
 
-## Telemetry as query parameters
+### Telemetry as query parameters
 
 `createConfig` now takes `telemetry: "header" | "query" | "off"`. The default, `"header"`, keeps sending the `x-zama-sdk-*` usage headers. `"query"` sends the same four fields as `zama_sdk_*` query parameters instead, for backend proxies and edges that rebuild or strip request headers. `"off"` sends nothing; `true` and `false` still work as `"header"` and `"off"`. On Node.js, `ZAMA_SDK_TELEMETRY` takes the same three values, case-insensitive, and switches the mode or turns telemetry off for the whole process; it cannot turn on what the config disabled. See [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md).
 
-## Amoy mock registry and tokens removed
+### Amoy mock registry and tokens removed
 
 The mock wrappers registry and mock confidential tokens on Polygon Amoy are no longer maintained, so the SDK no longer ships them. `polygonAmoy.registryAddress` is now `undefined`, Amoy is removed from the deprecated `DefaultRegistryAddresses` map, and the `example-polygon-amoy` app is removed. The `polygonAmoy` preset stays available for the base protocol: encrypting inputs and decrypting values on Amoy work as before. If you deploy your own registry on Amoy, pass its address via `registryAddresses` when creating a `WrappersRegistry`, or set `registryAddress` on the chain definition. The Polygon mainnet registry and wrappers are unchanged.
 
-## InGen testnet removed
+### `ApiKeyCookie` relayer auth removed
 
-The SDK no longer supports the T-Rex InGen testnet (chain ID `364301`). The `ingenTestnet` preset is removed from `@zama-fhe/sdk/chains`, from the built-in `chains` map and from the deprecated `DefaultRegistryAddresses`, and the `example-ingen` app is removed. Use `zenithTrexTestnet`, `hoodi` or `bscTestnet` for a cleartext testnet.
 
-## `ApiKeyCookie` relayer auth removed
+> [!WARNING]
+> **Breaking change in a minor release.** `ApiKeyCookie` was part of the relayer auth options in stable 3.7.0. Code that uses it no longer compiles; see **Migrate** below.
+
 
 `ApiKeyCookie` is removed from relayer authentication, so `FheChain.auth` is now `ApiKeyHeader | BearerToken`. The Zama-hosted relayer only accepts the `x-api-key` header, and in a browser the cookie never reached a server: it was written with `document.cookie` and marked `HttpOnly`, which browsers ignore when a script sets it. It was only ever sent, as a real `Cookie` header, from Node.js, which includes the daemon behind the Go and Rust clients. A setup that authenticated to its own proxy that way needs to change.
 
@@ -2635,28 +2692,6 @@ The SDK no longer supports the T-Rex InGen testnet (chain ID `364301`). The `ing
 - **Go and Rust clients:** `zama.APIKeyCookie` and `RelayerAuth::ApiKeyCookie` are removed, so code that uses them no longer compiles.
 - **Daemon protocol:** `api_key_cookie` is removed from `ChainAuth` and its field number (3) is reserved. A client that still sends it is rejected with `FAILED_PRECONDITION`; run the client and the daemon at exactly the same version.
 - **Migrate:** have your proxy read its credential from a header and use `ApiKeyHeader` with the optional `header` name (the default is `x-api-key`). See [Auth methods reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md#5-auth-methods-reference).
-
-## 3.x
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/changelog/v3.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3.md
-- logical_path: changelog/v3
-
-# 3.x
-
-Plain-language release notes for the `3.x` line — the current, actively-maintained release line. Here's what changed in each minor version, and why it matters. This complements the auto-generated [`CHANGELOG.md`](https://github.com/zama-ai/sdk/blob/main/CHANGELOG.md) (the full commit-level list) and the [migration guide](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/migrate-v2-to-v3.md) (for moving across a major version).
-
-## Versions
-
-- [**3.7.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-7.md) — Confidential ERC-4626 vaults, wildcard delegation, offline permits for more than 10 contracts, SDK usage telemetry headers, a T-Rex Zenith testnet preset, and permit signatures with a 0/1 recovery byte.
-- [**3.6.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-6.md) — Web Worker encryption offload, structured wallet-signing/permit-failure events, an interrupted-unshield resume fix, and orphaned relayer entries that warn instead of throwing.
-- [**3.5.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-5.md) — Polygon presets, offline signing and decryption permits, at-rest transport-key encryption, and automatic KMS-context recovery.
-- [**3.4.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-4.md) — An internal FHE backend migration to `@fhevm/sdk` (no API changes for `Token`/hooks apps), FHE runtime and client tuning knobs, shared transport key pairs for B2B2C, automatic decrypt-batch chunking, and a two-signature shield via `wrap()`.
-- [**3.3.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-3.md) — `confidentialTransferAndCall`, automatic pending-unshield recovery, and typed decryption errors.
-- [**3.2.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-2.md) — configurable, silent-by-default logging; upgrade codemods; and a `Wrap` event decoding fix.
-- [**3.1.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-1.md) — `createConfig`, transport factories, the provider/signer split, the `Token` / `WrappedToken` hierarchy, and top-level FHE primitives.
-- [**3.0.x**](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-0.md) — the first stable v3 line: the high-level clear-text-in, clear-text-out SDK, plus upgraded wrapper and registry contract support.
 
 ## 3.7.x
 
@@ -2668,6 +2703,16 @@ Plain-language release notes for the `3.x` line — the current, actively-mainta
 # 3.7.x
 
 This page covers the `3.7.x` line.
+
+## 3.7.2
+
+_Released 2026-11-09._
+
+### Revoked wrappers are no longer discovered
+
+`useWrapperDiscovery` and `wrapperDiscoveryQueryOptions` now return `null` for a wrapper that has been revoked from the wrappers registry. A revoked pair keeps its non-zero wrapper address on-chain with `isValid: false`, and the query used to return that address anyway. Apps that offer shielding based on the hook's result stop offering revoked wrappers.
+
+The result is also no longer cached for the whole session: it now expires with the registry TTL (`registryTTL`, 24 hours by default), like the other registry queries, so a revocation is picked up without a reload. See [useWrapperDiscovery](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useWrapperDiscovery.md).
 
 ## 3.7.1
 
@@ -6233,45 +6278,48 @@ All errors thrown by `@zama-fhe/sdk` and `@zama-fhe/react-sdk` extend `ZamaError
 
 Every SDK error is an instance of `ZamaError`, which extends the native `Error` class. Each subclass has a unique `.code` property:
 
-| Code                                     | TypeScript error class                    | What happened                                                                                                  |
-| ---------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `SIGNING_REJECTED`                       | `SigningRejectedError`                    | User rejected the wallet signature                                                                             |
-| `SIGNING_FAILED`                         | `SigningFailedError`                      | Wallet signature failed (connectivity or firmware issue)                                                       |
-| `ENCRYPTION_FAILED`                      | `EncryptionFailedError`                   | FHE encryption failed in the WASM runtime                                                                      |
-| `DECRYPTION_FAILED`                      | `DecryptionFailedError`                   | FHE decryption failed                                                                                          |
-| `TRANSACTION_REVERTED`                   | `TransactionRevertedError`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                 |
-| `HCU_BLOCK_LIMIT_EXCEEDED`               | `HcuBlockLimitExceededError`              | Gas estimation found too little FHE compute (HCU) left in the block (retryable)                                |
-| `HCU_TRANSACTION_LIMIT_EXCEEDED`         | `HcuTransactionLimitExceededError`        | The transaction needs more FHE compute (HCU) than one transaction may use                                      |
-| `UNSHIELD_ALREADY_FINALIZED`             | `UnshieldAlreadyFinalizedError`           | `resumeUnshield()` called for an unwrap that was already finalized -- funds already arrived, nothing to resume |
-| `INVALID_KEYPAIR`                        | `InvalidTransportKeyPairError`            | Relayer rejected transport key pair (stale or malformed)                                                       |
-| `KEYPAIR_EXPIRED`                        | `TransportKeyPairExpiredError`            | Transport key pair expired -- user needs to re-sign                                                            |
-| `REVOKED_KMS_CONTEXT`                    | `RevokedKmsContextError`                  | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                |
-| `NO_CIPHERTEXT`                          | `NoCiphertextError`                       | No encrypted balance exists for this account                                                                   |
-| `RELAYER_REQUEST_FAILED`                 | `RelayerRequestFailedError`               | Relayer HTTP request failed (check `.statusCode`); retryable on back-pressure (429)                            |
-| `NOT_ENTITLED`                           | `NotEntitledError`                        | Actor lacks the on-chain ACL grant to decrypt this value — terminal, don't retry                               |
-| `RPC_RATE_LIMITED`                       | `RpcRateLimitError`                       | Consumer's RPC provider rate-limited an on-chain read (retryable)                                              |
-| `CONFIGURATION`                          | `ConfigurationError`                      | Invalid SDK config or FHE runtime failed to initialize                                                         |
-| `INSUFFICIENT_CONFIDENTIAL_BALANCE`      | `InsufficientConfidentialBalanceError`    | Confidential balance too low for transfer or unshield                                                          |
-| `INSUFFICIENT_ERC20_BALANCE`             | `InsufficientERC20BalanceError`           | ERC-20 balance too low for shield                                                                              |
-| `INSUFFICIENT_ALLOWANCE`                 | `InsufficientAllowanceError`              | ERC-20 allowance too low for a manual `wrap` (approve first)                                                   |
-| `BALANCE_CHECK_UNAVAILABLE`              | `BalanceCheckUnavailableError`            | Balance check impossible (no stored permits)                                                                   |
-| `ERC20_READ_FAILED`                      | `ERC20ReadFailedError`                    | Public ERC-20 read failed (network or contract error)                                                          |
-| `DELEGATION_SELF_NOT_ALLOWED`            | `DelegationSelfNotAllowedError`           | Delegation cannot target self                                                                                  |
-| `DELEGATION_COOLDOWN`                    | `DelegationCooldownError`                 | Only one delegate/revoke per tuple per block (retryable)                                                       |
-| `DELEGATION_NOT_FOUND`                   | `DelegationNotFoundError`                 | No active delegation for this tuple                                                                            |
-| `SIGNER_REQUIRED`                        | `SignerRequiredError`                     | Write/sign/decrypt called without a signer                                                                     |
-| `DELEGATION_EXPIRED`                     | `DelegationExpiredError`                  | The delegation has expired                                                                                     |
-| `SIGNER_NOT_CONFIGURED`                  | `SignerNotConfiguredError`                | SDK operation needs a signer but none is configured (subclass of `SignerRequiredError`)                        |
-| `WALLET_NOT_CONNECTED`                   | `WalletNotConnectedError`                 | Signer exists but has no connected wallet account (subclass of `SignerRequiredError`)                          |
-| `WALLET_ACCOUNT_NOT_READY`               | `WalletAccountNotReadyError`              | Async signer adapter hasn't resolved its account yet (subclass of `SignerRequiredError`, retryable)            |
-| `CHAIN_MISMATCH`                         | `ChainMismatchError`                      | Signer and provider are on different chains, or the signer is not on the vault group's or batch's `chainId`    |
-| `DELEGATION_CONTRACT_IS_SELF`            | `DelegationContractIsSelfError`           | Delegation contract address equals the caller                                                                  |
-| `DELEGATION_DELEGATE_EQUALS_CONTRACT`    | `DelegationDelegateEqualsContractError`   | Delegate equals the contract address                                                                           |
-| `DELEGATION_DELEGATE_CANNOT_BE_WILDCARD` | `DelegationDelegateCannotBeWildcardError` | Delegate address is the wildcard address                                                                       |
-| `DELEGATION_EXPIRATION_TOO_SOON`         | `DelegationExpirationTooSoonError`        | Expiration date less than 1 hour in the future                                                                 |
-| `DELEGATION_EXPIRY_UNCHANGED`            | `DelegationExpiryUnchangedError`          | New expiry matches the current value                                                                           |
-| `DELEGATION_NOT_PROPAGATED`              | `DelegationNotPropagatedError`            | Delegated decrypt failed transiently (gateway not synced, or delegator ACL read stale) — retry                 |
-| `ACL_PAUSED`                             | `AclPausedError`                          | The ACL contract is paused                                                                                     |
+| Code                                     | TypeScript error class                    | What happened                                                                                                    |
+| ---------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `SIGNING_REJECTED`                       | `SigningRejectedError`                    | User rejected the wallet signature                                                                               |
+| `SIGNING_FAILED`                         | `SigningFailedError`                      | Wallet signature failed (connectivity or firmware issue)                                                         |
+| `ENCRYPTION_FAILED`                      | `EncryptionFailedError`                   | FHE encryption failed in the WASM runtime                                                                        |
+| `DECRYPTION_FAILED`                      | `DecryptionFailedError`                   | FHE decryption failed                                                                                            |
+| `TRANSACTION_REVERTED`                   | `TransactionRevertedError`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                   |
+| `HCU_BLOCK_LIMIT_EXCEEDED`               | `HcuBlockLimitExceededError`              | Gas estimation found too little FHE compute (HCU) left in the block (retryable)                                  |
+| `HCU_TRANSACTION_LIMIT_EXCEEDED`         | `HcuTransactionLimitExceededError`        | The transaction needs more FHE compute (HCU) than one transaction may use                                        |
+| `UNSHIELD_ALREADY_FINALIZED`             | `UnshieldAlreadyFinalizedError`           | `resumeUnshield()` called for an unwrap that was already finalized -- funds already arrived, nothing to resume   |
+| `INVALID_KEYPAIR`                        | `InvalidTransportKeyPairError`            | Relayer rejected transport key pair (stale or malformed)                                                         |
+| `KEYPAIR_EXPIRED`                        | `TransportKeyPairExpiredError`            | Transport key pair expired -- user needs to re-sign                                                              |
+| `REVOKED_KMS_CONTEXT`                    | `RevokedKmsContextError`                  | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                  |
+| `NO_CIPHERTEXT`                          | `NoCiphertextError`                       | No encrypted balance exists for this account                                                                     |
+| `RELAYER_REQUEST_FAILED`                 | `RelayerRequestFailedError`               | Relayer HTTP request failed (check `.statusCode`); retryable on back-pressure (429)                              |
+| `NOT_ENTITLED`                           | `NotEntitledError`                        | Actor lacks the on-chain ACL grant to decrypt this value — terminal, don't retry                                 |
+| `RPC_RATE_LIMITED`                       | `RpcRateLimitError`                       | Consumer's RPC provider rate-limited an on-chain read (retryable)                                                |
+| `CONFIGURATION`                          | `ConfigurationError`                      | Invalid SDK config or FHE runtime failed to initialize                                                           |
+| `INSUFFICIENT_CONFIDENTIAL_BALANCE`      | `InsufficientConfidentialBalanceError`    | Confidential balance too low for transfer or unshield                                                            |
+| `INSUFFICIENT_ERC20_BALANCE`             | `InsufficientERC20BalanceError`           | ERC-20 balance too low for shield                                                                                |
+| `INSUFFICIENT_ALLOWANCE`                 | `InsufficientAllowanceError`              | ERC-20 allowance too low for a manual `wrap` (approve first)                                                     |
+| `BALANCE_CHECK_UNAVAILABLE`              | `BalanceCheckUnavailableError`            | Balance check impossible (no stored permits)                                                                     |
+| `ERC20_READ_FAILED`                      | `ERC20ReadFailedError`                    | Public ERC-20 read failed (network or contract error)                                                            |
+| `DELEGATION_SELF_NOT_ALLOWED`            | `DelegationSelfNotAllowedError`           | Delegation cannot target self                                                                                    |
+| `DELEGATION_COOLDOWN`                    | `DelegationCooldownError`                 | Only one delegate/revoke per tuple per block (retryable)                                                         |
+| `DELEGATION_NOT_FOUND`                   | `DelegationNotFoundError`                 | No active delegation for this tuple                                                                              |
+| `SIGNER_REQUIRED`                        | `SignerRequiredError`                     | Write/sign/decrypt called without a signer                                                                       |
+| `DELEGATION_EXPIRED`                     | `DelegationExpiredError`                  | The delegation has expired                                                                                       |
+| `SIGNER_NOT_CONFIGURED`                  | `SignerNotConfiguredError`                | SDK operation needs a signer but none is configured (subclass of `SignerRequiredError`)                          |
+| `WALLET_NOT_CONNECTED`                   | `WalletNotConnectedError`                 | Signer exists but has no connected wallet account (subclass of `SignerRequiredError`)                            |
+| `WALLET_ACCOUNT_NOT_READY`               | `WalletAccountNotReadyError`              | Async signer adapter hasn't resolved its account yet (subclass of `SignerRequiredError`, retryable)              |
+| `CHAIN_MISMATCH`                         | `ChainMismatchError`                      | Signer and provider are on different chains, or the signer is not on the vault group's or batch's `chainId`      |
+| `DELEGATION_CONTRACT_IS_SELF`            | `DelegationContractIsSelfError`           | Delegation contract address equals the caller                                                                    |
+| `DELEGATION_DELEGATE_EQUALS_CONTRACT`    | `DelegationDelegateEqualsContractError`   | Delegate equals the contract address                                                                             |
+| `DELEGATION_DELEGATE_CANNOT_BE_WILDCARD` | `DelegationDelegateCannotBeWildcardError` | Delegate address is the wildcard address                                                                         |
+| `DELEGATION_EXPIRATION_TOO_SOON`         | `DelegationExpirationTooSoonError`        | Expiration date less than 1 hour in the future                                                                   |
+| `DELEGATION_EXPIRY_UNCHANGED`            | `DelegationExpiryUnchangedError`          | New expiry matches the current value                                                                             |
+| `DELEGATION_NOT_PROPAGATED`              | `DelegationNotPropagatedError`            | Delegated decrypt failed transiently (gateway not synced, or delegator ACL read stale) — retry                   |
+| `ACL_PAUSED`                             | `AclPausedError`                          | The ACL contract is paused                                                                                       |
+| `VAULT_BATCHER_PAUSED`                   | `VaultBatcherPausedError`                 | A batcher one leg of a vault join would reach is paused, so the whole join would revert                          |
+| `VAULT_BATCH_NOT_DISPATCHED`             | `VaultBatchNotDispatchedError`            | A vault batch cannot be finalized because it is not dispatched (still pending, or already finalized or canceled) |
+| `VAULT_JOIN_UNCONFIRMED`                 | `VaultJoinUnconfirmedError`               | A vault join was mined, but its receipt doesn't confirm every leg                                                |
 
 ### 2. Catch with instanceof
 
@@ -11122,7 +11170,7 @@ Each release signs the image in the release workflow and stores the signature, b
 Resolve the tag first, so the digest you verify is the digest you pin:
 
 ```bash
-export ZAMA_SDK_VERSION=3.8.0-beta.22
+export ZAMA_SDK_VERSION=3.8.0
 export ZAMA_SDK_DAEMON_DIGEST="$(docker buildx imagetools inspect "ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION}" --format '{{ .Manifest.Digest }}')"
 ```
 
@@ -11182,7 +11230,7 @@ services:
 Download the daemon file next to it, then start both:
 
 ```bash
-export ZAMA_SDK_VERSION=3.8.0-beta.22
+export ZAMA_SDK_VERSION=3.8.0
 curl -fsSL -o zama-sdk-daemon.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.yaml"
 docker compose up -d --wait
 ```
@@ -11196,7 +11244,7 @@ When your application runs directly on a Linux host rather than in a container, 
 From the directory that will hold the daemon's files, replace `myapp` with the user your application runs as:
 
 ```bash
-export ZAMA_SDK_VERSION=3.8.0-beta.22
+export ZAMA_SDK_VERSION=3.8.0
 curl -fsSL -o compose.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.host.yaml"
 sudo install -d -m 700 -o myapp -g myapp socket storage
 ZAMA_SDK_DAEMON_UID="$(id -u myapp)" ZAMA_SDK_DAEMON_GID="$(id -g myapp)" docker compose up -d --wait
@@ -13551,6 +13599,17 @@ readContract(config: ReadContractConfig): Promise<unknown>
 ```
 
 Execute a read-only contract call. `ReadContractConfig` contains `address`, `abi`, `functionName`, `args`, and an optional `chainId`. Without `chainId`, read the provider's current chain. With one, `WagmiProvider` reads that chain through wagmi. `ViemProvider` and `EthersProvider` are bound to one chain and throw `ConfigurationError` for another. A custom provider must do one or the other, never answer from the wrong chain.
+
+### multicall
+
+```ts
+multicall?(params: {
+  calls: readonly ReadContractConfig[];
+  chainId?: number;
+}): Promise<MulticallReturnType<typeof calls>>
+```
+
+Optional. Run many reads in one Multicall3 call, on `chainId` when given, and return the results in call order. One reverted read rejects the whole call, and each call's own `chainId` is ignored. `ViemProvider`, `EthersProvider` and `WagmiProvider` implement it, including on chains with no deployed Multicall3. Leave it out of a custom provider and the SDK reads one call at a time with `readContract`.
 
 ### waitForTransactionReceipt
 
@@ -20940,7 +20999,7 @@ useWrapperDiscovery({ tokenAddress: "0xConfidentialToken", erc20Address: "0xUSDC
 
 ## Return Type
 
-The `data` field resolves to `Address | null` -- the wrapper contract address for the given token, or `null` if no wrapper exists.
+The `data` field resolves to `Address | null` -- the wrapper contract address for the given token, or `null` if no wrapper is registered or the registered wrapper has been revoked.
 
 ### `data`
 
@@ -20999,7 +21058,7 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 ## Caching
 
-The query uses `staleTime: Infinity`. Wrapper addresses are immutable once deployed, so the result never re-fetches automatically.
+The query's `staleTime` matches the registry cache TTL (`registryTTL`, default 24 hours). Registry pairs can be revoked, so the result is re-fetched once it goes stale.
 
 ## Suspense
 
@@ -29573,7 +29632,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 ## Installation
 
 ```sh
-go get github.com/zama-ai/sdk/clients/go/v3@v3.8.0-beta.22
+go get github.com/zama-ai/sdk/clients/go/v3@v3.8.0
 ```
 
 Run the `ghcr.io/zama-ai/sdk-daemon` image at exactly the same version as the client.
@@ -29602,7 +29661,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 ## Installation
 
 ```sh
-cargo add zama_sdk@=3.8.0-beta.22
+cargo add zama_sdk@=3.8.0
 ```
 
 Run the `ghcr.io/zama-ai/sdk-daemon` image at exactly the same version as the client. Enable the `alloy` feature for the Alloy signing and transaction adapters.

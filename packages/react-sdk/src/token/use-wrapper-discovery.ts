@@ -35,8 +35,9 @@ export interface UseWrapperDiscoverySuspenseConfig {
 
 /**
  * Discover the confidential wrapper for an ERC-20 token via the on-chain registry.
- * Returns the wrapper address if one exists, or `null` if not.
- * Cached indefinitely since wrapper mappings are immutable.
+ * Returns the wrapper address if a valid one is registered, or `null` if none is
+ * registered or the registered wrapper has been revoked.
+ * Cached for the registry TTL (`registryTTL`, default 24 hours), since pairs can be revoked.
  *
  * @param config - Token and ERC-20 addresses.
  * @param options - React Query options (forwarded to `useQuery`).
