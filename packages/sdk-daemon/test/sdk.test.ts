@@ -1,4 +1,4 @@
-import { ClientLanguage, ContextConfig } from "../src/generated/zama/sdk/v1beta1/daemon.js";
+import { ContextConfig, CreateContextRequest } from "../src/generated/zama/sdk/v1beta1/daemon.js";
 import type * as Viem from "viem";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -37,17 +37,11 @@ test("context factory preserves signerless public decryption and zero-value lazy
   const directory = await mkdtemp(join(tmpdir(), "daemon-zero-"));
   const storage = new StorageManager(directory);
   const factory = createContextFactory(storage);
-  const request = {
+  const request = CreateContextRequest.fromPartial({
     config: ContextConfig.fromPartial({
       chains: [{ id: 11155111n, network: "https://rpc.invalid" }],
     }),
-    signerEnabled: false,
-    account: undefined,
-    storage: undefined,
-    permitStorage: undefined,
-    clientLanguage: ClientLanguage.CLIENT_LANGUAGE_UNSPECIFIED,
-    transportKeyPairDerivationSecret: undefined,
-  };
+  });
   const signer = new RemoteSigner(
     { address: "0x1111111111111111111111111111111111111111", chainId: 11155111 },
     () => {},

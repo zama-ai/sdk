@@ -1,5 +1,10 @@
-import { ClientLanguage } from "../src/generated/zama/sdk/v1beta1/daemon.js";
-import { storage, fixture, decode as values, testServer } from "./support/harness.js";
+import {
+  createContext,
+  storage,
+  fixture,
+  decode as values,
+  testServer,
+} from "./support/harness.js";
 import { randomUUID } from "node:crypto";
 
 import type { ServiceError } from "@grpc/grpc-js";
@@ -44,20 +49,10 @@ async function harness() {
   const { client } = server;
   return {
     async open(address: Address, attach = true) {
-      const contextId = await new Promise<string>((resolve, reject) =>
-        client.createContext(
-          {
-            storage: undefined,
-            permitStorage: undefined,
-            clientLanguage: ClientLanguage.CLIENT_LANGUAGE_UNSPECIFIED,
-            transportKeyPairDerivationSecret: undefined,
-            config: undefined,
-            signerEnabled: true,
-            account: { address: bytes(address), chainId: BigInt(anvil.id) },
-          },
-          (error, result) => (error ? reject(error) : resolve(result.contextId)),
-        ),
-      );
+      const contextId = await createContext(client, {
+        signerEnabled: true,
+        account: { address: bytes(address), chainId: BigInt(anvil.id) },
+      });
       const created = fixtures.at(-1);
       if (!created) {
         throw new Error("Missing SDK fixture");

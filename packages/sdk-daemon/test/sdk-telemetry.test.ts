@@ -38,17 +38,12 @@ describe("context factory telemetry", () => {
 
   async function build(clientLanguage = ClientLanguage.CLIENT_LANGUAGE_GO) {
     const context = await createContextFactory(new StorageManager(directory))(
-      {
+      CreateContextRequest.fromPartial({
         config: ContextConfig.fromPartial({
           chains: [{ id: 11155111n, network: "https://rpc.invalid" }],
         }),
-        signerEnabled: false,
-        account: undefined,
-        storage: undefined,
-        permitStorage: undefined,
         clientLanguage,
-        transportKeyPairDerivationSecret: undefined,
-      },
+      }),
       undefined,
       new RemoteStorage(),
       new RemoteEvents("telemetry"),

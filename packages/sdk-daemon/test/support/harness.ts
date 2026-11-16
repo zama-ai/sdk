@@ -24,8 +24,7 @@ import {
   DaemonServiceClient,
   type ClearEntry,
   type ClearValue,
-  type CreateContextRequest,
-  ClientLanguage,
+  CreateContextRequest,
   type SignerAction,
   type SignerClientMessage,
   type SignerReply,
@@ -80,18 +79,8 @@ export function createContext(
   request: Partial<CreateContextRequest> = {},
 ) {
   return new Promise<string>((resolve, reject) =>
-    client.createContext(
-      {
-        config: undefined,
-        signerEnabled: false,
-        account: undefined,
-        storage: undefined,
-        permitStorage: undefined,
-        clientLanguage: ClientLanguage.CLIENT_LANGUAGE_UNSPECIFIED,
-        transportKeyPairDerivationSecret: undefined,
-        ...request,
-      },
-      (error, response) => (error ? reject(error) : resolve(response.contextId)),
+    client.createContext(CreateContextRequest.fromPartial(request), (error, response) =>
+      error ? reject(error) : resolve(response.contextId),
     ),
   );
 }

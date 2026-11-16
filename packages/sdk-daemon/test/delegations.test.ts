@@ -619,15 +619,12 @@ test("losing events then cancelling during a delegation receipt preserves the br
     created = fixture(signer, undefined, undefined, events.onEvent);
     return { sdk: created.sdk, storageIdentities: [] };
   }, createCoordinator());
-  const contextId = await runtime.createContext({
-    config: undefined,
-    signerEnabled: true,
-    account: { address: bytes(USER), chainId: BigInt(anvil.id) },
-    storage: undefined,
-    permitStorage: undefined,
-    clientLanguage: rpc.ClientLanguage.CLIENT_LANGUAGE_UNSPECIFIED,
-    transportKeyPairDerivationSecret: undefined,
-  });
+  const contextId = await runtime.createContext(
+    rpc.CreateContextRequest.fromPartial({
+      signerEnabled: true,
+      account: { address: bytes(USER), chainId: BigInt(anvil.id) },
+    }),
+  );
   const stream = new FakeStream<rpc.SignerServerMessage>();
   const signer = runtime.attachSigner(contextId, stream as unknown as SignerStream);
   const eventStream = new FakeStream<rpc.EventServerMessage>();

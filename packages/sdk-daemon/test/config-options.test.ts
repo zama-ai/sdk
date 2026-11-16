@@ -7,7 +7,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { chains, ConfigurationError, cleartext } from "@zama-fhe/sdk";
 import { node } from "@zama-fhe/sdk/node";
 import {
-  ClientLanguage,
+  CreateContextRequest,
   ContextConfig,
   ModuleVersions,
   ProviderBatch,
@@ -77,7 +77,7 @@ test("forwards every supported typed provider option to viem", async () => {
   const manager = new StorageManager();
   try {
     const context = await createContextFactory(manager)(
-      {
+      CreateContextRequest.fromPartial({
         config: ContextConfig.fromPartial({
           chainId,
           chains: [
@@ -96,13 +96,7 @@ test("forwards every supported typed provider option to viem", async () => {
             },
           ],
         }),
-        signerEnabled: false,
-        account: undefined,
-        storage: undefined,
-        permitStorage: undefined,
-        clientLanguage: ClientLanguage.CLIENT_LANGUAGE_UNSPECIFIED,
-        transportKeyPairDerivationSecret: undefined,
-      },
+      }),
       undefined,
       new RemoteStorage(),
       new RemoteEvents("fixture"),

@@ -1,4 +1,3 @@
-import { ClientLanguage } from "../src/generated/zama/sdk/v1beta1/daemon.js";
 import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,16 +6,9 @@ import { createCoordinator } from "../src/coordination.js";
 import { DaemonRuntime, type ContextSdk } from "../src/runtime.js";
 import { startServer } from "../src/server.js";
 import { shutdownDaemon } from "../src/shutdown.js";
+import { CreateContextRequest } from "../src/generated/zama/sdk/v1beta1/daemon.js";
 
-const contextRequest = {
-  config: undefined,
-  signerEnabled: false,
-  account: undefined,
-  storage: undefined,
-  permitStorage: undefined,
-  clientLanguage: ClientLanguage.CLIENT_LANGUAGE_UNSPECIFIED,
-  transportKeyPairDerivationSecret: undefined,
-};
+const contextRequest = CreateContextRequest.fromPartial({});
 const directories: string[] = [];
 
 afterEach(async () => {

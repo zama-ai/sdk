@@ -7,7 +7,7 @@ import { operationContext, RemoteSigner, type SignerStream } from "../src/remote
 import { createCoordinator } from "../src/coordination.js";
 import { DaemonRuntime } from "../src/runtime.js";
 import {
-  ClientLanguage,
+  CreateContextRequest,
   SignerAction,
   type SignerReply,
   type SignerServerMessage,
@@ -27,15 +27,10 @@ const config = {
   functionName: "store",
   args: [2n ** 255n, { owner: account.address, delta: -123n }, "0x00ff"],
 } as const;
-const contextRequest = {
-  config: undefined,
+const contextRequest = CreateContextRequest.fromPartial({
   signerEnabled: true,
   account: { address: bytes(account.address), chainId: 31337n },
-  storage: undefined,
-  permitStorage: undefined,
-  clientLanguage: ClientLanguage.CLIENT_LANGUAGE_UNSPECIFIED,
-  transportKeyPairDerivationSecret: undefined,
-};
+});
 type Result = SignerReply["result"];
 const transactionHash = (value = bytes(hash)): Result => ({
   $case: "transactionHash",
