@@ -38,7 +38,8 @@ export interface FheChain<TId extends number = number> {
    * Address of the `KMSGeneration` contract, which records the digests of the
    * active FHE public key and CRS. Encryption checks the key material the
    * relayer serves against it. Ethereum host chains only; other host chains
-   * set {@link FheChain.keyVerificationChain} instead.
+   * set {@link FheChain.keyVerificationChain} instead. Left unset on a chain
+   * with the id and ACL of a built-in preset, it is taken from that preset.
    */
   readonly kmsGenerationContractAddress?: Address | undefined;
   /**

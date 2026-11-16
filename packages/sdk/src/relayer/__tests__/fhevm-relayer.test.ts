@@ -82,8 +82,14 @@ vi.mock("@fhevm/sdk/viem/cleartext", () => ({
   createFhevmCleartextEncryptClient: clients.createFhevmCleartextEncryptClient,
 }));
 
-import { anvil, mainnet, polygon } from "../../chains";
+import { anvil as anvilPreset, mainnet, polygon, sepolia } from "../../chains";
 import type { FheChain } from "../../chains/types";
+
+/** Local chain used as a real-FHE chain; encryption on one needs a KMSGeneration contract. */
+const anvil: FheChain = {
+  ...anvilPreset,
+  kmsGenerationContractAddress: "0x0000000000000000000000000000000000000001",
+};
 import {
   DEFAULT_ENCRYPT_WORKER_TIMEOUTS,
   type EncryptWorkerTimeouts,
@@ -686,6 +692,39 @@ describe("FhevmRelayer request options", () => {
         }),
       );
     }
+  });
+
+  test("rejects a real-FHE chain with no KMSGeneration contract, naming the FheChain fields", () => {
+    expect(() => makeRelayer({ chain: anvilPreset })).toThrow(ConfigurationError);
+    expect(() => makeRelayer({ chain: anvilPreset })).toThrow(/kmsGenerationContractAddress/);
+  });
+
+  test("accepts a cleartext chain with no KMSGeneration contract", () => {
+    expect(() => makeRelayer({ chain: anvilPreset, cleartext: true })).not.toThrow();
+  });
+
+  test("fills the KMSGeneration contract of a hand-written chain from the matching preset", () => {
+    const { kmsGenerationContractAddress: _, ...handWritten } = sepolia;
+    makeRelayer({ chain: { ...handWritten, network: "https://rpc.example" } });
+
+    expect(clients.createFhevmEncryptClient).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chain: expect.objectContaining({
+          fhevm: expect.objectContaining({
+            contracts: expect.objectContaining({
+              kmsGeneration: { address: sepolia.kmsGenerationContractAddress },
+            }),
+          }),
+        }),
+      }),
+    );
+  });
+
+  test("does not fill the KMSGeneration contract of another deployment on a preset's chain id", () => {
+    const { kmsGenerationContractAddress: _, ...handWritten } = sepolia;
+    const custom = { ...handWritten, aclContractAddress: CONTRACT } as FheChain;
+
+    expect(() => makeRelayer({ chain: custom })).toThrow(ConfigurationError);
   });
 
   test("forwards key verification against the Ethereum KMSGeneration to every factory", () => {

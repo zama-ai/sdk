@@ -15,6 +15,7 @@ import {
   createFhevmCleartextEncryptClient,
 } from "@fhevm/sdk/viem/cleartext";
 import { createPublicClient, custom, http } from "viem";
+import { hasKeyVerification, withPresetKeyVerification } from "../chains/key-verification";
 import { toFhevmChain } from "../chains/to-fhevm-chain";
 import type { FheChain } from "../chains/types";
 import { ConfigurationError } from "../errors";
@@ -107,7 +108,16 @@ export class FhevmRelayer implements RelayerSDK {
    * cheap; each client's one-time init is deferred to its first operation.
    */
   constructor(config: FhevmRelayerConfig) {
-    this.#chain = config.chain;
+    this.#chain = withPresetKeyVerification(config.chain);
+    if (!config.cleartext && !hasKeyVerification(this.#chain)) {
+      // Raised here, with the FheChain fields to set, rather than by
+      // `@fhevm/sdk`, whose message names its own client options.
+      throw new ConfigurationError(
+        `Chain ${this.#chain.id} has no KMSGeneration contract to check the FHE public key and CRS against. ` +
+          `Set kmsGenerationContractAddress on its FheChain (Ethereum host chains), or keyVerificationChain ` +
+          `to the Ethereum chain that holds it (other host chains).`,
+      );
+    }
     const { timeout, debug, batchRpcCalls, moduleVersions, fheEncryptionKey } =
       config.options ?? {};
     const auth = this.#chain.auth ? toFhevmAuth(this.#chain.auth) : undefined;
