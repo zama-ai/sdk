@@ -39,7 +39,9 @@ export interface FheChain<TId extends number = number> {
    * active FHE public key and CRS. Encryption checks the key material the
    * relayer serves against it. Ethereum host chains only; other host chains
    * set {@link FheChain.keyVerificationChain} instead. Left unset on a chain
-   * with the id and ACL of a built-in preset, it is taken from that preset.
+   * with the id and ACL of a built-in preset, it is taken from that preset. A
+   * chain with a preset's id but another ACL drops the preset's value it got by
+   * spreading the preset, so set it to that deployment's own contract.
    */
   readonly kmsGenerationContractAddress?: Address | undefined;
   /**

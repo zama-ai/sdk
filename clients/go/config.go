@@ -45,6 +45,7 @@ type ChainConfig struct {
 	VerifyingContractAddressInputVerification *string
 	RegistryAddress                           *string
 	ExecutorAddress                           *string
+	KMSGenerationContractAddress              *string
 	Auth                                      RelayerAuth
 	Provider                                  *ProviderOptions
 }
@@ -129,6 +130,7 @@ func (c ChainConfig) wire() (*pb.ChainConfig, error) {
 		{"VerifyingContractAddressInputVerification", c.VerifyingContractAddressInputVerification, &result.VerifyingContractAddressInputVerification, false},
 		{"RegistryAddress", c.RegistryAddress, &result.RegistryAddress, true},
 		{"ExecutorAddress", c.ExecutorAddress, &result.ExecutorAddress, true},
+		{"KMSGenerationContractAddress", c.KMSGenerationContractAddress, &result.KmsGenerationContractAddress, true},
 	} {
 		if field.value == nil {
 			continue

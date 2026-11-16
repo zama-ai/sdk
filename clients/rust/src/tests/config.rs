@@ -135,10 +135,12 @@ fn optional_preset_addresses_preserve_omission_clearing_and_values() {
     ] {
         let mut chain = crate::ChainConfig::new(11_155_111, "https://rpc.invalid");
         chain.registry_address = address.clone();
-        chain.executor_address = address;
+        chain.executor_address = address.clone();
+        chain.kms_generation_contract_address = address;
         let wire = generated::ChainConfig::try_from(chain).unwrap();
         assert_eq!(wire.registry_address, expected);
         assert_eq!(wire.executor_address, expected);
+        assert_eq!(wire.kms_generation_contract_address, expected);
     }
     let mut chain = crate::ChainConfig::new(11_155_111, "https://rpc.invalid");
     chain.acl_contract_address = Some(String::new());
@@ -148,7 +150,7 @@ fn optional_preset_addresses_preserve_omission_clearing_and_values() {
 #[test]
 fn invalid_address_errors_name_the_field_but_not_the_value() {
     type Field = fn(&mut crate::ChainConfig) -> &mut Option<String>;
-    let fields: [(&str, Field); 7] = [
+    let fields: [(&str, Field); 8] = [
         ("acl_contract_address", |c| &mut c.acl_contract_address),
         ("kms_contract_address", |c| &mut c.kms_contract_address),
         ("input_verifier_contract_address", |c| {
@@ -162,6 +164,9 @@ fn invalid_address_errors_name_the_field_but_not_the_value() {
         }),
         ("registry_address", |c| &mut c.registry_address),
         ("executor_address", |c| &mut c.executor_address),
+        ("kms_generation_contract_address", |c| {
+            &mut c.kms_generation_contract_address
+        }),
     ];
     for (name, field) in fields {
         let mut chain = crate::ChainConfig::new(11_155_111, "https://rpc.invalid");

@@ -76,6 +76,20 @@ test("custom chain overrides preserve addresses and can clear optional preset ad
     aclContractAddress: `0x${"01".repeat(20)}`,
   });
 });
+test("a chain can set and clear its KMSGeneration contract", () => {
+  const set = parseContextConfig(
+    ContextConfig.fromPartial({
+      chains: [{ ...preset, kmsGenerationContractAddress: Buffer.alloc(20, 2) }],
+    }),
+  );
+  expect(set.chains[0].kmsGenerationContractAddress).toBe(`0x${"02".repeat(20)}`);
+  const cleared = parseContextConfig(
+    ContextConfig.fromPartial({
+      chains: [{ ...preset, kmsGenerationContractAddress: Buffer.alloc(0) }],
+    }),
+  );
+  expect(cleared.chains[0].kmsGenerationContractAddress).toBeUndefined();
+});
 test.each([
   ContextConfig.fromPartial({ chains: [preset], chainId: 31337n }),
   ContextConfig.fromPartial({ chains: [{ ...preset, id: 9007199254740992n }] }),

@@ -4372,6 +4372,9 @@ type ChainConfig struct {
 	RegistryAddress []byte     `protobuf:"bytes,10,opt,name=registry_address,json=registryAddress,proto3,oneof" json:"registry_address,omitempty"`
 	ExecutorAddress []byte     `protobuf:"bytes,11,opt,name=executor_address,json=executorAddress,proto3,oneof" json:"executor_address,omitempty"`
 	Auth            *ChainAuth `protobuf:"bytes,12,opt,name=auth,proto3" json:"auth,omitempty"`
+	// KMSGeneration contract the FHE public key and CRS are checked against before encryption.
+	// A chain with the ID and ACL of a preset inherits the preset's. An explicitly empty value clears it.
+	KmsGenerationContractAddress []byte `protobuf:"bytes,13,opt,name=kms_generation_contract_address,json=kmsGenerationContractAddress,proto3,oneof" json:"kms_generation_contract_address,omitempty"`
 	// Fields 100–119 are allocated to configuration and credential protection.
 	Provider      *HttpProviderConfig `protobuf:"bytes,100,opt,name=provider,proto3" json:"provider,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -4488,6 +4491,13 @@ func (x *ChainConfig) GetExecutorAddress() []byte {
 func (x *ChainConfig) GetAuth() *ChainAuth {
 	if x != nil {
 		return x.Auth
+	}
+	return nil
+}
+
+func (x *ChainConfig) GetKmsGenerationContractAddress() []byte {
+	if x != nil {
+		return x.KmsGenerationContractAddress
 	}
 	return nil
 }
@@ -8394,7 +8404,7 @@ const file_zama_sdk_v1beta1_daemon_proto_rawDesc = "" +
 	"\v_permit_ttlB\x19\n" +
 	"\x17_transport_key_pair_ttlB\x1b\n" +
 	"\x19_transport_key_pair_scopeB\x0f\n" +
-	"\r_registry_ttl\"\xea\a\n" +
+	"\r_registry_ttl\"\xda\b\n" +
 	"\vChainConfig\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x1d\n" +
 	"\anetwork\x18\x02 \x01(\tH\x00R\anetwork\x88\x01\x01\x12-\n" +
@@ -8409,7 +8419,9 @@ const file_zama_sdk_v1beta1_daemon_proto_rawDesc = "" +
 	"\x10registry_address\x18\n" +
 	" \x01(\fH\bR\x0fregistryAddress\x88\x01\x01\x12.\n" +
 	"\x10executor_address\x18\v \x01(\fH\tR\x0fexecutorAddress\x88\x01\x01\x12/\n" +
-	"\x04auth\x18\f \x01(\v2\x1b.zama.sdk.v1beta1.ChainAuthR\x04auth\x12@\n" +
+	"\x04auth\x18\f \x01(\v2\x1b.zama.sdk.v1beta1.ChainAuthR\x04auth\x12J\n" +
+	"\x1fkms_generation_contract_address\x18\r \x01(\fH\n" +
+	"R\x1ckmsGenerationContractAddress\x88\x01\x01\x12@\n" +
 	"\bprovider\x18d \x01(\v2$.zama.sdk.v1beta1.HttpProviderConfigR\bproviderB\n" +
 	"\n" +
 	"\b_networkB\x13\n" +
@@ -8421,7 +8433,8 @@ const file_zama_sdk_v1beta1_daemon_proto_rawDesc = "" +
 	"&_verifying_contract_address_decryptionB0\n" +
 	"._verifying_contract_address_input_verificationB\x13\n" +
 	"\x11_registry_addressB\x13\n" +
-	"\x11_executor_address\"\x9f\x01\n" +
+	"\x11_executor_addressB\"\n" +
+	" _kms_generation_contract_address\"\x9f\x01\n" +
 	"\tChainAuth\x12#\n" +
 	"\fbearer_token\x18\x01 \x01(\tH\x00R\vbearerToken\x12I\n" +
 	"\x0eapi_key_header\x18\x02 \x01(\v2!.zama.sdk.v1beta1.NamedCredentialH\x00R\fapiKeyHeaderB\f\n" +

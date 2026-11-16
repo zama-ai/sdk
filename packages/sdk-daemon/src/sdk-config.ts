@@ -73,6 +73,11 @@ function chain(value: ChainConfig): HttpChain {
       ? address(value.executorAddress)
       : undefined;
   }
+  if (value.kmsGenerationContractAddress !== undefined) {
+    merged.kmsGenerationContractAddress = value.kmsGenerationContractAddress.length
+      ? address(value.kmsGenerationContractAddress)
+      : undefined;
+  }
   if (typeof merged.network !== "string") {
     throw new ConfigurationError("A chain network must be an RPC URL string.");
   }

@@ -400,6 +400,9 @@ message ChainConfig {
   optional bytes registry_address = 10;
   optional bytes executor_address = 11;
   ChainAuth auth = 12;
+  // KMSGeneration contract the FHE public key and CRS are checked against before encryption.
+  // A chain with the ID and ACL of a preset inherits the preset's. An explicitly empty value clears it.
+  optional bytes kms_generation_contract_address = 13;
   // Fields 100–119 are allocated to configuration and credential protection.
   HttpProviderConfig provider = 100;
 }

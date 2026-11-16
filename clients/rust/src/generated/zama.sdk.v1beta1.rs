@@ -600,6 +600,12 @@ pub struct ChainConfig {
     pub executor_address: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
     #[prost(message, optional, tag = "12")]
     pub auth: ::core::option::Option<ChainAuth>,
+    /// KMSGeneration contract the FHE public key and CRS are checked against before encryption.
+    /// A chain with the ID and ACL of a preset inherits the preset's. An explicitly empty value clears it.
+    #[prost(bytes = "vec", optional, tag = "13")]
+    pub kms_generation_contract_address: ::core::option::Option<
+        ::prost::alloc::vec::Vec<u8>,
+    >,
     /// Fields 100–119 are allocated to configuration and credential protection.
     #[prost(message, optional, tag = "100")]
     pub provider: ::core::option::Option<HttpProviderConfig>,

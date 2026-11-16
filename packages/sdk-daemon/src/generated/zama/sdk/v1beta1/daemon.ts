@@ -1186,6 +1186,13 @@ export interface ChainConfig {
   auth:
     | ChainAuth
     | undefined;
+  /**
+   * KMSGeneration contract the FHE public key and CRS are checked against before encryption.
+   * A chain with the ID and ACL of a preset inherits the preset's. An explicitly empty value clears it.
+   */
+  kmsGenerationContractAddress?:
+    | Buffer
+    | undefined;
   /** Fields 100–119 are allocated to configuration and credential protection. */
   provider: HttpProviderConfig | undefined;
 }
@@ -7542,6 +7549,7 @@ function createBaseChainConfig(): ChainConfig {
     registryAddress: undefined,
     executorAddress: undefined,
     auth: undefined,
+    kmsGenerationContractAddress: undefined,
     provider: undefined,
   };
 }
@@ -7589,6 +7597,9 @@ export const ChainConfig: MessageFns<ChainConfig> = {
     }
     if (message.auth !== undefined) {
       ChainAuth.encode(message.auth, writer.uint32(98).fork()).join();
+    }
+    if (message.kmsGenerationContractAddress !== undefined) {
+      writer.uint32(106).bytes(message.kmsGenerationContractAddress);
     }
     if (message.provider !== undefined) {
       HttpProviderConfig.encode(message.provider, writer.uint32(802).fork()).join();
@@ -7705,6 +7716,14 @@ export const ChainConfig: MessageFns<ChainConfig> = {
             message.auth = ChainAuth.decode(reader, reader.uint32());
             continue;
           }
+          case 13: {
+            if (tag !== 106) {
+              break;
+            }
+
+            message.kmsGenerationContractAddress = Buffer.from(reader.bytes());
+            continue;
+          }
           case 100: {
             if (tag !== 802) {
               break;
@@ -7775,6 +7794,11 @@ export const ChainConfig: MessageFns<ChainConfig> = {
         ? Buffer.from(bytesFromBase64(object.executor_address))
         : undefined,
       auth: isSet(object.auth) ? ChainAuth.fromJSON(object.auth) : undefined,
+      kmsGenerationContractAddress: isSet(object.kmsGenerationContractAddress)
+        ? Buffer.from(bytesFromBase64(object.kmsGenerationContractAddress))
+        : isSet(object.kms_generation_contract_address)
+        ? Buffer.from(bytesFromBase64(object.kms_generation_contract_address))
+        : undefined,
       provider: isSet(object.provider) ? HttpProviderConfig.fromJSON(object.provider) : undefined,
     };
   },
@@ -7819,6 +7843,9 @@ export const ChainConfig: MessageFns<ChainConfig> = {
     if (message.auth !== undefined) {
       obj.auth = ChainAuth.toJSON(message.auth);
     }
+    if (message.kmsGenerationContractAddress !== undefined) {
+      obj.kmsGenerationContractAddress = base64FromBytes(message.kmsGenerationContractAddress);
+    }
     if (message.provider !== undefined) {
       obj.provider = HttpProviderConfig.toJSON(message.provider);
     }
@@ -7844,6 +7871,7 @@ export const ChainConfig: MessageFns<ChainConfig> = {
     message.registryAddress = object.registryAddress ?? undefined;
     message.executorAddress = object.executorAddress ?? undefined;
     message.auth = (object.auth !== undefined && object.auth !== null) ? ChainAuth.fromPartial(object.auth) : undefined;
+    message.kmsGenerationContractAddress = object.kmsGenerationContractAddress ?? undefined;
     message.provider = (object.provider !== undefined && object.provider !== null)
       ? HttpProviderConfig.fromPartial(object.provider)
       : undefined;
