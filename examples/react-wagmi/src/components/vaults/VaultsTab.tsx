@@ -1,41 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import {
-  useConfidentialBalance,
-  useGrantPermit,
-  useHasPermit,
-  useMetadata,
-  useZamaSDK,
-} from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/sdk";
-import { formatUnits, parseAbi } from "viem";
 import { useReadContracts } from "wagmi";
+import { PositionsOverview } from "@/components/vaults/PositionsOverview";
 import { VaultActionCard } from "@/components/vaults/VaultActionCard";
 import { describeError } from "@/lib/errors";
 import { useNetwork } from "@/lib/hooks";
 import type { BatchVault } from "@/lib/networks";
-import { singleVault } from "@/lib/vaults";
-
-// The vault is set by its two batchers. This app reads the asset and the share token from the
-// deposit batcher, so nothing else needs to be set.
-const BATCHER_ABI = parseAbi([
-  "function fromToken() view returns (address)",
-  "function toToken() view returns (address)",
-  "function vault() view returns (address)",
-]);
-
-const VALUE_ABI = parseAbi([
-  // On each confidential wrapper: underlying units per confidential unit.
-  "function rate() view returns (uint256)",
-  // On the ERC-4626 vault.
-  "function convertToAssets(uint256 shares) view returns (uint256)",
-]);
+import { BATCHER_ABI, singleVault, useVaultDetails, type VaultDetails } from "@/lib/vaults";
 
 export function VaultsTab({ account }: { account: Address }) {
   const { vaults } = useNetwork();
-  const [selected, setSelected] = useState(0);
   if (vaults.length === 0) {
     return (
       <section className="card">
@@ -47,32 +23,27 @@ export function VaultsTab({ account }: { account: Address }) {
       </section>
     );
   }
+  return <VaultsView vaults={vaults} account={account} />;
+}
+
+// The vault is set by its two batchers. The app reads everything else through the deposit
+// batcher: the asset, the share token, and the ERC-4626 vault.
+function VaultsView({ vaults, account }: { vaults: BatchVault[]; account: Address }) {
+  const details = useVaultDetails(vaults);
+  const [selected, setSelected] = useState(0);
   // Another network can list fewer vaults: fall back to its first one.
   const index = selected < vaults.length ? selected : 0;
   const vault = vaults[index];
   return (
     <>
+      <PositionsOverview
+        vaults={vaults}
+        details={details}
+        account={account}
+        onSelect={setSelected}
+      />
       {vaults.length > 1 && (
-        <section className="card" aria-labelledby="vault-picker-title">
-          <h2 className="card-title" id="vault-picker-title">
-            Vault
-          </h2>
-          <label className="sr-only" htmlFor="vault-picker">
-            Vault
-          </label>
-          <select
-            id="vault-picker"
-            className="select"
-            value={index}
-            onChange={(event) => setSelected(Number(event.currentTarget.value))}
-          >
-            {vaults.map((option, i) => (
-              <option key={option.depositBatcher} value={i}>
-                {`Vault ${i + 1} · ${option.depositBatcher.slice(0, 6)}…${option.depositBatcher.slice(-4)}`}
-              </option>
-            ))}
-          </select>
-        </section>
+        <VaultPicker vaults={vaults} details={details} value={index} onChange={setSelected} />
       )}
       {/* Keyed by vault, so the cards drop their form and reads when the vault changes. */}
       <VaultPanel
@@ -84,10 +55,66 @@ export function VaultsTab({ account }: { account: Address }) {
   );
 }
 
+interface VaultPickerProps {
+  vaults: BatchVault[];
+  details: (VaultDetails | undefined)[];
+  value: number;
+  onChange: (index: number) => void;
+}
+
+// Groups the vaults by the token they take and names each by its ERC-4626 vault. Until the
+// reads land, or if they fail, a vault shows its batcher.
+function VaultPicker({ vaults, details, value, onChange }: VaultPickerProps) {
+  const groups = new Map<string, { index: number; name: string }[]>();
+  const ungrouped: { index: number; name: string }[] = [];
+  vaults.forEach((vault, index) => {
+    const detail = details[index];
+    const symbol = detail?.asset.symbol;
+    const item = {
+      index,
+      name: detail?.name ?? `${vault.depositBatcher.slice(0, 6)}…${vault.depositBatcher.slice(-4)}`,
+    };
+    if (symbol) {
+      groups.set(symbol, [...(groups.get(symbol) ?? []), item]);
+    } else {
+      ungrouped.push(item);
+    }
+  });
+  const option = ({ index, name }: { index: number; name: string }) => (
+    <option key={index} value={index}>
+      {name}
+    </option>
+  );
+
+  return (
+    <section className="card" aria-labelledby="vault-picker-title">
+      <h2 className="card-title" id="vault-picker-title">
+        Vault
+      </h2>
+      <label className="sr-only" htmlFor="vault-picker">
+        Vault
+      </label>
+      <select
+        id="vault-picker"
+        className="select"
+        value={value}
+        onChange={(event) => onChange(Number(event.currentTarget.value))}
+      >
+        {[...groups].map(([symbol, items]) => (
+          <optgroup key={symbol} label={symbol}>
+            {items.map(option)}
+          </optgroup>
+        ))}
+        {ungrouped.map(option)}
+      </select>
+    </section>
+  );
+}
+
 function VaultPanel({ vault, account }: { vault: BatchVault; account: Address }) {
   // The deposit batcher takes the vault's asset and pays out its shares.
   const { data, error } = useReadContracts({
-    contracts: (["fromToken", "toToken", "vault"] as const).map((functionName) => ({
+    contracts: (["fromToken", "toToken"] as const).map((functionName) => ({
       address: vault.depositBatcher,
       abi: BATCHER_ABI,
       functionName,
@@ -95,10 +122,10 @@ function VaultPanel({ vault, account }: { vault: BatchVault; account: Address })
     })),
     allowFailure: false,
   });
-  const [assetToken, shareToken, erc4626] = data ?? [];
+  const [assetToken, shareToken] = data ?? [];
   // Built once per vault, so the read hooks see the same vault on every render.
   const defined = useMemo(() => singleVault(vault), [vault]);
-  if (!assetToken || !shareToken || !erc4626) {
+  if (!assetToken || !shareToken) {
     return (
       <section className="card">
         {error ? (
@@ -112,131 +139,15 @@ function VaultPanel({ vault, account }: { vault: BatchVault; account: Address })
     );
   }
 
-  // One permit covers both tokens and both batchers (for the amounts in the positions),
-  // so the first decrypt is the only signature the tab asks for.
+  // One permit covers both tokens and both batchers (for the amounts of the batches in progress).
   const permitContracts = [assetToken, shareToken, vault.depositBatcher, vault.redeemBatcher];
   const props = { vault: defined, account, permitContracts };
   return (
     <>
-      <PositionCard
-        chainId={vault.chainId}
-        account={account}
-        permitContracts={permitContracts}
-        vault={erc4626}
-        assetToken={assetToken}
-        shareToken={shareToken}
-      />
       {/* A deposit sends assets and is paid out in shares; a withdrawal sends shares and is
           paid out in assets. */}
       <VaultActionCard {...props} kind="deposit" token={assetToken} />
       <VaultActionCard {...props} kind="withdraw" token={shareToken} />
     </>
-  );
-}
-
-interface PositionCardProps {
-  chainId: number;
-  account: Address;
-  permitContracts: Address[];
-  /** The ERC-4626 vault. */
-  vault: Address;
-  assetToken: Address;
-  shareToken: Address;
-}
-
-function PositionCard({
-  chainId,
-  vault,
-  account,
-  permitContracts,
-  assetToken,
-  shareToken,
-}: PositionCardProps) {
-  const sdk = useZamaSDK();
-  const { data: assetMetadata } = useMetadata(assetToken);
-  const { data: shareMetadata } = useMetadata(shareToken);
-  // The first decryption asks the wallet for a signature, so it starts from a click.
-  const { data: hasPermit } = useHasPermit({ contractAddresses: permitContracts });
-  const grantPermit = useGrantPermit();
-  const shares = useConfidentialBalance(
-    { address: shareToken, account },
-    { enabled: hasPermit === true },
-  );
-  const { data: value, error: valueError } = useQuery({
-    queryKey: ["vault-position-value", chainId, shareToken, shares.data?.toString()],
-    queryFn: async () => {
-      const [shareRate, assetRate] = await Promise.all([
-        sdk.provider.readContract({
-          chainId,
-          address: shareToken,
-          abi: VALUE_ABI,
-          functionName: "rate",
-          args: [],
-        }),
-        sdk.provider.readContract({
-          chainId,
-          address: assetToken,
-          abi: VALUE_ABI,
-          functionName: "rate",
-          args: [],
-        }),
-      ]);
-      const assets = await sdk.provider.readContract({
-        chainId,
-        address: vault,
-        abi: VALUE_ABI,
-        functionName: "convertToAssets",
-        args: [shares.data! * shareRate],
-      });
-      return assets / assetRate;
-    },
-    enabled: shares.data !== undefined,
-    // The share price moves as the vault earns: refresh it now and then.
-    refetchInterval: 60_000,
-  });
-
-  return (
-    <section className="card" aria-labelledby="vault-position-title">
-      <h2 className="card-title" id="vault-position-title">
-        Your position
-      </h2>
-      <div className="balance-row">
-        <span className="balance-label">Shares</span>
-        {!hasPermit ? (
-          <button
-            type="button"
-            className="btn btn-sm btn-secondary"
-            disabled={grantPermit.isPending}
-            onClick={() => grantPermit.mutate(permitContracts)}
-          >
-            {grantPermit.isPending ? "Sign in your wallet…" : "Decrypt balances"}
-          </button>
-        ) : (
-          <output className="balance-value">
-            {shares.data === undefined || !shareMetadata
-              ? "Decrypting…"
-              : `${formatUnits(shares.data, shareMetadata.decimals)} ${shareMetadata.symbol}`}
-          </output>
-        )}
-      </div>
-      {value !== undefined && assetMetadata && (
-        <div className="balance-row">
-          <span className="balance-label">Worth now</span>
-          <output className="balance-value">
-            {formatUnits(value, assetMetadata.decimals)} {assetMetadata.symbol}
-          </output>
-        </div>
-      )}
-      {(grantPermit.error ?? shares.error) && (
-        <div className="alert alert-error card-status" role="alert">
-          {describeError(grantPermit.error ?? shares.error, "Decryption failed")}
-        </div>
-      )}
-      {valueError && (
-        <div className="alert alert-error card-status" role="alert">
-          {describeError(valueError, "Could not read what your shares are worth")}
-        </div>
-      )}
-    </section>
   );
 }

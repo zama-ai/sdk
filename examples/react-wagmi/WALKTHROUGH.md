@@ -31,8 +31,9 @@ page.tsx                         # wallet connect, network picker, tabs, token s
 ├── DecryptAsCard.tsx            # decrypt another wallet's balance (as a delegate)
 ├── MintAndShieldButton.tsx     # mint a test ERC-20 and shield it, on the Vaults tab
 └── vaults/                      # the Vaults tab
-    ├── VaultsTab.tsx            # the vault's tokens, the decrypt click, and the position
-    ├── VaultActionCard.tsx      # the Deposit or Withdraw box: balance, form, positions
+    ├── VaultsTab.tsx            # the vault picker and the chosen vault's tokens
+    ├── PositionsOverview.tsx    # your shares in every vault, their value, a total per token
+    ├── VaultActionCard.tsx      # the Deposit or Withdraw box: balance, decrypt, form, positions
     └── PositionList.tsx         # one row per joined batch, an exhaustive switch on its state
 ```
 
@@ -421,7 +422,7 @@ no default and are hidden until set.
 The proxy fails closed and is deliberately narrow:
 
 - unknown or unconfigured network → `404`, never a default upstream
-- `Origin` not the app's own, or not in `RELAYER_PROXY_ALLOWED_ORIGINS` when that is set (it replaces the default) → `403`
+- `Origin` host not the one the browser asked for (`X-Forwarded-Host` behind a reverse proxy, else `Host`) → `403`
 - only the relayer routes `web()` calls, and their `<route>/<job id>` polling paths, are forwarded; any other path → `404`
 - request bodies are never logged
 
@@ -461,12 +462,17 @@ Vaults tab shows each of those steps, following the
 - **Vaults per network.** Each row of `src/lib/networks.ts` reads its vaults from
   `NEXT_PUBLIC_<NETWORK>_VAULTS`, one `depositBatcher:redeemBatcher` pair per vault. Next.js
   inlines a `NEXT_PUBLIC_*` variable only where the code names it, so each row names its own.
-  With several vaults the tab shows a picker, and each vault is used on its own.
+  With several vaults the tab shows a picker that groups them by the token they take and names
+  each by its ERC-4626 vault, both read through the deposit batcher. Each vault is used on its own.
 - **Pinned chain.** Reads go to the vault's `chainId`, and the write hooks throw
   `ChainMismatchError` when the wallet is on another chain instead of sending the transaction
   there.
-- **Decrypt on click.** One `useGrantPermit` call covers both tokens and both batchers, so the
-  position card's "Decrypt balances" button is the only signature the tab asks for.
+- **Positions overview.** `PositionsOverview.tsx` decrypts the share balance of every vault in
+  one `useConfidentialBalances` query and values each with the ERC-4626 `convertToAssets`, with a
+  total per token. A permit holds at most 10 contracts, so `useGrantPermit` asks for one
+  signature per 10 share tokens. "Open" selects that vault below.
+- **Decrypt on click.** In the Deposit and Withdraw boxes, one `useGrantPermit` call covers the
+  vault's two tokens and two batchers (for the amounts of its batches in progress).
 - **Send.** `useDeposit` and `useRedeem` return the batch the join landed in. The button
   explains why it is disabled (a paused batcher from `useOpenBatches`, no amount, above balance),
   and `onJoinSubmitted` tells "confirm in your wallet" from "waiting for the transaction".
@@ -548,9 +554,9 @@ The directives that are specific to this app:
 - `connect-src`: this origin (the proxy, `/api/networks`, WASM and worker files), the
   RPC origin of every network in the table (the SDK probes the wallet's chain on connect,
   served or not), the storage each relayer's `keyurl` points the browser at for the FHE
-  public key and CRS (the public testnet bucket is built in; `CSP_CONNECT_SRC` for any other
-  relayer, each entry checked to be an origin when `relayers.ts` loads at boot), and `data:`
-  URLs (the FHE runtime compiles its WASM from one).
+  public key and CRS (the server asks each enabled relayer's `keyurl` and caches the answer
+  for an hour), and `data:` URLs (the FHE runtime
+  compiles its WASM from one).
 - `script-src 'wasm-unsafe-eval'` and `worker-src 'self' blob:`: what the FHE runtime
   needs to compile WASM and spawn its thread pool. See the SDK's security model docs.
 - `'unsafe-eval'` and inline styles are allowed under `next dev` only.

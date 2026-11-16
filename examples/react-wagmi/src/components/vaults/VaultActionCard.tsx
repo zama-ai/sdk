@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useConfidentialBalance, useHasPermit, useMetadata } from "@zama-fhe/react-sdk";
+import {
+  useConfidentialBalance,
+  useGrantPermit,
+  useHasPermit,
+  useMetadata,
+} from "@zama-fhe/react-sdk";
 import { useDeposit, useOpenBatches, useRedeem } from "@zama-fhe/react-sdk/vaults";
 import type { Address } from "@zama-fhe/sdk";
 import type { BatchRef } from "@zama-fhe/sdk/vaults";
@@ -62,8 +67,9 @@ export function VaultActionCard({
   const { data: metadata } = useMetadata(token);
   const { data: openBatches, error: pausedError } = useOpenBatches(vault, copy.direction);
   const paused = openBatches?.some((batch) => batch.paused);
-  // Decrypts only under an existing permit: this card never prompts the wallet on its own.
+  // The first decryption asks the wallet for a signature, so it starts from a click.
   const { data: hasPermit } = useHasPermit({ contractAddresses: permitContracts });
+  const grantPermit = useGrantPermit();
   const balance = useConfidentialBalance(
     { address: token, account },
     { enabled: hasPermit === true },
@@ -98,7 +104,9 @@ export function VaultActionCard({
   };
   const reason = blockedReason();
 
-  const errors = [send.error, balance.error, pausedError].filter((error) => error !== null);
+  const errors = [send.error, grantPermit.error, balance.error, pausedError].filter(
+    (error) => error !== null,
+  );
 
   return (
     <section className="card" aria-labelledby={`vault-${kind}-title`}>
@@ -112,13 +120,22 @@ export function VaultActionCard({
             <MintAndShieldButton account={account} token={token} symbol={metadata.symbol} />
           )}
         </div>
-        <output className="balance-value">
-          {!hasPermit
-            ? "—"
-            : balance.data === undefined || !metadata
+        {!hasPermit ? (
+          <button
+            type="button"
+            className="btn btn-sm btn-secondary"
+            disabled={grantPermit.isPending}
+            onClick={() => grantPermit.mutate(permitContracts)}
+          >
+            {grantPermit.isPending ? "Sign in your wallet…" : "Decrypt balances"}
+          </button>
+        ) : (
+          <output className="balance-value">
+            {balance.data === undefined || !metadata
               ? "Decrypting…"
               : `${formatUnits(balance.data, metadata.decimals)} ${metadata.symbol}`}
-        </output>
+          </output>
+        )}
       </div>
 
       <form

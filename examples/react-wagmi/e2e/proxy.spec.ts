@@ -47,6 +47,15 @@ test.describe("relayer proxy", () => {
     expect(res.status()).toBe(403);
   });
 
+  // Behind a reverse proxy, the server sees its own address while the browser sends the
+  // public host, which the proxy passes on as X-Forwarded-Host.
+  test("accepts a request whose origin is the forwarded host", async ({ request }) => {
+    const res = await request.post("/api/relayer/mainnet/v2/keyurl", {
+      headers: { origin: "https://app.example", "x-forwarded-host": "app.example" },
+    });
+    expect(res.status()).toBe(503);
+  });
+
   // From the browser, so the Origin header is the one the page's referrer policy produces
   // (`no-referrer` turns it into "null" for form posts, not for fetch). Mainnet's upstream is
   // unreachable: passing the check gives 503, failing it 403.
