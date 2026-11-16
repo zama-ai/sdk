@@ -371,7 +371,7 @@ func TestStoragePanicFailsOnlyItsRequest(t *testing.T) {
 func TestChainOverridesPreservePresence(t *testing.T) {
 	empty := ""
 	address := "0x0000000000000000000000000000000000000001"
-	chain, err := (ChainConfig{ID: 11155111, RegistryAddress: &empty, ACLContractAddress: &address, Auth: APIKeyCookie{Value: "token", Cookie: &empty}}).wire()
+	chain, err := (ChainConfig{ID: 11155111, RegistryAddress: &empty, ACLContractAddress: &address, Auth: APIKeyHeader{Value: "token", Header: &empty}}).wire()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -381,7 +381,7 @@ func TestChainOverridesPreservePresence(t *testing.T) {
 	if len(chain.AclContractAddress) != 20 || chain.AclContractAddress[19] != 1 {
 		t.Fatal("address changed")
 	}
-	if chain.Auth.GetApiKeyCookie().Name == nil || *chain.Auth.GetApiKeyCookie().Name != "" {
+	if chain.Auth.GetApiKeyHeader().Name == nil || *chain.Auth.GetApiKeyHeader().Name != "" {
 		t.Fatal("explicit credential name became omitted")
 	}
 	invalid := "0x1234"

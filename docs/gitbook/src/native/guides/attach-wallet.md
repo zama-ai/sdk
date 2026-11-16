@@ -111,6 +111,6 @@ For a custom wallet:
 
 Wallet callbacks can run concurrently. Each built-in adapter instance sends one write at a time, so its concurrent writes do not reuse a nonce, and a stalled broadcast delays the next write by up to the broadcast timeout. A custom wallet must coordinate nonces across concurrent writes itself.
 
-Report a rejection or failure as an SDK error. Report a revert detected before broadcast with Go `ExecutionRevertError` or Rust `SdkError::execution_reverted`; the operation then fails with `TRANSACTION_REVERTED`.
+Report a rejection or failure as an SDK error. Report a revert detected before broadcast with Go `ExecutionRevertError` or Rust `SdkError::execution_reverted`; the operation then fails with `TRANSACTION_REVERTED`, or with `HCU_BLOCK_LIMIT_EXCEEDED` or `HCU_TRANSACTION_LIMIT_EXCEEDED` when the revert is one of the protocol's FHE compute (HCU) limits.
 
 If a write ends without a clear result, follow [Resolve uncertain transaction outcomes](uncertain-transaction-outcomes.md).

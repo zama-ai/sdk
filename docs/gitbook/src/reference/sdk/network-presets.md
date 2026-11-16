@@ -30,22 +30,23 @@ import { sepolia, mainnet, polygon, polygonAmoy, hoodi, hardhat } from "@zama-fh
 
 Each chain object implements the `FheChain` interface:
 
-| Field                                       | Type                        | Description                                                                                                                                                                               |
-| ------------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                                        | `number`                    | Chain identifier                                                                                                                                                                          |
-| `gatewayChainId`                            | `number`                    | Chain ID of the gateway                                                                                                                                                                   |
-| `relayerUrl`                                | `string`                    | Default relayer endpoint for this network                                                                                                                                                 |
-| `network`                                   | `EIP1193Provider \| string` | Default RPC URL or EIP-1193 provider for this network                                                                                                                                     |
-| `aclContractAddress`                        | `Address`                   | ACL contract address                                                                                                                                                                      |
-| `kmsContractAddress`                        | `Address`                   | KMS contract address                                                                                                                                                                      |
-| `inputVerifierContractAddress`              | `Address`                   | Input verifier contract address                                                                                                                                                           |
-| `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations                                                                                                                                         |
-| `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations                                                                                                                                         |
-| `registryAddress`                           | `Address \| undefined`      | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat)                                                                                  |
-| `executorAddress`                           | `Address \| undefined`      | TFHEExecutor contract address (cleartext mode only, undefined for real FHE chains)                                                                                                        |
-| `auth`                                      | `Auth \| undefined`         | Relayer authentication. Required for the Zama-hosted **mainnet** relayer (Ethereum, Polygon); leave unset on the shared Zama testnet relayer (Sepolia, Polygon Amoy), which needs no key. |
-| `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key for EIP-712 verification (cleartext mode)                                                                                                                          |
-| `inputSignerPrivateKey`                     | `Hex \| undefined`          | Input signer private key for EIP-712 verification (cleartext mode)                                                                                                                        |
+| Field                                       | Type                        | Description                                                                                                                                                                                                      |
+| ------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                                        | `number`                    | Chain identifier                                                                                                                                                                                                 |
+| `gatewayChainId`                            | `number`                    | Chain ID of the gateway                                                                                                                                                                                          |
+| `relayerUrl`                                | `string`                    | Default relayer endpoint for this network                                                                                                                                                                        |
+| `network`                                   | `EIP1193Provider \| string` | Default RPC URL or EIP-1193 provider for this network                                                                                                                                                            |
+| `aclContractAddress`                        | `Address`                   | ACL contract address                                                                                                                                                                                             |
+| `kmsContractAddress`                        | `Address`                   | KMS contract address                                                                                                                                                                                             |
+| `inputVerifierContractAddress`              | `Address`                   | Input verifier contract address                                                                                                                                                                                  |
+| `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations                                                                                                                                                                |
+| `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations                                                                                                                                                                |
+| `registryAddress`                           | `Address \| undefined`      | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat and Polygon Amoy)                                                                                        |
+| `vaultRouterAddress`                        | `Address \| undefined`      | Optional. The multi-vault router, one per chain. A multi-vault join of a [`defineVaultGroup`](VaultClient.md#definevaultgroup) group goes through it. Set it on a custom chain to join multi-vault groups there. |
+| `executorAddress`                           | `Address \| undefined`      | TFHEExecutor contract address (cleartext mode only, undefined for real FHE chains)                                                                                                                               |
+| `auth`                                      | `Auth \| undefined`         | Relayer authentication. Required for the Zama-hosted **mainnet** relayer (Ethereum, Polygon); leave unset on the shared Zama testnet relayer (Sepolia, Polygon Amoy), which needs no key.                        |
+| `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key for EIP-712 verification (cleartext mode)                                                                                                                                                 |
+| `inputSignerPrivateKey`                     | `Hex \| undefined`          | Input signer private key for EIP-712 verification (cleartext mode)                                                                                                                                               |
 
 ### Usage with `createConfig`
 
@@ -148,7 +149,7 @@ import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 **Deprecated.** Read `registryAddress` from the chain presets instead (e.g. `sepolia.registryAddress`). This export will be removed in the next major version.
 {% endhint %}
 
-A convenience export of built-in registry addresses for every built-in chain with a deployed registry (Mainnet, Polygon, Sepolia, Polygon Amoy, Hoodi, T-Rex Zenith Testnet, BNB Smart Chain Testnet) as a `Record<number, Address>` map. Used internally by the [WrappersRegistry](./WrappersRegistry.md) class.
+A convenience export of built-in registry addresses for every built-in chain with a deployed registry (Mainnet, Polygon, Sepolia, Hoodi, T-Rex Zenith Testnet, BNB Smart Chain Testnet) as a `Record<number, Address>` map. Used internally by the [WrappersRegistry](./WrappersRegistry.md) class.
 
 ```ts
 // Deprecated
@@ -160,7 +161,7 @@ console.log(sepolia.registryAddress);
 ```
 
 {% hint style="info" %}
-`hardhat` has no registry address by default. Pass one via `registryAddresses` when creating a [WrappersRegistry](./WrappersRegistry.md), or set `registryAddress` on the chain definition.
+`hardhat` and `polygonAmoy` have no registry address by default. Pass one via `registryAddresses` when creating a [WrappersRegistry](./WrappersRegistry.md), or set `registryAddress` on the chain definition.
 {% endhint %}
 
 ## Related

@@ -93,7 +93,7 @@ export class CredentialStorage implements GenericStorage {
         return null;
       }
       if (!(row.value instanceof Uint8Array)) {
-        throw new Error("Invalid credential data.");
+        throw new TypeError("Invalid credential data.");
       }
       return deserialize(row.value) as T;
     });

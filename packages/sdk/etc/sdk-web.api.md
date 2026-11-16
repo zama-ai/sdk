@@ -58,6 +58,4 @@ export interface WebRelayerOptions extends RelayerOptions {
     readonly offloadWorker?: string | URL | (() => Worker);
 }
 
-// (No @packageDocumentation comment for this package)
-
 ```

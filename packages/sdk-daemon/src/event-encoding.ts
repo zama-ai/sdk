@@ -67,6 +67,8 @@ const operations = {
   "vault:claim": EventOperation.EVENT_OPERATION_VAULT_CLAIM,
   "vault:recover": EventOperation.EVENT_OPERATION_VAULT_RECOVER,
   "vault:dispatchBatch": EventOperation.EVENT_OPERATION_VAULT_DISPATCH_BATCH,
+  "vault:finalize": EventOperation.EVENT_OPERATION_VAULT_FINALIZE,
+  "vault:routerJoin": EventOperation.EVENT_OPERATION_VAULT_ROUTER_JOIN,
   invalidateDecryptionSignatures: EventOperation.EVENT_OPERATION_INVALIDATE_DECRYPTION_SIGNATURES,
 } satisfies Record<PermitOperation | TransactionOperation, EventOperation>;
 
@@ -89,6 +91,8 @@ const vaultOperations = {
   claim: VaultOperation.VAULT_OPERATION_CLAIM,
   recover: VaultOperation.VAULT_OPERATION_RECOVER,
   dispatchBatch: VaultOperation.VAULT_OPERATION_DISPATCH_BATCH,
+  finalize: VaultOperation.VAULT_OPERATION_FINALIZE,
+  routerJoin: VaultOperation.VAULT_OPERATION_ROUTER_JOIN,
 } satisfies Record<
   Extract<ZamaSDKEvent, { type: "vault:submitted" }>["vaultOperation"],
   VaultOperation

@@ -31,7 +31,7 @@ export function createContextFactory(manager: StorageManager): ContextFactory {
       getChainId: () => current().getChainId(),
       readContract: (config) => current().readContract(config),
       waitForTransactionReceipt: (hash) => current().waitForTransactionReceipt(hash),
-      getBlockTimestamp: () => current().getBlockTimestamp(),
+      getBlockTimestamp: (readChainId) => current().getBlockTimestamp(readChainId),
       prepareTransaction: (args) => current().prepareTransaction(args),
     };
     const secret = request.transportKeyPairDerivationSecret;

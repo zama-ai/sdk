@@ -1,7 +1,8 @@
 name: Examples CI
 
-# Typechecks (and builds, where applicable) every app under examples/ against
-# the exact published SDK versions each example pins in its own package.json.
+# Lints, typechecks and builds (where applicable) every app under examples/
+# against the exact published SDK versions each example pins in its own
+# package.json.
 # examples/* are deliberately standalone npm projects (not pnpm workspace
 # members) with committed lockfiles, so this installs each example exactly as
 # an end user would and catches breakage in the example code itself — a bad
@@ -27,10 +28,6 @@ jobs:
       fail-fast: false
       matrix:
         example:
-          - example-bnb
-          - example-hoodi
-          - example-polygon-amoy
-          - example-zenith
           - node-ethers
           - node-viem
           - react-ethers
@@ -49,12 +46,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24.22.1
+          node-version: 24.22.3
           cache: npm
           cache-dependency-path: examples/${{ matrix.example }}/package-lock.json
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Lint
+        run: npm run lint --if-present
 
       - name: Typecheck
         run: npm run typecheck
@@ -63,20 +63,18 @@ jobs:
         run: npm run build --if-present
 
   # Runs the Playwright e2e suite for the examples that ship one. These tests
-  # mock the RPC at the network layer and boot the app's own `npm run dev`
-  # server (on the per-app port pinned in each playwright.config.ts), so they
-  # need no chain, keys, or secrets — only the browser binary. GitHub Actions
-  # sets CI=true, which flips `reuseExistingServer` off so Playwright always
-  # starts a fresh server.
+  # mock the RPC at the network layer and boot the app's own server (on the
+  # per-app port pinned in each playwright.config.ts), so they need no chain,
+  # keys, or secrets — only the browser binary. GitHub Actions sets CI=true,
+  # which flips `reuseExistingServer` off so Playwright always starts a fresh
+  # server; react-wagmi then builds and runs `next start` instead of `next dev`,
+  # because its production CSP is the one worth testing.
   e2e:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         example:
-          - example-bnb
-          - example-hoodi
-          - example-polygon-amoy
           - react-ethers
           - react-viem
           - react-wagmi
@@ -92,7 +90,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24.22.1
+          node-version: 24.22.3
           cache: npm
           cache-dependency-path: examples/${{ matrix.example }}/package-lock.json
 

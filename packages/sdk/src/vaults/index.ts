@@ -3,62 +3,39 @@
  *
  * @packageDocumentation
  */
-export { createVaultBatcher, VaultBatcher } from "./vault-batcher";
-export { createVault, Vault } from "./vault";
-export { BatchState } from "./types";
-export type { JoinOptions, JoinResult, VaultAddresses, VaultJoinOptions } from "./types";
-export { decodeJoined, findJoined, VaultTopics, type JoinedEvent } from "./events";
-
+export { createVaultClient, type VaultClient } from "./client";
 export {
-  batchCallbackDeadlineContract,
-  batchCreatedAtContract,
-  batchDispatchedAtContract,
-  batchMinBatchAgeContract,
-  batchStateContract,
-  callbackDeadlineContract,
-  claimContract,
-  currentBatchIdContract,
-  depositsContract,
-  dispatchBatchContract,
-  exchangeRateContract,
-  exchangeRateDecimalsContract,
-  fromTokenContract,
-  joinContract,
-  minBatchAgeContract,
-  pausedContract,
-  quitContract,
-  recoverContract,
-  toTokenContract,
-  totalDepositsContract,
-  vaultContract,
-} from "./contracts";
+  defineVault,
+  defineVaultGroup,
+  MAX_GROUP_VAULTS,
+  type BatcherHistory,
+  type RetiredBatcher,
+  type Vault,
+  type VaultGroup,
+  type VaultIdOf,
+} from "./config";
+export type {
+  Batch,
+  BatchAction,
+  BatchRef,
+  BatchState,
+  BatcherRef,
+  Call,
+  GroupJoinInput,
+  GroupJoinOptions,
+  OperatorApprovalCall,
+  JoinCall,
+  JoinDirection,
+  JoinInput,
+  JoinOptions,
+  JoinOutcome,
+  JoinRoute,
+  OpenBatch,
+  PreparedFinalize,
+  PreparedJoin,
+  SendJoinOptions,
+  VaultCall,
+  VaultLeg,
+} from "./types";
 
-// Importing this barrel does not require TanStack Query to be installed: the
-// TanStack types below are type-only imports, erased at compile time.
-export {
-  batchStateQueryOptions,
-  claimMutationOptions,
-  currentBatchIdQueryOptions,
-  depositMutationOptions,
-  dispatchBatchMutationOptions,
-  invalidateAfterClaim,
-  invalidateAfterDispatchBatch,
-  invalidateAfterJoin,
-  invalidateAfterQuit,
-  invalidateBatchQueries,
-  joinMutationOptions,
-  quitMutationOptions,
-  recoverMutationOptions,
-  redeemMutationOptions,
-  timeUntilDispatchableQueryOptions,
-  vaultQueryKeys,
-  type BatchStateQueryConfig,
-  type ClaimParams,
-  type CurrentBatchIdQueryConfig,
-  type DepositParams,
-  type JoinParams,
-  type QuitParams,
-  type RecoverParams,
-  type RedeemParams,
-  type TimeUntilDispatchableQueryConfig,
-} from "./query";
+export * from "./query";

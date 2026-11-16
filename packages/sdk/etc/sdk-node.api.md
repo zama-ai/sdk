@@ -13,7 +13,7 @@ import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 import { TypedValue } from '@fhevm/sdk/types';
 
 // @public
-export const anvil: {
+export const anvil: Readonly<{
     readonly id: 31337;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "";
@@ -25,7 +25,7 @@ export const anvil: {
     readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
     readonly registryAddress: undefined;
     readonly executorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
-};
+}>;
 
 // @public
 export class AsyncLocalMapStorage implements GenericStorage {
@@ -39,7 +39,7 @@ export class AsyncLocalMapStorage implements GenericStorage {
 export const asyncLocalStorage: AsyncLocalMapStorage;
 
 // @public
-export const bscTestnet: {
+export const bscTestnet: Readonly<{
     readonly id: 97;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "";
@@ -51,7 +51,7 @@ export const bscTestnet: {
     readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
     readonly registryAddress: "0xc0E8B73b1C58D846e1d4f8fAE2E1466C85BCeAeC";
     readonly executorAddress: "0x5985e48689550c1b2893ABfBbe4cc0eE3A22cc54";
-};
+}>;
 
 // @public
 export const chains: Record<number, FheChain>;
@@ -112,6 +112,7 @@ export interface FheChain<TId extends number = number> {
     readonly protocolConfigContractAddress?: Address | undefined;
     readonly registryAddress: Address | undefined;
     readonly relayerUrl: string;
+    readonly vaultRouterAddress?: Address;
     readonly verifyingContractAddressDecryption: Address;
     readonly verifyingContractAddressInputVerification: Address;
 }
@@ -123,10 +124,6 @@ export type FheChainAuth = {
 } | {
     __type: "ApiKeyHeader";
     header?: string;
-    value: string;
-} | {
-    __type: "ApiKeyCookie";
-    cookie?: string;
     value: string;
 };
 
@@ -164,7 +161,7 @@ export interface GenericStorage {
 }
 
 // @public
-export const hardhat: {
+export const hardhat: Readonly<{
     readonly id: 31337;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "";
@@ -176,10 +173,10 @@ export const hardhat: {
     readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
     readonly registryAddress: undefined;
     readonly executorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
-};
+}>;
 
 // @public
-export const hoodi: {
+export const hoodi: Readonly<{
     readonly id: 560048;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "";
@@ -191,10 +188,10 @@ export const hoodi: {
     readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
     readonly registryAddress: "0x1807aE2f693F8530DFB126D0eF98F2F2518F292f";
     readonly executorAddress: "0xC316692627de536368d82e9121F1D44a550894E6";
-};
+}>;
 
 // @public
-export const mainnet: {
+export const mainnet: Readonly<{
     readonly id: 1;
     readonly gatewayChainId: 261131;
     readonly relayerUrl: "https://relayer.mainnet.zama.org";
@@ -205,8 +202,9 @@ export const mainnet: {
     readonly verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24";
     readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
     readonly registryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0";
+    readonly vaultRouterAddress: "0x11c6Acfd368DDFAB97d15649eB8043C0197fac4C";
     readonly protocolConfigContractAddress: "0xD8236B57394f90726b26aB25D38CeAC776E1a7C4";
-};
+}>;
 
 // @public
 export function node(options?: RelayerOptions): NodeRelayerConfig;
@@ -217,7 +215,7 @@ export interface NodeRelayerConfig extends RelayerConfig {
 }
 
 // @public
-export const polygon: {
+export const polygon: Readonly<{
     readonly id: 137;
     readonly gatewayChainId: 261131;
     readonly relayerUrl: "https://relayer.mainnet.zama.org";
@@ -229,10 +227,10 @@ export const polygon: {
     readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
     readonly registryAddress: "0xc8908569868758dAF814B5a8b96bBc44D1653d54";
     readonly protocolConfigContractAddress: "0x17f62Ab3A1Ea519703cD597410147A30Fa1a7f1e";
-};
+}>;
 
 // @public
-export const polygonAmoy: {
+export const polygonAmoy: Readonly<{
     readonly id: 80002;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "https://relayer.testnet.zama.org";
@@ -242,9 +240,9 @@ export const polygonAmoy: {
     readonly inputVerifierContractAddress: "0x6e5A7D8b0c645467Cba7e62D6624917085118631";
     readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
     readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
-    readonly registryAddress: "0xF486c3D4F4562760A43883e72E8D6f6Cf2EFdA94";
+    readonly registryAddress: undefined;
     readonly protocolConfigContractAddress: "0x4CcF009Aba90D04f52b31fc7aDdE240578aFe10F";
-};
+}>;
 
 // @public
 export interface RelayerConfig {
@@ -259,7 +257,7 @@ export interface RelayerOptions extends Pick<FhevmRelayerOptions, "timeout" | "d
 }
 
 // @public
-export const sepolia: {
+export const sepolia: Readonly<{
     readonly id: 11155111;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "https://relayer.testnet.zama.org";
@@ -270,11 +268,12 @@ export const sepolia: {
     readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
     readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
     readonly registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
+    readonly vaultRouterAddress: "0xD5BBFF95F3401aeC3B111664F6b72EdAe73814e8";
     readonly protocolConfigContractAddress: "0x51f9AFBc89Ea792e1a21a12AB802ab58D4dbee83";
-};
+}>;
 
 // @public
-export const zenithTrexTestnet: {
+export const zenithTrexTestnet: Readonly<{
     readonly id: 936486;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "";
@@ -286,8 +285,6 @@ export const zenithTrexTestnet: {
     readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
     readonly registryAddress: "0xde2e3948d35ef9C406A7317eAF332F3c2786a566";
     readonly executorAddress: "0x6C5036A4ad55DBA8007ae82c4e9C123F143e53ab";
-};
-
-// (No @packageDocumentation comment for this package)
+}>;
 
 ```

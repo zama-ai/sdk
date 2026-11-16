@@ -120,6 +120,7 @@ export interface FheChain<TId extends number = number> {
     readonly protocolConfigContractAddress?: Address | undefined;
     readonly registryAddress: Address | undefined;
     readonly relayerUrl: string;
+    readonly vaultRouterAddress?: Address;
     readonly verifyingContractAddressDecryption: Address;
     readonly verifyingContractAddressInputVerification: Address;
 }
@@ -131,10 +132,6 @@ export type FheChainAuth = {
 } | {
     __type: "ApiKeyHeader";
     header?: string;
-    value: string;
-} | {
-    __type: "ApiKeyCookie";
-    cookie?: string;
     value: string;
 };
 
@@ -157,8 +154,12 @@ export interface GenericLogger {
 
 // @public
 export interface GenericProvider {
-    getBlockTimestamp(): Promise<bigint>;
+    getBlockTimestamp(chainId?: number): Promise<bigint>;
     getChainId(): Promise<number>;
+    multicall?<const TCalls extends readonly ReadContractConfig[]>(params: {
+        readonly calls: TCalls;
+        readonly chainId?: number;
+    }): Promise<MulticallReturnType<TCalls>>;
     prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
         from: Address;
         calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
@@ -197,6 +198,9 @@ export interface InvalidateDecryptionSignaturesSubmittedEvent extends BaseEvent 
     txHash: Hex;
     type: typeof ZamaSDKEvents.InvalidateDecryptionSignaturesSubmitted;
 }
+
+// @public
+export type MulticallReturnType<TCalls extends readonly ReadContractConfig[]> = { -readonly [K in keyof TCalls]: TCalls[K] extends ReadContractConfig<infer TAbi, infer TFunctionName, infer TArgs> ? ReadContractReturnType<TAbi, TFunctionName, TArgs> : never; };
 
 // @public
 export class MutableWalletAccountStore implements WalletAccountStore {
@@ -238,6 +242,7 @@ export interface ReadContractConfig<TAbi extends ContractAbi = ContractAbi, TFun
     readonly abi: TAbi;
     readonly address: Address;
     readonly args: TArgs;
+    readonly chainId?: number;
     readonly functionName: TFunctionName;
 }
 
@@ -318,11 +323,12 @@ export interface TransactionErrorEvent extends BaseEvent {
 }
 
 // @public
-export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "invalidateDecryptionSignatures" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll" | "vault:join" | "vault:quit" | "vault:claim" | "vault:recover" | "vault:dispatchBatch";
+export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "invalidateDecryptionSignatures" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll" | "vault:join" | "vault:quit" | "vault:claim" | "vault:recover" | "vault:dispatchBatch" | "vault:finalize" | "vault:routerJoin";
 
 // @public
 export interface TransactionReceipt {
     readonly logs: readonly RawLog[];
+    readonly status?: "success" | "reverted";
 }
 
 // @public
@@ -363,8 +369,12 @@ export interface UnwrapSubmittedEvent extends BaseEvent {
 // @public
 export class ViemProvider implements GenericProvider {
     constructor(config: ViemProviderConfig);
-    getBlockTimestamp(): Promise<bigint>;
+    getBlockTimestamp(chainId?: number): Promise<bigint>;
     getChainId(): Promise<number>;
+    multicall<const TCalls extends readonly ReadContractConfig[]>(params: {
+        readonly calls: TCalls;
+        readonly chainId?: number;
+    }): Promise<MulticallReturnType<TCalls>>;
     prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
         from: Address;
         calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
@@ -539,7 +549,5 @@ export const ZamaSDKEvents: {
 
 // @public
 export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents];
-
-// (No @packageDocumentation comment for this package)
 
 ```

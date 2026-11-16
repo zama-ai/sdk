@@ -1,4 +1,4 @@
-import { ZamaError, retryAfterSeconds as sdkRetryAfterSeconds } from "@zama-fhe/sdk";
+import { ZamaError, ZamaErrorCode, retryAfterSeconds as sdkRetryAfterSeconds } from "@zama-fhe/sdk";
 import { Metadata, status, type ServiceError } from "@grpc/grpc-js";
 import type { SdkError } from "./generated/zama/sdk/v1beta1/daemon.js";
 import { reportCode } from "./diagnostics.js";
@@ -22,8 +22,15 @@ export function cancelled(): DaemonError {
   return new DaemonError("CANCELLED", status.CANCELLED, "Operation cancelled.");
 }
 export function errorDetails(error: unknown): SdkError {
-  // The SDK wraps wallet errors; native callers still need the broadcast outcome.
-  if (error instanceof ZamaError && error.cause instanceof TransactionCallbackError) {
+  // The SDK wraps a wallet error it could not classify; native callers still need the
+  // broadcast outcome. A revert the SDK did classify keeps its more specific code,
+  // unless the transaction may have been broadcast: that must never look retryable.
+  if (
+    error instanceof ZamaError &&
+    error.cause instanceof TransactionCallbackError &&
+    (error.code === ZamaErrorCode.TransactionReverted ||
+      error.cause.code === "TRANSACTION_OUTCOME_UNKNOWN")
+  ) {
     return errorDetails(error.cause);
   }
   if (error instanceof ZamaError) {

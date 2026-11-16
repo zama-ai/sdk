@@ -7,6 +7,7 @@ export {
   isOperatorContract,
   setOperatorContract,
   unwrapContract,
+  unwrapAmountContract,
   unwrapFromBalanceContract,
   unwrapRequesterContract,
   confidentialTotalSupplyContract,

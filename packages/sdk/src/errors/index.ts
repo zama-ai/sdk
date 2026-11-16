@@ -6,7 +6,11 @@ export {
   DecryptionFailedError,
   EncryptOffloadUnavailableError,
 } from "./encryption";
-export { TransactionRevertedError } from "./transaction";
+export {
+  TransactionRevertedError,
+  HcuBlockLimitExceededError,
+  HcuTransactionLimitExceededError,
+} from "./transaction";
 export {
   TransportKeyPairExpiredError,
   InvalidTransportKeyPairError,
@@ -54,6 +58,14 @@ export {
   type BalanceErrorDetails,
 } from "./balance";
 export { UnshieldAlreadyFinalizedError, type UnshieldAlreadyFinalizedDetails } from "./unshield";
+export {
+  VaultBatcherPausedError,
+  VaultBatchNotDispatchedError,
+  VaultJoinUnconfirmedError,
+  type VaultBatcherPausedDetails,
+  type VaultBatchNotDispatchedDetails,
+  type VaultJoinUnconfirmedDetails,
+} from "./vaults";
 export { wrapDecryptError, type DecryptErrorContext } from "./decrypt";
 export { wrapEncryptError } from "./encrypt";
 export { isFatalBatchError } from "./fatal-batch";

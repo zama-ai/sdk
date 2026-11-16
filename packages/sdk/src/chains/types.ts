@@ -3,8 +3,7 @@ import type { Address, EIP1193Provider } from "viem";
 /** Authentication forwarded to a chain's relayer endpoint. */
 export type FheChainAuth =
   | { __type: "BearerToken"; token: string }
-  | { __type: "ApiKeyHeader"; header?: string; value: string }
-  | { __type: "ApiKeyCookie"; cookie?: string; value: string };
+  | { __type: "ApiKeyHeader"; header?: string; value: string };
 
 /**
  * Complete chain configuration — the single source of truth for
@@ -44,6 +43,12 @@ export interface FheChain<TId extends number = number> {
    * `undefined` for chains where no registry is deployed (e.g. Hardhat).
    */
   readonly registryAddress: Address | undefined;
+  /**
+   * Address of the multi-vault `VaultBatcherConfidentialRouter`, one per chain.
+   * A `VaultGroup` refuses to submit through any other router unless its
+   * config sets `allowCustomRouter`. `undefined` where none is deployed.
+   */
+  readonly vaultRouterAddress?: Address;
   /**
    * Address of the `TFHEExecutor` contract (cleartext mode only).
    * Required by the `cleartext()` transport to read mock plaintexts.

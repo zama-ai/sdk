@@ -404,14 +404,15 @@ message ChainConfig {
   HttpProviderConfig provider = 100;
 }
 message ChainAuth {
+  reserved 3;
+  reserved "api_key_cookie";
   oneof credential {
     string bearer_token = 1;
     NamedCredential api_key_header = 2;
-    NamedCredential api_key_cookie = 3;
   }
 }
 message NamedCredential {
-  // Omission preserves the SDK's default header or cookie name.
+  // Omission preserves the SDK's default header name.
   optional string name = 1;
   string value = 2;
 }
@@ -735,7 +736,9 @@ enum EventOperation {
   EVENT_OPERATION_VAULT_CLAIM = 21;
   EVENT_OPERATION_VAULT_RECOVER = 22;
   EVENT_OPERATION_VAULT_DISPATCH_BATCH = 23;
-  EVENT_OPERATION_INVALIDATE_DECRYPTION_SIGNATURES = 24;
+  EVENT_OPERATION_VAULT_ROUTER_JOIN = 24;
+  EVENT_OPERATION_VAULT_FINALIZE = 25;
+  EVENT_OPERATION_INVALIDATE_DECRYPTION_SIGNATURES = 26;
 }
 // The SDK-selected route for a submitted shield transaction.
 enum ShieldPath {
@@ -757,6 +760,8 @@ enum VaultOperation {
   VAULT_OPERATION_CLAIM = 3;
   VAULT_OPERATION_RECOVER = 4;
   VAULT_OPERATION_DISPATCH_BATCH = 5;
+  VAULT_OPERATION_ROUTER_JOIN = 6;
+  VAULT_OPERATION_FINALIZE = 7;
 }
 // A lifecycle event; timestamp is Unix epoch milliseconds, and timestamp and
 // duration_ms preserve fractional milliseconds.

@@ -47,8 +47,12 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Operator approvals](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/guides/operator-approvals.md): How to approve another address to act on your confidential tokens.
 - [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/guides/delegated-decryption.md): Grant another address the right to decrypt confidential balances, then read those balances as a delegate, in TypeScript, React, Go, or Rust.
 - [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/guides/encrypt-decrypt.md): How to encrypt values and decrypt FHE encrypted values in TypeScript, React, Go, or Rust for custom confidential smart contracts that are not wrapped ERC-20 tokens.
-- [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/guides/vault-deposits.md): How to integrate confidential ERC-4626 vaults with the Zama SDK.
-- [Go & Rust clients](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/native/README.md): Integrate Go and Rust applications with the Zama SDK daemon and manage wallets, credentials, and connection lifecycles.
+- [Vaults overview](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/guides/vaults/README.md): How confidential ERC-4626 vaults work from the SDK. Batches, keepers, the vault router, and the privacy of a vault group.
+- [Vault deposits and redemptions](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/guides/vaults/deposits.md): Define a vault group, deposit or redeem with the Zama SDK vault client, and follow each batch to the payout.
+- [Handle wallet prompts, upgrades and custom sending](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/guides/vaults/advanced.md): Wallet prompts, paused batchers, batcher upgrades, bundling wallets, and sending vault calls through your own pipeline.
+- [Building a vault UI](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/guides/vaults/building-a-ui.md): What a vault UI should show and offer on the form, during the send, and in each batch state.
+- [Go & Rust overview](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/native/README.md): Integrate Go and Rust applications with the Zama SDK daemon, manage wallets, credentials, and connection lifecycles, and deploy the daemon in production.
+- [Clients](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/native/guides/README.md): Integrate your Go or Rust application with the Zama SDK daemon — wallet, credentials, events, and connection lifecycle.
 - [Attach a wallet](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/native/guides/attach-wallet.md): Connect signing and transaction callbacks from Go and Rust to the daemon.
 - [Store credentials](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/native/guides/credential-storage.md): Choose where the daemon keeps Go and Rust decryption credentials, or keep them in your own database.
 - [Observe events](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/native/guides/observe-events.md): Subscribe to lifecycle, wallet, and progress notifications in Go and Rust.
@@ -62,8 +66,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Token](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/Token.md): Read/write interface for an ERC-7984 confidential token — balances, transfers, operator approvals.
 - [WrappedToken](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/WrappedToken.md): ERC-7984 ERC-20 wrapper interface — shield, unshield, allowance.
 - [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/WrappersRegistry.md): Query the on-chain token wrappers registry — list pairs, look up tokens, and validate confidential tokens.
-- [Vault](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/Vault.md): Confidential ERC-4626 vault interface — deposit and redeem through a pair of batchers.
-- [VaultBatcher](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/VaultBatcher.md): One on-chain vault batcher — join, batch state, dispatch, claim, quit, recover.
+- [VaultClient](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/VaultClient.md): Reference for defineVault, defineVaultGroup, createVaultClient and the VaultClient methods and types.
 - [`web()` transport](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/RelayerWeb.md): Browser relayer transport that runs FHE operations via bundled WASM.
 - [`node()` transport](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/RelayerNode.md): Node.js relayer transport that runs FHE operations through @fhevm/sdk on the calling thread.
 - [`cleartext()` transport](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/sdk/RelayerCleartext.md): Development relayer transport that operates in cleartext mode, without FHE, KMS, or gateway dependencies.
@@ -113,7 +116,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useConfidentialIsOperator](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useConfidentialIsOperator.md): Check if a spender is an approved operator for a holder's confidential tokens.
 - [useUnderlyingAllowance](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useUnderlyingAllowance.md): Read the ERC-20 allowance of the underlying public token for the wrapper contract.
 - [useWrapperDiscovery](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useWrapperDiscovery.md): Find the confidential wrapper contract address for an ERC-20 token via the on-chain registry.
-- [useWrappersRegistryAddress](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useWrappersRegistryAddress.md): Resolve the wrappers registry contract address for the current chain.
+- [useWrappersRegistryAddress](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useWrappersRegistryAddress.md): Resolve the wrappers registry contract address for the provider's chain.
 - [useListPairs](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useListPairs.md): Fetch paginated token wrapper pairs from the on-chain registry, with optional metadata enrichment.
 - [useTokenPairsRegistry](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useTokenPairsRegistry.md): Fetch all token wrapper pairs from the on-chain registry.
 - [useTokenPairsLength](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useTokenPairsLength.md): Get the total number of token wrapper pairs in the registry.
@@ -136,18 +139,15 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useDelegationStatus](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useDelegationStatus.md): Query hook that checks whether a decryption delegation is active between two addresses.
 - [useDecryptBalanceAs](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useDecryptBalanceAs.md): Mutation hook that decrypts another user's confidential balance as a delegate.
 - [useBatchDecryptBalancesAs](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useBatchDecryptBalancesAs.md): Mutation hook that decrypts confidential balances across multiple tokens as a delegate.
-- [useVault](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useVault.md): React hook returning a memoized Vault instance for a deposit/redeem batcher pair.
-- [useVaultBatcher](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useVaultBatcher.md): React hook returning a memoized VaultBatcher instance for one batcher contract.
-- [useDeposit](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useDeposit.md): Mutation hook that deposits into a confidential ERC-4626 vault by joining the current deposit batch.
-- [useRedeem](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useRedeem.md): Mutation hook that redeems confidential vault shares by joining the current redeem batch.
-- [useJoin](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useJoin.md): Low-level mutation hook that joins a single vault batcher's open batch directly.
+- [useVaultClient](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useVaultClient.md): Returns a VaultClient bound to the SDK in context.
+- [useDeposit](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useDeposit.md): Mutation hook that deposits into a confidential vault group and returns the batch each leg landed in.
+- [useRedeem](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useRedeem.md): Mutation hook that redeems confidential vault shares and returns the batch each leg landed in.
+- [useBatch](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useBatch.md): Query hook that reads one vault batch with its state, its timings, and the actions you can send now.
+- [useOpenBatches](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useOpenBatches.md): Query hook that reads the open batch of every vault in a group.
 - [useClaim](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useClaim.md): Mutation hook that claims a finalized vault batch's output for an account.
-- [useQuit](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useQuit.md): Mutation hook that withdraws the caller's own deposit from a pending or canceled vault batch.
-- [useRecover](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useRecover.md): Mutation hook that refunds a depositor's deposit from a canceled vault batch on their behalf.
-- [useDispatchBatch](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useDispatchBatch.md): Mutation hook that dispatches a vault batcher's current batch once it is old enough.
-- [useCurrentBatchId](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useCurrentBatchId.md): Query hook for the id of a vault batcher's currently open batch.
-- [useBatchState](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useBatchState.md): Query hook for a vault batch's lifecycle state, which decides what the user can do next.
-- [useTimeUntilDispatchable](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useTimeUntilDispatchable.md): Query hook for the seconds until a vault batch becomes eligible for dispatch.
+- [useQuit](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useQuit.md): Mutation hook that takes the signer's deposit back from a pending or canceled vault batch.
+- [useDispatch](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useDispatch.md): Mutation hook that dispatches a vault batcher's open batch.
+- [useFinalize](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/useFinalize.md): Mutation hook that settles a dispatched vault batch.
 - [Query keys](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/reference/react/query-keys.md): Reference for the zamaQueryKeys factory used for manual React Query cache control.
 
 ### Go, Rust, and Daemon Reference
@@ -160,6 +160,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 
 ### Go and Rust Daemon Deployment
 
+- [Daemon deployment](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/native/operations/README.md): Run, monitor, and upgrade the Zama SDK daemon in production for Go and Rust integrations.
 - [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/native/operations/run-in-production.md): Deploy the Zama SDK daemon next to a Go or Rust application on your infrastructure.
 - [Monitor and troubleshoot](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md): Monitor daemon-backed Go and Rust operations and diagnose daemon failures.
 - [Upgrade the daemon](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/native/operations/upgrade-and-recover.md): Replace the Zama SDK daemon and its Go or Rust client without losing stored credentials.
@@ -177,6 +178,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Release channels](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/changelog/README.md): What stable, beta, and alpha mean for @zama-fhe/sdk, and where to find what changed in each.
 - [Beta](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/changelog/beta.md): Unreleased changes on the prerelease (beta) line — not yet in a stable release.
 - [3.x](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/changelog/v3.md): Human-readable release notes for the 3.x line — what changed in each minor version of @zama-fhe/sdk and @zama-fhe/react-sdk, in plain language.
+- [3.8.x](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/changelog/v3-8.md): Experimental Go and Rust clients through the SDK daemon, a new vault client API that replaces the 3.7 vault classes, typed errors for FHE compute limits, batched reads with multicall, and the removal of ApiKeyCookie relayer auth.
 - [3.7.x](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/changelog/v3-7.md): Confidential ERC-4626 vaults, wildcard delegation, offline permits for more than 10 contracts, SDK usage telemetry headers, a T-Rex Zenith testnet preset, and permit signatures with a 0/1 recovery byte.
 - [3.6.x](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/changelog/v3-6.md): Web Worker encryption offload, structured wallet-signing and permit-failure events, an interrupted-unshield resume fix, and orphaned relayer entries that warn instead of throwing.
 - [3.5.x](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/changelog/v3-5.md): Polygon presets, offline signing and decryption permits, at-rest transport-key encryption, and automatic KMS-context recovery.
@@ -191,8 +193,6 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 
 ## Official Examples
 
-- [example-hoodi README](https://raw.githubusercontent.com/zama-ai/sdk/alpha/examples/example-hoodi/README.md): Next.js app demonstrating ERC-7984 confidential token operations on the Hoodi testnet with wagmi 3 and viem 2 — including on-chain ACL delegation.
-- [example-hoodi WALKTHROUGH](https://raw.githubusercontent.com/zama-ai/sdk/alpha/examples/example-hoodi/WALKTHROUGH.md): ERC-7984 is a token standard that adds confidential balances and transfer amounts to ERC-20 tokens. Instead of storing plaintext balances on-chain, balances are stored as encrypted handles. Only the token owner can decrypt their own balance.
 - [node-ethers README](https://raw.githubusercontent.com/zama-ai/sdk/alpha/examples/node-ethers/README.md): Node.js script demonstrating the full ERC-7984 confidential token lifecycle using `@zama-fhe/sdk` with ethers v6.
 - [node-ethers WALKTHROUGH](https://raw.githubusercontent.com/zama-ai/sdk/alpha/examples/node-ethers/WALKTHROUGH.md): ERC-7984 is a token standard that adds confidential balances and transfer amounts to ERC-20 tokens. Balances are stored as encrypted handles on-chain; only the token owner (or an authorized delegate) can decrypt them.
 - [node-viem README](https://raw.githubusercontent.com/zama-ai/sdk/alpha/examples/node-viem/README.md): Node.js script demonstrating the full ERC-7984 confidential token lifecycle using `@zama-fhe/sdk` with viem.
@@ -201,7 +201,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [react-ethers WALKTHROUGH](https://raw.githubusercontent.com/zama-ai/sdk/alpha/examples/react-ethers/WALKTHROUGH.md): A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using ethers v6.
 - [react-viem README](https://raw.githubusercontent.com/zama-ai/sdk/alpha/examples/react-viem/README.md): Next.js 16 example app demonstrating how to integrate `@zama-fhe/react-sdk` with viem v2 on Sepolia testnet.
 - [react-viem WALKTHROUGH](https://raw.githubusercontent.com/zama-ai/sdk/alpha/examples/react-viem/WALKTHROUGH.md): A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using viem v2.
-- [react-wagmi README](https://raw.githubusercontent.com/zama-ai/sdk/alpha/examples/react-wagmi/README.md): Next.js 16 example app demonstrating how to integrate `@zama-fhe/react-sdk` with wagmi v3 on Sepolia testnet.
+- [react-wagmi README](https://raw.githubusercontent.com/zama-ai/sdk/alpha/examples/react-wagmi/README.md): Next.js 16 example app demonstrating how to integrate `@zama-fhe/react-sdk` with wagmi v3 on every network the SDK ships a chain preset for. A network picker switches the wallet between them; nothing else in the app changes per chain.
 - [react-wagmi WALKTHROUGH](https://raw.githubusercontent.com/zama-ai/sdk/alpha/examples/react-wagmi/WALKTHROUGH.md): A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using wagmi v3.
 
 ## Package READMEs

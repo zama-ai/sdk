@@ -21,6 +21,7 @@
 - [Release channels](changelog/README.md)
 - [Beta (unreleased)](changelog/beta.md)
 - [3.x (current)](changelog/v3.md)
+  - [3.8.x](changelog/v3-8.md)
   - [3.7.x](changelog/v3-7.md)
   - [3.6.x](changelog/v3-6.md)
   - [3.5.x](changelog/v3-5.md)
@@ -53,22 +54,27 @@
 - [Operator approvals](guides/operator-approvals.md)
 - [Delegated decryption](guides/delegated-decryption.md)
 - [Encrypt & decrypt](guides/encrypt-decrypt.md)
-- [Vault deposits and redemptions](guides/vault-deposits.md)
 
-## Go & Rust clients
+## Vaults
+
+- [Vaults overview](guides/vaults/README.md)
+- [Deposits and redemptions](guides/vaults/deposits.md)
+- [Handle wallet prompts, upgrades and custom sending](guides/vaults/advanced.md)
+- [Building a vault UI](guides/vaults/building-a-ui.md)
+
+## Go & Rust guide
 
 - [Go & Rust overview](native/README.md)
-- [Attach a wallet](native/guides/attach-wallet.md)
-- [Store credentials](native/guides/credential-storage.md)
-- [Observe events](native/guides/observe-events.md)
-- [Recover from disconnections](native/guides/recover-from-disconnections.md)
-- [Resolve uncertain transaction outcomes](native/guides/uncertain-transaction-outcomes.md)
-
-## Go & Rust daemon deployment
-
-- [Deploy in production](native/operations/run-in-production.md)
-- [Monitor and troubleshoot](native/operations/monitor-and-troubleshoot.md)
-- [Upgrade the daemon](native/operations/upgrade-and-recover.md)
+- [Clients](native/guides/README.md)
+  - [Attach a wallet](native/guides/attach-wallet.md)
+  - [Store credentials](native/guides/credential-storage.md)
+  - [Observe events](native/guides/observe-events.md)
+  - [Recover from disconnections](native/guides/recover-from-disconnections.md)
+  - [Resolve uncertain transaction outcomes](native/guides/uncertain-transaction-outcomes.md)
+- [Daemon deployment](native/operations/README.md)
+  - [Deploy in production](native/operations/run-in-production.md)
+  - [Monitor and troubleshoot](native/operations/monitor-and-troubleshoot.md)
+  - [Upgrade the daemon](native/operations/upgrade-and-recover.md)
 
 ## API References
 
@@ -77,8 +83,7 @@
   - [Token](reference/sdk/Token.md)
   - [WrappedToken](reference/sdk/WrappedToken.md)
   - [WrappersRegistry](reference/sdk/WrappersRegistry.md)
-  - [Vault](reference/sdk/Vault.md)
-  - [VaultBatcher](reference/sdk/VaultBatcher.md)
+  - [VaultClient](reference/sdk/VaultClient.md)
   - [web() transport](reference/sdk/RelayerWeb.md)
   - [node() transport](reference/sdk/RelayerNode.md)
   - [cleartext() transport](reference/sdk/RelayerCleartext.md)
@@ -148,18 +153,15 @@
   - [useDelegationStatus](reference/react/useDelegationStatus.md)
   - [useDecryptBalanceAs](reference/react/useDecryptBalanceAs.md)
   - [useBatchDecryptBalancesAs](reference/react/useBatchDecryptBalancesAs.md)
-  - [useVault](reference/react/useVault.md)
-  - [useVaultBatcher](reference/react/useVaultBatcher.md)
+  - [useVaultClient](reference/react/useVaultClient.md)
   - [useDeposit](reference/react/useDeposit.md)
   - [useRedeem](reference/react/useRedeem.md)
-  - [useJoin](reference/react/useJoin.md)
+  - [useBatch](reference/react/useBatch.md)
+  - [useOpenBatches](reference/react/useOpenBatches.md)
   - [useClaim](reference/react/useClaim.md)
   - [useQuit](reference/react/useQuit.md)
-  - [useRecover](reference/react/useRecover.md)
-  - [useDispatchBatch](reference/react/useDispatchBatch.md)
-  - [useCurrentBatchId](reference/react/useCurrentBatchId.md)
-  - [useBatchState](reference/react/useBatchState.md)
-  - [useTimeUntilDispatchable](reference/react/useTimeUntilDispatchable.md)
+  - [useDispatch](reference/react/useDispatch.md)
+  - [useFinalize](reference/react/useFinalize.md)
   - [Query keys](reference/react/query-keys.md)
 
 - [Go client](native/reference/go-client.md)

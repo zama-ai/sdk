@@ -7,6 +7,7 @@ import {
   useEffect,
   useMemo,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -190,6 +191,13 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
   const [walletCreationError, setWalletCreationError] = useState<string | null>(null);
   const [needsWalletCreation, setNeedsWalletCreation] = useState(false);
   const [isCreatingWallet, setIsCreatingWallet] = useState(false);
+  // refreshWallets() hands back a new (possibly still empty) wallets array, so refreshing on
+  // every wallets change would loop against Turnkey's API.
+  const hasRefreshedWallets = useRef(false);
+
+  useEffect(() => {
+    if (authState !== AuthState.Authenticated) hasRefreshedWallets.current = false;
+  }, [authState]);
 
   useEffect(() => {
     let cancelled = false;
@@ -210,12 +218,15 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
       }
 
       try {
-        const availableWallets =
-          wallets.length > 0
-            ? wallets
-            : authState === AuthState.Authenticated
-              ? await refreshWallets()
-              : [];
+        let availableWallets = wallets;
+        if (
+          availableWallets.length === 0 &&
+          authState === AuthState.Authenticated &&
+          !hasRefreshedWallets.current
+        ) {
+          hasRefreshedWallets.current = true;
+          availableWallets = await refreshWallets();
+        }
 
         if (availableWallets.length === 0) {
           reset({ needsWallet: true });

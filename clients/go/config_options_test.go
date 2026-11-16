@@ -142,7 +142,6 @@ func TestRelayerAuthFormattingRedactsCredentials(t *testing.T) {
 	for _, auth := range []RelayerAuth{
 		BearerToken{Token: "bearer-secret"},
 		APIKeyHeader{Value: "header-secret"},
-		APIKeyCookie{Value: "cookie-secret"},
 	} {
 		for _, format := range []string{"%v", "%+v", "%#v", "%s", "%q"} {
 			assertNoRelayerCredential(t, format, fmt.Sprintf(format, auth))
@@ -175,7 +174,7 @@ func TestProviderHeadersFormattingRedactsValues(t *testing.T) {
 
 func assertNoRelayerCredential(t *testing.T, format string, formatted string) {
 	t.Helper()
-	for _, secret := range []string{"bearer-secret", "header-secret", "cookie-secret"} {
+	for _, secret := range []string{"bearer-secret", "header-secret"} {
 		if strings.Contains(formatted, secret) {
 			t.Fatalf("relayer credential leaked with %s", format)
 		}

@@ -1,7 +1,7 @@
 /**
  * ABI for the deposit and redeem vault batchers, which share one interface.
- * Owner-only writes and the relayer-driven `dispatchBatchCallback` are omitted;
- * every custom error is kept so reverts decode to a name.
+ * Owner-only writes are omitted; every custom error is kept so reverts decode
+ * to a name.
  */
 export const vaultBatcherAbi = [
   {
@@ -84,6 +84,17 @@ export const vaultBatcherAbi = [
     type: "function",
     name: "dispatchBatch",
     inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "dispatchBatchCallback",
+    inputs: [
+      { name: "batchId", type: "uint256", internalType: "uint256" },
+      { name: "unwrapAmountCleartext", type: "uint64", internalType: "uint64" },
+      { name: "decryptionProof", type: "bytes", internalType: "bytes" },
+    ],
     outputs: [],
     stateMutability: "nonpayable",
   },

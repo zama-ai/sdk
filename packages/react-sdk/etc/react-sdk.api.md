@@ -359,6 +359,4 @@ export interface ZamaProviderProps extends PropsWithChildren {
     config: ZamaConfig;
 }
 
-// (No @packageDocumentation comment for this package)
-
 ```

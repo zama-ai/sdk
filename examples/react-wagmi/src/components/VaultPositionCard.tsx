@@ -8,7 +8,7 @@ import { useDecryptValues, useGrantPermit, useHasPermit, useZamaSDK } from "@zam
 import type { Address, EncryptedValue, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { isEncryptedValueZero } from "@zama-fhe/sdk";
 import { VAULT_ABI } from "@/lib/vaultAbi";
-import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
+import { useNetwork } from "@/lib/hooks";
 
 interface VaultPositionCardProps {
   /** The confidential token pair bound to the vault — supplies display units. */
@@ -26,6 +26,7 @@ export function VaultPositionCard({
   vaultAddress,
   onWithdraw,
 }: VaultPositionCardProps) {
+  const { explorerUrl } = useNetwork();
   const decimals = token.confidential.decimals;
   const symbol = token.confidential.symbol;
 
@@ -151,7 +152,7 @@ export function VaultPositionCard({
       {withdraw.isSuccess && withdraw.data && (
         <output className="alert alert-success card-status">
           Withdrawn!{" "}
-          <a href={`${SEPOLIA_EXPLORER_URL}/tx/${withdraw.data}`} target="_blank" rel="noreferrer">
+          <a href={`${explorerUrl}/tx/${withdraw.data}`} target="_blank" rel="noreferrer">
             {withdraw.data.slice(0, 10)}…
           </a>
         </output>

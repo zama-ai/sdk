@@ -205,13 +205,10 @@ test("runtime auth uses the backend discriminator and preserves default or empty
     processRuntimeConfig({
       ...base,
       auth: {
-        credential: {
-          $case: "apiKeyCookie",
-          apiKeyCookie: { name: "", value: "synthetic-cookie" },
-        },
+        credential: { $case: "apiKeyHeader", apiKeyHeader: { name: "", value: "synthetic-key" } },
       },
     }),
-  ).toEqual({ auth: { type: "ApiKeyCookie", cookie: "", value: "synthetic-cookie" } });
+  ).toEqual({ auth: { type: "ApiKeyHeader", header: "", value: "synthetic-key" } });
 });
 
 test("preserves chain auth names and preset address omission, clear, and override", () => {
@@ -237,8 +234,8 @@ test("preserves chain auth names and preset address omission, clear, and overrid
           executorAddress: Buffer.alloc(0),
           auth: {
             credential: {
-              $case: "apiKeyCookie",
-              apiKeyCookie: { name: "", value: "synthetic-cookie" },
+              $case: "apiKeyHeader",
+              apiKeyHeader: { name: "", value: "synthetic-key" },
             },
           },
         },
@@ -248,7 +245,7 @@ test("preserves chain auth names and preset address omission, clear, and overrid
   expect(cleared).toMatchObject({
     registryAddress: undefined,
     executorAddress: undefined,
-    auth: { __type: "ApiKeyCookie", cookie: "", value: "synthetic-cookie" },
+    auth: { __type: "ApiKeyHeader", header: "", value: "synthetic-key" },
   });
 });
 

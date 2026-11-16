@@ -606,7 +606,7 @@ pub struct ChainConfig {
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ChainAuth {
-    #[prost(oneof = "chain_auth::Credential", tags = "1, 2, 3")]
+    #[prost(oneof = "chain_auth::Credential", tags = "1, 2")]
     pub credential: ::core::option::Option<chain_auth::Credential>,
 }
 /// Nested message and enum types in `ChainAuth`.
@@ -617,13 +617,11 @@ pub mod chain_auth {
         BearerToken(::prost::alloc::string::String),
         #[prost(message, tag = "2")]
         ApiKeyHeader(super::NamedCredential),
-        #[prost(message, tag = "3")]
-        ApiKeyCookie(super::NamedCredential),
     }
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct NamedCredential {
-    /// Omission preserves the SDK's default header or cookie name.
+    /// Omission preserves the SDK's default header name.
     #[prost(string, optional, tag = "1")]
     pub name: ::core::option::Option<::prost::alloc::string::String>,
     #[prost(string, tag = "2")]
@@ -1467,7 +1465,9 @@ pub enum EventOperation {
     VaultClaim = 21,
     VaultRecover = 22,
     VaultDispatchBatch = 23,
-    InvalidateDecryptionSignatures = 24,
+    VaultRouterJoin = 24,
+    VaultFinalize = 25,
+    InvalidateDecryptionSignatures = 26,
 }
 impl EventOperation {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -1500,6 +1500,8 @@ impl EventOperation {
             Self::VaultClaim => "EVENT_OPERATION_VAULT_CLAIM",
             Self::VaultRecover => "EVENT_OPERATION_VAULT_RECOVER",
             Self::VaultDispatchBatch => "EVENT_OPERATION_VAULT_DISPATCH_BATCH",
+            Self::VaultRouterJoin => "EVENT_OPERATION_VAULT_ROUTER_JOIN",
+            Self::VaultFinalize => "EVENT_OPERATION_VAULT_FINALIZE",
             Self::InvalidateDecryptionSignatures => {
                 "EVENT_OPERATION_INVALIDATE_DECRYPTION_SIGNATURES"
             }
@@ -1538,6 +1540,8 @@ impl EventOperation {
             "EVENT_OPERATION_VAULT_CLAIM" => Some(Self::VaultClaim),
             "EVENT_OPERATION_VAULT_RECOVER" => Some(Self::VaultRecover),
             "EVENT_OPERATION_VAULT_DISPATCH_BATCH" => Some(Self::VaultDispatchBatch),
+            "EVENT_OPERATION_VAULT_ROUTER_JOIN" => Some(Self::VaultRouterJoin),
+            "EVENT_OPERATION_VAULT_FINALIZE" => Some(Self::VaultFinalize),
             "EVENT_OPERATION_INVALIDATE_DECRYPTION_SIGNATURES" => {
                 Some(Self::InvalidateDecryptionSignatures)
             }
@@ -1615,6 +1619,8 @@ pub enum VaultOperation {
     Claim = 3,
     Recover = 4,
     DispatchBatch = 5,
+    RouterJoin = 6,
+    Finalize = 7,
 }
 impl VaultOperation {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -1629,6 +1635,8 @@ impl VaultOperation {
             Self::Claim => "VAULT_OPERATION_CLAIM",
             Self::Recover => "VAULT_OPERATION_RECOVER",
             Self::DispatchBatch => "VAULT_OPERATION_DISPATCH_BATCH",
+            Self::RouterJoin => "VAULT_OPERATION_ROUTER_JOIN",
+            Self::Finalize => "VAULT_OPERATION_FINALIZE",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -1640,6 +1648,8 @@ impl VaultOperation {
             "VAULT_OPERATION_CLAIM" => Some(Self::Claim),
             "VAULT_OPERATION_RECOVER" => Some(Self::Recover),
             "VAULT_OPERATION_DISPATCH_BATCH" => Some(Self::DispatchBatch),
+            "VAULT_OPERATION_ROUTER_JOIN" => Some(Self::RouterJoin),
+            "VAULT_OPERATION_FINALIZE" => Some(Self::Finalize),
             _ => None,
         }
     }

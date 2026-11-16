@@ -5,6 +5,8 @@ import type {
   EncryptionFailedError,
   DecryptionFailedError,
   TransactionRevertedError,
+  HcuBlockLimitExceededError,
+  HcuTransactionLimitExceededError,
   TransportKeyPairExpiredError,
   InvalidTransportKeyPairError,
   NoCiphertextError,
@@ -93,6 +95,12 @@ describe("error subclasses extend ZamaError", () => {
     expectTypeOf<DelegationNotFoundError>().toExtend<ZamaError>();
     expectTypeOf<DelegationExpiredError>().toExtend<ZamaError>();
     expectTypeOf<DelegationNotPropagatedError>().toExtend<ZamaError>();
+  });
+
+  test("transaction errors", () => {
+    expectTypeOf<TransactionRevertedError>().toExtend<ZamaError>();
+    expectTypeOf<HcuBlockLimitExceededError>().toExtend<ZamaError>();
+    expectTypeOf<HcuTransactionLimitExceededError>().toExtend<ZamaError>();
   });
 });
 

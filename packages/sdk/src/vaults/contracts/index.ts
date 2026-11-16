@@ -4,20 +4,22 @@ export {
   batchDispatchedAtContract,
   batchMinBatchAgeContract,
   batchStateContract,
-  callbackDeadlineContract,
   claimContract,
   currentBatchIdContract,
   depositsContract,
+  dispatchBatchCallbackContract,
   dispatchBatchContract,
   exchangeRateContract,
   exchangeRateDecimalsContract,
   fromTokenContract,
-  joinContract,
-  minBatchAgeContract,
   pausedContract,
   quitContract,
   recoverContract,
-  toTokenContract,
-  totalDepositsContract,
-  vaultContract,
+  unwrapRequestIdContract,
 } from "./vault-batcher";
+
+export {
+  encodeAllocationData,
+  routerJoinContract,
+  type EncryptedAllocationLeg,
+} from "./vault-router";

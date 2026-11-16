@@ -311,6 +311,25 @@ export function unwrapRequesterContract(wrapperAddress: Address, unwrapRequestId
 }
 
 /**
+ * Returns the contract config to read the encrypted amount an unwrap request will release.
+ *
+ * @example
+ * ```ts
+ * const encryptedAmount = await provider.readContract(
+ *   unwrapAmountContract(wrapperAddress, unwrapRequestId),
+ * );
+ * ```
+ */
+export function unwrapAmountContract(wrapperAddress: Address, unwrapRequestId: EncryptedValue) {
+  return {
+    address: wrapperAddress,
+    abi: confidentialWrapperAbi,
+    functionName: "unwrapAmount",
+    args: [unwrapRequestId],
+  } as const;
+}
+
+/**
  * Returns the contract config to read the underlying ERC-20 token of a wrapper.
  *
  * @example

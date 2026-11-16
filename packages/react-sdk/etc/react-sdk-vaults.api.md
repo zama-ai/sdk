@@ -4,127 +4,61 @@
 
 ```ts
 
-import { Address } from '@zama-fhe/sdk';
-import { BatchState } from '@zama-fhe/sdk/vaults';
-import { ClaimParams } from '@zama-fhe/sdk/vaults';
-import { DepositParams } from '@zama-fhe/sdk/vaults';
-import { JoinParams } from '@zama-fhe/sdk/vaults';
-import { JoinResult } from '@zama-fhe/sdk/vaults';
-import { QuitParams } from '@zama-fhe/sdk/vaults';
-import { RecoverParams } from '@zama-fhe/sdk/vaults';
-import { RedeemParams } from '@zama-fhe/sdk/vaults';
+import { Address } from 'viem';
+import { Batch } from '@zama-fhe/sdk/vaults';
+import { BatcherRef } from '@zama-fhe/sdk/vaults';
+import { BatchRef } from '@zama-fhe/sdk/vaults';
+import { JoinDirection } from '@zama-fhe/sdk/vaults';
+import { JoinOutcome } from '@zama-fhe/sdk/vaults';
+import { JoinVariables } from '@zama-fhe/sdk/vaults';
+import { OpenBatch } from '@zama-fhe/sdk/vaults';
 import { TransactionResult } from '@zama-fhe/sdk';
 import { UseMutationOptions } from '@tanstack/react-query';
 import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
 import { UseQueryResult } from '@tanstack/react-query';
 import { Vault } from '@zama-fhe/sdk/vaults';
-import { VaultAddresses } from '@zama-fhe/sdk/vaults';
-import { VaultBatcher } from '@zama-fhe/sdk/vaults';
+import { VaultClient } from '@zama-fhe/sdk/vaults';
+import { VaultGroup } from '@zama-fhe/sdk/vaults';
 
 // @public
-export function useBatchState(config: UseBatchStateConfig, options?: UseBatchStateOptions): UseQueryResult<BatchState, Error>;
+export function useBatch(batch: BatchRef | undefined, options?: UseBatchOptions): UseQueryResult<Batch, Error>;
 
 // @public
-export interface UseBatchStateConfig {
-    address: Address;
-    batchId: bigint | undefined;
-}
-
-// @public
-export interface UseBatchStateOptions extends Omit<UseQueryOptions<BatchState>, "queryKey" | "queryFn" | "enabled"> {
+export interface UseBatchOptions extends Omit<UseQueryOptions<Batch>, "queryKey" | "queryFn" | "enabled"> {
+    account?: Address;
     enabled?: boolean;
 }
 
 // @public
-export function useClaim<TContext = unknown>(config: UseClaimConfig, options?: UseMutationOptions<TransactionResult, Error, ClaimParams, TContext>): UseMutationResult<TransactionResult, Error, ClaimParams, TContext>;
+export function useClaim<TContext = unknown>(options?: UseVaultMutationOptions<TransactionResult, BatchRef & {
+    readonly account?: Address;
+}, TContext>): UseMutationResult<TransactionResult, Error, BatchRef & {
+    readonly account?: Address;
+}, TContext>;
 
 // @public
-export interface UseClaimConfig {
-    address: Address;
-}
+export function useDeposit<TContext = unknown>(options?: UseVaultMutationOptions<JoinOutcome, JoinVariables, TContext>): UseMutationResult<JoinOutcome, Error, JoinVariables, TContext>;
 
 // @public
-export function useCurrentBatchId(config: UseCurrentBatchIdConfig, options?: UseCurrentBatchIdOptions): UseQueryResult<bigint, Error>;
+export function useDispatch<TContext = unknown>(options?: UseVaultMutationOptions<TransactionResult, BatcherRef, TContext>): UseMutationResult<TransactionResult, Error, BatcherRef, TContext>;
 
 // @public
-export interface UseCurrentBatchIdConfig {
-    address: Address;
-}
+export function useFinalize<TContext = unknown>(options?: UseVaultMutationOptions<TransactionResult, BatchRef, TContext>): UseMutationResult<TransactionResult, Error, BatchRef, TContext>;
 
 // @public
-export interface UseCurrentBatchIdOptions extends Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn" | "enabled"> {
-    enabled?: boolean;
-}
+export function useOpenBatches(target: Vault | VaultGroup, direction: JoinDirection, options?: Omit<UseQueryOptions<readonly OpenBatch[]>, "queryKey" | "queryFn">): UseQueryResult<readonly OpenBatch[], Error>;
 
 // @public
-export function useDeposit<TContext = unknown>(config: UseDepositConfig, options?: UseMutationOptions<JoinResult, Error, DepositParams, TContext>): UseMutationResult<JoinResult, Error, DepositParams, TContext>;
+export function useQuit<TContext = unknown>(options?: UseVaultMutationOptions<TransactionResult, BatchRef, TContext>): UseMutationResult<TransactionResult, Error, BatchRef, TContext>;
 
 // @public
-export interface UseDepositConfig {
-    addresses: VaultAddresses;
-}
+export function useRedeem<TContext = unknown>(options?: UseVaultMutationOptions<JoinOutcome, JoinVariables, TContext>): UseMutationResult<JoinOutcome, Error, JoinVariables, TContext>;
 
 // @public
-export function useDispatchBatch<TContext = unknown>(config: UseDispatchBatchConfig, options?: UseMutationOptions<TransactionResult, Error, void, TContext>): UseMutationResult<TransactionResult, Error, void, TContext>;
+export function useVaultClient(): VaultClient;
 
 // @public
-export interface UseDispatchBatchConfig {
-    address: Address;
-}
-
-// @public
-export function useJoin<TContext = unknown>(config: UseJoinConfig, options?: UseMutationOptions<JoinResult, Error, JoinParams, TContext>): UseMutationResult<JoinResult, Error, JoinParams, TContext>;
-
-// @public
-export interface UseJoinConfig {
-    address: Address;
-}
-
-// @public
-export function useQuit<TContext = unknown>(config: UseQuitConfig, options?: UseMutationOptions<TransactionResult, Error, QuitParams, TContext>): UseMutationResult<TransactionResult, Error, QuitParams, TContext>;
-
-// @public
-export interface UseQuitConfig {
-    address: Address;
-}
-
-// @public
-export function useRecover<TContext = unknown>(config: UseRecoverConfig, options?: UseMutationOptions<TransactionResult, Error, RecoverParams, TContext>): UseMutationResult<TransactionResult, Error, RecoverParams, TContext>;
-
-// @public
-export interface UseRecoverConfig {
-    address: Address;
-}
-
-// @public
-export function useRedeem<TContext = unknown>(config: UseRedeemConfig, options?: UseMutationOptions<JoinResult, Error, RedeemParams, TContext>): UseMutationResult<JoinResult, Error, RedeemParams, TContext>;
-
-// @public
-export interface UseRedeemConfig {
-    addresses: VaultAddresses;
-}
-
-// @public
-export function useTimeUntilDispatchable(config: UseTimeUntilDispatchableConfig, options?: UseTimeUntilDispatchableOptions): UseQueryResult<bigint | null, Error>;
-
-// @public
-export interface UseTimeUntilDispatchableConfig {
-    address: Address;
-    batchId: bigint | undefined;
-}
-
-// @public
-export interface UseTimeUntilDispatchableOptions extends Omit<UseQueryOptions<bigint | null>, "queryKey" | "queryFn" | "enabled"> {
-    enabled?: boolean;
-}
-
-// @public
-export function useVault(addresses: VaultAddresses): Vault;
-
-// @public
-export function useVaultBatcher(address: Address): VaultBatcher;
-
-// (No @packageDocumentation comment for this package)
+export type UseVaultMutationOptions<TData, TVariables, TContext = unknown> = Omit<UseMutationOptions<TData, Error, TVariables, TContext>, "mutationKey" | "mutationFn">;
 
 ```

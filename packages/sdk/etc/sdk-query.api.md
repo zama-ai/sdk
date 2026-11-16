@@ -443,6 +443,7 @@ export interface FheChain<TId extends number = number> {
     readonly protocolConfigContractAddress?: Address | undefined;
     readonly registryAddress: Address | undefined;
     readonly relayerUrl: string;
+    readonly vaultRouterAddress?: Address;
     readonly verifyingContractAddressDecryption: Address;
     readonly verifyingContractAddressInputVerification: Address;
 }
@@ -454,10 +455,6 @@ export type FheChainAuth = {
 } | {
     __type: "ApiKeyHeader";
     header?: string;
-    value: string;
-} | {
-    __type: "ApiKeyCookie";
-    cookie?: string;
     value: string;
 };
 
@@ -514,8 +511,12 @@ export interface GenericLogger {
 
 // @public
 export interface GenericProvider {
-    getBlockTimestamp(): Promise<bigint>;
+    getBlockTimestamp(chainId?: number): Promise<bigint>;
     getChainId(): Promise<number>;
+    multicall?<const TCalls extends readonly ReadContractConfig[]>(params: {
+        readonly calls: TCalls;
+        readonly chainId?: number;
+    }): Promise<MulticallReturnType<TCalls>>;
     prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
         from: Address;
         calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
@@ -646,6 +647,9 @@ export interface ListPairsQueryConfig {
 
 // @public
 export function listPairsQueryOptions(registry: WrappersRegistry, config: ListPairsQueryConfig): QueryFactoryOptions<PaginatedResult<TokenWrapperPair | TokenWrapperPairWithMetadata>, Error, PaginatedResult<TokenWrapperPair | TokenWrapperPairWithMetadata>, ReturnType<typeof zamaQueryKeys.wrappersRegistry.listPairs>>;
+
+// @public
+export type MulticallReturnType<TCalls extends readonly ReadContractConfig[]> = { -readonly [K in keyof TCalls]: TCalls[K] extends ReadContractConfig<infer TAbi, infer TFunctionName, infer TArgs> ? ReadContractReturnType<TAbi, TFunctionName, TArgs> : never; };
 
 // @public
 export interface MutationFactoryOptions<TMutationKey extends readonly unknown[], TVariables, TData, TOnMutateResult = unknown> {
@@ -804,6 +808,7 @@ export interface ReadContractConfig<TAbi extends ContractAbi = ContractAbi, TFun
     readonly abi: TAbi;
     readonly address: Address;
     readonly args: TArgs;
+    readonly chainId?: number;
     readonly functionName: TFunctionName;
 }
 
@@ -1054,11 +1059,12 @@ export interface TransactionErrorEvent extends BaseEvent {
 export type TransactionKind = PrepareTransactionRequest["kind"];
 
 // @public
-export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "invalidateDecryptionSignatures" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll" | "vault:join" | "vault:quit" | "vault:claim" | "vault:recover" | "vault:dispatchBatch";
+export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "invalidateDecryptionSignatures" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll" | "vault:join" | "vault:quit" | "vault:claim" | "vault:recover" | "vault:dispatchBatch" | "vault:finalize" | "vault:routerJoin";
 
 // @public
 export interface TransactionReceipt {
     readonly logs: readonly RawLog[];
+    readonly status?: "success" | "reverted";
 }
 
 // @public
@@ -1394,6 +1400,8 @@ export const ZamaErrorCode: {
     readonly DecryptionFailed: "DECRYPTION_FAILED";
     readonly EncryptOffloadUnavailable: "ENCRYPT_OFFLOAD_UNAVAILABLE";
     readonly TransactionReverted: "TRANSACTION_REVERTED";
+    readonly HcuBlockLimitExceeded: "HCU_BLOCK_LIMIT_EXCEEDED";
+    readonly HcuTransactionLimitExceeded: "HCU_TRANSACTION_LIMIT_EXCEEDED";
     readonly TransportKeyPairExpired: "KEYPAIR_EXPIRED";
     readonly InvalidTransportKeyPair: "INVALID_KEYPAIR";
     readonly RevokedKmsContext: "REVOKED_KMS_CONTEXT";
@@ -1431,6 +1439,9 @@ export const ZamaErrorCode: {
     readonly InvalidationTimestampTooLow: "INVALIDATION_TIMESTAMP_TOO_LOW";
     readonly InvalidationTimestampInFuture: "INVALIDATION_TIMESTAMP_IN_FUTURE";
     readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
+    readonly VaultBatcherPaused: "VAULT_BATCHER_PAUSED";
+    readonly VaultBatchNotDispatched: "VAULT_BATCH_NOT_DISPATCHED";
+    readonly VaultJoinUnconfirmed: "VAULT_JOIN_UNCONFIRMED";
 };
 
 // @public
@@ -1582,7 +1593,8 @@ export const zamaQueryKeys: {
     };
     readonly wrappersRegistry: {
         readonly all: readonly ["zama.wrappersRegistry"];
-        readonly chainId: () => readonly ["zama.wrappersRegistry", {
+        readonly chainId: (walletChainId?: number) => readonly ["zama.wrappersRegistry", {
+            readonly walletChainId?: number | undefined;
             readonly type: "chainId";
         }];
         readonly tokenPairs: (registryAddress: Address) => readonly ["zama.wrappersRegistry", {
@@ -1689,7 +1701,5 @@ export const ZamaSDKEvents: {
 export interface ZamaSDKOptions {
     transportKeyPairDerivationSecret?: string | Uint8Array;
 }
-
-// (No @packageDocumentation comment for this package)
 
 ```

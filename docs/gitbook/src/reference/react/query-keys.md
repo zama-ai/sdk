@@ -94,7 +94,7 @@ On-chain wrappers registry queries.
 | Key                                                         | Scope                                      |
 | ----------------------------------------------------------- | ------------------------------------------ |
 | `.all`                                                      | All registry queries                       |
-| `.chainId()`                                                | Chain ID resolution                        |
+| `.chainId(walletChainId?)`                                  | Chain ID resolution, per wallet chain      |
 | `.tokenPairs(registryAddr)`                                 | All pairs for a registry                   |
 | `.tokenPairsLength(registryAddr)`                           | Pair count                                 |
 | `.tokenPairsSlice(registryAddr, from, to)`                  | Index-based slice                          |
@@ -119,21 +119,21 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 ### `vaultQueryKeys`
 
-Batch reads for confidential ERC-4626 vaults, used by [`useCurrentBatchId`](./useCurrentBatchId.md), [`useBatchState`](./useBatchState.md) and [`useTimeUntilDispatchable`](./useTimeUntilDispatchable.md). Lives in the `vaults` subpath, not on `zamaQueryKeys`.
+Reads of confidential ERC-4626 vaults, used by [`useBatch`](./useBatch.md) and [`useOpenBatches`](./useOpenBatches.md). Lives in the `vaults` subpath, not on `zamaQueryKeys`.
 
 ```ts
-import { vaultQueryKeys, invalidateBatchQueries } from "@zama-fhe/sdk/vaults";
+import { vaultQueryKeys, invalidateAfterVaultAction } from "@zama-fhe/sdk/vaults";
 ```
 
-| Key                                             | Scope                                   |
-| ----------------------------------------------- | --------------------------------------- |
-| `.currentBatchId.batcher(batcherAddr)`          | One batcher's open batch id             |
-| `.batchState.batcher(batcherAddr)`              | All batch states for one batcher        |
-| `.batchState.batch(batcherAddr, batchId)`       | One batch's state                       |
-| `.timeUntilDispatchable.batcher(batcherAddr)`   | All dispatch countdowns for one batcher |
-| `.timeUntilDispatchable.batch(batcherAddr, id)` | One batch's dispatch countdown          |
+| Key                              | Scope                                                       |
+| -------------------------------- | ----------------------------------------------------------- |
+| `.all`                           | Every vault read                                            |
+| `.batch(batchRef, account)`      | One batch, read for one account or for none                 |
+| `.openBatches(group, direction)` | The open batch of every vault of a group, for one direction |
 
-A `batcher(...)` key is a prefix of every `batch(...)` key for that batcher, so invalidating it clears all of them at once. `invalidateBatchQueries(queryClient, batcherAddr)` invalidates all three namespaces for a batcher — this is what the vault mutation hooks call after a join, quit, recover or dispatch. Balances on the batcher's input and output tokens go through the regular [`invalidateBalanceQueries`](#invalidatebalancequeries).
+`.all` is a prefix of every vault key, so invalidating it clears every vault read at once. `.batch` takes the `BatchRef` and the account as `undefined` when they are not set yet.
+
+`invalidateAfterVaultAction(queryClient)` invalidates every vault read and every confidential balance. The vault mutation hooks call it when a mutation settles, successful or not. Call it yourself after you send prepared vault calls through your own pipeline.
 
 ## Common patterns
 
