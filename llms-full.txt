@@ -2078,7 +2078,7 @@ Relayers are no longer classes you instantiate; they are factories placed in a
 
 `cleartext()` is **new in v3** — the relayer for cleartext-mode chains (no FHE,
 KMS, or gateway): local dev (`hardhat`) and the cleartext testnets (`hoodi`,
-`zenithTrexTestnet`, `bscTestnet`).
+`zenithTrexTestnet`).
 
 ```ts
 // Before
@@ -2555,6 +2555,12 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 **Several batchers per vault direction.** A vault's `batchers.deposit` and `batchers.redeem` take an address, or a list of addresses and `BatcherEntry` objects (`{ address, lastBatchId? }`). A join goes to the open batch that is dispatched next among the batchers that are not paused or closed, and `readOpenBatches` returns that batch. `openBatchesQueryOptions` and `useOpenBatches` refetch when that batch comes within a minute of its due time. `VaultBatcherPausedError` is now thrown only when no batcher of a vault is open. `readOpenBatches` also throws it, instead of `ConfigurationError`, when every batcher of a vault is closed. The new `VaultBatcherReadFailedError` names the batcher and the vault when one cannot be read. `readBatch` no longer lists `dispatch` while the previous batch is in flight. See [Several batchers](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#several-batchers).
 
 **`BatcherHistory` and `RetiredBatcher` are deprecated.** A history reads as the list `[...retired, latest]`, so `latest` takes joins as soon as it is open. It no longer waits for the retired batchers to pass their `lastBatchId`. Replace `{ retired, latest }` with that list. Code that reads `vault.batchers` must also handle a list.
+
+### Chains
+
+**`bscTestnet` targets the real protocol.** The `bscTestnet` preset (chain ID `97`) now targets the Zama protocol on BNB Smart Chain testnet through the hosted testnet relayer, like `sepolia`. Use it with `web()` or `node()` instead of `cleartext()`. The preset includes the wrappers registry address, so token discovery needs no extra configuration.
+
+**Breaking change for the BSC cleartext deployment:** the preset no longer carries that deployment's contract addresses or `executorAddress`. To keep using it, define a custom `FheChain` with its addresses and use `cleartext()`. See [What each chain includes](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/network-presets.md#what-each-chain-includes).
 
 ## 3.x
 
@@ -3711,7 +3717,7 @@ let config = SdkConfig::new(11_155_111, rpc_url); // Sepolia preset
 
 
 > [!INFO]
-> The shared Zama testnet relayer needs **no API key**: presets like `sepolia` and `polygonAmoy` work as-is, so leave `auth` unset. Only the Zama-hosted **mainnet** relayer (used by `mainnet` and `polygon`) requires a key; see [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md).
+> The shared Zama testnet relayer needs **no API key**: presets like `sepolia`, `polygonAmoy` and `bscTestnet` work as-is, so leave `auth` unset. Only the Zama-hosted **mainnet** relayer (used by `mainnet` and `polygon`) requires a key; see [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md).
 
 
 ### 2. Pick a relayer
@@ -28661,7 +28667,7 @@ This app replaces the former `example-bnb`, `example-hoodi`, `example-polygon-am
 | Network                  | Chain ID   | Transport         | Gas token                                                          | Listed when                  |
 | ------------------------ | ---------- | ----------------- | ------------------------------------------------------------------ | ---------------------------- |
 | Sepolia (default)        | `11155111` | `web()` via proxy | Sepolia ETH, any public faucet                                     | always                       |
-| BNB Testnet · Cleartext  | `97`       | `cleartext()`     | tBNB, [faucet](https://www.bnbchain.org/en/testnet-faucet)         | always                       |
+| BNB Testnet              | `97`       | `web()` via proxy | tBNB, [faucet](https://www.bnbchain.org/en/testnet-faucet)         | always                       |
 | Hoodi · Cleartext        | `560048`   | `cleartext()`     | Hoodi ETH, [faucet](https://hoodi-faucet.pk910.de)                 | always                       |
 | T-Rex Zenith · Cleartext | `936486`   | `cleartext()`     | CC, [faucet](https://explorer.testnet.t-rex.zenith.network/faucet) | always                       |
 | Ethereum                 | `1`        | `web()` via proxy | ETH                                                                | `MAINNET_RELAYER_URL` is set |
@@ -28738,6 +28744,8 @@ All server-side variables are read by the proxy only and never reach the browser
 | `POLYGON_RELAYER_API_KEY`              | No                                                         | Same for Polygon mainnet.                                                                                                                                                        |
 | `SEPOLIA_RELAYER_URL`                  | No                                                         | Defaults to the public testnet relayer `https://relayer.testnet.zama.org`, which needs no key.                                                                                   |
 | `SEPOLIA_RELAYER_API_KEY`              | No                                                         | Only for a private Sepolia relayer.                                                                                                                                              |
+| `BNB_TESTNET_RELAYER_URL`              | No                                                         | Same for BNB Testnet.                                                                                                                                                            |
+| `BNB_TESTNET_RELAYER_API_KEY`          | No                                                         | Only for a private BNB Testnet relayer.                                                                                                                                          |
 | `SEPOLIA_CUSTOM_RELAYER_URL`           | Custom                                                     | Relayer of the custom environment. No default: the custom environment is hidden while unset.                                                                                     |
 | `SEPOLIA_CUSTOM_RELAYER_API_KEY`       | No                                                         | Only for a custom-environment relayer that needs a key.                                                                                                                          |
 | `RELAYER_PROXY_ALLOWED_ORIGINS`        | No                                                         | Comma-separated origins allowed to call the proxy. Replaces the default, the app's own origin, so list that too.                                                                 |
@@ -28865,7 +28873,7 @@ export const networks = {
     canMint: true,
     vault: { address, confidentialToken },
   }),
-  "bnb-testnet": defineNetwork({ label: "BNB Testnet · Cleartext", transport: "cleartext", ... }),
+  hoodi: defineNetwork({ label: "Hoodi · Cleartext", transport: "cleartext", ... }),
   mainnet: defineNetwork({ label: "Ethereum", transport: "relayer", canMint: false, ... }),
   // ...
 };
