@@ -10,7 +10,7 @@ The connected app has three tabs:
 
 - **Tokens**: balances, shield, confidential transfer, unshield and pending unshield recovery for the selected token. The core of the SDK.
 - **Delegation**: grant, revoke and use decryption delegation for the selected token.
-- **Vaults**: deposit into and withdraw from a confidential ERC-4626 vault with `@zama-fhe/react-sdk/vaults`. The Deposit and Withdraw boxes each hold their form and the positions still in progress, with one view per batch state: cancel, settle a late batch, claim, take a canceled amount back. The joined batches live in localStorage. It implements the [Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide. Set each network's vaults in `.env.local` (`NEXT_PUBLIC_<NETWORK>_VAULTS`) to use it; with several, a picker chooses the vault.
+- **Vaults**: deposit into and withdraw from a confidential ERC-4626 vault with `@zama-fhe/react-sdk/vaults`. The top of the tab shows your shares in every vault and every batch still in progress, with one view per batch state: cancel, settle a late batch, claim, take a canceled amount back. The Deposit and Withdraw boxes below hold the chosen vault's forms. The joined batches live in localStorage. It implements the [Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide. Set each network's vaults in `.env.local` (`NEXT_PUBLIC_<NETWORK>_VAULTS`) to use it; with several, a picker chooses the vault.
 
 This app replaces the former `example-bnb`, `example-hoodi`, `example-polygon-amoy` and `example-zenith` apps, which were copies of it pinned to one chain each.
 
