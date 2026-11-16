@@ -161,8 +161,8 @@ importers:
         specifier: ^14.3.0
         version: 14.3.0
       ts-proto:
-        specifier: 2.19.0
-        version: 2.19.0
+        specifier: 2.20.0
+        version: 2.20.0
       turbo:
         specifier: 2.11.10
         version: 2.11.10
@@ -634,8 +634,8 @@ packages:
     resolution: {integrity: sha512-R76UKbvsqI68DJJVTVyqFKqU98CN4+B+acxNfEA2IFarSzP0SjtKf/3+fFiXzTyv5Fj3PxLkGHe2wnVWWMxobQ==}
     engines: {node: ^12.0.0 || ^14.0.0 || >=16.0.0}
 
-  '@eslint/config-array@0.23.5':
-    resolution: {integrity: sha512-Y3kKLvC1dvTOT+oGlqNQ1XLqK6D1HU2YXPc52NmAlJZbMMWDzGYXMiPRJ8TYD39muD/OTjlZmNJ4ib7dvSrMBA==}
+  '@eslint/config-array@0.23.6':
+    resolution: {integrity: sha512-WrTH7nioI9QPY4NZGnsywmecswJdgeq4BCM76qok9VgjTO29ZgUzUvcuJLVPYVQM4uDbaPBU0M33R9DIxI8X3w==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
 
   '@eslint/config-helpers@0.7.0':
@@ -4164,8 +4164,8 @@ packages:
   ts-proto-descriptors@2.1.0:
     resolution: {integrity: sha512-S5EZYEQ6L9KLFfjSRpZWDIXDV/W7tAj8uW7pLsihIxyr62EAVSiKuVPwE8iWnr849Bqa53enex1jhDUcpgquzA==}
 
-  ts-proto@2.19.0:
-    resolution: {integrity: sha512-rTdxS7kOwyYche8mZZJwLad7PYuNGoK3GDNWx8bTXxgOUMCfHMmrCNiCOnXvyNymoh/0mddc5aFiQUDUCjNOgQ==}
+  ts-proto@2.20.0:
+    resolution: {integrity: sha512-iEmxKpYOJCMzg5QY/Riq9OHgKeMk3jhlqo6OwNzrypDBNZmrJ/w6NjbGpxGR8fG04lHKCOtDafkcr6pJzfrreQ==}
     hasBin: true
 
   tslib@2.7.0:
@@ -4736,7 +4736,7 @@ snapshots:
 
   '@eslint-community/regexpp@4.12.3': {}
 
-  '@eslint/config-array@0.23.5':
+  '@eslint/config-array@0.23.6':
     dependencies:
       '@eslint/object-schema': 3.0.5
       debug: 4.4.3
@@ -6356,7 +6356,7 @@ snapshots:
     dependencies:
       '@eslint-community/eslint-utils': 4.10.1(eslint@10.8.1(jiti@2.7.0))
       '@eslint-community/regexpp': 4.12.3
-      '@eslint/config-array': 0.23.5
+      '@eslint/config-array': 0.23.6
       '@eslint/config-helpers': 0.7.0
       '@eslint/core': 1.2.1
       '@eslint/plugin-kit': 0.7.3
@@ -7776,7 +7776,7 @@ snapshots:
     dependencies:
       '@bufbuild/protobuf': 2.17.0
 
-  ts-proto@2.19.0:
+  ts-proto@2.20.0:
     dependencies:
       '@bufbuild/protobuf': 2.17.0
       case-anything: 2.1.13
