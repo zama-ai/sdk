@@ -131,6 +131,9 @@ func TestSDKContextParametersAndOptionalDefaults(t *testing.T) {
 	ctx := testContext(t)
 	first := unsignedSDK(t, client)
 	created := (<-requests).(*pb.CreateContextRequest)
+	if created.ClientLanguage != pb.ClientLanguage_CLIENT_LANGUAGE_GO {
+		t.Fatalf("client language = %v", created.ClientLanguage)
+	}
 	if created.SignerEnabled || created.Account != nil {
 		t.Fatal("read-only context gained signer")
 	}

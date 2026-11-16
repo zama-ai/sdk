@@ -1,3 +1,4 @@
+import { ClientLanguage } from "../src/generated/zama/sdk/v1beta1/daemon.js";
 import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,6 +14,7 @@ const contextRequest = {
   account: undefined,
   storage: undefined,
   permitStorage: undefined,
+  clientLanguage: ClientLanguage.CLIENT_LANGUAGE_UNSPECIFIED,
   transportKeyPairDerivationSecret: undefined,
 };
 const directories: string[] = [];

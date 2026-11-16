@@ -74,6 +74,11 @@ message WalletAccount {
   bytes address = 1;
   uint64 chain_id = 2;
 }
+enum ClientLanguage {
+  CLIENT_LANGUAGE_UNSPECIFIED = 0;
+  CLIENT_LANGUAGE_GO = 1;
+  CLIENT_LANGUAGE_RUST = 2;
+}
 message CreateContextRequest {
   ContextConfig config = 1;
   bool signer_enabled = 2;
@@ -82,6 +87,8 @@ message CreateContextRequest {
   StorageBinding storage = 4;
   // Omission shares storage, including its backend identity.
   StorageBinding permit_storage = 5;
+  // Reported in telemetry; unspecified and unknown values are accepted.
+  ClientLanguage client_language = 6;
   // Fields 100–119 are allocated to configuration and credential protection.
   DerivationSecret transport_key_pair_derivation_secret = 100;
 }

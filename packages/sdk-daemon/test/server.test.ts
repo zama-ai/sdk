@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { credentials, Metadata, status, type ServiceError } from "@grpc/grpc-js";
 import { expect, test, vi } from "vitest";
-import { DaemonServiceClient } from "../src/generated/zama/sdk/v1beta1/daemon.js";
+import { ClientLanguage, DaemonServiceClient } from "../src/generated/zama/sdk/v1beta1/daemon.js";
 import { createCoordinator } from "../src/coordination.js";
 import { type ContextSdk, DaemonRuntime } from "../src/runtime.js";
 import { startServer } from "../src/server.js";
@@ -44,6 +44,7 @@ test("serves typed unary calls over a private socket and sanitizes errors", asyn
         {
           storage: undefined,
           permitStorage: undefined,
+          clientLanguage: ClientLanguage.CLIENT_LANGUAGE_UNSPECIFIED,
           transportKeyPairDerivationSecret: undefined,
           config: undefined,
           signerEnabled: false,
@@ -127,6 +128,7 @@ test.each(["cancel", "deadline"] as const)(
     const contextId = await runtime.createContext({
       storage: undefined,
       permitStorage: undefined,
+      clientLanguage: ClientLanguage.CLIENT_LANGUAGE_UNSPECIFIED,
       transportKeyPairDerivationSecret: undefined,
       config: undefined,
       signerEnabled: false,
@@ -183,6 +185,7 @@ test("closing contexts with both callback channels permits prompt server shutdow
           account: undefined,
           storage: undefined,
           permitStorage: undefined,
+          clientLanguage: ClientLanguage.CLIENT_LANGUAGE_UNSPECIFIED,
           transportKeyPairDerivationSecret: undefined,
         },
         (error, value) => (error ? reject(error) : resolve(value)),

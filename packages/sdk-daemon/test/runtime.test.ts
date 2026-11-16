@@ -1,3 +1,4 @@
+import { ClientLanguage } from "../src/generated/zama/sdk/v1beta1/daemon.js";
 import { expect, test, vi } from "vitest";
 import { DaemonRuntime, type ContextSdk } from "../src/runtime.js";
 import { createCoordinator } from "../src/coordination.js";
@@ -14,6 +15,7 @@ function setup() {
 const request = {
   storage: undefined,
   permitStorage: undefined,
+  clientLanguage: ClientLanguage.CLIENT_LANGUAGE_UNSPECIFIED,
   transportKeyPairDerivationSecret: undefined,
   config: undefined,
   signerEnabled: false,

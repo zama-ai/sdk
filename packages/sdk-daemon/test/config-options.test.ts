@@ -7,6 +7,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { chains, ConfigurationError, cleartext } from "@zama-fhe/sdk";
 import { node } from "@zama-fhe/sdk/node";
 import {
+  ClientLanguage,
   ContextConfig,
   ModuleVersions,
   ProviderBatch,
@@ -99,6 +100,7 @@ test("forwards every supported typed provider option to viem", async () => {
         account: undefined,
         storage: undefined,
         permitStorage: undefined,
+        clientLanguage: ClientLanguage.CLIENT_LANGUAGE_UNSPECIFIED,
         transportKeyPairDerivationSecret: undefined,
       },
       undefined,

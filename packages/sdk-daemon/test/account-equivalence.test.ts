@@ -1,3 +1,4 @@
+import { ClientLanguage } from "../src/generated/zama/sdk/v1beta1/daemon.js";
 import { storage, fixture, decode as values, testServer } from "./support/harness.js";
 import { randomUUID } from "node:crypto";
 
@@ -48,6 +49,7 @@ async function harness() {
           {
             storage: undefined,
             permitStorage: undefined,
+            clientLanguage: ClientLanguage.CLIENT_LANGUAGE_UNSPECIFIED,
             transportKeyPairDerivationSecret: undefined,
             config: undefined,
             signerEnabled: true,

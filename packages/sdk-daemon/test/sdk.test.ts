@@ -1,4 +1,4 @@
-import { ContextConfig } from "../src/generated/zama/sdk/v1beta1/daemon.js";
+import { ClientLanguage, ContextConfig } from "../src/generated/zama/sdk/v1beta1/daemon.js";
 import type * as Viem from "viem";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -45,6 +45,7 @@ test("context factory preserves signerless public decryption and zero-value lazy
     account: undefined,
     storage: undefined,
     permitStorage: undefined,
+    clientLanguage: ClientLanguage.CLIENT_LANGUAGE_UNSPECIFIED,
     transportKeyPairDerivationSecret: undefined,
   };
   const signer = new RemoteSigner(

@@ -7,6 +7,7 @@ import { operationContext, RemoteSigner, type SignerStream } from "../src/remote
 import { createCoordinator } from "../src/coordination.js";
 import { DaemonRuntime } from "../src/runtime.js";
 import {
+  ClientLanguage,
   SignerAction,
   type SignerReply,
   type SignerServerMessage,
@@ -32,6 +33,7 @@ const contextRequest = {
   account: { address: bytes(account.address), chainId: 31337n },
   storage: undefined,
   permitStorage: undefined,
+  clientLanguage: ClientLanguage.CLIENT_LANGUAGE_UNSPECIFIED,
   transportKeyPairDerivationSecret: undefined,
 };
 type Result = SignerReply["result"];
