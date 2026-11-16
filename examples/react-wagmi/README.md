@@ -10,7 +10,7 @@ The connected app has three tabs:
 
 - **Tokens**: balances, shield, confidential transfer, unshield and pending unshield recovery for the selected token. The core of the SDK.
 - **Delegation**: grant, revoke and use decryption delegation for the selected token.
-- **Vaults**: deposit into and withdraw from a confidential ERC-4626 vault with `@zama-fhe/react-sdk/vaults`. The Deposit and Withdraw boxes each hold their form and the positions still in progress, with one view per batch state: cancel, settle a late batch, claim, take a canceled amount back. The joined batches live in localStorage. It implements the [Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide. Set the vault's batchers in `.env.local` to use it.
+- **Vaults**: deposit into and withdraw from a confidential ERC-4626 vault with `@zama-fhe/react-sdk/vaults`. The Deposit and Withdraw boxes each hold their form and the positions still in progress, with one view per batch state: cancel, settle a late batch, claim, take a canceled amount back. The joined batches live in localStorage. It implements the [Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide. Set each network's vaults in `.env.local` (`NEXT_PUBLIC_<NETWORK>_VAULTS`) to use it; with several, a picker chooses the vault.
 
 This app replaces the former `example-bnb`, `example-hoodi`, `example-polygon-amoy` and `example-zenith` apps, which were copies of it pinned to one chain each.
 
@@ -111,8 +111,7 @@ All server-side variables are read by the proxy only and never reach the browser
 | `NEXT_PUBLIC_COMMIT_SHA`             | No                                                         | Commit shown in the footer. Vercel's `VERCEL_GIT_COMMIT_SHA` is used when this is unset.                                                                                         |
 | `NEXT_PUBLIC_SOURCE_REPO_URL`        | No                                                         | Repository the footer links to. Defaults to `https://github.com/zama-ai/sdk`; a fork must set its own.                                                                           |
 | `NEXT_PUBLIC_<NETWORK>_RPC_URL`      | No                                                         | RPC override per network: `SEPOLIA`, `BNB_TESTNET`, `HOODI`, `ZENITH`, `MAINNET`, `POLYGON`.                                                                                     |
-| `NEXT_PUBLIC_VAULT_DEPOSIT_BATCHER`  | For the Vaults tab                                         | Deposit batcher of the confidential vault on Sepolia. The Vaults tab shows a setup hint until both batchers are set.                                                             |
-| `NEXT_PUBLIC_VAULT_REDEEM_BATCHER`   | For the Vaults tab                                         | Redeem batcher of the same vault.                                                                                                                                                |
+| `NEXT_PUBLIC_<NETWORK>_VAULTS`       | For the Vaults tab                                         | Vaults per network, same keys as the RPC overrides: `0xDeposit:0xRedeem` per vault, comma-separated. Several vaults add a vault picker; none shows a setup hint.                 |
 
 Earlier versions of this app, and the per-chain apps it replaces, read `RELAYER_URL`, `RELAYER_API_KEY`, `NEXT_PUBLIC_AMOY_RPC_URL` and `NEXT_PUBLIC_BSC_TESTNET_RPC_URL`. Those names are no longer read: a stale `.env.local` silently falls back to the public testnet relayer, so rename them to the per-network names above.
 

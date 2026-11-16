@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   useConfidentialBalance,
@@ -34,19 +34,54 @@ const VALUE_ABI = parseAbi([
 ]);
 
 export function VaultsTab({ account }: { account: Address }) {
-  const { batchVault } = useNetwork();
-  if (!batchVault) {
+  const { vaults } = useNetwork();
+  const [selected, setSelected] = useState(0);
+  if (vaults.length === 0) {
     return (
       <section className="card">
         <h2 className="card-title">Vaults</h2>
         <p className="token-meta">
-          No vault is configured for this network. Set NEXT_PUBLIC_VAULT_DEPOSIT_BATCHER and
-          NEXT_PUBLIC_VAULT_REDEEM_BATCHER (see .env.example), then restart the app.
+          No vault is configured for this network. Set {"NEXT_PUBLIC_<NETWORK>_VAULTS"} (see
+          .env.example), then restart the app.
         </p>
       </section>
     );
   }
-  return <VaultPanel vault={batchVault} account={account} />;
+  // Another network can list fewer vaults: fall back to its first one.
+  const index = selected < vaults.length ? selected : 0;
+  const vault = vaults[index];
+  return (
+    <>
+      {vaults.length > 1 && (
+        <section className="card" aria-labelledby="vault-picker-title">
+          <h2 className="card-title" id="vault-picker-title">
+            Vault
+          </h2>
+          <label className="sr-only" htmlFor="vault-picker">
+            Vault
+          </label>
+          <select
+            id="vault-picker"
+            className="select"
+            value={index}
+            onChange={(event) => setSelected(Number(event.currentTarget.value))}
+          >
+            {vaults.map((option, i) => (
+              <option key={option.depositBatcher} value={i}>
+                {`Vault ${i + 1} · ${option.depositBatcher.slice(0, 6)}…${option.depositBatcher.slice(-4)}`}
+              </option>
+            ))}
+          </select>
+        </section>
+      )}
+      {/* Keyed by vault, so the cards drop their form and reads when the vault changes. */}
+      <VaultPanel
+        key={`${vault.chainId}:${vault.depositBatcher}`}
+        vault={vault}
+        account={account}
+      />
+    </>
+  );
 }
 
 function VaultPanel({ vault, account }: { vault: BatchVault; account: Address }) {

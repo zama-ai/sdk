@@ -36,9 +36,13 @@ export default defineConfig({
       MAINNET_RELAYER_URL: "http://127.0.0.1:9",
       POLYGON_RELAYER_URL: "",
       ENABLED_NETWORKS: "",
-      // No batch vault, so the Vaults tab shows its setup hint whatever a dev's .env.local says.
-      NEXT_PUBLIC_VAULT_DEPOSIT_BATCHER: "",
-      NEXT_PUBLIC_VAULT_REDEEM_BATCHER: "",
+      // No vaults, so the Vaults tab shows its setup hint whatever a dev's .env.local says.
+      NEXT_PUBLIC_SEPOLIA_VAULTS: "",
+      NEXT_PUBLIC_BNB_TESTNET_VAULTS: "",
+      NEXT_PUBLIC_HOODI_VAULTS: "",
+      NEXT_PUBLIC_ZENITH_VAULTS: "",
+      NEXT_PUBLIC_MAINNET_VAULTS: "",
+      NEXT_PUBLIC_POLYGON_VAULTS: "",
       // Pin a commit so the footer test can check the commit link.
       NEXT_PUBLIC_COMMIT_SHA: "0123456789abcdef0123456789abcdef01234567",
       NEXT_PUBLIC_SOURCE_REPO_URL: "",
