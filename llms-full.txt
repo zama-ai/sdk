@@ -2538,7 +2538,47 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 > **Unreleased.** The changes on this page are on the prerelease (`beta`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
 
 
-## Daemon
+_Nothing is staged for the next release yet._
+
+## 3.x
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/v3.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3.md
+- logical_path: changelog/v3
+
+# 3.x
+
+Plain-language release notes for the `3.x` line — the current, actively-maintained release line. Here's what changed in each minor version, and why it matters. This complements the auto-generated [`CHANGELOG.md`](https://github.com/zama-ai/sdk/blob/main/CHANGELOG.md) (the full commit-level list) and the [migration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/migrate-v2-to-v3.md) (for moving across a major version).
+
+## Versions
+
+- [**3.8.x**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-8.md) — Experimental Go and Rust clients through the SDK daemon, a new vault client API that replaces the 3.7 vault classes, typed errors for FHE compute limits, batched reads with multicall, and the removal of ApiKeyCookie relayer auth.
+- [**3.7.x**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-7.md) — Confidential ERC-4626 vaults, wildcard delegation, offline permits for more than 10 contracts, SDK usage telemetry headers, a T-Rex Zenith testnet preset, and permit signatures with a 0/1 recovery byte.
+- [**3.6.x**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-6.md) — Web Worker encryption offload, structured wallet-signing/permit-failure events, an interrupted-unshield resume fix, and orphaned relayer entries that warn instead of throwing.
+- [**3.5.x**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-5.md) — Polygon presets, offline signing and decryption permits, at-rest transport-key encryption, and automatic KMS-context recovery.
+- [**3.4.x**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-4.md) — An internal FHE backend migration to `@fhevm/sdk` (no API changes for `Token`/hooks apps), FHE runtime and client tuning knobs, shared transport key pairs for B2B2C, automatic decrypt-batch chunking, and a two-signature shield via `wrap()`.
+- [**3.3.x**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-3.md) — `confidentialTransferAndCall`, automatic pending-unshield recovery, and typed decryption errors.
+- [**3.2.x**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-2.md) — configurable, silent-by-default logging; upgrade codemods; and a `Wrap` event decoding fix.
+- [**3.1.x**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-1.md) — `createConfig`, transport factories, the provider/signer split, the `Token` / `WrappedToken` hierarchy, and top-level FHE primitives.
+- [**3.0.x**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-0.md) — the first stable v3 line: the high-level clear-text-in, clear-text-out SDK, plus upgraded wrapper and registry contract support.
+
+## 3.8.x
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/v3-8.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-8.md
+- logical_path: changelog/v3-8
+
+# 3.8.x
+
+This page covers the `3.8.x` line.
+
+## 3.8.0
+
+_Released 2026-11-16._
+
+### Daemon
 
 **Experimental Go and Rust clients.** Go and Rust services can use the SDK through native clients that talk to a local SDK daemon over a private Unix socket. The clients encrypt inputs, decrypt values (including public and delegated decryption), manage permits, prepare unsigned transactions for external signing, and grant or revoke on-chain decryption delegation through your wallet. Token workflows are not available in the clients yet.
 
@@ -2551,7 +2591,7 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 
 Start with the [Go quick start](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/native/tutorials/go-quick-start.md) or the [Rust quick start](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/native/tutorials/rust-quick-start.md).
 
-## New vaults API: `defineVaultGroup` and `createVaultClient`
+### New vaults API: `defineVaultGroup` and `createVaultClient`
 
 
 > [!WARNING]
@@ -2594,7 +2634,7 @@ The root entry now exports `confidentialTransferAndCallContract`, `confidentialT
 
 See [Vaults overview](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/vaults/README.md) and [`VaultClient`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/VaultClient.md).
 
-## Typed errors for the protocol's FHE compute limits
+### Typed errors for the protocol's FHE compute limits
 
 The protocol caps the FHE compute, measured in HCU, that a transaction and a block can use. A write whose gas estimation hits one of them now throws a typed error instead of a bare `TransactionRevertedError`, from `submitTransaction`-backed methods and from `sdk.offline.prepare` alike: `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`) when the block has too little left, which is retryable in the next block, and `HcuTransactionLimitExceededError` (`HCU_TRANSACTION_LIMIT_EXCEEDED`) when the transaction needs more HCU, in total or in one sequential chain, than one transaction may use, which a retry cannot fix.
 
@@ -2602,23 +2642,23 @@ The protocol caps the FHE compute, measured in HCU, that a transaction and a blo
 
 See [Errors](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/errors.md#hcublocklimitexceedederror).
 
-## Batched reads with `GenericProvider.multicall`
+### Batched reads with `GenericProvider.multicall`
 
 `GenericProvider` gains an optional `multicall({ calls, chainId? })` that runs many reads in one Multicall3 call and returns the results in call order; one reverted read rejects the whole call. `ViemProvider`, `EthersProvider` and `WagmiProvider` implement it, including on chains with no deployed Multicall3. A custom provider can leave it out, and the SDK then reads one call at a time. The result type is exported as `MulticallReturnType`. See [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericProvider.md#multicall).
 
-## Safe and EIP-5792 transactions resolve in `WagmiProvider`
+### Safe and EIP-5792 transactions resolve in `WagmiProvider`
 
 `WagmiProvider.waitForTransactionReceipt` now also asks the connected wallet for the receipt, through `eth_getTransactionReceipt` and then `wallet_getCallsStatus`. Smart-account wallets such as Safe over WalletConnect return a hash the chain doesn't know, so shield and approve flows used to wait forever. The wait is now bounded at 3 minutes and then throws `TransactionRevertedError` saying the outcome is unknown; a revert reported by either the chain or the wallet counts as a failure.
 
-## Registry chain refetches when a wallet connects
+### Registry chain refetches when a wallet connects
 
 `useWrappersRegistryAddress`, and the hooks built on it, now refetch when a wallet connects on a different chain, instead of showing the previous chain's registry for up to 30 seconds. The hook can briefly return `undefined` after a connect or a chain switch. `zamaQueryKeys.wrappersRegistry.chainId` takes an optional `walletChainId`, so exact-match `getQueryData` or `setQueryData` calls on `chainId()` no longer match once a wallet is connected.
 
-## Chain presets are frozen
+### Chain presets are frozen
 
 The built-in chain presets and the `chains` map are now frozen with `Object.freeze`. Writing to a preset directly, such as `sepolia.registryAddress = …`, throws a `TypeError` in strict mode instead of silently changing the preset for the whole app. Spread a preset to customize it: `{ ...sepolia, registryAddress }`.
 
-## Opt out of clearing credentials on wallet account changes
+### Opt out of clearing credentials on wallet account changes
 
 New `clearCredentialsOnWalletChange` option on `createConfig`. By default (`true`) the SDK keeps its existing behavior: switching wallet accounts, locking the wallet, or disconnecting wipes the previous account's transport key pair, permits, and decrypt cache. Set it to `false` to keep them. Storage is keyed per signer address and a permit is only accepted from the address that signed it, so one account can never use another's entries; keeping them lets a multi-wallet user switch A → B → A without signing a new permit or re-decrypting, and stops wallets that emit an empty account list on auto-lock (Rabby, Brave) from wiping credentials on every lock.
 
@@ -2627,19 +2667,19 @@ New `clearCredentialsOnWalletChange` option on `createConfig`. By default (`true
 
 See [Wallet account changes](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md#wallet-account-changes) in the Permit Model.
 
-## Permit signing with browser extensions that patch `BigInt`
+### Permit signing with browser extensions that patch `BigInt`
 
 `ViemSigner` and `WagmiSigner` now convert the typed-data domain `chainId` to a number and every `bigint` value in the message to a decimal string before calling viem. Browser extensions that patch how `bigint` is JSON-serialized made viem send the permit's `chainId` as `"1n"`, and the wallet rejected the signature with `chainId should be same as current chainId`; with no `bigint` left in the request, such a patch has nothing to act on. Signatures are unchanged, and `EthersSigner` was never affected.
 
-## Telemetry as query parameters
+### Telemetry as query parameters
 
 `createConfig` now takes `telemetry: "header" | "query" | "off"`. The default, `"header"`, keeps sending the `x-zama-sdk-*` usage headers. `"query"` sends the same four fields as `zama_sdk_*` query parameters instead, for backend proxies and edges that rebuild or strip request headers. `"off"` sends nothing; `true` and `false` still work as `"header"` and `"off"`. On Node.js, `ZAMA_SDK_TELEMETRY` takes the same three values, case-insensitive, and switches the mode or turns telemetry off for the whole process; it cannot turn on what the config disabled. See [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/telemetry.md).
 
-## Amoy mock registry and tokens removed
+### Amoy mock registry and tokens removed
 
 The mock wrappers registry and mock confidential tokens on Polygon Amoy are no longer maintained, so the SDK no longer ships them. `polygonAmoy.registryAddress` is now `undefined`, Amoy is removed from the deprecated `DefaultRegistryAddresses` map, and the `example-polygon-amoy` app is removed. The `polygonAmoy` preset stays available for the base protocol: encrypting inputs and decrypting values on Amoy work as before. If you deploy your own registry on Amoy, pass its address via `registryAddresses` when creating a `WrappersRegistry`, or set `registryAddress` on the chain definition. The Polygon mainnet registry and wrappers are unchanged.
 
-## `ApiKeyCookie` relayer auth removed
+### `ApiKeyCookie` relayer auth removed
 
 
 > [!WARNING]
@@ -2652,28 +2692,6 @@ The mock wrappers registry and mock confidential tokens on Polygon Amoy are no l
 - **Go and Rust clients:** `zama.APIKeyCookie` and `RelayerAuth::ApiKeyCookie` are removed, so code that uses them no longer compiles.
 - **Daemon protocol:** `api_key_cookie` is removed from `ChainAuth` and its field number (3) is reserved. A client that still sends it is rejected with `FAILED_PRECONDITION`; run the client and the daemon at exactly the same version.
 - **Migrate:** have your proxy read its credential from a header and use `ApiKeyHeader` with the optional `header` name (the default is `x-api-key`). See [Auth methods reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/authentication.md#5-auth-methods-reference).
-
-## 3.x
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/changelog/v3.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3.md
-- logical_path: changelog/v3
-
-# 3.x
-
-Plain-language release notes for the `3.x` line — the current, actively-maintained release line. Here's what changed in each minor version, and why it matters. This complements the auto-generated [`CHANGELOG.md`](https://github.com/zama-ai/sdk/blob/main/CHANGELOG.md) (the full commit-level list) and the [migration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/migrate-v2-to-v3.md) (for moving across a major version).
-
-## Versions
-
-- [**3.7.x**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-7.md) — Confidential ERC-4626 vaults, wildcard delegation, offline permits for more than 10 contracts, SDK usage telemetry headers, a T-Rex Zenith testnet preset, and permit signatures with a 0/1 recovery byte.
-- [**3.6.x**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-6.md) — Web Worker encryption offload, structured wallet-signing/permit-failure events, an interrupted-unshield resume fix, and orphaned relayer entries that warn instead of throwing.
-- [**3.5.x**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-5.md) — Polygon presets, offline signing and decryption permits, at-rest transport-key encryption, and automatic KMS-context recovery.
-- [**3.4.x**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-4.md) — An internal FHE backend migration to `@fhevm/sdk` (no API changes for `Token`/hooks apps), FHE runtime and client tuning knobs, shared transport key pairs for B2B2C, automatic decrypt-batch chunking, and a two-signature shield via `wrap()`.
-- [**3.3.x**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-3.md) — `confidentialTransferAndCall`, automatic pending-unshield recovery, and typed decryption errors.
-- [**3.2.x**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-2.md) — configurable, silent-by-default logging; upgrade codemods; and a `Wrap` event decoding fix.
-- [**3.1.x**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-1.md) — `createConfig`, transport factories, the provider/signer split, the `Token` / `WrappedToken` hierarchy, and top-level FHE primitives.
-- [**3.0.x**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-0.md) — the first stable v3 line: the high-level clear-text-in, clear-text-out SDK, plus upgraded wrapper and registry contract support.
 
 ## 3.7.x
 
