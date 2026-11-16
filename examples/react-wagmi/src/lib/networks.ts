@@ -27,8 +27,8 @@ export interface Network {
   explorerUrl: string;
   /** The test tokens expose `mint(address,uint256)`; real tokens do not. */
   canMint: boolean;
-  /** Confidential ERC-4626 vault for the Vaults tab: its two batchers. */
-  batchVault?: BatchVault;
+  /** Confidential ERC-4626 vaults for the Vaults tab, each set by its two batchers. */
+  vaults: BatchVault[];
 }
 
 export interface BatchVault {
@@ -38,22 +38,25 @@ export interface BatchVault {
   redeemBatcher: Address;
 }
 
-interface NetworkInput extends Omit<Network, "chain" | "fhe"> {
+interface NetworkInput extends Omit<Network, "chain" | "fhe" | "vaults"> {
   chain: Chain;
   /** A preset from `@zama-fhe/sdk/chains`; every preset names its public RPC as a URL. */
   fhe: FheChain & { network: string };
   /** `NEXT_PUBLIC_<KEY>_RPC_URL`. Falls back to the preset's public RPC. */
   rpcUrl: string | undefined;
+  /** `NEXT_PUBLIC_<KEY>_VAULTS`, read with {@link vaultsFromEnv}. */
+  vaults: Omit<BatchVault, "chainId">[];
 }
 
 // Use || not ?? — Next.js replaces unset NEXT_PUBLIC_* variables with "" at build time, not
 // undefined, and "" is not nullish.
-function defineNetwork({ chain, fhe, rpcUrl, ...rest }: NetworkInput): Network {
+function defineNetwork({ chain, fhe, rpcUrl, vaults, ...rest }: NetworkInput): Network {
   const network = rpcUrl || fhe.network;
   return {
     ...rest,
     chain: defineChain({ ...chain, rpcUrls: { default: { http: [network] } } }),
     fhe: { ...fhe, network },
+    vaults: vaults.map((vault) => ({ ...vault, chainId: chain.id })),
   };
 }
 
@@ -69,17 +72,23 @@ const zenith = defineChain({
   },
 });
 
-function batchVaultFromEnv(chainId: number): BatchVault | undefined {
-  const depositBatcher = process.env.NEXT_PUBLIC_VAULT_DEPOSIT_BATCHER;
-  const redeemBatcher = process.env.NEXT_PUBLIC_VAULT_REDEEM_BATCHER;
-  if (!depositBatcher || !redeemBatcher) {
-    return undefined;
-  }
-  return {
-    chainId,
-    depositBatcher: envAddress("NEXT_PUBLIC_VAULT_DEPOSIT_BATCHER", depositBatcher),
-    redeemBatcher: envAddress("NEXT_PUBLIC_VAULT_REDEEM_BATCHER", redeemBatcher),
-  };
+// One `depositBatcher:redeemBatcher` pair per vault, comma-separated. The name is passed with
+// the value because Next.js inlines a NEXT_PUBLIC_* variable only where the code names it.
+function vaultsFromEnv(name: string, value: string | undefined): Omit<BatchVault, "chainId">[] {
+  return (value ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const [depositBatcher, redeemBatcher, ...rest] = entry.split(":").map((part) => part.trim());
+      if (!depositBatcher || !redeemBatcher || rest.length > 0) {
+        throw new Error(`${name}: expected depositBatcher:redeemBatcher, got "${entry}"`);
+      }
+      return {
+        depositBatcher: envAddress(name, depositBatcher),
+        redeemBatcher: envAddress(name, redeemBatcher),
+      };
+    });
 }
 
 // Checksummed, so query keys built from it match addresses the SDK returns.
@@ -99,7 +108,7 @@ export const networks = {
     transport: "relayer",
     explorerUrl: "https://eth-sepolia.blockscout.com",
     canMint: true,
-    batchVault: batchVaultFromEnv(sepolia.id),
+    vaults: vaultsFromEnv("NEXT_PUBLIC_SEPOLIA_VAULTS", process.env.NEXT_PUBLIC_SEPOLIA_VAULTS),
   }),
   // Cleartext rows are development deployments: "encrypted" values are stored in cleartext
   // on-chain and there is no relayer or KMS. They exist to integrate against the SDK on
@@ -109,6 +118,10 @@ export const networks = {
     chain: bscTestnet,
     fhe: fheBscTestnet,
     rpcUrl: process.env.NEXT_PUBLIC_BNB_TESTNET_RPC_URL,
+    vaults: vaultsFromEnv(
+      "NEXT_PUBLIC_BNB_TESTNET_VAULTS",
+      process.env.NEXT_PUBLIC_BNB_TESTNET_VAULTS,
+    ),
     transport: "cleartext",
     explorerUrl: "https://testnet.bscscan.com",
     canMint: true,
@@ -118,6 +131,7 @@ export const networks = {
     chain: hoodi,
     fhe: fheHoodi,
     rpcUrl: process.env.NEXT_PUBLIC_HOODI_RPC_URL,
+    vaults: vaultsFromEnv("NEXT_PUBLIC_HOODI_VAULTS", process.env.NEXT_PUBLIC_HOODI_VAULTS),
     transport: "cleartext",
     explorerUrl: "https://eth-hoodi.blockscout.com",
     canMint: true,
@@ -127,6 +141,7 @@ export const networks = {
     chain: zenith,
     fhe: fheZenith,
     rpcUrl: process.env.NEXT_PUBLIC_ZENITH_RPC_URL,
+    vaults: vaultsFromEnv("NEXT_PUBLIC_ZENITH_VAULTS", process.env.NEXT_PUBLIC_ZENITH_VAULTS),
     transport: "cleartext",
     explorerUrl: "https://explorer.testnet.t-rex.zenith.network",
     canMint: true,
@@ -138,6 +153,7 @@ export const networks = {
     chain: mainnet,
     fhe: fheMainnet,
     rpcUrl: process.env.NEXT_PUBLIC_MAINNET_RPC_URL,
+    vaults: vaultsFromEnv("NEXT_PUBLIC_MAINNET_VAULTS", process.env.NEXT_PUBLIC_MAINNET_VAULTS),
     transport: "relayer",
     explorerUrl: "https://etherscan.io",
     canMint: false,
@@ -147,6 +163,7 @@ export const networks = {
     chain: polygon,
     fhe: fhePolygon,
     rpcUrl: process.env.NEXT_PUBLIC_POLYGON_RPC_URL,
+    vaults: vaultsFromEnv("NEXT_PUBLIC_POLYGON_VAULTS", process.env.NEXT_PUBLIC_POLYGON_VAULTS),
     transport: "relayer",
     explorerUrl: "https://polygonscan.com",
     canMint: false,

@@ -58,7 +58,7 @@ export const networks = {
     transport: "relayer",
     explorerUrl: "https://eth-sepolia.blockscout.com",
     canMint: true,
-    batchVault: batchVaultFromEnv(sepolia.id),
+    vaults: vaultsFromEnv("NEXT_PUBLIC_SEPOLIA_VAULTS", process.env.NEXT_PUBLIC_SEPOLIA_VAULTS),
   }),
   "bnb-testnet": defineNetwork({ label: "BNB Testnet · Cleartext", transport: "cleartext", ... }),
   mainnet: defineNetwork({ label: "Ethereum", transport: "relayer", canMint: false, ... }),
@@ -457,8 +457,11 @@ Vaults tab shows each of those steps, following the
 
 - **Vault.** `src/lib/vaults.ts` builds the vault with `defineVault`: a single vault, so a join
   has a single leg and lands in a single batch. `VaultsTab.tsx` reads the vault's asset and share
-  from the deposit batcher, so the only configuration is the two batcher addresses (the
-  `batchVault` field of the Sepolia row in `src/lib/networks.ts`).
+  from the deposit batcher, so the only configuration is the two batcher addresses.
+- **Vaults per network.** Each row of `src/lib/networks.ts` reads its vaults from
+  `NEXT_PUBLIC_<NETWORK>_VAULTS`, one `depositBatcher:redeemBatcher` pair per vault. Next.js
+  inlines a `NEXT_PUBLIC_*` variable only where the code names it, so each row names its own.
+  With several vaults the tab shows a picker, and each vault is used on its own.
 - **Pinned chain.** Reads go to the vault's `chainId`, and the write hooks throw
   `ChainMismatchError` when the wallet is on another chain instead of sending the transaction
   there.
