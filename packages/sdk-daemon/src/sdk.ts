@@ -31,7 +31,7 @@ function telemetryClient(language: ClientLanguage): TelemetryClient {
   }
 }
 
-export function markDaemonTelemetry(config: ZamaConfig, language: ClientLanguage): void {
+function markDaemonTelemetry(config: ZamaConfig, language: ClientLanguage): void {
   const { telemetry } = config as MarkableConfig;
   if (telemetry) {
     telemetry.daemonClient = telemetryClient(language);

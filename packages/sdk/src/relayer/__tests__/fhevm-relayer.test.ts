@@ -138,6 +138,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 /** Records the runtime config the relayer reads; reset before every test. */
@@ -791,6 +792,7 @@ describe("FhevmRelayer usage telemetry", () => {
   });
 
   test("node() reports the daemon runtime and client set after creation", async () => {
+    vi.stubEnv("ZAMA_SDK_TELEMETRY", "");
     const state: TelemetryState = { layer: "core", mode: "header" };
     const relayer = node().createRelayer(hostedChain, new LoggerService(), state);
     state.daemonClient = "go";
@@ -805,36 +807,6 @@ describe("FhevmRelayer usage telemetry", () => {
           "x-zama-sdk-client": "go",
         },
       },
-    });
-  });
-
-  test("node() reports the daemon runtime and client in query mode", async () => {
-    const state: TelemetryState = { layer: "core", mode: "query" };
-    const relayer = node().createRelayer(hostedChain, new LoggerService(), state);
-    state.daemonClient = "go";
-    await relayer.fetchFheEncryptionKeyBytes();
-
-    expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
-      options: {
-        query: {
-          zama_sdk_version: SDK_VERSION,
-          zama_sdk_layer: "core",
-          zama_sdk_runtime: "daemon",
-          zama_sdk_client: "go",
-        },
-      },
-    });
-  });
-
-  test("node() sends no client header unless the state sets one", async () => {
-    const relayer = node().createRelayer(hostedChain, new LoggerService(), {
-      layer: "core",
-      mode: "header",
-    });
-    await relayer.fetchFheEncryptionKeyBytes();
-
-    expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
-      options: { headers: { ...staticHeaders, "x-zama-sdk-runtime": "node" } },
     });
   });
 

@@ -1,7 +1,6 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { ZamaConfig } from "@zama-fhe/sdk";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   ClientLanguage,
@@ -10,7 +9,7 @@ import {
 } from "../src/generated/zama/sdk/v1beta1/daemon.js";
 import { RemoteEvents } from "../src/remote-events.js";
 import { RemoteStorage } from "../src/remote-storage.js";
-import { createContextFactory, markDaemonTelemetry } from "../src/sdk.js";
+import { createContextFactory } from "../src/sdk.js";
 import { StorageManager } from "../src/storage-manager.js";
 import type { FhevmRelayerConfig } from "../../sdk/src/relayer/fhevm-relayer";
 import { telemetryRequestOptions } from "../../sdk/src/telemetry";
@@ -23,34 +22,8 @@ vi.mock("../../sdk/src/relayer/fhevm-relayer", () => ({
   }),
 }));
 
-function fakeConfig(telemetry: object | undefined): { config: ZamaConfig; telemetry: unknown } {
-  return { config: { telemetry } as unknown as ZamaConfig, telemetry };
-}
-
 // The binary decoder delivers unknown enum values as-is: field 6, varint 3.
 const futureLanguage = CreateContextRequest.decode(new Uint8Array([0x30, 0x03])).clientLanguage;
-
-describe("markDaemonTelemetry", () => {
-  test.each([
-    [ClientLanguage.CLIENT_LANGUAGE_GO, "go"],
-    [ClientLanguage.CLIENT_LANGUAGE_RUST, "rust"],
-    [ClientLanguage.CLIENT_LANGUAGE_UNSPECIFIED, "unknown"],
-    [ClientLanguage.UNRECOGNIZED, "unknown"],
-    [futureLanguage, "unknown"],
-  ])("maps client language %s to %s", (language, client) => {
-    const { config, telemetry } = fakeConfig({ layer: "core", mode: "header" });
-    markDaemonTelemetry(config, language);
-
-    expect(telemetry).toEqual({ layer: "core", mode: "header", daemonClient: client });
-  });
-
-  test("is a no-op when telemetry is off", () => {
-    const { config } = fakeConfig(undefined);
-
-    expect(() => markDaemonTelemetry(config, ClientLanguage.CLIENT_LANGUAGE_GO)).not.toThrow();
-    expect(config).toEqual({ telemetry: undefined });
-  });
-});
 
 describe("context factory telemetry", () => {
   let directory: string;
@@ -63,7 +36,7 @@ describe("context factory telemetry", () => {
     await rm(directory, { recursive: true, force: true });
   });
 
-  async function build() {
+  async function build(clientLanguage = ClientLanguage.CLIENT_LANGUAGE_GO) {
     const context = await createContextFactory(new StorageManager(directory))(
       {
         config: ContextConfig.fromPartial({
@@ -73,7 +46,7 @@ describe("context factory telemetry", () => {
         account: undefined,
         storage: undefined,
         permitStorage: undefined,
-        clientLanguage: ClientLanguage.CLIENT_LANGUAGE_GO,
+        clientLanguage,
         transportKeyPairDerivationSecret: undefined,
       },
       undefined,
@@ -92,12 +65,19 @@ describe("context factory telemetry", () => {
     await expect(build()).resolves.toBeUndefined();
   });
 
-  test("tags requests as the daemon runtime and client in header mode", async () => {
-    const telemetry = await build();
+  test.each([
+    [ClientLanguage.CLIENT_LANGUAGE_GO, "go"],
+    [ClientLanguage.CLIENT_LANGUAGE_RUST, "rust"],
+    [ClientLanguage.CLIENT_LANGUAGE_UNSPECIFIED, "unknown"],
+    [ClientLanguage.UNRECOGNIZED, "unknown"],
+    [futureLanguage, "unknown"],
+  ])("tags client language %s as the daemon runtime and client %s", async (language, client) => {
+    vi.stubEnv("ZAMA_SDK_TELEMETRY", "");
+    const telemetry = await build(language);
 
     expect(telemetryRequestOptions(telemetry!, undefined).headers).toMatchObject({
       "x-zama-sdk-runtime": "daemon",
-      "x-zama-sdk-client": "go",
+      "x-zama-sdk-client": client,
     });
   });
 

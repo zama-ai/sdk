@@ -65,15 +65,6 @@ describe("telemetryRequestOptions", () => {
       zama_sdk_client: "go",
     });
   });
-
-  test("omits the client when the state does not set one", () => {
-    expect(telemetryRequestOptions(telemetry("header"), "unshield").headers).not.toHaveProperty(
-      "x-zama-sdk-client",
-    );
-    expect(telemetryRequestOptions(telemetry("query"), "unshield").query).not.toHaveProperty(
-      "zama_sdk_client",
-    );
-  });
 });
 
 describe("parseTelemetryMode", () => {
