@@ -49,10 +49,12 @@ export function VaultActionCard({
 }: VaultActionCardProps) {
   const { canMint } = useNetwork();
   const copy = COPY[kind];
+  // This app sets each batcher as one address; an upgraded vault lists its history instead.
+  const batcher = vault.batchers[copy.direction];
   const { batches, add, remove } = useJoinedBatches(
     vault.chainId,
     account,
-    vault.batchers[copy.direction].latest,
+    typeof batcher === "string" ? batcher : batcher.latest,
   );
   const [amount, setAmount] = useState("");
   const [submitted, setSubmitted] = useState(false);
