@@ -34,6 +34,20 @@ export interface FheChain<TId extends number = number> {
    * instead of a wallet prompt. V1 permits are unaffected either way.
    */
   readonly protocolConfigContractAddress?: Address | undefined;
+  /**
+   * Address of the `KMSGeneration` contract, which records the digests of the
+   * active FHE public key and CRS. Encryption checks the key material the
+   * relayer serves against it. Ethereum host chains only; other host chains
+   * set {@link FheChain.keyVerificationChain} instead.
+   */
+  readonly kmsGenerationContractAddress?: Address | undefined;
+  /**
+   * The Ethereum chain whose `KMSGeneration` contract the key material of this
+   * non-Ethereum host chain is checked against, read through its `network`.
+   * Encryption on a non-cleartext chain needs this or
+   * {@link FheChain.kmsGenerationContractAddress}.
+   */
+  readonly keyVerificationChain?: FheChain | undefined;
   /** EIP-712 verifying contract address for decryption requests. */
   readonly verifyingContractAddressDecryption: Address;
   /** EIP-712 verifying contract address for input verification. */

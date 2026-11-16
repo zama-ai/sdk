@@ -24,6 +24,7 @@ export const mainnet = Object.freeze({
   registryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0",
   vaultRouterAddress: "0x11c6Acfd368DDFAB97d15649eB8043C0197fac4C",
   protocolConfigContractAddress: "0xD8236B57394f90726b26aB25D38CeAC776E1a7C4",
+  kmsGenerationContractAddress: "0xf102cC9A9D2174630c394f5b7B7D63104E348daa",
 } as const satisfies FheChain);
 
 /**
@@ -41,6 +42,7 @@ export const polygon = Object.freeze({
   verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287",
   registryAddress: "0xc8908569868758dAF814B5a8b96bBc44D1653d54",
   protocolConfigContractAddress: "0x17f62Ab3A1Ea519703cD597410147A30Fa1a7f1e",
+  keyVerificationChain: mainnet,
 } as const satisfies FheChain);
 
 /**
@@ -59,6 +61,7 @@ export const sepolia = Object.freeze({
   registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e",
   vaultRouterAddress: "0xD5BBFF95F3401aeC3B111664F6b72EdAe73814e8",
   protocolConfigContractAddress: "0x51f9AFBc89Ea792e1a21a12AB802ab58D4dbee83",
+  kmsGenerationContractAddress: "0x77389113d7000EcBCfc2bDed57202f5f46109934",
 } as const satisfies FheChain);
 
 /**
@@ -79,6 +82,7 @@ export const polygonAmoy = Object.freeze({
   verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
   registryAddress: undefined,
   protocolConfigContractAddress: "0x4CcF009Aba90D04f52b31fc7aDdE240578aFe10F",
+  keyVerificationChain: sepolia,
 } as const satisfies FheChain);
 
 /**

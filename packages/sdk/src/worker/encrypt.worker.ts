@@ -102,7 +102,13 @@ const api: EncryptWorkerApi = {
     client = createFhevmEncryptClient({
       publicClient: createPublicClient({ transport }),
       chain: payload.chain,
-      options: payload.clientOptions,
+      options: {
+        ...payload.clientOptions,
+        keyVerification: payload.keyVerification && {
+          chain: payload.keyVerification.chain,
+          client: createPublicClient({ transport: http(payload.keyVerification.rpcUrl) }),
+        },
+      },
     });
     return client.init().catch((error: unknown) => {
       throw toWireError(error);

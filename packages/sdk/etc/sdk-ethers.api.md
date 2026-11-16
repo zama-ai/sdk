@@ -197,7 +197,9 @@ export interface FheChain<TId extends number = number> {
     readonly gatewayChainId: number;
     readonly id: TId;
     readonly inputVerifierContractAddress: Address;
+    readonly keyVerificationChain?: FheChain | undefined;
     readonly kmsContractAddress: Address;
+    readonly kmsGenerationContractAddress?: Address | undefined;
     readonly network: EIP1193Provider | string;
     readonly protocolConfigContractAddress?: Address | undefined;
     readonly registryAddress: Address | undefined;

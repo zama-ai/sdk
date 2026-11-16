@@ -31,6 +31,7 @@ import { BUNDLED_ENCRYPT_WORKER } from "../worker/spawn";
 import type {
   FhevmBaseClient,
   FhevmClient,
+  FhevmClientOptions,
   FhevmDecryptClient,
   FhevmEncryptBackend,
   FhevmRelayerOptions,
@@ -110,14 +111,19 @@ export class FhevmRelayer implements RelayerSDK {
     const { timeout, debug, batchRpcCalls, moduleVersions, fheEncryptionKey } =
       config.options ?? {};
     const auth = this.#chain.auth ? toFhevmAuth(this.#chain.auth) : undefined;
-    const transport =
-      typeof this.#chain.network === "string"
-        ? http(this.#chain.network)
-        : custom(this.#chain.network);
+    const verifier = this.#chain.keyVerificationChain;
     const params = {
-      publicClient: createPublicClient({ transport }),
+      publicClient: createPublicClient({ transport: toTransport(this.#chain.network) }),
       chain: toFhevmChain(this.#chain),
-      options: { batchRpcCalls, moduleVersions, fheEncryptionKey },
+      options: {
+        batchRpcCalls,
+        moduleVersions,
+        fheEncryptionKey,
+        keyVerification: verifier && {
+          chain: toFhevmChain(verifier),
+          client: createPublicClient({ transport: toTransport(verifier.network) }),
+        },
+      },
     };
     this.#defaultOptions = {
       ...(auth !== undefined && { auth }),
@@ -161,7 +167,7 @@ export class FhevmRelayer implements RelayerSDK {
    */
   #buildEncryptBackend(
     config: FhevmRelayerConfig,
-    params: { chain: EncryptInitPayload["chain"]; options: EncryptInitPayload["clientOptions"] },
+    params: { chain: EncryptInitPayload["chain"]; options: FhevmClientOptions },
     inline: {
       prefetchKey: EncryptWorkerClientConfig["prefetchKey"];
       createInlineClient: () => FhevmEncryptBackend;
@@ -180,7 +186,15 @@ export class FhevmRelayer implements RelayerSDK {
       return inline.createInlineClient();
     }
     const runtime = getAppliedWireRuntime();
-    const blocker = encryptOffloadBlocker(runtime);
+    // The key-verification client cannot be cloned into the worker realm, which
+    // rebuilds it from the verifying chain's RPC URL instead.
+    const { keyVerification, ...clientOptions } = params.options;
+    const verifierNetwork = this.#chain.keyVerificationChain?.network;
+    const blocker =
+      encryptOffloadBlocker(runtime) ??
+      (keyVerification !== undefined && typeof verifierNetwork !== "string"
+        ? "an EIP-1193 provider on keyVerificationChain cannot cross the encrypt worker boundary"
+        : undefined);
     if (blocker !== undefined && !strict) {
       // Always on the console: the alternative is an opaque rejection at
       // encrypt time, or WASM assets silently resolved from the default URLs.
@@ -188,7 +202,15 @@ export class FhevmRelayer implements RelayerSDK {
       return inline.createInlineClient();
     }
     const workerClient = new EncryptWorkerClient({
-      initPayload: { chain: params.chain, clientOptions: params.options, runtime: runtime ?? {} },
+      initPayload: {
+        chain: params.chain,
+        clientOptions,
+        keyVerification:
+          keyVerification !== undefined && typeof verifierNetwork === "string"
+            ? { chain: keyVerification.chain, rpcUrl: verifierNetwork }
+            : undefined,
+        runtime: runtime ?? {},
+      },
       network: this.#chain.network,
       prefetchKey: inline.prefetchKey,
       createInlineClient: inline.createInlineClient,
@@ -686,6 +708,10 @@ function normalizeSignatureV(signature: string): string {
  * The one reason, if any, this thread's configuration cannot be reproduced in
  * the worker realm, so offload is worse than inline there.
  */
+function toTransport(network: FheChain["network"]) {
+  return typeof network === "string" ? http(network) : custom(network);
+}
+
 function encryptOffloadBlocker(runtime: WireRuntimeConfig | undefined): string | undefined {
   // A runtime `locateFile` is a function: it cannot be cloned into the worker
   // realm, which would silently resolve WASM assets from the default URLs.
