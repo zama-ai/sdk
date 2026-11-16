@@ -7,53 +7,93 @@ import type { Address } from "@zama-fhe/sdk";
 import type { BatchRef } from "@zama-fhe/sdk/vaults";
 import { formatUnits } from "viem";
 import { describeError } from "@/lib/errors";
-import { batchKey } from "@/lib/vaults";
+import type { BatchVault } from "@/lib/networks";
+import { batchKey, removeJoinedBatch, useJoinedBatches, type VaultDetails } from "@/lib/vaults";
 
 // A keeper normally settles a dispatched batch. After this long, offer the user to settle it.
 const FINALIZE_AFTER_SECONDS = 15 * 60;
 
-interface PositionListProps {
+interface InProgressBatchesProps {
+  vaults: BatchVault[];
+  /** From `useVaultDetails`, by vault index: names each vault and its tokens. */
+  details: (VaultDetails | undefined)[];
   account: Address;
-  batches: BatchRef[];
-  /** The confidential token the joins sent, to show their amounts. */
-  token: Address;
-  permitContracts: Address[];
-  /** Called once a batch is claimed or taken back: it is no longer needed. */
-  onDone: (batch: BatchRef) => void;
 }
 
-export function PositionList({
-  account,
-  batches,
-  token,
-  permitContracts,
-  onDone,
-}: PositionListProps) {
+/** Every batch the account joined, in every vault and direction, that is not claimed yet. */
+export function InProgressBatches({ vaults, details, account }: InProgressBatchesProps) {
+  const lists = vaults.flatMap((vault, index) =>
+    (["deposit", "redeem"] as const).map((direction) => ({
+      vault,
+      detail: details[index],
+      direction,
+      batcher: direction === "deposit" ? vault.depositBatcher : vault.redeemBatcher,
+    })),
+  );
+  const joined = useJoinedBatches(
+    account,
+    lists.map(({ vault, batcher }) => ({ chainId: vault.chainId, batcher })),
+  );
+  const groups = lists
+    .map((list, k) => ({ ...list, batches: joined[k] ?? [] }))
+    .filter(({ batches }) => batches.length > 0);
+  const onDone = (batch: BatchRef) => removeJoinedBatch(account, batch);
+
   return (
-    <div className="card-status">
-      <h3 className="section-label">In progress</h3>
-      {batches.length === 0 ? (
+    <section className="card" aria-labelledby="vault-batches-title">
+      <h2 className="card-title" id="vault-batches-title">
+        In progress
+      </h2>
+      {groups.length === 0 ? (
         <p className="token-meta">Nothing in progress.</p>
       ) : (
-        <ul className="batch-list">
-          {batches.map((batch) => (
-            <BatchRow
-              key={batchKey(batch)}
-              account={account}
-              batchRef={batch}
-              token={token}
-              permitContracts={permitContracts}
-              onDone={onDone}
-            />
-          ))}
-        </ul>
+        groups.map(({ vault, detail, direction, batcher, batches }) => {
+          // A deposit sends the asset, a withdrawal the shares. The amounts decrypt under the
+          // permit the vault's cards grant, which a join needs anyway.
+          const token = direction === "deposit" ? detail?.asset.address : detail?.share.address;
+          const permitContracts = detail
+            ? [
+                detail.asset.address,
+                detail.share.address,
+                vault.depositBatcher,
+                vault.redeemBatcher,
+              ]
+            : [];
+          const name =
+            detail?.name ?? `${vault.depositBatcher.slice(0, 6)}…${vault.depositBatcher.slice(-4)}`;
+          return (
+            <div key={batcher} className="card-status">
+              <h3 className="section-label">
+                {name} · {direction === "deposit" ? "Deposits" : "Withdrawals"}
+              </h3>
+              <ul className="batch-list">
+                {batches.map((batch) => (
+                  <BatchRow
+                    key={batchKey(batch)}
+                    account={account}
+                    batchRef={batch}
+                    token={token}
+                    permitContracts={permitContracts}
+                    onDone={onDone}
+                  />
+                ))}
+              </ul>
+            </div>
+          );
+        })
       )}
-    </div>
+    </section>
   );
 }
 
-interface BatchRowProps extends Omit<PositionListProps, "batches"> {
+interface BatchRowProps {
+  account: Address;
   batchRef: BatchRef;
+  /** The confidential token the join sent, to show its amount; unknown while the vault loads. */
+  token: Address | undefined;
+  permitContracts: Address[];
+  /** Called once the batch is claimed or taken back: it is no longer needed. */
+  onDone: (batch: BatchRef) => void;
 }
 
 function BatchRow({ account, batchRef, token, permitContracts, onDone }: BatchRowProps) {
@@ -80,7 +120,7 @@ function BatchRow({ account, batchRef, token, permitContracts, onDone }: BatchRo
       <div>
         <span className="balance-label">
           Batch #{batchRef.batchId.toString()}
-          {amount !== undefined && <Amount token={token} amount={amount} />}
+          {amount !== undefined && token && <Amount token={token} amount={amount} />}
         </span>
         <p className="token-meta">{label}</p>
         {actionError && (

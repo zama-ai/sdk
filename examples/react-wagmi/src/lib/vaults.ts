@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import {
   decimalsContract,
   nameContract,
@@ -168,20 +168,75 @@ function save(key: string, batches: BatchRef[]) {
   }
 }
 
-/** The batches `account` joined on `batcher` and has not claimed or taken back yet. */
-export function useJoinedBatches(chainId: number, account: Address, batcher: Address) {
-  const key = `vault-batches:${chainId}:${account.toLowerCase()}:${batcher.toLowerCase()}`;
-  const [batches, setBatches] = useState(() => load(key, chainId, batcher));
-  useEffect(() => save(key, batches), [key, batches]);
-  return {
-    batches,
-    add: (batch: BatchRef) =>
-      setBatches((current) =>
-        current.some((stored) => batchKey(stored) === batchKey(batch))
-          ? current
-          : [...current, batch],
-      ),
-    remove: (batch: BatchRef) =>
-      setBatches((current) => current.filter((stored) => batchKey(stored) !== batchKey(batch))),
+// One shared copy per account and batcher, so the views of the same batches stay in step: a
+// join in a vault's card shows in the list at the top, and a claim there removes it everywhere.
+const cache = new Map<string, BatchRef[]>();
+const listeners = new Set<() => void>();
+let version = 0;
+const NONE: BatchRef[] = [];
+
+function storageKey(chainId: number, account: Address, batcher: Address) {
+  return `vault-batches:${chainId}:${account.toLowerCase()}:${batcher.toLowerCase()}`;
+}
+
+function stored(chainId: number, account: Address, batcher: Address): BatchRef[] {
+  if (typeof window === "undefined") {
+    return NONE;
+  }
+  const key = storageKey(chainId, account, batcher);
+  let batches = cache.get(key);
+  if (!batches) {
+    batches = load(key, chainId, batcher);
+    cache.set(key, batches);
+  }
+  return batches;
+}
+
+// A change that leaves the list as it was notifies nobody, so removing a batch twice is harmless.
+function update(account: Address, batch: BatchRef, change: (current: BatchRef[]) => BatchRef[]) {
+  const current = stored(batch.chainId, account, batch.batcher);
+  const next = change(current);
+  if (next === current) {
+    return;
+  }
+  const key = storageKey(batch.chainId, account, batch.batcher);
+  cache.set(key, next);
+  save(key, next);
+  version += 1;
+  listeners.forEach((listener) => listener());
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
   };
+}
+const currentVersion = () => version;
+const serverVersion = () => 0;
+
+/** Store the batch a join of `account` landed in. */
+export function addJoinedBatch(account: Address, batch: BatchRef) {
+  update(account, batch, (current) =>
+    current.some((entry) => batchKey(entry) === batchKey(batch)) ? current : [...current, batch],
+  );
+}
+
+/** Forget a batch once it is claimed or taken back. */
+export function removeJoinedBatch(account: Address, batch: BatchRef) {
+  update(account, batch, (current) =>
+    current.some((entry) => batchKey(entry) === batchKey(batch))
+      ? current.filter((entry) => batchKey(entry) !== batchKey(batch))
+      : current,
+  );
+}
+
+/** The batches `account` joined on each batcher and has not claimed or taken back yet. */
+export function useJoinedBatches(
+  account: Address,
+  batchers: readonly { chainId: number; batcher: Address }[],
+): BatchRef[][] {
+  // Re-renders on every change to the store; each list is the cached array until it changes.
+  useSyncExternalStore(subscribe, currentVersion, serverVersion);
+  return batchers.map(({ chainId, batcher }) => stored(chainId, account, batcher));
 }

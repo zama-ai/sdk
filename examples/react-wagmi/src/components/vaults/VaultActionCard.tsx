@@ -12,11 +12,10 @@ import type { Address } from "@zama-fhe/sdk";
 import type { BatchRef } from "@zama-fhe/sdk/vaults";
 import { formatUnits } from "viem";
 import { MintAndShieldButton } from "@/components/MintAndShieldButton";
-import { PositionList } from "@/components/vaults/PositionList";
 import { describeError } from "@/lib/errors";
 import { useNetwork } from "@/lib/hooks";
 import { minAmount, parseAmount } from "@/lib/parseAmount";
-import { useJoinedBatches, type Vault } from "@/lib/vaults";
+import { addJoinedBatch, type Vault } from "@/lib/vaults";
 
 const COPY = {
   deposit: {
@@ -44,7 +43,7 @@ interface VaultActionCardProps {
   token: Address;
 }
 
-/** One direction of the vault: its balance, its form, and the batches it has in progress. */
+/** One direction of the vault: its balance and its form. Its batches show under In progress. */
 export function VaultActionCard({
   kind,
   vault,
@@ -54,13 +53,6 @@ export function VaultActionCard({
 }: VaultActionCardProps) {
   const { canMint } = useNetwork();
   const copy = COPY[kind];
-  // This app sets each batcher as one address; an upgraded vault lists its history instead.
-  const batcher = vault.batchers[copy.direction];
-  const { batches, add, remove } = useJoinedBatches(
-    vault.chainId,
-    account,
-    typeof batcher === "string" ? batcher : batcher.latest,
-  );
   const [amount, setAmount] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
@@ -75,12 +67,12 @@ export function VaultActionCard({
     { enabled: hasPermit === true },
   );
 
-  // Store the batch the join landed in: the position list reads it, now and after a reload. A
+  // Store the batch the join landed in: the In progress card reads it, now and after a reload. A
   // single vault has a single leg, so a join lands in a single batch.
   const callbacks = {
     onSuccess: ({ batches: [joined] }: { batches: readonly BatchRef[] }) => {
       if (joined) {
-        add(joined);
+        addJoinedBatch(account, joined);
       }
       setAmount("");
     },
@@ -182,7 +174,7 @@ export function VaultActionCard({
       {send.data && (
         <output className="alert alert-success card-status">
           Queued in batch #{send.data.batches[0]?.batchId.toString()}. You receive your{" "}
-          {copy.receive} once the batch is processed and you claim them below.
+          {copy.receive} once the batch is processed and you claim them under In progress.
         </output>
       )}
       {errors.map((error, index) => (
@@ -190,14 +182,6 @@ export function VaultActionCard({
           {describeError(error, `${copy.title} failed`)}
         </div>
       ))}
-
-      <PositionList
-        account={account}
-        batches={batches}
-        token={token}
-        permitContracts={permitContracts}
-        onDone={remove}
-      />
     </section>
   );
 }

@@ -33,8 +33,8 @@ page.tsx                         # wallet connect, network picker, tabs, token s
 └── vaults/                      # the Vaults tab
     ├── VaultsTab.tsx            # the vault picker and the chosen vault's tokens
     ├── PositionsOverview.tsx    # your shares in every vault, their value, a total per token
-    ├── VaultActionCard.tsx      # the Deposit or Withdraw box: balance, decrypt, form, positions
-    └── PositionList.tsx         # one row per joined batch, an exhaustive switch on its state
+    ├── InProgressBatches.tsx    # every joined batch, in every vault: an exhaustive switch on its state
+    └── VaultActionCard.tsx      # the Deposit or Withdraw box: balance, decrypt, form
 ```
 
 ---
@@ -479,10 +479,12 @@ Vaults tab shows each of those steps, following the
   explains why it is disabled (a paused batcher from `useOpenBatches`, no amount, above balance),
   and `onJoinSubmitted` tells "confirm in your wallet" from "waiting for the transaction".
 - **Joined batches.** The app needs each batch to read and act on it later, so
-  `src/lib/vaults.ts` keeps them in localStorage, with the bigint batch ids stored as strings. A
-  claim or a quit removes the batch.
+  `src/lib/vaults.ts` keeps them in localStorage, with the bigint batch ids stored as strings, in
+  one store that every view reads (`useSyncExternalStore`): a join in a vault's box shows at
+  once in the In progress card, and a claim or a quit removes the batch.
 - **One row per batch.** `useBatch` reads a batch with the fields its state has and the
-  `actions` it allows now, and `PositionList.tsx` switches on `state` exhaustively: cancel
+  `actions` it allows now, and `InProgressBatches.tsx` lists the batches of every vault and
+  switches on `state` exhaustively: cancel
   while pending, settle a late batch with `useFinalize`, claim a finalized one with `useClaim`,
   take a canceled amount back with `useQuit`.
 

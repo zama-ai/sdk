@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Address } from "@zama-fhe/sdk";
+import { InProgressBatches } from "@/components/vaults/InProgressBatches";
 import { PositionsOverview } from "@/components/vaults/PositionsOverview";
 import { VaultActionCard } from "@/components/vaults/VaultActionCard";
 import { describeError } from "@/lib/errors";
@@ -41,6 +42,7 @@ function VaultsView({ vaults, account }: { vaults: BatchVault[]; account: Addres
         account={account}
         onSelect={setSelected}
       />
+      <InProgressBatches vaults={vaults} details={details} account={account} />
       {vaults.length > 1 && (
         <VaultPicker vaults={vaults} details={details} value={index} onChange={setSelected} />
       )}
