@@ -457,8 +457,10 @@ Vaults tab shows each of those steps, following the
 [Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide.
 
 - **Vault.** `src/lib/vaults.ts` builds the vault with `defineVault`: a single vault, so a join
-  has a single leg and lands in a single batch. `VaultsTab.tsx` reads the vault's asset and share
-  from the deposit batcher, so the only configuration is the two batcher addresses.
+  has a single leg and lands in a single batch. `useVaultDetails` reads the vault's asset and
+  share from the deposit batcher, then their names, decimals and rates with the SDK's
+  `nameContract`, `symbolContract`, `decimalsContract` and `rateContract`, so the only
+  configuration is the two batcher addresses.
 - **Vaults per network.** Each row of `src/lib/networks.ts` reads its vaults from
   `NEXT_PUBLIC_<NETWORK>_VAULTS`, one `depositBatcher:redeemBatcher` pair per vault. Next.js
   inlines a `NEXT_PUBLIC_*` variable only where the code names it, so each row names its own.

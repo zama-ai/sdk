@@ -1,6 +1,6 @@
 // ─── Upstream relayers (server-side only) ──────────────────────────────────────
 // Where the proxy forwards relayer traffic, per relayer-backed network. URLs and API keys
-// live in server env vars and never reach the browser; the API routes are the only readers.
+// live in server env vars and never reach the browser; only server code reads them.
 import { envList } from "@/lib/env";
 import { ENVIRONMENTS, type Environment, isCustomized, networkId } from "@/lib/environment";
 import { NETWORK_KEYS, networks, type NetworkKey } from "@/lib/networks";

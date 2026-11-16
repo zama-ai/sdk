@@ -61,18 +61,19 @@ export function PositionsOverview({ vaults, details, account, onSelect }: Positi
       value: assets === undefined ? undefined : assets / detail.asset.rate,
     };
   });
-  // Assets of different tokens do not add up: one total per token, once every value is read.
-  const groups = new Map<string, { decimals: number; total?: bigint; rows: typeof rows }>();
+  // Assets of different tokens do not add up: one total per asset token, once every value is
+  // read. Keyed by address, as two tokens can share a symbol.
+  const groups = new Map<
+    Address,
+    { symbol: string; decimals: number; total?: bigint; rows: typeof rows }
+  >();
   for (const row of rows) {
-    const group = groups.get(row.detail.asset.symbol) ?? {
-      decimals: row.detail.asset.decimals,
-      total: 0n,
-      rows: [],
-    };
+    const { address, symbol, decimals } = row.detail.asset;
+    const group = groups.get(address) ?? { symbol, decimals, total: 0n, rows: [] };
     group.rows.push(row);
     group.total =
       group.total === undefined || row.value === undefined ? undefined : group.total + row.value;
-    groups.set(row.detail.asset.symbol, group);
+    groups.set(address, group);
   }
   const decryptError = grantPermit.error ?? balances.error;
   const failed = balances.data?.errors.size ?? 0;
@@ -95,13 +96,13 @@ export function PositionsOverview({ vaults, details, account, onSelect }: Positi
           </button>
         </div>
       ) : !balances.data ? (
-        <p className="token-meta">Decrypting…</p>
+        !balances.error && <p className="token-meta">Decrypting…</p>
       ) : groups.size === 0 ? (
         <p className="token-meta">No vault positions yet.</p>
       ) : (
-        [...groups].map(([symbol, group]) => (
-          <div key={symbol} className="card-status">
-            <h3 className="section-label">{symbol}</h3>
+        [...groups].map(([address, group]) => (
+          <div key={address} className="card-status">
+            <h3 className="section-label">{group.symbol}</h3>
             <ul className="batch-list">
               {group.rows.map(({ index, detail, shares, value }) => (
                 <li key={index}>
@@ -110,7 +111,7 @@ export function PositionsOverview({ vaults, details, account, onSelect }: Positi
                     <p className="token-meta">
                       {formatUnits(shares, detail.share.decimals)} {detail.share.symbol}
                       {value !== undefined &&
-                        ` ≈ ${formatUnits(value, detail.asset.decimals)} ${symbol}`}
+                        ` ≈ ${formatUnits(value, detail.asset.decimals)} ${group.symbol}`}
                     </p>
                   </div>
                   <button
@@ -126,7 +127,7 @@ export function PositionsOverview({ vaults, details, account, onSelect }: Positi
                 <li>
                   <span className="balance-label">Total</span>
                   <output className="balance-value">
-                    ≈ {formatUnits(group.total, group.decimals)} {symbol}
+                    ≈ {formatUnits(group.total, group.decimals)} {group.symbol}
                   </output>
                 </li>
               )}
