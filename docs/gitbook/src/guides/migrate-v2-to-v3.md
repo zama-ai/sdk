@@ -331,7 +331,7 @@ Relayers are no longer classes you instantiate; they are factories placed in a
 
 `cleartext()` is **new in v3** — the relayer for cleartext-mode chains (no FHE,
 KMS, or gateway): local dev (`hardhat`) and the cleartext testnets (`hoodi`,
-`zenithTrexTestnet`, `bscTestnet`).
+`zenithTrexTestnet`).
 
 ```ts
 // Before
