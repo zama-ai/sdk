@@ -12,7 +12,7 @@ const validEnv = {
   NEXT_PUBLIC_ZAMA_INPUT_VERIFIER_ADDRESS: "0x3333333333333333333333333333333333333333",
   NEXT_PUBLIC_ZAMA_DECRYPTION_ADDRESS: "0x4444444444444444444444444444444444444444",
   NEXT_PUBLIC_ZAMA_INPUT_VERIFICATION_ADDRESS: "0x5555555555555555555555555555555555555555",
-  NEXT_PUBLIC_REGISTRY_ADDRESS: "",
+  NEXT_PUBLIC_REGISTRY_ADDRESS: "0x7777777777777777777777777777777777777777",
 };
 
 function loadNetworks(overrides: Record<string, string> = {}) {
@@ -52,7 +52,7 @@ test.describe("NEXT_PUBLIC_ZAMA_ENV=custom", () => {
     expect(custom.chain.id).toBe(networks.sepolia.chain.id);
     expect(custom.fhe.gatewayChainId).toBe(10901);
     expect(custom.fhe.aclContractAddress).toBe(validEnv.NEXT_PUBLIC_ZAMA_ACL_ADDRESS);
-    expect(custom.fhe.registryAddress).toBeUndefined();
+    expect(custom.fhe.registryAddress).toBe(validEnv.NEXT_PUBLIC_REGISTRY_ADDRESS);
     expect(networks.sepolia.label).toBe("Sepolia");
     expect(networks.sepolia.fhe.aclContractAddress).not.toBe(validEnv.NEXT_PUBLIC_ZAMA_ACL_ADDRESS);
   });
@@ -95,18 +95,15 @@ test.describe("NEXT_PUBLIC_ZAMA_ENV=custom", () => {
     expect(enabledNetworks()).toContain("sepolia");
   });
 
-  test("accepts the optional registry address", () => {
-    const { networks } = loadNetworks({
-      NEXT_PUBLIC_REGISTRY_ADDRESS: "0x7777777777777777777777777777777777777777",
-    });
-    expect(networks["sepolia-custom"].fhe.registryAddress).toBe(
-      "0x7777777777777777777777777777777777777777",
-    );
-  });
-
   test("requires every protocol address", () => {
     expect(() => loadNetworks({ NEXT_PUBLIC_ZAMA_ACL_ADDRESS: "" })).toThrow(
       /requires NEXT_PUBLIC_ZAMA_ACL_ADDRESS to be set/,
+    );
+  });
+
+  test("requires the registry address", () => {
+    expect(() => loadNetworks({ NEXT_PUBLIC_REGISTRY_ADDRESS: "" })).toThrow(
+      /requires NEXT_PUBLIC_REGISTRY_ADDRESS to be set/,
     );
   });
 
@@ -125,7 +122,7 @@ test.describe("NEXT_PUBLIC_ZAMA_ENV=custom", () => {
     ).toThrow(/NEXT_PUBLIC_ZAMA_DECRYPTION_ADDRESS is not a valid address/);
   });
 
-  test("rejects an optional address that is set but invalid", () => {
+  test("rejects a registry value that is not an address", () => {
     expect(() => loadNetworks({ NEXT_PUBLIC_REGISTRY_ADDRESS: "not-an-address" })).toThrow(
       /NEXT_PUBLIC_REGISTRY_ADDRESS is not a valid address/,
     );

@@ -27,13 +27,13 @@ const origin = typeof window === "undefined" ? "http://localhost" : window.locat
 const customEnvStorage = new IndexedDBStorage("CredentialStore-custom");
 
 // The SDK takes one FheChain per chain id, so a config registers the active row and, for
-// every other chain, its first row. Picking the other row on a shared chain swaps the config.
+// every other chain, its first row. Cached, because a new config on re-render resets the SDK.
 const configs = new Map<string, ZamaConfig>();
 
 function zamaConfigFor(active: NetworkKey | undefined): ZamaConfig {
   const keys = rowsFor(active);
   const storage = active === "sepolia-custom" ? customEnvStorage : indexedDBStorage;
-  const id = `${keys.join()}|${storage === customEnvStorage ? "custom" : "default"}`;
+  const id = `${keys.join()}|${active === "sepolia-custom"}`;
   let config = configs.get(id);
   if (!config) {
     // Destructuring gives the non-empty tuple type the config requires.
@@ -59,7 +59,6 @@ function zamaConfigFor(active: NetworkKey | undefined): ZamaConfig {
   return config;
 }
 
-// Stable config per active row — a new config on re-render would reset the SDK.
 function ActiveZamaProvider({ children }: { children: ReactNode }) {
   const { activeKey } = useActiveNetwork();
   return <ZamaProvider config={zamaConfigFor(activeKey)}>{children}</ZamaProvider>;

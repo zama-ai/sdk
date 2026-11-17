@@ -24,13 +24,16 @@ export function useEnabledNetworks() {
   });
 }
 
-// Hidden rows lose to an enabled row on the same chain, so a hidden custom row never
-// shadows Sepolia.
+// Undefined until the enabled list loads: before that, a hidden custom row would win the
+// Sepolia chain and get an SDK config of its own.
 export function useActiveNetwork() {
   const { chosen, choose } = useChosenNetwork();
   const { chainId } = useConnection();
   const { data: enabled } = useEnabledNetworks();
-  return { activeKey: networkForChain(chainId, chosen, enabled), choose };
+  const activeKey =
+    enabled &&
+    networkForChain(chainId, chainId === undefined ? undefined : chosen[chainId], enabled);
+  return { activeKey, choose };
 }
 
 // The network row for the wallet's current chain. Only valid under the connected screen,

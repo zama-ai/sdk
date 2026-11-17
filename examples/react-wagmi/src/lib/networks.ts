@@ -64,8 +64,7 @@ const zenith = defineChain({
 
 // ─── Custom Zama environment on Sepolia ───────────────────────────────────────
 // NEXT_PUBLIC_ZAMA_ENV=custom adds a "sepolia-custom" row: another Zama environment on
-// Sepolia, for example a pre-release one the SDK ships no preset for, configured through the
-// NEXT_PUBLIC_ZAMA_* variables (see .env.example).
+// Sepolia, for example a pre-release one the SDK ships no preset for.
 const ZAMA_ENV = process.env.NEXT_PUBLIC_ZAMA_ENV === "custom" ? "custom" : "testnet";
 
 function customEnvValue(name: string, value: string | undefined): string {
@@ -83,10 +82,6 @@ function customEnvAddress(name: string, value: string | undefined): Address {
     throw new Error(`NEXT_PUBLIC_ZAMA_ENV=custom: ${name} is not a valid address: ${address}`);
   }
   return address;
-}
-
-function optionalCustomEnvAddress(name: string, value: string | undefined): Address | undefined {
-  return value ? customEnvAddress(name, value) : undefined;
 }
 
 function customEnvChainId(name: string, value: string | undefined): number {
@@ -130,9 +125,9 @@ function customSepolia(): FheChain & { network: string } {
       "NEXT_PUBLIC_ZAMA_INPUT_VERIFICATION_ADDRESS",
       process.env.NEXT_PUBLIC_ZAMA_INPUT_VERIFICATION_ADDRESS,
     ),
-    // A custom environment usually has no wrapper registry deployment; point this at wrapper
-    // pairs and a ConfidentialTokenWrappersRegistry deployed there by hand.
-    registryAddress: optionalCustomEnvAddress(
+    // Required: the SDK falls back to its preset Sepolia registry when this is unset, which
+    // would list Sepolia's tokens against this environment's contracts.
+    registryAddress: customEnvAddress(
       "NEXT_PUBLIC_REGISTRY_ADDRESS",
       process.env.NEXT_PUBLIC_REGISTRY_ADDRESS,
     ),
@@ -233,11 +228,7 @@ export const networks = { ...customRow, ...table } as Record<NetworkKey, Network
 
 export const NETWORK_KEYS = Object.keys(networks) as NetworkKey[];
 
-/**
- * The row for a chain: `chosen` when it runs on that chain, else the first enabled row that
- * does, else the first row. Two rows can share a chain (the custom environment and Sepolia),
- * so the picker's choice decides between them.
- */
+/** The row for a chain. Two rows can share one, so `chosen` wins, then the first in `enabled`. */
 export function networkForChain(
   chainId: number | undefined,
   chosen?: NetworkKey,

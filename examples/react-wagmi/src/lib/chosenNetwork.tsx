@@ -1,18 +1,27 @@
 "use client";
 
 import { createContext, type ReactNode, useContext, useMemo, useState } from "react";
-import type { NetworkKey } from "@/lib/networks";
+import { networks, type NetworkKey } from "@/lib/networks";
 
-// The row last picked in the network picker. It decides between rows that share the wallet's
-// chain (the custom environment and Sepolia); the wallet's chain decides everything else.
+type ChosenByChain = Partial<Record<number, NetworkKey>>;
+
+// The row last picked in the network picker, which decides between rows on the same chain.
+// Keyed by chain id, so a switch the wallet rejects can't change the current chain's row.
 const ChosenNetworkContext = createContext<{
-  chosen: NetworkKey | undefined;
+  chosen: ChosenByChain;
   choose: (key: NetworkKey) => void;
 } | null>(null);
 
 export function ChosenNetworkProvider({ children }: { children: ReactNode }) {
-  const [chosen, choose] = useState<NetworkKey>();
-  const value = useMemo(() => ({ chosen, choose }), [chosen]);
+  const [chosen, setChosen] = useState<ChosenByChain>({});
+  const value = useMemo(
+    () => ({
+      chosen,
+      choose: (key: NetworkKey) =>
+        setChosen((prev) => ({ ...prev, [networks[key].chain.id]: key })),
+    }),
+    [chosen],
+  );
   return <ChosenNetworkContext.Provider value={value}>{children}</ChosenNetworkContext.Provider>;
 }
 
