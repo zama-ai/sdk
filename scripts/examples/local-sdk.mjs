@@ -4,7 +4,7 @@
 // A later `npm ci` in the example restores the published versions.
 
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readdirSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
@@ -66,8 +66,12 @@ if (values.help) {
   process.exit(0);
 }
 
-if (values.pack) {
-  if (values.from || positionals.length > 0) {
+if (values.pack === "" || values.from === "") {
+  fail("--pack and --from need a directory.");
+}
+
+if (values.pack !== undefined) {
+  if (values.from !== undefined || positionals.length > 0) {
     fail("--pack takes no examples and cannot be combined with --from.");
   }
   pack(resolve(values.pack));
@@ -83,6 +87,9 @@ if (values.pack) {
     ? known.filter((example) => positionals.includes(example.name))
     : known;
 
+  if (values.from !== undefined && !existsSync(resolve(values.from))) {
+    fail(`--from directory not found: ${values.from}`);
+  }
   const dir = values.from ? resolve(values.from) : mkdtempSync(join(tmpdir(), "zama-local-sdk-"));
   if (!values.from) {
     pack(dir);
