@@ -1,8 +1,8 @@
 name: Examples CI
 
-# Lints, typechecks, builds and e2e-tests each example against this branch's
-# SDK and against the SDK release it pins. examples/* are standalone npm
-# projects with committed lockfiles, so users can copy them out as they are.
+# Lints, typechecks and builds each example, and runs its e2e suite where it has one,
+# against this branch's SDK and, on main, the release it pins. examples/* are standalone
+# npm projects with committed lockfiles, so users can copy them out as they are.
 on:
   pull_request:
     branches: [main, beta, alpha]
@@ -37,6 +37,8 @@ jobs:
   pack-sdk:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      examples: ${{ steps.examples.outputs.examples }}
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -48,6 +50,10 @@ jobs:
         uses: ./.github/actions/install-deps
         with:
           ignore-scripts: "true"
+
+      - name: List the examples
+        id: examples
+        run: echo "examples=$(node scripts/examples/examples.mjs --json)" >> "$GITHUB_OUTPUT"
 
       - name: Build and pack the SDK
         run: node scripts/examples/local-sdk.mjs --pack "$RUNNER_TEMP/local-sdk"
@@ -61,39 +67,19 @@ jobs:
           if-no-files-found: error
 
   check:
-    name: ${{ matrix.example }} (${{ matrix.sdk }} SDK)
+    name: ${{ matrix.example.name }} (${{ matrix.sdk }} SDK)
     needs: [pack-sdk]
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # An example may already use unreleased SDK API, so on feature PRs the
-    # published-SDK legs report without failing the run. They block the
-    # release bump PR, Dependabot PRs and the nightly run.
-    continue-on-error: >-
-      ${{ matrix.sdk == 'published' && github.event_name == 'pull_request'
-      && !startsWith(github.head_ref, 'chore/examples-sdk-')
-      && !startsWith(github.head_ref, 'dependabot/') }}
     strategy:
       fail-fast: false
       matrix:
-        example:
-          - node-ethers
-          - node-viem
-          - react-ethers
-          - react-turnkey-wallet
-          - react-viem
-          - react-wagmi
-        sdk: [workspace, published]
-        # The e2e suites mock the RPC, so they need no chain or secrets, only the browser.
-        include:
-          - example: react-ethers
-            e2e: true
-          - example: react-viem
-            e2e: true
-          - example: react-wagmi
-            e2e: true
+        example: ${{ fromJSON(needs.pack-sdk.outputs.examples) }}
+        # Off main, examples may use SDK API newer than their pins, so only main checks the pinned release.
+        sdk: ${{ fromJSON((github.base_ref || github.ref_name) == 'main' && '["workspace","published"]' || '["workspace"]') }}
     defaults:
       run:
-        working-directory: examples/${{ matrix.example }}
+        working-directory: examples/${{ matrix.example.name }}
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -106,7 +92,7 @@ jobs:
         with:
           node-version: 24.22.3
           cache: npm
-          cache-dependency-path: examples/${{ matrix.example }}/package-lock.json
+          cache-dependency-path: examples/${{ matrix.example.name }}/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -122,7 +108,7 @@ jobs:
         if: matrix.sdk == 'workspace'
         working-directory: ${{ github.workspace }}
         env:
-          EXAMPLE: ${{ matrix.example }}
+          EXAMPLE: ${{ matrix.example.name }}
         run: node scripts/examples/local-sdk.mjs --from "$RUNNER_TEMP/local-sdk" "$EXAMPLE"
 
       - name: Lint
@@ -134,27 +120,28 @@ jobs:
       - name: Build
         run: npm run build --if-present
 
+      # The e2e suites mock the RPC, so they need no chain or secrets, only the browser.
       - name: Install Playwright browser
-        if: matrix.e2e
+        if: matrix.example.e2e
         run: npx playwright install --with-deps chromium
 
       - name: Run e2e tests
-        if: matrix.e2e
+        if: matrix.example.e2e
         run: npm run test:e2e
 
       # On failure, Playwright drops diagnostics (error context, any traces)
       # under test-results/. No HTML reporter is configured, so there is no
       # playwright-report/ to upload.
       - name: Upload Playwright artifacts
-        if: failure() && matrix.e2e
+        if: failure() && matrix.example.e2e
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
-          name: playwright-results-${{ matrix.example }}-${{ matrix.sdk }}
-          path: examples/${{ matrix.example }}/test-results/
+          name: playwright-results-${{ matrix.example.name }}-${{ matrix.sdk }}
+          path: examples/${{ matrix.example.name }}/test-results/
           retention-days: 7
           if-no-files-found: ignore
 
-  # One stable check name for branch protection; continue-on-error legs count as success here.
+  # Sums up the matrix.
   examples:
     needs: [check]
     if: always()

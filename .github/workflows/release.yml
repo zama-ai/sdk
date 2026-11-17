@@ -341,38 +341,17 @@ jobs:
         with:
           ignore-scripts: "true"
 
-      # The registry can lag the publish, and the lockfile update resolves the new version from it.
-      - name: Wait for the release on npm
-        run: |
-          for _ in $(seq 1 30); do
-            if npm view "@zama-fhe/sdk@${VERSION}" version > /dev/null 2>&1 \
-              && npm view "@zama-fhe/react-sdk@${VERSION}" version > /dev/null 2>&1; then
-              exit 0
-            fi
-            sleep 20
-          done
-          echo "::error::@zama-fhe/sdk and @zama-fhe/react-sdk ${VERSION} did not appear on npm."
-          exit 1
-
-      # A re-run for an older release must not downgrade the pins.
+      # Waits for the release on npm and pins it only if it is npm latest, so a re-run for an older release never downgrades.
       - name: Pin the examples
-        run: |
-          latest="$(npm view @zama-fhe/sdk dist-tags.latest)"
-          if [[ "${latest}" != "${VERSION}" ]]; then
-            echo "::notice::${VERSION} is no longer the latest release (${latest}); not pinning it."
-            exit 0
-          fi
-          node scripts/examples/bump-sdk.mjs "${VERSION}"
+        id: bump
+        run: node scripts/examples/bump-sdk.mjs "${VERSION}"
 
       # The releaser token, not GITHUB_TOKEN, so the PR triggers Examples CI.
       - name: Open the bump PR
+        if: steps.bump.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.SDK_RELEASER_TOKEN }}
         run: |
-          if [[ -z "$(git status --porcelain -- examples)" ]]; then
-            echo "::notice::Examples already pin ${VERSION}."
-            exit 0
-          fi
           if [[ "$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "${BRANCH}" --state open --json number --jq length)" != "0" ]]; then
             echo "::notice::A bump PR for ${VERSION} is already open."
             exit 0
@@ -382,6 +361,7 @@ jobs:
           git -c user.name="github-actions[bot]" \
             -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -m "${TITLE}"
+          # Overwrites a branch left by a closed bump PR for the same version.
           git push --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${BRANCH}"
           gh pr create --repo "${GITHUB_REPOSITORY}" --base "${BASE}" --head "${BRANCH}" --title "${TITLE}" \
             --body "Pins the example apps to \`@zama-fhe/sdk\` and \`@zama-fhe/react-sdk\` ${VERSION}."

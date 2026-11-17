@@ -176,14 +176,18 @@ Partner-facing pages live in [`docs/gitbook/src/native/`](docs/gitbook/src/nativ
 
 ### Example apps
 
-Each app in `examples/` is a standalone npm project that pins a published SDK release, so it works when copied out of the repo. Never point an example at the workspace in its `package.json`. To try an SDK change in an example, install the workspace build without touching `package.json` or the lockfile:
+Each app in `examples/` is a standalone npm project that pins a published SDK release, so on `main` it works when copied out of the repo. Never point an example at the workspace in its `package.json`. To try an SDK change in an example, install the workspace build without touching `package.json` or the lockfile. The script builds the SDK with turbo, so run `pnpm install` at the repo root first:
 
 ```bash
 pnpm examples:local react-viem   # builds and packs the SDK, then `npm install --no-save` into examples/react-viem
 pnpm examples:local              # all examples
 ```
 
-`npm ci` in the example brings back the published version. Put the SDK change and the example change in the same PR: `Examples CI` checks every example against both this branch's SDK and the pinned release, and the `examples` job sums up both. The pinned-release check fails while an example uses unreleased API, so on feature PRs it only reports; it blocks the release bump PR, Dependabot PRs and the nightly run. On `beta` and `alpha`, examples can run ahead of their pins until the change reaches a stable release; the bump PR (see [Release Automation](#release-automation)) then updates the pins.
+Run `npm ci` in the example to go back to the published version.
+
+Put the SDK change and the example change in the same PR. `Examples CI` runs each example against this branch's SDK (`<example> (workspace SDK)`). On `main` it also runs it against the pinned release (`<example> (published SDK)`).
+
+On `beta` and `alpha`, examples can use API newer than their pins. The bump PR (see [Release Automation](#release-automation)) updates the pins on `main` after each stable release, and they reach `beta` and `alpha` with the next merge from `main`.
 
 ### Code Style
 
@@ -216,7 +220,7 @@ Release behavior:
 7. Each release also pushes the `ghcr.io/zama-ai/sdk-daemon` image (`linux/amd64`, `linux/arm64`) with the workflow `GITHUB_TOKEN`, tagged with the version and the channel. Each platform digest is pushed untagged first, scanned with Trivy (any CRITICAL or HIGH finding blocks the tags unless it was risk-accepted in `.trivyignore`, reviewed by its owners in `CODEOWNERS`), then signed with GitHub artifact attestations (build provenance and an SPDX SBOM). The scan reads `.trivyignore` from the tip of the release branch, not from the release commit: when a CVE disclosed after `Daemon CI` passed blocks the image, risk-accept it on the branch and re-run the failed `publish-image` jobs; npm, the crate and the Go tag are already out by then. The manifest list gets a provenance attestation too, so `gh attestation verify oci://ghcr.io/zama-ai/sdk-daemon:<version> --repo zama-ai/sdk` works on the tag. The job summary prints the digest to pin.
 8. Each release also publishes the `zama_sdk` crate to crates.io through Trusted Publishing.
 9. Each release also tags `clients/go/v<version>` for the Go module. Before a major bump, change the module path in `clients/go/go.mod` to `/v<major>`.
-10. Each stable release also opens a `chore(no-release): bump examples to SDK <version>` PR on `main`, which pins every app in `examples/` to the new version. Prereleases don't bump the examples. The PR is merged by hand, and its `chore` type keeps that merge from cutting another release.
+10. Each stable release also opens a `chore(no-release): bump examples to SDK <version>` PR on `main`, which pins every app in `examples/` to the new version. It skips a version that is no longer npm `latest`, so re-runs never downgrade. Prereleases don't bump the examples. The PR is merged by hand, and its `chore` type keeps that merge from cutting another release.
 
 Release workflows:
 
