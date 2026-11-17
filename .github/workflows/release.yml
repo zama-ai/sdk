@@ -309,8 +309,8 @@ jobs:
             exit 1
           fi
 
-  # Stable releases only: prerelease pins would reach main through promotions and conflict on every backmerge.
-  # The no-release scope stops semantic-release from cutting a release off the bump PR's merge.
+  # Main only: prerelease pins would reach main through promotions and conflict on backmerges.
+  # A chore title keeps the bump PR's merge from cutting another release.
   bump-examples:
     needs: [release]
     if: >-
@@ -338,7 +338,7 @@ jobs:
         with:
           ignore-scripts: "true"
 
-      # The lockfiles need the published tarballs' integrity hashes.
+      # The registry can lag the publish, and the lockfile update resolves the new version from it.
       - name: Wait for the release on npm
         run: |
           for _ in $(seq 1 30); do
@@ -351,8 +351,15 @@ jobs:
           echo "::error::@zama-fhe/sdk and @zama-fhe/react-sdk ${VERSION} did not appear on npm."
           exit 1
 
+      # A re-run for an older release must not downgrade the pins.
       - name: Pin the examples
-        run: node scripts/examples/bump-sdk.mjs "${VERSION}"
+        run: |
+          latest="$(npm view @zama-fhe/sdk dist-tags.latest)"
+          if [[ "${latest}" != "${VERSION}" ]]; then
+            echo "::notice::${VERSION} is no longer the latest release (${latest}); not pinning it."
+            exit 0
+          fi
+          node scripts/examples/bump-sdk.mjs "${VERSION}"
 
       # The releaser token, not GITHUB_TOKEN, so the PR triggers Examples CI.
       - name: Open the bump PR
@@ -375,8 +382,6 @@ jobs:
           git push --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${BRANCH}"
           gh pr create --repo "${GITHUB_REPOSITORY}" --base "${BASE}" --head "${BRANCH}" --title "${TITLE}" \
             --body "Pins the example apps to \`@zama-fhe/sdk\` and \`@zama-fhe/react-sdk\` ${VERSION}."
-          gh pr merge --repo "${GITHUB_REPOSITORY}" "${BRANCH}" --auto --squash \
-            || echo "::notice::Could not enable auto-merge; merge the bump PR by hand."
 
   # Runs even if npm publish failed: the tag exists and a re-run of the release job cannot republish it.
   publish-image:

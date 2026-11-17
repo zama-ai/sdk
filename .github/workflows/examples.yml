@@ -1,7 +1,8 @@
 name: Examples CI
 
-# examples/* are standalone npm projects (not pnpm workspace members) with
-# committed lockfiles, so users can copy them out of the repo as they are.
+# Lints, typechecks, builds and e2e-tests each example against this branch's
+# SDK and against the SDK release it pins. examples/* are standalone npm
+# projects with committed lockfiles, so users can copy them out as they are.
 on:
   pull_request:
     branches: [main, beta, alpha]
@@ -82,9 +83,7 @@ jobs:
           - react-viem
           - react-wagmi
         sdk: [workspace, published]
-        # The e2e suites mock the RPC, so they need no chain or secrets, only
-        # the browser. Under CI, react-wagmi runs a production build so its
-        # production CSP is the one tested.
+        # The e2e suites mock the RPC, so they need no chain or secrets, only the browser.
         include:
           - example: react-ethers
             e2e: true
@@ -157,15 +156,14 @@ jobs:
 
   # One stable check name for branch protection; continue-on-error legs count as success here.
   examples:
-    needs: [pack-sdk, check]
+    needs: [check]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Check results
         env:
-          PACK: ${{ needs.pack-sdk.result }}
           CHECK: ${{ needs.check.result }}
         run: |
-          echo "pack-sdk: ${PACK}, check: ${CHECK}"
-          [[ "${PACK}" == "success" && "${CHECK}" == "success" ]]
+          echo "check: ${CHECK}"
+          [[ "${CHECK}" == "success" ]]

@@ -1,17 +1,18 @@
 // Installs the workspace build of @zama-fhe/sdk and @zama-fhe/react-sdk into example apps without touching their
-// package.json or package-lock.json, so the committed pins stay copy-pasteable while we test unreleased SDK changes.
-// Packed tarballs (not links) mirror what npm users get and avoid a second copy of React or viem in the example.
-//
-//   node scripts/examples/local-sdk.mjs [example...]               build, pack and install (all examples by default)
-//   node scripts/examples/local-sdk.mjs --pack <dir>                build and pack into <dir> only
-//   node scripts/examples/local-sdk.mjs --from <dir> [example...]   install tarballs already in <dir>
-//
-// A later `npm ci` or `npm install` in the example restores the published versions.
+// package.json or lockfile, so the committed pins stay copy-pasteable.
+// Tarballs, not links: a link would pull a second copy of React or viem into the example.
+// A later `npm ci` in the example restores the published versions.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { parseArgs } from "node:util";
+
+const usage = `Usage:
+  node scripts/examples/local-sdk.mjs [example...]               build, pack and install (all examples by default)
+  node scripts/examples/local-sdk.mjs --pack <dir>                build and pack into <dir> only
+  node scripts/examples/local-sdk.mjs --from <dir> [example...]   install tarballs already in <dir>`;
 
 const root = resolve(import.meta.dirname, "../..");
 const examplesDir = join(root, "examples");
@@ -52,29 +53,27 @@ function install(dir, example) {
   run("npm", ["install", "--no-save", ...tarballs], cwd);
 }
 
-const args = process.argv.slice(2);
-const flag = args[0]?.startsWith("--") ? args.shift() : undefined;
+let parsed;
+try {
+  parsed = parseArgs({
+    options: { pack: { type: "string" }, from: { type: "string" } },
+    allowPositionals: true,
+  });
+} catch (error) {
+  console.error(`${error.message}\n\n${usage}`);
+  process.exit(1);
+}
+const { values, positionals } = parsed;
 
-if (flag === "--pack") {
-  if (!args[0]) {
-    throw new Error("--pack needs a directory");
-  }
-  pack(resolve(args[0]));
+if (values.pack) {
+  pack(resolve(values.pack));
 } else {
-  let dir;
-  if (flag === "--from") {
-    if (!args[0]) {
-      throw new Error("--from needs a directory");
-    }
-    dir = resolve(args.shift());
-  } else if (flag) {
-    throw new Error(`Unknown flag: ${flag}`);
-  } else {
-    dir = mkdtempSync(join(tmpdir(), "zama-local-sdk-"));
+  const dir = values.from ? resolve(values.from) : mkdtempSync(join(tmpdir(), "zama-local-sdk-"));
+  if (!values.from) {
     pack(dir);
   }
-  const examples = args.length
-    ? args
+  const examples = positionals.length
+    ? positionals
     : readdirSync(examplesDir).filter((name) =>
         existsSync(join(examplesDir, name, "package.json")),
       );

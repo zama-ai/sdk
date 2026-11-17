@@ -1,4 +1,4 @@
-// Pins each example to a published SDK release, keeping its caret or exact range style.
+// Pins each example to a published SDK release, keeping its ^, ~ or exact range style.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
