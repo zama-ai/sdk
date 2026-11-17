@@ -48,9 +48,6 @@ updates:
       interval: weekly
     cooldown:
       default-days: 3
-      exclude:
-        - "@zama-fhe/sdk"
-        - "@zama-fhe/react-sdk"
     groups:
       example-apps:
         update-types:
@@ -60,6 +57,9 @@ updates:
       - dependency-name: "*"
         update-types:
           - version-update:semver-patch
+      # Pinned by the release workflow after every stable release, not by Dependabot.
+      - dependency-name: "@zama-fhe/sdk"
+      - dependency-name: "@zama-fhe/react-sdk"
 
   # Daemon image bases, pinned by digest. Majors are ignored: the Node.js line follows the daemon's engines field.
   # The client example images are left out on purpose: their toolchains track go.mod and rust-toolchain.toml.
