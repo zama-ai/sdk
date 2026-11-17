@@ -1,13 +1,13 @@
 "use client";
 
-import { networkForChain, networks, type Network, type NetworkKey } from "@/lib/networks";
+import { useActiveNetwork } from "@/lib/chosenNetwork";
+import { networks, type Network, type NetworkKey } from "@/lib/networks";
 import { erc20BalanceKey } from "@/lib/queryKeys";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useZamaSDK } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { balanceOfContract } from "@zama-fhe/sdk";
 import { parseAbi, parseUnits } from "viem";
-import { useConnection } from "wagmi";
 
 // Networks the server can serve (see /api/networks): cleartext rows always, relayer rows
 // only when the server has a relayer URL for them. Fetched once per page load.
@@ -26,10 +26,9 @@ export function useEnabledNetworks() {
 // The network row for the wallet's current chain. Only valid under the connected screen,
 // which never renders while the wallet is on a chain outside the table.
 export function useNetwork(): Network {
-  const { chainId } = useConnection();
-  const key = networkForChain(chainId);
-  if (!key) throw new Error("useNetwork: the wallet is not on a supported network.");
-  return networks[key];
+  const { activeKey } = useActiveNetwork();
+  if (!activeKey) throw new Error("useNetwork: the wallet is not on a supported network.");
+  return networks[activeKey];
 }
 
 // mint(address, uint256) is not part of the ERC-20 standard — it is a convenience

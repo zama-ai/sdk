@@ -15,8 +15,9 @@ import {
   TokenSelector,
 } from "@/components/PageChrome";
 import { NoTokenPanel, SelectedTokenPanel } from "@/components/SelectedTokenPanel";
+import { useActiveNetwork } from "@/lib/chosenNetwork";
 import { useEnabledNetworks } from "@/lib/hooks";
-import { networkForChain, networks } from "@/lib/networks";
+import { networks } from "@/lib/networks";
 import { useWalletConnection } from "@/lib/wallet";
 
 const TITLE = "Confidential Token Quickstart";
@@ -42,7 +43,7 @@ export default function Home() {
     isError: isNetworksError,
     refetch: refetchNetworks,
   } = useEnabledNetworks();
-  const activeKey = networkForChain(chainId);
+  const { activeKey, choose } = useActiveNetwork();
   const activeNetwork = activeKey && enabledNetworks.includes(activeKey) ? activeKey : undefined;
   const network = activeNetwork && networks[activeNetwork];
 
@@ -67,7 +68,11 @@ export default function Home() {
       options={enabledNetworks}
       value={activeNetwork ?? ""}
       pending={isSwitching}
-      onChange={(key) => switchChain({ chainId: networks[key].chain.id })}
+      onChange={(key) => {
+        // Remembered even when the wallet is already on the chain: two rows can share one.
+        choose(key);
+        if (networks[key].chain.id !== chainId) switchChain({ chainId: networks[key].chain.id });
+      }}
       error={switchError && "Could not switch network. Please switch manually in your wallet."}
     />
   );
@@ -158,7 +163,7 @@ export default function Home() {
         disconnecting={isDisconnecting}
       />
       {picker}
-      <TokenScreen chainId={chainId} address={address} />
+      <TokenScreen key={activeNetwork} chainId={chainId} address={address} />
     </main>
   );
 }

@@ -26,30 +26,80 @@ function loadNetworks(overrides: Record<string, string> = {}) {
   return require(modulePath) as typeof import("../src/lib/networks");
 }
 
+function loadRelayers(overrides: Record<string, string> = {}) {
+  loadNetworks(overrides);
+  const modulePath = require.resolve("../src/lib/relayers");
+  delete require.cache[modulePath];
+  return require(modulePath) as typeof import("../src/lib/relayers");
+}
+
 test.afterEach(() => {
   for (const [key, value] of Object.entries(saved)) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
     delete saved[key];
   }
-  // Other specs load this module too (through relayers); don't leave the custom table cached.
+  // Other specs load these modules too; don't leave the custom table cached.
   delete require.cache[require.resolve("../src/lib/networks")];
+  delete require.cache[require.resolve("../src/lib/relayers")];
 });
 
 test.describe("NEXT_PUBLIC_ZAMA_ENV=custom", () => {
-  test("swaps the Sepolia row's protocol contracts and gateway for the configured ones", () => {
+  test("adds a row with the configured contracts and gateway, and keeps Sepolia", () => {
     const { networks } = loadNetworks();
-    expect(networks.sepolia.label).toBe("Sepolia · Custom environment");
-    expect(networks.sepolia.fhe.gatewayChainId).toBe(10901);
-    expect(networks.sepolia.fhe.aclContractAddress).toBe(validEnv.NEXT_PUBLIC_ZAMA_ACL_ADDRESS);
-    expect(networks.sepolia.fhe.registryAddress).toBeUndefined();
+    const custom = networks["sepolia-custom"];
+    expect(custom.label).toBe("Sepolia · Custom environment");
+    expect(custom.chain.id).toBe(networks.sepolia.chain.id);
+    expect(custom.fhe.gatewayChainId).toBe(10901);
+    expect(custom.fhe.aclContractAddress).toBe(validEnv.NEXT_PUBLIC_ZAMA_ACL_ADDRESS);
+    expect(custom.fhe.registryAddress).toBeUndefined();
+    expect(networks.sepolia.label).toBe("Sepolia");
+    expect(networks.sepolia.fhe.aclContractAddress).not.toBe(validEnv.NEXT_PUBLIC_ZAMA_ACL_ADDRESS);
+  });
+
+  test("resolves the Sepolia chain to the custom row unless Sepolia is chosen", () => {
+    const { networkForChain, networks, CHAINS } = loadNetworks();
+    const sepoliaId = networks.sepolia.chain.id;
+    expect(networkForChain(sepoliaId)).toBe("sepolia-custom");
+    expect(networkForChain(sepoliaId, "sepolia")).toBe("sepolia");
+    // A choice on another chain does not apply.
+    expect(networkForChain(sepoliaId, "hoodi")).toBe("sepolia-custom");
+    expect(CHAINS.filter((chain) => chain.id === sepoliaId)).toHaveLength(1);
+  });
+
+  test("proxies the custom row to its own relayer and Sepolia to the testnet relayer", () => {
+    const { enabledNetworks, upstreamFor } = loadRelayers({
+      SEPOLIA_RELAYER_URL: "",
+      SEPOLIA_CUSTOM_RELAYER_URL: "http://127.0.0.1:9",
+    });
+    expect(upstreamFor("sepolia-custom")?.url).toBe("http://127.0.0.1:9");
+    expect(upstreamFor("sepolia")?.url).toBe("https://relayer.testnet.zama.org");
+    expect(enabledNetworks()).toEqual(expect.arrayContaining(["sepolia-custom", "sepolia"]));
+  });
+
+  test("has no custom row, and proxies none, while the environment is not custom", () => {
+    const { NETWORK_KEYS } = loadNetworks({ NEXT_PUBLIC_ZAMA_ENV: "" });
+    expect(NETWORK_KEYS).not.toContain("sepolia-custom");
+    const { upstreamFor } = loadRelayers({
+      NEXT_PUBLIC_ZAMA_ENV: "",
+      SEPOLIA_CUSTOM_RELAYER_URL: "http://127.0.0.1:9",
+    });
+    expect(upstreamFor("sepolia-custom")).toBeUndefined();
+  });
+
+  test("hides the custom row without its relayer", () => {
+    const { enabledNetworks } = loadRelayers({ SEPOLIA_CUSTOM_RELAYER_URL: "" });
+    expect(enabledNetworks()).not.toContain("sepolia-custom");
+    expect(enabledNetworks()).toContain("sepolia");
   });
 
   test("accepts the optional registry address", () => {
     const { networks } = loadNetworks({
       NEXT_PUBLIC_REGISTRY_ADDRESS: "0x7777777777777777777777777777777777777777",
     });
-    expect(networks.sepolia.fhe.registryAddress).toBe("0x7777777777777777777777777777777777777777");
+    expect(networks["sepolia-custom"].fhe.registryAddress).toBe(
+      "0x7777777777777777777777777777777777777777",
+    );
   });
 
   test("requires every protocol address", () => {

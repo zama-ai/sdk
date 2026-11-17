@@ -15,6 +15,11 @@ const upstreams: Partial<Record<NetworkKey, { url?: string; apiKey?: string }>> 
     url: process.env.SEPOLIA_RELAYER_URL || TESTNET_RELAYER_URL,
     apiKey: process.env.SEPOLIA_RELAYER_API_KEY,
   },
+  // The custom environment's own relayer. No default: unset hides the row.
+  "sepolia-custom": {
+    url: process.env.SEPOLIA_CUSTOM_RELAYER_URL,
+    apiKey: process.env.SEPOLIA_CUSTOM_RELAYER_API_KEY,
+  },
   // Mainnets have no default. Unset means the network is hidden, never a fallback.
   mainnet: { url: process.env.MAINNET_RELAYER_URL, apiKey: process.env.MAINNET_RELAYER_API_KEY },
   polygon: { url: process.env.POLYGON_RELAYER_URL, apiKey: process.env.POLYGON_RELAYER_API_KEY },
@@ -58,7 +63,8 @@ export interface Upstream {
 /** The upstream relayer for a network, or undefined when none is configured (fail closed). */
 export function upstreamFor(network: string): Upstream | undefined {
   const key = network as NetworkKey;
-  const entry = listed(key) ? upstreams[key] : undefined;
+  // The custom row exists only with NEXT_PUBLIC_ZAMA_ENV=custom, whatever its upstream says.
+  const entry = NETWORK_KEYS.includes(key) && listed(key) ? upstreams[key] : undefined;
   return entry?.url ? { url: entry.url, apiKey: entry.apiKey } : undefined;
 }
 

@@ -63,13 +63,13 @@ const zenith = defineChain({
 });
 
 // ─── Custom Zama environment on Sepolia ───────────────────────────────────────
-// NEXT_PUBLIC_ZAMA_ENV=custom swaps the Sepolia row's protocol contracts and gateway for the
-// ones in the NEXT_PUBLIC_ZAMA_* variables (see .env.example): another Zama environment that
-// runs on Sepolia, for example a pre-release one the SDK ships no preset for. Its relayer is
-// configured server-side like any other upstream (SEPOLIA_RELAYER_URL in src/lib/relayers.ts).
-// Same host chain, so this is a build-time switch on the existing row, not a second row:
-// the picker resolves rows by chain id.
-export const ZAMA_ENV = process.env.NEXT_PUBLIC_ZAMA_ENV === "custom" ? "custom" : "testnet";
+// NEXT_PUBLIC_ZAMA_ENV=custom adds a "sepolia-custom" row next to the Sepolia one, with the
+// protocol contracts and gateway in the NEXT_PUBLIC_ZAMA_* variables (see .env.example):
+// another Zama environment that runs on Sepolia, for example a pre-release one the SDK ships
+// no preset for. Its relayer is configured server-side like any other upstream
+// (SEPOLIA_CUSTOM_RELAYER_URL in src/lib/relayers.ts). Both rows share the Sepolia chain, so
+// the wallet's chain id alone cannot tell them apart: see networkForChain below.
+const ZAMA_ENV = process.env.NEXT_PUBLIC_ZAMA_ENV === "custom" ? "custom" : "testnet";
 
 function customEnvValue(name: string, value: string | undefined): string {
   if (!value) {
@@ -142,11 +142,28 @@ function customSepolia(): FheChain & { network: string } {
   };
 }
 
-export const networks = {
+// Built only when configured: customSepolia() throws on a missing variable. First in the
+// table, so a wallet on Sepolia lands on the custom environment until Sepolia is picked.
+const customRow =
+  ZAMA_ENV === "custom"
+    ? {
+        "sepolia-custom": defineNetwork({
+          label: "Sepolia · Custom environment",
+          chain: sepolia,
+          fhe: customSepolia(),
+          rpcUrl: process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL,
+          transport: "relayer",
+          explorerUrl: "https://eth-sepolia.blockscout.com",
+          canMint: true,
+        }),
+      }
+    : undefined;
+
+const table = {
   sepolia: defineNetwork({
-    label: ZAMA_ENV === "custom" ? "Sepolia · Custom environment" : "Sepolia",
+    label: "Sepolia",
     chain: sepolia,
-    fhe: ZAMA_ENV === "custom" ? customSepolia() : fheSepolia,
+    fhe: fheSepolia,
     rpcUrl: process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL,
     transport: "relayer",
     explorerUrl: "https://eth-sepolia.blockscout.com",
@@ -212,11 +229,29 @@ export const networks = {
   }),
 } satisfies Record<string, Network>;
 
-export type NetworkKey = keyof typeof networks;
+export type NetworkKey = keyof typeof table | "sepolia-custom";
+
+// "sepolia-custom" exists only with the custom environment configured. Every lookup goes
+// through a key from NETWORK_KEYS, which lists only the rows that exist.
+export const networks = { ...customRow, ...table } as Record<NetworkKey, Network>;
 
 /** Table order: the first key is the chain wagmi falls back to while no wallet is connected. */
 export const NETWORK_KEYS = Object.keys(networks) as NetworkKey[];
 
-export function networkForChain(chainId: number | undefined): NetworkKey | undefined {
+/**
+ * The row for a chain: `chosen` when it runs on that chain, else the first row that does.
+ * Two rows can share a chain (the custom environment and Sepolia), so the picker's choice
+ * decides between them.
+ */
+export function networkForChain(
+  chainId: number | undefined,
+  chosen?: NetworkKey,
+): NetworkKey | undefined {
+  if (chosen && networks[chosen].chain.id === chainId) return chosen;
   return NETWORK_KEYS.find((key) => networks[key].chain.id === chainId);
 }
+
+/** One wallet-facing chain per chain id, in table order. */
+export const CHAINS = NETWORK_KEYS.filter(
+  (key) => networkForChain(networks[key].chain.id) === key,
+).map((key) => networks[key].chain);

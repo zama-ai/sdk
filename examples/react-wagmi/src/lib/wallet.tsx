@@ -30,12 +30,12 @@ import { injected } from "wagmi/connectors/injected";
 import { ConnectWalletDialog, type ConnectState } from "@/components/ConnectWalletDialog";
 import { DYNAMIC_ENVIRONMENT_ID, dynamicWallets } from "@/lib/dynamic";
 import { dynamicConnector, readSavedWallet } from "@/lib/dynamicConnector";
-import { NETWORK_KEYS, networks } from "@/lib/networks";
+import { CHAINS } from "@/lib/networks";
 
 // Stable module-level references — recreating on re-render would reset wagmi's state.
-// Every row of the network table is registered; the picker decides which ones are offered.
+// Every chain of the network table is registered; the picker decides which ones are offered.
 // Destructuring gives the non-empty tuple type the config requires.
-const [firstChain, ...otherChains] = NETWORK_KEYS.map((key) => networks[key].chain);
+const [firstChain, ...otherChains] = CHAINS;
 const chains = [firstChain, ...otherChains] as const;
 const transports = Object.fromEntries(
   chains.map((chain) => [chain.id, http(chain.rpcUrls.default.http[0])]),
