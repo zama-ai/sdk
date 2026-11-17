@@ -6,7 +6,9 @@ import { test, expect } from "@playwright/test";
 const saved: Record<string, string | undefined> = {};
 
 function loadRelayers(env: Record<string, string>) {
-  for (const key of Object.keys(env)) saved[key] ??= process.env[key];
+  for (const key of Object.keys(env)) {
+    if (!(key in saved)) saved[key] = process.env[key];
+  }
   Object.assign(process.env, env);
   const modulePath = require.resolve("../src/lib/relayers");
   delete require.cache[modulePath];
