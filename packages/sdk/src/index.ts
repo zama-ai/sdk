@@ -57,7 +57,7 @@ export {
   sepolia,
   zenithTrexTestnet,
 } from "./chains";
-export type { FheChain, FheChainAuth } from "./chains/types";
+export type { FheChain, FheChainAuth, FheKeyVerification } from "./chains/types";
 
 // ERC-165 interface IDs
 export {

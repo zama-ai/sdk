@@ -371,7 +371,7 @@ func TestStoragePanicFailsOnlyItsRequest(t *testing.T) {
 func TestChainOverridesPreservePresence(t *testing.T) {
 	empty := ""
 	address := "0x0000000000000000000000000000000000000001"
-	chain, err := (ChainConfig{ID: 11155111, RegistryAddress: &empty, ACLContractAddress: &address, KMSGenerationContractAddress: &address, Auth: APIKeyHeader{Value: "token", Header: &empty}}).wire()
+	chain, err := (ChainConfig{ID: 11155111, RegistryAddress: &empty, ACLContractAddress: &address, KeyVerification: KMSGenerationContract{Address: address}, Auth: APIKeyHeader{Value: "token", Header: &empty}}).wire()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -381,8 +381,19 @@ func TestChainOverridesPreservePresence(t *testing.T) {
 	if len(chain.AclContractAddress) != 20 || chain.AclContractAddress[19] != 1 {
 		t.Fatal("address changed")
 	}
-	if len(chain.KmsGenerationContractAddress) != 20 || chain.KmsGenerationContractAddress[19] != 1 {
+	if contract := chain.KeyVerification.GetContract(); len(contract) != 20 || contract[19] != 1 {
 		t.Fatal("KMSGeneration address changed")
+	}
+	network := "https://eth.invalid"
+	verifier, err := (ChainConfig{ID: 80002, KeyVerification: KeyVerificationChain{ID: 11155111, Network: &network}}).wire()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := verifier.KeyVerification.GetChain(); got.GetId() != 11155111 || got.GetNetwork() != network || got.KmsGenerationContractAddress != nil {
+		t.Fatal("key verification chain changed")
+	}
+	if _, err := (ChainConfig{KeyVerification: KeyVerificationChain{KMSGenerationContractAddress: &empty}}).wire(); err == nil {
+		t.Fatal("empty KMSGeneration address was accepted")
 	}
 	if chain.Auth.GetApiKeyHeader().Name == nil || *chain.Auth.GetApiKeyHeader().Name != "" {
 		t.Fatal("explicit credential name became omitted")

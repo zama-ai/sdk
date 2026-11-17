@@ -112,6 +112,22 @@ describe("resolveChainRelayers", () => {
     expect(result.get(11155111)).toEqual({ chain: sepolia, relayerConfig: sepoliaCfg });
     expect(result.get(1)).toEqual({ chain: mainnet, relayerConfig: mainnetCfg });
   });
+
+  const { keyVerification: _keyVerification, ...sepoliaWithout } = sepolia;
+  const own = { contract: "0x00000000000000000000000000000000000000Aa" } as const;
+
+  test.each<[string, FheChain, FheChain["keyVerification"]]>([
+    ["fills a hand-written preset deployment's", sepoliaWithout, sepolia.keyVerification],
+    ["keeps a chain's own", { ...sepolia, keyVerification: own }, own],
+    [
+      "never fills another deployment on a preset's id",
+      { ...sepoliaWithout, aclContractAddress: own.contract },
+      undefined,
+    ],
+  ])("%s keyVerification", (_, chain, expected) => {
+    const result = resolveChainRelayers([chain], { [chain.id]: mockRelayerConfig() }, silent);
+    expect(result.get(chain.id)?.chain.keyVerification).toEqual(expected);
+  });
 });
 
 describe("resolveStorage", () => {

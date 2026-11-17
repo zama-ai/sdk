@@ -15,7 +15,7 @@ import {
   createFhevmCleartextEncryptClient,
 } from "@fhevm/sdk/viem/cleartext";
 import { createPublicClient, custom, http } from "viem";
-import { hasKeyVerification, withPresetKeyVerification } from "../chains/key-verification";
+import { keyVerificationChain, keyVerificationProblem } from "../chains/key-verification";
 import { toFhevmChain } from "../chains/to-fhevm-chain";
 import type { FheChain } from "../chains/types";
 import { ConfigurationError } from "../errors";
@@ -97,10 +97,9 @@ export class FhevmRelayer implements RelayerSDK {
   readonly #chain: FheChain;
   readonly #base: FhevmBaseClient;
   readonly #decrypt: FhevmDecryptClient;
-  readonly #encrypt: FhevmEncryptBackend;
+  readonly #encrypt: FhevmEncryptBackend | ConfigurationError;
   readonly #defaultOptions: Partial<FhevmRelayerOptions>;
   readonly #telemetry: RelayerTelemetry | undefined;
-  readonly #keyVerificationError: ConfigurationError | undefined;
   #encryptInitPromise: Promise<void> | undefined;
 
   /**
@@ -109,22 +108,11 @@ export class FhevmRelayer implements RelayerSDK {
    * cheap; each client's one-time init is deferred to its first operation.
    */
   constructor(config: FhevmRelayerConfig) {
-    this.#chain = withPresetKeyVerification(config.chain);
-    // Raised by encryption only, so that reads and decryption keep working, and
-    // by this SDK, with the FheChain fields to set, rather than by `@fhevm/sdk`,
-    // whose message names its own client options.
-    this.#keyVerificationError =
-      !config.cleartext && !hasKeyVerification(this.#chain)
-        ? new ConfigurationError(
-            `Chain ${this.#chain.id} has no KMSGeneration contract to check the FHE public key and CRS against. ` +
-              `Set kmsGenerationContractAddress on its FheChain (Ethereum host chains), or keyVerificationChain ` +
-              `to the Ethereum chain that holds it (other host chains).`,
-          )
-        : undefined;
+    this.#chain = config.chain;
     const { timeout, debug, batchRpcCalls, moduleVersions, fheEncryptionKey } =
       config.options ?? {};
     const auth = this.#chain.auth ? toFhevmAuth(this.#chain.auth) : undefined;
-    const verifier = this.#chain.keyVerificationChain;
+    const verifier = keyVerificationChain(this.#chain);
     const params = {
       publicClient: createPublicClient({ transport: toTransport(this.#chain.network) }),
       chain: toFhevmChain(this.#chain),
@@ -167,12 +155,13 @@ export class FhevmRelayer implements RelayerSDK {
     } else {
       this.#base = createFhevmBaseClient(params);
       this.#decrypt = createFhevmDecryptClient(params);
-      this.#encrypt = this.#keyVerificationError
-        ? unavailableEncryptBackend(this.#keyVerificationError)
-        : this.#buildEncryptBackend(config, params, {
-            prefetchKey,
-            createInlineClient: () => withInlineInit(createFhevmEncryptClient(params)),
-          });
+      // Deferred to encryption, so reads and decryption still work without a KMSGeneration contract.
+      this.#encrypt =
+        keyVerificationProblem(this.#chain) ??
+        this.#buildEncryptBackend(config, params, {
+          prefetchKey,
+          createInlineClient: () => withInlineInit(createFhevmEncryptClient(params)),
+        });
     }
   }
 
@@ -201,16 +190,10 @@ export class FhevmRelayer implements RelayerSDK {
       return inline.createInlineClient();
     }
     const runtime = getAppliedWireRuntime();
-    // The key-verification client cannot be cloned into the worker realm, which
-    // rebuilds it from the verifying chain's RPC URL instead.
-    const { keyVerification, ...clientOptions } = params.options;
-    const verifierNetwork = this.#chain.keyVerificationChain?.network;
-    const verifierRpcUrl = typeof verifierNetwork === "string" ? verifierNetwork : undefined;
-    const blocker =
-      encryptOffloadBlocker(runtime) ??
-      (keyVerification !== undefined && verifierRpcUrl === undefined
-        ? "an EIP-1193 provider on keyVerificationChain cannot cross the encrypt worker boundary"
-        : undefined);
+    // A viem client cannot be structured-cloned; the worker rebuilds it from the verifying chain's network.
+    const { keyVerification: _client, ...clientOptions } = params.options;
+    const verifier = keyVerificationChain(this.#chain);
+    const blocker = encryptOffloadBlocker(runtime, verifier?.network);
     if (blocker !== undefined && !strict) {
       // Always on the console: the alternative is an opaque rejection at
       // encrypt time, or WASM assets silently resolved from the default URLs.
@@ -218,16 +201,9 @@ export class FhevmRelayer implements RelayerSDK {
       return inline.createInlineClient();
     }
     const workerClient = new EncryptWorkerClient({
-      initPayload: {
-        chain: params.chain,
-        clientOptions,
-        keyVerification:
-          keyVerification && verifierRpcUrl !== undefined
-            ? { chain: keyVerification.chain, rpcUrl: verifierRpcUrl }
-            : undefined,
-        runtime: runtime ?? {},
-      },
+      initPayload: { chain: params.chain, clientOptions, runtime: runtime ?? {} },
       network: this.#chain.network,
+      keyVerification: verifier && { chain: toFhevmChain(verifier), network: verifier.network },
       prefetchKey: inline.prefetchKey,
       createInlineClient: inline.createInlineClient,
       logger: config.logger,
@@ -277,12 +253,21 @@ export class FhevmRelayer implements RelayerSDK {
   // Only a fulfilled init is memoized: a rejection clears the memo so the next
   // encryption retries instead of inheriting a transient key-fetch failure.
   #initEncrypt = (): Promise<void> => {
-    this.#encryptInitPromise ??= this.#encrypt.init().catch((error: unknown) => {
-      this.#encryptInitPromise = undefined;
-      throw error;
-    });
+    this.#encryptInitPromise ??= this.#assertCanEncrypt()
+      .init()
+      .catch((error: unknown) => {
+        this.#encryptInitPromise = undefined;
+        throw error;
+      });
     return this.#encryptInitPromise;
   };
+
+  #assertCanEncrypt(): FhevmEncryptBackend {
+    if (this.#encrypt instanceof ConfigurationError) {
+      throw this.#encrypt;
+    }
+    return this.#encrypt;
+  }
 
   /**
    * Releases the encrypt worker once in-flight encryptions settle and drops the
@@ -290,7 +275,9 @@ export class FhevmRelayer implements RelayerSDK {
    */
   dispose = (): void => {
     this.#encryptInitPromise = undefined;
-    this.#encrypt.dispose?.();
+    if (!(this.#encrypt instanceof ConfigurationError)) {
+      this.#encrypt.dispose?.();
+    }
   };
 
   /**
@@ -372,7 +359,7 @@ export class FhevmRelayer implements RelayerSDK {
    */
   encryptValue: FhevmClient["encryptValue"] = async (parameters) => {
     await this.#initEncrypt();
-    return this.#encrypt.encryptValue({
+    return this.#assertCanEncrypt().encryptValue({
       ...parameters,
       options: this.#requestOptions(parameters.options),
     });
@@ -397,7 +384,7 @@ export class FhevmRelayer implements RelayerSDK {
    */
   encryptValues: FhevmClient["encryptValues"] = async (parameters) => {
     await this.#initEncrypt();
-    return this.#encrypt.encryptValues({
+    return this.#assertCanEncrypt().encryptValues({
       ...parameters,
       options: this.#requestOptions(parameters.options),
     });
@@ -488,12 +475,10 @@ export class FhevmRelayer implements RelayerSDK {
    * ```
    */
   fetchFheEncryptionKeyBytes: FhevmClient["fetchFheEncryptionKeyBytes"] = async (parameters) => {
+    this.#assertCanEncrypt();
     // Served from the base client, which shares the key cache with the encrypt
     // client: initializing encryption here would spawn the encrypt worker and
     // wait out its bring-up for a key this thread fetches itself.
-    if (this.#keyVerificationError) {
-      throw this.#keyVerificationError;
-    }
     await this.#base.init();
     return this.#base.fetchFheEncryptionKeyBytes({
       ...parameters,
@@ -727,24 +712,14 @@ function toTransport(network: FheChain["network"]) {
   return typeof network === "string" ? http(network) : custom(network);
 }
 
-/** An encrypt backend whose every call rejects with `error`. */
-function unavailableEncryptBackend(error: Error): FhevmEncryptBackend {
-  const reject = async () => {
-    throw error;
-  };
-  return {
-    init: reject,
-    encryptValue: reject,
-    encryptValues: reject,
-    fetchFheEncryptionKeyBytes: reject,
-  };
-}
-
 /**
  * The one reason, if any, this thread's configuration cannot be reproduced in
  * the worker realm, so offload is worse than inline there.
  */
-function encryptOffloadBlocker(runtime: WireRuntimeConfig | undefined): string | undefined {
+function encryptOffloadBlocker(
+  runtime: WireRuntimeConfig | undefined,
+  keyVerificationNetwork: FheChain["network"] | undefined,
+): string | undefined {
   // A runtime `locateFile` is a function: it cannot be cloned into the worker
   // realm, which would silently resolve WASM assets from the default URLs.
   if (hasAppliedLocateFile()) {
@@ -754,6 +729,9 @@ function encryptOffloadBlocker(runtime: WireRuntimeConfig | undefined): string |
   // carries would 401 inside the worker as an application error, which never degrades.
   if (runtime === undefined && hasFhevmRuntimeConfig()) {
     return "a runtime config set outside createConfig cannot be replicated in the encrypt worker realm";
+  }
+  if (keyVerificationNetwork !== undefined && typeof keyVerificationNetwork !== "string") {
+    return "an EIP-1193 provider on the keyVerification chain cannot cross the encrypt worker boundary";
   }
   return undefined;
 }

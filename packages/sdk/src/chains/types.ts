@@ -6,6 +6,15 @@ export type FheChainAuth =
   | { __type: "ApiKeyHeader"; header?: string; value: string };
 
 /**
+ * Where encryption checks the relayer's FHE public key and CRS: `contract`, the
+ * `KMSGeneration` address on an Ethereum host chain, or `chain`, the Ethereum
+ * chain holding it (read through its `network`), for any other host chain.
+ */
+export type FheKeyVerification =
+  | { readonly contract: Address }
+  | { readonly chain: FheChain & { readonly keyVerification: { readonly contract: Address } } };
+
+/**
  * Complete chain configuration — the single source of truth for
  * per-chain FHE contract addresses and network settings. The built-in presets
  * exported from `@zama-fhe/sdk/chains` are `FheChain` objects.
@@ -35,22 +44,10 @@ export interface FheChain<TId extends number = number> {
    */
   readonly protocolConfigContractAddress?: Address | undefined;
   /**
-   * Address of the `KMSGeneration` contract, which records the digests of the
-   * active FHE public key and CRS. Encryption checks the key material the
-   * relayer serves against it. Ethereum host chains only; other host chains
-   * set {@link FheChain.keyVerificationChain} instead. Left unset on a chain
-   * with the id and ACL of a built-in preset, it is taken from that preset. A
-   * chain with a preset's id but another ACL drops the preset's value it got by
-   * spreading the preset, so set it to that deployment's own contract.
+   * Required to encrypt on a non-cleartext chain; reads and decryption work
+   * without it. A chain with a built-in preset's id and ACL inherits the preset's.
    */
-  readonly kmsGenerationContractAddress?: Address | undefined;
-  /**
-   * The Ethereum chain whose `KMSGeneration` contract the key material of this
-   * non-Ethereum host chain is checked against, read through its `network`.
-   * Encryption on a non-cleartext chain needs this or
-   * {@link FheChain.kmsGenerationContractAddress}.
-   */
-  readonly keyVerificationChain?: FheChain | undefined;
+  readonly keyVerification?: FheKeyVerification | undefined;
   /** EIP-712 verifying contract address for decryption requests. */
   readonly verifyingContractAddressDecryption: Address;
   /** EIP-712 verifying contract address for input verification. */

@@ -400,11 +400,25 @@ message ChainConfig {
   optional bytes registry_address = 10;
   optional bytes executor_address = 11;
   ChainAuth auth = 12;
-  // KMSGeneration contract the FHE public key and CRS are checked against before encryption.
-  // A chain with the ID and ACL of a preset inherits the preset's. An explicitly empty value clears it.
-  optional bytes kms_generation_contract_address = 13;
+  // Checks the relayer's FHE public key and CRS before encryption.
+  // When omitted, a chain with the ID and ACL of a preset inherits the preset's.
+  KeyVerification key_verification = 13;
   // Fields 100–119 are allocated to configuration and credential protection.
   HttpProviderConfig provider = 100;
+}
+message KeyVerification {
+  oneof target {
+    // KMSGeneration address, for an Ethereum host chain.
+    bytes contract = 1;
+    // For any other host chain: the Ethereum chain holding its KMSGeneration contract.
+    KeyVerificationChain chain = 2;
+  }
+}
+// id must name an SDK preset. Omitted fields inherit it.
+message KeyVerificationChain {
+  uint64 id = 1;
+  optional string network = 2;
+  optional bytes kms_generation_contract_address = 3;
 }
 message ChainAuth {
   reserved 3;

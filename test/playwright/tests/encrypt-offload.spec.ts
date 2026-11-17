@@ -43,7 +43,6 @@ const STUB_CRS = "not-a-crs";
 const STUB_KEY_DIGEST = "0xad9fecb59ef6e338c8e2ac318d54bb39fe59a7e3f9530e02ddacd896c18f51cd";
 const STUB_CRS_DIGEST = "0x058f85c3b590032e2067bd5596028b2e0e474c075d5912d4e41114e00818f0af";
 
-/** The `KMSGeneration` getters the SDK reads to check the key material. */
 const kmsGenerationAbi = parseAbi([
   "function getVersion() view returns (string)",
   "function getActiveKeyId() view returns (uint256)",
@@ -52,7 +51,6 @@ const kmsGenerationAbi = parseAbi([
   "function getCrsMaterials(uint256) view returns (string[], bytes)",
 ]);
 
-/** Answers one JSON-RPC call as a `KMSGeneration` contract on chain 1 holding the stub digests. */
 function kmsGenerationRpc({
   id,
   method,
@@ -107,7 +105,6 @@ async function routeFakeRelayer(page: Page, baseURL: string) {
       }),
     }),
   );
-  // Key bytes are only digested, never deserialized, before the spawn.
   await page.route("**/fake-relayer/pk", (route) =>
     route.fulfill({ contentType: "application/octet-stream", body: STUB_KEY }),
   );

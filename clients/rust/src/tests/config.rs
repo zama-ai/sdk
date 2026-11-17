@@ -135,12 +135,10 @@ fn optional_preset_addresses_preserve_omission_clearing_and_values() {
     ] {
         let mut chain = crate::ChainConfig::new(11_155_111, "https://rpc.invalid");
         chain.registry_address = address.clone();
-        chain.executor_address = address.clone();
-        chain.kms_generation_contract_address = address;
+        chain.executor_address = address;
         let wire = generated::ChainConfig::try_from(chain).unwrap();
         assert_eq!(wire.registry_address, expected);
         assert_eq!(wire.executor_address, expected);
-        assert_eq!(wire.kms_generation_contract_address, expected);
     }
     let mut chain = crate::ChainConfig::new(11_155_111, "https://rpc.invalid");
     chain.acl_contract_address = Some(String::new());
@@ -148,9 +146,44 @@ fn optional_preset_addresses_preserve_omission_clearing_and_values() {
 }
 
 #[test]
+fn key_verification_wires_a_contract_or_a_chain() {
+    use generated::key_verification::Target;
+    let mut chain = crate::ChainConfig::new(11_155_111, "https://rpc.invalid");
+    chain.key_verification = Some(crate::KeyVerification::Contract(
+        Address::repeat_byte(1).to_string(),
+    ));
+    let wire = generated::ChainConfig::try_from(chain).unwrap();
+    assert_eq!(
+        wire.key_verification.unwrap().target,
+        Some(Target::Contract(vec![1; 20]))
+    );
+
+    let mut chain = crate::ChainConfig::new(80_002, "https://rpc.invalid");
+    chain.key_verification = Some(crate::KeyVerification::Chain {
+        id: 11_155_111,
+        network: Some("https://eth.invalid".into()),
+        kms_generation_contract_address: None,
+    });
+    let wire = generated::ChainConfig::try_from(chain).unwrap();
+    assert_eq!(
+        wire.key_verification.unwrap().target,
+        Some(Target::Chain(generated::KeyVerificationChain {
+            id: 11_155_111,
+            network: Some("https://eth.invalid".into()),
+            kms_generation_contract_address: None,
+        }))
+    );
+
+    let mut chain = crate::ChainConfig::new(11_155_111, "https://rpc.invalid");
+    chain.key_verification = Some(crate::KeyVerification::Contract(String::new()));
+    let error = generated::ChainConfig::try_from(chain).unwrap_err();
+    assert_eq!(error.to_string(), "invalid key_verification.contract");
+}
+
+#[test]
 fn invalid_address_errors_name_the_field_but_not_the_value() {
     type Field = fn(&mut crate::ChainConfig) -> &mut Option<String>;
-    let fields: [(&str, Field); 8] = [
+    let fields: [(&str, Field); 7] = [
         ("acl_contract_address", |c| &mut c.acl_contract_address),
         ("kms_contract_address", |c| &mut c.kms_contract_address),
         ("input_verifier_contract_address", |c| {
@@ -164,9 +197,6 @@ fn invalid_address_errors_name_the_field_but_not_the_value() {
         }),
         ("registry_address", |c| &mut c.registry_address),
         ("executor_address", |c| &mut c.executor_address),
-        ("kms_generation_contract_address", |c| {
-            &mut c.kms_generation_contract_address
-        }),
     ];
     for (name, field) in fields {
         let mut chain = crate::ChainConfig::new(11_155_111, "https://rpc.invalid");

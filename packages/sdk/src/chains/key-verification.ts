@@ -1,37 +1,37 @@
+import { ConfigurationError } from "../errors";
 import { chains } from "./configs";
 import type { FheChain } from "./types";
 
-/**
- * Matches a chain's `KMSGeneration` settings to its deployment, by the built-in
- * preset with the same chain id:
- * - same ACL, settings unset: takes the preset's, so a hand-written definition
- *   of a known deployment needs none;
- * - another ACL, settings equal to the preset's: drops them, as they come from
- *   spreading the preset and name the preset's deployment, not this one.
- */
+/** A chain with a preset's id and ACL is that preset's deployment, so it inherits its `keyVerification`. */
 export function withPresetKeyVerification(chain: FheChain): FheChain {
-  const preset = chains[chain.id];
-  if (preset === undefined) {
+  const preset: FheChain | undefined = chains[chain.id];
+  if (
+    chain.keyVerification !== undefined ||
+    preset === undefined ||
+    preset.aclContractAddress.toLowerCase() !== chain.aclContractAddress.toLowerCase()
+  ) {
     return chain;
   }
-  if (preset.aclContractAddress.toLowerCase() === chain.aclContractAddress.toLowerCase()) {
-    return hasKeyVerification(chain)
-      ? chain
-      : {
-          ...chain,
-          kmsGenerationContractAddress: preset.kmsGenerationContractAddress,
-          keyVerificationChain: preset.keyVerificationChain,
-        };
-  }
-  const spreadFromPreset =
-    chain.kmsGenerationContractAddress === preset.kmsGenerationContractAddress &&
-    chain.keyVerificationChain === preset.keyVerificationChain;
-  return spreadFromPreset
-    ? { ...chain, kmsGenerationContractAddress: undefined, keyVerificationChain: undefined }
-    : chain;
+  return { ...chain, keyVerification: preset.keyVerification };
 }
 
-/** Whether encryption on `chain` can check the FHE public key and CRS against a `KMSGeneration` contract. */
-export function hasKeyVerification(chain: FheChain): boolean {
-  return (chain.keyVerificationChain ?? chain).kmsGenerationContractAddress !== undefined;
+export function keyVerificationChain(chain: FheChain): FheChain | undefined {
+  const keyVerification = chain.keyVerification;
+  return keyVerification !== undefined && "chain" in keyVerification
+    ? keyVerification.chain
+    : undefined;
+}
+
+/** Why encryption on a non-cleartext `chain` cannot run, or `undefined` when it can. */
+export function keyVerificationProblem(chain: FheChain): ConfigurationError | undefined {
+  const holder = keyVerificationChain(chain) ?? chain;
+  const keyVerification = holder.keyVerification;
+  if (keyVerification !== undefined && "contract" in keyVerification) {
+    return undefined;
+  }
+  return new ConfigurationError(
+    `Chain ${chain.id} has no KMSGeneration contract to check the FHE public key and CRS against. ` +
+      `Set keyVerification on its FheChain: { contract } on an Ethereum host chain, or { chain } with ` +
+      `the Ethereum chain that holds it on other host chains.`,
+  );
 }

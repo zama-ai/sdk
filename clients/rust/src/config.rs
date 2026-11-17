@@ -25,6 +25,39 @@ impl RelayerAuth {
 }
 
 #[derive(Clone)]
+pub enum KeyVerification {
+    /// `KMSGeneration` address, for an Ethereum host chain.
+    Contract(String),
+    /// For any other host chain: the Ethereum chain holding its `KMSGeneration` contract.
+    /// `id` must name an SDK preset; `None` fields inherit it.
+    Chain {
+        id: u64,
+        network: Option<String>,
+        kms_generation_contract_address: Option<String>,
+    },
+}
+impl std::fmt::Debug for KeyVerification {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Contract(contract) => f.debug_tuple("Contract").field(contract).finish(),
+            Self::Chain {
+                id,
+                network,
+                kms_generation_contract_address,
+            } => f
+                .debug_struct("Chain")
+                .field("id", id)
+                .field("network", &network.as_deref().map(url_origin))
+                .field(
+                    "kms_generation_contract_address",
+                    kms_generation_contract_address,
+                )
+                .finish(),
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct ChainConfig {
     pub provider: Option<crate::ProviderOptions>,
     pub id: u64,
@@ -40,7 +73,7 @@ pub struct ChainConfig {
     pub verifying_contract_address_input_verification: Option<String>,
     pub registry_address: Option<String>,
     pub executor_address: Option<String>,
-    pub kms_generation_contract_address: Option<String>,
+    pub key_verification: Option<KeyVerification>,
 }
 impl std::fmt::Debug for ChainConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -58,7 +91,7 @@ impl std::fmt::Debug for ChainConfig {
             verifying_contract_address_input_verification,
             registry_address,
             executor_address,
-            kms_generation_contract_address,
+            key_verification,
         } = self;
         f.debug_struct("ChainConfig")
             .field("provider", provider)
@@ -83,10 +116,7 @@ impl std::fmt::Debug for ChainConfig {
             )
             .field("registry_address", registry_address)
             .field("executor_address", executor_address)
-            .field(
-                "kms_generation_contract_address",
-                kms_generation_contract_address,
-            )
+            .field("key_verification", key_verification)
             .finish()
     }
 }
@@ -133,7 +163,7 @@ impl ChainConfig {
             verifying_contract_address_input_verification: None,
             registry_address: None,
             executor_address: None,
-            kms_generation_contract_address: None,
+            key_verification: None,
         }
     }
     pub fn with_auth(mut self, auth: RelayerAuth) -> Self {
@@ -245,10 +275,33 @@ impl TryFrom<ChainConfig> for generated::ChainConfig {
             )?,
             registry_address: optional_address("registry_address", chain.registry_address)?,
             executor_address: optional_address("executor_address", chain.executor_address)?,
-            kms_generation_contract_address: optional_address(
-                "kms_generation_contract_address",
-                chain.kms_generation_contract_address,
-            )?,
+            key_verification: chain
+                .key_verification
+                .map(|key_verification| -> Result<generated::KeyVerification> {
+                    use generated::key_verification::Target;
+                    let target = match key_verification {
+                        KeyVerification::Contract(contract) => Target::Contract(
+                            address("key_verification.contract", Some(contract))?
+                                .unwrap_or_default(),
+                        ),
+                        KeyVerification::Chain {
+                            id,
+                            network,
+                            kms_generation_contract_address,
+                        } => Target::Chain(generated::KeyVerificationChain {
+                            id,
+                            network,
+                            kms_generation_contract_address: address(
+                                "key_verification.chain.kms_generation_contract_address",
+                                kms_generation_contract_address,
+                            )?,
+                        }),
+                    };
+                    Ok(generated::KeyVerification {
+                        target: Some(target),
+                    })
+                })
+                .transpose()?,
             provider: chain.provider.map(crate::ProviderOptions::wire),
         })
     }

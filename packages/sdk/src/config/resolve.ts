@@ -1,4 +1,5 @@
 import type { FheChain } from "../chains";
+import { withPresetKeyVerification } from "../chains/key-verification";
 import { ConfigurationError } from "../errors";
 import { IndexedDBStorage } from "../storage/indexeddb-storage";
 import { MemoryStorage } from "../storage/memory-storage";
@@ -64,7 +65,7 @@ export function resolveChainRelayers(
           `Add a relayer entry: relayers: { [${chain.id}]: web() }`,
       );
     }
-    result.set(chain.id, { chain, relayerConfig });
+    result.set(chain.id, { chain: withPresetKeyVerification(chain), relayerConfig });
   }
 
   return result;

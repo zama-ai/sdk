@@ -39,8 +39,8 @@ export type WireInitPayload = {
   readonly rpcUrl: string | undefined;
   /** Carries `fheEncryptionKey`, prefetched on the main thread so the worker skips the download. */
   readonly clientOptions: Omit<FhevmClientOptions, "keyVerification">;
-  /** `KMSGeneration` chain for a non-Ethereum host chain; the worker builds its client from `rpcUrl`. */
-  readonly keyVerification?: { readonly chain: FhevmChain; readonly rpcUrl: string } | undefined;
+  /** Verifying chain for a non-Ethereum host chain, with its own RPC URL. */
+  readonly keyVerification: { readonly chain: FhevmChain; readonly rpcUrl: string } | undefined;
   readonly runtime: WireRuntimeConfig;
 };
 

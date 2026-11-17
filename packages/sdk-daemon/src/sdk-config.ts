@@ -2,11 +2,13 @@ import {
   chains as presets,
   ConfigurationError,
   type FheChain,
+  type FheKeyVerification,
   type ZamaConfigBase,
 } from "@zama-fhe/sdk";
 import type {
   ChainConfig,
   ContextConfig as WireConfig,
+  KeyVerification,
 } from "./generated/zama/sdk/v1beta1/daemon.js";
 import {
   processRuntimeConfig,
@@ -37,6 +39,39 @@ export interface ContextConfig extends Pick<
   chainId: number;
   providerConfigs: Map<number, ProviderConfig>;
 }
+function keyVerification(value: KeyVerification): FheKeyVerification {
+  switch (value.target?.$case) {
+    case "contract":
+      return { contract: address(value.target.contract) };
+    case "chain": {
+      const verifier = value.target.chain;
+      const id = safeInteger(verifier.id, "Key verification chain ID");
+      const preset: FheChain | undefined = presets[id];
+      if (preset === undefined) {
+        throw new ConfigurationError(`Key verification chain ${id} has no SDK preset.`);
+      }
+      const contract =
+        decodeOptional(verifier.kmsGenerationContractAddress, address) ??
+        (preset.keyVerification && "contract" in preset.keyVerification
+          ? preset.keyVerification.contract
+          : undefined);
+      if (contract === undefined) {
+        throw new ConfigurationError(
+          `Key verification chain ${id} needs a KMSGeneration contract address.`,
+        );
+      }
+      return {
+        chain: {
+          ...preset,
+          network: verifier.network ?? preset.network,
+          keyVerification: { contract },
+        },
+      };
+    }
+    default:
+      throw new ConfigurationError("Key verification requires a contract or a chain.");
+  }
+}
 function chain(value: ChainConfig): HttpChain {
   const id = safeInteger(value.id, "Chain ID");
   const merged = {
@@ -60,6 +95,7 @@ function chain(value: ChainConfig): HttpChain {
         address,
       ),
       auth: decodeOptional(value.auth, chainAuth),
+      keyVerification: decodeOptional(value.keyVerification, keyVerification),
     }),
   };
   // Empty address bytes clear a preset; omission retains it.
@@ -71,11 +107,6 @@ function chain(value: ChainConfig): HttpChain {
   if (value.executorAddress !== undefined) {
     merged.executorAddress = value.executorAddress.length
       ? address(value.executorAddress)
-      : undefined;
-  }
-  if (value.kmsGenerationContractAddress !== undefined) {
-    merged.kmsGenerationContractAddress = value.kmsGenerationContractAddress.length
-      ? address(value.kmsGenerationContractAddress)
       : undefined;
   }
   if (typeof merged.network !== "string") {

@@ -76,19 +76,47 @@ test("custom chain overrides preserve addresses and can clear optional preset ad
     aclContractAddress: `0x${"01".repeat(20)}`,
   });
 });
-test("a chain can set and clear its KMSGeneration contract", () => {
-  const set = parseContextConfig(
+test("a chain can set its KMSGeneration contract", () => {
+  const config = parseContextConfig(
     ContextConfig.fromPartial({
-      chains: [{ ...preset, kmsGenerationContractAddress: Buffer.alloc(20, 2) }],
+      chains: [
+        {
+          ...preset,
+          keyVerification: { target: { $case: "contract", contract: Buffer.alloc(20, 2) } },
+        },
+      ],
     }),
   );
-  expect(set.chains[0].kmsGenerationContractAddress).toBe(`0x${"02".repeat(20)}`);
-  const cleared = parseContextConfig(
+  expect(config.chains[0].keyVerification).toEqual({ contract: `0x${"02".repeat(20)}` });
+});
+test("a key verification chain inherits its preset and takes its own RPC URL", () => {
+  const config = parseContextConfig(
     ContextConfig.fromPartial({
-      chains: [{ ...preset, kmsGenerationContractAddress: Buffer.alloc(0) }],
+      chains: [
+        {
+          id: 80002n,
+          network: "https://rpc.invalid",
+          keyVerification: {
+            target: { $case: "chain", chain: { id: 11155111n, network: "https://eth.invalid" } },
+          },
+        },
+      ],
     }),
   );
-  expect(cleared.chains[0].kmsGenerationContractAddress).toBeUndefined();
+  expect(config.chains[0].keyVerification).toEqual({
+    chain: { ...chains[11155111], network: "https://eth.invalid" },
+  });
+});
+test.each([
+  [{ $case: "chain", chain: { id: 999n } }, /no SDK preset/],
+  [{ $case: "chain", chain: { id: 31337n } }, /needs a KMSGeneration contract/],
+  [undefined, /contract or a chain/],
+] as const)("rejects key verification %#", (target, message) => {
+  expect(() =>
+    parseContextConfig(
+      ContextConfig.fromPartial({ chains: [{ ...preset, keyVerification: { target } }] }),
+    ),
+  ).toThrow(message);
 });
 test.each([
   ContextConfig.fromPartial({ chains: [preset], chainId: 31337n }),

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { chains, mainnet } from "../configs";
+import { keyVerificationChain, keyVerificationProblem } from "../key-verification";
 import { toFhevmChain } from "../to-fhevm-chain";
 
 describe("chain presets", () => {
@@ -23,16 +24,14 @@ describe("chain presets", () => {
     expect(mainnet.registryAddress).toBe(original);
   });
 
-  // Encryption fails at client creation when the key material cannot be verified.
   test.each(
     Object.values(chains)
       .filter((chain) => chain.relayerUrl !== "")
       .map((chain) => [chain.id, chain] as const),
   )("FHE preset %i names a KMSGeneration contract to verify keys against", (_id, chain) => {
-    const verifier = chain.keyVerificationChain ?? chain;
-    expect(toFhevmChain(verifier).fhevm.contracts.kmsGeneration).toEqual({
-      address: verifier.kmsGenerationContractAddress,
-    });
+    expect(keyVerificationProblem(chain)).toBeUndefined();
+    const verifier = keyVerificationChain(chain) ?? chain;
+    expect(toFhevmChain(verifier).fhevm.contracts.kmsGeneration?.address).toMatch(/^0x/);
   });
 
   test("spreading a preset still allows overrides", () => {

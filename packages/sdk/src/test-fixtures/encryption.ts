@@ -14,7 +14,7 @@ export function createEncryptionValidationBackend() {
   // Client creation requires a KMSGeneration contract; validation never reaches it.
   const chain = toFhevmChain({
     ...anvil,
-    kmsGenerationContractAddress: "0x0000000000000000000000000000000000000001",
+    keyVerification: { contract: "0x0000000000000000000000000000000000000001" },
   });
   return createFhevmEncryptClient({ publicClient, chain }).encryptValues;
 }
