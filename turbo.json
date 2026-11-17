@@ -7,7 +7,7 @@
     "api-extractor.base.json"
   ],
   "tasks": {
-    "typecheck": { "outputs": [] },
+    "typecheck": { "dependsOn": ["^build"], "outputs": [] },
     "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
     "api-report": { "dependsOn": ["build"], "outputs": ["etc/**"] },
     "api-report:check": { "dependsOn": ["build"], "outputs": [] },

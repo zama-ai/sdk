@@ -23,6 +23,12 @@ function merge(a, b) {
   return b;
 }
 
+function hookCommands(hooks = {}) {
+  return Object.values(hooks).flatMap((groups) =>
+    groups.flatMap((group) => group.hooks.map((hook) => hook.command)),
+  );
+}
+
 function isObj(v) {
   return v !== null && typeof v === "object" && !Array.isArray(v);
 }
@@ -73,8 +79,20 @@ if (!existsSync(TARGET)) {
     if (existsSync(dstSettings)) {
       const a = JSON.parse(readFileSync(dstSettings, "utf8"));
       const b = JSON.parse(readFileSync(srcSettings, "utf8"));
-      writeFileSync(dstSettings, JSON.stringify(merge(a, b), null, 2) + "\n");
-      console.log("  ✅ settings.json merged (template wins on conflicts, arrays unioned)");
+      // Hook entries are objects, so unioning them would keep superseded hooks running.
+      const merged = { ...merge(a, b), hooks: b.hooks };
+      writeFileSync(dstSettings, JSON.stringify(merged, null, 2) + "\n");
+      console.log(
+        "  ✅ settings.json merged (template wins on conflicts, arrays unioned, hooks replaced)",
+      );
+      const dropped = hookCommands(a.hooks).filter((c) => !hookCommands(b.hooks).includes(c));
+      if (dropped.length > 0) {
+        console.log("  ⚠️  Removed hooks that are not in the template:");
+        for (const command of dropped) {
+          console.log(`     - ${command}`);
+        }
+        console.log("     Put personal hooks in .claude/settings.local.json to keep them.");
+      }
     } else {
       cpSync(srcSettings, dstSettings);
       console.log("  ✅ settings.json copied");
