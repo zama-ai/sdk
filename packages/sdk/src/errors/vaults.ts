@@ -5,15 +5,15 @@ import { ZamaError, ZamaErrorCode } from "./base";
 
 /** What a {@link VaultBatcherPausedError} carries. */
 export interface VaultBatcherPausedDetails {
-  /** The batcher that reported `paused()`. */
+  /** A paused batcher of the vault. */
   readonly batcher: Address;
   /** The vault whose leg needs the batcher. */
   readonly vaultId: string;
 }
 
-/** A batcher that a join needs is paused. */
+/** No batcher of a vault a join needs is open: each one is paused or closed. */
 export class VaultBatcherPausedError extends ZamaError {
-  /** The batcher that reported `paused()`. */
+  /** A paused batcher of the vault. */
   readonly batcher: Address;
   /** The vault whose leg needs the batcher. */
   readonly vaultId: string;

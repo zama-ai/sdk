@@ -1,9 +1,6 @@
 import type { Address } from "viem";
 
-/**
- * A keeper dispatches a due batch within minutes, so a join sent in the last
- * minute before the batch is due can miss it and wait a whole cycle.
- */
+/** A join sent this close to its batch's due time can land after the dispatch and wait a whole cycle. */
 export const JOIN_MARGIN_SECONDS = 60n;
 
 /** What one batcher offers a join, read at one block. */
@@ -26,6 +23,7 @@ export type BatcherOffer =
   | { readonly status: "closed"; readonly batcher: Address };
 
 export type OpenOffer = Extract<BatcherOffer, { status: "open" }>;
+export type PausedOffer = Extract<BatcherOffer, { status: "paused" }>;
 
 function soonest(offers: readonly OpenOffer[]): OpenOffer | undefined {
   return [...offers].sort((a, b) => {
@@ -39,18 +37,22 @@ function soonest(offers: readonly OpenOffer[]): OpenOffer | undefined {
 }
 
 /**
- * The open batch a join reaches: the one dispatched soonest that is not
- * blocked and not due within {@link JOIN_MARGIN_SECONDS}. Otherwise, when every
- * batch waits on its previous one, the one due first, then any open batch.
- * `undefined` when no batcher is open.
+ * The batch a join reaches: the unblocked open batch due soonest that is not
+ * due within {@link JOIN_MARGIN_SECONDS}, else the blocked one due soonest,
+ * else the open one due soonest. With no batcher open, a paused batcher's
+ * batch, which no join reaches; `undefined` when every batcher is closed.
  *
  * @internal
  */
-export function pickNextBatch(offers: readonly BatcherOffer[], now: bigint): OpenOffer | undefined {
+export function pickNextBatch(
+  offers: readonly BatcherOffer[],
+  now: bigint,
+): OpenOffer | PausedOffer | undefined {
   const open = offers.filter((offer): offer is OpenOffer => offer.status === "open");
   return (
     soonest(open.filter((o) => !o.blocked && o.dispatchableAt >= now + JOIN_MARGIN_SECONDS)) ??
     soonest(open.filter((o) => o.blocked)) ??
-    soonest(open)
+    soonest(open) ??
+    offers.find((offer): offer is PausedOffer => offer.status === "paused")
   );
 }

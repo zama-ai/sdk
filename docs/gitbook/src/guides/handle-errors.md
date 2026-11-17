@@ -52,7 +52,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `DELEGATION_EXPIRY_UNCHANGED`            | `DelegationExpiryUnchangedError`          | New expiry matches the current value                                                                             |
 | `DELEGATION_NOT_PROPAGATED`              | `DelegationNotPropagatedError`            | Delegated decrypt failed transiently (gateway not synced, or delegator ACL read stale) — retry                   |
 | `ACL_PAUSED`                             | `AclPausedError`                          | The ACL contract is paused                                                                                       |
-| `VAULT_BATCHER_PAUSED`                   | `VaultBatcherPausedError`                 | A batcher one leg of a vault join would reach is paused, so the whole join would revert                          |
+| `VAULT_BATCHER_PAUSED`                   | `VaultBatcherPausedError`                 | Every batcher of a vault in the join is paused or closed, so the whole join would revert                         |
 | `VAULT_BATCH_NOT_DISPATCHED`             | `VaultBatchNotDispatchedError`            | A vault batch cannot be finalized because it is not dispatched (still pending, or already finalized or canceled) |
 | `VAULT_JOIN_UNCONFIRMED`                 | `VaultJoinUnconfirmedError`               | A vault join was mined, but its receipt doesn't confirm every leg                                                |
 

@@ -5,7 +5,7 @@ description: Query hook that reads the open batch of every vault in a group.
 
 # useOpenBatches
 
-Query hook that reads the batch the next join lands in, for every vault of a group: when it can be dispatched, and whether its batcher is paused. Wraps [`VaultClient.readOpenBatches`](../sdk/VaultClient.md#readopenbatches).
+Query hook that reads the batch the next join lands in, for every vault of a group: when it can be dispatched, and whether every batcher of the vault is paused or closed. Wraps [`VaultClient.readOpenBatches`](../sdk/VaultClient.md#readopenbatches).
 
 ## Import
 

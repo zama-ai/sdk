@@ -42,7 +42,7 @@ const BETA = {
   depositBatcher: getAddress("0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC"),
   redeemBatcher: getAddress("0xdDdDddDdDdddDDddDdDdDDDDdDdDDdDDdDDDDDDd"),
 };
-// Alpha's deposit batcher was upgraded: the retired one takes joins up to a batch id.
+// A second deposit batcher for alpha, listed before its first one in `upgraded`.
 const RETIRED_ALPHA_DEPOSIT = getAddress("0x7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a");
 
 const CHAIN_ID = 31337;
@@ -95,7 +95,7 @@ interface BatchFacts {
   deposit?: Hex;
   /** Defaults to 7. */
   currentBatchId?: bigint;
-  /** The state of every batch before the asked one, defaults to finalized. */
+  /** The state of the batch before the current one, defaults to finalized. */
   previousState?: number;
 }
 
@@ -136,10 +136,7 @@ function mockChain(
       case "fromToken":
         return fromTokens[batcher];
       case "batchState":
-        // readBatch asks about batch 3, so its previous batch is 2.
-        return args[0] === current - 1n || args[0] === 2n
-          ? (batch?.previousState ?? 2)
-          : (batch?.state ?? 0);
+        return args[0] === current - 1n ? (batch?.previousState ?? 2) : (batch?.state ?? 0);
       case "batchCreatedAt":
         return batch?.createdAt ?? NOW - 10n;
       case "batchMinBatchAge":
@@ -590,7 +587,7 @@ describe("without a signer", () => {
 
 describe("several batchers in one direction", () => {
   const [EARLY, LATE] = [RETIRED_ALPHA_DEPOSIT, ALPHA.depositBatcher];
-  // Listed late first, so the order of the list never decides.
+  // Listed in reverse dispatch order, so list order cannot be what picks the batcher.
   const SET = defineVault({
     id: "set",
     chainId: CHAIN_ID,
@@ -740,6 +737,17 @@ describe("several batchers in one direction", () => {
     await expect(nextBatcher(sdk)).rejects.toBeInstanceOf(ConfigurationError);
   });
 
+  test("picks by due time, not by address", async ({ sdk, provider }) => {
+    // LATE has the higher address, so only its earlier batch can make it win.
+    mockChain(provider, {
+      batches: {
+        [EARLY]: { createdAt: NOW, minAge: 600n },
+        [LATE]: { createdAt: NOW, minAge: 100n },
+      },
+    });
+    expect(await nextBatcher(sdk)).toMatchObject({ batcher: LATE });
+  });
+
   test("still reads a BatcherHistory as the list of its batchers", async ({ sdk, provider }) => {
     mockChain(provider);
     const batches = await createVaultClient(sdk).readOpenBatches(upgraded(6n), "deposit");
@@ -747,6 +755,20 @@ describe("several batchers in one direction", () => {
       ALPHA.depositBatcher,
       BETA.depositBatcher,
     ]);
+  });
+
+  test("a BatcherHistory's latest batcher takes joins before the retired one is past lastBatchId", async ({
+    sdk,
+    provider,
+  }) => {
+    mockChain(provider, {
+      batches: {
+        [RETIRED_ALPHA_DEPOSIT]: { createdAt: NOW, minAge: 600n },
+        [ALPHA.depositBatcher]: { createdAt: NOW, minAge: 100n },
+      },
+    });
+    const [alpha] = await createVaultClient(sdk).readOpenBatches(upgraded(7n), "deposit");
+    expect(alpha).toMatchObject({ batcher: ALPHA.depositBatcher });
   });
 });
 
@@ -798,7 +820,8 @@ describe("batch actions", () => {
 });
 
 describe("readBatch", () => {
-  const ref = { chainId: CHAIN_ID, batcher: ALPHA.depositBatcher, batchId: 3n };
+  // The batcher's current batch, so its previous batch reads `previousState`.
+  const ref = { chainId: CHAIN_ID, batcher: ALPHA.depositBatcher, batchId: 7n };
 
   test("a young pending batch: quit for its depositor, and when it becomes dispatchable", async ({
     sdk,
@@ -867,9 +890,9 @@ describe("readBatch", () => {
 describe("readOpenBatches", () => {
   test("reads the batch a join reaches in each vault", async ({ sdk, provider }) => {
     mockChain(provider);
-    const batches = await createVaultClient(sdk).readOpenBatches(upgraded(7n), "deposit");
+    const batches = await createVaultClient(sdk).readOpenBatches(STABLE, "deposit");
     expect(batches).toMatchObject([
-      { vaultId: "alpha", batcher: RETIRED_ALPHA_DEPOSIT, batchId: 7n, observedAt: NOW },
+      { vaultId: "alpha", batcher: ALPHA.depositBatcher, batchId: 7n, observedAt: NOW },
       { vaultId: "beta", batcher: BETA.depositBatcher, batchId: 7n, observedAt: NOW },
     ]);
   });

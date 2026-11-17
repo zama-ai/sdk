@@ -48,12 +48,12 @@ A vault names no token: the client reads each batcher's `fromToken()`. A join or
 
 | Field         | Type                  | Description                                                                                        |
 | ------------- | --------------------- | -------------------------------------------------------------------------------------------------- |
-| `address`     | `Address`             | The batcher.                                                                                       |
+| `address`     | `Address`             | The batcher's address.                                                                             |
 | `lastBatchId` | `bigint \| undefined` | The last batch joins may land in. Set it only for a batcher whose contract cannot close by itself. |
 
 A join reaches the open batch that is dispatched next among the batchers that are not paused or closed. See [Several batchers](../../guides/vaults/advanced.md#several-batchers).
 
-`BatcherHistory` (`{ retired, latest }`) is deprecated. It still works, and reads as the list `[...retired, latest]`.
+`BatcherHistory` (`{ retired, latest }`) is deprecated. It still works, and reads as the list `[...retired, latest]`, so `latest` takes joins as soon as it is open.
 
 ## defineVaultGroup
 
@@ -113,8 +113,8 @@ const prepared = await vaults.prepareDeposit(STABLE, {
 **Throws:**
 
 - `ChainMismatchError` when a wallet is connected and the provider is not on the target's chain.
-- `ConfigurationError` when the provider is not on the target's chain with no wallet connected, the vault is not in the group, the group is invalid (see [`VaultGroup`](#vaultgroup)), or the join uses the router and the chain has none.
-- `VaultBatcherPausedError` when a batcher the join reaches is paused. This check always runs.
+- `ConfigurationError` when the provider is not on the target's chain with no wallet connected, the vault is not in the group, the group is invalid (see [`VaultGroup`](#vaultgroup)), the join uses the router and the chain has none, a vault lists no batcher, or every batcher of a vault is closed.
+- `VaultBatcherPausedError` when no batcher of a vault the join reaches is open: each one is paused or closed. This check always runs.
 - `InsufficientConfidentialBalanceError` when the balance is below `amount`.
 - `BalanceCheckUnavailableError` when the balance cannot be decrypted: no signer is connected, or `account` is not the signer. Pass `skipBalanceCheck: true`.
 
@@ -292,11 +292,15 @@ if (batch.actions.includes("claim")) {
 
 `readOpenBatches(target, direction) => Promise<OpenBatch[]>`
 
-Reads, for every vault of the target in group order, the open batch a join reaches now. When every batcher of a vault is paused or closed, it returns a paused batcher's batch with `paused: true`.
+Reads, for every vault of the target in group order, the open batch a join reaches now. When no batcher of a vault is open, it returns a paused batcher's batch with `paused: true`.
 
 ```ts
 const open = await vaults.readOpenBatches(STABLE, "deposit");
 ```
+
+**Throws:**
+
+- `ConfigurationError` when a vault lists no batcher, a batcher address or `lastBatchId` is invalid, or every batcher of a vault is closed.
 
 ## Types
 
@@ -377,12 +381,12 @@ A `BatchRef` plus the fields below. Times are in chain seconds. `Batch` is a uni
 
 When each action is listed:
 
-| Action     | Listed when                                                                       |
-| ---------- | --------------------------------------------------------------------------------- |
-| `claim`    | The account joined the batch, and the batch is finalized.                         |
-| `quit`     | The account joined the batch, and the batch is pending or canceled.               |
-| `dispatch` | The batch is pending, the batcher is not paused, and `dispatchableAt` has passed. |
-| `finalize` | The batch is dispatched.                                                          |
+| Action     | Listed when                                                                                                                   |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `claim`    | The account joined the batch, and the batch is finalized.                                                                     |
+| `quit`     | The account joined the batch, and the batch is pending or canceled.                                                           |
+| `dispatch` | The batch is pending, the batcher is not paused, the previous batch is not still dispatched, and `dispatchableAt` has passed. |
+| `finalize` | The batch is dispatched.                                                                                                      |
 
 `claim` and `quit` are listed without decrypting the deposit. A deposit that was paid out reads as an encrypted zero, so they stay listed after the payout. Sending them again moves nothing.
 
@@ -390,12 +394,12 @@ When each action is listed:
 
 A `BatchRef` for the batch the next join lands in, plus:
 
-| Field            | Type      | Description                                           |
-| ---------------- | --------- | ----------------------------------------------------- |
-| `vaultId`        | `string`  |                                                       |
-| `dispatchableAt` | `bigint`  | When anyone may dispatch the batch, in chain seconds. |
-| `paused`         | `boolean` | Whether the batcher is paused.                        |
-| `observedAt`     | `bigint`  | The block timestamp of the read.                      |
+| Field            | Type      | Description                                                      |
+| ---------------- | --------- | ---------------------------------------------------------------- |
+| `vaultId`        | `string`  |                                                                  |
+| `dispatchableAt` | `bigint`  | When anyone may dispatch the batch, in chain seconds.            |
+| `paused`         | `boolean` | Whether no batcher of the vault is open, so no join can be sent. |
+| `observedAt`     | `bigint`  | The block timestamp of the read.                                 |
 
 ## TanStack Query
 

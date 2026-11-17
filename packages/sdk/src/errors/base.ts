@@ -98,7 +98,7 @@ export const ZamaErrorCode = {
   PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED",
   /** The unwrap request was already finalized on-chain; there is nothing left to resume. */
   UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED",
-  /** A batcher a vault join needs is paused. */
+  /** No batcher of a vault a join needs is open: each one is paused or closed. */
   VaultBatcherPaused: "VAULT_BATCHER_PAUSED",
   /** A batch to be finalized is not dispatched. */
   VaultBatchNotDispatched: "VAULT_BATCH_NOT_DISPATCHED",

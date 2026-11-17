@@ -1,9 +1,9 @@
 ---
-title: Handle wallet prompts, upgrades and custom sending
+title: Handle wallet prompts, batchers and custom sending
 description: Wallet prompts, paused batchers, several batchers per vault, bundling wallets, and sending vault calls through your own pipeline.
 ---
 
-# Handle wallet prompts, upgrades and custom sending
+# Handle wallet prompts, batchers and custom sending
 
 {% hint style="info" %}
 Available in the Core SDK and React SDK.
@@ -55,13 +55,13 @@ The client reads every batcher when it prepares a join, and the join goes to the
 - closed on chain, or
 - past its `lastBatchId`. Set `lastBatchId` only for a batcher whose contract cannot close by itself.
 
-It also skips a batch that waits for its previous batch to settle, and a batch due within a minute while another batcher is open, because a keeper can dispatch it before the join lands. The choice follows the chain, not the clock, so you can ship a new list before a batcher opens or closes. Stored batches name their own batcher, so they keep working. [`readOpenBatches`](deposits.md#show-the-open-batches) shows the batch the next join reaches.
+Among the open batches, it prefers one that does not wait for its previous batch to settle and is not due within the next minute, because a keeper can dispatch such a batch before the join lands. When none qualifies, it takes the soonest batch that waits for its previous one, then the soonest open batch. The choice follows the chain, not the clock, so you can ship a new list before a batcher opens or closes. Stored batches name their own batcher, so they keep working. [`readOpenBatches`](deposits.md#show-the-open-batches) shows the batch the next join reaches.
 
 {% hint style="warning" %}
 Never remove a batcher from the list, even once its batches settled. Every batcher of a vault direction must serve the same ERC-4626 vault with the same asset and share token.
 {% endhint %}
 
-The earlier `BatcherHistory` form (`{ retired, latest }`) is deprecated. It still works, and reads as the list `[...retired, latest]`.
+The earlier `BatcherHistory` form (`{ retired, latest }`) is deprecated. It still works, and reads as the list `[...retired, latest]`. So `latest` now takes joins as soon as it is open, even before a retired batcher reaches its `lastBatchId`.
 
 ## Bundling wallets
 

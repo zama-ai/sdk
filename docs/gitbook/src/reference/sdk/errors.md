@@ -126,7 +126,7 @@ Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequ
 | `HcuBlockLimitExceededError`              | `HCU_BLOCK_LIMIT_EXCEEDED`               | Gas estimation found too little FHE compute (HCU) left in the block; retry in the next block (retryable)                          |
 | `HcuTransactionLimitExceededError`        | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | The transaction needs more FHE compute (HCU), in total or in one sequential chain, than one transaction may use                   |
 | `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
-| `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | A batcher one leg of a vault join would reach is paused, so the whole join would revert                                           |
+| `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | Every batcher of a vault in the join is paused or closed, so the whole join would revert                                          |
 | `VaultBatchNotDispatchedError`            | `VAULT_BATCH_NOT_DISPATCHED`             | A vault batch cannot be finalized because it is not dispatched: it is still pending, or it was already finalized or canceled      |
 | `VaultJoinUnconfirmedError`               | `VAULT_JOIN_UNCONFIRMED`                 | A vault join was mined, but its receipt has no matching `Joined` event for at least one leg                                       |
 | `InvalidTransportKeyPairError`            | `INVALID_KEYPAIR`                        | Relayer rejected transport key pair (stale or malformed)                                                                          |
@@ -337,7 +337,7 @@ matchZamaError(error, {
 
 **Code:** `VAULT_BATCHER_PAUSED`
 
-Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()` and `prepareRedeem()` when a batcher the join reaches is paused, before anything is sent. The error carries the paused `batcher` and its `vaultId`.
+Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()` and `prepareRedeem()` when no batcher of a vault the join reaches is open (each one is paused or closed), before anything is sent. The error carries one paused `batcher` of that vault and the `vaultId`.
 
 **How to handle:** Not retryable until the batcher is unpaused. Claims and quits still work. Show which vault is paused. See [Paused batchers](../../guides/vaults/advanced.md#paused-batchers).
 

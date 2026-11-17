@@ -43,7 +43,7 @@ import {
   type VaultGroup,
   type VaultIdOf,
 } from "./config";
-import { pickNextBatch, type BatcherOffer, type OpenOffer } from "./next-batch";
+import { pickNextBatch, type BatcherOffer, type OpenOffer, type PausedOffer } from "./next-batch";
 import {
   batchCallbackDeadlineContract,
   batchCreatedAtContract,
@@ -176,8 +176,8 @@ export class VaultClient {
    * account's balance before sending.
    *
    * @throws if the provider is not on the vault's chain while a wallet is connected. {@link ChainMismatchError}
-   * @throws if the provider is on another chain with no wallet connected, or a batcher address or `lastBatchId` is invalid. {@link ConfigurationError}
-   * @throws if a batcher the join reaches is paused, even with `skipBalanceCheck`. {@link VaultBatcherPausedError}
+   * @throws if the provider is on another chain with no wallet connected, a vault lists no batcher, a batcher address or `lastBatchId` is invalid, or every batcher of a vault is closed. {@link ConfigurationError}
+   * @throws if no batcher of a vault the join reaches is open, even with `skipBalanceCheck`. {@link VaultBatcherPausedError}
    * @throws if the balance is less than `amount` and `skipBalanceCheck` is not set. {@link InsufficientConfidentialBalanceError}
    * @throws if `skipBalanceCheck` is not set and no signer is connected, `account` is not the signer's, or the balance cannot be read. {@link BalanceCheckUnavailableError}
    * @throws if encryption returns a different number of values than the join has legs. {@link EncryptionFailedError}
@@ -460,7 +460,7 @@ export class VaultClient {
       decimals,
       deposit,
       now,
-      previous,
+      blocked,
     ] = await Promise.all([
       this.#batchState(chainId, batcher, batchId),
       this.#read(chainId, batchCreatedAtContract(batcher, batchId)),
@@ -476,11 +476,9 @@ export class VaultClient {
         ? null
         : this.#read(chainId, depositsContract(batcher, batchId, depositor)),
       this.#sdk.provider.getBlockTimestamp(chainId),
-      batchId <= 1n ? null : this.#batchState(chainId, batcher, batchId - 1n),
+      this.#waitsOnPrevious(chainId, batcher, batchId),
     ]);
     const dispatchableAt = createdAt + minAge;
-    // `dispatchBatch` reverts while the previous batch is still dispatched.
-    const blocked = previous === "dispatched";
     const cancelsAt = dispatchedAt + deadline;
     // A literal zero handle means the account never joined this batch.
     const member = deposit !== null && !isEncryptedValueZero(deposit);
@@ -517,10 +515,10 @@ export class VaultClient {
 
   /**
    * The batch a join reaches now, for a vault or each vault of a group, with
-   * when it can be dispatched. When every batcher of a vault is paused or
-   * closed, it is a paused batcher's batch, with `paused: true`.
+   * when it can be dispatched. When no batcher of a vault is open, it is a
+   * paused batcher's batch with `paused: true`.
    *
-   * @throws if every batcher of a vault is closed. {@link ConfigurationError}
+   * @throws if a vault lists no batcher, an address or `lastBatchId` is invalid, or every batcher of a vault is closed. {@link ConfigurationError}
    */
   async readOpenBatches(
     target: Vault | VaultGroup,
@@ -569,7 +567,9 @@ export class VaultClient {
         const next = await this.#nextBatch(vault, direction, now);
         if (next.status === "paused") {
           throw new VaultBatcherPausedError(
-            `Every ${direction} batcher of vault "${vault.id}"${group === undefined ? "" : ` in group "${group.id}"`} is paused or closed, so ${group === undefined ? "the vault" : "no vault of the group"} can be joined until one resumes`,
+            group === undefined
+              ? `Every ${direction} batcher of vault "${vault.id}" is paused or closed, so the vault cannot be joined until one resumes`
+              : `Every ${direction} batcher of vault "${vault.id}" in group "${group.id}" is paused or closed, so no vault of the group can be joined until one resumes`,
             { batcher: next.batcher, vaultId: vault.id },
           );
         }
@@ -724,11 +724,11 @@ export class VaultClient {
     vault: Vault,
     direction: JoinDirection,
     now: bigint,
-  ): Promise<OpenOffer | Extract<BatcherOffer, { status: "paused" }>> {
+  ): Promise<OpenOffer | PausedOffer> {
     const offers = await Promise.all(
       batchersOf(vault, direction).map((entry) => this.#offer(vault.chainId, entry)),
     );
-    const next = pickNextBatch(offers, now) ?? offers.find((offer) => offer.status === "paused");
+    const next = pickNextBatch(offers, now);
     if (next === undefined) {
       throw new ConfigurationError(
         `Every ${direction} batcher of vault "${vault.id}" is closed; list a batcher that takes joins`,
@@ -748,19 +748,26 @@ export class VaultClient {
     if (lastBatchId !== undefined && batchId > lastBatchId) {
       return { status: "closed", batcher };
     }
-    const [createdAt, minAge, previous] = await Promise.all([
+    const [createdAt, minAge, blocked] = await Promise.all([
       this.#read(chainId, batchCreatedAtContract(batcher, batchId)),
       this.#read(chainId, batchMinBatchAgeContract(batcher, batchId)),
-      paused || batchId <= 1n ? null : this.#batchState(chainId, batcher, batchId - 1n),
+      paused ? false : this.#waitsOnPrevious(chainId, batcher, batchId),
     ]);
-    // A batch gets its creation time when it opens, and a closed batcher never opens the batch after its last.
+    // A closed batcher never opens its next batch, so the current one has no creation time.
     if (createdAt === 0n) {
       return { status: "closed", batcher };
     }
     const dispatchableAt = createdAt + minAge;
     return paused
       ? { status: "paused", batcher, batchId, dispatchableAt }
-      : { status: "open", batcher, batchId, dispatchableAt, blocked: previous === "dispatched" };
+      : { status: "open", batcher, batchId, dispatchableAt, blocked };
+  }
+
+  // `dispatchBatch` reverts while the previous batch is still dispatched.
+  async #waitsOnPrevious(chainId: number, batcher: Address, batchId: bigint): Promise<boolean> {
+    return (
+      batchId > 1n && (await this.#batchState(chainId, batcher, batchId - 1n)) === "dispatched"
+    );
   }
 
   #router(group: VaultGroup): Address {

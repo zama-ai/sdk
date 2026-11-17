@@ -535,7 +535,7 @@
     },
     {
       "id": "doc:guides/vaults/advanced",
-      "title": "Handle wallet prompts, upgrades and custom sending",
+      "title": "Handle wallet prompts, batchers and custom sending",
       "source_path": "docs/gitbook/src/guides/vaults/advanced.md",
       "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md",
       "source_type": "official-doc",
