@@ -62,8 +62,9 @@ test.describe("NEXT_PUBLIC_ZAMA_ENV=custom", () => {
     const sepoliaId = networks.sepolia.chain.id;
     expect(networkForChain(sepoliaId)).toBe("sepolia-custom");
     expect(networkForChain(sepoliaId, "sepolia")).toBe("sepolia");
-    // A choice on another chain does not apply.
     expect(networkForChain(sepoliaId, "hoodi")).toBe("sepolia-custom");
+    expect(networkForChain(sepoliaId, undefined, ["sepolia", "hoodi"])).toBe("sepolia");
+    expect(networkForChain(sepoliaId, "sepolia-custom", ["sepolia"])).toBe("sepolia-custom");
     expect(CHAINS.filter((chain) => chain.id === sepoliaId)).toHaveLength(1);
   });
 
@@ -78,8 +79,9 @@ test.describe("NEXT_PUBLIC_ZAMA_ENV=custom", () => {
   });
 
   test("has no custom row, and proxies none, while the environment is not custom", () => {
-    const { NETWORK_KEYS } = loadNetworks({ NEXT_PUBLIC_ZAMA_ENV: "" });
+    const { NETWORK_KEYS, networkForChain, networks } = loadNetworks({ NEXT_PUBLIC_ZAMA_ENV: "" });
     expect(NETWORK_KEYS).not.toContain("sepolia-custom");
+    expect(networkForChain(networks.sepolia.chain.id, "sepolia-custom")).toBe("sepolia");
     const { upstreamFor } = loadRelayers({
       NEXT_PUBLIC_ZAMA_ENV: "",
       SEPOLIA_CUSTOM_RELAYER_URL: "http://127.0.0.1:9",

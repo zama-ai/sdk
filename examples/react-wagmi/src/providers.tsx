@@ -12,8 +12,9 @@ import {
   type ZamaConfig,
 } from "@zama-fhe/sdk";
 import { web } from "@zama-fhe/sdk/web";
-import { ChosenNetworkProvider, useActiveNetwork } from "@/lib/chosenNetwork";
-import { NETWORK_KEYS, networkForChain, networks, type NetworkKey } from "@/lib/networks";
+import { ChosenNetworkProvider } from "@/lib/chosenNetwork";
+import { useActiveNetwork } from "@/lib/hooks";
+import { networks, rowsFor, type NetworkKey } from "@/lib/networks";
 import { wagmiConfig, WalletProviders } from "@/lib/wallet";
 
 // Relayer traffic goes through the same-origin Next.js proxy so API keys stay server-side.
@@ -21,9 +22,8 @@ import { wagmiConfig, WalletProviders } from "@/lib/wallet";
 // placeholder never issues requests. Cleartext networks have no relayer at all.
 const origin = typeof window === "undefined" ? "http://localhost" : window.location.origin;
 
-// The SDK stores permits per signer and chain id, so a permit signed for the custom
-// environment would be sent to Sepolia's relayer, which rejects its signature. A database
-// of its own keeps them apart.
+// Permits are keyed by signer and chain id, which both Sepolia rows share. A database of its
+// own keeps a permit signed for one environment away from the other's relayer.
 const customEnvStorage = new IndexedDBStorage("CredentialStore-custom");
 
 // The SDK takes one FheChain per chain id, so a config registers the active row and, for
@@ -31,10 +31,9 @@ const customEnvStorage = new IndexedDBStorage("CredentialStore-custom");
 const configs = new Map<string, ZamaConfig>();
 
 function zamaConfigFor(active: NetworkKey | undefined): ZamaConfig {
-  const keys = NETWORK_KEYS.filter(
-    (key) => networkForChain(networks[key].chain.id, active) === key,
-  );
-  const id = keys.join();
+  const keys = rowsFor(active);
+  const storage = active === "sepolia-custom" ? customEnvStorage : indexedDBStorage;
+  const id = `${keys.join()}|${storage === customEnvStorage ? "custom" : "default"}`;
   let config = configs.get(id);
   if (!config) {
     // Destructuring gives the non-empty tuple type the config requires.
@@ -48,7 +47,6 @@ function zamaConfigFor(active: NetworkKey | undefined): ZamaConfig {
         return [chain.id, transport === "relayer" ? web() : cleartext()];
       }),
     ) as Record<number, RelayerConfig>;
-    const storage = keys.includes("sepolia-custom") ? customEnvStorage : indexedDBStorage;
     config = createZamaConfig({
       wagmiConfig,
       chains: [firstFheChain, ...otherFheChains],

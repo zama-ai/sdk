@@ -15,8 +15,7 @@ import {
   TokenSelector,
 } from "@/components/PageChrome";
 import { NoTokenPanel, SelectedTokenPanel } from "@/components/SelectedTokenPanel";
-import { useActiveNetwork } from "@/lib/chosenNetwork";
-import { useEnabledNetworks } from "@/lib/hooks";
+import { useActiveNetwork, useEnabledNetworks } from "@/lib/hooks";
 import { networks } from "@/lib/networks";
 import { useWalletConnection } from "@/lib/wallet";
 

@@ -1,13 +1,14 @@
 "use client";
 
-import { useActiveNetwork } from "@/lib/chosenNetwork";
-import { networks, type Network, type NetworkKey } from "@/lib/networks";
+import { useChosenNetwork } from "@/lib/chosenNetwork";
+import { networkForChain, networks, type Network, type NetworkKey } from "@/lib/networks";
 import { erc20BalanceKey } from "@/lib/queryKeys";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useZamaSDK } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { balanceOfContract } from "@zama-fhe/sdk";
 import { parseAbi, parseUnits } from "viem";
+import { useConnection } from "wagmi";
 
 // Networks the server can serve (see /api/networks): cleartext rows always, relayer rows
 // only when the server has a relayer URL for them. Fetched once per page load.
@@ -21,6 +22,15 @@ export function useEnabledNetworks() {
     },
     staleTime: Infinity,
   });
+}
+
+// Hidden rows lose to an enabled row on the same chain, so a hidden custom row never
+// shadows Sepolia.
+export function useActiveNetwork() {
+  const { chosen, choose } = useChosenNetwork();
+  const { chainId } = useConnection();
+  const { data: enabled } = useEnabledNetworks();
+  return { activeKey: networkForChain(chainId, chosen, enabled), choose };
 }
 
 // The network row for the wallet's current chain. Only valid under the connected screen,

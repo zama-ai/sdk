@@ -15,7 +15,7 @@ const upstreams: Partial<Record<NetworkKey, { url?: string; apiKey?: string }>> 
     url: process.env.SEPOLIA_RELAYER_URL || TESTNET_RELAYER_URL,
     apiKey: process.env.SEPOLIA_RELAYER_API_KEY,
   },
-  // The custom environment's own relayer. No default: unset hides the row.
+  // No default: unset hides the row.
   "sepolia-custom": {
     url: process.env.SEPOLIA_CUSTOM_RELAYER_URL,
     apiKey: process.env.SEPOLIA_CUSTOM_RELAYER_API_KEY,
@@ -37,8 +37,9 @@ if (unknownKeys.length > 0) {
   );
 }
 
+// The custom row exists only with NEXT_PUBLIC_ZAMA_ENV=custom, whatever its upstream says.
 function listed(key: NetworkKey): boolean {
-  return allowlist.length === 0 || allowlist.includes(key);
+  return NETWORK_KEYS.includes(key) && (allowlist.length === 0 || allowlist.includes(key));
 }
 
 // The SDK downloads the FHE key on the page thread, so these origins go into the page CSP's
@@ -63,8 +64,7 @@ export interface Upstream {
 /** The upstream relayer for a network, or undefined when none is configured (fail closed). */
 export function upstreamFor(network: string): Upstream | undefined {
   const key = network as NetworkKey;
-  // The custom row exists only with NEXT_PUBLIC_ZAMA_ENV=custom, whatever its upstream says.
-  const entry = NETWORK_KEYS.includes(key) && listed(key) ? upstreams[key] : undefined;
+  const entry = listed(key) ? upstreams[key] : undefined;
   return entry?.url ? { url: entry.url, apiKey: entry.apiKey } : undefined;
 }
 

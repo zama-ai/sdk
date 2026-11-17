@@ -63,12 +63,9 @@ const zenith = defineChain({
 });
 
 // ─── Custom Zama environment on Sepolia ───────────────────────────────────────
-// NEXT_PUBLIC_ZAMA_ENV=custom adds a "sepolia-custom" row next to the Sepolia one, with the
-// protocol contracts and gateway in the NEXT_PUBLIC_ZAMA_* variables (see .env.example):
-// another Zama environment that runs on Sepolia, for example a pre-release one the SDK ships
-// no preset for. Its relayer is configured server-side like any other upstream
-// (SEPOLIA_CUSTOM_RELAYER_URL in src/lib/relayers.ts). Both rows share the Sepolia chain, so
-// the wallet's chain id alone cannot tell them apart: see networkForChain below.
+// NEXT_PUBLIC_ZAMA_ENV=custom adds a "sepolia-custom" row: another Zama environment on
+// Sepolia, for example a pre-release one the SDK ships no preset for, configured through the
+// NEXT_PUBLIC_ZAMA_* variables (see .env.example).
 const ZAMA_ENV = process.env.NEXT_PUBLIC_ZAMA_ENV === "custom" ? "custom" : "testnet";
 
 function customEnvValue(name: string, value: string | undefined): string {
@@ -142,8 +139,8 @@ function customSepolia(): FheChain & { network: string } {
   };
 }
 
-// Built only when configured: customSepolia() throws on a missing variable. First in the
-// table, so a wallet on Sepolia lands on the custom environment until Sepolia is picked.
+// Built only when configured, since it throws on a missing variable. Listed before Sepolia,
+// so a wallet on Sepolia starts on it until Sepolia is picked.
 const customRow =
   ZAMA_ENV === "custom"
     ? {
@@ -231,27 +228,33 @@ const table = {
 
 export type NetworkKey = keyof typeof table | "sepolia-custom";
 
-// "sepolia-custom" exists only with the custom environment configured. Every lookup goes
-// through a key from NETWORK_KEYS, which lists only the rows that exist.
+// Cast: "sepolia-custom" is present only when the custom environment is configured.
 export const networks = { ...customRow, ...table } as Record<NetworkKey, Network>;
 
-/** Table order: the first key is the chain wagmi falls back to while no wallet is connected. */
 export const NETWORK_KEYS = Object.keys(networks) as NetworkKey[];
 
 /**
- * The row for a chain: `chosen` when it runs on that chain, else the first row that does.
- * Two rows can share a chain (the custom environment and Sepolia), so the picker's choice
- * decides between them.
+ * The row for a chain: `chosen` when it runs on that chain, else the first enabled row that
+ * does, else the first row. Two rows can share a chain (the custom environment and Sepolia),
+ * so the picker's choice decides between them.
  */
 export function networkForChain(
   chainId: number | undefined,
   chosen?: NetworkKey,
+  enabled?: readonly NetworkKey[],
 ): NetworkKey | undefined {
-  if (chosen && networks[chosen].chain.id === chainId) return chosen;
-  return NETWORK_KEYS.find((key) => networks[key].chain.id === chainId);
+  const onChain = NETWORK_KEYS.filter((key) => networks[key].chain.id === chainId);
+  return (
+    onChain.find((key) => key === chosen) ??
+    onChain.find((key) => enabled?.includes(key) ?? true) ??
+    onChain[0]
+  );
 }
 
-/** One wallet-facing chain per chain id, in table order. */
-export const CHAINS = NETWORK_KEYS.filter(
-  (key) => networkForChain(networks[key].chain.id) === key,
-).map((key) => networks[key].chain);
+/** One row per chain id, preferring `active` on its chain. */
+export function rowsFor(active?: NetworkKey): NetworkKey[] {
+  return NETWORK_KEYS.filter((key) => networkForChain(networks[key].chain.id, active) === key);
+}
+
+/** One chain per chain id, in table order. wagmi falls back to the first while disconnected. */
+export const CHAINS = rowsFor().map((key) => networks[key].chain);

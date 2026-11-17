@@ -375,9 +375,9 @@ transaction(s), shield transaction, and cache invalidation.
 The proxy route `src/app/api/relayer/[network]/[...path]/route.ts` keeps API keys server-side.
 The `[network]` segment is a key of the network table; the route looks it up in
 `src/lib/relayers.ts`, which maps each `relayer` network to an upstream from env
-(`SEPOLIA_RELAYER_URL`, `SEPOLIA_CUSTOM_RELAYER_URL`, `MAINNET_RELAYER_URL`, … — bare hosts, no `/v2`
-suffix). Testnets
-default to the public testnet relayer; mainnets have no default and are hidden until set.
+(`SEPOLIA_RELAYER_URL`, `SEPOLIA_CUSTOM_RELAYER_URL`, `MAINNET_RELAYER_URL`, … — bare hosts, no
+`/v2` suffix). Testnets default to the public testnet relayer; mainnets have no default and are
+hidden until set.
 
 The proxy fails closed and is deliberately narrow:
 
