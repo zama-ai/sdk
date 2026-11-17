@@ -21,9 +21,9 @@ export type Batcher = Address | BatcherEntry;
 
 /**
  * The batchers of one vault direction: one, or several. A join reaches the open
- * batch that is dispatched next.
+ * batch that is dispatched next. A join or read throws on an empty list.
  */
-export type Batchers = Batcher | readonly [Batcher, ...Batcher[]];
+export type Batchers = Batcher | readonly Batcher[];
 
 /**
  * A batcher that took joins while its `currentBatchId` was at most `lastBatchId`.
@@ -202,7 +202,7 @@ export function batchersOf(
   return [first, ...rest];
 }
 
-// `Array.isArray` does not narrow a readonly tuple out of a union.
+// `Array.isArray` does not narrow a readonly array out of a union.
 function isArray(value: unknown): value is readonly Batcher[] {
   return Array.isArray(value);
 }

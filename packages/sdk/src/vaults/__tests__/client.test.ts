@@ -725,6 +725,16 @@ describe("several batchers in one direction", () => {
     expect(relayer.encryptValues).not.toHaveBeenCalled();
   });
 
+  test("refuses an empty list", async ({ sdk, provider }) => {
+    mockChain(provider);
+    const empty = defineVault({
+      id: "empty",
+      chainId: CHAIN_ID,
+      batchers: { deposit: [], redeem: ALPHA.redeemBatcher },
+    });
+    await expect(nextBatcher(sdk, empty)).rejects.toThrow(/list is empty/);
+  });
+
   test("refuses when every batcher is closed", async ({ sdk, provider }) => {
     mockChain(provider, { batches: { [EARLY]: { createdAt: 0n }, [LATE]: { createdAt: 0n } } });
     await expect(nextBatcher(sdk)).rejects.toBeInstanceOf(ConfigurationError);

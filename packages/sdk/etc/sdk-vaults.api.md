@@ -60,7 +60,7 @@ export interface BatcherHistory {
 export type BatcherRef = Pick<BatchRef, "chainId" | "batcher">;
 
 // @public
-export type Batchers = Batcher | readonly [Batcher, ...Batcher[]];
+export type Batchers = Batcher | readonly Batcher[];
 
 // @public
 export interface BatchQueryConfig {
