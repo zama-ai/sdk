@@ -1,6 +1,6 @@
 ---
 name: model-check-unshield-recovery
-description: "Model-check, with TLA+ and TLC, that an interrupted two-phase unshield can always be found and resumed: WrappedToken.unshield/unshieldAll/resumeUnshield/getPendingUnshield and the zama:pending-unshield storage pointer. Use when a change touches those methods, pending-unshield.ts, submitTransaction, isInvalidUnwrapRequestRevert, or anything that reads or writes the pending-unshield pointer, or when asked whether an interrupted unshield can be lost."
+description: "Exhaustively check, by running the real WrappedToken code under every interleaving of SDK calls, wallet, RPC, storage and chain events, that an interrupted two-phase unshield can always be found and resumed: WrappedToken.unshield/unshieldAll/resumeUnshield/getPendingUnshield and the zama:pending-unshield storage pointer. Use when a change touches those methods, pending-unshield.ts, submitTransaction, isInvalidUnwrapRequestRevert, or anything that reads or writes the pending-unshield pointer, or when asked whether an interrupted unshield can be lost."
 ---
 
 # Model-check unshield recovery
@@ -9,102 +9,157 @@ An unshield is two transactions. `unwrap` burns the confidential amount and open
 
 **Harm when it breaks:** the user's confidential balance is burned, the ERC-20 never arrives, and the app shows no resume prompt. The request stays open on-chain, so only someone who digs out the unwrap transaction can finalize it.
 
+The check is a vitest suite that runs the real `WrappedToken` code. Fakes replace the wallet, the RPC, the storage, the relayer and the chain. The explorer tries every order in which concurrent SDK calls and the chain can make progress, and every way each awaited call can end. There is no separate model to keep in sync with the code.
+
 ## The rules
 
-All three are in `model/UnshieldRecovery.tla`.
-
-| Rule                            | In plain words                                                                                                                                                                                                                                                                   |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PendingUnshieldIsDiscoverable` | When an unwrap request is open on-chain and no SDK call is still working on it, `getPendingUnshield()` returns the hash of an open request.                                                                                                                                      |
-| `PointerKeptAfterSave`          | After `savePendingUnshield` writes the pointer for a request, the pointer stays until that request is finalized on-chain.                                                                                                                                                        |
-| `NoFalseAlreadyFinalized`       | The SDK reports "already finalized" (it throws `UnshieldAlreadyFinalizedError`, or `getPendingUnshield()` clears the pointer and returns `null`) only for a request that is finalized on-chain. If this breaks, the app tells the user that the funds arrived when they did not. |
+| Rule                            | In plain words                                                                                                                                                                                                                                                                                                  |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PendingUnshieldIsDiscoverable` | When an unwrap request is open on-chain and no SDK call is still working on it, the pointer names an open request, so `getPendingUnshield()` returns its hash. Checked in every state.                                                                                                                          |
+| `PointerKeptAfterSave`          | After `savePendingUnshield` writes the pointer for a request, the pointer stays until that request is finalized on-chain. Checked in every state.                                                                                                                                                               |
+| `NoFalseAlreadyFinalized`       | The SDK reports "already finalized" (it throws `UnshieldAlreadyFinalizedError`, or `getPendingUnshield()` clears the pointer and returns `null`) only for a request that is finalized on-chain. If this breaks, the app tells the user that the funds arrived when they did not. Checked when an SDK call ends. |
 
 ## When to use this skill
 
-Run the check when a change touches a function in the coverage record at the end of this file. Also run it when a change adds code that reads or writes the `zama:pending-unshield:` key, or changes how a finalize error is classified. Run it too when someone asks whether an interrupted unshield can be lost.
+Run the check when a change touches a function in the coverage list at the end of this file. Also run it when a change adds code that reads or writes the `zama:pending-unshield:` key, or changes how a finalize error is classified. Run it too when someone asks whether an interrupted unshield can be lost.
 
 ## Run
 
-From the repo root:
+From the repo root, after `pnpm install`:
 
 ```sh
-node claude-setup/skills/model-check-unshield-recovery/scripts/check.mjs
+pnpm vitest run --config claude-setup/skills/model-check-unshield-recovery/explorer/vitest.config.mts
 ```
 
-- Needs Java 11 or later. On macOS, run `brew install openjdk`, or set `JAVA=/path/to/java`.
-- The first run downloads TLC 1.7.4 (`tla2tools.jar`, checked against its sha256) to `~/.cache/zama-sdk-model-check/`. Set `TLA2TOOLS=/path/to/tla2tools.jar` to use your own copy.
-- The replay step needs `pnpm install`.
-- A full run takes about 10 seconds.
-- `--traces` also prints the known counterexamples. `--no-replay` skips the vitest replay.
+A run takes about 15 seconds. It needs no network. The suite has its own vitest config, so the root `pnpm test` does not run it.
 
-The command does three things and exits 0 only when all three match what is recorded:
+## How it works
 
-1. **Drift.** It compares the text of each covered function, with comments removed, against its text at the sync commit. A changed function means that the model may no longer describe the code.
-2. **Model.** It runs TLC once for each row of `RUNS` in `scripts/check.mjs`. Each row is one config and one rule. It compares the result, and for a known finding the shortest counterexample, with the row.
-3. **Replay.** It runs `replay/findings.test.ts`, which drives the real `WrappedToken` through each known finding against an in-memory wrapper. While the finding exists in the code, the test passes.
+The files are in `explorer/`:
+
+- `sdk-call.ts` builds a real `ZamaSDK` and `WrappedToken` with fake signer, provider, storage and relayer, and runs one SDK call against a script of answers.
+- `world.ts` is the fake world: one storage and one wrapper on one chain. For each awaited call it lists every answer that the real dependency could give, the state in which each answer is possible, and what the answer changes. It also lists how the chain can mine each pending transaction.
+- `explore.ts` is the scheduler: a breadth-first search over global states, the three rules, and the shortest paths.
+- `unshield-recovery.test.ts` has the scenarios, the expected result for each rule, and the report.
+
+An **actor** is one SDK call on the shared wrapper and storage: `unshield#1`, `unshieldAll#2`, or the `page load`. A **yield point** is an awaited call that touches shared state or that the flow depends on: `storage.get`, `storage.set`, `storage.delete`, `signer.writeContract`, `provider.waitForTransactionReceipt`, `provider.readContract(unwrapRequester)` and `relayer.decryptPublicValuesWithSignatures`. JavaScript runs nothing else between two awaits, so actors can interleave only at yield points.
+
+One **step** is one of these:
+
+- A pending call of one actor returns, with any value that the world allows.
+- A pending call throws.
+- The tab closes: the SDK call never resumes, but a transaction it already sent can still be mined.
+- The page load starts.
+- The chain mines one pending transaction.
+
+Mining is a separate step, so "sent but not yet mined" and "mined after the caller gave up" are both reachable.
+
+An actor's next call depends only on the answers it has had. So the explorer first runs the real code once for each answer sequence that an actor can get (the "real SDK runs" in the report). This gives one tree for each actor. Two tree nodes with equal subtrees count as one state. For example, `unwrapRequester` can return the requester or throw, and in both cases `#isUnwrapRequestConsumed` returns `false` and the code goes on the same way. The search then combines the trees with the world. It skips states it has seen, so the first path that breaks a rule is a shortest one.
 
 ## Read the result
 
-- `ok`: the rule holds in every reachable state of that config.
-- `FINDING`: a known finding still breaks the rule, along the recorded path. This is not a regression.
-- `UNEXPECTED`: a rule that held now breaks, a known finding now holds, or a known finding's path changed. The path is printed one step per line, as `Action(process)` followed by the variables that changed.
-- `ERROR`: TLC failed, or found a deadlock. This is a modeling error, not a finding.
-- `changed: <file> <function>`: covered code changed since the sync commit. Until you mirror the change in the model, a pass describes the old code.
+Each scenario prints one header line with the number of states, steps and real SDK runs. Then it prints one line for each rule:
 
-Read every TLC result with the `/statechart` skill from pstack (in Claude Code: `/pstack:statechart`). Give it `model/UnshieldRecovery.tla` and a config from `model/`. For each broken rule it tells the shortest path in plain words. When the rules hold, it draws how the unshield moves between states.
+- `ok`: the rule holds in every reachable state of that scenario.
+- `FINDING`: a known finding still breaks the rule, along the recorded shortest path. This is not a regression.
+- `UNEXPECTED`: a rule that held now breaks, a known finding now holds, or a known finding's shortest path changed. The test fails and prints the path.
+- `HarnessError`: the harness failed, not the SDK. For example, the code made a call that the fakes do not know, awaited something that the harness does not control, left a call pending without awaiting it, or behaved differently when replayed. Fix the harness before you trust any result.
 
-**A real bug, or a modeling error?** Replay the path against the real code, one step for each action. Copy the pattern in `replay/findings.test.ts`: `fakeWrapper` opens a request on `unwrap`, deletes it on `finalizeUnwrap`, and answers `unwrapRequester`. If a step cannot happen in the code, the model is wrong, so fix the model. If every step happens, it is a bug. Report it with the path in the code's words. Do not weaken the rule, and do not change product code unless the user asks you to.
+A path is one step per line:
 
-## How the model maps to the code
+```text
+ 1. unshield#1: signer.writeContract(unwrap) -> sends U1
+ 2. unshield#1: provider.waitForTransactionReceipt(U1) throws (RPC timeout); unshield#1 ends: throws TransactionRevertedError
+ 3. chain: mines U1 -> req1 open
+```
 
-Each process is one SDK call on one wrapper with one storage. Each action is one `await` that reads or writes the storage or the chain. Awaits that touch neither, such as encryption or a chain-id check, fold into the next action. JavaScript runs nothing else between two awaits, so other calls (another tab, a second click) can interleave only at actions. The comment above each action names its code.
+- `U1`, `U2` are the unwrap transactions that actor 1 and actor 2 send. `req1`, `req2` are the requests that they open.
+- `F1`, `F2`, `F3` are the `finalizeUnwrap` transactions that `unshield#1`, `unshieldAll#2` and the page load send.
+- `pointer(U1)` is the stored pending-unshield value for `U1`. `empty` means no value.
+- `-> value` means the call returned that value. `ok` means it returned nothing.
+- `; <actor> ends: ...` shows how the SDK call ended. `; getPendingUnshield() returns U1, ...` is a note from the page load.
 
-| Action                                                                               | Code                                                                                                                                                                                                        |
-| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SubmitUnwrap`, `UnwrapReceipt`                                                      | `#unwrap` / `unwrapAll` → `submitTransaction`: `signer.writeContract`, then `provider.waitForTransactionReceipt` and `#extractUnwrapRequestId`                                                              |
-| `MineUnwrap`, `FinalizeMined`, `FinalizeMinedReverted`                               | The chain: `_unwrap` opens the request; `finalizeUnwrap` deletes it and pays out, or reverts                                                                                                                |
-| `Save`                                                                               | `#finalizeUnshield` → `savePendingUnshield` (one `storage.set` on the key for this wrapper)                                                                                                                 |
-| `Decrypt`, `SubmitFinalize`, `FinalizeReceiptOk`, `FinalizeReceiptFails`             | `#finalizeUnwrap`: `decryptPublicValues`, then `submitTransaction` for `finalizeUnwrap`                                                                                                                     |
-| `FinalizeRejectedGone`, `FinalizeRejected`, `ConsumedYes`, `ConsumedNo`, `HealClear` | The `catch` in `#finalizeUnshield`: `isInvalidUnwrapRequestRevert`, or a `TransactionRevertedError` plus `#isUnwrapRequestConsumed`, then `#clearStoredPendingUnshield` and `UnshieldAlreadyFinalizedError` |
-| `ClearDone`                                                                          | `#finalizeUnshield` success path: `#clearStoredPendingUnshield("unshield")`                                                                                                                                 |
-| `LoadPointer`, `PointerConsumed`, `PointerReported`, `ClearStalePointer`             | `getPendingUnshield`: `loadPendingUnshieldRequest`, `#isPendingUnshieldConsumed`, `#clearStoredPendingUnshield`                                                                                             |
-| `ResumeKnownHash`, `ResumeReceipt`, `ResumeSeesFinalized`, `ResumeProceeds`          | `resumeUnshield`: receipt, `#extractUnwrapRequestId`, `#isUnwrapRequestConsumed`, then the clear-and-throw path or `#finalizeUnshield`                                                                      |
-| `Stop`                                                                               | The tab closes, or an awaited call throws and the error leaves the SDK call with no storage write                                                                                                           |
+**A real bug, or a harness error?** The SDK side of each step comes from the real code, so it can be wrong only if the scenario is wrong. The answers come from `world.ts`, and a harness error is a fake that behaves unlike the real wrapper, wallet, RPC, storage or relayer. For each step of the path, ask: could the real dependency give this answer in this state? Compare with `ERC7984ERC20WrapperUpgradeable` (under `contracts/dependencies/`), the `GenericSigner`, `GenericProvider` and `GenericStorage` contracts, and `submitTransaction`. A `throws Error (...)` or `throws TypeError (...)` at the end of an actor means that an error from a fake left the SDK call unchanged. Check that the real dependency throws like that. If every answer is realistic, it is a bug. Report it with the path in the code's words. Do not weaken a rule or a fake to make the check pass, and do not change product code unless the user asks you to.
 
-## Known findings at the sync commit
+## Known findings
 
-Run with `--traces` to see each path as TLC prints it. Both findings replay against the real code in `replay/findings.test.ts`.
+Both findings break their rules on the current code, and the suite expects them.
 
-1. **Unsaved window** (`OneUnshield` / `PendingUnshieldIsDiscoverable`). `unshield()` → `#unwrap` → `signer.writeContract` returns the unwrap hash → `provider.waitForTransactionReceipt` throws (an RPC timeout, or a wallet hash that the RPC never finds), or the tab closes → `unshield()` throws `TransactionRevertedError` before `#finalizeUnshield` reaches `savePendingUnshield` → the unwrap transaction is mined anyway. The request is open, the storage is empty, and `getPendingUnshield()` returns `null`. The guide says that the hash is saved "when phase 1 is submitted", but the code saves it only after the receipt.
-2. **One pointer per wrapper** (`TwoUnshields` / `PointerKeptAfterSave` and `PendingUnshieldIsDiscoverable`). The key holds one request for each wrapper, with no account and no request id in it, and every clear deletes the key whatever it holds. Path: `unshield(A)` saves A. The finalize of A fails (for example, `decryptPublicValues` throws), so pointer A stays, which is correct. Then `unshield(B)` on the same wrapper saves B over A, finalizes, and clears the key. Request A is still open, and `getPendingUnshield()` returns `null`. Two tabs or two accounts in one browser reach the same state. So does a `getPendingUnshield()` or `resumeUnshield()` that clears a stale pointer after another call saved a new one.
+1. **SDK-415, unsaved window** (`one unshield` and `two unshields` / `PendingUnshieldIsDiscoverable`). `unshield()` → `#unwrap` → `signer.writeContract` returns the unwrap hash → `provider.waitForTransactionReceipt` throws (an RPC timeout, or a wallet hash that the RPC never finds) → `unshield()` throws `TransactionRevertedError` before `#finalizeUnshield` reaches `savePendingUnshield` → the chain mines the unwrap anyway. The request is open, the storage is empty, and `getPendingUnshield()` returns `null`. A tab that closes during the receipt wait has the same effect. The guide says that the hash is saved "when phase 1 is submitted", but the code saves it only after the receipt.
+
+   ```text
+    1. unshield#1: signer.writeContract(unwrap) -> sends U1
+    2. unshield#1: provider.waitForTransactionReceipt(U1) throws (RPC timeout); unshield#1 ends: throws TransactionRevertedError
+    3. chain: mines U1 -> req1 open
+   ```
+
+2. **SDK-416, one pointer per wrapper** (`two unshields` / `PointerKeptAfterSave`, and `two unshields [phase 1 always saves]` / both rules). The key holds one request for each wrapper, with no account and no request id in it, and every clear deletes the key whatever it holds. A second save overwrites the first pointer while the first request is still open:
+
+   ```text
+    1. unshield#1: signer.writeContract(unwrap) -> sends U1
+    2. unshieldAll#2: signer.writeContract(unwrap) -> sends U2
+    3. chain: mines U1 -> req1 open
+    4. unshield#1: provider.waitForTransactionReceipt(U1) -> success
+    5. unshield#1: storage.set(pending-unshield, pointer(U1)) ok
+    6. chain: mines U2 -> req2 open
+    7. unshieldAll#2: provider.waitForTransactionReceipt(U2) -> success
+    8. unshieldAll#2: storage.set(pending-unshield, pointer(U2)) ok
+   ```
+
+   With phase 1 always saving, the first unshield then stops (for example, the public decryption fails), the second one finalizes and clears the key, and req1 stays open with no pointer:
+
+   ```text
+    1-5. as above
+    6. unshield#1: relayer.decryptPublicValuesWithSignatures(req1) throws (relayer unavailable); unshield#1 ends: throws DecryptionFailedError
+    7. chain: mines U2 -> req2 open
+    8. unshieldAll#2: provider.waitForTransactionReceipt(U2) -> success
+    9. unshieldAll#2: storage.set(pending-unshield, pointer(U2)) ok
+   10. unshieldAll#2: relayer.decryptPublicValuesWithSignatures(req2) ok
+   11. unshieldAll#2: signer.writeContract(finalizeUnwrap req2) -> sends F2
+   12. chain: mines F2 -> req2 finalized, ERC-20 paid out
+   ```
+
+   Two tabs, a second click, or two accounts in one browser reach the same state. So does a `getPendingUnshield()` or `resumeUnshield()` that clears a stale pointer after another call saved a new one.
 
 ## Bounds and assumptions
 
-- One wrapper and one storage. `OneUnshield.cfg` has one `unshield()` call and one page load. The page load calls `getPendingUnshield()` and then `resumeUnshield()`, or calls `resumeUnshield()` with a hash that the app kept. `TwoUnshields.cfg` has two `unshield()` calls and one page load. Each call runs once. The configs have about 550 and about 40,000 distinct states.
-- Rows marked `[phase 1 always saves]` set `StopBeforeSave = FALSE`: phase 1 always reaches `savePendingUnshield`. They keep finding 2 apart from finding 1, and they check the one-unshield promise after phase 1.
-- `storage.set` and `storage.delete` succeed, and each is atomic. `swallow` hides a failed write, and the model does not cover that case.
-- The wrapper behaves like `ERC7984ERC20WrapperUpgradeable`: `unwrap` opens a request, `finalizeUnwrap` deletes it or reverts with `InvalidUnwrapRequest`, `unwrapRequester` returns zero once the request is gone, and a finalized request never reopens. The `unwrapRequestId` comes from this wrapper's own `UnwrapRequested` event.
-- An unwrap that reverts or is dropped opens no request. The model treats it like a transaction that is never mined.
-- Not covered: the low-level `unwrap` / `unwrapAll` / `finalizeUnwrap` used without `unshield()` (the guide says those callers own the persistence), legacy hash-only pointers, React hooks and query invalidation, amounts and balances, the relayer's decryption, and liveness (that a stranded request is finalized in the end). A pass covers these bounds only.
+- **Scenarios.** One wrapper, one storage, one account. `one unshield` has `unshield(50n)` and one page load. `two unshields` has `unshield(50n)`, `unshieldAll()` and one page load. Each actor runs once. The page load starts at any step. It calls `getPendingUnshield()` and then `resumeUnshield(hash)` when that returns a hash, or it calls `resumeUnshield()` with any sent unwrap hash that the app kept. The two scenarios have about 2,000 and about 1.1 million distinct states.
+- **Phase 1 always saves.** The `[phase 1 always saves]` variants forbid a throw or a tab close in an unshield call from the moment its unwrap is sent until `savePendingUnshield` returns. They keep finding 2 apart from finding 1, and they show that one unshield alone is safe once phase 1 always saves.
+- **Answers** (`world.ts`):
+  - `writeContract(unwrap)` sends the transaction, or the user rejects.
+  - `writeContract(finalizeUnwrap)` on an open request sends, or the user rejects. On a request that is gone, the wallet's gas estimate throws `InvalidUnwrapRequest`, or a wallet that skips the estimate sends a transaction that reverts, or the user rejects.
+  - A receipt returns only after the transaction is mined. A receipt wait can always throw.
+  - A mined unwrap always opens its request. An unwrap that reverts or is dropped opens nothing, which is the same as a transaction that is never mined.
+  - A mined finalize on an open request finalizes it and pays out, or reverts for another reason (bad proof, failed ERC-20 transfer) and leaves the request open. On a request that is gone, it reverts with `InvalidUnwrapRequest`.
+  - `unwrapRequester` returns the requester while the request is open and zero once it is gone. A finalized request never reopens.
+  - Storage reads and writes can throw. Each storage write is atomic.
+  - Every yield point can also end with the tab closing.
+- **Not yield points.** `provider.getChainId`, encryption, and the `confidentialBalanceOf` read in `unwrapAll` return at once. They touch no shared state. A throw there has the same effect as a throw before the unwrap is sent, or as a tab close at the next yield point.
+- **Not covered.**
+  - The low-level `unwrap` / `unwrapAll` / `finalizeUnwrap` used without `unshield()`. The guide says that those callers own the persistence.
+  - Legacy hash-only pointers, and the receipt path in `#isPendingUnshieldConsumed` that they use.
+  - A wallet that broadcasts the transaction and then throws, and transaction replacement (speed-up or cancel).
+  - More than one wrapper or account. Unshield callbacks (none are passed).
+  - React hooks and query invalidation, amounts and balances, and the relayer's decryption itself.
+  - Liveness: that a stranded request is finalized in the end.
+
+  A pass covers these bounds only.
 
 ## When a change to covered code is intended
 
-1. For each `changed:` line, read `git diff <sync-commit> -- <file>`.
-2. Mirror the change in the model action whose comment names that code. An `await` that reads or writes the storage or the chain stays one action. A new storage read or write, a new chain read or transaction, or a new `catch` branch is a new action. Write the update from the code, not from what makes the check pass.
-3. Run the check again. If a rule breaks after a faithful update, it is a finding: replay it and report it. Change a rule only when the promise changed on purpose, and cite the evidence: the doc comment, the unshield guide, the tests, or the changelog.
-4. If a fix removes a finding, set its rows in `RUNS` to `expect: "holds"` and remove their `steps`. Turn its replay test into a test of the fixed behavior, or delete it. If a known finding's path changes for a correct reason, update `steps`.
-5. Show that the check can still fail. Break the new code (remove a check, or move a save or a clear), mirror the break in the model, and confirm that the check reports `UNEXPECTED`. Then revert both.
-6. Only after the model describes the code, set `sync-commit` below to the commit that you checked (`git rev-parse HEAD`). Add each new function that reads or writes the pointer to the list.
-7. Edit the files under `claude-setup/skills/model-check-unshield-recovery/`, which git tracks. Then copy them to `.claude/skills/model-check-unshield-recovery/` with `cp -R`, or run `pnpm setup:claude`.
+1. Run the suite. The real code runs, so there is nothing to mirror by hand.
+2. A `HarnessError` means that the change added a call that the fakes do not handle. Examples are a new chain read, a new storage key, or a provider method that is not faked. Add it to the `Call` type and the fakes in `sdk-call.ts`, and give it realistic answers in `options()` in `world.ts`. If it touches shared state, make it a yield point. Write the fake from the real dependency's behavior, not from what makes the check pass.
+3. If a rule breaks `UNEXPECTED`, read the path step by step (see "A real bug, or a harness error?"). Change a rule only when the promise changed on purpose, and cite the evidence: the doc comment, the unshield guide, the tests, or the changelog.
+4. If a fix removes a finding, its rows report `UNEXPECTED ... holds`. Set those rules to `"holds"` in `CASES` in `unshield-recovery.test.ts`, and delete path constants that nothing uses. If a known finding's shortest path changes for a correct reason (for example, a new yield point), confirm that it is the same bug, then update the recorded path.
+5. Show that the check can still fail. Break the new code on purpose, for example in `#finalizeUnshield` make every `TransactionRevertedError` count as finalized elsewhere. Confirm that the suite reports `UNEXPECTED` for `NoFalseAlreadyFinalized` with a path that saves, has the finalize rejected, then clears the pointer and throws `UnshieldAlreadyFinalizedError` while the request is still open. Then revert, and confirm that `git diff packages/` is empty.
+6. Edit the files under `claude-setup/skills/model-check-unshield-recovery/`, which git tracks. Then copy them to `.claude/skills/model-check-unshield-recovery/` with `cp -R`, or run `pnpm setup:claude`.
 
-## Coverage record
+## Coverage
 
-The first line is the commit at which the model was last confirmed to describe this code. Each other line is a file and the functions in it that the check covers. `scripts/check.mjs` reads this block.
+The explorer runs these functions. Run it when a change touches any of them.
 
-```coverage
-sync-commit 5c7db5d58d634c2a32bc3a0d0361dde943ef0477
-packages/sdk/src/token/wrapped-token.ts WrappedToken.unshield WrappedToken.unshieldAll WrappedToken.resumeUnshield WrappedToken.getPendingUnshield WrappedToken.#unwrap WrappedToken.unwrapAll WrappedToken.#finalizeUnwrap WrappedToken.#extractUnwrapRequestId WrappedToken.#isUnwrapRequestConsumed WrappedToken.#isPendingUnshieldConsumed WrappedToken.#clearStoredPendingUnshield WrappedToken.#finalizeUnshield
-packages/sdk/src/token/pending-unshield.ts storageKey savePendingUnshield loadPendingUnshieldRequest clearPendingUnshield
-packages/sdk/src/utils/submit-transaction.ts submitTransaction
-packages/sdk/src/errors/unshield.ts isInvalidUnwrapRequestRevert
-```
+- `packages/sdk/src/token/wrapped-token.ts`: `WrappedToken.unshield`, `unshieldAll`, `resumeUnshield`, `getPendingUnshield`, `#unwrap`, `unwrapAll`, `#finalizeUnshield`, `#finalizeUnwrap`, `#extractUnwrapRequestId`, `#isUnwrapRequestConsumed`, `#isPendingUnshieldConsumed`, `#clearStoredPendingUnshield`
+- `packages/sdk/src/token/pending-unshield.ts`: `savePendingUnshield`, `loadPendingUnshieldRequest`, `clearPendingUnshield`
+- `packages/sdk/src/utils/submit-transaction.ts`: `submitTransaction`
+- `packages/sdk/src/errors/unshield.ts`: `isInvalidUnwrapRequestRevert`
+- On the way: `Decryption.decryptPublicValues`, `requireAlignedWalletAccount`, `swallow`, `findUnwrapRequested`
