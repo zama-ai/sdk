@@ -7,6 +7,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
+if (typeof path.matchesGlob !== "function") {
+  process.stderr.write("post-edit hook needs Node >= 22.5 for path.matchesGlob\n");
+  process.exit(0);
+}
+
 const input = JSON.parse(readFileSync(0, "utf8"));
 const file = input.tool_input?.file_path;
 if (!file) {

@@ -11,13 +11,13 @@ const marker = path.join(tmpdir(), `claude-typecheck-${input.session_id}`);
 if (!existsSync(marker)) {
   process.exit(0);
 }
-const roots = new Set(readFileSync(marker, "utf8").split("\n").filter(Boolean));
-rmSync(marker);
-
-// Already blocked once this turn: let Claude stop instead of looping.
+// Already blocked once this turn: let Claude stop instead of looping, and keep the marker for the next turn.
 if (input.stop_hook_active) {
   process.exit(0);
 }
+
+const roots = new Set(readFileSync(marker, "utf8").split("\n").filter(Boolean));
+rmSync(marker);
 
 const errors = [];
 for (const root of roots) {
