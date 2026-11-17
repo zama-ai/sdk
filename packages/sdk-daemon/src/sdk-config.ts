@@ -63,7 +63,7 @@ function keyVerification(value: KeyVerification): FheKeyVerification {
       return {
         chain: {
           ...preset,
-          network: verifier.network ?? preset.network,
+          network: rpcUrl(verifier.network) ?? preset.network,
           keyVerification: { contract },
         },
       };
@@ -78,7 +78,7 @@ function chain(value: ChainConfig): HttpChain {
     ...presets[id],
     id,
     ...defined({
-      network: value.network,
+      network: rpcUrl(value.network),
       gatewayChainId: decodeOptional(value.gatewayChainId, (gatewayId) =>
         safeInteger(gatewayId, "Gateway chain ID"),
       ),
@@ -178,6 +178,12 @@ export function parseContextConfig(config: WireConfig | undefined): ContextConfi
   };
 }
 
+function rpcUrl(value: string | undefined): string | undefined {
+  if (value === "") {
+    throw new ConfigurationError("A chain network must be a non-empty RPC URL.");
+  }
+  return value;
+}
 function required<T>(value: T | undefined, name: string): T {
   if (value === undefined) {
     throw new ConfigurationError(`Custom chain requires ${name}.`);
