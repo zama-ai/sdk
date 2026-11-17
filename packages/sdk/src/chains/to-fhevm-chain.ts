@@ -19,6 +19,10 @@ export function toFhevmChain(chain: FheChain): FhevmChain {
         inputVerifier: { address: chain.inputVerifierContractAddress },
         kmsVerifier: { address: chain.kmsContractAddress },
         protocolConfig: undefined,
+        kmsGeneration:
+          chain.keyVerification && "contract" in chain.keyVerification
+            ? { address: chain.keyVerification.contract }
+            : undefined,
       },
       relayerUrl: chain.relayerUrl,
       gateway: {

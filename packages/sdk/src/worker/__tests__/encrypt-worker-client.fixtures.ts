@@ -6,6 +6,7 @@ import { WORKER_READY_MESSAGE } from "../protocol";
 import {
   DEFAULT_ENCRYPT_WORKER_TIMEOUTS,
   EncryptWorkerClient,
+  type EncryptWorkerClientConfig,
   type EncryptWorkerTimeouts,
 } from "../encrypt-worker-client";
 
@@ -223,6 +224,7 @@ export function makeClient(args?: {
   workerSource?: string | URL | (() => Worker);
   timeouts?: Partial<EncryptWorkerTimeouts>;
   blockedReason?: string;
+  keyVerification?: EncryptWorkerClientConfig["keyVerification"];
 }) {
   const api = makeApi();
   vi.mocked(comlink.wrap).mockReturnValue(api as never);
@@ -242,6 +244,7 @@ export function makeClient(args?: {
     strict: args?.strict ?? false,
     workerSource: args?.workerSource,
     blockedReason: args?.blockedReason,
+    keyVerification: args?.keyVerification,
   });
   return { client, api, inline, warn, prefetchKey };
 }
