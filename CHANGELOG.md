@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.9.0-beta.1](https://github.com/zama-ai/sdk/compare/v3.8.0...v3.9.0-beta.1) (2026-11-17)
+
+### Features
+
+- **daemon:** report daemon traffic in telemetry ([#947](https://github.com/zama-ai/sdk/issues/947)) ([d640d72]())
+
 ## [3.8.0](https://github.com/zama-ai/sdk/compare/v3.7.2...v3.8.0) (2026-11-16)
 
 ### ⚠ BREAKING CHANGES
