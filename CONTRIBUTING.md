@@ -133,7 +133,7 @@ pnpm test:run -- packages/sdk/src/token/__tests__/token.test.ts
 # With coverage
 pnpm test:coverage
 
-# E2E tests (requires build first; auto-starts hardhat + next dev)
+# E2E tests (requires build first; auto-starts anvil and the Next.js and Vite test apps)
 pnpm e2e:test
 ```
 

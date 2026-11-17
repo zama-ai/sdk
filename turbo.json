@@ -8,6 +8,7 @@
   ],
   "tasks": {
     "typecheck": { "outputs": [] },
+    "@zama-fhe/sdk-daemon#typecheck": { "dependsOn": ["@zama-fhe/sdk#build"], "outputs": [] },
     "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
     "api-report": { "dependsOn": ["build"], "outputs": ["etc/**"] },
     "api-report:check": { "dependsOn": ["build"], "outputs": [] },
