@@ -1,6 +1,7 @@
 import { expect, test, vi } from "vitest";
 import { DaemonRuntime, type ContextSdk } from "../src/runtime.js";
 import { createCoordinator } from "../src/coordination.js";
+import { CreateContextRequest } from "../src/generated/zama/sdk/v1beta1/daemon.js";
 
 function setup() {
   const dispose = vi.fn();
@@ -11,14 +12,7 @@ function setup() {
   );
   return { runtime, dispose };
 }
-const request = {
-  storage: undefined,
-  permitStorage: undefined,
-  transportKeyPairDerivationSecret: undefined,
-  config: undefined,
-  signerEnabled: false,
-  account: undefined,
-};
+const request = CreateContextRequest.fromPartial({});
 test("independent operations do not share a process-wide busy gate", async () => {
   const { runtime } = setup();
   const contextId = await runtime.createContext(request);

@@ -4,7 +4,11 @@ import { SDK_VERSION } from "./version";
 
 export type TelemetryLayer = "core" | "react";
 
-export type TelemetryRuntime = "web" | "node";
+/** Values are frozen once shipped, so that dashboards keyed on them survive renames. */
+export type TelemetryRuntime = "web" | "node" | "daemon";
+
+/** Values are frozen once shipped, so that dashboards keyed on them survive renames. */
+export type TelemetryClient = "go" | "rust" | "unknown";
 
 export type TelemetryMode = "header" | "query" | "off";
 
@@ -39,19 +43,21 @@ export type TelemetryOperation =
   | "offline-finalize-unwrap";
 
 /**
- * Shared by every relayer of a config. `layer` flips to `react` once
- * `ZamaProvider` marks the config, after the relayers exist.
+ * Shared by every relayer of a config; `layer` and `daemonClient` are set on it
+ * after the relayers exist.
  *
  * @internal
  */
 export interface TelemetryState {
   layer: TelemetryLayer;
+  /** Set only by the daemon; overrides the reported runtime with `daemon`. */
+  daemonClient?: TelemetryClient;
   readonly mode: Exclude<TelemetryMode, "off">;
 }
 
 export interface RelayerTelemetry {
   readonly state: TelemetryState;
-  readonly runtime: TelemetryRuntime;
+  readonly runtime: Exclude<TelemetryRuntime, "daemon">;
   /** The config's `mode`, unless `ZAMA_SDK_TELEMETRY` overrode it on Node. */
   readonly mode: Exclude<TelemetryMode, "off">;
 }
@@ -60,10 +66,13 @@ export function telemetryRequestOptions(
   telemetry: RelayerTelemetry,
   operation: TelemetryOperation | undefined,
 ): { headers?: Record<string, string>; query?: Record<string, string> } {
+  const { layer, daemonClient } = telemetry.state;
   const fields = Object.entries({
     version: SDK_VERSION,
-    layer: telemetry.state.layer,
-    runtime: telemetry.runtime,
+    layer,
+    ...(daemonClient === undefined
+      ? { runtime: telemetry.runtime }
+      : { runtime: "daemon" satisfies TelemetryRuntime, client: daemonClient }),
     ...(operation !== undefined && { operation }),
   });
   const prefixed = (prefix: string) =>

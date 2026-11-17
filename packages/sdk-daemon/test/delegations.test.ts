@@ -41,7 +41,7 @@ import { createCoordinator } from "../src/coordination.js";
 import { DaemonRuntime } from "../src/runtime.js";
 import type { EventStream } from "../src/remote-events.js";
 import { operationContext, RemoteSigner, type SignerStream } from "../src/remote-signer.js";
-import type * as rpc from "../src/generated/zama/sdk/v1beta1/daemon.js";
+import * as rpc from "../src/generated/zama/sdk/v1beta1/daemon.js";
 
 const MAX_UINT64 = 2n ** 64n - 1n;
 const ACL = anvil.aclContractAddress;
@@ -619,14 +619,12 @@ test("losing events then cancelling during a delegation receipt preserves the br
     created = fixture(signer, undefined, undefined, events.onEvent);
     return { sdk: created.sdk, storageIdentities: [] };
   }, createCoordinator());
-  const contextId = await runtime.createContext({
-    config: undefined,
-    signerEnabled: true,
-    account: { address: bytes(USER), chainId: BigInt(anvil.id) },
-    storage: undefined,
-    permitStorage: undefined,
-    transportKeyPairDerivationSecret: undefined,
-  });
+  const contextId = await runtime.createContext(
+    rpc.CreateContextRequest.fromPartial({
+      signerEnabled: true,
+      account: { address: bytes(USER), chainId: BigInt(anvil.id) },
+    }),
+  );
   const stream = new FakeStream<rpc.SignerServerMessage>();
   const signer = runtime.attachSigner(contextId, stream as unknown as SignerStream);
   const eventStream = new FakeStream<rpc.EventServerMessage>();

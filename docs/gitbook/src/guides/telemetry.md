@@ -11,16 +11,17 @@ Telemetry is on by default. One config option switches it to query parameters, f
 
 ## What is sent
 
-| Header                 | Example value           | Meaning                                                                                 |
-| ---------------------- | ----------------------- | --------------------------------------------------------------------------------------- |
-| `x-zama-sdk-version`   | `3.7.0`                 | The `@zama-fhe/sdk` version (`@zama-fhe/react-sdk` ships the same version).             |
-| `x-zama-sdk-layer`     | `core` / `react`        | `react` when the SDK is driven by `ZamaProvider`, `core` otherwise.                     |
-| `x-zama-sdk-runtime`   | `web` / `node`          | `web` for the `web()` transport, `node` for `node()`.                                   |
-| `x-zama-sdk-operation` | `confidential-transfer` | The public SDK method the request belongs to (see below). Omitted on the FHE key fetch. |
+| Header                 | Example value             | Meaning                                                                                                                                                    |
+| ---------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `x-zama-sdk-version`   | `3.7.0`                   | The `@zama-fhe/sdk` version (`@zama-fhe/react-sdk` ships the same version).                                                                                |
+| `x-zama-sdk-layer`     | `core` / `react`          | `react` when the SDK is driven by `ZamaProvider`, `core` otherwise.                                                                                        |
+| `x-zama-sdk-runtime`   | `web` / `node` / `daemon` | `web` for the `web()` transport, `node` for `node()`, `daemon` for requests made by the [SDK daemon](../native/operations/run-in-production.md#telemetry). |
+| `x-zama-sdk-client`    | `go` / `rust` / `unknown` | Native client language. Only sent when the runtime is `daemon`; `unknown` for a custom client that does not set it.                                        |
+| `x-zama-sdk-operation` | `confidential-transfer`   | The public SDK method the request belongs to (see below). Omitted on the FHE key fetch.                                                                    |
 
 The headers ride on the requests the SDK makes anyway: input-proof generation (`encrypt`), user and public decryption, and the FHE key fetch. They add no extra requests.
 
-With `telemetry: "query"` (see [below](#sending-query-parameters-instead-of-headers)) the same four fields travel as `zama_sdk_*` query parameters instead: `x-zama-sdk-version` becomes `zama_sdk_version`, and so on, with identical values. The relayer accepts either form.
+With `telemetry: "query"` (see [below](#sending-query-parameters-instead-of-headers)) the same fields (up to five) travel as `zama_sdk_*` query parameters instead: `x-zama-sdk-version` becomes `zama_sdk_version`, and so on, with identical values. The relayer accepts either form.
 
 **Never sent:** wallet addresses, encrypted values or handles, amounts, transaction hashes, or any user or session identifier. The relayer already sees the request itself; the headers only label it.
 
@@ -56,7 +57,7 @@ Each public method that reaches the relayer sends its own value. When a method m
 | `offline-unwrap`                      | `sdk.offline.prepare`, `Unwrap`                       |
 | `offline-finalize-unwrap`             | `sdk.offline.prepare`, `FinalizeUnwrap`               |
 
-Calls made directly on `sdk.relayer` carry the version, layer and runtime headers but no operation.
+Calls made directly on `sdk.relayer` carry the version, layer and runtime headers (plus the client on the daemon) but no operation.
 
 Shielding (`WrappedToken.shield`) never calls the relayer, so it produces no telemetry at all.
 
@@ -68,7 +69,7 @@ If browser traffic reaches the relayer through [your own backend proxy](./authen
 
 ## Sending query parameters instead of headers
 
-Some deployments forward the request URL unchanged but lose custom headers on the way: for example a proxy that rebuilds the request with its own header set, a strict `Access-Control-Allow-Headers` list on the relayer or proxy, or a gateway that drops headers it does not know. For those deployments, set `telemetry: "query"` in `createConfig`. The SDK then sends the same four fields as `zama_sdk_*` query parameters and no `x-zama-sdk-*` headers:
+Some deployments forward the request URL unchanged but lose custom headers on the way: for example a proxy that rebuilds the request with its own header set, a strict `Access-Control-Allow-Headers` list on the relayer or proxy, or a gateway that drops headers it does not know. For those deployments, set `telemetry: "query"` in `createConfig`. The SDK then sends the same fields as `zama_sdk_*` query parameters and no `x-zama-sdk-*` headers:
 
 ```ts
 const config = createConfig({

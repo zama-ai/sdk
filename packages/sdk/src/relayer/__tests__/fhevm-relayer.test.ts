@@ -89,6 +89,7 @@ import {
   type EncryptWorkerTimeouts,
 } from "../../worker/encrypt-worker-client";
 import { web } from "../../config/web";
+import { node } from "../../node/config";
 import { LoggerService } from "../../services/logger-service";
 import { recordAppliedRuntimeConfig, resetAppliedRuntimeConfig } from "../applied-runtime";
 import { ConfigurationError } from "../../errors";
@@ -137,6 +138,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 /** Records the runtime config the relayer reads; reset before every test. */
@@ -786,6 +788,25 @@ describe("FhevmRelayer usage telemetry", () => {
 
     expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
       options: { headers: { ...staticHeaders, "x-zama-sdk-layer": "react" } },
+    });
+  });
+
+  test("node() reports the daemon runtime and client set after creation", async () => {
+    vi.stubEnv("ZAMA_SDK_TELEMETRY", "");
+    const state: TelemetryState = { layer: "core", mode: "header" };
+    const relayer = node().createRelayer(hostedChain, new LoggerService(), state);
+    state.daemonClient = "go";
+    await relayer.fetchFheEncryptionKeyBytes();
+
+    expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
+      options: {
+        headers: {
+          "x-zama-sdk-version": SDK_VERSION,
+          "x-zama-sdk-layer": "core",
+          "x-zama-sdk-runtime": "daemon",
+          "x-zama-sdk-client": "go",
+        },
+      },
     });
   });
 

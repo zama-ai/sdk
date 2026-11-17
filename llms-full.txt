@@ -2538,7 +2538,9 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 > **Unreleased.** The changes on this page are on the prerelease (`beta`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
 
 
-_Nothing is staged for the next release yet._
+### Daemon
+
+**Daemon traffic is identifiable in telemetry.** Relayer requests made by the SDK daemon now report `runtime=daemon` instead of `node`, plus a `client` field (`go`, `rust`, or `unknown`) with the client language. Nothing else changes: no new identifiers are sent, and `ZAMA_SDK_TELEMETRY=off` on the daemon process still disables telemetry. See [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md) and [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md#telemetry).
 
 ## 3.x
 
@@ -4829,16 +4831,17 @@ Telemetry is on by default. One config option switches it to query parameters, f
 
 ## What is sent
 
-| Header                 | Example value           | Meaning                                                                                 |
-| ---------------------- | ----------------------- | --------------------------------------------------------------------------------------- |
-| `x-zama-sdk-version`   | `3.7.0`                 | The `@zama-fhe/sdk` version (`@zama-fhe/react-sdk` ships the same version).             |
-| `x-zama-sdk-layer`     | `core` / `react`        | `react` when the SDK is driven by `ZamaProvider`, `core` otherwise.                     |
-| `x-zama-sdk-runtime`   | `web` / `node`          | `web` for the `web()` transport, `node` for `node()`.                                   |
-| `x-zama-sdk-operation` | `confidential-transfer` | The public SDK method the request belongs to (see below). Omitted on the FHE key fetch. |
+| Header                 | Example value             | Meaning                                                                                                                                                    |
+| ---------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `x-zama-sdk-version`   | `3.7.0`                   | The `@zama-fhe/sdk` version (`@zama-fhe/react-sdk` ships the same version).                                                                                |
+| `x-zama-sdk-layer`     | `core` / `react`          | `react` when the SDK is driven by `ZamaProvider`, `core` otherwise.                                                                                        |
+| `x-zama-sdk-runtime`   | `web` / `node` / `daemon` | `web` for the `web()` transport, `node` for `node()`, `daemon` for requests made by the [SDK daemon](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md#telemetry). |
+| `x-zama-sdk-client`    | `go` / `rust` / `unknown` | Native client language. Only sent when the runtime is `daemon`; `unknown` for a custom client that does not set it.                                        |
+| `x-zama-sdk-operation` | `confidential-transfer`   | The public SDK method the request belongs to (see below). Omitted on the FHE key fetch.                                                                    |
 
 The headers ride on the requests the SDK makes anyway: input-proof generation (`encrypt`), user and public decryption, and the FHE key fetch. They add no extra requests.
 
-With `telemetry: "query"` (see [below](#sending-query-parameters-instead-of-headers)) the same four fields travel as `zama_sdk_*` query parameters instead: `x-zama-sdk-version` becomes `zama_sdk_version`, and so on, with identical values. The relayer accepts either form.
+With `telemetry: "query"` (see [below](#sending-query-parameters-instead-of-headers)) the same fields (up to five) travel as `zama_sdk_*` query parameters instead: `x-zama-sdk-version` becomes `zama_sdk_version`, and so on, with identical values. The relayer accepts either form.
 
 **Never sent:** wallet addresses, encrypted values or handles, amounts, transaction hashes, or any user or session identifier. The relayer already sees the request itself; the headers only label it.
 
@@ -4874,7 +4877,7 @@ Each public method that reaches the relayer sends its own value. When a method m
 | `offline-unwrap`                      | `sdk.offline.prepare`, `Unwrap`                       |
 | `offline-finalize-unwrap`             | `sdk.offline.prepare`, `FinalizeUnwrap`               |
 
-Calls made directly on `sdk.relayer` carry the version, layer and runtime headers but no operation.
+Calls made directly on `sdk.relayer` carry the version, layer and runtime headers (plus the client on the daemon) but no operation.
 
 Shielding (`WrappedToken.shield`) never calls the relayer, so it produces no telemetry at all.
 
@@ -4886,7 +4889,7 @@ If browser traffic reaches the relayer through [your own backend proxy](https://
 
 ## Sending query parameters instead of headers
 
-Some deployments forward the request URL unchanged but lose custom headers on the way: for example a proxy that rebuilds the request with its own header set, a strict `Access-Control-Allow-Headers` list on the relayer or proxy, or a gateway that drops headers it does not know. For those deployments, set `telemetry: "query"` in `createConfig`. The SDK then sends the same four fields as `zama_sdk_*` query parameters and no `x-zama-sdk-*` headers:
+Some deployments forward the request URL unchanged but lose custom headers on the way: for example a proxy that rebuilds the request with its own header set, a strict `Access-Control-Allow-Headers` list on the relayer or proxy, or a gateway that drops headers it does not know. For those deployments, set `telemetry: "query"` in `createConfig`. The SDK then sends the same fields as `zama_sdk_*` query parameters and no `x-zama-sdk-*` headers:
 
 ```ts
 const config = createConfig({
@@ -11264,6 +11267,18 @@ Treat the storage directory and every backup of it as sensitive. Each named stor
 To restore, copy the backup into a private volume for one stopped daemon, check that the daemon UID owns it, then start the matching client and daemon versions. Recreate SDK contexts with the original store names and derivation secret, and confirm a decryption succeeds without a new wallet signature before returning to service.
 
 For application-owned storage, use your backend's own backup and restore procedure while its writers are stopped.
+
+## Telemetry
+
+Relayer requests the daemon makes carry the SDK's [usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md) headers, with `x-zama-sdk-runtime: daemon` and `x-zama-sdk-client` set to the client language (`go`, `rust`, or `unknown` for a custom client). The values carry no identifiers. Because the client and daemon must run the same version ([compatibility](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/client-and-daemon-compatibility.md)), `x-zama-sdk-version` also gives the client version.
+
+Set `ZAMA_SDK_TELEMETRY` on the daemon process, not the application. `query` sends every field as a `zama_sdk_*` query parameter (`zama_sdk_runtime`, `zama_sdk_client`, ...) instead of a header, and `off` disables telemetry entirely:
+
+```bash
+ZAMA_SDK_TELEMETRY=off
+```
+
+Contexts on the cleartext transport send no telemetry.
 
 ## Verify the deployment
 
@@ -26074,6 +26089,7 @@ The daemon reads its process configuration from environment variables at startup
 | `ZAMA_SDK_DAEMON_MAX_CONTEXTS`               | Unset (no limit)     | Maximum open SDK contexts. Creating another context fails with `CONTEXT_LIMIT`.                                                                  |
 | `ZAMA_SDK_DAEMON_MAX_OPERATIONS_PER_CONTEXT` | Unset (no limit)     | Maximum in-flight operations per SDK context. Another operation fails with `OPERATION_LIMIT`.                                                    |
 | `ZAMA_SDK_DAEMON_SHUTDOWN_TIMEOUT_MS`        | `120000`             | Longest wait, in milliseconds, for running SDK work after `SIGTERM` or `SIGINT`. Past it, the daemon removes its socket and exits with status 1. |
+| `ZAMA_SDK_TELEMETRY`                         | Unset (`header`)     | Usage telemetry mode: `header`, `query`, or `off`. See [Telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md#telemetry).                                |
 
 Numeric limits must be positive integers. The daemon exits at startup when a path is relative or a limit is invalid.
 

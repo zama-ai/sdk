@@ -25,6 +25,45 @@ export const protobufPackage = "zama.sdk.v1beta1";
 
 export const protobufFileName = "zama/sdk/v1beta1/daemon.proto";
 
+export enum ClientLanguage {
+  CLIENT_LANGUAGE_UNSPECIFIED = 0,
+  CLIENT_LANGUAGE_GO = 1,
+  CLIENT_LANGUAGE_RUST = 2,
+  UNRECOGNIZED = -1,
+}
+
+export function clientLanguageFromJSON(object: any): ClientLanguage {
+  switch (object) {
+    case 0:
+    case "CLIENT_LANGUAGE_UNSPECIFIED":
+      return ClientLanguage.CLIENT_LANGUAGE_UNSPECIFIED;
+    case 1:
+    case "CLIENT_LANGUAGE_GO":
+      return ClientLanguage.CLIENT_LANGUAGE_GO;
+    case 2:
+    case "CLIENT_LANGUAGE_RUST":
+      return ClientLanguage.CLIENT_LANGUAGE_RUST;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return ClientLanguage.UNRECOGNIZED;
+  }
+}
+
+export function clientLanguageToJSON(object: ClientLanguage): string {
+  switch (object) {
+    case ClientLanguage.CLIENT_LANGUAGE_UNSPECIFIED:
+      return "CLIENT_LANGUAGE_UNSPECIFIED";
+    case ClientLanguage.CLIENT_LANGUAGE_GO:
+      return "CLIENT_LANGUAGE_GO";
+    case ClientLanguage.CLIENT_LANGUAGE_RUST:
+      return "CLIENT_LANGUAGE_RUST";
+    case ClientLanguage.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
 export enum StorageMethod {
   STORAGE_METHOD_UNSPECIFIED = 0,
   STORAGE_METHOD_GET = 1,
@@ -796,6 +835,8 @@ export interface CreateContextRequest {
   permitStorage:
     | StorageBinding
     | undefined;
+  /** Reported in telemetry; unspecified and unknown values are accepted. */
+  clientLanguage: ClientLanguage;
   /** Fields 100–119 are allocated to configuration and credential protection. */
   transportKeyPairDerivationSecret: DerivationSecret | undefined;
 }
@@ -1831,6 +1872,7 @@ function createBaseCreateContextRequest(): CreateContextRequest {
     account: undefined,
     storage: undefined,
     permitStorage: undefined,
+    clientLanguage: 0,
     transportKeyPairDerivationSecret: undefined,
   };
 }
@@ -1851,6 +1893,9 @@ export const CreateContextRequest: MessageFns<CreateContextRequest> = {
     }
     if (message.permitStorage !== undefined) {
       StorageBinding.encode(message.permitStorage, writer.uint32(42).fork()).join();
+    }
+    if (message.clientLanguage !== 0) {
+      writer.uint32(48).int32(message.clientLanguage);
     }
     if (message.transportKeyPairDerivationSecret !== undefined) {
       DerivationSecret.encode(message.transportKeyPairDerivationSecret, writer.uint32(802).fork()).join();
@@ -1911,6 +1956,14 @@ export const CreateContextRequest: MessageFns<CreateContextRequest> = {
             message.permitStorage = StorageBinding.decode(reader, reader.uint32());
             continue;
           }
+          case 6: {
+            if (tag !== 48) {
+              break;
+            }
+
+            message.clientLanguage = reader.int32() as any;
+            continue;
+          }
           case 100: {
             if (tag !== 802) {
               break;
@@ -1946,6 +1999,11 @@ export const CreateContextRequest: MessageFns<CreateContextRequest> = {
         : isSet(object.permit_storage)
         ? StorageBinding.fromJSON(object.permit_storage)
         : undefined,
+      clientLanguage: isSet(object.clientLanguage)
+        ? clientLanguageFromJSON(object.clientLanguage)
+        : isSet(object.client_language)
+        ? clientLanguageFromJSON(object.client_language)
+        : 0,
       transportKeyPairDerivationSecret: isSet(object.transportKeyPairDerivationSecret)
         ? DerivationSecret.fromJSON(object.transportKeyPairDerivationSecret)
         : isSet(object.transport_key_pair_derivation_secret)
@@ -1971,6 +2029,9 @@ export const CreateContextRequest: MessageFns<CreateContextRequest> = {
     if (message.permitStorage !== undefined) {
       obj.permitStorage = StorageBinding.toJSON(message.permitStorage);
     }
+    if (message.clientLanguage !== 0) {
+      obj.clientLanguage = clientLanguageToJSON(message.clientLanguage);
+    }
     if (message.transportKeyPairDerivationSecret !== undefined) {
       obj.transportKeyPairDerivationSecret = DerivationSecret.toJSON(message.transportKeyPairDerivationSecret);
     }
@@ -1995,6 +2056,7 @@ export const CreateContextRequest: MessageFns<CreateContextRequest> = {
     message.permitStorage = (object.permitStorage !== undefined && object.permitStorage !== null)
       ? StorageBinding.fromPartial(object.permitStorage)
       : undefined;
+    message.clientLanguage = object.clientLanguage ?? 0;
     message.transportKeyPairDerivationSecret =
       (object.transportKeyPairDerivationSecret !== undefined && object.transportKeyPairDerivationSecret !== null)
         ? DerivationSecret.fromPartial(object.transportKeyPairDerivationSecret)
