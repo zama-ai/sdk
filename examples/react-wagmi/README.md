@@ -107,7 +107,7 @@ All server-side variables are read by the proxy only and never reach the browser
 | `NEXT_PUBLIC_<NETWORK>_RPC_URL`      | No                 | RPC override per network: `SEPOLIA`, `BNB_TESTNET`, `HOODI`, `ZENITH`, `MAINNET`, `POLYGON`.                                                                          |
 | `NEXT_PUBLIC_<NETWORK>_VAULTS`       | For the Vaults tab | Vaults per network, same keys as the RPC overrides: `0xDeposit:0xRedeem` per vault, comma-separated. Several vaults add a vault picker; none shows a setup hint.      |
 
-Earlier versions of this app, and the per-chain apps it replaces, read `RELAYER_URL`, `RELAYER_API_KEY`, `NEXT_PUBLIC_AMOY_RPC_URL` and `NEXT_PUBLIC_BSC_TESTNET_RPC_URL`. Those names are no longer read: a stale `.env.local` silently falls back to the public testnet relayer, so rename them to the per-network names above.
+Earlier versions of this app, and the per-chain apps it replaces, read `RELAYER_URL`, `RELAYER_API_KEY`, `NEXT_PUBLIC_AMOY_RPC_URL` and `NEXT_PUBLIC_BSC_TESTNET_RPC_URL`. Those names are no longer read: a stale `.env.local` silently falls back to the public testnet relayer, so rename them to the per-network names above. `CSP_CONNECT_SRC` and `RELAYER_PROXY_ALLOWED_ORIGINS` are no longer read either: the server reads each relayer's key storage from its `keyurl`, and the proxy compares the request's `Origin` with the host the browser asked for.
 
 ## Relayer proxy
 

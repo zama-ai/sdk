@@ -131,13 +131,14 @@ function cachedKeyOrigins(upstream: Upstream): Promise<string[]> {
   const entry = {
     expires: Date.now() + KEY_ORIGINS_TTL_MS,
     // A failure is kept for a minute only, so page loads do not each wait for a dead relayer.
+    // Until then the CSP keeps the origins read last time.
     origins: fetchKeyOrigins(upstream).catch((error: unknown) => {
       entry.expires = Date.now() + KEY_ORIGINS_RETRY_MS;
       console.warn(
-        `Could not read ${upstream.url}/v2/keyurl, so the page CSP blocks its FHE key and encryption fails until it answers:`,
+        `Could not read ${upstream.url}/v2/keyurl, so the page CSP keeps the FHE key origins it had, if any:`,
         error,
       );
-      return [];
+      return cached?.origins ?? [];
     }),
   };
   keyOriginsCache.set(upstream.url, entry);

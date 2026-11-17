@@ -8,14 +8,21 @@ import type { BatchRef } from "@zama-fhe/sdk/vaults";
 import { formatUnits } from "viem";
 import { describeError } from "@/lib/errors";
 import type { BatchVault } from "@/lib/networks";
-import { batchKey, removeJoinedBatch, useJoinedBatches, type VaultDetails } from "@/lib/vaults";
+import {
+  batchKey,
+  removeJoinedBatch,
+  useJoinedBatches,
+  vaultLabel,
+  vaultPermitContracts,
+  type VaultDetails,
+} from "@/lib/vaults";
 
 // A keeper normally settles a dispatched batch. After this long, offer the user to settle it.
 const FINALIZE_AFTER_SECONDS = 15 * 60;
 
 interface InProgressBatchesProps {
   vaults: BatchVault[];
-  /** From `useVaultDetails`, by vault index: names each vault and its tokens. */
+  /** By vault index. */
   details: (VaultDetails | undefined)[];
   account: Address;
 }
@@ -48,23 +55,13 @@ export function InProgressBatches({ vaults, details, account }: InProgressBatche
         <p className="token-meta">Nothing in progress.</p>
       ) : (
         groups.map(({ vault, detail, direction, batcher, batches }) => {
-          // A deposit sends the asset, a withdrawal the shares. The amounts decrypt under the
-          // permit the vault's cards grant, which a join needs anyway.
           const token = direction === "deposit" ? detail?.asset.address : detail?.share.address;
-          const permitContracts = detail
-            ? [
-                detail.asset.address,
-                detail.share.address,
-                vault.depositBatcher,
-                vault.redeemBatcher,
-              ]
-            : [];
-          const name =
-            detail?.name ?? `${vault.depositBatcher.slice(0, 6)}…${vault.depositBatcher.slice(-4)}`;
+          // The amounts decrypt under the permit the vault's cards grant, which a join needs anyway.
+          const permitContracts = detail ? vaultPermitContracts(vault, detail) : [];
           return (
             <div key={batcher} className="card-status">
               <h3 className="section-label">
-                {name} · {direction === "deposit" ? "Deposits" : "Withdrawals"}
+                {vaultLabel(vault, detail)} · {direction === "deposit" ? "Deposits" : "Withdrawals"}
               </h3>
               <ul className="batch-list">
                 {batches.map((batch) => (
@@ -92,7 +89,7 @@ interface BatchRowProps {
   /** The confidential token the join sent, to show its amount; unknown while the vault loads. */
   token: Address | undefined;
   permitContracts: Address[];
-  /** Called once the batch is claimed or taken back: it is no longer needed. */
+  /** Called once the batch is claimed or taken back. */
   onDone: (batch: BatchRef) => void;
 }
 

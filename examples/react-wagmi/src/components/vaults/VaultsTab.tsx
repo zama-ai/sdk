@@ -8,7 +8,13 @@ import { VaultActionCard } from "@/components/vaults/VaultActionCard";
 import { describeError } from "@/lib/errors";
 import { useNetwork } from "@/lib/hooks";
 import type { BatchVault } from "@/lib/networks";
-import { singleVault, useVaultDetails, type VaultDetails } from "@/lib/vaults";
+import {
+  singleVault,
+  useVaultDetails,
+  vaultLabel,
+  vaultPermitContracts,
+  type VaultDetails,
+} from "@/lib/vaults";
 
 export function VaultsTab({ account }: { account: Address }) {
   const { vaults } = useNetwork();
@@ -26,8 +32,6 @@ export function VaultsTab({ account }: { account: Address }) {
   return <VaultsView vaults={vaults} account={account} />;
 }
 
-// The vault is set by its two batchers. The app reads everything else through the deposit
-// batcher: the asset, the share token, and the ERC-4626 vault.
 function VaultsView({ vaults, account }: { vaults: BatchVault[]; account: Address }) {
   const { details, errors } = useVaultDetails(vaults);
   const [selected, setSelected] = useState(0);
@@ -73,10 +77,7 @@ function VaultPicker({ vaults, details, value, onChange }: VaultPickerProps) {
   vaults.forEach((vault, index) => {
     const detail = details[index];
     const symbol = detail?.asset.symbol;
-    const item = {
-      index,
-      name: detail?.name ?? `${vault.depositBatcher.slice(0, 6)}…${vault.depositBatcher.slice(-4)}`,
-    };
+    const item = { index, name: vaultLabel(vault, detail) };
     if (symbol) {
       groups.set(symbol, [...(groups.get(symbol) ?? []), item]);
     } else {
@@ -116,7 +117,6 @@ function VaultPicker({ vaults, details, value, onChange }: VaultPickerProps) {
 
 interface VaultPanelProps {
   vault: BatchVault;
-  /** From `useVaultDetails`: the vault's asset and share tokens. */
   detail: VaultDetails | undefined;
   error: Error | undefined;
   account: Address;
@@ -139,17 +139,11 @@ function VaultPanel({ vault, detail, error, account }: VaultPanelProps) {
     );
   }
 
-  const assetToken = detail.asset.address;
-  const shareToken = detail.share.address;
-  // One permit covers both tokens and both batchers (for the amounts of the batches in progress).
-  const permitContracts = [assetToken, shareToken, vault.depositBatcher, vault.redeemBatcher];
-  const props = { vault: defined, account, permitContracts };
+  const props = { vault: defined, account, permitContracts: vaultPermitContracts(vault, detail) };
   return (
     <>
-      {/* A deposit sends assets and is paid out in shares; a withdrawal sends shares and is
-          paid out in assets. */}
-      <VaultActionCard {...props} kind="deposit" token={assetToken} />
-      <VaultActionCard {...props} kind="withdraw" token={shareToken} />
+      <VaultActionCard {...props} kind="deposit" token={detail.asset.address} />
+      <VaultActionCard {...props} kind="withdraw" token={detail.share.address} />
     </>
   );
 }

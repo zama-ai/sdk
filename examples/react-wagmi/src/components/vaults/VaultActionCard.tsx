@@ -43,7 +43,7 @@ interface VaultActionCardProps {
   token: Address;
 }
 
-/** One direction of the vault: its balance and its form. Its batches show under In progress. */
+/** One direction of the vault: its balance and its form. */
 export function VaultActionCard({
   kind,
   vault,
@@ -67,8 +67,8 @@ export function VaultActionCard({
     { enabled: hasPermit === true },
   );
 
-  // Store the batch the join landed in: the In progress card reads it, now and after a reload. A
-  // single vault has a single leg, so a join lands in a single batch.
+  // Stored so the batch can be read and claimed later, also after a reload. A single vault has a
+  // single leg, so a join lands in a single batch.
   const callbacks = {
     onSuccess: ({ batches: [joined] }: { batches: readonly BatchRef[] }) => {
       if (joined) {
