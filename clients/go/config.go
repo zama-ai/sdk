@@ -29,6 +29,48 @@ func (a APIKeyHeader) wire() *pb.ChainAuth {
 }
 func (APIKeyHeader) Format(state fmt.State, verb rune) { redactAuth(state) }
 
+type KeyVerification interface {
+	wire() (*pb.KeyVerification, error)
+}
+
+// KMSGenerationContract is for an Ethereum host chain.
+type KMSGenerationContract struct{ Address string }
+
+func (k KMSGenerationContract) wire() (*pb.KeyVerification, error) {
+	address, err := wireAddress("KMSGenerationContract.Address", k.Address)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.KeyVerification{Target: &pb.KeyVerification_Contract{Contract: address}}, nil
+}
+
+// KeyVerificationChain is for any other host chain: the Ethereum chain holding its KMSGeneration
+// contract. ID must name an SDK preset; nil fields inherit it.
+type KeyVerificationChain struct {
+	ID                           uint64
+	Network                      *string
+	KMSGenerationContractAddress *string
+}
+
+func (k KeyVerificationChain) wire() (*pb.KeyVerification, error) {
+	chain := &pb.KeyVerificationChain{Id: k.ID, Network: k.Network}
+	if k.KMSGenerationContractAddress != nil {
+		address, err := wireAddress("KeyVerificationChain.KMSGenerationContractAddress", *k.KMSGenerationContractAddress)
+		if err != nil {
+			return nil, err
+		}
+		chain.KmsGenerationContractAddress = address
+	}
+	return &pb.KeyVerification{Target: &pb.KeyVerification_Chain{Chain: chain}}, nil
+}
+
+func wireAddress(name, value string) ([]byte, error) {
+	if !common.IsHexAddress(value) {
+		return nil, fmt.Errorf("%s must be a 20-byte hex address", name)
+	}
+	return common.HexToAddress(value).Bytes(), nil
+}
+
 func redactAuth(state fmt.State) {
 	_, _ = state.Write([]byte("[REDACTED]"))
 }
@@ -45,6 +87,7 @@ type ChainConfig struct {
 	VerifyingContractAddressInputVerification *string
 	RegistryAddress                           *string
 	ExecutorAddress                           *string
+	KeyVerification                           KeyVerification
 	Auth                                      RelayerAuth
 	Provider                                  *ProviderOptions
 }
@@ -116,6 +159,13 @@ func (c ChainConfig) wire() (*pb.ChainConfig, error) {
 	if c.Provider != nil {
 		result.Provider = c.Provider.wire()
 	}
+	if c.KeyVerification != nil {
+		keyVerification, err := c.KeyVerification.wire()
+		if err != nil {
+			return nil, err
+		}
+		result.KeyVerification = keyVerification
+	}
 	for _, field := range []struct {
 		name      string
 		value     *string
@@ -137,10 +187,11 @@ func (c ChainConfig) wire() (*pb.ChainConfig, error) {
 			*field.target = []byte{}
 			continue
 		}
-		if !common.IsHexAddress(*field.value) {
-			return nil, fmt.Errorf("%s must be a 20-byte hex address", field.name)
+		address, err := wireAddress(field.name, *field.value)
+		if err != nil {
+			return nil, err
 		}
-		*field.target = common.HexToAddress(*field.value).Bytes()
+		*field.target = address
 	}
 	return result, nil
 }

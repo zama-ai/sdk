@@ -8184,6 +8184,7 @@ export interface FheChain<TId extends number = number> {
     readonly gatewayChainId: number;
     readonly id: TId;
     readonly inputVerifierContractAddress: Address;
+    readonly keyVerification?: FheKeyVerification | undefined;
     readonly kmsContractAddress: Address;
     readonly network: EIP1193Provider | string;
     readonly protocolConfigContractAddress?: Address | undefined;
@@ -8202,6 +8203,17 @@ export type FheChainAuth = {
     __type: "ApiKeyHeader";
     header?: string;
     value: string;
+};
+
+// @public
+export type FheKeyVerification = {
+    readonly contract: Address;
+} | {
+    readonly chain: FheChain & {
+        readonly keyVerification: {
+            readonly contract: Address;
+        };
+    };
 };
 
 // @public
@@ -13824,6 +13836,9 @@ export const mainnet: Readonly<{
     readonly registryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0";
     readonly vaultRouterAddress: "0x11c6Acfd368DDFAB97d15649eB8043C0197fac4C";
     readonly protocolConfigContractAddress: "0xD8236B57394f90726b26aB25D38CeAC776E1a7C4";
+    readonly keyVerification: {
+        readonly contract: "0xf102cC9A9D2174630c394f5b7B7D63104E348daa";
+    };
 }>;
 
 // @public
@@ -14100,6 +14115,25 @@ export const polygon: Readonly<{
     readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
     readonly registryAddress: "0xc8908569868758dAF814B5a8b96bBc44D1653d54";
     readonly protocolConfigContractAddress: "0x17f62Ab3A1Ea519703cD597410147A30Fa1a7f1e";
+    readonly keyVerification: {
+        readonly chain: Readonly<{
+            readonly id: 1;
+            readonly gatewayChainId: 261131;
+            readonly relayerUrl: "https://relayer.mainnet.zama.org";
+            readonly network: "https://ethereum-rpc.publicnode.com";
+            readonly aclContractAddress: "0xcA2E8f1F656CD25C01F05d0b243Ab1ecd4a8ffb6";
+            readonly kmsContractAddress: "0x77627828a55156b04Ac0DC0eb30467f1a552BB03";
+            readonly inputVerifierContractAddress: "0xCe0FC2e05CFff1B719EFF7169f7D80Af770c8EA2";
+            readonly verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24";
+            readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
+            readonly registryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0";
+            readonly vaultRouterAddress: "0x11c6Acfd368DDFAB97d15649eB8043C0197fac4C";
+            readonly protocolConfigContractAddress: "0xD8236B57394f90726b26aB25D38CeAC776E1a7C4";
+            readonly keyVerification: {
+                readonly contract: "0xf102cC9A9D2174630c394f5b7B7D63104E348daa";
+            };
+        }>;
+    };
 }>;
 
 // @public
@@ -14115,6 +14149,25 @@ export const polygonAmoy: Readonly<{
     readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
     readonly registryAddress: undefined;
     readonly protocolConfigContractAddress: "0x4CcF009Aba90D04f52b31fc7aDdE240578aFe10F";
+    readonly keyVerification: {
+        readonly chain: Readonly<{
+            readonly id: 11155111;
+            readonly gatewayChainId: 10901;
+            readonly relayerUrl: "https://relayer.testnet.zama.org";
+            readonly network: "https://ethereum-sepolia-rpc.publicnode.com";
+            readonly aclContractAddress: "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D";
+            readonly kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A";
+            readonly inputVerifierContractAddress: "0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0";
+            readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
+            readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
+            readonly registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
+            readonly vaultRouterAddress: "0xD5BBFF95F3401aeC3B111664F6b72EdAe73814e8";
+            readonly protocolConfigContractAddress: "0x51f9AFBc89Ea792e1a21a12AB802ab58D4dbee83";
+            readonly keyVerification: {
+                readonly contract: "0x77389113d7000EcBCfc2bDed57202f5f46109934";
+            };
+        }>;
+    };
 }>;
 
 // @public
@@ -15657,6 +15710,9 @@ export const sepolia: Readonly<{
     readonly registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
     readonly vaultRouterAddress: "0xD5BBFF95F3401aeC3B111664F6b72EdAe73814e8";
     readonly protocolConfigContractAddress: "0x51f9AFBc89Ea792e1a21a12AB802ab58D4dbee83";
+    readonly keyVerification: {
+        readonly contract: "0x77389113d7000EcBCfc2bDed57202f5f46109934";
+    };
 }>;
 
 // @public

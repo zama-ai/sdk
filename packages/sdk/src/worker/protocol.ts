@@ -38,7 +38,9 @@ export type WireInitPayload = {
   /** RPC URL for host-chain reads; absent when reads proxy through `rpcRequest`. */
   readonly rpcUrl: string | undefined;
   /** Carries `fheEncryptionKey`, prefetched on the main thread so the worker skips the download. */
-  readonly clientOptions: FhevmClientOptions;
+  readonly clientOptions: Omit<FhevmClientOptions, "keyVerification">;
+  /** Verifying chain for a non-Ethereum host chain, with its own RPC URL. */
+  readonly keyVerification: { readonly chain: FhevmChain; readonly rpcUrl: string } | undefined;
   readonly runtime: WireRuntimeConfig;
 };
 

@@ -1186,8 +1186,33 @@ export interface ChainConfig {
   auth:
     | ChainAuth
     | undefined;
+  /**
+   * Checks the relayer's FHE public key and CRS before encryption.
+   * When omitted, a chain with the ID and ACL of a preset inherits the preset's.
+   */
+  keyVerification:
+    | KeyVerification
+    | undefined;
   /** Fields 100–119 are allocated to configuration and credential protection. */
   provider: HttpProviderConfig | undefined;
+}
+
+export interface KeyVerification {
+  target:
+    | //
+    /** KMSGeneration address, for an Ethereum host chain. */
+    { $case: "contract"; contract: Buffer }
+    | //
+    /** For any other host chain: the Ethereum chain holding its KMSGeneration contract. */
+    { $case: "chain"; chain: KeyVerificationChain }
+    | undefined;
+}
+
+/** id must name an SDK preset. Omitted fields inherit it. */
+export interface KeyVerificationChain {
+  id: bigint;
+  network?: string | undefined;
+  kmsGenerationContractAddress?: Buffer | undefined;
 }
 
 export interface ChainAuth {
@@ -7542,6 +7567,7 @@ function createBaseChainConfig(): ChainConfig {
     registryAddress: undefined,
     executorAddress: undefined,
     auth: undefined,
+    keyVerification: undefined,
     provider: undefined,
   };
 }
@@ -7589,6 +7615,9 @@ export const ChainConfig: MessageFns<ChainConfig> = {
     }
     if (message.auth !== undefined) {
       ChainAuth.encode(message.auth, writer.uint32(98).fork()).join();
+    }
+    if (message.keyVerification !== undefined) {
+      KeyVerification.encode(message.keyVerification, writer.uint32(106).fork()).join();
     }
     if (message.provider !== undefined) {
       HttpProviderConfig.encode(message.provider, writer.uint32(802).fork()).join();
@@ -7705,6 +7734,14 @@ export const ChainConfig: MessageFns<ChainConfig> = {
             message.auth = ChainAuth.decode(reader, reader.uint32());
             continue;
           }
+          case 13: {
+            if (tag !== 106) {
+              break;
+            }
+
+            message.keyVerification = KeyVerification.decode(reader, reader.uint32());
+            continue;
+          }
           case 100: {
             if (tag !== 802) {
               break;
@@ -7775,6 +7812,11 @@ export const ChainConfig: MessageFns<ChainConfig> = {
         ? Buffer.from(bytesFromBase64(object.executor_address))
         : undefined,
       auth: isSet(object.auth) ? ChainAuth.fromJSON(object.auth) : undefined,
+      keyVerification: isSet(object.keyVerification)
+        ? KeyVerification.fromJSON(object.keyVerification)
+        : isSet(object.key_verification)
+        ? KeyVerification.fromJSON(object.key_verification)
+        : undefined,
       provider: isSet(object.provider) ? HttpProviderConfig.fromJSON(object.provider) : undefined,
     };
   },
@@ -7819,6 +7861,9 @@ export const ChainConfig: MessageFns<ChainConfig> = {
     if (message.auth !== undefined) {
       obj.auth = ChainAuth.toJSON(message.auth);
     }
+    if (message.keyVerification !== undefined) {
+      obj.keyVerification = KeyVerification.toJSON(message.keyVerification);
+    }
     if (message.provider !== undefined) {
       obj.provider = HttpProviderConfig.toJSON(message.provider);
     }
@@ -7844,9 +7889,221 @@ export const ChainConfig: MessageFns<ChainConfig> = {
     message.registryAddress = object.registryAddress ?? undefined;
     message.executorAddress = object.executorAddress ?? undefined;
     message.auth = (object.auth !== undefined && object.auth !== null) ? ChainAuth.fromPartial(object.auth) : undefined;
+    message.keyVerification = (object.keyVerification !== undefined && object.keyVerification !== null)
+      ? KeyVerification.fromPartial(object.keyVerification)
+      : undefined;
     message.provider = (object.provider !== undefined && object.provider !== null)
       ? HttpProviderConfig.fromPartial(object.provider)
       : undefined;
+    return message;
+  },
+};
+
+function createBaseKeyVerification(): KeyVerification {
+  return { target: undefined };
+}
+
+export const KeyVerification: MessageFns<KeyVerification> = {
+  encode(message: KeyVerification, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    switch (message.target?.$case) {
+      case "contract":
+        writer.uint32(10).bytes(message.target.contract);
+        break;
+      case "chain":
+        KeyVerificationChain.encode(message.target.chain, writer.uint32(18).fork()).join();
+        break;
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): KeyVerification {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseKeyVerification();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.target = { $case: "contract", contract: Buffer.from(reader.bytes()) };
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.target = { $case: "chain", chain: KeyVerificationChain.decode(reader, reader.uint32()) };
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): KeyVerification {
+    return {
+      target: isSet(object.contract)
+        ? { $case: "contract", contract: Buffer.from(bytesFromBase64(object.contract)) }
+        : isSet(object.chain)
+        ? { $case: "chain", chain: KeyVerificationChain.fromJSON(object.chain) }
+        : undefined,
+    };
+  },
+
+  toJSON(message: KeyVerification): unknown {
+    const obj: any = {};
+    if (message.target?.$case === "contract") {
+      obj.contract = base64FromBytes(message.target.contract);
+    } else if (message.target?.$case === "chain") {
+      obj.chain = KeyVerificationChain.toJSON(message.target.chain);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<KeyVerification>): KeyVerification {
+    return KeyVerification.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<KeyVerification>): KeyVerification {
+    const message = createBaseKeyVerification();
+    switch (object.target?.$case) {
+      case "contract": {
+        if (object.target?.contract !== undefined && object.target?.contract !== null) {
+          message.target = { $case: "contract", contract: object.target.contract };
+        }
+        break;
+      }
+      case "chain": {
+        if (object.target?.chain !== undefined && object.target?.chain !== null) {
+          message.target = { $case: "chain", chain: KeyVerificationChain.fromPartial(object.target.chain) };
+        }
+        break;
+      }
+    }
+    return message;
+  },
+};
+
+function createBaseKeyVerificationChain(): KeyVerificationChain {
+  return { id: 0n, network: undefined, kmsGenerationContractAddress: undefined };
+}
+
+export const KeyVerificationChain: MessageFns<KeyVerificationChain> = {
+  encode(message: KeyVerificationChain, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== 0n) {
+      if (BigInt.asUintN(64, message.id) !== message.id) {
+        throw new globalThis.Error("value provided for field message.id of type uint64 too large");
+      }
+      writer.uint32(8).uint64(message.id);
+    }
+    if (message.network !== undefined) {
+      writer.uint32(18).string(message.network);
+    }
+    if (message.kmsGenerationContractAddress !== undefined) {
+      writer.uint32(26).bytes(message.kmsGenerationContractAddress);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): KeyVerificationChain {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseKeyVerificationChain();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 8) {
+              break;
+            }
+
+            message.id = reader.uint64() as bigint;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.network = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.kmsGenerationContractAddress = Buffer.from(reader.bytes());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): KeyVerificationChain {
+    return {
+      id: isSet(object.id) ? BigInt(object.id) : 0n,
+      network: isSet(object.network) ? globalThis.String(object.network) : undefined,
+      kmsGenerationContractAddress: isSet(object.kmsGenerationContractAddress)
+        ? Buffer.from(bytesFromBase64(object.kmsGenerationContractAddress))
+        : isSet(object.kms_generation_contract_address)
+        ? Buffer.from(bytesFromBase64(object.kms_generation_contract_address))
+        : undefined,
+    };
+  },
+
+  toJSON(message: KeyVerificationChain): unknown {
+    const obj: any = {};
+    if (message.id !== 0n) {
+      obj.id = message.id.toString();
+    }
+    if (message.network !== undefined) {
+      obj.network = message.network;
+    }
+    if (message.kmsGenerationContractAddress !== undefined) {
+      obj.kmsGenerationContractAddress = base64FromBytes(message.kmsGenerationContractAddress);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<KeyVerificationChain>): KeyVerificationChain {
+    return KeyVerificationChain.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<KeyVerificationChain>): KeyVerificationChain {
+    const message = createBaseKeyVerificationChain();
+    message.id = (object.id !== undefined && object.id !== null) ? BigInt(object.id) : 0n;
+    message.network = object.network ?? undefined;
+    message.kmsGenerationContractAddress = object.kmsGenerationContractAddress ?? undefined;
     return message;
   },
 };
