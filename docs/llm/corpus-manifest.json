@@ -541,7 +541,7 @@
       "source_type": "official-doc",
       "category": "guides",
       "logical_path": "guides/vaults/advanced",
-      "description": "Wallet prompts, paused batchers, batcher upgrades, bundling wallets, and sending vault calls through your own pipeline.",
+      "description": "Wallet prompts, paused batchers, several batchers per vault, bundling wallets, and sending vault calls through your own pipeline.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

@@ -34,22 +34,26 @@ export const ALPHA = defineVault({
 
 ### Vault
 
-| Field      | Type                                                                        | Description                                                               |
-| ---------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `id`       | `string`                                                                    | Names the vault in `vaultId`, errors and query keys.                      |
-| `chainId`  | `number`                                                                    | The chain the vault's batchers are on.                                    |
-| `batchers` | `{ deposit: Address \| BatcherHistory; redeem: Address \| BatcherHistory }` | The batcher each direction joins: an address, or a history once upgraded. |
+| Field      | Type                                      | Description                                                   |
+| ---------- | ----------------------------------------- | ------------------------------------------------------------- |
+| `id`       | `string`                                  | Names the vault in `vaultId`, errors and query keys.          |
+| `chainId`  | `number`                                  | The chain the vault's batchers are on.                        |
+| `batchers` | `{ deposit: Batchers; redeem: Batchers }` | The batchers each direction joins: one, or a list of several. |
 
-A vault names no token: the client reads each batcher's `fromToken()`. A join or read throws `ConfigurationError` for an invalid batcher address or `lastBatchId`.
+A vault names no token: the client reads each batcher's `fromToken()`. A join or read throws `ConfigurationError` for an invalid batcher address or `lastBatchId`, or when every batcher of a direction is closed.
 
-### BatcherHistory
+### Batchers
 
-| Field     | Type                                          | Description                                                                               |
-| --------- | --------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `retired` | `{ address: Address; lastBatchId: bigint }[]` | Replaced batchers, oldest first. `lastBatchId` is the last batch joins may land in there. |
-| `latest`  | `Address`                                     | The batcher joins reach once every retired one is past its `lastBatchId`.                 |
+`Batcher | Batcher[]`, where a `Batcher` is an address or a `BatcherEntry`:
 
-See [Upgrade a batcher](../../guides/vaults/advanced.md#upgrade-a-batcher).
+| Field         | Type                  | Description                                                                                        |
+| ------------- | --------------------- | -------------------------------------------------------------------------------------------------- |
+| `address`     | `Address`             | The batcher.                                                                                       |
+| `lastBatchId` | `bigint \| undefined` | The last batch joins may land in. Set it only for a batcher whose contract cannot close by itself. |
+
+A join reaches the open batch that is dispatched next among the batchers that are not paused or closed. See [Several batchers](../../guides/vaults/advanced.md#several-batchers).
+
+`BatcherHistory` (`{ retired, latest }`) is deprecated. It still works, and reads as the list `[...retired, latest]`.
 
 ## defineVaultGroup
 
@@ -288,7 +292,7 @@ if (batch.actions.includes("claim")) {
 
 `readOpenBatches(target, direction) => Promise<OpenBatch[]>`
 
-Reads the open batch of every vault of the target, in group order, on each vault's active batcher.
+Reads, for every vault of the target in group order, the open batch a join reaches now. When every batcher of a vault is paused or closed, it returns a paused batcher's batch with `paused: true`.
 
 ```ts
 const open = await vaults.readOpenBatches(STABLE, "deposit");

@@ -42,6 +42,15 @@ export type Batch = (BatchBase & {
 export type BatchAction = "claim" | "quit" | "dispatch" | "finalize";
 
 // @public
+export type Batcher = Address | BatcherEntry;
+
+// @public
+export interface BatcherEntry {
+    readonly address: Address;
+    readonly lastBatchId?: bigint;
+}
+
+// @public @deprecated
 export interface BatcherHistory {
     readonly latest: Address;
     readonly retired: readonly RetiredBatcher[];
@@ -49,6 +58,9 @@ export interface BatcherHistory {
 
 // @public
 export type BatcherRef = Pick<BatchRef, "chainId" | "batcher">;
+
+// @public
+export type Batchers = Batcher | readonly [Batcher, ...Batcher[]];
 
 // @public
 export interface BatchQueryConfig {
@@ -219,7 +231,7 @@ export function quitMutationOptions(client: VaultClient): MutationFactoryOptions
 // @public
 export function redeemMutationOptions(client: VaultClient): MutationFactoryOptions<readonly ["zama.vault.redeem"], JoinVariables, JoinOutcome>;
 
-// @public
+// @public @deprecated
 export interface RetiredBatcher {
     readonly address: Address;
     readonly lastBatchId: bigint;
@@ -233,7 +245,7 @@ export interface SendJoinOptions {
 
 // @public
 export interface Vault<TVaultId extends string = string> {
-    readonly batchers: Readonly<Record<JoinDirection, Address | BatcherHistory>>;
+    readonly batchers: Readonly<Record<JoinDirection, Batchers | BatcherHistory>>;
     readonly chainId: number;
     readonly id: TVaultId;
 }
