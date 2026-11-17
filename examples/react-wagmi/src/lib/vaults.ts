@@ -16,7 +16,8 @@ import type { BatchVault } from "@/lib/networks";
 /** The configured vault, on its own: every join has a single leg, so it lands in a single batch. */
 export function singleVault(vault: BatchVault) {
   return defineVault({
-    id: "main",
+    // The vault reads are cached by chain and id, so two vaults on a chain need distinct ids.
+    id: vault.depositBatcher,
     chainId: vault.chainId,
     batchers: { deposit: vault.depositBatcher, redeem: vault.redeemBatcher },
   });
@@ -24,7 +25,19 @@ export function singleVault(vault: BatchVault) {
 
 export type Vault = ReturnType<typeof singleVault>;
 
-// What a batcher exposes about the vault it joins.
+/** The vault's name, or its deposit batcher until the name is read. */
+export function vaultLabel(vault: BatchVault, detail: VaultDetails | undefined): string {
+  return detail?.name ?? `${vault.depositBatcher.slice(0, 6)}…${vault.depositBatcher.slice(-4)}`;
+}
+
+/**
+ * The contracts one permit needs for a vault: its tokens for the balances, its batchers for the
+ * amounts of the batches in progress.
+ */
+export function vaultPermitContracts(vault: BatchVault, detail: VaultDetails): Address[] {
+  return [detail.asset.address, detail.share.address, vault.depositBatcher, vault.redeemBatcher];
+}
+
 const BATCHER_ABI = parseAbi([
   "function fromToken() view returns (address)",
   "function toToken() view returns (address)",
@@ -34,18 +47,13 @@ const BATCHER_ABI = parseAbi([
 export interface VaultDetails {
   /** The ERC-4626 vault's name. */
   name: string;
-  /** The ERC-4626 vault. */
   erc4626: Address;
   /** `rate` is the wrapper's underlying units per confidential unit. */
   asset: { address: Address; symbol: string; decimals: number; rate: bigint };
   share: { address: Address; symbol: string; decimals: number; rate: bigint };
 }
 
-/**
- * What each vault's deposit batcher points at, by vault index: the asset it takes, the share it
- * pays out, and the ERC-4626 vault, with their names, decimals and wrapper rates. A vault's
- * details are `undefined` while its reads load, and its error is set if one of them failed.
- */
+/** Each vault's asset, share and ERC-4626 vault, read through its deposit batcher, by vault index. */
 export function useVaultDetails(vaults: BatchVault[]): {
   details: (VaultDetails | undefined)[];
   errors: (Error | undefined)[];
@@ -103,7 +111,6 @@ export function useVaultDetails(vaults: BatchVault[]): {
       if (results?.length !== 7) {
         return;
       }
-      // One vault's seven reads, in the order they were listed above.
       const [name, assetSymbol, assetDecimals, assetRate, shareSymbol, shareDecimals, shareRate] =
         results.map((read) => read.result) as [
           string,
@@ -215,7 +222,6 @@ function subscribe(listener: () => void) {
 const currentVersion = () => version;
 const serverVersion = () => 0;
 
-/** Store the batch a join of `account` landed in. */
 export function addJoinedBatch(account: Address, batch: BatchRef) {
   update(account, batch, (current) =>
     current.some((entry) => batchKey(entry) === batchKey(batch)) ? current : [...current, batch],

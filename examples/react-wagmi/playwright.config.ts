@@ -32,7 +32,10 @@ export default defineConfig({
       NEXT_PUBLIC_ZAMA_ENV: "",
       NEXT_PUBLIC_REGISTRY_ADDRESS: "",
       // Enable the mainnet row so the picker and the mainnet feature flags are testable, and pin
-      // Polygon off. Nothing listens on port 9, so a forwarded proxy call fails fast with 503.
+      // Polygon off. Nothing listens on port 9, so a forwarded proxy call fails fast with 503,
+      // and so does the server's keyurl read: no run waits on a live relayer.
+      SEPOLIA_RELAYER_URL: "http://127.0.0.1:9",
+      SEPOLIA_RELAYER_API_KEY: "",
       MAINNET_RELAYER_URL: "http://127.0.0.1:9",
       POLYGON_RELAYER_URL: "",
       ENABLED_NETWORKS: "",

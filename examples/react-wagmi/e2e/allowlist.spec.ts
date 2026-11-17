@@ -96,4 +96,23 @@ test.describe("key storage origins", () => {
     globalThis.fetch = async () => new Response("down", { status: 503 });
     expect(await keyStorageOrigins()).toEqual([]);
   });
+
+  test("keeps the last origins when a refresh fails", async () => {
+    const { keyStorageOrigins } = loadRelayers({
+      ENABLED_NETWORKS: "mainnet",
+      MAINNET_RELAYER_URL: "https://relayer.example",
+    });
+    globalThis.fetch = async () =>
+      Response.json({ response: { crs: { 2048: { urls: ["https://crs.example.com/CRS/1"] } } } });
+    expect(await keyStorageOrigins()).toEqual(["https://crs.example.com"]);
+
+    const realNow = Date.now;
+    Date.now = () => realNow() + 2 * 60 * 60 * 1000;
+    try {
+      globalThis.fetch = async () => new Response("down", { status: 503 });
+      expect(await keyStorageOrigins()).toEqual(["https://crs.example.com"]);
+    } finally {
+      Date.now = realNow;
+    }
+  });
 });

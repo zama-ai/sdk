@@ -7,13 +7,13 @@ import { formatUnits, getAddress, parseAbi } from "viem";
 import { useReadContracts } from "wagmi";
 import { describeError } from "@/lib/errors";
 import type { BatchVault } from "@/lib/networks";
-import type { VaultDetails } from "@/lib/vaults";
+import { vaultPermitContracts, type VaultDetails } from "@/lib/vaults";
 
 const ERC4626_ABI = parseAbi(["function convertToAssets(uint256 shares) view returns (uint256)"]);
 
 interface PositionsOverviewProps {
   vaults: BatchVault[];
-  /** From `useVaultDetails`, by vault index. */
+  /** By vault index. */
   details: (VaultDetails | undefined)[];
   account: Address;
   /** Opens a vault in the picker below. */
@@ -26,8 +26,19 @@ export function PositionsOverview({ vaults, details, account, onSelect }: Positi
     () => [...new Set(details.flatMap((detail) => (detail ? [detail.share.address] : [])))],
     [details],
   );
-  // One permit holds at most 10 contracts: with more share tokens, the wallet signs once per 10.
-  const { data: hasPermit } = useHasPermit({ contractAddresses: shareTokens });
+  // Every vault's permit at once, so this one signature also unlocks the vault cards. A permit
+  // holds at most 10 contracts: with more, the wallet signs once per 10.
+  const permitContracts = useMemo(
+    () => [
+      ...new Set(
+        details.flatMap((detail, index) =>
+          detail ? vaultPermitContracts(vaults[index], detail) : [],
+        ),
+      ),
+    ],
+    [vaults, details],
+  );
+  const { data: hasPermit } = useHasPermit({ contractAddresses: permitContracts });
   const grantPermit = useGrantPermit();
   const balances = useConfidentialBalances(
     { addresses: shareTokens, account },
@@ -75,6 +86,8 @@ export function PositionsOverview({ vaults, details, account, onSelect }: Positi
       group.total === undefined || row.value === undefined ? undefined : group.total + row.value;
     groups.set(address, group);
   }
+  // A single failed read leaves the whole query successful, so look into each result too.
+  const valueFailure = valueError ?? values?.find((read) => read.status === "failure")?.error;
   const decryptError = grantPermit.error ?? balances.error;
   const failed = balances.data?.errors.size ?? 0;
 
@@ -89,8 +102,8 @@ export function PositionsOverview({ vaults, details, account, onSelect }: Positi
           <button
             type="button"
             className="btn btn-sm btn-secondary"
-            disabled={grantPermit.isPending || shareTokens.length === 0}
-            onClick={() => grantPermit.mutate(shareTokens)}
+            disabled={grantPermit.isPending || permitContracts.length === 0}
+            onClick={() => grantPermit.mutate(permitContracts)}
           >
             {grantPermit.isPending ? "Sign in your wallet…" : "Decrypt balances"}
           </button>
@@ -145,9 +158,9 @@ export function PositionsOverview({ vaults, details, account, onSelect }: Positi
           Could not decrypt {failed} of {shareTokens.length} share balances.
         </p>
       )}
-      {valueError && (
+      {valueFailure && (
         <div className="alert alert-error card-status" role="alert">
-          {describeError(valueError, "Could not read what your shares are worth")}
+          {describeError(valueFailure, "Could not read what your shares are worth")}
         </div>
       )}
     </section>

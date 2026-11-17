@@ -238,7 +238,8 @@ export function AppTabs({ value, onChange }: { value: AppTab; onChange: (tab: Ap
   // ARIA tabs pattern expects.
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
-    if (step === undefined) return;
+    // Alt/Cmd+Arrow is the browser's Back and Forward.
+    if (step === undefined || event.altKey || event.ctrlKey || event.metaKey) return;
     event.preventDefault();
     const index = APP_TABS.findIndex((tab) => tab.id === value);
     const next = APP_TABS[(index + step + APP_TABS.length) % APP_TABS.length].id;

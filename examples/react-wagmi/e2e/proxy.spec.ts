@@ -2,13 +2,13 @@ import { test, expect } from "./fixtures";
 
 // Exercises the relayer proxy through Playwright's request context, which bypasses the
 // page-level abort of /api/relayer/** and hits the app server directly. Nothing reaches a
-// real relayer: rejected cases stop at the proxy, and mainnet's upstream is unreachable.
+// real relayer: rejected cases stop at the proxy, and every upstream is unreachable.
 test.describe("relayer proxy", () => {
   test("lists the networks the server can serve", async ({ request }) => {
     const { enabled } = (await (await request.get("/api/networks")).json()) as {
       enabled: string[];
     };
-    expect(enabled).toContain("sepolia"); // public testnet relayer by default
+    expect(enabled).toContain("sepolia"); // SEPOLIA_RELAYER_URL set in playwright.config.ts
     expect(enabled).toContain("bnb-testnet"); // cleartext: no relayer needed
     expect(enabled).toContain("mainnet"); // MAINNET_RELAYER_URL set in playwright.config.ts
     expect(enabled).not.toContain("polygon"); // POLYGON_RELAYER_URL unset

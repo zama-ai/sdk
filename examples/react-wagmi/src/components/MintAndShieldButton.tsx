@@ -35,7 +35,12 @@ export function MintAndShieldButton({
       });
       const amount = parseUnits(MINT_AMOUNT, decimals);
       await mintUnderlying(sdk, underlying, account, amount);
-      await shield.mutateAsync({ amount });
+      try {
+        await shield.mutateAsync({ amount });
+      } catch (error) {
+        // Say the mint went through, so a retry does not mint again by mistake.
+        throw new Error(`Minted ${MINT_AMOUNT} ${symbol}, but shielding failed`, { cause: error });
+      }
     },
   });
 
