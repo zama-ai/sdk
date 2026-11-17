@@ -8,9 +8,9 @@ Guidance for AI coding agents (Claude Code, Cursor, Codex, etc.) working in this
 
 The daemon system spans `packages/sdk-daemon`, `clients/go`, `clients/rust`, and `proto`.
 
-**Package manager:** pnpm. Install with `pnpm install` — it also auto-initializes git submodules and runs `forge soldeer install` for contracts.
+**Package manager:** pnpm, version pinned by `packageManager` in `package.json` (Node 22+). Install with `pnpm install`. It also initializes git submodules and runs `forge soldeer install` for contracts.
 
-**Agent setup:** run `pnpm setup:claude`. It copies `claude-setup/` → `.claude/` (which is gitignored and unpublished for security, so never commit it) and installs the Zama marketplace plugins and skills. Its hooks format and lint each edited file and typecheck before the turn ends.
+**Agent setup:** run `pnpm setup:claude`. It copies `claude-setup/` → `.claude/` (which is gitignored and unpublished for security, so never commit it) and installs the Zama marketplace plugins and skills. Its hooks run the pre-commit checks (`lint-staged.config.mjs`) on each edited file, and typecheck before the turn ends when TypeScript files changed.
 
 ## ⚠️ Not `@zama-fhe/relayer-sdk`
 

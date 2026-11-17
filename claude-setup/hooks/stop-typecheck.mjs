@@ -1,24 +1,34 @@
 #!/usr/bin/env node
-// Typechecks before Claude ends its turn. Exit code 2 makes Claude fix the errors first.
+// Typechecks each checkout where Claude edited TypeScript this turn. Exit code 2 makes Claude fix the errors first.
 
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
 const input = JSON.parse(readFileSync(0, "utf8"));
-const cwd = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
+const marker = path.join(tmpdir(), `claude-typecheck-${input.session_id}`);
+if (!existsSync(marker)) {
+  process.exit(0);
+}
+const roots = new Set(readFileSync(marker, "utf8").split("\n").filter(Boolean));
+rmSync(marker);
 
 // Already blocked once this turn: let Claude stop instead of looping.
 if (input.stop_hook_active) {
   process.exit(0);
 }
 
-const status = spawnSync("git", ["status", "--porcelain"], { cwd, encoding: "utf8" });
-if (!/\.(ts|tsx)$/m.test(status.stdout)) {
-  process.exit(0);
+const errors = [];
+for (const root of roots) {
+  const result = spawnSync("pnpm", ["typecheck"], { cwd: root, encoding: "utf8" });
+  if (result.status !== 0) {
+    // Tail only: the errors are at the end, and the full output floods Claude's context.
+    errors.push(`${root}:\n${(result.stdout + result.stderr).slice(-8000)}`);
+  }
 }
 
-const result = spawnSync("pnpm", ["typecheck"], { cwd, encoding: "utf8", stdio: "pipe" });
-if (result.status !== 0) {
-  process.stderr.write((result.stdout + result.stderr).slice(-8000));
+if (errors.length > 0) {
+  process.stderr.write(errors.join("\n"));
   process.exit(2);
 }

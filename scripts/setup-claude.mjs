@@ -23,9 +23,9 @@ function merge(a, b) {
   return b;
 }
 
-function hookCommands(hooks = {}) {
-  return Object.values(hooks).flatMap((groups) =>
-    groups.flatMap((group) => group.hooks.map((hook) => hook.command)),
+function hookCommands(hooks) {
+  return Object.values(hooks ?? {}).flatMap((groups) =>
+    groups.flatMap((group) => (group.hooks ?? []).map((hook) => hook.command ?? hook.type)),
   );
 }
 
@@ -81,11 +81,12 @@ if (!existsSync(TARGET)) {
       const b = JSON.parse(readFileSync(srcSettings, "utf8"));
       // Hook entries are objects, so unioning them would keep superseded hooks running.
       const merged = { ...merge(a, b), hooks: b.hooks };
+      const kept = new Set(hookCommands(b.hooks));
+      const dropped = hookCommands(a.hooks).filter((c) => !kept.has(c));
       writeFileSync(dstSettings, JSON.stringify(merged, null, 2) + "\n");
       console.log(
         "  ✅ settings.json merged (template wins on conflicts, arrays unioned, hooks replaced)",
       );
-      const dropped = hookCommands(a.hooks).filter((c) => !hookCommands(b.hooks).includes(c));
       if (dropped.length > 0) {
         console.log("  ⚠️  Removed hooks that are not in the template:");
         for (const command of dropped) {

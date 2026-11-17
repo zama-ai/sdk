@@ -128,13 +128,6 @@
     "typescript-language-server": "^6.0.0",
     "vitest": "^4.1.12"
   },
-  "lint-staged": {
-    "*.{ts,tsx,js,mjs,cjs}": [
-      "oxlint --fix --no-error-on-unmatched-pattern",
-      "ast-grep scan --config sgconfig.yml"
-    ],
-    "*.{ts,tsx,js,mjs,cjs,json,yaml,yml}": "oxfmt --no-error-on-unmatched-pattern"
-  },
   "browserslist": [
     "chrome >= 105",
     "edge >= 105",
