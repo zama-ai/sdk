@@ -4860,7 +4860,7 @@ dependencies = [
 
 [[package]]
 name = "zama_sdk"
-version = "4.0.0-alpha.4"
+version = "4.0.0-alpha.5"
 dependencies = [
  "alloy-consensus",
  "alloy-contract",

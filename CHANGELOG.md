@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.0.0-alpha.5](https://github.com/zama-ai/sdk/compare/v4.0.0-alpha.4...v4.0.0-alpha.5) (2026-11-17)
+
+### Features
+
+- **sdk:** verify the FHE public key and CRS against KMSGeneration ([#943](https://github.com/zama-ai/sdk/issues/943)) ([6997ff7]())
+
 ## [4.0.0-alpha.4](https://github.com/zama-ai/sdk/compare/v4.0.0-alpha.3...v4.0.0-alpha.4) (2026-11-16)
 
 ### ⚠ BREAKING CHANGES
