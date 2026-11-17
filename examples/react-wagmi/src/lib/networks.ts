@@ -134,10 +134,12 @@ function customSepolia(): FheChain & { network: string } {
       process.env.NEXT_PUBLIC_ZAMA_INPUT_VERIFICATION_ADDRESS,
     ),
     // Encryption checks the FHE public key and CRS from the relayer against this contract.
-    kmsGenerationContractAddress: customEnvAddress(
-      "NEXT_PUBLIC_ZAMA_KMS_GENERATION_ADDRESS",
-      process.env.NEXT_PUBLIC_ZAMA_KMS_GENERATION_ADDRESS,
-    ),
+    keyVerification: {
+      contract: customEnvAddress(
+        "NEXT_PUBLIC_ZAMA_KMS_GENERATION_ADDRESS",
+        process.env.NEXT_PUBLIC_ZAMA_KMS_GENERATION_ADDRESS,
+      ),
+    },
     // Optional: needed for unified (V2) decryption permits on protocol v0.14+.
     protocolConfigContractAddress: optionalCustomEnvAddress(
       "NEXT_PUBLIC_ZAMA_PROTOCOL_CONFIG_ADDRESS",

@@ -44,9 +44,9 @@ test.describe("NEXT_PUBLIC_ZAMA_ENV=custom", () => {
     expect(networks.sepolia.label).toBe("Sepolia · Custom environment");
     expect(networks.sepolia.fhe.gatewayChainId).toBe(10901);
     expect(networks.sepolia.fhe.aclContractAddress).toBe(validEnv.NEXT_PUBLIC_ZAMA_ACL_ADDRESS);
-    expect(networks.sepolia.fhe.kmsGenerationContractAddress).toBe(
-      validEnv.NEXT_PUBLIC_ZAMA_KMS_GENERATION_ADDRESS,
-    );
+    expect(networks.sepolia.fhe.keyVerification).toEqual({
+      contract: validEnv.NEXT_PUBLIC_ZAMA_KMS_GENERATION_ADDRESS,
+    });
     expect(networks.sepolia.fhe.registryAddress).toBeUndefined();
   });
 
