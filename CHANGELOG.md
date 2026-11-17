@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.9.0-beta.2](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.1...v3.9.0-beta.2) (2026-11-17)
+
+### Bug Fixes
+
+- **deps:** raise the Next.js floor to 16.4.6 in the examples and test app ([#955](https://github.com/zama-ai/sdk/issues/955)) ([c83d715]())
+
 ## [3.9.0-beta.1](https://github.com/zama-ai/sdk/compare/v3.8.0...v3.9.0-beta.1) (2026-11-17)
 
 ### Features
