@@ -6,7 +6,7 @@ settings:
 
 overrides:
   minimatch@^10.0.0: '>=11.0.1 <12'
-  next: '>=16.4.5'
+  next: '>=16.4.6'
   '@walletconnect/ethereum-provider': ^2.23.7
   lodash: '>=4.18.0'
   lodash-es: '>=4.18.0'
@@ -305,7 +305,7 @@ importers:
         specifier: workspace:*
         version: link:../test-components
       next:
-        specifier: '>=16.4.5'
+        specifier: '>=16.4.6'
         version: 16.4.6(@playwright/test@1.65.0)(@types/node@22.20.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react:
         specifier: ^19.3.0
@@ -2181,6 +2181,7 @@ packages:
   '@zama-fhe/relayer-sdk@0.4.1':
     resolution: {integrity: sha512-bS7tVQbXnsPFgiqm5R4pJ8hbPMYZuRh/Pv89S+jxO60y0mD296F4qIKEO7dgiHjC87V5GFM9DqCLNejjCNVw2Q==}
     engines: {node: '>=22'}
+    deprecated: This package is deprecated, use @zama-fhe/sdk instead
     hasBin: true
 
   abitype@1.2.3:
