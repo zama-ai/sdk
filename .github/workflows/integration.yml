@@ -41,8 +41,9 @@ jobs:
     env:
       # Authenticates the hosted-mainnet relayer integration test. When unset,
       # that test is skipped (gated on the key's presence), so forks and
-      # secret-less runs stay green.
-      ZAMA_RELAYER_API_KEY: ${{ secrets.ZAMA_RELAYER_API_KEY }}
+      # secret-less runs stay green. PRs to `alpha` build pre-release versions,
+      # so they run without the key and skip that test.
+      ZAMA_RELAYER_API_KEY: ${{ github.base_ref != 'alpha' && secrets.ZAMA_RELAYER_API_KEY || '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
