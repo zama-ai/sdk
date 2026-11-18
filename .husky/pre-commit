@@ -1,3 +1,4 @@
+node scripts/lint/no-em-dash.mjs
 pnpm exec lint-staged
 pnpm typecheck
 pnpm llm:stage

@@ -58,7 +58,7 @@ export default defineConfig({
           name: "scripts",
           environment: "node",
           // scripts/docs — scripts/llm tests run via `pnpm llm:check` (vitest.llm.config.ts).
-          include: ["scripts/docs/**/*.test.mjs"],
+          include: ["scripts/docs/**/*.test.mjs", "scripts/lint/**/*.test.mjs"],
           exclude: ["**/node_modules/**"],
         },
       },
