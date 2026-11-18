@@ -28,7 +28,7 @@
     "test:coverage": "vitest --coverage",
     "test:integration": "vitest run --reporter=verbose --config vitest.integration.config.ts",
     "typecheck": "turbo run typecheck",
-    "lint": "oxlint && pnpm ast-grep:scan && node scripts/lint/workflow-head-ref.mjs",
+    "lint": "oxlint && pnpm ast-grep:scan && node scripts/lint/workflow-head-ref.mjs && node scripts/lint/pre-commit-hook.mjs",
     "ast-grep:scan": "ast-grep scan --config sgconfig.yml",
     "lint:em-dash": "node scripts/lint/no-em-dash.mjs",
     "codemod:sdk-migration-v3": "codemod workflow run -w codemods/sdk-migration-v3/workflow.yaml",
