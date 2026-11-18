@@ -53,7 +53,9 @@ jobs:
 
       - name: List the examples
         id: examples
-        run: echo "examples=$(node scripts/examples/examples.mjs --json)" >> "$GITHUB_OUTPUT"
+        run: |
+          examples="$(node scripts/examples/examples.mjs --json)"
+          echo "examples=${examples}" >> "$GITHUB_OUTPUT"
 
       - name: Build and pack the SDK
         run: node scripts/examples/local-sdk.mjs --pack "$RUNNER_TEMP/local-sdk"

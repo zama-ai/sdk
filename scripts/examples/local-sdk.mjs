@@ -13,7 +13,8 @@ import { listExamples, sdkPackages } from "./examples.mjs";
 const usage = `Usage:
   node scripts/examples/local-sdk.mjs [example...]               build, pack and install (all examples by default)
   node scripts/examples/local-sdk.mjs --pack <dir>                build and pack into <dir> only
-  node scripts/examples/local-sdk.mjs --from <dir> [example...]   install tarballs already in <dir>`;
+  node scripts/examples/local-sdk.mjs --from <dir> [example...]   install tarballs already in <dir>
+  node scripts/examples/local-sdk.mjs --help                       print this help`;
 
 const root = resolve(import.meta.dirname, "../..");
 

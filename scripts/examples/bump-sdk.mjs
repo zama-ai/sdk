@@ -13,11 +13,18 @@ if (!version) {
   process.exit(1);
 }
 
+// A package or version npm doesn't have yet reads as "". Any other npm failure is thrown.
 function npmView(...args) {
   try {
-    return execFileSync("npm", ["view", ...args], { encoding: "utf8" }).trim();
-  } catch {
-    return "";
+    return execFileSync("npm", ["view", ...args], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+  } catch (error) {
+    if (error.stderr?.includes("E404")) {
+      return "";
+    }
+    throw error;
   }
 }
 
@@ -59,10 +66,13 @@ if (notLatest.length > 0) {
 let changed = false;
 for (const example of listExamples()) {
   const ranges = Object.fromEntries(
-    Object.entries(example.sdk).map(([name, range]) => [
-      name,
-      `${range.match(/^[\^~]?/)[0]}${version}`,
-    ]),
+    Object.entries(example.sdk).map(([name, range]) => {
+      const prefix = range.match(/^([\^~]?)\d/)?.[1];
+      if (prefix === undefined) {
+        throw new Error(`${example.name}: unsupported ${name} range ${range}`);
+      }
+      return [name, `${prefix}${version}`];
+    }),
   );
   if (Object.entries(ranges).every(([name, range]) => example.sdk[name] === range)) {
     console.log(`${example.name}: already on ${version}`);
