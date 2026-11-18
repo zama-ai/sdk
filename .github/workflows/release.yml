@@ -316,9 +316,7 @@ jobs:
   # A chore title keeps the bump PR's merge from cutting another release.
   bump-examples:
     needs: [release]
-    if: >-
-      ${{ !cancelled() && github.ref_name == 'main'
-      && needs.release.result == 'success' && needs.release.outputs.released == 'true' }}
+    if: github.ref_name == 'main' && needs.release.outputs.released == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
