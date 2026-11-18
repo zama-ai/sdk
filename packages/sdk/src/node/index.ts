@@ -32,6 +32,7 @@ export type {
 } from "../relayer/types";
 // Decrypt parameter/result types — aligned with the canonical Zama glossary (see main entry).
 export type { DecryptPublicValuesResult } from "../relayer/types";
+export type { DecryptPublicUintResult } from "../relayer/public-decrypt";
 
 // Storage
 export { asyncLocalStorage, AsyncLocalMapStorage } from "../storage/async-local-storage";

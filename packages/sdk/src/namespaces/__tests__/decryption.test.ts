@@ -143,4 +143,42 @@ describe("Decryption", () => {
       await expect(sdk.decryption.decryptPublicValues([handle])).rejects.toBe(original);
     });
   });
+
+  describe("decryptPublicUint", () => {
+    test("returns the uint and its proof, without a signer", async ({
+      createSDK,
+      handle,
+      relayer,
+    }) => {
+      const sdk = createSDK({ signer: undefined });
+      await expect(
+        sdk.decryption.decryptPublicUint(handle, { operation: "finalize-unwrap" }),
+      ).resolves.toEqual({
+        value: 500n,
+        abiEncodedClearValues: "0x1f4",
+        decryptionProof: "0xproof",
+      });
+      expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
+        encryptedValues: [handle],
+        options: { operation: "finalize-unwrap" },
+      });
+    });
+
+    test.for([
+      ["no value", []],
+      ["a boolean", [{ type: "bool", value: true }]],
+    ] as const)("refuses %s", async ([, clearValues], { sdk, relayer, handle }) => {
+      vi.mocked(relayer.decryptPublicValuesWithSignatures).mockResolvedValueOnce({
+        clearValues,
+        checkSignaturesArgs: {
+          handlesList: [handle],
+          abiEncodedCleartexts: "0x",
+          decryptionProof: "0x",
+        },
+      } as never);
+      await expect(sdk.decryption.decryptPublicUint(handle)).rejects.toBeInstanceOf(
+        DecryptionFailedError,
+      );
+    });
+  });
 });

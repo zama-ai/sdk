@@ -2540,6 +2540,10 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 > **Unreleased.** The changes on this page are on the prerelease (`beta`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
 
 
+### Decryption
+
+**`sdk.decryption.decryptPublicUint` decrypts one uint publicly.** It returns the value as a `bigint` with its `decryptionProof` and `abiEncodedClearValues`, and throws `DecryptionFailedError` when the relayer returns no uint. You no longer need to read `clearValues` and check the type yourself. See [Decrypt public values](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/encrypt-decrypt.md#4-decrypt-public-values-advanced).
+
 ### Daemon
 
 **Daemon traffic is identifiable in telemetry.** Relayer requests made by the SDK daemon now report `runtime=daemon` instead of `node`, plus a `client` field (`go`, `rust`, or `unknown`) with the client language. Nothing else changes: no new identifiers are sent, and `ZAMA_SDK_TELEMETRY=off` on the daemon process still disables telemetry. See [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md) and [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md#telemetry).
@@ -9861,6 +9865,12 @@ const { clearValues } = await sdk.decryption.decryptPublicValues(["0xEncryptedVa
 ```
 
 `decryptPublicValues` also returns `decryptionProof` and `abiEncodedClearValues` alongside `clearValues`, so you can submit on-chain finalization transactions that verify the decryption.
+
+To decrypt one uint, such as an unwrap amount, use `decryptPublicUint`. It returns the value as a `bigint`, and throws `DecryptionFailedError` when the relayer returns no uint:
+
+```ts
+const { value, decryptionProof } = await sdk.decryption.decryptPublicUint("0xEncryptedValue...");
+```
 
 ### Tab: React SDK
 
