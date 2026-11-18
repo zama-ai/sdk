@@ -20,7 +20,7 @@ import type {
   GenericStorage,
   TransactionReceipt,
 } from "../../../types";
-import { clearPendingUnshield } from "../../pending-unshield";
+import { loadPendingUnshieldRequests } from "../../pending-unshield";
 import { WrappedToken } from "../../wrapped-token";
 
 export { USER, WRAPPER };
@@ -73,20 +73,20 @@ export class HarnessError extends Error {
   override name = "HarnessError";
 }
 
-/** The storage key the SDK uses for this wrapper's pending-unshield pointer. */
+/** The storage key the SDK uses for this wrapper's pending-unshield entries. */
 export const POINTER_KEY = await (async () => {
   let key: string | undefined;
   const recorder: GenericStorage = {
-    get: () => Promise.resolve(null),
-    set: () => Promise.resolve(),
-    delete: (k) => {
+    get: (k) => {
       key = k;
-      return Promise.resolve();
+      return Promise.resolve(null);
     },
+    set: () => Promise.resolve(),
+    delete: () => Promise.resolve(),
   };
-  await clearPendingUnshield(recorder, WRAPPER);
+  await loadPendingUnshieldRequests(recorder, WRAPPER);
   if (key === undefined) {
-    throw new HarnessError("clearPendingUnshield did not delete a key");
+    throw new HarnessError("loadPendingUnshieldRequests did not read a key");
   }
   return key;
 })();

@@ -19,23 +19,23 @@ export interface Tx {
 }
 
 export interface World {
-  /** The pending-unshield pointer as stored JSON, or undefined. */
-  readonly pointer: string | undefined;
+  /** The pending-unshield entries as stored JSON, or undefined. */
+  readonly stored: string | undefined;
   /** Every transaction the wallet sent, in send (nonce) order. */
   readonly txs: readonly Tx[];
-  /** Requests whose pointer `storage.set` wrote. */
+  /** Requests that ever had a stored entry. */
   readonly saved: readonly Hex[];
-  /** Requests whose pointer a call working on another request overwrote or deleted. */
-  readonly clobbered: readonly Hex[];
-  /** Requests whose unshield call ended before saving a pointer, with the call it ended on. */
-  readonly unsaved: readonly { requestId: Hex; endedOn: Call["kind"] | "pointer save" }[];
+  /** Requests whose entry a write based on a stale read dropped (two tabs wrote at once). */
+  readonly lostUpdate: readonly Hex[];
+  /** Requests whose unshield call ended before saving an entry, with where it ended. */
+  readonly unsaved: readonly { requestId: Hex; endedOn: Call["kind"] | "storage failure" }[];
 }
 
 export const EMPTY_WORLD: World = {
-  pointer: undefined,
+  stored: undefined,
   txs: [],
   saved: [],
-  clobbered: [],
+  lostUpdate: [],
   unsaved: [],
 };
 
@@ -44,6 +44,15 @@ const word = (tail: string): Hex => `0x${tail.padStart(64, "0")}`;
 export const unwrapTx = (slot: number): Hex => word(`a${slot}`);
 export const finalizeTx = (slot: number): Hex => word(`f${slot}`);
 export const requestOf = (slot: number): Hex => word(`e${slot}`);
+
+/** An earlier unshield (U0) is open on chain with its entry saved, and its tab is gone. */
+export const INTERRUPTED_WORLD: World = {
+  ...EMPTY_WORLD,
+  stored: JSON.stringify({ version: 2, requests: [{ unwrapTxHash: unwrapTx(0) }] }),
+  txs: [{ hash: unwrapTx(0), kind: "unwrap", requestId: requestOf(0), status: "success" }],
+  saved: [requestOf(0)],
+};
+export const isUnwrapTx = (hash: Hex) => /^0x0+a\d+$/.test(hash);
 
 /** Short names for the hex values in step labels: U1, F1, req1, ... */
 export function pretty(text: string): string {
@@ -64,22 +73,37 @@ export function requestStatus(world: World, requestId: Hex): "none" | "open" | "
   return mined("unwrap") ? "open" : "none";
 }
 
-export type Pointer = Required<PendingUnshieldRequest>;
-
-export function parsePointer(json: string): Pointer {
-  const value = JSON.parse(json) as Partial<Pointer>;
-  if (!value.unwrapTxHash || !value.unwrapRequestId) {
-    throw new HarnessError(`unexpected pending-unshield value ${json}`);
-  }
-  return { unwrapTxHash: value.unwrapTxHash, unwrapRequestId: value.unwrapRequestId };
-}
-
 export function requestOfTx(world: World, hash: Hex | undefined): Hex | undefined {
   return world.txs.find((tx) => tx.hash === hash)?.requestId;
 }
 
-function pointerLabel(json: string | null | undefined): string {
-  return json ? pretty(`pointer(${parsePointer(json).unwrapTxHash})`) : "empty";
+export function parseEntries(json: string | null | undefined): PendingUnshieldRequest[] {
+  if (json === null || json === undefined) {
+    return [];
+  }
+  const value = JSON.parse(json) as { version?: number; requests?: PendingUnshieldRequest[] };
+  if (value.version !== 2 || !Array.isArray(value.requests)) {
+    throw new HarnessError(`unexpected pending-unshield value ${json}`);
+  }
+  return value.requests;
+}
+
+/** The requests that `json` has an entry for. */
+export function storedRequests(world: World, json: string | null | undefined): Hex[] {
+  return parseEntries(json).map((entry) => {
+    const requestId = requestOfTx(world, entry.unwrapTxHash);
+    if (!requestId || (entry.unwrapRequestId && entry.unwrapRequestId !== requestId)) {
+      throw new HarnessError(`entry ${JSON.stringify(entry)} does not match its unwrap tx`);
+    }
+    return requestId;
+  });
+}
+
+function storedLabel(json: string | null | undefined): string {
+  const entries = parseEntries(json).map(
+    (e) => `${e.unwrapTxHash}${e.unwrapRequestId ? `+${e.unwrapRequestId}` : ""}`,
+  );
+  return entries.length === 0 ? "empty" : pretty(`[${entries.join(", ")}]`);
 }
 
 export function callLabel(call: Call): string {
@@ -88,7 +112,7 @@ export function callLabel(call: Call): string {
     case "storage.delete":
       return `${call.kind}(pending-unshield)`;
     case "storage.set":
-      return `storage.set(pending-unshield, ${pointerLabel(call.value)})`;
+      return `storage.set(pending-unshield, ${storedLabel(call.value)})`;
     case "signer.writeContract":
       return pretty(
         `signer.writeContract(${call.functionName}${call.requestId ? ` ${call.requestId}` : ""})`,
@@ -139,46 +163,35 @@ const txStatus = (hash: Hex, status: TxStatus) => (world: World) =>
   world.txs.some((tx) => tx.hash === hash && tx.status === status);
 
 /**
- * Every answer the real dependency could give to `call` made by actor `slot`,
- * each with the world in which it is possible. `storedValues` lists every
- * value a `storage.get` can return: null and each value any actor stores.
+ * Every answer the real dependency could give to `call` made by actor `slot`
+ * in `world`. An answer with `when` is possible only where `when` holds.
  */
-export function options(
-  call: Call,
-  slot: number,
-  storedValues: readonly (string | null)[],
-): Option[] {
+export function options(call: Call, slot: number, world: World): Option[] {
   switch (call.kind) {
     case "storage.get":
       return [
-        ...storedValues.map((value): Option => ({
-          answer: { kind: "ok", value },
-          text: `-> ${pointerLabel(value)}`,
-          when: (world) => (world.pointer ?? null) === value,
-        })),
+        {
+          answer: { kind: "ok", value: world.stored ?? null },
+          text: `-> ${storedLabel(world.stored)}`,
+        },
         fail("storage unavailable"),
         CLOSE,
       ];
     case "storage.set": {
-      const { unwrapRequestId } = parsePointer(call.value);
       const ok: Option = {
         answer: { kind: "ok" },
         text: "ok",
         apply: (world) => ({
           ...world,
-          pointer: call.value,
-          saved: [...new Set([...world.saved, unwrapRequestId])].sort(),
+          stored: call.value,
+          saved: [...new Set([...world.saved, ...storedRequests(world, call.value)])].sort(),
         }),
       };
       return [ok, fail("storage unavailable"), CLOSE];
     }
     case "storage.delete":
       return [
-        {
-          answer: { kind: "ok" },
-          text: "ok",
-          apply: (world) => ({ ...world, pointer: undefined }),
-        },
+        { answer: { kind: "ok" }, text: "ok", apply: (world) => ({ ...world, stored: undefined }) },
         fail("storage unavailable"),
         CLOSE,
       ];

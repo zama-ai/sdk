@@ -46,7 +46,7 @@ import type { TelemetryOperation } from "../telemetry";
 import { swallow } from "../utils/swallow";
 import {
   clearPendingUnshield,
-  loadPendingUnshieldRequest,
+  loadPendingUnshieldRequests,
   savePendingUnshield,
   type PendingUnshieldRequest,
 } from "./pending-unshield";
@@ -383,7 +383,7 @@ export class WrappedToken extends Token {
 
     const callbacks: UnshieldCallbacks = { onFinalizing, onFinalizeSubmitted };
     const operationId = crypto.randomUUID();
-    const unwrapResult = await this.#unwrap(amount, "unshield");
+    const unwrapResult = await this.#unwrap(amount, "unshield", true);
     void swallow(
       "unshield: onUnwrapSubmitted",
       () => onUnwrapSubmitted?.(unwrapResult.txHash),
@@ -414,7 +414,7 @@ export class WrappedToken extends Token {
    */
   async unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult> {
     const operationId = crypto.randomUUID();
-    const unwrapResult = await this.unwrapAll();
+    const unwrapResult = await this.#unwrapAll(true);
     void swallow(
       "unshieldAll: onUnwrapSubmitted",
       () => callbacks?.onUnwrapSubmitted?.(unwrapResult.txHash),
@@ -468,12 +468,15 @@ export class WrappedToken extends Token {
     }
     const unwrapRequestId = this.#extractUnwrapRequestId(receipt.logs);
     if (await this.#isUnwrapRequestConsumed(unwrapRequestId)) {
-      await this.#clearStoredPendingUnshield("resumeUnshield");
+      await this.#clearStoredPendingUnshield("resumeUnshield", unwrapTxHash);
       throw new UnshieldAlreadyFinalizedError(
         "Nothing to resume: the unwrap request was already finalized on-chain and the funds were delivered.",
         { unwrapTxHash, unwrapRequestId },
       );
     }
+    // A hash the app kept may have no entry yet (e.g. the tab closed before
+    // the unshield saved it): save it, so an interrupted resume stays findable.
+    await this.#savePendingUnshield(unwrapTxHash);
     return this.#finalizeUnshield(
       unwrapRequestId,
       unwrapTxHash,
@@ -488,8 +491,10 @@ export class WrappedToken extends Token {
    * two phases, or `null` if none is pending for this wrapper.
    *
    * The SDK persists this automatically when {@link unshield}/{@link unshieldAll}
-   * submit phase 1, and clears it once phase 2 finalizes. Use the returned hash
-   * to surface a "resume" affordance, then pass it to {@link resumeUnshield}.
+   * submit phase 1, and clears it once phase 2 finalizes. When several unshields
+   * are pending, this returns the oldest one; after resuming it, call again for
+   * the next. Use the returned hash to surface a "resume" affordance, then pass
+   * it to {@link resumeUnshield}.
    * Resuming is intentionally caller-driven — auto-resuming on load would fire a
    * wallet transaction unprompted.
    *
@@ -508,15 +513,13 @@ export class WrappedToken extends Token {
    * ```
    */
   async getPendingUnshield(): Promise<Hex | null> {
-    const pending = await loadPendingUnshieldRequest(this.sdk.storage, this.address);
-    if (!pending) {
-      return null;
+    for (const pending of await loadPendingUnshieldRequests(this.sdk.storage, this.address)) {
+      if (!(await this.#isPendingUnshieldConsumed(pending))) {
+        return pending.unwrapTxHash;
+      }
+      await this.#clearStoredPendingUnshield("getPendingUnshield", pending.unwrapTxHash);
     }
-    if (await this.#isPendingUnshieldConsumed(pending)) {
-      await this.#clearStoredPendingUnshield("getPendingUnshield");
-      return null;
-    }
-    return pending.unwrapTxHash;
+    return null;
   }
 
   // UNSHIELD LOW-LEVEL PRIMITIVES
@@ -536,10 +539,15 @@ export class WrappedToken extends Token {
    * ```
    */
   async unwrap(amount: bigint): Promise<UnwrapResult> {
-    return this.#unwrap(amount, "unwrap");
+    return this.#unwrap(amount, "unwrap", false);
   }
 
-  async #unwrap(amount: bigint, telemetryOperation: TelemetryOperation): Promise<UnwrapResult> {
+  /** `persist`: save the pending-unshield entry as soon as the unwrap hash is known. */
+  async #unwrap(
+    amount: bigint,
+    telemetryOperation: TelemetryOperation,
+    persist: boolean,
+  ): Promise<UnwrapResult> {
     this.#requireSigner("unwrap");
     const account = await requireAlignedWalletAccount("unwrap", this.sdk.signer, this.sdk.provider);
     const userAddress = getAddress(account.address);
@@ -557,6 +565,7 @@ export class WrappedToken extends Token {
     const result = await this.submitTransaction({
       operation: "unwrap",
       config: unwrapContract(this.address, userAddress, userAddress, encryptedAmount, inputProof),
+      beforeReceipt: persist ? (txHash) => this.#savePendingUnshield(txHash) : undefined,
     });
 
     return { ...result, unwrapRequestId: this.#extractUnwrapRequestId(result.receipt.logs) };
@@ -577,6 +586,10 @@ export class WrappedToken extends Token {
    * ```
    */
   async unwrapAll(): Promise<UnwrapResult> {
+    return this.#unwrapAll(false);
+  }
+
+  async #unwrapAll(persist: boolean): Promise<UnwrapResult> {
     this.#requireSigner("unwrapAll");
     const account = await requireAlignedWalletAccount(
       "unwrapAll",
@@ -593,6 +606,7 @@ export class WrappedToken extends Token {
     const result = await this.submitTransaction({
       operation: "unwrapAll",
       config: unwrapFromBalanceContract(this.address, userAddress, userAddress, encryptedValue),
+      beforeReceipt: persist ? (txHash) => this.#savePendingUnshield(txHash) : undefined,
     });
 
     return { ...result, unwrapRequestId: this.#extractUnwrapRequestId(result.receipt.logs) };
@@ -697,10 +711,18 @@ export class WrappedToken extends Token {
     return this.#isUnwrapRequestConsumed(unwrapRequestId);
   }
 
-  async #clearStoredPendingUnshield(operation: string): Promise<void> {
+  async #savePendingUnshield(unwrapTxHash: Hex): Promise<void> {
+    await swallow(
+      "unshield: savePendingUnshield",
+      () => savePendingUnshield(this.sdk.storage, this.address, unwrapTxHash),
+      this.sdk.logger,
+    );
+  }
+
+  async #clearStoredPendingUnshield(operation: string, unwrapTxHash: Hex): Promise<void> {
     await swallow(
       `${operation}: clearPendingUnshield`,
-      () => clearPendingUnshield(this.sdk.storage, this.address),
+      () => clearPendingUnshield(this.sdk.storage, this.address, unwrapTxHash),
       this.sdk.logger,
     );
   }
@@ -728,8 +750,8 @@ export class WrappedToken extends Token {
   /**
    * Phase 2 of unshield, shared by {@link unshield}/{@link unshieldAll} (which
    * pass the id `unwrap`/`unwrapAll` already decoded) and {@link resumeUnshield}
-   * (which decoded it from a fetched receipt). Persists the unwrap hash for
-   * recovery, finalizes, then clears the persisted state.
+   * (which decoded it from a fetched receipt). The pending-unshield entry is
+   * already saved; this finalizes, then removes the entry.
    */
   async #finalizeUnshield(
     unwrapRequestId: EncryptedValue,
@@ -739,11 +761,6 @@ export class WrappedToken extends Token {
     telemetryOperation: TelemetryOperation,
   ): Promise<TransactionResult> {
     this.emit({ type: ZamaSDKEvents.UnshieldPhase1Submitted, txHash: unwrapTxHash, operationId });
-    await swallow(
-      "unshield: savePendingUnshield",
-      () => savePendingUnshield(this.sdk.storage, this.address, unwrapTxHash, unwrapRequestId),
-      this.sdk.logger,
-    );
     this.emit({ type: ZamaSDKEvents.UnshieldPhase2Started, operationId });
     void swallow("unshield: onFinalizing", () => callbacks?.onFinalizing?.(), this.sdk.logger);
     let finalizeResult: TransactionResult;
@@ -762,7 +779,7 @@ export class WrappedToken extends Token {
       if (!finalizedElsewhere) {
         throw error;
       }
-      await this.#clearStoredPendingUnshield("unshield");
+      await this.#clearStoredPendingUnshield("unshield", unwrapTxHash);
       throw new UnshieldAlreadyFinalizedError(
         "The unwrap request was finalized concurrently — the funds were already delivered.",
         { unwrapTxHash, unwrapRequestId },
@@ -780,7 +797,7 @@ export class WrappedToken extends Token {
       this.sdk.logger,
     );
     // Phase 2 landed: the persisted recovery state is no longer needed.
-    await this.#clearStoredPendingUnshield("unshield");
+    await this.#clearStoredPendingUnshield("unshield", unwrapTxHash);
     return finalizeResult;
   }
 

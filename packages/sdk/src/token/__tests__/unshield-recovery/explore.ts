@@ -4,15 +4,19 @@
 // A global state is where each SDK call is (the answers it has had so far)
 // plus the shared world. A step answers one pending call of one actor (it
 // returns, it throws, or the tab closes), starts the page load, or mines the
-// next transaction. Every state reached is checked against the rules, and
-// every rule break is classified (see CLASSES). The first example of each
-// class is a shortest one.
+// next transaction. The real code decides each actor's next call: the first
+// time a state needs an answer sequence, `runSdkCall` runs the SDK call with
+// that sequence, and the result is kept.
+//
+// Every state reached is checked against the rules. A rule break is allowed
+// only inside one of the BOUNDS; the first example of each is a shortest one.
 import type { Hex } from "viem";
 import {
   HarnessError,
   POINTER_KEY,
   runSdkCall,
   type Answer,
+  type Call,
   type Entry,
   type Outcome,
   type RunResult,
@@ -22,13 +26,14 @@ import {
   callLabel,
   chainSteps,
   EMPTY_WORLD,
+  INTERRUPTED_WORLD,
+  isUnwrapTx,
   options,
-  parsePointer,
   pretty,
   requestOfTx,
   requestStatus,
+  storedRequests,
   unwrapTx,
-  type Option,
   type World,
 } from "./world";
 
@@ -44,35 +49,18 @@ interface Violation {
   requestId: Hex;
 }
 
-const endedOn = (world: World, requestId: Hex) =>
-  world.unsaved.find((u) => u.requestId === requestId)?.endedOn;
+const SAVE_WINDOW = new Set<string>(["storage.get", "storage.set", "storage failure"]);
 
-/**
- * Every rule break must fall in one of these classes, or the run reports it
- * as unexplained. A finding is a known bug; a bound is outside what the SDK
- * can promise.
- */
-export const CLASSES = {
-  /** The unshield ended while waiting for its unwrap receipt, before it saved a pointer. */
-  "unsaved window": {
-    kind: "finding",
-    matches: (v: Violation, world: World) =>
-      v.rule === "PendingUnshieldIsDiscoverable" &&
-      endedOn(world, v.requestId) === "provider.waitForTransactionReceipt",
-  },
-  /** A call working on another request overwrote or deleted this request's pointer. */
-  "one pointer per wrapper": {
-    kind: "finding",
-    matches: (v: Violation, world: World) => world.clobbered.includes(v.requestId),
-  },
-  /** Storage refused the pointer write itself. */
-  "storage refused the save": {
-    kind: "bound",
-    matches: (v: Violation, world: World) =>
-      v.rule === "PendingUnshieldIsDiscoverable" && endedOn(world, v.requestId) === "pointer save",
-  },
+/** Rule breaks the SDK cannot prevent with get/set/delete storage. */
+export const BOUNDS = {
+  /** The tab closed or storage failed between sending the unwrap and saving its entry. */
+  "save window": (v: Violation, world: World) =>
+    v.rule === "PendingUnshieldIsDiscoverable" &&
+    SAVE_WINDOW.has(world.unsaved.find((u) => u.requestId === v.requestId)?.endedOn ?? ""),
+  /** Two tabs read and wrote the entry list at once, and the later write dropped this entry. */
+  "lost update": (v: Violation, world: World) => world.lostUpdate.includes(v.requestId),
 } as const;
-export type ClassName = keyof typeof CLASSES;
+export type BoundName = keyof typeof BOUNDS;
 
 export interface ActorSpec {
   name: string;
@@ -85,38 +73,41 @@ export interface ActorSpec {
 export interface Scenario {
   name: string;
   actors: ActorSpec[];
+  /** Starts with an earlier unshield (U0) whose request is open, its entry saved, and its tab gone. */
+  interrupted?: boolean;
 }
 
 export interface Exploration {
   states: number;
   transitions: number;
-  /** Real SDK calls run to build the actor trees. */
+  /** Real SDK calls run. */
   sdkRuns: number;
-  /** A shortest path into each class of rule break that occurred. */
-  classified: Map<ClassName, string[]>;
-  /** For each rule broken outside every class, a shortest path that breaks it. */
-  unexplained: Map<Rule, string[]>;
+  /** A shortest path into each bound that occurred. */
+  bounded: Map<BoundName, string[]>;
+  /** For each rule broken outside every bound, a shortest path that breaks it. */
+  broken: Map<Rule, string[]>;
 }
 
 /** One SDK call after a given answer sequence: what the real code did next. */
 interface Node {
+  id: number;
   slot: number;
   entry: Entry;
   script: Step[];
   run: RunResult;
   /** The unwrap tx this SDK call works on, once it knows one. */
   hash?: Hex;
-  /** The last pending-unshield value this SDK call read. */
-  pointerRead?: string | null;
-  /** An unshield call: it has called `storage.set` on the pointer. */
-  saveAttempted: boolean;
-  /** An unshield call: that `storage.set` returned. */
+  /** The request whose state this SDK call last read on chain. */
+  requestId?: Hex;
+  /** getPendingUnshield: the stored value it read first, the list it goes through. */
+  firstRead?: string | null;
+  /** The last answered call was a `storage.get` that returned this, so a write now is read-modify-write. */
+  justRead?: { value: string | null };
+  /** An unshield call: a `storage.set` returned. */
   saved: boolean;
+  /** A storage call threw before the entry was saved. */
+  storageFailed: boolean;
   children: Map<string, Node>;
-  /** Every answer to the pending call, with the node it leads to (none for a close). */
-  steps: { option: Option; child?: Node }[];
-  /** Equal for nodes with equal subtrees. */
-  canon: number;
 }
 
 type ActorState = Node | "idle" | "done";
@@ -134,50 +125,12 @@ interface Transition {
 
 const answerKey = (answer: Answer): string => JSON.stringify(answer);
 const isUnshield = (entry: Entry) => entry.kind === "unshield" || entry.kind === "unshieldAll";
+const isStorage = (call: Call) => call.kind.startsWith("storage.");
 
-function deriveNode(slot: number, entry: Entry, script: Step[], run: RunResult, from?: Node): Node {
-  const node: Node = {
-    slot,
-    entry,
-    script,
-    run,
-    hash: from ? from.hash : entry.kind === "resumeUnshield" ? entry.hash : undefined,
-    pointerRead: from?.pointerRead,
-    saveAttempted: from?.saveAttempted ?? false,
-    saved: from?.saved ?? false,
-    children: new Map(),
-    steps: [],
-    canon: -1,
-  };
-  const last = script.at(-1);
-  if (!last) {
-    return node;
-  }
-  const { call, answer } = last;
-  if (call.kind === "storage.set" && isUnshield(entry)) {
-    node.saveAttempted = true;
-    node.saved ||= answer.kind === "ok";
-  }
-  if (answer.kind !== "ok") {
-    return node;
-  }
-  if (call.kind === "signer.writeContract" && call.functionName === "unwrap") {
-    node.hash = answer.value as Hex;
-  } else if (call.kind === "storage.get") {
-    node.pointerRead = answer.value as string | null;
-    if (typeof answer.value === "string") {
-      node.hash = parsePointer(answer.value).unwrapTxHash;
-    }
-  }
-  return node;
-}
-
-/** Every actor's tree of possible answer sequences, built by running the real code. */
-class ActorTrees {
+/** The SDK calls of a scenario, run on demand and kept by answer sequence. */
+class Actors {
   readonly #roots = new Map<string, Node>();
-  /** Every value a `storage.get` can return: null and each value any actor stores. */
-  readonly stored: (string | null)[] = [null];
-  sdkRuns = 0;
+  #nodes = 0;
 
   constructor(readonly scenario: Scenario) {}
 
@@ -185,115 +138,76 @@ class ActorTrees {
     if (spec.entry !== "page load") {
       return [spec.entry];
     }
-    const kept = this.scenario.actors
-      .filter((a) => a.entry !== "page load")
-      .map((a): Entry => ({ kind: "resumeUnshield", hash: unwrapTx(a.slot) }));
+    const slots = this.scenario.actors.filter((a) => a.entry !== "page load").map((a) => a.slot);
+    const kept = (this.scenario.interrupted ? [0, ...slots] : slots).map((slot): Entry => ({
+      kind: "resumeUnshield",
+      hash: unwrapTx(slot),
+    }));
     return [{ kind: "getPendingUnshield" }, ...kept];
   }
 
-  root(slot: number, entry: Entry): Node {
-    const node = this.#roots.get(`${slot}|${JSON.stringify(entry)}`);
+  get sdkRuns(): number {
+    return this.#nodes;
+  }
+
+  async root(slot: number, entry: Entry): Promise<Node> {
+    const key = `${slot}|${JSON.stringify(entry)}`;
+    let node = this.#roots.get(key);
     if (!node) {
-      throw new HarnessError(`no tree for actor ${slot} ${JSON.stringify(entry)}`);
+      node = this.#node(slot, entry, [], await runSdkCall(entry, []));
+      this.#roots.set(key, node);
     }
     return node;
   }
 
-  async build(): Promise<void> {
-    // Grow the trees until no actor can store a value that some storage.get does not yet return.
-    for (;;) {
-      const found = new Set<string>();
-      for (const spec of this.scenario.actors) {
-        for (const entry of this.entries(spec)) {
-          const key = `${spec.slot}|${JSON.stringify(entry)}`;
-          let root = this.#roots.get(key);
-          if (!root) {
-            root = deriveNode(spec.slot, entry, [], await this.#run(entry, []));
-            this.#roots.set(key, root);
-          }
-          await this.#grow(root, found);
-        }
-      }
-      const fresh = [...found].filter((v) => !this.stored.includes(v)).sort();
-      if (fresh.length === 0) {
-        break;
-      }
-      this.stored.push(...fresh);
+  async child(node: Node, call: Call, answer: Answer): Promise<Node> {
+    const key = answerKey(answer);
+    let child = node.children.get(key);
+    if (!child) {
+      const script = [...node.script, { call, answer }];
+      child = this.#node(node.slot, node.entry, script, await runSdkCall(node.entry, script), node);
+      node.children.set(key, child);
     }
-    const canons = new Map<string, number>();
-    for (const root of this.#roots.values()) {
-      this.#finish(root, canons);
-    }
+    return child;
   }
 
-  async #run(entry: Entry, script: Step[]): Promise<RunResult> {
-    this.sdkRuns++;
-    return runSdkCall(entry, script);
-  }
-
-  async #grow(node: Node, found: Set<string>): Promise<void> {
-    if (node.run.next.kind !== "call") {
-      return;
+  #node(slot: number, entry: Entry, script: Step[], run: RunResult, from?: Node): Node {
+    const node: Node = {
+      id: this.#nodes++,
+      slot,
+      entry,
+      script,
+      run,
+      hash: from ? from.hash : entry.kind === "resumeUnshield" ? entry.hash : undefined,
+      requestId: from?.requestId,
+      firstRead: from?.firstRead,
+      saved: from?.saved ?? false,
+      storageFailed: from?.storageFailed ?? false,
+      children: new Map(),
+    };
+    const last = script.at(-1);
+    if (!last) {
+      return node;
     }
-    const { call } = node.run.next;
-    if (call.kind === "storage.set") {
-      found.add(call.value);
-    }
-    for (const option of options(call, node.slot, this.stored)) {
-      if (option.answer.kind === "close") {
-        continue;
+    const { call, answer } = last;
+    if (answer.kind !== "ok") {
+      node.storageFailed ||= isStorage(call) && !node.saved;
+    } else if (call.kind === "signer.writeContract" && call.functionName === "unwrap") {
+      node.hash = answer.value as Hex;
+    } else if (call.kind === "provider.waitForTransactionReceipt" && isUnwrapTx(call.hash)) {
+      node.hash = call.hash;
+    } else if (call.kind === "provider.readContract") {
+      node.requestId = call.requestId;
+    } else if (call.kind === "storage.get") {
+      const value = answer.value as string | null;
+      if (entry.kind === "getPendingUnshield" && node.firstRead === undefined) {
+        node.firstRead = value;
       }
-      const key = answerKey(option.answer);
-      let child = node.children.get(key);
-      if (!child) {
-        const script = [...node.script, { call, answer: option.answer }];
-        child = deriveNode(
-          node.slot,
-          node.entry,
-          script,
-          await this.#run(node.entry, script),
-          node,
-        );
-        node.children.set(key, child);
-      }
-      await this.#grow(child, found);
+      node.justRead = { value };
+    } else if (call.kind === "storage.set" && isUnshield(entry)) {
+      node.saved = true;
     }
-  }
-
-  // Nodes with equal subtrees share one canon id, so different answers that
-  // lead the code down the same path count as one state.
-  #finish(node: Node, canons: Map<string, number>): number {
-    if (node.canon >= 0) {
-      return node.canon;
-    }
-    if (node.run.next.kind === "call") {
-      const { call } = node.run.next;
-      node.steps = options(call, node.slot, this.stored).map((option) => ({
-        option,
-        child:
-          option.answer.kind === "close" ? undefined : node.children.get(answerKey(option.answer)),
-      }));
-    }
-    const children = [...node.children]
-      .map(([key, child]) => `${key}>${this.#finish(child, canons)}`)
-      .sort();
-    const signature = JSON.stringify([
-      node.slot,
-      node.entry,
-      node.run,
-      node.hash ?? null,
-      node.pointerRead === undefined ? "unread" : node.pointerRead,
-      node.saveAttempted,
-      node.saved,
-      children,
-    ]);
-    let canon = canons.get(signature);
-    if (canon === undefined) {
-      canon = canons.size;
-      canons.set(signature, canon);
-    }
-    node.canon = canon;
-    return canon;
+    return node;
   }
 }
 
@@ -320,42 +234,29 @@ function reportsFalseFinalized(node: Node, world: World): boolean {
     return false;
   }
   const { outcome } = node.run.next;
-  let reported: Hex | undefined;
+  let reported: Hex[] = [];
   if (outcome.kind === "threw") {
-    reported = outcome.unwrapRequestId;
-  } else if (
-    outcome.value === "null" &&
-    node.entry.kind === "getPendingUnshield" &&
-    typeof node.pointerRead === "string"
-  ) {
-    // getPendingUnshield read a pointer and returned null: it cleared the pointer as finalized.
-    reported = parsePointer(node.pointerRead).unwrapRequestId;
+    reported = outcome.unwrapRequestId ? [outcome.unwrapRequestId] : [];
+  } else if (outcome.value === "null" && node.entry.kind === "getPendingUnshield") {
+    // getPendingUnshield returned null: it judged every entry it read finalized.
+    reported = storedRequests(world, node.firstRead);
   }
-  return reported !== undefined && requestStatus(world, reported) !== "finalized";
+  return reported.some((r) => requestStatus(world, r) !== "finalized");
 }
 
 /** PendingUnshieldIsDiscoverable and PointerKeptAfterSave, checked on every state. */
 function violations(state: State): Violation[] {
   const { world } = state;
-  const stored = world.pointer === undefined ? undefined : parsePointer(world.pointer);
-  if (stored && requestOfTx(world, stored.unwrapTxHash) !== stored.unwrapRequestId) {
-    throw new HarnessError("the stored pointer names a request that its unwrap tx did not open");
-  }
+  const stored = new Set(storedRequests(world, world.stored));
+  const lost = (r: Hex) => requestStatus(world, r) === "open" && !stored.has(r);
   const out: Violation[] = world.saved
-    .filter((r) => requestStatus(world, r) === "open" && stored?.unwrapRequestId !== r)
+    .filter(lost)
     .map((requestId) => ({ rule: "PointerKeptAfterSave", requestId }));
-  if (stored && requestStatus(world, stored.unwrapRequestId) === "open") {
-    return out;
-  }
   const working = new Set(
     state.actors.map((a) => (typeof a === "object" ? requestOfTx(world, a.hash) : undefined)),
   );
   for (const tx of world.txs) {
-    if (
-      tx.kind === "unwrap" &&
-      !working.has(tx.requestId) &&
-      requestStatus(world, tx.requestId) === "open"
-    ) {
+    if (tx.kind === "unwrap" && !working.has(tx.requestId) && lost(tx.requestId)) {
       out.push({ rule: "PendingUnshieldIsDiscoverable", requestId: tx.requestId });
     }
   }
@@ -373,41 +274,43 @@ function withActor(state: State, index: number, actor: ActorState, world: World)
 }
 
 /**
- * `next` plus what the checks need about `actor`'s step from `world`: a
- * pointer it lost for another request, and how an unshield ended unsaved.
- * `child` is absent when the tab closed.
+ * `next` plus what the bounds need about `actor`'s step from `world`: entries
+ * of other requests that a read-modify-write based on a stale read dropped,
+ * and where an unshield ended before saving. `child` is absent when the tab
+ * closed.
  */
 function recordStep(world: World, next: World, actor: Node, child?: Node): World {
   let out = next;
-  const own = requestOfTx(world, actor.hash);
-  const before = world.pointer === undefined ? undefined : parsePointer(world.pointer);
-  if (before && before.unwrapRequestId !== own && next.pointer !== world.pointer) {
-    out = { ...out, clobbered: [...new Set([...out.clobbered, before.unwrapRequestId])].sort() };
+  const own = actor.requestId ?? requestOfTx(world, actor.hash);
+  const stale = actor.justRead !== undefined && (world.stored ?? null) !== actor.justRead.value;
+  if (stale && next.stored !== world.stored) {
+    const kept = new Set(storedRequests(next, next.stored));
+    const dropped = storedRequests(world, world.stored).filter((r) => r !== own && !kept.has(r));
+    out = { ...out, lostUpdate: [...new Set([...out.lostUpdate, ...dropped])].sort() };
   }
   const ended = !child || child.run.next.kind === "done";
   if (ended && isUnshield(actor.entry) && own && !(child ?? actor).saved) {
-    const pending = actor.run.next.kind === "call" ? actor.run.next.call : undefined;
-    const attempted = actor.saveAttempted || pending?.kind === "storage.set";
-    const on = attempted ? "pointer save" : pending?.kind;
-    if (!on) {
+    const pending = actor.run.next.kind === "call" ? actor.run.next.call.kind : undefined;
+    const endedOn = (child ?? actor).storageFailed ? "storage failure" : pending;
+    if (!endedOn) {
       throw new HarnessError("an actor ended without a pending call");
     }
-    out = { ...out, unsaved: [...out.unsaved, { requestId: own, endedOn: on }] };
+    out = { ...out, unsaved: [...out.unsaved, { requestId: own, endedOn }] };
   }
   return out;
 }
 
-function successors(trees: ActorTrees, state: State): Transition[] {
+async function successors(actors: Actors, state: State): Promise<Transition[]> {
   const out: Transition[] = [];
   const { world } = state;
-  for (const [index, spec] of trees.scenario.actors.entries()) {
+  for (const [index, spec] of actors.scenario.actors.entries()) {
     const actor = state.actors[index];
     if (actor === "idle") {
-      for (const entry of trees.entries(spec)) {
+      for (const entry of actors.entries(spec)) {
         if (entry.kind === "resumeUnshield" && !world.txs.some((tx) => tx.hash === entry.hash)) {
           continue;
         }
-        const node = trees.root(spec.slot, entry);
+        const node = await actors.root(spec.slot, entry);
         const call =
           entry.kind === "resumeUnshield"
             ? `resumeUnshield(${entry.hash}) with a hash the app kept`
@@ -424,11 +327,11 @@ function successors(trees: ActorTrees, state: State): Transition[] {
       continue;
     }
     const { call } = actor.run.next;
-    for (const { option, child } of actor.steps) {
+    for (const option of options(call, actor.slot, world)) {
       if (option.when && !option.when(world)) {
         continue;
       }
-      if (!child) {
+      if (option.answer.kind === "close") {
         out.push({
           text: () => `${spec.name}: tab closes while waiting on ${callLabel(call)}`,
           state: withActor(state, index, "done", recordStep(world, world, actor)),
@@ -436,6 +339,7 @@ function successors(trees: ActorTrees, state: State): Transition[] {
         });
         continue;
       }
+      const child = await actors.child(actor, call, option.answer);
       const next = recordStep(world, option.apply ? option.apply(world) : world, actor, child);
       out.push({
         text: () => `${spec.name}: ${callLabel(call)} ${option.text}${endText(spec.name, child)}`,
@@ -455,13 +359,14 @@ function successors(trees: ActorTrees, state: State): Transition[] {
 }
 
 export async function explore(scenario: Scenario): Promise<Exploration> {
-  const trees = new ActorTrees(scenario);
-  await trees.build();
+  const actors = new Actors(scenario);
   const initial: State = {
-    actors: scenario.actors.map((spec) =>
-      spec.entry === "page load" ? "idle" : settle(trees.root(spec.slot, spec.entry)),
+    actors: await Promise.all(
+      scenario.actors.map(async (spec) =>
+        spec.entry === "page load" ? "idle" : settle(await actors.root(spec.slot, spec.entry)),
+      ),
     ),
-    world: EMPTY_WORLD,
+    world: scenario.interrupted ? INTERRUPTED_WORLD : EMPTY_WORLD,
   };
 
   // Small integers keep state keys short: the search visits many states.
@@ -475,31 +380,32 @@ export async function explore(scenario: Scenario): Promise<Exploration> {
     return id;
   };
   const worldKeys = new WeakMap<World, string>();
-  const stateKey = ({ actors, world }: State): string => {
+  const stateKey = (state: State): string => {
+    const { world } = state;
     let key = worldKeys.get(world);
     if (key === undefined) {
       key = [
-        world.pointer === undefined ? "-" : intern(world.pointer),
+        world.stored === undefined ? "-" : intern(world.stored),
         world.txs.map((tx) => `${intern(tx.hash)}${tx.status[0]}`).join(","),
         world.saved.map(intern).join(","),
-        world.clobbered.map(intern).join(","),
+        world.lostUpdate.map(intern).join(","),
         world.unsaved.map((u) => `${intern(u.requestId)}@${intern(u.endedOn)}`).join(","),
       ].join("|");
       worldKeys.set(world, key);
     }
-    return `${actors.map((a) => (typeof a === "string" ? a[0] : a.canon)).join(",")}|${key}`;
+    return `${state.actors.map((a) => (typeof a === "string" ? a[0] : a.id)).join(",")}|${key}`;
   };
 
   const seen = new Set<string>([stateKey(initial)]);
   // Per state: the state it was first reached from, and which of that state's steps led here.
   const trail: ({ from: number; ordinal: number } | undefined)[] = [undefined];
   const queue: (State | undefined)[] = [initial];
-  const classified = new Map<ClassName, string[]>();
-  const unexplained = new Map<Rule, string[]>();
+  const bounded = new Map<BoundName, string[]>();
+  const broken = new Map<Rule, string[]>();
   let transitions = 0;
 
   // Labels are built only for a path that is reported, by replaying it from the start.
-  const pathTo = (index: number): string[] => {
+  const pathTo = async (index: number): Promise<string[]> => {
     const ordinals: number[] = [];
     for (let link = trail[index]; link; link = trail[link.from]) {
       ordinals.unshift(link.ordinal);
@@ -507,7 +413,7 @@ export async function explore(scenario: Scenario): Promise<Exploration> {
     const path: string[] = [];
     let state = initial;
     for (const ordinal of ordinals) {
-      const step = successors(trees, state)[ordinal];
+      const step = (await successors(actors, state))[ordinal];
       if (!step) {
         throw new HarnessError("a recorded path does not replay: the search is not deterministic");
       }
@@ -523,10 +429,10 @@ export async function explore(scenario: Scenario): Promise<Exploration> {
     if (!state) {
       continue;
     }
-    for (const [ordinal, t] of successors(trees, state).entries()) {
+    for (const [ordinal, t] of (await successors(actors, state)).entries()) {
       transitions++;
-      if (t.falselyFinalized && !unexplained.has("NoFalseAlreadyFinalized")) {
-        unexplained.set("NoFalseAlreadyFinalized", [...pathTo(i), t.text()]);
+      if (t.falselyFinalized && !broken.has("NoFalseAlreadyFinalized")) {
+        broken.set("NoFalseAlreadyFinalized", [...(await pathTo(i)), t.text()]);
       }
       const key = stateKey(t.state);
       if (seen.has(key)) {
@@ -536,18 +442,16 @@ export async function explore(scenario: Scenario): Promise<Exploration> {
       const j = queue.push(t.state) - 1;
       trail.push({ from: i, ordinal });
       for (const v of violations(t.state)) {
-        const name = (Object.keys(CLASSES) as ClassName[]).find((c) =>
-          CLASSES[c].matches(v, t.state.world),
-        );
-        if (name !== undefined) {
-          if (!classified.has(name)) {
-            classified.set(name, pathTo(j));
+        const bound = (Object.keys(BOUNDS) as BoundName[]).find((b) => BOUNDS[b](v, t.state.world));
+        if (bound !== undefined) {
+          if (!bounded.has(bound)) {
+            bounded.set(bound, await pathTo(j));
           }
-        } else if (!unexplained.has(v.rule)) {
-          unexplained.set(v.rule, pathTo(j));
+        } else if (!broken.has(v.rule)) {
+          broken.set(v.rule, await pathTo(j));
         }
       }
     }
   }
-  return { states: queue.length, transitions, sdkRuns: trees.sdkRuns, classified, unexplained };
+  return { states: queue.length, transitions, sdkRuns: actors.sdkRuns, bounded, broken };
 }
