@@ -29,7 +29,7 @@ export interface SdkFixtures {
   events: typeof ZamaSDKEvents;
 }
 
-function buildSDK(
+export function buildSDK(
   chain: FheChain,
   relayer: RelayerSDK,
   provider: GenericProvider,
