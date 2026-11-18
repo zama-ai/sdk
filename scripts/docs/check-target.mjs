@@ -101,8 +101,11 @@ function main() {
     let content;
     try {
       content = readFileSync(file, "utf8");
-    } catch {
-      continue;
+    } catch (error) {
+      if (error.code === "ENOENT") {
+        continue;
+      }
+      throw error;
     }
     for (const problem of findUrlProblems(content, expected)) {
       problems.push(`${rel(file)}: ${problem}`);

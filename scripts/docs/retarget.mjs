@@ -179,8 +179,11 @@ function main() {
     let content;
     try {
       content = readFileSync(file, "utf8");
-    } catch {
-      continue; // optional file (e.g. a README that doesn't exist) — skip
+    } catch (error) {
+      if (error.code === "ENOENT") {
+        continue; // optional file, e.g. a README that does not exist
+      }
+      throw error;
     }
     const updated = retargetUrls(content, target);
     if (updated !== content) {
