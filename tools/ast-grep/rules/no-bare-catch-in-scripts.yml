@@ -1,0 +1,17 @@
+id: no-bare-catch-in-scripts
+language: JavaScript
+severity: error
+message: >-
+  A catch with no error binding treats every failure (permission, network,
+  auth, typo) as the one you expected. Bind the error, handle only the
+  error.code you expect (for example ENOENT, or npm E404), and rethrow the
+  rest. See npmView in scripts/examples/bump-sdk.mjs.
+files:
+  - scripts/**/*.mjs
+  - claude-setup/**/*.mjs
+rule:
+  kind: catch_clause
+  not:
+    has:
+      field: parameter
+      regex: "."
