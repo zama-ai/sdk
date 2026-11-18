@@ -41,10 +41,8 @@ for (const [glob, commands] of Object.entries(tasks)) {
   }
   for (const command of [commands].flat()) {
     const [tool, ...args] = command.split(" ");
-    const result = spawnSync(path.join(bin, tool), [...args, file], {
-      cwd: root,
-      encoding: "utf8",
-    });
+    const executable = tool === "node" ? process.execPath : path.join(bin, tool);
+    const result = spawnSync(executable, [...args, file], { cwd: root, encoding: "utf8" });
     if (result.status !== 0) {
       failures.push(result.error?.message ?? result.stdout + result.stderr);
     }

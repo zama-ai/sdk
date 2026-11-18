@@ -1,4 +1,3 @@
-[ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ] || pnpm lint:em-dash
-pnpm exec lint-staged
+pnpm exec lint-staged --concurrent false
 pnpm typecheck
 pnpm llm:stage

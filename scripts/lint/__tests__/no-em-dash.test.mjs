@@ -32,6 +32,28 @@ describe("findAddedEmDashes", () => {
     expect(findAddedEmDashes(diff)).toEqual([]);
   });
 
+  it("skips a pure rename, a binary file, and the no-newline marker", () => {
+    const diff = [
+      "diff --git a/old.md b/new.md",
+      "similarity index 100%",
+      "rename from old.md",
+      "rename to new.md",
+      "diff --git a/logo.png b/logo.png",
+      "Binary files a/logo.png and b/logo.png differ",
+      "diff --git a/c.md b/c.md",
+      "--- a/c.md",
+      "+++ b/c.md",
+      "@@ -1 +1 @@",
+      "-old",
+      `+new ${EM_DASH} end`,
+      "\\ No newline at end of file",
+    ].join("\n");
+
+    expect(findAddedEmDashes(diff)).toEqual([
+      { file: "c.md", line: 1, text: `new ${EM_DASH} end` },
+    ]);
+  });
+
   it("does not mistake hunk lines that look like file headers for headers", () => {
     const diff = [
       "diff --git a/q.sql b/q.sql",
