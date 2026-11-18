@@ -12,7 +12,7 @@ import {
   zenithTrexTestnet as fheZenith,
   type FheChain,
 } from "@zama-fhe/sdk/chains";
-import { defineChain, isAddress, type Chain } from "viem";
+import { defineChain, type Chain } from "viem";
 import { bscTestnet, hoodi, mainnet, polygon, sepolia } from "viem/chains";
 
 export interface Network {
@@ -62,96 +62,7 @@ const zenith = defineChain({
   },
 });
 
-// ─── Custom Zama environment on Sepolia ───────────────────────────────────────
-// NEXT_PUBLIC_ZAMA_ENV=custom adds a "sepolia-custom" row: another Zama environment on
-// Sepolia, for example a pre-release one the SDK ships no preset for.
-const ZAMA_ENV = process.env.NEXT_PUBLIC_ZAMA_ENV === "custom" ? "custom" : "testnet";
-
-function customEnvValue(name: string, value: string | undefined): string {
-  if (!value) {
-    throw new Error(`NEXT_PUBLIC_ZAMA_ENV=custom requires ${name} to be set in .env.local`);
-  }
-  return value;
-}
-
-// A wrong address would only show up later as a failed read or a rejected signature, so the
-// values are checked when the table loads. Mixed-case addresses must carry a valid checksum.
-function customEnvAddress(name: string, value: string | undefined): Address {
-  const address = customEnvValue(name, value);
-  if (!isAddress(address)) {
-    throw new Error(`NEXT_PUBLIC_ZAMA_ENV=custom: ${name} is not a valid address: ${address}`);
-  }
-  return address;
-}
-
-function customEnvChainId(name: string, value: string | undefined): number {
-  const raw = customEnvValue(name, value);
-  const chainId = Number(raw);
-  if (!Number.isSafeInteger(chainId) || chainId <= 0) {
-    throw new Error(`NEXT_PUBLIC_ZAMA_ENV=custom: ${name} must be a positive integer: ${raw}`);
-  }
-  return chainId;
-}
-
-// Next.js inlines NEXT_PUBLIC_* variables only where they are referenced literally, so each
-// one is spelled out here rather than looked up by name.
-function customSepolia(): FheChain & { network: string } {
-  return {
-    id: fheSepolia.id,
-    gatewayChainId: customEnvChainId(
-      "NEXT_PUBLIC_ZAMA_GATEWAY_CHAIN_ID",
-      process.env.NEXT_PUBLIC_ZAMA_GATEWAY_CHAIN_ID,
-    ),
-    // Placeholder: providers.tsx points every relayer row at the same-origin proxy.
-    relayerUrl: fheSepolia.relayerUrl,
-    network: fheSepolia.network,
-    aclContractAddress: customEnvAddress(
-      "NEXT_PUBLIC_ZAMA_ACL_ADDRESS",
-      process.env.NEXT_PUBLIC_ZAMA_ACL_ADDRESS,
-    ),
-    kmsContractAddress: customEnvAddress(
-      "NEXT_PUBLIC_ZAMA_KMS_VERIFIER_ADDRESS",
-      process.env.NEXT_PUBLIC_ZAMA_KMS_VERIFIER_ADDRESS,
-    ),
-    inputVerifierContractAddress: customEnvAddress(
-      "NEXT_PUBLIC_ZAMA_INPUT_VERIFIER_ADDRESS",
-      process.env.NEXT_PUBLIC_ZAMA_INPUT_VERIFIER_ADDRESS,
-    ),
-    verifyingContractAddressDecryption: customEnvAddress(
-      "NEXT_PUBLIC_ZAMA_DECRYPTION_ADDRESS",
-      process.env.NEXT_PUBLIC_ZAMA_DECRYPTION_ADDRESS,
-    ),
-    verifyingContractAddressInputVerification: customEnvAddress(
-      "NEXT_PUBLIC_ZAMA_INPUT_VERIFICATION_ADDRESS",
-      process.env.NEXT_PUBLIC_ZAMA_INPUT_VERIFICATION_ADDRESS,
-    ),
-    // Required: the SDK falls back to its preset Sepolia registry when this is unset, which
-    // would list Sepolia's tokens against this environment's contracts.
-    registryAddress: customEnvAddress(
-      "NEXT_PUBLIC_REGISTRY_ADDRESS",
-      process.env.NEXT_PUBLIC_REGISTRY_ADDRESS,
-    ),
-  };
-}
-
-// Built only when configured, since it throws on a missing variable. Listed before Sepolia,
-// so a wallet on Sepolia starts on it until Sepolia is picked.
-const customRow =
-  ZAMA_ENV === "custom"
-    ? {
-        "sepolia-custom": defineNetwork({
-          label: "Sepolia · Custom environment",
-          chain: sepolia,
-          fhe: customSepolia(),
-          rpcUrl: process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL,
-          transport: "relayer",
-          explorerUrl: "https://eth-sepolia.blockscout.com",
-          canMint: true,
-        }),
-      }
-    : undefined;
-
-const table = {
+export const networks = {
   sepolia: defineNetwork({
     label: "Sepolia",
     chain: sepolia,
@@ -221,31 +132,11 @@ const table = {
   }),
 } satisfies Record<string, Network>;
 
-export type NetworkKey = keyof typeof table | "sepolia-custom";
+export type NetworkKey = keyof typeof networks;
 
-// Cast: "sepolia-custom" is present only when the custom environment is configured.
-export const networks = { ...customRow, ...table } as Record<NetworkKey, Network>;
-
+/** Table order: the first key is the chain wagmi falls back to while no wallet is connected. */
 export const NETWORK_KEYS = Object.keys(networks) as NetworkKey[];
 
-/** The row for a chain. Two rows can share one, so `chosen` wins, then the first in `enabled`. */
-export function networkForChain(
-  chainId: number | undefined,
-  chosen?: NetworkKey,
-  enabled?: readonly NetworkKey[],
-): NetworkKey | undefined {
-  const onChain = NETWORK_KEYS.filter((key) => networks[key].chain.id === chainId);
-  return (
-    onChain.find((key) => key === chosen) ??
-    onChain.find((key) => enabled?.includes(key) ?? true) ??
-    onChain[0]
-  );
+export function networkForChain(chainId: number | undefined): NetworkKey | undefined {
+  return NETWORK_KEYS.find((key) => networks[key].chain.id === chainId);
 }
-
-/** One row per chain id, preferring `active` on its chain. */
-export function rowsFor(active?: NetworkKey): NetworkKey[] {
-  return NETWORK_KEYS.filter((key) => networkForChain(networks[key].chain.id, active) === key);
-}
-
-/** One chain per chain id, in table order. wagmi falls back to the first while disconnected. */
-export const CHAINS = rowsFor().map((key) => networks[key].chain);

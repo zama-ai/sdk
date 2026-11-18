@@ -26,7 +26,7 @@ import {
 import { addEvmWindowInjectedExtension } from "@dynamic-labs-sdk/evm/window-injected";
 import type { Chain } from "viem";
 import type { Config } from "wagmi";
-import { CHAINS } from "@/lib/networks";
+import { NETWORK_KEYS, networks } from "@/lib/networks";
 import {
   connectDynamicWallet,
   type DynamicWallet,
@@ -76,7 +76,9 @@ function startDynamic(): Dynamic {
     // Initialized below, so a failure reaches our handler instead of going unhandled.
     autoInitialize: false,
     // The network table is the only set of networks Dynamic knows, whatever its dashboard lists.
-    transformers: { networksData: () => CHAINS.map(toNetworkData) },
+    transformers: {
+      networksData: () => NETWORK_KEYS.map((key) => toNetworkData(networks[key].chain)),
+    },
     // No telemetry to Dynamic's own log endpoint.
     instrumentation: { enabled: false },
   });

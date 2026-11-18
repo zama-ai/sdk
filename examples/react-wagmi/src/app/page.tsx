@@ -15,9 +15,11 @@ import {
   TokenSelector,
 } from "@/components/PageChrome";
 import { NoTokenPanel, SelectedTokenPanel } from "@/components/SelectedTokenPanel";
-import { useActiveNetwork, useEnabledNetworks } from "@/lib/hooks";
-import { networks } from "@/lib/networks";
+import { ENVIRONMENTS, isCustomized, labelFor, networkId } from "@/lib/environment";
+import { useEnabledNetworks } from "@/lib/hooks";
+import { networkForChain, networks } from "@/lib/networks";
 import { useWalletConnection } from "@/lib/wallet";
+import { useEnvironment } from "@/providers";
 
 const TITLE = "Confidential Token Quickstart";
 
@@ -36,13 +38,14 @@ export default function Home() {
   // Networks the server can serve: cleartext rows always, relayer rows only when it has a
   // relayer URL for them. Mainnet stays hidden until a deployment opts in.
   const {
-    data: enabledNetworks = [],
+    data: served,
     isPending: isNetworksPending,
     isFetching: isNetworksFetching,
     isError: isNetworksError,
     refetch: refetchNetworks,
   } = useEnabledNetworks();
-  const { activeKey, choose } = useActiveNetwork();
+  const enabledNetworks = served?.enabled ?? [];
+  const activeKey = networkForChain(chainId);
   const activeNetwork = activeKey && enabledNetworks.includes(activeKey) ? activeKey : undefined;
   const network = activeNetwork && networks[activeNetwork];
 
@@ -50,6 +53,7 @@ export default function Home() {
   // after a switch the token list would keep showing the previous network's tokens. Refetch it
   // on every chain change. Remove once the example installs a react-sdk that does this itself.
   const queryClient = useQueryClient();
+  const { env, setEnv } = useEnvironment();
   useEffect(() => {
     void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.wrappersRegistry.chainId() });
   }, [chainId, queryClient]);
@@ -62,15 +66,34 @@ export default function Home() {
     query: { enabled: isConnected && network !== undefined },
   });
 
+  // One option per network, plus one per network the custom environment changes and serves.
+  const options = enabledNetworks.flatMap((key) => {
+    const envs = served?.custom.includes(key) ? ENVIRONMENTS : (["default"] as const);
+    return envs.map((optionEnv) => ({
+      key,
+      env: optionEnv,
+      id: networkId(key, optionEnv),
+      label: labelFor(key, optionEnv),
+    }));
+  });
+
   const picker = (
     <NetworkPicker
-      options={enabledNetworks}
-      value={activeNetwork ?? ""}
+      options={options}
+      value={activeNetwork ? networkId(activeNetwork, env) : ""}
       pending={isSwitching}
-      onChange={(key) => {
-        // Remembered even when the wallet is already on the chain: two rows can share one.
-        choose(key);
-        if (networks[key].chain.id !== chainId) switchChain({ chainId: networks[key].chain.id });
+      onChange={(id) => {
+        const option = options.find((option) => option.id === id);
+        if (!option) return;
+        // Only networks the custom environment changes pick an environment. It is set before the
+        // switch: wagmi reports the new chain before the switch resolves, and the environments
+        // differ only on that chain. A switch the wallet rejects puts the previous one back.
+        const previous = env;
+        if (isCustomized(option.key)) setEnv(option.env);
+        const target = networks[option.key].chain.id;
+        if (target !== chainId) {
+          switchChain({ chainId: target }, { onError: () => setEnv(previous) });
+        }
       }}
       error={switchError && "Could not switch network. Please switch manually in your wallet."}
     />
@@ -162,7 +185,8 @@ export default function Home() {
         disconnecting={isDisconnecting}
       />
       {picker}
-      <TokenScreen key={activeNetwork} chainId={chainId} address={address} />
+      {/* Remounted on an environment change: the same chain, but other tokens. */}
+      <TokenScreen key={env} chainId={chainId} address={address} />
     </main>
   );
 }

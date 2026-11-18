@@ -1,6 +1,5 @@
 "use client";
 
-import { useChosenNetwork } from "@/lib/chosenNetwork";
 import { networkForChain, networks, type Network, type NetworkKey } from "@/lib/networks";
 import { erc20BalanceKey } from "@/lib/queryKeys";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -11,37 +10,27 @@ import { parseAbi, parseUnits } from "viem";
 import { useConnection } from "wagmi";
 
 // Networks the server can serve (see /api/networks): cleartext rows always, relayer rows
-// only when the server has a relayer URL for them. Fetched once per page load.
+// only when the server has a relayer URL for them. `custom` lists the ones it also serves in
+// the custom environment (src/lib/environment.ts). Fetched once per page load.
 export function useEnabledNetworks() {
   return useQuery({
     queryKey: ["enabled-networks"],
     queryFn: async () => {
       const res = await fetch("/api/networks");
       if (!res.ok) throw new Error(`Failed to load networks (${res.status})`);
-      return ((await res.json()) as { enabled: NetworkKey[] }).enabled;
+      return (await res.json()) as { enabled: NetworkKey[]; custom: NetworkKey[] };
     },
     staleTime: Infinity,
   });
 }
 
-// Undefined until the enabled list loads: before that, a hidden custom row would win the
-// Sepolia chain and get an SDK config of its own.
-export function useActiveNetwork() {
-  const { chosen, choose } = useChosenNetwork();
-  const { chainId } = useConnection();
-  const { data: enabled } = useEnabledNetworks();
-  const activeKey =
-    enabled &&
-    networkForChain(chainId, chainId === undefined ? undefined : chosen[chainId], enabled);
-  return { activeKey, choose };
-}
-
 // The network row for the wallet's current chain. Only valid under the connected screen,
 // which never renders while the wallet is on a chain outside the table.
 export function useNetwork(): Network {
-  const { activeKey } = useActiveNetwork();
-  if (!activeKey) throw new Error("useNetwork: the wallet is not on a supported network.");
-  return networks[activeKey];
+  const { chainId } = useConnection();
+  const key = networkForChain(chainId);
+  if (!key) throw new Error("useNetwork: the wallet is not on a supported network.");
+  return networks[key];
 }
 
 // mint(address, uint256) is not part of the ERC-20 standard — it is a convenience

@@ -1,20 +1,20 @@
 "use client";
 
 import "@/lib/zodJitless";
-import { type ReactNode } from "react";
+import { createContext, type ReactNode, useContext, useMemo, useState } from "react";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import {
   cleartext,
+  type GenericStorage,
   IndexedDBStorage,
   indexedDBStorage,
   type RelayerConfig,
   type ZamaConfig,
 } from "@zama-fhe/sdk";
 import { web } from "@zama-fhe/sdk/web";
-import { ChosenNetworkProvider } from "@/lib/chosenNetwork";
-import { useActiveNetwork } from "@/lib/hooks";
-import { networks, rowsFor, type NetworkKey } from "@/lib/networks";
+import { type Environment, fheFor, networkId } from "@/lib/environment";
+import { NETWORK_KEYS, networks } from "@/lib/networks";
 import { wagmiConfig, WalletProviders } from "@/lib/wallet";
 
 // Relayer traffic goes through the same-origin Next.js proxy so API keys stay server-side.
@@ -22,54 +22,65 @@ import { wagmiConfig, WalletProviders } from "@/lib/wallet";
 // placeholder never issues requests. Cleartext networks have no relayer at all.
 const origin = typeof window === "undefined" ? "http://localhost" : window.location.origin;
 
-// Permits are keyed by signer and chain id, which both Sepolia rows share. A database of its
-// own keeps a permit signed for one environment away from the other's relayer.
-const customEnvStorage = new IndexedDBStorage("CredentialStore-custom");
+const relayers = Object.fromEntries(
+  NETWORK_KEYS.map((key) => {
+    const { chain, transport } = networks[key];
+    return [chain.id, transport === "relayer" ? web() : cleartext()];
+  }),
+) as Record<number, RelayerConfig>;
 
-// The SDK takes one FheChain per chain id, so a config registers the active row and, for
-// every other chain, its first row. Cached, because a new config on re-render resets the SDK.
-const configs = new Map<string, ZamaConfig>();
-
-function zamaConfigFor(active: NetworkKey | undefined): ZamaConfig {
-  const keys = rowsFor(active);
-  const storage = active === "sepolia-custom" ? customEnvStorage : indexedDBStorage;
-  const id = `${keys.join()}|${active === "sepolia-custom"}`;
-  let config = configs.get(id);
-  if (!config) {
-    // Destructuring gives the non-empty tuple type the config requires.
-    const [firstFheChain, ...otherFheChains] = keys.map((key) => {
-      const { fhe, transport } = networks[key];
-      return transport === "relayer" ? { ...fhe, relayerUrl: `${origin}/api/relayer/${key}` } : fhe;
-    });
-    const relayers = Object.fromEntries(
-      keys.map((key) => {
-        const { chain, transport } = networks[key];
-        return [chain.id, transport === "relayer" ? web() : cleartext()];
-      }),
-    ) as Record<number, RelayerConfig>;
-    config = createZamaConfig({
-      wagmiConfig,
-      chains: [firstFheChain, ...otherFheChains],
-      relayers,
-      storage,
-      permitStorage: storage,
-    });
-    configs.set(id, config);
-  }
-  return config;
+function createConfig(env: Environment, storage: GenericStorage): ZamaConfig {
+  // Every row of the network table is registered; the picker decides which ones are offered.
+  // Destructuring gives the non-empty tuple type the config requires.
+  const [firstFheChain, ...otherFheChains] = NETWORK_KEYS.map((key) => {
+    const fhe = fheFor(key, env);
+    return networks[key].transport === "relayer"
+      ? { ...fhe, relayerUrl: `${origin}/api/relayer/${networkId(key, env)}` }
+      : fhe;
+  });
+  return createZamaConfig({
+    wagmiConfig,
+    chains: [firstFheChain, ...otherFheChains],
+    relayers,
+    storage,
+    permitStorage: storage,
+  });
 }
 
-function ActiveZamaProvider({ children }: { children: ReactNode }) {
-  const { activeKey } = useActiveNetwork();
-  return <ZamaProvider config={zamaConfigFor(activeKey)}>{children}</ZamaProvider>;
+// Stable module-level references — recreating on re-render would reset the SDK. The SDK keys
+// permits by signer and chain id, which both environments share, so the custom one gets a
+// database of its own: a permit signed for one environment never reaches the other's relayer.
+const configs: Record<Environment, ZamaConfig> = {
+  default: createConfig("default", indexedDBStorage),
+  custom: createConfig("custom", new IndexedDBStorage("CredentialStore-custom")),
+};
+
+const EnvironmentContext = createContext<{
+  env: Environment;
+  setEnv: (env: Environment) => void;
+} | null>(null);
+
+/** The Zama environment the SDK runs against, picked together with the network. */
+export function useEnvironment() {
+  const ctx = useContext(EnvironmentContext);
+  if (!ctx) throw new Error("useEnvironment must be used within <Providers>");
+  return ctx;
+}
+
+function EnvironmentProvider({ children }: { children: ReactNode }) {
+  const [env, setEnv] = useState<Environment>("default");
+  const value = useMemo(() => ({ env, setEnv }), [env]);
+  return (
+    <EnvironmentContext.Provider value={value}>
+      <ZamaProvider config={configs[env]}>{children}</ZamaProvider>
+    </EnvironmentContext.Provider>
+  );
 }
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <WalletProviders>
-      <ChosenNetworkProvider>
-        <ActiveZamaProvider>{children}</ActiveZamaProvider>
-      </ChosenNetworkProvider>
+      <EnvironmentProvider>{children}</EnvironmentProvider>
     </WalletProviders>
   );
 }
