@@ -10,6 +10,8 @@ The daemon system spans `packages/sdk-daemon`, `clients/go`, `clients/rust`, and
 
 **Package manager:** pnpm, version pinned by `packageManager` in `package.json` (Node 22+). Install with `pnpm install`. It also initializes git submodules and runs `forge soldeer install` for contracts.
 
+**No em dashes:** don't add em dashes (U+2014) in new or edited lines. Use a comma, colon, period, or parentheses.
+
 **Agent setup:** run `pnpm setup:claude`. It copies `claude-setup/` → `.claude/` (which is gitignored and unpublished for security, so never commit it) and installs the Zama marketplace plugins and skills. Its hooks run the pre-commit checks (`lint-staged.config.mjs`) on each edited file, and typecheck before the turn ends when TypeScript files changed.
 
 ## ⚠️ Not `@zama-fhe/relayer-sdk`

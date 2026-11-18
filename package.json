@@ -30,6 +30,7 @@
     "typecheck": "turbo run typecheck",
     "lint": "oxlint && pnpm ast-grep:scan",
     "ast-grep:scan": "ast-grep scan --config sgconfig.yml",
+    "lint:em-dash": "node scripts/lint/no-em-dash.mjs",
     "codemod:sdk-migration-v3": "codemod workflow run -w codemods/sdk-migration-v3/workflow.yaml",
     "lint:fix": "oxlint --fix --fix-suggestions",
     "format": "oxfmt",
