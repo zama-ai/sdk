@@ -7,6 +7,7 @@ const saved: Record<string, string | undefined> = {};
 
 function loadRelayers(env: Record<string, string>) {
   for (const key of Object.keys(env)) {
+    // `in`, not `??=`: an originally unset variable must stay saved as undefined.
     if (!(key in saved)) saved[key] = process.env[key];
   }
   Object.assign(process.env, env);

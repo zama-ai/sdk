@@ -18,6 +18,7 @@ const validEnv = {
 function loadEnvironment(overrides: Record<string, string> = {}) {
   const env = { ...validEnv, ...overrides };
   for (const key of Object.keys(env)) {
+    // `in`, not `??=`: an originally unset variable must stay saved as undefined.
     if (!(key in saved)) saved[key] = process.env[key];
   }
   Object.assign(process.env, env);
@@ -51,6 +52,15 @@ test.describe("NEXT_PUBLIC_ZAMA_ENV=custom", () => {
     expect(custom.gatewayChainId).toBe(10901);
     expect(custom.aclContractAddress).toBe(validEnv.NEXT_PUBLIC_ZAMA_ACL_ADDRESS);
     expect(custom.registryAddress).toBe(validEnv.NEXT_PUBLIC_REGISTRY_ADDRESS);
+    // Every preset field is either set here or deliberately dropped: a field added to the
+    // preset fails this until it is one or the other.
+    const dropped = ["vaultRouterAddress"];
+    expect(Object.keys(custom).sort()).toEqual(
+      Object.keys(fheFor("sepolia", "default"))
+        .filter((key) => !dropped.includes(key))
+        .sort(),
+    );
+    for (const key of dropped) expect(custom).not.toHaveProperty(key);
     expect(fheFor("sepolia", "default").aclContractAddress).not.toBe(
       validEnv.NEXT_PUBLIC_ZAMA_ACL_ADDRESS,
     );

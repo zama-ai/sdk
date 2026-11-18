@@ -100,9 +100,12 @@ function createConfig(env: Environment, storage: GenericStorage) {
   });
 }
 
+const defaultConfig = createConfig("default", indexedDBStorage);
 const configs = {
-  default: createConfig("default", indexedDBStorage),
-  custom: createConfig("custom", new IndexedDBStorage("CredentialStore-custom")),
+  default: defaultConfig,
+  custom: NETWORK_KEYS.some(isCustomized)
+    ? createConfig("custom", new IndexedDBStorage("CredentialStore-custom"))
+    : defaultConfig,
 };
 ```
 
@@ -118,8 +121,8 @@ providers. `useEnvironment()` exposes that environment to the page:
 </WalletProviders>
 ```
 
-`storage` and `permitStorage` use the same IndexedDB-backed storage in this browser app so
-the transport key pair and signed permits survive page reloads during local development.
+Each config passes one IndexedDB database as both `storage` and `permitStorage`, so the
+transport key pair and signed permits survive page reloads during local development.
 
 **Custom environment.** With `NEXT_PUBLIC_ZAMA_ENV=custom`, `src/lib/environment.ts` builds a
 second version of Sepolia from the `NEXT_PUBLIC_ZAMA_*` variables: the same chain, other
@@ -406,9 +409,9 @@ The proxy route `src/app/api/relayer/[network]/[...path]/route.ts` keeps API key
 The `[network]` segment is a network id: a key of the network table, or `sepolia-custom` for
 Sepolia in the custom environment (`networkId()` in `src/lib/environment.ts`). The route looks it up in
 `src/lib/relayers.ts`, which maps each `relayer` network to an upstream from env
-(`SEPOLIA_RELAYER_URL`, `SEPOLIA_CUSTOM_RELAYER_URL`, `MAINNET_RELAYER_URL`, … — bare hosts, no
-`/v2` suffix). Testnets default to the public testnet relayer; mainnets have no default and are
-hidden until set.
+(`SEPOLIA_RELAYER_URL`, `SEPOLIA_CUSTOM_RELAYER_URL`, `MAINNET_RELAYER_URL`, …; bare hosts, no
+`/v2` suffix). Sepolia defaults to the public testnet relayer; custom Sepolia and mainnets have
+no default and are hidden until set.
 
 The proxy fails closed and is deliberately narrow:
 

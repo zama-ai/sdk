@@ -11,7 +11,7 @@ import { useConnection } from "wagmi";
 
 // Networks the server can serve (see /api/networks): cleartext rows always, relayer rows
 // only when the server has a relayer URL for them. `custom` lists the ones it also serves in
-// the custom environment (src/lib/environment.ts). Fetched once per page load.
+// the custom environment. Fetched once per page load.
 export function useEnabledNetworks() {
   return useQuery({
     queryKey: ["enabled-networks"],

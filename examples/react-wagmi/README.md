@@ -27,7 +27,7 @@ The table lives in [`src/lib/networks.ts`](src/lib/networks.ts). Each row pairs 
 
 Token pairs on every network come from the on-chain `WrappersRegistry` at runtime; no token addresses are hardcoded. On testnets, the underlying mock tokens expose `mint(address,uint256)`, which the **Mint** button calls.
 
-**Custom environment.** `NEXT_PUBLIC_ZAMA_ENV=custom` adds a second Zama environment next to the default one: another Zama deployment on Sepolia, for example a pre-release one the SDK ships no preset for, with the protocol contracts, gateway and wrapper registry in the `NEXT_PUBLIC_ZAMA_*` and `NEXT_PUBLIC_REGISTRY_ADDRESS` values in `.env.local` (see `.env.example`). The picker then offers **Sepolia · Custom environment** next to **Sepolia**; the app starts in the default environment. The environment is not a network of its own: the app builds one SDK config per environment ([`src/lib/environment.ts`](src/lib/environment.ts), [`src/providers.tsx`](src/providers.tsx)), and picking the option switches the wallet's chain and the SDK config together. Its relayer is `SEPOLIA_CUSTOM_RELAYER_URL` (the option is hidden while that is unset); add the origin its `keyurl` serves keys from to `CSP_CONNECT_SRC`. The registry is required: without it Sepolia's preset registry would list Sepolia's tokens. Its keys and permits live in a separate IndexedDB database, because the SDK keys them by signer and chain ID, which both environments share.
+**Custom environment.** `NEXT_PUBLIC_ZAMA_ENV=custom` adds a second Zama deployment on Sepolia to the picker, configured from the `NEXT_PUBLIC_ZAMA_*` variables (see `.env.example`). Used internally; you can ignore it.
 
 ## Stack
 

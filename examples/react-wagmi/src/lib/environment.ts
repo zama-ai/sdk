@@ -1,10 +1,6 @@
 // ─── Zama environments ─────────────────────────────────────────────────────────
-// The network table is the "default" environment: the protocol deployments the SDK ships
-// presets for. NEXT_PUBLIC_ZAMA_ENV=custom adds a "custom" one: another Zama deployment on
-// the same chains, for example a pre-release one the SDK ships no preset for. It differs only
-// on Sepolia, whose protocol contracts and gateway come from the NEXT_PUBLIC_ZAMA_* variables
-// (see .env.example). An environment is a version of the networks, not a network of its own,
-// so the table keeps one row per chain and the SDK gets one config per environment.
+// NEXT_PUBLIC_ZAMA_ENV=custom adds a second Zama deployment on Sepolia, configured from the
+// NEXT_PUBLIC_ZAMA_* variables.
 import type { Address } from "@zama-fhe/sdk";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 import { isAddress } from "viem";
@@ -40,10 +36,15 @@ function customEnvChainId(name: string, value: string | undefined): number {
 }
 
 // Next.js inlines NEXT_PUBLIC_* variables only where they are referenced literally, so each
-// one is spelled out here rather than looked up by name.
+// one is spelled out here rather than looked up by name. Fields are listed one by one, not
+// spread from the preset, so a field this environment does not set is absent rather than
+// silently taken from the default Sepolia deployment.
 function customSepolia(): FheChain {
+  const { id, relayerUrl, network } = networks.sepolia.fhe;
   return {
-    ...networks.sepolia.fhe,
+    id,
+    relayerUrl, // replaced by the proxy route in providers.tsx
+    network,
     gatewayChainId: customEnvChainId(
       "NEXT_PUBLIC_ZAMA_GATEWAY_CHAIN_ID",
       process.env.NEXT_PUBLIC_ZAMA_GATEWAY_CHAIN_ID,
@@ -81,7 +82,6 @@ function customSepolia(): FheChain {
 export const customNetworks: Partial<Record<NetworkKey, FheChain>> =
   process.env.NEXT_PUBLIC_ZAMA_ENV === "custom" ? { sepolia: customSepolia() } : {};
 
-/** Whether the custom environment changes this network. */
 export function isCustomized(key: NetworkKey): boolean {
   return key in customNetworks;
 }
@@ -94,7 +94,6 @@ export function networkId(key: NetworkKey, env: Environment): string {
   return env === "custom" && isCustomized(key) ? `${key}-custom` : key;
 }
 
-/** The network's protocol config in an environment. */
 export function fheFor(key: NetworkKey, env: Environment): FheChain {
   return (env === "custom" && customNetworks[key]) || networks[key].fhe;
 }

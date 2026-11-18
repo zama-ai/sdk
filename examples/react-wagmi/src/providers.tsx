@@ -13,7 +13,7 @@ import {
   type ZamaConfig,
 } from "@zama-fhe/sdk";
 import { web } from "@zama-fhe/sdk/web";
-import { type Environment, fheFor, networkId } from "@/lib/environment";
+import { type Environment, fheFor, isCustomized, networkId } from "@/lib/environment";
 import { NETWORK_KEYS, networks } from "@/lib/networks";
 import { wagmiConfig, WalletProviders } from "@/lib/wallet";
 
@@ -47,12 +47,15 @@ function createConfig(env: Environment, storage: GenericStorage): ZamaConfig {
   });
 }
 
-// Stable module-level references — recreating on re-render would reset the SDK. The SDK keys
-// permits by signer and chain id, which both environments share, so the custom one gets a
-// database of its own: a permit signed for one environment never reaches the other's relayer.
+// Module-level: recreating a config on re-render resets the SDK. The custom one has its own
+// database because permits are keyed by signer and chain ID, which both environments share.
+// When it changes no network it would equal the default config, so it reuses that.
+const defaultConfig = createConfig("default", indexedDBStorage);
 const configs: Record<Environment, ZamaConfig> = {
-  default: createConfig("default", indexedDBStorage),
-  custom: createConfig("custom", new IndexedDBStorage("CredentialStore-custom")),
+  default: defaultConfig,
+  custom: NETWORK_KEYS.some(isCustomized)
+    ? createConfig("custom", new IndexedDBStorage("CredentialStore-custom"))
+    : defaultConfig,
 };
 
 const EnvironmentContext = createContext<{

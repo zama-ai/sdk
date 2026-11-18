@@ -24,7 +24,7 @@ const upstreams: Record<
     mainnet: { url: process.env.MAINNET_RELAYER_URL, apiKey: process.env.MAINNET_RELAYER_API_KEY },
     polygon: { url: process.env.POLYGON_RELAYER_URL, apiKey: process.env.POLYGON_RELAYER_API_KEY },
   },
-  // Only the networks the custom environment changes. No default: unset hides the network.
+  // Only the networks the custom environment changes. No default: unset hides the custom option.
   custom: {
     sepolia: {
       url: process.env.SEPOLIA_CUSTOM_RELAYER_URL,

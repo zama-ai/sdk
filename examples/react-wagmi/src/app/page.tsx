@@ -87,7 +87,7 @@ export default function Home() {
         if (!option) return;
         // Only networks the custom environment changes pick an environment. It is set before the
         // switch: wagmi reports the new chain before the switch resolves, and the environments
-        // differ only on that chain. A switch the wallet rejects puts the previous one back.
+        // differ only on that chain.
         const previous = env;
         if (isCustomized(option.key)) setEnv(option.env);
         const target = networks[option.key].chain.id;
