@@ -195,9 +195,9 @@ if (pending) {
 
 `() => Promise<Hex | null>`
 
-Returns the unwrap transaction hash of an unshield that was interrupted between its two phases, or `null` if none is pending for this wrapper. The SDK persists this automatically when `unshield()` / `unshieldAll()` submit phase 1, and clears it once phase 2 finalizes.
+Returns the unwrap transaction hash of an unshield that was interrupted between its two phases, or `null` if none is pending for this wrapper. The SDK saves it automatically as soon as the wallet returns the `unshield()` / `unshieldAll()` unwrap hash, and clears it once phase 2 finalizes. If several unshields on this wrapper were interrupted, it returns the oldest; after resuming it, call it again for the next.
 
-The SDK verifies the persisted hash on-chain before reporting it: if the unwrap request was already finalized, it clears the record and returns `null`. If the verification read fails, the hash is returned unverified; a network error never deletes recovery state.
+The SDK verifies each saved hash on-chain before reporting it: an entry whose unwrap request was already finalized, or whose unwrap reverted, is cleared and the next one is checked. If a verification read fails, that hash is returned unverified, but only when no other entry is verified open; a network error never deletes recovery state.
 
 Resuming stays caller-driven — surface a "resume" prompt and call `resumeUnshield()`, rather than finalizing on load and triggering a wallet transaction the user did not initiate.
 

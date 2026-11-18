@@ -4,14 +4,15 @@
 // which each answer is possible, and what it changes. A fake that answers
 // something the real one cannot is a harness error, not a finding.
 import type { Hex } from "viem";
+import { USER } from "../../../test-fixtures/constants";
 import type { PendingUnshieldRequest } from "../../pending-unshield";
-import { HarnessError, USER, type Answer, type Call, type ReceiptAnswer } from "./sdk-call";
+import { HarnessError, type Answer, type Call, type ReceiptAnswer } from "./sdk-call";
 
 const ZERO_ADDRESS = `0x${"0".repeat(40)}`;
 
-export type TxStatus = "pending" | "success" | "reverted";
+type TxStatus = "pending" | "success" | "reverted";
 
-export interface Tx {
+interface Tx {
   readonly hash: Hex;
   readonly kind: "unwrap" | "finalize";
   readonly requestId: Hex;
@@ -42,8 +43,15 @@ export const EMPTY_WORLD: World = {
 // Actor k sends at most one unwrap (Uk) and one finalizeUnwrap (Fk); Uk opens request reqk.
 const word = (tail: string): Hex => `0x${tail.padStart(64, "0")}`;
 export const unwrapTx = (slot: number): Hex => word(`a${slot}`);
-export const finalizeTx = (slot: number): Hex => word(`f${slot}`);
-export const requestOf = (slot: number): Hex => word(`e${slot}`);
+const finalizeTx = (slot: number): Hex => word(`f${slot}`);
+const requestOf = (slot: number): Hex => word(`e${slot}`);
+
+/** The slot k when `hash` is Uk. */
+function unwrapSlot(hash: Hex): number | undefined {
+  const match = /^0x0+a(\d+)$/.exec(hash);
+  return match ? Number(match[1]) : undefined;
+}
+export const isUnwrapTx = (hash: Hex) => unwrapSlot(hash) !== undefined;
 
 /** An earlier unshield (U0) is open on chain with its entry saved, and its tab is gone. */
 export const INTERRUPTED_WORLD: World = {
@@ -52,7 +60,19 @@ export const INTERRUPTED_WORLD: World = {
   txs: [{ hash: unwrapTx(0), kind: "unwrap", requestId: requestOf(0), status: "success" }],
   saved: [requestOf(0)],
 };
-export const isUnwrapTx = (hash: Hex) => /^0x0+a\d+$/.test(hash);
+
+/** An earlier unshield (U0) was finalized on chain, but its entry is still stored. */
+export const STALE_ENTRY_WORLD: World = {
+  ...INTERRUPTED_WORLD,
+  stored: JSON.stringify({
+    version: 2,
+    requests: [{ unwrapTxHash: unwrapTx(0), unwrapRequestId: requestOf(0) }],
+  }),
+  txs: [
+    ...INTERRUPTED_WORLD.txs,
+    { hash: finalizeTx(0), kind: "finalize", requestId: requestOf(0), status: "success" },
+  ],
+};
 
 /** Short names for the hex values in step labels: U1, F1, req1, ... */
 export function pretty(text: string): string {
@@ -77,7 +97,7 @@ export function requestOfTx(world: World, hash: Hex | undefined): Hex | undefine
   return world.txs.find((tx) => tx.hash === hash)?.requestId;
 }
 
-export function parseEntries(json: string | null | undefined): PendingUnshieldRequest[] {
+function parseEntries(json: string | null | undefined): PendingUnshieldRequest[] {
   if (json === null || json === undefined) {
     return [];
   }
@@ -129,7 +149,7 @@ export function callLabel(call: Call): string {
   throw new HarnessError(`unknown call ${JSON.stringify(call)}`);
 }
 
-export interface Option {
+interface Option {
   answer: Answer;
   /** How the step reads in a path, after the call label. */
   text: string;
@@ -181,11 +201,17 @@ export function options(call: Call, slot: number, world: World): Option[] {
       const ok: Option = {
         answer: { kind: "ok" },
         text: "ok",
-        apply: (world) => ({
-          ...world,
-          stored: call.value,
-          saved: [...new Set([...world.saved, ...storedRequests(world, call.value)])].sort(),
-        }),
+        apply: (world) => {
+          const stored = storedRequests(world, call.value);
+          // A request stored again leaves both bounds: a later loss has a new cause.
+          return {
+            ...world,
+            stored: call.value,
+            saved: [...new Set([...world.saved, ...stored])].sort(),
+            lostUpdate: world.lostUpdate.filter((r) => !stored.includes(r)),
+            unsaved: world.unsaved.filter((u) => !stored.includes(u.requestId)),
+          };
+        },
       };
       return [ok, fail("storage unavailable"), CLOSE];
     }
@@ -226,11 +252,15 @@ export function options(call: Call, slot: number, world: World): Option[] {
         text: `-> ${value.status}`,
         when: txStatus(call.hash, value.status),
       });
-      const unwrapSlot = /^0x0+a(\d+)$/.exec(call.hash)?.[1];
-      const receipts =
-        unwrapSlot === undefined
-          ? [mined({ status: "success" }), mined({ status: "reverted" })]
-          : [mined({ status: "success", unwrapRequestId: requestOf(Number(unwrapSlot)) })];
+      const slot = unwrapSlot(call.hash);
+      const receipts = [
+        mined(
+          slot === undefined
+            ? { status: "success" }
+            : { status: "success", unwrapRequestId: requestOf(slot) },
+        ),
+        mined({ status: "reverted" }),
+      ];
       return [...receipts, timeout, CLOSE];
     }
     case "provider.readContract": {
@@ -252,7 +282,7 @@ export function options(call: Call, slot: number, world: World): Option[] {
   throw new HarnessError(`unknown call ${JSON.stringify(call)}`);
 }
 
-export interface ChainStep {
+interface ChainStep {
   text: string;
   apply: (world: World) => World;
 }
@@ -263,7 +293,8 @@ function setStatus(world: World, hash: Hex, status: TxStatus): World {
 
 /**
  * The chain mines the account's next pending transaction (nonce order), like
- * ERC7984ERC20WrapperUpgradeable would run it.
+ * ERC7984ERC20WrapperUpgradeable would run it. An unwrap can also revert (for
+ * example on an HCU limit).
  */
 export function chainSteps(world: World): ChainStep[] {
   const tx = world.txs.find((t) => t.status === "pending");
@@ -275,6 +306,10 @@ export function chainSteps(world: World): ChainStep[] {
       {
         text: pretty(`chain: mines ${tx.hash} -> ${tx.requestId} open`),
         apply: (w) => setStatus(w, tx.hash, "success"),
+      },
+      {
+        text: pretty(`chain: mines ${tx.hash} -> reverts, no request opened`),
+        apply: (w) => setStatus(w, tx.hash, "reverted"),
       },
     ];
   }

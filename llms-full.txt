@@ -2540,6 +2540,10 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 > **Unreleased.** The changes on this page are on the prerelease (`beta`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
 
 
+### Unshield
+
+**Interrupted unshields stay recoverable.** The SDK now saves the unwrap transaction hash as soon as the wallet returns it, instead of after the receipt, and keeps one entry per unshield, so a second unshield on the same token no longer overwrites the first. `getPendingUnshield()` / `usePendingUnshield` return the oldest pending one; after resuming it, the next one is returned. An entry whose unwrap reverted is cleared instead of being reported. See [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields).
+
 ### Daemon
 
 **Daemon traffic is identifiable in telemetry.** Relayer requests made by the SDK daemon now report `runtime=daemon` instead of `node`, plus a `client` field (`go`, `rust`, or `unknown`) with the client language. Nothing else changes: no new identifiers are sent, and `ZAMA_SDK_TELEMETRY=off` on the daemon process still disables telemetry. See [SDK usage telemetry](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/telemetry.md) and [Deploy in production](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/run-in-production.md#telemetry).
@@ -5522,8 +5526,8 @@ import { usePendingUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
 
 const WRAPPER = "0xWrappedEncryptedERC20";
 
-// The SDK persisted the unwrap tx hash during phase 1 and clears it
-// automatically once the resume finalizes; the query invalidates on success.
+// The SDK saved the unwrap tx hash when the wallet returned it and clears it
+// once the resume finalizes; the query then refetches and shows the next one, if any.
 const { data: unwrapTxHash } = usePendingUnshield(WRAPPER);
 const { mutate: resumeUnshield } = useResumeUnshield(WRAPPER);
 
@@ -12481,9 +12485,9 @@ if (pending) {
 
 `() => Promise<Hex | null>`
 
-Returns the unwrap transaction hash of an unshield that was interrupted between its two phases, or `null` if none is pending for this wrapper. The SDK persists this automatically when `unshield()` / `unshieldAll()` submit phase 1, and clears it once phase 2 finalizes.
+Returns the unwrap transaction hash of an unshield that was interrupted between its two phases, or `null` if none is pending for this wrapper. The SDK saves it automatically as soon as the wallet returns the `unshield()` / `unshieldAll()` unwrap hash, and clears it once phase 2 finalizes. If several unshields on this wrapper were interrupted, it returns the oldest; after resuming it, call it again for the next.
 
-The SDK verifies the persisted hash on-chain before reporting it: if the unwrap request was already finalized, it clears the record and returns `null`. If the verification read fails, the hash is returned unverified; a network error never deletes recovery state.
+The SDK verifies each saved hash on-chain before reporting it: an entry whose unwrap request was already finalized, or whose unwrap reverted, is cleared and the next one is checked. If a verification read fails, that hash is returned unverified, but only when no other entry is verified open; a network error never deletes recovery state.
 
 Resuming stays caller-driven — surface a "resume" prompt and call `resumeUnshield()`, rather than finalizing on load and triggering a wallet transaction the user did not initiate.
 
@@ -18686,8 +18690,8 @@ function ResumeUnshieldGuard({
   wrapperAddress: Address;
   children: React.ReactNode;
 }) {
-  // The SDK persisted the unwrap tx hash during phase 1 and clears it
-  // automatically once the resume finalizes; the query invalidates on success.
+  // The SDK saved the unwrap tx hash when the wallet returned it and clears it
+  // once the resume finalizes; the query then refetches and shows the next one, if any.
   const { data: unwrapTxHash } = usePendingUnshield(wrapperAddress);
   const { mutate: resumeUnshield } = useResumeUnshield(wrapperAddress);
 
@@ -18785,7 +18789,7 @@ await resumeUnshield({ unwrapTxHash: "0xabc..." });
 
 The SDK persists the unwrap tx hash automatically when phase 1 is submitted and clears it once finalization confirms, so recovery is two steps:
 
-1. **[`usePendingUnshield(tokenAddress)`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/usePendingUnshield.md)** — returns the stored unwrap tx hash (or `null` if none is pending).
+1. **[`usePendingUnshield(tokenAddress)`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/usePendingUnshield.md)**: returns the oldest stored unwrap tx hash (or `null` if none is pending); after a resume it refetches and returns the next one.
 2. **`resumeUnshield({ unwrapTxHash })`** — picks up from the finalize step using the unwrap receipt, then clears the persisted state on success (the query invalidates automatically).
 
 Run this check on mount to handle any session that was interrupted. Resuming is intentionally caller-driven — prompt the user rather than finalizing on load, so you never trigger a wallet transaction they did not initiate.
@@ -18875,7 +18879,9 @@ Read the unwrap transaction hash of an unshield that was interrupted between its
 
 The SDK persists this automatically when [`useUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useUnshield.md) / [`useUnshieldAll`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useUnshieldAll.md) submit phase 1, and clears it once phase 2 finalizes — the unshield and unwrap mutations invalidate this query on success. Surface the returned hash as a "resume" prompt and pass it to [`useResumeUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useResumeUnshield.md); resuming is caller-driven so a wallet transaction is never triggered on load.
 
-The SDK verifies the persisted hash on-chain before reporting it: if the unwrap request was already finalized, it clears the record and returns `null`, so a stale entry never shows a resume prompt. If the verification read fails, the hash is returned unverified; a network error never deletes recovery state.
+If several unshields on this wrapper were interrupted, the hook returns the oldest; after it is resumed, the query refetches and returns the next.
+
+The SDK verifies each saved hash on-chain before reporting it: an entry whose unwrap request was already finalized, or whose unwrap reverted, is cleared and the next one is checked, so a stale entry never shows a resume prompt. If a verification read fails, that hash is returned unverified, but only when no other entry is verified open; a network error never deletes recovery state.
 
 ## Import
 

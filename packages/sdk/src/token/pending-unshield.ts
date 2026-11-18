@@ -17,9 +17,8 @@ export interface PendingUnshieldRequest {
   /** Transaction hash of the original unwrap call. */
   readonly unwrapTxHash: Hex;
   /**
-   * Request identifier from the `UnwrapRequested` event. Only entries written
-   * by older SDK versions carry it; otherwise it is decoded from the unwrap
-   * receipt.
+   * Request identifier from the `UnwrapRequested` event. Absent until the
+   * unwrap receipt is known; then it is decoded from the receipt instead.
    */
   readonly unwrapRequestId?: EncryptedValue;
 }
@@ -57,7 +56,8 @@ const StoredSchema = z.union([
 const sameTx = (a: Hex, b: Hex) => a.toLowerCase() === b.toLowerCase();
 
 /**
- * Load every saved pending unshield for this wrapper, oldest first.
+ * Load every saved pending unshield for this wrapper, oldest first. An
+ * unreadable stored value is deleted.
  *
  * @internal
  */
@@ -93,38 +93,65 @@ async function writeRequests(
   } satisfies StoredPendingUnshieldRequests);
 }
 
-/**
- * Persist an unwrap so an interrupted unshield can be resumed later (e.g.
- * after a page reload). Adds an entry unless one exists for this transaction.
- * Other entries are kept.
- *
- * @internal
- */
-export async function savePendingUnshield(
-  storage: GenericStorage,
-  wrapperAddress: Address,
-  unwrapTxHash: Hex,
-): Promise<void> {
-  const requests = await loadPendingUnshieldRequests(storage, wrapperAddress);
-  if (!requests.some((r) => sameTx(r.unwrapTxHash, unwrapTxHash))) {
-    await writeRequests(storage, wrapperAddress, [...requests, { unwrapTxHash }]);
-  }
+// Read-modify-write on one storage runs one at a time, so two unshields in
+// the same tab cannot drop each other's entry. Tabs still race: GenericStorage
+// has no atomic update.
+const writeQueues = new WeakMap<GenericStorage, Promise<void>>();
+
+function serialized(storage: GenericStorage, update: () => Promise<void>): Promise<void> {
+  const run = (writeQueues.get(storage) ?? Promise.resolve()).then(update);
+  writeQueues.set(
+    storage,
+    run.catch(() => {}),
+  );
+  return run;
 }
 
 /**
- * Remove the entry for one unwrap transaction, after it was finalized.
- * Entries for other unwraps are kept.
+ * Persist an unwrap so an interrupted unshield can be resumed later (e.g.
+ * after a page reload). Adds an entry, or fills in `unwrapRequestId` on the
+ * entry for the same transaction. Other entries are kept.
  *
  * @internal
  */
-export async function clearPendingUnshield(
+export function savePendingUnshield(
+  storage: GenericStorage,
+  wrapperAddress: Address,
+  unwrapTxHash: Hex,
+  unwrapRequestId?: EncryptedValue,
+): Promise<void> {
+  return serialized(storage, async () => {
+    const requests = await loadPendingUnshieldRequests(storage, wrapperAddress);
+    const existing = requests.find((r) => sameTx(r.unwrapTxHash, unwrapTxHash));
+    if (existing && (unwrapRequestId === undefined || existing.unwrapRequestId !== undefined)) {
+      return;
+    }
+    const entry: PendingUnshieldRequest =
+      unwrapRequestId === undefined ? { unwrapTxHash } : { unwrapTxHash, unwrapRequestId };
+    await writeRequests(
+      storage,
+      wrapperAddress,
+      existing ? requests.map((r) => (r === existing ? entry : r)) : [...requests, entry],
+    );
+  });
+}
+
+/**
+ * Remove the entry for one unwrap transaction, once it is finalized or its
+ * unwrap reverted. Entries for other unwraps are kept.
+ *
+ * @internal
+ */
+export function clearPendingUnshield(
   storage: GenericStorage,
   wrapperAddress: Address,
   unwrapTxHash: Hex,
 ): Promise<void> {
-  const requests = await loadPendingUnshieldRequests(storage, wrapperAddress);
-  const rest = requests.filter((r) => !sameTx(r.unwrapTxHash, unwrapTxHash));
-  if (rest.length !== requests.length) {
-    await writeRequests(storage, wrapperAddress, rest);
-  }
+  return serialized(storage, async () => {
+    const requests = await loadPendingUnshieldRequests(storage, wrapperAddress);
+    const rest = requests.filter((r) => !sameTx(r.unwrapTxHash, unwrapTxHash));
+    if (rest.length !== requests.length) {
+      await writeRequests(storage, wrapperAddress, rest);
+    }
+  });
 }

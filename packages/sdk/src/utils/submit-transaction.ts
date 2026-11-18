@@ -33,7 +33,7 @@ export async function submitTransaction(params: {
   config: WriteContractConfig;
   emit: (input: ZamaSDKEventInput) => void;
   onSubmitted?: (txHash: Hex) => void;
-  /** Awaited once the hash is known, before the receipt wait. It must not throw. */
+  /** Awaited before the receipt wait; errors are logged, not thrown. */
   beforeReceipt?: (txHash: Hex) => Promise<void>;
   logger: GenericLogger;
 }): Promise<TransactionResult> {
@@ -44,7 +44,7 @@ export async function submitTransaction(params: {
     const txHash = await signer.writeContract(config);
     emit(metadata.submittedEvent(txHash));
     void swallow(`${operation}: onSubmitted`, () => onSubmitted?.(txHash), logger);
-    await beforeReceipt?.(txHash);
+    await swallow(`${operation}: beforeReceipt`, () => beforeReceipt?.(txHash), logger);
     const receipt = await provider.waitForTransactionReceipt(txHash);
     if (receipt.status === "reverted") {
       throw new TransactionRevertedError(`Transaction ${txHash} reverted during ${operation}`);

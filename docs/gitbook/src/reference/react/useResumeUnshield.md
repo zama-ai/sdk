@@ -29,8 +29,8 @@ function ResumeUnshieldGuard({
   wrapperAddress: Address;
   children: React.ReactNode;
 }) {
-  // The SDK persisted the unwrap tx hash during phase 1 and clears it
-  // automatically once the resume finalizes; the query invalidates on success.
+  // The SDK saved the unwrap tx hash when the wallet returned it and clears it
+  // once the resume finalizes; the query then refetches and shows the next one, if any.
   const { data: unwrapTxHash } = usePendingUnshield(wrapperAddress);
   const { mutate: resumeUnshield } = useResumeUnshield(wrapperAddress);
 
@@ -108,7 +108,7 @@ await resumeUnshield({ unwrapTxHash: "0xabc..." });
 
 The SDK persists the unwrap tx hash automatically when phase 1 is submitted and clears it once finalization confirms, so recovery is two steps:
 
-1. **[`usePendingUnshield(tokenAddress)`](./usePendingUnshield.md)** — returns the stored unwrap tx hash (or `null` if none is pending).
+1. **[`usePendingUnshield(tokenAddress)`](./usePendingUnshield.md)**: returns the oldest stored unwrap tx hash (or `null` if none is pending); after a resume it refetches and returns the next one.
 2. **`resumeUnshield({ unwrapTxHash })`** — picks up from the finalize step using the unwrap receipt, then clears the persisted state on success (the query invalidates automatically).
 
 Run this check on mount to handle any session that was interrupted. Resuming is intentionally caller-driven — prompt the user rather than finalizing on load, so you never trigger a wallet transaction they did not initiate.

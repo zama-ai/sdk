@@ -9,7 +9,9 @@ Read the unwrap transaction hash of an unshield that was interrupted between its
 
 The SDK persists this automatically when [`useUnshield`](./useUnshield.md) / [`useUnshieldAll`](./useUnshieldAll.md) submit phase 1, and clears it once phase 2 finalizes — the unshield and unwrap mutations invalidate this query on success. Surface the returned hash as a "resume" prompt and pass it to [`useResumeUnshield`](./useResumeUnshield.md); resuming is caller-driven so a wallet transaction is never triggered on load.
 
-The SDK verifies the persisted hash on-chain before reporting it: if the unwrap request was already finalized, it clears the record and returns `null`, so a stale entry never shows a resume prompt. If the verification read fails, the hash is returned unverified; a network error never deletes recovery state.
+If several unshields on this wrapper were interrupted, the hook returns the oldest; after it is resumed, the query refetches and returns the next.
+
+The SDK verifies each saved hash on-chain before reporting it: an entry whose unwrap request was already finalized, or whose unwrap reverted, is cleared and the next one is checked, so a stale entry never shows a resume prompt. If a verification read fails, that hash is returned unverified, but only when no other entry is verified open; a network error never deletes recovery state.
 
 ## Import
 

@@ -14,9 +14,11 @@ export { pendingUnshieldQueryOptions };
  *
  * The SDK persists this automatically when `useUnshield` / `useUnshieldAll`
  * submit phase 1, and clears it once phase 2 finalizes (the unshield/unwrap
- * mutations invalidate this query on success). Surface the returned hash as a
- * "resume" prompt, then pass it to {@link useResumeUnshield} — resuming is
- * caller-driven so a wallet transaction is never triggered on load.
+ * mutations invalidate this query on success). When several unshields are
+ * pending, `data` is the oldest; after a resume the query refetches and shows
+ * the next. Surface the returned hash as a "resume" prompt, then pass it to
+ * {@link useResumeUnshield}: resuming is caller-driven so a wallet
+ * transaction is never triggered on load.
  *
  * @param tokenAddress - Address of the confidential wrapper contract.
  * @param options - React Query options (forwarded to `useQuery`).

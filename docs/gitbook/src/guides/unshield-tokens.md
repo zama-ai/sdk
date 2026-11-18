@@ -153,8 +153,8 @@ import { usePendingUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
 
 const WRAPPER = "0xWrappedEncryptedERC20";
 
-// The SDK persisted the unwrap tx hash during phase 1 and clears it
-// automatically once the resume finalizes; the query invalidates on success.
+// The SDK saved the unwrap tx hash when the wallet returned it and clears it
+// once the resume finalizes; the query then refetches and shows the next one, if any.
 const { data: unwrapTxHash } = usePendingUnshield(WRAPPER);
 const { mutate: resumeUnshield } = useResumeUnshield(WRAPPER);
 

@@ -5,40 +5,22 @@
 //
 // Rules:
 // - PendingUnshieldIsDiscoverable: an open unwrap request that no SDK call is
-//   working on has a stored entry, so getPendingUnshield() can offer a resume.
-// - PointerKeptAfterSave: a stored entry stays until its request is finalized.
+//   working on has a stored entry.
+// - EntryKeptAfterSave: a stored entry stays until its request is finalized.
 // - NoFalseAlreadyFinalized: the SDK reports "already finalized" only for a
 //   request that is finalized on chain.
+// - NoDeadEntryReported: getPendingUnshield() never returns a hash whose
+//   unwrap it saw revert, so a dead entry cannot hide newer ones.
 //
 // Model: one account, so transactions mine in send order; each actor is its
 // own tab (own SDK instance) on one shared storage; RPC reads see the latest
 // mined state; the pending-unshield entries are the only storage key.
 //
 // A rule break fails the test unless it falls in one of the BOUNDS (explore.ts).
+// self-test.test.ts proves the check still fails when a known bug is put back.
 import { describe, expect, test } from "vitest";
-import { explore, type Scenario } from "./explore";
-
-const UNSHIELD: Scenario["actors"][number] = {
-  name: "unshield#1",
-  slot: 1,
-  entry: { kind: "unshield" },
-};
-const UNSHIELD_ALL: Scenario["actors"][number] = {
-  name: "unshieldAll#2",
-  slot: 2,
-  entry: { kind: "unshieldAll" },
-};
-const PAGE_LOAD: Scenario["actors"][number] = { name: "page load", slot: 3, entry: "page load" };
-
-const SCENARIOS: Scenario[] = [
-  { name: "one unshield", actors: [UNSHIELD, PAGE_LOAD] },
-  { name: "two unshields at once", actors: [UNSHIELD, UNSHIELD_ALL] },
-  {
-    name: "a new unshield next to an interrupted one",
-    actors: [UNSHIELD, PAGE_LOAD],
-    interrupted: true,
-  },
-];
+import { explore } from "./explore";
+import { SCENARIOS } from "./scenarios";
 
 const numbered = (path: string[]) =>
   path.map((step, i) => `  ${String(i + 1).padStart(2)}. ${step}`);

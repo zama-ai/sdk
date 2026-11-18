@@ -882,8 +882,52 @@ describe("WrappedToken", () => {
       await wrappedToken.unshield(50n, { skipBalanceCheck: true });
 
       expect(await loadPendingUnshieldRequests(storage, wrapperAddress)).toEqual([
+        { unwrapTxHash: UNWRAP_TX, unwrapRequestId: REQUEST_ID },
+      ]);
+    });
+
+    test("getPendingUnshield clears an entry whose unwrap reverted and reports the next one", async ({
+      userAddress,
+      wrappedToken,
+      wrapperAddress,
+      storage,
+      provider,
+    }) => {
+      const REVERTED_TX = ("0x" + "dd".repeat(32)) as Hex;
+      await savePendingUnshield(storage, wrapperAddress, REVERTED_TX);
+      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX);
+      vi.mocked(provider.waitForTransactionReceipt).mockImplementation(async (hash) =>
+        hash === REVERTED_TX
+          ? { status: "reverted", logs: [] }
+          : receiptWithUnwrapRequested(userAddress),
+      );
+      vi.mocked(provider.readContract).mockResolvedValue(REQUESTER);
+
+      expect(await wrappedToken.getPendingUnshield()).toBe(UNWRAP_TX);
+      expect(await loadPendingUnshieldRequests(storage, wrapperAddress)).toEqual([
         { unwrapTxHash: UNWRAP_TX },
       ]);
+    });
+
+    test("getPendingUnshield reports an open entry before one it could not verify", async ({
+      userAddress,
+      wrappedToken,
+      wrapperAddress,
+      storage,
+      provider,
+    }) => {
+      const DROPPED_TX = ("0x" + "dd".repeat(32)) as Hex;
+      await savePendingUnshield(storage, wrapperAddress, DROPPED_TX);
+      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX);
+      vi.mocked(provider.waitForTransactionReceipt).mockImplementation(async (hash) => {
+        if (hash === DROPPED_TX) {
+          throw new Error("timed out while waiting for transaction receipt");
+        }
+        return receiptWithUnwrapRequested(userAddress);
+      });
+      vi.mocked(provider.readContract).mockResolvedValue(REQUESTER);
+
+      expect(await wrappedToken.getPendingUnshield()).toBe(UNWRAP_TX);
     });
   });
 

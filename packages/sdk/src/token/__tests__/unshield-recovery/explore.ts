@@ -13,7 +13,6 @@
 import type { Hex } from "viem";
 import {
   HarnessError,
-  POINTER_KEY,
   runSdkCall,
   type Answer,
   type Call,
@@ -32,17 +31,17 @@ import {
   pretty,
   requestOfTx,
   requestStatus,
+  STALE_ENTRY_WORLD,
   storedRequests,
   unwrapTx,
   type World,
 } from "./world";
 
-export const RULES = [
-  "PendingUnshieldIsDiscoverable",
-  "PointerKeptAfterSave",
-  "NoFalseAlreadyFinalized",
-] as const;
-export type Rule = (typeof RULES)[number];
+export type Rule =
+  | "PendingUnshieldIsDiscoverable"
+  | "EntryKeptAfterSave"
+  | "NoFalseAlreadyFinalized"
+  | "NoDeadEntryReported";
 
 interface Violation {
   rule: Rule;
@@ -52,7 +51,7 @@ interface Violation {
 const SAVE_WINDOW = new Set<string>(["storage.get", "storage.set", "storage failure"]);
 
 /** Rule breaks the SDK cannot prevent with get/set/delete storage. */
-export const BOUNDS = {
+const BOUNDS = {
   /** The tab closed or storage failed between sending the unwrap and saving its entry. */
   "save window": (v: Violation, world: World) =>
     v.rule === "PendingUnshieldIsDiscoverable" &&
@@ -73,8 +72,11 @@ export interface ActorSpec {
 export interface Scenario {
   name: string;
   actors: ActorSpec[];
-  /** Starts with an earlier unshield (U0) whose request is open, its entry saved, and its tab gone. */
-  interrupted?: boolean;
+  /**
+   * An earlier unshield (U0) whose tab is gone, with its entry stored:
+   * "interrupted" (its request is open) or "stale entry" (already finalized).
+   */
+  earlier?: "interrupted" | "stale entry";
 }
 
 export interface Exploration {
@@ -97,8 +99,10 @@ interface Node {
   run: RunResult;
   /** The unwrap tx this SDK call works on, once it knows one. */
   hash?: Hex;
-  /** The request whose state this SDK call last read on chain. */
+  /** The request whose state this SDK call read on chain since it last fetched an unwrap receipt. */
   requestId?: Hex;
+  /** Unwrap txs whose receipt this SDK call saw reverted. */
+  sawReverted: Hex[];
   /** getPendingUnshield: the stored value it read first, the list it goes through. */
   firstRead?: string | null;
   /** The last answered call was a `storage.get` that returned this, so a write now is read-modify-write. */
@@ -120,10 +124,13 @@ interface State {
 interface Transition {
   text: () => string;
   state: State;
-  falselyFinalized: boolean;
+  /** A rule that this step itself breaks. */
+  breaks?: Rule;
 }
 
 const answerKey = (answer: Answer): string => JSON.stringify(answer);
+/** The request an SDK call is working on, once it knows one. */
+const workingOn = (world: World, node: Node) => node.requestId ?? requestOfTx(world, node.hash);
 const isUnshield = (entry: Entry) => entry.kind === "unshield" || entry.kind === "unshieldAll";
 const isStorage = (call: Call) => call.kind.startsWith("storage.");
 
@@ -139,7 +146,7 @@ class Actors {
       return [spec.entry];
     }
     const slots = this.scenario.actors.filter((a) => a.entry !== "page load").map((a) => a.slot);
-    const kept = (this.scenario.interrupted ? [0, ...slots] : slots).map((slot): Entry => ({
+    const kept = (this.scenario.earlier ? [0, ...slots] : slots).map((slot): Entry => ({
       kind: "resumeUnshield",
       hash: unwrapTx(slot),
     }));
@@ -180,6 +187,7 @@ class Actors {
       run,
       hash: from ? from.hash : entry.kind === "resumeUnshield" ? entry.hash : undefined,
       requestId: from?.requestId,
+      sawReverted: from?.sawReverted ?? [],
       firstRead: from?.firstRead,
       saved: from?.saved ?? false,
       storageFailed: from?.storageFailed ?? false,
@@ -196,6 +204,10 @@ class Actors {
       node.hash = answer.value as Hex;
     } else if (call.kind === "provider.waitForTransactionReceipt" && isUnwrapTx(call.hash)) {
       node.hash = call.hash;
+      node.requestId = undefined;
+      if ((answer.value as { status: string }).status === "reverted") {
+        node.sawReverted = [...node.sawReverted, call.hash];
+      }
     } else if (call.kind === "provider.readContract") {
       node.requestId = call.requestId;
     } else if (call.kind === "storage.get") {
@@ -222,38 +234,49 @@ function outcomeLabel(outcome: Outcome): string {
 }
 
 function endText(name: string, node: Node): string {
-  const notes = node.run.notes.map((n) => `; ${pretty(n)}`).join("");
+  const { reported } = node.run;
+  const report = reported
+    ? pretty(
+        `; getPendingUnshield() returns ${reported}, the app calls resumeUnshield(${reported})`,
+      )
+    : "";
   const end =
     node.run.next.kind === "done" ? `; ${name} ends: ${outcomeLabel(node.run.next.outcome)}` : "";
-  return notes + end;
+  return report + end;
 }
 
-/** NoFalseAlreadyFinalized, checked on the step where an SDK call ends. */
-function reportsFalseFinalized(node: Node, world: World): boolean {
+/** The rule that the step reaching `node` itself breaks, if any. */
+function stepBreaks(node: Node, world: World): Rule | undefined {
+  // Its unwrap reverted, so the hash can never be resumed, and it hides newer entries.
+  if (node.run.reported && node.sawReverted.includes(node.run.reported)) {
+    return "NoDeadEntryReported";
+  }
   if (node.run.next.kind !== "done") {
-    return false;
+    return undefined;
   }
   const { outcome } = node.run.next;
-  let reported: Hex[] = [];
   if (outcome.kind === "threw") {
-    reported = outcome.unwrapRequestId ? [outcome.unwrapRequestId] : [];
-  } else if (outcome.value === "null" && node.entry.kind === "getPendingUnshield") {
-    // getPendingUnshield returned null: it judged every entry it read finalized.
-    reported = storedRequests(world, node.firstRead);
+    const r = outcome.unwrapRequestId;
+    return r && requestStatus(world, r) !== "finalized" ? "NoFalseAlreadyFinalized" : undefined;
   }
-  return reported.some((r) => requestStatus(world, r) !== "finalized");
+  // getPendingUnshield returned null: it judged every entry it read settled.
+  const judged = outcome.value === "null" && node.entry.kind === "getPendingUnshield";
+  return judged &&
+    storedRequests(world, node.firstRead).some((r) => requestStatus(world, r) === "open")
+    ? "NoFalseAlreadyFinalized"
+    : undefined;
 }
 
-/** PendingUnshieldIsDiscoverable and PointerKeptAfterSave, checked on every state. */
+/** PendingUnshieldIsDiscoverable and EntryKeptAfterSave, checked on every state. */
 function violations(state: State): Violation[] {
   const { world } = state;
   const stored = new Set(storedRequests(world, world.stored));
   const lost = (r: Hex) => requestStatus(world, r) === "open" && !stored.has(r);
   const out: Violation[] = world.saved
     .filter(lost)
-    .map((requestId) => ({ rule: "PointerKeptAfterSave", requestId }));
+    .map((requestId) => ({ rule: "EntryKeptAfterSave", requestId }));
   const working = new Set(
-    state.actors.map((a) => (typeof a === "object" ? requestOfTx(world, a.hash) : undefined)),
+    state.actors.map((a) => (typeof a === "object" ? workingOn(world, a) : undefined)),
   );
   for (const tx of world.txs) {
     if (tx.kind === "unwrap" && !working.has(tx.requestId) && lost(tx.requestId)) {
@@ -281,7 +304,7 @@ function withActor(state: State, index: number, actor: ActorState, world: World)
  */
 function recordStep(world: World, next: World, actor: Node, child?: Node): World {
   let out = next;
-  const own = actor.requestId ?? requestOfTx(world, actor.hash);
+  const own = workingOn(world, actor);
   const stale = actor.justRead !== undefined && (world.stored ?? null) !== actor.justRead.value;
   if (stale && next.stored !== world.stored) {
     const kept = new Set(storedRequests(next, next.stored));
@@ -318,7 +341,7 @@ async function successors(actors: Actors, state: State): Promise<Transition[]> {
         out.push({
           text: () => pretty(`${spec.name}: ${call}`) + endText(spec.name, node),
           state: withActor(state, index, settle(node), world),
-          falselyFinalized: reportsFalseFinalized(node, world),
+          breaks: stepBreaks(node, world),
         });
       }
       continue;
@@ -335,7 +358,6 @@ async function successors(actors: Actors, state: State): Promise<Transition[]> {
         out.push({
           text: () => `${spec.name}: tab closes while waiting on ${callLabel(call)}`,
           state: withActor(state, index, "done", recordStep(world, world, actor)),
-          falselyFinalized: false,
         });
         continue;
       }
@@ -344,21 +366,21 @@ async function successors(actors: Actors, state: State): Promise<Transition[]> {
       out.push({
         text: () => `${spec.name}: ${callLabel(call)} ${option.text}${endText(spec.name, child)}`,
         state: withActor(state, index, settle(child), next),
-        falselyFinalized: reportsFalseFinalized(child, next),
+        breaks: stepBreaks(child, next),
       });
     }
   }
   for (const step of chainSteps(world)) {
-    out.push({
-      text: () => step.text,
-      state: { actors: state.actors, world: step.apply(world) },
-      falselyFinalized: false,
-    });
+    out.push({ text: () => step.text, state: { actors: state.actors, world: step.apply(world) } });
   }
   return out;
 }
 
-export async function explore(scenario: Scenario): Promise<Exploration> {
+/** `stopOnBreak`: return once any rule breaks, for callers that only need to know whether one does. */
+export async function explore(
+  scenario: Scenario,
+  { stopOnBreak = false }: { stopOnBreak?: boolean } = {},
+): Promise<Exploration> {
   const actors = new Actors(scenario);
   const initial: State = {
     actors: await Promise.all(
@@ -366,11 +388,16 @@ export async function explore(scenario: Scenario): Promise<Exploration> {
         spec.entry === "page load" ? "idle" : settle(await actors.root(spec.slot, spec.entry)),
       ),
     ),
-    world: scenario.interrupted ? INTERRUPTED_WORLD : EMPTY_WORLD,
+    world:
+      scenario.earlier === "interrupted"
+        ? INTERRUPTED_WORLD
+        : scenario.earlier === "stale entry"
+          ? STALE_ENTRY_WORLD
+          : EMPTY_WORLD,
   };
 
   // Small integers keep state keys short: the search visits many states.
-  const interned = new Map<string, number>([[POINTER_KEY, 0]]);
+  const interned = new Map<string, number>();
   const intern = (text: string): number => {
     let id = interned.get(text);
     if (id === undefined) {
@@ -424,6 +451,9 @@ export async function explore(scenario: Scenario): Promise<Exploration> {
   };
 
   for (let i = 0; i < queue.length; i++) {
+    if (stopOnBreak && broken.size > 0) {
+      break;
+    }
     const state = queue[i];
     queue[i] = undefined;
     if (!state) {
@@ -431,8 +461,8 @@ export async function explore(scenario: Scenario): Promise<Exploration> {
     }
     for (const [ordinal, t] of (await successors(actors, state)).entries()) {
       transitions++;
-      if (t.falselyFinalized && !broken.has("NoFalseAlreadyFinalized")) {
-        broken.set("NoFalseAlreadyFinalized", [...(await pathTo(i)), t.text()]);
+      if (t.breaks && !broken.has(t.breaks)) {
+        broken.set(t.breaks, [...(await pathTo(i)), t.text()]);
       }
       const key = stateKey(t.state);
       if (seen.has(key)) {

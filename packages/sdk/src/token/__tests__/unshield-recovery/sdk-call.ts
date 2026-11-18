@@ -23,8 +23,6 @@ import type {
 import { loadPendingUnshieldRequests } from "../../pending-unshield";
 import { WrappedToken } from "../../wrapped-token";
 
-export { USER, WRAPPER };
-
 /** One awaited call that the explorer schedules. */
 export type Call =
   | { kind: "storage.get"; key: string }
@@ -64,8 +62,8 @@ export type Outcome =
 
 export interface RunResult {
   next: { kind: "call"; call: Call } | { kind: "done"; outcome: Outcome };
-  /** What the actor reported after the last scripted answer (e.g. the hash `getPendingUnshield` returned). */
-  notes: string[];
+  /** The hash `getPendingUnshield` returned after the last scripted answer; the app then resumes it. */
+  reported?: Hex;
 }
 
 /** The harness, not the SDK, misbehaved. Fix the fake before trusting any result. */
@@ -74,7 +72,7 @@ export class HarnessError extends Error {
 }
 
 /** The storage key the SDK uses for this wrapper's pending-unshield entries. */
-export const POINTER_KEY = await (async () => {
+export const STORAGE_KEY = await (async () => {
   let key: string | undefined;
   const recorder: GenericStorage = {
     get: (k) => {
@@ -94,12 +92,18 @@ export const POINTER_KEY = await (async () => {
 const NONZERO_HANDLE = `0x${"ab".repeat(32)}` as Hex;
 const STUCK_MS = 5000;
 
+// Built once: vitest keeps every vi.fn it creates, and the explorer makes
+// thousands of runs. The methods a run keeps from these give fixed answers.
+const SIGNER = createMockSigner(USER);
+const PROVIDER = createMockProvider();
+const RELAYER = createMockRelayer();
+
 function never<T>(): Promise<T> {
   return new Promise<T>(() => {});
 }
 
 function macrotask(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
+  return new Promise((resolve) => setImmediate(resolve));
 }
 
 /**
@@ -147,7 +151,7 @@ function toReceipt(answer: ReceiptAnswer): TransactionReceipt {
 async function start(
   entry: Entry,
   token: WrappedToken,
-  note: (text: string) => void,
+  report: (hash: Hex) => void,
 ): Promise<unknown> {
   switch (entry.kind) {
     case "unshield":
@@ -161,7 +165,7 @@ async function start(
       if (hash === null) {
         return null;
       }
-      note(`getPendingUnshield() returns ${hash}, the app calls resumeUnshield(${hash})`);
+      report(hash);
       return token.resumeUnshield(hash);
     }
   }
@@ -197,7 +201,7 @@ function describeError(error: unknown): Outcome {
  */
 export async function runSdkCall(entry: Entry, script: readonly Step[]): Promise<RunResult> {
   const calls: Call[] = [];
-  const notes: { at: number; text: string }[] = [];
+  let reported: { at: number; hash: Hex } | undefined;
   const problems: string[] = [];
   let started = false;
   let reachFrontier: (call: Call) => void = () => {};
@@ -238,16 +242,18 @@ export async function runSdkCall(entry: Entry, script: readonly Step[]): Promise
     return never();
   }
 
-  function pointerKey(key: string): string {
-    if (key !== POINTER_KEY) {
-      problems.push(`unexpected storage key ${key}: only the pending-unshield pointer is explored`);
+  function checkKey(key: string): string {
+    if (key !== STORAGE_KEY) {
+      problems.push(
+        `unexpected storage key ${key}: only the pending-unshield entries are explored`,
+      );
     }
     return key;
   }
 
   const signer = strict(
     "signer",
-    createMockSigner(USER),
+    SIGNER,
     {
       writeContract: ((config: { functionName: string; args?: readonly unknown[] }) =>
         yieldPoint(
@@ -264,7 +270,7 @@ export async function runSdkCall(entry: Entry, script: readonly Step[]): Promise
   );
   const provider = strict(
     "provider",
-    createMockProvider(),
+    PROVIDER,
     {
       waitForTransactionReceipt: (hash) =>
         yieldPoint({ kind: "provider.waitForTransactionReceipt", hash }, (answer) =>
@@ -294,19 +300,19 @@ export async function runSdkCall(entry: Entry, script: readonly Step[]): Promise
   );
   const storage: GenericStorage = {
     get: <T>(key: string) =>
-      yieldPoint({ kind: "storage.get", key: pointerKey(key) }, (answer) =>
+      yieldPoint({ kind: "storage.get", key: checkKey(key) }, (answer) =>
         typeof answer.value === "string" ? (JSON.parse(answer.value) as T) : null,
       ),
     set: (key, value) =>
       yieldPoint(
-        { kind: "storage.set", key: pointerKey(key), value: JSON.stringify(value) },
+        { kind: "storage.set", key: checkKey(key), value: JSON.stringify(value) },
         () => undefined,
       ),
-    delete: (key) => yieldPoint({ kind: "storage.delete", key: pointerKey(key) }, () => undefined),
+    delete: (key) => yieldPoint({ kind: "storage.delete", key: checkKey(key) }, () => undefined),
   };
   const relayer = strict(
     "relayer",
-    createMockRelayer(),
+    RELAYER,
     {
       decryptPublicValuesWithSignatures: ((params: { encryptedValues: readonly Hex[] }) =>
         yieldPoint(
@@ -336,7 +342,9 @@ export async function runSdkCall(entry: Entry, script: readonly Step[]): Promise
   started = true;
 
   let outcome: Outcome | undefined;
-  const settled = start(entry, token, (text) => notes.push({ at: calls.length, text })).then(
+  const settled = start(entry, token, (hash) => {
+    reported = { at: calls.length, hash };
+  }).then(
     (value) => {
       outcome = describeOutcome(value);
     },
@@ -370,5 +378,5 @@ export async function runSdkCall(entry: Entry, script: readonly Step[]): Promise
       `${problems.join("; ")}\n  entry: ${JSON.stringify(entry)}\n  script: ${JSON.stringify(script)}`,
     );
   }
-  return { next, notes: notes.filter((n) => n.at === script.length).map((n) => n.text) };
+  return reported?.at === script.length ? { next, reported: reported.hash } : { next };
 }

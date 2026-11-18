@@ -40,6 +40,23 @@ describe("pending-unshield persistence", () => {
     ]);
   });
 
+  test("concurrent saves and clears in one tab keep every other entry", async ({
+    storage,
+    wrapperAddress,
+  }) => {
+    const TX_C = `0x${"c3".repeat(32)}` as Hex;
+    await savePendingUnshield(storage, wrapperAddress, TX_A);
+    await Promise.all([
+      savePendingUnshield(storage, wrapperAddress, TX_B),
+      clearPendingUnshield(storage, wrapperAddress, TX_A),
+      savePendingUnshield(storage, wrapperAddress, TX_C),
+    ]);
+    expect(await loadPendingUnshieldRequests(storage, wrapperAddress)).toEqual([
+      { unwrapTxHash: TX_B },
+      { unwrapTxHash: TX_C },
+    ]);
+  });
+
   test("clearing one entry keeps the others", async ({ storage, wrapperAddress }) => {
     await savePendingUnshield(storage, wrapperAddress, TX_A);
     await savePendingUnshield(storage, wrapperAddress, TX_B);
