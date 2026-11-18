@@ -1,4 +1,4 @@
-node scripts/lint/no-em-dash.mjs
+[ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ] || pnpm lint:em-dash
 pnpm exec lint-staged
 pnpm typecheck
 pnpm llm:stage

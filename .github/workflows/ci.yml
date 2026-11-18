@@ -55,13 +55,14 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: false
-          # Depth 2 keeps the PR merge commit's base parent for the em dash check.
+          # The em dash check below diffs against HEAD^1.
           fetch-depth: 2
 
       # On a PR, HEAD is the merge commit and HEAD^1 is the base branch tip,
-      # so this checks exactly the lines the PR adds.
+      # so this checks exactly the lines the PR adds. Promotion and sync PRs
+      # between release branches carry lines that were already reviewed.
       - name: Check for added em dashes
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && !contains(fromJSON('["main","beta","alpha"]'), github.head_ref)
         run: node scripts/lint/no-em-dash.mjs HEAD^1
 
       - name: Install dependencies

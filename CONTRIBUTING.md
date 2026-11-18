@@ -189,6 +189,7 @@ pnpm examples:local              # all examples
 
 - **ESM-only** — all packages use `"type": "module"`
 - **oxfmt + oxlint** — enforced via pre-commit hooks (Husky + lint-staged); ast-grep adds custom AST lint rules
+- **No new em dashes**: pre-commit and CI fail when a change adds an em dash (U+2014). Use a comma, colon, period, or parentheses instead. An edited line counts as added, so replace any em dash on a line you touch.
 - **Unused variables** — prefix with `_` (e.g., `_unused`)
 - **Tests** — place in `__tests__/` directories adjacent to source files, use vitest with `vi.fn()` for mocks
 - **React SDK** — all source files use `"use client"` directive

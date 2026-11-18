@@ -19,19 +19,31 @@ describe("findAddedEmDashes", () => {
     ]);
   });
 
-  it("ignores removed lines and generated files", () => {
+  it("ignores removed lines", () => {
     const diff = [
+      "diff --git a/docs/x.md b/docs/x.md",
       "--- a/docs/x.md",
       "+++ b/docs/x.md",
       "@@ -1 +1 @@",
       `-old ${EM_DASH} line`,
       "+new line",
-      "--- a/CHANGELOG.md",
-      "+++ b/CHANGELOG.md",
-      "@@ -0,0 +1 @@",
-      `+* feat ${EM_DASH} generated`,
     ].join("\n");
 
     expect(findAddedEmDashes(diff)).toEqual([]);
+  });
+
+  it("does not mistake hunk lines that look like file headers for headers", () => {
+    const diff = [
+      "diff --git a/q.sql b/q.sql",
+      "--- a/q.sql",
+      "+++ b/q.sql",
+      "@@ -1 +1 @@",
+      "--- old comment",
+      `+++ new comment ${EM_DASH} here`,
+    ].join("\n");
+
+    expect(findAddedEmDashes(diff)).toEqual([
+      { file: "q.sql", line: 1, text: `++ new comment ${EM_DASH} here` },
+    ]);
   });
 });
