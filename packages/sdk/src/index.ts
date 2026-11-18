@@ -42,6 +42,7 @@ export type {
 // Decrypt parameter/result types — aligned with the canonical Zama glossary.
 // Re-exported from the underlying relayer types under their glossary names.
 export type { DecryptPublicValuesResult } from "./relayer/types";
+export type { DecryptPublicUintResult } from "./relayer/public-decrypt";
 export type { GenericLogger } from "./types/logger";
 
 // Chain presets and types

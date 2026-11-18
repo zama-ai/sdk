@@ -163,6 +163,7 @@ export type { ClearValue, EncryptParams, EncryptResult, EncryptedValue } from ".
 export type { EncryptInput, EIP712TypedData } from "../relayer/types";
 // Decrypt parameter/result types — aligned with the canonical Zama glossary (see main entry).
 export type { DecryptPublicValuesResult } from "../relayer/types";
+export type { DecryptPublicUintResult } from "../relayer/public-decrypt";
 export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/token";
 export type { Token } from "../token/token";
 export type { WrappedToken } from "../token/wrapped-token";

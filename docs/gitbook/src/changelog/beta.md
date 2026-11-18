@@ -9,6 +9,10 @@ description: Unreleased changes on the prerelease (beta) line — not yet in a s
 **Unreleased.** The changes on this page are on the prerelease (`beta`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
 {% endhint %}
 
+### Decryption
+
+**`sdk.decryption.decryptPublicUint` decrypts one uint publicly.** It returns the value as a `bigint` with its `decryptionProof` and `abiEncodedClearValues`, and throws `DecryptionFailedError` when the relayer returns no uint. You no longer need to read `clearValues` and check the type yourself. See [Decrypt public values](../guides/encrypt-decrypt.md#4-decrypt-public-values-advanced).
+
 ### Daemon
 
 **Daemon traffic is identifiable in telemetry.** Relayer requests made by the SDK daemon now report `runtime=daemon` instead of `node`, plus a `client` field (`go`, `rust`, or `unknown`) with the client language. Nothing else changes: no new identifiers are sent, and `ZAMA_SDK_TELEMETRY=off` on the daemon process still disables telemetry. See [SDK usage telemetry](../guides/telemetry.md) and [Deploy in production](../native/operations/run-in-production.md#telemetry).

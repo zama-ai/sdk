@@ -40,7 +40,7 @@ import type {
 import type { RawLog } from "../types/transaction";
 import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
-import { assertBigint, assertNonNullable } from "../utils/assertions";
+import { assertNonNullable } from "../utils/assertions";
 import { isEncryptedValueZero } from "../utils/handles";
 import type { TelemetryOperation } from "../telemetry";
 import { swallow } from "../utils/swallow";
@@ -624,19 +624,13 @@ export class WrappedToken extends Token {
   ): Promise<TransactionResult> {
     this.#requireSigner("finalizeUnwrap");
     await requireChainAlignment("finalizeUnwrap", this.sdk.signer, this.sdk.provider);
-    const result = await this.sdk.decryption.decryptPublicValues([unwrapRequestId], {
-      operation: telemetryOperation,
-    });
-    const clearValue = result.clearValues[unwrapRequestId];
-    assertBigint(clearValue, "finalizeUnwrap: clearValue");
+    const { value, decryptionProof } = await this.sdk.decryption.decryptPublicUint(
+      unwrapRequestId,
+      { operation: telemetryOperation },
+    );
     return this.submitTransaction({
       operation: "finalizeUnwrap",
-      config: finalizeUnwrapContract(
-        this.address,
-        unwrapRequestId,
-        clearValue,
-        result.decryptionProof,
-      ),
+      config: finalizeUnwrapContract(this.address, unwrapRequestId, value, decryptionProof),
     });
   }
 

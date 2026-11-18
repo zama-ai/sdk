@@ -7675,6 +7675,7 @@ export interface DecryptInput {
 
 // @public
 export class Decryption {
+    decryptPublicUint(encryptedValue: EncryptedValue, options?: RelayerRequestOptions): Promise<DecryptPublicUintResult>;
     decryptPublicValues(encryptedValues: EncryptedValue[], options?: RelayerRequestOptions): Promise<DecryptPublicValuesResult>;
     decryptValues(encryptedInput: DecryptInput[], options?: RelayerRequestOptions): Promise<Record<EncryptedValue, ClearValue>>;
     delegatedBatchDecryptValues(input: {
@@ -7689,6 +7690,13 @@ export class Decryption {
 // @public
 export class DecryptionFailedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
+export interface DecryptPublicUintResult {
+    readonly abiEncodedClearValues: Hex;
+    readonly decryptionProof: Hex;
+    readonly value: bigint;
 }
 
 // @public

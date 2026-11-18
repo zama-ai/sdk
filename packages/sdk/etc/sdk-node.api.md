@@ -68,6 +68,13 @@ export interface CleartextRelayerConfig extends RelayerConfig {
 export type ClearValue = TypedValue["value"] | bigint | string | undefined;
 
 // @public
+export interface DecryptPublicUintResult {
+    readonly abiEncodedClearValues: Hex;
+    readonly decryptionProof: Hex;
+    readonly value: bigint;
+}
+
+// @public
 export interface DecryptPublicValuesResult {
     abiEncodedClearValues: Hex;
     readonly clearValues: Record<EncryptedValue, ClearValue>;
