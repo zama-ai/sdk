@@ -28,6 +28,15 @@ The daemon system spans `packages/sdk-daemon`, `clients/go`, `clients/rust`, and
 
 If the snippet you're about to generate composes the underlying contract calls for one of these flows, drop down to the `Token` method instead. The `examples/` apps are the ground truth and use the `Token` API throughout.
 
+## Enforced rules
+
+Each rule here has a check that fails when it's broken. Add a row only together with its check.
+
+| Rule                                                                                                                       | Enforced by                                                                         |
+| -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| No new em dashes (U+2014)                                                                                                  | `scripts/lint/no-em-dash.mjs`, run by lint-staged, the agent post-edit hook, and CI |
+| A workflow condition on `github.head_ref` also checks `github.event.pull_request.head.repo.full_name == github.repository` | `scripts/lint/workflow-head-ref.mjs`, run by `pnpm lint`                            |
+
 ## Further reading
 
 Load these on demand during planning — they are not preloaded:
