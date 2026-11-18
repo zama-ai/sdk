@@ -36,6 +36,7 @@ Each rule here has a check that fails when it's broken. Add a row only together 
 | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | No new em dashes (U+2014)                                                                                                  | `scripts/lint/no-em-dash.mjs`, run by lint-staged, the agent post-edit hook, and CI |
 | A workflow condition on `github.head_ref` also checks `github.event.pull_request.head.repo.full_name == github.repository` | `scripts/lint/workflow-head-ref.mjs`, run by `pnpm lint`                            |
+| The em dash check gives the same result from any directory and with any user git diff config                               | `scripts/lint/__tests__/no-em-dash-cli.test.mjs`, run by `pnpm test`                |
 | Per-file checks go in `lint-staged.config.mjs`, not `.husky/pre-commit`                                                    | `scripts/lint/pre-commit-hook.mjs`, run by `pnpm lint`                              |
 
 ## Further reading
