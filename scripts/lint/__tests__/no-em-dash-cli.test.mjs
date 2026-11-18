@@ -11,13 +11,15 @@ const SCRIPT = fileURLToPath(new URL("../no-em-dash.mjs", import.meta.url));
 const EM_DASH = "\u2014";
 
 let repo;
-const git = (...args) => execFileSync("git", args, { cwd: repo, encoding: "utf8" });
+// Ignore the developer's git config (commit signing, hooks) and any repo the
+// environment points at, so only the config each test sets applies.
+const GIT_ENV = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" };
+for (const name of ["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"]) {
+  delete GIT_ENV[name];
+}
+const git = (...args) => execFileSync("git", args, { cwd: repo, encoding: "utf8", env: GIT_ENV });
 const check = (cwd = repo) =>
-  spawnSync(process.execPath, [SCRIPT], {
-    cwd,
-    encoding: "utf8",
-    env: { ...process.env, GIT_CONFIG_NOSYSTEM: "1" },
-  });
+  spawnSync(process.execPath, [SCRIPT], { cwd, encoding: "utf8", env: GIT_ENV });
 
 beforeEach(() => {
   repo = mkdtempSync(join(tmpdir(), "no-em-dash-"));
