@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.9.0-beta.4](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.3...v3.9.0-beta.4) (2026-11-19)
+
+### Features
+
+- **vaults:** route a join to the next batch among several batchers ([#959](https://github.com/zama-ai/sdk/issues/959)) ([5bbc963]())
+
 ## [3.9.0-beta.3](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.2...v3.9.0-beta.3) (2026-11-19)
 
 ### Features
