@@ -38,7 +38,7 @@ export const BETA = defineVault({
 export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
 ```
 
-A vault names its two batchers: the one deposits join, and the one redemptions join. The ids are yours to choose. See [`defineVaultGroup`](../../reference/sdk/VaultClient.md#definevaultgroup) for how the types check `vaultId`.
+A vault names its batchers for each direction: the ones deposits join, and the ones redemptions join. Most vaults have one of each; see [Several batchers](advanced.md#several-batchers). The ids are yours to choose. See [`defineVaultGroup`](../../reference/sdk/VaultClient.md#definevaultgroup) for how the types check `vaultId`.
 
 Every method that takes a group also takes a vault on its own, such as `ALPHA`, with no `vaultId`. Join through the group, as the [privacy rules](README.md#a-group-hides-which-vault-you-chose) say.
 
@@ -255,5 +255,5 @@ Writes need the vault's chain. While the wallet is on another chain, they throw 
 ## Next steps
 
 - [Building a vault UI](building-a-ui.md): what to show and offer in each batch state
-- [Handle wallet prompts, upgrades and custom sending](advanced.md): wallet prompts, batcher upgrades and your own pipeline
+- [Handle wallet prompts, batchers and custom sending](advanced.md): wallet prompts, paused batchers, several batchers and your own pipeline
 - [`VaultClient`](../../reference/sdk/VaultClient.md): the API reference
