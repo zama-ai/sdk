@@ -32,6 +32,10 @@ const name = path.basename(file);
 if (/\.[cm]?tsx?$/.test(name)) {
   appendFileSync(path.join(tmpdir(), `claude-typecheck-${input.session_id}`), `${root}\n`);
 }
+// Broader than the corpus sources in scripts/llm/stage-artifacts.mjs: a rebuild that changes nothing is harmless.
+if (name.endsWith(".md") || /(^|\/)(scripts|docs)\/llm\//.test(path.relative(root, file))) {
+  appendFileSync(path.join(tmpdir(), `claude-llm-${input.session_id}`), `${root}\n`);
+}
 
 const { default: tasks } = await import(pathToFileURL(config).href);
 const failures = [];
