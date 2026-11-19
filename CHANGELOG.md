@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.9.0-beta.3](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.2...v3.9.0-beta.3) (2026-11-19)
+
+### Features
+
+- **examples:** offer Sepolia alongside the custom environment in react-wagmi ([#952](https://github.com/zama-ai/sdk/issues/952)) ([59d9236]())
+
 ## [3.9.0-beta.2](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.1...v3.9.0-beta.2) (2026-11-17)
 
 ### Bug Fixes

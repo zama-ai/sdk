@@ -1,5 +1,4 @@
 import type { ChangeEventHandler, ReactNode } from "react";
-import { networks, type NetworkKey } from "@/lib/networks";
 
 interface ActionScreenProps {
   title: string;
@@ -112,12 +111,12 @@ export function MainnetBanner({ label }: { label: string }) {
 }
 
 interface NetworkPickerProps {
-  /** Networks the server can serve, in table order. */
-  options: NetworkKey[];
-  /** The wallet's current network, or "" when it is on a chain the app does not support. */
-  value: NetworkKey | "";
+  /** In table order: one per network, plus one per network the custom environment serves. */
+  options: { id: string; label: string }[];
+  /** The current network's id, or "" when the wallet is on a chain the app does not support. */
+  value: string;
   pending: boolean;
-  onChange: (key: NetworkKey) => void;
+  onChange: (id: string) => void;
   error?: ReactNode;
 }
 
@@ -136,16 +135,16 @@ export function NetworkPicker({ options, value, pending, onChange, error }: Netw
         className="select"
         value={value}
         disabled={pending}
-        onChange={(event) => onChange(event.currentTarget.value as NetworkKey)}
+        onChange={(event) => onChange(event.currentTarget.value)}
       >
         {value === "" && (
           <option value="" disabled>
             Choose a network…
           </option>
         )}
-        {options.map((key) => (
-          <option key={key} value={key}>
-            {networks[key].label}
+        {options.map(({ id, label }) => (
+          <option key={id} value={id}>
+            {label}
           </option>
         ))}
       </select>

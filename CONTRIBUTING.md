@@ -193,7 +193,7 @@ On `beta` and `alpha`, examples can use API newer than their pins. The bump PR (
 
 - **ESM-only**: all packages use `"type": "module"`
 - **oxfmt + oxlint**: enforced via pre-commit hooks (Husky + lint-staged); ast-grep adds custom AST lint rules
-- **No new em dashes**: pre-commit and CI fail when a change adds an em dash (U+2014). Use a comma, colon, period, or parentheses instead. Run `pnpm lint:em-dash` to check staged changes, or `pnpm lint:em-dash --base <rev>` to check against a base.
+- **No new em dashes**: pre-commit and CI fail when a change adds an em dash (U+2014). Rephrase using commas, colons, parentheses, or separate sentences. Run `pnpm lint:em-dash` to check staged changes, or `pnpm lint:em-dash --base <rev>` to check against a base.
   - An edited line counts as added, so replace any em dash on a line you touch. That includes Markdown table rows that oxfmt realigns.
   - A moved file keeps its em dashes only while git still pairs it with the old path (at least 50% similar). A copied file counts as new.
 - **Unused variables**: prefix with `_` (e.g., `_unused`)
