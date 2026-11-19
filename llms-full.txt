@@ -28592,7 +28592,7 @@ The table lives in [`src/lib/networks.ts`](src/lib/networks.ts). Each row pairs 
 
 Token pairs on every network come from the on-chain `WrappersRegistry` at runtime; no token addresses are hardcoded. On testnets, the underlying mock tokens expose `mint(address,uint256)`, which the **Mint** button calls.
 
-**Custom environment.** `NEXT_PUBLIC_ZAMA_ENV=custom` adds a second Zama environment next to the default one: another Zama deployment on Sepolia, for example a pre-release one the SDK ships no preset for, with the protocol contracts, gateway and wrapper registry in the `NEXT_PUBLIC_ZAMA_*` and `NEXT_PUBLIC_REGISTRY_ADDRESS` values in `.env.local` (see `.env.example`). The picker then offers **Sepolia · Custom environment** next to **Sepolia**; the app starts in the default environment. The environment is not a network of its own: the app builds one SDK config per environment ([`src/lib/environment.ts`](src/lib/environment.ts), [`src/providers.tsx`](src/providers.tsx)), and picking the option switches the wallet's chain and the SDK config together. Its relayer is `SEPOLIA_CUSTOM_RELAYER_URL` (the option is hidden while that is unset); add the origin its `keyurl` serves keys from to `CSP_CONNECT_SRC`. The registry is required: without it Sepolia's preset registry would list Sepolia's tokens. Its keys and permits live in a separate IndexedDB database, because the SDK keys them by signer and chain ID, which both environments share.
+**Custom environment.** `NEXT_PUBLIC_ZAMA_ENV=custom` adds a second Zama deployment on Sepolia to the picker, configured from the `NEXT_PUBLIC_ZAMA_*` variables (see `.env.example`). Used internally; you can ignore it.
 
 ## Stack
 
@@ -28827,9 +28827,12 @@ function createConfig(env: Environment, storage: GenericStorage) {
   });
 }
 
+const defaultConfig = createConfig("default", indexedDBStorage);
 const configs = {
-  default: createConfig("default", indexedDBStorage),
-  custom: createConfig("custom", new IndexedDBStorage("CredentialStore-custom")),
+  default: defaultConfig,
+  custom: NETWORK_KEYS.some(isCustomized)
+    ? createConfig("custom", new IndexedDBStorage("CredentialStore-custom"))
+    : defaultConfig,
 };
 ```
 
@@ -28845,8 +28848,8 @@ providers. `useEnvironment()` exposes that environment to the page:
 </WalletProviders>
 ```
 
-`storage` and `permitStorage` use the same IndexedDB-backed storage in this browser app so
-the transport key pair and signed permits survive page reloads during local development.
+Each config passes one IndexedDB database as both `storage` and `permitStorage`, so the
+transport key pair and signed permits survive page reloads during local development.
 
 **Custom environment.** With `NEXT_PUBLIC_ZAMA_ENV=custom`, `src/lib/environment.ts` builds a
 second version of Sepolia from the `NEXT_PUBLIC_ZAMA_*` variables: the same chain, other
@@ -29133,9 +29136,9 @@ The proxy route `src/app/api/relayer/[network]/[...path]/route.ts` keeps API key
 The `[network]` segment is a network id: a key of the network table, or `sepolia-custom` for
 Sepolia in the custom environment (`networkId()` in `src/lib/environment.ts`). The route looks it up in
 `src/lib/relayers.ts`, which maps each `relayer` network to an upstream from env
-(`SEPOLIA_RELAYER_URL`, `SEPOLIA_CUSTOM_RELAYER_URL`, `MAINNET_RELAYER_URL`, … — bare hosts, no
-`/v2` suffix). Testnets default to the public testnet relayer; mainnets have no default and are
-hidden until set.
+(`SEPOLIA_RELAYER_URL`, `SEPOLIA_CUSTOM_RELAYER_URL`, `MAINNET_RELAYER_URL`, …; bare hosts, no
+`/v2` suffix). Sepolia defaults to the public testnet relayer; custom Sepolia and mainnets have
+no default and are hidden until set.
 
 The proxy fails closed and is deliberately narrow:
 
