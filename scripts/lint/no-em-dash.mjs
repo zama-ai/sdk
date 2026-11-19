@@ -136,7 +136,7 @@ if (import.meta.url === entry) {
   }
   if (hits.length > 0) {
     console.error(
-      `\nFound ${hits.length} added em dash(es) (${EM_DASH}). Use a comma, colon, period, or parentheses instead.`,
+      `\nFound ${hits.length} added em dash(es) (${EM_DASH}). Rephrase using commas, colons, parentheses, or separate sentences.`,
     );
     process.exit(1);
   }
