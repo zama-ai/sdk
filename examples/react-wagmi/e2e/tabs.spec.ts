@@ -18,14 +18,14 @@ test.describe("tabs", () => {
       "aria-selected",
       "true",
     );
-    await expect(page.getByText("Shield — ERC-20 → Confidential")).toBeVisible();
-    await expect(page.getByText("Delegation — as owner")).toHaveCount(0);
+    await expect(page.getByText(/^Shield . ERC-20 → Confidential$/)).toBeVisible();
+    await expect(page.getByText(/^Delegation . as owner$/)).toHaveCount(0);
   });
 
   test("moves delegation to the Delegation tab", async ({ page }) => {
     await page.getByRole("tab", { name: "Delegation" }).click();
-    await expect(page.getByText("Delegation — as owner")).toBeVisible();
-    await expect(page.getByText("Shield — ERC-20 → Confidential")).toHaveCount(0);
+    await expect(page.getByText(/^Delegation . as owner$/)).toBeVisible();
+    await expect(page.getByText(/^Shield . ERC-20 → Confidential$/)).toHaveCount(0);
   });
 
   test("shows a setup hint on the Vaults tab when no vault is configured", async ({ page }) => {

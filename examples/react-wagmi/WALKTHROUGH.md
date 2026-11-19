@@ -249,8 +249,8 @@ chain (error 4902). That covers Hoodi and Zenith, which most wallets don't ship.
 override from `NEXT_PUBLIC_<NETWORK>_RPC_URL` is applied to the viem chain too, so the
 "add network" prompt shows the same RPC the app uses.
 
-Everything that depends on the active network — explorer links, the native balance label,
-the Mint button, the Vaults tab's batchers — reads its row through `useNetwork()` (`src/lib/hooks.ts`)
+Everything that depends on the active network (explorer links, the native balance label,
+the Mint button, the Vaults tab's batchers) reads its row through `useNetwork()` (`src/lib/hooks.ts`)
 rather than a hardcoded constant.
 
 **Screen 2 is passive**: there is no `isInitializing` guard (unlike the ethers/viem examples)
