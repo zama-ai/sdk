@@ -884,7 +884,13 @@ describe("several batchers in one direction", () => {
       batches: { [EARLY]: { createdAt: 0n }, [LATE]: { createdAt: NOW, minAge: 600n } },
     });
     const answer = vi.mocked(provider.readContract).getMockImplementation();
-    const cause = new Error("Too Many Requests");
+    // viem wraps every readContract failure, transport ones included.
+    const cause = Object.assign(new Error("Too Many Requests"), {
+      name: "ContractFunctionExecutionError",
+      cause: Object.assign(new Error("HTTP request failed. Status: 429"), {
+        name: "HttpRequestError",
+      }),
+    });
     vi.mocked(provider.readContract).mockImplementation(async (call: unknown) => {
       if ((call as { functionName: string }).functionName === "closed") {
         throw cause;
