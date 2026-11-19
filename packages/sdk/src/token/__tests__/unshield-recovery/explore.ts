@@ -32,15 +32,23 @@ import {
   requestOfTx,
   requestStatus,
   STALE_ENTRY_WORLD,
+  storedHashes,
   storedRequests,
   unwrapTx,
   type World,
 } from "./world";
 
 export type Rule =
+  /** An open unwrap request that no SDK call is working on has a stored entry. */
   | "PendingUnshieldIsDiscoverable"
+  /** A stored entry stays until its request is finalized. */
   | "EntryKeptAfterSave"
+  /** The SDK reports "already finalized" only for a request that is finalized on chain. */
   | "NoFalseAlreadyFinalized"
+  /**
+   * getPendingUnshield() never returns a hash whose unwrap it saw revert or
+   * open no request, so a dead entry cannot hide newer ones.
+   */
   | "NoDeadEntryReported";
 
 interface Violation {
@@ -101,13 +109,13 @@ interface Node {
   hash?: Hex;
   /** The request whose state this SDK call read on chain since it last fetched an unwrap receipt. */
   requestId?: Hex;
-  /** Unwrap txs whose receipt this SDK call saw reverted. */
-  sawReverted: Hex[];
+  /** Unwrap txs whose receipt this SDK call saw reverted, or mined without opening a request. */
+  sawDead: Hex[];
   /** getPendingUnshield: the stored value it read first, the list it goes through. */
   firstRead?: string | null;
-  /** The last answered call was a `storage.get` that returned this, so a write now is read-modify-write. */
-  justRead?: { value: string | null };
-  /** An unshield call: a `storage.set` returned. */
+  /** The stored value of this SDK call's latest `storage.get`, which its next write builds on. */
+  lastRead?: string | null;
+  /** An unshield call: it stored a list with its own unwrap tx. */
   saved: boolean;
   /** A storage call threw before the entry was saved. */
   storageFailed: boolean;
@@ -132,7 +140,6 @@ const answerKey = (answer: Answer): string => JSON.stringify(answer);
 /** The request an SDK call is working on, once it knows one. */
 const workingOn = (world: World, node: Node) => node.requestId ?? requestOfTx(world, node.hash);
 const isUnshield = (entry: Entry) => entry.kind === "unshield" || entry.kind === "unshieldAll";
-const isStorage = (call: Call) => call.kind.startsWith("storage.");
 
 /** The SDK calls of a scenario, run on demand and kept by answer sequence. */
 class Actors {
@@ -171,7 +178,8 @@ class Actors {
     const key = answerKey(answer);
     let child = node.children.get(key);
     if (!child) {
-      const script = [...node.script, { call, answer }];
+      // `answer` comes from `options(call)`, so it has the call's kind.
+      const script = [...node.script, { kind: call.kind, call, answer } as Step];
       child = this.#node(node.slot, node.entry, script, await runSdkCall(node.entry, script), node);
       node.children.set(key, child);
     }
@@ -187,39 +195,73 @@ class Actors {
       run,
       hash: from ? from.hash : entry.kind === "resumeUnshield" ? entry.hash : undefined,
       requestId: from?.requestId,
-      sawReverted: from?.sawReverted ?? [],
+      sawDead: from?.sawDead ?? [],
       firstRead: from?.firstRead,
+      lastRead: from?.lastRead,
       saved: from?.saved ?? false,
       storageFailed: from?.storageFailed ?? false,
       children: new Map(),
     };
     const last = script.at(-1);
-    if (!last) {
-      return node;
-    }
-    const { call, answer } = last;
-    if (answer.kind !== "ok") {
-      node.storageFailed ||= isStorage(call) && !node.saved;
-    } else if (call.kind === "signer.writeContract" && call.functionName === "unwrap") {
-      node.hash = answer.value as Hex;
-    } else if (call.kind === "provider.waitForTransactionReceipt" && isUnwrapTx(call.hash)) {
-      node.hash = call.hash;
-      node.requestId = undefined;
-      if ((answer.value as { status: string }).status === "reverted") {
-        node.sawReverted = [...node.sawReverted, call.hash];
-      }
-    } else if (call.kind === "provider.readContract") {
-      node.requestId = call.requestId;
-    } else if (call.kind === "storage.get") {
-      const value = answer.value as string | null;
-      if (entry.kind === "getPendingUnshield" && node.firstRead === undefined) {
-        node.firstRead = value;
-      }
-      node.justRead = { value };
-    } else if (call.kind === "storage.set" && isUnshield(entry)) {
-      node.saved = true;
+    if (last) {
+      observe(node, last);
     }
     return node;
+  }
+}
+
+/**
+ * What `node` learns from its last answered step. The rules and bounds rely on
+ * these facts, so each one states how it is derived.
+ */
+function observe(node: Node, step: Step): void {
+  const { entry } = node;
+  if (step.answer.kind !== "ok") {
+    // A failed storage call before its own entry was stored: the save window bound.
+    node.storageFailed ||= step.kind.startsWith("storage.") && !node.saved;
+    return;
+  }
+  switch (step.kind) {
+    case "signer.writeContract":
+      // The hash the wallet returned for its own unwrap.
+      if (step.call.functionName === "unwrap") {
+        node.hash = step.answer.value;
+      }
+      return;
+    case "provider.waitForTransactionReceipt":
+    case "provider.getTransactionReceipt": {
+      if (!isUnwrapTx(step.call.hash)) {
+        return;
+      }
+      // An unwrap receipt it looked at: the request it works on now, read fresh.
+      node.hash = step.call.hash;
+      node.requestId = undefined;
+      const receipt = step.answer.value;
+      if (receipt && (receipt.status === "reverted" || !receipt.unwrapRequestId)) {
+        node.sawDead = [...node.sawDead, step.call.hash];
+      }
+      return;
+    }
+    case "provider.readContract":
+      node.requestId = step.call.requestId;
+      return;
+    case "storage.get":
+      // getPendingUnshield reads the list once and goes through it; any later
+      // read belongs to a clear.
+      if (entry.kind === "getPendingUnshield" && node.firstRead === undefined) {
+        node.firstRead = step.answer.value;
+      }
+      node.lastRead = step.answer.value;
+      return;
+    case "storage.set":
+      node.saved ||=
+        isUnshield(entry) &&
+        node.hash !== undefined &&
+        storedHashes(step.call.value).includes(node.hash);
+      return;
+    case "storage.delete":
+    case "relayer.decryptPublicValuesWithSignatures":
+      return;
   }
 }
 
@@ -247,8 +289,8 @@ function endText(name: string, node: Node): string {
 
 /** The rule that the step reaching `node` itself breaks, if any. */
 function stepBreaks(node: Node, world: World): Rule | undefined {
-  // Its unwrap reverted, so the hash can never be resumed, and it hides newer entries.
-  if (node.run.reported && node.sawReverted.includes(node.run.reported)) {
+  // Its unwrap opened no request, so the hash can never be resumed, and it hides newer entries.
+  if (node.run.reported && node.sawDead.includes(node.run.reported)) {
     return "NoDeadEntryReported";
   }
   if (node.run.next.kind !== "done") {
@@ -298,17 +340,21 @@ function withActor(state: State, index: number, actor: ActorState, world: World)
 
 /**
  * `next` plus what the bounds need about `actor`'s step from `world`: entries
- * of other requests that a read-modify-write based on a stale read dropped,
- * and where an unshield ended before saving. `child` is absent when the tab
- * closed.
+ * of other requests that a write dropped because they were not in the list it
+ * read (another tab stored them after the read), and where an unshield ended
+ * before saving.
+ * `child` is absent when the tab closed.
  */
 function recordStep(world: World, next: World, actor: Node, child?: Node): World {
   let out = next;
   const own = workingOn(world, actor);
-  const stale = actor.justRead !== undefined && (world.stored ?? null) !== actor.justRead.value;
-  if (stale && next.stored !== world.stored) {
+  // Only a write built on an earlier read can be a lost update; a blind write is a bug.
+  if (next.stored !== world.stored && actor.lastRead !== undefined) {
     const kept = new Set(storedRequests(next, next.stored));
-    const dropped = storedRequests(world, world.stored).filter((r) => r !== own && !kept.has(r));
+    const known = new Set(storedRequests(world, actor.lastRead));
+    const dropped = storedRequests(world, world.stored).filter(
+      (r) => r !== own && !kept.has(r) && !known.has(r),
+    );
     out = { ...out, lostUpdate: [...new Set([...out.lostUpdate, ...dropped])].sort() };
   }
   const ended = !child || child.run.next.kind === "done";
@@ -413,7 +459,7 @@ export async function explore(
     if (key === undefined) {
       key = [
         world.stored === undefined ? "-" : intern(world.stored),
-        world.txs.map((tx) => `${intern(tx.hash)}${tx.status[0]}`).join(","),
+        world.txs.map((tx) => `${intern(tx.hash)}${intern(tx.status)}`).join(","),
         world.saved.map(intern).join(","),
         world.lostUpdate.map(intern).join(","),
         world.unsaved.map((u) => `${intern(u.requestId)}@${intern(u.endedOn)}`).join(","),

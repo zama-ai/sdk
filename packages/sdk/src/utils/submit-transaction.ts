@@ -32,6 +32,7 @@ export async function submitTransaction(params: {
   provider: GenericProvider;
   config: WriteContractConfig;
   emit: (input: ZamaSDKEventInput) => void;
+  /** Not awaited. Use `beforeReceipt` for work that must finish before the receipt wait. */
   onSubmitted?: (txHash: Hex) => void;
   /** Awaited before the receipt wait; errors are logged, not thrown. */
   beforeReceipt?: (txHash: Hex) => Promise<void>;

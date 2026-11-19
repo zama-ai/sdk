@@ -11,7 +11,7 @@ The SDK persists this automatically when [`useUnshield`](./useUnshield.md) / [`u
 
 If several unshields on this wrapper were interrupted, the hook returns the oldest; after it is resumed, the query refetches and returns the next.
 
-The SDK verifies each saved hash on-chain before reporting it: an entry whose unwrap request was already finalized, or whose unwrap reverted, is cleared and the next one is checked, so a stale entry never shows a resume prompt. If a verification read fails, that hash is returned unverified, but only when no other entry is verified open; a network error never deletes recovery state.
+The SDK verifies each saved hash on-chain before reporting it, without waiting for a receipt: an entry whose unwrap request was already finalized, or whose unwrap reverted or opened no request (replaced or cancelled in the wallet), is cleared and the next one is checked, so a stale entry never shows a resume prompt. An entry it cannot verify (a read failed, or the unwrap is not mined yet) is kept, and returned only when no other entry is verified open; a network error never deletes recovery state.
 
 ## Import
 

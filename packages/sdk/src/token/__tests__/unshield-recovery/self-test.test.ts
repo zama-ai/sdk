@@ -2,7 +2,7 @@
 // one module for a broken copy and expects some scenario to break a rule. If a
 // case passes, the check has gone blind: a bound or the model now hides that
 // bug, or no scenario reaches it.
-import { getAddress, type Address, type Hex } from "viem";
+import type { Address, Hex } from "viem";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type { GenericStorage } from "../../../types";
 import type * as SubmitTransactionModule from "../../../utils/submit-transaction";
@@ -10,8 +10,6 @@ import type * as PendingUnshieldModule from "../../pending-unshield";
 
 type PendingUnshield = typeof PendingUnshieldModule;
 type SubmitTransaction = typeof SubmitTransactionModule;
-
-const keyOf = (wrapper: Address) => `zama:pending-unshield:${getAddress(wrapper)}`;
 
 const CASES: { bug: string; inject: () => void }[] = [
   {
@@ -29,20 +27,29 @@ const CASES: { bug: string; inject: () => void }[] = [
   {
     bug: "a clear deletes every entry of the wrapper",
     inject: () =>
-      vi.doMock("../../pending-unshield", async (importOriginal) => ({
-        ...(await importOriginal<PendingUnshield>()),
-        clearPendingUnshield: (storage: GenericStorage, wrapper: Address) =>
-          storage.delete(keyOf(wrapper)),
-      })),
+      vi.doMock("../../pending-unshield", async (importOriginal) => {
+        const real = await importOriginal<PendingUnshield>();
+        return {
+          ...real,
+          clearPendingUnshield: (storage: GenericStorage, wrapper: Address) =>
+            storage.delete(real.pendingUnshieldsKey(wrapper)),
+        };
+      }),
   },
   {
     bug: "a save overwrites the other entries",
     inject: () =>
-      vi.doMock("../../pending-unshield", async (importOriginal) => ({
-        ...(await importOriginal<PendingUnshield>()),
-        savePendingUnshield: (storage: GenericStorage, wrapper: Address, unwrapTxHash: Hex) =>
-          storage.set(keyOf(wrapper), { version: 2, requests: [{ unwrapTxHash }] }),
-      })),
+      vi.doMock("../../pending-unshield", async (importOriginal) => {
+        const real = await importOriginal<PendingUnshield>();
+        return {
+          ...real,
+          savePendingUnshield: (storage: GenericStorage, wrapper: Address, unwrapTxHash: Hex) =>
+            storage.set(
+              real.pendingUnshieldsKey(wrapper),
+              real.encodePendingUnshields([unwrapTxHash]),
+            ),
+        };
+      }),
   },
   {
     bug: "getPendingUnshield stops at the first entry",
@@ -51,8 +58,8 @@ const CASES: { bug: string; inject: () => void }[] = [
         const real = await importOriginal<PendingUnshield>();
         return {
           ...real,
-          loadPendingUnshieldRequests: async (storage: GenericStorage, wrapper: Address) =>
-            (await real.loadPendingUnshieldRequests(storage, wrapper)).slice(0, 1),
+          loadPendingUnshields: async (storage: GenericStorage, wrapper: Address) =>
+            (await real.loadPendingUnshields(storage, wrapper)).slice(0, 1),
         };
       }),
   },

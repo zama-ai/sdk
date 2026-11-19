@@ -11,7 +11,9 @@ description: Unreleased changes on the prerelease (beta) line — not yet in a s
 
 ### Unshield
 
-**Interrupted unshields stay recoverable.** The SDK now saves the unwrap transaction hash as soon as the wallet returns it, instead of after the receipt, and keeps one entry per unshield, so a second unshield on the same token no longer overwrites the first. `getPendingUnshield()` / `usePendingUnshield` return the oldest pending one; after resuming it, the next one is returned. An entry whose unwrap reverted is cleared instead of being reported. See [Unshield tokens](../guides/unshield-tokens.md#4-handle-interrupted-unshields).
+**Interrupted unshields stay recoverable.** The SDK now saves the unwrap transaction hash as soon as the wallet returns it, instead of after the receipt, and keeps one entry per unshield, so a second unshield on the same token no longer overwrites the first. `getPendingUnshield()` / `usePendingUnshield` return the oldest pending one; after resuming it, the next one is returned. An entry whose unwrap reverted, or was replaced or cancelled in the wallet, is cleared instead of being reported, and an unwrap that is not mined yet no longer stalls `getPendingUnshield()`. Entries move to a new storage key, so an older SDK still open in another tab cannot delete them. See [Unshield tokens](../guides/unshield-tokens.md#4-handle-interrupted-unshields).
+
+**`GenericProvider.getTransactionReceipt`.** An optional method that returns a mined receipt, or `null`, without waiting. `ViemProvider`, `EthersProvider` and `WagmiProvider` implement it. See [GenericProvider](../reference/sdk/GenericProvider.md#gettransactionreceipt).
 
 ### Daemon
 

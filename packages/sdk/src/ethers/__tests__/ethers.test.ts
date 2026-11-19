@@ -525,6 +525,24 @@ describe("EthersProvider", () => {
     });
   });
 
+  describe("getTransactionReceipt", () => {
+    test("maps a mined receipt, and returns null when the transaction is not mined", async () => {
+      const mockProvider = {
+        getTransactionReceipt: vi
+          .fn()
+          .mockResolvedValueOnce({ logs: [], status: 0 })
+          .mockResolvedValueOnce(null),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
+
+      expect(await ethersProvider.getTransactionReceipt("0xhash" as Hex)).toEqual({
+        logs: [],
+        status: "reverted",
+      });
+      expect(await ethersProvider.getTransactionReceipt("0xhash" as Hex)).toBeNull();
+    });
+  });
+
   describe("waitForTransactionReceipt", () => {
     test("waits for the transaction and maps logs correctly", async () => {
       const mockProvider = {

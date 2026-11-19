@@ -110,6 +110,14 @@ waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>
 
 Poll for a transaction receipt by hash.
 
+### getTransactionReceipt
+
+```ts
+getTransactionReceipt?(hash: Hex): Promise<TransactionReceipt | null>
+```
+
+Optional. Return the receipt of a mined transaction, or `null` when it is not mined, without waiting. `ViemProvider`, `EthersProvider` and `WagmiProvider` implement it; `WagmiProvider` also asks the connected wallet. `getPendingUnshield()` uses it to check saved unshields. Leave it out of a custom provider and the SDK waits for the receipt for at most 5 seconds instead.
+
 ### getBlockTimestamp
 
 ```ts

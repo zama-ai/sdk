@@ -1,9 +1,9 @@
 // Runs one SDK call of the real WrappedToken against scripted answers.
 //
-// Every awaited call that reads or writes the storage or the chain, or asks
-// the relayer for a public decryption, goes through `yieldPoint`. The first
+// Every awaited call listed in EXPLORED goes through `yieldPoint`. The first
 // `script.length` calls get the scripted answers. The next call stays pending
-// forever, and the run returns it.
+// forever, and the run returns it. The harness assumes one call in flight at
+// a time per SDK call: two at once is a HarnessError.
 import type { Address, Hex } from "viem";
 import { UnshieldAlreadyFinalizedError } from "../../../errors";
 import { Topics } from "../../../events";
@@ -20,8 +20,38 @@ import type {
   GenericStorage,
   TransactionReceipt,
 } from "../../../types";
-import { loadPendingUnshieldRequests } from "../../pending-unshield";
+import { legacyPendingUnshieldKey, pendingUnshieldsKey } from "../../pending-unshield";
 import { WrappedToken } from "../../wrapped-token";
+
+/** The storage key of this wrapper's pending-unshield entries. */
+export const STORAGE_KEY = pendingUnshieldsKey(WRAPPER);
+
+/**
+ * What the harness models. A HarnessError "unexpected call" means the SDK
+ * made a call that is in neither list: explore it (a `Call` kind here, its
+ * answers in world.ts `options`) or allow it below.
+ */
+export const HARNESS_CALLS = {
+  /** Awaited calls the explorer answers in every possible way. */
+  explored: [
+    "storage.get",
+    "storage.set",
+    "storage.delete",
+    "signer.writeContract",
+    "provider.waitForTransactionReceipt",
+    "provider.getTransactionReceipt",
+    "provider.readContract",
+    "relayer.decryptPublicValuesWithSignatures",
+  ],
+  /** Calls answered at once with a fixed value. */
+  allowed: {
+    signer: ["requireWalletAccount"],
+    provider: ["getChainId", "readContract(confidentialBalanceOf)"],
+    relayer: ["encryptValues"],
+    // The key SDK 3.8 and older wrote. No older SDK runs in the model, so it stays empty.
+    storage: ["get(legacy key) -> null"],
+  },
+} as const;
 
 /** One awaited call that the explorer schedules. */
 export type Call =
@@ -30,24 +60,41 @@ export type Call =
   | { kind: "storage.delete"; key: string }
   | { kind: "signer.writeContract"; functionName: string; requestId?: Hex }
   | { kind: "provider.waitForTransactionReceipt"; hash: Hex }
+  | { kind: "provider.getTransactionReceipt"; hash: Hex }
   | { kind: "provider.readContract"; functionName: string; requestId: Hex }
   | { kind: "relayer.decryptPublicValuesWithSignatures"; encryptedValues: Hex[] };
 
+export type CallKind = Call["kind"];
+export type CallOf<K extends CallKind> = Extract<Call, { kind: K }>;
+
+/** A mined receipt. `unwrapRequestId`: it carries this wrapper's UnwrapRequested event. */
 export interface ReceiptAnswer {
   status: "success" | "reverted";
   unwrapRequestId?: Hex;
 }
 
+/** What a call returns, by call kind. */
+export interface Returns {
+  "storage.get": string | null;
+  "storage.set": undefined;
+  "storage.delete": undefined;
+  "signer.writeContract": Hex;
+  "provider.waitForTransactionReceipt": ReceiptAnswer;
+  "provider.getTransactionReceipt": ReceiptAnswer | null;
+  "provider.readContract": Address;
+  "relayer.decryptPublicValuesWithSignatures": undefined;
+}
+
 /** How a call settles: it returns, it throws, or the tab closes and it never returns. */
-export type Answer =
-  | { kind: "ok"; value?: string | null | ReceiptAnswer }
+export type Answer<K extends CallKind = CallKind> =
+  | { kind: "ok"; value: Returns[K] }
   | { kind: "throw"; message: string }
   | { kind: "close" };
 
-export interface Step {
-  call: Call;
-  answer: Answer;
-}
+/** A call and its answer. `kind` repeats `call.kind`, so a switch on it narrows both. */
+export type Step = {
+  [K in CallKind]: { kind: K; call: CallOf<K>; answer: Answer<K> };
+}[CallKind];
 
 /** The SDK call an actor makes. `getPendingUnshield` goes on to `resumeUnshield` when it returns a hash. */
 export type Entry =
@@ -70,24 +117,6 @@ export interface RunResult {
 export class HarnessError extends Error {
   override name = "HarnessError";
 }
-
-/** The storage key the SDK uses for this wrapper's pending-unshield entries. */
-export const STORAGE_KEY = await (async () => {
-  let key: string | undefined;
-  const recorder: GenericStorage = {
-    get: (k) => {
-      key = k;
-      return Promise.resolve(null);
-    },
-    set: () => Promise.resolve(),
-    delete: () => Promise.resolve(),
-  };
-  await loadPendingUnshieldRequests(recorder, WRAPPER);
-  if (key === undefined) {
-    throw new HarnessError("loadPendingUnshieldRequests did not read a key");
-  }
-  return key;
-})();
 
 const NONZERO_HANDLE = `0x${"ab".repeat(32)}` as Hex;
 const STUCK_MS = 5000;
@@ -112,19 +141,19 @@ function macrotask(): Promise<void> {
  * starts making later then fails the run instead of silently answering at once.
  */
 function strict<T extends object>(
-  name: string,
+  name: keyof typeof HARNESS_CALLS.allowed,
   mock: T,
   overrides: Partial<T>,
-  instant: readonly (keyof T)[],
   problems: string[],
 ): T {
+  const allowed: readonly string[] = HARNESS_CALLS.allowed[name];
   const out: T = { ...mock, ...overrides };
   for (const key of Object.keys(mock) as (keyof T)[]) {
-    if (key in overrides || instant.includes(key) || typeof mock[key] !== "function") {
+    if (key in overrides || allowed.includes(String(key)) || typeof mock[key] !== "function") {
       continue;
     }
     out[key] = (() => {
-      problems.push(`unexpected call ${name}.${String(key)}: explore it as a Call or allow it`);
+      problems.push(`unexpected call ${name}.${String(key)}: see HARNESS_CALLS`);
       return never();
     }) as T[keyof T];
   }
@@ -209,7 +238,7 @@ export async function runSdkCall(entry: Entry, script: readonly Step[]): Promise
     reachFrontier = resolve;
   });
 
-  function yieldPoint<T>(call: Call, toValue: (value: Answer & { kind: "ok" }) => T): Promise<T> {
+  function yieldPoint<K extends CallKind>(call: CallOf<K>): Promise<Returns[K]> {
     if (!started) {
       problems.push(`${call.kind} ran while the SDK was built, before the call under test`);
       return never();
@@ -231,9 +260,10 @@ export async function runSdkCall(entry: Entry, script: readonly Step[]): Promise
       );
       return never();
     }
-    const { answer } = step;
+    // Same call, so the same kind: the answer has K's return type.
+    const answer = step.answer as Answer<K>;
     if (answer.kind === "ok") {
-      return Promise.resolve(toValue(answer));
+      return Promise.resolve(answer.value);
     }
     if (answer.kind === "throw") {
       return Promise.reject(new Error(answer.message));
@@ -244,9 +274,7 @@ export async function runSdkCall(entry: Entry, script: readonly Step[]): Promise
 
   function checkKey(key: string): string {
     if (key !== STORAGE_KEY) {
-      problems.push(
-        `unexpected storage key ${key}: only the pending-unshield entries are explored`,
-      );
+      problems.push(`unexpected storage key ${key}: see HARNESS_CALLS`);
     }
     return key;
   }
@@ -256,84 +284,85 @@ export async function runSdkCall(entry: Entry, script: readonly Step[]): Promise
     SIGNER,
     {
       writeContract: ((config: { functionName: string; args?: readonly unknown[] }) =>
-        yieldPoint(
-          {
-            kind: "signer.writeContract",
-            functionName: config.functionName,
-            ...(config.functionName === "finalizeUnwrap" && { requestId: config.args?.[0] as Hex }),
-          },
-          (answer) => answer.value as Hex,
-        )) as GenericSigner["writeContract"],
+        yieldPoint<"signer.writeContract">({
+          kind: "signer.writeContract",
+          functionName: config.functionName,
+          ...(config.functionName === "finalizeUnwrap" && { requestId: config.args?.[0] as Hex }),
+        })) as GenericSigner["writeContract"],
     },
-    ["requireWalletAccount"],
     problems,
   );
   const provider = strict(
     "provider",
     PROVIDER,
     {
-      waitForTransactionReceipt: (hash) =>
-        yieldPoint({ kind: "provider.waitForTransactionReceipt", hash }, (answer) =>
-          toReceipt(answer.value as ReceiptAnswer),
+      waitForTransactionReceipt: async (hash) =>
+        toReceipt(
+          await yieldPoint<"provider.waitForTransactionReceipt">({
+            kind: "provider.waitForTransactionReceipt",
+            hash,
+          }),
         ),
+      getTransactionReceipt: async (hash) => {
+        const answer = await yieldPoint<"provider.getTransactionReceipt">({
+          kind: "provider.getTransactionReceipt",
+          hash,
+        });
+        return answer && toReceipt(answer);
+      },
       readContract: ((config: { functionName: string; args?: readonly unknown[] }) => {
         // Balances are not modeled: unwrapAll only needs a non-zero encrypted balance.
         if (config.functionName === "confidentialBalanceOf") {
           return Promise.resolve(NONZERO_HANDLE);
         }
         if (config.functionName !== "unwrapRequester") {
-          problems.push(`unexpected chain read ${config.functionName}`);
+          problems.push(`unexpected chain read ${config.functionName}: see HARNESS_CALLS`);
           return never();
         }
-        return yieldPoint(
-          {
-            kind: "provider.readContract",
-            functionName: config.functionName,
-            requestId: config.args?.[0] as Hex,
-          },
-          (answer) => answer.value as Address,
-        );
+        return yieldPoint<"provider.readContract">({
+          kind: "provider.readContract",
+          functionName: config.functionName,
+          requestId: config.args?.[0] as Hex,
+        });
       }) as GenericProvider["readContract"],
     },
-    ["getChainId"],
     problems,
   );
   const storage: GenericStorage = {
-    get: <T>(key: string) =>
-      yieldPoint({ kind: "storage.get", key: checkKey(key) }, (answer) =>
-        typeof answer.value === "string" ? (JSON.parse(answer.value) as T) : null,
-      ),
+    get: async <T>(key: string) => {
+      if (key === legacyPendingUnshieldKey(WRAPPER)) {
+        return null;
+      }
+      const value = await yieldPoint<"storage.get">({ kind: "storage.get", key: checkKey(key) });
+      return value === null ? null : (JSON.parse(value) as T);
+    },
     set: (key, value) =>
-      yieldPoint(
-        { kind: "storage.set", key: checkKey(key), value: JSON.stringify(value) },
-        () => undefined,
-      ),
-    delete: (key) => yieldPoint({ kind: "storage.delete", key: checkKey(key) }, () => undefined),
+      yieldPoint<"storage.set">({
+        kind: "storage.set",
+        key: checkKey(key),
+        value: JSON.stringify(value),
+      }),
+    delete: (key) => yieldPoint<"storage.delete">({ kind: "storage.delete", key: checkKey(key) }),
   };
   const relayer = strict(
     "relayer",
     RELAYER,
     {
-      decryptPublicValuesWithSignatures: ((params: { encryptedValues: readonly Hex[] }) =>
-        yieldPoint(
-          {
-            kind: "relayer.decryptPublicValuesWithSignatures",
-            encryptedValues: [...params.encryptedValues],
+      decryptPublicValuesWithSignatures: (async (params: { encryptedValues: readonly Hex[] }) => {
+        await yieldPoint<"relayer.decryptPublicValuesWithSignatures">({
+          kind: "relayer.decryptPublicValuesWithSignatures",
+          encryptedValues: [...params.encryptedValues],
+        });
+        return {
+          clearValues: params.encryptedValues.map(() => ({ type: "uint64" as const, value: 50n })),
+          checkSignaturesArgs: {
+            handlesList: [...params.encryptedValues],
+            abiEncodedCleartexts: "0x32" as Hex,
+            decryptionProof: "0x00" as Hex,
           },
-          () => ({
-            clearValues: params.encryptedValues.map(() => ({
-              type: "uint64" as const,
-              value: 50n,
-            })),
-            checkSignaturesArgs: {
-              handlesList: [...params.encryptedValues],
-              abiEncodedCleartexts: "0x32" as Hex,
-              decryptionProof: "0x00" as Hex,
-            },
-          }),
-        )) as unknown as RelayerSDK["decryptPublicValuesWithSignatures"],
+        };
+      }) as unknown as RelayerSDK["decryptPublicValuesWithSignatures"],
     },
-    ["encryptValues"],
     problems,
   );
   const chain = createMockChain({ id: 31337 });

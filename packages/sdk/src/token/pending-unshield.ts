@@ -1,96 +1,92 @@
 import type { Address, Hex } from "viem";
 import { z } from "zod/mini";
 import { checksum, hex } from "../schemas/primitives";
-import type { GenericStorage } from "../types";
-import type { EncryptedValue } from "../relayer/types";
+import type { GenericLogger, GenericStorage } from "../types";
 
-const STORAGE_PREFIX = "zama:pending-unshield:";
 const CURRENT_VERSION = 2;
 
 /**
- * Persisted state for an in-progress unshield request.
- * Used to resume an interrupted unshield after page reload.
+ * Key of this wrapper's pending unshields. A new key, so SDK versions that
+ * only know the legacy key never read (and delete) the list.
  *
  * @internal
  */
-export interface PendingUnshieldRequest {
-  /** Transaction hash of the original unwrap call. */
-  readonly unwrapTxHash: Hex;
-  /**
-   * Request identifier from the `UnwrapRequested` event. Absent until the
-   * unwrap receipt is known; then it is decoded from the receipt instead.
-   */
-  readonly unwrapRequestId?: EncryptedValue;
+export function pendingUnshieldsKey(wrapperAddress: Address): string {
+  return `zama:pending-unshields:${checksum(wrapperAddress)}`;
 }
 
-interface StoredPendingUnshieldRequests {
-  readonly version: typeof CURRENT_VERSION;
-  readonly requests: readonly PendingUnshieldRequest[];
+/**
+ * The key SDK 3.8 and older write one bare hash or a version 1 object to.
+ * They delete any other value they find there.
+ *
+ * @internal
+ */
+export function legacyPendingUnshieldKey(wrapperAddress: Address): string {
+  return `zama:pending-unshield:${checksum(wrapperAddress)}`;
 }
 
-function storageKey(wrapperAddress: Address): string {
-  return `${STORAGE_PREFIX}${checksum(wrapperAddress)}`;
+/**
+ * The stored value for a list of unwrap tx hashes, oldest first.
+ *
+ * @internal
+ */
+export function encodePendingUnshields(unwrapTxHashes: readonly Hex[]) {
+  return { version: CURRENT_VERSION, unwrapTxHashes };
 }
 
-const RequestSchema = z.object({ unwrapTxHash: hex, unwrapRequestId: z.optional(hex) });
-
-// One wrapper keeps a list, so a second unshield never overwrites the first.
-// Version 1 (one object) and a bare hash are formats written by older SDK versions.
-const StoredSchema = z.union([
+const LegacySchema = z.union([
+  hex,
   z.pipe(
-    hex,
-    z.transform((unwrapTxHash: Hex): PendingUnshieldRequest[] => [{ unwrapTxHash }]),
-  ),
-  z.pipe(
-    z.object({ version: z.literal(1), unwrapTxHash: hex, unwrapRequestId: z.optional(hex) }),
-    z.transform(({ unwrapTxHash, unwrapRequestId }): PendingUnshieldRequest[] => [
-      unwrapRequestId === undefined ? { unwrapTxHash } : { unwrapTxHash, unwrapRequestId },
-    ]),
-  ),
-  z.pipe(
-    z.object({ version: z.literal(CURRENT_VERSION), requests: z.array(RequestSchema) }),
-    z.transform(({ requests }) => requests as PendingUnshieldRequest[]),
+    z.object({ version: z.literal(1), unwrapTxHash: hex }),
+    z.transform(({ unwrapTxHash }) => unwrapTxHash),
   ),
 ]);
 
 const sameTx = (a: Hex, b: Hex) => a.toLowerCase() === b.toLowerCase();
 
-/**
- * Load every saved pending unshield for this wrapper, oldest first. An
- * unreadable stored value is deleted.
- *
- * @internal
- */
-export async function loadPendingUnshieldRequests(
-  storage: GenericStorage,
-  wrapperAddress: Address,
-): Promise<PendingUnshieldRequest[]> {
-  const key = storageKey(wrapperAddress);
-  const value = await storage.get(key);
-  if (value === null || value === undefined) {
-    return [];
-  }
-  const parsed = StoredSchema.safeParse(value);
-  if (!parsed.success) {
-    await storage.delete(key);
-    return [];
-  }
-  return parsed.data;
+interface Loaded {
+  readonly hashes: Hex[];
+  /** False when the key holds a version this SDK does not know: it is left as is. */
+  readonly writable: boolean;
 }
 
-async function writeRequests(
+async function readList(
+  storage: GenericStorage,
+  key: string,
+  logger: GenericLogger | undefined,
+): Promise<Loaded> {
+  const value = await storage.get(key);
+  if (value === null || value === undefined) {
+    return { hashes: [], writable: true };
+  }
+  const { version, unwrapTxHashes } = (typeof value === "object" ? value : {}) as {
+    version?: unknown;
+    unwrapTxHashes?: unknown;
+  };
+  if (typeof version === "number" && version !== CURRENT_VERSION) {
+    logger?.warn("pending unshields saved by an unknown SDK version were left as is", { version });
+    return { hashes: [], writable: false };
+  }
+  if (version !== CURRENT_VERSION || !Array.isArray(unwrapTxHashes)) {
+    logger?.warn("unreadable pending unshields were dropped", { value });
+    return { hashes: [], writable: true };
+  }
+  const hashes = unwrapTxHashes.filter((h): h is Hex => hex.safeParse(h).success);
+  if (hashes.length !== unwrapTxHashes.length) {
+    logger?.warn("unreadable pending unshield entries were dropped", { unwrapTxHashes });
+  }
+  return { hashes, writable: true };
+}
+
+async function writeList(
   storage: GenericStorage,
   wrapperAddress: Address,
-  requests: readonly PendingUnshieldRequest[],
+  hashes: readonly Hex[],
 ): Promise<void> {
-  if (requests.length === 0) {
-    await storage.delete(storageKey(wrapperAddress));
-    return;
-  }
-  await storage.set(storageKey(wrapperAddress), {
-    version: CURRENT_VERSION,
-    requests,
-  } satisfies StoredPendingUnshieldRequests);
+  const key = pendingUnshieldsKey(wrapperAddress);
+  await (hashes.length === 0
+    ? storage.delete(key)
+    : storage.set(key, encodePendingUnshields(hashes)));
 }
 
 // Read-modify-write on one storage runs one at a time, so two unshields in
@@ -98,19 +94,56 @@ async function writeRequests(
 // has no atomic update.
 const writeQueues = new WeakMap<GenericStorage, Promise<void>>();
 
-function serialized(storage: GenericStorage, update: () => Promise<void>): Promise<void> {
+function serialized<T>(storage: GenericStorage, update: () => Promise<T>): Promise<T> {
   const run = (writeQueues.get(storage) ?? Promise.resolve()).then(update);
   writeQueues.set(
     storage,
-    run.catch(() => {}),
+    run.then(
+      () => {},
+      () => {},
+    ),
   );
   return run;
 }
 
+// Moves a hash an older SDK wrote under the legacy key into the list.
+async function load(
+  storage: GenericStorage,
+  wrapperAddress: Address,
+  logger: GenericLogger | undefined,
+): Promise<Loaded> {
+  const loaded = await readList(storage, pendingUnshieldsKey(wrapperAddress), logger);
+  const legacy = LegacySchema.safeParse(
+    await storage.get(legacyPendingUnshieldKey(wrapperAddress)),
+  );
+  if (!legacy.success || !loaded.writable) {
+    return loaded;
+  }
+  const hashes = loaded.hashes.some((h) => sameTx(h, legacy.data))
+    ? loaded.hashes
+    : [legacy.data, ...loaded.hashes];
+  await writeList(storage, wrapperAddress, hashes);
+  await storage.delete(legacyPendingUnshieldKey(wrapperAddress));
+  return { hashes, writable: true };
+}
+
+/**
+ * Load the unwrap tx hash of every saved pending unshield for this wrapper,
+ * oldest first.
+ *
+ * @internal
+ */
+export async function loadPendingUnshields(
+  storage: GenericStorage,
+  wrapperAddress: Address,
+  logger?: GenericLogger,
+): Promise<Hex[]> {
+  return (await serialized(storage, () => load(storage, wrapperAddress, logger))).hashes;
+}
+
 /**
  * Persist an unwrap so an interrupted unshield can be resumed later (e.g.
- * after a page reload). Adds an entry, or fills in `unwrapRequestId` on the
- * entry for the same transaction. Other entries are kept.
+ * after a page reload). Entries for other unwraps are kept.
  *
  * @internal
  */
@@ -118,27 +151,19 @@ export function savePendingUnshield(
   storage: GenericStorage,
   wrapperAddress: Address,
   unwrapTxHash: Hex,
-  unwrapRequestId?: EncryptedValue,
+  logger?: GenericLogger,
 ): Promise<void> {
   return serialized(storage, async () => {
-    const requests = await loadPendingUnshieldRequests(storage, wrapperAddress);
-    const existing = requests.find((r) => sameTx(r.unwrapTxHash, unwrapTxHash));
-    if (existing && (unwrapRequestId === undefined || existing.unwrapRequestId !== undefined)) {
-      return;
+    const { hashes, writable } = await load(storage, wrapperAddress, logger);
+    if (writable && !hashes.some((h) => sameTx(h, unwrapTxHash))) {
+      await writeList(storage, wrapperAddress, [...hashes, unwrapTxHash]);
     }
-    const entry: PendingUnshieldRequest =
-      unwrapRequestId === undefined ? { unwrapTxHash } : { unwrapTxHash, unwrapRequestId };
-    await writeRequests(
-      storage,
-      wrapperAddress,
-      existing ? requests.map((r) => (r === existing ? entry : r)) : [...requests, entry],
-    );
   });
 }
 
 /**
- * Remove the entry for one unwrap transaction, once it is finalized or its
- * unwrap reverted. Entries for other unwraps are kept.
+ * Remove the entry for one unwrap transaction, once it is settled. Entries
+ * for other unwraps are kept.
  *
  * @internal
  */
@@ -146,12 +171,13 @@ export function clearPendingUnshield(
   storage: GenericStorage,
   wrapperAddress: Address,
   unwrapTxHash: Hex,
+  logger?: GenericLogger,
 ): Promise<void> {
   return serialized(storage, async () => {
-    const requests = await loadPendingUnshieldRequests(storage, wrapperAddress);
-    const rest = requests.filter((r) => !sameTx(r.unwrapTxHash, unwrapTxHash));
-    if (rest.length !== requests.length) {
-      await writeRequests(storage, wrapperAddress, rest);
+    const { hashes, writable } = await load(storage, wrapperAddress, logger);
+    const rest = hashes.filter((h) => !sameTx(h, unwrapTxHash));
+    if (writable && rest.length !== hashes.length) {
+      await writeList(storage, wrapperAddress, rest);
     }
   });
 }

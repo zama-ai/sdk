@@ -9,7 +9,7 @@ import {
   type Address,
   type Hex,
 } from "@zama-fhe/sdk";
-import { WaitForTransactionReceiptTimeoutError } from "viem";
+import { TransactionReceiptNotFoundError, WaitForTransactionReceiptTimeoutError } from "viem";
 import type { Config } from "wagmi";
 
 const UNSIGNED = "0xdeadbeef" as Hex;
@@ -24,6 +24,7 @@ const {
   mockEstimateGas,
   mockEstimateFees,
   mockWaitForReceipt,
+  mockGetReceipt,
   mockGetConnectorClient,
 } = vi.hoisted(() => ({
   mockGetPublicClient: vi.fn(),
@@ -33,6 +34,7 @@ const {
   mockEstimateGas: vi.fn(),
   mockEstimateFees: vi.fn(),
   mockWaitForReceipt: vi.fn(),
+  mockGetReceipt: vi.fn(),
   mockGetConnectorClient: vi.fn(),
 }));
 
@@ -52,6 +54,7 @@ vi.mock(import("wagmi/actions"), () => ({
   multicall: vi.fn(),
   readContract: vi.fn(),
   waitForTransactionReceipt: mockWaitForReceipt,
+  getTransactionReceipt: mockGetReceipt,
   getConnectorClient: mockGetConnectorClient,
 }));
 
@@ -160,7 +163,35 @@ describe("WagmiProvider.waitForTransactionReceipt", () => {
 
   beforeEach(() => {
     mockWaitForReceipt.mockReset();
+    mockGetReceipt.mockReset();
     mockGetConnectorClient.mockReset();
+  });
+
+  test("getTransactionReceipt asks the chain, then the wallet, without waiting", async () => {
+    const notFound = new TransactionReceiptNotFoundError({ hash: HASH });
+    mockGetReceipt.mockResolvedValueOnce({ logs: [], status: "success" });
+    await expect(provider.getTransactionReceipt(HASH)).resolves.toEqual({
+      logs: [],
+      status: "success",
+    });
+
+    mockGetReceipt.mockRejectedValue(notFound);
+    mockGetConnectorClient.mockResolvedValue(
+      makeConnectorClient(walletAnswering({ eth_getTransactionReceipt: () => REVERTED_RECEIPT })),
+    );
+    await expect(provider.getTransactionReceipt(HASH)).resolves.toEqual({
+      logs: [],
+      status: "reverted",
+    });
+
+    mockGetConnectorClient.mockResolvedValue(
+      makeConnectorClient(walletAnswering({ eth_getTransactionReceipt: () => null })),
+    );
+    await expect(provider.getTransactionReceipt(HASH)).resolves.toBeNull();
+
+    mockGetConnectorClient.mockRejectedValue(new Error("Connector not connected."));
+    await expect(provider.getTransactionReceipt(HASH)).resolves.toBeNull();
+    expect(mockWaitForReceipt).not.toHaveBeenCalled();
   });
 
   test("returns the public-transport receipt when the chain knows the hash", async () => {

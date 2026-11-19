@@ -3,14 +3,22 @@
 // the real wallet, RPC, storage or relayer could give, the world state in
 // which each answer is possible, and what it changes. A fake that answers
 // something the real one cannot is a harness error, not a finding.
-import type { Hex } from "viem";
+import type { Address, Hex } from "viem";
 import { USER } from "../../../test-fixtures/constants";
-import type { PendingUnshieldRequest } from "../../pending-unshield";
-import { HarnessError, type Answer, type Call, type ReceiptAnswer } from "./sdk-call";
+import { encodePendingUnshields } from "../../pending-unshield";
+import {
+  HarnessError,
+  type Answer,
+  type Call,
+  type CallKind,
+  type CallOf,
+  type ReceiptAnswer,
+} from "./sdk-call";
 
-const ZERO_ADDRESS = `0x${"0".repeat(40)}`;
+const ZERO_ADDRESS: Address = `0x${"0".repeat(40)}`;
 
-type TxStatus = "pending" | "success" | "reverted";
+/** "replaced": the wallet replaced or cancelled it, and the replacement mined without opening a request. */
+type TxStatus = "pending" | "success" | "reverted" | "replaced";
 
 interface Tx {
   readonly hash: Hex;
@@ -56,7 +64,7 @@ export const isUnwrapTx = (hash: Hex) => unwrapSlot(hash) !== undefined;
 /** An earlier unshield (U0) is open on chain with its entry saved, and its tab is gone. */
 export const INTERRUPTED_WORLD: World = {
   ...EMPTY_WORLD,
-  stored: JSON.stringify({ version: 2, requests: [{ unwrapTxHash: unwrapTx(0) }] }),
+  stored: JSON.stringify(encodePendingUnshields([unwrapTx(0)])),
   txs: [{ hash: unwrapTx(0), kind: "unwrap", requestId: requestOf(0), status: "success" }],
   saved: [requestOf(0)],
 };
@@ -64,10 +72,6 @@ export const INTERRUPTED_WORLD: World = {
 /** An earlier unshield (U0) was finalized on chain, but its entry is still stored. */
 export const STALE_ENTRY_WORLD: World = {
   ...INTERRUPTED_WORLD,
-  stored: JSON.stringify({
-    version: 2,
-    requests: [{ unwrapTxHash: unwrapTx(0), unwrapRequestId: requestOf(0) }],
-  }),
   txs: [
     ...INTERRUPTED_WORLD.txs,
     { hash: finalizeTx(0), kind: "finalize", requestId: requestOf(0), status: "success" },
@@ -97,32 +101,32 @@ export function requestOfTx(world: World, hash: Hex | undefined): Hex | undefine
   return world.txs.find((tx) => tx.hash === hash)?.requestId;
 }
 
-function parseEntries(json: string | null | undefined): PendingUnshieldRequest[] {
+/** The unwrap tx hashes that a stored value lists. */
+export function storedHashes(json: string | null | undefined): Hex[] {
   if (json === null || json === undefined) {
     return [];
   }
-  const value = JSON.parse(json) as { version?: number; requests?: PendingUnshieldRequest[] };
-  if (value.version !== 2 || !Array.isArray(value.requests)) {
+  const expected = JSON.stringify(Object.keys(encodePendingUnshields([])));
+  const value = JSON.parse(json) as ReturnType<typeof encodePendingUnshields>;
+  if (JSON.stringify(Object.keys(value)) !== expected || !Array.isArray(value.unwrapTxHashes)) {
     throw new HarnessError(`unexpected pending-unshield value ${json}`);
   }
-  return value.requests;
+  return [...value.unwrapTxHashes];
 }
 
 /** The requests that `json` has an entry for. */
 export function storedRequests(world: World, json: string | null | undefined): Hex[] {
-  return parseEntries(json).map((entry) => {
-    const requestId = requestOfTx(world, entry.unwrapTxHash);
-    if (!requestId || (entry.unwrapRequestId && entry.unwrapRequestId !== requestId)) {
-      throw new HarnessError(`entry ${JSON.stringify(entry)} does not match its unwrap tx`);
+  return storedHashes(json).map((hash) => {
+    const requestId = requestOfTx(world, hash);
+    if (!requestId) {
+      throw new HarnessError(`entry ${hash} is not a sent unwrap tx`);
     }
     return requestId;
   });
 }
 
 function storedLabel(json: string | null | undefined): string {
-  const entries = parseEntries(json).map(
-    (e) => `${e.unwrapTxHash}${e.unwrapRequestId ? `+${e.unwrapRequestId}` : ""}`,
-  );
+  const entries = storedHashes(json);
   return entries.length === 0 ? "empty" : pretty(`[${entries.join(", ")}]`);
 }
 
@@ -138,7 +142,8 @@ export function callLabel(call: Call): string {
         `signer.writeContract(${call.functionName}${call.requestId ? ` ${call.requestId}` : ""})`,
       );
     case "provider.waitForTransactionReceipt":
-      return pretty(`provider.waitForTransactionReceipt(${call.hash})`);
+    case "provider.getTransactionReceipt":
+      return pretty(`${call.kind}(${call.hash})`);
     case "provider.readContract":
       return pretty(`provider.readContract(${call.functionName} ${call.requestId})`);
     case "relayer.decryptPublicValuesWithSignatures":
@@ -149,8 +154,8 @@ export function callLabel(call: Call): string {
   throw new HarnessError(`unknown call ${JSON.stringify(call)}`);
 }
 
-interface Option {
-  answer: Answer;
+interface Option<K extends CallKind = CallKind> {
+  answer: Answer<K>;
   /** How the step reads in a path, after the call label. */
   text: string;
   /** The answer is possible only in a world where this holds. Absent: always possible. */
@@ -158,13 +163,13 @@ interface Option {
   apply?: (world: World) => World;
 }
 
-const fail = (message: string, text = `throws (${message})`): Option => ({
+const fail = (message: string, text = `throws (${message})`): Option<never> => ({
   answer: { kind: "throw", message },
   text,
 });
-const CLOSE: Option = { answer: { kind: "close" }, text: "" };
+const CLOSE: Option<never> = { answer: { kind: "close" }, text: "" };
 
-function send(slot: number, kind: Tx["kind"], requestId: Hex): Option {
+function send(slot: number, kind: Tx["kind"], requestId: Hex): Option<"signer.writeContract"> {
   const hash = kind === "unwrap" ? unwrapTx(slot) : finalizeTx(slot);
   return {
     answer: { kind: "ok", value: hash },
@@ -186,6 +191,11 @@ const txStatus = (hash: Hex, status: TxStatus) => (world: World) =>
  * Every answer the real dependency could give to `call` made by actor `slot`
  * in `world`. An answer with `when` is possible only where `when` holds.
  */
+export function options<K extends CallKind>(
+  call: CallOf<K>,
+  slot: number,
+  world: World,
+): Option<K>[];
 export function options(call: Call, slot: number, world: World): Option[] {
   switch (call.kind) {
     case "storage.get":
@@ -198,8 +208,8 @@ export function options(call: Call, slot: number, world: World): Option[] {
         CLOSE,
       ];
     case "storage.set": {
-      const ok: Option = {
-        answer: { kind: "ok" },
+      const ok: Option<"storage.set"> = {
+        answer: { kind: "ok", value: undefined },
         text: "ok",
         apply: (world) => {
           const stored = storedRequests(world, call.value);
@@ -217,7 +227,11 @@ export function options(call: Call, slot: number, world: World): Option[] {
     }
     case "storage.delete":
       return [
-        { answer: { kind: "ok" }, text: "ok", apply: (world) => ({ ...world, stored: undefined }) },
+        {
+          answer: { kind: "ok", value: undefined },
+          text: "ok",
+          apply: (world) => ({ ...world, stored: undefined }),
+        },
         fail("storage unavailable"),
         CLOSE,
       ];
@@ -231,7 +245,7 @@ export function options(call: Call, slot: number, world: World): Option[] {
         // When the request is gone, the wallet's gas estimate hits the revert.
         // A wallet that skips the estimate sends the transaction anyway, and
         // it reverts when mined.
-        const invalid: Option = {
+        const invalid: Option<"signer.writeContract"> = {
           ...fail(
             'The contract reverted with custom error "InvalidUnwrapRequest".',
             "throws InvalidUnwrapRequest (wallet gas estimate)",
@@ -242,26 +256,45 @@ export function options(call: Call, slot: number, world: World): Option[] {
       }
       throw new HarnessError(`unexpected write ${call.functionName}`);
     }
-    case "provider.waitForTransactionReceipt": {
-      const timeout = fail(
-        "timed out while waiting for transaction receipt",
-        "throws (RPC timeout)",
-      );
-      const mined = (value: ReceiptAnswer): Option => ({
-        answer: { kind: "ok", value },
-        text: `-> ${value.status}`,
-        when: txStatus(call.hash, value.status),
-      });
+    case "provider.waitForTransactionReceipt":
+    case "provider.getTransactionReceipt": {
       const slot = unwrapSlot(call.hash);
+      const mined = (
+        status: TxStatus,
+        value: ReceiptAnswer,
+      ): Option<"provider.getTransactionReceipt"> => ({
+        answer: { kind: "ok", value },
+        text: value.unwrapRequestId
+          ? `-> ${value.status}`
+          : `-> ${value.status}, no UnwrapRequested`,
+        when: txStatus(call.hash, status),
+      });
       const receipts = [
         mined(
+          "success",
           slot === undefined
             ? { status: "success" }
             : { status: "success", unwrapRequestId: requestOf(slot) },
         ),
-        mined({ status: "reverted" }),
+        mined("reverted", { status: "reverted" }),
       ];
-      return [...receipts, timeout, CLOSE];
+      if (call.kind === "provider.getTransactionReceipt") {
+        // A lookup by hash: a replaced tx is never mined under this hash.
+        const notMined: Option<"provider.getTransactionReceipt"> = {
+          answer: { kind: "ok", value: null },
+          text: "-> null (not mined)",
+          when: (world) =>
+            txStatus(call.hash, "pending")(world) || txStatus(call.hash, "replaced")(world),
+        };
+        return [...receipts, notMined, fail("RPC request failed", "throws (RPC error)"), CLOSE];
+      }
+      // A wait that follows replacements, like viem's, returns the replacement's receipt.
+      const replaced = mined("replaced", { status: "success" });
+      const timeout = fail(
+        "timed out while waiting for transaction receipt",
+        "throws (RPC timeout)",
+      );
+      return [...receipts, replaced, timeout, CLOSE];
     }
     case "provider.readContract": {
       const open = isOpen(call.requestId);
@@ -277,7 +310,11 @@ export function options(call: Call, slot: number, world: World): Option[] {
       ];
     }
     case "relayer.decryptPublicValuesWithSignatures":
-      return [{ answer: { kind: "ok" }, text: "ok" }, fail("relayer unavailable"), CLOSE];
+      return [
+        { answer: { kind: "ok", value: undefined }, text: "ok" },
+        fail("relayer unavailable"),
+        CLOSE,
+      ];
   }
   throw new HarnessError(`unknown call ${JSON.stringify(call)}`);
 }
@@ -294,7 +331,7 @@ function setStatus(world: World, hash: Hex, status: TxStatus): World {
 /**
  * The chain mines the account's next pending transaction (nonce order), like
  * ERC7984ERC20WrapperUpgradeable would run it. An unwrap can also revert (for
- * example on an HCU limit).
+ * example on an HCU limit), or the wallet can replace it with a cancel.
  */
 export function chainSteps(world: World): ChainStep[] {
   const tx = world.txs.find((t) => t.status === "pending");
@@ -310,6 +347,10 @@ export function chainSteps(world: World): ChainStep[] {
       {
         text: pretty(`chain: mines ${tx.hash} -> reverts, no request opened`),
         apply: (w) => setStatus(w, tx.hash, "reverted"),
+      },
+      {
+        text: pretty(`chain: the wallet replaces ${tx.hash} with a cancel, no request opened`),
+        apply: (w) => setStatus(w, tx.hash, "replaced"),
       },
     ];
   }

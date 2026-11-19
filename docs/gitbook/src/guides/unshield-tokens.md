@@ -138,10 +138,11 @@ Resuming is intentionally caller-driven: surface a "resume" prompt rather than f
 {% tab title="Core SDK" %}
 
 ```ts
-// On next page load, check for a pending unshield
-const pending = await wrappedToken.getPendingUnshield();
-if (pending) {
-  await wrappedToken.resumeUnshield(pending);
+// On next page load, resume every pending unshield, oldest first
+let pending = await wrappedToken.getPendingUnshield();
+while (pending) {
+  await wrappedToken.resumeUnshield(pending); // one wallet prompt per entry
+  pending = await wrappedToken.getPendingUnshield();
 }
 ```
 

@@ -18,6 +18,7 @@ import { ConfigurationError, TransactionRevertedError } from "@zama-fhe/sdk";
 import {
   encodeFunctionData,
   serializeTransaction,
+  TransactionReceiptNotFoundError,
   WaitForTransactionReceiptTimeoutError,
   type Abi,
 } from "viem";
@@ -27,6 +28,7 @@ import {
   getChainId,
   getConnectorClient,
   getPublicClient,
+  getTransactionReceipt,
   multicall,
   readContract,
   waitForTransactionReceipt,
@@ -138,6 +140,34 @@ export class WagmiProvider implements GenericProvider {
       throw error;
     } finally {
       settled = true;
+    }
+  }
+
+  /**
+   * Return the receipt of a mined transaction, or `null` when neither the
+   * public transport nor the connected wallet knows it yet. Does not wait.
+   */
+  async getTransactionReceipt(hash: Hex): Promise<TransactionReceipt | null> {
+    const receipt = await getTransactionReceipt(this.#config, { hash }).catch((error: unknown) => {
+      if (error instanceof TransactionReceiptNotFoundError) {
+        return null;
+      }
+      throw error;
+    });
+    if (receipt) {
+      return { logs: receipt.logs, status: receipt.status };
+    }
+    const client = await getConnectorClient(this.#config).catch(() => undefined);
+    if (!client) {
+      return null;
+    }
+    try {
+      return (await walletReceipt(client, hash, this.#logger)) ?? null;
+    } catch (error) {
+      if (error instanceof TransactionRevertedError) {
+        return { logs: [], status: "reverted" };
+      }
+      throw error;
     }
   }
 

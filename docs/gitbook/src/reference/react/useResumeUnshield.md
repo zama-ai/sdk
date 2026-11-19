@@ -115,6 +115,8 @@ Run this check on mount to handle any session that was interrupted. Resuming is 
 
 {% hint style="warning" %}
 **An already-finalized resume is not a failure.** If the unwrap request was already finalized (another tab, a double click, a third party), the mutation fails with [`UnshieldAlreadyFinalizedError`](../sdk/errors.md#unshieldalreadyfinalizederror). The funds already arrived. The SDK clears the persisted state and the hook invalidates the pending-unshield and balance queries, so the resume prompt disappears on its own. Treat the error as completion; do not retry.
+
+If the unwrap reverted or opened no unwrap request, the mutation fails with [`TransactionRevertedError`](../sdk/errors.md#transactionrevertederror). The SDK clears that entry and the hook invalidates the pending-unshield query, so the prompt moves on to the next pending unshield, if any.
 {% endhint %}
 
 {% hint style="info" %}
