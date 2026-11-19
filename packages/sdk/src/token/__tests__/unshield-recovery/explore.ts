@@ -85,6 +85,8 @@ export interface Scenario {
    * "interrupted" (its request is open) or "stale entry" (already finalized).
    */
   earlier?: "interrupted" | "stale entry";
+  /** False: the provider has no `getTransactionReceipt`, so the SDK waits for receipts instead. */
+  receiptLookup?: boolean;
 }
 
 export interface Exploration {
@@ -146,6 +148,10 @@ class Actors {
   readonly #roots = new Map<string, Node>();
   #nodes = 0;
 
+  get #options() {
+    return { receiptLookup: this.scenario.receiptLookup ?? true };
+  }
+
   constructor(readonly scenario: Scenario) {}
 
   entries(spec: ActorSpec): Entry[] {
@@ -168,7 +174,7 @@ class Actors {
     const key = `${slot}|${JSON.stringify(entry)}`;
     let node = this.#roots.get(key);
     if (!node) {
-      node = this.#node(slot, entry, [], await runSdkCall(entry, []));
+      node = this.#node(slot, entry, [], await runSdkCall(entry, [], this.#options));
       this.#roots.set(key, node);
     }
     return node;
@@ -180,7 +186,8 @@ class Actors {
     if (!child) {
       // `answer` comes from `options(call)`, so it has the call's kind.
       const script = [...node.script, { kind: call.kind, call, answer } as Step];
-      child = this.#node(node.slot, node.entry, script, await runSdkCall(node.entry, script), node);
+      const run = await runSdkCall(node.entry, script, this.#options);
+      child = this.#node(node.slot, node.entry, script, run, node);
       node.children.set(key, child);
     }
     return child;
@@ -457,16 +464,11 @@ export async function explore(
     const { world } = state;
     let key = worldKeys.get(world);
     if (key === undefined) {
-      key = [
-        world.stored === undefined ? "-" : intern(world.stored),
-        world.txs.map((tx) => `${intern(tx.hash)}${intern(tx.status)}`).join(","),
-        world.saved.map(intern).join(","),
-        world.lostUpdate.map(intern).join(","),
-        world.unsaved.map((u) => `${intern(u.requestId)}@${intern(u.endedOn)}`).join(","),
-      ].join("|");
+      // The whole world, so a field added to World can never be left out of the key.
+      key = String(intern(JSON.stringify(world)));
       worldKeys.set(world, key);
     }
-    return `${state.actors.map((a) => (typeof a === "string" ? a[0] : a.id)).join(",")}|${key}`;
+    return `${state.actors.map((a) => (typeof a === "string" ? a : a.id)).join(",")}|${key}`;
   };
 
   const seen = new Set<string>([stateKey(initial)]);

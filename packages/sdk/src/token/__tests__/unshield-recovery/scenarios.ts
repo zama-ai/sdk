@@ -21,6 +21,11 @@ export const SCENARIOS: Scenario[] = [
     earlier: "interrupted",
   },
   {
+    name: "one unshield, provider without getTransactionReceipt",
+    actors: [UNSHIELD, PAGE_LOAD],
+    receiptLookup: false,
+  },
+  {
     name: "a new unshield behind a stale entry",
     actors: [UNSHIELD, PAGE_LOAD],
     earlier: "stale entry",

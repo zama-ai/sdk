@@ -1,7 +1,10 @@
-import type { Address, Hex } from "viem";
+import { getAddress, type Address, type Hex } from "viem";
 import { z } from "zod/mini";
+import { findUnwrapRequested } from "../events/onchain-events";
+import type { EncryptedValue } from "../relayer/types";
 import { checksum, hex } from "../schemas/primitives";
-import type { GenericLogger, GenericStorage } from "../types";
+import type { GenericLogger, GenericStorage, TransactionReceipt } from "../types";
+import type { RawLog } from "../types/transaction";
 
 const CURRENT_VERSION = 2;
 
@@ -180,4 +183,42 @@ export function clearPendingUnshield(
       await writeList(storage, wrapperAddress, rest);
     }
   });
+}
+
+/**
+ * The request id from this wrapper's `UnwrapRequested` event in an unwrap
+ * receipt's logs. A tx hash from another wrapper must not decode a foreign
+ * request id. Logs without an emitter address (older custom adapters) count.
+ *
+ * @internal
+ */
+export function unwrapRequestIn(
+  logs: readonly RawLog[],
+  wrapperAddress: Address,
+): EncryptedValue | undefined {
+  const wrapper = getAddress(wrapperAddress);
+  const ownLogs = logs.filter(
+    (log) => log.address === undefined || getAddress(log.address) === wrapper,
+  );
+  return findUnwrapRequested(ownLogs)?.unwrapRequestId;
+}
+
+/**
+ * What the receipt of a saved unwrap says about its entry. Not mined
+ * (`null`): "unknown". Reverted, or mined without opening a request (the
+ * wallet replaced or cancelled it): "settled". Otherwise the request to
+ * check on chain.
+ *
+ * @internal
+ */
+export function judgeUnwrapReceipt(
+  receipt: TransactionReceipt | null,
+  wrapperAddress: Address,
+): "settled" | "unknown" | { unwrapRequestId: EncryptedValue } {
+  if (!receipt) {
+    return "unknown";
+  }
+  const unwrapRequestId =
+    receipt.status === "reverted" ? undefined : unwrapRequestIn(receipt.logs, wrapperAddress);
+  return unwrapRequestId === undefined ? "settled" : { unwrapRequestId };
 }

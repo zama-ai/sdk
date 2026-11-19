@@ -228,7 +228,11 @@ function describeError(error: unknown): Outcome {
  * Builds a fresh SDK (one browser tab), runs `entry` with the scripted
  * answers, and reports the next pending call or how the SDK call ended.
  */
-export async function runSdkCall(entry: Entry, script: readonly Step[]): Promise<RunResult> {
+export async function runSdkCall(
+  entry: Entry,
+  script: readonly Step[],
+  { receiptLookup = true }: { receiptLookup?: boolean } = {},
+): Promise<RunResult> {
   const calls: Call[] = [];
   let reported: { at: number; hash: Hex } | undefined;
   const problems: string[] = [];
@@ -303,13 +307,18 @@ export async function runSdkCall(entry: Entry, script: readonly Step[]): Promise
             hash,
           }),
         ),
-      getTransactionReceipt: async (hash) => {
-        const answer = await yieldPoint<"provider.getTransactionReceipt">({
-          kind: "provider.getTransactionReceipt",
-          hash,
-        });
-        return answer && toReceipt(answer);
-      },
+      // Without it, the SDK falls back to a wait raced against a 5 s timer. A
+      // wait that throws gives the same result as the timer, so the timer is
+      // not explored; a run that ends on the wait leaves it pending, harmlessly.
+      ...(receiptLookup && {
+        getTransactionReceipt: async (hash: Hex) => {
+          const answer = await yieldPoint<"provider.getTransactionReceipt">({
+            kind: "provider.getTransactionReceipt",
+            hash,
+          });
+          return answer && toReceipt(answer);
+        },
+      }),
       readContract: ((config: { functionName: string; args?: readonly unknown[] }) => {
         // Balances are not modeled: unwrapAll only needs a non-zero encrypted balance.
         if (config.functionName === "confidentialBalanceOf") {

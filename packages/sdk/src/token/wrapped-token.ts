@@ -24,7 +24,6 @@ import {
   ZamaError,
 } from "../errors";
 import { isInvalidUnwrapRequestRevert } from "../errors/unshield";
-import { findUnwrapRequested } from "../events/onchain-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { EncryptedValue } from "../relayer/types";
 import type {
@@ -47,8 +46,10 @@ import type { TelemetryOperation } from "../telemetry";
 import { swallow } from "../utils/swallow";
 import {
   clearPendingUnshield,
+  judgeUnwrapReceipt,
   loadPendingUnshields,
   savePendingUnshield,
+  unwrapRequestIn,
 } from "./pending-unshield";
 import { Token } from "./token";
 
@@ -690,22 +691,16 @@ export class WrappedToken extends Token {
 
   /**
    * Decode the `unwrapRequestId` from an unwrap/unshield receipt's logs.
-   * Only logs emitted by this wrapper count: a caller-supplied tx hash from a
-   * different wrapper must fail here, not decode a foreign request id. Logs
-   * without an emitter address (older custom adapters) are kept.
-   * Throws when no matching `UnwrapRequested` event is found.
+   * Throws when no `UnwrapRequested` event from this wrapper is found.
    */
   #extractUnwrapRequestId(logs: readonly RawLog[]): EncryptedValue {
-    const ownLogs = logs.filter(
-      (log) => log.address === undefined || getAddress(log.address) === this.address,
-    );
-    const event = findUnwrapRequested(ownLogs);
-    if (!event) {
+    const unwrapRequestId = unwrapRequestIn(logs, this.address);
+    if (unwrapRequestId === undefined) {
       throw new TransactionRevertedError(
         "No UnwrapRequested event from this wrapper found in the unwrap receipt",
       );
     }
-    return event.unwrapRequestId;
+    return unwrapRequestId;
   }
 
   /**
@@ -733,20 +728,10 @@ export class WrappedToken extends Token {
     } catch {
       return "unknown";
     }
-    if (!receipt) {
-      return "unknown";
-    }
-    if (receipt.status === "reverted") {
-      return "settled";
-    }
-    let unwrapRequestId: EncryptedValue;
-    try {
-      unwrapRequestId = this.#extractUnwrapRequestId(receipt.logs);
-    } catch {
-      // Mined without opening a request: the wallet replaced or cancelled it.
-      return "settled";
-    }
-    return this.#unwrapRequestState(unwrapRequestId);
+    const verdict = judgeUnwrapReceipt(receipt, this.address);
+    return typeof verdict === "string"
+      ? verdict
+      : this.#unwrapRequestState(verdict.unwrapRequestId);
   }
 
   /** The receipt, or `null` when the transaction is not mined (or not within a short wait). */

@@ -63,6 +63,21 @@ const CASES: { bug: string; inject: () => void }[] = [
         };
       }),
   },
+  {
+    bug: "a mined receipt that opened no request counts as unknown, so it is kept and reported",
+    inject: () =>
+      vi.doMock("../../pending-unshield", async (importOriginal) => {
+        const real = await importOriginal<PendingUnshield>();
+        return {
+          ...real,
+          judgeUnwrapReceipt: (...args: Parameters<PendingUnshield["judgeUnwrapReceipt"]>) => {
+            const [receipt] = args;
+            const verdict = real.judgeUnwrapReceipt(...args);
+            return verdict === "settled" && receipt?.status !== "reverted" ? "unknown" : verdict;
+          },
+        };
+      }),
+  },
 ];
 
 afterEach(() => {
