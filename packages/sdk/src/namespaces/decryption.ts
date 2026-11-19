@@ -206,6 +206,7 @@ export class Decryption {
    *
    * @param encryptedValue - The FHE encrypted uint to decrypt publicly.
    * @param options - Per-call `signal` and `timeout` forwarded to the relayer round-trip.
+   * @returns The clear-text uint as a `bigint`, its ABI encoding, and the decryption proof.
    * @throws if the relayer returns no value, or a value that is not a uint. {@link DecryptionFailedError}
    *
    * @example
@@ -217,15 +218,11 @@ export class Decryption {
     encryptedValue: EncryptedValue,
     options?: RelayerRequestOptions,
   ): Promise<DecryptPublicUintResult> {
-    try {
-      return await decryptPublicUint(
-        this.#router.relayer,
-        encryptedValue,
-        withOperation(options, "decrypt-public-values"),
-      );
-    } catch (error) {
-      throw wrapDecryptError(error, "Public decryption failed");
-    }
+    return decryptPublicUint(
+      this.#router.relayer,
+      encryptedValue,
+      withOperation(options, "decrypt-public-values"),
+    );
   }
 
   /**

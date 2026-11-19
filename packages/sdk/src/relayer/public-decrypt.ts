@@ -1,5 +1,5 @@
 import type { Hex } from "viem";
-import { DecryptionFailedError } from "../errors";
+import { DecryptionFailedError, wrapDecryptError } from "../errors";
 import type { EncryptedValue, RelayerRequestOptions, RelayerSDK } from "./types";
 
 /** A publicly decrypted uint, with what on-chain verification needs. */
@@ -16,17 +16,18 @@ export interface DecryptPublicUintResult {
  * Publicly decrypt one uint handle through `relayer`.
  *
  * @internal Use `sdk.decryption.decryptPublicUint`; this is for code that has only the relayer.
- * @throws if the relayer returns no value, or a value that is not a bigint. {@link DecryptionFailedError}
+ * @throws if the relayer returns no value, or a value that is not a uint. {@link DecryptionFailedError}
  */
 export async function decryptPublicUint(
   relayer: Pick<RelayerSDK, "decryptPublicValuesWithSignatures">,
   encryptedValue: EncryptedValue,
   options: RelayerRequestOptions,
 ): Promise<DecryptPublicUintResult> {
-  const result = await relayer.decryptPublicValuesWithSignatures({
-    encryptedValues: [encryptedValue],
-    options,
-  });
+  const result = await relayer
+    .decryptPublicValuesWithSignatures({ encryptedValues: [encryptedValue], options })
+    .catch((error: unknown) => {
+      throw wrapDecryptError(error, "Public decryption failed");
+    });
   const value = result.clearValues[0]?.value;
   if (typeof value !== "bigint") {
     throw new DecryptionFailedError(

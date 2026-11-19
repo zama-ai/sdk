@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Every bullet in the API reference that names an SDK error links to that error's section in
-// errors.md, so a page does not keep its own copy of when the error is thrown.
+// Every bullet in the API reference that starts with an SDK error links to that error's section in
+// errors.md, so a page does not keep its own copy of when the error is thrown. Whether the section
+// exists is checked by `pnpm docs:check-links`.
 //
 // Usage:
 //   node scripts/lint/error-doc-links.mjs              # every reference page
@@ -18,24 +19,13 @@ const ERRORS_PAGE = join(REFERENCE, "sdk/errors.md");
 const ERROR_BULLET = /^\s*[-*]\s+(\[)?`([A-Z][A-Za-z0-9]*Error)`(\]\(([^)]*)\))?/u;
 
 /**
- * The errors with a `### <Name>Error` section in errors.md.
- *
- * @param {string} errorsPage The content of errors.md.
- * @returns {Set<string>}
- */
-export function documentedErrors(errorsPage) {
-  return new Set([...errorsPage.matchAll(/^### ([A-Z][A-Za-z0-9]*Error)\s*$/gmu)].map((m) => m[1]));
-}
-
-/**
  * The problems in one reference page.
  *
  * @param {string} content The page's markdown.
  * @param {string} errorsLink The relative link from the page to errors.md.
- * @param {Set<string>} documented The errors errors.md has a section for.
  * @returns {{ line: number, message: string }[]}
  */
-export function findUnlinkedErrors(content, errorsLink, documented) {
+export function findUnlinkedErrors(content, errorsLink) {
   const problems = [];
   let fenced = false;
   content.split("\n").forEach((text, index) => {
@@ -48,12 +38,7 @@ export function findUnlinkedErrors(content, errorsLink, documented) {
     }
     const [, open, name, linked, target] = match;
     const expected = `${errorsLink}#${name.toLowerCase()}`;
-    if (!documented.has(name)) {
-      problems.push({
-        line: index + 1,
-        message: `${name} has no "### ${name}" section in docs/gitbook/src/reference/sdk/errors.md. Add one, then link this bullet to it.`,
-      });
-    } else if (open === undefined || linked === undefined || target !== expected) {
+    if (open === undefined || linked === undefined || target !== expected) {
       problems.push({
         line: index + 1,
         message: `Start the bullet with [\`${name}\`](${expected}). errors.md says when ${name} is thrown; after the link, say only what is specific to this call.`,
@@ -77,15 +62,10 @@ function main(args) {
   const files = (args.length > 0 ? args.map((file) => resolve(file)) : referencePages()).filter(
     (file) => file.startsWith(`${REFERENCE}/`) && file.endsWith(".md") && file !== ERRORS_PAGE,
   );
-  const documented = documentedErrors(readFileSync(ERRORS_PAGE, "utf8"));
   let count = 0;
   for (const file of files) {
     const errorsLink = relative(dirname(file), ERRORS_PAGE);
-    for (const { line, message } of findUnlinkedErrors(
-      readFileSync(file, "utf8"),
-      errorsLink,
-      documented,
-    )) {
+    for (const { line, message } of findUnlinkedErrors(readFileSync(file, "utf8"), errorsLink)) {
       console.error(`${relative(ROOT, file)}:${line}: ${message}`);
       count += 1;
     }

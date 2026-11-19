@@ -56,9 +56,9 @@ Returns a `PreparedTransaction`. All three fields are JSON-safe, so the object c
 - [`ConfigurationError`](errors.md#configurationerror) - invalid request, or the provider's chain differs from the configured chain
 - [`EncryptionFailedError`](errors.md#encryptionfailederror) - encryption produced no result (encrypting kinds)
 - [`DecryptionFailedError`](errors.md#decryptionfailederror) - fallback for an unclassified public-decryption failure (`FinalizeUnwrap`); classified failures preserve their specific [SDK error](./errors.md)
-- [`DelegationExpirationTooSoonError`](errors.md#delegationexpirationtoosoonerror) / `DelegationSelfNotAllowedError` / `DelegationDelegateEqualsContractError` - delegation guards (`DelegateDecryption`)
+- [`DelegationExpirationTooSoonError`](errors.md#delegationexpirationtoosoonerror) / [`DelegationSelfNotAllowedError`](errors.md#delegationselfnotallowederror) / [`DelegationDelegateEqualsContractError`](errors.md#delegationdelegateequalscontracterror) - delegation guards (`DelegateDecryption`)
 - [`TransactionRevertedError`](errors.md#transactionrevertederror) - gas estimation reverted, for example when `Wrap` is prepared before its approval mines
-- [`HcuBlockLimitExceededError`](errors.md#hcublocklimitexceedederror) / `HcuTransactionLimitExceededError` - gas estimation hit the protocol's FHE compute (HCU) limits; see [Errors](./errors.md#hcublocklimitexceedederror)
+- [`HcuBlockLimitExceededError`](errors.md#hcublocklimitexceedederror) / [`HcuTransactionLimitExceededError`](errors.md#hcutransactionlimitexceedederror) - gas estimation hit the protocol's FHE compute (HCU) limits
 
 ### preparePermit
 

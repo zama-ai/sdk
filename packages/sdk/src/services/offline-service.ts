@@ -23,7 +23,6 @@ import {
   DelegationExpirationTooSoonError,
   DelegationSelfNotAllowedError,
   EncryptionFailedError,
-  wrapDecryptError,
 } from "../errors";
 import { matchHcuRevert } from "../errors/hcu-revert";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
@@ -282,9 +281,7 @@ export class OfflineService {
       this.#router.relayer,
       request.unwrapRequestIdOrAmount,
       options,
-    ).catch((error: unknown) => {
-      throw wrapDecryptError(error, "Public decryption failed during FinalizeUnwrap");
-    });
+    );
     return finalizeUnwrapContract(
       request.wrapper,
       request.unwrapRequestIdOrAmount,

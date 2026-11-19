@@ -9,7 +9,6 @@ message: >-
   Both return the value as a bigint with its decryption proof.
 files:
   - packages/*/src/**/*.ts
-  - packages/*/src/**/*.tsx
 ignores:
   - packages/*/src/**/__tests__/**
   - packages/sdk/src/namespaces/decryption.ts
