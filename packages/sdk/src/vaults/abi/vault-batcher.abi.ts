@@ -146,6 +146,13 @@ export const vaultBatcherAbi = [
   },
   {
     type: "function",
+    name: "closed",
+    inputs: [],
+    outputs: [{ name: "", type: "bool", internalType: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "paused",
     inputs: [],
     outputs: [{ name: "", type: "bool", internalType: "bool" }],

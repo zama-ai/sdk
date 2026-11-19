@@ -23,6 +23,7 @@ import {
   HcuTransactionLimitExceededError,
   UnshieldAlreadyFinalizedError,
   VaultBatcherPausedError,
+  VaultBatcherReadFailedError,
   VaultBatchNotDispatchedError,
   VaultJoinUnconfirmedError,
   InvalidTransportKeyPairError,
@@ -90,7 +91,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 
 ## Retryability
 
-Every `ZamaError` declares whether it's safe to retry via a `readonly retryable: boolean` field — usually determined by its error code, though `RelayerRequestFailedError` sets it per-instance based on the HTTP status instead. Use `isRetryable()` and `retryAfterSeconds()` instead of hardcoding a set of retryable codes yourself — they stay correct as the error taxonomy grows.
+Every `ZamaError` declares whether it's safe to retry via a `readonly retryable: boolean` field. It usually follows the error code, though `RelayerRequestFailedError` sets it per instance from the HTTP status, and `VaultBatcherReadFailedError` from its cause. Use `isRetryable()` and `retryAfterSeconds()` instead of hardcoding a set of retryable codes yourself: they stay correct as the error taxonomy grows.
 
 ```ts
 import { isRetryable, retryAfterSeconds } from "@zama-fhe/sdk";
@@ -127,6 +128,7 @@ Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequ
 | `HcuTransactionLimitExceededError`        | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | The transaction needs more FHE compute (HCU), in total or in one sequential chain, than one transaction may use                   |
 | `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
 | `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | Every batcher of a vault in the join is paused or closed, so the whole join would revert                                          |
+| `VaultBatcherReadFailedError`             | `VAULT_BATCHER_READ_FAILED`              | A batcher of a vault could not be read, so the SDK cannot tell which batch a join reaches                                         |
 | `VaultBatchNotDispatchedError`            | `VAULT_BATCH_NOT_DISPATCHED`             | A vault batch cannot be finalized because it is not dispatched: it is still pending, or it was already finalized or canceled      |
 | `VaultJoinUnconfirmedError`               | `VAULT_JOIN_UNCONFIRMED`                 | A vault join was mined, but its receipt has no matching `Joined` event for at least one leg                                       |
 | `InvalidTransportKeyPairError`            | `INVALID_KEYPAIR`                        | Relayer rejected transport key pair (stale or malformed)                                                                          |
@@ -337,9 +339,17 @@ matchZamaError(error, {
 
 **Code:** `VAULT_BATCHER_PAUSED`
 
-Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()` and `prepareRedeem()` when no batcher of a vault the join reaches is open (each one is paused or closed), before anything is sent. The error carries one paused `batcher` of that vault and the `vaultId`.
+Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()` and `prepareRedeem()` when no batcher of a vault the join reaches is open (each one is paused or closed), before anything is sent. `readOpenBatches()` also throws it when every batcher of a vault is closed. The error carries one paused or closed `batcher` of that vault and the `vaultId`.
 
-**How to handle:** Not retryable until the batcher is unpaused. Claims and quits still work. Show which vault is paused. See [Paused batchers](../../guides/vaults/advanced.md#paused-batchers).
+**How to handle:** Not retryable until a batcher of the vault is unpaused. Claims and quits still work. Show which vault takes no joins. See [Paused batchers](../../guides/vaults/advanced.md#paused-batchers).
+
+### VaultBatcherReadFailedError
+
+**Code:** `VAULT_BATCHER_READ_FAILED`
+
+Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()`, `prepareRedeem()` and `readOpenBatches()` when a batcher of a vault cannot be read, before anything is sent. The error carries the `batcher`, the `vaultId`, and the read error as `cause`. It is also thrown when the RPC returns reads from different blocks, so a batcher looks closed while its `closed()` is not true.
+
+**How to handle:** Check `isRetryable(error)`. It is retryable when the cause is (for example a rate limit), and when the reads came from different blocks. Otherwise check that the vault config lists the right batcher address on the right chain.
 
 ### VaultBatchNotDispatchedError
 

@@ -8,7 +8,6 @@ export {
   defineVault,
   defineVaultGroup,
   MAX_GROUP_VAULTS,
-  type Batcher,
   type BatcherEntry,
   type Batchers,
   type BatcherHistory,

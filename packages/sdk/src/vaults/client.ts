@@ -35,15 +35,8 @@ import { assertBigint, assertNonNullable } from "../utils/assertions";
 import { isEncryptedValueZero } from "../utils/handles";
 import { submitTransaction } from "../utils/submit-transaction";
 import type { ZamaSDK } from "../zama-sdk";
-import {
-  batchersOf,
-  scopeOf,
-  type BatcherEntry,
-  type Vault,
-  type VaultGroup,
-  type VaultIdOf,
-} from "./config";
-import { pickNextBatch, type BatcherOffer, type OpenOffer, type PausedOffer } from "./next-batch";
+import { scopeOf, type Vault, type VaultGroup, type VaultIdOf } from "./config";
+import { readNextBatches, waitsOnPrevious } from "./next-batch";
 import {
   batchCallbackDeadlineContract,
   batchCreatedAtContract,
@@ -51,7 +44,6 @@ import {
   batchMinBatchAgeContract,
   batchStateContract,
   claimContract,
-  currentBatchIdContract,
   depositsContract,
   dispatchBatchCallbackContract,
   dispatchBatchContract,
@@ -176,8 +168,9 @@ export class VaultClient {
    * account's balance before sending.
    *
    * @throws if the provider is not on the vault's chain while a wallet is connected. {@link ChainMismatchError}
-   * @throws if the provider is on another chain with no wallet connected, a vault lists no batcher, a batcher address or `lastBatchId` is invalid, or every batcher of a vault is closed. {@link ConfigurationError}
+   * @throws if the provider is on another chain with no wallet connected, a vault lists no batcher, or a batcher address or `lastBatchId` is invalid. {@link ConfigurationError}
    * @throws if no batcher of a vault the join reaches is open, even with `skipBalanceCheck`. {@link VaultBatcherPausedError}
+   * @throws if a batcher of a vault the join reaches cannot be read. {@link VaultBatcherReadFailedError}
    * @throws if the balance is less than `amount` and `skipBalanceCheck` is not set. {@link InsufficientConfidentialBalanceError}
    * @throws if `skipBalanceCheck` is not set and no signer is connected, `account` is not the signer's, or the balance cannot be read. {@link BalanceCheckUnavailableError}
    * @throws if encryption returns a different number of values than the join has legs. {@link EncryptionFailedError}
@@ -476,7 +469,7 @@ export class VaultClient {
         ? null
         : this.#read(chainId, depositsContract(batcher, batchId, depositor)),
       this.#sdk.provider.getBlockTimestamp(chainId),
-      this.#waitsOnPrevious(chainId, batcher, batchId),
+      waitsOnPrevious(this.#sdk.provider, chainId, batcher, batchId),
     ]);
     const dispatchableAt = createdAt + minAge;
     const cancelsAt = dispatchedAt + deadline;
@@ -518,32 +511,25 @@ export class VaultClient {
    * when it can be dispatched. When no batcher of a vault is open, it is a
    * paused batcher's batch with `paused: true`.
    *
-   * @throws if a vault lists no batcher, an address or `lastBatchId` is invalid, or every batcher of a vault is closed. {@link ConfigurationError}
+   * @throws if a vault lists no batcher, or an address or `lastBatchId` is invalid. {@link ConfigurationError}
+   * @throws if every batcher of a vault is closed. {@link VaultBatcherPausedError}
+   * @throws if a batcher cannot be read. {@link VaultBatcherReadFailedError}
    */
   async readOpenBatches(
     target: Vault | VaultGroup,
     direction: JoinDirection,
   ): Promise<readonly OpenBatch[]> {
     const { vaults, chainId } = scopeOf(target);
-    const now = await this.#sdk.provider.getBlockTimestamp(chainId);
-    return Promise.all(
-      vaults.map(async (vault) => {
-        const { status, batcher, batchId, dispatchableAt } = await this.#nextBatch(
-          vault,
-          direction,
-          now,
-        );
-        return {
-          vaultId: vault.id,
-          chainId,
-          batcher,
-          batchId,
-          dispatchableAt,
-          paused: status === "paused",
-          observedAt: now,
-        };
-      }),
-    );
+    const { now, next } = await readNextBatches(this.#sdk.provider, chainId, vaults, direction);
+    return next.map(({ status, batcher, batchId, dispatchableAt }, index) => ({
+      vaultId: at(vaults, index).id,
+      chainId,
+      batcher,
+      batchId,
+      dispatchableAt,
+      paused: status === "paused",
+      observedAt: now,
+    }));
   }
 
   async #planJoin(
@@ -560,22 +546,20 @@ export class VaultClient {
     // Encryption runs on the provider's chain, so check it before anything prompts.
     await this.#requireProviderChain(chainId, `vault ${direction}`);
     const router = group !== undefined && route === "router" ? this.#router(group) : undefined;
-    const now = await this.#sdk.provider.getBlockTimestamp(chainId);
     // A paused batcher reverts the whole join, so every leg needs an open batch.
-    const batchers = await Promise.all(
-      vaults.map(async (vault) => {
-        const next = await this.#nextBatch(vault, direction, now);
-        if (next.status === "paused") {
-          throw new VaultBatcherPausedError(
-            group === undefined
-              ? `Every ${direction} batcher of vault "${vault.id}" is paused or closed, so the vault cannot be joined until one resumes`
-              : `Every ${direction} batcher of vault "${vault.id}" in group "${group.id}" is paused or closed, so no vault of the group can be joined until one resumes`,
-            { batcher: next.batcher, vaultId: vault.id },
-          );
-        }
-        return next.batcher;
-      }),
-    );
+    const { next: picked } = await readNextBatches(this.#sdk.provider, chainId, vaults, direction);
+    const batchers = picked.map((next, index) => {
+      const vault = at(vaults, index);
+      if (next.status === "paused") {
+        throw new VaultBatcherPausedError(
+          group === undefined
+            ? `Every ${direction} batcher of vault "${vault.id}" is paused or closed, so the vault cannot be joined until one resumes`
+            : `Every ${direction} batcher of vault "${vault.id}" in group "${group.id}" is paused or closed, so no vault of the group can be joined until one resumes`,
+          { batcher: next.batcher, vaultId: vault.id },
+        );
+      }
+      return next.batcher;
+    });
     const tokens = await Promise.all(batchers.map((batcher) => this.#fromToken(chainId, batcher)));
     const legs = nonEmpty(
       vaults.map((vault, index): VaultLeg => ({
@@ -711,63 +695,6 @@ export class VaultClient {
       );
     }
     return { batches, txHashes };
-  }
-
-  /**
-   * The batch a join into `vault` reaches at chain time `now`, or a paused
-   * batcher's batch when no batcher is open. Never cached: it moves with every
-   * dispatch.
-   *
-   * @throws if every batcher is closed. {@link ConfigurationError}
-   */
-  async #nextBatch(
-    vault: Vault,
-    direction: JoinDirection,
-    now: bigint,
-  ): Promise<OpenOffer | PausedOffer> {
-    const offers = await Promise.all(
-      batchersOf(vault, direction).map((entry) => this.#offer(vault.chainId, entry)),
-    );
-    const next = pickNextBatch(offers, now);
-    if (next === undefined) {
-      throw new ConfigurationError(
-        `Every ${direction} batcher of vault "${vault.id}" is closed; list a batcher that takes joins`,
-      );
-    }
-    return next;
-  }
-
-  async #offer(
-    chainId: number,
-    { address: batcher, lastBatchId }: BatcherEntry,
-  ): Promise<BatcherOffer> {
-    const [paused, batchId] = await Promise.all([
-      this.#read(chainId, pausedContract(batcher)),
-      this.#read(chainId, currentBatchIdContract(batcher)),
-    ]);
-    if (lastBatchId !== undefined && batchId > lastBatchId) {
-      return { status: "closed", batcher };
-    }
-    const [createdAt, minAge, blocked] = await Promise.all([
-      this.#read(chainId, batchCreatedAtContract(batcher, batchId)),
-      this.#read(chainId, batchMinBatchAgeContract(batcher, batchId)),
-      paused ? false : this.#waitsOnPrevious(chainId, batcher, batchId),
-    ]);
-    // A closed batcher never opens its next batch, so the current one has no creation time.
-    if (createdAt === 0n) {
-      return { status: "closed", batcher };
-    }
-    const dispatchableAt = createdAt + minAge;
-    return paused
-      ? { status: "paused", batcher, batchId, dispatchableAt }
-      : { status: "open", batcher, batchId, dispatchableAt, blocked };
-  }
-
-  // `dispatchBatch` reverts while the previous batch is still dispatched.
-  async #waitsOnPrevious(chainId: number, batcher: Address, batchId: bigint): Promise<boolean> {
-    return (
-      batchId > 1n && (await this.#batchState(chainId, batcher, batchId - 1n)) === "dispatched"
-    );
   }
 
   #router(group: VaultGroup): Address {

@@ -8153,6 +8153,7 @@ export interface ErrorForCode {
     [ZamaErrorCode.UnshieldAlreadyFinalized]: UnshieldAlreadyFinalizedError;
     [ZamaErrorCode.VaultBatchNotDispatched]: VaultBatchNotDispatchedError;
     [ZamaErrorCode.VaultBatcherPaused]: VaultBatcherPausedError;
+    [ZamaErrorCode.VaultBatcherReadFailed]: VaultBatcherReadFailedError;
     [ZamaErrorCode.VaultJoinUnconfirmed]: VaultJoinUnconfirmedError;
     [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
     [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
@@ -22948,6 +22949,21 @@ export class VaultBatcherPausedError extends ZamaError {
 }
 
 // @public
+export interface VaultBatcherReadFailedDetails {
+    readonly batcher: Address;
+    readonly vaultId: string;
+}
+
+// @public
+export class VaultBatcherReadFailedError extends ZamaError {
+    constructor(message: string, details: VaultBatcherReadFailedDetails, options?: ErrorOptions & {
+        retryable?: boolean;
+    });
+    readonly batcher: Address;
+    readonly vaultId: string;
+}
+
+// @public
 export interface VaultBatchNotDispatchedDetails {
     readonly batcher: Address;
     readonly batchId: bigint;
@@ -24373,6 +24389,7 @@ export const ZamaErrorCode: {
     readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
     readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
     readonly VaultBatcherPaused: "VAULT_BATCHER_PAUSED";
+    readonly VaultBatcherReadFailed: "VAULT_BATCHER_READ_FAILED";
     readonly VaultBatchNotDispatched: "VAULT_BATCH_NOT_DISPATCHED";
     readonly VaultJoinUnconfirmed: "VAULT_JOIN_UNCONFIRMED";
 };

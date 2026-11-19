@@ -67,7 +67,7 @@ Whether to read the deposit batchers or the redeem batchers.
 
 {% include ".gitbook/includes/query-options.md" %}
 
-The hook sets no `refetchInterval`.
+The hook refetches one second after a batch comes within a minute of its due time, when joins move to another batch, then every 15 seconds until a keeper dispatches it. It stops while every vault is paused. A `refetchInterval` you pass replaces this.
 
 ## Return Type
 

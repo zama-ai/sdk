@@ -5,7 +5,9 @@ import {
   BalanceCheckUnavailableError,
   ConfigurationError,
   InsufficientConfidentialBalanceError,
+  RpcRateLimitError,
   VaultBatcherPausedError,
+  VaultBatcherReadFailedError,
   type VaultBatchNotDispatchedError,
   type VaultJoinUnconfirmedError,
 } from "../../errors";
@@ -97,6 +99,8 @@ interface BatchFacts {
   currentBatchId?: bigint;
   /** The state of the batch before the current one, defaults to finalized. */
   previousState?: number;
+  /** What `closed()` returns; `"reverts"` for a batcher deployed before it. Defaults to false. */
+  closed?: boolean | "reverts";
 }
 
 /** What each batcher reports, and the batches a read asks about. */
@@ -133,6 +137,11 @@ function mockChain(
         return answers.operators ?? true;
       case "paused":
         return answers.paused?.includes(batcher) ?? false;
+      case "closed":
+        if (batch?.closed === "reverts") {
+          throw new Error("execution reverted");
+        }
+        return batch?.closed ?? false;
       case "fromToken":
         return fromTokens[batcher];
       case "batchState":
@@ -214,6 +223,30 @@ describe("config checks, where the config is used", () => {
       client.prepareDeposit(broken, { account: USER, amount: 10n }, { skipBalanceCheck: true }),
     ).rejects.toThrow(/deposit batcher is not an address/);
     await expect(client.readOpenBatches(broken, "deposit")).rejects.toThrow(/not an address/);
+  });
+
+  test.for([
+    [
+      "a negative lastBatchId",
+      { address: ALPHA.depositBatcher, lastBatchId: -1n },
+      /invalid lastBatchId: -1/,
+    ],
+    [
+      "a lastBatchId that is not a bigint",
+      { address: ALPHA.depositBatcher, lastBatchId: 6 as never },
+      /invalid lastBatchId: 6/,
+    ],
+    ["an invalid address in an entry", { address: "0x12" as never }, /not an address: 0x12/],
+  ] as const)("refuses %s in a batcher list", async ([, entry, message], { sdk, provider }) => {
+    mockChain(provider);
+    const broken = defineVault({
+      id: "broken",
+      chainId: CHAIN_ID,
+      batchers: { deposit: [entry, BETA.depositBatcher], redeem: ALPHA.redeemBatcher },
+    });
+    const read = createVaultClient(sdk).readOpenBatches(broken, "deposit");
+    await expect(read).rejects.toBeInstanceOf(ConfigurationError);
+    await expect(read).rejects.toThrow(message);
   });
 
   test("refuses an invalid lastBatchId", async ({ sdk, provider }) => {
@@ -682,7 +715,10 @@ describe("several batchers in one direction", () => {
     provider,
   }) => {
     mockChain(provider, {
-      batches: { [EARLY]: { createdAt: 0n, minAge: 0n }, [LATE]: { createdAt: NOW, minAge: 600n } },
+      batches: {
+        [EARLY]: { createdAt: 0n, minAge: NOW + 100n, closed: true },
+        [LATE]: { createdAt: NOW, minAge: 600n },
+      },
     });
     expect(await nextBatcher(sdk)).toMatchObject({ batcher: LATE });
   });
@@ -710,7 +746,7 @@ describe("several batchers in one direction", () => {
     provider,
     relayer,
   }) => {
-    mockChain(provider, { paused: [LATE], batches: { [EARLY]: { createdAt: 0n } } });
+    mockChain(provider, { paused: [LATE], batches: { [EARLY]: { createdAt: 0n, closed: true } } });
     mockEncryption(relayer);
     await expect(
       createVaultClient(sdk).prepareDeposit(SET, { account: USER, amount: 10n }),
@@ -732,9 +768,82 @@ describe("several batchers in one direction", () => {
     await expect(nextBatcher(sdk, empty)).rejects.toThrow(/list is empty/);
   });
 
-  test("refuses when every batcher is closed", async ({ sdk, provider }) => {
-    mockChain(provider, { batches: { [EARLY]: { createdAt: 0n }, [LATE]: { createdAt: 0n } } });
-    await expect(nextBatcher(sdk)).rejects.toBeInstanceOf(ConfigurationError);
+  test("refuses when every batcher is closed, naming the first one declared", async ({
+    sdk,
+    provider,
+  }) => {
+    mockChain(provider, {
+      batches: {
+        [EARLY]: { createdAt: 0n, closed: true },
+        [LATE]: { createdAt: 0n, closed: true },
+      },
+    });
+    await expect(nextBatcher(sdk)).rejects.toMatchObject({
+      name: "VaultBatcherPausedError",
+      batcher: LATE,
+      vaultId: "set",
+    });
+  });
+
+  test("reads a batch with no creation time again when closed() is false, since a node lagged", async ({
+    sdk,
+    provider,
+  }) => {
+    mockChain(provider, {
+      batches: {
+        [EARLY]: { createdAt: NOW, minAge: 100n },
+        [LATE]: { createdAt: NOW, minAge: 600n },
+      },
+    });
+    const answer = vi.mocked(provider.readContract).getMockImplementation();
+    let lagging = true;
+    vi.mocked(provider.readContract).mockImplementation(async (call: unknown) => {
+      const { functionName, address } = call as { functionName: string; address: Address };
+      if (lagging && functionName === "batchCreatedAt" && getAddress(address) === EARLY) {
+        lagging = false;
+        return 0n;
+      }
+      return answer?.(call as never);
+    });
+    expect(await nextBatcher(sdk)).toMatchObject({ batcher: EARLY });
+  });
+
+  test.for([
+    ["closed() is false", false],
+    ["the batcher has no closed()", "reverts"],
+  ] as const)(
+    "throws a retryable read error when a batch keeps reading with no creation time and %s",
+    async ([, closed], { sdk, provider }) => {
+      mockChain(provider, {
+        batches: { [EARLY]: { createdAt: 0n, closed }, [LATE]: { createdAt: NOW, minAge: 600n } },
+      });
+      const read = nextBatcher(sdk);
+      await expect(read).rejects.toBeInstanceOf(VaultBatcherReadFailedError);
+      await expect(read).rejects.toMatchObject({ batcher: EARLY, vaultId: "set", retryable: true });
+    },
+  );
+
+  test("names the batcher and the vault when a read fails, and keeps the cause's retryability", async ({
+    sdk,
+    provider,
+  }) => {
+    mockChain(provider);
+    const answer = vi.mocked(provider.readContract).getMockImplementation();
+    const cause = new RpcRateLimitError("rate limited");
+    vi.mocked(provider.readContract).mockImplementation(async (call: unknown) => {
+      if (getAddress((call as { address: Address }).address) === LATE) {
+        throw cause;
+      }
+      return answer?.(call as never);
+    });
+    const read = nextBatcher(sdk);
+    await expect(read).rejects.toThrow(`batcher ${LATE} of vault "set"`);
+    await expect(read).rejects.toMatchObject({
+      batcher: LATE,
+      vaultId: "set",
+      cause,
+      retryable: true,
+    });
   });
 
   test("picks by due time, not by address", async ({ sdk, provider }) => {
@@ -845,10 +954,7 @@ describe("readBatch", () => {
     expect(batch.deposit).toBeNull();
   });
 
-  test("cannot be dispatched while the previous batch is still dispatched", async ({
-    sdk,
-    provider,
-  }) => {
+  test("cannot be dispatched while the previous batch is in flight", async ({ sdk, provider }) => {
     mockChain(provider, {
       batches: { [ALPHA.depositBatcher]: { createdAt: NOW - 200n, previousState: 1 } },
     });

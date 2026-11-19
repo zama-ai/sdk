@@ -53,6 +53,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `DELEGATION_NOT_PROPAGATED`              | `DelegationNotPropagatedError`            | Delegated decrypt failed transiently (gateway not synced, or delegator ACL read stale) — retry                   |
 | `ACL_PAUSED`                             | `AclPausedError`                          | The ACL contract is paused                                                                                       |
 | `VAULT_BATCHER_PAUSED`                   | `VaultBatcherPausedError`                 | Every batcher of a vault in the join is paused or closed, so the whole join would revert                         |
+| `VAULT_BATCHER_READ_FAILED`              | `VaultBatcherReadFailedError`             | A batcher of a vault could not be read, so the SDK cannot tell which batch a join reaches                        |
 | `VAULT_BATCH_NOT_DISPATCHED`             | `VaultBatchNotDispatchedError`            | A vault batch cannot be finalized because it is not dispatched (still pending, or already finalized or canceled) |
 | `VAULT_JOIN_UNCONFIRMED`                 | `VaultJoinUnconfirmedError`               | A vault join was mined, but its receipt doesn't confirm every leg                                                |
 
@@ -303,7 +304,7 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 
 ### 8. Retry transient failures
 
-Six causes are transient — the operation can simply be retried, ideally with backoff: `RpcRateLimitError` (`RPC_RATE_LIMITED`), `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`, only on a 429, or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`), `DelegationCooldownError` (`DELEGATION_COOLDOWN`), `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`), and `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`). Rather than hardcoding that set of codes, use `isRetryable(error)` and `retryAfterSeconds(error)` — they stay correct as the taxonomy grows, since every `ZamaError` declares its own `.retryable`.
+Six causes are transient, so the operation can simply be retried, ideally with backoff: `RpcRateLimitError` (`RPC_RATE_LIMITED`), `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`, only on a 429, or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`), `DelegationCooldownError` (`DELEGATION_COOLDOWN`), `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`), and `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`). `VaultBatcherReadFailedError` (`VAULT_BATCHER_READ_FAILED`) is transient when its cause is. Rather than hardcoding that set of codes, use `isRetryable(error)` and `retryAfterSeconds(error)`: they stay correct as the taxonomy grows, since every `ZamaError` declares its own `.retryable`.
 
 | Cause                                                        | `retryAfterSeconds`                               | Notes                                                                                                   |
 | ------------------------------------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |

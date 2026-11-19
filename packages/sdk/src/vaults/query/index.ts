@@ -7,6 +7,7 @@ import type { TransactionResult } from "../../types";
 import { assertNonNullable } from "../../utils/assertions";
 import type { VaultClient } from "../client";
 import { chainIdOf, type Vault, type VaultGroup, type VaultIdOf } from "../config";
+import { JOIN_MARGIN_SECONDS } from "../next-batch";
 import type {
   Batch,
   BatchRef,
@@ -115,7 +116,28 @@ export type OpenBatchesQueryConfig = VaultSelection & {
   direction: JoinDirection;
 };
 
-/** Query options that read the open batch of every vault of a group, or of a vault on its own. */
+/**
+ * How long to wait before reading the open batches again: until a batch is due within the join
+ * margin, when joins move to another batch, then while a keeper dispatches it. `false` while
+ * every vault is paused.
+ */
+function openBatchesRefetchInterval(read: readonly OpenBatch[] | undefined): number | false {
+  const waits = (read ?? [])
+    .filter((batch) => !batch.paused)
+    .map((batch) => {
+      const untilMargin = batch.dispatchableAt - JOIN_MARGIN_SECONDS - batch.observedAt;
+      return untilMargin > 0n
+        ? Math.min(Number(untilMargin) * 1000 + 1000, MAX_REFETCH_MS)
+        : KEEPER_POLL_MS;
+    });
+  return waits.length === 0 ? false : Math.min(...waits);
+}
+
+/**
+ * Query options that read the open batch of every vault of a group, or of a vault on its own.
+ * They refetch when a batch comes within a minute of its due time, and poll until a keeper
+ * dispatches it; a `refetchInterval` passed to `useQuery` replaces both.
+ */
 export function openBatchesQueryOptions(
   client: VaultClient,
   config: OpenBatchesQueryConfig,
@@ -127,6 +149,7 @@ export function openBatchesQueryOptions(
 > {
   const target = selected(config);
   return {
+    refetchInterval: (query) => openBatchesRefetchInterval(query.state.data),
     queryKey: vaultQueryKeys.openBatches(target, config.direction),
     queryFn: async () => client.readOpenBatches(target, config.direction),
   };

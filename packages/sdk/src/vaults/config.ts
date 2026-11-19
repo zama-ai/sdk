@@ -7,7 +7,7 @@ export const MAX_GROUP_VAULTS = 8;
 
 /**
  * A batcher, with the last batch it takes joins in. Set `lastBatchId` only for
- * a batcher that cannot close itself on chain.
+ * a batcher whose contract has no `closed()`.
  */
 export interface BatcherEntry {
   /** The batcher's address. */
@@ -16,23 +16,15 @@ export interface BatcherEntry {
   readonly lastBatchId?: bigint;
 }
 
-/** A batcher of one vault direction: its address, or an entry with a `lastBatchId`. */
-export type Batcher = Address | BatcherEntry;
-
-/** One batcher or several for a vault direction. A join or read throws on an empty list. */
-export type Batchers = Batcher | readonly Batcher[];
+/** A join or read throws on an empty list. */
+export type Batchers = Address | readonly (Address | BatcherEntry)[];
 
 /**
  * A batcher that took joins while its `currentBatchId` was at most `lastBatchId`.
  *
  * @deprecated List the batchers as {@link Batchers} instead, a retired one as `{ address, lastBatchId }`.
  */
-export interface RetiredBatcher {
-  /** The retired batcher. */
-  readonly address: Address;
-  /** The last batch it took joins into. */
-  readonly lastBatchId: bigint;
-}
+export type RetiredBatcher = BatcherEntry & { readonly lastBatchId: bigint };
 
 /**
  * Every batcher a vault has had in one direction. Read as the list
@@ -187,12 +179,15 @@ export function batchersOf(
   return [first, ...rest];
 }
 
-function listOf(declared: Batchers | BatcherHistory, where: string): readonly Batcher[] {
+function listOf(
+  declared: Batchers | BatcherHistory,
+  where: string,
+): readonly (Address | BatcherEntry)[] {
+  if (typeof declared === "string") {
+    return [declared];
+  }
   if (isArray(declared)) {
     return declared;
-  }
-  if (typeof declared === "string" || !("latest" in declared)) {
-    return [declared];
   }
   // Without its lastBatchId, a retired batcher would read as live and keep taking joins.
   const unbounded = declared.retired.find((entry) => entry.lastBatchId === undefined);
@@ -205,11 +200,11 @@ function listOf(declared: Batchers | BatcherHistory, where: string): readonly Ba
 }
 
 // `Array.isArray` does not narrow a readonly array out of a union.
-function isArray(value: unknown): value is readonly Batcher[] {
+function isArray(value: unknown): value is readonly (Address | BatcherEntry)[] {
   return Array.isArray(value);
 }
 
-function entryOf(batcher: Batcher, where: string): BatcherEntry {
+function entryOf(batcher: Address | BatcherEntry, where: string): BatcherEntry {
   if (typeof batcher === "string") {
     return { address: requireAddress(batcher, where) };
   }

@@ -49,4 +49,14 @@ describe("pickNextBatch", () => {
     expect(pickNextBatch([closed, paused], NOW)).toBe(paused);
     expect(pickNextBatch([closed], NOW)).toBeUndefined();
   });
+
+  test("with every batcher paused, reports the first one declared", () => {
+    const paused = (batcher: typeof LOW): BatcherOffer => ({
+      status: "paused",
+      batcher,
+      batchId: 1n,
+      dispatchableAt: NOW,
+    });
+    expect(pick(paused(HIGH), paused(LOW))).toBe(HIGH);
+  });
 });

@@ -5,6 +5,7 @@ export {
   batchMinBatchAgeContract,
   batchStateContract,
   claimContract,
+  closedContract,
   currentBatchIdContract,
   depositsContract,
   dispatchBatchCallbackContract,

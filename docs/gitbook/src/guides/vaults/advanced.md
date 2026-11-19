@@ -28,7 +28,7 @@ The router's address comes from `vaultRouterAddress` in the [chain preset](../..
 
 ## Paused batchers
 
-A paused batcher rejects joins. When a vault has [several batchers](#several-batchers), joins go to the others. When every batcher of a vault is paused or closed, the vault takes no joins. A group join sends a leg to every vault, so that vault blocks every join of its group. `deposit` and `redeem` check this first and throw `VaultBatcherPausedError`, naming the vault. Claims and quits still work, so existing deposits are never stuck.
+A paused batcher rejects joins. When a vault has [several batchers](#several-batchers), joins go to the others. When every batcher of a vault is paused or closed, the vault takes no joins. A group join sends a leg to every vault, so that vault blocks every join of its group. `deposit` and `redeem` check this first and throw `VaultBatcherPausedError`, naming the vault. `readOpenBatches` throws it too when every batcher of a vault is closed. Claims and quits still work, so existing deposits are never stuck.
 
 To disable the form before the user submits, read `paused` from [`readOpenBatches`](deposits.md#show-the-open-batches).
 
@@ -53,9 +53,15 @@ The client reads every batcher when it prepares a join, and the join goes to the
 
 - paused,
 - closed on chain, or
-- past its `lastBatchId`. Set `lastBatchId` only for a batcher whose contract cannot close by itself.
+- past its `lastBatchId`. Set `lastBatchId` only for a batcher whose contract has no `closed()`.
 
-Among the open batches, it prefers one that does not wait for its previous batch to settle and is not due within the next minute, because a keeper can dispatch such a batch before the join lands. When none qualifies, it takes the soonest batch that waits for its previous one, then the soonest open batch. The choice follows the chain, not the clock, so you can ship a new list before a batcher opens or closes. Stored batches name their own batcher, so they keep working. [`readOpenBatches`](deposits.md#show-the-open-batches) shows the batch the next join reaches.
+Among the open batches, the join goes to the first match:
+
+1. The batch due soonest that is due at least a minute from now and whose previous batch is not still in flight. A batch due sooner, or already due, can be dispatched before the join lands.
+2. The batch due soonest whose previous batch is still in flight. Its wait has already started, while a join that misses a dispatch waits behind the batch that just left.
+3. The open batch due soonest.
+
+Ties go to the lowest batcher address, so every client picks the same batch. The choice follows the chain, not the clock, so you can ship a new list before a batcher opens or closes. Stored batches name their own batcher, so they keep working. [`readOpenBatches`](deposits.md#show-the-open-batches) shows the batch the next join reaches.
 
 {% hint style="warning" %}
 Never remove a batcher from the list, even once its batches settled. Every batcher of a vault direction must serve the same ERC-4626 vault with the same asset and share token.
