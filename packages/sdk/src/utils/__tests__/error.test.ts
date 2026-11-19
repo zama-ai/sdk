@@ -66,10 +66,37 @@ describe("toError", () => {
 });
 
 describe("isContractCallError", () => {
-  test("detects viem ContractFunctionExecutionError", () => {
-    const err = new Error("contract call failed");
-    err.name = "ContractFunctionExecutionError";
+  test("detects a viem revert wrapped in ContractFunctionExecutionError", () => {
+    const revert = Object.assign(new Error("contract reverted"), {
+      name: "ContractFunctionRevertedError",
+    });
+    const err = Object.assign(new Error("contract call failed"), {
+      name: "ContractFunctionExecutionError",
+      cause: revert,
+    });
     expect(isContractCallError(err)).toBe(true);
+  });
+
+  test("detects viem ContractFunctionZeroDataError", () => {
+    const zeroData = Object.assign(new Error("returned no data"), {
+      name: "ContractFunctionZeroDataError",
+    });
+    const err = Object.assign(new Error("contract call failed"), {
+      name: "ContractFunctionExecutionError",
+      cause: zeroData,
+    });
+    expect(isContractCallError(err)).toBe(true);
+  });
+
+  test("returns false for a transport failure wrapped in ContractFunctionExecutionError", () => {
+    const http = Object.assign(new Error("HTTP request failed. Status: 429"), {
+      name: "HttpRequestError",
+    });
+    const err = Object.assign(new Error("contract call failed"), {
+      name: "ContractFunctionExecutionError",
+      cause: http,
+    });
+    expect(isContractCallError(err)).toBe(false);
   });
 
   test("detects viem ContractFunctionRevertedError", () => {

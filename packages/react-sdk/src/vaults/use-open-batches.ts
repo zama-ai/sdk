@@ -12,7 +12,7 @@ import { useQuery } from "../utils/query";
 import { useVaultClient } from "./use-vault-client";
 
 /**
- * The open batch of each vault's active batcher, with when it can be dispatched.
+ * The batch a join into each vault reaches now, with when it can be dispatched.
  *
  * @returns `data` holds one open batch per vault, in group order.
  */

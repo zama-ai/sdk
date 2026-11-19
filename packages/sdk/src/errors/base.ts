@@ -98,8 +98,10 @@ export const ZamaErrorCode = {
   PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED",
   /** The unwrap request was already finalized on-chain; there is nothing left to resume. */
   UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED",
-  /** A batcher a vault join needs is paused. */
+  /** No batcher of a vault is open: each one is paused or closed. */
   VaultBatcherPaused: "VAULT_BATCHER_PAUSED",
+  /** A batcher of a vault could not be read, so the batch a join reaches is unknown. */
+  VaultBatcherReadFailed: "VAULT_BATCHER_READ_FAILED",
   /** A batch to be finalized is not dispatched. */
   VaultBatchNotDispatched: "VAULT_BATCH_NOT_DISPATCHED",
   /** A vault join was mined, but its receipt does not confirm every leg. */
@@ -118,10 +120,10 @@ type Complete<T extends Record<ZamaErrorCode, boolean>> = T;
  * `matchZamaError`'s `ErrorForCode` map uses (see `match.ts`) — so a new
  * transient (or terminal) cause can't silently default to the wrong signal.
  *
- * {@link RelayerRequestFailedError} is the one exception: its retryability
- * depends on the HTTP status (only a 429 is retryable), not just the code, so
- * it overrides this default via the constructor's `retryable` option instead
- * of being read from here.
+ * {@link RelayerRequestFailedError} and `VaultBatcherReadFailedError` are the
+ * exceptions. The first depends on the HTTP status (only a 429 is retryable),
+ * the second on its cause, so both override this default via the constructor's
+ * `retryable` option instead of being read from here.
  */
 const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.SigningRejected]: false,
@@ -166,6 +168,7 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.PreparedPermitExpired]: false, // caller must prepare the permit again for a fresh validity window
   [ZamaErrorCode.UnshieldAlreadyFinalized]: false, // the funds already arrived; the stale pointer is cleared
   [ZamaErrorCode.VaultBatcherPaused]: false, // stays paused until the batcher is unpaused, not on retry
+  [ZamaErrorCode.VaultBatcherReadFailed]: false, // conditional: see doc above
   [ZamaErrorCode.VaultBatchNotDispatched]: false, // a settled batch stays settled; a pending one waits for its dispatch
   [ZamaErrorCode.VaultJoinUnconfirmed]: false, // the transaction is mined; a retry would submit another
 };
@@ -181,8 +184,8 @@ export class ZamaError extends Error {
 
   /**
    * Whether the operation that threw this error is safe to retry. Defaults to
-   * {@link RETRYABLE_BY_CODE}'s entry for `code`; only {@link RelayerRequestFailedError}
-   * overrides it per-instance (its retryability depends on the HTTP status).
+   * {@link RETRYABLE_BY_CODE}'s entry for `code`; {@link RelayerRequestFailedError}
+   * and `VaultBatcherReadFailedError` override it per instance.
    * Prefer {@link isRetryable} over reading this directly, so a new `unknown`
    * caught value doesn't need an `instanceof ZamaError` check first.
    */
